@@ -23,7 +23,6 @@ typedef double real;
 
 // TODO pull fx and dEdf out of the Node object and have them
 // as local tables in forward/backward algorithms
-// TODO figure out what paths are constants and don't propagate errors along them
 
 struct Dim {
   Dim() : rows(1), cols(1) {}
@@ -109,6 +108,7 @@ struct Edge {
                           const Matrix& fx,
                           const Matrix& dEdf,
                           unsigned i) const = 0;
+  virtual bool has_parameters() const;
 
   // number of arguments to the function
   inline unsigned arity() const { return tail.size(); }

@@ -7,6 +7,8 @@ namespace cnn {
 
 Edge::~Edge() {}
 
+bool Edge::has_parameters() const { return false; }
+
 Hypergraph::~Hypergraph() {
   for (auto e : edges) delete e;
   for (auto n : nodes) delete n;
@@ -44,6 +46,18 @@ Matrix Hypergraph::forward() {
 }
 
 void Hypergraph::backward() {
+  // here we find constants and to avoid doing extra work
+  vector<bool> needs_derivative(nodes.size(), false);
+  for (unsigned ni = 0; ni < nodes.size(); ++ni) {
+    const Node& node = *nodes[ni];
+    const Edge& in_edge = *edges[node.in_edge];
+    bool is_variable = in_edge.has_parameters();
+    for (auto tail_node : in_edge.tail)
+      is_variable |= needs_derivative[tail_node];
+    needs_derivative[ni] = is_variable;
+  }
+
+  // initialize dE/dE = 1
   nodes.back()->dEdf = Matrix(1,1);
   nodes.back()->dEdf(0,0) = 1;
 
@@ -58,8 +72,10 @@ void Hypergraph::backward() {
       ++ti;
     }
     for (unsigned ti = 0; ti < in_edge.tail.size(); ++ti) {
-      Node& tail_node = *nodes[in_edge.tail[ti]];
-      tail_node.dEdf += in_edge.backward(xs, node.f, node.dEdf, ti);
+      if (needs_derivative[in_edge.tail[ti]]) {
+        Node& tail_node = *nodes[in_edge.tail[ti]];
+        tail_node.dEdf += in_edge.backward(xs, node.f, node.dEdf, ti);
+      }
     }
   }
 }
