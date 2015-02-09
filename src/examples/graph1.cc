@@ -36,7 +36,7 @@ int main() {
   unsigned i_h = hg.add_function<Tanh>({i_g}, "h");
   unsigned i_p = hg.add_function<MatrixMultiply>({i_V, i_h}, "p");
   unsigned i_y_pred = hg.add_function<Sum>({i_p, i_a, i_t2}, "y_pred");
-  hg.add_function<EuclideanDistance>({i_y_pred, i_y}, "err");
+  hg.add_function<SquaredEuclideanDistance>({i_y_pred, i_y}, "err");
   hg.PrintGraphviz();
   cerr << "E = " << hg.forward() << endl;
   hg.backward();

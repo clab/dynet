@@ -14,6 +14,7 @@ struct ParametersBase {
 // represents a small set of parameters (e.g., a weight matrix)
 struct Parameters : public ParametersBase {
   explicit Parameters(const Dim& d) : dim(d), values(Random(d)) {}
+  explicit Parameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v) {}
   size_t size() const override;
   real& operator()(int i, int j) { return values(i,j); }
   const real& operator()(int i, int j) const { return values(i,j); }

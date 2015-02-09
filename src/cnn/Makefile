@@ -2,7 +2,8 @@ all: libcnn.a
 
 OBJ_FILES = \
   cnn.o \
-  cnn-edges.o
+  edges.o \
+  params.o
 
 clean:
 	$(RM) -f *.o libcnn.a

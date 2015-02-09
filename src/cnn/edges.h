@@ -87,7 +87,7 @@ struct Sum : public Edge {
   }
 };
 
-struct EuclideanDistance : public Edge {
+struct SquaredEuclideanDistance : public Edge {
   // y = || x_1 - x_2 ||^2
   string as_string(const vector<string>& arg_names) const {
     ostringstream s;
@@ -113,7 +113,7 @@ struct EuclideanDistance : public Edge {
 };
 
 struct LogisticSigmoid : public Edge {
-  // y = tanh x_1
+  // y = \sigma(x_1)
   string as_string(const vector<string>& arg_names) const {
     ostringstream s;
     s << "\\sigma(" << arg_names[0] << ')';
