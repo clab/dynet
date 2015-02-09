@@ -30,8 +30,7 @@ struct Node;
 struct Hypergraph {
   ~Hypergraph();
   // construct a graph
-  unsigned add_scalar_input(real s, const std::string& name = "");
-  unsigned add_input(const Matrix& m, const std::string& name = "");
+  unsigned add_input(const ConstParameters* m, const std::string& name = "");
   unsigned add_parameter(const Parameters* p, const std::string& name = "");
   unsigned add_parameter(const LookupParameters* p, const std::string& name = "");
   template <class Function> inline unsigned add_function(const std::initializer_list<unsigned>& arguments, const std::string& name = "");

@@ -10,8 +10,10 @@ int main() {
   sranddev();
   cnn::Hypergraph hg;
   Matrix x(2,1); x(0,0) = 1; x(1,0) = -1;
-  unsigned i_x = hg.add_input(x, "x");
-  unsigned i_y = hg.add_scalar_input(1.0, "y");
+  ConstParameters p_x(x);
+  unsigned i_x = hg.add_input(&p_x, "x");
+  ConstParameters p_y(1.0);
+  unsigned i_y = hg.add_input(&p_y, "y");
   Matrix b(3,1); b(0,0) = 0.3; b(1,0) = -0.02; b(2,0) = 0.1;
   Parameters p_b(b);
   unsigned i_b = hg.add_parameter(&p_b, "b");

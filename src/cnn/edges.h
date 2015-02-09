@@ -16,23 +16,21 @@ struct ParameterEdge : public Edge {
                   const Matrix& fx,
                   const Matrix& dEdf,
                   unsigned i) const override;
-  inline const real& operator()(int i, int j) const { return (*params)(i,j); }
   Dim dim;
   const Parameters* params;
 };
 
 // represents constant inputs
 struct InputEdge : public Edge {
-  explicit InputEdge(const Matrix& m) : dim(m.rows(), m.cols()), values(m) {}
+  explicit InputEdge(const ConstParameters* p) : dim(p->values.rows(), p->values.cols()), params(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;
   Matrix backward(const std::vector<const Matrix*>& xs,
                   const Matrix& fx,
                   const Matrix& dEdf,
                   unsigned i) const override;
-  inline const real& operator()(int i, int j) const { return values(i,j); }
   Dim dim;
-  Matrix values;
+  const ConstParameters* params;
 };
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
@@ -44,7 +42,6 @@ struct LookupEdge : public Edge {
                   const Matrix& fx,
                   const Matrix& dEdf,
                   unsigned i) const override;
-  inline const Matrix& operator[](unsigned i) const { return (*params)[i]; }
   Dim dim;
   const LookupParameters* params;
 };

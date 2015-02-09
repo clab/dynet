@@ -14,16 +14,10 @@ Hypergraph::~Hypergraph() {
   for (auto n : nodes) delete n;
 }
 
-unsigned Hypergraph::add_scalar_input(real s, const string& name) {
-  Matrix m(1,1);
-  m(0,0) = s;
-  return add_input(m, name);
-}
-
-unsigned Hypergraph::add_input(const Matrix& m, const string& name) {
+unsigned Hypergraph::add_input(const ConstParameters* p, const string& name) {
   unsigned new_node_index = nodes.size();
   nodes.push_back(new Node(edges.size(), name));
-  InputEdge* e = new InputEdge(m);
+  InputEdge* e = new InputEdge(p);
   edges.push_back(e);
   edges.back()->head_node = new_node_index;
   return new_node_index;

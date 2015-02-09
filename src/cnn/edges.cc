@@ -35,7 +35,7 @@ string InputEdge::as_string(const vector<string>& arg_names) const {
 
 Matrix InputEdge::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 0);
-  return values;
+  return params->values;
 }
 
 Matrix InputEdge::backward(const vector<const Matrix*>& xs,

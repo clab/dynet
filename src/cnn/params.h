@@ -23,6 +23,19 @@ struct Parameters : public ParametersBase {
   Matrix values;
 };
 
+// represents a collection of inputs (i.e., things that aren't optimized)
+struct ConstParameters : public ParametersBase {
+  explicit ConstParameters(const real& s) : dim(1,1), values(Zero(dim)) { values(0,0) = s; }
+  explicit ConstParameters(const Dim& d) : dim(d), values(Zero(d)) {}
+  explicit ConstParameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v) {}
+  size_t size() const override;
+  real& operator()(int i, int j) { return values(i,j); }
+  const real& operator()(int i, int j) const { return values(i,j); }
+
+  Dim dim;
+  Matrix values;
+};
+
 // represents a matrix/vector embedding of a discrete set
 struct LookupParameters : public ParametersBase {
   LookupParameters(unsigned n, const Dim& d) : dim(d), index(), values(n) {
