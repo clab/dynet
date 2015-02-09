@@ -1,5 +1,5 @@
 #include "cnn/cnn.h"
-#include "cnn/cnn-edges.h"
+#include "cnn/edges.h"
 
 using namespace std;
 
@@ -14,18 +14,33 @@ Hypergraph::~Hypergraph() {
   for (auto n : nodes) delete n;
 }
 
-unsigned Hypergraph::add_parameter(const Dim& d, const string& name) {
+unsigned Hypergraph::add_scalar_input(real s, const string& name) {
+  Matrix m(1,1);
+  m(0,0) = s;
+  return add_input(m, name);
+}
+
+unsigned Hypergraph::add_input(const Matrix& m, const string& name) {
   unsigned new_node_index = nodes.size();
   nodes.push_back(new Node(edges.size(), name));
-  edges.push_back(new ParameterEdge(d));
+  InputEdge* e = new InputEdge(m);
+  edges.push_back(e);
   edges.back()->head_node = new_node_index;
   return new_node_index;
 }
 
-unsigned Hypergraph::add_input(const Dim& d, const string& name) {
+unsigned Hypergraph::add_parameter(const Parameters* p, const std::string& name) {
   unsigned new_node_index = nodes.size();
   nodes.push_back(new Node(edges.size(), name));
-  edges.push_back(new InputEdge(d));
+  edges.push_back(new ParameterEdge(p));
+  edges.back()->head_node = new_node_index;
+  return new_node_index;
+}
+
+unsigned Hypergraph::add_parameter(const LookupParameters* p, const std::string& name) {
+  unsigned new_node_index = nodes.size();
+  nodes.push_back(new Node(edges.size(), name));
+  edges.push_back(new LookupEdge(p));
   edges.back()->head_node = new_node_index;
   return new_node_index;
 }
@@ -46,7 +61,7 @@ Matrix Hypergraph::forward() {
 }
 
 void Hypergraph::backward() {
-  // here we find constants and to avoid doing extra work
+  // here we find constants to avoid doing extra work
   vector<bool> needs_derivative(nodes.size(), false);
   for (unsigned ni = 0; ni < nodes.size(); ++ni) {
     const Node& node = *nodes[ni];

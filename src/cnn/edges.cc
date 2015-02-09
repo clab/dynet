@@ -1,4 +1,4 @@
-#include "cnn/cnn-edges.h"
+#include "cnn/edges.h"
 
 #include <sstream>
 
@@ -16,14 +16,15 @@ string ParameterEdge::as_string(const vector<string>& arg_names) const {
 
 Matrix ParameterEdge::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 0);
-  return values;
+  return params->values;
 }
 
 Matrix ParameterEdge::backward(const vector<const Matrix*>& xs,
                     const Matrix& fx,
                     const Matrix& dEdf,
                     unsigned i) const {
-  return Matrix();
+  cerr << "called backward() on arity 0 edge\n";
+  abort();
 }
 
 string InputEdge::as_string(const vector<string>& arg_names) const {
@@ -41,7 +42,27 @@ Matrix InputEdge::backward(const vector<const Matrix*>& xs,
                     const Matrix& fx,
                     const Matrix& dEdf,
                     unsigned i) const {
-  return Matrix();
+  cerr << "called backward() on arity 0 edge\n";
+  abort();
+}
+
+string LookupEdge::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "lookup[|x|=" << params->values.size() << " --> " << dim << ']';
+  return s.str();
+}
+
+Matrix LookupEdge::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 0);
+  return params->embedding();
+}
+
+Matrix LookupEdge::backward(const vector<const Matrix*>& xs,
+                            const Matrix& fx,
+                            const Matrix& dEdf,
+                            unsigned i) const {
+  cerr << "called backward() on arity 0 edge\n";
+  abort();
 }
 
 string MatrixMultiply::as_string(const vector<string>& arg_names) const {

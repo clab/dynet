@@ -2,12 +2,13 @@
 #define CNN_EDGES_H_
 
 #include "cnn/cnn.h"
+#include "cnn/params.h"
 
 namespace cnn {
 
 // represents optimizable parameters
 struct ParameterEdge : public Edge {
-  ParameterEdge(const Dim& d) : dim(d), values(Random(d)) {}
+  explicit ParameterEdge(const Parameters* p) : dim(p->values.rows(), p->values.cols()), params(p) {}
   bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;
@@ -15,27 +16,40 @@ struct ParameterEdge : public Edge {
                   const Matrix& fx,
                   const Matrix& dEdf,
                   unsigned i) const override;
-  inline real& operator()(int i, int j) { return values(i,j); }
-  inline const real& operator()(int i, int j) const { return values(i,j); }
+  inline const real& operator()(int i, int j) const { return (*params)(i,j); }
   Dim dim;
-  Matrix values;
+  const Parameters* params;
 };
 
 // represents constant inputs
 struct InputEdge : public Edge {
-  InputEdge(const Dim& d) : dim(d), values(Zero(d)) {}
+  explicit InputEdge(const Matrix& m) : dim(m.rows(), m.cols()), values(m) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;
   Matrix backward(const std::vector<const Matrix*>& xs,
                   const Matrix& fx,
                   const Matrix& dEdf,
                   unsigned i) const override;
-  inline real& operator()(int i, int j) { return values(i,j); }
   inline const real& operator()(int i, int j) const { return values(i,j); }
   Dim dim;
   Matrix values;
 };
 
+// represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
+struct LookupEdge : public Edge {
+  LookupEdge(const LookupParameters* p) : dim(p->dim), params(p) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+  inline const Matrix& operator[](unsigned i) const { return (*params)[i]; }
+  Dim dim;
+  const LookupParameters* params;
+};
+
+// y = x_1 * x_2
 struct MatrixMultiply : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;

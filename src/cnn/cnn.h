@@ -7,6 +7,9 @@
 #include <initializer_list>
 #include <Eigen/Eigen>
 
+#include "cnn/tensor.h"
+#include "cnn/params.h"
+
 // Computation graph where nodes represent forward and backward intermediate
 // values, and edges represent functions of multiple values. To represent the
 // fact that a function may have multiple arguments, edges have a single head
@@ -18,32 +21,8 @@
 
 namespace cnn {
 
-typedef Eigen::MatrixXd Matrix;
-typedef double real;
-
 // TODO pull fx and dEdf out of the Node object and have them
 // as local tables in forward/backward algorithms
-
-struct Dim {
-  Dim() : rows(1), cols(1) {}
-  explicit Dim(unsigned m) : rows(m), cols(1) {}
-  Dim(unsigned m, unsigned n) : rows(m), cols(n) {}
-  unsigned short rows;
-  unsigned short cols;
-  Dim transpose() const { return Dim(cols,rows); }
-};
-
-inline Dim operator*(const Dim& a, const Dim& b) {
-  assert(a.cols == b.rows);
-  return Dim(a.rows, b.cols);
-}
-
-inline std::ostream& operator<<(std::ostream& os, const Dim& d) {
-  return os << '(' << d.rows << ',' << d.cols << ')';
-}
-
-inline Matrix Zero(const Dim& d) { return Matrix::Zero(d.rows, d.cols); }
-inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) * 0.08; }
 
 struct Edge;
 struct Node;
@@ -51,8 +30,10 @@ struct Node;
 struct Hypergraph {
   ~Hypergraph();
   // construct a graph
-  unsigned add_parameter(const Dim& d, const std::string& name = "");
-  unsigned add_input(const Dim& d, const std::string& name = "");
+  unsigned add_scalar_input(real s, const std::string& name = "");
+  unsigned add_input(const Matrix& m, const std::string& name = "");
+  unsigned add_parameter(const Parameters* p, const std::string& name = "");
+  unsigned add_parameter(const LookupParameters* p, const std::string& name = "");
   template <class Function> inline unsigned add_function(const std::initializer_list<unsigned>& arguments, const std::string& name = "");
 
   // perform computations
