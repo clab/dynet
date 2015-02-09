@@ -6,63 +6,18 @@ using namespace std;
 
 namespace cnn {
 
-bool ParameterEdge::has_parameters() const { return true; }
+// TODO move the implementation of all the standard functional edges into here
 
-string ParameterEdge::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "params" << dim;
-  return s.str();
-}
-
-Matrix ParameterEdge::forward(const vector<const Matrix*>& xs) const {
-  assert(xs.size() == 0);
-  return params->values;
-}
-
-Matrix ParameterEdge::backward(const vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
-                    unsigned i) const {
-  cerr << "called backward() on arity 0 edge\n";
-  abort();
-}
-
-string InputEdge::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "inputs" << dim;
-  return s.str();
-}
-
-Matrix InputEdge::forward(const vector<const Matrix*>& xs) const {
-  assert(xs.size() == 0);
-  return params->values;
-}
-
-Matrix InputEdge::backward(const vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
-                    unsigned i) const {
-  cerr << "called backward() on arity 0 edge\n";
-  abort();
-}
-
-string LookupEdge::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "lookup[|x|=" << params->values.size() << " --> " << dim << ']';
-  return s.str();
-}
-
-Matrix LookupEdge::forward(const vector<const Matrix*>& xs) const {
-  assert(xs.size() == 0);
-  return params->embedding();
-}
-
-Matrix LookupEdge::backward(const vector<const Matrix*>& xs,
-                            const Matrix& fx,
-                            const Matrix& dEdf,
-                            unsigned i) const {
-  cerr << "called backward() on arity 0 edge\n";
-  abort();
+inline real logsumexp(const Matrix& x) {
+  real m = x(0,0);
+  for (unsigned i = 1; i < x.rows(); ++i) {
+    real r = x(i,0);
+    if (r > m) m = r;
+  }
+  real z = 0;
+  for (unsigned i = 0; i < x.rows(); ++i)
+    z += exp(x(i,0) - m);
+  return m + log(z);
 }
 
 string MatrixMultiply::as_string(const vector<string>& arg_names) const {
@@ -87,6 +42,5 @@ Matrix MatrixMultiply::backward(const vector<const Matrix*>& xs,
     return xs[0]->transpose() * dEdf;
   }
 }
-
 
 } // namespace cnn

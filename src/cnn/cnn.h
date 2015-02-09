@@ -25,14 +25,15 @@ namespace cnn {
 // as local tables in forward/backward algorithms
 
 struct Edge;
+struct ParameterEdgeBase;
 struct Node;
 
 struct Hypergraph {
   ~Hypergraph();
   // construct a graph
-  unsigned add_input(const ConstParameters* m, const std::string& name = "");
-  unsigned add_parameter(const Parameters* p, const std::string& name = "");
-  unsigned add_parameter(const LookupParameters* p, const std::string& name = "");
+  unsigned add_input(ConstParameters* m, const std::string& name = "");
+  unsigned add_parameter(Parameters* p, const std::string& name = "");
+  unsigned add_parameter(LookupParameters* p, const std::string& name = "");
   template <class Function> inline unsigned add_function(const std::initializer_list<unsigned>& arguments, const std::string& name = "");
 
   // perform computations
@@ -43,8 +44,9 @@ struct Hypergraph {
   void PrintGraphviz() const;
 
   // data
-  std::vector<Edge*> edges;
   std::vector<Node*> nodes;  // **stored in topological order**
+  std::vector<Edge*> edges;  // all edges
+  std::vector<ParameterEdgeBase*> parameter_edges; // edges that contain parameters that can be updated (subset of edges)
 };
 
 // represents an SSA variable

@@ -1,5 +1,6 @@
 #include "cnn/cnn.h"
 #include "cnn/edges.h"
+#include "cnn/param-edges.h"
 
 using namespace std;
 
@@ -10,11 +11,12 @@ Edge::~Edge() {}
 bool Edge::has_parameters() const { return false; }
 
 Hypergraph::~Hypergraph() {
-  for (auto e : edges) delete e;
   for (auto n : nodes) delete n;
+  for (auto e : edges) delete e;
+  // don't delete parameter_edges since they're a subset of edges
 }
 
-unsigned Hypergraph::add_input(const ConstParameters* p, const string& name) {
+unsigned Hypergraph::add_input(ConstParameters* p, const string& name) {
   unsigned new_node_index = nodes.size();
   nodes.push_back(new Node(edges.size(), name));
   InputEdge* e = new InputEdge(p);
@@ -23,19 +25,23 @@ unsigned Hypergraph::add_input(const ConstParameters* p, const string& name) {
   return new_node_index;
 }
 
-unsigned Hypergraph::add_parameter(const Parameters* p, const std::string& name) {
+unsigned Hypergraph::add_parameter(Parameters* p, const std::string& name) {
   unsigned new_node_index = nodes.size();
   nodes.push_back(new Node(edges.size(), name));
-  edges.push_back(new ParameterEdge(p));
-  edges.back()->head_node = new_node_index;
+  ParameterEdge* new_edge = new ParameterEdge(p);
+  edges.push_back(new_edge);
+  parameter_edges.push_back(new_edge);
+  new_edge->head_node = new_node_index;
   return new_node_index;
 }
 
-unsigned Hypergraph::add_parameter(const LookupParameters* p, const std::string& name) {
+unsigned Hypergraph::add_parameter(LookupParameters* p, const std::string& name) {
   unsigned new_node_index = nodes.size();
   nodes.push_back(new Node(edges.size(), name));
-  edges.push_back(new LookupEdge(p));
-  edges.back()->head_node = new_node_index;
+  LookupEdge* new_edge = new LookupEdge(p);
+  edges.push_back(new_edge);
+  parameter_edges.push_back(new_edge);
+  new_edge->head_node = new_node_index;
   return new_node_index;
 }
 
@@ -87,6 +93,10 @@ void Hypergraph::backward() {
       }
     }
   }
+
+  // accumulate gradients into parameters
+  for (auto pedge : parameter_edges)
+    pedge->accumulate_grad(nodes[pedge->head_node]->dEdf);
 }
 
 void Hypergraph::PrintGraphviz() const {

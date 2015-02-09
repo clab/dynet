@@ -31,15 +31,23 @@ int main() {
   unsigned i_y_pred = hg.add_function<Sum>({i_p, i_a}, "y_pred");
   hg.add_function<SquaredEuclideanDistance>({i_y_pred, i_y}, "err");
   hg.PrintGraphviz();
-
   // train the parameters
-  for (unsigned iter = 0; iter < 4; ++iter) {
-    p_x(0,0) = (iter % 2 == 0) ? -1 : 1;
-    p_x(1,0) = ((iter / 2) % 2 == 0) ? -1 : 1;
-    double y = -1;
-    if (iter % 2 != (iter / 2) % 2) y = -1;
-    p_y(0,0) = y;
-    cerr << "E = " << hg.forward() << endl;
+  for (unsigned iter = 0; iter < 40; ++iter) {
+    double loss = 0;
+    for (unsigned mi = 0; mi < 4; ++mi) {
+      bool x1 = mi % 2;
+      bool x2 = (mi / 2) % 2;
+      p_x(0,0) = x1 ? 1 : -1;
+      p_x(1,0) = x2 ? 1 : -1;
+      p_y(0,0) = (x1 != x2) ? 1 : -1;
+      loss += hg.forward()(0,0);
+      hg.backward();
+    }
+    cerr << "E = " << (loss / 4) << endl;
+    p_a.update(1);
+    p_W.update(1);
+    p_V.update(1);
+    p_b.update(1);
   }
 }
 

@@ -28,7 +28,8 @@ inline std::ostream& operator<<(std::ostream& os, const Dim& d) {
 }
 
 inline Matrix Zero(const Dim& d) { return Matrix::Zero(d.rows, d.cols); }
-inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) * 0.08; }
+inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) / sqrt(d.rows); }
+inline Matrix Random(const Dim& d, double scale) { return Matrix::Random(d.rows, d.cols) * scale; }
 
 } // namespace cnn
 
