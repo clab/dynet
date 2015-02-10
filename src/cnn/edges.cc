@@ -77,6 +77,32 @@ Matrix MatrixMultiply::backward(const vector<const Matrix*>& xs,
   }
 }
 
+string Multilinear::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); i += 2)
+    s << " + " << arg_names[i] << " * " << arg_names[i+1];
+  return s.str();
+}
+
+Matrix Multilinear::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() % 2 == 1);
+  Matrix fx = *xs.front();
+  for (unsigned i = 1; i < xs.size(); i += 2)
+    fx += (*xs[i]) * (*xs[i + 1]);
+  return fx;
+}
+
+Matrix Multilinear::backward(const vector<const Matrix*>& xs,
+                             const Matrix& fx,
+                             const Matrix& dEdf,
+                             unsigned i) const {
+  assert(i < xs.size());
+  if (i == 0) return dEdf;
+  if (i % 2 == 1) return dEdf * xs[i+1]->transpose();
+  return xs[i-1]->transpose() * dEdf;
+}
+
 string Negate::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << '-' << arg_names[0];
