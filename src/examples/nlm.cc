@@ -51,13 +51,24 @@ int main(int argc, char** argv) {
   unsigned i_R = hg.add_parameter(&p_R, "R");
   unsigned i_ytrue = hg.add_input(&p_ytrue, "ytrue");
   unsigned i_bias = hg.add_parameter(&p_bias, "bias");
+
+#if 0
   unsigned i_r1 = hg.add_function<MatrixMultiply>({i_C1, i_c1}, "r1");
   unsigned i_r2 = hg.add_function<MatrixMultiply>({i_C2, i_c2}, "r2");
   unsigned i_r3 = hg.add_function<MatrixMultiply>({i_C3, i_c3}, "r3");
   unsigned i_r = hg.add_function<Sum>({i_r1, i_r2, i_r3, i_hb}, "r");
+#else
+  unsigned i_r = hg.add_function<Multilinear>({i_hb, i_C1, i_c1, i_C2, i_c2, i_C3, i_c3}, "r");
+#endif
+
   unsigned i_nl = hg.add_function<Rectify>({i_r}, "nl");
+
+#if 0
   unsigned i_o1 = hg.add_function<MatrixMultiply>({i_R, i_nl}, "o1");
   unsigned i_o2 = hg.add_function<Sum>({i_o1, i_bias}, "o2");
+#else
+  unsigned i_o2 = hg.add_function<Multilinear>({i_bias, i_R, i_nl}, "o2");
+#endif
   unsigned i_ydist = hg.add_function<LogSoftmax>({i_o2}, "ydist");
   unsigned i_nerr = hg.add_function<PickElement>({i_ydist, i_ytrue}, "nerr");
   hg.add_function<Negate>({i_nerr}, "err");

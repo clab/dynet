@@ -14,6 +14,7 @@ struct RNNBuilder {
                       unsigned input_dim,
                       unsigned hidden_dim,
                       Trainer* trainer);
+  ~RNNBuilder();
 
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
@@ -30,6 +31,8 @@ struct RNNBuilder {
 
   Hypergraph* hg;
   const unsigned layers;
+
+  std::vector<ParametersBase*> to_be_deleted;
 };
 
 } // namespace cnn

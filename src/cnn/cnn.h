@@ -39,6 +39,7 @@ struct Hypergraph {
   // the caller can set before running forward()
   unsigned add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name = "");
   template <class Function> inline unsigned add_function(const std::initializer_list<unsigned>& arguments, const std::string& name = "");
+  template <class Function, typename T> inline unsigned add_function(const T& arguments, const std::string& name = "");
 
   // perform computations
   Matrix forward();
@@ -106,6 +107,21 @@ struct Edge {
 
 template <class Function>
 inline unsigned Hypergraph::add_function(const std::initializer_list<unsigned>& arguments, const std::string& name) {
+  unsigned new_node_index = nodes.size();
+  unsigned new_edge_index = edges.size();
+  nodes.push_back(new Node(new_edge_index, name));
+  Edge* new_edge = new Function;
+  edges.push_back(new_edge);
+  new_edge->head_node = new_node_index;
+  for (auto ni : arguments) {
+    new_edge->tail.push_back(ni);
+    nodes[ni]->out_edges.push_back(new_edge_index);
+  }
+  return new_node_index;
+}
+
+template <class Function, typename T>
+inline unsigned Hypergraph::add_function(const T& arguments, const std::string& name) {
   unsigned new_node_index = nodes.size();
   unsigned new_edge_index = edges.size();
   nodes.push_back(new Node(new_edge_index, name));
