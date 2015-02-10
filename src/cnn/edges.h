@@ -168,46 +168,15 @@ struct Tanh : public Edge {
   }
 };
 
+// z = \sum_j \exp (x_i)_j
+// y_i = (x_1)_i - \log z
 struct LogSoftmax : public Edge {
-  // z = \sum_j \exp (x_i)_j
-  // y_i = (x_1)_i - \log z
-  string as_string(const vector<string>& arg_names) const {
-    ostringstream s;
-    s << "log_softmax(" << arg_names[0] << ')';
-    return s.str();
-  }
-
-  Matrix forward(const vector<const Matrix*>& xs) const {
-    assert(xs.size() == 1);
-    const Matrix& x = *xs.front();
-    const unsigned rows = x.rows();
-    assert(x.cols() == 1);
-    Matrix fx(rows, 1);
-    // TODO switch to logsum and z=-inf
-    real z = 0;
-    for (unsigned i = 0; i < rows; ++i)
-      z += exp(x(i,0));
-    real logz = log(z);
-    for (unsigned i = 0; i < rows; ++i)
-      fx(i,0) = x(i,0) - logz;
-    return fx;
-  }
-
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const vector<const Matrix*>& xs) const override;
   Matrix backward(const vector<const Matrix*>& xs,
                     const Matrix& fx,
                     const Matrix& dEdf,
-                    unsigned i) const override {
-    assert(i == 0);
-    const Matrix& x = *xs.front();
-    const unsigned rows = x.rows();
-    Matrix dEdx(rows, 1);
-    double z = 0;
-    for (unsigned i = 0; i < rows; ++i)
-      z += dEdf(i, 0);
-    for (unsigned i = 0; i < rows; ++i)
-      dEdx(i, 0) = dEdf(i, 0) - exp(fx(i, 0)) * z;
-    return dEdx;
-  }
+                    unsigned i) const override;
 };
 
 struct PickElement : public Edge {

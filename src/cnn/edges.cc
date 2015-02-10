@@ -20,6 +20,40 @@ inline real logsumexp(const Matrix& x) {
   return m + log(z);
 }
 
+string LogSoftmax::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "log_softmax(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Matrix LogSoftmax::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  const Matrix& x = *xs.front();
+  const unsigned rows = x.rows();
+  assert(x.cols() == 1);
+  const real logz = logsumexp(x);
+  Matrix fx(rows, 1);
+  for (unsigned i = 0; i < rows; ++i)
+    fx(i,0) = x(i,0) - logz;
+  return fx;
+}
+
+Matrix LogSoftmax::backward(const vector<const Matrix*>& xs,
+                            const Matrix& fx,
+                            const Matrix& dEdf,
+                            unsigned i) const {
+  assert(i == 0);
+  const Matrix& x = *xs.front();
+  const unsigned rows = x.rows();
+  Matrix dEdx(rows, 1);
+  double z = 0;
+  for (unsigned i = 0; i < rows; ++i)
+    z += dEdf(i, 0);
+  for (unsigned i = 0; i < rows; ++i)
+    dEdx(i, 0) = dEdf(i, 0) - exp(fx(i, 0)) * z;
+  return dEdx;
+}
+
 string MatrixMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " * " << arg_names[1];
