@@ -1,4 +1,4 @@
-all: graph1 xor
+all: graph1 xor nlm
 
 graph1: graph1.cc
 	g++ -g -O3 -Wall -std=c++11 -I.. -I/Users/cdyer/software/eigen-eigen-36fd1ba04c12 $< ../cnn/libcnn.a -o $@
@@ -6,4 +6,6 @@ graph1: graph1.cc
 xor: xor.cc
 	g++ -g -O3 -Wall -std=c++11 -I.. -I/Users/cdyer/software/eigen-eigen-36fd1ba04c12 $< ../cnn/libcnn.a -o $@
 
+nlm: nlm.cc
+	g++ -g -O3 -Wall -std=c++11 -I.. -I/Users/cdyer/software/eigen-eigen-36fd1ba04c12 $< ../cnn/libcnn.a -o $@
 

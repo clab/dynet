@@ -6,8 +6,8 @@
 
 namespace cnn {
 
-typedef Eigen::MatrixXd Matrix;
-typedef double real;
+typedef Eigen::MatrixXf Matrix;
+typedef float real;
 
 struct Dim {
   Dim() : rows(1), cols(1) {}
@@ -28,7 +28,7 @@ inline std::ostream& operator<<(std::ostream& os, const Dim& d) {
 }
 
 inline Matrix Zero(const Dim& d) { return Matrix::Zero(d.rows, d.cols); }
-inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) / sqrt(d.rows); }
+inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) * (sqrt(6) / sqrt(d.cols + d.rows)); }
 inline Matrix Random(const Dim& d, double scale) { return Matrix::Random(d.rows, d.cols) * scale; }
 
 } // namespace cnn

@@ -7,11 +7,15 @@
 
 namespace cnn {
 
+// to deal with sparse updates, there are two parameter classes:
+// * Parameters represents a vector, matrix, (eventually higher order tensors)
+//   of parameters. These are densely updated.
+// * LookupParameters represents a table of vectors that are used to embed a
+//   set of discrete objects. These are sparsely updated.
+
 struct ParametersBase {
   virtual ~ParametersBase();
   virtual size_t size() const = 0;
-  virtual void accumulate_grad(const Matrix& g) = 0;
-  virtual void update(real scale) = 0;
 };
 
 // represents parameters (e.g., a weight matrix)
@@ -23,12 +27,30 @@ struct Parameters : public ParametersBase {
   real& operator()(int i, int j) { return values(i,j); }
   const real& operator()(int i, int j) const { return values(i,j); }
 
-  void accumulate_grad(const Matrix& g) override;
-  void update(real scale) override;
+  void accumulate_grad(const Matrix& g);
+  void clear();
 
   Dim dim;
   Matrix values;
   Matrix g;
+};
+
+// represents a matrix/vector embedding of a discrete set
+struct LookupParameters : public ParametersBase {
+  LookupParameters(unsigned n, const Dim& d) : dim(d), values(n) {
+    for (auto& v : values) v = Random(d);
+  }
+  size_t size() const override;
+
+  Matrix& operator[](unsigned i) { return values[i]; }
+  const Matrix& operator[](unsigned i) const { return values[i]; }
+
+  void accumulate_grad(unsigned index, const Matrix& g);
+  void clear();
+
+  Dim dim;
+  std::vector<Matrix> values;
+  std::unordered_map<unsigned, Matrix> g;
 };
 
 // represents an input (i.e., things that aren't optimized)
@@ -40,31 +62,8 @@ struct ConstParameters : public ParametersBase {
   real& operator()(int i, int j) { return values(i,j); }
   const real& operator()(int i, int j) const { return values(i,j); }
 
-  void accumulate_grad(const Matrix& g) override;
-  void update(real scale) override;
-
   Dim dim;
   Matrix values;
-};
-
-// represents a matrix/vector embedding of a discrete set
-struct LookupParameters : public ParametersBase {
-  LookupParameters(unsigned n, const Dim& d) : dim(d), index(), values(n) {
-    for (auto& v : values) v = Random(d);
-  }
-  size_t size() const override;
-
-  const Matrix& embedding() const { return values[index]; }
-  Matrix& operator[](unsigned i) { return values[i]; }
-  const Matrix& operator[](unsigned i) const { return values[i]; }
-
-  void accumulate_grad(const Matrix& g) override;
-  void update(real scale) override;
-
-  Dim dim;
-  unsigned index; // index of item in set to be embedded
-  std::vector<Matrix> values;
-  std::unordered_map<unsigned, Matrix> g;
 };
 
 } // namespace cnn

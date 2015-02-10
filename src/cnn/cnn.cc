@@ -35,10 +35,11 @@ unsigned Hypergraph::add_parameter(Parameters* p, const std::string& name) {
   return new_node_index;
 }
 
-unsigned Hypergraph::add_parameter(LookupParameters* p, const std::string& name) {
+unsigned Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name) {
   unsigned new_node_index = nodes.size();
   nodes.push_back(new Node(edges.size(), name));
   LookupEdge* new_edge = new LookupEdge(p);
+  *ppindex = &new_edge->index;
   edges.push_back(new_edge);
   parameter_edges.push_back(new_edge);
   new_edge->head_node = new_node_index;

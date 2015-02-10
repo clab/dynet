@@ -4,7 +4,8 @@ OBJ_FILES = \
   cnn.o \
   edges.o \
   param-edges.o \
-  params.o
+  params.o \
+  training.o
 
 clean:
 	$(RM) -f *.o libcnn.a

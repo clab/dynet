@@ -15,6 +15,36 @@ struct MatrixMultiply : public Edge {
                   unsigned i) const override;
 };
 
+// y = -x_1
+struct Negate : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+};
+
+// y = max(0,x)
+struct Rectify : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+};
+
+// y = hardtanh(0,x)
+struct HardTanh : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+};
+
 // TODO move implementations of everything here into .cc file see MatrixMultiply as an example
 using namespace std;
 
@@ -24,7 +54,7 @@ struct Sum : public Edge {
     ostringstream s;
     s << arg_names[0];
     for (unsigned i = 1; i < tail.size(); ++i)
-      s << " + " << arg_names[1];
+      s << " + " << arg_names[i];
     return s.str();
   }
 

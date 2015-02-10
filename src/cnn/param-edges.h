@@ -41,7 +41,7 @@ struct InputEdge : public ParameterEdgeBase {
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
 struct LookupEdge : public ParameterEdgeBase {
-  LookupEdge(LookupParameters* p) : dim(p->dim), params(p) {}
+  LookupEdge(LookupParameters* p) : dim(p->dim), index(), params(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;
   Matrix backward(const std::vector<const Matrix*>& xs,
@@ -50,6 +50,7 @@ struct LookupEdge : public ParameterEdgeBase {
                   unsigned i) const override;
   void accumulate_grad(const Matrix& g) override;
   Dim dim;
+  unsigned index;
   LookupParameters* params;
 };
 

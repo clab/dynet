@@ -33,7 +33,11 @@ struct Hypergraph {
   // construct a graph
   unsigned add_input(ConstParameters* m, const std::string& name = "");
   unsigned add_parameter(Parameters* p, const std::string& name = "");
-  unsigned add_parameter(LookupParameters* p, const std::string& name = "");
+  // this is rather ugly, but lookup parameters are a combination of pure parameters
+  // and a "constant input" (this is done for computational efficiency reasons), so
+  // the ppindex parameter is used to return a pointer to the "input" variable that
+  // the caller can set before running forward()
+  unsigned add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name = "");
   template <class Function> inline unsigned add_function(const std::initializer_list<unsigned>& arguments, const std::string& name = "");
 
   // perform computations

@@ -63,7 +63,7 @@ string LookupEdge::as_string(const vector<string>& arg_names) const {
 
 Matrix LookupEdge::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 0);
-  return params->embedding();
+  return params->values[index];
 }
 
 Matrix LookupEdge::backward(const vector<const Matrix*>& xs,
@@ -75,7 +75,7 @@ Matrix LookupEdge::backward(const vector<const Matrix*>& xs,
 }
 
 void LookupEdge::accumulate_grad(const Matrix& g) {
-  params->accumulate_grad(g);
+  params->accumulate_grad(index, g);
 }
 
 } // namespace cnn
