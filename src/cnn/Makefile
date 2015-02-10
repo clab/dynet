@@ -5,6 +5,7 @@ OBJ_FILES = \
   edges.o \
   param-edges.o \
   params.o \
+  rnn.o \
   training.o
 
 clean:
