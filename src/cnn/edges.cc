@@ -77,6 +77,29 @@ Matrix MatrixMultiply::backward(const vector<const Matrix*>& xs,
   }
 }
 
+string CwiseMultiply::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " \\cdot " << arg_names[1];
+  return s.str();
+}
+
+Matrix CwiseMultiply::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 2);
+  return xs[0]->cwiseProduct(*xs[1]);
+}
+
+Matrix CwiseMultiply::backward(const vector<const Matrix*>& xs,
+                               const Matrix& fx,
+                               const Matrix& dEdf,
+                               unsigned i) const {
+  assert(i < 2);
+  if (i == 0) {
+    return dEdf.cwiseProduct(*xs[1]);
+  } else {
+    return dEdf.cwiseProduct(*xs[0]);
+  }
+}
+
 string Multilinear::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0];

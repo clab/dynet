@@ -25,10 +25,12 @@ RNNBuilder::RNNBuilder(Hypergraph* g,
   to_be_deleted.push_back(p_z);
   zero = hg->add_input(p_z, "zero");
 
+  unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    Parameters* p_x2h = new Parameters(Dim(hidden_dim, input_dim));
+    Parameters* p_x2h = new Parameters(Dim(hidden_dim, layer_input_dim));
     Parameters* p_h2h = new Parameters(Dim(hidden_dim, hidden_dim));
     Parameters* p_hb = new Parameters(Dim(hidden_dim, 1));
+    layer_input_dim = hidden_dim;
     to_be_deleted.push_back(p_x2h);
     to_be_deleted.push_back(p_h2h);
     to_be_deleted.push_back(p_hb);

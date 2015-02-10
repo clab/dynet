@@ -3,6 +3,7 @@ all: libcnn.a
 OBJ_FILES = \
   cnn.o \
   edges.o \
+  lstm.o \
   param-edges.o \
   params.o \
   rnn.o \

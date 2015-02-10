@@ -15,6 +15,16 @@ struct MatrixMultiply : public Edge {
                   unsigned i) const override;
 };
 
+// y = x_1 \cdot x_2  (Hadamard product)
+struct CwiseMultiply : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+};
+
 // y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
 struct Multilinear : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
