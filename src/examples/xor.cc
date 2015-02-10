@@ -32,11 +32,20 @@ int main() {
   unsigned i_a = hg.add_parameter(&p_a, "a");
   unsigned i_W = hg.add_parameter(&p_W, "W");
   unsigned i_V = hg.add_parameter(&p_V, "V");
+#if 0
   unsigned i_f = hg.add_function<MatrixMultiply>({i_W, i_x}, "f");
   unsigned i_g = hg.add_function<Sum>({i_f, i_b}, "g");
+#else
+  unsigned i_g = hg.add_function<Multilinear>({i_b, i_W, i_x}, "g");
+#endif
   unsigned i_h = hg.add_function<Tanh>({i_g}, "h");
+
+#if 0
   unsigned i_p = hg.add_function<MatrixMultiply>({i_V, i_h}, "p");
   unsigned i_y_pred = hg.add_function<Sum>({i_p, i_a}, "y_pred");
+#else
+  unsigned i_y_pred = hg.add_function<Multilinear>({i_a, i_V, i_h}, "y_pred");
+#endif
   hg.add_function<SquaredEuclideanDistance>({i_y_pred, i_y}, "err");
   hg.PrintGraphviz();
 
