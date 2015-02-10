@@ -7,7 +7,7 @@ using namespace std;
 using namespace cnn;
 
 int main() {
-  sranddev();
+  srand(time(0));
   cnn::Hypergraph hg;
   Matrix x(2,1); x(0,0) = 1; x(1,0) = -1;
   ConstParameters p_x(x);

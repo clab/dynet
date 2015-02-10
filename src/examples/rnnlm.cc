@@ -12,11 +12,11 @@
 using namespace std;
 using namespace cnn;
 
-unsigned DIM = 150;
+unsigned DIM = 50;
 unsigned VOCAB_SIZE = 30;
 
 int main(int argc, char** argv) {
-  sranddev();
+  srand(time(0));
   if (argc != 2) {
     cerr << "Usage: " << argv[0] << " text.ints\n";
     return 1;
@@ -84,9 +84,9 @@ int main(int argc, char** argv) {
       hg.add_function<Negate>({i_nerr}, "err");
       loss += hg.forward()(0,0);
       hg.backward();
-      sgd->update(1.0 / slen);
+      sgd->update(0.5 / slen);
       ++lines;
-      if (lines == 10000) break;
+      if (lines == 1000) break;
     }
     cerr << "E = " << (loss / chars);
     

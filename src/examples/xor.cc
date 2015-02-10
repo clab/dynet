@@ -8,7 +8,7 @@ using namespace std;
 using namespace cnn;
 
 int main() {
-  sranddev();
+  srand(time(0));
 
   RMSPropTrainer sgd;
 

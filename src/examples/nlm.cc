@@ -11,7 +11,7 @@ using namespace std;
 using namespace cnn;
 
 int main(int argc, char** argv) {
-  sranddev();
+  srand(time(0));
 
   Trainer* sgd = 0;
   if (false) {
