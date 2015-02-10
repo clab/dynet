@@ -10,5 +10,5 @@ nlm: nlm.cc
 	g++ -g -O3 -Wall -std=c++11 -I.. -I/Users/cdyer/software/eigen-eigen-36fd1ba04c12 $< ../cnn/libcnn.a -o $@
 
 rnnlm: rnnlm.cc
-	g++ -g -O3 -Wall -std=c++11 -I.. -I/Users/cdyer/software/eigen-eigen-36fd1ba04c12 $< ../cnn/libcnn.a -o $@
+	g++ -g -O4 -Wall -std=c++11 -I.. -I/Users/cdyer/software/eigen-eigen-36fd1ba04c12 $< ../cnn/libcnn.a -o $@
 
