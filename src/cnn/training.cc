@@ -9,6 +9,11 @@ void Trainer::add_params_impl(Parameters* p) {}
 void Trainer::add_params_impl(LookupParameters* p) {}
 
 void SimpleSGDTrainer::update(real scale) {
+  //double gg = 0;
+  //for (auto p : all_params) {
+  //  gg+=p->g_squared_l2norm();
+  //}
+  //gg = sqrt(gg);
   for (auto p : params) {
     const Matrix reg = p->values * lambda;
     p->values -= (eta * scale) * p->g;

@@ -11,19 +11,20 @@ using namespace std;
 
 namespace cnn {
 
+enum { X2I, H2I, C2I, BI, X2F, H2F, C2F, BF, X2O, H2O, C2O, BO, X2C, H2C, BC };
+
 LSTMBuilder::~LSTMBuilder() {
   for (auto p : to_be_deleted) delete p;
 }
 
-LSTMBuilder::LSTMBuilder(Hypergraph* g,
-                       unsigned layers,
+LSTMBuilder::LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Trainer* trainer) : hg(g), layers(layers) {
+                       Trainer* trainer) : layers(layers) {
   assert(layers < 10);
-  ConstParameters* p_z = new ConstParameters(Matrix::Zero(hidden_dim, hidden_dim));
+  // TODO move into stack-allocated object
+  p_z = new ConstParameters(Matrix::Zero(hidden_dim, 1));
   to_be_deleted.push_back(p_z);
-  zero = hg->add_input(p_z, "zero");
 
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
@@ -51,38 +52,48 @@ LSTMBuilder::LSTMBuilder(Hypergraph* g,
     Parameters* p_bc = new Parameters(Dim(hidden_dim, 1));
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
-    trainer->add_params({p_x2i, p_h2i, p_c2i, p_bi, p_x2f, p_h2f, p_c2f, p_bf, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bo});
+    trainer->add_params({p_x2i, p_h2i, p_c2i, p_bi, p_x2f, p_h2f, p_c2f, p_bf, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc});
+    vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2f, p_h2f, p_c2f, p_bf, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
+    params.push_back(ps);
+    for (auto p : ps) to_be_deleted.push_back(p);
+  }  // layers
+}
 
-    // TODO free list
+void LSTMBuilder::add_parameter_edges(Hypergraph* hg) {
+  zero = hg->add_input(p_z, "zero");
+  param_vars.clear();
+  h.clear();
+  c.clear();
+  for (unsigned i = 0; i < layers; ++i) {
     string layer = to_string(i);
+    auto& p = params[i];
 
     // i
-    unsigned i_x2i = hg->add_parameter(p_x2i, "x2i:" + layer);
-    unsigned i_h2i = hg->add_parameter(p_h2i, "h2i:" + layer);
-    unsigned i_c2i = hg->add_parameter(p_c2i, "c2i:" + layer);
-    unsigned i_bi = hg->add_parameter(p_bi, "bi:" + layer);
+    unsigned i_x2i = hg->add_parameter(p[X2I], "x2i:" + layer);
+    unsigned i_h2i = hg->add_parameter(p[H2I], "h2i:" + layer);
+    unsigned i_c2i = hg->add_parameter(p[C2I], "c2i:" + layer);
+    unsigned i_bi = hg->add_parameter(p[BI], "bi:" + layer);
     // f
-    unsigned i_x2f = hg->add_parameter(p_x2f, "x2f:" + layer);
-    unsigned i_h2f = hg->add_parameter(p_h2f, "h2f:" + layer);
-    unsigned i_c2f = hg->add_parameter(p_c2f, "c2f:" + layer);
-    unsigned i_bf = hg->add_parameter(p_bf, "bf:" + layer);
+    unsigned i_x2f = hg->add_parameter(p[X2F], "x2f:" + layer);
+    unsigned i_h2f = hg->add_parameter(p[H2F], "h2f:" + layer);
+    unsigned i_c2f = hg->add_parameter(p[C2F], "c2f:" + layer);
+    unsigned i_bf = hg->add_parameter(p[BF], "bf:" + layer);
     // i
-    unsigned i_x2o = hg->add_parameter(p_x2o, "x2o:" + layer);
-    unsigned i_h2o = hg->add_parameter(p_h2o, "h2o:" + layer);
-    unsigned i_c2o = hg->add_parameter(p_c2o, "c2o:" + layer);
-    unsigned i_bo = hg->add_parameter(p_bo, "bo:" + layer);
+    unsigned i_x2o = hg->add_parameter(p[X2O], "x2o:" + layer);
+    unsigned i_h2o = hg->add_parameter(p[H2O], "h2o:" + layer);
+    unsigned i_c2o = hg->add_parameter(p[C2O], "c2o:" + layer);
+    unsigned i_bo = hg->add_parameter(p[BO], "bo:" + layer);
     // c
-    unsigned i_x2c = hg->add_parameter(p_x2c, "x2c:" + layer);
-    unsigned i_h2c = hg->add_parameter(p_h2c, "h2c:" + layer);
-    unsigned i_bc = hg->add_parameter(p_bc, "bc:" + layer);
+    unsigned i_x2c = hg->add_parameter(p[X2C], "x2c:" + layer);
+    unsigned i_h2c = hg->add_parameter(p[H2C], "h2c:" + layer);
+    unsigned i_bc = hg->add_parameter(p[BC], "bc:" + layer);
 
     vector<unsigned> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2f, i_h2f, i_c2f, i_bf, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
   }
 }
 
-unsigned LSTMBuilder::add_input(unsigned x) {
-  enum { X2I, H2I, C2I, BI, X2F, H2F, C2F, BF, X2O, H2O, C2O, BO, X2C, H2C, BC };
+unsigned LSTMBuilder::add_input(unsigned x, Hypergraph* hg) {
   const unsigned t = h.size();
   string ts = to_string(t);
   h.push_back(vector<unsigned>(layers));

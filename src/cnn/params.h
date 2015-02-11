@@ -15,6 +15,7 @@ namespace cnn {
 
 struct ParametersBase {
   virtual ~ParametersBase();
+  virtual real g_squared_l2norm() const = 0;
   virtual size_t size() const = 0;
 };
 
@@ -22,6 +23,7 @@ struct ParametersBase {
 struct Parameters : public ParametersBase {
   explicit Parameters(const Dim& d) : dim(d), values(Random(d)), g(Zero(d)) {}
   explicit Parameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v), g(Zero(dim)) {}
+  real g_squared_l2norm() const override;
   size_t size() const override;
 
   real& operator()(int i, int j) { return values(i,j); }
@@ -40,6 +42,7 @@ struct LookupParameters : public ParametersBase {
   LookupParameters(unsigned n, const Dim& d) : dim(d), values(n) {
     for (auto& v : values) v = Random(d);
   }
+  real g_squared_l2norm() const override;
   size_t size() const override;
 
   Matrix& operator[](unsigned i) { return values[i]; }
@@ -58,6 +61,7 @@ struct ConstParameters : public ParametersBase {
   explicit ConstParameters(const real& s) : dim(1,1), values(Zero(dim)) { values(0,0) = s; }
   explicit ConstParameters(const Dim& d) : dim(d), values(Zero(d)) {}
   explicit ConstParameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v) {}
+  real g_squared_l2norm() const override;
   size_t size() const override;
   real& operator()(int i, int j) { return values(i,j); }
   const real& operator()(int i, int j) const { return values(i,j); }

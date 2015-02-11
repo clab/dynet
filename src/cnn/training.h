@@ -11,11 +11,13 @@ namespace cnn {
 struct Trainer {
   virtual ~Trainer();
   void add_params(Parameters* p) {
+    all_params.push_back(p);
     params.push_back(p);
     add_params_impl(p);
   }
 
   void add_params(LookupParameters* p) {
+    all_params.push_back(p);
     lookup_params.push_back(p);
     add_params_impl(p);
   }
@@ -32,6 +34,7 @@ struct Trainer {
   virtual void add_params_impl(LookupParameters* p);
   virtual void update(real scale) = 0;
 
+  std::vector<ParametersBase*> all_params;
   std::vector<Parameters*> params;
   std::vector<LookupParameters*> lookup_params;
 };
