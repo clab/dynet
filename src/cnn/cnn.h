@@ -38,6 +38,7 @@ struct Hypergraph {
   // the ppindex parameter is used to return a pointer to the "input" variable that
   // the caller can set before running forward()
   unsigned add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name = "");
+  unsigned add_lookup(LookupParameters* p, unsigned index, const std::string& name = "");
   template <class Function> inline unsigned add_function(const std::initializer_list<unsigned>& arguments, const std::string& name = "");
   template <class Function, typename T> inline unsigned add_function(const T& arguments, const std::string& name = "");
 

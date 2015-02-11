@@ -12,8 +12,10 @@
 using namespace std;
 using namespace cnn;
 
-unsigned DIM = 50;
-unsigned VOCAB_SIZE = 30;
+unsigned LAYERS = 2;
+unsigned INPUT_DIM = 10;
+unsigned HIDDEN_DIM = 50;
+unsigned VOCAB_SIZE = 32;
 
 int main(int argc, char** argv) {
   srand(time(0));
@@ -43,12 +45,13 @@ int main(int argc, char** argv) {
   }
 
   // parameters
-  LookupParameters p_c(VOCAB_SIZE, Dim(DIM, 1));
-  Parameters p_R(Dim(VOCAB_SIZE, DIM));
+  LookupParameters p_c(VOCAB_SIZE, Dim(INPUT_DIM, 1));
+  Parameters p_R(Dim(VOCAB_SIZE, HIDDEN_DIM));
   Parameters p_bias(Dim(VOCAB_SIZE, 1));
   sgd->add_params(&p_c);
   sgd->add_params({&p_R, &p_bias});
-  RNNBuilder rnn(2, DIM, DIM, sgd);
+  RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, sgd);
+  //LSTMBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, sgd);
 
   for (unsigned iter = 0; iter < 1000; ++iter) {
     Timer iteration("epoch completed in");
@@ -57,6 +60,7 @@ int main(int argc, char** argv) {
     unsigned chars = 0;
     for (auto& sent : corpus) {
       Hypergraph hg;
+      rnn.new_graph();
       rnn.add_parameter_edges(&hg);
       unsigned i_R = hg.add_parameter(&p_R, "R");
       unsigned i_bias = hg.add_parameter(&p_bias, "bias");
@@ -64,11 +68,9 @@ int main(int argc, char** argv) {
       const unsigned slen = sent.size() - 1;
       for (unsigned t = 0; t < slen; ++t) {
         string ts = to_string(t);
-        unsigned* wt;
-        unsigned i_rwt = hg.add_lookup(&p_c, &wt, "x_" + ts);
-        *wt = sent[t]; // input
+        unsigned i_rwt = hg.add_lookup(&p_c, sent[t], "x_" + ts); // input
         unsigned i_yt = rnn.add_input(i_rwt, &hg);
-#if 1
+#if 0
         unsigned i_r1 = hg.add_function<MatrixMultiply>({i_R, i_yt}, "r1t_" + ts);
         unsigned i_r = hg.add_function<Sum>({i_r1, i_bias}, "rt_" + ts);
 #else

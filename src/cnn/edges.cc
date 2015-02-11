@@ -111,6 +111,9 @@ string Multilinear::as_string(const vector<string>& arg_names) const {
 Matrix Multilinear::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() % 2 == 1);
   Matrix fx = *xs.front();
+  //cerr << "Multilinear\n";
+  //for (unsigned i = 0; i < xs.size(); i++)
+  //  cerr << " (" << xs[i]->rows() << "," << xs[i]->cols() << ")\n";
   for (unsigned i = 1; i < xs.size(); i += 2)
     fx += (*xs[i]) * (*xs[i + 1]);
   return fx;

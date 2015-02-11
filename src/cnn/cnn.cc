@@ -46,6 +46,17 @@ unsigned Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex, const s
   return new_node_index;
 }
 
+unsigned Hypergraph::add_lookup(LookupParameters* p, unsigned index, const std::string& name) {
+  unsigned new_node_index = nodes.size();
+  nodes.push_back(new Node(edges.size(), name));
+  LookupEdge* new_edge = new LookupEdge(p);
+  new_edge->index = index;
+  edges.push_back(new_edge);
+  parameter_edges.push_back(new_edge);
+  new_edge->head_node = new_node_index;
+  return new_node_index;
+}
+
 Matrix Hypergraph::forward() {
   for (auto node : nodes) { // nodes are stored in topological order
     const Edge& in_edge = *edges[node->in_edge];

@@ -19,6 +19,7 @@ RNNBuilder::RNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
                        Trainer* trainer) : layers(layers) {
+  builder_state = 0; // created
   assert(layers < 10);
   p_z = new ConstParameters(Matrix::Zero(hidden_dim, 1));
   to_be_deleted.push_back(p_z);
@@ -36,10 +37,19 @@ RNNBuilder::RNNBuilder(unsigned layers,
   }
 }
 
-void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
-  zero = hg->add_input(p_z, "zero");
+void RNNBuilder::new_graph() {
   param_vars.clear();
   h.clear();
+  builder_state = 1;  
+}
+
+void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
+  zero = hg->add_input(p_z, "zero");
+  if (builder_state != 1) {
+    cerr << "Invalid state: " << builder_state << endl;
+    abort();
+  }
+  builder_state = 2;
   for (unsigned i = 0; i < layers; ++i) {
     Parameters* p_x2h = params[i][0];
     Parameters* p_h2h = params[i][1];
@@ -54,6 +64,10 @@ void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
 }
 
 unsigned RNNBuilder::add_input(unsigned x, Hypergraph* hg) {
+  if (builder_state != 2) {
+    cerr << "Invalid state: " << builder_state << endl;
+    abort();
+  }
   const unsigned t = h.size();
   string ts = to_string(t);
   h.push_back(vector<unsigned>(layers));

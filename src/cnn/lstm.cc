@@ -21,7 +21,7 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
                        Trainer* trainer) : layers(layers) {
-  assert(layers < 10);
+  builder_state = 0; // created
   // TODO move into stack-allocated object
   p_z = new ConstParameters(Matrix::Zero(hidden_dim, 1));
   to_be_deleted.push_back(p_z);
@@ -59,7 +59,18 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
   }  // layers
 }
 
+void LSTMBuilder::new_graph() {
+  param_vars.clear();
+  h.clear();
+  builder_state = 1;  
+}
+
 void LSTMBuilder::add_parameter_edges(Hypergraph* hg) {
+  if (builder_state != 1) {
+    cerr << "Invalid state: " << builder_state << endl;
+    abort();
+  }
+  builder_state = 2;
   zero = hg->add_input(p_z, "zero");
   param_vars.clear();
   h.clear();
@@ -94,6 +105,10 @@ void LSTMBuilder::add_parameter_edges(Hypergraph* hg) {
 }
 
 unsigned LSTMBuilder::add_input(unsigned x, Hypergraph* hg) {
+  if (builder_state != 2) {
+    cerr << "Invalid state: " << builder_state << endl;
+    abort();
+  }
   const unsigned t = h.size();
   string ts = to_string(t);
   h.push_back(vector<unsigned>(layers));
@@ -122,7 +137,7 @@ unsigned LSTMBuilder::add_input(unsigned x, Hypergraph* hg) {
     unsigned i_aot = hg->add_function<Multilinear>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]}, "po_" + ts);
     unsigned i_ot = hg->add_function<LogisticSigmoid>({i_aot}, "o_" + ts);
     unsigned ph_t = hg->add_function<Tanh>({ct[i]}, "ph_" + ts);
-    ht[i] = hg->add_function<CwiseMultiply>({i_ot, ph_t}, "h_" + ts);
+    in = ht[i] = hg->add_function<CwiseMultiply>({i_ot, ph_t}, "h_" + ts);
   }
   return ht.back();
 }
