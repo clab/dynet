@@ -79,7 +79,7 @@ struct Sum : public Edge {
   }
 
   Matrix forward(const vector<const Matrix*>& xs) const {
-    assert(xs.size() > 1);
+    assert(xs.size() > 0);
     Matrix res = *xs[0];
     for (unsigned i = 1; i < xs.size(); ++i)
       res += *xs[i];
