@@ -16,18 +16,18 @@ Hypergraph::~Hypergraph() {
   // don't delete parameter_edges since they're a subset of edges
 }
 
-VariableIndex Hypergraph::add_input(ConstParameters* p, const string& name) {
+VariableIndex Hypergraph::add_input(ConstParameters* p) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), name));
+  nodes.push_back(new Node(edges.size(), new_node_index));
   InputEdge* e = new InputEdge(p);
   edges.push_back(e);
   edges.back()->head_node = new_node_index;
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_parameter(Parameters* p, const std::string& name) {
+VariableIndex Hypergraph::add_parameter(Parameters* p) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), name));
+  nodes.push_back(new Node(edges.size(), new_node_index));
   ParameterEdge* new_edge = new ParameterEdge(p);
   edges.push_back(new_edge);
   parameter_edges.push_back(new_edge);
@@ -35,9 +35,9 @@ VariableIndex Hypergraph::add_parameter(Parameters* p, const std::string& name) 
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name) {
+VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), name));
+  nodes.push_back(new Node(edges.size(), new_node_index));
   LookupEdge* new_edge = new LookupEdge(p);
   *ppindex = &new_edge->index;
   edges.push_back(new_edge);
@@ -46,9 +46,9 @@ VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex, co
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned index, const std::string& name) {
+VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), name));
+  nodes.push_back(new Node(edges.size(), new_node_index));
   LookupEdge* new_edge = new LookupEdge(p);
   new_edge->index = index;
   edges.push_back(new_edge);

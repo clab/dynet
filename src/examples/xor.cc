@@ -26,29 +26,29 @@ int main() {
 
   // build the graph
   Hypergraph hg;
-  VariableIndex i_x = hg.add_input(&p_x, "x");
-  VariableIndex i_y = hg.add_input(&p_y, "y");
-  VariableIndex i_b = hg.add_parameter(&p_b, "b");
-  VariableIndex i_a = hg.add_parameter(&p_a, "a");
-  VariableIndex i_W = hg.add_parameter(&p_W, "W");
-  VariableIndex i_V = hg.add_parameter(&p_V, "V");
+  VariableIndex i_x = hg.add_input(&p_x);
+  VariableIndex i_y = hg.add_input(&p_y);
+  VariableIndex i_b = hg.add_parameter(&p_b);
+  VariableIndex i_a = hg.add_parameter(&p_a);
+  VariableIndex i_W = hg.add_parameter(&p_W);
+  VariableIndex i_V = hg.add_parameter(&p_V);
 
   // two options: MatrixMultiply and Sum, or Multilinear
 #if 0
-  VariableIndex i_f = hg.add_function<MatrixMultiply>({i_W, i_x}, "f");
-  VariableIndex i_g = hg.add_function<Sum>({i_f, i_b}, "g");
+  VariableIndex i_f = hg.add_function<MatrixMultiply>({i_W, i_x});
+  VariableIndex i_g = hg.add_function<Sum>({i_f, i_b});
 #else
-  VariableIndex i_g = hg.add_function<Multilinear>({i_b, i_W, i_x}, "g");
+  VariableIndex i_g = hg.add_function<Multilinear>({i_b, i_W, i_x});
 #endif
-  VariableIndex i_h = hg.add_function<Tanh>({i_g}, "h");
+  VariableIndex i_h = hg.add_function<Tanh>({i_g});
 
 #if 0
-  VariableIndex i_p = hg.add_function<MatrixMultiply>({i_V, i_h}, "p");
-  VariableIndex i_y_pred = hg.add_function<Sum>({i_p, i_a}, "y_pred");
+  VariableIndex i_p = hg.add_function<MatrixMultiply>({i_V, i_h});
+  VariableIndex i_y_pred = hg.add_function<Sum>({i_p, i_a});
 #else
-  VariableIndex i_y_pred = hg.add_function<Multilinear>({i_a, i_V, i_h}, "y_pred");
+  VariableIndex i_y_pred = hg.add_function<Multilinear>({i_a, i_V, i_h});
 #endif
-  hg.add_function<SquaredEuclideanDistance>({i_y_pred, i_y}, "err");
+  hg.add_function<SquaredEuclideanDistance>({i_y_pred, i_y});
   hg.PrintGraphviz();
 
   // train the parameters

@@ -44,7 +44,7 @@ void RNNBuilder::new_graph() {
 }
 
 void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
-  zero = hg->add_input(p_z, "zero");
+  zero = hg->add_input(p_z);
   if (builder_state != 1) {
     cerr << "Invalid state: " << builder_state << endl;
     abort();
@@ -55,9 +55,9 @@ void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
     Parameters* p_h2h = params[i][1];
     Parameters* p_hb = params[i][2];
     const string ts = to_string(i);
-    VariableIndex i_x2h = hg->add_parameter(p_x2h, "x2h" + ts);
-    VariableIndex i_h2h = hg->add_parameter(p_h2h, "h2h" + ts);
-    VariableIndex i_hb = hg->add_parameter(p_hb, "hb" + ts);
+    VariableIndex i_x2h = hg->add_parameter(p_x2h);
+    VariableIndex i_h2h = hg->add_parameter(p_h2h);
+    VariableIndex i_hb = hg->add_parameter(p_hb);
     vector<VariableIndex> vars = {i_x2h, i_h2h, i_hb};
     param_vars.push_back(vars);
   }
@@ -76,8 +76,8 @@ VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
   for (unsigned i = 0; i < layers; ++i) {
     const vector<VariableIndex>& vars = param_vars[i];
     VariableIndex i_h_tm1 = t ? h[t-1][i] : zero;
-    VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in, vars[1], i_h_tm1}, "ph_" + ts);
-    in = ht[i] = hg->add_function<Tanh>({i_h3}, "h_" + ts);
+    VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in, vars[1], i_h_tm1});
+    in = ht[i] = hg->add_function<Tanh>({i_h3});
   }
   return ht.back();
 }

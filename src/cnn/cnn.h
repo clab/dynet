@@ -36,16 +36,16 @@ struct Hypergraph {
   Hypergraph() : last_node_evaluated() {}
   ~Hypergraph();
   // construct a graph
-  VariableIndex add_input(ConstParameters* m, const std::string& name = "");
-  VariableIndex add_parameter(Parameters* p, const std::string& name = "");
+  VariableIndex add_input(ConstParameters* m);
+  VariableIndex add_parameter(Parameters* p);
   // this is rather ugly, but lookup parameters are a combination of pure parameters
   // and a "constant input" (this is done for computational efficiency reasons), so
   // the ppindex parameter is used to return a pointer to the "input" variable that
   // the caller can set before running forward()
-  VariableIndex add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name = "");
-  VariableIndex add_lookup(LookupParameters* p, unsigned index, const std::string& name = "");
-  template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments, const std::string& name = "");
-  template <class Function, typename T> inline VariableIndex add_function(const T& arguments, const std::string& name = "");
+  VariableIndex add_lookup(LookupParameters* p, unsigned** ppindex);
+  VariableIndex add_lookup(LookupParameters* p, unsigned index);
+  template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);
+  template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
   // perform computations
   Matrix forward();
@@ -70,17 +70,17 @@ struct Hypergraph {
 struct Node {
   // name is currently just used for debugging- maybe eventually for code
   // generation though
-  Node(unsigned in_edge_index, const std::string& name) :
+  Node(unsigned in_edge_index, VariableIndex nid) :
       in_edge(in_edge_index),
-      var_name(name) {}
+      node_id(nid) {}
 
   // dependency structure
   unsigned in_edge;
   std::vector<unsigned> out_edges;
 
   // debugging
-  const std::string& variable_name() const { return var_name; }
-  std::string var_name;
+  std::string variable_name() const { return "v" + std::to_string(node_id); }
+  VariableIndex node_id;  // my id
 
   // computation
   // TODO remove these from here, they should be local to the forward/backward
@@ -114,10 +114,10 @@ struct Edge {
 };
 
 template <class Function>
-inline VariableIndex Hypergraph::add_function(const std::initializer_list<VariableIndex>& arguments, const std::string& name) {
+inline VariableIndex Hypergraph::add_function(const std::initializer_list<VariableIndex>& arguments) {
   VariableIndex new_node_index(nodes.size());
   unsigned new_edge_index = edges.size();
-  nodes.push_back(new Node(new_edge_index, name));
+  nodes.push_back(new Node(new_edge_index, new_node_index));
   Edge* new_edge = new Function;
   edges.push_back(new_edge);
   new_edge->head_node = new_node_index;
@@ -129,10 +129,10 @@ inline VariableIndex Hypergraph::add_function(const std::initializer_list<Variab
 }
 
 template <class Function, typename T>
-inline VariableIndex Hypergraph::add_function(const T& arguments, const std::string& name) {
+inline VariableIndex Hypergraph::add_function(const T& arguments) {
   VariableIndex new_node_index(nodes.size());
   unsigned new_edge_index = edges.size();
-  nodes.push_back(new Node(new_edge_index, name));
+  nodes.push_back(new Node(new_edge_index, new_node_index));
   Edge* new_edge = new Function;
   edges.push_back(new_edge);
   new_edge->head_node = new_node_index;
@@ -143,6 +143,6 @@ inline VariableIndex Hypergraph::add_function(const T& arguments, const std::str
   return new_node_index;
 }
 
-}
+} // namespace cnn
 
 #endif

@@ -41,34 +41,34 @@ int main(int argc, char** argv) {
   // build the graph
   Hypergraph hg;
   unsigned *in_c1, *in_c2, *in_c3;  // set these to set the context
-  VariableIndex i_c1 = hg.add_lookup(&p_c, &in_c1, "c1");
-  VariableIndex i_c2 = hg.add_lookup(&p_c, &in_c2, "c2");
-  VariableIndex i_c3 = hg.add_lookup(&p_c, &in_c3, "c3");
-  VariableIndex i_C1 = hg.add_parameter(&p_C1, "C1");
-  VariableIndex i_C2 = hg.add_parameter(&p_C2, "C2");
-  VariableIndex i_C3 = hg.add_parameter(&p_C3, "C3");
-  VariableIndex i_hb = hg.add_parameter(&p_hb, "hb");
-  VariableIndex i_R = hg.add_parameter(&p_R, "R");
-  VariableIndex i_ytrue = hg.add_input(&p_ytrue, "ytrue");
-  VariableIndex i_bias = hg.add_parameter(&p_bias, "bias");
+  VariableIndex i_c1 = hg.add_lookup(&p_c, &in_c1);
+  VariableIndex i_c2 = hg.add_lookup(&p_c, &in_c2);
+  VariableIndex i_c3 = hg.add_lookup(&p_c, &in_c3);
+  VariableIndex i_C1 = hg.add_parameter(&p_C1);
+  VariableIndex i_C2 = hg.add_parameter(&p_C2);
+  VariableIndex i_C3 = hg.add_parameter(&p_C3);
+  VariableIndex i_hb = hg.add_parameter(&p_hb);
+  VariableIndex i_R = hg.add_parameter(&p_R);
+  VariableIndex i_ytrue = hg.add_input(&p_ytrue);
+  VariableIndex i_bias = hg.add_parameter(&p_bias);
 
   // r = hb + C1 * c1 + C2 * c2 + C3 * c3
-  VariableIndex i_r = hg.add_function<Multilinear>({i_hb, i_C1, i_c1, i_C2, i_c2, i_C3, i_c3}, "r");
+  VariableIndex i_r = hg.add_function<Multilinear>({i_hb, i_C1, i_c1, i_C2, i_c2, i_C3, i_c3});
 
   // nl = rectify(r)
-  VariableIndex i_nl = hg.add_function<Rectify>({i_r}, "nl");
+  VariableIndex i_nl = hg.add_function<Rectify>({i_r});
 
   // o2 = bias + R * nl
-  VariableIndex i_o2 = hg.add_function<Multilinear>({i_bias, i_R, i_nl}, "o2");
+  VariableIndex i_o2 = hg.add_function<Multilinear>({i_bias, i_R, i_nl});
 
   // ydist = softmax(o2)
-  VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_o2}, "ydist");
+  VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_o2});
 
   // nerr = pick(ydist, ytrue)
-  VariableIndex i_nerr = hg.add_function<PickElement>({i_ydist, i_ytrue}, "nerr");
+  VariableIndex i_nerr = hg.add_function<PickElement>({i_ydist, i_ytrue});
 
   // err = -nerr
-  hg.add_function<Negate>({i_nerr}, "err");
+  hg.add_function<Negate>({i_nerr});
   hg.PrintGraphviz();
 
   // load some training data
