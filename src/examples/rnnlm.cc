@@ -60,17 +60,20 @@ int main(int argc, char** argv) {
     unsigned chars = 0;
     for (auto& sent : corpus) {
       Hypergraph hg;
-      rnn.new_graph();
-      rnn.add_parameter_edges(&hg);
-      VariableIndex i_R = hg.add_parameter(&p_R);
-      VariableIndex i_bias = hg.add_parameter(&p_bias);
+      rnn.new_graph();  // reset RNN builder for new graph
+      rnn.add_parameter_edges(&hg);  // add variables for its parameters
+      VariableIndex i_R = hg.add_parameter(&p_R); // hidden -> word rep parameter
+      VariableIndex i_bias = hg.add_parameter(&p_bias);  // word bias
       vector<VariableIndex> errs;
       const unsigned slen = sent.size() - 1;
       for (unsigned t = 0; t < slen; ++t) {
-        VariableIndex i_rwt = hg.add_lookup(&p_c, sent[t]); // input
-        VariableIndex i_yt = rnn.add_input(i_rwt, &hg);
-        VariableIndex i_r = hg.add_function<Multilinear>({i_bias, i_R, i_yt});
-        VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r});  
+        VariableIndex i_x_t = hg.add_lookup(&p_c, sent[t]); // input
+        // y_t = RNN(x_t)
+        VariableIndex i_y_t = rnn.add_input(i_x_t, &hg);
+        // r_t = bias + R * y_t
+        VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
+        // ydist = softmax(r_t)
+        VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});  
         ConstParameters* p_ytrue_t = new ConstParameters(sent[t+1]);  // predict sent[t+1]
         VariableIndex i_ytrue = hg.add_input(p_ytrue_t);
         errs.push_back(hg.add_function<PickElement>({i_ydist, i_ytrue}));
