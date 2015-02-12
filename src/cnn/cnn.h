@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <initializer_list>
+#include <utility>
 #include <Eigen/Eigen>
 #include <boost/serialization/strong_typedef.hpp>
 
@@ -30,7 +31,11 @@ struct ParameterEdgeBase;
 struct Node;
 
 BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
-//typedef unsigned VariableIndex;
+inline void swap(VariableIndex& i1, VariableIndex& i2) {
+  VariableIndex t = i1;
+  i1 = i2;
+  i2 = t;
+}
 
 struct Hypergraph {
   Hypergraph() : last_node_evaluated() {}
@@ -89,6 +94,15 @@ struct Node {
   Matrix dEdf;            // dE/df
 };
 
+inline void swap(Node& n1, Node& n2) {
+  using std::swap;
+  n1.f.swap(n2.f);
+  n1.dEdf.swap(n2.dEdf);
+  swap(n1.in_edge, n2.in_edge);
+  swap(n1.out_edges, n2.out_edges);
+  swap(n1.node_id, n2.node_id);
+}
+
 // represents a function of zero or more input variables
 // functions with zero inputs are constants or optimizeable parameters
 struct Edge {
@@ -112,6 +126,12 @@ struct Edge {
   VariableIndex head_node;   // index of node to contain result of f
   std::vector<VariableIndex> tail;  // arguments of function
 };
+
+inline void swap(Edge& e1, Edge& e2) {
+  using std::swap;
+  swap(e1.tail, e2.tail);
+  swap(e1.head_node, e2.head_node);
+}
 
 template <class Function>
 inline VariableIndex Hypergraph::add_function(const std::initializer_list<VariableIndex>& arguments) {
