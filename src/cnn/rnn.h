@@ -24,7 +24,7 @@ struct RNNBuilder {
 
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
-  unsigned add_input(unsigned x, Hypergraph* hg);
+  VariableIndex add_input(VariableIndex x, Hypergraph* hg);
 
   // rewind the last timestep - this DOES NOT remove the variables
   // from the computation graph, it just means the next time step will
@@ -34,24 +34,24 @@ struct RNNBuilder {
     h.pop_back();
   }
 
-  // returns node index (variable) of most recent output
-  unsigned back() const { return h.back().back(); }
+  // returns node (index) of most recent output
+  VariableIndex back() const { return h.back().back(); }
 
   // check to make sure parameters have been added before adding input
   unsigned builder_state;
 
   // hidden x hidden zero matrix
-  unsigned zero;
+  VariableIndex zero;
 
   ConstParameters* p_z; // dummy zero parameter for starting state
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameters*>> params;
 
   // first index is layer, then x2h h2h hb
-  std::vector<std::vector<unsigned>> param_vars;
+  std::vector<std::vector<VariableIndex>> param_vars;
 
   // first index is time, second is layer 
-  std::vector<std::vector<unsigned>> h;
+  std::vector<std::vector<VariableIndex>> h;
 
   Hypergraph* hg;
   const unsigned layers;

@@ -80,63 +80,63 @@ void LSTMBuilder::add_parameter_edges(Hypergraph* hg) {
     auto& p = params[i];
 
     // i
-    unsigned i_x2i = hg->add_parameter(p[X2I], "x2i:" + layer);
-    unsigned i_h2i = hg->add_parameter(p[H2I], "h2i:" + layer);
-    unsigned i_c2i = hg->add_parameter(p[C2I], "c2i:" + layer);
-    unsigned i_bi = hg->add_parameter(p[BI], "bi:" + layer);
+    VariableIndex i_x2i = hg->add_parameter(p[X2I], "x2i:" + layer);
+    VariableIndex i_h2i = hg->add_parameter(p[H2I], "h2i:" + layer);
+    VariableIndex i_c2i = hg->add_parameter(p[C2I], "c2i:" + layer);
+    VariableIndex i_bi = hg->add_parameter(p[BI], "bi:" + layer);
     // f
-    unsigned i_x2f = hg->add_parameter(p[X2F], "x2f:" + layer);
-    unsigned i_h2f = hg->add_parameter(p[H2F], "h2f:" + layer);
-    unsigned i_c2f = hg->add_parameter(p[C2F], "c2f:" + layer);
-    unsigned i_bf = hg->add_parameter(p[BF], "bf:" + layer);
+    VariableIndex i_x2f = hg->add_parameter(p[X2F], "x2f:" + layer);
+    VariableIndex i_h2f = hg->add_parameter(p[H2F], "h2f:" + layer);
+    VariableIndex i_c2f = hg->add_parameter(p[C2F], "c2f:" + layer);
+    VariableIndex i_bf = hg->add_parameter(p[BF], "bf:" + layer);
     // i
-    unsigned i_x2o = hg->add_parameter(p[X2O], "x2o:" + layer);
-    unsigned i_h2o = hg->add_parameter(p[H2O], "h2o:" + layer);
-    unsigned i_c2o = hg->add_parameter(p[C2O], "c2o:" + layer);
-    unsigned i_bo = hg->add_parameter(p[BO], "bo:" + layer);
+    VariableIndex i_x2o = hg->add_parameter(p[X2O], "x2o:" + layer);
+    VariableIndex i_h2o = hg->add_parameter(p[H2O], "h2o:" + layer);
+    VariableIndex i_c2o = hg->add_parameter(p[C2O], "c2o:" + layer);
+    VariableIndex i_bo = hg->add_parameter(p[BO], "bo:" + layer);
     // c
-    unsigned i_x2c = hg->add_parameter(p[X2C], "x2c:" + layer);
-    unsigned i_h2c = hg->add_parameter(p[H2C], "h2c:" + layer);
-    unsigned i_bc = hg->add_parameter(p[BC], "bc:" + layer);
+    VariableIndex i_x2c = hg->add_parameter(p[X2C], "x2c:" + layer);
+    VariableIndex i_h2c = hg->add_parameter(p[H2C], "h2c:" + layer);
+    VariableIndex i_bc = hg->add_parameter(p[BC], "bc:" + layer);
 
-    vector<unsigned> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2f, i_h2f, i_c2f, i_bf, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
+    vector<VariableIndex> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2f, i_h2f, i_c2f, i_bf, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
   }
 }
 
-unsigned LSTMBuilder::add_input(unsigned x, Hypergraph* hg) {
+VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
   if (builder_state != 2) {
     cerr << "Invalid state: " << builder_state << endl;
     abort();
   }
   const unsigned t = h.size();
   string ts = to_string(t);
-  h.push_back(vector<unsigned>(layers));
-  c.push_back(vector<unsigned>(layers));
-  vector<unsigned>& ht = h.back();
-  vector<unsigned>& ct = c.back();
-  unsigned in = x;
+  h.push_back(vector<VariableIndex>(layers));
+  c.push_back(vector<VariableIndex>(layers));
+  vector<VariableIndex>& ht = h.back();
+  vector<VariableIndex>& ct = c.back();
+  VariableIndex in = x;
   for (unsigned i = 0; i < layers; ++i) {
-    const vector<unsigned>& vars = param_vars[i];
-    unsigned i_h_tm1 = t ? h[t-1][i] : zero;
-    unsigned i_c_tm1 = t ? c[t-1][i] : zero;
+    const vector<VariableIndex>& vars = param_vars[i];
+    VariableIndex i_h_tm1 = t ? h[t-1][i] : zero;
+    VariableIndex i_c_tm1 = t ? c[t-1][i] : zero;
     // input
-    unsigned i_ait = hg->add_function<Multilinear>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1}, "pi_" + ts);
-    unsigned i_it = hg->add_function<LogisticSigmoid>({i_ait}, "i_" + ts);
+    VariableIndex i_ait = hg->add_function<Multilinear>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1}, "pi_" + ts);
+    VariableIndex i_it = hg->add_function<LogisticSigmoid>({i_ait}, "i_" + ts);
     // forget
-    unsigned i_aft = hg->add_function<Multilinear>({vars[BF], vars[X2F], in, vars[H2F], i_h_tm1, vars[C2F], i_c_tm1}, "pf_" + ts);
-    unsigned i_ft = hg->add_function<LogisticSigmoid>({i_aft}, "f_" + ts);
+    VariableIndex i_aft = hg->add_function<Multilinear>({vars[BF], vars[X2F], in, vars[H2F], i_h_tm1, vars[C2F], i_c_tm1}, "pf_" + ts);
+    VariableIndex i_ft = hg->add_function<LogisticSigmoid>({i_aft}, "f_" + ts);
     // write memory cell
-    unsigned i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1}, "pc_" + ts);
-    unsigned i_wt = hg->add_function<Tanh>({i_awt}, "w_" + ts);
-    unsigned i_nwt = hg->add_function<CwiseMultiply>({i_it, i_wt}, "iw_" + ts);
-    unsigned i_crt = hg->add_function<CwiseMultiply>({i_ft, i_c_tm1}, "cr_" + ts);
+    VariableIndex i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1}, "pc_" + ts);
+    VariableIndex i_wt = hg->add_function<Tanh>({i_awt}, "w_" + ts);
+    VariableIndex i_nwt = hg->add_function<CwiseMultiply>({i_it, i_wt}, "iw_" + ts);
+    VariableIndex i_crt = hg->add_function<CwiseMultiply>({i_ft, i_c_tm1}, "cr_" + ts);
     ct[i] = hg->add_function<Sum>({i_crt, i_nwt}, "c_"+ts); // new memory cell at time t
  
     // output
-    unsigned i_aot = hg->add_function<Multilinear>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]}, "po_" + ts);
-    unsigned i_ot = hg->add_function<LogisticSigmoid>({i_aot}, "o_" + ts);
-    unsigned ph_t = hg->add_function<Tanh>({ct[i]}, "ph_" + ts);
+    VariableIndex i_aot = hg->add_function<Multilinear>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]}, "po_" + ts);
+    VariableIndex i_ot = hg->add_function<LogisticSigmoid>({i_aot}, "o_" + ts);
+    VariableIndex ph_t = hg->add_function<Tanh>({ct[i]}, "ph_" + ts);
     in = ht[i] = hg->add_function<CwiseMultiply>({i_ot, ph_t}, "h_" + ts);
   }
   return ht.back();

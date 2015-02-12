@@ -62,27 +62,22 @@ int main(int argc, char** argv) {
       Hypergraph hg;
       rnn.new_graph();
       rnn.add_parameter_edges(&hg);
-      unsigned i_R = hg.add_parameter(&p_R, "R");
-      unsigned i_bias = hg.add_parameter(&p_bias, "bias");
-      vector<unsigned> errs;
+      VariableIndex i_R = hg.add_parameter(&p_R, "R");
+      VariableIndex i_bias = hg.add_parameter(&p_bias, "bias");
+      vector<VariableIndex> errs;
       const unsigned slen = sent.size() - 1;
       for (unsigned t = 0; t < slen; ++t) {
         string ts = to_string(t);
-        unsigned i_rwt = hg.add_lookup(&p_c, sent[t], "x_" + ts); // input
-        unsigned i_yt = rnn.add_input(i_rwt, &hg);
-#if 0
-        unsigned i_r1 = hg.add_function<MatrixMultiply>({i_R, i_yt}, "r1t_" + ts);
-        unsigned i_r = hg.add_function<Sum>({i_r1, i_bias}, "rt_" + ts);
-#else
-        unsigned i_r = hg.add_function<Multilinear>({i_bias, i_R, i_yt}, "rt_" + ts);
-#endif
-        unsigned i_ydist = hg.add_function<LogSoftmax>({i_r}, "ydist_" + ts);  
+        VariableIndex i_rwt = hg.add_lookup(&p_c, sent[t], "x_" + ts); // input
+        VariableIndex i_yt = rnn.add_input(i_rwt, &hg);
+        VariableIndex i_r = hg.add_function<Multilinear>({i_bias, i_R, i_yt}, "rt_" + ts);
+        VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r}, "ydist_" + ts);  
         ConstParameters* p_ytrue_t = new ConstParameters(sent[t+1]);  // predict sent[t+1]
-        unsigned i_ytrue = hg.add_input(p_ytrue_t, "ytrue_" + ts);
+        VariableIndex i_ytrue = hg.add_input(p_ytrue_t, "ytrue_" + ts);
         errs.push_back(hg.add_function<PickElement>({i_ydist, i_ytrue}, "nerr_" + ts));
         chars++;
       }
-      unsigned i_nerr = hg.add_function<Sum>(errs, "nerr");
+      VariableIndex i_nerr = hg.add_function<Sum>(errs, "nerr");
       hg.add_function<Negate>({i_nerr}, "err");
       loss += hg.forward()(0,0);
       hg.backward();
@@ -91,7 +86,6 @@ int main(int argc, char** argv) {
       if (lines == 1000) break;
     }
     cerr << "E = " << (loss / chars);
-    
   }
 }
 

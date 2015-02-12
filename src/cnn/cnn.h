@@ -6,6 +6,7 @@
 #include <iostream>
 #include <initializer_list>
 #include <Eigen/Eigen>
+#include <boost/serialization/strong_typedef.hpp>
 
 #include "cnn/tensor.h"
 #include "cnn/params.h"
@@ -28,22 +29,27 @@ struct Edge;
 struct ParameterEdgeBase;
 struct Node;
 
+BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
+//typedef unsigned VariableIndex;
+
 struct Hypergraph {
+  Hypergraph() : last_node_evaluated() {}
   ~Hypergraph();
   // construct a graph
-  unsigned add_input(ConstParameters* m, const std::string& name = "");
-  unsigned add_parameter(Parameters* p, const std::string& name = "");
+  VariableIndex add_input(ConstParameters* m, const std::string& name = "");
+  VariableIndex add_parameter(Parameters* p, const std::string& name = "");
   // this is rather ugly, but lookup parameters are a combination of pure parameters
   // and a "constant input" (this is done for computational efficiency reasons), so
   // the ppindex parameter is used to return a pointer to the "input" variable that
   // the caller can set before running forward()
-  unsigned add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name = "");
-  unsigned add_lookup(LookupParameters* p, unsigned index, const std::string& name = "");
-  template <class Function> inline unsigned add_function(const std::initializer_list<unsigned>& arguments, const std::string& name = "");
-  template <class Function, typename T> inline unsigned add_function(const T& arguments, const std::string& name = "");
+  VariableIndex add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name = "");
+  VariableIndex add_lookup(LookupParameters* p, unsigned index, const std::string& name = "");
+  template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments, const std::string& name = "");
+  template <class Function, typename T> inline VariableIndex add_function(const T& arguments, const std::string& name = "");
 
   // perform computations
   Matrix forward();
+  Matrix incremental_forward();  // if you want to add nodes and evaluate just the new parts
   void backward();
 
   // debugging
@@ -53,6 +59,7 @@ struct Hypergraph {
   std::vector<Node*> nodes;  // **stored in topological order**
   std::vector<Edge*> edges;  // all edges
   std::vector<ParameterEdgeBase*> parameter_edges; // edges that contain parameters that can be updated (subset of edges)
+  VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
 };
 
 // represents an SSA variable
@@ -102,13 +109,13 @@ struct Edge {
   inline unsigned arity() const { return tail.size(); }
 
   // structure
-  unsigned head_node;   // index of node to contain result of f
-  std::vector<unsigned> tail;
+  VariableIndex head_node;   // index of node to contain result of f
+  std::vector<VariableIndex> tail;  // arguments of function
 };
 
 template <class Function>
-inline unsigned Hypergraph::add_function(const std::initializer_list<unsigned>& arguments, const std::string& name) {
-  unsigned new_node_index = nodes.size();
+inline VariableIndex Hypergraph::add_function(const std::initializer_list<VariableIndex>& arguments, const std::string& name) {
+  VariableIndex new_node_index(nodes.size());
   unsigned new_edge_index = edges.size();
   nodes.push_back(new Node(new_edge_index, name));
   Edge* new_edge = new Function;
@@ -122,8 +129,8 @@ inline unsigned Hypergraph::add_function(const std::initializer_list<unsigned>& 
 }
 
 template <class Function, typename T>
-inline unsigned Hypergraph::add_function(const T& arguments, const std::string& name) {
-  unsigned new_node_index = nodes.size();
+inline VariableIndex Hypergraph::add_function(const T& arguments, const std::string& name) {
+  VariableIndex new_node_index(nodes.size());
   unsigned new_edge_index = edges.size();
   nodes.push_back(new Node(new_edge_index, name));
   Edge* new_edge = new Function;

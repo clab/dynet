@@ -16,8 +16,8 @@ Hypergraph::~Hypergraph() {
   // don't delete parameter_edges since they're a subset of edges
 }
 
-unsigned Hypergraph::add_input(ConstParameters* p, const string& name) {
-  unsigned new_node_index = nodes.size();
+VariableIndex Hypergraph::add_input(ConstParameters* p, const string& name) {
+  VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), name));
   InputEdge* e = new InputEdge(p);
   edges.push_back(e);
@@ -25,8 +25,8 @@ unsigned Hypergraph::add_input(ConstParameters* p, const string& name) {
   return new_node_index;
 }
 
-unsigned Hypergraph::add_parameter(Parameters* p, const std::string& name) {
-  unsigned new_node_index = nodes.size();
+VariableIndex Hypergraph::add_parameter(Parameters* p, const std::string& name) {
+  VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), name));
   ParameterEdge* new_edge = new ParameterEdge(p);
   edges.push_back(new_edge);
@@ -35,8 +35,8 @@ unsigned Hypergraph::add_parameter(Parameters* p, const std::string& name) {
   return new_node_index;
 }
 
-unsigned Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name) {
-  unsigned new_node_index = nodes.size();
+VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex, const std::string& name) {
+  VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), name));
   LookupEdge* new_edge = new LookupEdge(p);
   *ppindex = &new_edge->index;
@@ -46,8 +46,8 @@ unsigned Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex, const s
   return new_node_index;
 }
 
-unsigned Hypergraph::add_lookup(LookupParameters* p, unsigned index, const std::string& name) {
-  unsigned new_node_index = nodes.size();
+VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned index, const std::string& name) {
+  VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), name));
   LookupEdge* new_edge = new LookupEdge(p);
   new_edge->index = index;
@@ -57,19 +57,26 @@ unsigned Hypergraph::add_lookup(LookupParameters* p, unsigned index, const std::
   return new_node_index;
 }
 
-Matrix Hypergraph::forward() {
-  for (auto node : nodes) { // nodes are stored in topological order
+Matrix Hypergraph::incremental_forward() {
+  while (last_node_evaluated < nodes.size()) {
+    Node* node = nodes[last_node_evaluated];
     const Edge& in_edge = *edges[node->in_edge];
     vector<const Matrix*> xs(in_edge.arity());
     unsigned ti = 0;
-    for (unsigned tail_node_index : in_edge.tail) {
+    for (VariableIndex tail_node_index : in_edge.tail) {
       xs[ti] = &nodes[tail_node_index]->f;
       ++ti;
     }
     node->f = in_edge.forward(xs);
     node->dEdf = Zero(Dim(node->f.rows(), node->f.cols()));
+    ++last_node_evaluated;
   }
   return nodes.back()->f;
+}
+
+Matrix Hypergraph::forward() {
+  last_node_evaluated = 0;
+  return incremental_forward();
 }
 
 void Hypergraph::backward() {
