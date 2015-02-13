@@ -33,13 +33,13 @@ void ParameterEdge::accumulate_grad(const Matrix& g) {
 
 string InputEdge::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "inputs" << dim;
+  s << "inputsN(" << m.rows() << ',' << m.cols() << ')';
   return s.str();
 }
 
 Matrix InputEdge::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 0);
-  return params->values;
+  return m;
 }
 
 Matrix InputEdge::backward(const vector<const Matrix*>& xs,
@@ -47,11 +47,6 @@ Matrix InputEdge::backward(const vector<const Matrix*>& xs,
                     const Matrix& dEdf,
                     unsigned i) const {
   cerr << "called backward() on arity 0 edge\n";
-  abort();
-}
-
-void InputEdge::accumulate_grad(const Matrix& g) {
-  cerr << "called accumulate_grad() on InputEdge\n";
   abort();
 }
 

@@ -25,18 +25,17 @@ struct ParameterEdge : public ParameterEdgeBase {
   Parameters* params;
 };
 
-// represents constant inputs
-struct InputEdge : public ParameterEdgeBase {
-  explicit InputEdge(ConstParameters* p) : dim(p->values.rows(), p->values.cols()), params(p) {}
+// represents specified (not learned) inputs to the network
+struct InputEdge : public Edge {
+  explicit InputEdge(const Dim& d) : m(d.rows, d.cols) {}
+  explicit InputEdge(const Matrix& mm) : m(mm) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;
   Matrix backward(const std::vector<const Matrix*>& xs,
                   const Matrix& fx,
                   const Matrix& dEdf,
                   unsigned i) const override;
-  void accumulate_grad(const Matrix& g) override;
-  Dim dim;
-  ConstParameters* params;
+  Matrix m;
 };
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)

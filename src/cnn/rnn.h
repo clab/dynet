@@ -43,7 +43,6 @@ struct RNNBuilder {
   // hidden x hidden zero matrix
   VariableIndex zero;
 
-  ConstParameters* p_z; // dummy zero parameter for starting state
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameters*>> params;
 
@@ -55,7 +54,6 @@ struct RNNBuilder {
 
   Hypergraph* hg;
   const unsigned layers;
-
   std::vector<ParametersBase*> to_be_deleted;
 };
 

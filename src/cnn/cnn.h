@@ -41,7 +41,10 @@ struct Hypergraph {
   Hypergraph() : last_node_evaluated() {}
   ~Hypergraph();
   // construct a graph
-  VariableIndex add_input(ConstParameters* m);
+  VariableIndex add_input(real** ps);
+  VariableIndex add_input(real s, real** ps = 0);
+  VariableIndex add_input(const Matrix& m, Matrix** pm = 0);
+  VariableIndex add_input(const Dim& d, Matrix** pm = 0);
   VariableIndex add_parameter(Parameters* p);
   // this is rather ugly, but lookup parameters are a combination of pure parameters
   // and a "constant input" (this is done for computational efficiency reasons), so

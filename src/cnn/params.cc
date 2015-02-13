@@ -38,9 +38,4 @@ void LookupParameters::accumulate_grad(unsigned index, const Matrix& d) {
 
 void LookupParameters::clear() { g.clear(); }
 
-real ConstParameters::g_squared_l2norm() const { return 0; }
-
-// since these aren't optimized, don't count them
-size_t ConstParameters::size() const { return 0; }
-
 } // namespace cnn

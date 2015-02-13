@@ -50,8 +50,8 @@ int main(int argc, char** argv) {
   Parameters p_bias(Dim(VOCAB_SIZE, 1));
   sgd->add_params(&p_c);
   sgd->add_params({&p_R, &p_bias});
-  RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, sgd);
-  //LSTMBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, sgd);
+  //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, sgd);
+  LSTMBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, sgd);
 
   for (unsigned iter = 0; iter < 1000; ++iter) {
     Timer iteration("epoch completed in");
@@ -74,8 +74,7 @@ int main(int argc, char** argv) {
         VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
         // ydist = softmax(r_t)
         VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});  
-        ConstParameters* p_ytrue_t = new ConstParameters(sent[t+1]);  // predict sent[t+1]
-        VariableIndex i_ytrue = hg.add_input(p_ytrue_t);
+        VariableIndex i_ytrue = hg.add_input(sent[t+1]);
         errs.push_back(hg.add_function<PickElement>({i_ydist, i_ytrue}));
         chars++;
       }

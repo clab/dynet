@@ -16,10 +16,34 @@ Hypergraph::~Hypergraph() {
   // don't delete parameter_edges since they're a subset of edges
 }
 
-VariableIndex Hypergraph::add_input(ConstParameters* p) {
+VariableIndex Hypergraph::add_input(real** ps) { return add_input(0., ps); }
+
+VariableIndex Hypergraph::add_input(real s, real** ps) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
-  InputEdge* e = new InputEdge(p);
+  InputEdge* e = new InputEdge(Dim(1,1));
+  e->m(0,0) = s;
+  if (ps) *ps = &e->m(0,0);
+  edges.push_back(e);
+  edges.back()->head_node = new_node_index;
+  return new_node_index;
+}
+
+VariableIndex Hypergraph::add_input(const Matrix& m, Matrix** pm) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new Node(edges.size(), new_node_index));
+  InputEdge* e = new InputEdge(m);
+  if (pm) *pm = &e->m;
+  edges.push_back(e);
+  edges.back()->head_node = new_node_index;
+  return new_node_index;
+}
+
+VariableIndex Hypergraph::add_input(const Dim& d, Matrix** pm) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new Node(edges.size(), new_node_index));
+  InputEdge* e = new InputEdge(d);
+  if (pm) *pm = &e->m;
   edges.push_back(e);
   edges.back()->head_node = new_node_index;
   return new_node_index;

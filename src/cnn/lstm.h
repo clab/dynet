@@ -41,11 +41,6 @@ struct LSTMBuilder {
   // check to make sure parameters have been added before adding input
   unsigned builder_state;
 
-  // hidden x hidden zero matrix
-  VariableIndex zero;
-
-  ConstParameters* p_z; // dummy zero parameter for starting state
-
   // first index is layer, then ...
   std::vector<std::vector<Parameters*>> params;
 

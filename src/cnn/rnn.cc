@@ -21,8 +21,6 @@ RNNBuilder::RNNBuilder(unsigned layers,
                        Trainer* trainer) : layers(layers) {
   builder_state = 0; // created
   assert(layers < 10);
-  p_z = new ConstParameters(Matrix::Zero(hidden_dim, 1));
-  to_be_deleted.push_back(p_z);
 
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
@@ -44,7 +42,6 @@ void RNNBuilder::new_graph() {
 }
 
 void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
-  zero = hg->add_input(p_z);
   if (builder_state != 1) {
     cerr << "Invalid state: " << builder_state << endl;
     abort();
@@ -75,9 +72,16 @@ VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
   VariableIndex in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<VariableIndex>& vars = param_vars[i];
-    VariableIndex i_h_tm1 = t ? h[t-1][i] : zero;
-    VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in, vars[1], i_h_tm1});
-    in = ht[i] = hg->add_function<Tanh>({i_h3});
+    if (t == 0) {  // first time step
+      // h3 = hbias + x2h * in
+      VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in});
+      in = ht[i] = hg->add_function<Tanh>({i_h3});
+    } else {  // tth time step
+      VariableIndex i_h_tm1 = h[t-1][i];
+      // h3 = hbias + h2h * h_{t-1} + x2h * in
+      VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in, vars[1], i_h_tm1});
+      in = ht[i] = hg->add_function<Tanh>({i_h3});
+    }
   }
   return ht.back();
 }

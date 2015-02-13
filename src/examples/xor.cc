@@ -20,14 +20,12 @@ int main() {
   Parameters p_V(Dim(1, HIDDEN_SIZE));
   sgd.add_params({&p_b, &p_a, &p_W, &p_V});
 
-  // inputs
-  ConstParameters p_x(Dim(2,1));
-  ConstParameters p_y(Dim(1,1));
-
   // build the graph
   Hypergraph hg;
-  VariableIndex i_x = hg.add_input(&p_x);
-  VariableIndex i_y = hg.add_input(&p_y);
+  Matrix* x_values;  // set *x_values to change the inputs to the graph
+  VariableIndex i_x = hg.add_input(Dim(2), &x_values);
+  cnn::real* y_value;  // set *y_value to change the predicted output
+  VariableIndex i_y = hg.add_input(0, &y_value);
   VariableIndex i_b = hg.add_parameter(&p_b);
   VariableIndex i_a = hg.add_parameter(&p_a);
   VariableIndex i_W = hg.add_parameter(&p_W);
@@ -57,9 +55,9 @@ int main() {
     for (unsigned mi = 0; mi < 4; ++mi) {
       bool x1 = mi % 2;
       bool x2 = (mi / 2) % 2;
-      p_x(0,0) = x1 ? 1 : -1;
-      p_x(1,0) = x2 ? 1 : -1;
-      p_y(0,0) = (x1 != x2) ? 1 : -1;
+      (*x_values)(0,0) = x1 ? 1 : -1;
+      (*x_values)(1,0) = x2 ? 1 : -1;
+      *y_value = (x1 != x2) ? 1 : -1;
       loss += hg.forward()(0,0);
       hg.backward();
       sgd.update(1.0);

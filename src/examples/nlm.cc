@@ -35,12 +35,9 @@ int main(int argc, char** argv) {
   sgd->add_params(&p_c);
   sgd->add_params({&p_C1, &p_C2, &p_C3, &p_hb, &p_R, &p_bias});
 
-  // inputs
-  ConstParameters p_ytrue(Dim(1,1));
-
   // build the graph
   Hypergraph hg;
-  unsigned *in_c1, *in_c2, *in_c3;  // set these to set the context
+  unsigned *in_c1, *in_c2, *in_c3;  // set these to set the context words
   VariableIndex i_c1 = hg.add_lookup(&p_c, &in_c1);
   VariableIndex i_c2 = hg.add_lookup(&p_c, &in_c2);
   VariableIndex i_c3 = hg.add_lookup(&p_c, &in_c3);
@@ -49,7 +46,8 @@ int main(int argc, char** argv) {
   VariableIndex i_C3 = hg.add_parameter(&p_C3);
   VariableIndex i_hb = hg.add_parameter(&p_hb);
   VariableIndex i_R = hg.add_parameter(&p_R);
-  VariableIndex i_ytrue = hg.add_input(&p_ytrue);
+  cnn::real* ytrue;  // set *ytrue to change the value of the input
+  VariableIndex i_ytrue = hg.add_input(&ytrue);
   VariableIndex i_bias = hg.add_parameter(&p_bias);
 
   // r = hb + C1 * c1 + C2 * c2 + C3 * c3
@@ -99,7 +97,7 @@ int main(int argc, char** argv) {
       *in_c1 = ci[0];
       *in_c2 = ci[1];
       *in_c3 = ci[2];
-      p_ytrue(0,0) = ci[CONTEXT];
+      *ytrue  = ci[3];
       loss += hg.forward()(0,0);
       hg.backward();
       ++n;

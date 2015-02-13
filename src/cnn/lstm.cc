@@ -22,9 +22,6 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
                        unsigned hidden_dim,
                        Trainer* trainer) : layers(layers) {
   builder_state = 0; // created
-  // TODO move into stack-allocated object
-  p_z = new ConstParameters(Matrix::Zero(hidden_dim, 1));
-  to_be_deleted.push_back(p_z);
 
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
@@ -71,7 +68,7 @@ void LSTMBuilder::add_parameter_edges(Hypergraph* hg) {
     abort();
   }
   builder_state = 2;
-  zero = hg->add_input(p_z);
+
   param_vars.clear();
   h.clear();
   c.clear();
@@ -110,7 +107,6 @@ VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
     abort();
   }
   const unsigned t = h.size();
-  string ts = to_string(t);
   h.push_back(vector<VariableIndex>(layers));
   c.push_back(vector<VariableIndex>(layers));
   vector<VariableIndex>& ht = h.back();
@@ -118,26 +114,46 @@ VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
   VariableIndex in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<VariableIndex>& vars = param_vars[i];
-    VariableIndex i_h_tm1 = t ? h[t-1][i] : zero;
-    VariableIndex i_c_tm1 = t ? c[t-1][i] : zero;
-    // input
-    VariableIndex i_ait = hg->add_function<Multilinear>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
-    VariableIndex i_it = hg->add_function<LogisticSigmoid>({i_ait});
-    // forget
-    VariableIndex i_aft = hg->add_function<Multilinear>({vars[BF], vars[X2F], in, vars[H2F], i_h_tm1, vars[C2F], i_c_tm1});
-    VariableIndex i_ft = hg->add_function<LogisticSigmoid>({i_aft});
-    // write memory cell
-    VariableIndex i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
-    VariableIndex i_wt = hg->add_function<Tanh>({i_awt});
-    VariableIndex i_nwt = hg->add_function<CwiseMultiply>({i_it, i_wt});
-    VariableIndex i_crt = hg->add_function<CwiseMultiply>({i_ft, i_c_tm1});
-    ct[i] = hg->add_function<Sum>({i_crt, i_nwt}); // new memory cell at time t
+    if (t == 0) {
+      // this assumes the initial state is 0
+      // TODO add non-zero initial states for c and h
+      // input
+      VariableIndex i_ait = hg->add_function<Multilinear>({vars[BI], vars[X2I], in});
+      VariableIndex i_it = hg->add_function<LogisticSigmoid>({i_ait});
+      // write memory cell
+      VariableIndex i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in});
+      VariableIndex i_wt = hg->add_function<Tanh>({i_awt});
+      VariableIndex i_nwt = hg->add_function<CwiseMultiply>({i_it, i_wt});
+      ct[i] = i_nwt; 
  
-    // output
-    VariableIndex i_aot = hg->add_function<Multilinear>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
-    VariableIndex i_ot = hg->add_function<LogisticSigmoid>({i_aot});
-    VariableIndex ph_t = hg->add_function<Tanh>({ct[i]});
-    in = ht[i] = hg->add_function<CwiseMultiply>({i_ot, ph_t});
+      // output
+      VariableIndex i_aot = hg->add_function<Multilinear>({vars[BO], vars[X2O], in, vars[C2O], ct[i]});
+      VariableIndex i_ot = hg->add_function<LogisticSigmoid>({i_aot});
+      VariableIndex ph_t = hg->add_function<Tanh>({ct[i]});
+      in = ht[i] = hg->add_function<CwiseMultiply>({i_ot, ph_t});
+    } else {  // t > 0
+      VariableIndex i_h_tm1 = h[t-1][i];
+      VariableIndex i_c_tm1 = c[t-1][i];
+
+      // input
+      VariableIndex i_ait = hg->add_function<Multilinear>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
+      VariableIndex i_it = hg->add_function<LogisticSigmoid>({i_ait});
+      // forget
+      VariableIndex i_aft = hg->add_function<Multilinear>({vars[BF], vars[X2F], in, vars[H2F], i_h_tm1, vars[C2F], i_c_tm1});
+      VariableIndex i_ft = hg->add_function<LogisticSigmoid>({i_aft});
+      // write memory cell
+      VariableIndex i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
+      VariableIndex i_wt = hg->add_function<Tanh>({i_awt});
+      // output
+      VariableIndex i_nwt = hg->add_function<CwiseMultiply>({i_it, i_wt});
+      VariableIndex i_crt = hg->add_function<CwiseMultiply>({i_ft, i_c_tm1});
+      ct[i] = hg->add_function<Sum>({i_crt, i_nwt}); // new memory cell at time t
+ 
+      VariableIndex i_aot = hg->add_function<Multilinear>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
+      VariableIndex i_ot = hg->add_function<LogisticSigmoid>({i_aot});
+      VariableIndex ph_t = hg->add_function<Tanh>({ct[i]});
+      in = ht[i] = hg->add_function<CwiseMultiply>({i_ot, ph_t});
+    }
   }
   return ht.back();
 }

@@ -56,20 +56,6 @@ struct LookupParameters : public ParametersBase {
   std::unordered_map<unsigned, Matrix> g;
 };
 
-// represents an input (i.e., things that aren't optimized)
-struct ConstParameters : public ParametersBase {
-  explicit ConstParameters(const real& s) : dim(1,1), values(Zero(dim)) { values(0,0) = s; }
-  explicit ConstParameters(const Dim& d) : dim(d), values(Zero(d)) {}
-  explicit ConstParameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v) {}
-  real g_squared_l2norm() const override;
-  size_t size() const override;
-  real& operator()(int i, int j) { return values(i,j); }
-  const real& operator()(int i, int j) const { return values(i,j); }
-
-  Dim dim;
-  Matrix values;
-};
-
 } // namespace cnn
 
 #endif
