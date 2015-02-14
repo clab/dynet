@@ -38,4 +38,29 @@ void LookupParameters::accumulate_grad(unsigned index, const Matrix& d) {
 
 void LookupParameters::clear() { g.clear(); }
 
+Model::~Model() {
+  for (auto p : all_params) delete p;
+}
+
+Parameters* Model::add_parameters(const Dim& d) {
+  Parameters* p = new Parameters(d);
+  all_params.push_back(p);
+  params.push_back(p);
+  return p;
+}
+
+Parameters* Model::add_parameters(const Matrix& m) {  // initial value is m
+  Parameters* p = new Parameters(m);
+  all_params.push_back(p);
+  params.push_back(p);
+  return p;
+}
+
+LookupParameters* Model::add_lookup_parameters(unsigned n, const Dim& d) {
+  LookupParameters* p = new LookupParameters(n,d);
+  all_params.push_back(p);
+  lookup_params.push_back(p);
+  return p;
+}
+
 } // namespace cnn

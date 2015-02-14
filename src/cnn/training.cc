@@ -5,8 +5,6 @@ namespace cnn {
 using namespace std;
 
 Trainer::~Trainer() {}
-void Trainer::add_params_impl(Parameters* p) {}
-void Trainer::add_params_impl(LookupParameters* p) {}
 
 void SimpleSGDTrainer::update(real scale) {
   //double gg = 0;
@@ -14,13 +12,13 @@ void SimpleSGDTrainer::update(real scale) {
   //  gg+=p->g_squared_l2norm();
   //}
   //gg = sqrt(gg);
-  for (auto p : params) {
+  for (auto p : model->parameters_list()) {
     const Matrix reg = p->values * lambda;
     p->values -= (eta * scale) * p->g;
     p->values -= reg;
     p->clear();
   }
-  for (auto p : lookup_params) {
+  for (auto p : model->lookup_parameters_list()) {
     for (auto it : p->g) {
       const Matrix reg = p->values[it.first] * lambda;
       p->values[it.first] -= it.second * (eta * scale);
@@ -30,14 +28,7 @@ void SimpleSGDTrainer::update(real scale) {
   }
 }
 
-void RMSPropTrainer::add_params_impl(Parameters* p) {
-  vp[p] = p->values * 0;
-}
-
-void RMSPropTrainer::add_params_impl(LookupParameters* p) {
-  vl[p].clear();
-}
-
+#if 0
 void RMSPropTrainer::update(real scale) {
   for (auto p : params) {
     Matrix& x = p->values;
@@ -66,5 +57,6 @@ void RMSPropTrainer::update(real scale) {
     p->clear();
   }
 }
+#endif
 
 } // namespace cnn

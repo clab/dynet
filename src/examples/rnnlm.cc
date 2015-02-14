@@ -37,21 +37,15 @@ int main(int argc, char** argv) {
     corpus.push_back(x);
   }
 
-  Trainer* sgd = 0;
-  if (false) {
-    sgd = new RMSPropTrainer;
-  } else {
-    sgd = new SimpleSGDTrainer;
-  }
+  Model model;
+  SimpleSGDTrainer sgd(&model);
 
   // parameters
-  LookupParameters p_c(VOCAB_SIZE, Dim(INPUT_DIM, 1));
-  Parameters p_R(Dim(VOCAB_SIZE, HIDDEN_DIM));
-  Parameters p_bias(Dim(VOCAB_SIZE, 1));
-  sgd->add_params(&p_c);
-  sgd->add_params({&p_R, &p_bias});
-  //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, sgd);
-  LSTMBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, sgd);
+  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim(INPUT_DIM, 1)); 
+  Parameters* p_R = model.add_parameters(Dim(VOCAB_SIZE, HIDDEN_DIM));
+  Parameters* p_bias = model.add_parameters(Dim(VOCAB_SIZE, 1));
+  //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
+  LSTMBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
 
   for (unsigned iter = 0; iter < 1000; ++iter) {
     Timer iteration("epoch completed in");
@@ -62,12 +56,12 @@ int main(int argc, char** argv) {
       Hypergraph hg;
       rnn.new_graph();  // reset RNN builder for new graph
       rnn.add_parameter_edges(&hg);  // add variables for its parameters
-      VariableIndex i_R = hg.add_parameter(&p_R); // hidden -> word rep parameter
-      VariableIndex i_bias = hg.add_parameter(&p_bias);  // word bias
+      VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
+      VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
       vector<VariableIndex> errs;
       const unsigned slen = sent.size() - 1;
       for (unsigned t = 0; t < slen; ++t) {
-        VariableIndex i_x_t = hg.add_lookup(&p_c, sent[t]); // input
+        VariableIndex i_x_t = hg.add_lookup(p_c, sent[t]); // input
         // y_t = RNN(x_t)
         VariableIndex i_y_t = rnn.add_input(i_x_t, &hg);
         // r_t = bias + R * y_t
@@ -82,7 +76,7 @@ int main(int argc, char** argv) {
       hg.add_function<Negate>({i_nerr});
       loss += hg.forward()(0,0);
       hg.backward();
-      sgd->update(0.5 / slen);
+      sgd.update(0.5 / slen);
       ++lines;
       if (lines == 1000) break;
     }

@@ -11,27 +11,21 @@ using namespace std;
 
 namespace cnn {
 
-RNNBuilder::~RNNBuilder() {
-  for (auto p : to_be_deleted) delete p;
-}
-
 RNNBuilder::RNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Trainer* trainer) : layers(layers) {
+                       Model* model) : layers(layers) {
   builder_state = 0; // created
   assert(layers < 10);
 
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    Parameters* p_x2h = new Parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2h = new Parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_hb = new Parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2h = model->add_parameters(Dim(hidden_dim, layer_input_dim));
+    Parameters* p_h2h = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_hb = model->add_parameters(Dim(hidden_dim, 1));
     vector<Parameters*> ps = {p_x2h, p_h2h, p_hb};
-    for (auto p : ps) to_be_deleted.push_back(p);
     params.push_back(ps);
     layer_input_dim = hidden_dim;
-    trainer->add_params({p_x2h, p_h2h, p_hb});
   }
 }
 

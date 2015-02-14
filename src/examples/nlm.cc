@@ -13,42 +13,35 @@ using namespace cnn;
 int main(int argc, char** argv) {
   srand(time(0));
 
-  Trainer* sgd = 0;
-  if (false) {
-    sgd = new RMSPropTrainer;
-  } else {
-    sgd = new SimpleSGDTrainer;
-  }
-
   unsigned CONTEXT = 3;
   unsigned DIM = 100;
   unsigned VOCAB_SIZE = 29;
 
   // parameters
-  LookupParameters p_c(VOCAB_SIZE, Dim(DIM, 1));
-  Parameters p_C1(Dim(DIM, DIM));
-  Parameters p_C2(Dim(DIM, DIM));
-  Parameters p_C3(Dim(DIM, DIM));
-  Parameters p_R(Dim(VOCAB_SIZE, DIM));
-  Parameters p_bias(Dim(VOCAB_SIZE, 1));
-  Parameters p_hb(Dim(DIM, 1));
-  sgd->add_params(&p_c);
-  sgd->add_params({&p_C1, &p_C2, &p_C3, &p_hb, &p_R, &p_bias});
+  Model model;
+  SimpleSGDTrainer sgd(&model);
+  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim(DIM, 1));
+  Parameters* p_C1 = model.add_parameters(Dim(DIM, DIM));
+  Parameters* p_C2 = model.add_parameters(Dim(DIM, DIM));
+  Parameters* p_C3 = model.add_parameters(Dim(DIM, DIM));
+  Parameters* p_R = model.add_parameters(Dim(VOCAB_SIZE, DIM));
+  Parameters* p_bias = model.add_parameters(Dim(VOCAB_SIZE, 1));
+  Parameters* p_hb = model.add_parameters(Dim(DIM, 1));
 
   // build the graph
   Hypergraph hg;
   unsigned *in_c1, *in_c2, *in_c3;  // set these to set the context words
-  VariableIndex i_c1 = hg.add_lookup(&p_c, &in_c1);
-  VariableIndex i_c2 = hg.add_lookup(&p_c, &in_c2);
-  VariableIndex i_c3 = hg.add_lookup(&p_c, &in_c3);
-  VariableIndex i_C1 = hg.add_parameter(&p_C1);
-  VariableIndex i_C2 = hg.add_parameter(&p_C2);
-  VariableIndex i_C3 = hg.add_parameter(&p_C3);
-  VariableIndex i_hb = hg.add_parameter(&p_hb);
-  VariableIndex i_R = hg.add_parameter(&p_R);
+  VariableIndex i_c1 = hg.add_lookup(p_c, &in_c1);
+  VariableIndex i_c2 = hg.add_lookup(p_c, &in_c2);
+  VariableIndex i_c3 = hg.add_lookup(p_c, &in_c3);
+  VariableIndex i_C1 = hg.add_parameter(p_C1);
+  VariableIndex i_C2 = hg.add_parameter(p_C2);
+  VariableIndex i_C3 = hg.add_parameter(p_C3);
+  VariableIndex i_hb = hg.add_parameter(p_hb);
+  VariableIndex i_R = hg.add_parameter(p_R);
   cnn::real* ytrue;  // set *ytrue to change the value of the input
   VariableIndex i_ytrue = hg.add_input(&ytrue);
-  VariableIndex i_bias = hg.add_parameter(&p_bias);
+  VariableIndex i_bias = hg.add_parameter(p_bias);
 
   // r = hb + C1 * c1 + C2 * c2 + C3 * c3
   VariableIndex i_r = hg.add_function<Multilinear>({i_hb, i_C1, i_c1, i_C2, i_c2, i_C3, i_c3});
@@ -101,7 +94,7 @@ int main(int argc, char** argv) {
       loss += hg.forward()(0,0);
       hg.backward();
       ++n;
-      sgd->update(1.0);
+      sgd.update(1.0);
       if (n == 2500) break;
     }
     loss /= n;

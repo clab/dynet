@@ -14,15 +14,15 @@ namespace cnn {
 //   set of discrete objects. These are sparsely updated.
 
 struct ParametersBase {
-  virtual ~ParametersBase();
+  friend class Model;
   virtual real g_squared_l2norm() const = 0;
   virtual size_t size() const = 0;
+  virtual ~ParametersBase();
 };
 
 // represents parameters (e.g., a weight matrix)
 struct Parameters : public ParametersBase {
-  explicit Parameters(const Dim& d) : dim(d), values(Random(d)), g(Zero(d)) {}
-  explicit Parameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v), g(Zero(dim)) {}
+  friend class Model;
   real g_squared_l2norm() const override;
   size_t size() const override;
 
@@ -35,13 +35,14 @@ struct Parameters : public ParametersBase {
   Dim dim;
   Matrix values;
   Matrix g;
+ private:
+  explicit Parameters(const Dim& d) : dim(d), values(Random(d)), g(Zero(d)) {}
+  explicit Parameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v), g(Zero(dim)) {}
 };
 
 // represents a matrix/vector embedding of a discrete set
 struct LookupParameters : public ParametersBase {
-  LookupParameters(unsigned n, const Dim& d) : dim(d), values(n) {
-    for (auto& v : values) v = Random(d);
-  }
+  friend class Model;
   real g_squared_l2norm() const override;
   size_t size() const override;
 
@@ -54,6 +55,30 @@ struct LookupParameters : public ParametersBase {
   Dim dim;
   std::vector<Matrix> values;
   std::unordered_map<unsigned, Matrix> g;
+ private:
+  LookupParameters(unsigned n, const Dim& d) : dim(d), values(n) {
+    for (auto& v : values) v = Random(d);
+  }
+};
+
+// this is a collection of parameters
+// if you need a matrix of parameters, or a lookup table - ask an instance of this class
+// this knows how to serialize itself
+// parameters know how to track their gradients, but any extra information (like velocity) will live here
+class Model {
+ public:
+  ~Model();
+  Parameters* add_parameters(const Dim& d);  // initialized randomly
+  Parameters* add_parameters(const Matrix& m);  // initial value is m
+  LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
+
+  const std::vector<Parameters*>& parameters_list() const { return params; }
+  const std::vector<LookupParameters*>& lookup_parameters_list() const { return lookup_params; }
+
+ private:
+  std::vector<ParametersBase*> all_params;
+  std::vector<Parameters*> params;
+  std::vector<LookupParameters*> lookup_params;
 };
 
 } // namespace cnn

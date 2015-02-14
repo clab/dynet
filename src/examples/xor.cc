@@ -10,26 +10,29 @@ using namespace cnn;
 int main() {
   srand(time(0));
 
-  RMSPropTrainer sgd;
-
   // parameters
   const unsigned HIDDEN_SIZE = 8;
-  Parameters p_b(Dim(HIDDEN_SIZE,1));
-  Parameters p_a(Dim(1,1));
-  Parameters p_W(Dim(HIDDEN_SIZE,2));
-  Parameters p_V(Dim(1, HIDDEN_SIZE));
-  sgd.add_params({&p_b, &p_a, &p_W, &p_V});
+  Model m;
+  SimpleSGDTrainer sgd(&m);
+
+  Parameters& p_a = *m.add_parameters(Dim(1,1));
+  Parameters& p_b = *m.add_parameters(Dim(HIDDEN_SIZE, 1));
+  Parameters& p_W = *m.add_parameters(Dim(HIDDEN_SIZE, 2));
+  Parameters& p_V = *m.add_parameters(Dim(1, HIDDEN_SIZE));
 
   // build the graph
   Hypergraph hg;
-  Matrix* x_values;  // set *x_values to change the inputs to the graph
-  VariableIndex i_x = hg.add_input(Dim(2), &x_values);
-  cnn::real* y_value;  // set *y_value to change the predicted output
-  VariableIndex i_y = hg.add_input(0, &y_value);
+
+  // get symbolic variables corresponding to parameters
   VariableIndex i_b = hg.add_parameter(&p_b);
   VariableIndex i_a = hg.add_parameter(&p_a);
   VariableIndex i_W = hg.add_parameter(&p_W);
   VariableIndex i_V = hg.add_parameter(&p_V);
+
+  Matrix* x_values;  // set *x_values to change the inputs to the graph
+  VariableIndex i_x = hg.add_input(Dim(2), &x_values);
+  cnn::real* y_value;  // set *y_value to change the predicted output
+  VariableIndex i_y = hg.add_input(&y_value);
 
   // two options: MatrixMultiply and Sum, or Multilinear
 #if 0

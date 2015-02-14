@@ -6,14 +6,13 @@
 
 namespace cnn {
 
-struct Trainer;
+class Model;
 
 struct RNNBuilder {
   explicit RNNBuilder(unsigned layers,
                       unsigned input_dim,
                       unsigned hidden_dim,
-                      Trainer* trainer);
-  ~RNNBuilder();
+                      Model* model);
 
   // call this to reset the builder when you are going to create
   // a new computation graph
@@ -40,9 +39,6 @@ struct RNNBuilder {
   // check to make sure parameters have been added before adding input
   unsigned builder_state;
 
-  // hidden x hidden zero matrix
-  VariableIndex zero;
-
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameters*>> params;
 
@@ -54,7 +50,6 @@ struct RNNBuilder {
 
   Hypergraph* hg;
   const unsigned layers;
-  std::vector<ParametersBase*> to_be_deleted;
 };
 
 } // namespace cnn

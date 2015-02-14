@@ -9,58 +9,29 @@
 namespace cnn {
 
 struct Trainer {
+  explicit Trainer(Model* m) : model(m) {}
   virtual ~Trainer();
-  void add_params(Parameters* p) {
-    all_params.push_back(p);
-    params.push_back(p);
-    add_params_impl(p);
-  }
 
-  void add_params(LookupParameters* p) {
-    all_params.push_back(p);
-    lookup_params.push_back(p);
-    add_params_impl(p);
-  }
-
-  void add_params(const std::initializer_list<Parameters*>& ps) {
-    for (auto p : ps) add_params(p);
-  }
-
-  void add_params(const std::initializer_list<LookupParameters*>& ps) {
-    for (auto p : ps) add_params(p);
-  }
-
-  virtual void add_params_impl(Parameters* p);
-  virtual void add_params_impl(LookupParameters* p);
   virtual void update(real scale) = 0;
 
-  std::vector<ParametersBase*> all_params;
-  std::vector<Parameters*> params;
-  std::vector<LookupParameters*> lookup_params;
+  Model* model;  // parameters and gradients live here
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(real lambda = 1e-6, real eta = 0.1) : lambda(lambda), eta(eta) {}
+  explicit SimpleSGDTrainer(Model* m, real lambda = 1e-6, real eta = 0.1) : Trainer(m), lambda(lambda), eta(eta) {}
   void update(real scale) override;
   real lambda;
   real eta;
 };
-
-struct RMSPropTrainer : public Trainer {
-  explicit RMSPropTrainer(real lambda = 1e-6, real eta = 0.01, real decay = 0.999, real eps = 1e-8) : lambda(lambda), eta(eta), decay(decay), eps(eps) {}
-  void add_params_impl(Parameters* p) override;
-  void add_params_impl(LookupParameters* p) override;
-  void update(real scale) override;
 
   // store the velocity for each parameter
-  std::unordered_map<Parameters*, Matrix> vp;
-  std::unordered_map<LookupParameters*, std::unordered_map<unsigned, Matrix>> vl;
+  // std::unordered_map<Parameters*, Matrix> vp;
+  // std::unordered_map<LookupParameters*, std::unordered_map<unsigned, Matrix>> vl;
 
-  real lambda;
-  real eta;
-  real decay;
-  real eps;
-};
+  //real lambda;
+  //real eta;
+  //real decay;
+  //real eps;
 
 } // namespace cnn
 

@@ -6,14 +6,13 @@
 
 namespace cnn {
 
-struct Trainer;
+class Model;
 
 struct LSTMBuilder {
   explicit LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Trainer* trainer);
-  ~LSTMBuilder();
+                       Model* model);
 
   // call this to reset the builder when you are going to create
   // a new computation graph
@@ -51,8 +50,6 @@ struct LSTMBuilder {
   std::vector<std::vector<VariableIndex>> h, c;
 
   const unsigned layers;
-
-  std::vector<ParametersBase*> to_be_deleted;
 };
 
 } // namespace cnn

@@ -13,46 +13,40 @@ namespace cnn {
 
 enum { X2I, H2I, C2I, BI, X2F, H2F, C2F, BF, X2O, H2O, C2O, BO, X2C, H2C, BC };
 
-LSTMBuilder::~LSTMBuilder() {
-  for (auto p : to_be_deleted) delete p;
-}
-
 LSTMBuilder::LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Trainer* trainer) : layers(layers) {
+                       Model* model) : layers(layers) {
   builder_state = 0; // created
 
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameters* p_x2i = new Parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2i = new Parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_c2i = new Parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_bi = new Parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2i = model->add_parameters(Dim(hidden_dim, layer_input_dim));
+    Parameters* p_h2i = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_c2i = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_bi = model->add_parameters(Dim(hidden_dim, 1));
     
     // f
-    Parameters* p_x2f = new Parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2f = new Parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_c2f = new Parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_bf = new Parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2f = model->add_parameters(Dim(hidden_dim, layer_input_dim));
+    Parameters* p_h2f = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_c2f = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_bf = model->add_parameters(Dim(hidden_dim, 1));
 
     // o
-    Parameters* p_x2o = new Parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2o = new Parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_c2o = new Parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_bo = new Parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2o = model->add_parameters(Dim(hidden_dim, layer_input_dim));
+    Parameters* p_h2o = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_c2o = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_bo = model->add_parameters(Dim(hidden_dim, 1));
 
     // c
-    Parameters* p_x2c = new Parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2c = new Parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_bc = new Parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2c = model->add_parameters(Dim(hidden_dim, layer_input_dim));
+    Parameters* p_h2c = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_bc = model->add_parameters(Dim(hidden_dim, 1));
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
-    trainer->add_params({p_x2i, p_h2i, p_c2i, p_bi, p_x2f, p_h2f, p_c2f, p_bf, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc});
     vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2f, p_h2f, p_c2f, p_bf, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
     params.push_back(ps);
-    for (auto p : ps) to_be_deleted.push_back(p);
   }  // layers
 }
 
