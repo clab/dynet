@@ -50,7 +50,7 @@ struct RNNBuilder {
   std::vector<std::vector<VariableIndex>> h;
 
   Hypergraph* hg;
-  const unsigned layers;
+  unsigned layers;
 };
 
 } // namespace cnn
