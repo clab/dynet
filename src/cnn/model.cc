@@ -1,4 +1,4 @@
-#include "cnn/params.h"
+#include "cnn/model.h"
 
 #include <iostream>
 

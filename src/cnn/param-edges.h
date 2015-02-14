@@ -2,7 +2,7 @@
 #define CNN_PARAM_EDGES_H_
 
 #include "cnn/cnn.h"
-#include "cnn/params.h"
+#include "cnn/model.h"
 
 namespace cnn {
 

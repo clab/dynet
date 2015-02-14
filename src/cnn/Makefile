@@ -5,7 +5,7 @@ OBJ_FILES = \
   edges.o \
   lstm.o \
   param-edges.o \
-  params.o \
+  model.o \
   rnn.o \
   training.o
 

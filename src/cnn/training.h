@@ -4,7 +4,7 @@
 #include <initializer_list>
 #include <vector>
 #include <unordered_map>
-#include "cnn/params.h"
+#include "cnn/model.h"
 
 namespace cnn {
 

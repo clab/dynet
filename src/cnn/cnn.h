@@ -10,7 +10,7 @@
 #include <boost/serialization/strong_typedef.hpp>
 
 #include "cnn/tensor.h"
-#include "cnn/params.h"
+#include "cnn/model.h"
 
 // Computation graph where nodes represent forward and backward intermediate
 // values, and edges represent functions of multiple values. To represent the
