@@ -9,6 +9,7 @@ namespace cnn {
 class Model;
 
 struct RNNBuilder {
+  RNNBuilder() {}
   explicit RNNBuilder(unsigned layers,
                       unsigned input_dim,
                       unsigned hidden_dim,

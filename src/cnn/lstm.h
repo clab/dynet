@@ -9,6 +9,7 @@ namespace cnn {
 class Model;
 
 struct LSTMBuilder {
+  LSTMBuilder() {}
   explicit LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
@@ -49,7 +50,7 @@ struct LSTMBuilder {
   // first index is time, second is layer 
   std::vector<std::vector<VariableIndex>> h, c;
 
-  const unsigned layers;
+  unsigned layers;
 };
 
 } // namespace cnn
