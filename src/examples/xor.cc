@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
       hg.backward();
       sgd.update(1.0);
     }
+    sgd.update_epoch();
     loss /= 4;
     cerr << "E = " << loss << endl;
   }

@@ -18,7 +18,7 @@ struct Trainer {
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(Model* m, real lambda = 1e-6, real eta0 = 0.1) : Trainer(m), epoch(), lambda(lambda), eta0(eta0), eta(eta0), eta_decay(0.8) {}
+  explicit SimpleSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.1) : Trainer(m), epoch(), lambda(lam), eta0(e0), eta(e0), eta_decay(0.1) {}
   void update(real scale) override;
   void update_epoch(real r = 1) {
     epoch += r;
