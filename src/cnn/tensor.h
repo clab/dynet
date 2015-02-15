@@ -2,6 +2,9 @@
 #define CNN_TENSOR_H_
 
 #include <iostream>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include "cnn/eigen-serialization.h"
 #include <Eigen/Eigen>
 
 namespace cnn {
@@ -16,6 +19,12 @@ struct Dim {
   unsigned short rows;
   unsigned short cols;
   Dim transpose() const { return Dim(cols,rows); }
+ private:
+  friend class boost::serialization::access;
+  template<class Archive> void serialize(Archive& ar, const unsigned int) {
+    ar & rows;
+    ar & cols;
+  }
 };
 
 inline Dim operator*(const Dim& a, const Dim& b) {

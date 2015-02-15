@@ -3,6 +3,10 @@
 
 #include <vector>
 #include <unordered_map>
+
+#include <boost/serialization/split_member.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include "cnn/tensor.h"
 
 namespace cnn {
@@ -36,8 +40,14 @@ struct Parameters : public ParametersBase {
   Matrix values;
   Matrix g;
  private:
+  Parameters() {}
   explicit Parameters(const Dim& d) : dim(d), values(Random(d)), g(Zero(d)) {}
   explicit Parameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v), g(Zero(dim)) {}
+  friend class boost::serialization::access;
+  template<class Archive> void serialize(Archive& ar, const unsigned int) {
+    ar & dim;
+    ar & values;
+  }
 };
 
 // represents a matrix/vector embedding of a discrete set
@@ -56,8 +66,14 @@ struct LookupParameters : public ParametersBase {
   std::vector<Matrix> values;
   std::unordered_map<unsigned, Matrix> g;
  private:
+  LookupParameters() {}
   LookupParameters(unsigned n, const Dim& d) : dim(d), values(n) {
     for (auto& v : values) v = Random(d);
+  }
+  friend class boost::serialization::access;
+  template<class Archive> void serialize(Archive& ar, const unsigned int) {
+    ar & dim;
+    ar & values;
   }
 };
 
@@ -76,6 +92,35 @@ class Model {
   const std::vector<LookupParameters*>& lookup_parameters_list() const { return lookup_params; }
 
  private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void save(Archive& ar, const unsigned int) const {
+    int np = params.size();
+    int nlp = lookup_params.size();
+    ar & np;
+    ar & nlp;
+    for (unsigned i = 0; i < params.size(); ++i)
+      ar & *params[i];
+    for (unsigned i = 0; i < lookup_params.size(); ++i)
+      ar & *lookup_params[i];
+  }
+  template<class Archive>
+  void load(Archive& ar, const unsigned int) {
+    int np, nlp;
+    ar & np;
+    ar & nlp;
+    assert(np == params.size());
+    assert(nlp == lookup_params.size());
+    for (unsigned i = 0; i < params.size(); ++i)
+      ar & *params[i];
+    for (unsigned i = 0; i < lookup_params.size(); ++i)
+      ar & *lookup_params[i];
+    all_params.clear();
+    for (auto p : params) all_params.push_back(p);
+    for (auto p : lookup_params) all_params.push_back(p);
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
+
   std::vector<ParametersBase*> all_params;
   std::vector<Parameters*> params;
   std::vector<LookupParameters*> lookup_params;

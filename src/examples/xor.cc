@@ -2,12 +2,15 @@
 #include "cnn/cnn.h"
 #include "cnn/training.h"
 
+#include <boost/archive/text_oarchive.hpp>
+
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 using namespace cnn;
 
-int main() {
+int main(int argc, char** argv) {
   srand(time(0));
 
   // parameters
@@ -51,6 +54,11 @@ int main() {
 #endif
   hg.add_function<SquaredEuclideanDistance>({i_y_pred, i_y});
   hg.PrintGraphviz();
+  if (argc == 2) {
+    ifstream in(argv[1]);
+    boost::archive::text_iarchive ia(in);
+    ia >> m;
+  }
 
   // train the parameters
   for (unsigned iter = 0; iter < 30; ++iter) {
@@ -68,5 +76,7 @@ int main() {
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
+  boost::archive::text_oarchive oa(cout);
+  oa << m;
 }
 
