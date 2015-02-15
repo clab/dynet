@@ -18,10 +18,17 @@ struct Trainer {
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(Model* m, real lambda = 1e-6, real eta = 0.1) : Trainer(m), lambda(lambda), eta(eta) {}
+  explicit SimpleSGDTrainer(Model* m, real lambda = 1e-6, real eta0 = 0.1) : Trainer(m), epoch(), lambda(lambda), eta0(eta0), eta(eta0), eta_decay(0.8) {}
   void update(real scale) override;
+  void update_epoch(real r = 1) {
+    epoch += r;
+    eta = eta0 / (1 + epoch * eta_decay);
+  }
+  real epoch;
   real lambda;
+  real eta0;
   real eta;
+  real eta_decay;
 };
 
   // store the velocity for each parameter
