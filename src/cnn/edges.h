@@ -199,47 +199,34 @@ struct LogSoftmax : public Edge {
                     unsigned i) const override;
 };
 
-struct PickElement : public Edge {
-  // x_1 is a vector
-  // x_2 is a scalar index stored in (0,0)
-  // y = (x_1)_{x_2}
-  // this is used to implement cross-entropy training
-  string as_string(const vector<string>& arg_names) const {
-    ostringstream s;
-    s << "pick(" << arg_names[0] << '_' << arg_names[1] << ')';
-    return s.str();
-  }
-
-  Matrix forward(const vector<const Matrix*>& xs) const {
-    assert(xs.size() == 2);
-    const Matrix& x = *xs.front();
-    assert(x.cols() == 1);
-    const Matrix& mindex = *xs.back();
-    assert(mindex.rows() == 1);
-    assert(mindex.cols() == 1);
-    const unsigned index = static_cast<unsigned>(mindex(0,0));
-    assert(index < x.rows());
-    Matrix fx(1,1);
-    fx(0,0) = x(index, 0);
-    return fx;
-  }
-
-  // derivative is 0 in all dimensions except 1 for the selected element
+// z = \sum_{j \in denom} \exp (x_i)_j
+// y_i = (x_1)_i - \log z
+struct RestrictedLogSoftmax : public Edge {
+  explicit RestrictedLogSoftmax(const std::vector<unsigned>& d) : denom(d) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const vector<const Matrix*>& xs) const override;
   Matrix backward(const vector<const Matrix*>& xs,
                     const Matrix& fx,
                     const Matrix& dEdf,
-                    unsigned i) const override {
-    assert(i == 0); // f with respect to x_2 is not smooth
-    assert(dEdf.rows() == 1);
-    assert(dEdf.cols() == 1);
-    const Matrix& x = *xs.front();
-    const Matrix& mindex = *xs.back();
+                    unsigned i) const override;
+  std::vector<unsigned> denom;
+};
 
-    // TODO should be sparse
-    Matrix dEdx1 = Matrix::Zero(x.rows(), 1); 
-    dEdx1(mindex(0,0),0) = dEdf(0,0);
-    return dEdx1;
-  }
+// x_1 is a vector
+// y = (x_1)_{*pval}
+// this is used to implement cross-entropy training
+struct PickElement : public Edge {
+  explicit PickElement(unsigned v) : val(v), pval(&val) {}
+  // use this constructor if you want to change the value after the graph is constructed
+  explicit PickElement(const unsigned* pv) : val(), pval(pv) {}
+  string as_string(const vector<string>& arg_names) const override;
+  Matrix forward(const vector<const Matrix*>& xs) const override;
+  Matrix backward(const vector<const Matrix*>& xs,
+                    const Matrix& fx,
+                    const Matrix& dEdf,
+                    unsigned i) const override;
+  unsigned val;
+  const unsigned* pval;
 };
 
 struct Square : public Edge {

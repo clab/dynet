@@ -59,11 +59,10 @@ VariableIndex Hypergraph::add_parameter(Parameters* p) {
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex) {
+VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
-  LookupEdge* new_edge = new LookupEdge(p);
-  *ppindex = &new_edge->index;
+  LookupEdge* new_edge = new LookupEdge(p, pindex);
   edges.push_back(new_edge);
   parameter_edges.push_back(new_edge);
   new_edge->head_node = new_node_index;
@@ -73,8 +72,7 @@ VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned** ppindex) {
 VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
-  LookupEdge* new_edge = new LookupEdge(p);
-  new_edge->index = index;
+  LookupEdge* new_edge = new LookupEdge(p, index);
   edges.push_back(new_edge);
   parameter_edges.push_back(new_edge);
   new_edge->head_node = new_node_index;

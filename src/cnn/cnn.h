@@ -46,13 +46,14 @@ struct Hypergraph {
   VariableIndex add_input(const Matrix& m, Matrix** pm = 0);
   VariableIndex add_input(const Dim& d, Matrix** pm = 0);
   VariableIndex add_parameter(Parameters* p);
-  // this is rather ugly, but lookup parameters are a combination of pure parameters
-  // and a "constant input" (this is done for computational efficiency reasons), so
-  // the ppindex parameter is used to return a pointer to the "input" variable that
-  // the caller can set before running forward()
-  VariableIndex add_lookup(LookupParameters* p, unsigned** ppindex);
+  // use pindex to point to a memory location where the index will live
+  // that the caller owns
+  VariableIndex add_lookup(LookupParameters* p, unsigned* pindex);
   VariableIndex add_lookup(LookupParameters* p, unsigned index);
   template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);
+  template <class Function, typename T>
+  inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments,
+                                    const T& side_information);
   template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
   // perform computations
@@ -142,6 +143,23 @@ inline VariableIndex Hypergraph::add_function(const std::initializer_list<Variab
   unsigned new_edge_index = edges.size();
   nodes.push_back(new Node(new_edge_index, new_node_index));
   Edge* new_edge = new Function;
+  edges.push_back(new_edge);
+  new_edge->head_node = new_node_index;
+  for (auto ni : arguments) {
+    new_edge->tail.push_back(ni);
+    nodes[ni]->out_edges.push_back(new_edge_index);
+  }
+  return new_node_index;
+}
+
+// pass side information to the function. these are likely to be nondifferentiable arguments
+template <class Function, typename T>
+inline VariableIndex Hypergraph::add_function(const std::initializer_list<VariableIndex>& arguments,
+                                              const T& side_information) {
+  VariableIndex new_node_index(nodes.size());
+  unsigned new_edge_index = edges.size();
+  nodes.push_back(new Node(new_edge_index, new_node_index));
+  Edge* new_edge = new Function(side_information);
   edges.push_back(new_edge);
   new_edge->head_node = new_node_index;
   for (auto ni : arguments) {

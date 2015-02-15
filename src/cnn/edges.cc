@@ -1,5 +1,7 @@
 #include "cnn/edges.h"
 
+#include <limits>
+#include <cmath>
 #include <sstream>
 
 using namespace std;
@@ -16,6 +18,18 @@ inline real logsumexp(const Matrix& x) {
   }
   real z = 0;
   for (unsigned i = 0; i < x.rows(); ++i)
+    z += exp(x(i,0) - m);
+  return m + log(z);
+}
+
+inline real logsumexp(const Matrix& x, const vector<unsigned>& denom) {
+  real m = x(denom[0],0);
+  for (auto i : denom) {
+    real r = x(i,0);
+    if (r > m) m = r;
+  }
+  real z = 0;
+  for (auto i : denom)
     z += exp(x(i,0) - m);
   return m + log(z);
 }
@@ -51,6 +65,78 @@ Matrix LogSoftmax::backward(const vector<const Matrix*>& xs,
     z += dEdf(i, 0);
   for (unsigned i = 0; i < rows; ++i)
     dEdx(i, 0) = dEdf(i, 0) - exp(fx(i, 0)) * z;
+  return dEdx;
+}
+
+string RestrictedLogSoftmax::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "r_log_softmax(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Matrix RestrictedLogSoftmax::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  assert(denom.size() > 0);
+  const Matrix& x = *xs.front();
+  const unsigned rows = x.rows();
+  assert(x.cols() == 1);
+  const real logz = logsumexp(x, denom);
+  Matrix fx(rows, 1);
+  for (unsigned i = 0; i < rows; ++i)
+    fx(i,0) = -std::numeric_limits<real>::infinity();
+  for (auto i : denom)
+    fx(i,0) = x(i,0) - logz;
+  if (denom.size() == 1) fx(denom.front(), 0) = 0;
+  return fx;
+}
+
+Matrix RestrictedLogSoftmax::backward(const vector<const Matrix*>& xs,
+                            const Matrix& fx,
+                            const Matrix& dEdf,
+                            unsigned i) const {
+  assert(i == 0);
+  const Matrix& x = *xs.front();
+  const unsigned rows = x.rows();
+  Matrix dEdx = Matrix::Zero(rows, 1);
+  double z = 0;
+  for (auto i : denom)
+    z += dEdf(i, 0);
+  for (auto i : denom)
+    dEdx(i, 0) = dEdf(i, 0) - exp(fx(i, 0)) * z;
+  return dEdx;
+}
+
+// x_1 is a vector
+// y = (x_1)_{*pval}
+string PickElement::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "pick(" << arg_names[0] << ',' << *pval << ')';
+  return s.str();
+}
+
+Matrix PickElement::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  const Matrix& x = *xs.front();
+  assert(x.cols() == 1);
+  assert(*pval < x.rows());
+  Matrix fx(1,1);
+  fx(0,0) = x(*pval, 0);
+  return fx;
+}
+
+// derivative is 0 in all dimensions except 1 for the selected element
+Matrix PickElement::backward(const vector<const Matrix*>& xs,
+                    const Matrix& fx,
+                    const Matrix& dEdf,
+                    unsigned i) const {
+  assert(i == 0);
+  assert(dEdf.rows() == 1);
+  assert(dEdf.cols() == 1);
+  const Matrix& x = *xs.front();
+
+  // TODO should be sparse
+  Matrix dEdx = Matrix::Zero(x.rows(), 1); 
+  dEdx(*pval,0) = dEdf(0,0);
   return dEdx;
 }
 

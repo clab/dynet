@@ -68,8 +68,7 @@ int main(int argc, char** argv) {
         VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
         // ydist = softmax(r_t)
         VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});  
-        VariableIndex i_ytrue = hg.add_input(sent[t+1]);
-        errs.push_back(hg.add_function<PickElement>({i_ydist, i_ytrue}));
+        errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
         chars++;
       }
       VariableIndex i_nerr = hg.add_function<Sum>(errs);
