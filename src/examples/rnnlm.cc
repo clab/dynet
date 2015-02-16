@@ -75,10 +75,11 @@ int main(int argc, char** argv) {
       hg.add_function<Negate>({i_nerr});
       loss += hg.forward()(0,0);
       hg.backward();
-      sgd.update(0.5 / slen);
+      sgd.update(1); // 0.5 / slen);
       ++lines;
       if (lines == 1000) break;
     }
+    sgd.status();
     cerr << "E = " << (loss / chars);
   }
 }

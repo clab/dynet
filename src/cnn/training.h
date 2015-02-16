@@ -18,17 +18,26 @@ struct Trainer {
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.1) : Trainer(m), epoch(), lambda(lam), eta0(e0), eta(e0), eta_decay(0.1) {}
+  explicit SimpleSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.1) : Trainer(m), epoch(), lambda(lam), eta0(e0), eta(e0), eta_decay(0.0), clipping_enabled(true), clip_threshold(5), clips(), updates() {}
   void update(real scale) override;
   void update_epoch(real r = 1) {
     epoch += r;
     eta = eta0 / (1 + epoch * eta_decay);
+  }
+  void status() {
+    std::cerr << "[eta=" << eta << " clips=" << clips << " updates=" << updates << "] ";
+    updates = clips = 0;
   }
   real epoch;
   real lambda;
   real eta0;
   real eta;
   real eta_decay;
+
+  real clipping_enabled;
+  real clip_threshold;
+  real clips;
+  real updates;
 };
 
   // store the velocity for each parameter
