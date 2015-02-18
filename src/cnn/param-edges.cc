@@ -69,7 +69,12 @@ Matrix LookupEdge::backward(const vector<const Matrix*>& xs,
   abort();
 }
 
+bool LookupEdge::has_parameters() const {
+  return has_optimizable_parameters;
+}
+
 void LookupEdge::accumulate_grad(const Matrix& g) {
+  assert(has_optimizable_parameters);
   params->accumulate_grad(*pindex, g);
 }
 

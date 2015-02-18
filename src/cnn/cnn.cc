@@ -79,7 +79,27 @@ VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned index) {
   return new_node_index;
 }
 
-Matrix Hypergraph::incremental_forward() {
+VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned* pindex) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new Node(edges.size(), new_node_index));
+  LookupEdge* new_edge = new LookupEdge(p, pindex);
+  new_edge->has_optimizable_parameters = false;
+  edges.push_back(new_edge);
+  new_edge->head_node = new_node_index;
+  return new_node_index;
+}
+
+VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned index) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new Node(edges.size(), new_node_index));
+  LookupEdge* new_edge = new LookupEdge(p, index);
+  new_edge->has_optimizable_parameters = false;
+  edges.push_back(new_edge);
+  new_edge->head_node = new_node_index;
+  return new_node_index;
+}
+
+const Matrix& Hypergraph::incremental_forward() {
   while (last_node_evaluated < nodes.size()) {
     Node* node = nodes[last_node_evaluated];
     const Edge& in_edge = *edges[node->in_edge];
@@ -96,7 +116,7 @@ Matrix Hypergraph::incremental_forward() {
   return nodes.back()->f;
 }
 
-Matrix Hypergraph::forward() {
+const Matrix& Hypergraph::forward() {
   last_node_evaluated = 0;
   return incremental_forward();
 }

@@ -50,6 +50,9 @@ struct Hypergraph {
   // that the caller owns
   VariableIndex add_lookup(LookupParameters* p, unsigned* pindex);
   VariableIndex add_lookup(LookupParameters* p, unsigned index);
+  // just like add_lookup, but don't optimize the lookup parameters
+  VariableIndex add_const_lookup(LookupParameters* p, unsigned* pindex);
+  VariableIndex add_const_lookup(LookupParameters* p, unsigned index);
   template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);
   template <class Function, typename T>
   inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments,
@@ -57,8 +60,8 @@ struct Hypergraph {
   template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
   // perform computations
-  Matrix forward();
-  Matrix incremental_forward();  // if you want to add nodes and evaluate just the new parts
+  const Matrix& forward();
+  const Matrix& incremental_forward();  // if you want to add nodes and evaluate just the new parts
   void backward();
 
   // debugging

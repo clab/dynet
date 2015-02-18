@@ -12,9 +12,9 @@
 using namespace std;
 using namespace cnn;
 
-unsigned LAYERS = 2;
-unsigned INPUT_DIM = 10;
-unsigned HIDDEN_DIM = 50;
+unsigned LAYERS = 3;
+unsigned INPUT_DIM = 8;
+unsigned HIDDEN_DIM = 24;
 unsigned VOCAB_SIZE = 32;
 
 int main(int argc, char** argv) {
@@ -61,13 +61,14 @@ int main(int argc, char** argv) {
       vector<VariableIndex> errs;
       const unsigned slen = sent.size() - 1;
       for (unsigned t = 0; t < slen; ++t) {
-        VariableIndex i_x_t = hg.add_lookup(p_c, sent[t]); // input
+        // x_t = lookup sent[t] in parameters p_c
+        VariableIndex i_x_t = hg.add_lookup(p_c, sent[t]);
         // y_t = RNN(x_t)
         VariableIndex i_y_t = rnn.add_input(i_x_t, &hg);
         // r_t = bias + R * y_t
         VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
         // ydist = softmax(r_t)
-        VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});  
+        VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});
         errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
         chars++;
       }
@@ -75,7 +76,7 @@ int main(int argc, char** argv) {
       hg.add_function<Negate>({i_nerr});
       loss += hg.forward()(0,0);
       hg.backward();
-      sgd.update(1); // 0.5 / slen);
+      sgd.update(1.0);
       ++lines;
       if (lines == 1000) break;
     }
