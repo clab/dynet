@@ -65,6 +65,24 @@ struct HardTanh : public Edge {
                   unsigned i) const override;
 };
 
+// you could do this with LogisticSigmoid, Softmax or a variety of other
+// functions, but this is often useful.
+// x_1 must be a scalar that is a value between 0 and 1
+// target_y is a value between 0 and 1
+// y = ty * log(x_1) + (1 - ty) * log(x_1)
+struct BinaryLogLoss : public Edge {
+  BinaryLogLoss(real ty) : target_y(ty), ptarget_y(&target_y) {}
+  BinaryLogLoss(real* pty) : target_y(), ptarget_y(pty) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+  real target_y;
+  real* ptarget_y;
+};
+
 // TODO move implementations of everything here into .cc file see MatrixMultiply as an example
 using namespace std;
 

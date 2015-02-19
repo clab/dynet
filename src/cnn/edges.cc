@@ -289,4 +289,45 @@ Matrix HardTanh::backward(const vector<const Matrix*>& xs,
   return dEdx;
 }
 
+// you could do this with LogisticSigmoid, Softmax or a variety of other
+// functions, but this is often useful.
+// x_1 must be a scalar that is a value between 0 and 1
+// target_y is a value between 0 and 1
+// y = ty * log(x_1) + (1 - ty) * log(x_1)
+string BinaryLogLoss::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "binary_log_loss(" << arg_names[0] << ", " << *ptarget_y << ')';
+  return os.str();
+}
+
+Matrix BinaryLogLoss::forward(const std::vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  assert(xs.front()->cols() == 1);
+  assert(xs.front()->rows() == 1);
+  const real y_pred = (*xs.front())(0,0);
+  assert(y_pred >= 0.);
+  assert(y_pred <= 1.);
+  const real ty = *ptarget_y;
+  assert(ty >= 0.);
+  assert(ty <= 1.);
+  Matrix fx = *xs.front();
+  real& res = fx(0,0);
+  res = 0;
+  if (ty > 0.) res -= ty * log(y_pred);
+  if ((1 - ty) > 0.) res -= (1 - ty) * log1p(-y_pred);
+  return fx;
+}
+
+Matrix BinaryLogLoss::backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const {
+  const real y_pred = (*xs.front())(0,0);
+  const real ty = *ptarget_y;
+  real scale = 0;
+  if (ty > 0.) scale -= ty / y_pred;
+  if ((1 - ty) >= 0.) scale += (1 - ty) / (1 - y_pred);
+  return dEdf * scale;
+}
+
 } // namespace cnn
