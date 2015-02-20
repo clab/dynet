@@ -200,8 +200,12 @@ Matrix Multilinear::forward(const vector<const Matrix*>& xs) const {
   //cerr << "Multilinear\n";
   //for (unsigned i = 0; i < xs.size(); i++)
   //  cerr << " (" << xs[i]->rows() << "," << xs[i]->cols() << ")\n";
-  for (unsigned i = 1; i < xs.size(); i += 2)
-    fx += (*xs[i]) * (*xs[i + 1]);
+  for (unsigned i = 1; i < xs.size(); i += 2) {
+    if (xs[i]->cols() == 1 && xs[i+1]->cols() == 1)
+      fx += xs[i]->cwiseProduct(*xs[i + 1]);
+    else
+      fx += (*xs[i]) * (*xs[i + 1]);
+  }
   return fx;
 }
 
@@ -211,7 +215,15 @@ Matrix Multilinear::backward(const vector<const Matrix*>& xs,
                              unsigned i) const {
   assert(i < xs.size());
   if (i == 0) return dEdf;
-  if (i % 2 == 1) return dEdf * xs[i+1]->transpose();
+  if (i % 2 == 1) {  // is a matrix
+    if (xs[i]->cols() == 1)  // diagonal matrix
+      return dEdf.cwiseProduct(*xs[i+1]);
+    else
+      return dEdf * xs[i+1]->transpose();
+  }
+  // is a vector
+  if (xs[i-1]->cols() == 1)  // xs[i-1] is a diagonal matrix
+    return xs[i-1]->cwiseProduct(dEdf);
   return xs[i-1]->transpose() * dEdf;
 }
 

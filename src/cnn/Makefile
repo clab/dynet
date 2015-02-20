@@ -4,6 +4,7 @@ OBJ_FILES = \
   cnn.o \
   edges.o \
   lstm.o \
+  lstm2.o \
   param-edges.o \
   model.o \
   rnn.o \

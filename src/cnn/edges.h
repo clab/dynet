@@ -26,6 +26,8 @@ struct CwiseMultiply : public Edge {
 };
 
 // y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
+// NOTE: if A_i is a vector then * computes the component-wise product
+// this is an ugly hack to deal with diagonal matrices
 struct Multilinear : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;
