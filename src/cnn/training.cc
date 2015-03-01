@@ -6,7 +6,7 @@ using namespace std;
 
 Trainer::~Trainer() {}
 
-void SimpleSGDTrainer::update(real scale) {
+void Trainer::clip_gradients() {
   if (clipping_enabled) {
     double gg = 0;
     for (auto p : model->all_parameters_list())
@@ -18,7 +18,10 @@ void SimpleSGDTrainer::update(real scale) {
         p->rescale_gradient(clip_threshold / gg);
     }
   }
+}
 
+void SimpleSGDTrainer::update(real scale) {
+  clip_gradients();
   for (auto p : model->parameters_list()) {
     const Matrix reg = p->values * lambda;
     p->values -= (eta * scale) * p->g;
@@ -36,29 +39,31 @@ void SimpleSGDTrainer::update(real scale) {
   ++updates;
 }
 
-void MomentumSGDTrainer::update(real scale) {
-  if (clipping_enabled) {
-    double gg = 0;
-    for (auto p : model->all_parameters_list())
-      gg+=p->g_squared_l2norm();
-    gg = sqrt(gg);
-    if (gg > clip_threshold) {
-      ++clips;
-      for (auto p : model->all_parameters_list())
-        p->rescale_gradient(clip_threshold / gg);
-    }
+static inline Matrix& get_or_init(Matrix& x, const Matrix& t) {
+  if (x.rows() == 0) {
+    x = t;
+    x.setZero();
   }
+  return x;
+}
 
+void MomentumSGDTrainer::update(real scale) {
+  clip_gradients();
   for (auto p : model->parameters_list()) {
+    Matrix& v = get_or_init(vp[p], p->values);
     const Matrix reg = p->values * lambda;
-    p->values -= (eta * scale) * p->g;
+    v = momentum * v - (eta * scale) * p->g;
+    p->values += v;
     p->values -= reg;
     p->clear();
   }
   for (auto p : model->lookup_parameters_list()) {
+    unordered_map<unsigned, Matrix>& vx = vl[p];
     for (auto it : p->g) {
+      Matrix& v = get_or_init(vx[it.first], it.second);
       const Matrix reg = p->values[it.first] * lambda;
-      p->values[it.first] -= it.second * (eta * scale);
+      v = momentum * v - (eta * scale) * it.second;
+      p->values[it.first] += v;
       p->values[it.first] -= reg;
     }
     p->g.clear();

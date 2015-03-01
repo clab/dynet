@@ -13,3 +13,5 @@ INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
 
 add_subdirectory(cnn)
 add_subdirectory(examples)
+# add_subdirectory(parser)
+

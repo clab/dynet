@@ -39,7 +39,12 @@ int main(int argc, char** argv) {
   }
 
   Model model;
-  SimpleSGDTrainer sgd(&model);
+  bool use_momentum = true;
+  Trainer* sgd = nullptr;
+  if (use_momentum)
+    sgd = new MomentumSGDTrainer(&model);
+  else
+    sgd = new SimpleSGDTrainer(&model);
 
   // parameters
   LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim(INPUT_DIM, 1)); 
@@ -77,12 +82,13 @@ int main(int argc, char** argv) {
       hg.add_function<Negate>({i_nerr});
       loss += hg.forward()(0,0);
       hg.backward();
-      sgd.update(1.0);
+      sgd->update();
       ++lines;
       if (lines == 1000) break;
     }
-    sgd.status();
+    sgd->status();
     cerr << "E = " << (loss / chars);
   }
+  delete sgd;
 }
 

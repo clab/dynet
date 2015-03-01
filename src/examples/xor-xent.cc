@@ -16,7 +16,8 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned HIDDEN_SIZE = 8;
   Model m;
-  SimpleSGDTrainer sgd(&m);
+  //SimpleSGDTrainer sgd(&m);
+  MomentumSGDTrainer sgd(&m);
 
   Parameters& p_a = *m.add_parameters(Dim(1,1));
   Parameters& p_b = *m.add_parameters(Dim(HIDDEN_SIZE, 1));
