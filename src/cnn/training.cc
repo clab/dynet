@@ -7,29 +7,58 @@ using namespace std;
 Trainer::~Trainer() {}
 
 void SimpleSGDTrainer::update(real scale) {
-  double extra_scale = 1.0;
   if (clipping_enabled) {
     double gg = 0;
-    for (auto p : model->parameters_list())
-      gg+=p->g_squared_l2norm();
-    for (auto p : model->lookup_parameters_list())
+    for (auto p : model->all_parameters_list())
       gg+=p->g_squared_l2norm();
     gg = sqrt(gg);
     if (gg > clip_threshold) {
-      extra_scale = clip_threshold / gg;
       ++clips;
+      for (auto p : model->all_parameters_list())
+        p->rescale_gradient(clip_threshold / gg);
     }
   }
+
   for (auto p : model->parameters_list()) {
     const Matrix reg = p->values * lambda;
-    p->values -= (eta * scale * extra_scale) * p->g;
+    p->values -= (eta * scale) * p->g;
     p->values -= reg;
     p->clear();
   }
   for (auto p : model->lookup_parameters_list()) {
     for (auto it : p->g) {
       const Matrix reg = p->values[it.first] * lambda;
-      p->values[it.first] -= it.second * (eta * scale * extra_scale);
+      p->values[it.first] -= it.second * (eta * scale);
+      p->values[it.first] -= reg;
+    }
+    p->g.clear();
+  }
+  ++updates;
+}
+
+void MomentumSGDTrainer::update(real scale) {
+  if (clipping_enabled) {
+    double gg = 0;
+    for (auto p : model->all_parameters_list())
+      gg+=p->g_squared_l2norm();
+    gg = sqrt(gg);
+    if (gg > clip_threshold) {
+      ++clips;
+      for (auto p : model->all_parameters_list())
+        p->rescale_gradient(clip_threshold / gg);
+    }
+  }
+
+  for (auto p : model->parameters_list()) {
+    const Matrix reg = p->values * lambda;
+    p->values -= (eta * scale) * p->g;
+    p->values -= reg;
+    p->clear();
+  }
+  for (auto p : model->lookup_parameters_list()) {
+    for (auto it : p->g) {
+      const Matrix reg = p->values[it.first] * lambda;
+      p->values[it.first] -= it.second * (eta * scale);
       p->values[it.first] -= reg;
     }
     p->g.clear();

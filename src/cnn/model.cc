@@ -10,11 +10,13 @@ ParametersBase::~ParametersBase() {}
 
 size_t Parameters::size() const { return values.rows() * values.cols(); }
 
+void Parameters::rescale_gradient(real scale) { g *= scale; }
+
 real Parameters::g_squared_l2norm() const { return g.squaredNorm(); }
 
 void Parameters::accumulate_grad(const Matrix& d) { g += d; }
 
-void Parameters::clear() { g *= 0; }
+void Parameters::clear() { g.setZero(); }
 
 size_t LookupParameters::size() const {
   return values.size() * dim.rows * dim.cols;
@@ -34,6 +36,11 @@ void LookupParameters::accumulate_grad(unsigned index, const Matrix& d) {
   } else {
     g[index] += d;
   }
+}
+
+void LookupParameters::rescale_gradient(real scale) {
+  for (auto it : this->g)
+    it.second *= scale;
 }
 
 void LookupParameters::clear() { g.clear(); }

@@ -19,6 +19,7 @@ namespace cnn {
 
 struct ParametersBase {
   friend class Model;
+  virtual void rescale_gradient(real scale) = 0;
   virtual real g_squared_l2norm() const = 0;
   virtual size_t size() const = 0;
   virtual ~ParametersBase();
@@ -27,6 +28,7 @@ struct ParametersBase {
 // represents parameters (e.g., a weight matrix)
 struct Parameters : public ParametersBase {
   friend class Model;
+  void rescale_gradient(real scale) override;
   real g_squared_l2norm() const override;
   size_t size() const override;
 
@@ -53,6 +55,7 @@ struct Parameters : public ParametersBase {
 // represents a matrix/vector embedding of a discrete set
 struct LookupParameters : public ParametersBase {
   friend class Model;
+  void rescale_gradient(real scale) override;
   real g_squared_l2norm() const override;
   size_t size() const override;
 
@@ -88,6 +91,7 @@ class Model {
   Parameters* add_parameters(const Matrix& m);  // initial value is m
   LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
 
+  const std::vector<ParametersBase*>& all_parameters_list() const { return all_params; }
   const std::vector<Parameters*>& parameters_list() const { return params; }
   const std::vector<LookupParameters*>& lookup_parameters_list() const { return lookup_params; }
 
