@@ -1,6 +1,6 @@
 # ########## Project setup ##########
 PROJECT(cnn CXX)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 # ########## cnn library ##########
 # Sources:
