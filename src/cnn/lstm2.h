@@ -22,6 +22,12 @@ struct LSTMBuilder2 {
   // call this before add_input
   void add_parameter_edges(Hypergraph* hg);
 
+  // call this before input and
+  // initialize c and h to given values at each layer
+  void add_parameter_edges(Hypergraph* hg,
+                           vector<VariableIndex> c_0,
+                           vector<VariableIndex> h_0);
+
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
   VariableIndex add_input(VariableIndex x, Hypergraph* hg);
@@ -50,6 +56,11 @@ struct LSTMBuilder2 {
   // first index is time, second is layer 
   std::vector<std::vector<VariableIndex>> h, c;
 
+  // initial values of h and c at each layer
+  // - both default to zero input
+  std::vector<VariableIndex> h0;
+  std::vector<VariableIndex> c0;
+  unsigned hidden_dim;
   unsigned layers;
 };
 

@@ -22,6 +22,10 @@ struct RNNBuilder {
   // call this before add_input
   void add_parameter_edges(Hypergraph* hg);
 
+  // call this before add_input and initialize hidden layers
+  // at timestep 0 to given values
+  void add_parameter_edges(Hypergraph* hg, vector<VariableIndex> h_0);
+
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
   VariableIndex add_input(VariableIndex x, Hypergraph* hg);
@@ -49,7 +53,13 @@ struct RNNBuilder {
   // first index is time, second is layer 
   std::vector<std::vector<VariableIndex>> h;
 
+  // initial value of h
+  // defaults to zero input
+  std::vector<VariableIndex> h0;
+
   Hypergraph* hg;
+
+  unsigned hidden_dim;
   unsigned layers;
 };
 

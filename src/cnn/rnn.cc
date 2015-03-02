@@ -14,7 +14,7 @@ namespace cnn {
 RNNBuilder::RNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model) : layers(layers) {
+                       Model* model) : layers(layers), hidden_dim(hidden_dim) {
   builder_state = 0; // created
   assert(layers < 10);
 
@@ -32,7 +32,8 @@ RNNBuilder::RNNBuilder(unsigned layers,
 void RNNBuilder::new_graph() {
   param_vars.clear();
   h.clear();
-  builder_state = 1;  
+  h0.clear();
+  builder_state = 1;
 }
 
 void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
@@ -41,6 +42,12 @@ void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
     abort();
   }
   builder_state = 2;
+
+  if (h0.empty()) {
+    VariableIndex zero_input = hg->add_input(Matrix::Zero(hidden_dim, 1));
+    h0 = vector<VariableIndex>(layers, zero_input);
+  }
+
   for (unsigned i = 0; i < layers; ++i) {
     Parameters* p_x2h = params[i][0];
     Parameters* p_h2h = params[i][1];
@@ -52,6 +59,12 @@ void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
     vector<VariableIndex> vars = {i_x2h, i_h2h, i_hb};
     param_vars.push_back(vars);
   }
+}
+
+void RNNBuilder::add_parameter_edges(Hypergraph* hg, vector<VariableIndex> h_0) {
+  assert (h_0.size() == layers);
+  h0 = h_0;
+  add_parameter_edges(hg);
 }
 
 VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
@@ -66,16 +79,17 @@ VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
   VariableIndex in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<VariableIndex>& vars = param_vars[i];
+    VariableIndex i_h_tm1;
     if (t == 0) {  // first time step
-      // h3 = hbias + x2h * in
-      VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in});
-      in = ht[i] = hg->add_function<Tanh>({i_h3});
+      // initial value of h for layer i at timestep 0
+      // defaults to VariableIndex(0) if not set in add_parameter_edges
+      i_h_tm1 = h0[i];
     } else {  // tth time step
-      VariableIndex i_h_tm1 = h[t-1][i];
-      // h3 = hbias + h2h * h_{t-1} + x2h * in
-      VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in, vars[1], i_h_tm1});
-      in = ht[i] = hg->add_function<Tanh>({i_h3});
+      i_h_tm1 = h[t-1][i];
     }
+    // h3 = hbias + h2h * h_{t-1} + x2h * in
+    VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in, vars[1], i_h_tm1});
+    in = ht[i] = hg->add_function<Tanh>({i_h3});
   }
   return ht.back();
 }
