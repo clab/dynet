@@ -29,12 +29,12 @@ void SimpleSGDTrainer::update(real scale) {
     p->clear();
   }
   for (auto p : model->lookup_parameters_list()) {
-    for (auto it : p->g) {
+    for (auto& it : p->g) {
       const Matrix reg = p->values[it.first] * lambda;
       p->values[it.first] -= it.second * (eta * scale);
       p->values[it.first] -= reg;
     }
-    p->g.clear();
+    p->clear();
   }
   ++updates;
 }
@@ -59,14 +59,14 @@ void MomentumSGDTrainer::update(real scale) {
   }
   for (auto p : model->lookup_parameters_list()) {
     unordered_map<unsigned, Matrix>& vx = vl[p];
-    for (auto it : p->g) {
+    for (auto& it : p->g) {
       Matrix& v = get_or_init(vx[it.first], it.second);
       const Matrix reg = p->values[it.first] * lambda;
       v = momentum * v - (eta * scale) * it.second;
       p->values[it.first] += v;
       p->values[it.first] -= reg;
     }
-    p->g.clear();
+    p->clear();
   }
   ++updates;
 }

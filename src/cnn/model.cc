@@ -24,7 +24,7 @@ size_t LookupParameters::size() const {
 
 real LookupParameters::g_squared_l2norm() const {
   real a = 0;
-  for (auto it : this->g)
+  for (auto& it : this->g)
     a += it.second.squaredNorm();
   return a;
 }
@@ -34,12 +34,12 @@ void LookupParameters::accumulate_grad(unsigned index, const Matrix& d) {
   if (it == this->g.end()) {
     g[index] = d;
   } else {
-    g[index] += d;
+    it->second += d;
   }
 }
 
 void LookupParameters::rescale_gradient(real scale) {
-  for (auto it : this->g)
+  for (auto& it : this->g)
     it.second *= scale;
 }
 

@@ -113,8 +113,8 @@ class Model {
     int np, nlp;
     ar & np;
     ar & nlp;
-    assert(np == params.size());
-    assert(nlp == lookup_params.size());
+    assert(np == (int)params.size());
+    assert(nlp == (int)lookup_params.size());
     for (unsigned i = 0; i < params.size(); ++i)
       ar & *params[i];
     for (unsigned i = 0; i < lookup_params.size(); ++i)

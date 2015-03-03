@@ -10,7 +10,7 @@ namespace cnn {
 
 struct Trainer {
   explicit Trainer(Model* m, real e0, real lam) :
-    eta0(e0), eta(e0), eta_decay(), epoch(), lambda(lam), clipping_enabled(true), clip_threshold(5), clips(), model(m) {}
+    eta0(e0), eta(e0), eta_decay(), epoch(), lambda(lam), clipping_enabled(true), clip_threshold(5), clips(), updates(), model(m) {}
   virtual ~Trainer();
 
   virtual void update(real scale = 1.0) = 0;
@@ -55,11 +55,6 @@ struct MomentumSGDTrainer : public Trainer {
   void update(real scale) override;
 
   real momentum;
-
-  real clipping_enabled;
-  real clip_threshold;
-  real clips;
-  real updates;
 
   std::unordered_map<Parameters*, Matrix> vp;
   std::unordered_map<LookupParameters*, std::unordered_map<unsigned, Matrix>> vl;
