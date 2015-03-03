@@ -22,8 +22,9 @@ struct LSTMBuilder {
   // call this before add_input
   void add_parameter_edges(Hypergraph* hg);
 
-  // call this before input and
+  // call this before add_input and
   // initialize c and h to given values at each layer
+  // - if c_0 or h_0 are empty, initialized to zero matrix input
   void add_parameter_edges(Hypergraph* hg,
                            vector<VariableIndex> c_0,
                            vector<VariableIndex> h_0);
@@ -57,11 +58,11 @@ struct LSTMBuilder {
   std::vector<std::vector<VariableIndex>> h, c;
 
   // initial values of h and c at each layer
-  // - both default to zero input
+  // - both default to zero matrix input
   std::vector<VariableIndex> h0;
   std::vector<VariableIndex> c0;
-  unsigned hidden_dim;
 
+  unsigned hidden_dim;
   unsigned layers;
 };
 

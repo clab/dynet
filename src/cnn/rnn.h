@@ -54,7 +54,7 @@ struct RNNBuilder {
   std::vector<std::vector<VariableIndex>> h;
 
   // initial value of h
-  // defaults to zero input
+  // defaults to zero matrix input
   std::vector<VariableIndex> h0;
 
   Hypergraph* hg;

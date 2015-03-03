@@ -62,9 +62,9 @@ void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
 }
 
 void RNNBuilder::add_parameter_edges(Hypergraph* hg, vector<VariableIndex> h_0) {
-  assert (h_0.size() == layers);
   h0 = h_0;
   add_parameter_edges(hg);
+  assert (h0.size() == layers);
 }
 
 VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
@@ -82,7 +82,7 @@ VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
     VariableIndex i_h_tm1;
     if (t == 0) {  // first time step
       // initial value of h for layer i at timestep 0
-      // defaults to VariableIndex(0) if not set in add_parameter_edges
+      // defaults to zero matrix if not set in add_parameter_edges
       i_h_tm1 = h0[i];
     } else {  // tth time step
       i_h_tm1 = h[t-1][i];

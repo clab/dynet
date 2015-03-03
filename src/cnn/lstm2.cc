@@ -107,11 +107,11 @@ void LSTMBuilder2::add_parameter_edges(Hypergraph* hg) {
 void LSTMBuilder2::add_parameter_edges(Hypergraph* hg,
                                       vector<VariableIndex> c_0,
                                       vector<VariableIndex> h_0) {
-  assert (h_0.size() == layers);
-  assert (c_0.size() == layers);
   h0 = h_0;
   c0 = c_0;
   add_parameter_edges(hg);
+  assert (h0.size() == layers);
+  assert (c0.size() == layers);
 }
 
 VariableIndex LSTMBuilder2::add_input(VariableIndex x, Hypergraph* hg) {
@@ -131,10 +131,9 @@ VariableIndex LSTMBuilder2::add_input(VariableIndex x, Hypergraph* hg) {
     VariableIndex i_c_tm1;
     if (t == 0) {
       // intial value for h and c at timestep 0 in layer i
-      // default to VariableIndex(0) if not set in add_parameter_edges
+      // defaults to zero matrix input if not set in add_parameter_edges
       i_h_tm1 = h0[i];
       i_c_tm1 = c0[i];
-      cout << i_h_tm1 << " " << i_c_tm1 << endl;
     } else {  // t > 0
       i_h_tm1 = h[t-1][i];
       i_c_tm1 = c[t-1][i];
