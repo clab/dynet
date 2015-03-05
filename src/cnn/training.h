@@ -50,7 +50,7 @@ struct SimpleSGDTrainer : public Trainer {
 };
 
 struct MomentumSGDTrainer : public Trainer {
-  explicit MomentumSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.02, real mom = 0.9) :
+  explicit MomentumSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.01, real mom = 0.9) :
     Trainer(m, e0, lam), momentum(mom) {}
   void update(real scale) override;
 
