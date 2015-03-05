@@ -54,9 +54,9 @@ struct Hypergraph {
   VariableIndex add_const_lookup(LookupParameters* p, unsigned* pindex);
   VariableIndex add_const_lookup(LookupParameters* p, unsigned index);
   template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);
-  template <class Function, typename T>
+  template <class Function, typename... Args>
   inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments,
-                                    const T& side_information);
+                                    Args&&... side_information);
   template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
   // perform computations
@@ -156,13 +156,13 @@ inline VariableIndex Hypergraph::add_function(const std::initializer_list<Variab
 }
 
 // pass side information to the function. these are likely to be nondifferentiable arguments
-template <class Function, typename T>
+template <class Function, typename... Args>
 inline VariableIndex Hypergraph::add_function(const std::initializer_list<VariableIndex>& arguments,
-                                              const T& side_information) {
+                                              Args&&... side_information) {
   VariableIndex new_node_index(nodes.size());
   unsigned new_edge_index = edges.size();
   nodes.push_back(new Node(new_edge_index, new_node_index));
-  Edge* new_edge = new Function(side_information);
+  Edge* new_edge = new Function(std::forward<Args>(side_information)...);
   edges.push_back(new_edge);
   new_edge->head_node = new_node_index;
   for (auto ni : arguments) {
