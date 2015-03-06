@@ -12,6 +12,7 @@ SET(cnn_library_SRCS
     model.cc
     param-edges.cc
     rnn.cc
+    saxe_init.cc
     training.cc
 )
 
@@ -25,6 +26,7 @@ SET(cnn_library_HDRS
     model.h
     param-edges.h
     rnn.h
+    saxe_init.h
     tensor.h
     timing.h
     training.h
