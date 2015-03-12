@@ -318,18 +318,14 @@ string Rectify::as_string(const vector<string>& arg_names) const {
 
 Matrix Rectify::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 1);
-  return xs[0]->cwiseMax(Matrix::Zero(xs[0]->rows(), xs[0]->cols()));
+  return Elewise::ReluForward(*xs.front());
 }
 
 Matrix Rectify::backward(const vector<const Matrix*>& xs,
                         const Matrix& fx,
                         const Matrix& dEdf,
                         unsigned i) const {
-  Matrix dEdx = fx;
-  for (unsigned i = 0; i < dEdx.rows(); ++i)
-    for (unsigned j = 0; j < dEdx.cols(); ++j)
-      if (dEdx(i,j)) dEdx(i,j) = dEdf(i,j);
-  return dEdx;
+  return Elewise::ReluBackward(dEdf, fx, *xs.front());
 }
 
 string HardTanh::as_string(const vector<string>& arg_names) const {

@@ -2,6 +2,7 @@
 #define CNN_TENSOR_H_
 
 #include <iostream>
+#include <initializer_list>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include "cnn/eigen-serialization.h"
@@ -16,6 +17,18 @@ struct Dim {
   Dim() : rows(1), cols(1) {}
   explicit Dim(unsigned m) : rows(m), cols(1) {}
   Dim(unsigned m, unsigned n) : rows(m), cols(n) {}
+  Dim(const std::initializer_list<unsigned>& x) {
+    unsigned c = 0;
+    for (auto v : x) {
+      if (c == 0) rows = v;
+      if (c == 1) cols = v;
+      ++c;
+    }
+    if (c > 2) {
+      std::cerr << "Dim class doesn't support more than two dimensions\n";
+      abort();
+    }
+  }
   unsigned short rows;
   unsigned short cols;
   Dim transpose() const { return Dim(cols,rows); }
