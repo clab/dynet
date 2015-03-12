@@ -5,6 +5,31 @@
 
 namespace cnn {
 
+struct Identity : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+};
+
+// hyperparameter: width > 1
+// x_1 is a vector in R^n, which we write x
+// y is a vector in R^{n / width}
+// y_i = max_{x_{i * width - width + 1}, ..., x_{i * width}}
+struct MaxPooling1D : public Edge {
+  MaxPooling1D(unsigned w) : width(w) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+  unsigned width;
+  mutable std::vector<unsigned> ind;
+};
+
 // y = x_1 * x_2
 struct MatrixMultiply : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
