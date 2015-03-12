@@ -34,6 +34,70 @@ inline real logsumexp(const Matrix& x, const vector<unsigned>& denom) {
   return m + log(z);
 }
 
+string Identity::as_string(const vector<string>& arg_names) const {
+  return arg_names[0];
+}
+
+Matrix Identity::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  return *xs.front();
+}
+
+Matrix Identity::backward(const vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const {
+  assert(i == 0);
+  return dEdf;
+}
+
+string MaxPooling1D::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "maxpool1d(" << arg_names.front() << ",w=" << width << ")";
+  return os.str();
+}
+
+Matrix MaxPooling1D::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  const Matrix& x = *xs.front();
+  const unsigned x_rows = x.rows();
+  assert(x.cols() == 1);
+  const unsigned fx_rows = x_rows / width;
+  ind.resize(fx_rows);
+  Matrix fx = Matrix::Zero(fx_rows, 1);
+  for (unsigned i = 0; i < fx_rows; ++i) {
+    unsigned from = i * width;
+    unsigned to = from + width;
+    if (to > x_rows) to = x_rows;
+    real best = x(from, 0);
+    unsigned bestr = from;
+    for (unsigned r = from + 1; r < to; ++r) {
+      if (x(r, 0) > best) {
+        best = x(r,0);
+        bestr = r;
+      }
+    }
+    ind[i] = bestr;
+    fx(i, 0) = best;
+  }
+  return fx;
+}
+
+Matrix MaxPooling1D::backward(const vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const {
+  const Matrix& x = *xs.front();
+  const unsigned x_rows = x.rows();
+  Matrix dEdx = Matrix::Zero(x_rows, 1);
+  const unsigned fx_rows = x_rows / width;
+  assert(fx_rows == ind.size());
+  assert(fx_rows == dEdf.rows());
+  for (unsigned i = 0; i < fx_rows; ++i)
+    dEdx(ind[i], 0) = dEdf(i, 0);
+  return dEdx;
+}
+
 string LogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "log_softmax(" << arg_names[0] << ')';
@@ -83,7 +147,7 @@ Matrix RestrictedLogSoftmax::forward(const vector<const Matrix*>& xs) const {
   const real logz = logsumexp(x, denom);
   Matrix fx(rows, 1);
   for (unsigned i = 0; i < rows; ++i)
-    fx(i,0) = -std::numeric_limits<real>::infinity();
+    fx(i,0) = -numeric_limits<real>::infinity();
   for (auto i : denom)
     fx(i,0) = x(i,0) - logz;
   if (denom.size() == 1) fx(denom.front(), 0) = 0;
@@ -312,7 +376,7 @@ string BinaryLogLoss::as_string(const vector<string>& arg_names) const {
   return os.str();
 }
 
-Matrix BinaryLogLoss::forward(const std::vector<const Matrix*>& xs) const {
+Matrix BinaryLogLoss::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 1);
   assert(xs.front()->cols() == 1);
   assert(xs.front()->rows() == 1);
@@ -330,7 +394,7 @@ Matrix BinaryLogLoss::forward(const std::vector<const Matrix*>& xs) const {
   return fx;
 }
 
-Matrix BinaryLogLoss::backward(const std::vector<const Matrix*>& xs,
+Matrix BinaryLogLoss::backward(const vector<const Matrix*>& xs,
                   const Matrix& fx,
                   const Matrix& dEdf,
                   unsigned i) const {
