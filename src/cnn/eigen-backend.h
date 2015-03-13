@@ -24,6 +24,14 @@ class Elewise {
   static Matrix TanhBackward(const Matrix& diff, const Matrix& top, const Matrix& bottom);
 };
 
+typedef unsigned SoftmaxAlgorithm;
+
+class Convolution {
+ public:
+  static Matrix SoftmaxForward(const Matrix& src, SoftmaxAlgorithm algorithm);
+  static Matrix SoftmaxBackward(const Matrix& diff, const Matrix& top, SoftmaxAlgorithm algorithm);
+};
+
 } // namespace cnn
 
 #endif
