@@ -8,31 +8,7 @@ using namespace std;
 
 namespace cnn {
 
-// TODO move the implementation of all the standard functional edges into here
-
-inline real logsumexp(const Matrix& x) {
-  real m = x(0,0);
-  for (unsigned i = 1; i < x.rows(); ++i) {
-    real r = x(i,0);
-    if (r > m) m = r;
-  }
-  real z = 0;
-  for (unsigned i = 0; i < x.rows(); ++i)
-    z += exp(x(i,0) - m);
-  return m + log(z);
-}
-
-inline real logsumexp(const Matrix& x, const vector<unsigned>& denom) {
-  real m = x(denom[0],0);
-  for (auto i : denom) {
-    real r = x(i,0);
-    if (r > m) m = r;
-  }
-  real z = 0;
-  for (auto i : denom)
-    z += exp(x(i,0) - m);
-  return m + log(z);
-}
+// TODO move the implementation of all the standard functional edges into this file from the header
 
 string Identity::as_string(const vector<string>& arg_names) const {
   return arg_names[0];
@@ -107,13 +83,7 @@ string LogSoftmax::as_string(const vector<string>& arg_names) const {
 Matrix LogSoftmax::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 1);
   const Matrix& x = *xs.front();
-  const unsigned rows = x.rows();
-  assert(x.cols() == 1);
-  const real logz = logsumexp(x);
-  Matrix fx(rows, 1);
-  for (unsigned i = 0; i < rows; ++i)
-    fx(i,0) = x(i,0) - logz;
-  return fx;
+  return Convolution::SoftmaxForward(x, 1).array().log();
 }
 
 Matrix LogSoftmax::backward(const vector<const Matrix*>& xs,
@@ -121,21 +91,26 @@ Matrix LogSoftmax::backward(const vector<const Matrix*>& xs,
                             const Matrix& dEdf,
                             unsigned i) const {
   assert(i == 0);
-  const Matrix& x = *xs.front();
-  const unsigned rows = x.rows();
-  Matrix dEdx(rows, 1);
-  double z = 0;
-  for (unsigned i = 0; i < rows; ++i)
-    z += dEdf(i, 0);
-  for (unsigned i = 0; i < rows; ++i)
-    dEdx(i, 0) = dEdf(i, 0) - exp(fx(i, 0)) * z;
-  return dEdx;
+  Matrix u = fx.array().exp();
+  return Convolution::SoftmaxBackward(dEdf.cwiseQuotient(u), u, 1);
 }
 
 string RestrictedLogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "r_log_softmax(" << arg_names[0] << ')';
   return s.str();
+}
+
+inline real logsumexp(const Matrix& x, const vector<unsigned>& denom) {
+  real m = x(denom[0],0);
+  for (auto i : denom) {
+    real r = x(i,0);
+    if (r > m) m = r;
+  }
+  real z = 0;
+  for (auto i : denom)
+    z += expf(x(i,0) - m);
+  return m + logf(z);
 }
 
 Matrix RestrictedLogSoftmax::forward(const vector<const Matrix*>& xs) const {
@@ -318,18 +293,14 @@ string Rectify::as_string(const vector<string>& arg_names) const {
 
 Matrix Rectify::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 1);
-  return xs[0]->cwiseMax(Matrix::Zero(xs[0]->rows(), xs[0]->cols()));
+  return Elewise::ReluForward(*xs.front());
 }
 
 Matrix Rectify::backward(const vector<const Matrix*>& xs,
                         const Matrix& fx,
                         const Matrix& dEdf,
                         unsigned i) const {
-  Matrix dEdx = fx;
-  for (unsigned i = 0; i < dEdx.rows(); ++i)
-    for (unsigned j = 0; j < dEdx.cols(); ++j)
-      if (dEdx(i,j)) dEdx(i,j) = dEdf(i,j);
-  return dEdx;
+  return Elewise::ReluBackward(dEdf, fx, *xs.front());
 }
 
 string HardTanh::as_string(const vector<string>& arg_names) const {

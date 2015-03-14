@@ -7,6 +7,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 SET(cnn_library_SRCS
     cnn.cc
     edges.cc
+    eigen-backend.cc
     lstm.cc
     lstm2.cc
     model.cc
@@ -20,6 +21,7 @@ SET(cnn_library_SRCS
 SET(cnn_library_HDRS
     cnn.h
     edges.h
+    eigen-backend.h
     eigen-serialization.h
     lstm.h
     lstm2.h

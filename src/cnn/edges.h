@@ -2,6 +2,7 @@
 #define CNN_EDGES_H_
 
 #include "cnn/cnn.h"
+#include "cnn/eigen-backend.h"
 
 namespace cnn {
 
@@ -174,13 +175,7 @@ struct LogisticSigmoid : public Edge {
   Matrix forward(const vector<const Matrix*>& xs) const {
     assert(xs.size() == 1);
     const Matrix& x = *xs.front();
-    const unsigned rows = x.rows();
-    const unsigned cols = x.cols();
-    Matrix fx(rows, cols);
-    for (unsigned i = 0; i < rows; ++i)
-      for (unsigned j = 0; j < cols; ++j)
-        fx(i,j) = 1. / (1. + exp(-x(i,j)));
-    return fx;
+    return Elewise::SigmoidForward(x);
   }
   Matrix backward(const vector<const Matrix*>& xs,
                     const Matrix& fx,
@@ -188,13 +183,7 @@ struct LogisticSigmoid : public Edge {
                     unsigned i) const override {
     assert(i == 0);
     const Matrix& x = *xs.front();
-    const unsigned rows = x.rows();
-    const unsigned cols = x.cols();
-    Matrix dfdx(rows, cols);
-    for (unsigned i = 0; i < rows; ++i)
-      for (unsigned j = 0; j < cols; ++j)
-        dfdx(i,j) = (1. - fx(i,j)) * fx(i,j);
-    return dfdx.cwiseProduct(dEdf);
+    return Elewise::SigmoidBackward(dEdf, fx, x);
   }
 };
 
@@ -209,13 +198,7 @@ struct Tanh : public Edge {
   Matrix forward(const vector<const Matrix*>& xs) const {
     assert(xs.size() == 1);
     const Matrix& x = *xs.front();
-    const unsigned rows = x.rows();
-    const unsigned cols = x.cols();
-    Matrix fx(rows, cols);
-    for (unsigned i = 0; i < rows; ++i)
-      for (unsigned j = 0; j < cols; ++j)
-        fx(i,j) = tanh(x(i,j));
-    return fx;
+    return Elewise::TanhForward(x);
   }
   Matrix backward(const vector<const Matrix*>& xs,
                     const Matrix& fx,
@@ -223,13 +206,7 @@ struct Tanh : public Edge {
                     unsigned i) const override {
     assert(i == 0);
     const Matrix& x = *xs.front();
-    const unsigned rows = x.rows();
-    const unsigned cols = x.cols();
-    Matrix dfdx(rows, cols);
-    for (unsigned i = 0; i < rows; ++i)
-      for (unsigned j = 0; j < cols; ++j)
-        dfdx(i,j) = 1. - fx(i,j) * fx(i,j);
-    return dfdx.cwiseProduct(dEdf);
+    return Elewise::TanhBackward(dEdf, fx, x);
   }
 };
 
