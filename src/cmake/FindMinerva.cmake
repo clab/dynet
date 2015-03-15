@@ -6,9 +6,7 @@
 
 find_path(MINERVA_INCLUDE_DIR
     NAMES minerva/minerva.h
-    PATHS
-    PATH_SUFFIXES minerva
-  )
+    PATHS ${MINERVA_PREFIX_PATH}/minerva)
 
 find_library(MINERVA_LIBRARY
     NAMES minerva
