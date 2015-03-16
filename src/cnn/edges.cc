@@ -6,9 +6,94 @@
 
 using namespace std;
 
+// TODO move the implementation of all the standard functional edges into this file from the header
+
 namespace cnn {
 
-// TODO move the implementation of all the standard functional edges into this file from the header
+string Concatenate::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "concat(" << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); ++i) {
+    os << ',' << arg_names[i];
+  }
+  os << ')';
+  return os.str();
+}
+
+Matrix Concatenate::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() > 0);
+  unsigned rows = 0;
+  for (auto x : xs) rows += x->rows();
+  src_row_indices.resize(xs.size());
+  Matrix fx(rows, 1);
+  unsigned i = 0;
+  unsigned k = 0;
+  for (auto x : xs) {
+    src_row_indices[k] = i;
+    ++k;
+    const Matrix& cx = *x;
+    assert(cx.cols() == 1); // this can be relaxed to the same everywhere
+    const unsigned crows = cx.rows();
+    for (unsigned j = 0; j < crows; ++j) {
+      fx(i, 0) = cx(j, 0);
+      ++i;
+    }
+  }
+  return fx;
+}
+
+Matrix Concatenate::backward(const vector<const Matrix*>& xs,
+                             const Matrix& fx,
+                             const Matrix& dEdf,
+                             unsigned i) const {
+  assert(i < src_row_indices.size());
+  Matrix dEdx = *xs[i];
+  const unsigned rows = dEdx.rows();
+  const unsigned begin = src_row_indices[i];
+  assert(rows + begin <= dEdf.rows());
+  for (unsigned i = 0; i < rows; ++i)
+    dEdx(i,0) = dEdf(i + begin, 0);
+  return dEdx;
+}
+
+string Hinge::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "hinge(" << arg_names[0] << ",m=" << margin << ")";
+  return os.str();
+}
+
+Matrix Hinge::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  const Matrix& x = *xs.front();
+  const unsigned rows = x.rows();
+  if (u.rows() != rows)
+    u = Matrix(rows, 1);  // local forward value
+  real y = 0;
+  const real mlystar = margin - x(*pelement, 0);
+  for (unsigned i = 0; i < rows; ++i)
+    if (*pelement != i)
+      y += u(i, 0) = max(real(0), mlystar + x(i,0));
+  Matrix res(1,1);
+  res(0,0) = y;
+  return res;
+}
+
+Matrix Hinge::backward(const vector<const Matrix*>& xs,
+                       const Matrix& fx,
+                       const Matrix& dEdf,
+                       unsigned i) const {
+  assert(i == 0);
+  const Matrix& x = *xs.front();
+  const unsigned rows = x.rows();
+  Matrix dEdx = Matrix::Zero(rows, 1);
+  if (fx(0,0) == 0) return dEdx;
+  const real diff = dEdf(0,0);
+  unsigned tv = 0;
+  for (unsigned i = 0; i < rows; ++i)
+    if (*pelement != i && u(i, 0) > 0) { dEdx(i, 0) = diff; tv++; }
+  dEdx(*pelement, 0) = -diff * tv;
+  return dEdx;
+}
 
 string Identity::as_string(const vector<string>& arg_names) const {
   return arg_names[0];

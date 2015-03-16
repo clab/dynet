@@ -6,6 +6,35 @@
 
 namespace cnn {
 
+struct Concatenate : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+  // src_row_indices[i] says what row in fx the ith x vector was assigned to
+  // used to simplify backprop
+  mutable std::vector<unsigned> src_row_indices;
+};
+
+// Let x be a vector-valued input, x_i represents the score of the ith element, then
+// y = \sum{i != element} max{0, margin - x_element + x_i}
+struct Hinge : public Edge {
+  explicit Hinge(unsigned e, real m = 1.0) : element(e), pelement(&element), margin(m) {}
+  explicit Hinge(unsigned* pe, real m = 1.0) : element(), pelement(pe), margin(m) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+  unsigned element;
+  const unsigned* pelement;
+  real margin;
+  mutable Matrix u; // partial forward values
+};
+
 struct Identity : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;

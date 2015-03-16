@@ -1,4 +1,5 @@
 # cmake stuff
+config.h
 Makefile
 CMakeCache.txt
 CMakeFiles
