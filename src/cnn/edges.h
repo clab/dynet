@@ -2,7 +2,6 @@
 #define CNN_EDGES_H_
 
 #include "cnn/cnn.h"
-#include "cnn/eigen-backend.h"
 
 namespace cnn {
 
@@ -75,6 +74,7 @@ struct Hinge : public Edge {
   mutable Matrix u; // partial forward values
 };
 
+// y = x_1
 struct Identity : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;

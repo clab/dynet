@@ -4,6 +4,8 @@
 #include <cmath>
 #include <sstream>
 
+#include "cnn/eigen-backend.h"
+
 using namespace std;
 
 namespace cnn {
