@@ -16,6 +16,8 @@ namespace cnn {
 
 class Elewise {
  public:
+  static Matrix Ln(const Matrix&);
+  static Matrix Exp(const Matrix&);
   static Matrix SigmoidForward(const Matrix&);
   static Matrix SigmoidBackward(const Matrix& diff, const Matrix& top, const Matrix& bottom);
   static Matrix ReluForward(const Matrix&);

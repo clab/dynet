@@ -6,6 +6,14 @@ using namespace std;
 
 namespace cnn {
 
+Matrix Elewise::Ln(const Matrix& x) {
+  return x.array().log();
+}
+
+Matrix Elewise::Exp(const Matrix& x) {
+  return x.array().exp();
+}
+
 Matrix Elewise::SigmoidForward(const Matrix& x) {
   Matrix fx = x;
   for (unsigned i = 0; i < fx.rows(); ++i)

@@ -26,8 +26,8 @@ struct LSTMBuilder {
   // initialize c and h to given values at each layer
   // - if c_0 or h_0 are empty, initialized to zero matrix input
   void add_parameter_edges(Hypergraph* hg,
-                           vector<VariableIndex> c_0,
-                           vector<VariableIndex> h_0);
+                           std::vector<VariableIndex> c_0,
+                           std::vector<VariableIndex> h_0);
 
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
