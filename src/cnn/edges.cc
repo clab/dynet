@@ -384,6 +384,43 @@ Matrix PickElement::backward(const vector<const Matrix*>& xs,
   return dEdx;
 }
 
+// x_1 is a vector
+// y = (x_1)[start:end]
+string PickRange::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "slice(" << arg_names[0] << ',' << start << ':' << end << ')';
+  return s.str();
+}
+
+// slice of vector from index start (inclusive) to index end (exclusive)
+Matrix PickRange::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  const Matrix& x = *xs.front();
+  assert(x.cols() == 1);
+  assert(start >= 0);
+  assert(end <= x.rows());
+  assert(start < end);
+  Matrix fx = x.block(start, 0, end-start, 1);
+  assert(fx.rows() == end-start);
+  return fx;
+}
+
+// derivative is 0 in all dimensions except the slice range
+Matrix PickRange::backward(const vector<const Matrix*>& xs,
+                    const Matrix& fx,
+                    const Matrix& dEdf,
+                    unsigned i) const {
+  assert(i == 0);
+  assert(dEdf.rows() == end-start);
+  assert(dEdf.cols() == 1);
+  const Matrix& x = *xs.front();
+
+  // TODO should be sparse
+  Matrix dEdx = Matrix::Zero(x.rows(), 1);
+  dEdx.block(start, 0, end-start, 1) = dEdf;
+  return dEdx;
+}
+
 string MatrixMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " * " << arg_names[1];
