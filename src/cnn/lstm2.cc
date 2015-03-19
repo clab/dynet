@@ -16,7 +16,7 @@ enum { X2I, H2I, C2I, BI, X2F, H2F, C2F, BF, X2O, H2O, C2O, BO, X2C, H2C, BC };
 LSTMBuilder2::LSTMBuilder2(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model) : layers(layers), hidden_dim(hidden_dim) {
+                       Model* model) : hidden_dim(hidden_dim), layers(layers) {
   builder_state = 0; // created
 
   unsigned layer_input_dim = input_dim;
