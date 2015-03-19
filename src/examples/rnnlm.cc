@@ -4,7 +4,7 @@
 #include "cnn/timing.h"
 #include "cnn/rnn.h"
 #include "cnn/lstm.h"
-#include "cnn/lstm2.h"
+#include "cnn/lstm-fast.h"
 
 #include <iostream>
 #include <fstream>
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   Parameters* p_R = model.add_parameters(Dim(VOCAB_SIZE, HIDDEN_DIM));
   Parameters* p_bias = model.add_parameters(Dim(VOCAB_SIZE, 1));
   //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
-  LSTMBuilder2 rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
+  LSTMBuilder_CIFG rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
 
   for (unsigned iter = 0; iter < 1000; ++iter) {
     Timer iteration("epoch completed in");
