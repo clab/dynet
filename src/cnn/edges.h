@@ -5,6 +5,16 @@
 
 namespace cnn {
 
+// y = 1 - x_1
+struct OneMinusX : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
+};
+
 // y = tanh x_1
 struct Tanh : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
