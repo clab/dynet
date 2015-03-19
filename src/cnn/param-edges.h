@@ -41,7 +41,7 @@ struct InputEdge : public Edge {
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
 struct LookupEdge : public ParameterEdgeBase {
   LookupEdge(LookupParameters* p, unsigned ind) : dim(p->dim), index(ind), pindex(&index), params(p), has_optimizable_parameters(true) {}
-  LookupEdge(LookupParameters* p, unsigned* pind) : dim(p->dim), index(), pindex(pind), params(p), has_optimizable_parameters(true) {}
+  LookupEdge(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), params(p), has_optimizable_parameters(true) {}
   bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;
@@ -52,7 +52,7 @@ struct LookupEdge : public ParameterEdgeBase {
   void accumulate_grad(const Matrix& g) override;
   Dim dim;
   unsigned index;
-  unsigned* pindex;
+  const unsigned* pindex;
   LookupParameters* params;
   bool has_optimizable_parameters;
 };

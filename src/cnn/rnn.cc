@@ -14,7 +14,7 @@ namespace cnn {
 RNNBuilder::RNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model) : layers(layers), hidden_dim(hidden_dim) {
+                       Model* model) : hidden_dim(hidden_dim), layers(layers) {
   builder_state = 0; // created
   assert(layers < 10);
 

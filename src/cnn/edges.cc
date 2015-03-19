@@ -10,6 +10,30 @@ using namespace std;
 
 namespace cnn {
 
+std::string OneMinusX::as_string(const std::vector<std::string>& arg_names) const {
+  ostringstream s;
+  s << "1 - " << arg_names[0];
+  return s.str();
+}
+
+Matrix OneMinusX::forward(const std::vector<const Matrix*>& xs) const {
+  assert(xs.size() == 1);
+  Matrix res = *xs[0];
+  const unsigned rows = res.rows();
+  const unsigned cols = res.cols();
+  for (unsigned i = 0; i < rows; ++i)
+    for (unsigned j = 0; j < cols; ++j)
+      res(i, j) = 1 - res(i, j);
+  return res;
+}
+
+Matrix OneMinusX::backward(const std::vector<const Matrix*>& xs,
+                     const Matrix& fx,
+                     const Matrix& dEdf,
+                     unsigned i) const {
+  return -dEdf;
+};
+
 std::string Sum::as_string(const std::vector<std::string>& arg_names) const {
   ostringstream s;
   s << arg_names[0];

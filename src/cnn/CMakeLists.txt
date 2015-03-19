@@ -9,7 +9,7 @@ SET(cnn_library_SRCS
     edges.cc
     eigen-backend.cc
     lstm.cc
-    lstm2.cc
+    lstm-fast.cc
     model.cc
     param-edges.cc
     rnn.cc
@@ -24,7 +24,7 @@ SET(cnn_library_HDRS
     eigen-backend.h
     eigen-serialization.h
     lstm.h
-    lstm2.h
+    lstm-fast.h
     model.h
     param-edges.h
     rnn.h
