@@ -1,4 +1,4 @@
-#include "cnn/lstm2.h"
+#include "cnn/lstm-fast.h"
 
 #include <string>
 #include <cassert>
@@ -11,9 +11,9 @@ using namespace std;
 
 namespace cnn {
 
-enum { X2I, H2I, C2I, BI, X2F, H2F, C2F, BF, X2O, H2O, C2O, BO, X2C, H2C, BC };
+enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 
-LSTMBuilder2::LSTMBuilder2(unsigned layers,
+LSTMBuilder_CIFG::LSTMBuilder_CIFG(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
                        Model* model) : hidden_dim(hidden_dim), layers(layers) {
@@ -23,20 +23,14 @@ LSTMBuilder2::LSTMBuilder2(unsigned layers,
   for (unsigned i = 0; i < layers; ++i) {
     // i
     Parameters* p_x2i = model->add_parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2i = model->add_parameters(Dim(hidden_dim, 1));
-    Parameters* p_c2i = model->add_parameters(Dim(hidden_dim, 1));
+    Parameters* p_h2i = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_c2i = model->add_parameters(Dim(hidden_dim, hidden_dim));
     Parameters* p_bi = model->add_parameters(Dim(hidden_dim, 1));
     
-    // f
-    Parameters* p_x2f = model->add_parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2f = model->add_parameters(Dim(hidden_dim, 1));
-    Parameters* p_c2f = model->add_parameters(Dim(hidden_dim, 1));
-    Parameters* p_bf = model->add_parameters(Dim(hidden_dim, 1));
-
     // o
     Parameters* p_x2o = model->add_parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2o = model->add_parameters(Dim(hidden_dim, 1));
-    Parameters* p_c2o = model->add_parameters(Dim(hidden_dim, 1));
+    Parameters* p_h2o = model->add_parameters(Dim(hidden_dim, hidden_dim));
+    Parameters* p_c2o = model->add_parameters(Dim(hidden_dim, hidden_dim));
     Parameters* p_bo = model->add_parameters(Dim(hidden_dim, 1));
 
     // c
@@ -45,12 +39,12 @@ LSTMBuilder2::LSTMBuilder2(unsigned layers,
     Parameters* p_bc = model->add_parameters(Dim(hidden_dim, 1));
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
-    vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2f, p_h2f, p_c2f, p_bf, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
+    vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
     params.push_back(ps);
   }  // layers
 }
 
-void LSTMBuilder2::new_graph() {
+void LSTMBuilder_CIFG::new_graph() {
   param_vars.clear();
   h.clear();
   h0.clear();
@@ -58,7 +52,7 @@ void LSTMBuilder2::new_graph() {
   builder_state = 1;  
 }
 
-void LSTMBuilder2::add_parameter_edges(Hypergraph* hg) {
+void LSTMBuilder_CIFG::add_parameter_edges(Hypergraph* hg) {
   if (builder_state != 1) {
     cerr << "Invalid state: " << builder_state << endl;
     abort();
@@ -84,27 +78,24 @@ void LSTMBuilder2::add_parameter_edges(Hypergraph* hg) {
     VariableIndex i_h2i = hg->add_parameter(p[H2I]);
     VariableIndex i_c2i = hg->add_parameter(p[C2I]);
     VariableIndex i_bi = hg->add_parameter(p[BI]);
-    // f
-    VariableIndex i_x2f = hg->add_parameter(p[X2F]);
-    VariableIndex i_h2f = hg->add_parameter(p[H2F]);
-    VariableIndex i_c2f = hg->add_parameter(p[C2F]);
-    VariableIndex i_bf = hg->add_parameter(p[BF]);
+
     // o
     VariableIndex i_x2o = hg->add_parameter(p[X2O]);
     VariableIndex i_h2o = hg->add_parameter(p[H2O]);
     VariableIndex i_c2o = hg->add_parameter(p[C2O]);
     VariableIndex i_bo = hg->add_parameter(p[BO]);
+
     // c
     VariableIndex i_x2c = hg->add_parameter(p[X2C]);
     VariableIndex i_h2c = hg->add_parameter(p[H2C]);
     VariableIndex i_bc = hg->add_parameter(p[BC]);
 
-    vector<VariableIndex> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2f, i_h2f, i_c2f, i_bf, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
+    vector<VariableIndex> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
   }
 }
 
-void LSTMBuilder2::add_parameter_edges(Hypergraph* hg,
+void LSTMBuilder_CIFG::add_parameter_edges(Hypergraph* hg,
                                       vector<VariableIndex> c_0,
                                       vector<VariableIndex> h_0) {
   h0 = h_0;
@@ -114,7 +105,7 @@ void LSTMBuilder2::add_parameter_edges(Hypergraph* hg,
   assert (c0.size() == layers);
 }
 
-VariableIndex LSTMBuilder2::add_input(VariableIndex x, Hypergraph* hg) {
+VariableIndex LSTMBuilder_CIFG::add_input(VariableIndex x, Hypergraph* hg) {
   if (builder_state != 2) {
     cerr << "Invalid state: " << builder_state << endl;
     abort();
@@ -142,8 +133,7 @@ VariableIndex LSTMBuilder2::add_input(VariableIndex x, Hypergraph* hg) {
     VariableIndex i_ait = hg->add_function<Multilinear>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
     VariableIndex i_it = hg->add_function<LogisticSigmoid>({i_ait});
     // forget
-    VariableIndex i_aft = hg->add_function<Multilinear>({vars[BF], vars[X2F], in, vars[H2F], i_h_tm1, vars[C2F], i_c_tm1});
-    VariableIndex i_ft = hg->add_function<LogisticSigmoid>({i_aft});
+    VariableIndex i_ft = hg->add_function<OneMinusX>({i_it});
     // write memory cell
     VariableIndex i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
     VariableIndex i_wt = hg->add_function<Tanh>({i_awt});

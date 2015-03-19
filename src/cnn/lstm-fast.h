@@ -1,5 +1,5 @@
-#ifndef CNN_LSTM2_H_
-#define CNN_LSTM2_H_
+#ifndef CNN_LSTM_FAST_H_
+#define CNN_LSTM_FAST_H_
 
 #include "cnn/cnn.h"
 #include "cnn/edges.h"
@@ -8,12 +8,12 @@ namespace cnn {
 
 class Model;
 
-struct LSTMBuilder2 {
-  LSTMBuilder2() {}
-  explicit LSTMBuilder2(unsigned layers,
-                       unsigned input_dim,
-                       unsigned hidden_dim,
-                       Model* model);
+struct LSTMBuilder_CIFG {
+  LSTMBuilder_CIFG() {}
+  explicit LSTMBuilder_CIFG(unsigned layers,
+                            unsigned input_dim,
+                            unsigned hidden_dim,
+                            Model* model);
 
   // call this to reset the builder when you are going to create
   // a new computation graph
