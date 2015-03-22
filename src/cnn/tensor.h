@@ -45,14 +45,32 @@ inline Dim operator*(const Dim& a, const Dim& b) {
   return Dim(a.rows, b.cols);
 }
 
+inline bool operator==(const Dim& a, const Dim& b) { return (a.rows == b.rows && a.cols == b.cols); }
+inline bool operator!=(const Dim& a, const Dim& b) { return !(a == b); }
+
 inline std::ostream& operator<<(std::ostream& os, const Dim& d) {
   return os << '(' << d.rows << ',' << d.cols << ')';
 }
+
+inline Dim size(const Matrix& m) { return Dim(m.rows(), m.cols()); }
 
 inline Matrix Zero(const Dim& d) { return Matrix::Zero(d.rows, d.cols); }
 inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) * (sqrt(6) / sqrt(d.cols + d.rows)); }
 //inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) * 0.08; }
 inline Matrix Random(const Dim& d, double scale) { return Matrix::Random(d.rows, d.cols) * scale; }
+
+// column major constructor
+inline Matrix Ccm(const Dim&d, const std::initializer_list<real>& v) {
+  Matrix m = Matrix::Zero(d.rows, d.cols);
+  int cc = 0;
+  int cr = 0;
+  for (const auto& x : v) {
+    m(cr, cc) = x;
+    ++cc;
+    if (cc == d.cols) { cc = 0; ++cr; }
+  }
+  return m;
+}
 
 } // namespace cnn
 
