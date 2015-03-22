@@ -10,6 +10,7 @@ In `src`, you need to first use [`cmake`](http://www.cmake.org/) to generate the
 Then to compile, run
 
     make -j 2
+    make test
 
 If you want to see the compile commands that are used, you can run
 
