@@ -180,6 +180,38 @@ Matrix Concatenate::backward(const vector<const Matrix*>& xs,
   return dEdx;
 }
 
+string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "concat_cols(" << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); ++i) {
+    os << ',' << arg_names[i];
+  }
+  os << ')';
+  return os.str();
+}
+
+Matrix ConcatenateColumns::forward(const vector<const Matrix*>& xs) const {
+  assert(xs.size() > 0);
+  const unsigned rows = xs.front()->rows();
+  Matrix fx(rows, xs.size());
+  unsigned i = 0;
+  for (auto x : xs) {
+    assert(x->rows() == rows);
+    for (unsigned j = 0; j < rows; ++j)
+      fx(i, j) = (*x)(j, 0);
+    ++i;
+  }
+  return fx;
+}
+
+Matrix ConcatenateColumns::backward(const vector<const Matrix*>& xs,
+                                    const Matrix& fx,
+                                    const Matrix& dEdf,
+                                    unsigned i) const {
+  assert(i < fx.cols());
+  return dEdf.col(i);
+}
+
 string Hinge::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "hinge(" << arg_names[0] << ",m=" << margin << ")";

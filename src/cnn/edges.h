@@ -55,6 +55,7 @@ struct Log : public Edge {
                   unsigned i) const override;
 };
 
+// concatenate rows
 struct Concatenate : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Matrix forward(const std::vector<const Matrix*>& xs) const override;
@@ -65,6 +66,17 @@ struct Concatenate : public Edge {
   // src_row_indices[i] says what row in fx the ith x vector was assigned to
   // used to simplify backprop
   mutable std::vector<unsigned> src_row_indices;
+};
+
+// concatenate column vectors into a matrix
+// x_i must be a column vector in R^n
+struct ConcatenateColumns : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                  const Matrix& fx,
+                  const Matrix& dEdf,
+                  unsigned i) const override;
 };
 
 // Let x be a vector-valued input, x_i represents the score of the ith element, then
