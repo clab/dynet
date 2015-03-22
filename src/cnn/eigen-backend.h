@@ -1,7 +1,7 @@
 #ifndef CNN_EIGEN_BACKEND_H_
 #define CNN_EIGEN_BACKEND_H_
 
-#include "cnn/tensor.h"
+#include "Eigen/Eigen"
 
 namespace cnn {
 
@@ -16,22 +16,22 @@ namespace cnn {
 
 class Elewise {
  public:
-  static Matrix Ln(const Matrix&);
-  static Matrix Exp(const Matrix&);
-  static Matrix SigmoidForward(const Matrix&);
-  static Matrix SigmoidBackward(const Matrix& diff, const Matrix& top, const Matrix& bottom);
-  static Matrix ReluForward(const Matrix&);
-  static Matrix ReluBackward(const Matrix& diff, const Matrix& top, const Matrix& bottom);
-  static Matrix TanhForward(const Matrix&);
-  static Matrix TanhBackward(const Matrix& diff, const Matrix& top, const Matrix& bottom);
+  static Eigen::MatrixXf Ln(const Eigen::MatrixXf&);
+  static Eigen::MatrixXf Exp(const Eigen::MatrixXf&);
+  static Eigen::MatrixXf SigmoidForward(const Eigen::MatrixXf&);
+  static Eigen::MatrixXf SigmoidBackward(const Eigen::MatrixXf& diff, const Eigen::MatrixXf& top, const Eigen::MatrixXf& bottom);
+  static Eigen::MatrixXf ReluForward(const Eigen::MatrixXf&);
+  static Eigen::MatrixXf ReluBackward(const Eigen::MatrixXf& diff, const Eigen::MatrixXf& top, const Eigen::MatrixXf& bottom);
+  static Eigen::MatrixXf TanhForward(const Eigen::MatrixXf&);
+  static Eigen::MatrixXf TanhBackward(const Eigen::MatrixXf& diff, const Eigen::MatrixXf& top, const Eigen::MatrixXf& bottom);
 };
 
 typedef unsigned SoftmaxAlgorithm;
 
 class Convolution {
  public:
-  static Matrix SoftmaxForward(const Matrix& src, SoftmaxAlgorithm algorithm);
-  static Matrix SoftmaxBackward(const Matrix& diff, const Matrix& top, SoftmaxAlgorithm algorithm);
+  static Eigen::MatrixXf SoftmaxForward(const Eigen::MatrixXf& src, SoftmaxAlgorithm algorithm);
+  static Eigen::MatrixXf SoftmaxBackward(const Eigen::MatrixXf& diff, const Eigen::MatrixXf& top, SoftmaxAlgorithm algorithm);
 };
 
 } // namespace cnn

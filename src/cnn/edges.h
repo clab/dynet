@@ -8,60 +8,60 @@ namespace cnn {
 // y = 1 - x_1
 struct OneMinusX : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // y = tanh x_1
 struct Tanh : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // y = x_1 \odot x_1
 struct Square : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // y = exp x_1
 struct Exp : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // y = log x_1  (base e, i.e., natural log)
 struct Log : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // concatenate rows
 struct Concatenate : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
   // src_row_indices[i] says what row in fx the ith x vector was assigned to
   // used to simplify backprop
@@ -72,10 +72,10 @@ struct Concatenate : public Edge {
 // x_i must be a column vector in R^n
 struct ConcatenateColumns : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
@@ -85,24 +85,24 @@ struct Hinge : public Edge {
   explicit Hinge(unsigned e, real m = 1.0) : element(e), pelement(&element), margin(m) {}
   explicit Hinge(unsigned* pe, real m = 1.0) : element(), pelement(pe), margin(m) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
   unsigned element;
   const unsigned* pelement;
   real margin;
-  mutable Matrix u; // partial forward values
+  mutable Tensor u; // partial forward values
 };
 
 // y = x_1
 struct Identity : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
@@ -113,10 +113,10 @@ struct Identity : public Edge {
 struct MaxPooling1D : public Edge {
   MaxPooling1D(unsigned w) : width(w) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
   unsigned width;
   mutable std::vector<unsigned> ind;
@@ -125,20 +125,20 @@ struct MaxPooling1D : public Edge {
 // y = x_1 * x_2
 struct MatrixMultiply : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // y = x_1 \cdot x_2  (Hadamard product)
 struct CwiseMultiply : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
@@ -147,30 +147,30 @@ struct CwiseMultiply : public Edge {
 // this is an ugly hack to deal with diagonal matrices
 struct Multilinear : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // y = -x_1
 struct Negate : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // y = max(0,x)
 struct Rectify : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
@@ -183,10 +183,10 @@ struct BinaryLogLoss : public Edge {
   BinaryLogLoss(real ty) : target_y(ty), ptarget_y(&target_y) {}
   BinaryLogLoss(real* pty) : target_y(), ptarget_y(pty) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
   real target_y;
   real* ptarget_y;
@@ -195,30 +195,30 @@ struct BinaryLogLoss : public Edge {
 // y = \sum_i x_i
 struct Sum : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
                     unsigned i) const override;
 };
 
 // y = || x_1 - x_2 ||^2
 struct SquaredEuclideanDistance : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
 };
 
 // y = \sigma(x_1)
 struct LogisticSigmoid : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
                     unsigned i) const override;
 };
 
@@ -226,10 +226,10 @@ struct LogisticSigmoid : public Edge {
 // y_i = (x_1)_i / z
 struct Softmax : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
                     unsigned i) const override;
 };
 
@@ -237,10 +237,10 @@ struct Softmax : public Edge {
 // y_i = (x_1)_i - \log z
 struct LogSoftmax : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
                     unsigned i) const override;
 };
 
@@ -249,10 +249,10 @@ struct LogSoftmax : public Edge {
 struct RestrictedLogSoftmax : public Edge {
   explicit RestrictedLogSoftmax(const std::vector<unsigned>& d) : denom(d) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
                     unsigned i) const override;
   std::vector<unsigned> denom;
 };
@@ -265,10 +265,10 @@ struct PickElement : public Edge {
   // use this constructor if you want to change the value after the graph is constructed
   explicit PickElement(const unsigned* pv) : val(), pval(pv) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
                     unsigned i) const override;
   unsigned val;
   const unsigned* pval;

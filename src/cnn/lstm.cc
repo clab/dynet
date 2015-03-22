@@ -70,7 +70,7 @@ void LSTMBuilder::add_parameter_edges(Hypergraph* hg) {
   c.clear();
 
   if (h0.empty() || c0.empty()) {
-    VariableIndex zero_input = hg->add_input(Matrix::Zero(hidden_dim, 1));
+    VariableIndex zero_input = hg->add_input(Zero(Dim(hidden_dim, 1)));
     if (c0.empty()) { c0 = vector<VariableIndex>(layers, zero_input); }
     if (h0.empty()) { h0 = vector<VariableIndex>(layers, zero_input); }
   }
@@ -131,7 +131,7 @@ VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
     VariableIndex i_c_tm1;
     if (t == 0) { // first time step
       // intial value for h and c at timestep 0 in layer i
-      // defaults to Matrix::Zero(hidden_dim, 1) if not set
+      // defaults to Tensor::Zero(hidden_dim, 1) if not set
       // in add_parameter_edges
       i_h_tm1 = h0[i];
       i_c_tm1 = c0[i];
@@ -145,6 +145,7 @@ VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
     // forget
     VariableIndex i_aft = hg->add_function<Multilinear>({vars[BF], vars[X2F], in, vars[H2F], i_h_tm1, vars[C2F], i_c_tm1});
     VariableIndex i_ft = hg->add_function<LogisticSigmoid>({i_aft});
+    //VariableIndex i_ft = hg->add_function<OneMinusX>({i_it});
     // write memory cell
     VariableIndex i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
     VariableIndex i_wt = hg->add_function<Tanh>({i_awt});

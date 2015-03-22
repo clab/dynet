@@ -10,7 +10,7 @@
 
 namespace cnn {
 
-typedef Eigen::MatrixXf Matrix;
+typedef Eigen::MatrixXf Tensor;
 typedef float real;
 
 struct Dim {
@@ -52,16 +52,15 @@ inline std::ostream& operator<<(std::ostream& os, const Dim& d) {
   return os << '(' << d.rows << ',' << d.cols << ')';
 }
 
-inline Dim size(const Matrix& m) { return Dim(m.rows(), m.cols()); }
+inline Dim size(const Tensor& m) { return Dim(m.rows(), m.cols()); }
 
-inline Matrix Zero(const Dim& d) { return Matrix::Zero(d.rows, d.cols); }
-inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) * (sqrt(6) / sqrt(d.cols + d.rows)); }
-//inline Matrix Random(const Dim& d) { return Matrix::Random(d.rows, d.cols) * 0.08; }
-inline Matrix Random(const Dim& d, double scale) { return Matrix::Random(d.rows, d.cols) * scale; }
+inline Tensor Zero(const Dim& d) { return Eigen::MatrixXf::Zero(d.rows, d.cols); }
+inline Tensor Random(const Dim& d) { return Eigen::MatrixXf::Random(d.rows, d.cols) * (sqrt(6) / sqrt(d.cols + d.rows)); }
+inline Tensor Random(const Dim& d, double scale) { return Eigen::MatrixXf::Random(d.rows, d.cols) * scale; }
 
 // column major constructor
-inline Matrix Ccm(const Dim&d, const std::initializer_list<real>& v) {
-  Matrix m = Matrix::Zero(d.rows, d.cols);
+inline Tensor Ccm(const Dim&d, const std::initializer_list<real>& v) {
+  Tensor m = Zero(d);
   int cc = 0;
   int cr = 0;
   for (const auto& x : v) {

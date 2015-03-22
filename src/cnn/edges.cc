@@ -16,9 +16,9 @@ string OneMinusX::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix OneMinusX::forward(const vector<const Matrix*>& xs) const {
+Tensor OneMinusX::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  Matrix res = *xs[0];
+  Tensor res = *xs[0];
   const unsigned rows = res.rows();
   const unsigned cols = res.cols();
   for (unsigned i = 0; i < rows; ++i)
@@ -27,9 +27,9 @@ Matrix OneMinusX::forward(const vector<const Matrix*>& xs) const {
   return res;
 }
 
-Matrix OneMinusX::backward(const vector<const Matrix*>& xs,
-                     const Matrix& fx,
-                     const Matrix& dEdf,
+Tensor OneMinusX::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
                      unsigned i) const {
   return -dEdf;
 };
@@ -42,17 +42,17 @@ string Sum::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix Sum::forward(const vector<const Matrix*>& xs) const {
+Tensor Sum::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() > 0);
-  Matrix res = *xs[0];
+  Tensor res = *xs[0];
   for (unsigned i = 1; i < xs.size(); ++i)
     res += *xs[i];
   return res;
 }
 
-Matrix Sum::backward(const vector<const Matrix*>& xs,
-                     const Matrix& fx,
-                     const Matrix& dEdf,
+Tensor Sum::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
                      unsigned i) const {
   return dEdf;
 };
@@ -63,18 +63,18 @@ string Tanh::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix Tanh::forward(const vector<const Matrix*>& xs) const {
+Tensor Tanh::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   return Elewise::TanhForward(x);
 }
 
-Matrix Tanh::backward(const vector<const Matrix*>& xs,
-                      const Matrix& fx,
-                      const Matrix& dEdf,
+Tensor Tanh::backward(const vector<const Tensor*>& xs,
+                      const Tensor& fx,
+                      const Tensor& dEdf,
                       unsigned i) const {
   assert(i == 0);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   return Elewise::TanhBackward(dEdf, fx, x);
 }
 
@@ -84,15 +84,15 @@ string Square::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix Square::forward(const vector<const Matrix*>& xs) const {
+Tensor Square::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1); // just a single input
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   return x.cwiseProduct(x);
 }
 
-Matrix Square::backward(const vector<const Matrix*>& xs,
-                        const Matrix& fx,
-                        const Matrix& dEdf,
+Tensor Square::backward(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
                         unsigned i) const {
   assert(i == 0);
   return dEdf.cwiseProduct(*xs.front()) * 2;
@@ -104,14 +104,14 @@ string Exp::as_string(const vector<string>& arg_names) const {
   return os.str();
 }
 
-Matrix Exp::forward(const vector<const Matrix*>& xs) const {
+Tensor Exp::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   return Elewise::Exp(*xs.front());
 }
 
-Matrix Exp::backward(const vector<const Matrix*>& xs,
-                     const Matrix& fx,
-                     const Matrix& dEdf,
+Tensor Exp::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
                      unsigned i) const {
   return dEdf.array() * fx.array();
 }
@@ -122,14 +122,14 @@ string Log::as_string(const vector<string>& arg_names) const {
   return os.str();
 }
 
-Matrix Log::forward(const vector<const Matrix*>& xs) const {
+Tensor Log::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   return Elewise::Ln(*xs.front());
 }
 
-Matrix Log::backward(const vector<const Matrix*>& xs,
-                     const Matrix& fx,
-                     const Matrix& dEdf,
+Tensor Log::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
                      unsigned i) const {
   return dEdf.array() / xs[0]->array();
 }
@@ -144,18 +144,18 @@ string Concatenate::as_string(const vector<string>& arg_names) const {
   return os.str();
 }
 
-Matrix Concatenate::forward(const vector<const Matrix*>& xs) const {
+Tensor Concatenate::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() > 0);
   unsigned rows = 0;
   for (auto x : xs) rows += x->rows();
   src_row_indices.resize(xs.size());
-  Matrix fx(rows, 1);
+  Tensor fx(rows, 1);
   unsigned i = 0;
   unsigned k = 0;
   for (auto x : xs) {
     src_row_indices[k] = i;
     ++k;
-    const Matrix& cx = *x;
+    const Tensor& cx = *x;
     assert(cx.cols() == 1); // this can be relaxed to the same everywhere
     const unsigned crows = cx.rows();
     for (unsigned j = 0; j < crows; ++j) {
@@ -166,12 +166,12 @@ Matrix Concatenate::forward(const vector<const Matrix*>& xs) const {
   return fx;
 }
 
-Matrix Concatenate::backward(const vector<const Matrix*>& xs,
-                             const Matrix& fx,
-                             const Matrix& dEdf,
+Tensor Concatenate::backward(const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
                              unsigned i) const {
   assert(i < src_row_indices.size());
-  Matrix dEdx = *xs[i];
+  Tensor dEdx = *xs[i];
   const unsigned rows = dEdx.rows();
   const unsigned begin = src_row_indices[i];
   assert(rows + begin <= dEdf.rows());
@@ -190,10 +190,10 @@ string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
   return os.str();
 }
 
-Matrix ConcatenateColumns::forward(const vector<const Matrix*>& xs) const {
+Tensor ConcatenateColumns::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() > 0);
   const unsigned rows = xs.front()->rows();
-  Matrix fx(rows, xs.size());
+  Tensor fx(rows, xs.size());
   unsigned i = 0;
   for (auto x : xs) {
     assert(x->rows() == rows);
@@ -204,9 +204,9 @@ Matrix ConcatenateColumns::forward(const vector<const Matrix*>& xs) const {
   return fx;
 }
 
-Matrix ConcatenateColumns::backward(const vector<const Matrix*>& xs,
-                                    const Matrix& fx,
-                                    const Matrix& dEdf,
+Tensor ConcatenateColumns::backward(const vector<const Tensor*>& xs,
+                                    const Tensor& fx,
+                                    const Tensor& dEdf,
                                     unsigned i) const {
   assert(i < fx.cols());
   return dEdf.col(i);
@@ -218,30 +218,30 @@ string Hinge::as_string(const vector<string>& arg_names) const {
   return os.str();
 }
 
-Matrix Hinge::forward(const vector<const Matrix*>& xs) const {
+Tensor Hinge::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   const unsigned rows = x.rows();
   if (u.rows() != rows)
-    u = Matrix(rows, 1);  // local forward value
+    u = Tensor(rows, 1);  // local forward value
   real y = 0;
   const real mlystar = margin - x(*pelement, 0);
   for (unsigned i = 0; i < rows; ++i)
     if (*pelement != i)
       y += u(i, 0) = max(real(0), mlystar + x(i,0));
-  Matrix res(1,1);
+  Tensor res(1,1);
   res(0,0) = y;
   return res;
 }
 
-Matrix Hinge::backward(const vector<const Matrix*>& xs,
-                       const Matrix& fx,
-                       const Matrix& dEdf,
+Tensor Hinge::backward(const vector<const Tensor*>& xs,
+                       const Tensor& fx,
+                       const Tensor& dEdf,
                        unsigned i) const {
   assert(i == 0);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   const unsigned rows = x.rows();
-  Matrix dEdx = Matrix::Zero(rows, 1);
+  Tensor dEdx = Zero(Dim(rows, 1));
   if (fx(0,0) == 0) return dEdx;
   const real diff = dEdf(0,0);
   unsigned tv = 0;
@@ -255,14 +255,14 @@ string Identity::as_string(const vector<string>& arg_names) const {
   return arg_names[0];
 }
 
-Matrix Identity::forward(const vector<const Matrix*>& xs) const {
+Tensor Identity::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   return *xs.front();
 }
 
-Matrix Identity::backward(const vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+Tensor Identity::backward(const vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const {
   assert(i == 0);
   return dEdf;
@@ -274,14 +274,14 @@ string MaxPooling1D::as_string(const vector<string>& arg_names) const {
   return os.str();
 }
 
-Matrix MaxPooling1D::forward(const vector<const Matrix*>& xs) const {
+Tensor MaxPooling1D::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   const unsigned x_rows = x.rows();
   assert(x.cols() == 1);
   const unsigned fx_rows = x_rows / width;
   ind.resize(fx_rows);
-  Matrix fx = Matrix::Zero(fx_rows, 1);
+  Tensor fx = Zero(Dim(fx_rows, 1));
   for (unsigned i = 0; i < fx_rows; ++i) {
     unsigned from = i * width;
     unsigned to = from + width;
@@ -300,13 +300,13 @@ Matrix MaxPooling1D::forward(const vector<const Matrix*>& xs) const {
   return fx;
 }
 
-Matrix MaxPooling1D::backward(const vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+Tensor MaxPooling1D::backward(const vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const {
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   const unsigned x_rows = x.rows();
-  Matrix dEdx = Matrix::Zero(x_rows, 1);
+  Tensor dEdx = Zero(Dim(x_rows, 1));
   const unsigned fx_rows = x_rows / width;
   assert(fx_rows == ind.size());
   assert(fx_rows == dEdf.rows());
@@ -321,15 +321,15 @@ string Softmax::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix Softmax::forward(const vector<const Matrix*>& xs) const {
+Tensor Softmax::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   return Convolution::SoftmaxForward(x, 1);
 }
 
-Matrix Softmax::backward(const vector<const Matrix*>& xs,
-                            const Matrix& fx,
-                            const Matrix& dEdf,
+Tensor Softmax::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
                             unsigned i) const {
   assert(i == 0);
   return Convolution::SoftmaxBackward(dEdf, fx, 1);
@@ -341,18 +341,18 @@ string LogSoftmax::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix LogSoftmax::forward(const vector<const Matrix*>& xs) const {
+Tensor LogSoftmax::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   return Convolution::SoftmaxForward(x, 1).array().log();
 }
 
-Matrix LogSoftmax::backward(const vector<const Matrix*>& xs,
-                            const Matrix& fx,
-                            const Matrix& dEdf,
+Tensor LogSoftmax::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
                             unsigned i) const {
   assert(i == 0);
-  Matrix u = fx.array().exp();
+  Tensor u = fx.array().exp();
   return Convolution::SoftmaxBackward(dEdf.cwiseQuotient(u), u, 1);
 }
 
@@ -362,7 +362,7 @@ string RestrictedLogSoftmax::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-inline real logsumexp(const Matrix& x, const vector<unsigned>& denom) {
+inline real logsumexp(const Tensor& x, const vector<unsigned>& denom) {
   real m = x(denom[0],0);
   for (auto i : denom) {
     real r = x(i,0);
@@ -374,14 +374,14 @@ inline real logsumexp(const Matrix& x, const vector<unsigned>& denom) {
   return m + logf(z);
 }
 
-Matrix RestrictedLogSoftmax::forward(const vector<const Matrix*>& xs) const {
+Tensor RestrictedLogSoftmax::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   assert(denom.size() > 0);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   const unsigned rows = x.rows();
   assert(x.cols() == 1);
   const real logz = logsumexp(x, denom);
-  Matrix fx(rows, 1);
+  Tensor fx(rows, 1);
   for (unsigned i = 0; i < rows; ++i)
     fx(i,0) = -numeric_limits<real>::infinity();
   for (auto i : denom)
@@ -390,14 +390,14 @@ Matrix RestrictedLogSoftmax::forward(const vector<const Matrix*>& xs) const {
   return fx;
 }
 
-Matrix RestrictedLogSoftmax::backward(const vector<const Matrix*>& xs,
-                            const Matrix& fx,
-                            const Matrix& dEdf,
+Tensor RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
                             unsigned i) const {
   assert(i == 0);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   const unsigned rows = x.rows();
-  Matrix dEdx = Matrix::Zero(rows, 1);
+  Tensor dEdx = Zero(Dim(rows, 1));
   double z = 0;
   for (auto i : denom)
     z += dEdf(i, 0);
@@ -414,28 +414,28 @@ string PickElement::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix PickElement::forward(const vector<const Matrix*>& xs) const {
+Tensor PickElement::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   assert(x.cols() == 1);
   assert(*pval < x.rows());
-  Matrix fx(1,1);
+  Tensor fx(1,1);
   fx(0,0) = x(*pval, 0);
   return fx;
 }
 
 // derivative is 0 in all dimensions except 1 for the selected element
-Matrix PickElement::backward(const vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
+Tensor PickElement::backward(const vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
                     unsigned i) const {
   assert(i == 0);
   assert(dEdf.rows() == 1);
   assert(dEdf.cols() == 1);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
 
   // TODO should be sparse
-  Matrix dEdx = Matrix::Zero(x.rows(), 1); 
+  Tensor dEdx = Zero(Dim(x.rows(), 1)); 
   dEdx(*pval,0) = dEdf(0,0);
   return dEdx;
 }
@@ -446,14 +446,14 @@ string MatrixMultiply::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix MatrixMultiply::forward(const vector<const Matrix*>& xs) const {
+Tensor MatrixMultiply::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 2);
   return (*xs[0]) * (*xs[1]);
 }
 
-Matrix MatrixMultiply::backward(const vector<const Matrix*>& xs,
-                                const Matrix& fx,
-                                const Matrix& dEdf,
+Tensor MatrixMultiply::backward(const vector<const Tensor*>& xs,
+                                const Tensor& fx,
+                                const Tensor& dEdf,
                                 unsigned i) const {
   assert(i < 2);
   if (i == 0) {
@@ -469,14 +469,14 @@ string CwiseMultiply::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix CwiseMultiply::forward(const vector<const Matrix*>& xs) const {
+Tensor CwiseMultiply::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 2);
   return xs[0]->cwiseProduct(*xs[1]);
 }
 
-Matrix CwiseMultiply::backward(const vector<const Matrix*>& xs,
-                               const Matrix& fx,
-                               const Matrix& dEdf,
+Tensor CwiseMultiply::backward(const vector<const Tensor*>& xs,
+                               const Tensor& fx,
+                               const Tensor& dEdf,
                                unsigned i) const {
   assert(i < 2);
   if (i == 0) {
@@ -494,9 +494,9 @@ string Multilinear::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix Multilinear::forward(const vector<const Matrix*>& xs) const {
+Tensor Multilinear::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() % 2 == 1);
-  Matrix fx = *xs.front();
+  Tensor fx = *xs.front();
   //cerr << "Multilinear\n";
   //for (unsigned i = 0; i < xs.size(); i++)
   //  cerr << " (" << xs[i]->rows() << "," << xs[i]->cols() << ")\n";
@@ -509,9 +509,9 @@ Matrix Multilinear::forward(const vector<const Matrix*>& xs) const {
   return fx;
 }
 
-Matrix Multilinear::backward(const vector<const Matrix*>& xs,
-                             const Matrix& fx,
-                             const Matrix& dEdf,
+Tensor Multilinear::backward(const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
                              unsigned i) const {
   assert(i < xs.size());
   if (i == 0) return dEdf;
@@ -533,14 +533,14 @@ string Negate::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix Negate::forward(const vector<const Matrix*>& xs) const {
+Tensor Negate::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   return -(*xs[0]);
 }
 
-Matrix Negate::backward(const vector<const Matrix*>& xs,
-                        const Matrix& fx,
-                        const Matrix& dEdf,
+Tensor Negate::backward(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
                         unsigned i) const {
   assert(i == 0);
   return -dEdf;
@@ -552,14 +552,14 @@ string Rectify::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix Rectify::forward(const vector<const Matrix*>& xs) const {
+Tensor Rectify::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   return Elewise::ReluForward(*xs.front());
 }
 
-Matrix Rectify::backward(const vector<const Matrix*>& xs,
-                         const Matrix& fx,
-                         const Matrix& dEdf,
+Tensor Rectify::backward(const vector<const Tensor*>& xs,
+                         const Tensor& fx,
+                         const Tensor& dEdf,
                          unsigned i) const {
   return Elewise::ReluBackward(dEdf, fx, *xs.front());
 }
@@ -570,16 +570,16 @@ string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) cons
   return s.str();
 }
 
-Matrix SquaredEuclideanDistance::forward(const vector<const Matrix*>& xs) const {
+Tensor SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 2);
-  Matrix res(1,1);
+  Tensor res(1,1);
   res(0,0) = (*xs[0] - *xs[1]).squaredNorm();
   return res;
 }
 
-Matrix SquaredEuclideanDistance::backward(const vector<const Matrix*>& xs,
-                                 const Matrix& fx,
-                                 const Matrix& dEdf,
+Tensor SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,
+                                 const Tensor& fx,
+                                 const Tensor& dEdf,
                                  unsigned i) const {
   assert(i < 2);
   real scale = dEdf(0,0) * 2;
@@ -593,18 +593,18 @@ string LogisticSigmoid::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Matrix LogisticSigmoid::forward(const vector<const Matrix*>& xs) const {
+Tensor LogisticSigmoid::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   return Elewise::SigmoidForward(x);
 }
 
-Matrix LogisticSigmoid::backward(const vector<const Matrix*>& xs,
-                                 const Matrix& fx,
-                                 const Matrix& dEdf,
+Tensor LogisticSigmoid::backward(const vector<const Tensor*>& xs,
+                                 const Tensor& fx,
+                                 const Tensor& dEdf,
                                  unsigned i) const {
   assert(i == 0);
-  const Matrix& x = *xs.front();
+  const Tensor& x = *xs.front();
   return Elewise::SigmoidBackward(dEdf, fx, x);
 }
 
@@ -619,7 +619,7 @@ string BinaryLogLoss::as_string(const vector<string>& arg_names) const {
   return os.str();
 }
 
-Matrix BinaryLogLoss::forward(const vector<const Matrix*>& xs) const {
+Tensor BinaryLogLoss::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   assert(xs.front()->cols() == 1);
   assert(xs.front()->rows() == 1);
@@ -629,7 +629,7 @@ Matrix BinaryLogLoss::forward(const vector<const Matrix*>& xs) const {
   const real ty = *ptarget_y;
   assert(ty >= 0.);
   assert(ty <= 1.);
-  Matrix fx = *xs.front();
+  Tensor fx = *xs.front();
   real& res = fx(0,0);
   res = 0;
   if (ty > 0.) res -= ty * log(y_pred);
@@ -637,9 +637,9 @@ Matrix BinaryLogLoss::forward(const vector<const Matrix*>& xs) const {
   return fx;
 }
 
-Matrix BinaryLogLoss::backward(const vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+Tensor BinaryLogLoss::backward(const vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const {
   const real y_pred = (*xs.front())(0,0);
   const real ty = *ptarget_y;

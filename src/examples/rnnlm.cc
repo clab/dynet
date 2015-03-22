@@ -13,7 +13,7 @@
 using namespace std;
 using namespace cnn;
 
-unsigned LAYERS = 3;
+unsigned LAYERS = 2;
 unsigned INPUT_DIM = 8;
 unsigned HIDDEN_DIM = 24;
 unsigned VOCAB_SIZE = 32;

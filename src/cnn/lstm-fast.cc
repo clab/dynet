@@ -64,7 +64,7 @@ void LSTMBuilder_CIFG::add_parameter_edges(Hypergraph* hg) {
   c.clear();
 
   if (h0.empty() || c0.empty()) {
-    VariableIndex zero_input = hg->add_input(Matrix::Zero(hidden_dim, 1));
+    VariableIndex zero_input = hg->add_input(Zero(Dim(hidden_dim, 1)));
     if (c0.empty()) { c0 = vector<VariableIndex>(layers, zero_input); }
     if (h0.empty()) { h0 = vector<VariableIndex>(layers, zero_input); }
   }

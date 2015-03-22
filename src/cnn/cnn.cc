@@ -29,7 +29,7 @@ VariableIndex Hypergraph::add_input(real s, real** ps) {
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_input(const Matrix& m, Matrix** pm) {
+VariableIndex Hypergraph::add_input(const Tensor& m, Tensor** pm) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
   InputEdge* e = new InputEdge(m);
@@ -39,7 +39,7 @@ VariableIndex Hypergraph::add_input(const Matrix& m, Matrix** pm) {
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_input(const Dim& d, Matrix** pm) {
+VariableIndex Hypergraph::add_input(const Dim& d, Tensor** pm) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
   InputEdge* e = new InputEdge(d);
@@ -99,11 +99,11 @@ VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned index) 
   return new_node_index;
 }
 
-const Matrix& Hypergraph::incremental_forward() {
+const Tensor& Hypergraph::incremental_forward() {
   while (last_node_evaluated < nodes.size()) {
     Node* node = nodes[last_node_evaluated];
     const Edge& in_edge = *edges[node->in_edge];
-    vector<const Matrix*> xs(in_edge.arity());
+    vector<const Tensor*> xs(in_edge.arity());
     unsigned ti = 0;
     for (VariableIndex tail_node_index : in_edge.tail) {
       xs[ti] = &nodes[tail_node_index]->f;
@@ -116,7 +116,7 @@ const Matrix& Hypergraph::incremental_forward() {
   return nodes.back()->f;
 }
 
-const Matrix& Hypergraph::forward() {
+const Tensor& Hypergraph::forward() {
   last_node_evaluated = 0;
   return incremental_forward();
 }
@@ -134,14 +134,14 @@ void Hypergraph::backward() {
   }
 
   // initialize dE/dE = 1
-  nodes.back()->dEdf = Matrix(1,1);
+  nodes.back()->dEdf = Tensor(1,1);
   nodes.back()->dEdf(0,0) = 1;
 
   // loop in reverse topological order
   for (int i = nodes.size() - 1; i >= 0; --i) {
     const Node& node = *nodes[i];
     const Edge& in_edge = *edges[node.in_edge];
-    vector<const Matrix*> xs(in_edge.arity());
+    vector<const Tensor*> xs(in_edge.arity());
     unsigned ti = 0;
     for (unsigned tail_node_index : in_edge.tail) {
       xs[ti] = &nodes[tail_node_index]->f;

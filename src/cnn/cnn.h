@@ -43,8 +43,8 @@ struct Hypergraph {
   // construct a graph
   VariableIndex add_input(real** ps);
   VariableIndex add_input(real s, real** ps = 0);
-  VariableIndex add_input(const Matrix& m, Matrix** pm = 0);
-  VariableIndex add_input(const Dim& d, Matrix** pm = 0);
+  VariableIndex add_input(const Tensor& m, Tensor** pm = 0);
+  VariableIndex add_input(const Dim& d, Tensor** pm = 0);
   VariableIndex add_parameter(Parameters* p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
@@ -60,8 +60,8 @@ struct Hypergraph {
   template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
   // perform computations
-  const Matrix& forward();
-  const Matrix& incremental_forward();  // if you want to add nodes and evaluate just the new parts
+  const Tensor& forward();
+  const Tensor& incremental_forward();  // if you want to add nodes and evaluate just the new parts
   void backward();
 
   // debugging
@@ -97,8 +97,8 @@ struct Node {
   // computation
   // TODO remove these from here, they should be local to the forward/backward
   // algorithms
-  Matrix f;               // f(x_1 , ... , x_n)
-  Matrix dEdf;            // dE/df
+  Tensor f;               // f(x_1 , ... , x_n)
+  Tensor dEdf;            // dE/df
 };
 
 inline void swap(Node& n1, Node& n2) {
@@ -118,11 +118,11 @@ struct Edge {
   virtual std::string as_string(const std::vector<std::string>& var_names) const = 0;
 
   // computation
-  virtual Matrix forward(const std::vector<const Matrix*>& xs) const = 0;
+  virtual Tensor forward(const std::vector<const Tensor*>& xs) const = 0;
   // computes the derivative of E with respect to the ith argument to f, that is, xs[i]
-  virtual Matrix backward(const std::vector<const Matrix*>& xs,
-                          const Matrix& fx,
-                          const Matrix& dEdf,
+  virtual Tensor backward(const std::vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
                           unsigned i) const = 0;
   virtual bool has_parameters() const;
 
