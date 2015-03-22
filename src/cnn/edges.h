@@ -174,16 +174,6 @@ struct Rectify : public Edge {
                   unsigned i) const override;
 };
 
-// y = hardtanh(0,x)
-struct HardTanh : public Edge {
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
-                  unsigned i) const override;
-};
-
 // you could do this with LogisticSigmoid, Softmax or a variety of other
 // functions, but this is often useful.
 // x_1 must be a scalar that is a value between 0 and 1

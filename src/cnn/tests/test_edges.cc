@@ -101,3 +101,70 @@ BOOST_AUTO_TEST_CASE(ESoftmaxUnif) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(EMultilinear) {
+  Matrix b = Ccm({3,1},{1,2,3});
+  Matrix W = Ccm({3,2},{2,3,4,5,6,7});
+  Matrix x = Ccm({2,1},{-1,1});
+  Multilinear ml;
+  vector<const Matrix*> mlxs = {&b, &W, &x};
+  Matrix r1 = ml.forward(mlxs);
+  Sum se;
+  MatrixMultiply mm;
+  Matrix p = mm.forward(vector<const Matrix*>({&W, &x}));
+  Matrix r2 = se.forward(vector<const Matrix*>({&p, &b}));
+  BOOST_REQUIRE_EQUAL(size(r1), size(r2));
+  double eps = 1e-5;
+  BOOST_CHECK_CLOSE(r1(0,0), 2., eps);
+  BOOST_CHECK_CLOSE(r1(1,0), 3., eps);
+  BOOST_CHECK_CLOSE(r1(2,0), 4., eps);
+  BOOST_CHECK_CLOSE(r2(0,0), 2., eps);
+  BOOST_CHECK_CLOSE(r2(1,0), 3., eps);
+  BOOST_CHECK_CLOSE(r2(2,0), 4., eps);
+  Matrix dEdf = Ccm({3,1}, {1., 0.5, 0.25});
+  Matrix dEdx = ml.backward(mlxs, r1, dEdf, 0);
+  BOOST_CHECK_EQUAL(size(dEdx), size(b));
+  dEdx = ml.backward(mlxs, r1, dEdf, 1);
+  BOOST_CHECK_EQUAL(size(dEdx), size(W));
+  dEdx = ml.backward(mlxs, r1, dEdf, 2);
+  BOOST_CHECK_EQUAL(size(dEdx), size(x));
+}
+
+BOOST_AUTO_TEST_CASE(ELogisticSigmoid) {
+  Matrix x = Ccm({5,1},{-6.f,-logf(3),0.f,logf(3),6.f});
+  LogisticSigmoid ls;
+  vector<const Matrix*> xs = {&x};
+  Matrix r = ls.forward(xs);
+  BOOST_REQUIRE_EQUAL(size(r), size(x));
+  double eps = 1e-2;
+  BOOST_CHECK_CLOSE(r(0,0), 1. /(1. + exp(6.)), eps);
+  BOOST_CHECK_CLOSE(r(1,0), 0.25, eps);
+  BOOST_CHECK_CLOSE(r(2,0), 0.5, eps);
+  BOOST_CHECK_CLOSE(r(3,0), 0.75, eps);
+  BOOST_CHECK_CLOSE(r(4,0), 1. - r(0,0), eps);
+  Matrix dEdf = Ccm({5,1},{1.,1.,1.,1.,1.});
+  Matrix dEdx = ls.backward(xs, r, dEdf, 0);
+  BOOST_CHECK_CLOSE(dEdx(1,0), 0.1875, eps);
+  BOOST_CHECK_CLOSE(dEdx(2,0), 0.25, eps);
+  BOOST_CHECK_CLOSE(dEdx(3,0), dEdx(1,0), eps);
+  BOOST_CHECK_CLOSE(dEdx(4,0), dEdx(0,0), eps);
+}
+
+BOOST_AUTO_TEST_CASE(ETanh) {
+  Matrix x = Ccm({5,1},{-6.f,-logf(3),0.f,logf(3),6.f});
+  Tanh th;
+  vector<const Matrix*> xs = {&x};
+  Matrix r = th.forward(xs);
+  BOOST_REQUIRE_EQUAL(size(r), size(x));
+  double eps = 1e-2;
+  BOOST_CHECK_CLOSE(r(1,0), -0.8, eps);
+  BOOST_CHECK_CLOSE(r(2,0), 0, eps);
+  BOOST_CHECK_CLOSE(r(3,0), 0.8, eps);
+  BOOST_CHECK_CLOSE(r(4,0), -r(0,0), eps);
+  Matrix dEdf = Ccm({5,1},{1.,1.,1.,1.,1.});
+  Matrix dEdx = th.backward(xs, r, dEdf, 0);
+  BOOST_CHECK_CLOSE(dEdx(1,0), 0.36, eps);
+  BOOST_CHECK_CLOSE(dEdx(2,0), 1.0, eps);
+  BOOST_CHECK_CLOSE(dEdx(3,0), dEdx(1,0), eps);
+  BOOST_CHECK_CLOSE(dEdx(4,0), dEdx(0,0), eps);
+}
+

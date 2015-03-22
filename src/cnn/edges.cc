@@ -10,13 +10,13 @@ using namespace std;
 
 namespace cnn {
 
-std::string OneMinusX::as_string(const std::vector<std::string>& arg_names) const {
+string OneMinusX::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "1 - " << arg_names[0];
   return s.str();
 }
 
-Matrix OneMinusX::forward(const std::vector<const Matrix*>& xs) const {
+Matrix OneMinusX::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 1);
   Matrix res = *xs[0];
   const unsigned rows = res.rows();
@@ -27,14 +27,14 @@ Matrix OneMinusX::forward(const std::vector<const Matrix*>& xs) const {
   return res;
 }
 
-Matrix OneMinusX::backward(const std::vector<const Matrix*>& xs,
+Matrix OneMinusX::backward(const vector<const Matrix*>& xs,
                      const Matrix& fx,
                      const Matrix& dEdf,
                      unsigned i) const {
   return -dEdf;
 };
 
-std::string Sum::as_string(const std::vector<std::string>& arg_names) const {
+string Sum::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0];
   for (unsigned i = 1; i < tail.size(); ++i)
@@ -42,7 +42,7 @@ std::string Sum::as_string(const std::vector<std::string>& arg_names) const {
   return s.str();
 }
 
-Matrix Sum::forward(const std::vector<const Matrix*>& xs) const {
+Matrix Sum::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() > 0);
   Matrix res = *xs[0];
   for (unsigned i = 1; i < xs.size(); ++i)
@@ -50,26 +50,26 @@ Matrix Sum::forward(const std::vector<const Matrix*>& xs) const {
   return res;
 }
 
-Matrix Sum::backward(const std::vector<const Matrix*>& xs,
+Matrix Sum::backward(const vector<const Matrix*>& xs,
                      const Matrix& fx,
                      const Matrix& dEdf,
                      unsigned i) const {
   return dEdf;
 };
 
-std::string Tanh::as_string(const std::vector<std::string>& arg_names) const {
+string Tanh::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "tanh(" << arg_names[0] << ')';
   return s.str();
 }
 
-Matrix Tanh::forward(const std::vector<const Matrix*>& xs) const {
+Matrix Tanh::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 1);
   const Matrix& x = *xs.front();
   return Elewise::TanhForward(x);
 }
 
-Matrix Tanh::backward(const std::vector<const Matrix*>& xs,
+Matrix Tanh::backward(const vector<const Matrix*>& xs,
                       const Matrix& fx,
                       const Matrix& dEdf,
                       unsigned i) const {
@@ -78,19 +78,19 @@ Matrix Tanh::backward(const std::vector<const Matrix*>& xs,
   return Elewise::TanhBackward(dEdf, fx, x);
 }
 
-std::string Square::as_string(const std::vector<std::string>& arg_names) const {
+string Square::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "square(" << arg_names[0] << ')';
   return s.str();
 }
 
-Matrix Square::forward(const std::vector<const Matrix*>& xs) const {
+Matrix Square::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 1); // just a single input
   const Matrix& x = *xs.front();
   return x.cwiseProduct(x);
 }
 
-Matrix Square::backward(const std::vector<const Matrix*>& xs,
+Matrix Square::backward(const vector<const Matrix*>& xs,
                         const Matrix& fx,
                         const Matrix& dEdf,
                         unsigned i) const {
@@ -558,59 +558,26 @@ Matrix Rectify::forward(const vector<const Matrix*>& xs) const {
 }
 
 Matrix Rectify::backward(const vector<const Matrix*>& xs,
-                        const Matrix& fx,
-                        const Matrix& dEdf,
-                        unsigned i) const {
+                         const Matrix& fx,
+                         const Matrix& dEdf,
+                         unsigned i) const {
   return Elewise::ReluBackward(dEdf, fx, *xs.front());
 }
 
-string HardTanh::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "hardtanh(" << arg_names[0] << ')';
-  return s.str();
-}
-
-inline real hardtanh(real x) {
-  if (x > 1.) return 1;
-  if (x < -1.) return -1;
-  return x;
-}
-
-Matrix HardTanh::forward(const vector<const Matrix*>& xs) const {
-  assert(xs.size() == 1);
-  Matrix fx = *xs[0];
-  for (unsigned i = 0; i < fx.rows(); ++i)
-    for (unsigned j = 0; j < fx.cols(); ++j)
-      fx(i,j) = hardtanh(fx(i,j));
-  return fx;
-}
-
-Matrix HardTanh::backward(const vector<const Matrix*>& xs,
-                          const Matrix& fx,
-                          const Matrix& dEdf,
-                          unsigned i) const {
-  const Matrix& x = *xs[0];
-  Matrix dEdx = x * 0;
-  for (unsigned i = 0; i < dEdx.rows(); ++i)
-    for (unsigned j = 0; j < dEdx.cols(); ++j)
-      if (x(i,j) > -1. && x(i,j) < -1.) dEdx(i,j) = dEdf(i,j);
-  return dEdx;
-}
-
-std::string SquaredEuclideanDistance::as_string(const std::vector<std::string>& arg_names) const {
+string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
   return s.str();
 }
 
-Matrix SquaredEuclideanDistance::forward(const std::vector<const Matrix*>& xs) const {
+Matrix SquaredEuclideanDistance::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 2);
   Matrix res(1,1);
   res(0,0) = (*xs[0] - *xs[1]).squaredNorm();
   return res;
 }
 
-Matrix SquaredEuclideanDistance::backward(const std::vector<const Matrix*>& xs,
+Matrix SquaredEuclideanDistance::backward(const vector<const Matrix*>& xs,
                                  const Matrix& fx,
                                  const Matrix& dEdf,
                                  unsigned i) const {
@@ -620,19 +587,19 @@ Matrix SquaredEuclideanDistance::backward(const std::vector<const Matrix*>& xs,
   return scale * (*xs[0] - *xs[1]);
 }
 
-std::string LogisticSigmoid::as_string(const std::vector<std::string>& arg_names) const {
+string LogisticSigmoid::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "\\sigma(" << arg_names[0] << ')';
   return s.str();
 }
 
-Matrix LogisticSigmoid::forward(const std::vector<const Matrix*>& xs) const {
+Matrix LogisticSigmoid::forward(const vector<const Matrix*>& xs) const {
   assert(xs.size() == 1);
   const Matrix& x = *xs.front();
   return Elewise::SigmoidForward(x);
 }
 
-Matrix LogisticSigmoid::backward(const std::vector<const Matrix*>& xs,
+Matrix LogisticSigmoid::backward(const vector<const Matrix*>& xs,
                                  const Matrix& fx,
                                  const Matrix& dEdf,
                                  unsigned i) const {
