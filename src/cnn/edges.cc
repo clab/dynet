@@ -198,7 +198,7 @@ Matrix ConcatenateColumns::forward(const vector<const Matrix*>& xs) const {
   for (auto x : xs) {
     assert(x->rows() == rows);
     for (unsigned j = 0; j < rows; ++j)
-      fx(i, j) = (*x)(j, 0);
+      fx(j, i) = (*x)(j, 0);
     ++i;
   }
   return fx;
