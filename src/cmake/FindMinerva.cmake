@@ -5,17 +5,17 @@
 #  MINERVA_INCLUDE_DIR
 
 find_path(MINERVA_INCLUDE_DIR
-    NAMES minerva/minerva.h
+    NAMES minerva.h
     PATHS ${MINERVA_PREFIX_PATH}/minerva)
 
 find_library(MINERVA_LIBRARY
     NAMES minerva
-    PATHS ${MINERVA_PREFIX_PATH}/minerva/release/lib)
+    PATHS ${MINERVA_PREFIX_PATH}/release/lib)
 
 if(NOT MINERVA_LIBRARY)
   find_library(MINERVA_LIBRARY
       NAMES minerva
-      PATHS ${MINERVA_PREFIX_PATH}/minerva/debug/lib)
+      PATHS ${MINERVA_PREFIX_PATH}/debug/lib)
 endif(NOT MINERVA_LIBRARY)
 
 include(FindPackageHandleStandardArgs)
