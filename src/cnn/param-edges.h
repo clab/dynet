@@ -7,7 +7,7 @@
 namespace cnn {
 
 struct ParameterEdgeBase : public Edge {
-  virtual void accumulate_grad(const Matrix& g) = 0;
+  virtual void accumulate_grad(const Tensor& g) = 0;
 };
 
 // represents optimizable parameters
@@ -15,12 +15,12 @@ struct ParameterEdge : public ParameterEdgeBase {
   explicit ParameterEdge(Parameters* p) : dim(p->values.rows(), p->values.cols()), params(p) {}
   bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
-  void accumulate_grad(const Matrix& g) override;
+  void accumulate_grad(const Tensor& g) override;
   Dim dim;
   Parameters* params;
 };
@@ -28,14 +28,14 @@ struct ParameterEdge : public ParameterEdgeBase {
 // represents specified (not learned) inputs to the network
 struct InputEdge : public Edge {
   explicit InputEdge(const Dim& d) : m(d.rows, d.cols) {}
-  explicit InputEdge(const Matrix& mm) : m(mm) {}
+  explicit InputEdge(const Tensor& mm) : m(mm) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
-  Matrix m;
+  Tensor m;
 };
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
@@ -44,12 +44,12 @@ struct LookupEdge : public ParameterEdgeBase {
   LookupEdge(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), params(p), has_optimizable_parameters(true) {}
   bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                  const Matrix& fx,
-                  const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
                   unsigned i) const override;
-  void accumulate_grad(const Matrix& g) override;
+  void accumulate_grad(const Tensor& g) override;
   Dim dim;
   unsigned index;
   const unsigned* pindex;

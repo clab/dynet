@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
   VariableIndex i_W = hg.add_parameter(&p_W);
   VariableIndex i_V = hg.add_parameter(&p_V);
 
-  Matrix* x_values;  // set *x_values to change the inputs to the network
+  Tensor* x_values;  // set *x_values to change the inputs to the network
   VariableIndex i_x = hg.add_input(Dim(2), &x_values);
   cnn::real* y_value;  // set *y_value to change the target output
   VariableIndex i_y = hg.add_input(&y_value);

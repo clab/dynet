@@ -14,7 +14,7 @@ void Parameters::rescale_gradient(real scale) { g *= scale; }
 
 real Parameters::g_squared_l2norm() const { return g.squaredNorm(); }
 
-void Parameters::accumulate_grad(const Matrix& d) { g += d; }
+void Parameters::accumulate_grad(const Tensor& d) { g += d; }
 
 void Parameters::clear() { g.setZero(); }
 
@@ -29,7 +29,7 @@ real LookupParameters::g_squared_l2norm() const {
   return a;
 }
 
-void LookupParameters::accumulate_grad(unsigned index, const Matrix& d) {
+void LookupParameters::accumulate_grad(unsigned index, const Tensor& d) {
   auto it = this->g.find(index);
   if (it == this->g.end()) {
     g[index] = d;
@@ -56,7 +56,7 @@ Parameters* Model::add_parameters(const Dim& d) {
   return p;
 }
 
-Parameters* Model::add_parameters(const Matrix& m) {  // initial value is m
+Parameters* Model::add_parameters(const Tensor& m) {  // initial value is m
   Parameters* p = new Parameters(m);
   all_params.push_back(p);
   params.push_back(p);

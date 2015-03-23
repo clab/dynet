@@ -15,9 +15,9 @@ real randn(real) {
   return distribution(reng);
 }
 
-Matrix OrthonormalRandom(unsigned dim, real g) {
-  Matrix m = Matrix::Zero(dim, dim).unaryExpr(ptr_fun(randn));
-  Eigen::JacobiSVD<Matrix> svd(m, Eigen::ComputeFullU);
+Tensor OrthonormalRandom(unsigned dim, real g) {
+  Eigen::MatrixXf m = Eigen::MatrixXf::Zero(dim, dim).unaryExpr(ptr_fun(randn));
+  Eigen::JacobiSVD<Eigen::MatrixXf> svd(m, Eigen::ComputeFullU);
   return svd.matrixU();
 }
 

@@ -35,16 +35,16 @@ struct Parameters : public ParametersBase {
   real& operator()(int i, int j) { return values(i,j); }
   const real& operator()(int i, int j) const { return values(i,j); }
 
-  void accumulate_grad(const Matrix& g);
+  void accumulate_grad(const Tensor& g);
   void clear();
 
   Dim dim;
-  Matrix values;
-  Matrix g;
+  Tensor values;
+  Tensor g;
  private:
   Parameters() {}
   explicit Parameters(const Dim& d) : dim(d), values(Random(d)), g(Zero(d)) {}
-  explicit Parameters(const Matrix& v) : dim(v.rows(), v.cols()), values(v), g(Zero(dim)) {}
+  explicit Parameters(const Tensor& v) : dim(v.rows(), v.cols()), values(v), g(Zero(dim)) {}
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
     ar & dim;
@@ -59,15 +59,15 @@ struct LookupParameters : public ParametersBase {
   real g_squared_l2norm() const override;
   size_t size() const override;
 
-  Matrix& operator[](unsigned i) { return values[i]; }
-  const Matrix& operator[](unsigned i) const { return values[i]; }
+  Tensor& operator[](unsigned i) { return values[i]; }
+  const Tensor& operator[](unsigned i) const { return values[i]; }
 
-  void accumulate_grad(unsigned index, const Matrix& g);
+  void accumulate_grad(unsigned index, const Tensor& g);
   void clear();
 
   Dim dim;
-  std::vector<Matrix> values;
-  std::unordered_map<unsigned, Matrix> g;
+  std::vector<Tensor> values;
+  std::unordered_map<unsigned, Tensor> g;
  private:
   LookupParameters() {}
   LookupParameters(unsigned n, const Dim& d) : dim(d), values(n) {
@@ -88,7 +88,7 @@ class Model {
  public:
   ~Model();
   Parameters* add_parameters(const Dim& d);  // initialized randomly
-  Parameters* add_parameters(const Matrix& m);  // initial value is m
+  Parameters* add_parameters(const Tensor& m);  // initial value is m
   LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
 
   const std::vector<ParametersBase*>& all_parameters_list() const { return all_params; }

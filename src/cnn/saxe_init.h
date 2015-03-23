@@ -6,7 +6,7 @@
 namespace cnn {
 
 // returns a dim x dim matrix
-Matrix OrthonormalRandom(unsigned dim, real g);
+Tensor OrthonormalRandom(unsigned dim, real g);
 
 }
 
