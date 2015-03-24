@@ -274,6 +274,21 @@ struct PickElement : public Edge {
   const unsigned* pval;
 };
 
+// x_1 is a vector
+// y = x_1[start:end]
+// (start inclusive, end exclusive)
+struct PickRange : public Edge {
+  explicit PickRange(unsigned start, unsigned end) : start(start), end(end) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Matrix forward(const std::vector<const Matrix*>& xs) const override;
+  Matrix backward(const std::vector<const Matrix*>& xs,
+                    const Matrix& fx,
+                    const Matrix& dEdf,
+                    unsigned i) const override;
+  unsigned start;
+  unsigned end;
+};
+
 } // namespace cnn
 
 #endif
