@@ -280,10 +280,10 @@ struct PickElement : public Edge {
 struct PickRange : public Edge {
   explicit PickRange(unsigned start, unsigned end) : start(start), end(end) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Matrix forward(const std::vector<const Matrix*>& xs) const override;
-  Matrix backward(const std::vector<const Matrix*>& xs,
-                    const Matrix& fx,
-                    const Matrix& dEdf,
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
                     unsigned i) const override;
   unsigned start;
   unsigned end;
