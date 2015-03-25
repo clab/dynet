@@ -440,6 +440,43 @@ Tensor PickElement::backward(const vector<const Tensor*>& xs,
   return dEdx;
 }
 
+// x_1 is a vector
+// y = (x_1)[start:end]
+string PickRange::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "slice(" << arg_names[0] << ',' << start << ':' << end << ')';
+  return s.str();
+}
+
+// slice of vector from index start (inclusive) to index end (exclusive)
+Tensor PickRange::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 1);
+  const Tensor& x = *xs.front();
+  assert(x.cols() == 1);
+  assert(start >= 0);
+  assert(end <= x.rows());
+  assert(start < end);
+  Tensor fx = x.block(start, 0, end-start, 1);
+  assert(fx.rows() == end-start);
+  return fx;
+}
+
+// derivative is 0 in all dimensions except the slice range
+Tensor PickRange::backward(const vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i) const {
+  assert(i == 0);
+  assert(dEdf.rows() == end-start);
+  assert(dEdf.cols() == 1);
+  const Tensor& x = *xs.front();
+
+  // TODO should be sparse
+  Tensor dEdx = Tensor::Zero(x.rows(), 1);
+  dEdx.block(start, 0, end-start, 1) = dEdf;
+  return dEdx;
+}
+
 string MatrixMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " * " << arg_names[1];
