@@ -16,6 +16,8 @@ set(cnn_library_SRCS
 )
 
 if(MINERVA_FOUND)
+  # for now
+  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc)
 else(MINERVA_FOUND)
   list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc)
 endif(MINERVA_FOUND)

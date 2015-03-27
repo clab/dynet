@@ -4,9 +4,9 @@
 
 #include <vector>
 
+#include "cnn/tests/test_utils.h"
 #include "cnn/tensor.h"
 #include "cnn/edges.h"
-#include "cnn/tests/test_utils.h"
 
 using namespace std;
 using namespace cnn;
@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_CASE(ESqrL2)
   cerr << U << endl;
   SquaredEuclideanDistance e;
   vector<const Tensor*> xs = {&U, &V};
-  Tensor W = e.forward(xs);
+  Tensor W = e.forward(xs); 
   cerr << "Norm^2:" << W << endl;
   double eps = 1e-5;
   BOOST_CHECK_CLOSE(t(W,0,0),25., eps);
@@ -121,34 +121,9 @@ BOOST_AUTO_TEST_CASE(ERowConcat)
   BOOST_CHECK_EQUAL(t(u3,1,0), t(b3,1,0));
 }
 
-BOOST_AUTO_TEST_CASE(ESoftmaxUnif) {
-  for (float v = -12.; v < 12.; v += 1.) { 
-    Tensor u = Ccm({4,1}, {v, v, v, v});
-    Softmax sm;
-    vector<const Tensor*> xs = {&u};
-    Tensor m = sm.forward(xs);
-    BOOST_REQUIRE_EQUAL(Dim({4,1}),size(m));
-    double eps = 1e-5;
-    for (unsigned i = 0; i < 4; ++i)
-      BOOST_CHECK_CLOSE(m(i, 0), 0.25, eps);
-    Tensor dEdf = Ccm({4,1}, {1., 0., 0., 0.});
-    Tensor d = sm.backward(xs, m, dEdf, 0);
-    BOOST_CHECK_CLOSE(d(0,0), 0.1875, eps);
-    BOOST_CHECK_CLOSE(d(1,0), -0.0625, eps);
-    BOOST_CHECK_CLOSE(d(2,0), -0.0625, eps);
-    BOOST_CHECK_CLOSE(d(3,0), -0.0625, eps);
-
-    LogSoftmax lsm;
-    Tensor lm = lsm.forward(xs);
-    BOOST_REQUIRE_EQUAL(Dim({4,1}),size(lm));
-    for (unsigned i = 0; i < 4; ++i)
-      BOOST_CHECK_CLOSE(log(m(i, 0)), lm(i, 0), eps);
-  }
-}
-
 BOOST_AUTO_TEST_CASE(EMultilinear) {
   Tensor b = Ccm({3,1},{1,2,3});
-  Tensor W = Ccm({3,2},{2,3,4,5,6,7});
+  Tensor W = Ccm({3,2},{2,4,6,3,5,7});
   Tensor x = Ccm({2,1},{-1,1});
   Multilinear ml;
   vector<const Tensor*> mlxs = {&b, &W, &x};
@@ -159,19 +134,24 @@ BOOST_AUTO_TEST_CASE(EMultilinear) {
   Tensor r2 = se.forward(vector<const Tensor*>({&p, &b}));
   BOOST_REQUIRE_EQUAL(size(r1), size(r2));
   double eps = 1e-5;
-  BOOST_CHECK_CLOSE(t(r1,0,0), 4., eps);
-  BOOST_CHECK_CLOSE(t(r1,1,0), 5., eps);
-  BOOST_CHECK_CLOSE(t(r1,2,0), 6., eps);
-  BOOST_CHECK_CLOSE(t(r2,0,0), 4., eps);
-  BOOST_CHECK_CLOSE(t(r2,1,0), 5., eps);
-  BOOST_CHECK_CLOSE(t(r2,2,0), 6., eps);
+  cerr << r1 << endl;
+  cerr << r2 << endl;
+  BOOST_CHECK_CLOSE(t(r1,0,0), 2., eps);
+  BOOST_CHECK_CLOSE(t(r1,1,0), 3., eps);
+  BOOST_CHECK_CLOSE(t(r1,2,0), 4., eps);
+  BOOST_CHECK_CLOSE(t(r2,0,0), 2., eps);
+  BOOST_CHECK_CLOSE(t(r2,1,0), 3., eps);
+  BOOST_CHECK_CLOSE(t(r2,2,0), 4., eps);
   Tensor dEdf = Ccm({3,1}, {1., 0.5, 0.25});
   Tensor dEdx = ml.backward(mlxs, r1, dEdf, 0);
   BOOST_CHECK_EQUAL(size(dEdx), size(b));
   dEdx = ml.backward(mlxs, r1, dEdf, 1);
   BOOST_CHECK_EQUAL(size(dEdx), size(W));
+  cerr << dEdx << endl;
   dEdx = ml.backward(mlxs, r1, dEdf, 2);
   BOOST_CHECK_EQUAL(size(dEdx), size(x));
+  cerr << r2 << endl;
+  cerr << r1 << endl;
 }
 
 BOOST_AUTO_TEST_CASE(ELogisticSigmoid) {
@@ -181,17 +161,17 @@ BOOST_AUTO_TEST_CASE(ELogisticSigmoid) {
   Tensor r = ls.forward(xs);
   BOOST_REQUIRE_EQUAL(size(r), size(x));
   double eps = 1e-2;
-  BOOST_CHECK_CLOSE(r(0,0), 1. /(1. + exp(6.)), eps);
-  BOOST_CHECK_CLOSE(r(1,0), 0.25, eps);
-  BOOST_CHECK_CLOSE(r(2,0), 0.5, eps);
-  BOOST_CHECK_CLOSE(r(3,0), 0.75, eps);
-  BOOST_CHECK_CLOSE(r(4,0), 1. - r(0,0), eps);
+  BOOST_CHECK_CLOSE(t(r,0,0), 1. /(1. + exp(6.)), eps);
+  BOOST_CHECK_CLOSE(t(r,1,0), 0.25, eps);
+  BOOST_CHECK_CLOSE(t(r,2,0), 0.5, eps);
+  BOOST_CHECK_CLOSE(t(r,3,0), 0.75, eps);
+  BOOST_CHECK_CLOSE(t(r,4,0), 1. - t(r,0,0), eps);
   Tensor dEdf = Ccm({5,1},{1.,1.,1.,1.,1.});
   Tensor dEdx = ls.backward(xs, r, dEdf, 0);
-  BOOST_CHECK_CLOSE(dEdx(1,0), 0.1875, eps);
-  BOOST_CHECK_CLOSE(dEdx(2,0), 0.25, eps);
-  BOOST_CHECK_CLOSE(dEdx(3,0), dEdx(1,0), eps);
-  BOOST_CHECK_CLOSE(dEdx(4,0), dEdx(0,0), eps);
+  BOOST_CHECK_CLOSE(t(dEdx,1,0), 0.1875, eps);
+  BOOST_CHECK_CLOSE(t(dEdx,2,0), 0.25, eps);
+  BOOST_CHECK_CLOSE(t(dEdx,3,0), t(dEdx,1,0), eps);
+  BOOST_CHECK_CLOSE(t(dEdx,4,0), t(dEdx,0,0), eps);
 }
 
 BOOST_AUTO_TEST_CASE(ETanh) {
@@ -201,15 +181,47 @@ BOOST_AUTO_TEST_CASE(ETanh) {
   Tensor r = th.forward(xs);
   BOOST_REQUIRE_EQUAL(size(r), size(x));
   double eps = 1e-2;
-  BOOST_CHECK_CLOSE(r(1,0), -0.8, eps);
-  BOOST_CHECK_CLOSE(r(2,0), 0, eps);
-  BOOST_CHECK_CLOSE(r(3,0), 0.8, eps);
-  BOOST_CHECK_CLOSE(r(4,0), -r(0,0), eps);
+  BOOST_CHECK_CLOSE(t(r,1,0), -0.8, eps);
+  BOOST_CHECK_CLOSE(t(r,2,0), 0, eps);
+  BOOST_CHECK_CLOSE(t(r,3,0), 0.8, eps);
+  BOOST_CHECK_CLOSE(t(r,4,0), -t(r,0,0), eps);
   Tensor dEdf = Ccm({5,1},{1.,1.,1.,1.,1.});
   Tensor dEdx = th.backward(xs, r, dEdf, 0);
-  BOOST_CHECK_CLOSE(dEdx(1,0), 0.36, eps);
-  BOOST_CHECK_CLOSE(dEdx(2,0), 1.0, eps);
-  BOOST_CHECK_CLOSE(dEdx(3,0), dEdx(1,0), eps);
-  BOOST_CHECK_CLOSE(dEdx(4,0), dEdx(0,0), eps);
+  BOOST_CHECK_CLOSE(t(dEdx,1,0), 0.36, eps);
+  BOOST_CHECK_CLOSE(t(dEdx,2,0), 1.0, eps);
+  BOOST_CHECK_CLOSE(t(dEdx,3,0), t(dEdx,1,0), eps);
+  BOOST_CHECK_CLOSE(t(dEdx,4,0), t(dEdx,0,0), eps);
 }
+
+BOOST_AUTO_TEST_CASE(ESoftmaxUnif) {
+  for (float v = -12.; v < 12.; v += 1.) { 
+    Tensor u = Ccm({4,1}, {v, v, v, v});
+    Softmax sm;
+    vector<const Tensor*> xs = {&u};
+    Tensor m = sm.forward(xs);
+    BOOST_REQUIRE_EQUAL(Dim({4,1}),size(m));
+    double eps = 1e-5;
+    for (unsigned i = 0; i < 4; ++i)
+      BOOST_CHECK_CLOSE(t(m, i, 0), 0.25, eps);
+    Tensor dEdf = Ccm({4,1}, {1., 0., 0., 0.});
+    Tensor d = sm.backward(xs, m, dEdf, 0);
+    BOOST_CHECK_CLOSE(t(d,0,0), 0.1875, eps);
+    BOOST_CHECK_CLOSE(t(d,1,0), -0.0625, eps);
+    BOOST_CHECK_CLOSE(t(d,2,0), -0.0625, eps);
+    BOOST_CHECK_CLOSE(t(d,3,0), -0.0625, eps);
+//    cerr << d << endl;
+
+    LogSoftmax lsm;
+    Tensor lm = lsm.forward(xs);
+    BOOST_REQUIRE_EQUAL(Dim({4,1}),size(lm));
+    for (unsigned i = 0; i < 4; ++i)
+      BOOST_CHECK_CLOSE(log(t(m, i, 0)), t(lm, i, 0), eps);
+    Tensor b = lsm.backward(xs, lm, dEdf, 0);
+    BOOST_CHECK_CLOSE(t(b, 0, 0), 0.75, eps);
+    BOOST_CHECK_CLOSE(t(b, 1, 0), -0.25, eps);
+    BOOST_CHECK_CLOSE(t(b, 2, 0), -0.25, eps);
+    BOOST_CHECK_CLOSE(t(b, 3, 0), -0.25, eps);
+  }
+}
+
 
