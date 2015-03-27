@@ -15,9 +15,9 @@ typedef float real;
 
 struct Dim {
   Dim() : rows(1), cols(1) {}
-  explicit Dim(unsigned m) : rows(m), cols(1) {}
-  Dim(unsigned m, unsigned n) : rows(m), cols(n) {}
-  Dim(const std::initializer_list<unsigned>& x) {
+  explicit Dim(int m) : rows(m), cols(1) {}
+  Dim(int m, int n) : rows(m), cols(n) {}
+  Dim(const std::initializer_list<int>& x) {
     unsigned c = 0;
     for (auto v : x) {
       if (c == 0) rows = v;
