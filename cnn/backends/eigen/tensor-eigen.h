@@ -29,6 +29,11 @@ struct Dim {
       abort();
     }
   }
+  int operator[](unsigned i) const {
+    if (i == 0) return rows;
+    if (i == 1) return cols;
+    abort();
+  }
   unsigned short rows;
   unsigned short cols;
   Dim transpose() const { return Dim(cols,rows); }

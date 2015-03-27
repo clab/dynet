@@ -21,7 +21,7 @@ VariableIndex Hypergraph::add_input(real** ps) { return add_input(0., ps); }
 VariableIndex Hypergraph::add_input(real s, real** ps) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
-  InputEdge* e = new InputEdge(Dim(1,1));
+  InputEdge* e = new InputEdge(Dim({1,1}));
   e->m(0,0) = s;
   if (ps) *ps = &e->m(0,0);
   edges.push_back(e);
@@ -29,7 +29,7 @@ VariableIndex Hypergraph::add_input(real s, real** ps) {
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_input(const Tensor& m, Tensor** pm) {
+VariableIndex Hypergraph::add_input(const Eigen::MatrixXf& m, Eigen::MatrixXf** pm) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
   InputEdge* e = new InputEdge(m);
@@ -39,7 +39,7 @@ VariableIndex Hypergraph::add_input(const Tensor& m, Tensor** pm) {
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_input(const Dim& d, Tensor** pm) {
+VariableIndex Hypergraph::add_input(const Dim& d, Eigen::MatrixXf** pm) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
   InputEdge* e = new InputEdge(d);

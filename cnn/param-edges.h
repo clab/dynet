@@ -27,15 +27,15 @@ struct ParameterEdge : public ParameterEdgeBase {
 
 // represents specified (not learned) inputs to the network
 struct InputEdge : public Edge {
-  explicit InputEdge(const Dim& d) : m(d.rows, d.cols) {}
-  explicit InputEdge(const Tensor& mm) : m(mm) {}
+  explicit InputEdge(const Dim& d) : m(d[0], d[1]) {}
+  explicit InputEdge(const Eigen::MatrixXf& mm) : m(mm) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i) const override;
-  Tensor m;
+  Eigen::MatrixXf m;
 };
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)

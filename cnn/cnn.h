@@ -43,8 +43,8 @@ struct Hypergraph {
   // construct a graph
   VariableIndex add_input(real** ps);
   VariableIndex add_input(real s, real** ps = 0);
-  VariableIndex add_input(const Tensor& m, Tensor** pm = 0);
-  VariableIndex add_input(const Dim& d, Tensor** pm = 0);
+  VariableIndex add_input(const Eigen::MatrixXf& m, Eigen::MatrixXf** pm = 0);
+  VariableIndex add_input(const Dim& d, Eigen::MatrixXf** pm = 0);
   VariableIndex add_parameter(Parameters* p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
