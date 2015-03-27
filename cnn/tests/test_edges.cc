@@ -6,12 +6,36 @@
 
 #include "cnn/tensor.h"
 #include "cnn/edges.h"
+#include "cnn/tests/test_utils.h"
 
 using namespace std;
 using namespace cnn;
 
-BOOST_AUTO_TEST_CASE(EMatrixMultiply)
+BOOST_GLOBAL_FIXTURE(TestTensorSetup)
+
+BOOST_AUTO_TEST_CASE(ESqrL2)
 {
+  Tensor U = Ccm({2,1}, {4,5});
+  Tensor V = Ccm({2,1}, {1,1});
+  cerr << U << endl;
+  SquaredEuclideanDistance e;
+  vector<const Tensor*> xs = {&U, &V};
+  Tensor W = e.forward(xs);
+  cerr << "Norm^2:" << W << endl;
+  double eps = 1e-5;
+  BOOST_CHECK_CLOSE(t(W,0,0),25., eps);
+  Tensor dEdf = Ccm({1,1}, {1});
+  Tensor d1 = e.backward(xs, W, dEdf, 0);
+  Tensor d2 = e.backward(xs, W, dEdf, 1);
+  cerr << d1 << endl;
+  cerr << d2 << endl;
+  BOOST_CHECK_CLOSE(t(d1,0,0), 6., eps);
+  BOOST_CHECK_CLOSE(t(d1,1,0), 8., eps);
+  BOOST_CHECK_CLOSE(t(d2,0,0), -6., eps);
+  BOOST_CHECK_CLOSE(t(d2,1,0), -8., eps);
+}
+
+BOOST_AUTO_TEST_CASE(EMatrixMultiply) {
   Tensor U = Ccm({2,3}, {1,2,3,4,5,6});
   Tensor V = Ccm({3,2}, {7,8,9,10,11,12});
   MatrixMultiply mm;
@@ -19,36 +43,50 @@ BOOST_AUTO_TEST_CASE(EMatrixMultiply)
   Tensor W = mm.forward(xs);
   BOOST_REQUIRE_EQUAL(Dim({2,2}),size(W));
   double eps = 1e-5;
-  BOOST_CHECK_CLOSE(W(0,0), 58., eps);
-  BOOST_CHECK_CLOSE(W(1,0), 139., eps);
-  BOOST_CHECK_CLOSE(W(0,1), 64., eps);
-  BOOST_CHECK_CLOSE(W(1,1), 154., eps);
+  BOOST_CHECK_CLOSE(t(W,0,0), 76., eps);
+  BOOST_CHECK_CLOSE(t(W,1,0), 100., eps);
+  BOOST_CHECK_CLOSE(t(W,0,1), 103., eps);
+  BOOST_CHECK_CLOSE(t(W,1,1), 136., eps);
+  cerr << U << endl;
+  cerr << V << endl;
+  cerr << W << endl;
 }
 
 BOOST_AUTO_TEST_CASE(EColumnConcat)
 {
-  Tensor u1 = Ccm({2,1}, {1, 4});
-  Tensor u2 = Ccm({2,1}, {2, 5});
-  Tensor u3 = Ccm({2,1}, {3, 6});
+  Tensor u1 = Ccm({2,1}, {1, 2});
+  Tensor u2 = Ccm({2,1}, {3, 4});
+  Tensor u3 = Ccm({2,1}, {5, 6});
+  cerr << u1 << endl;
+  cerr << u2 << endl;
+  cerr << u3 << endl;
   vector<const Tensor*> xs = {&u1, &u2, &u3};
   ConcatenateColumns cc;
   Tensor U = cc.forward(xs);
+  cerr << U << endl;
   Tensor V = Ccm({3,2}, {7,8,9,10,11,12});
   MatrixMultiply mm;
   vector<const Tensor*> xs2 = {&U, &V};
   Tensor W = mm.forward(xs2);
+  cerr << W << endl;
   BOOST_REQUIRE_EQUAL(Dim({2,2}),size(W));
   double eps = 1e-5;
-  BOOST_CHECK_CLOSE(W(0,0), 58., eps);
-  BOOST_CHECK_CLOSE(W(1,0), 139., eps);
-  BOOST_CHECK_CLOSE(W(0,1), 64., eps);
-  BOOST_CHECK_CLOSE(W(1,1), 154., eps);
+  BOOST_CHECK_CLOSE(t(W,0,0), 76., eps);
+  BOOST_CHECK_CLOSE(t(W,1,0), 100., eps);
+  BOOST_CHECK_CLOSE(t(W,0,1), 103., eps);
+  BOOST_CHECK_CLOSE(t(W,1,1), 136., eps);
   Tensor b1 = cc.backward(xs, U, U, 0);
   Tensor b2 = cc.backward(xs, U, U, 1);
   Tensor b3 = cc.backward(xs, U, U, 2);
-  BOOST_CHECK_EQUAL(u1, b1);
-  BOOST_CHECK_EQUAL(u2, b2);
-  BOOST_CHECK_EQUAL(u3, b3);
+  cerr << b1 << endl;
+  cerr << b2 << endl;
+  cerr << b3 << endl;
+  BOOST_CHECK_EQUAL(t(u1,0,0), t(b1,0,0));
+  BOOST_CHECK_EQUAL(t(u1,1,0), t(b1,1,0));
+  BOOST_CHECK_EQUAL(t(u2,0,0), t(b2,0,0));
+  BOOST_CHECK_EQUAL(t(u2,1,0), t(b2,1,0));
+  BOOST_CHECK_EQUAL(t(u3,0,0), t(b3,0,0));
+  BOOST_CHECK_EQUAL(t(u3,1,0), t(b3,1,0));
 }
 
 BOOST_AUTO_TEST_CASE(ERowConcat)
@@ -59,21 +97,28 @@ BOOST_AUTO_TEST_CASE(ERowConcat)
   vector<const Tensor*> xs = {&u1, &u2, &u3};
   Concatenate cr;
   Tensor U = cr.forward(xs);
+  cerr << U << endl;
   BOOST_REQUIRE_EQUAL(Dim({6,1}),size(U));
   double eps = 1e-5;
-  BOOST_CHECK_CLOSE(U(0,0), 1., eps);
-  BOOST_CHECK_CLOSE(U(1,0), 4., eps);
-  BOOST_CHECK_CLOSE(U(2,0), 2., eps);
-  BOOST_CHECK_CLOSE(U(3,0), 5., eps);
-  BOOST_CHECK_CLOSE(U(4,0), 3., eps);
-  BOOST_CHECK_CLOSE(U(5,0), 6., eps);
+  BOOST_CHECK_CLOSE(t(U,0,0), 1., eps);
+  BOOST_CHECK_CLOSE(t(U,1,0), 4., eps);
+  BOOST_CHECK_CLOSE(t(U,2,0), 2., eps);
+  BOOST_CHECK_CLOSE(t(U,3,0), 5., eps);
+  BOOST_CHECK_CLOSE(t(U,4,0), 3., eps);
+  BOOST_CHECK_CLOSE(t(U,5,0), 6., eps);
 
   Tensor b1 = cr.backward(xs, U, U, 0);
   Tensor b2 = cr.backward(xs, U, U, 1);
   Tensor b3 = cr.backward(xs, U, U, 2);
-  BOOST_CHECK_EQUAL(u1, b1);
-  BOOST_CHECK_EQUAL(u2, b2);
-  BOOST_CHECK_EQUAL(u3, b3);
+  cerr << b1 << endl;
+  cerr << b2 << endl;
+  cerr << b3 << endl;
+  BOOST_CHECK_EQUAL(t(u1,0,0), t(b1,0,0));
+  BOOST_CHECK_EQUAL(t(u1,1,0), t(b1,1,0));
+  BOOST_CHECK_EQUAL(t(u2,0,0), t(b2,0,0));
+  BOOST_CHECK_EQUAL(t(u2,1,0), t(b2,1,0));
+  BOOST_CHECK_EQUAL(t(u3,0,0), t(b3,0,0));
+  BOOST_CHECK_EQUAL(t(u3,1,0), t(b3,1,0));
 }
 
 BOOST_AUTO_TEST_CASE(ESoftmaxUnif) {
@@ -114,12 +159,12 @@ BOOST_AUTO_TEST_CASE(EMultilinear) {
   Tensor r2 = se.forward(vector<const Tensor*>({&p, &b}));
   BOOST_REQUIRE_EQUAL(size(r1), size(r2));
   double eps = 1e-5;
-  BOOST_CHECK_CLOSE(r1(0,0), 2., eps);
-  BOOST_CHECK_CLOSE(r1(1,0), 3., eps);
-  BOOST_CHECK_CLOSE(r1(2,0), 4., eps);
-  BOOST_CHECK_CLOSE(r2(0,0), 2., eps);
-  BOOST_CHECK_CLOSE(r2(1,0), 3., eps);
-  BOOST_CHECK_CLOSE(r2(2,0), 4., eps);
+  BOOST_CHECK_CLOSE(t(r1,0,0), 4., eps);
+  BOOST_CHECK_CLOSE(t(r1,1,0), 5., eps);
+  BOOST_CHECK_CLOSE(t(r1,2,0), 6., eps);
+  BOOST_CHECK_CLOSE(t(r2,0,0), 4., eps);
+  BOOST_CHECK_CLOSE(t(r2,1,0), 5., eps);
+  BOOST_CHECK_CLOSE(t(r2,2,0), 6., eps);
   Tensor dEdf = Ccm({3,1}, {1., 0.5, 0.25});
   Tensor dEdx = ml.backward(mlxs, r1, dEdf, 0);
   BOOST_CHECK_EQUAL(size(dEdx), size(b));

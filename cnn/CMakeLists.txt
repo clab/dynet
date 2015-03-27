@@ -6,7 +6,6 @@ PROJECT(cnn CXX)
 set(cnn_library_SRCS
     cnn.cc
     edges.cc
-    eigen-backend.cc
     lstm.cc
     lstm-fast.cc
     model.cc
@@ -16,12 +15,15 @@ set(cnn_library_SRCS
     training.cc
 )
 
+if(MINERVA_FOUND)
+else(MINERVA_FOUND)
+  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc)
+endif(MINERVA_FOUND)
+
 # Headers:
 set(cnn_library_HDRS
     cnn.h
     edges.h
-    eigen-backend.h
-    eigen-serialization.h
     lstm.h
     lstm-fast.h
     model.h

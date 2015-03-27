@@ -1,6 +1,8 @@
 #ifndef CNN_EIGEN_SERIALIZE_H_
 #define CNN_EIGEN_SERIALIZE_H_
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include <Eigen/Eigen>
 
 namespace boost{

@@ -1,4 +1,4 @@
-#include "cnn/eigen-backend.h"
+#include "cnn/backends/eigen/eigen-backend.h"
 
 #include <cmath>
 
