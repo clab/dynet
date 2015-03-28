@@ -13,10 +13,14 @@ namespace cnn {
 typedef Eigen::MatrixXf Tensor;
 typedef float real;
 
+// dummy function with Eigen backend
+inline Tensor FromEigenMatrix(const Eigen::MatrixXf& src) { return src; }
+
 struct Dim {
   Dim() : rows(1), cols(1) {}
   explicit Dim(int m) : rows(m), cols(1) {}
   Dim(int m, int n) : rows(m), cols(n) {}
+  inline unsigned Prod() const { return rows * cols; }
   Dim(const std::initializer_list<int>& x) {
     unsigned c = 0;
     for (auto v : x) {

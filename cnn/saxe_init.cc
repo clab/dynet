@@ -1,6 +1,7 @@
 #include "saxe_init.h"
 
 #include <random>
+#include <cstring>
 
 #include <Eigen/SVD>
 
@@ -18,9 +19,8 @@ real randn(real) {
 Tensor OrthonormalRandom(unsigned dim, real g) {
   Eigen::MatrixXf m = Eigen::MatrixXf::Zero(dim, dim).unaryExpr(ptr_fun(randn));
   Eigen::JacobiSVD<Eigen::MatrixXf> svd(m, Eigen::ComputeFullU);
-  return svd.matrixU();
+  return FromEigenMatrix(svd.matrixU());
 }
 
 }
-
 

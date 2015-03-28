@@ -1,4 +1,5 @@
 #include "cnn/model.h"
+#include "cnn/tensor.h"
 
 #include <iostream>
 
@@ -8,34 +9,56 @@ namespace cnn {
 
 ParametersBase::~ParametersBase() {}
 
-size_t Parameters::size() const { return values.rows() * values.cols(); }
+size_t Parameters::size() const { return cnn::size(values).Prod(); }
 
 void Parameters::rescale_gradient(real scale) { g *= scale; }
 
-real Parameters::g_squared_l2norm() const { return g.squaredNorm(); }
+real Parameters::g_squared_l2norm() const {
+#if MINERVA_BACKEND
+  Tensor r = g.Reshape({g.Size().Prod()});
+  Tensor sq = Elewise::Mult(r, r);
+  return sq.Sum(0).Get().get()[0];
+#else
+  return g.squaredNorm();
+#endif
+}
 
 void Parameters::accumulate_grad(const Tensor& d) { g += d; }
 
-void Parameters::clear() { g.setZero(); }
+void Parameters::clear() {
+#if MINERVA_BACKEND
+  g = NArray::Zeros(g.Size());
+#else
+  g.setZero();
+#endif
+}
 
 size_t LookupParameters::size() const {
-  return values.size() * dim.rows * dim.cols;
+  return values.size() * dim.Prod();
 }
 
 real LookupParameters::g_squared_l2norm() const {
   real a = 0;
+#if MINERVA_BACKEND
+  cerr << "No impl yet\n"; abort();
+#else
   for (auto& it : this->g)
     a += it.second.squaredNorm();
+#endif
   return a;
 }
 
 void LookupParameters::accumulate_grad(unsigned index, const Tensor& d) {
+#if MINERVA_BACKEND
+  cerr << "No impl yet\n"; abort();
+#else
   auto it = this->g.find(index);
   if (it == this->g.end()) {
     g[index] = d;
   } else {
     it->second += d;
   }
+#endif
 }
 
 void LookupParameters::rescale_gradient(real scale) {
