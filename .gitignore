@@ -1,4 +1,8 @@
 # cmake stuff
+Testing/
+cnn/Testing/
+cnn/tests.bin/
+CTestTestfile.cmake
 config.h
 Makefile
 CMakeCache.txt
@@ -6,10 +10,10 @@ CMakeFiles
 cmake_install.cmake
 
 # binaries
-src/examples/xor
-src/examples/xor-xent
-src/examples/rnnlm
-src/examples/nlm
+examples/xor
+examples/xor-xent
+examples/rnnlm
+examples/nlm
 
 # Compiled Object files
 *.slo

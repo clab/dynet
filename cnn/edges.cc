@@ -16,13 +16,8 @@ string OneMinusX::as_string(const vector<string>& arg_names) const {
 
 Tensor OneMinusX::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  Tensor res = *xs[0];
-  const unsigned rows = res.rows();
-  const unsigned cols = res.cols();
-  for (unsigned i = 0; i < rows; ++i)
-    for (unsigned j = 0; j < cols; ++j)
-      res(i, j) = 1 - res(i, j);
-  return res;
+  const Tensor& x = *xs[0];
+  return Ones(cnn::size(x)) - x;
 }
 
 Tensor OneMinusX::backward(const vector<const Tensor*>& xs,

@@ -110,7 +110,7 @@ const Tensor& Hypergraph::incremental_forward() {
       ++ti;
     }
     node->f = in_edge.forward(xs);
-    node->dEdf = Zero(Dim(node->f.rows(), node->f.cols()));
+    node->dEdf = Zero(cnn::size(node->f));
     ++last_node_evaluated;
   }
   return nodes.back()->f;
@@ -134,8 +134,7 @@ void Hypergraph::backward() {
   }
 
   // initialize dE/dE = 1
-  nodes.back()->dEdf = Tensor(1,1);
-  nodes.back()->dEdf(0,0) = 1;
+  nodes.back()->dEdf = cnn::Constant({1,1}, 1);
 
   // loop in reverse topological order
   for (int i = nodes.size() - 1; i >= 0; --i) {

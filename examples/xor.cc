@@ -15,6 +15,7 @@ int main(int argc, char** argv) {
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
+  const unsigned ITERATIONS = 30;
   Model m;
   SimpleSGDTrainer sgd(&m);
   //MomentumSGDTrainer sgd(&m);
@@ -63,7 +64,7 @@ int main(int argc, char** argv) {
   }
 
   // train the parameters
-  for (unsigned iter = 0; iter < 30; ++iter) {
+  for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
     double loss = 0;
     for (unsigned mi = 0; mi < 4; ++mi) {
       bool x1 = mi % 2;

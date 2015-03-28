@@ -19,6 +19,7 @@ typedef minerva::NArray Tensor;
 typedef float real;
 typedef minerva::Scale Dim;
 
+inline Tensor Constant(const Dim& d, real c) { return minerva::NArray::Constant(d, c); }
 inline Tensor Zero(const Dim& d) { return minerva::NArray::Zeros(d); }
 inline Tensor Random(const Dim& d) { return minerva::NArray::Zeros(d); }
 inline Dim size(const Tensor& m) { return m.Size(); }

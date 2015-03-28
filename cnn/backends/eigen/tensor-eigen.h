@@ -63,7 +63,13 @@ inline std::ostream& operator<<(std::ostream& os, const Dim& d) {
 
 inline Dim size(const Tensor& m) { return Dim(m.rows(), m.cols()); }
 
+inline Tensor Constant(const Dim& d, real c) {
+  Tensor m(d.rows, d.cols);
+  m.fill(c);
+  return m;
+}
 inline Tensor Zero(const Dim& d) { return Eigen::MatrixXf::Zero(d.rows, d.cols); }
+inline Tensor Ones(const Dim& d) { return Eigen::MatrixXf::Ones(d.rows, d.cols); }
 inline Tensor Random(const Dim& d) { return Eigen::MatrixXf::Random(d.rows, d.cols) * (sqrt(6) / sqrt(d.cols + d.rows)); }
 inline Tensor Random(const Dim& d, double scale) { return Eigen::MatrixXf::Random(d.rows, d.cols) * scale; }
 
