@@ -5,6 +5,19 @@
 
 namespace cnn {
 
+// y = dropout(x,p) where p specifies the dropout probability
+struct Dropout : public Edge {
+  explicit Dropout(real p) : p(p) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i) const override;
+  mutable Tensor noise_mask;
+  real p;
+};
+
 // y = 1 - x_1
 struct OneMinusX : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;

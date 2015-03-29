@@ -11,7 +11,7 @@ using namespace std;
 using namespace cnn;
 
 int main(int argc, char** argv) {
-  srand(time(0));
+  cnn::Initialize(argc, argv);
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;

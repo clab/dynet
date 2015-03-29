@@ -5,6 +5,8 @@
 
 namespace cnn {
 
+void Initialize(int& argc, char**& argv);
+
 // This is a class that makes some of the Minerva library calls available
 // even with the Eigen backend (it will just be used in porting, and until
 // Minerva supports everything it should on the CPU, I hope).

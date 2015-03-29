@@ -1,10 +1,17 @@
 #include "cnn/backends/eigen/eigen-backend.h"
 
+#include <random>
 #include <cmath>
 
 using namespace std;
 
 namespace cnn {
+
+std::mt19937* rndeng = nullptr;
+void Initialize(int& argc, char**& argv) {
+   std::random_device rd;
+   rndeng = new mt19937(rd());
+}
 
 Eigen::MatrixXf Elewise::Ln(const Eigen::MatrixXf& x) {
   return x.array().log();

@@ -8,6 +8,27 @@ using namespace std;
 
 namespace cnn {
 
+string Dropout::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dropout(" << arg_names[0] << ",p=" << p << ')';
+  return s.str();
+}
+
+Tensor Dropout::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 1);
+  const Tensor& x = *xs[0];
+  noise_mask = RandomBernoulli(cnn::size(x), p);
+  return x.cwiseProduct(noise_mask);
+}
+
+Tensor Dropout::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i) const {
+  assert(i == 0);
+  return dEdf.cwiseProduct(noise_mask);
+};
+
 string OneMinusX::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "1 - " << arg_names[0];

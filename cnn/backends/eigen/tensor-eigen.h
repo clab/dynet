@@ -5,6 +5,8 @@
 
 #include <Eigen/Eigen>
 #include "cnn/backends/eigen/eigen-serialization.h"
+#include "cnn/backends/eigen/random.h"
+#include <random>
 
 namespace cnn {
 
@@ -70,8 +72,24 @@ inline Tensor Constant(const Dim& d, real c) {
 }
 inline Tensor Zero(const Dim& d) { return Eigen::MatrixXf::Zero(d.rows, d.cols); }
 inline Tensor Ones(const Dim& d) { return Eigen::MatrixXf::Ones(d.rows, d.cols); }
-inline Tensor Random(const Dim& d) { return Eigen::MatrixXf::Random(d.rows, d.cols) * (sqrt(6) / sqrt(d.cols + d.rows)); }
-inline Tensor Random(const Dim& d, double scale) { return Eigen::MatrixXf::Random(d.rows, d.cols) * scale; }
+inline Tensor Random(const Dim& d, real scale) {
+  std::uniform_real_distribution<real> distribution(-scale,scale);
+  auto b = [&] (real) {return distribution(*rndeng);};
+  return Eigen::MatrixXf::NullaryExpr(d.rows, d.cols, b);
+}
+inline Tensor Random(const Dim& d) {
+  return Random(d, sqrt(6) / sqrt(d.cols + d.rows));
+}
+inline Tensor RandomBernoulli(const Dim& d, real p) {
+  std::bernoulli_distribution distribution(p);
+  auto b = [&] (real) {return distribution(*rndeng);};
+  return Eigen::MatrixXf::NullaryExpr(d.rows, d.cols, b);
+}
+inline Tensor RandomNormal(const Dim& d, real mean, real stddev) {
+  std::normal_distribution<real> distribution(mean, stddev);
+  auto b = [&] (real) {return distribution(*rndeng);};
+  return Eigen::MatrixXf::NullaryExpr(d.rows, d.cols, b);
+}
 
 // column major constructor
 inline Tensor Ccm(const Dim&d, const std::initializer_list<real>& v) {

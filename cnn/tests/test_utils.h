@@ -48,7 +48,12 @@ std::ostream& operator<<(std::ostream& os, const Tensor& T) {
 #else
 
 struct TestTensorSetup {
-  TestTensorSetup() {}
+  TestTensorSetup() {
+    int argc = 1;
+    char* p = "foo";
+    char** argv = {&p};
+    cnn::Initialize(argc, argv);
+  }
 };
 
 double t(const Tensor& T, unsigned i, unsigned j) {

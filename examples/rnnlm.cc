@@ -19,7 +19,7 @@ unsigned HIDDEN_DIM = 24;
 unsigned VOCAB_SIZE = 32;
 
 int main(int argc, char** argv) {
-  srand(time(0));
+  cnn::Initialize(argc, argv);
   if (argc != 2) {
     cerr << "Usage: " << argv[0] << " text.ints\n";
     return 1;

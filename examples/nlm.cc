@@ -11,7 +11,7 @@ using namespace std;
 using namespace cnn;
 
 int main(int argc, char** argv) {
-  srand(time(0));
+  cnn::Initialize(argc, argv);
 
   unsigned CONTEXT = 3;
   unsigned DIM = 100;

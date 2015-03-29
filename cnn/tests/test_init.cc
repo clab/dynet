@@ -32,3 +32,14 @@ BOOST_AUTO_TEST_CASE(EOrthonormalRandom)
   }
 }
 
+BOOST_AUTO_TEST_CASE(BernoulliInit) {
+  Tensor r = RandomBernoulli(Dim({1000,1000}), 0.5f);
+  int tot = 0;
+  for (int i = 0; i < 1000; ++i)
+    for (int j = 0; j < 1000; ++j)
+      if (t(r,i,j)) ++tot;
+  cerr << "tot: " << tot << endl;
+  BOOST_CHECK_GT(tot, 490000);
+  BOOST_CHECK_LT(tot, 510000);
+}
+
