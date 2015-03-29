@@ -90,6 +90,10 @@ inline Tensor RandomNormal(const Dim& d, real mean, real stddev) {
   auto b = [&] (real) {return distribution(*rndeng);};
   return Eigen::MatrixXf::NullaryExpr(d.rows, d.cols, b);
 }
+inline real rand01() {
+  std::uniform_real_distribution<real> distribution(0, 1);
+  return distribution(*rndeng);
+}
 
 // column major constructor
 inline Tensor Ccm(const Dim&d, const std::initializer_list<real>& v) {

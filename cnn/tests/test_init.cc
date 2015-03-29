@@ -38,8 +38,16 @@ BOOST_AUTO_TEST_CASE(BernoulliInit) {
   for (int i = 0; i < 1000; ++i)
     for (int j = 0; j < 1000; ++j)
       if (t(r,i,j)) ++tot;
-  cerr << "tot: " << tot << endl;
   BOOST_CHECK_GT(tot, 490000);
   BOOST_CHECK_LT(tot, 510000);
 }
+
+BOOST_AUTO_TEST_CASE(Rand01) {
+  cnn::real tot = 0;
+  for (unsigned i = 0; i < 1000000; ++i)
+    tot += cnn::rand01();
+  BOOST_CHECK_GT(tot, 490000.);
+  BOOST_CHECK_LT(tot, 510000.);
+}
+
 
