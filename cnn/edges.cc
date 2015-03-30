@@ -8,6 +8,26 @@ using namespace std;
 
 namespace cnn {
 
+string GaussianNoise::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " + N(0," << stddev << ')';
+  return s.str();
+}
+
+Tensor GaussianNoise::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 1);
+  const Tensor& x = *xs[0];
+  return x + RandomNormal(cnn::size(x), 0, stddev);
+}
+
+Tensor GaussianNoise::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i) const {
+  assert(i == 0);
+  return dEdf;
+};
+
 string Dropout::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "dropout(" << arg_names[0] << ",p=" << p << ')';
