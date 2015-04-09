@@ -19,15 +19,15 @@ struct LSTMBuilder_CIFG {
   // a new computation graph
   void new_graph();
 
-  // call this before add_input
+  // call this before start_new_sequence
   void add_parameter_edges(Hypergraph* hg);
 
-  // call this before add_input and
-  // initialize c and h to given values at each layer
-  // - if c_0 or h_0 are empty, initialized to zero matrix input
-  void add_parameter_edges(Hypergraph* hg,
-                           std::vector<VariableIndex> c_0,
-                           std::vector<VariableIndex> h_0);
+  // Start new sequence in given Hypergraph with initial c0 and h0
+  // call after add_parameter edges but before add input,
+  // as well as whenever a new sequence is to be added to the graph
+  void start_new_sequence(Hypergraph* hg,
+                          std::vector<VariableIndex> c_0={},
+                          std::vector<VariableIndex> h_0={});
 
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer

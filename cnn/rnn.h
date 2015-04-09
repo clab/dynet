@@ -22,9 +22,11 @@ struct RNNBuilder {
   // call this before add_input
   void add_parameter_edges(Hypergraph* hg);
 
-  // call this before add_input and initialize hidden layers
-  // at timestep 0 to given values
-  void add_parameter_edges(Hypergraph* hg, std::vector<VariableIndex> h_0);
+  // Reset for new sequence on hypergraph hg with shared parameters
+  // call this before add_input and after add_parameter_edges, or
+  // when starting a new sequence on the same hypergraph.
+  // h_0 is used to initialize hidden layers at timestep 0 to given values
+  void start_new_sequence(Hypergraph* hg, std::vector<VariableIndex> h_0={});
 
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer

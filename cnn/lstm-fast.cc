@@ -63,12 +63,6 @@ void LSTMBuilder_CIFG::add_parameter_edges(Hypergraph* hg) {
   h.clear();
   c.clear();
 
-  if (h0.empty() || c0.empty()) {
-    VariableIndex zero_input = hg->add_input(Zero(Dim(hidden_dim, 1)));
-    if (c0.empty()) { c0 = vector<VariableIndex>(layers, zero_input); }
-    if (h0.empty()) { h0 = vector<VariableIndex>(layers, zero_input); }
-  }
-
   for (unsigned i = 0; i < layers; ++i) {
     string layer = to_string(i);
     auto& p = params[i];
@@ -95,18 +89,30 @@ void LSTMBuilder_CIFG::add_parameter_edges(Hypergraph* hg) {
   }
 }
 
-void LSTMBuilder_CIFG::add_parameter_edges(Hypergraph* hg,
-                                      vector<VariableIndex> c_0,
-                                      vector<VariableIndex> h_0) {
+void LSTMBuilder_CIFG::start_new_sequence(Hypergraph* hg,
+                                          vector<VariableIndex> c_0,
+                                          vector<VariableIndex> h_0){
+  if (builder_state < 2) {
+    cerr << "Invalid state: " << builder_state << endl;
+    abort();
+  }
+  builder_state = 3;
+
+  h.clear();
+  c.clear();
   h0 = h_0;
   c0 = c_0;
-  add_parameter_edges(hg);
+  if (h0.empty() || c0.empty()) {
+    VariableIndex zero_input = hg->add_input(Zero(Dim(hidden_dim, 1)));
+    if (c0.empty()) { c0 = vector<VariableIndex>(layers, zero_input); }
+    if (h0.empty()) { h0 = vector<VariableIndex>(layers, zero_input); }
+  }
   assert (h0.size() == layers);
   assert (c0.size() == layers);
 }
 
 VariableIndex LSTMBuilder_CIFG::add_input(VariableIndex x, Hypergraph* hg) {
-  if (builder_state != 2) {
+  if (builder_state != 3) {
     cerr << "Invalid state: " << builder_state << endl;
     abort();
   }
