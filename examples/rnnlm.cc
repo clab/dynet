@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
       Hypergraph hg;
       rnn.new_graph();  // reset RNN builder for new graph
       rnn.add_parameter_edges(&hg);  // add variables for its parameters
+      rnn.start_new_sequence(&hg);
       VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
       VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
       vector<VariableIndex> errs;
