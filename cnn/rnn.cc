@@ -43,11 +43,6 @@ void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
   }
   builder_state = 2;
 
-  if (h0.empty()) {
-    VariableIndex zero_input = hg->add_input(Zero(Dim(hidden_dim, 1)));
-    h0 = vector<VariableIndex>(layers, zero_input);
-  }
-
   for (unsigned i = 0; i < layers; ++i) {
     Parameters* p_x2h = params[i][0];
     Parameters* p_h2h = params[i][1];
@@ -61,14 +56,24 @@ void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
   }
 }
 
-void RNNBuilder::add_parameter_edges(Hypergraph* hg, vector<VariableIndex> h_0) {
+void RNNBuilder::start_new_sequence(Hypergraph* hg, vector<VariableIndex> h_0) {
+  if (builder_state < 2) {
+    cerr << "Invalid state: " << builder_state << endl;
+    abort();
+  }
+  builder_state = 3;
+
+  h.clear();
   h0 = h_0;
-  add_parameter_edges(hg);
+  if (h0.empty()) {
+    VariableIndex zero_input = hg->add_input(Zero(Dim(hidden_dim, 1)));
+    h0 = vector<VariableIndex>(layers, zero_input);
+  }
   assert (h0.size() == layers);
 }
 
 VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
-  if (builder_state != 2) {
+  if (builder_state != 3) {
     cerr << "Invalid state: " << builder_state << endl;
     abort();
   }

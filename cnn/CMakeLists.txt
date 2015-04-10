@@ -6,7 +6,6 @@ PROJECT(cnn CXX)
 set(cnn_library_SRCS
     cnn.cc
     edges.cc
-    lstm.cc
     lstm-fast.cc
     model.cc
     param-edges.cc
@@ -26,7 +25,6 @@ endif(MINERVA_FOUND)
 set(cnn_library_HDRS
     cnn.h
     edges.h
-    lstm.h
     lstm-fast.h
     model.h
     param-edges.h

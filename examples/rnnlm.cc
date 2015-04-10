@@ -3,7 +3,6 @@
 #include "cnn/training.h"
 #include "cnn/timing.h"
 #include "cnn/rnn.h"
-#include "cnn/lstm.h"
 #include "cnn/lstm-fast.h"
 
 #include <iostream>
