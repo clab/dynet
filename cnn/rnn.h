@@ -63,6 +63,7 @@ struct RNNBuilder {
 
   unsigned hidden_dim;
   unsigned layers;
+  std::vector<float> zeros;
 };
 
 } // namespace cnn

@@ -15,6 +15,12 @@ namespace cnn {
 typedef Eigen::MatrixXf Tensor;
 typedef float real;
 
+inline real as_scalar(const Tensor& t) {
+  assert(t.cols() == 1);
+  assert(t.rows() == 1);
+  return t(0,0);
+}
+
 // dummy function with Eigen backend
 inline Tensor FromEigenMatrix(const Eigen::MatrixXf& src) { return src; }
 
@@ -22,8 +28,10 @@ struct Dim {
   Dim() : rows(1), cols(1) {}
   explicit Dim(int m) : rows(m), cols(1) {}
   Dim(int m, int n) : rows(m), cols(n) {}
+  inline int size() const { return rows * cols; }
+  int ndims() const { return (cols == 1 ? 1 : 2); }
   inline unsigned Prod() const { return rows * cols; }
-  Dim(const std::initializer_list<int>& x) {
+  Dim(std::initializer_list<long> x) : cols(1) {
     unsigned c = 0;
     for (auto v : x) {
       if (c == 0) rows = v;
@@ -39,6 +47,9 @@ struct Dim {
     if (i == 0) return rows;
     if (i == 1) return cols;
     abort();
+  }
+  int size(unsigned i) const {
+    return (*this)[i];
   }
   unsigned short rows;
   unsigned short cols;
@@ -64,6 +75,12 @@ inline std::ostream& operator<<(std::ostream& os, const Dim& d) {
 }
 
 inline Dim size(const Tensor& m) { return Dim(m.rows(), m.cols()); }
+
+inline Tensor FromRawData(const Dim& dim, const float* data) {
+  Tensor t(dim.size(0), dim.ndims() > 1 ? dim.size(1) : 1);
+  std::memcpy(t.data(), data, sizeof(float) * dim.size());
+  return t;
+}
 
 inline Tensor Constant(const Dim& d, real c) {
   Tensor m(d.rows, d.cols);

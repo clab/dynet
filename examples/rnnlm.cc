@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   }
 
   Model model;
-  bool use_momentum = true;
+  bool use_momentum = false;
   Trainer* sgd = nullptr;
   if (use_momentum)
     sgd = new MomentumSGDTrainer(&model);
@@ -46,9 +46,9 @@ int main(int argc, char** argv) {
     sgd = new SimpleSGDTrainer(&model);
 
   // parameters
-  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim(INPUT_DIM, 1)); 
-  Parameters* p_R = model.add_parameters(Dim(VOCAB_SIZE, HIDDEN_DIM));
-  Parameters* p_bias = model.add_parameters(Dim(VOCAB_SIZE, 1));
+  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim({INPUT_DIM})); 
+  Parameters* p_R = model.add_parameters(Dim({VOCAB_SIZE, HIDDEN_DIM}));
+  Parameters* p_bias = model.add_parameters(Dim({VOCAB_SIZE}));
   //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
   LSTMBuilder_CIFG rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
 
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
       }
       VariableIndex i_nerr = hg.add_function<Sum>(errs);
       hg.add_function<Negate>({i_nerr});
-      loss += hg.forward()(0,0);
+      loss += as_scalar(hg.forward());
       hg.backward();
       sgd->update();
       ++lines;

@@ -14,15 +14,15 @@ namespace cnn {
 RNNBuilder::RNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model) : hidden_dim(hidden_dim), layers(layers) {
+                       Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
   builder_state = 0; // created
   assert(layers < 10);
 
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    Parameters* p_x2h = model->add_parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2h = model->add_parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_hb = model->add_parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2h = model->add_parameters(Dim({hidden_dim, layer_input_dim}));
+    Parameters* p_h2h = model->add_parameters(Dim({hidden_dim, hidden_dim}));
+    Parameters* p_hb = model->add_parameters(Dim({hidden_dim}));
     vector<Parameters*> ps = {p_x2h, p_h2h, p_hb};
     params.push_back(ps);
     layer_input_dim = hidden_dim;
@@ -66,7 +66,7 @@ void RNNBuilder::start_new_sequence(Hypergraph* hg, vector<VariableIndex> h_0) {
   h.clear();
   h0 = h_0;
   if (h0.empty()) {
-    VariableIndex zero_input = hg->add_input(Zero(Dim(hidden_dim, 1)));
+    VariableIndex zero_input = hg->add_input(Dim({hidden_dim}), &zeros);
     h0 = vector<VariableIndex>(layers, zero_input);
   }
   assert (h0.size() == layers);

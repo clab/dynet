@@ -16,27 +16,27 @@ enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 LSTMBuilder_CIFG::LSTMBuilder_CIFG(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model) : hidden_dim(hidden_dim), layers(layers) {
+                       Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
   builder_state = 0; // created
 
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameters* p_x2i = model->add_parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2i = model->add_parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_c2i = model->add_parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_bi = model->add_parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2i = model->add_parameters(Dim({hidden_dim, layer_input_dim}));
+    Parameters* p_h2i = model->add_parameters(Dim({hidden_dim, hidden_dim}));
+    Parameters* p_c2i = model->add_parameters(Dim({hidden_dim, hidden_dim}));
+    Parameters* p_bi = model->add_parameters(Dim({hidden_dim}));
     
     // o
-    Parameters* p_x2o = model->add_parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2o = model->add_parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_c2o = model->add_parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_bo = model->add_parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2o = model->add_parameters(Dim({hidden_dim, layer_input_dim}));
+    Parameters* p_h2o = model->add_parameters(Dim({hidden_dim, hidden_dim}));
+    Parameters* p_c2o = model->add_parameters(Dim({hidden_dim, hidden_dim}));
+    Parameters* p_bo = model->add_parameters(Dim({hidden_dim}));
 
     // c
-    Parameters* p_x2c = model->add_parameters(Dim(hidden_dim, layer_input_dim));
-    Parameters* p_h2c = model->add_parameters(Dim(hidden_dim, hidden_dim));
-    Parameters* p_bc = model->add_parameters(Dim(hidden_dim, 1));
+    Parameters* p_x2c = model->add_parameters(Dim({hidden_dim, layer_input_dim}));
+    Parameters* p_h2c = model->add_parameters(Dim({hidden_dim, hidden_dim}));
+    Parameters* p_bc = model->add_parameters(Dim({hidden_dim}));
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
@@ -103,7 +103,7 @@ void LSTMBuilder_CIFG::start_new_sequence(Hypergraph* hg,
   h0 = h_0;
   c0 = c_0;
   if (h0.empty() || c0.empty()) {
-    VariableIndex zero_input = hg->add_input(Zero(Dim(hidden_dim, 1)));
+    VariableIndex zero_input = hg->add_input(Dim({hidden_dim}), &zeros);
     if (c0.empty()) { c0 = vector<VariableIndex>(layers, zero_input); }
     if (h0.empty()) { h0 = vector<VariableIndex>(layers, zero_input); }
   }

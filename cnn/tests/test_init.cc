@@ -15,7 +15,7 @@ BOOST_GLOBAL_FIXTURE(TestTensorSetup)
 
 BOOST_AUTO_TEST_CASE(EOrthonormalRandom)
 {
-  for (int d = 4; d < 100; d += 16) {
+  for (int d = 4; d < 128; d += 1) {
     Tensor Q = OrthonormalRandom(d, 1.0);
     BOOST_REQUIRE_EQUAL(size(Q), Dim({d,d}));
 

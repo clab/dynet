@@ -1,4 +1,4 @@
-#include "cnn/cnn.h"
+I#include "cnn/cnn.h"
 #include "cnn/edges.h"
 #include "cnn/param-edges.h"
 
@@ -16,34 +16,28 @@ Hypergraph::~Hypergraph() {
   // don't delete parameter_edges since they're a subset of edges
 }
 
-VariableIndex Hypergraph::add_input(real** ps) { return add_input(0., ps); }
-
-VariableIndex Hypergraph::add_input(real s, real** ps) {
+VariableIndex Hypergraph::add_input(real s) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
-  InputEdge* e = new InputEdge(Dim({1,1}));
-  e->m(0,0) = s;
-  if (ps) *ps = &e->m(0,0);
+  ScalarInputEdge* e = new ScalarInputEdge(s);
   edges.push_back(e);
   edges.back()->head_node = new_node_index;
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_input(const Eigen::MatrixXf& m, Eigen::MatrixXf** pm) {
+VariableIndex Hypergraph::add_input(const real* ps) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
-  InputEdge* e = new InputEdge(m);
-  if (pm) *pm = &e->m;
+  ScalarInputEdge* e = new ScalarInputEdge(ps);
   edges.push_back(e);
   edges.back()->head_node = new_node_index;
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_input(const Dim& d, Eigen::MatrixXf** pm) {
+VariableIndex Hypergraph::add_input(const Dim& d, const vector<float>* pm) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
-  InputEdge* e = new InputEdge(d);
-  if (pm) *pm = &e->m;
+  InputEdge* e = new InputEdge(d, pm);
   edges.push_back(e);
   edges.back()->head_node = new_node_index;
   return new_node_index;
@@ -59,7 +53,7 @@ VariableIndex Hypergraph::add_parameter(Parameters* p) {
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned* pindex) {
+VariableIndex Hypergraph::add_lookup(LookupParameters* p, const unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Node(edges.size(), new_node_index));
   LookupEdge* new_edge = new LookupEdge(p, pindex);

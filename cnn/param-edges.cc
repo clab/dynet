@@ -1,4 +1,5 @@
 #include "cnn/param-edges.h"
+#include "cnn/tensor.h"
 
 #include <sstream>
 
@@ -10,7 +11,7 @@ bool ParameterEdge::has_parameters() const { return true; }
 
 string ParameterEdge::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "params" << dim;
+  s << "params(" << dim << ')';
   return s.str();
 }
 
@@ -33,16 +34,36 @@ void ParameterEdge::accumulate_grad(const Tensor& g) {
 
 string InputEdge::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "inputsN(" << m.rows() << ',' << m.cols() << ')';
+  s << "inputs(" << dim << ')';
   return s.str();
 }
 
 Tensor InputEdge::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 0);
-  return m;
+  assert(dim.size() == pdata->size());
+  return FromRawData(dim, &pdata->front());
 }
 
 Tensor InputEdge::backward(const vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i) const {
+  cerr << "called backward() on arity 0 edge\n";
+  abort();
+}
+
+string ScalarInputEdge::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "scalar_inputs(" << data << ')';
+  return s.str();
+}
+
+Tensor ScalarInputEdge::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 0);
+  return FromRawData(Dim({1}), pdata);
+}
+
+Tensor ScalarInputEdge::backward(const vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
                     unsigned i) const {

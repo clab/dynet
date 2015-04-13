@@ -20,10 +20,10 @@ int main(int argc, char** argv) {
   SimpleSGDTrainer sgd(&m);
   //MomentumSGDTrainer sgd(&m);
 
-  Parameters& p_a = *m.add_parameters(Dim(1,1));
-  Parameters& p_b = *m.add_parameters(Dim(HIDDEN_SIZE, 1));
-  Parameters& p_W = *m.add_parameters(Dim(HIDDEN_SIZE, 2));
-  Parameters& p_V = *m.add_parameters(Dim(1, HIDDEN_SIZE));
+  Parameters& p_a = *m.add_parameters(Dim({1}));
+  Parameters& p_b = *m.add_parameters(Dim({HIDDEN_SIZE}));
+  Parameters& p_W = *m.add_parameters(Dim({HIDDEN_SIZE, 2}));
+  Parameters& p_V = *m.add_parameters(Dim({1, HIDDEN_SIZE}));
 
   // build the graph
   Hypergraph hg;
@@ -34,9 +34,9 @@ int main(int argc, char** argv) {
   VariableIndex i_W = hg.add_parameter(&p_W);
   VariableIndex i_V = hg.add_parameter(&p_V);
 
-  Tensor* x_values;  // set *x_values to change the inputs to the network
-  VariableIndex i_x = hg.add_input(Dim(2), &x_values);
-  cnn::real* y_value;  // set *y_value to change the target output
+  vector<float> x_values(2);  // set x_values to change the inputs to the network
+  VariableIndex i_x = hg.add_input(Dim({2}), &x_values);
+  cnn::real y_value;  // set y_value to change the target output
   VariableIndex i_y = hg.add_input(&y_value);
 
   // two options: MatrixMultiply and Sum, or Multilinear
@@ -69,10 +69,10 @@ int main(int argc, char** argv) {
     for (unsigned mi = 0; mi < 4; ++mi) {
       bool x1 = mi % 2;
       bool x2 = (mi / 2) % 2;
-      (*x_values)(0,0) = x1 ? 1 : -1;
-      (*x_values)(1,0) = x2 ? 1 : -1;
-      *y_value = (x1 != x2) ? 1 : -1;
-      loss += hg.forward()(0,0);
+      x_values[0] = x1 ? 1 : -1;
+      x_values[1] = x2 ? 1 : -1;
+      y_value = (x1 != x2) ? 1 : -1;
+      loss += as_scalar(hg.forward());
       hg.backward();
       sgd.update(1.0);
     }

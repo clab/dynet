@@ -1,4 +1,4 @@
-#ifndef CNN_CNN_H_
+cnn/cnn.cc#ifndef CNN_CNN_H_
 #define CNN_CNN_H_
 
 #include <string>
@@ -6,7 +6,6 @@
 #include <iostream>
 #include <initializer_list>
 #include <utility>
-#include <Eigen/Eigen>
 #include <boost/serialization/strong_typedef.hpp>
 
 #include "cnn/tensor.h"
@@ -40,19 +39,28 @@ inline void swap(VariableIndex& i1, VariableIndex& i2) {
 struct Hypergraph {
   Hypergraph() : last_node_evaluated() {}
   ~Hypergraph();
-  // construct a graph
-  VariableIndex add_input(real** ps);
-  VariableIndex add_input(real s, real** ps = 0);
-  VariableIndex add_input(const Eigen::MatrixXf& m, Eigen::MatrixXf** pm = 0);
-  VariableIndex add_input(const Dim& d, Eigen::MatrixXf** pm = 0);
+
+  // INPUTS
+  // the computational network will pull inputs in from the user's data
+  // structures and make them available to the computation
+  VariableIndex add_input(real s);  // add scalar
+  VariableIndex add_input(const real* ps);  // add pointer to scalar
+  VariableIndex add_input(const Dim& d, const std::vector<float>* pdata);
+
+  // PARAMETERS
+  // parameters are things that are optimized. in contrast to a system like
+  // Torch where computational modules may have their own parameters, in CNN
+  // parameters are just parameters
   VariableIndex add_parameter(Parameters* p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
-  VariableIndex add_lookup(LookupParameters* p, unsigned* pindex);
+  VariableIndex add_lookup(LookupParameters* p, const unsigned* pindex);
   VariableIndex add_lookup(LookupParameters* p, unsigned index);
   // just like add_lookup, but don't optimize the lookup parameters
   VariableIndex add_const_lookup(LookupParameters* p, unsigned* pindex);
   VariableIndex add_const_lookup(LookupParameters* p, unsigned index);
+
+  // COMPUTATIONS
   template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);
   template <class Function, typename... Args>
   inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments,
@@ -103,8 +111,8 @@ struct Node {
 
 inline void swap(Node& n1, Node& n2) {
   using std::swap;
-  n1.f.swap(n2.f);
-  n1.dEdf.swap(n2.dEdf);
+  swap(n1.f, n2.f);
+  swap(n1.dEdf, n2.dEdf);
   swap(n1.in_edge, n2.in_edge);
   swap(n1.out_edges, n2.out_edges);
   swap(n1.node_id, n2.node_id);

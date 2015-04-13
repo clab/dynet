@@ -64,6 +64,7 @@ struct LSTMBuilder_CIFG {
 
   unsigned hidden_dim;
   unsigned layers;
+  std::vector<float> zeros;
 };
 
 } // namespace cnn

@@ -60,6 +60,10 @@ double t(const Tensor& T, unsigned i, unsigned j) {
   return T(i, j);
 }
 
+double t(const Tensor& T, unsigned i) {
+  return T(i, 0);
+}
+
 #endif
 
 } // namespace cnn
