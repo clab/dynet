@@ -1,4 +1,4 @@
-cnn/cnn.cc#ifndef CNN_CNN_H_
+#ifndef CNN_CNN_H_
 #define CNN_CNN_H_
 
 #include <string>
