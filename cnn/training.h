@@ -37,7 +37,7 @@ struct Trainer {
   real updates;
 
   void status() {
-    std::cerr << "[eta=" << eta << " clips=" << clips << " updates=" << updates << "] ";
+    std::cerr << "[epoch=" << epoch << " eta=" << eta << " clips=" << clips << " updates=" << updates << "] ";
     updates = clips = 0;
   }
 

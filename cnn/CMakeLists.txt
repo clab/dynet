@@ -5,6 +5,7 @@ PROJECT(cnn CXX)
 # Sources:
 set(cnn_library_SRCS
     cnn.cc
+    dict.cc
     edges.cc
     lstm-fast.cc
     model.cc
