@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
   int dtoks = 0;
   cerr << "Reading dev data from " << argv[2] << "...\n";
   {
-    ifstream in(argv[1]);
+    ifstream in(argv[2]);
     assert(in);
     while(getline(in, line)) {
       ++dlc;
@@ -144,6 +144,15 @@ int main(int argc, char** argv) {
     }
     cerr << dlc << " lines, " << dtoks << " tokens\n";
   }
+  ostringstream os;
+  os << "lm"
+     << '_' << LAYERS
+     << '_' << INPUT_DIM
+     << '_' << HIDDEN_DIM
+     << "-pid" << getpid() << ".params";
+  const string fname = os.str();
+  cerr << "Parameters will be written to: " << fname << endl;
+  double best = 9e+99;
 
   Model model;
   bool use_momentum = false;
@@ -199,8 +208,14 @@ int main(int argc, char** argv) {
       for (auto& sent : dev) {
         Hypergraph hg;
         lm.BuildLMGraph(sent, hg);
-        dchars += sent.size() - 1;
         dloss += as_scalar(hg.forward());
+        dchars += sent.size() - 1;
+      }
+      if (dloss < best) {
+        best = dloss;
+        ofstream out(fname);
+        boost::archive::text_oarchive oa(out);
+        oa << model;
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
