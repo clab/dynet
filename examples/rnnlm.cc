@@ -18,15 +18,93 @@ unsigned INPUT_DIM = 8;
 unsigned HIDDEN_DIM = 24;
 unsigned VOCAB_SIZE = 0;
 
+cnn::Dict d;
+int kSOS;
+int kEOS;
+
+template <class Builder>
+struct RNNLanguageModel {
+  LookupParameters* p_c;
+  Parameters* p_R;
+  Parameters* p_bias;
+  Builder builder;
+  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+    p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim({INPUT_DIM})); 
+    p_R = model.add_parameters(Dim({VOCAB_SIZE, HIDDEN_DIM}));
+    p_bias = model.add_parameters(Dim({VOCAB_SIZE}));
+  }
+
+  // return VariableIndex of total loss
+  VariableIndex BuildLMGraph(const vector<int>& sent, Hypergraph& hg) {
+    const unsigned slen = sent.size() - 1;
+    builder.new_graph();  // reset RNN builder for new graph
+    builder.add_parameter_edges(&hg);  // add variables for its parameters
+    builder.start_new_sequence(&hg);
+    VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
+    VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
+    vector<VariableIndex> errs;
+    for (unsigned t = 0; t < slen; ++t) {
+      // x_t = lookup sent[t] in parameters p_c
+      VariableIndex i_x_t = hg.add_lookup(p_c, sent[t]);
+      // y_t = RNN(x_t)
+      VariableIndex i_y_t = builder.add_input(i_x_t, &hg);
+      // r_t = bias + R * y_t
+      VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
+      // ydist = softmax(r_t)
+      VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});
+      errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
+    }
+    VariableIndex i_nerr = hg.add_function<Sum>(errs);
+    return hg.add_function<Negate>({i_nerr});
+  }
+
+  // return VariableIndex of total loss
+  void RandomSample(int max_len = 150) {
+    cerr << endl;
+    Hypergraph hg;
+    builder.new_graph();  // reset RNN builder for new graph
+    builder.add_parameter_edges(&hg);  // add variables for its parameters
+    builder.start_new_sequence(&hg);
+    VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
+    VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
+    vector<VariableIndex> errs;
+    int len = 0;
+    int cur = kSOS;
+    while(len < max_len && cur != kEOS) {
+      ++len;
+      // x_t = lookup sent[t] in parameters p_c
+      VariableIndex i_x_t = hg.add_lookup(p_c, cur);
+      // y_t = RNN(x_t)
+      VariableIndex i_y_t = builder.add_input(i_x_t, &hg);
+      // r_t = bias + R * y_t
+      VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
+      // ydist = softmax(r_t)
+      hg.add_function<Softmax>({i_r_t});
+      unsigned w = 0;
+      while (w == 0 || w == kSOS) {
+        auto dist = as_vector(hg.incremental_forward());
+        double p = (double)rand() / (RAND_MAX + 1.0);
+        for (; w < dist.size(); ++w) {
+          p -= dist[w];
+          if (p < 0.0) { break; }
+        }
+        if (w == dist.size()) w = kEOS;
+      }
+      cerr << (len == 1 ? "" : " ") << d.Convert(w);
+      cur = w;
+    }
+    cerr << endl;
+  }
+};
+
 int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
   if (argc != 3) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt\n";
     return 1;
   }
-  cnn::Dict d;
-  const int kSOS = d.Convert("<s>");
-  const int kEOS = d.Convert("</s>");
+  kSOS = d.Convert("<s>");
+  kEOS = d.Convert("</s>");
   vector<vector<int>> training, dev;
   string line;
   int tlc = 0;
@@ -36,13 +114,13 @@ int main(int argc, char** argv) {
     ifstream in(argv[1]);
     assert(in);
     while(getline(in, line)) {
-    ++tlc;
-    training.push_back(ReadSentence(line, &d));
-    ttoks += training.back().size();
-    if (training.back().front() != kSOS && training.back().back() != kEOS) {
-      cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
-      abort();
-    }
+      ++tlc;
+      training.push_back(ReadSentence(line, &d));
+      ttoks += training.back().size();
+      if (training.back().front() != kSOS && training.back().back() != kEOS) {
+        cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+        abort();
+      }
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
@@ -56,13 +134,13 @@ int main(int argc, char** argv) {
     ifstream in(argv[1]);
     assert(in);
     while(getline(in, line)) {
-    ++dlc;
-    dev.push_back(ReadSentence(line, &d));
-    dtoks += dev.back().size();
-    if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
-      cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
-      abort();
-    }
+      ++dlc;
+      dev.push_back(ReadSentence(line, &d));
+      dtoks += dev.back().size();
+      if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
+        cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+        abort();
+      }
     }
     cerr << dlc << " lines, " << dtoks << " tokens\n";
   }
@@ -75,12 +153,8 @@ int main(int argc, char** argv) {
   else
     sgd = new SimpleSGDTrainer(&model);
 
-  // parameters
-  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim({INPUT_DIM})); 
-  Parameters* p_R = model.add_parameters(Dim({VOCAB_SIZE, HIDDEN_DIM}));
-  Parameters* p_bias = model.add_parameters(Dim({VOCAB_SIZE}));
   //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
-  LSTMBuilder_CIFG rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
+  RNNLanguageModel<LSTMBuilder_CIFG> lm(model);
 
   unsigned report_every_i = 50;
   unsigned dev_every_i_reports = 25;
@@ -104,29 +178,10 @@ int main(int argc, char** argv) {
 
       // build graph for this instance
       Hypergraph hg;
-      rnn.new_graph();  // reset RNN builder for new graph
-      rnn.add_parameter_edges(&hg);  // add variables for its parameters
-      rnn.start_new_sequence(&hg);
-      VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
-      VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
-      vector<VariableIndex> errs;
       auto& sent = training[order[si]];
+      chars += sent.size() - 1;
       ++si;
-      const unsigned slen = sent.size() - 1;
-      for (unsigned t = 0; t < slen; ++t) {
-        // x_t = lookup sent[t] in parameters p_c
-        VariableIndex i_x_t = hg.add_lookup(p_c, sent[t]);
-        // y_t = RNN(x_t)
-        VariableIndex i_y_t = rnn.add_input(i_x_t, &hg);
-        // r_t = bias + R * y_t
-        VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
-        // ydist = softmax(r_t)
-        VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});
-        errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
-        chars++;
-      }
-      VariableIndex i_nerr = hg.add_function<Sum>(errs);
-      hg.add_function<Negate>({i_nerr});
+      lm.BuildLMGraph(sent, hg);
       loss += as_scalar(hg.forward());
       hg.backward();
       sgd->update();
@@ -134,6 +189,7 @@ int main(int argc, char** argv) {
     }
     sgd->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
+    lm.RandomSample();
 
     // show score on dev data?
     report++;
@@ -142,27 +198,8 @@ int main(int argc, char** argv) {
       int dchars = 0;
       for (auto& sent : dev) {
         Hypergraph hg;
-        rnn.new_graph();  // reset RNN builder for new graph
-        rnn.add_parameter_edges(&hg);  // add variables for its parameters
-        rnn.start_new_sequence(&hg);
-        VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
-        VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
-        vector<VariableIndex> errs;
-        const unsigned slen = sent.size() - 1;
-        for (unsigned t = 0; t < slen; ++t) {
-          // x_t = lookup sent[t] in parameters p_c
-          VariableIndex i_x_t = hg.add_lookup(p_c, sent[t]);
-          // y_t = RNN(x_t)
-          VariableIndex i_y_t = rnn.add_input(i_x_t, &hg);
-          // r_t = bias + R * y_t
-          VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
-          // ydist = softmax(r_t)
-          VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});
-          errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
-          dchars++;
-        }
-        VariableIndex i_nerr = hg.add_function<Sum>(errs);
-        hg.add_function<Negate>({i_nerr});
+        lm.BuildLMGraph(sent, hg);
+        dchars += sent.size() - 1;
         dloss += as_scalar(hg.forward());
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';

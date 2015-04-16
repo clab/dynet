@@ -2,11 +2,12 @@
 #define CNN_TENSOR_EIGEN_H_
 
 #include <initializer_list>
+#include <random>
+#include <vector>
 
 #include <Eigen/Eigen>
 #include "cnn/backends/eigen/eigen-serialization.h"
 #include "cnn/backends/eigen/random.h"
-#include <random>
 
 namespace cnn {
 
@@ -19,6 +20,12 @@ inline real as_scalar(const Tensor& t) {
   assert(t.cols() == 1);
   assert(t.rows() == 1);
   return t(0,0);
+}
+
+inline std::vector<real> as_vector(const Tensor& v) {
+  std::vector<real> res(v.rows() * v.cols());
+  std::memcpy(&res[0], v.data(), sizeof(real) * res.size());
+  return res;
 }
 
 // dummy function with Eigen backend
