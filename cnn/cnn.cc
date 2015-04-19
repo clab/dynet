@@ -94,10 +94,11 @@ VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned index) 
 }
 
 const Tensor& Hypergraph::incremental_forward() {
+  vector<const Tensor*> xs;
   while (last_node_evaluated < nodes.size()) {
     Node* node = nodes[last_node_evaluated];
     const Edge& in_edge = *edges[node->in_edge];
-    vector<const Tensor*> xs(in_edge.arity());
+    xs.resize(in_edge.arity());
     unsigned ti = 0;
     for (VariableIndex tail_node_index : in_edge.tail) {
       xs[ti] = &nodes[tail_node_index]->f;
@@ -128,14 +129,15 @@ void Hypergraph::backward() {
   }
 
   // initialize dE/dE = 1
-  nodes.back()->dEdf = cnn::Constant({1,1}, 1);
+  nodes.back()->dEdf = cnn::Constant({1}, 1);
 
   // loop in reverse topological order
+  vector<const Tensor*> xs;
   for (int i = nodes.size() - 1; i >= 0; --i) {
     const Node& node = *nodes[i];
     const Edge& in_edge = *edges[node.in_edge];
-    vector<const Tensor*> xs(in_edge.arity());
     unsigned ti = 0;
+    xs.resize(in_edge.arity());
     for (unsigned tail_node_index : in_edge.tail) {
       xs[ti] = &nodes[tail_node_index]->f;
       ++ti;

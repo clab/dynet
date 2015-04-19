@@ -40,7 +40,7 @@ string InputEdge::as_string(const vector<string>& arg_names) const {
 
 Tensor InputEdge::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 0);
-  assert(dim.size() == pdata->size());
+  assert((int)dim.size() == (int)pdata->size());
   return FromRawData(dim, &pdata->front());
 }
 

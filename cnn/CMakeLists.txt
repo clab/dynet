@@ -6,21 +6,12 @@ PROJECT(cnn CXX)
 set(cnn_library_SRCS
     cnn.cc
     dict.cc
-    edges.cc
     lstm-fast.cc
-    model.cc
     param-edges.cc
     rnn.cc
     saxe_init.cc
     training.cc
 )
-
-if(MINERVA_FOUND)
-  # for now
-  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc)
-else(MINERVA_FOUND)
-  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc)
-endif(MINERVA_FOUND)
 
 # Headers:
 set(cnn_library_HDRS
@@ -36,6 +27,18 @@ set(cnn_library_HDRS
     training.h
 )
 
+if(WITH_THPP_BACKEND)
+  list(APPEND cnn_library_SRCS backends/thpp/backend.cc backends/thpp/dim.cc backends/thpp/edges.cc backends/thpp/model.cc)
+endif(WITH_THPP_BACKEND)
+
+if(WITH_MINERVA_BACKEND)
+#  list(APPEND cnn_library_SRCS backends/minerva/eigen-backend.cc)
+endif(WITH_MINERVA_BACKEND)
+
+if(WITH_EIGEN_BACKEND)
+  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc backends/eigen/edges.cc backends/eigen/model.cc)
+endif(WITH_EIGEN_BACKEND)
+
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 
 foreach(test_src ${TEST_SRCS})
@@ -46,7 +49,7 @@ foreach(test_src ${TEST_SRCS})
   add_executable(${testName} ${test_src})
 
   #link to Boost libraries AND your targets and dependencies
-  target_link_libraries(${testName} ${Boost_LIBRARIES} cnn)
+  target_link_libraries(${testName} cnn ${LIBS})
 
   set_target_properties(${testName} PROPERTIES 
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests.bin)
@@ -59,6 +62,6 @@ foreach(test_src ${TEST_SRCS})
 endforeach(test_src)
 
 # actual target:
-add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS})
+add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
 # target_compile_features(cnn PRIVATE cxx_range_for)
 
