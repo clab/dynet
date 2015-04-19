@@ -5,6 +5,22 @@
 
 namespace cnn {
 
+// Forward:
+//   Y_ij = A_ijk * B_k + C_ij
+//
+// Backward:
+//   (dE/dA)_ijk = (dE/dY)_ij * L_k
+//   (dE/dB)_k = (dE/dY)_ij * A_ijk
+//   (dE/dC)_ij = (dE/dY)_ij
+struct InnerProduct3D_1D : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i) const override;
+};
+
 // n_{i,j} ~ N(0,stddev)
 // y = x + n
 struct GaussianNoise : public Edge {
