@@ -29,9 +29,9 @@ struct RNNLanguageModel {
   Parameters* p_bias;
   Builder builder;
   explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
-    p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim({INPUT_DIM})); 
-    p_R = model.add_parameters(Dim({VOCAB_SIZE, HIDDEN_DIM}));
-    p_bias = model.add_parameters(Dim({VOCAB_SIZE}));
+    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
+    p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
+    p_bias = model.add_parameters({VOCAB_SIZE});
   }
 
   // return VariableIndex of total loss
