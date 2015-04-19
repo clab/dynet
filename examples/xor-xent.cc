@@ -19,10 +19,10 @@ int main(int argc, char** argv) {
   //SimpleSGDTrainer sgd(&m);
   MomentumSGDTrainer sgd(&m);
 
-  Parameters& p_a = *m.add_parameters(Dim({1}));
-  Parameters& p_b = *m.add_parameters(Dim({HIDDEN_SIZE}));
-  Parameters& p_W = *m.add_parameters(Dim({HIDDEN_SIZE, 2}));
-  Parameters& p_V = *m.add_parameters(Dim({1, HIDDEN_SIZE}));
+  Parameters& p_a = *m.add_parameters({1});
+  Parameters& p_b = *m.add_parameters({HIDDEN_SIZE});
+  Parameters& p_W = *m.add_parameters({HIDDEN_SIZE, 2});
+  Parameters& p_V = *m.add_parameters({1, HIDDEN_SIZE});
 
   // build the graph
   Hypergraph hg;
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
   VariableIndex i_V = hg.add_parameter(&p_V);
 
   vector<float> x_values(2);  // set x_values to change the inputs to the network
-  VariableIndex i_x = hg.add_input(Dim({2}), &x_values);
+  VariableIndex i_x = hg.add_input({2}, &x_values);
   cnn::real y_value;  // set y_value to change the target output
 
   // two options: MatrixMultiply and Sum, or Multilinear
