@@ -99,8 +99,8 @@ struct RNNLanguageModel {
 
 int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
-  if (argc != 3) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt\n";
+  if (argc != 3 && argc != 4) {
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
   }
   kSOS = d.Convert("<s>");
@@ -164,9 +164,15 @@ int main(int argc, char** argv) {
 
   //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
   RNNLanguageModel<LSTMBuilder_CIFG> lm(model);
+  if (argc == 4) {
+    string fname = argv[3];
+    ifstream in(fname);
+    boost::archive::text_iarchive ia(in);
+    ia >> model;
+  }
 
   unsigned report_every_i = 50;
-  unsigned dev_every_i_reports = 25;
+  unsigned dev_every_i_reports = 500;
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
