@@ -85,7 +85,6 @@ class Model {
  public:
   ~Model();
   Parameters* add_parameters(const Dim& d);  // initialized randomly
-  Parameters* add_parameters(const Tensor& m);  // initial value is m
   LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
 
   const std::vector<ParametersBase*>& all_parameters_list() const { return all_params; }
