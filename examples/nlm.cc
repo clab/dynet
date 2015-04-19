@@ -20,13 +20,13 @@ int main(int argc, char** argv) {
   // parameters
   Model model;
   SimpleSGDTrainer sgd(&model);
-  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, Dim(DIM, 1));
-  Parameters* p_C1 = model.add_parameters(Dim(DIM, DIM));
-  Parameters* p_C2 = model.add_parameters(Dim(DIM, DIM));
-  Parameters* p_C3 = model.add_parameters(Dim(DIM, DIM));
-  Parameters* p_R = model.add_parameters(Dim(VOCAB_SIZE, DIM));
-  Parameters* p_bias = model.add_parameters(Dim(VOCAB_SIZE, 1));
-  Parameters* p_hb = model.add_parameters(Dim(DIM, 1));
+  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, {DIM});
+  Parameters* p_C1 = model.add_parameters({DIM, DIM});
+  Parameters* p_C2 = model.add_parameters({DIM, DIM});
+  Parameters* p_C3 = model.add_parameters({DIM, DIM});
+  Parameters* p_R = model.add_parameters({VOCAB_SIZE, DIM});
+  Parameters* p_bias = model.add_parameters({VOCAB_SIZE});
+  Parameters* p_hb = model.add_parameters({DIM});
 
   // build the graph
   Hypergraph hg;
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
       in_c2 = ci[1];
       in_c3 = ci[2];
       ytrue  = ci[3];
-      loss += hg.forward()(0,0);
+      loss += as_scalar(hg.forward());
       hg.backward();
       ++n;
       sgd.update(1.0);
