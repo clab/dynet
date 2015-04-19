@@ -5,7 +5,7 @@ C++ neural network library
 
 In `src`, you need to first use [`cmake`](http://www.cmake.org/) to generate the makefiles
 
-    cmake -DEIGEN3_INCLUDE_DIR=/Users/cdyer/software/eigen-eigen-36fd1ba04c12 -G 'Unix Makefiles'
+    cmake . -DEIGEN3_INCLUDE_DIR=/Users/cdyer/software/eigen-eigen-36fd1ba04c12
 
 Then to compile, run
 
