@@ -81,7 +81,7 @@ struct RNNLanguageModel {
       // ydist = softmax(r_t)
       hg.add_function<Softmax>({i_r_t});
       unsigned w = 0;
-      while (w == 0 || w == kSOS) {
+      while (w == 0 || (int)w == kSOS) {
         auto dist = as_vector(hg.incremental_forward());
         double p = (double)rand() / (RAND_MAX + 1.0);
         for (; w < dist.size(); ++w) {

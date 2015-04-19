@@ -5,7 +5,7 @@
 
 namespace cnn {
 
-#if MINERVA_BACKEND
+#if WITH_MINERVA_BACKEND
 
 struct TestTensorSetup {
   TestTensorSetup() {
@@ -57,11 +57,19 @@ struct TestTensorSetup {
 };
 
 double t(const Tensor& T, unsigned i, unsigned j) {
+#if WITH_THPP_BACKEND
+  return T.at({i,j});
+#else
   return T(i, j);
+#endif
 }
 
 double t(const Tensor& T, unsigned i) {
+#if WITH_THPP_BACKEND
+  return T.at({i});
+#else
   return T(i, 0);
+#endif
 }
 
 #endif

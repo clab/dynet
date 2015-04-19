@@ -40,11 +40,22 @@ void SimpleSGDTrainer::update(real scale) {
 }
 
 static inline Tensor& get_or_init(Tensor& x, const Tensor& t) {
+#if WITH_THPP_BACKEND
+  if (x.ndims() == 0) {
+    x = Tensor(t.sizes());
+    x.zero();
+  }
+  return x;
+#endif
+#ifdef WITH_EIGEN_BACKEND
   if (x.rows() == 0) {
     x = t;
     x.setZero();
   }
   return x;
+#endif
+#if WITH_MINERVA_BACKEND
+#endif
 }
 
 void MomentumSGDTrainer::update(real scale) {

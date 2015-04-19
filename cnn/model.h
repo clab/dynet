@@ -32,9 +32,6 @@ struct Parameters : public ParametersBase {
   real g_squared_l2norm() const override;
   size_t size() const override;
 
-  real& operator()(int i, int j) { return values(i,j); }
-  const real& operator()(int i, int j) const { return values(i,j); }
-
   void accumulate_grad(const Tensor& g);
   void clear();
 
@@ -44,7 +41,7 @@ struct Parameters : public ParametersBase {
  private:
   Parameters() {}
   explicit Parameters(const Dim& d) : dim(d), values(Random(d)), g(Zero(d)) {}
-  explicit Parameters(const Tensor& v) : dim(v.rows(), v.cols()), values(v), g(Zero(dim)) {}
+  explicit Parameters(const Tensor& v) : dim(cnn::size(v)), values(v), g(Zero(dim)) {}
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
     ar & dim;
