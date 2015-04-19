@@ -132,6 +132,12 @@ inline Tensor Ccm(const Dim&d, const std::initializer_list<real>& v) {
   return m;
 }
 
+inline std::string str(const Tensor& T) {
+  std::ostringstream os;
+  os << T << std::endl;
+  return os.str();
+}
+
 } // namespace cnn
 
 #include "cnn/backends/eigen/eigen-backend.h"

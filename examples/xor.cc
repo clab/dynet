@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 #else
   VariableIndex i_g = hg.add_function<Multilinear>({i_b, i_W, i_x});
 #endif
-  VariableIndex i_h = hg.add_function<Identity>({i_g});
+  VariableIndex i_h = hg.add_function<Tanh>({i_g});
 
 #if 0
   VariableIndex i_p = hg.add_function<MatrixMultiply>({i_V, i_h});
