@@ -33,6 +33,13 @@ find_package(Boost COMPONENTS program_options serialization unit_test_framework 
 include_directories(${Boost_INCLUDE_DIR})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 
+if(BACKEND)
+  message("BACKEND: ${BACKEND}")
+else()
+  message("BACKEND not specified, defaulting to eigen.")
+  set(BACKEND "eigen")
+endif()
+
 if(BACKEND MATCHES "^thpp$")
   set(WITH_THPP_BACKEND 1)
 elseif(BACKEND MATCHES "^eigen$")
