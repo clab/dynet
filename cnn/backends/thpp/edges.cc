@@ -8,6 +8,57 @@ using namespace std;
 
 namespace cnn {
 
+string InnerProduct3D_1D::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "inner(" << arg_names[0] << "," << arg_names[1] << ") + " << arg_names[2];
+  return s.str();
+}
+
+Tensor InnerProduct3D_1D::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 3);
+  Tensor fx;
+  fx.inner(*xs[0], *xs[1]);
+  fx += *xs[2];
+  return fx;
+}
+
+Tensor InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
+                                   const Tensor& fx,
+                                   const Tensor& dEdf,
+                                   unsigned i) const {
+  assert(i < 3);
+  if (i == 2) return dEdf;
+  const int ii = dEdf.size(0);
+  const int jj = dEdf.size(1);
+  const int kk = xs[1]->size(0);
+  Tensor dEdx;
+  if (i == 0) {
+//   (dE/dA)_ijk = (dE/dY)_ij * L_k
+    dEdx.resize({ii, jj, kk});
+    const real* x1 = xs[1]->data();
+    for (int i = 0; i < ii; ++i) {
+      for (int j = 0; j < jj; ++j) {
+        const real d = dEdf.at({i,j});
+        for (int k = 0; k < kk; ++k)
+          dEdx.at({i,j,k}) = d * x1[k];
+      }
+    }
+    return dEdx;
+  }
+//   (dE/dB)_k = (dE/dY)_ij * A_ijk
+  dEdx.resize({kk});
+  dEdx.zero();
+  const Tensor& x0 = *xs[0];
+  for (int i = 0; i < ii; ++i) {
+    for (int j = 0; j < jj; ++j) {
+      const real d = dEdf.at({i,j});
+      for (int k = 0; k < kk; ++k)
+        dEdx.at({k}) += d * x0.at({i,j,k});
+    }
+  }
+  return dEdx;
+}
+
 string CwiseMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " \\cdot " << arg_names[1];
