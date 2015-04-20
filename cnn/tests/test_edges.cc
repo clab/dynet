@@ -305,4 +305,32 @@ BOOST_AUTO_TEST_CASE(ESoftmaxUnif) {
   }
 }
 
+#ifdef WITH_THPP_BACKEND
+BOOST_AUTO_TEST_CASE(TensorInner3D_1D) {
+  Tensor A = Ccm({24}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23});
+  A.reshape(A, {2,3,4});
+  Tensor v = Ccm({4}, {-0.5, 1, 1.5, 2});
+  Tensor B = Ccm({2,3}, {1, 2, 3, 4, 5, 6});
+  vector<const Tensor*> xs = {&A, &v, &B};
+  InnerProduct3D_1D e;
+  Tensor Y = e.forward(xs);
+  cerr << str(Y) << endl;
+  double eps = 1e-5;
+  BOOST_CHECK_CLOSE(t(Y, 0, 0), 11, eps);
+  BOOST_CHECK_CLOSE(t(Y, 1, 0), 60, eps);
+  BOOST_CHECK_CLOSE(t(Y, 0, 1), 29, eps);
+  BOOST_CHECK_CLOSE(t(Y, 1, 1), 78, eps);
+  BOOST_CHECK_CLOSE(t(Y, 0, 2), 47, eps);
+  BOOST_CHECK_CLOSE(t(Y, 1, 2), 96, eps);
+  Tensor dEdY = Ccm({2,3}, {1, 0.1, -1, 1.2, 2, -0.25});
+  Tensor dEdx3 = e.backward(xs, Y, dEdY, 2);
+  cerr << str(dEdY) << endl;
+  cerr << str(dEdx3) << endl;
+  Tensor dEdx1 = e.backward(xs, Y, dEdY, 0);
+  cerr << dEdx1 << endl;
+  //cerr << str(dEdx1) << endl;
+  Tensor dEdx2 = e.backward(xs, Y, dEdY, 1);
+  cerr << str(dEdx2) << endl;
+}
+#endif
 

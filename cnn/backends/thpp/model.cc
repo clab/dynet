@@ -64,13 +64,6 @@ Parameters* Model::add_parameters(const Dim& d) {
   return p;
 }
 
-Parameters* Model::add_parameters(const Tensor& m) {  // initial value is m
-  Parameters* p = new Parameters(m);
-  all_params.push_back(p);
-  params.push_back(p);
-  return p;
-}
-
 LookupParameters* Model::add_lookup_parameters(unsigned n, const Dim& d) {
   LookupParameters* p = new LookupParameters(n,d);
   all_params.push_back(p);
