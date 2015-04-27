@@ -1,5 +1,7 @@
-PROJECT(cnn:examples)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+ADD_EXECUTABLE(encdec encdec.cc)
+target_link_libraries(encdec cnn ${LIBS})
 
 ADD_EXECUTABLE(xor xor.cc)
 target_link_libraries(xor cnn ${LIBS})
