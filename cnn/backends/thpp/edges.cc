@@ -8,20 +8,6 @@ using namespace std;
 
 namespace cnn {
 
-string InnerProduct3D_1D::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "inner(" << arg_names[0] << "," << arg_names[1] << ") + " << arg_names[2];
-  return s.str();
-}
-
-Tensor InnerProduct3D_1D::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 3);
-  Tensor fx;
-  fx.inner(*xs[0], *xs[1]);
-  fx += *xs[2];
-  return fx;
-}
-
 Tensor InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
                                    const Tensor& fx,
                                    const Tensor& dEdf,
@@ -59,12 +45,6 @@ Tensor InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
   return dEdx;
 }
 
-string CwiseMultiply::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << arg_names[0] << " \\cdot " << arg_names[1];
-  return s.str();
-}
-
 Tensor CwiseMultiply::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 2);
   Tensor fx;
@@ -86,12 +66,6 @@ Tensor CwiseMultiply::backward(const vector<const Tensor*>& xs,
   return dEdx;
 }
 
-string Negate::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << '-' << arg_names[0];
-  return s.str();
-}
-
 Tensor Negate::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   return -(*xs[0]);
@@ -103,12 +77,6 @@ Tensor Negate::backward(const vector<const Tensor*>& xs,
                         unsigned i) const {
   assert(i == 0);
   return -dEdf;
-}
-
-string LogSoftmax::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "log_softmax(" << arg_names[0] << ')';
-  return s.str();
 }
 
 Tensor LogSoftmax::forward(const vector<const Tensor*>& xs) const {
@@ -135,12 +103,6 @@ Tensor LogSoftmax::backward(const vector<const Tensor*>& xs,
   return dEdx;
 }
 
-string Softmax::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "softmax(" << arg_names[0] << ')';
-  return s.str();
-}
-
 Tensor Softmax::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs.front();
@@ -159,12 +121,6 @@ Tensor Softmax::backward(const vector<const Tensor*>& xs,
   return dEdx;
 }
 
-string OneMinusX::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "1 - " << arg_names[0];
-  return s.str();
-}
-
 Tensor OneMinusX::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
@@ -179,16 +135,6 @@ Tensor OneMinusX::backward(const vector<const Tensor*>& xs,
                      unsigned i) const {
   return -dEdf;
 };
-
-string Concatenate::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "concat(" << arg_names[0];
-  for (unsigned i = 1; i < arg_names.size(); ++i) {
-    os << ',' << arg_names[i];
-  }
-  os << ')';
-  return os.str();
-}
 
 Tensor Concatenate::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() > 0);
@@ -215,16 +161,6 @@ Tensor Concatenate::backward(const vector<const Tensor*>& xs,
   return dEdx;
 }
 
-string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "concat_cols(" << arg_names[0];
-  for (unsigned i = 1; i < arg_names.size(); ++i) {
-    os << ',' << arg_names[i];
-  }
-  os << ')';
-  return os.str();
-}
-
 Tensor ConcatenateColumns::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() > 0);
   assert(xs.front()->ndims() == 1);
@@ -245,12 +181,6 @@ Tensor ConcatenateColumns::backward(const vector<const Tensor*>& xs,
   Tensor dEdx;
   dEdx.narrow(dEdf,1,i,1);
   return dEdx;
-}
-
-string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
-  return s.str();
 }
 
 Tensor SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs) const {
@@ -274,14 +204,6 @@ Tensor SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,
   return dEdx;
 }
 
-string Sum::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << arg_names[0];
-  for (unsigned i = 1; i < arg_names.size(); ++i)
-    s << " + " << arg_names[i];
-  return s.str();
-}
-
 Tensor Sum::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() > 0);
   Tensor fx = *xs[0];
@@ -297,14 +219,6 @@ Tensor Sum::backward(const vector<const Tensor*>& xs,
                      unsigned i) const {
   return dEdf;
 };
-
-string Multilinear::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << arg_names[0];
-  for (unsigned i = 1; i < arg_names.size(); i += 2)
-    s << " + " << arg_names[i] << " * " << arg_names[i+1];
-  return s.str();
-}
 
 Tensor Multilinear::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() % 2 == 1);
@@ -334,12 +248,6 @@ Tensor Multilinear::backward(const vector<const Tensor*>& xs,
     dEdx.addmv(0, 1, xt, dEdf);
   }
   return dEdx;
-}
-
-string MatrixMultiply::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << arg_names[0] << " * " << arg_names[1];
-  return s.str();
 }
 
 Tensor MatrixMultiply::forward(const vector<const Tensor*>& xs) const {
@@ -385,12 +293,6 @@ Tensor MatrixMultiply::backward(const vector<const Tensor*>& xs,
   return dEdx;
 }
 
-std::string Tanh::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "tanh(" << arg_names[0] << ')';
-  return s.str();
-}
-
 Tensor Tanh::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs.front();
@@ -420,12 +322,6 @@ Tensor Tanh::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-std::string LogisticSigmoid::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "\\sigma(" << arg_names[0] << ')';
-  return s.str();
-}
-
 Tensor LogisticSigmoid::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs.front();
@@ -446,12 +342,6 @@ Tensor LogisticSigmoid::backward(const vector<const Tensor*>& xs,
 
 // x_1 is a vector
 // y = (x_1)_{*pval}
-string PickElement::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "pick(" << arg_names[0] << ',' << *pval << ')';
-  return s.str();
-}
-
 Tensor PickElement::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs.front();
@@ -481,12 +371,6 @@ Tensor PickElement::backward(const vector<const Tensor*>& xs,
 // x_1 must be a scalar that is a value between 0 and 1
 // target_y is a value between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
-string BinaryLogLoss::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "binary_log_loss(" << arg_names[0] << ", " << *ptarget_y << ')';
-  return os.str();
-}
-
 Tensor BinaryLogLoss::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   assert(xs.front()->isScalar());

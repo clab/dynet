@@ -6,6 +6,7 @@ PROJECT(cnn CXX)
 set(cnn_library_SRCS
     cnn.cc
     dict.cc
+    edges-common.cc
     lstm-fast.cc
     param-edges.cc
     rnn.cc
