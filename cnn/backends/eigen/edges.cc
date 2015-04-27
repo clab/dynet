@@ -8,6 +8,17 @@ using namespace std;
 
 namespace cnn {
 
+Tensor InnerProduct3D_1D::forward(const vector<const Tensor*>& xs) const {
+  assert(!"not implemented");
+}
+
+Tensor InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i) const {
+  assert(!"not implemented");
+}
+
 Tensor GaussianNoise::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
