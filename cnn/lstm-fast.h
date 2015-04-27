@@ -45,6 +45,9 @@ struct LSTMBuilder_CIFG {
   // returns node index (variable) of most recent output
   VariableIndex back() const { return h.back().back(); }
 
+  // access memory/hidden state contents
+  const std::vector<VariableIndex>& final_h() const { return h.back(); }
+
   // check to make sure parameters have been added before adding input
   unsigned builder_state;
 

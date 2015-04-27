@@ -43,6 +43,9 @@ struct RNNBuilder {
   // returns node (index) of most recent output
   VariableIndex back() const { return h.back().back(); }
 
+  // access hidden state contents
+  const std::vector<VariableIndex>& final_h() const { return h.back(); }
+
   // check to make sure parameters have been added before adding input
   unsigned builder_state;
 

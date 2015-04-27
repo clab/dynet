@@ -12,10 +12,10 @@ namespace cnn {
 class Dict {
  typedef std::unordered_map<std::string, int> Map;
  public:
-  Dict() : b0_("<bad0>"), frozen(false) {
+  Dict() : frozen(false) {
   }
 
-  inline unsigned size() const { return words_.size() + 1; }
+  inline unsigned size() const { return words_.size(); }
 
   void Freeze() { frozen = true; }
 
@@ -27,23 +27,20 @@ class Dict {
         abort();
       }
       words_.push_back(word);
-      d_[word] = words_.size();
-      return words_.size();
+      return d_[word] = words_.size() - 1;
     } else {
       return i->second;
     }
   }
 
   inline const std::string& Convert(const int& id) const {
-    if (id == 0) return b0_;
-    assert(id <= (int)words_.size());
-    return words_[id-1];
+    assert(id < (int)words_.size());
+    return words_[id];
   }
 
   void clear() { words_.clear(); d_.clear(); }
 
  private:
-  std::string b0_;
   bool frozen;
   std::vector<std::string> words_;
   Map d_;
