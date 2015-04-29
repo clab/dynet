@@ -37,7 +37,7 @@ if(WITH_MINERVA_BACKEND)
 endif(WITH_MINERVA_BACKEND)
 
 if(WITH_EIGEN_BACKEND)
-  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc backends/eigen/edges.cc backends/eigen/model.cc)
+  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc backends/eigen/dim.cc backends/eigen/edges.cc backends/eigen/model.cc)
 endif(WITH_EIGEN_BACKEND)
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
