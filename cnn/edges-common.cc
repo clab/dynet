@@ -8,6 +8,18 @@ using namespace std;
 
 namespace cnn {
 
+string SumColumns::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "sum_cols(" << arg_names[0] << ')';
+  return s.str();
+}
+
+string KMHNGram::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "kmh-ngram(" << arg_names[0] << ')';
+  return s.str();
+}
+
 string InnerProduct3D_1D::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "inner(" << arg_names[0] << "," << arg_names[1] << ") + " << arg_names[2];

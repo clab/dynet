@@ -8,6 +8,51 @@ using namespace std;
 
 namespace cnn {
 
+Tensor SumColumns::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 1);
+  const Tensor& x = *xs.front();
+  return x.rowwise().sum();
+}
+
+Tensor SumColumns::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i) const {
+  Tensor dEdx = *xs.front();
+  const int c = dEdf.cols();
+  for (int j = 0; j < c; ++j)
+    dEdx.col(j) = dEdf;
+  return dEdx;
+}
+
+Tensor KMHNGram::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 1);
+  const Tensor& x = *xs.front();
+  const int new_cols = x.cols() - n + 1;
+  assert(new_cols > 0);
+  const int new_rows = x.rows();
+  Tensor res = Zero(Dim({new_rows, new_cols}));
+  for (int j = 0; j < new_cols; ++j) {
+    auto c_j = res.col(j);
+    for (int k = 0; k < n; ++k)
+      c_j += x.col(j + k);
+  }
+  return res;
+}
+
+Tensor KMHNGram::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i) const {
+  Tensor dEdx = *xs.front();
+  dEdx.setZero();
+  const int c = dEdf.cols();
+  for (int j = 0; j < c; ++j)
+    for (int k = 0; k < n; ++k)
+      dEdx.col(j+k) += dEdf.col(j);
+  return dEdx;
+}
+
 Tensor InnerProduct3D_1D::forward(const vector<const Tensor*>& xs) const {
   assert(!"not implemented");
 }
@@ -51,7 +96,7 @@ Tensor Dropout::backward(const vector<const Tensor*>& xs,
 Tensor OneMinusX::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
-  return Ones(cnn::size(x)) - x;
+  return Constant(cnn::size(x), o) - x;
 }
 
 Tensor OneMinusX::backward(const vector<const Tensor*>& xs,

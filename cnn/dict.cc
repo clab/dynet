@@ -29,7 +29,7 @@ void ReadSentencePair(const std::string& line, std::vector<int>* s, Dict* sd, st
   std::vector<int>* v = s; 
   while(in) {
     in >> word;
-    if (word.empty()) break;
+    if (!in) break;
     if (word == sep) { d = td; v = t; continue; }
     v->push_back(d->Convert(word));
   }
