@@ -1,4 +1,4 @@
-#ifndef CNN_TENSOR_EIGEN_H_
+../cnn/backends/eigen/edges.cc#ifndef CNN_TENSOR_EIGEN_H_
 #define CNN_TENSOR_EIGEN_H_
 
 #include <initializer_list>
@@ -38,13 +38,9 @@ inline Tensor FromRawData(const Dim& dim, const float* data) {
   return t;
 }
 
-inline Tensor Constant(const Dim& d, real c) {
-  Tensor m(d.rows(), d.cols());
-  m.fill(c);
-  return m;
-}
 inline Tensor Zero(const Dim& d) { return Eigen::MatrixXf::Zero(d.rows(), d.cols()); }
 inline Tensor Ones(const Dim& d) { return Eigen::MatrixXf::Ones(d.rows(), d.cols()); }
+inline Tensor Constant(const Dim& d, real c) { return Eigen::MatrixXf::Constant(d.rows(), d.cols(), c); }
 inline Tensor Random(const Dim& d, real scale) {
   std::uniform_real_distribution<real> distribution(-scale,scale);
   auto b = [&] (real) {return distribution(*rndeng);};

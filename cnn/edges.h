@@ -5,6 +5,28 @@
 
 namespace cnn {
 
+// y_i = \sum_{j} x_i,j
+struct SumColumns : public Edge {
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i) const override;
+};
+
+// y_i = \sum_{j=1}^n x_1:{i-1+j}
+struct KMHNGram : public Edge {
+  explicit KMHNGram(unsigned n) : n(n) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i) const override;
+  unsigned n;  // width, n=2 for Karl's paper
+};
+
 // Forward:
 //   Y_ij = A_ijk * B_k + C_ij
 //
@@ -49,12 +71,15 @@ struct Dropout : public Edge {
 
 // y = 1 - x_1
 struct OneMinusX : public Edge {
+  OneMinusX() : o(1) {}
+  explicit OneMinusX(real o) : o(o) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i) const override;
+  real o;
 };
 
 // y = tanh x_1
