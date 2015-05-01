@@ -46,7 +46,7 @@ string Dropout::as_string(const vector<string>& arg_names) const {
 
 string OneMinusX::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "1 - " << arg_names[0];
+  s << c << " - " << arg_names[0];
   return s.str();
 }
 
@@ -121,6 +121,12 @@ string MaxPooling1D::as_string(const vector<string>& arg_names) const {
 string Softmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "softmax(" << arg_names[0] << ')';
+  return s.str();
+}
+
+string PickNegLogSoftmax::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "log_softmax(" << arg_names[0] << ")_{" << *pval << '}';
   return s.str();
 }
 

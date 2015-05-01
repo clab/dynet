@@ -25,7 +25,7 @@ struct ParametersBase {
   virtual ~ParametersBase();
 };
 
-// represents parameters (e.g., a weight matrix)
+// represents parameters (e.g., a weight matrix) that will be optimized
 struct Parameters : public ParametersBase {
   friend class Model;
   void rescale_gradient(real scale) override;
