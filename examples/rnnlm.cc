@@ -51,11 +51,20 @@ struct RNNLanguageModel {
       // r_t = bias + R * y_t
       VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
       // ydist = softmax(r_t)
+      // LogSoftmax followed by PickElement can be written in one step
+      // using PickNegLogSoftmax
+#if 0
       VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});
       errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
+#endif
+      VariableIndex i_err = hg.add_function<PickNegLogSoftmax>({i_r_t}, sent[t+1]);
+      errs.push_back(i_err);
     }
     VariableIndex i_nerr = hg.add_function<Sum>(errs);
+#if 0
     return hg.add_function<Negate>({i_nerr});
+#endif
+    return i_nerr;
   }
 
   // return VariableIndex of total loss
@@ -83,7 +92,7 @@ struct RNNLanguageModel {
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
         auto dist = as_vector(hg.incremental_forward());
-        double p = (double)rand() / (RAND_MAX + 1.0);
+        double p = rand01();
         for (; w < dist.size(); ++w) {
           p -= dist[w];
           if (p < 0.0) { break; }

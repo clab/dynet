@@ -121,20 +121,19 @@ Eigen::MatrixXf Convolution::SoftmaxBackward(const Eigen::MatrixXf& diff, const 
   }
 }
 
-#if 0
-Eigen::MatrixXf Convolution::SoftmaxBackwardSingleError(
-   const real& r, int elem, const Eigen::MatrixXf& top, SoftmaxAlgorithm algorithm) {
+Eigen::MatrixXf Convolution::SoftmaxBackwardSingleError(float diff, int elem, const Eigen::MatrixXf& top) {
   // d softmax(x)_i / d x_j = softmax(x)_i * (1 - softmax(x)_i) if i == j
   // d softmax(x)_i / d x_j = -softmax(x)_i * softmax(x)_j if i != j
   if (top.cols() == 1) {
-    float off_diag_sum = -top.sum() + top(elem, 0) * (r - 1);
-    return top.binaryExpr(diff, FSoftmaxBackward(off_diag_sum));
+    const float r = diff / top(elem, 0);
+    Eigen::MatrixXf b = top * diff;
+    b(elem, 0) = (diff - r) * top(elem, 0);
+    return b;
   } else {
-    cerr << "SoftmaxBackward not implemented for multiple columns\n";
+    cerr << "SoftmaxBackwardSingleError not implemented for multiple columns\n";
     abort();
   }
 }
-#endif
 
 } // namespace cnn
 
