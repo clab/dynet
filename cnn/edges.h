@@ -5,6 +5,21 @@
 
 namespace cnn {
 
+// y = reshape(x_1, from --> to)
+struct Reshape : public Edge {
+  explicit Reshape(const Dim& from, const Dim& to) : from(from), to(to) {
+    assert(from.size() == to.size());
+  }
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i) const override;
+  Dim from;
+  Dim to;
+};
+
 // y_i = \sum_{j} x_i,j
 struct SumColumns : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;

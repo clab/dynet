@@ -11,7 +11,7 @@ bool ParameterEdge::has_parameters() const { return true; }
 
 string ParameterEdge::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "params(" << dim << ')';
+  s << "parameters(" << dim << ')';
   return s.str();
 }
 
@@ -34,7 +34,7 @@ void ParameterEdge::accumulate_grad(const Tensor& g) {
 
 string InputEdge::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "inputs(" << dim << ')';
+  s << "constant(" << dim << ')';
   return s.str();
 }
 
@@ -54,7 +54,7 @@ Tensor InputEdge::backward(const vector<const Tensor*>& xs,
 
 string ScalarInputEdge::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "scalar_inputs(" << data << ')';
+  s << "scalar_constant(" << *pdata << ')';
   return s.str();
 }
 
@@ -73,7 +73,7 @@ Tensor ScalarInputEdge::backward(const vector<const Tensor*>& xs,
 
 string LookupEdge::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "lookup[|x|=" << params->values.size() << " --> " << dim << ']';
+  s << "lookup_parameters(|x|=" << params->values.size() << " --> " << dim << ')';
   return s.str();
 }
 

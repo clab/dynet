@@ -8,6 +8,12 @@ using namespace std;
 
 namespace cnn {
 
+string Reshape::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "reshape(" << arg_names[0] << ',' << from << " --> " << to << ')';
+  return s.str();
+}
+
 string SumColumns::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "sum_cols(" << arg_names[0] << ')';
