@@ -29,6 +29,7 @@ function(find_cudnn)
 endfunction()
 
 # look for Boost
+set(Boost_REALPATH ON)
 find_package(Boost COMPONENTS program_options serialization unit_test_framework REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
