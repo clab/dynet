@@ -1,4 +1,4 @@
-../cnn/backends/eigen/edges.cc#ifndef CNN_TENSOR_EIGEN_H_
+#ifndef CNN_TENSOR_EIGEN_H_
 #define CNN_TENSOR_EIGEN_H_
 
 #include <initializer_list>

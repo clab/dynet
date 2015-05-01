@@ -8,6 +8,25 @@ using namespace std;
 
 namespace cnn {
 
+Tensor Reshape::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 1);
+  Tensor fx = *xs.front();
+  assert(fx.rows() * fx.cols() == from.size());
+  fx.resize(to.size(0), to.size(1));
+  return fx;
+}
+
+Tensor Reshape::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i) const {
+  Tensor dEdx = dEdf;
+  int cols = from.size(1);
+  if (!cols) ++cols;
+  dEdx.resize(from.size(0), cols);
+  return dEdx;
+}
+
 Tensor SumColumns::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs.front();
