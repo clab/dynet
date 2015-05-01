@@ -151,6 +151,9 @@ void Hypergraph::backward() {
   }
 
   // accumulate gradients into parameters
+  // this is simpler than you might find in some other frameworks
+  // since we assume parameters come into the graph as a "function"
+  // that returns the current value of the parameters
   for (auto pedge : parameter_edges)
     pedge->accumulate_grad(nodes[pedge->head_node]->dEdf);
 }

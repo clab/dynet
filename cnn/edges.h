@@ -84,17 +84,18 @@ struct Dropout : public Edge {
   real p;
 };
 
-// y = 1 - x_1
+// y = c - x_1
+// (c is a vector or matrix of the constant, usually 1, but can be configured)
 struct OneMinusX : public Edge {
-  OneMinusX() : o(1) {}
-  explicit OneMinusX(real o) : o(o) {}
+  OneMinusX() : c(1) {}
+  explicit OneMinusX(real o) : c(o) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i) const override;
-  real o;
+  real c;
 };
 
 // y = tanh x_1
@@ -324,6 +325,23 @@ struct LogSoftmax : public Edge {
                     const Tensor& fx,
                     const Tensor& dEdf,
                     unsigned i) const override;
+};
+
+// z = \sum_j \exp (x_i)_j
+// y = (x_1)_element - \log z
+struct PickNegLogSoftmax : public Edge {
+  explicit PickNegLogSoftmax(unsigned v) : val(v), pval(&val) {}
+  // use this constructor if you want to change the value after the graph is constructed
+  explicit PickNegLogSoftmax(const unsigned* pv) : val(), pval(pv) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Tensor forward(const std::vector<const Tensor*>& xs) const override;
+  Tensor backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i) const override;
+  unsigned val;
+  const unsigned* pval;
+  mutable Tensor v;
 };
 
 // z = \sum_{j \in denom} \exp (x_i)_j

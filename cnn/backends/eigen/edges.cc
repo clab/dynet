@@ -115,7 +115,7 @@ Tensor Dropout::backward(const vector<const Tensor*>& xs,
 Tensor OneMinusX::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
-  return Constant(cnn::size(x), o) - x;
+  return Constant(cnn::size(x), c) - x;
 }
 
 Tensor OneMinusX::backward(const vector<const Tensor*>& xs,
@@ -350,6 +350,27 @@ Tensor Softmax::backward(const vector<const Tensor*>& xs,
                             unsigned i) const {
   assert(i == 0);
   return Convolution::SoftmaxBackward(dEdf, fx, 1);
+}
+
+Tensor PickNegLogSoftmax::forward(const vector<const Tensor*>& xs) const {
+  assert(xs.size() == 1);
+  const Tensor& x = *xs.front();
+  assert(x.cols() == 1); // need to generalize for multiple vectors
+  v = Convolution::SoftmaxForward(x, 1);
+  float cll = -log(v(*pval, 0));
+  return Constant({1}, cll);
+}
+
+Tensor PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i) const {
+  assert(i == 0);
+  float r = dEdf(*pval, 0) / v(*pval, 0);
+  // TODO finish implementing
+  cerr << "not implemented\n";
+  abort();
+  //return Convolution::SoftmaxBackward(dEdf.cwiseQuotient(v), v, 1);
 }
 
 Tensor LogSoftmax::forward(const vector<const Tensor*>& xs) const {
