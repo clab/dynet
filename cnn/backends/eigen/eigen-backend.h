@@ -34,6 +34,7 @@ class Convolution {
  public:
   static Eigen::MatrixXf SoftmaxForward(const Eigen::MatrixXf& src, SoftmaxAlgorithm algorithm);
   static Eigen::MatrixXf SoftmaxBackward(const Eigen::MatrixXf& diff, const Eigen::MatrixXf& top, SoftmaxAlgorithm algorithm);
+  static Eigen::MatrixXf SoftmaxBackwardSingleError(float diff, int elem, const Eigen::MatrixXf& top);
 };
 
 } // namespace cnn

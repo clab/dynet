@@ -366,11 +366,7 @@ Tensor PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
                             const Tensor& dEdf,
                             unsigned i) const {
   assert(i == 0);
-  float r = dEdf(*pval, 0) / v(*pval, 0);
-  // TODO finish implementing
-  cerr << "not implemented\n";
-  abort();
-  //return Convolution::SoftmaxBackward(dEdf.cwiseQuotient(v), v, 1);
+  return Convolution::SoftmaxBackwardSingleError(as_scalar(dEdf), *pval, v);
 }
 
 Tensor LogSoftmax::forward(const vector<const Tensor*>& xs) const {
