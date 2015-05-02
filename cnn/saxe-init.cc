@@ -1,4 +1,4 @@
-#include "saxe_init.h"
+#include "saxe-init.h"
 
 #include <random>
 #include <cstring>

@@ -6,7 +6,7 @@
 
 #include "cnn/tests/test_utils.h"
 #include "cnn/tensor.h"
-#include "cnn/saxe_init.h"
+#include "cnn/saxe-init.h"
 
 using namespace std;
 using namespace cnn;

@@ -3,7 +3,7 @@
 #include "cnn/training.h"
 #include "cnn/timing.h"
 #include "cnn/rnn.h"
-#include "cnn/lstm-fast.h"
+#include "cnn/lstm.h"
 #include "cnn/dict.h"
 
 #include <iostream>
@@ -37,8 +37,7 @@ struct RNNLanguageModel {
   // return VariableIndex of total loss
   VariableIndex BuildLMGraph(const vector<int>& sent, Hypergraph& hg) {
     const unsigned slen = sent.size() - 1;
-    builder.new_graph();  // reset RNN builder for new graph
-    builder.add_parameter_edges(&hg);  // add variables for its parameters
+    builder.new_graph(&hg);  // reset RNN builder for new graph
     builder.start_new_sequence(&hg);
     VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
     VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
@@ -71,8 +70,7 @@ struct RNNLanguageModel {
   void RandomSample(int max_len = 150) {
     cerr << endl;
     Hypergraph hg;
-    builder.new_graph();  // reset RNN builder for new graph
-    builder.add_parameter_edges(&hg);  // add variables for its parameters
+    builder.new_graph(&hg);  // reset RNN builder for new graph
     builder.start_new_sequence(&hg);
     VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
     VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
@@ -172,7 +170,7 @@ int main(int argc, char** argv) {
     sgd = new SimpleSGDTrainer(&model);
 
   //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
-  RNNLanguageModel<LSTMBuilder_CIFG> lm(model);
+  RNNLanguageModel<LSTMBuilder> lm(model);
   if (argc == 4) {
     string fname = argv[3];
     ifstream in(fname);
