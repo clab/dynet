@@ -3,6 +3,7 @@
 
 #include "cnn/cnn.h"
 #include "cnn/edges.h"
+#include "cnn/rnn-state-machine.h"
 
 namespace cnn {
 
@@ -15,12 +16,9 @@ struct RNNBuilder {
                       unsigned hidden_dim,
                       Model* model);
 
-  // call this to reset the builder when you are going to create
-  // a new computation graph
-  void new_graph();
-
-  // call this before add_input
-  void add_parameter_edges(Hypergraph* hg);
+  // call this to reset the builder when you are working with a newly
+  // created Hypergraph object
+  void new_graph(Hypergraph* hg);
 
   // Reset for new sequence on hypergraph hg with shared parameters
   // call this before add_input and after add_parameter_edges, or
@@ -46,9 +44,6 @@ struct RNNBuilder {
   // access hidden state contents
   const std::vector<VariableIndex>& final_h() const { return h.back(); }
 
-  // check to make sure parameters have been added before adding input
-  unsigned builder_state;
-
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameters*>> params;
 
@@ -67,6 +62,9 @@ struct RNNBuilder {
   unsigned hidden_dim;
   unsigned layers;
   std::vector<float> zeros;
+
+  // the state machine ensures that the caller is behaving
+  RNNStateMachine sm;
 };
 
 } // namespace cnn

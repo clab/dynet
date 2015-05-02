@@ -1,26 +1,24 @@
-#ifndef CNN_LSTM_FAST_H_
-#define CNN_LSTM_FAST_H_
+#ifndef CNN_LSTM_H_
+#define CNN_LSTM_H_
 
 #include "cnn/cnn.h"
 #include "cnn/edges.h"
+#include "cnn/rnn-state-machine.h"
 
 namespace cnn {
 
 class Model;
 
-struct LSTMBuilder_CIFG {
-  LSTMBuilder_CIFG() {}
-  explicit LSTMBuilder_CIFG(unsigned layers,
-                            unsigned input_dim,
-                            unsigned hidden_dim,
-                            Model* model);
+struct LSTMBuilder {
+  LSTMBuilder() {}
+  explicit LSTMBuilder(unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       Model* model);
 
-  // call this to reset the builder when you are going to create
-  // a new computation graph
-  void new_graph();
-
-  // call this before start_new_sequence
-  void add_parameter_edges(Hypergraph* hg);
+  // call this to reset the builder when you are working with a newly
+  // created Hypergraph object
+  void new_graph(Hypergraph* hg);
 
   // Start new sequence in given Hypergraph with initial c0 and h0
   // call after add_parameter edges but before add input,
@@ -48,9 +46,6 @@ struct LSTMBuilder_CIFG {
   // access memory/hidden state contents
   const std::vector<VariableIndex>& final_h() const { return h.back(); }
 
-  // check to make sure parameters have been added before adding input
-  unsigned builder_state;
-
   // first index is layer, then ...
   std::vector<std::vector<Parameters*>> params;
 
@@ -68,6 +63,9 @@ struct LSTMBuilder_CIFG {
   unsigned hidden_dim;
   unsigned layers;
   std::vector<float> zeros;
+
+  // the state machine ensures that the caller is behaving
+  RNNStateMachine sm;
 };
 
 } // namespace cnn

@@ -7,10 +7,11 @@ set(cnn_library_SRCS
     cnn.cc
     dict.cc
     edges-common.cc
-    lstm-fast.cc
+    lstm.cc
     param-edges.cc
     rnn.cc
-    saxe_init.cc
+    rnn-state-machine.cc
+    saxe-init.cc
     training.cc
 )
 
@@ -18,11 +19,12 @@ set(cnn_library_SRCS
 set(cnn_library_HDRS
     cnn.h
     edges.h
-    lstm-fast.h
+    lstm.h
     model.h
     param-edges.h
     rnn.h
-    saxe_init.h
+    rnn-state-machine.h
+    saxe-init.h
     tensor.h
     timing.h
     training.h

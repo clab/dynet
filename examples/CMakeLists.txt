@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-ADD_EXECUTABLE(embed_cl embed_cl.cc)
-target_link_libraries(embed_cl cnn ${LIBS})
+ADD_EXECUTABLE(embed-cl embed-cl.cc)
+target_link_libraries(embed-cl cnn ${LIBS})
 
 ADD_EXECUTABLE(encdec encdec.cc)
 target_link_libraries(encdec cnn ${LIBS})

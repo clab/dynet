@@ -1,4 +1,4 @@
-#include "cnn/lstm-fast.h"
+#include "cnn/lstm.h"
 
 #include <string>
 #include <cassert>
@@ -13,12 +13,10 @@ namespace cnn {
 
 enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 
-LSTMBuilder_CIFG::LSTMBuilder_CIFG(unsigned layers,
+LSTMBuilder::LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
                        Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
-  builder_state = 0; // created
-
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
@@ -44,24 +42,9 @@ LSTMBuilder_CIFG::LSTMBuilder_CIFG(unsigned layers,
   }  // layers
 }
 
-void LSTMBuilder_CIFG::new_graph() {
+void LSTMBuilder::new_graph(Hypergraph* hg) {
+  sm.transition(RNNOp::new_graph);
   param_vars.clear();
-  h.clear();
-  h0.clear();
-  c0.clear();
-  builder_state = 1;  
-}
-
-void LSTMBuilder_CIFG::add_parameter_edges(Hypergraph* hg) {
-  if (builder_state != 1) {
-    cerr << "Invalid state: " << builder_state << endl;
-    abort();
-  }
-  builder_state = 2;
-
-  param_vars.clear();
-  h.clear();
-  c.clear();
 
   for (unsigned i = 0; i < layers; ++i) {
     string layer = to_string(i);
@@ -89,15 +72,10 @@ void LSTMBuilder_CIFG::add_parameter_edges(Hypergraph* hg) {
   }
 }
 
-void LSTMBuilder_CIFG::start_new_sequence(Hypergraph* hg,
-                                          vector<VariableIndex> c_0,
-                                          vector<VariableIndex> h_0){
-  if (builder_state < 2) {
-    cerr << "Invalid state: " << builder_state << endl;
-    abort();
-  }
-  builder_state = 3;
-
+void LSTMBuilder::start_new_sequence(Hypergraph* hg,
+                                     vector<VariableIndex> c_0,
+                                     vector<VariableIndex> h_0) {
+  sm.transition(RNNOp::start_new_sequence);
   h.clear();
   c.clear();
   h0 = h_0;
@@ -111,11 +89,8 @@ void LSTMBuilder_CIFG::start_new_sequence(Hypergraph* hg,
   assert (c0.size() == layers);
 }
 
-VariableIndex LSTMBuilder_CIFG::add_input(VariableIndex x, Hypergraph* hg) {
-  if (builder_state != 3) {
-    cerr << "Invalid state: " << builder_state << endl;
-    abort();
-  }
+VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
+  sm.transition(RNNOp::add_input);
   const unsigned t = h.size();
   h.push_back(vector<VariableIndex>(layers));
   c.push_back(vector<VariableIndex>(layers));

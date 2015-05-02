@@ -15,9 +15,6 @@ RNNBuilder::RNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
                        Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
-  builder_state = 0; // created
-  assert(layers < 10);
-
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     Parameters* p_x2h = model->add_parameters(Dim({hidden_dim, layer_input_dim}));
@@ -29,25 +26,13 @@ RNNBuilder::RNNBuilder(unsigned layers,
   }
 }
 
-void RNNBuilder::new_graph() {
+void RNNBuilder::new_graph(Hypergraph* hg) {
+  sm.transition(RNNOp::new_graph);
   param_vars.clear();
-  h.clear();
-  h0.clear();
-  builder_state = 1;
-}
-
-void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
-  if (builder_state != 1) {
-    cerr << "Invalid state: " << builder_state << endl;
-    abort();
-  }
-  builder_state = 2;
-
   for (unsigned i = 0; i < layers; ++i) {
     Parameters* p_x2h = params[i][0];
     Parameters* p_h2h = params[i][1];
     Parameters* p_hb = params[i][2];
-    const string ts = to_string(i);
     VariableIndex i_x2h = hg->add_parameter(p_x2h);
     VariableIndex i_h2h = hg->add_parameter(p_h2h);
     VariableIndex i_hb = hg->add_parameter(p_hb);
@@ -57,12 +42,7 @@ void RNNBuilder::add_parameter_edges(Hypergraph* hg) {
 }
 
 void RNNBuilder::start_new_sequence(Hypergraph* hg, vector<VariableIndex> h_0) {
-  if (builder_state < 2) {
-    cerr << "Invalid state: " << builder_state << endl;
-    abort();
-  }
-  builder_state = 3;
-
+  sm.transition(RNNOp::start_new_sequence);
   h.clear();
   h0 = h_0;
   if (h0.empty()) {
@@ -73,12 +53,8 @@ void RNNBuilder::start_new_sequence(Hypergraph* hg, vector<VariableIndex> h_0) {
 }
 
 VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
-  if (builder_state != 3) {
-    cerr << "Invalid state: " << builder_state << endl;
-    abort();
-  }
+  sm.transition(RNNOp::add_input);
   const unsigned t = h.size();
-  string ts = to_string(t);
   h.push_back(vector<VariableIndex>(layers));
   vector<VariableIndex>& ht = h.back();
   VariableIndex in = x;

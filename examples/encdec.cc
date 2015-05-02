@@ -3,7 +3,7 @@
 #include "cnn/training.h"
 #include "cnn/timing.h"
 #include "cnn/rnn.h"
-#include "cnn/lstm-fast.h"
+#include "cnn/lstm.h"
 #include "cnn/dict.h"
 
 #include <iostream>
@@ -53,16 +53,14 @@ struct EncoderDecoder {
   // build graph and return VariableIndex of total loss
   VariableIndex BuildGraph(const vector<int>& insent, const vector<int>& osent, Hypergraph& hg) {
     // forward encoder
-    fwd_enc_builder.new_graph();
-    fwd_enc_builder.add_parameter_edges(&hg);
+    fwd_enc_builder.new_graph(&hg);
     fwd_enc_builder.start_new_sequence(&hg);
     for (unsigned t = 0; t < insent.size(); ++t) {
       VariableIndex i_x_t = hg.add_lookup(p_ec, insent[t]);
       fwd_enc_builder.add_input(i_x_t, &hg);
     }
     // backward encoder
-    rev_enc_builder.new_graph();
-    rev_enc_builder.add_parameter_edges(&hg);
+    rev_enc_builder.new_graph(&hg);
     rev_enc_builder.start_new_sequence(&hg);
     for (int t = insent.size() - 1; t >= 0; --t) {
       VariableIndex i_x_t = hg.add_lookup(p_ec, insent[t]);
@@ -90,8 +88,7 @@ struct EncoderDecoder {
       oein_c[i] = hg.add_function<PickRange>({i_nc}, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM);
       oein_h[i] = hg.add_function<Tanh>({oein_c[i]});
     }
-    dec_builder.new_graph();
-    dec_builder.add_parameter_edges(&hg);
+    dec_builder.new_graph(&hg);
     dec_builder.start_new_sequence(&hg, oein_c, oein_h);
 
     // decoder
@@ -178,7 +175,7 @@ int main(int argc, char** argv) {
     sgd = new SimpleSGDTrainer(&model);
 
   //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
-  EncoderDecoder<LSTMBuilder_CIFG> lm(model);
+  EncoderDecoder<LSTMBuilder> lm(model);
   if (argc == 4) {
     string fname = argv[3];
     ifstream in(fname);
