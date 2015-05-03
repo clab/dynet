@@ -2,6 +2,7 @@
 #define CNN_TENSOR_H_
 
 #include "config.h"
+#include "cnn/dim.h"
 
 #ifdef WITH_MINERVA_BACKEND
 #  include "backends/minerva/tensor-minerva.h"

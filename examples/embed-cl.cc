@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
       VariableIndex i_t = emb.EmbedTarget(trg, hg);
       VariableIndex i_sim = hg.add_function<SquaredEuclideanDistance>({i_s,i_t});
       float margin = 2;
-      VariableIndex i_ms = hg.add_function<OneMinusX>({i_sim}, margin);
+      VariableIndex i_ms = hg.add_function<ConstantMinusX>({i_sim}, margin);
       const unsigned K = 20;
       vector<VariableIndex> noise(K);
       for (unsigned j = 0; j < K; ++j) {

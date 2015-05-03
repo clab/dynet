@@ -6,7 +6,6 @@
 #include <vector>
 
 #include <Eigen/Eigen>
-#include "cnn/backends/eigen/dim.h"
 #include "cnn/backends/eigen/eigen-serialization.h"
 #include "cnn/backends/eigen/random.h"
 
@@ -64,14 +63,8 @@ inline real rand01() {
   return distribution(*rndeng);
 }
 
-inline Dim size(const Tensor& m) {
-  if (m.cols() == 1) return Dim({m.rows()});
-  return Dim(m.rows(), m.cols());
-}
-
 // column major constructor
 inline Tensor Ccm(const Dim&d, const std::initializer_list<real>& v) {
-  std::cerr << "d: " << d << std::endl;
   Tensor m = Zero(d);
   int cc = 0;
   int cr = 0;

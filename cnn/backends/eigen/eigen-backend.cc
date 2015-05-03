@@ -44,7 +44,7 @@ Eigen::MatrixXf Elewise::SigmoidBackward(const Eigen::MatrixXf& diff, const Eige
 
 struct FRectify {
   inline float operator()(float x) const {
-    return (x > 0) ? x : 0;
+    return (x > 0.f) ? x : 0.f;
   }
 };
 
@@ -62,8 +62,14 @@ Eigen::MatrixXf Elewise::ReluBackward(const Eigen::MatrixXf& diff, const Eigen::
   return top.binaryExpr(diff, FRectifyBackward());
 }
 
+struct FTanh {
+  inline float operator()(float x) const {
+    return tanhf(x);
+  }
+};
+
 Eigen::MatrixXf Elewise::TanhForward(const Eigen::MatrixXf& x) {
-  return x.unaryExpr(ptr_fun(tanhf));
+  return x.unaryExpr(FTanh());
 }
 
 struct FTanhBackward {
@@ -96,7 +102,7 @@ Eigen::MatrixXf Convolution::SoftmaxForward(const Eigen::MatrixXf& src, SoftmaxA
   if (src.cols() == 1) {
     return src.unaryExpr(FSoftmaxNormalize(logsumexp(src)));
   } else {
-    cerr << "SoftmaxForward not implemented for multiple columns\n";
+    cerr << "SoftmaxForward not implemented for multiple columns: " << src.rows() << "x" << src.cols() << endl;
     abort();
   }
 }

@@ -169,8 +169,8 @@ int main(int argc, char** argv) {
   else
     sgd = new SimpleSGDTrainer(&model);
 
-  //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
   RNNLanguageModel<LSTMBuilder> lm(model);
+  //RNNLanguageModel<RNNBuilder> lm(model);
   if (argc == 4) {
     string fname = argv[3];
     ifstream in(fname);

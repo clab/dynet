@@ -86,7 +86,7 @@ Tensor InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
 Tensor GaussianNoise::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
-  return x + RandomNormal(cnn::size(x), 0, stddev);
+  return x + RandomNormal(Dim(x.rows(), x.cols()), 0, stddev);
 }
 
 Tensor GaussianNoise::backward(const vector<const Tensor*>& xs,
@@ -100,7 +100,7 @@ Tensor GaussianNoise::backward(const vector<const Tensor*>& xs,
 Tensor Dropout::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
-  noise_mask = RandomBernoulli(cnn::size(x), p);
+  noise_mask = RandomBernoulli(Dim(x.rows(), x.cols()), p);
   return x.cwiseProduct(noise_mask);
 }
 
@@ -112,13 +112,21 @@ Tensor Dropout::backward(const vector<const Tensor*>& xs,
   return dEdf.cwiseProduct(noise_mask);
 };
 
-Tensor OneMinusX::forward(const vector<const Tensor*>& xs) const {
+struct FConstantMinus {
+  FConstantMinus(float c) : c(c) {}
+  inline float operator()(float x) const {
+    return c - x;
+  }
+  float c;
+};
+
+Tensor ConstantMinusX::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
-  return Constant(cnn::size(x), c) - x;
+  return x.unaryExpr(FConstantMinus(c));
 }
 
-Tensor OneMinusX::backward(const vector<const Tensor*>& xs,
+Tensor ConstantMinusX::backward(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i) const {
@@ -183,7 +191,7 @@ Tensor Exp::backward(const vector<const Tensor*>& xs,
 
 Tensor Log::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 1);
-  return Elewise::Ln(*xs.front());
+  return xs.front()->array().log();
 }
 
 Tensor Log::backward(const vector<const Tensor*>& xs,

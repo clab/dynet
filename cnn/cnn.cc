@@ -94,6 +94,19 @@ VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned index) 
 }
 
 const Tensor& Hypergraph::incremental_forward() {
+  vector<Dim> xds;
+  for (unsigned i = last_node_evaluated; i < nodes.size(); ++i) {
+    Node* node = nodes[i];
+    const Edge& in_edge = *edges[node->in_edge];
+    xds.resize(in_edge.arity());
+    unsigned ti = 0;
+    for (VariableIndex tail_node_index : in_edge.tail) {
+      xds[ti] = nodes[tail_node_index]->dim;
+      ++ti;
+    }
+    node->dim = in_edge.dim_forward(xds);
+  }
+
   vector<const Tensor*> xs;
   while (last_node_evaluated < nodes.size()) {
     Node* node = nodes[last_node_evaluated];
@@ -105,7 +118,8 @@ const Tensor& Hypergraph::incremental_forward() {
       ++ti;
     }
     node->f = in_edge.forward(xs);
-    node->dEdf = Zero(cnn::size(node->f));
+    //node->dEdf = Zero(Dim(node->f.rows(), node->f.cols()));
+    node->dEdf = Zero(node->dim);
     ++last_node_evaluated;
   }
   return nodes.back()->f;
