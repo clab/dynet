@@ -9,7 +9,7 @@ namespace cnn {
 
 ParametersBase::~ParametersBase() {}
 
-size_t Parameters::size() const { return cnn::size(values).Prod(); }
+size_t Parameters::size() const { return dim.size(); }
 
 void Parameters::rescale_gradient(real scale) { g *= scale; }
 
@@ -24,7 +24,7 @@ void Parameters::clear() {
 }
 
 size_t LookupParameters::size() const {
-  return values.size() * dim.Prod();
+  return values.size() * dim.size();
 }
 
 real LookupParameters::g_squared_l2norm() const {

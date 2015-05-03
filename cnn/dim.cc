@@ -1,17 +1,16 @@
-#include "cnn/backends/eigen/dim.h"
+#include "cnn/dim.h"
 
 #include <iostream>
 
+using namespace std;
+
 namespace cnn {
 
-std::ostream& operator<<(std::ostream& os, const Dim& d) {
+ostream& operator<<(ostream& os, const Dim& d) {
   os << '{';
-  int c = 0;
-  for (auto v : d.d) {
-    if (!v) break;
-    if (c) os << ',';
-    os << v;
-    ++c;
+  for (unsigned i = 0; i < d.nd; ++i) {
+    if (i) os << ',';
+    os << d.d[i];
   }
   return os << '}';
 }

@@ -15,6 +15,7 @@ struct ParameterEdge : public ParameterEdgeBase {
   explicit ParameterEdge(Parameters* p) : dim(p->dim), params(p) {}
   bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -29,6 +30,7 @@ struct ParameterEdge : public ParameterEdgeBase {
 struct InputEdge : public Edge {
   explicit InputEdge(const Dim& d, const std::vector<float>* pd) : dim(d), pdata(pd) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -43,6 +45,7 @@ struct ScalarInputEdge : public Edge {
   explicit ScalarInputEdge(real s) : data(s), pdata(&data) {}
   explicit ScalarInputEdge(const real* ps) : data(), pdata(ps) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -58,6 +61,7 @@ struct LookupEdge : public ParameterEdgeBase {
   LookupEdge(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), params(p), has_optimizable_parameters(true) {}
   bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,

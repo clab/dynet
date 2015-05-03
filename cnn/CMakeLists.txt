@@ -6,6 +6,7 @@ PROJECT(cnn CXX)
 set(cnn_library_SRCS
     cnn.cc
     dict.cc
+    dim.cc
     edges-common.cc
     lstm.cc
     param-edges.cc
@@ -18,6 +19,8 @@ set(cnn_library_SRCS
 # Headers:
 set(cnn_library_HDRS
     cnn.h
+    dict.h
+    dim.h
     edges.h
     lstm.h
     model.h
@@ -31,7 +34,7 @@ set(cnn_library_HDRS
 )
 
 if(WITH_THPP_BACKEND)
-  list(APPEND cnn_library_SRCS backends/thpp/backend.cc backends/thpp/dim.cc backends/thpp/edges.cc backends/thpp/model.cc)
+  list(APPEND cnn_library_SRCS backends/thpp/backend.cc backends/thpp/edges.cc backends/thpp/model.cc)
 endif(WITH_THPP_BACKEND)
 
 if(WITH_MINERVA_BACKEND)
@@ -39,7 +42,7 @@ if(WITH_MINERVA_BACKEND)
 endif(WITH_MINERVA_BACKEND)
 
 if(WITH_EIGEN_BACKEND)
-  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc backends/eigen/dim.cc backends/eigen/edges.cc backends/eigen/model.cc)
+  list(APPEND cnn_library_SRCS backends/eigen/eigen-backend.cc backends/eigen/edges.cc backends/eigen/model.cc)
 endif(WITH_EIGEN_BACKEND)
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)

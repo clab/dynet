@@ -103,14 +103,16 @@ struct Node {
   VariableIndex node_id;  // my id
 
   // computation
+  Dim dim;
   // TODO remove these from here, they should be local to the forward/backward
-  // algorithms
+  // algorithms which lets them manage memory for the full computation graph
   Tensor f;               // f(x_1 , ... , x_n)
   Tensor dEdf;            // dE/df
 };
 
 inline void swap(Node& n1, Node& n2) {
   using std::swap;
+  swap(n1.dim, n2.dim);
   swap(n1.f, n2.f);
   swap(n1.dEdf, n2.dEdf);
   swap(n1.in_edge, n2.in_edge);
@@ -124,6 +126,10 @@ struct Edge {
   virtual ~Edge();
   // debugging
   virtual std::string as_string(const std::vector<std::string>& var_names) const = 0;
+
+  // compute dimensions of results given dimensions of inputs
+  // also checks to make sure inputs are compatible with each other
+  virtual Dim dim_forward(const std::vector<Dim>& xs) const = 0;
 
   // computation
   virtual Tensor forward(const std::vector<const Tensor*>& xs) const = 0;

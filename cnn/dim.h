@@ -1,46 +1,47 @@
-#ifndef EIGEN_DIM_H
-#define EIGEN_DIM_H
+#ifndef CNN_DIM_H
+#define CNN_DIM_H
 
 #include <initializer_list>
 #include <iosfwd>
+#include <cstring>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#define CNN_MAX_TENSOR_DIM 8
+#define CNN_MAX_TENSOR_DIM 7
+
+namespace boost { namespace serialization { class access; } }
 
 namespace cnn {
 
 struct Dim {
-  Dim() { d[0] = 0; }
-  explicit Dim(int m) { d[0] = m; d[1] = 0; }
-  Dim(int m, int n) { d[0] = m; d[1] = n; d[2] = 0; }
-  Dim(std::initializer_list<long> x) {
-    int c = 0;
-    for(auto v : x) d[c++] = v;
-    d[c] = 0;
+  Dim() : nd() {}
+  explicit Dim(int m) : nd(1) { d[0] = m; }
+  Dim(int m, int n) : nd(2) { d[0] = m; d[1] = n; }
+  Dim(std::initializer_list<long> x) : nd() {
+    for(auto v : x) d[nd++] = v;
   }
-  inline int size() const { int p = 1; const unsigned short* pd=d; while(*pd) { p *= *pd; ++pd; } return p; }
-  inline int ndims() const { int nd = 0; const unsigned short* pd = d; while(*pd) { nd++; pd++; } return nd; }
-  inline unsigned Prod() const { return size(); }
+  inline int size() const {
+    int p = 1;
+    for (unsigned i = 0; i < nd; ++i) p *= d[i];
+    return p;
+  }
+  inline int ndims() const { return nd; }
   inline int rows() const { return d[0]; }
-  inline int cols() const { return d[1] ? d[1] : 1; }
-  inline int operator[](unsigned i) const { return d[i]; }
-  inline int size(unsigned i) const { return d[i]; }
+  inline int cols() const { return nd > 1 ? d[1] : 1; }
+  inline int operator[](unsigned i) const { return i < nd ? d[i] : 1; }
+  inline int size(unsigned i) const { return (*this)[i]; }
   inline Dim transpose() const { return Dim({d[1],d[0]}); }
   unsigned short d[CNN_MAX_TENSOR_DIM];
+  unsigned short nd;
  private:
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
-    ar & d;
+    ar & nd;
     ar & d;
   }
 };
 
 inline bool operator==(const Dim& a, const Dim& b) {
-  if (a.size() != b.size()) return false;
-  for (unsigned i = 0; i < CNN_MAX_TENSOR_DIM && !(a.d[i] == 0 && b.d[i] == 0); ++i)
-    if (a.d[i] != b.d[i]) return false;
-  return true;
+  if (a.nd != b.nd) return false;
+  return std::memcmp(a.d, b.d, a.nd) == 0;
 }
 
 inline bool operator!=(const Dim& a, const Dim& b) { return !(a == b); }

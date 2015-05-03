@@ -11,6 +11,7 @@ struct Reshape : public Edge {
     assert(from.size() == to.size());
   }
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -23,6 +24,7 @@ struct Reshape : public Edge {
 // y_i = \sum_{j} x_i,j
 struct SumColumns : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -34,6 +36,7 @@ struct SumColumns : public Edge {
 struct KMHNGram : public Edge {
   explicit KMHNGram(unsigned n) : n(n) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -51,6 +54,7 @@ struct KMHNGram : public Edge {
 //   (dE/dC)_ij = (dE/dY)_ij
 struct InnerProduct3D_1D : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -63,6 +67,7 @@ struct InnerProduct3D_1D : public Edge {
 struct GaussianNoise : public Edge {
   explicit GaussianNoise(real stddev) : stddev(stddev) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -75,6 +80,7 @@ struct GaussianNoise : public Edge {
 struct Dropout : public Edge {
   explicit Dropout(real p) : p(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -86,10 +92,10 @@ struct Dropout : public Edge {
 
 // y = c - x_1
 // (c is a vector or matrix of the constant, usually 1, but can be configured)
-struct OneMinusX : public Edge {
-  OneMinusX() : c(1) {}
-  explicit OneMinusX(real o) : c(o) {}
+struct ConstantMinusX : public Edge {
+  explicit ConstantMinusX(real o) : c(o) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -101,6 +107,7 @@ struct OneMinusX : public Edge {
 // y = tanh x_1
 struct Tanh : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -111,6 +118,7 @@ struct Tanh : public Edge {
 // y = x_1 \odot x_1
 struct Square : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -121,6 +129,7 @@ struct Square : public Edge {
 // y = exp x_1
 struct Exp : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -131,6 +140,7 @@ struct Exp : public Edge {
 // y = log x_1  (base e, i.e., natural log)
 struct Log : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -141,6 +151,7 @@ struct Log : public Edge {
 // concatenate rows
 struct Concatenate : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -155,6 +166,7 @@ struct Concatenate : public Edge {
 // x_i must be a column vector in R^n
 struct ConcatenateColumns : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -168,6 +180,7 @@ struct Hinge : public Edge {
   explicit Hinge(unsigned e, real m = 1.0) : element(e), pelement(&element), margin(m) {}
   explicit Hinge(unsigned* pe, real m = 1.0) : element(), pelement(pe), margin(m) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -182,6 +195,7 @@ struct Hinge : public Edge {
 // y = x_1
 struct Identity : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -196,6 +210,7 @@ struct Identity : public Edge {
 struct MaxPooling1D : public Edge {
   MaxPooling1D(unsigned w) : width(w) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -208,6 +223,7 @@ struct MaxPooling1D : public Edge {
 // y = x_1 * x_2
 struct MatrixMultiply : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -218,6 +234,7 @@ struct MatrixMultiply : public Edge {
 // y = x_1 \cdot x_2  (Hadamard product)
 struct CwiseMultiply : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -230,6 +247,7 @@ struct CwiseMultiply : public Edge {
 // this is an ugly hack to deal with diagonal matrices
 struct Multilinear : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -240,6 +258,7 @@ struct Multilinear : public Edge {
 // y = -x_1
 struct Negate : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -250,6 +269,7 @@ struct Negate : public Edge {
 // y = max(0,x)
 struct Rectify : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -266,6 +286,7 @@ struct BinaryLogLoss : public Edge {
   BinaryLogLoss(real ty) : target_y(ty), ptarget_y(&target_y) {}
   BinaryLogLoss(real* pty) : target_y(), ptarget_y(pty) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -278,6 +299,7 @@ struct BinaryLogLoss : public Edge {
 // y = \sum_i x_i
 struct Sum : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
@@ -288,6 +310,7 @@ struct Sum : public Edge {
 // y = || x_1 - x_2 ||^2
 struct SquaredEuclideanDistance : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -298,6 +321,7 @@ struct SquaredEuclideanDistance : public Edge {
 // y = \sigma(x_1)
 struct LogisticSigmoid : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const;
   Tensor backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
@@ -309,6 +333,7 @@ struct LogisticSigmoid : public Edge {
 // y_i = (x_1)_i / z
 struct Softmax : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
@@ -320,6 +345,7 @@ struct Softmax : public Edge {
 // y_i = (x_1)_i - \log z
 struct LogSoftmax : public Edge {
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
@@ -334,6 +360,7 @@ struct PickNegLogSoftmax : public Edge {
   // use this constructor if you want to change the value after the graph is constructed
   explicit PickNegLogSoftmax(const unsigned* pv) : val(), pval(pv) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
@@ -349,6 +376,7 @@ struct PickNegLogSoftmax : public Edge {
 struct RestrictedLogSoftmax : public Edge {
   explicit RestrictedLogSoftmax(const std::vector<unsigned>& d) : denom(d) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
@@ -365,6 +393,7 @@ struct PickElement : public Edge {
   // use this constructor if you want to change the value after the graph is constructed
   explicit PickElement(const unsigned* pv) : val(), pval(pv) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
@@ -380,6 +409,7 @@ struct PickElement : public Edge {
 struct PickRange : public Edge {
   explicit PickRange(unsigned start, unsigned end) : start(start), end(end) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
   Tensor forward(const std::vector<const Tensor*>& xs) const override;
   Tensor backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,

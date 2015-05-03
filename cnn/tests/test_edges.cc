@@ -14,6 +14,11 @@ using namespace cnn;
 
 BOOST_GLOBAL_FIXTURE(TestTensorSetup)
 
+Dim size(const Tensor& t) {
+  if (t.cols() > 1)
+    return Dim(t.rows(), t.cols());
+  return Dim(t.rows());
+}
 
 BOOST_AUTO_TEST_CASE(ESqrL2)
 {
@@ -258,9 +263,9 @@ BOOST_AUTO_TEST_CASE(MatrixVector) {
   BOOST_CHECK_CLOSE(t(vv,1), 34.75, eps);
 }
 
-BOOST_AUTO_TEST_CASE(EOneMinus) {
+BOOST_AUTO_TEST_CASE(EConstantMinus) {
   Tensor W = Ccm({2,2},{1,2,3,-4});
-  OneMinusX om;
+  ConstantMinusX om(1);
   vector<const Tensor*> xs(1, &W);
   Tensor O = om.forward(xs);
   cerr << str(W) << endl;

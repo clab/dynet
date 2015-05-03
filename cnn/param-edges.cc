@@ -15,6 +15,10 @@ string ParameterEdge::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
+Dim ParameterEdge::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
 Tensor ParameterEdge::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 0);
   return params->values;
@@ -38,6 +42,10 @@ string InputEdge::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
+Dim InputEdge::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
 Tensor InputEdge::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 0);
   assert((int)dim.size() == (int)pdata->size());
@@ -58,6 +66,10 @@ string ScalarInputEdge::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
+Dim ScalarInputEdge::dim_forward(const vector<Dim>& xs) const {
+  return Dim({1});
+}
+
 Tensor ScalarInputEdge::forward(const vector<const Tensor*>& xs) const {
   assert(xs.size() == 0);
   return FromRawData(Dim({1}), pdata);
@@ -75,6 +87,10 @@ string LookupEdge::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "lookup_parameters(|x|=" << params->values.size() << " --> " << dim << ')';
   return s.str();
+}
+
+Dim LookupEdge::dim_forward(const vector<Dim>& xs) const {
+  return dim;
 }
 
 Tensor LookupEdge::forward(const vector<const Tensor*>& xs) const {

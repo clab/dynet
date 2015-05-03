@@ -41,7 +41,6 @@ struct Parameters : public ParametersBase {
  private:
   Parameters() {}
   explicit Parameters(const Dim& d) : dim(d), values(Random(d)), g(Zero(d)) {}
-  explicit Parameters(const Tensor& v) : dim(cnn::size(v)), values(v), g(Zero(dim)) {}
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
     ar & dim;

@@ -114,7 +114,7 @@ VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
     VariableIndex i_ait = hg->add_function<Multilinear>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
     VariableIndex i_it = hg->add_function<LogisticSigmoid>({i_ait});
     // forget
-    VariableIndex i_ft = hg->add_function<OneMinusX>({i_it});
+    VariableIndex i_ft = hg->add_function<ConstantMinusX>({i_it}, 1.f);
     // write memory cell
     VariableIndex i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
     VariableIndex i_wt = hg->add_function<Tanh>({i_awt});
