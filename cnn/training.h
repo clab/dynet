@@ -56,8 +56,8 @@ struct MomentumSGDTrainer : public Trainer {
 
   real momentum;
 
-  std::unordered_map<Parameters*, Tensor> vp;
-  std::unordered_map<LookupParameters*, std::unordered_map<unsigned, Tensor>> vl;
+  //std::unordered_map<Parameters*, Tensor> vp;
+  //std::unordered_map<LookupParameters*, std::unordered_map<unsigned, Tensor>> vl;
 };
 
 } // namespace cnn

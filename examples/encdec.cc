@@ -10,6 +10,9 @@
 #include <fstream>
 #include <sstream>
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 using namespace std;
 using namespace cnn;
 

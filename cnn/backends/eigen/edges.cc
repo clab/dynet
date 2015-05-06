@@ -6,260 +6,291 @@
 
 using namespace std;
 
+// notes on implementing differentiable components
+// 1) fx can be understood as a pointer to the (preallocated) location for the result
+//    of forward to be stored
+// 2) fx is not initialized, so after calling forward fx must point to the correct answer
+// 3) fx can be repointed to an input, if forward(x) evaluates to x (e.g., in reshaping)
+// 4) dEdxi MUST **ACCUMULATE** a result since multiple calls to forward may depend on
+//    the same x_i. Even, e.g., Identity must be implemented as
+//    dEdx1 += dEdf. THIS IS EXTREMELY IMPORTANT
+// 5) scalars results of forward are placed in fx.v[0]
+// 6) CNN manages its own memory, not Eigen, and it is configured with the
+//    EIGEN_NO_MALLOC option. If you get an error about Eigen attempting to allocate
+//    memory, it is (probably) because of an implicit creation of a temporary variable.
+//    To tell Eigen this is not necessary, the noalias() method is available. If you really
+//    do need a temporary variable, its capacity must be requested by Edge::aux_storage_space
+
 namespace cnn {
 
-Tensor Reshape::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  Tensor fx = *xs.front();
-  assert(fx.rows() * fx.cols() == from.size());
-  fx.resize(to.size(0), to.size(1));
-  return fx;
+void Reshape::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  // just point to the input memory and change dimensions
+  // dimensions are handled by forward_dim
+  fx.v = xs[0]->v;
 }
 
-Tensor Reshape::backward(const vector<const Tensor*>& xs,
+void Reshape::backward(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
-                            unsigned i) const {
-  Tensor dEdx = dEdf;
-  int cols = from.size(1);
-  if (!cols) ++cols;
-  dEdx.resize(from.size(0), cols);
-  return dEdx;
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  const Tensor reshaped(from, dEdf.v);
+  *dEdxi += *reshaped;
 }
 
-Tensor SumColumns::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  return x.rowwise().sum();
+void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.rowwise().sum();
 }
 
-Tensor SumColumns::backward(const vector<const Tensor*>& xs,
+void SumColumns::backward(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
-                            unsigned i) const {
-  Tensor dEdx = *xs.front();
-  const int c = dEdf.cols();
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  auto out = *dEdxi;
+  const int c = out.cols();
   for (int j = 0; j < c; ++j)
-    dEdx.col(j) = dEdf;
-  return dEdx;
+    out.col(j) += *dEdf;
 }
 
-Tensor KMHNGram::forward(const vector<const Tensor*>& xs) const {
+void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
+  auto x = **xs[0];
   const int new_cols = x.cols() - n + 1;
   assert(new_cols > 0);
-  const int new_rows = x.rows();
-  Tensor res = Zero(Dim({new_rows, new_cols}));
+  auto res = *fx;
+  res.setZero();
   for (int j = 0; j < new_cols; ++j) {
     auto c_j = res.col(j);
     for (int k = 0; k < n; ++k)
       c_j += x.col(j + k);
   }
-  return res;
 }
 
-Tensor KMHNGram::backward(const vector<const Tensor*>& xs,
-                          const Tensor& fx,
-                          const Tensor& dEdf,
-                          unsigned i) const {
-  Tensor dEdx = *xs.front();
-  dEdx.setZero();
-  const int c = dEdf.cols();
+void KMHNGram::backward(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  const int c = dEdf.d.cols();
   for (int j = 0; j < c; ++j)
     for (int k = 0; k < n; ++k)
-      dEdx.col(j+k) += dEdf.col(j);
-  return dEdx;
+      (*dEdxi).col(j+k) += (*dEdf).col(j);
 }
 
-Tensor InnerProduct3D_1D::forward(const vector<const Tensor*>& xs) const {
+void InnerProduct3D_1D::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(!"not implemented");
 }
 
-Tensor InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
+void InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
-                     unsigned i) const {
+                     unsigned i,
+                     Tensor& dEdxi) const {
   assert(!"not implemented");
 }
 
-Tensor GaussianNoise::forward(const vector<const Tensor*>& xs) const {
+void GaussianNoise::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  cerr << "FIX IMPL GaussianNoise::f\n"; abort();
+#if 0
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
   return x + RandomNormal(Dim(x.rows(), x.cols()), 0, stddev);
+#endif
 }
 
-Tensor GaussianNoise::backward(const vector<const Tensor*>& xs,
+void GaussianNoise::backward(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
-                     unsigned i) const {
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  cerr << "FIX IMPL GaussianNoise::b\n"; abort();
+#if 0
   assert(i == 0);
   return dEdf;
+#endif
 };
 
-Tensor Dropout::forward(const vector<const Tensor*>& xs) const {
+void Dropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  cerr << "FIX IMPL Dropout::f\n"; abort();
+#if 0
   assert(xs.size() == 1);
   const Tensor& x = *xs[0];
   noise_mask = RandomBernoulli(Dim(x.rows(), x.cols()), p);
   return x.cwiseProduct(noise_mask);
+#endif
 }
 
-Tensor Dropout::backward(const vector<const Tensor*>& xs,
+void Dropout::backward(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
-                     unsigned i) const {
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  cerr << "FIX IMPL Dropout::b\n"; abort();
+#if 0
   assert(i == 0);
   return dEdf.cwiseProduct(noise_mask);
+#endif
 };
 
 struct FConstantMinus {
   FConstantMinus(float c) : c(c) {}
-  inline float operator()(float x) const {
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
     return c - x;
   }
   float c;
 };
 
-Tensor ConstantMinusX::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  const Tensor& x = *xs[0];
-  return x.unaryExpr(FConstantMinus(c));
+void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.unaryExpr(FConstantMinus(c));
 }
 
-Tensor ConstantMinusX::backward(const vector<const Tensor*>& xs,
+void ConstantMinusX::backward(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
-                     unsigned i) const {
-  return -dEdf;
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  *dEdxi -= *dEdf;
 };
 
-Tensor Sum::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() > 0);
-  Tensor res = *xs[0];
-  for (unsigned i = 1; i < xs.size(); ++i)
-    res += *xs[i];
-  return res;
+void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  auto res = *fx;
+  const unsigned remainder = num_args % 4;
+  switch (remainder) {
+    case 0: res.setZero(); break;
+    case 1: res = **xs[0]; break;
+    case 2: res = **xs[0] + **xs[1]; break;
+    case 3: res = **xs[0] + **xs[1] + **xs[2]; break;
+  }
+  for (unsigned i = remainder; i < num_args; i += 4)
+    res += **xs[i] + **xs[i+1] + **xs[i+2] + **xs[i+3];
 }
 
-Tensor Sum::backward(const vector<const Tensor*>& xs,
+void Sum::backward(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
-                     unsigned i) const {
-  return dEdf;
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  *dEdxi += *dEdf;
 };
 
-Tensor Tanh::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  return Elewise::TanhForward(x);
+struct FTanh {
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
+    return tanhf(x);
+  }
+};
+
+void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.unaryExpr(FTanh());
 }
 
-Tensor Tanh::backward(const vector<const Tensor*>& xs,
+struct FTanhBackward {
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
+    return (1.f - t * t) * d;
+  }
+};
+
+void Tanh::backward(const vector<const Tensor*>& xs,
                       const Tensor& fx,
                       const Tensor& dEdf,
-                      unsigned i) const {
-  assert(i == 0);
-  const Tensor& x = *xs.front();
-  return Elewise::TanhBackward(dEdf, fx, x);
+                      unsigned i,
+                      Tensor& dEdxi) const {
+  *dEdxi += (*fx).binaryExpr(*dEdf, FTanhBackward());
 }
 
-Tensor Square::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1); // just a single input
-  const Tensor& x = *xs.front();
-  return x.cwiseProduct(x);
+void Square::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.cwiseProduct(x);
 }
 
-Tensor Square::backward(const vector<const Tensor*>& xs,
+void Square::backward(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
-                        unsigned i) const {
-  assert(i == 0);
-  return dEdf.cwiseProduct(*xs.front()) * 2;
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  auto x = **xs[0];
+  *dEdxi += (*dEdf).cwiseProduct(x);
 };
 
-Tensor Exp::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  return Elewise::Exp(*xs.front());
+void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.array().exp();
 }
 
-Tensor Exp::backward(const vector<const Tensor*>& xs,
+void Exp::backward(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
-                     unsigned i) const {
-  return dEdf.array() * fx.array();
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  *dEdxi += (*dEdf).cwiseProduct(*fx);
 }
 
-Tensor Log::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  return xs.front()->array().log();
+void Log::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.array().log();
 }
 
-Tensor Log::backward(const vector<const Tensor*>& xs,
+void Log::backward(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
-                     unsigned i) const {
-  return dEdf.array() / xs[0]->array();
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  auto x = **xs[0];
+  *dEdxi += (*dEdf).cwiseQuotient(x);
 }
 
-Tensor Concatenate::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() > 0);
+void Concatenate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   unsigned rows = 0;
-  for (auto x : xs) rows += x->rows();
+  for (auto x : xs) rows += x->d.rows();
+  // the following should use auxiliary memory
   src_row_indices.resize(xs.size());
-  Tensor fx(rows, 1);
-  unsigned i = 0;
+  unsigned ind = 0;
   unsigned k = 0;
   for (auto x : xs) {
-    src_row_indices[k] = i;
-    ++k;
-    const Tensor& cx = *x;
-    assert(cx.cols() == 1); // this can be relaxed to the same everywhere
-    const unsigned crows = cx.rows();
-    for (unsigned j = 0; j < crows; ++j) {
-      fx(i, 0) = cx(j, 0);
-      ++i;
-    }
+    src_row_indices[k++] = ind;
+    auto xi = **x;
+    assert(xi.cols() == 1); // this can be relaxed to the same everywhere
+    const unsigned rows = xi.rows();
+    (*fx).block(ind, 0, rows, 1) = xi;
+    ind += rows;
   }
-  return fx;
 }
 
-Tensor Concatenate::backward(const vector<const Tensor*>& xs,
+void Concatenate::backward(const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
-                             unsigned i) const {
+                             unsigned i,
+                             Tensor& dEdxi) const {
   assert(i < src_row_indices.size());
-  Tensor dEdx = *xs[i];
-  const unsigned rows = dEdx.rows();
+  const unsigned rows = dEdxi.d.rows();
   const unsigned begin = src_row_indices[i];
-  assert(rows + begin <= dEdf.rows());
-  for (unsigned i = 0; i < rows; ++i)
-    dEdx(i,0) = dEdf(i + begin, 0);
-  return dEdx;
+  *dEdxi += (*dEdf).block(begin, 0, rows, 1);
 }
 
-Tensor ConcatenateColumns::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() > 0);
-  const unsigned rows = xs.front()->rows();
-  Tensor fx(rows, xs.size());
-  unsigned i = 0;
-  for (auto x : xs) {
-    assert(x->rows() == rows);
-    for (unsigned j = 0; j < rows; ++j)
-      fx(j, i) = (*x)(j, 0);
-    ++i;
-  }
-  return fx;
+void ConcatenateColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  for (unsigned i = 0; i < xs.size(); ++i)
+    (*fx).col(i) = **xs[i];
 }
 
-Tensor ConcatenateColumns::backward(const vector<const Tensor*>& xs,
+void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
                                     const Tensor& fx,
                                     const Tensor& dEdf,
-                                    unsigned i) const {
-  assert(i < fx.cols());
-  return dEdf.col(i);
+                                    unsigned i,
+                                    Tensor& dEdxi) const {
+  *dEdxi += (*dEdf).col(i);
 }
 
-Tensor Hinge::forward(const vector<const Tensor*>& xs) const {
+void Hinge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  cerr << "FIX IMPL3\n"; abort();
+#if 0
   assert(xs.size() == 1);
   const Tensor& x = *xs.front();
   const unsigned rows = x.rows();
@@ -273,12 +304,16 @@ Tensor Hinge::forward(const vector<const Tensor*>& xs) const {
   Tensor res(1,1);
   res(0,0) = y;
   return res;
+#endif
 }
 
-Tensor Hinge::backward(const vector<const Tensor*>& xs,
+void Hinge::backward(const vector<const Tensor*>& xs,
                        const Tensor& fx,
                        const Tensor& dEdf,
-                       unsigned i) const {
+                       unsigned i,
+                       Tensor& dEdxi) const {
+  cerr << "FIX IMPL4\n"; abort();
+#if 0
   assert(i == 0);
   const Tensor& x = *xs.front();
   const unsigned rows = x.rows();
@@ -290,22 +325,25 @@ Tensor Hinge::backward(const vector<const Tensor*>& xs,
     if (*pelement != i && u(i, 0) > 0) { dEdx(i, 0) = diff; tv++; }
   dEdx(*pelement, 0) = -diff * tv;
   return dEdx;
+#endif
 }
 
-Tensor Identity::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  return *xs.front();
+void Identity::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.d = xs[0]->d;
+  fx.v = xs[0]->v;
 }
 
-Tensor Identity::backward(const vector<const Tensor*>& xs,
+void Identity::backward(const vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
-                  unsigned i) const {
-  assert(i == 0);
-  return dEdf;
+                  unsigned i,
+                  Tensor& dEdxi) const {
+  *dEdxi += *dEdf;
 }
 
-Tensor MaxPooling1D::forward(const vector<const Tensor*>& xs) const {
+void MaxPooling1D::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  cerr << "FIX IMPL5\n"; abort();
+#if 0
   assert(xs.size() == 1);
   const Tensor& x = *xs.front();
   const unsigned x_rows = x.rows();
@@ -329,12 +367,16 @@ Tensor MaxPooling1D::forward(const vector<const Tensor*>& xs) const {
     fx(i, 0) = best;
   }
   return fx;
+#endif
 }
 
-Tensor MaxPooling1D::backward(const vector<const Tensor*>& xs,
+void MaxPooling1D::backward(const vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
-                  unsigned i) const {
+                  unsigned i,
+                  Tensor& dEdxi) const {
+  cerr << "FIX IMPL6\n"; abort();
+#if 0
   const Tensor& x = *xs.front();
   const unsigned x_rows = x.rows();
   Tensor dEdx = Zero(Dim(x_rows, 1));
@@ -344,55 +386,141 @@ Tensor MaxPooling1D::backward(const vector<const Tensor*>& xs,
   for (unsigned i = 0; i < fx_rows; ++i)
     dEdx(ind[i], 0) = dEdf(i, 0);
   return dEdx;
+#endif
 }
 
-Tensor Softmax::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  return Convolution::SoftmaxForward(x, 1);
+template <class T>
+EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float logsumexp(const T& x) {
+  const float m = x.maxCoeff();
+  float z = 0;
+  for (unsigned i = 0; i < x.rows(); ++i)
+    z += expf(x(i,0) - m);
+  return m + logf(z);
 }
 
-Tensor Softmax::backward(const vector<const Tensor*>& xs,
+struct FSoftmaxNormalize {
+  explicit FSoftmaxNormalize(float logz) : logz(logz) {}
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
+    return expf(x - logz);
+  }
+  float logz;
+};
+
+void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (xs[0]->d.cols() == 1) {
+    auto x = **xs[0];
+    *fx = x.unaryExpr(FSoftmaxNormalize(logsumexp(x)));
+  } else {
+    cerr << "SoftmaxForward not implemented for multiple columns\n";
+    abort();
+  }
+}
+
+struct FSoftmaxBackward {
+  explicit FSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
+    return (off_diag_sum + d) * t;
+  }
+  float off_diag_sum;
+};
+
+void Softmax::backward(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
-                            unsigned i) const {
-  assert(i == 0);
-  return Convolution::SoftmaxBackward(dEdf, fx, 1);
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  float off_diag_sum = -(*fx).cwiseProduct(*dEdf).sum();
+  *dEdxi += (*fx).binaryExpr(*dEdf, FSoftmaxBackward(off_diag_sum));
 }
 
-Tensor PickNegLogSoftmax::forward(const vector<const Tensor*>& xs) const {
-  assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  assert(x.cols() == 1); // need to generalize for multiple vectors
-  v = Convolution::SoftmaxForward(x, 1);
-  float cll = -log(v(*pval, 0));
-  return Constant({1}, cll);
+void PickNegLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (xs[0]->d.cols() == 1) {
+    auto x = **xs[0];
+    logz = logsumexp(x);
+    fx.v[0] = x(*pval) - logz;
+  } else {
+    cerr << "SoftmaxForward not implemented for multiple columns\n";
+    abort();
+  }
 }
 
-Tensor PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
+struct FNegLogSoftmaxBackward {
+  FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t) const {
+    return expf(t - logz) * d;
+  }
+  float logz;
+  float d;
+};
+
+void PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
-                            unsigned i) const {
-  assert(i == 0);
-  return Convolution::SoftmaxBackwardSingleError(as_scalar(dEdf), *pval, v);
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  if (xs[0]->d.cols() == 1) {
+    const auto elem = *pval;
+    const float err = dEdf.v[0];
+    auto x = **xs[0];
+    // logz is computed in the forward pass and cached
+    *dEdxi += x.unaryExpr(FNegLogSoftmaxBackward(logz, err));
+    (*dEdxi)(elem) -= err;
+  } else {
+    cerr << "PickNegLogSoftmax not implemented for multiple columns\n";
+    abort();
+  }
 }
 
-Tensor LogSoftmax::forward(const vector<const Tensor*>& xs) const {
+struct FLogSoftmaxNormalize {
+  explicit FLogSoftmaxNormalize(float logz) : logz(logz) {}
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
+    return x - logz;
+  }
+  float logz;
+};
+
+void LogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  return Convolution::SoftmaxForward(x, 1).array().log();
+  if (xs[0]->d.cols() == 1) {
+    auto x = **xs[0];
+    *fx = x.unaryExpr(FLogSoftmaxNormalize(logsumexp(x)));
+  } else {
+    cerr << "LogSoftmaxForward not implemented for multiple columns\n";
+    abort();
+  }
 }
 
-Tensor LogSoftmax::backward(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i) const {
-  assert(i == 0);
-  Tensor u = fx.array().exp();
-  return Convolution::SoftmaxBackward(dEdf.cwiseQuotient(u), u, 1);
+struct FWeightedError {
+  float operator()(float t, float d) const {
+    return expf(t) * d / expf(t);
+  }
+};
+
+struct FLogSoftmaxBackward {
+  explicit FLogSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
+    return off_diag_sum * expf(t) + d;
+    //return (off_diag_sum + d) * t;
+  }
+  float off_diag_sum;
+};
+
+void LogSoftmax::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  if (xs[0]->d.cols() == 1) {
+    float off_diag_sum = -(*fx).binaryExpr(*dEdf, FWeightedError()).sum();
+    *dEdxi += (*fx).binaryExpr(*dEdf, FLogSoftmaxBackward(off_diag_sum));
+  } else {
+    cerr << "LogSoftmaxBackward not implemented for multiple columns\n";
+    abort();
+  }
 }
 
-inline real logsumexp(const Tensor& x, const vector<unsigned>& denom) {
+template <class T>
+EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   real m = x(denom[0],0);
   for (auto i : denom) {
     real r = x(i,0);
@@ -404,219 +532,232 @@ inline real logsumexp(const Tensor& x, const vector<unsigned>& denom) {
   return m + logf(z);
 }
 
-Tensor RestrictedLogSoftmax::forward(const vector<const Tensor*>& xs) const {
+void RestrictedLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  // TODO create auxiliary mask with -infty's
+  // and do usual LogSoftmax stuff
   assert(xs.size() == 1);
   assert(denom.size() > 0);
-  const Tensor& x = *xs.front();
-  const unsigned rows = x.rows();
+  auto x = **xs[0];
   assert(x.cols() == 1);
   const real logz = logsumexp(x, denom);
-  Tensor fx(rows, 1);
-  for (unsigned i = 0; i < rows; ++i)
-    fx(i,0) = -numeric_limits<real>::infinity();
+  Constant(fx, -numeric_limits<real>::infinity());
   for (auto i : denom)
-    fx(i,0) = x(i,0) - logz;
-  if (denom.size() == 1) fx(denom.front(), 0) = 0;
-  return fx;
+    (*fx)(i,0) = x(i,0) - logz;
+  if (denom.size() == 1) (*fx)(denom.front(), 0) = 0;
 }
 
-Tensor RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
+void RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
-                            unsigned i) const {
+                            unsigned i,
+                            Tensor& dEdxi) const {
   assert(i == 0);
-  const Tensor& x = *xs.front();
-  const unsigned rows = x.rows();
-  Tensor dEdx = Zero(Dim(rows, 1));
-  double z = 0;
-  for (auto i : denom)
-    z += dEdf(i, 0);
-  for (auto i : denom)
-    dEdx(i, 0) = dEdf(i, 0) - exp(fx(i, 0)) * z;
-  return dEdx;
+  auto x = **xs[0];
+  float z = 0;
+  for (auto ind : denom)
+    z += (*dEdf)(ind, 0);
+  for (auto ind : denom)
+    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - expf((*fx)(ind, 0)) * z;
 }
 
 // x_1 is a vector
 // y = (x_1)_{*pval}
-Tensor PickElement::forward(const vector<const Tensor*>& xs) const {
+void PickElement::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  assert(x.cols() == 1);
-  assert(*pval < x.rows());
-  Tensor fx(1,1);
-  fx(0,0) = x(*pval, 0);
-  return fx;
+  auto x = **xs[0];
+  fx.v[0] = x(*pval);
 }
 
 // derivative is 0 in all dimensions except 1 for the selected element
-Tensor PickElement::backward(const vector<const Tensor*>& xs,
+void PickElement::backward(const vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
-                    unsigned i) const {
+                    unsigned i,
+                    Tensor& dEdxi) const {
   assert(i == 0);
-  assert(dEdf.rows() == 1);
-  assert(dEdf.cols() == 1);
-  const Tensor& x = *xs.front();
-
-  // TODO should be sparse
-  Tensor dEdx = Zero(Dim(x.rows(), 1)); 
-  dEdx(*pval,0) = dEdf(0,0);
-  return dEdx;
+  (*dEdxi)(*pval) += dEdf.v[0];
 }
 
 // x_1 is a vector
 // y = (x_1)[start:end]
 // slice of vector from index start (inclusive) to index end (exclusive)
-Tensor PickRange::forward(const vector<const Tensor*>& xs) const {
+void PickRange::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
+  auto x = **xs[0];
   assert(x.cols() == 1);
   assert(start >= 0);
   assert(end <= x.rows());
   assert(start < end);
-  Tensor fx = x.block(start, 0, end-start, 1);
-  assert(fx.rows() == end-start);
-  return fx;
+  assert(fx.d.rows() == end-start);
+  (*fx) = x.block(start, 0, end-start, 1);
 }
 
 // derivative is 0 in all dimensions except the slice range
-Tensor PickRange::backward(const vector<const Tensor*>& xs,
+void PickRange::backward(const vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
-                    unsigned i) const {
+                    unsigned i,
+                    Tensor& dEdxi) const {
   assert(i == 0);
-  assert(dEdf.rows() == end-start);
-  assert(dEdf.cols() == 1);
-  const Tensor& x = *xs.front();
-
-  // TODO should be sparse
-  Tensor dEdx = Tensor::Zero(x.rows(), 1);
-  dEdx.block(start, 0, end-start, 1) = dEdf;
-  return dEdx;
+  assert(dEdf.d.rows() == end-start);
+  assert(dEdf.d.cols() == 1);
+  (*dEdxi).block(start, 0, end-start, 1) += (*dEdf);
 }
 
-Tensor MatrixMultiply::forward(const vector<const Tensor*>& xs) const {
+void MatrixMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
-  return (*xs[0]) * (*xs[1]);
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  (*fx).noalias() = x1 * x2;
 }
 
-Tensor MatrixMultiply::backward(const vector<const Tensor*>& xs,
+void MatrixMultiply::backward(const vector<const Tensor*>& xs,
                                 const Tensor& fx,
                                 const Tensor& dEdf,
-                                unsigned i) const {
+                                unsigned i,
+                                Tensor& dEdxi) const {
   assert(i < 2);
   if (i == 0) {
-    return dEdf * xs[1]->transpose();
+    (*dEdxi).noalias() += *dEdf * (**xs[1]).transpose();
   } else {
-    return xs[0]->transpose() * dEdf;
+    (*dEdxi).noalias() += (**xs[0]).transpose() * *dEdf;
   }
 }
 
-Tensor CwiseMultiply::forward(const vector<const Tensor*>& xs) const {
+void CwiseMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
-  return xs[0]->cwiseProduct(*xs[1]);
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  *fx = x1.cwiseProduct(x2);
 }
 
-Tensor CwiseMultiply::backward(const vector<const Tensor*>& xs,
+void CwiseMultiply::backward(const vector<const Tensor*>& xs,
                                const Tensor& fx,
                                const Tensor& dEdf,
-                               unsigned i) const {
+                               unsigned i,
+                               Tensor& dEdxi) const {
   assert(i < 2);
   if (i == 0) {
-    return dEdf.cwiseProduct(*xs[1]);
+    auto x2 = **xs[1];
+    *dEdxi += (*dEdf).cwiseProduct(x2);
   } else {
-    return dEdf.cwiseProduct(*xs[0]);
+    auto x1 = **xs[0];
+    *dEdxi += (*dEdf).cwiseProduct(x1);
   }
 }
 
-Tensor Multilinear::forward(const vector<const Tensor*>& xs) const {
+void Multilinear::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() % 2 == 1);
-  Tensor fx = *xs.front();
-  //cerr << "Multilinear\n";
-  //for (unsigned i = 0; i < xs.size(); i++)
-  //  cerr << " (" << xs[i]->rows() << "," << xs[i]->cols() << ")\n";
-  for (unsigned i = 1; i < xs.size(); i += 2) {
-    if (xs[i]->cols() == 1 && xs[i+1]->cols() == 1)
-      fx += xs[i]->cwiseProduct(*xs[i + 1]);
-    else
-      fx += (*xs[i]) * (*xs[i + 1]);
+  if (xs.size() == 1) {
+    fx.v = xs[0]->v;
+    return;
+  } else {
+    (*fx) = **xs[0];
+    for (unsigned i = 1; i < xs.size(); i += 2)
+      (*fx).noalias() += (**xs[i]) * (**xs[i + 1]);
   }
-  return fx;
 }
 
-Tensor Multilinear::backward(const vector<const Tensor*>& xs,
+void Multilinear::backward(const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
-                             unsigned i) const {
+                             unsigned i,
+                             Tensor& dEdxi) const {
   assert(i < xs.size());
-  if (i == 0) return dEdf;
-  if (i % 2 == 1) {  // is a matrix
-    if (xs[i]->cols() == 1)  // diagonal matrix
-      return dEdf.cwiseProduct(*xs[i+1]);
-    else
-      return dEdf * xs[i+1]->transpose();
+  if (i == 0) { // bias term
+    *dEdxi += *dEdf;
+  } else if (i % 2 == 1) { // left argument of matrix multiply
+    (*dEdxi).noalias() += *dEdf * (**xs[i+1]).transpose();
+  } else {  // right argument of matrix multiply
+    (*dEdxi).noalias() += (**xs[i-1]).transpose() * *dEdf;
   }
-  // is a vector
-  if (xs[i-1]->cols() == 1)  // xs[i-1] is a diagonal matrix
-    return xs[i-1]->cwiseProduct(dEdf);
-  return xs[i-1]->transpose() * dEdf;
 }
 
-Tensor Negate::forward(const vector<const Tensor*>& xs) const {
+void Negate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  return -(*xs[0]);
+  auto x = **xs[0];
+  *fx = -x;
 }
 
-Tensor Negate::backward(const vector<const Tensor*>& xs,
+void Negate::backward(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
-                        unsigned i) const {
+                        unsigned i,
+                        Tensor& dEdxi) const {
   assert(i == 0);
-  return -dEdf;
+  *dEdxi -= *dEdf;
 }
 
-Tensor Rectify::forward(const vector<const Tensor*>& xs) const {
+struct FRectify {
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
+    return (x > 0.f) ? x : 0.f;
+  }
+};
+
+void Rectify::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  return Elewise::ReluForward(*xs.front());
+  auto x = **xs[0];
+  *fx = x.unaryExpr(FRectify());
 }
 
-Tensor Rectify::backward(const vector<const Tensor*>& xs,
+struct FRectifyBackward {
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
+    return (t) ? d : 0.f;
+  }
+};
+
+void Rectify::backward(const vector<const Tensor*>& xs,
                          const Tensor& fx,
                          const Tensor& dEdf,
-                         unsigned i) const {
-  return Elewise::ReluBackward(dEdf, fx, *xs.front());
+                         unsigned i,
+                         Tensor& dEdxi) const {
+  *dEdxi += (*fx).binaryExpr(*dEdf, FRectifyBackward());
 }
 
-Tensor SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs) const {
+void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
-  Tensor res(1,1);
-  res(0,0) = (*xs[0] - *xs[1]).squaredNorm();
-  return res;
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  fx.v[0] = (x1 - x2).squaredNorm();
 }
 
-Tensor SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,
+void SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,
                                  const Tensor& fx,
                                  const Tensor& dEdf,
-                                 unsigned i) const {
+                                 unsigned i,
+                                 Tensor& dEdxi) const {
   assert(i < 2);
-  real scale = dEdf(0,0) * 2;
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  real scale = dEdf.v[0] * 2;
   if (i == 1) scale = -scale;
-  return scale * (*xs[0] - *xs[1]);
+  *dEdxi += scale * (x1 - x2);
 }
 
-Tensor LogisticSigmoid::forward(const vector<const Tensor*>& xs) const {
+struct FLogisticSigmoid {
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
+    return 1.f / (1.f + expf(-x));
+  }
+};
+
+void LogisticSigmoid::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  return Elewise::SigmoidForward(x);
+  auto x = **xs[0];
+  *fx = x.unaryExpr(FLogisticSigmoid());
 }
 
-Tensor LogisticSigmoid::backward(const vector<const Tensor*>& xs,
+struct FLogisticSigmoidBackward {
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
+    return (1.f - t) * t * d;
+  }
+};
+
+void LogisticSigmoid::backward(const vector<const Tensor*>& xs,
                                  const Tensor& fx,
                                  const Tensor& dEdf,
-                                 unsigned i) const {
-  assert(i == 0);
-  const Tensor& x = *xs.front();
-  return Elewise::SigmoidBackward(dEdf, fx, x);
+                                 unsigned i,
+                                 Tensor& dEdxi) const {
+  *dEdxi += (*fx).binaryExpr(*dEdf, FLogisticSigmoidBackward());
 }
 
 // you could do this with LogisticSigmoid, Softmax or a variety of other
@@ -624,34 +765,32 @@ Tensor LogisticSigmoid::backward(const vector<const Tensor*>& xs,
 // x_1 must be a scalar that is a value between 0 and 1
 // target_y is a value between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
-Tensor BinaryLogLoss::forward(const vector<const Tensor*>& xs) const {
+void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  assert(xs.front()->cols() == 1);
-  assert(xs.front()->rows() == 1);
-  const real y_pred = (*xs.front())(0,0);
+  assert(xs.front()->d.size() == 1);
+  const auto y_pred = xs[0]->v[0];
   assert(y_pred >= 0.);
   assert(y_pred <= 1.);
   const real ty = *ptarget_y;
   assert(ty >= 0.);
   assert(ty <= 1.);
-  Tensor fx = *xs.front();
-  real& res = fx(0,0);
+  auto& res = fx.v[0];
   res = 0;
   if (ty > 0.) res -= ty * log(y_pred);
   if ((1 - ty) > 0.) res -= (1 - ty) * log1p(-y_pred);
-  return fx;
 }
 
-Tensor BinaryLogLoss::backward(const vector<const Tensor*>& xs,
+void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
-                  unsigned i) const {
-  const real y_pred = (*xs.front())(0,0);
+                  unsigned i,
+                  Tensor& dEdxi) const {
+  const auto y_pred = xs[0]->v[0];
   const real ty = *ptarget_y;
   real scale = 0;
   if (ty > 0.) scale -= ty / y_pred;
   if ((1 - ty) >= 0.) scale += (1 - ty) / (1 - y_pred);
-  return dEdf * scale;
+  *dEdxi += *dEdf * scale;
 }
 
 } // namespace cnn

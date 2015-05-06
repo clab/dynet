@@ -1,4 +1,5 @@
-#include "saxe-init.h"
+#include "cnn/saxe-init.h"
+#include "cnn/tensor.h"
 
 #include <random>
 #include <cstring>
@@ -16,10 +17,10 @@ inline Eigen::MatrixXf EigenRandomNormal(int dim, real mean, real stddev) {
   return r;
 }
 
-Tensor OrthonormalRandom(int dim, real g) {
+void OrthonormalRandom(int dim, real g, Tensor& x) {
   Eigen::MatrixXf m = EigenRandomNormal(dim, 0.0, 0.01);
   Eigen::JacobiSVD<Eigen::MatrixXf> svd(m, Eigen::ComputeFullU);
-  return FromEigenMatrix(svd.matrixU());
+  *x = svd.matrixU();
 }
 
 }

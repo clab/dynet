@@ -16,8 +16,8 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned HIDDEN_SIZE = 8;
   Model m;
-  //SimpleSGDTrainer sgd(&m);
-  MomentumSGDTrainer sgd(&m);
+  SimpleSGDTrainer sgd(&m);
+  //MomentumSGDTrainer sgd(&m);
 
   Parameters& p_a = *m.add_parameters({1});
   Parameters& p_b = *m.add_parameters({HIDDEN_SIZE});
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
-  //boost::archive::text_oarchive oa(cout);
-  //oa << m;
+  boost::archive::text_oarchive oa(cout);
+  oa << m;
 }
 

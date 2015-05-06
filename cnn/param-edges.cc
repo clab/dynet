@@ -16,18 +16,20 @@ string ParameterEdge::as_string(const vector<string>& arg_names) const {
 }
 
 Dim ParameterEdge::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 0);
   return dim;
 }
 
-Tensor ParameterEdge::forward(const vector<const Tensor*>& xs) const {
+void ParameterEdge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  return params->values;
+  fx.v = params->values.v;
 }
 
-Tensor ParameterEdge::backward(const vector<const Tensor*>& xs,
+void ParameterEdge::backward(const vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
-                    unsigned i) const {
+                               unsigned i,
+                               Tensor& dEdxi) const {
   cerr << "called backward() on arity 0 edge\n";
   abort();
 }
@@ -46,16 +48,17 @@ Dim InputEdge::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
-Tensor InputEdge::forward(const vector<const Tensor*>& xs) const {
+void InputEdge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
   assert((int)dim.size() == (int)pdata->size());
-  return FromRawData(dim, &pdata->front());
+  memcpy(fx.v, &pdata->front(), dim.size() * sizeof(float));
 }
 
-Tensor InputEdge::backward(const vector<const Tensor*>& xs,
+void InputEdge::backward(const vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
-                    unsigned i) const {
+                               unsigned i,
+                               Tensor& dEdxi) const {
   cerr << "called backward() on arity 0 edge\n";
   abort();
 }
@@ -70,15 +73,16 @@ Dim ScalarInputEdge::dim_forward(const vector<Dim>& xs) const {
   return Dim({1});
 }
 
-Tensor ScalarInputEdge::forward(const vector<const Tensor*>& xs) const {
+void ScalarInputEdge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  return FromRawData(Dim({1}), pdata);
+  fx.v[0] = *pdata;
 }
 
-Tensor ScalarInputEdge::backward(const vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i) const {
+void ScalarInputEdge::backward(const vector<const Tensor*>& xs,
+                               const Tensor& fx,
+                               const Tensor& dEdf,
+                               unsigned i,
+                               Tensor& dEdxi) const {
   cerr << "called backward() on arity 0 edge\n";
   abort();
 }
@@ -93,15 +97,16 @@ Dim LookupEdge::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
-Tensor LookupEdge::forward(const vector<const Tensor*>& xs) const {
+void LookupEdge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  return params->values[*pindex];
+  *fx = *params->values[*pindex];
 }
 
-Tensor LookupEdge::backward(const vector<const Tensor*>& xs,
+void LookupEdge::backward(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
-                            unsigned i) const {
+                            unsigned i,
+                            Tensor& dEdxi) const {
   cerr << "called backward() on arity 0 edge\n";
   abort();
 }

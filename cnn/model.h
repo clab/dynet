@@ -2,7 +2,7 @@
 #define CNN_PARAMS_H_
 
 #include <vector>
-#include <unordered_map>
+#include <unordered_set>
 
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/vector.hpp>
@@ -40,7 +40,7 @@ struct Parameters : public ParametersBase {
   Tensor g;
  private:
   Parameters() {}
-  explicit Parameters(const Dim& d) : dim(d), values(Random(d)), g(Zero(d)) {}
+  explicit Parameters(const Dim& d);
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
     ar & dim;
@@ -54,21 +54,19 @@ struct LookupParameters : public ParametersBase {
   void rescale_gradient(real scale) override;
   real g_squared_l2norm() const override;
   size_t size() const override;
-
-  Tensor& operator[](unsigned i) { return values[i]; }
-  const Tensor& operator[](unsigned i) const { return values[i]; }
+  void Initialize(unsigned index, const std::vector<float>& val);
 
   void accumulate_grad(unsigned index, const Tensor& g);
   void clear();
 
   Dim dim;
   std::vector<Tensor> values;
-  std::unordered_map<unsigned, Tensor> g;
+  std::vector<Tensor> grads;
+  // gradients are sparse, so track which components are nonzero
+  std::unordered_set<unsigned> non_zero_grads;
  private:
   LookupParameters() {}
-  LookupParameters(unsigned n, const Dim& d) : dim(d), values(n) {
-    for (auto& v : values) v = Random(d);
-  }
+  LookupParameters(unsigned n, const Dim& d);
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
     ar & dim;
