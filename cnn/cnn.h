@@ -37,7 +37,7 @@ inline void swap(VariableIndex& i1, VariableIndex& i2) {
 }
 
 struct Hypergraph {
-  Hypergraph() : last_node_evaluated() {}
+  Hypergraph();
   ~Hypergraph();
 
   // INPUTS
@@ -76,8 +76,9 @@ struct Hypergraph {
   void PrintGraphviz() const;
 
   // data
-  std::vector<Node*> nodes;  // **stored in topological order**
-  std::vector<Edge*> edges;  // all edges
+  std::vector<Node*> nodes;       // **stored in topological order**
+  std::vector<Edge*> edges;       // all edges
+  std::vector<void*> memory_pool; // free this
   std::vector<ParameterEdgeBase*> parameter_edges; // edges that contain parameters that can be updated (subset of edges)
   VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
 };
@@ -98,14 +99,14 @@ struct Node {
   unsigned in_edge;
   std::vector<unsigned> out_edges;
 
+  // memory
+  Dim dim;  // will be .size() = 0 initially, before memory is allocated
+
   // debugging
   std::string variable_name() const { return "v" + std::to_string(node_id); }
   VariableIndex node_id;  // my id
 
-  // computation
-  Dim dim;
-  // TODO remove these from here, they should be local to the forward/backward
-  // algorithms which lets them manage memory for the full computation graph
+  // computation results (nb. memory is not owned by Tensor)
   Tensor f;               // f(x_1 , ... , x_n)
   Tensor dEdf;            // dE/df
 };
@@ -127,17 +128,26 @@ struct Edge {
   // debugging
   virtual std::string as_string(const std::vector<std::string>& var_names) const = 0;
 
-  // compute dimensions of results given dimensions of inputs
+  // compute dimensions of result for given dimensions of inputs
   // also checks to make sure inputs are compatible with each other
   virtual Dim dim_forward(const std::vector<Dim>& xs) const = 0;
 
+  // in general, this will return an empty size, but if a component needs to store
+  // extra information in the forward pass for use in the backward pass, it can
+  // request the memory here (nb. you could put it on the Edge object, but in general,
+  // edges should not allocate tensor memory since memory is managed centrally for the
+  // entire computation graph). TODO
+  // virtual Dim aux_storage_space() const;
+
   // computation
-  virtual Tensor forward(const std::vector<const Tensor*>& xs) const = 0;
+  virtual void forward(const std::vector<const Tensor*>& xs,
+                       Tensor& fx) const = 0;
   // computes the derivative of E with respect to the ith argument to f, that is, xs[i]
-  virtual Tensor backward(const std::vector<const Tensor*>& xs,
-                          const Tensor& fx,
-                          const Tensor& dEdf,
-                          unsigned i) const = 0;
+  virtual void backward(const std::vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const = 0;
   virtual bool has_parameters() const;
 
   // number of arguments to the function

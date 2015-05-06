@@ -16,11 +16,12 @@ struct ParameterEdge : public ParameterEdgeBase {
   bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  Tensor forward(const std::vector<const Tensor*>& xs) const override;
-  Tensor backward(const std::vector<const Tensor*>& xs,
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
-                  unsigned i) const override;
+                  unsigned i,
+                  Tensor& dEdxi) const override;
   void accumulate_grad(const Tensor& g) override;
   Dim dim;
   Parameters* params;
@@ -31,11 +32,12 @@ struct InputEdge : public Edge {
   explicit InputEdge(const Dim& d, const std::vector<float>* pd) : dim(d), pdata(pd) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  Tensor forward(const std::vector<const Tensor*>& xs) const override;
-  Tensor backward(const std::vector<const Tensor*>& xs,
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
-                  unsigned i) const override;
+                  unsigned i,
+                  Tensor& dEdxi) const override;
   Dim dim;
   const std::vector<float>* pdata;
 };
@@ -46,11 +48,12 @@ struct ScalarInputEdge : public Edge {
   explicit ScalarInputEdge(const real* ps) : data(), pdata(ps) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  Tensor forward(const std::vector<const Tensor*>& xs) const override;
-  Tensor backward(const std::vector<const Tensor*>& xs,
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
-                  unsigned i) const override;
+                  unsigned i,
+                  Tensor& dEdxi) const override;
   const cnn::real data;
   const cnn::real* pdata;
 };
@@ -62,11 +65,12 @@ struct LookupEdge : public ParameterEdgeBase {
   bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  Tensor forward(const std::vector<const Tensor*>& xs) const override;
-  Tensor backward(const std::vector<const Tensor*>& xs,
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
-                  unsigned i) const override;
+                  unsigned i,
+                  Tensor& dEdxi) const override;
   void accumulate_grad(const Tensor& g) override;
   Dim dim;
   unsigned index;

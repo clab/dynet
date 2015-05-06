@@ -10,6 +10,9 @@
 #include <fstream>
 #include <sstream>
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 using namespace std;
 using namespace cnn;
 
@@ -52,18 +55,25 @@ struct RNNLanguageModel {
       // ydist = softmax(r_t)
       // LogSoftmax followed by PickElement can be written in one step
       // using PickNegLogSoftmax
-#if 0
+#if 1
       VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});
       errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
+#if 0
+      VariableIndex i_ydist = hg.add_function<Softmax>({i_r_t});
+      i_ydist = hg.add_function<Log>({i_ydist});
+      errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
 #endif
+#else
       VariableIndex i_err = hg.add_function<PickNegLogSoftmax>({i_r_t}, sent[t+1]);
       errs.push_back(i_err);
+#endif
     }
     VariableIndex i_nerr = hg.add_function<Sum>(errs);
-#if 0
+#if 1
     return hg.add_function<Negate>({i_nerr});
-#endif
+#else
     return i_nerr;
+#endif
   }
 
   // return VariableIndex of total loss
@@ -164,9 +174,9 @@ int main(int argc, char** argv) {
   Model model;
   bool use_momentum = false;
   Trainer* sgd = nullptr;
-  if (use_momentum)
-    sgd = new MomentumSGDTrainer(&model);
-  else
+  //if (use_momentum)
+  //  sgd = new MomentumSGDTrainer(&model);
+  //else
     sgd = new SimpleSGDTrainer(&model);
 
   RNNLanguageModel<LSTMBuilder> lm(model);

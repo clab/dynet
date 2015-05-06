@@ -4,16 +4,11 @@
 #include "config.h"
 #include "cnn/dim.h"
 
-#ifdef WITH_MINERVA_BACKEND
-#  include "backends/minerva/tensor-minerva.h"
-#endif
-
-#ifdef WITH_THPP_BACKEND
-#  include "backends/thpp/tensor.h"
-#endif
-
 #ifdef WITH_EIGEN_BACKEND
-#  include "backends/eigen/tensor-eigen.h"
+#  include "backends/eigen/init.h"
+#  include "backends/eigen/tensor.h"
+#else
+#  error "Don't know any backend but Eigen"
 #endif
 
 #endif

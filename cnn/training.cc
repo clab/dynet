@@ -23,22 +23,21 @@ void Trainer::clip_gradients() {
 void SimpleSGDTrainer::update(real scale) {
   clip_gradients();
   for (auto p : model->parameters_list()) {
-    const Tensor reg = p->values * lambda;
-    p->values -= (eta * scale) * p->g;
-    p->values -= reg;
+    auto reg = (*p->values) * lambda;
+    *p->values -= ((eta * scale) * *p->g + reg);
     p->clear();
   }
   for (auto p : model->lookup_parameters_list()) {
-    for (auto& it : p->g) {
-      const Tensor reg = p->values[it.first] * lambda;
-      p->values[it.first] -= it.second * (eta * scale);
-      p->values[it.first] -= reg;
+    for (auto i : p->non_zero_grads) {
+      auto reg = (*p->values[i]) * lambda;
+      *p->values[i] -= (*p->grads[i] * (eta * scale) + reg);
     }
     p->clear();
   }
   ++updates;
 }
 
+#if 0
 static inline Tensor& get_or_init(Tensor& x, const Tensor& t) {
 #if WITH_THPP_BACKEND
   if (x.ndims() == 0) {
@@ -81,6 +80,7 @@ void MomentumSGDTrainer::update(real scale) {
   }
   ++updates;
 }
+#endif
 
 #if 0
 void RMSPropTrainer::update(real scale) {

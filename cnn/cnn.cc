@@ -1,19 +1,34 @@
 #include "cnn/cnn.h"
 #include "cnn/edges.h"
 #include "cnn/param-edges.h"
+#include "cnn/aligned-mem-pool.h"
 
 using namespace std;
 
 namespace cnn {
 
+AlignedMemoryPool<5> fxs(100000000);
+AlignedMemoryPool<5> dEdfs(100000000);
+
+int n_hgs = 0;
+
 Edge::~Edge() {}
 
 bool Edge::has_parameters() const { return false; }
 
+Hypergraph::Hypergraph() : last_node_evaluated() {
+  ++n_hgs;
+  if (n_hgs > 1) {
+    // TODO handle memory better
+    cerr << "Memory allocator assumes only a single hypergraph at a time.\n";
+    abort();
+  }
+}
+
 Hypergraph::~Hypergraph() {
   for (auto n : nodes) delete n;
   for (auto e : edges) delete e;
-  // don't delete parameter_edges since they're a subset of edges
+  --n_hgs;
 }
 
 VariableIndex Hypergraph::add_input(real s) {
@@ -94,6 +109,16 @@ VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned index) 
 }
 
 const Tensor& Hypergraph::incremental_forward() {
+  // free any old memory if this is a new HG
+  if (last_node_evaluated == 0) {
+    fxs.free();
+    dEdfs.zero_and_free();
+  }
+
+  assert(nodes.size() > 0);
+  if (nodes.size() - last_node_evaluated == 0) {
+    return nodes.back()->f;
+  }
   vector<Dim> xds;
   for (unsigned i = last_node_evaluated; i < nodes.size(); ++i) {
     Node* node = nodes[i];
@@ -105,8 +130,15 @@ const Tensor& Hypergraph::incremental_forward() {
       ++ti;
     }
     node->dim = in_edge.dim_forward(xds);
+    node->f.d = node->dim;
+    node->f.v = static_cast<float*>(fxs.allocate(node->dim.size() * sizeof(float)));
+    node->dEdf.d = node->dim;
+    node->dEdf.v = static_cast<float*>(dEdfs.allocate(node->dim.size() * sizeof(float)));
+    assert(node->f.v);
+    assert(node->dEdf.v);
   }
 
+  //vector<string> dummy(5, "x");
   vector<const Tensor*> xs;
   while (last_node_evaluated < nodes.size()) {
     Node* node = nodes[last_node_evaluated];
@@ -117,9 +149,7 @@ const Tensor& Hypergraph::incremental_forward() {
       xs[ti] = &nodes[tail_node_index]->f;
       ++ti;
     }
-    node->f = in_edge.forward(xs);
-    //node->dEdf = Zero(Dim(node->f.rows(), node->f.cols()));
-    node->dEdf = Zero(node->dim);
+    in_edge.forward(xs, node->f);
     ++last_node_evaluated;
   }
   return nodes.back()->f;
@@ -143,7 +173,7 @@ void Hypergraph::backward() {
   }
 
   // initialize dE/dE = 1
-  nodes.back()->dEdf = cnn::Constant({1}, 1);
+  nodes.back()->dEdf.v[0] = 1;
 
   // loop in reverse topological order
   vector<const Tensor*> xs;
@@ -159,10 +189,14 @@ void Hypergraph::backward() {
     for (unsigned ti = 0; ti < in_edge.tail.size(); ++ti) {
       if (needs_derivative[in_edge.tail[ti]]) {
         Node& tail_node = *nodes[in_edge.tail[ti]];
-        tail_node.dEdf += in_edge.backward(xs, node.f, node.dEdf, ti);
+        in_edge.backward(xs, node.f, node.dEdf, ti, tail_node.dEdf);
       }
     }
   }
+  //vector<string> dummy(5, "x");
+  //int cc = 0; // REMOVE
+  //for (auto n : nodes) { cerr << "NODE " << edges[n->in_edge]->as_string(dummy) << endl << (*n->dEdf) << endl; }
+  //abort();
 
   // accumulate gradients into parameters
   // this is simpler than you might find in some other frameworks
