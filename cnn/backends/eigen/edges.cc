@@ -217,7 +217,7 @@ void Square::backward(const vector<const Tensor*>& xs,
                         unsigned i,
                         Tensor& dEdxi) const {
   auto x = **xs[0];
-  *dEdxi += (*dEdf).cwiseProduct(x);
+  *dEdxi += (*dEdf).cwiseProduct(x) * 2;
 };
 
 void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -552,7 +552,6 @@ void RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
                             unsigned i,
                             Tensor& dEdxi) const {
   assert(i == 0);
-  auto x = **xs[0];
   float z = 0;
   for (auto ind : denom)
     z += (*dEdf)(ind, 0);
