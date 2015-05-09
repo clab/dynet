@@ -8,6 +8,7 @@
 #include <utility>
 #include <boost/serialization/strong_typedef.hpp>
 
+#include "cnn/aligned-mem-pool.h"
 #include "cnn/tensor.h"
 #include "cnn/model.h"
 
@@ -22,8 +23,8 @@
 
 namespace cnn {
 
-// TODO pull fx and dEdf out of the Node object and have them
-// as local tables in forward/backward algorithms
+extern AlignedMemoryPool<5>* fxs;
+extern AlignedMemoryPool<5>* dEdfs;
 
 struct Edge;
 struct ParameterEdgeBase;
