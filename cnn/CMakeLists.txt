@@ -5,6 +5,7 @@ set(cnn_library_SRCS
     dict.cc
     dim.cc
     edges-common.cc
+    gru.cc
     lstm.cc
     param-edges.cc
     rnn.cc
@@ -34,6 +35,7 @@ if(WITH_EIGEN_BACKEND)
        backends/eigen/saxe-init.cc
        backends/eigen/init.cc
        backends/eigen/edges.cc
+       backends/eigen/tensor.cc
        backends/eigen/model.cc)
 endif(WITH_EIGEN_BACKEND)
 

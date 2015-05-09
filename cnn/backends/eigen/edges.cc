@@ -540,7 +540,7 @@ void RestrictedLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) 
   auto x = **xs[0];
   assert(x.cols() == 1);
   const real logz = logsumexp(x, denom);
-  Constant(fx, -numeric_limits<real>::infinity());
+  TensorTools::Constant(fx, -numeric_limits<real>::infinity());
   for (auto i : denom)
     (*fx)(i,0) = x(i,0) - logz;
   if (denom.size() == 1) (*fx)(denom.front(), 0) = 0;

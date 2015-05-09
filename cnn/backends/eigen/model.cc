@@ -16,9 +16,9 @@ ParametersBase::~ParametersBase() {}
 Parameters::Parameters(const Dim& d) : dim(d) {
   values.d = g.d = d;
   values.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
-  Randomize(values);
+  TensorTools::Randomize(values);
   g.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
-  Zero(g);
+  TensorTools::Zero(g);
 }
 
 size_t Parameters::size() const { return dim.size(); }
@@ -32,7 +32,7 @@ real Parameters::g_squared_l2norm() const {
 void Parameters::accumulate_grad(const Tensor& d) { *g += *d; }
 
 void Parameters::clear() {
-  (*g).setZero();
+  TensorTools::Zero(g);
 }
 
 LookupParameters::LookupParameters(unsigned n, const Dim& d) : dim(d), values(n), grads(n) {
@@ -40,12 +40,12 @@ LookupParameters::LookupParameters(unsigned n, const Dim& d) : dim(d), values(n)
     auto& v = values[i];
     v.d = d;
     v.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
-    Randomize(v);
+    TensorTools::Randomize(v);
 
     auto& g = grads[i];
     g.d = d;
     g.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
-    Zero(g);
+    TensorTools::Zero(g);
   }
 }
 

@@ -2,6 +2,7 @@
 #define CNN_DIM_H
 
 #include <initializer_list>
+#include <type_traits>
 #include <iosfwd>
 #include <cstring>
 
@@ -28,7 +29,7 @@ struct Dim {
   inline int cols() const { return nd > 1 ? d[1] : 1; }
   inline int operator[](unsigned i) const { return i < nd ? d[i] : 1; }
   inline int size(unsigned i) const { return (*this)[i]; }
-  inline Dim transpose() const { return Dim({d[1],d[0]}); }
+  inline Dim transpose() const { return Dim(d[1],d[0]); }
   unsigned short d[CNN_MAX_TENSOR_DIM];
   unsigned short nd;
  private:
@@ -38,6 +39,8 @@ struct Dim {
     ar & d;
   }
 };
+
+//static_assert(std::is_trivially_copyable<Dim>::value, "Dim must be trivially copyable");
 
 inline bool operator==(const Dim& a, const Dim& b) {
   if (a.nd != b.nd) return false;

@@ -2,12 +2,16 @@
 #define CNN_EIGEN_TENSOR_H
 
 #include <initializer_list>
-#include <random>
 #include <vector>
 
+#include "cnn/dim.h"
 #include "cnn/backends/eigen/random.h"
-#include <boost/serialization/array.hpp>
 
+#if HAVE_CUDA
+#include <cuda.h>
+#include <cuda_runtime.h>
+#endif
+#include <boost/serialization/array.hpp>
 // CNN manages its own memory. DO NOT remove the following line
 #define EIGEN_NO_MALLOC
 #include <Eigen/Eigen>
@@ -46,45 +50,18 @@ struct Tensor {
   BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
-inline real as_scalar(const Tensor& t) {
-  assert(t.d.size() == 1);
-  return t.v[0];
-}
+real as_scalar(const Tensor& t);
+std::vector<real> as_vector(const Tensor& v);
 
-inline std::vector<real> as_vector(const Tensor& v) {
-  std::vector<real> res(v.d.size());
-  std::memcpy(&res[0], v.v, sizeof(real) * res.size());
-  return res;
-}
-
-inline void Constant(Tensor& d, float c) {
-  std::memset(d.v, c, d.d.size() * sizeof(float));
-}
-inline void Zero(Tensor& d) {
-  Constant(d, 0);
-}
-inline void Randomize(Tensor& val, real scale) {
-  std::uniform_real_distribution<real> distribution(-scale,scale);
-  auto b = [&] (real) {return distribution(*rndeng);};
-  *val = Eigen::MatrixXf::NullaryExpr(val.d.rows(), val.d.cols(), b);
-}
-inline void Randomize(Tensor& d) {
-  Randomize(d, sqrt(6) / sqrt(d.d[0] + d.d[1]));
-}
-inline void RandomBernoulli(Tensor& val, real p) {
-  std::bernoulli_distribution distribution(p);
-  auto b = [&] (real) {return distribution(*rndeng);};
-  *val = Eigen::MatrixXf::NullaryExpr(val.d.rows(), val.d.cols(), b);
-}
-inline void RandomizeNormal(real mean, real stddev, Tensor& val) {
-  std::normal_distribution<real> distribution(mean, stddev);
-  auto b = [&] (real) {return distribution(*rndeng);};
-  *val = Eigen::MatrixXf::NullaryExpr(val.d.rows(), val.d.cols(), b);
-}
-inline real rand01() {
-  std::uniform_real_distribution<real> distribution(0, 1);
-  return distribution(*rndeng);
-}
+struct TensorTools {
+  static void Constant(Tensor& d, float c);
+  static void Zero(Tensor& d);
+  static void Randomize(Tensor& val, real scale);
+  static void Randomize(Tensor& d);
+  static void RandomBernoulli(Tensor& val, real p);
+  static void RandomizeNormal(real mean, real stddev, Tensor& val);
+};
+real rand01();
 
 } // namespace cnn
 

@@ -7,9 +7,6 @@ using namespace std;
 
 namespace cnn {
 
-AlignedMemoryPool<5> fxs(100000000);
-AlignedMemoryPool<5> dEdfs(100000000);
-
 int n_hgs = 0;
 
 Edge::~Edge() {}
@@ -111,8 +108,8 @@ VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned index) 
 const Tensor& Hypergraph::incremental_forward() {
   // free any old memory if this is a new HG
   if (last_node_evaluated == 0) {
-    fxs.free();
-    dEdfs.zero_and_free();
+    fxs->free();
+    dEdfs->zero_and_free();
   }
 
   assert(nodes.size() > 0);
@@ -131,9 +128,9 @@ const Tensor& Hypergraph::incremental_forward() {
     }
     node->dim = in_edge.dim_forward(xds);
     node->f.d = node->dim;
-    node->f.v = static_cast<float*>(fxs.allocate(node->dim.size() * sizeof(float)));
+    node->f.v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
     node->dEdf.d = node->dim;
-    node->dEdf.v = static_cast<float*>(dEdfs.allocate(node->dim.size() * sizeof(float)));
+    node->dEdf.v = static_cast<float*>(dEdfs->allocate(node->dim.size() * sizeof(float)));
     assert(node->f.v);
     assert(node->dEdf.v);
   }
