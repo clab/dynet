@@ -18,7 +18,7 @@ inline ostream& operator<<(ostream& os, const vector<Dim>& ds) {
 inline bool LooksLikeVector(const Dim& d) {
   if (d.ndims() == 1) return true;
   if (d.ndims() > 1) {
-    for (unsigned i = 1; i < d.ndims(); ++i)
+    for (int i = 1; i < d.ndims(); ++i)
       if (d[i] != 1) return false;
   }
   return true;
@@ -203,8 +203,8 @@ string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
 
 Dim ConcatenateColumns::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() > 0);
-  unsigned rows = xs[0][0];
-  unsigned new_cols = 0;
+  int rows = xs[0][0];
+  int new_cols = 0;
   for (auto& d : xs) {
     if (d[0] != rows) {
       cerr << "Bad input dimensions in ConcatenateColumns: " << xs << endl;
@@ -339,7 +339,7 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
     cerr << "Bad input dimensions in PickElement: " << xs << endl;
     abort();
   }
-  assert(xs[0][0] <= end);
+  assert(xs[0][0] <= (int)end);
   return Dim({end - start});
 }
 
