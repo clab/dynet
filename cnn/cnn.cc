@@ -7,25 +7,15 @@ using namespace std;
 
 namespace cnn {
 
-int n_hgs = 0;
-
 Edge::~Edge() {}
 
 bool Edge::has_parameters() const { return false; }
 
-Hypergraph::Hypergraph() : last_node_evaluated() {
-  ++n_hgs;
-  if (n_hgs > 1) {
-    // TODO handle memory better
-    cerr << "Memory allocator assumes only a single hypergraph at a time.\n";
-    abort();
-  }
-}
+Hypergraph::Hypergraph() : running(false) { }
 
 Hypergraph::~Hypergraph() {
   for (auto n : nodes) delete n;
   for (auto e : edges) delete e;
-  --n_hgs;
 }
 
 VariableIndex Hypergraph::add_input(real s) {
@@ -105,25 +95,25 @@ VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned index) 
   return new_node_index;
 }
 
-const Tensor& Hypergraph::incremental_forward() {
+const Tensor& Run::incremental_forward() {
   // free any old memory if this is a new HG
   if (last_node_evaluated == 0) {
     fxs->free();
     dEdfs->zero_and_free();
   }
 
-  assert(nodes.size() > 0);
-  if (nodes.size() - last_node_evaluated == 0) {
-    return nodes.back()->f;
+  assert(hg->nodes.size() > 0);
+  if (hg->nodes.size() - last_node_evaluated == 0) {
+    return hg->nodes.back()->f;
   }
   vector<Dim> xds;
-  for (unsigned i = last_node_evaluated; i < nodes.size(); ++i) {
-    Node* node = nodes[i];
-    const Edge& in_edge = *edges[node->in_edge];
+  for (unsigned i = last_node_evaluated; i < hg->nodes.size(); ++i) {
+    Node* node = hg->nodes[i];
+    const Edge& in_edge = *hg->edges[node->in_edge];
     xds.resize(in_edge.arity());
     unsigned ti = 0;
     for (VariableIndex tail_node_index : in_edge.tail) {
-      xds[ti] = nodes[tail_node_index]->dim;
+      xds[ti] = hg->nodes[tail_node_index]->dim;
       ++ti;
     }
     node->dim = in_edge.dim_forward(xds);
@@ -137,32 +127,32 @@ const Tensor& Hypergraph::incremental_forward() {
 
   //vector<string> dummy(5, "x");
   vector<const Tensor*> xs;
-  while (last_node_evaluated < nodes.size()) {
-    Node* node = nodes[last_node_evaluated];
-    const Edge& in_edge = *edges[node->in_edge];
+  while (last_node_evaluated < hg->nodes.size()) {
+    Node* node = hg->nodes[last_node_evaluated];
+    const Edge& in_edge = *hg->edges[node->in_edge];
     xs.resize(in_edge.arity());
     unsigned ti = 0;
     for (VariableIndex tail_node_index : in_edge.tail) {
-      xs[ti] = &nodes[tail_node_index]->f;
+      xs[ti] = &hg->nodes[tail_node_index]->f;
       ++ti;
     }
     in_edge.forward(xs, node->f);
     ++last_node_evaluated;
   }
-  return nodes.back()->f;
+  return hg->nodes.back()->f;
 }
 
-const Tensor& Hypergraph::forward() {
+const Tensor& Run::forward() {
   last_node_evaluated = 0;
   return incremental_forward();
 }
 
-void Hypergraph::backward() {
+void Run::backward() {
   // here we find constants to avoid doing extra work
-  vector<bool> needs_derivative(nodes.size(), false);
-  for (unsigned ni = 0; ni < nodes.size(); ++ni) {
-    const Node& node = *nodes[ni];
-    const Edge& in_edge = *edges[node.in_edge];
+  vector<bool> needs_derivative(hg->nodes.size(), false);
+  for (unsigned ni = 0; ni < hg->nodes.size(); ++ni) {
+    const Node& node = *hg->nodes[ni];
+    const Edge& in_edge = *hg->edges[node.in_edge];
     bool is_variable = in_edge.has_parameters();
     for (auto tail_node : in_edge.tail)
       is_variable |= needs_derivative[tail_node];
@@ -170,22 +160,22 @@ void Hypergraph::backward() {
   }
 
   // initialize dE/dE = 1
-  nodes.back()->dEdf.v[0] = 1;
+  hg->nodes.back()->dEdf.v[0] = 1;
 
   // loop in reverse topological order
   vector<const Tensor*> xs;
-  for (int i = nodes.size() - 1; i >= 0; --i) {
-    const Node& node = *nodes[i];
-    const Edge& in_edge = *edges[node.in_edge];
+  for (int i = hg->nodes.size() - 1; i >= 0; --i) {
+    const Node& node = *hg->nodes[i];
+    const Edge& in_edge = *hg->edges[node.in_edge];
     unsigned ti = 0;
     xs.resize(in_edge.arity());
     for (unsigned tail_node_index : in_edge.tail) {
-      xs[ti] = &nodes[tail_node_index]->f;
+      xs[ti] = &hg->nodes[tail_node_index]->f;
       ++ti;
     }
     for (unsigned ti = 0; ti < in_edge.tail.size(); ++ti) {
       if (needs_derivative[in_edge.tail[ti]]) {
-        Node& tail_node = *nodes[in_edge.tail[ti]];
+        Node& tail_node = *hg->nodes[in_edge.tail[ti]];
         in_edge.backward(xs, node.f, node.dEdf, ti, tail_node.dEdf);
       }
     }
@@ -199,8 +189,8 @@ void Hypergraph::backward() {
   // this is simpler than you might find in some other frameworks
   // since we assume parameters come into the graph as a "function"
   // that returns the current value of the parameters
-  for (auto pedge : parameter_edges)
-    pedge->accumulate_grad(nodes[pedge->head_node]->dEdf);
+  for (auto pedge : hg->parameter_edges)
+    pedge->accumulate_grad(hg->nodes[pedge->head_node]->dEdf);
 }
 
 void Hypergraph::PrintGraphviz() const {

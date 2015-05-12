@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
   //  boost::archive::text_iarchive ia(in);
   //  ia >> m;
   //}
+  Run run(&hg, fxs, dEdfs);
 
   // train the parameters
   for (unsigned iter = 0; iter < 2000; ++iter) {
@@ -71,8 +72,8 @@ int main(int argc, char** argv) {
       x_values[0] = x1 ? 1 : 0;
       x_values[1] = x2 ? 1 : 0;
       y_value = (x1 != x2) ? 1 : 0;
-      loss += as_scalar(hg.forward());
-      hg.backward();
+      loss += as_scalar(run.forward());
+      run.backward();
       sgd.update(1.0);
     }
     sgd.update_epoch();

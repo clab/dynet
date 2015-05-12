@@ -23,6 +23,7 @@
 
 namespace cnn {
 
+typedef AlignedMemoryPool<5> MemoryPool; // ?
 extern AlignedMemoryPool<5>* fxs;
 extern AlignedMemoryPool<5>* dEdfs;
 
@@ -40,6 +41,8 @@ inline void swap(VariableIndex& i1, VariableIndex& i2) {
 struct Hypergraph {
   Hypergraph();
   ~Hypergraph();
+
+  bool running; // prevents more than one Run at a time
 
   // INPUTS
   // the computational network will pull inputs in from the user's data
@@ -68,11 +71,6 @@ struct Hypergraph {
                                     Args&&... side_information);
   template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
-  // perform computations
-  const Tensor& forward();
-  const Tensor& incremental_forward();  // if you want to add nodes and evaluate just the new parts
-  void backward();
-
   // debugging
   void PrintGraphviz() const;
 
@@ -81,7 +79,6 @@ struct Hypergraph {
   std::vector<Edge*> edges;       // all edges
   std::vector<void*> memory_pool; // free this
   std::vector<ParameterEdgeBase*> parameter_edges; // edges that contain parameters that can be updated (subset of edges)
-  VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
 };
 
 // represents an SSA variable
@@ -211,6 +208,32 @@ inline VariableIndex Hypergraph::add_function(const T& arguments) {
   }
   return new_node_index;
 }
+
+struct Run {
+  Run(Hypergraph *hg, MemoryPool *fxs, MemoryPool *dEdfs) 
+  : hg(hg), 
+    fxs(fxs), 
+    dEdfs(dEdfs),
+    last_node_evaluated()
+  { 
+    if (hg->running) {
+      std::cerr << "Only one run at a time can be active on a hypergraph.\n";
+      abort();
+    }
+    hg->running = true; 
+  };
+  ~Run() { hg->running = false; }
+
+  Hypergraph *hg;
+  MemoryPool *fxs, *dEdfs;
+
+  VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
+
+  // perform computations
+  const Tensor& forward();
+  const Tensor& incremental_forward();  // if you want to add nodes and evaluate just the new parts
+  void backward();
+};
 
 } // namespace cnn
 
