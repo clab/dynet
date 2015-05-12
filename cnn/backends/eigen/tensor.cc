@@ -23,6 +23,14 @@ std::vector<real> as_vector(const Tensor& v) {
   return res;
 }
 
+float TensorTools::AccessElement(const Tensor& v, const Dim& index) {
+#if HAVE_CUDA
+  abort();
+#else
+  return (*v)(index[0], index[1]);
+#endif
+}
+
 void TensorTools::Constant(Tensor& d, float c) {
   if (!c) {
     std::memset(d.v, c, d.d.size() * sizeof(float));
