@@ -42,8 +42,6 @@ struct Hypergraph {
   Hypergraph();
   ~Hypergraph();
 
-  bool running; // prevents more than one Run at a time
-
   // INPUTS
   // the computational network will pull inputs in from the user's data
   // structures and make them available to the computation
@@ -77,7 +75,6 @@ struct Hypergraph {
   // data
   std::vector<Node*> nodes;       // **stored in topological order**
   std::vector<Edge*> edges;       // all edges
-  std::vector<void*> memory_pool; // free this
   std::vector<ParameterEdgeBase*> parameter_edges; // edges that contain parameters that can be updated (subset of edges)
 };
 
@@ -97,23 +94,13 @@ struct Node {
   unsigned in_edge;
   std::vector<unsigned> out_edges;
 
-  // memory
-  Dim dim;  // will be .size() = 0 initially, before memory is allocated
-
   // debugging
   std::string variable_name() const { return "v" + std::to_string(node_id); }
   VariableIndex node_id;  // my id
-
-  // computation results (nb. memory is not owned by Tensor)
-  Tensor f;               // f(x_1 , ... , x_n)
-  Tensor dEdf;            // dE/df
 };
 
 inline void swap(Node& n1, Node& n2) {
   using std::swap;
-  swap(n1.dim, n2.dim);
-  swap(n1.f, n2.f);
-  swap(n1.dEdf, n2.dEdf);
   swap(n1.in_edge, n2.in_edge);
   swap(n1.out_edges, n2.out_edges);
   swap(n1.node_id, n2.node_id);
@@ -209,31 +196,46 @@ inline VariableIndex Hypergraph::add_function(const T& arguments) {
   return new_node_index;
 }
 
+struct RunNode;
+
 struct Run {
   Run(Hypergraph *hg, MemoryPool *fxs, MemoryPool *dEdfs) 
   : hg(hg), 
     fxs(fxs), 
     dEdfs(dEdfs),
-    last_node_evaluated()
-  { 
-    if (hg->running) {
-      std::cerr << "Only one run at a time can be active on a hypergraph.\n";
-      abort();
-    }
-    hg->running = true; 
-  };
-  ~Run() { hg->running = false; }
+    last_node_evaluated(),
+    runnodes()
+  { };
 
   Hypergraph *hg;
   MemoryPool *fxs, *dEdfs;
 
   VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
 
+  std::vector<RunNode> runnodes; // parallel to Hypergraph::nodes
+
   // perform computations
   const Tensor& forward();
   const Tensor& incremental_forward();  // if you want to add nodes and evaluate just the new parts
   void backward();
 };
+
+// All the information about a node that pertains to a particular run
+struct RunNode {
+  // memory
+  Dim dim;  // will be .size() = 0 initially, before memory is allocated
+
+  // computation results (nb. memory is not owned by Tensor)
+  Tensor f;               // f(x_1 , ... , x_n)
+  Tensor dEdf;            // dE/df
+};
+
+inline void swap(RunNode& n1, RunNode& n2) {
+  using std::swap;
+  swap(n1.dim, n2.dim);
+  swap(n1.f, n2.f);
+  swap(n1.dEdf, n2.dEdf);
+}
 
 } // namespace cnn
 
