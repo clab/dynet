@@ -61,6 +61,8 @@ int main(int argc, char** argv) {
   hg.add_function<Negate>({i_nerr});
   hg.PrintGraphviz();
 
+  Run run(&hg, fxs, dEdfs);
+
   // load some training data
   if (argc != 2) {
     cerr << "Usage: " << argv[0] << " ngrams.txt\n";
@@ -90,8 +92,8 @@ int main(int argc, char** argv) {
       in_c2 = ci[1];
       in_c3 = ci[2];
       ytrue  = ci[3];
-      loss += as_scalar(hg.forward());
-      hg.backward();
+      loss += as_scalar(run.forward());
+      run.backward();
       ++n;
       sgd.update(1.0);
       if (n == 2500) break;

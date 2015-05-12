@@ -38,7 +38,7 @@ struct RNNLanguageModel {
   }
 
   // return VariableIndex of total loss
-  VariableIndex BuildLMGraph(const vector<int>& sent, Hypergraph& hg) {
+  VariableIndex BuildLMGraph(const vector<int>& sent, Hypergraph& hg, Run& run) {
     const unsigned slen = sent.size() - 1;
     builder.new_graph(&hg);  // reset RNN builder for new graph
     builder.start_new_sequence(&hg);
@@ -80,6 +80,7 @@ struct RNNLanguageModel {
   void RandomSample(int max_len = 150) {
     cerr << endl;
     Hypergraph hg;
+    Run run(&hg, fxs, dEdfs);
     builder.new_graph(&hg);  // reset RNN builder for new graph
     builder.start_new_sequence(&hg);
     VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
@@ -99,7 +100,7 @@ struct RNNLanguageModel {
       hg.add_function<Softmax>({i_r_t});
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
-        auto dist = as_vector(hg.incremental_forward());
+        auto dist = as_vector(run.incremental_forward());
         double p = rand01();
         for (; w < dist.size(); ++w) {
           p -= dist[w];
@@ -210,12 +211,13 @@ int main(int argc, char** argv) {
 
       // build graph for this instance
       Hypergraph hg;
+      Run run(&hg, fxs, dEdfs);
       auto& sent = training[order[si]];
       chars += sent.size() - 1;
       ++si;
-      lm.BuildLMGraph(sent, hg);
-      loss += as_scalar(hg.forward());
-      hg.backward();
+      lm.BuildLMGraph(sent, hg, run);
+      loss += as_scalar(run.forward());
+      run.backward();
       sgd->update();
       ++lines;
     }
@@ -230,8 +232,9 @@ int main(int argc, char** argv) {
       int dchars = 0;
       for (auto& sent : dev) {
         Hypergraph hg;
-        lm.BuildLMGraph(sent, hg);
-        dloss += as_scalar(hg.forward());
+	Run run(&hg, fxs, dEdfs);
+        lm.BuildLMGraph(sent, hg, run);
+        dloss += as_scalar(run.forward());
         dchars += sent.size() - 1;
       }
       if (dloss < best) {

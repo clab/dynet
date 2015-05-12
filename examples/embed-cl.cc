@@ -174,11 +174,12 @@ int main(int argc, char** argv) {
       }
       VariableIndex i_v = hg.add_function<Rectify>({hg.add_function<ConcatenateColumns>(noise)});
       hg.add_function<SumColumns>({i_v});
-      auto iloss = as_scalar(hg.forward());
+      Run run(&hg, fxs, dEdfs);
+      auto iloss = as_scalar(run.forward());
       assert(iloss >= 0);
       if (iloss > 0) {
         loss += iloss;
-        hg.backward();
+        run.backward();
         sgd->update();
       }
       ++lines;

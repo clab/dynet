@@ -54,7 +54,7 @@ struct EncoderDecoder {
   }
 
   // build graph and return VariableIndex of total loss
-  VariableIndex BuildGraph(const vector<int>& insent, const vector<int>& osent, Hypergraph& hg) {
+  VariableIndex BuildGraph(const vector<int>& insent, const vector<int>& osent, Hypergraph& hg, Run& run) {
     // forward encoder
     fwd_enc_builder.new_graph(&hg);
     fwd_enc_builder.start_new_sequence(&hg);
@@ -80,7 +80,7 @@ struct EncoderDecoder {
     VariableIndex i_ie2h = hg.add_parameter(p_ie2h);
     VariableIndex i_bie = hg.add_parameter(p_bie);
     VariableIndex i_t = hg.add_function<Multilinear>({i_bie, i_ie2h, i_combined});
-    hg.incremental_forward();
+    run.incremental_forward();
     VariableIndex i_h = hg.add_function<Rectify>({i_t});
     VariableIndex i_h2oe = hg.add_parameter(p_h2oe);
     VariableIndex i_boe = hg.add_parameter(p_boe);
@@ -208,12 +208,13 @@ int main(int argc, char** argv) {
 
       // build graph for this instance
       Hypergraph hg;
+      Run run(&hg, fxs, dEdfs);
       auto& sent = training[order[si]];
       chars += sent.size() - 1;
       ++si;
-      lm.BuildGraph(sent, sent, hg);
-      loss += as_scalar(hg.forward());
-      hg.backward();
+      lm.BuildGraph(sent, sent, hg, run);
+      loss += as_scalar(run.forward());
+      run.backward();
       sgd->update();
       ++lines;
     }
@@ -231,8 +232,9 @@ int main(int argc, char** argv) {
       int dchars = 0;
       for (auto& sent : dev) {
         Hypergraph hg;
-        lm.BuildGraph(sent, sent, hg);
-        dloss += as_scalar(hg.forward());
+	Run run(&hg, fxs, dEdfs);
+        lm.BuildGraph(sent, sent, hg, run);
+        dloss += as_scalar(run.forward());
         dchars += sent.size() - 1;
       }
       if (dloss < best) {
