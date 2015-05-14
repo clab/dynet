@@ -1,4 +1,4 @@
-#include "cnn/edges.h"
+#include "cnn/nodes.h"
 
 #include <limits>
 #include <cmath>
@@ -374,7 +374,7 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-string Multilinear::as_string(const vector<string>& arg_names) const {
+string AffineTransform::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0];
   for (unsigned i = 1; i < arg_names.size(); i += 2)
@@ -382,16 +382,16 @@ string Multilinear::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Dim Multilinear::dim_forward(const vector<Dim>& xs) const {
+Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
   if ((xs.size() - 1) % 2 != 0) {
-    cerr << "Bad number of inputs for Multilinear: " << xs << endl;
+    cerr << "Bad number of inputs for AffineTransform: " << xs << endl;
     abort();
   }
   for (unsigned i = 1; i < xs.size(); i += 2) {
     if (xs[i].cols() != xs[i+1].rows() ||
         xs[0].rows() != xs[i].rows() ||
         xs[0].cols() != xs[i+1].cols()) {
-      cerr << "Bad dimensions for Multilinear: " << xs << endl;
+      cerr << "Bad dimensions for AffineTransform: " << xs << endl;
       abort();
     }
   }

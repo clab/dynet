@@ -1,7 +1,8 @@
-#include "cnn/edges.h"
+#include "cnn/nodes.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
 
+#include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
 #include <iostream>
@@ -25,37 +26,37 @@ int main(int argc, char** argv) {
   Parameters& p_V = *m.add_parameters({1, HIDDEN_SIZE});
 
   // build the graph
-  Hypergraph hg;
+  ComputationGraph cg;
 
   // get symbolic variables corresponding to parameters
-  VariableIndex i_b = hg.add_parameter(&p_b);
-  VariableIndex i_a = hg.add_parameter(&p_a);
-  VariableIndex i_W = hg.add_parameter(&p_W);
-  VariableIndex i_V = hg.add_parameter(&p_V);
+  VariableIndex i_b = cg.add_parameter(&p_b);
+  VariableIndex i_a = cg.add_parameter(&p_a);
+  VariableIndex i_W = cg.add_parameter(&p_W);
+  VariableIndex i_V = cg.add_parameter(&p_V);
 
   vector<float> x_values(2);  // set x_values to change the inputs to the network
-  VariableIndex i_x = hg.add_input({2}, &x_values);
+  VariableIndex i_x = cg.add_input({2}, &x_values);
   cnn::real y_value;  // set y_value to change the target output
 
-  // two options: MatrixMultiply and Sum, or Multilinear
-  // these are identical, but Multilinear may be slightly more efficient
+  // two options: MatrixMultiply and Sum, or AffineTransform
+  // these are identical, but AffineTransform may be slightly more efficient
 #if 0
-  VariableIndex i_f = hg.add_function<MatrixMultiply>({i_W, i_x});
-  VariableIndex i_g = hg.add_function<Sum>({i_f, i_b});
+  VariableIndex i_f = cg.add_function<MatrixMultiply>({i_W, i_x});
+  VariableIndex i_g = cg.add_function<Sum>({i_f, i_b});
 #else
-  VariableIndex i_g = hg.add_function<Multilinear>({i_b, i_W, i_x});
+  VariableIndex i_g = cg.add_function<AffineTransform>({i_b, i_W, i_x});
 #endif
-  VariableIndex i_h = hg.add_function<Tanh>({i_g});
+  VariableIndex i_h = cg.add_function<Tanh>({i_g});
 
 #if 0
-  VariableIndex i_p = hg.add_function<MatrixMultiply>({i_V, i_h});
-  VariableIndex i_uy_pred = hg.add_function<Sum>({i_p, i_a});
+  VariableIndex i_p = cg.add_function<MatrixMultiply>({i_V, i_h});
+  VariableIndex i_uy_pred = cg.add_function<Sum>({i_p, i_a});
 #else
-  VariableIndex i_uy_pred = hg.add_function<Multilinear>({i_a, i_V, i_h});
+  VariableIndex i_uy_pred = cg.add_function<AffineTransform>({i_a, i_V, i_h});
 #endif
-  VariableIndex i_y_pred = hg.add_function<LogisticSigmoid>({i_uy_pred});
-  hg.add_function<BinaryLogLoss>({i_y_pred}, &y_value);
-  hg.PrintGraphviz();
+  VariableIndex i_y_pred = cg.add_function<LogisticSigmoid>({i_uy_pred});
+  cg.add_function<BinaryLogLoss>({i_y_pred}, &y_value);
+  cg.PrintGraphviz();
   //if (argc == 2) {
   //  ifstream in(argv[1]);
   //  boost::archive::text_iarchive ia(in);
@@ -71,8 +72,8 @@ int main(int argc, char** argv) {
       x_values[0] = x1 ? 1 : 0;
       x_values[1] = x2 ? 1 : 0;
       y_value = (x1 != x2) ? 1 : 0;
-      loss += as_scalar(hg.forward());
-      hg.backward();
+      loss += as_scalar(cg.forward());
+      cg.backward();
       sgd.update(1.0);
     }
     sgd.update_epoch();

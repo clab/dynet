@@ -1,6 +1,6 @@
 #include "cnn/cnn.h"
-#include "cnn/edges.h"
-#include "cnn/param-edges.h"
+#include "cnn/nodes.h"
+#include "cnn/param-nodes.h"
 #include "cnn/aligned-mem-pool.h"
 
 using namespace std;
@@ -9,11 +9,12 @@ namespace cnn {
 
 int n_hgs = 0;
 
-Edge::~Edge() {}
+Node::~Node() {}
+bool Node::has_parameters() const {
+  return false;
+}
 
-bool Edge::has_parameters() const { return false; }
-
-Hypergraph::Hypergraph() : last_node_evaluated() {
+ComputationGraph::ComputationGraph() : last_node_evaluated() {
   ++n_hgs;
   if (n_hgs > 1) {
     // TODO handle memory better
@@ -22,90 +23,70 @@ Hypergraph::Hypergraph() : last_node_evaluated() {
   }
 }
 
-Hypergraph::~Hypergraph() {
+ComputationGraph::~ComputationGraph() {
   for (auto n : nodes) delete n;
-  for (auto e : edges) delete e;
   --n_hgs;
 }
 
-VariableIndex Hypergraph::add_input(real s) {
+VariableIndex ComputationGraph::add_input(real s) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), new_node_index));
-  ScalarInputEdge* e = new ScalarInputEdge(s);
-  edges.push_back(e);
-  edges.back()->head_node = new_node_index;
+  nodes.push_back(new ScalarInputNode(s));
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_input(const real* ps) {
+VariableIndex ComputationGraph::add_input(const real* ps) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), new_node_index));
-  ScalarInputEdge* e = new ScalarInputEdge(ps);
-  edges.push_back(e);
-  edges.back()->head_node = new_node_index;
+  nodes.push_back(new ScalarInputNode(ps));
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_input(const Dim& d, const vector<float>* pm) {
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), new_node_index));
-  InputEdge* e = new InputEdge(d, pm);
-  edges.push_back(e);
-  edges.back()->head_node = new_node_index;
+  nodes.push_back(new InputNode(d, pm));
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_parameter(Parameters* p) {
+VariableIndex ComputationGraph::add_parameter(Parameters* p) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), new_node_index));
-  ParameterEdge* new_edge = new ParameterEdge(p);
-  edges.push_back(new_edge);
-  parameter_edges.push_back(new_edge);
-  new_edge->head_node = new_node_index;
+  ParameterNode* new_node = new ParameterNode(p);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node);
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_lookup(LookupParameters* p, const unsigned* pindex) {
+VariableIndex ComputationGraph::add_lookup(LookupParameters* p, const unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), new_node_index));
-  LookupEdge* new_edge = new LookupEdge(p, pindex);
-  edges.push_back(new_edge);
-  parameter_edges.push_back(new_edge);
-  new_edge->head_node = new_node_index;
+  LookupNode* new_node = new LookupNode(p, pindex);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node);
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_lookup(LookupParameters* p, unsigned index) {
+VariableIndex ComputationGraph::add_lookup(LookupParameters* p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), new_node_index));
-  LookupEdge* new_edge = new LookupEdge(p, index);
-  edges.push_back(new_edge);
-  parameter_edges.push_back(new_edge);
-  new_edge->head_node = new_node_index;
+  LookupNode* new_node = new LookupNode(p, index);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node);
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned* pindex) {
+VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), new_node_index));
-  LookupEdge* new_edge = new LookupEdge(p, pindex);
-  new_edge->has_optimizable_parameters = false;
-  edges.push_back(new_edge);
-  new_edge->head_node = new_node_index;
+  LookupNode* new_node = new LookupNode(p, pindex);
+  new_node->has_optimizable_parameters = false;
+  nodes.push_back(new_node);
   return new_node_index;
 }
 
-VariableIndex Hypergraph::add_const_lookup(LookupParameters* p, unsigned index) {
+VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Node(edges.size(), new_node_index));
-  LookupEdge* new_edge = new LookupEdge(p, index);
-  new_edge->has_optimizable_parameters = false;
-  edges.push_back(new_edge);
-  new_edge->head_node = new_node_index;
+  LookupNode* new_node = new LookupNode(p, index);
+  new_node->has_optimizable_parameters = false;
+  nodes.push_back(new_node);
   return new_node_index;
 }
 
-const Tensor& Hypergraph::incremental_forward() {
+const Tensor& ComputationGraph::incremental_forward() {
   // free any old memory if this is a new HG
   if (last_node_evaluated == 0) {
     fxs->free();
@@ -119,14 +100,14 @@ const Tensor& Hypergraph::incremental_forward() {
   vector<Dim> xds;
   for (unsigned i = last_node_evaluated; i < nodes.size(); ++i) {
     Node* node = nodes[i];
-    const Edge& in_edge = *edges[node->in_edge];
-    xds.resize(in_edge.arity());
-    unsigned ti = 0;
-    for (VariableIndex tail_node_index : in_edge.tail) {
-      xds[ti] = nodes[tail_node_index]->dim;
-      ++ti;
+    xds.resize(node->arity());
+    unsigned ai = 0;
+    for (VariableIndex arg : node->args) {
+      xds[ai] = nodes[arg]->dim;
+      ++ai;
     }
-    node->dim = in_edge.dim_forward(xds);
+    // TODO remove dim_forward and replace it with the Node constructors
+    node->dim = node->dim_forward(xds);
     node->f.d = node->dim;
     node->f.v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
     node->dEdf.d = node->dim;
@@ -139,33 +120,38 @@ const Tensor& Hypergraph::incremental_forward() {
   vector<const Tensor*> xs;
   while (last_node_evaluated < nodes.size()) {
     Node* node = nodes[last_node_evaluated];
-    const Edge& in_edge = *edges[node->in_edge];
-    xs.resize(in_edge.arity());
-    unsigned ti = 0;
-    for (VariableIndex tail_node_index : in_edge.tail) {
-      xs[ti] = &nodes[tail_node_index]->f;
-      ++ti;
+    xs.resize(node->arity());
+    unsigned ai = 0;
+    for (VariableIndex arg : node->args) {
+      xs[ai] = &nodes[arg]->f;
+      ++ai;
     }
-    in_edge.forward(xs, node->f);
+
+    // we pass in node->f rather than expecting forward to know where it lives
+    // because we may end up batching up operations in a later version
+    node->forward(xs, node->f);
     ++last_node_evaluated;
   }
   return nodes.back()->f;
 }
 
-const Tensor& Hypergraph::forward() {
+const Tensor& ComputationGraph::forward() {
   last_node_evaluated = 0;
   return incremental_forward();
 }
 
-void Hypergraph::backward() {
+void ComputationGraph::backward() {
+  if (nodes.back()->dim.size() != 1) {
+    cerr << "backward() called on non-scalar node.\n";
+    abort();
+  }
   // here we find constants to avoid doing extra work
   vector<bool> needs_derivative(nodes.size(), false);
   for (unsigned ni = 0; ni < nodes.size(); ++ni) {
     const Node& node = *nodes[ni];
-    const Edge& in_edge = *edges[node.in_edge];
-    bool is_variable = in_edge.has_parameters();
-    for (auto tail_node : in_edge.tail)
-      is_variable |= needs_derivative[tail_node];
+    bool is_variable = node.has_parameters();
+    for (auto arg : node.args)
+      is_variable |= needs_derivative[arg];
     needs_derivative[ni] = is_variable;
   }
 
@@ -176,17 +162,16 @@ void Hypergraph::backward() {
   vector<const Tensor*> xs;
   for (int i = nodes.size() - 1; i >= 0; --i) {
     const Node& node = *nodes[i];
-    const Edge& in_edge = *edges[node.in_edge];
-    unsigned ti = 0;
-    xs.resize(in_edge.arity());
-    for (unsigned tail_node_index : in_edge.tail) {
-      xs[ti] = &nodes[tail_node_index]->f;
-      ++ti;
+    unsigned ai = 0;
+    xs.resize(node.arity());
+    for (VariableIndex arg : node.args) {
+      xs[ai] = &nodes[arg]->f;
+      ++ai;
     }
-    for (unsigned ti = 0; ti < in_edge.tail.size(); ++ti) {
-      if (needs_derivative[in_edge.tail[ti]]) {
-        Node& tail_node = *nodes[in_edge.tail[ti]];
-        in_edge.backward(xs, node.f, node.dEdf, ti, tail_node.dEdf);
+    for (unsigned ai = 0; ai < node.args.size(); ++ai) {
+      if (needs_derivative[node.args[ai]]) {
+        Node& arg_node = *nodes[node.args[ai]];
+        node.backward(xs, node.f, node.dEdf, ai, arg_node.dEdf);
       }
     }
   }
@@ -199,25 +184,23 @@ void Hypergraph::backward() {
   // this is simpler than you might find in some other frameworks
   // since we assume parameters come into the graph as a "function"
   // that returns the current value of the parameters
-  for (auto pedge : parameter_edges)
-    pedge->accumulate_grad(nodes[pedge->head_node]->dEdf);
+  for (auto pnode : parameter_nodes)
+    pnode->accumulate_grad(pnode->dEdf);
 }
 
-void Hypergraph::PrintGraphviz() const {
+void ComputationGraph::PrintGraphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";
   unsigned nc = 0;
   for (auto node : nodes) {
     vector<string> var_names;
-    const Edge* in_edge = edges[node->in_edge];
-    for (auto tail_node : in_edge->tail)
-      var_names.push_back(nodes[tail_node]->variable_name());
-    cerr << "  N" << nc << " [label=\"" << node->variable_name() << " = "
-         << in_edge->as_string(var_names) << "\"];\n";
+    for (auto arg : node->args)
+      var_names.push_back(string("v")); // TODO
+    cerr << "  N" << nc << " [label=\"v" << nc << " = "
+         << node->as_string(var_names) << "\"];\n";
+    for (auto arg : node->args)
+      cerr << "  N" << ((unsigned)arg) << " -> N" << nc << ";\n";
     ++nc;
   }
-  for (auto edge : edges)
-    for (auto ni : edge->tail)
-      cerr << "  N" << ni << " -> N" << edge->head_node << ";\n";
   cerr << "}\n";
 }
 

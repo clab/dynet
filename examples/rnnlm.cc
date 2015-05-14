@@ -1,8 +1,9 @@
-#include "cnn/edges.h"
+#include "cnn/nodes.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
 #include "cnn/timing.h"
 #include "cnn/rnn.h"
+#include "cnn/gru.h"
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
 
@@ -38,39 +39,39 @@ struct RNNLanguageModel {
   }
 
   // return VariableIndex of total loss
-  VariableIndex BuildLMGraph(const vector<int>& sent, Hypergraph& hg) {
+  VariableIndex BuildLMGraph(const vector<int>& sent, ComputationGraph& cg) {
     const unsigned slen = sent.size() - 1;
-    builder.new_graph(&hg);  // reset RNN builder for new graph
-    builder.start_new_sequence(&hg);
-    VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
-    VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
+    builder.new_graph(&cg);  // reset RNN builder for new graph
+    builder.start_new_sequence(&cg);
+    VariableIndex i_R = cg.add_parameter(p_R); // hidden -> word rep parameter
+    VariableIndex i_bias = cg.add_parameter(p_bias);  // word bias
     vector<VariableIndex> errs;
     for (unsigned t = 0; t < slen; ++t) {
       // x_t = lookup sent[t] in parameters p_c
-      VariableIndex i_x_t = hg.add_lookup(p_c, sent[t]);
+      VariableIndex i_x_t = cg.add_lookup(p_c, sent[t]);
       // y_t = RNN(x_t)
-      VariableIndex i_y_t = builder.add_input(i_x_t, &hg);
+      VariableIndex i_y_t = builder.add_input(i_x_t, &cg);
       // r_t = bias + R * y_t
-      VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
+      VariableIndex i_r_t = cg.add_function<AffineTransform>({i_bias, i_R, i_y_t});
       // ydist = softmax(r_t)
       // LogSoftmax followed by PickElement can be written in one step
       // using PickNegLogSoftmax
 #if 1
-      VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});
-      errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
+      VariableIndex i_ydist = cg.add_function<LogSoftmax>({i_r_t});
+      errs.push_back(cg.add_function<PickElement>({i_ydist}, sent[t+1]));
 #if 0
-      VariableIndex i_ydist = hg.add_function<Softmax>({i_r_t});
-      i_ydist = hg.add_function<Log>({i_ydist});
-      errs.push_back(hg.add_function<PickElement>({i_ydist}, sent[t+1]));
+      VariableIndex i_ydist = cg.add_function<Softmax>({i_r_t});
+      i_ydist = cg.add_function<Log>({i_ydist});
+      errs.push_back(cg.add_function<PickElement>({i_ydist}, sent[t+1]));
 #endif
 #else
-      VariableIndex i_err = hg.add_function<PickNegLogSoftmax>({i_r_t}, sent[t+1]);
+      VariableIndex i_err = cg.add_function<PickNegLogSoftmax>({i_r_t}, sent[t+1]);
       errs.push_back(i_err);
 #endif
     }
-    VariableIndex i_nerr = hg.add_function<Sum>(errs);
+    VariableIndex i_nerr = cg.add_function<Sum>(errs);
 #if 1
-    return hg.add_function<Negate>({i_nerr});
+    return cg.add_function<Negate>({i_nerr});
 #else
     return i_nerr;
 #endif
@@ -79,27 +80,27 @@ struct RNNLanguageModel {
   // return VariableIndex of total loss
   void RandomSample(int max_len = 150) {
     cerr << endl;
-    Hypergraph hg;
-    builder.new_graph(&hg);  // reset RNN builder for new graph
-    builder.start_new_sequence(&hg);
-    VariableIndex i_R = hg.add_parameter(p_R); // hidden -> word rep parameter
-    VariableIndex i_bias = hg.add_parameter(p_bias);  // word bias
+    ComputationGraph cg;
+    builder.new_graph(&cg);  // reset RNN builder for new graph
+    builder.start_new_sequence(&cg);
+    VariableIndex i_R = cg.add_parameter(p_R); // hidden -> word rep parameter
+    VariableIndex i_bias = cg.add_parameter(p_bias);  // word bias
     vector<VariableIndex> errs;
     int len = 0;
     int cur = kSOS;
     while(len < max_len && cur != kEOS) {
       ++len;
       // x_t = lookup sent[t] in parameters p_c
-      VariableIndex i_x_t = hg.add_lookup(p_c, cur);
+      VariableIndex i_x_t = cg.add_lookup(p_c, cur);
       // y_t = RNN(x_t)
-      VariableIndex i_y_t = builder.add_input(i_x_t, &hg);
+      VariableIndex i_y_t = builder.add_input(i_x_t, &cg);
       // r_t = bias + R * y_t
-      VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
+      VariableIndex i_r_t = cg.add_function<AffineTransform>({i_bias, i_R, i_y_t});
       // ydist = softmax(r_t)
-      hg.add_function<Softmax>({i_r_t});
+      cg.add_function<Softmax>({i_r_t});
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
-        auto dist = as_vector(hg.incremental_forward());
+        auto dist = as_vector(cg.incremental_forward());
         double p = rand01();
         for (; w < dist.size(); ++w) {
           p -= dist[w];
@@ -180,6 +181,7 @@ int main(int argc, char** argv) {
     sgd = new SimpleSGDTrainer(&model);
 
   RNNLanguageModel<LSTMBuilder> lm(model);
+  //RNNLanguageModel<GRUBuilder> lm(model);
   //RNNLanguageModel<RNNBuilder> lm(model);
   if (argc == 4) {
     string fname = argv[3];
@@ -209,13 +211,13 @@ int main(int argc, char** argv) {
       }
 
       // build graph for this instance
-      Hypergraph hg;
+      ComputationGraph cg;
       auto& sent = training[order[si]];
       chars += sent.size() - 1;
       ++si;
-      lm.BuildLMGraph(sent, hg);
-      loss += as_scalar(hg.forward());
-      hg.backward();
+      lm.BuildLMGraph(sent, cg);
+      loss += as_scalar(cg.forward());
+      cg.backward();
       sgd->update();
       ++lines;
     }
@@ -229,9 +231,9 @@ int main(int argc, char** argv) {
       double dloss = 0;
       int dchars = 0;
       for (auto& sent : dev) {
-        Hypergraph hg;
-        lm.BuildLMGraph(sent, hg);
-        dloss += as_scalar(hg.forward());
+        ComputationGraph cg;
+        lm.BuildLMGraph(sent, cg);
+        dloss += as_scalar(cg.forward());
         dchars += sent.size() - 1;
       }
       if (dloss < best) {

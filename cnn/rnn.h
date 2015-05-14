@@ -2,7 +2,6 @@
 #define CNN_RNN_H_
 
 #include "cnn/cnn.h"
-#include "cnn/edges.h"
 #include "cnn/rnn-state-machine.h"
 
 namespace cnn {
@@ -17,18 +16,18 @@ struct RNNBuilder {
                       Model* model);
 
   // call this to reset the builder when you are working with a newly
-  // created Hypergraph object
-  void new_graph(Hypergraph* hg);
+  // created ComputationGraph object
+  void new_graph(ComputationGraph* cg);
 
-  // Reset for new sequence on hypergraph hg with shared parameters
+  // Reset for new sequence on hypergraph cg with shared parameters
   // call this before add_input and after add_parameter_edges, or
   // when starting a new sequence on the same hypergraph.
   // h_0 is used to initialize hidden layers at timestep 0 to given values
-  void start_new_sequence(Hypergraph* hg, std::vector<VariableIndex> h_0={});
+  void start_new_sequence(ComputationGraph* cg, std::vector<VariableIndex> h_0={});
 
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
-  VariableIndex add_input(VariableIndex x, Hypergraph* hg);
+  VariableIndex add_input(VariableIndex x, ComputationGraph* cg);
 
   // rewind the last timestep - this DOES NOT remove the variables
   // from the computation graph, it just means the next time step will
@@ -57,7 +56,7 @@ struct RNNBuilder {
   // defaults to zero matrix input
   std::vector<VariableIndex> h0;
 
-  Hypergraph* hg;
+  ComputationGraph* cg;
 
   unsigned hidden_dim;
   unsigned layers;
