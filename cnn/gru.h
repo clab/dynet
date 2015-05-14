@@ -2,7 +2,6 @@
 #define CNN_GRU_H_
 
 #include "cnn/cnn.h"
-#include "cnn/edges.h"
 #include "cnn/rnn-state-machine.h"
 
 namespace cnn {
@@ -17,18 +16,18 @@ struct GRUBuilder {
                        Model* model);
 
   // call this to reset the builder when you are working with a newly
-  // created Hypergraph object
-  void new_graph(Hypergraph* hg);
+  // created ComputationGraph object
+  void new_graph(ComputationGraph* hg);
 
-  // Start new sequence in given Hypergraph with initial c0 and h0
+  // Start new sequence in given ComputationGraph with initial c0 and h0
   // call after add_parameter edges but before add input,
   // as well as whenever a new sequence is to be added to the graph
-  void start_new_sequence(Hypergraph* hg,
+  void start_new_sequence(ComputationGraph* hg,
                           std::vector<VariableIndex> h_0={});
 
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
-  VariableIndex add_input(VariableIndex x, Hypergraph* hg);
+  VariableIndex add_input(VariableIndex x, ComputationGraph* hg);
 
   // rewind the last timestep - this DOES NOT remove the variables
   // from the computation graph, it just means the next time step will

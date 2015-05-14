@@ -1,4 +1,4 @@
-#include "cnn/edges.h"
+#include "cnn/nodes.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
 #include "cnn/timing.h"
@@ -30,28 +30,29 @@ struct Encoder {
     p_t = model.add_lookup_parameters(OUTPUT_VOCAB_SIZE, {REP_DIM}); 
   }
 
-  VariableIndex EmbedSource(const vector<int>& sent, Hypergraph& hg) {
+  VariableIndex EmbedSource(const vector<int>& sent, ComputationGraph& cg) {
     vector<VariableIndex> m(sent.size() + 2);
-    m[0] = hg.add_lookup(p_s, kSRC_SOS);
+    m[0] = cg.add_lookup(p_s, kSRC_SOS);
     int i = 1;
     for (auto& w : sent)
-      m[i++] = hg.add_lookup(p_s, w);
-    m[i] = hg.add_lookup(p_s, kSRC_EOS);
-    VariableIndex i_m = hg.add_function<ConcatenateColumns>(m);
-    i_m = hg.add_function<KMHNGram>({i_m}, 2);
-    return hg.add_function<SumColumns>({i_m});
+      m[i++] = cg.add_lookup(p_s, w);
+    m[i] = cg.add_lookup(p_s, kSRC_EOS);
+    VariableIndex i_m = cg.add_function<ConcatenateColumns>(m);
+    //i_m = cg.add_function<KMHNGram>({i_m}, 2);
+    //i_m = cg.add_function<Tanh>({i_m});
+    return cg.add_function<SumColumns>({i_m});
   }
 
-  VariableIndex EmbedTarget(const vector<int>& sent, Hypergraph& hg) {
+  VariableIndex EmbedTarget(const vector<int>& sent, ComputationGraph& cg) {
     vector<VariableIndex> m(sent.size() + 2);
-    m[0] = hg.add_lookup(p_s, kTRG_SOS);
+    m[0] = cg.add_lookup(p_s, kTRG_SOS);
     int i = 1;
     for (auto& w : sent)
-      m[i++] = hg.add_lookup(p_t, w);
-    m[i] = hg.add_lookup(p_s, kTRG_EOS);
-    VariableIndex i_m = hg.add_function<ConcatenateColumns>(m);
-    i_m = hg.add_function<KMHNGram>({i_m}, 2);
-    return hg.add_function<SumColumns>({i_m});
+      m[i++] = cg.add_lookup(p_t, w);
+    m[i] = cg.add_lookup(p_s, kTRG_EOS);
+    VariableIndex i_m = cg.add_function<ConcatenateColumns>(m);
+    i_m = cg.add_function<KMHNGram>({i_m}, 2);
+    return cg.add_function<SumColumns>({i_m});
   }
 };
 
@@ -153,32 +154,32 @@ int main(int argc, char** argv) {
       }
 
       // build graph for this instance
-      Hypergraph hg;
+      ComputationGraph cg;
       auto& sent_pair = training[order[si]];
       ++si;
       auto& src = sent_pair.first;
       auto& trg = sent_pair.second;
-      VariableIndex i_s = emb.EmbedSource(src, hg);
-      VariableIndex i_t = emb.EmbedTarget(trg, hg);
-      VariableIndex i_sim = hg.add_function<SquaredEuclideanDistance>({i_s,i_t});
+      VariableIndex i_s = emb.EmbedSource(src, cg);
+      VariableIndex i_t = emb.EmbedTarget(trg, cg);
+      VariableIndex i_sim = cg.add_function<SquaredEuclideanDistance>({i_s,i_t});
       float margin = 2;
-      VariableIndex i_ms = hg.add_function<ConstantMinusX>({i_sim}, margin);
+      VariableIndex i_ms = cg.add_function<ConstantMinusX>({i_sim}, margin);
       const unsigned K = 20;
       vector<VariableIndex> noise(K);
       for (unsigned j = 0; j < K; ++j) {
         unsigned s = rand01() * training.size();
         while (s == order[si] || s == training.size()) { s = rand01() * training.size(); }
-        VariableIndex i_n_j = emb.EmbedTarget(training[s].second, hg);
-        VariableIndex i_sim_n = hg.add_function<SquaredEuclideanDistance>({i_s,i_n_j});
-        noise[j] = hg.add_function<Sum>({i_ms, i_sim_n});
+        VariableIndex i_n_j = emb.EmbedTarget(training[s].second, cg);
+        VariableIndex i_sim_n = cg.add_function<SquaredEuclideanDistance>({i_s,i_n_j});
+        noise[j] = cg.add_function<Sum>({i_ms, i_sim_n});
       }
-      VariableIndex i_v = hg.add_function<Rectify>({hg.add_function<ConcatenateColumns>(noise)});
-      hg.add_function<SumColumns>({i_v});
-      auto iloss = as_scalar(hg.forward());
+      VariableIndex i_v = cg.add_function<Rectify>({cg.add_function<ConcatenateColumns>(noise)});
+      cg.add_function<SumColumns>({i_v});
+      auto iloss = as_scalar(cg.forward());
       assert(iloss >= 0);
       if (iloss > 0) {
         loss += iloss;
-        hg.backward();
+        cg.backward();
         sgd->update();
       }
       ++lines;
@@ -196,9 +197,9 @@ int main(int argc, char** argv) {
       double dloss = 0;
       int dchars = 0;
       for (auto& sent : dev) {
-        Hypergraph hg;
-        lm.BuildGraph(sent, sent, hg);
-        dloss += as_scalar(hg.forward());
+        ComputationGraph cg;
+        lm.BuildGraph(sent, sent, cg);
+        dloss += as_scalar(cg.forward());
         dchars += sent.size() - 1;
       }
       if (dloss < best) {

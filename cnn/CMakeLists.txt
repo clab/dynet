@@ -4,10 +4,10 @@ set(cnn_library_SRCS
     cnn.cc
     dict.cc
     dim.cc
-    edges-common.cc
+    nodes-common.cc
     gru.cc
     lstm.cc
-    param-edges.cc
+    param-nodes.cc
     rnn.cc
     rnn-state-machine.cc
     training.cc
@@ -18,10 +18,10 @@ set(cnn_library_HDRS
     cnn.h
     dict.h
     dim.h
-    edges.h
+    nodes.h
     lstm.h
     model.h
-    param-edges.h
+    param-nodes.h
     rnn.h
     rnn-state-machine.h
     saxe-init.h
@@ -34,7 +34,7 @@ if(WITH_EIGEN_BACKEND)
   list(APPEND cnn_library_SRCS
        backends/eigen/saxe-init.cc
        backends/eigen/init.cc
-       backends/eigen/edges.cc
+       backends/eigen/nodes.cc
        backends/eigen/tensor.cc
        backends/eigen/model.cc)
 endif(WITH_EIGEN_BACKEND)

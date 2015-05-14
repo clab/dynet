@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 
+#include "cnn/nodes.h"
 #include "cnn/training.h"
 
 using namespace std;
@@ -42,7 +43,7 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
   }  // layers
 }
 
-void LSTMBuilder::new_graph(Hypergraph* hg) {
+void LSTMBuilder::new_graph(ComputationGraph* cg) {
   sm.transition(RNNOp::new_graph);
   param_vars.clear();
 
@@ -51,28 +52,28 @@ void LSTMBuilder::new_graph(Hypergraph* hg) {
     auto& p = params[i];
 
     // i
-    VariableIndex i_x2i = hg->add_parameter(p[X2I]);
-    VariableIndex i_h2i = hg->add_parameter(p[H2I]);
-    VariableIndex i_c2i = hg->add_parameter(p[C2I]);
-    VariableIndex i_bi = hg->add_parameter(p[BI]);
+    VariableIndex i_x2i = cg->add_parameter(p[X2I]);
+    VariableIndex i_h2i = cg->add_parameter(p[H2I]);
+    VariableIndex i_c2i = cg->add_parameter(p[C2I]);
+    VariableIndex i_bi = cg->add_parameter(p[BI]);
 
     // o
-    VariableIndex i_x2o = hg->add_parameter(p[X2O]);
-    VariableIndex i_h2o = hg->add_parameter(p[H2O]);
-    VariableIndex i_c2o = hg->add_parameter(p[C2O]);
-    VariableIndex i_bo = hg->add_parameter(p[BO]);
+    VariableIndex i_x2o = cg->add_parameter(p[X2O]);
+    VariableIndex i_h2o = cg->add_parameter(p[H2O]);
+    VariableIndex i_c2o = cg->add_parameter(p[C2O]);
+    VariableIndex i_bo = cg->add_parameter(p[BO]);
 
     // c
-    VariableIndex i_x2c = hg->add_parameter(p[X2C]);
-    VariableIndex i_h2c = hg->add_parameter(p[H2C]);
-    VariableIndex i_bc = hg->add_parameter(p[BC]);
+    VariableIndex i_x2c = cg->add_parameter(p[X2C]);
+    VariableIndex i_h2c = cg->add_parameter(p[H2C]);
+    VariableIndex i_bc = cg->add_parameter(p[BC]);
 
     vector<VariableIndex> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
   }
 }
 
-void LSTMBuilder::start_new_sequence(Hypergraph* hg,
+void LSTMBuilder::start_new_sequence(ComputationGraph* cg,
                                      vector<VariableIndex> c_0,
                                      vector<VariableIndex> h_0) {
   sm.transition(RNNOp::start_new_sequence);
@@ -81,7 +82,7 @@ void LSTMBuilder::start_new_sequence(Hypergraph* hg,
   h0 = h_0;
   c0 = c_0;
   if (h0.empty() || c0.empty()) {
-    VariableIndex zero_input = hg->add_input(Dim({hidden_dim}), &zeros);
+    VariableIndex zero_input = cg->add_input(Dim({hidden_dim}), &zeros);
     if (c0.empty()) { c0 = vector<VariableIndex>(layers, zero_input); }
     if (h0.empty()) { h0 = vector<VariableIndex>(layers, zero_input); }
   }
@@ -89,7 +90,7 @@ void LSTMBuilder::start_new_sequence(Hypergraph* hg,
   assert (c0.size() == layers);
 }
 
-VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
+VariableIndex LSTMBuilder::add_input(VariableIndex x, ComputationGraph* cg) {
   sm.transition(RNNOp::add_input);
   const unsigned t = h.size();
   h.push_back(vector<VariableIndex>(layers));
@@ -111,22 +112,22 @@ VariableIndex LSTMBuilder::add_input(VariableIndex x, Hypergraph* hg) {
       i_c_tm1 = c[t-1][i];
     }
     // input
-    VariableIndex i_ait = hg->add_function<Multilinear>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
-    VariableIndex i_it = hg->add_function<LogisticSigmoid>({i_ait});
+    VariableIndex i_ait = cg->add_function<AffineTransform>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
+    VariableIndex i_it = cg->add_function<LogisticSigmoid>({i_ait});
     // forget
-    VariableIndex i_ft = hg->add_function<ConstantMinusX>({i_it}, 1.f);
+    VariableIndex i_ft = cg->add_function<ConstantMinusX>({i_it}, 1.f);
     // write memory cell
-    VariableIndex i_awt = hg->add_function<Multilinear>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
-    VariableIndex i_wt = hg->add_function<Tanh>({i_awt});
+    VariableIndex i_awt = cg->add_function<AffineTransform>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
+    VariableIndex i_wt = cg->add_function<Tanh>({i_awt});
     // output
-    VariableIndex i_nwt = hg->add_function<CwiseMultiply>({i_it, i_wt});
-    VariableIndex i_crt = hg->add_function<CwiseMultiply>({i_ft, i_c_tm1});
-    ct[i] = hg->add_function<Sum>({i_crt, i_nwt}); // new memory cell at time t
+    VariableIndex i_nwt = cg->add_function<CwiseMultiply>({i_it, i_wt});
+    VariableIndex i_crt = cg->add_function<CwiseMultiply>({i_ft, i_c_tm1});
+    ct[i] = cg->add_function<Sum>({i_crt, i_nwt}); // new memory cell at time t
  
-    VariableIndex i_aot = hg->add_function<Multilinear>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
-    VariableIndex i_ot = hg->add_function<LogisticSigmoid>({i_aot});
-    VariableIndex ph_t = hg->add_function<Tanh>({ct[i]});
-    in = ht[i] = hg->add_function<CwiseMultiply>({i_ot, ph_t});
+    VariableIndex i_aot = cg->add_function<AffineTransform>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
+    VariableIndex i_ot = cg->add_function<LogisticSigmoid>({i_aot});
+    VariableIndex ph_t = cg->add_function<Tanh>({ct[i]});
+    in = ht[i] = cg->add_function<CwiseMultiply>({i_ot, ph_t});
   }
   return ht.back();
 }
