@@ -26,6 +26,7 @@ namespace cnn {
 extern AlignedMemoryPool<5>* fxs;
 extern AlignedMemoryPool<5>* dEdfs;
 
+class ExecutionEngine;
 struct ParameterNodeBase;
 struct Node;
 
@@ -77,32 +78,11 @@ struct ComputationGraph {
 
   // data
   std::vector<Node*> nodes;       // **stored in topological order**
-  std::vector<ParameterNodeBase*> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
+  std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
   VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
-};
 
-#if 0
-class ExecutionEngine {
- public:
-  virtual ~ExecutionEngine();
-  // perform computations
-  virtual const Tensor& forward() = 0;
-  virtual const Tensor& incremental_forward() = 0;  // if you want to add nodes and evaluate just the new parts
-  virtual void backward() = 0;
+  ExecutionEngine* ee;  // handles the execution
 };
-
-class SimpleExecutionEngine : public ExecutionEngine {
- public:
-  explicit ExecutionEngine(const ComputationGraph& hg) : hg(*hg) {}
-  const Tensor& forward() override;
-  const Tensor& incremental_forward() override;  // if you want to add nodes and evaluate just the new parts
-  void backward() override;
- private:
-  std::vector<Tensor> fxs;
-  std::vector<Tensor> dEdfs;
-  const ComputationGraph& hg;
-};
-#endif
 
 // represents an SSA variable
 // * in_edge is the **ordered** list of indices of the function arguments
@@ -146,11 +126,8 @@ struct Node {
   std::vector<VariableIndex> args;
 
   // memory size
-  Dim dim;  // will be .size() = 0 initially, before memory is allocated
+  Dim dim;  // will be .size() = 0 initially filled in by forward() -- TODO fix this
 
-  // computation results (nb. memory is not owned by Tensor)
-  Tensor f;               // f(x_1 , ... , x_n)
-  Tensor dEdf;            // dE/df
  protected:
   Node() : args() {}
   explicit Node(const std::initializer_list<VariableIndex>& a) : args(a) {}

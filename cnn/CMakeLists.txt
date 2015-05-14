@@ -4,6 +4,7 @@ set(cnn_library_SRCS
     cnn.cc
     dict.cc
     dim.cc
+    exec.cc
     nodes-common.cc
     gru.cc
     lstm.cc
@@ -18,6 +19,7 @@ set(cnn_library_HDRS
     cnn.h
     dict.h
     dim.h
+    exec.h
     nodes.h
     lstm.h
     model.h
