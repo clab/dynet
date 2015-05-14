@@ -58,7 +58,7 @@ class AlignedMemoryPool {
  public:
   explicit AlignedMemoryPool(size_t cap) {
     sys_alloc(cap);
-    zero();
+    zero_all();
   }
   // returns nullptr if OOM
   void* allocate(size_t n) {
@@ -73,14 +73,22 @@ class AlignedMemoryPool {
     //std::cerr << "freeing " << used << " bytes\n";
     used = 0;
   }
-  void zero_and_free() { zero(); free(); }
   void free_and_grow_capacity(size_t new_cap = 0) {
     cnn_mm_free(mem);
     if (new_cap)
       sys_alloc(new_cap);
     else
       sys_alloc(capacity * 1.5);
-    zero();
+    zero_all();
+  }
+  // zeros out the amount of allocations
+  void zero_allocated_memory() {
+    if (used == 0) return;
+#if HAVE_CUDA
+    cudaMemset(mem, 0, used);
+#else
+    std::memset(mem, 0, used);
+#endif
   }
  private:
   void sys_alloc(size_t cap) {
@@ -88,12 +96,12 @@ class AlignedMemoryPool {
     mem = cnn_mm_malloc(capacity, 1 << AlignedBits);
     used = 0;
   }
-  void zero() {
+  void zero_all() {
     //std::cerr << "zeroing " << (used ? used : capacity) << " bytes\n";
 #if HAVE_CUDA
-    cudaMemset(mem, 0, used ? used : capacity);
+    cudaMemset(mem, 0, capacity);
 #else
-    std::memset(mem, 0, used ? used : capacity);
+    std::memset(mem, 0, capacity);
 #endif
   }
   inline static size_t round_up_align(size_t n) {
