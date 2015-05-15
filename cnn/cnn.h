@@ -82,6 +82,8 @@ struct ComputationGraph {
   VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
 
   ExecutionEngine* ee;  // handles the execution
+ private:
+  void set_dim_for_new_node(const VariableIndex& i);
 };
 
 // represents an SSA variable
@@ -139,6 +141,7 @@ template <class Function>
 inline VariableIndex ComputationGraph::add_function(const std::initializer_list<VariableIndex>& arguments) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
@@ -148,6 +151,7 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
                                               Args&&... side_information) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
@@ -155,6 +159,7 @@ template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
