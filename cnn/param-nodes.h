@@ -13,7 +13,6 @@ struct ParameterNodeBase : public Node {
 // represents optimizable parameters
 struct ParameterNode : public ParameterNodeBase {
   explicit ParameterNode(Parameters* p) : dim(p->dim), params(p) {}
-  bool has_parameters() const override;
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -60,9 +59,8 @@ struct ScalarInputNode : public Node {
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
 struct LookupNode : public ParameterNodeBase {
-  LookupNode(LookupParameters* p, unsigned ind) : dim(p->dim), index(ind), pindex(&index), params(p), has_optimizable_parameters(true) {}
-  LookupNode(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), params(p), has_optimizable_parameters(true) {}
-  bool has_parameters() const override;
+  LookupNode(LookupParameters* p, unsigned ind) : dim(p->dim), index(ind), pindex(&index), params(p) {}
+  LookupNode(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), params(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -76,7 +74,6 @@ struct LookupNode : public ParameterNodeBase {
   unsigned index;
   const unsigned* pindex;
   LookupParameters* params;
-  bool has_optimizable_parameters;
 };
 
 } // namespace cnn

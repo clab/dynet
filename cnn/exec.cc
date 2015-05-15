@@ -58,15 +58,17 @@ void SimpleExecutionEngine::backward() {
   // initialize dE/dE = 1
   ndEdfs.back().v[0] = 1;
 
-  // here we find constants to avoid doing extra work
+  // here we find constant paths to avoid doing extra work
   const unsigned num_nodes = cg.nodes.size();
   vector<bool> needs_derivative(num_nodes, false);
+  for (auto i : cg.parameter_nodes)
+    needs_derivative[i] = true;
+
   for (unsigned ni = 0; ni < num_nodes; ++ni) {
-    const Node* node = cg.nodes[ni];
-    bool is_variable = node->has_parameters();
-    for (auto arg : node->args)
-      is_variable |= needs_derivative[arg];
-    needs_derivative[ni] = is_variable;
+    bool nd = needs_derivative[ni];
+    for (auto arg : cg.nodes[ni]->args)
+      nd |= needs_derivative[arg];
+    needs_derivative[ni] = nd;
   }
 
   // loop in reverse topological order

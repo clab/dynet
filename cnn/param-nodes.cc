@@ -7,8 +7,6 @@ using namespace std;
 
 namespace cnn {
 
-bool ParameterNode::has_parameters() const { return true; }
-
 string ParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "parameters(" << dim << ')';
@@ -111,12 +109,7 @@ void LookupNode::backward(const vector<const Tensor*>& xs,
   abort();
 }
 
-bool LookupNode::has_parameters() const {
-  return has_optimizable_parameters;
-}
-
 void LookupNode::accumulate_grad(const Tensor& g) {
-  assert(has_optimizable_parameters);
   params->accumulate_grad(*pindex, g);
 }
 

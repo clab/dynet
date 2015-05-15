@@ -56,7 +56,7 @@ struct RNNLanguageModel {
       // ydist = softmax(r_t)
       // LogSoftmax followed by PickElement can be written in one step
       // using PickNegLogSoftmax
-#if 1
+#if 0
       VariableIndex i_ydist = cg.add_function<LogSoftmax>({i_r_t});
       errs.push_back(cg.add_function<PickElement>({i_ydist}, sent[t+1]));
 #if 0
@@ -70,7 +70,7 @@ struct RNNLanguageModel {
 #endif
     }
     VariableIndex i_nerr = cg.add_function<Sum>(errs);
-#if 1
+#if 0
     return cg.add_function<Negate>({i_nerr});
 #else
     return i_nerr;
