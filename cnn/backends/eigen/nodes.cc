@@ -437,7 +437,7 @@ void PickNegLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) con
   if (xs[0]->d.cols() == 1) {
     auto x = **xs[0];
     logz = logsumexp(x);
-    fx.v[0] = x(*pval) - logz;
+    fx.v[0] = logz - x(*pval);
   } else {
     cerr << "SoftmaxForward not implemented for multiple columns\n";
     abort();

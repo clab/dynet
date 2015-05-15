@@ -11,9 +11,6 @@ namespace cnn {
 int n_hgs = 0;
 
 Node::~Node() {}
-bool Node::has_parameters() const {
-  return false;
-}
 
 ComputationGraph::ComputationGraph() : last_node_evaluated(),
   ee(new SimpleExecutionEngine(*this)) {
@@ -83,7 +80,6 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned* 
   LookupNode* new_node = new LookupNode(p, pindex);
   // get rid of the following in favor of using parameter_nodes to see the needs_derivative
   // expression
-  new_node->has_optimizable_parameters = false;
   nodes.push_back(new_node);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -92,7 +88,6 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned* 
 VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
-  new_node->has_optimizable_parameters = false;
   nodes.push_back(new_node);
   set_dim_for_new_node(new_node_index);
   return new_node_index;

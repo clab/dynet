@@ -93,9 +93,6 @@ struct ComputationGraph {
 struct Node {
   virtual ~Node();
 
-  // does this node have parameters that can be optimized?
-  virtual bool has_parameters() const;
-
   // compute dimensions of result for given dimensions of inputs
   // also checks to make sure inputs are compatible with each other
   // TODO remove this in favor of doing all this in the constructor
