@@ -22,21 +22,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
   nfxs.resize(node_max_index);
   if (node_max_index - last_node_evaluated == 0)
     return nfxs.back();
-  vector<Dim> xds;
-  for (unsigned i = last_node_evaluated; i < node_max_index; ++i) {
-    const Node* node = cg.nodes[i];
-    xds.resize(node->arity());
-    unsigned ai = 0;
-    for (VariableIndex arg : node->args) {
-      xds[ai] = nfxs[arg].d;
-      ++ai;
-    }
-    // TODO remove dim_forward and replace it with the Node constructors
-    auto dim = node->dim_forward(xds);
-    nfxs[i].d = dim;
-    nfxs[i].v = static_cast<float*>(fxs->allocate(dim.size() * sizeof(float)));
-    assert(nfxs[i].v);
-  }
+
   //vector<string> dummy(5, "x");
   vector<const Tensor*> xs;
   for (; last_node_evaluated < node_max_index; ++last_node_evaluated) {
@@ -47,6 +33,8 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
       xs[ai] = &nfxs[arg];
       ++ai;
     }
+    nfxs[last_node_evaluated].d = node->dim;
+    nfxs[last_node_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
     node->forward(xs, nfxs[last_node_evaluated]);
   }
   return nfxs.back();

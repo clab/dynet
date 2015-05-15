@@ -33,18 +33,21 @@ ComputationGraph::~ComputationGraph() {
 VariableIndex ComputationGraph::add_input(real s) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new ScalarInputNode(s));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
 VariableIndex ComputationGraph::add_input(const real* ps) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new ScalarInputNode(ps));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
 VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new InputNode(d, pm));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
@@ -53,6 +56,7 @@ VariableIndex ComputationGraph::add_parameter(Parameters* p) {
   ParameterNode* new_node = new ParameterNode(p);
   nodes.push_back(new_node);
   parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
@@ -61,6 +65,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameters* p, const unsigned* 
   LookupNode* new_node = new LookupNode(p, pindex);
   nodes.push_back(new_node);
   parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
@@ -69,16 +74,18 @@ VariableIndex ComputationGraph::add_lookup(LookupParameters* p, unsigned index) 
   LookupNode* new_node = new LookupNode(p, index);
   nodes.push_back(new_node);
   parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
 VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, pindex);
-  // get rid of this in favor of using parameter_nodes to see the needs_derivative
+  // get rid of the following in favor of using parameter_nodes to see the needs_derivative
   // expression
   new_node->has_optimizable_parameters = false;
   nodes.push_back(new_node);
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
@@ -87,7 +94,21 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned i
   LookupNode* new_node = new LookupNode(p, index);
   new_node->has_optimizable_parameters = false;
   nodes.push_back(new_node);
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
+}
+
+// factory function should call this right after creating a new node object
+// to set its dimensions properly
+void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
+  Node* node = nodes[i];
+  vector<Dim> xds(node->arity());
+  unsigned ai = 0;
+  for (VariableIndex arg : node->args) {
+    xds[ai] = nodes[arg]->dim;
+    ++ai;
+  }
+  node->dim = node->dim_forward(xds);
 }
 
 const Tensor& ComputationGraph::incremental_forward() { return ee->incremental_forward(); }
