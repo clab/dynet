@@ -1,4 +1,4 @@
-#include "cnn/edges.h"
+#include "cnn/nodes.h"
 
 #include <limits>
 #include <cmath>
@@ -19,7 +19,7 @@ using namespace std;
 //    EIGEN_NO_MALLOC option. If you get an error about Eigen attempting to allocate
 //    memory, it is (probably) because of an implicit creation of a temporary variable.
 //    To tell Eigen this is not necessary, the noalias() method is available. If you really
-//    do need a temporary variable, its capacity must be requested by Edge::aux_storage_space
+//    do need a temporary variable, its capacity must be requested by Node::aux_storage_space
 
 namespace cnn {
 
@@ -437,7 +437,7 @@ void PickNegLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) con
   if (xs[0]->d.cols() == 1) {
     auto x = **xs[0];
     logz = logsumexp(x);
-    fx.v[0] = x(*pval) - logz;
+    fx.v[0] = logz - x(*pval);
   } else {
     cerr << "SoftmaxForward not implemented for multiple columns\n";
     abort();
@@ -645,7 +645,7 @@ void CwiseMultiply::backward(const vector<const Tensor*>& xs,
   }
 }
 
-void Multilinear::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void AffineTransform::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() % 2 == 1);
   if (xs.size() == 1) {
     fx.v = xs[0]->v;
@@ -657,7 +657,7 @@ void Multilinear::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void Multilinear::backward(const vector<const Tensor*>& xs,
+void AffineTransform::backward(const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,

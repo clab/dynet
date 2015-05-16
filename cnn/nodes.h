@@ -1,13 +1,13 @@
-#ifndef CNN_EDGES_H_
-#define CNN_EDGES_H_
+#ifndef CNN_NODES_H_
+#define CNN_NODES_H_
 
 #include "cnn/cnn.h"
 
 namespace cnn {
 
 // y = reshape(x_1, from --> to)
-struct Reshape : public Edge {
-  explicit Reshape(const Dim& from, const Dim& to) : from(from), to(to) {
+struct Reshape : public Node {
+  explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& from, const Dim& to) : Node(a), from(from), to(to) {
     assert(from.size() == to.size());
   }
   std::string as_string(const std::vector<std::string>& arg_names) const override;
@@ -23,7 +23,8 @@ struct Reshape : public Edge {
 };
 
 // y_i = \sum_{j} x_i,j
-struct SumColumns : public Edge {
+struct SumColumns : public Node {
+  template <typename T> explicit SumColumns(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -35,8 +36,8 @@ struct SumColumns : public Edge {
 };
 
 // y_i = \sum_{j=1}^n x_1:{i-1+j}
-struct KMHNGram : public Edge {
-  explicit KMHNGram(unsigned n) : n(n) {}
+struct KMHNGram : public Node {
+  explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) : Node(a), n(n) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -55,7 +56,8 @@ struct KMHNGram : public Edge {
 //   (dE/dA)_ijk = (dE/dY)_ij * L_k
 //   (dE/dB)_k = (dE/dY)_ij * A_ijk
 //   (dE/dC)_ij = (dE/dY)_ij
-struct InnerProduct3D_1D : public Edge {
+struct InnerProduct3D_1D : public Node {
+  InnerProduct3D_1D(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -68,8 +70,8 @@ struct InnerProduct3D_1D : public Edge {
 
 // n_{i,j} ~ N(0,stddev)
 // y = x + n
-struct GaussianNoise : public Edge {
-  explicit GaussianNoise(real stddev) : stddev(stddev) {}
+struct GaussianNoise : public Node {
+  explicit GaussianNoise(const std::initializer_list<VariableIndex>& a, real stddev) : Node(a), stddev(stddev) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -82,8 +84,8 @@ struct GaussianNoise : public Edge {
 };
 
 // y = dropout(x,p) where p specifies the dropout probability
-struct Dropout : public Edge {
-  explicit Dropout(real p) : p(p) {}
+struct Dropout : public Node {
+  explicit Dropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -98,8 +100,8 @@ struct Dropout : public Edge {
 
 // y = c - x_1
 // (c is a vector or matrix of the constant, usually 1, but can be configured)
-struct ConstantMinusX : public Edge {
-  explicit ConstantMinusX(real o) : c(o) {}
+struct ConstantMinusX : public Node {
+  explicit ConstantMinusX(const std::initializer_list<VariableIndex>& a, real o) : Node(a), c(o) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -112,7 +114,8 @@ struct ConstantMinusX : public Edge {
 };
 
 // y = tanh x_1
-struct Tanh : public Edge {
+struct Tanh : public Node {
+  explicit Tanh(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -124,7 +127,8 @@ struct Tanh : public Edge {
 };
 
 // y = x_1 \odot x_1
-struct Square : public Edge {
+struct Square : public Node {
+  explicit Square(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -136,7 +140,8 @@ struct Square : public Edge {
 };
 
 // y = exp x_1
-struct Exp : public Edge {
+struct Exp : public Node {
+  explicit Exp(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -148,7 +153,8 @@ struct Exp : public Edge {
 };
 
 // y = log x_1  (base e, i.e., natural log)
-struct Log : public Edge {
+struct Log : public Node {
+  explicit Log(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -160,7 +166,8 @@ struct Log : public Edge {
 };
 
 // concatenate rows
-struct Concatenate : public Edge {
+struct Concatenate : public Node {
+  template <typename T> explicit Concatenate(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -176,7 +183,8 @@ struct Concatenate : public Edge {
 
 // concatenate column vectors into a matrix
 // x_i must be a column vector in R^n
-struct ConcatenateColumns : public Edge {
+struct ConcatenateColumns : public Node {
+  template <typename T> explicit ConcatenateColumns(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -189,9 +197,9 @@ struct ConcatenateColumns : public Edge {
 
 // Let x be a vector-valued input, x_i represents the score of the ith element, then
 // y = \sum{i != element} max{0, margin - x_element + x_i}
-struct Hinge : public Edge {
-  explicit Hinge(unsigned e, real m = 1.0) : element(e), pelement(&element), margin(m) {}
-  explicit Hinge(unsigned* pe, real m = 1.0) : element(), pelement(pe), margin(m) {}
+struct Hinge : public Node {
+  explicit Hinge(const std::initializer_list<VariableIndex>& a, unsigned e, real m = 1.0) : Node(a), element(e), pelement(&element), margin(m) {}
+  explicit Hinge(const std::initializer_list<VariableIndex>& a, unsigned* pe, real m = 1.0) : Node(a), element(), pelement(pe), margin(m) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -207,7 +215,8 @@ struct Hinge : public Edge {
 };
 
 // y = x_1
-struct Identity : public Edge {
+struct Identity : public Node {
+  explicit Identity(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -222,8 +231,8 @@ struct Identity : public Edge {
 // x_1 is a vector in R^n, which we write x
 // y is a vector in R^{n / width}
 // y_i = max_{x_{i * width - width + 1}, ..., x_{i * width}}
-struct MaxPooling1D : public Edge {
-  MaxPooling1D(unsigned w) : width(w) {}
+struct MaxPooling1D : public Node {
+  MaxPooling1D(const std::initializer_list<VariableIndex>& a, unsigned w) : Node(a), width(w) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -237,7 +246,8 @@ struct MaxPooling1D : public Edge {
 };
 
 // y = x_1 * x_2
-struct MatrixMultiply : public Edge {
+struct MatrixMultiply : public Node {
+  explicit MatrixMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -249,7 +259,8 @@ struct MatrixMultiply : public Edge {
 };
 
 // y = x_1 \cdot x_2  (Hadamard product)
-struct CwiseMultiply : public Edge {
+struct CwiseMultiply : public Node {
+  explicit CwiseMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -261,9 +272,8 @@ struct CwiseMultiply : public Edge {
 };
 
 // y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
-// NOTE: if A_i is a vector then * computes the component-wise product
-// this is an ugly hack to deal with diagonal matrices
-struct Multilinear : public Edge {
+struct AffineTransform : public Node {
+  template <typename T> explicit AffineTransform(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -275,7 +285,8 @@ struct Multilinear : public Edge {
 };
 
 // y = -x_1
-struct Negate : public Edge {
+struct Negate : public Node {
+  explicit Negate(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -287,7 +298,8 @@ struct Negate : public Edge {
 };
 
 // y = max(0,x)
-struct Rectify : public Edge {
+struct Rectify : public Node {
+  explicit Rectify(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -303,9 +315,9 @@ struct Rectify : public Edge {
 // x_1 must be a scalar that is a value between 0 and 1
 // target_y is a value between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
-struct BinaryLogLoss : public Edge {
-  BinaryLogLoss(real ty) : target_y(ty), ptarget_y(&target_y) {}
-  BinaryLogLoss(real* pty) : target_y(), ptarget_y(pty) {}
+struct BinaryLogLoss : public Node {
+  BinaryLogLoss(const std::initializer_list<VariableIndex>& a, real ty) : Node(a), target_y(ty), ptarget_y(&target_y) {}
+  BinaryLogLoss(const std::initializer_list<VariableIndex>& a, real* pty) : Node(a), target_y(), ptarget_y(pty) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -319,7 +331,8 @@ struct BinaryLogLoss : public Edge {
 };
 
 // y = \sum_i x_i
-struct Sum : public Edge {
+struct Sum : public Node {
+  template <typename T> explicit Sum(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -331,7 +344,8 @@ struct Sum : public Edge {
 };
 
 // y = || x_1 - x_2 ||^2
-struct SquaredEuclideanDistance : public Edge {
+struct SquaredEuclideanDistance : public Node {
+  explicit SquaredEuclideanDistance(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -343,7 +357,8 @@ struct SquaredEuclideanDistance : public Edge {
 };
 
 // y = \sigma(x_1)
-struct LogisticSigmoid : public Edge {
+struct LogisticSigmoid : public Node {
+  explicit LogisticSigmoid(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -356,7 +371,8 @@ struct LogisticSigmoid : public Edge {
 
 // z = \sum_j \exp (x_i)_j
 // y_i = (x_1)_i / z
-struct Softmax : public Edge {
+struct Softmax : public Node {
+  explicit Softmax(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -369,7 +385,8 @@ struct Softmax : public Edge {
 
 // z = \sum_j \exp (x_i)_j
 // y_i = (x_1)_i - \log z
-struct LogSoftmax : public Edge {
+struct LogSoftmax : public Node {
+  explicit LogSoftmax(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -382,10 +399,10 @@ struct LogSoftmax : public Edge {
 
 // z = \sum_j \exp (x_i)_j
 // y = (x_1)_element - \log z
-struct PickNegLogSoftmax : public Edge {
-  explicit PickNegLogSoftmax(unsigned v) : val(v), pval(&val) {}
+struct PickNegLogSoftmax : public Node {
+  explicit PickNegLogSoftmax(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val) {}
   // use this constructor if you want to change the value after the graph is constructed
-  explicit PickNegLogSoftmax(const unsigned* pv) : val(), pval(pv) {}
+  explicit PickNegLogSoftmax(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -401,8 +418,8 @@ struct PickNegLogSoftmax : public Edge {
 
 // z = \sum_{j \in denom} \exp (x_i)_j
 // y_i = (x_1)_i - \log z
-struct RestrictedLogSoftmax : public Edge {
-  explicit RestrictedLogSoftmax(const std::vector<unsigned>& d) : denom(d) {}
+struct RestrictedLogSoftmax : public Node {
+  explicit RestrictedLogSoftmax(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& d) : Node(a), denom(d) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -417,10 +434,10 @@ struct RestrictedLogSoftmax : public Edge {
 // x_1 is a vector
 // y = (x_1)_{*pval}
 // this is used to implement cross-entropy training
-struct PickElement : public Edge {
-  explicit PickElement(unsigned v) : val(v), pval(&val) {}
+struct PickElement : public Node {
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val) {}
   // use this constructor if you want to change the value after the graph is constructed
-  explicit PickElement(const unsigned* pv) : val(), pval(pv) {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -436,8 +453,8 @@ struct PickElement : public Edge {
 // x_1 is a vector
 // y = x_1[start:end]
 // (start inclusive, end exclusive)
-struct PickRange : public Edge {
-  explicit PickRange(unsigned start, unsigned end) : start(start), end(end) {}
+struct PickRange : public Node {
+  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned start, unsigned end) : Node(a), start(start), end(end) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
