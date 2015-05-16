@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 
+#include "cnn/nodes.h"
 #include "cnn/training.h"
 
 using namespace std;
@@ -40,7 +41,7 @@ GRUBuilder::GRUBuilder(unsigned layers,
   }  // layers
 }
 
-void GRUBuilder::new_graph(Hypergraph* hg) {
+void GRUBuilder::new_graph(ComputationGraph* hg) {
   sm.transition(RNNOp::new_graph);
   param_vars.clear();
 
@@ -68,7 +69,7 @@ void GRUBuilder::new_graph(Hypergraph* hg) {
   }
 }
 
-void GRUBuilder::start_new_sequence(Hypergraph* hg,
+void GRUBuilder::start_new_sequence(ComputationGraph* hg,
                                     vector<VariableIndex> h_0) {
   sm.transition(RNNOp::start_new_sequence);
   h.clear();
@@ -80,7 +81,7 @@ void GRUBuilder::start_new_sequence(Hypergraph* hg,
   assert (h0.size() == layers);
 }
 
-VariableIndex GRUBuilder::add_input(VariableIndex x, Hypergraph* hg) {
+VariableIndex GRUBuilder::add_input(VariableIndex x, ComputationGraph* hg) {
   sm.transition(RNNOp::add_input);
   const unsigned t = h.size();
   h.push_back(vector<VariableIndex>(layers));
@@ -97,16 +98,16 @@ VariableIndex GRUBuilder::add_input(VariableIndex x, Hypergraph* hg) {
       i_h_tm1 = h[t-1][i];
     }
     // update gate
-    VariableIndex i_zt = hg->add_function<Multilinear>({vars[BZ], vars[X2Z], in, vars[H2Z], i_h_tm1});
+    VariableIndex i_zt = hg->add_function<AffineTransform>({vars[BZ], vars[X2Z], in, vars[H2Z], i_h_tm1});
     i_zt = hg->add_function<LogisticSigmoid>({i_zt});
     // forget
     VariableIndex i_ft = hg->add_function<ConstantMinusX>({i_zt}, 1.f);
     // reset gate
-    VariableIndex i_rt = hg->add_function<Multilinear>({vars[BR], vars[X2R], in, vars[H2R], i_h_tm1});
+    VariableIndex i_rt = hg->add_function<AffineTransform>({vars[BR], vars[X2R], in, vars[H2R], i_h_tm1});
     i_rt = hg->add_function<LogisticSigmoid>({i_rt});
     // candidate activation
     VariableIndex i_ght = hg->add_function<CwiseMultiply>({i_rt, i_h_tm1});
-    VariableIndex i_ct = hg->add_function<Multilinear>({vars[BH], vars[X2H], in, vars[H2H], i_ght});
+    VariableIndex i_ct = hg->add_function<AffineTransform>({vars[BH], vars[X2H], in, vars[H2H], i_ght});
     i_ct = hg->add_function<Tanh>({i_ct});
 
     // new hidden state

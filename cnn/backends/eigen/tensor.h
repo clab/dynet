@@ -60,6 +60,8 @@ struct TensorTools {
   static void Randomize(Tensor& d);
   static void RandomBernoulli(Tensor& val, real p);
   static void RandomizeNormal(real mean, real stddev, Tensor& val);
+  // AccessElement is very, very slow (potentially) - use appropriately
+  static float AccessElement(const Tensor& v, const Dim& index);
 };
 real rand01();
 

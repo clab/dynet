@@ -1,4 +1,4 @@
-#include "cnn/edges.h"
+#include "cnn/nodes.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
 #include "cnn/timing.h"
@@ -54,20 +54,20 @@ struct EncoderDecoder {
   }
 
   // build graph and return VariableIndex of total loss
-  VariableIndex BuildGraph(const vector<int>& insent, const vector<int>& osent, Hypergraph& hg) {
+  VariableIndex BuildGraph(const vector<int>& insent, const vector<int>& osent, ComputationGraph& cg) {
     // forward encoder
-    fwd_enc_builder.new_graph(&hg);
-    fwd_enc_builder.start_new_sequence(&hg);
+    fwd_enc_builder.new_graph(&cg);
+    fwd_enc_builder.start_new_sequence(&cg);
     for (unsigned t = 0; t < insent.size(); ++t) {
-      VariableIndex i_x_t = hg.add_lookup(p_ec, insent[t]);
-      fwd_enc_builder.add_input(i_x_t, &hg);
+      VariableIndex i_x_t = cg.add_lookup(p_ec, insent[t]);
+      fwd_enc_builder.add_input(i_x_t, &cg);
     }
     // backward encoder
-    rev_enc_builder.new_graph(&hg);
-    rev_enc_builder.start_new_sequence(&hg);
+    rev_enc_builder.new_graph(&cg);
+    rev_enc_builder.start_new_sequence(&cg);
     for (int t = insent.size() - 1; t >= 0; --t) {
-      VariableIndex i_x_t = hg.add_lookup(p_ec, insent[t]);
-      rev_enc_builder.add_input(i_x_t, &hg);
+      VariableIndex i_x_t = cg.add_lookup(p_ec, insent[t]);
+      rev_enc_builder.add_input(i_x_t, &cg);
     }
 
     // encoder -> decoder transformation
@@ -76,38 +76,38 @@ struct EncoderDecoder {
     for (auto h_l : fwd_enc_builder.final_h()) to[c++] = h_l;
     for (auto h_l : rev_enc_builder.final_h()) to[c++] = h_l;
     assert(c == LAYERS * 2);
-    VariableIndex i_combined = hg.add_function<Concatenate>(to);
-    VariableIndex i_ie2h = hg.add_parameter(p_ie2h);
-    VariableIndex i_bie = hg.add_parameter(p_bie);
-    VariableIndex i_t = hg.add_function<Multilinear>({i_bie, i_ie2h, i_combined});
-    hg.incremental_forward();
-    VariableIndex i_h = hg.add_function<Rectify>({i_t});
-    VariableIndex i_h2oe = hg.add_parameter(p_h2oe);
-    VariableIndex i_boe = hg.add_parameter(p_boe);
-    VariableIndex i_nc = hg.add_function<Multilinear>({i_boe, i_h2oe, i_h});
+    VariableIndex i_combined = cg.add_function<Concatenate>(to);
+    VariableIndex i_ie2h = cg.add_parameter(p_ie2h);
+    VariableIndex i_bie = cg.add_parameter(p_bie);
+    VariableIndex i_t = cg.add_function<AffineTransform>({i_bie, i_ie2h, i_combined});
+    cg.incremental_forward();
+    VariableIndex i_h = cg.add_function<Rectify>({i_t});
+    VariableIndex i_h2oe = cg.add_parameter(p_h2oe);
+    VariableIndex i_boe = cg.add_parameter(p_boe);
+    VariableIndex i_nc = cg.add_function<AffineTransform>({i_boe, i_h2oe, i_h});
     vector<VariableIndex> oein_c(LAYERS);
     vector<VariableIndex> oein_h(LAYERS);
     for (int i = 0; i < LAYERS; ++i) {
-      oein_c[i] = hg.add_function<PickRange>({i_nc}, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM);
-      oein_h[i] = hg.add_function<Tanh>({oein_c[i]});
+      oein_c[i] = cg.add_function<PickRange>({i_nc}, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM);
+      oein_h[i] = cg.add_function<Tanh>({oein_c[i]});
     }
-    dec_builder.new_graph(&hg);
-    dec_builder.start_new_sequence(&hg, oein_c, oein_h);
+    dec_builder.new_graph(&cg);
+    dec_builder.start_new_sequence(&cg, oein_c, oein_h);
 
     // decoder
-    VariableIndex i_R = hg.add_parameter(p_R);
-    VariableIndex i_bias = hg.add_parameter(p_bias);
+    VariableIndex i_R = cg.add_parameter(p_R);
+    VariableIndex i_bias = cg.add_parameter(p_bias);
     vector<VariableIndex> errs;
     const unsigned oslen = osent.size() - 1;
     for (unsigned t = 0; t < oslen; ++t) {
-      VariableIndex i_x_t = hg.add_lookup(p_c, osent[t]);
-      VariableIndex i_y_t = dec_builder.add_input(i_x_t, &hg);
-      VariableIndex i_r_t = hg.add_function<Multilinear>({i_bias, i_R, i_y_t});
-      VariableIndex i_ydist = hg.add_function<LogSoftmax>({i_r_t});
-      errs.push_back(hg.add_function<PickElement>({i_ydist}, osent[t+1]));
+      VariableIndex i_x_t = cg.add_lookup(p_c, osent[t]);
+      VariableIndex i_y_t = dec_builder.add_input(i_x_t, &cg);
+      VariableIndex i_r_t = cg.add_function<AffineTransform>({i_bias, i_R, i_y_t});
+      VariableIndex i_ydist = cg.add_function<LogSoftmax>({i_r_t});
+      errs.push_back(cg.add_function<PickElement>({i_ydist}, osent[t+1]));
     }
-    VariableIndex i_nerr = hg.add_function<Sum>(errs);
-    return hg.add_function<Negate>({i_nerr});
+    VariableIndex i_nerr = cg.add_function<Sum>(errs);
+    return cg.add_function<Negate>({i_nerr});
   }
 };
 
@@ -207,13 +207,13 @@ int main(int argc, char** argv) {
       }
 
       // build graph for this instance
-      Hypergraph hg;
+      ComputationGraph cg;
       auto& sent = training[order[si]];
       chars += sent.size() - 1;
       ++si;
-      lm.BuildGraph(sent, sent, hg);
-      loss += as_scalar(hg.forward());
-      hg.backward();
+      lm.BuildGraph(sent, sent, cg);
+      loss += as_scalar(cg.forward());
+      cg.backward();
       sgd->update();
       ++lines;
     }
@@ -230,9 +230,9 @@ int main(int argc, char** argv) {
       double dloss = 0;
       int dchars = 0;
       for (auto& sent : dev) {
-        Hypergraph hg;
-        lm.BuildGraph(sent, sent, hg);
-        dloss += as_scalar(hg.forward());
+        ComputationGraph cg;
+        lm.BuildGraph(sent, sent, cg);
+        dloss += as_scalar(cg.forward());
         dchars += sent.size() - 1;
       }
       if (dloss < best) {

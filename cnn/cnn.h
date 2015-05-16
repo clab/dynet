@@ -26,8 +26,8 @@ namespace cnn {
 extern AlignedMemoryPool<5>* fxs;
 extern AlignedMemoryPool<5>* dEdfs;
 
-struct Edge;
-struct ParameterEdgeBase;
+class ExecutionEngine;
+struct ParameterNodeBase;
 struct Node;
 
 BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
@@ -37,9 +37,9 @@ inline void swap(VariableIndex& i1, VariableIndex& i2) {
   i2 = t;
 }
 
-struct Hypergraph {
-  Hypergraph();
-  ~Hypergraph();
+struct ComputationGraph {
+  ComputationGraph();
+  ~ComputationGraph();
 
   // INPUTS
   // the computational network will pull inputs in from the user's data
@@ -78,64 +78,32 @@ struct Hypergraph {
 
   // data
   std::vector<Node*> nodes;       // **stored in topological order**
-  std::vector<Edge*> edges;       // all edges
-  std::vector<void*> memory_pool; // free this
-  std::vector<ParameterEdgeBase*> parameter_edges; // edges that contain parameters that can be updated (subset of edges)
+  std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
   VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
+
+  ExecutionEngine* ee;  // handles the execution
+ private:
+  void set_dim_for_new_node(const VariableIndex& i);
 };
 
 // represents an SSA variable
-// * in_edge is the index of the function that computes the variable
-// * out_edges are the list of functions that use this variable
-// * f is the computed value of the variable (TODO: remove this, see note below)
+// * in_edge is the **ordered** list of indices of the function arguments
+// * fx is the computed value of the variable
 // * dEdf is the derivative of the output with respect to the function
 struct Node {
-  // name is currently just used for debugging- maybe eventually for code
-  // generation though
-  Node(unsigned in_edge_index, VariableIndex nid) :
-      in_edge(in_edge_index),
-      node_id(nid) {}
-
-  // dependency structure
-  unsigned in_edge;
-  std::vector<unsigned> out_edges;
-
-  // memory
-  Dim dim;  // will be .size() = 0 initially, before memory is allocated
-
-  // debugging
-  std::string variable_name() const { return "v" + std::to_string(node_id); }
-  VariableIndex node_id;  // my id
-
-  // computation results (nb. memory is not owned by Tensor)
-  Tensor f;               // f(x_1 , ... , x_n)
-  Tensor dEdf;            // dE/df
-};
-
-inline void swap(Node& n1, Node& n2) {
-  using std::swap;
-  swap(n1.dim, n2.dim);
-  swap(n1.f, n2.f);
-  swap(n1.dEdf, n2.dEdf);
-  swap(n1.in_edge, n2.in_edge);
-  swap(n1.out_edges, n2.out_edges);
-  swap(n1.node_id, n2.node_id);
-}
-
-// represents a function of zero or more input variables
-// functions with zero inputs are constants or optimizeable parameters
-struct Edge {
-  virtual ~Edge();
-  // debugging
-  virtual std::string as_string(const std::vector<std::string>& var_names) const = 0;
+  virtual ~Node();
 
   // compute dimensions of result for given dimensions of inputs
   // also checks to make sure inputs are compatible with each other
+  // TODO remove this in favor of doing all this in the constructor
   virtual Dim dim_forward(const std::vector<Dim>& xs) const = 0;
+
+  // TODO look at member args instead of passing in args
+  virtual std::string as_string(const std::vector<std::string>& args) const = 0;
 
   // in general, this will return an empty size, but if a component needs to store
   // extra information in the forward pass for use in the backward pass, it can
-  // request the memory here (nb. you could put it on the Edge object, but in general,
+  // request the memory here (nb. you could put it on the Node object, but in general,
   // edges should not allocate tensor memory since memory is managed centrally for the
   // entire computation graph). TODO
   // virtual Dim aux_storage_space() const;
@@ -143,72 +111,52 @@ struct Edge {
   // computation
   virtual void forward(const std::vector<const Tensor*>& xs,
                        Tensor& fx) const = 0;
-  // computes the derivative of E with respect to the ith argument to f, that is, xs[i]
+  // accumulates the derivative of E with respect to the ith argument to f, that is, xs[i]
   virtual void backward(const std::vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
                         Tensor& dEdxi) const = 0;
-  virtual bool has_parameters() const;
 
   // number of arguments to the function
-  inline unsigned arity() const { return tail.size(); }
+  inline unsigned arity() const { return args.size(); }
 
-  // structure
-  VariableIndex head_node;   // index of node to contain result of f
-  std::vector<VariableIndex> tail;  // arguments of function
+  // dependency structure
+  std::vector<VariableIndex> args;
+
+  // memory size
+  Dim dim;  // will be .size() = 0 initially filled in by forward() -- TODO fix this
+
+ protected:
+  Node() : args() {}
+  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a) {}
+  template <typename T>
+  explicit Node(const T&c) : args(c.begin(), c.end()) {}
 };
 
-inline void swap(Edge& e1, Edge& e2) {
-  using std::swap;
-  swap(e1.tail, e2.tail);
-  swap(e1.head_node, e2.head_node);
-}
-
 template <class Function>
-inline VariableIndex Hypergraph::add_function(const std::initializer_list<VariableIndex>& arguments) {
+inline VariableIndex ComputationGraph::add_function(const std::initializer_list<VariableIndex>& arguments) {
   VariableIndex new_node_index(nodes.size());
-  unsigned new_edge_index = edges.size();
-  nodes.push_back(new Node(new_edge_index, new_node_index));
-  Edge* new_edge = new Function;
-  edges.push_back(new_edge);
-  new_edge->head_node = new_node_index;
-  for (auto ni : arguments) {
-    new_edge->tail.push_back(ni);
-    nodes[ni]->out_edges.push_back(new_edge_index);
-  }
+  nodes.push_back(new Function(arguments));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
 // pass side information to the function. these are likely to be nondifferentiable arguments
 template <class Function, typename... Args>
-inline VariableIndex Hypergraph::add_function(const std::initializer_list<VariableIndex>& arguments,
+inline VariableIndex ComputationGraph::add_function(const std::initializer_list<VariableIndex>& arguments,
                                               Args&&... side_information) {
   VariableIndex new_node_index(nodes.size());
-  unsigned new_edge_index = edges.size();
-  nodes.push_back(new Node(new_edge_index, new_node_index));
-  Edge* new_edge = new Function(std::forward<Args>(side_information)...);
-  edges.push_back(new_edge);
-  new_edge->head_node = new_node_index;
-  for (auto ni : arguments) {
-    new_edge->tail.push_back(ni);
-    nodes[ni]->out_edges.push_back(new_edge_index);
-  }
+  nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
 template <class Function, typename T>
-inline VariableIndex Hypergraph::add_function(const T& arguments) {
+inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index(nodes.size());
-  unsigned new_edge_index = edges.size();
-  nodes.push_back(new Node(new_edge_index, new_node_index));
-  Edge* new_edge = new Function;
-  edges.push_back(new_edge);
-  new_edge->head_node = new_node_index;
-  for (auto ni : arguments) {
-    new_edge->tail.push_back(ni);
-    nodes[ni]->out_edges.push_back(new_edge_index);
-  }
+  nodes.push_back(new Function(arguments));
+  set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 

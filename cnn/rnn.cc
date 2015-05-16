@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 
+#include "cnn/nodes.h"
 #include "cnn/training.h"
 
 using namespace std;
@@ -26,33 +27,33 @@ RNNBuilder::RNNBuilder(unsigned layers,
   }
 }
 
-void RNNBuilder::new_graph(Hypergraph* hg) {
+void RNNBuilder::new_graph(ComputationGraph* cg) {
   sm.transition(RNNOp::new_graph);
   param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
     Parameters* p_x2h = params[i][0];
     Parameters* p_h2h = params[i][1];
     Parameters* p_hb = params[i][2];
-    VariableIndex i_x2h = hg->add_parameter(p_x2h);
-    VariableIndex i_h2h = hg->add_parameter(p_h2h);
-    VariableIndex i_hb = hg->add_parameter(p_hb);
+    VariableIndex i_x2h = cg->add_parameter(p_x2h);
+    VariableIndex i_h2h = cg->add_parameter(p_h2h);
+    VariableIndex i_hb = cg->add_parameter(p_hb);
     vector<VariableIndex> vars = {i_x2h, i_h2h, i_hb};
     param_vars.push_back(vars);
   }
 }
 
-void RNNBuilder::start_new_sequence(Hypergraph* hg, vector<VariableIndex> h_0) {
+void RNNBuilder::start_new_sequence(ComputationGraph* cg, vector<VariableIndex> h_0) {
   sm.transition(RNNOp::start_new_sequence);
   h.clear();
   h0 = h_0;
   if (h0.empty()) {
-    VariableIndex zero_input = hg->add_input(Dim({hidden_dim}), &zeros);
+    VariableIndex zero_input = cg->add_input(Dim({hidden_dim}), &zeros);
     h0 = vector<VariableIndex>(layers, zero_input);
   }
   assert (h0.size() == layers);
 }
 
-VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
+VariableIndex RNNBuilder::add_input(VariableIndex x, ComputationGraph* cg) {
   sm.transition(RNNOp::add_input);
   const unsigned t = h.size();
   h.push_back(vector<VariableIndex>(layers));
@@ -69,8 +70,8 @@ VariableIndex RNNBuilder::add_input(VariableIndex x, Hypergraph* hg) {
       i_h_tm1 = h[t-1][i];
     }
     // h3 = hbias + h2h * h_{t-1} + x2h * in
-    VariableIndex i_h3 = hg->add_function<Multilinear>({vars[2], vars[0], in, vars[1], i_h_tm1});
-    in = ht[i] = hg->add_function<Tanh>({i_h3});
+    VariableIndex i_h3 = cg->add_function<AffineTransform>({vars[2], vars[0], in, vars[1], i_h_tm1});
+    in = ht[i] = cg->add_function<Tanh>({i_h3});
   }
   return ht.back();
 }
