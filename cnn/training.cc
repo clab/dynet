@@ -6,7 +6,8 @@ using namespace std;
 
 Trainer::~Trainer() {}
 
-void Trainer::clip_gradients() {
+float Trainer::clip_gradients() {
+  float gscale = 1;
   if (clipping_enabled) {
     double gg = 0;
     for (auto p : model->all_parameters_list())
@@ -14,23 +15,31 @@ void Trainer::clip_gradients() {
     gg = sqrt(gg);
     if (gg > clip_threshold) {
       ++clips;
-      for (auto p : model->all_parameters_list())
-        p->rescale_gradient(clip_threshold / gg);
+      gscale = clip_threshold / gg;
     }
   }
+  return gscale;
 }
 
 void SimpleSGDTrainer::update(real scale) {
-  clip_gradients();
+  const float gscale = clip_gradients();
   for (auto p : model->parameters_list()) {
+#if HAVE_CUDA
+    cerr << "implement update\n"; abort();
+#else
     auto reg = (*p->values) * lambda;
-    *p->values -= ((eta * scale) * *p->g + reg);
+    *p->values -= ((eta * scale * gscale) * *p->g + reg);
+#endif
     p->clear();
   }
   for (auto p : model->lookup_parameters_list()) {
     for (auto i : p->non_zero_grads) {
+#if HAVE_CUDA
+      cerr << "implement lookup update\n"; abort();
+#else
       auto reg = (*p->values[i]) * lambda;
       *p->values[i] -= (*p->grads[i] * (eta * scale) + reg);
+#endif
     }
     p->clear();
   }

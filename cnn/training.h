@@ -19,8 +19,9 @@ struct Trainer {
     eta = eta0 / (1 + epoch * eta_decay);
   }
 
-  // if clipping is enabled and the gradient is too big, clip
-  void clip_gradients();
+  // if clipping is enabled and the gradient is too big, return the amount to
+  // scale the gradient by (otherwise 1)
+  float clip_gradients();
 
   // learning rates
   real eta0;
