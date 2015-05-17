@@ -215,6 +215,23 @@ Dim ConcatenateColumns::dim_forward(const vector<Dim>& xs) const {
   return Dim({rows, new_cols});
 }
 
+string PairwiseRankLoss::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "max(0, " << margin << " - " << arg_names[0] << " + " << arg_names[1] << ')';
+  return os.str();
+}
+
+Dim PairwiseRankLoss::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 ||
+      xs[0] != xs[1] ||
+      xs[0].rows() != 1 ||
+      (xs[0].ndims() != 1 && xs[0].ndims() != 2)) {
+    cerr << "Bad input dimensions in PairwiseRankLoss: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string Hinge::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "hinge(" << arg_names[0] << ",m=" << margin << ")";

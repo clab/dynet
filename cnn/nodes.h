@@ -195,6 +195,22 @@ struct ConcatenateColumns : public Node {
                   Tensor& dEdxi) const override;
 };
 
+// x_1 is a scalar (or row vector)
+// x_2 is a scalar (or row vector)
+// y = max(0, margin - x_1 + x_2)
+struct PairwiseRankLoss : public Node {
+  explicit PairwiseRankLoss(const std::initializer_list<VariableIndex>& a, real m = 1.0) : Node(a), margin(m) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
+  real margin;
+};
+
 // Let x be a vector-valued input, x_i represents the score of the ith element, then
 // y = \sum{i != element} max{0, margin - x_element + x_i}
 struct Hinge : public Node {
