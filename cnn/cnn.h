@@ -8,6 +8,7 @@
 #include <utility>
 #include <boost/serialization/strong_typedef.hpp>
 
+#include "cnn/init.h"
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/tensor.h"
 #include "cnn/model.h"
@@ -25,6 +26,9 @@ namespace cnn {
 
 extern AlignedMemoryPool<5>* fxs;
 extern AlignedMemoryPool<5>* dEdfs;
+extern float* kSCALAR_MINUSONE;
+extern float* kSCALAR_ONE;
+extern float* kSCALAR_ZERO;
 
 class ExecutionEngine;
 struct ParameterNodeBase;

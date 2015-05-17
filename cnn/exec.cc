@@ -24,7 +24,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
     return nfxs.back();
 
   //vector<string> dummy(5, "x");
-  vector<const Tensor*> xs;
+  vector<const Tensor*> xs(16);
   for (; last_node_evaluated < node_max_index; ++last_node_evaluated) {
     const Node* node = cg.nodes[last_node_evaluated];
     xs.resize(node->arity());
@@ -35,6 +35,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
     }
     nfxs[last_node_evaluated].d = node->dim;
     nfxs[last_node_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
+    //cerr << "CALLING: " << node->as_string(dummy) << endl;
     node->forward(xs, nfxs[last_node_evaluated]);
   }
   return nfxs.back();
@@ -56,7 +57,7 @@ void SimpleExecutionEngine::backward() {
   }
   dEdfs->zero_allocated_memory();
   // initialize dE/dE = 1
-  ndEdfs.back().v[0] = 1;
+  ndEdfs.back().v = kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
   const unsigned num_nodes = cg.nodes.size();

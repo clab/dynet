@@ -48,8 +48,11 @@ Dim InputNode::dim_forward(const vector<Dim>& xs) const {
 
 void InputNode::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  assert((int)dim.size() == (int)pdata->size());
+#if HAVE_CUDA
+  cudaMemcpy(fx.v, &pdata->front(), dim.size() * sizeof(float), cudaMemcpyHostToDevice);
+#else
   memcpy(fx.v, &pdata->front(), dim.size() * sizeof(float));
+#endif
 }
 
 void InputNode::backward(const vector<const Tensor*>& xs,
@@ -63,7 +66,7 @@ void InputNode::backward(const vector<const Tensor*>& xs,
 
 string ScalarInputNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "scalar_constant(" << *pdata << ')';
+  s << "scalar_constant(" << pdata << ')';
   return s.str();
 }
 
@@ -73,7 +76,11 @@ Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
 
 void ScalarInputNode::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
+#if HAVE_CUDA
+  cudaMemcpy(fx.v, pdata, 1 * sizeof(float), cudaMemcpyHostToDevice);
+#else
   fx.v[0] = *pdata;
+#endif
 }
 
 void ScalarInputNode::backward(const vector<const Tensor*>& xs,
