@@ -8,6 +8,7 @@
 #include <mm_malloc.h>
 //#endif
 #if HAVE_CUDA
+#include "cnn/cuda.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 #endif
@@ -18,11 +19,7 @@ inline void* cnn_mm_malloc(size_t n, size_t align) {
 //#if HAVE_MM_MALLOC
   void* ptr = nullptr;
 #if HAVE_CUDA
-  if (cudaMalloc(&ptr, n) != cudaSuccess) {
-    ptr = nullptr;
-  } else {
-    std::cerr << "cudaMalloc succeeded: ptr=" << ptr << std::endl;
-  }
+  CUDA_CHECK(cudaMalloc(&ptr, n));
 #else
   ptr = _mm_malloc(n, align);
 #endif
@@ -39,10 +36,7 @@ inline void* cnn_mm_malloc(size_t n, size_t align) {
 inline void cnn_mm_free(void* mem) {
 //#if HAVE_MM_MALLOC
 #if HAVE_CUDA
-  if (cudaFree(mem)) {
-    std::cerr << "cudaFree failed\n";
-    abort();
-  }
+  CUDA_CHECK(cudaFree(mem));
 #else
   _mm_free(mem);
 #endif
@@ -85,7 +79,7 @@ class AlignedMemoryPool {
   void zero_allocated_memory() {
     if (used == 0) return;
 #if HAVE_CUDA
-    cudaMemset(mem, 0, used);
+    CUDA_CHECK(cudaMemset(mem, 0, used));
 #else
     std::memset(mem, 0, used);
 #endif
@@ -99,15 +93,15 @@ class AlignedMemoryPool {
   void zero_all() {
     //std::cerr << "zeroing " << (used ? used : capacity) << " bytes\n";
 #if HAVE_CUDA
-    cudaMemset(mem, 0, capacity);
+    CUDA_CHECK(cudaMemset(mem, 0, capacity));
 #else
     std::memset(mem, 0, capacity);
 #endif
   }
   inline static size_t round_up_align(size_t n) {
     if (AlignedBits < 2) return n;
-    auto c = (n & ((1 << AlignedBits) - 1)) > 0 ? 1 : 0;
-    return ((n >> AlignedBits) + c) << AlignedBits;
+    auto c = (n & ((1 << (AlignedBits)) - 1)) > 0 ? 1 : 0;
+    return ((n >> (AlignedBits)) + c) << (AlignedBits);
   }
   size_t capacity;
   size_t used;

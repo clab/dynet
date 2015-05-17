@@ -5,12 +5,17 @@ set(cnn_library_SRCS
     dict.cc
     dim.cc
     exec.cc
-    nodes-common.cc
     gru.cc
+    init.cc
     lstm.cc
+    model.cc
+    nodes.cc
+    nodes-common.cc
     param-nodes.cc
     rnn.cc
     rnn-state-machine.cc
+    saxe-init.cc
+    tensor.cc
     training.cc
 )
 
@@ -32,14 +37,10 @@ set(cnn_library_HDRS
     training.h
 )
 
-if(WITH_EIGEN_BACKEND)
+if(WITH_CUDA_BACKEND)
   list(APPEND cnn_library_SRCS
-       backends/eigen/saxe-init.cc
-       backends/eigen/init.cc
-       backends/eigen/nodes.cc
-       backends/eigen/tensor.cc
-       backends/eigen/model.cc)
-endif(WITH_EIGEN_BACKEND)
+       cuda.cc)
+endif(WITH_CUDA_BACKEND)
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 
@@ -65,12 +66,12 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 
 # actual target:
 add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
-if(WITH_CUDA)
+if(WITH_CUDA_BACKEND)
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_20,code=sm_20;-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-O2;-DVERBOSE")
   SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-  cuda_add_library(cnncuda STATIC backends/cuda/dummy.cu)
-endif(WITH_CUDA)
+  cuda_add_library(cnncuda STATIC gpu-ops.cu)
+endif(WITH_CUDA_BACKEND)
 
 # target_compile_features(cnn PRIVATE cxx_range_for)
 

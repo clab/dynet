@@ -8,6 +8,9 @@ using namespace std;
 
 namespace cnn {
 
+float* kSCALAR_MINUSONE;
+float* kSCALAR_ONE;
+float* kSCALAR_ZERO;
 int n_hgs = 0;
 
 Node::~Node() {}
@@ -116,7 +119,7 @@ void ComputationGraph::PrintGraphviz() const {
   for (auto node : nodes) {
     vector<string> var_names;
     for (auto arg : node->args)
-      var_names.push_back(string("v")); // TODO
+      var_names.push_back(string("v") + to_string((unsigned)arg));
     cerr << "  N" << nc << " [label=\"v" << nc << " = "
          << node->as_string(var_names) << "\"];\n";
     for (auto arg : node->args)

@@ -4,6 +4,11 @@
 #include <cmath>
 #include <sstream>
 
+#if HAVE_CUDA
+#include "cnn/cuda.h"
+#include "cnn/gpu-ops.h"
+#endif
+
 using namespace std;
 
 // notes on implementing differentiable components
@@ -63,7 +68,7 @@ void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   res.setZero();
   for (int j = 0; j < new_cols; ++j) {
     auto c_j = res.col(j);
-    for (int k = 0; k < n; ++k)
+    for (unsigned k = 0; k < n; ++k)
       c_j += x.col(j + k);
   }
 }
@@ -75,7 +80,7 @@ void KMHNGram::backward(const vector<const Tensor*>& xs,
                         Tensor& dEdxi) const {
   const int c = dEdf.d.cols();
   for (int j = 0; j < c; ++j)
-    for (int k = 0; k < n; ++k)
+    for (unsigned k = 0; k < n; ++k)
       (*dEdxi).col(j+k) += (*dEdf).col(j);
 }
 
@@ -161,6 +166,10 @@ void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
     fx.v = xs[0]->v;
     return;
   }
+#if HAVE_CUDA
+  for (unsigned i = 0; i < num_args; ++i)
+    CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[i]->v, 1, fx.v, 1));
+#else
   auto res = *fx;
   const unsigned remainder = num_args % 4;
   switch (remainder) {
@@ -171,6 +180,7 @@ void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
   for (unsigned i = remainder; i < num_args; i += 4)
     res += **xs[i] + **xs[i+1] + **xs[i+2] + **xs[i+3];
+#endif
 }
 
 void Sum::backward(const vector<const Tensor*>& xs,
@@ -188,8 +198,12 @@ struct FTanh {
 };
 
 void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+#if HAVE_CUDA
+  gpu::vtanh(fx.d.size(), xs[0]->v, fx.v);
+#else
   auto x = **xs[0];
   *fx = x.unaryExpr(FTanh());
+#endif
 }
 
 struct FTanhBackward {
@@ -256,10 +270,14 @@ void Concatenate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   unsigned k = 0;
   for (auto x : xs) {
     src_row_indices[k++] = ind;
-    auto xi = **x;
-    assert(xi.cols() == 1); // this can be relaxed to the same everywhere
-    const unsigned rows = xi.rows();
-    (*fx).block(ind, 0, rows, 1) = xi;
+    auto xi = *x;
+    assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
+    const unsigned rows = xi.d.rows();
+#if HAVE_CUDA
+    CUDA_CHECK(cudaMemcpyAsync(&fx.v[ind], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
+#else
+    (*fx).block(ind, 0, rows, 1) = *xi;
+#endif
     ind += rows;
   }
 }
@@ -587,7 +605,7 @@ void PickRange::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(start >= 0);
   assert(end <= x.rows());
   assert(start < end);
-  assert(fx.d.rows() == end-start);
+  assert(int(fx.d.rows()) == int(end-start));
   (*fx) = x.block(start, 0, end-start, 1);
 }
 
@@ -598,16 +616,23 @@ void PickRange::backward(const vector<const Tensor*>& xs,
                     unsigned i,
                     Tensor& dEdxi) const {
   assert(i == 0);
-  assert(dEdf.d.rows() == end-start);
+  assert(int(dEdf.d.rows()) == int(end-start));
   assert(dEdf.d.cols() == 1);
   (*dEdxi).block(start, 0, end-start, 1) += (*dEdf);
 }
 
 void MatrixMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
+#if HAVE_CUDA
+  auto x1 = *xs[0];
+  auto x2 = *xs[1];
+  CUBLAS_CHECK(cublasSgemv(cublas_handle, CUBLAS_OP_N, x1.d.rows(), x1.d.cols(),
+             kSCALAR_ONE, x1.v, x1.d.rows(), x2.v, 1, kSCALAR_ZERO, fx.v, 1));
+#else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
   (*fx).noalias() = x1 * x2;
+#endif
 }
 
 void MatrixMultiply::backward(const vector<const Tensor*>& xs,
@@ -715,9 +740,13 @@ void Rectify::backward(const vector<const Tensor*>& xs,
 
 void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
+#if HAVE_CUDA
+  gpu::sqeucdist(xs[0]->d.size(), xs[0]->v, xs[1]->v, fx.v);
+#else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
   fx.v[0] = (x1 - x2).squaredNorm();
+#endif
 }
 
 void SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,

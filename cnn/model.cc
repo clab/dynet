@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include <iostream>
 
-#define CNN_ALIGN 32
+#define CNN_ALIGN 256
 
 using namespace std;
 
