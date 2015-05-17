@@ -38,7 +38,7 @@ void SimpleSGDTrainer::update(real scale) {
       cerr << "implement lookup update\n"; abort();
 #else
       auto reg = (*p->values[i]) * lambda;
-      *p->values[i] -= (*p->grads[i] * (eta * scale) + reg);
+      *p->values[i] -= (*p->grads[i] * (eta * scale * gscale) + reg);
 #endif
     }
     p->clear();
