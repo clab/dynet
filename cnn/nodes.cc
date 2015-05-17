@@ -306,6 +306,39 @@ void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf).col(i);
 }
 
+struct FPairwiseRankLoss {
+  FPairwiseRankLoss(float m) : margin(m) {}
+  float operator()(float a, float b) const {
+    float d = margin - a + b;
+    return d > 0.f ? d : 0.f;
+  }
+  float margin;
+};
+
+void PairwiseRankLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto a = **xs[0];
+  auto b = **xs[1];
+  *fx = a.binaryExpr(b, FPairwiseRankLoss(margin));
+}
+
+struct FRectifyBackward {
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
+    return (t) ? d : 0.f;
+  }
+};
+
+void PairwiseRankLoss::backward(const vector<const Tensor*>& xs,
+                                const Tensor& fx,
+                                const Tensor& dEdf,
+                                unsigned i,
+                                Tensor& dEdxi) const {
+  if (i == 0) {
+    *dEdxi -= (*fx).binaryExpr(*dEdf, FRectifyBackward());
+  } else {
+    *dEdxi += (*fx).binaryExpr(*dEdf, FRectifyBackward());
+  }
+}
+
 void Hinge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   cerr << "FIX IMPL3\n"; abort();
 #if 0
@@ -723,12 +756,6 @@ void Rectify::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   *fx = x.unaryExpr(FRectify());
 }
-
-struct FRectifyBackward {
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
-    return (t) ? d : 0.f;
-  }
-};
 
 void Rectify::backward(const vector<const Tensor*>& xs,
                          const Tensor& fx,

@@ -163,7 +163,6 @@ int main(int argc, char** argv) {
       VariableIndex i_t = emb.EmbedTarget(trg, cg);
       VariableIndex i_sim = cg.add_function<SquaredEuclideanDistance>({i_s,i_t});
       float margin = 2;
-      VariableIndex i_ms = cg.add_function<ConstantMinusX>({i_sim}, margin);
       const unsigned K = 20;
       vector<VariableIndex> noise(K);
       for (unsigned j = 0; j < K; ++j) {
@@ -171,10 +170,9 @@ int main(int argc, char** argv) {
         while (s == order[si] || s == training.size()) { s = rand01() * training.size(); }
         VariableIndex i_n_j = emb.EmbedTarget(training[s].second, cg);
         VariableIndex i_sim_n = cg.add_function<SquaredEuclideanDistance>({i_s,i_n_j});
-        noise[j] = cg.add_function<Sum>({i_ms, i_sim_n});
+        noise[j] = cg.add_function<PairwiseRankLoss>({i_sim, i_sim_n}, margin);
       }
-      VariableIndex i_v = cg.add_function<Rectify>({cg.add_function<ConcatenateColumns>(noise)});
-      cg.add_function<SumColumns>({i_v});
+      cg.add_function<Sum>(noise);
       auto iloss = as_scalar(cg.forward());
       assert(iloss >= 0);
       if (iloss > 0) {
