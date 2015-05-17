@@ -61,7 +61,7 @@ void TensorTools::Constant(Tensor& d, float c) {
   }
 #else
   if (!c) {
-    CUDA_CHECK(memset(d.v, c, d.d.size() * sizeof(float)));
+    memset(d.v, c, d.d.size() * sizeof(float));
   } else {
     fill(d.v, d.v + d.d.size(), c);
   }

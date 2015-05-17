@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
   // two options: MatrixMultiply and Sum, or AffineTransform
   // these are identical, but AffineTransform may be slightly more efficient
-#if 0
+#if 1
   VariableIndex i_f = cg.add_function<MatrixMultiply>({i_W, i_x});
   VariableIndex i_g = cg.add_function<Sum>({i_f, i_b});
 #else

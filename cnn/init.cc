@@ -1,5 +1,6 @@
 #include "cnn/init.h"
 #include "cnn/aligned-mem-pool.h"
+#include "cnn/cnn.h"
 
 #include <iostream>
 #include <random>
@@ -14,7 +15,7 @@ using namespace std;
 
 namespace cnn {
 
-#define ALIGN 12
+#define ALIGN 5
 AlignedMemoryPool<ALIGN>* fxs;
 AlignedMemoryPool<ALIGN>* dEdfs;
 
