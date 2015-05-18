@@ -167,6 +167,7 @@ void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
     return;
   }
 #if HAVE_CUDA
+  TensorTools::Zero(fx);
   for (unsigned i = 0; i < num_args; ++i)
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[i]->v, 1, fx.v, 1));
 #else
@@ -188,7 +189,11 @@ void Sum::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
+#if HAVE_CUDA
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
+#else
   *dEdxi += *dEdf;
+#endif
 };
 
 struct FTanh {
@@ -217,7 +222,11 @@ void Tanh::backward(const vector<const Tensor*>& xs,
                       const Tensor& dEdf,
                       unsigned i,
                       Tensor& dEdxi) const {
+#if HAVE_CUDA
+  gpu::vtanh_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+#else
   *dEdxi += (*fx).binaryExpr(*dEdf, FTanhBackward());
+#endif
 }
 
 void Square::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -659,8 +668,17 @@ void MatrixMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const 
 #if HAVE_CUDA
   auto x1 = *xs[0];
   auto x2 = *xs[1];
-  CUBLAS_CHECK(cublasSgemv(cublas_handle, CUBLAS_OP_N, x1.d.rows(), x1.d.cols(),
-             kSCALAR_ONE, x1.v, x1.d.rows(), x2.v, 1, kSCALAR_ZERO, fx.v, 1));
+  if (x2.d.ndims() == 1 || x2.d.cols() == 1) {
+    CUBLAS_CHECK(cublasSgemv(cublas_handle, CUBLAS_OP_N, x1.d.rows(), x1.d.cols(),
+               kSCALAR_ONE, x1.v, x1.d.rows(), x2.v, 1, kSCALAR_ZERO, fx.v, 1));
+  } else {
+    CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
+          fx.d.rows(), fx.d.cols(), x1.d.cols(),
+          kSCALAR_ONE,
+          x1.v, x1.d.rows(),
+          x2.v, x2.d.rows(),
+          kSCALAR_ZERO, fx.v, fx.d.rows()));
+  }
 #else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
@@ -674,11 +692,29 @@ void MatrixMultiply::backward(const vector<const Tensor*>& xs,
                                 unsigned i,
                                 Tensor& dEdxi) const {
   assert(i < 2);
+#if HAVE_CUDA
+  if (i == 0) {
+    CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+          dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
+          kSCALAR_ONE,
+          dEdf.v, dEdf.d.rows(),
+          xs[1]->v, xs[1]->d.rows(),
+          kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+  } else {
+    CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+          dEdxi.d.rows(), dEdxi.d.cols(), xs[0]->d.rows(),
+          kSCALAR_ONE,
+          xs[0]->v, xs[0]->d.rows(),
+          dEdf.v, xs[0]->d.rows(),
+          kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+  }
+#else
   if (i == 0) {
     (*dEdxi).noalias() += *dEdf * (**xs[1]).transpose();
   } else {
     (*dEdxi).noalias() += (**xs[0]).transpose() * *dEdf;
   }
+#endif
 }
 
 void CwiseMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -689,10 +725,10 @@ void CwiseMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 }
 
 void CwiseMultiply::backward(const vector<const Tensor*>& xs,
-                               const Tensor& fx,
-                               const Tensor& dEdf,
-                               unsigned i,
-                               Tensor& dEdxi) const {
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
   assert(i < 2);
   if (i == 0) {
     auto x2 = **xs[1];
@@ -782,11 +818,15 @@ void SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,
                                  unsigned i,
                                  Tensor& dEdxi) const {
   assert(i < 2);
+#if HAVE_CUDA
+  gpu::sqeucdist_backward(xs[0]->d.size(), dEdf.v, xs[0]->v, xs[1]->v, dEdxi.v, i);
+#else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
   real scale = dEdf.v[0] * 2;
   if (i == 1) scale = -scale;
   *dEdxi += scale * (x1 - x2);
+#endif
 }
 
 struct FLogisticSigmoid {

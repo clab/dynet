@@ -16,9 +16,8 @@ using namespace std;
 namespace cnn {
 
 #define ALIGN 5
-AlignedMemoryPool<ALIGN>* fxs;
-AlignedMemoryPool<ALIGN>* dEdfs;
-
+AlignedMemoryPool<ALIGN>* fxs = nullptr;
+AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
 mt19937* rndeng = nullptr;
 
 void Initialize(int& argc, char**& argv) {
@@ -34,8 +33,8 @@ void Initialize(int& argc, char**& argv) {
   *kSCALAR_ZERO = 0;
 #endif
   random_device rd;
-  rndeng = new mt19937(rd());
-//  rndeng = new mt19937(1);
+//  rndeng = new mt19937(rd());
+  rndeng = new mt19937(1);
   cerr << "Allocating memory...\n";
   fxs = new AlignedMemoryPool<ALIGN>(100000000);
   dEdfs = new AlignedMemoryPool<ALIGN>(100000000);

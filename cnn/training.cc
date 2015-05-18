@@ -1,5 +1,7 @@
 #include "cnn/training.h"
 
+#include "cnn/gpu-ops.h"
+
 namespace cnn {
 
 using namespace std;
@@ -9,10 +11,8 @@ Trainer::~Trainer() {}
 float Trainer::clip_gradients() {
   float gscale = 1;
   if (clipping_enabled) {
-    double gg = 0;
-    for (auto p : model->all_parameters_list())
-      gg+=p->g_squared_l2norm();
-    gg = sqrt(gg);
+    float gg = 0;
+    model->gradient_l2_norm(&gg);
     if (gg > clip_threshold) {
       ++clips;
       gscale = clip_threshold / gg;
@@ -25,7 +25,7 @@ void SimpleSGDTrainer::update(real scale) {
   const float gscale = clip_gradients();
   for (auto p : model->parameters_list()) {
 #if HAVE_CUDA
-    cerr << "implement update\n"; abort();
+    gpu::sgd_update(p->values.d.size(), p->g.v, p->values.v, eta * scale * gscale, lambda);
 #else
     auto reg = (*p->values) * lambda;
     *p->values -= ((eta * scale * gscale) * *p->g + reg);
