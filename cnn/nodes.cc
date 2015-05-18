@@ -141,8 +141,12 @@ void Dropout::backward(const vector<const Tensor*>& xs,
 };
 
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+#if HAVE_CUDA
+  gpu::vconstant_minusx(fx.d.size(), c, xs[0]->v, fx.v);
+#else
   auto x = **xs[0];
   *fx = x.unaryExpr(FConstantMinus(c));
+#endif
 }
 
 void ConstantMinusX::backward(const vector<const Tensor*>& xs,
@@ -150,7 +154,11 @@ void ConstantMinusX::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
+#if HAVE_CUDA
+  gpu::vnegate_backward(dEdxi.d.size(), dEdf.v, dEdxi.v);
+#else
   *dEdxi -= *dEdf;
+#endif
 };
 
 void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -297,9 +305,13 @@ void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
 }
 
 void PairwiseRankLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+#if HAVE_CUDA
+  gpu::vpairwise_rank_loss(fx.d.size(), margin, xs[0]->v, xs[1]->v, fx.v);
+#else
   auto a = **xs[0];
   auto b = **xs[1];
   *fx = a.binaryExpr(b, FPairwiseRankLoss(margin));
+#endif
 }
 
 void PairwiseRankLoss::backward(const vector<const Tensor*>& xs,
@@ -307,11 +319,15 @@ void PairwiseRankLoss::backward(const vector<const Tensor*>& xs,
                                 const Tensor& dEdf,
                                 unsigned i,
                                 Tensor& dEdxi) const {
+#if HAVE_CUDA
+  gpu::vpairwise_rank_loss_backward(dEdf.d.size(), (i == 0), fx.v, dEdf.v, dEdxi.v);
+#else
   if (i == 0) {
     *dEdxi -= (*fx).binaryExpr(*dEdf, FRectifyBackward());
   } else {
     *dEdxi += (*fx).binaryExpr(*dEdf, FRectifyBackward());
   }
+#endif
 }
 
 void Hinge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -642,9 +658,13 @@ void MatrixMultiply::backward(const vector<const Tensor*>& xs,
 
 void CwiseMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
+#if HAVE_CUDA
+  gpu::vcwise_product(fx.d.size(), xs[0]->v, xs[1]->v, fx.v);
+#else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
   *fx = x1.cwiseProduct(x2);
+#endif
 }
 
 void CwiseMultiply::backward(const vector<const Tensor*>& xs,
@@ -654,11 +674,19 @@ void CwiseMultiply::backward(const vector<const Tensor*>& xs,
                              Tensor& dEdxi) const {
   assert(i < 2);
   if (i == 0) {
+#if HAVE_CUDA
+    gpu::vcwise_product_backward(fx.d.size(), dEdf.v, xs[1]->v, dEdxi.v);
+#else
     auto x2 = **xs[1];
     *dEdxi += (*dEdf).cwiseProduct(x2);
+#endif
   } else {
+#if HAVE_CUDA
+    gpu::vcwise_product_backward(fx.d.size(), dEdf.v, xs[0]->v, dEdxi.v);
+#else
     auto x1 = **xs[0];
     *dEdxi += (*dEdf).cwiseProduct(x1);
+#endif
   }
 }
 
@@ -735,7 +763,7 @@ void Negate::backward(const vector<const Tensor*>& xs,
                       Tensor& dEdxi) const {
   assert(i == 0);
 #if HAVE_CUDA
-  gpu::vnegate_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+  gpu::vnegate_backward(fx.d.size(), dEdf.v, dEdxi.v);
 #else
   *dEdxi -= *dEdf;
 #endif

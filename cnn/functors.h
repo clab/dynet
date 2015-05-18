@@ -14,6 +14,12 @@
 
 namespace cnn {
 
+struct FProduct {
+  CNN_DEVICE_FUNC inline float operator()(float a, float b) const {
+    return a * b;
+  }
+};
+
 struct FConstantMinus {
   FConstantMinus(float c) : c(c) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {
@@ -52,6 +58,12 @@ struct FPairwiseRankLoss {
 struct FRectifyBackward {
   CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
     return (t) ? d : 0.f;
+  }
+};
+
+struct FRectifyNegateBackward {
+  CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
+    return (t) ? -d : 0.f;
   }
 };
 
