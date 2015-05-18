@@ -9,6 +9,26 @@ namespace gpu {
 // this wraps kernel dispatches for various operations (preventing us from
 // having to compile a version of nodes.cc with NVCC)
 
+void vnegate(int n, float* x, float* y) {
+  auto tb = SizeToBlockThreadPair(n);
+  unaryExprKernel<<<tb.first, tb.second>>>(n, x, y, FNegate());
+}
+
+void vnegate_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
+  auto tb = SizeToBlockThreadPair(n);
+  accUnaryExprKernel<<<tb.first, tb.second>>>(n, dEdf, dEdx, FNegate());
+}
+
+void vrelu(int n, float* x, float* y) {
+  auto tb = SizeToBlockThreadPair(n);
+  unaryExprKernel<<<tb.first, tb.second>>>(n, x, y, FRectify());
+}
+
+void vrelu_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
+  auto tb = SizeToBlockThreadPair(n);
+  accBinaryExprKernel<<<tb.first, tb.second>>>(n, fx, dEdf, dEdx, FRectifyBackward());
+}
+
 void vtanh(int n, float* x, float* y) {
   auto tb = SizeToBlockThreadPair(n);
   unaryExprKernel<<<tb.first, tb.second>>>(n, x, y, FTanh());

@@ -4,6 +4,10 @@
 namespace cnn {
 namespace gpu {
 
+void vnegate(int n, float* x, float* y);
+void vnegate_backward(int n, const float* fx, const float* dEdf, float* dEdx);
+void vrelu(int n, float* x, float* y);
+void vrelu_backward(int n, const float* fx, const float* dEdf, float* dEdx);
 void vtanh(int n, float* x, float* y);
 void vtanh_backward(int n, const float* fx, const float* dEdf, float* dEdx);
 void vlogistic(int n, float* x, float* y);
