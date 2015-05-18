@@ -22,6 +22,12 @@ struct FConstantMinus {
   float c;
 };
 
+struct FNegate {
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return -x;
+  }
+};
+
 struct FTanh {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
     return tanhf(x);

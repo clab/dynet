@@ -581,22 +581,27 @@ void PickRange::backward(const vector<const Tensor*>& xs,
   (*dEdxi).block(start, 0, end-start, 1) += (*dEdf);
 }
 
+#if HAVE_CUDA
+inline void CUDAMatrixMultiply(const Tensor& l, const Tensor& r, Tensor& y, const float* acc_scalar) {
+  if (r.d.ndims() == 1 || r.d.cols() == 1) {
+    CUBLAS_CHECK(cublasSgemv(cublas_handle, CUBLAS_OP_N, l.d.rows(), l.d.cols(),
+               kSCALAR_ONE, l.v, l.d.rows(), r.v, 1, acc_scalar, y.v, 1));
+  } else {
+    CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
+          y.d.rows(), y.d.cols(), l.d.cols(),
+          kSCALAR_ONE,
+          l.v, l.d.rows(),
+          r.v, r.d.rows(),
+          acc_scalar, y.v, y.d.rows()));
+  }
+}
+#endif
+
 void MatrixMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA
-  auto x1 = *xs[0];
-  auto x2 = *xs[1];
-  if (x2.d.ndims() == 1 || x2.d.cols() == 1) {
-    CUBLAS_CHECK(cublasSgemv(cublas_handle, CUBLAS_OP_N, x1.d.rows(), x1.d.cols(),
-               kSCALAR_ONE, x1.v, x1.d.rows(), x2.v, 1, kSCALAR_ZERO, fx.v, 1));
-  } else {
-    CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
-          fx.d.rows(), fx.d.cols(), x1.d.cols(),
-          kSCALAR_ONE,
-          x1.v, x1.d.rows(),
-          x2.v, x2.d.rows(),
-          kSCALAR_ZERO, fx.v, fx.d.rows()));
-  }
+  // fx = 0*fx + xs[0] * xs[1]
+  CUDAMatrixMultiply(*xs[0], *xs[1], fx, kSCALAR_ZERO);
 #else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
@@ -663,46 +668,87 @@ void AffineTransform::forward(const vector<const Tensor*>& xs, Tensor& fx) const
     fx.v = xs[0]->v;
     return;
   } else {
+#if HAVE_CUDA
+    for (unsigned i = 1; i < xs.size(); i += 2)
+      // fx = (acc_sclar)*fx + xs[0] * xs[1]
+      CUDAMatrixMultiply(*xs[i], *xs[i + 1], fx, (i == 1) ? kSCALAR_ZERO : kSCALAR_ONE);
+    CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v, 1, fx.v, 1));
+#else
     (*fx) = **xs[0];
     for (unsigned i = 1; i < xs.size(); i += 2)
       (*fx).noalias() += (**xs[i]) * (**xs[i + 1]);
+#endif
   }
 }
 
 void AffineTransform::backward(const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
+                               const Tensor& fx,
+                               const Tensor& dEdf,
+                               unsigned i,
+                               Tensor& dEdxi) const {
   assert(i < xs.size());
   if (i == 0) { // bias term
+#if HAVE_CUDA
+    CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
+#else
     *dEdxi += *dEdf;
+#endif
   } else if (i % 2 == 1) { // left argument of matrix multiply
+#if HAVE_CUDA
+    CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+          dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
+          kSCALAR_ONE,
+          dEdf.v, dEdf.d.rows(),
+          xs[i+1]->v, xs[i+1]->d.rows(),
+          kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+#else
     (*dEdxi).noalias() += *dEdf * (**xs[i+1]).transpose();
+#endif
   } else {  // right argument of matrix multiply
+#if HAVE_CUDA
+    CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+          dEdxi.d.rows(), dEdxi.d.cols(), xs[i-1]->d.rows(),
+          kSCALAR_ONE,
+          xs[i-1]->v, xs[i-1]->d.rows(),
+          dEdf.v, xs[i-1]->d.rows(),
+          kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+#else
     (*dEdxi).noalias() += (**xs[i-1]).transpose() * *dEdf;
+#endif
   }
 }
 
 void Negate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
+#if HAVE_CUDA
+  gpu::vnegate(fx.d.size(), xs[0]->v, fx.v);
+#else
   auto x = **xs[0];
   *fx = -x;
+#endif
 }
 
 void Negate::backward(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
+                      const Tensor& fx,
+                      const Tensor& dEdf,
+                      unsigned i,
+                      Tensor& dEdxi) const {
   assert(i == 0);
+#if HAVE_CUDA
+  gpu::vnegate_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+#else
   *dEdxi -= *dEdf;
+#endif
 }
 
 void Rectify::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
+#if HAVE_CUDA
+  gpu::vrelu(fx.d.size(), xs[0]->v, fx.v);
+#else
   auto x = **xs[0];
   *fx = x.unaryExpr(FRectify());
+#endif
 }
 
 void Rectify::backward(const vector<const Tensor*>& xs,
@@ -710,7 +756,11 @@ void Rectify::backward(const vector<const Tensor*>& xs,
                          const Tensor& dEdf,
                          unsigned i,
                          Tensor& dEdxi) const {
+#if HAVE_CUDA
+  gpu::vrelu_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+#else
   *dEdxi += (*fx).binaryExpr(*dEdf, FRectifyBackward());
+#endif
 }
 
 void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
