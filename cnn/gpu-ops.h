@@ -4,15 +4,20 @@
 namespace cnn {
 namespace gpu {
 
-void vnegate(int n, float* x, float* y);
-void vnegate_backward(int n, const float* fx, const float* dEdf, float* dEdx);
-void vrelu(int n, float* x, float* y);
+void vpairwise_rank_loss(int n, float margin, const float* xgood, const float* xbad, float* y);
+void vpairwise_rank_loss_backward(int n, bool d_wrt_correct, const float* fx, const float* dEdf, float* dEdx);
+void vcwise_product(int n, const float* x0, const float* x1, float* y);
+void vcwise_product_backward(int n, const float* dEdy, const float* x_other, float* dEdx);
+void vconstant_minusx(int n, float c, const float* x, float* y);
+void vnegate(int n, const float* x, float* y);
+void vnegate_backward(int n, const float* dEdf, float* dEdx);
+void vrelu(int n, const float* x, float* y);
 void vrelu_backward(int n, const float* fx, const float* dEdf, float* dEdx);
-void vtanh(int n, float* x, float* y);
+void vtanh(int n, const float* x, float* y);
 void vtanh_backward(int n, const float* fx, const float* dEdf, float* dEdx);
-void vlogistic(int n, float* x, float* y);
+void vlogistic(int n, const float* x, float* y);
 void vlogistic_backward(int n, const float* fx, const float* dEdf, float* dEdx);
-void sqeucdist(int n, float* x, float *y, float* res);
+void sqeucdist(int n, const float* x0, const float *x1, float* y);
 void sqeucdist_backward(int n, const float* dEdy, const float* x0, const float* x1, float* dEdx, int i);
 
 void sgd_update(int n, const float* g, float* x, float scale, float lambda);

@@ -43,11 +43,12 @@ __global__ void accBinaryExprKernel(int n, const float* x0, const float* x1, flo
 }
 
 template<typename Func>
-__global__ void slowReduceKernel(int n, float* x, float* y, float* r, Func func) {
-  float tr = 0;
+__global__ void slowReduceKernel(int n, const float* x0, const float* x1, float* y, Func func) {
+  float ty = 0;
+  // THIS IS BAD - FIX THIS TO MAKE IT FAST
   for (int i = 0; i < n; ++i)
-    tr += func(x[i], y[i]);
-  r[0] = tr;
+    ty += func(x0[i], x1[i]);
+  y[0] = ty;
 }
 
 } // namespace gpu
