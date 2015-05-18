@@ -4,6 +4,7 @@
 #include <cmath>
 #include <sstream>
 
+#include "cnn/functors.h"
 #if HAVE_CUDA
 #include "cnn/cuda.h"
 #include "cnn/gpu-ops.h"
@@ -139,14 +140,6 @@ void Dropout::backward(const vector<const Tensor*>& xs,
 #endif
 };
 
-struct FConstantMinus {
-  FConstantMinus(float c) : c(c) {}
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
-    return c - x;
-  }
-  float c;
-};
-
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   *fx = x.unaryExpr(FConstantMinus(c));
@@ -196,12 +189,6 @@ void Sum::backward(const vector<const Tensor*>& xs,
 #endif
 };
 
-struct FTanh {
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
-    return tanhf(x);
-  }
-};
-
 void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vtanh(fx.d.size(), xs[0]->v, fx.v);
@@ -210,12 +197,6 @@ void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   *fx = x.unaryExpr(FTanh());
 #endif
 }
-
-struct FTanhBackward {
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
-    return (1.f - t * t) * d;
-  }
-};
 
 void Tanh::backward(const vector<const Tensor*>& xs,
                       const Tensor& fx,
@@ -315,26 +296,11 @@ void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf).col(i);
 }
 
-struct FPairwiseRankLoss {
-  FPairwiseRankLoss(float m) : margin(m) {}
-  float operator()(float a, float b) const {
-    float d = margin - a + b;
-    return d > 0.f ? d : 0.f;
-  }
-  float margin;
-};
-
 void PairwiseRankLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto a = **xs[0];
   auto b = **xs[1];
   *fx = a.binaryExpr(b, FPairwiseRankLoss(margin));
 }
-
-struct FRectifyBackward {
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
-    return (t) ? d : 0.f;
-  }
-};
 
 void PairwiseRankLoss::backward(const vector<const Tensor*>& xs,
                                 const Tensor& fx,
@@ -458,14 +424,6 @@ EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   return m + logf(z);
 }
 
-struct FSoftmaxNormalize {
-  explicit FSoftmaxNormalize(float logz) : logz(logz) {}
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
-    return expf(x - logz);
-  }
-  float logz;
-};
-
 void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
     auto x = **xs[0];
@@ -475,14 +433,6 @@ void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
     abort();
   }
 }
-
-struct FSoftmaxBackward {
-  explicit FSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
-    return (off_diag_sum + d) * t;
-  }
-  float off_diag_sum;
-};
 
 void Softmax::backward(const vector<const Tensor*>& xs,
                             const Tensor& fx,
@@ -504,15 +454,6 @@ void PickNegLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) con
   }
 }
 
-struct FNegLogSoftmaxBackward {
-  FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t) const {
-    return expf(t - logz) * d;
-  }
-  float logz;
-  float d;
-};
-
 void PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
@@ -531,14 +472,6 @@ void PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
   }
 }
 
-struct FLogSoftmaxNormalize {
-  explicit FLogSoftmaxNormalize(float logz) : logz(logz) {}
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
-    return x - logz;
-  }
-  float logz;
-};
-
 void LogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   if (xs[0]->d.cols() == 1) {
@@ -549,21 +482,6 @@ void LogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
     abort();
   }
 }
-
-struct FWeightedError {
-  float operator()(float t, float d) const {
-    return expf(t) * d / expf(t);
-  }
-};
-
-struct FLogSoftmaxBackward {
-  explicit FLogSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
-    return off_diag_sum * expf(t) + d;
-    //return (off_diag_sum + d) * t;
-  }
-  float off_diag_sum;
-};
 
 void LogSoftmax::backward(const vector<const Tensor*>& xs,
                           const Tensor& fx,
@@ -781,12 +699,6 @@ void Negate::backward(const vector<const Tensor*>& xs,
   *dEdxi -= *dEdf;
 }
 
-struct FRectify {
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
-    return (x > 0.f) ? x : 0.f;
-  }
-};
-
 void Rectify::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto x = **xs[0];
@@ -829,30 +741,26 @@ void SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-struct FLogisticSigmoid {
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float x) const {
-    return 1.f / (1.f + expf(-x));
-  }
-};
-
 void LogisticSigmoid::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
+#if HAVE_CUDA
+  gpu::vlogistic(fx.d.size(), xs[0]->v, fx.v);
+#else
   auto x = **xs[0];
   *fx = x.unaryExpr(FLogisticSigmoid());
+#endif
 }
-
-struct FLogisticSigmoidBackward {
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float operator()(float t, float d) const {
-    return (1.f - t) * t * d;
-  }
-};
 
 void LogisticSigmoid::backward(const vector<const Tensor*>& xs,
                                  const Tensor& fx,
                                  const Tensor& dEdf,
                                  unsigned i,
                                  Tensor& dEdxi) const {
+#if HAVE_CUDA
+  gpu::vlogistic_backward(dEdf.d.size(), fx.v, dEdf.v, dEdxi.v);
+#else
   *dEdxi += (*fx).binaryExpr(*dEdf, FLogisticSigmoidBackward());
+#endif
 }
 
 // you could do this with LogisticSigmoid, Softmax or a variety of other

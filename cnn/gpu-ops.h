@@ -6,6 +6,8 @@ namespace gpu {
 
 void vtanh(int n, float* x, float* y);
 void vtanh_backward(int n, const float* fx, const float* dEdf, float* dEdx);
+void vlogistic(int n, float* x, float* y);
+void vlogistic_backward(int n, const float* fx, const float* dEdf, float* dEdx);
 void sqeucdist(int n, float* x, float *y, float* res);
 void sqeucdist_backward(int n, const float* dEdy, const float* x0, const float* x1, float* dEdx, int i);
 
