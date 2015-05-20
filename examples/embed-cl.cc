@@ -25,34 +25,45 @@ int kTRG_EOS;
 struct Encoder {
   LookupParameters* p_s;
   LookupParameters* p_t;
+  vector<VariableIndex> m;
   explicit Encoder(Model& model) {
     p_s = model.add_lookup_parameters(INPUT_VOCAB_SIZE, {REP_DIM}); 
     p_t = model.add_lookup_parameters(OUTPUT_VOCAB_SIZE, {REP_DIM}); 
   }
 
   VariableIndex EmbedSource(const vector<int>& sent, ComputationGraph& cg) {
-    vector<VariableIndex> m(sent.size() + 2);
+    m.resize(sent.size() + 2);
     m[0] = cg.add_lookup(p_s, kSRC_SOS);
     int i = 1;
     for (auto& w : sent)
       m[i++] = cg.add_lookup(p_s, w);
     m[i] = cg.add_lookup(p_s, kSRC_EOS);
+#define DUMB_ADDITIVE
+#ifdef DUMB_ADDITIVE
+    return cg.add_function<Sum>(m);
+#else
     VariableIndex i_m = cg.add_function<ConcatenateColumns>(m);
-    //i_m = cg.add_function<KMHNGram>({i_m}, 2);
-    //i_m = cg.add_function<Tanh>({i_m});
+    i_m = cg.add_function<KMHNGram>({i_m}, 2);
+    i_m = cg.add_function<Tanh>({i_m});
     return cg.add_function<SumColumns>({i_m});
+#endif
   }
 
   VariableIndex EmbedTarget(const vector<int>& sent, ComputationGraph& cg) {
-    vector<VariableIndex> m(sent.size() + 2);
+    m.resize(sent.size() + 2);
     m[0] = cg.add_lookup(p_s, kTRG_SOS);
     int i = 1;
     for (auto& w : sent)
       m[i++] = cg.add_lookup(p_t, w);
     m[i] = cg.add_lookup(p_s, kTRG_EOS);
+#ifdef DUMB_ADDITIVE
+    return cg.add_function<Sum>(m);
+#else
     VariableIndex i_m = cg.add_function<ConcatenateColumns>(m);
     i_m = cg.add_function<KMHNGram>({i_m}, 2);
+    i_m = cg.add_function<Tanh>({i_m});
     return cg.add_function<SumColumns>({i_m});
+#endif
   }
 };
 

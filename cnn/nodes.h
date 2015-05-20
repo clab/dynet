@@ -427,7 +427,7 @@ struct PickNegLogSoftmax : public Node {
                     const Tensor& dEdf,
                     unsigned i,
                     Tensor& dEdxi) const override;
-  mutable float logz;
+  mutable float* logz;
   unsigned val;
   const unsigned* pval;
 };

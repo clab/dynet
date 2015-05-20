@@ -99,18 +99,17 @@ struct Node {
 
   // compute dimensions of result for given dimensions of inputs
   // also checks to make sure inputs are compatible with each other
-  // TODO remove this in favor of doing all this in the constructor
   virtual Dim dim_forward(const std::vector<Dim>& xs) const = 0;
 
-  // TODO look at member args instead of passing in args
+  // for debugging
   virtual std::string as_string(const std::vector<std::string>& args) const = 0;
 
   // in general, this will return an empty size, but if a component needs to store
   // extra information in the forward pass for use in the backward pass, it can
   // request the memory here (nb. you could put it on the Node object, but in general,
   // edges should not allocate tensor memory since memory is managed centrally for the
-  // entire computation graph). TODO
-  // virtual Dim aux_storage_space() const;
+  // entire computation graph).
+  //virtual size_t aux_storage_space() const;
 
   // computation
   virtual void forward(const std::vector<const Tensor*>& xs,

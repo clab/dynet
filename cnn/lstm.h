@@ -56,6 +56,7 @@ struct LSTMBuilder {
 
   // initial values of h and c at each layer
   // - both default to zero matrix input
+  bool has_initial_state; // if this is false, treat h0 and c0 as 0
   std::vector<VariableIndex> h0;
   std::vector<VariableIndex> c0;
 

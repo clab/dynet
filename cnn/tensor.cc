@@ -52,10 +52,18 @@ float TensorTools::AccessElement(const Tensor& v, const Dim& index) {
 #endif
 }
 
+void TensorTools::SetElements(const Tensor& v, const vector<float>& vec) {
+#if HAVE_CUDA
+  cudaMemcpyAsync(v.v, &vec[0], sizeof(real) * vec.size(), cudaMemcpyHostToDevice);
+#else
+  memcpy(v.v, &vec[0], sizeof(real) * vec.size());
+#endif
+}
+
 void TensorTools::Constant(Tensor& d, float c) {
 #if HAVE_CUDA
   if (!c) {
-    CUDA_CHECK(cudaMemset(d.v, 0, d.d.size() * sizeof(float)));
+    CUDA_CHECK(cudaMemsetAsync(d.v, 0, d.d.size() * sizeof(float)));
   } else {
     fill(d.v, d.v + d.d.size(), c);
   }

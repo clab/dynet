@@ -36,7 +36,14 @@ struct FNegate {
 
 struct FTanh {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
+#ifdef FAST_TANH
+    float x2 = x * x;
+    float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
+    float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
+    return a / b;
+#else
     return tanhf(x);
+#endif
   }
 };
 
@@ -90,6 +97,15 @@ struct FNegLogSoftmaxBackward {
   }
   float logz;
   float d;
+};
+
+struct FPtrNegLogSoftmaxBackward {
+  FPtrNegLogSoftmaxBackward(const float* lz, const float* err) : logz(lz), d(err) {}
+  CNN_DEVICE_FUNC inline float operator()(float t) const {
+    return expf(t - *logz) * *d;
+  }
+  const float* logz;
+  const float* d;
 };
 
 struct FLogSoftmaxNormalize {
@@ -156,6 +172,19 @@ struct FL2SGDUpdate {
   }
   float lambda;
   float scale;
+};
+
+struct FBinaryLogLoss {
+  CNN_DEVICE_FUNC inline float operator()(float x, float x_true) const {
+    return x_true > 0.f ? -x_true * log(x) : (1.f - x_true) * log1p(-x);
+  }
+};
+
+struct FBinaryLogLossBackward {
+  CNN_DEVICE_FUNC inline float operator()(float x, float x_true, float d) const {
+    float scale = (x_true > 0.f) ? -x_true/x : (1.f-x_true)/(1.-x);
+    return d * scale;
+  }
 };
 
 } // namespace cnn

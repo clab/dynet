@@ -77,8 +77,9 @@ struct LookupParameters : public ParametersBase {
 // parameters know how to track their gradients, but any extra information (like velocity) will live here
 class Model {
  public:
+  Model() : gradient_norm_scratch() {}
   ~Model();
-  void gradient_l2_norm(float* norm) const;
+  float gradient_l2_norm() const;
   Parameters* add_parameters(const Dim& d);  // initialized randomly
   LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
 
@@ -119,6 +120,7 @@ class Model {
   std::vector<ParametersBase*> all_params;
   std::vector<Parameters*> params;
   std::vector<LookupParameters*> lookup_params;
+  mutable float* gradient_norm_scratch;
 };
 
 } // namespace cnn
