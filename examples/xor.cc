@@ -1,7 +1,7 @@
 #include "cnn/nodes.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
-
+#include "cnn/gpu-ops.h"
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
@@ -22,8 +22,7 @@ int main(int argc, char** argv) {
   //MomentumSGDTrainer sgd(&m);
 
   Parameters& p_a = *m.add_parameters({1});
-  Parameters& p_b1 = *m.add_parameters({HIDDEN_SIZE/2});
-  Parameters& p_b2 = *m.add_parameters({HIDDEN_SIZE/2});
+  Parameters& p_b = *m.add_parameters({HIDDEN_SIZE});
   Parameters& p_W = *m.add_parameters({HIDDEN_SIZE, 2});
   Parameters& p_V = *m.add_parameters({1, HIDDEN_SIZE});
 
@@ -31,9 +30,7 @@ int main(int argc, char** argv) {
   ComputationGraph cg;
 
   // get symbolic variables corresponding to parameters
-  VariableIndex i_b1 = cg.add_parameter(&p_b1);
-  VariableIndex i_b2 = cg.add_parameter(&p_b2);
-  VariableIndex i_b = cg.add_function<Concatenate>({i_b1, i_b2});
+  VariableIndex i_b = cg.add_parameter(&p_b);
   VariableIndex i_a = cg.add_parameter(&p_a);
   VariableIndex i_W = cg.add_parameter(&p_W);
   VariableIndex i_V = cg.add_parameter(&p_V);
@@ -45,7 +42,7 @@ int main(int argc, char** argv) {
 
   // two options: MatrixMultiply and Sum, or AffineTransform
   // these are identical, but AffineTransform may be slightly more efficient
-#if 1
+#if 0
   VariableIndex i_f = cg.add_function<MatrixMultiply>({i_W, i_x});
   VariableIndex i_g = cg.add_function<Sum>({i_f, i_b});
 #else
@@ -53,7 +50,7 @@ int main(int argc, char** argv) {
 #endif
   VariableIndex i_h = cg.add_function<Tanh>({i_g});
 
-#if 0
+#if 1
   VariableIndex i_p = cg.add_function<MatrixMultiply>({i_V, i_h});
   VariableIndex i_y_pred = cg.add_function<Sum>({i_p, i_a});
 #else

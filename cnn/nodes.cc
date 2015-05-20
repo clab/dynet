@@ -442,8 +442,12 @@ EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float logsumexp(const T& x) {
 
 void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
+#if HAVE_CUDA
+    gpu::softmax(xs[0]->d.size(), xs[0]->v, fx.v);
+#else
     auto x = **xs[0];
     *fx = x.unaryExpr(FSoftmaxNormalize(logsumexp(x)));
+#endif
   } else {
     cerr << "SoftmaxForward not implemented for multiple columns\n";
     abort();
@@ -461,9 +465,14 @@ void Softmax::backward(const vector<const Tensor*>& xs,
 
 void PickNegLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
+    logz = (float*)fxs->allocate(sizeof(float));
+#if HAVE_CUDA
+    gpu::pnlsoftmax(xs[0]->d.size(), *pval, xs[0]->v, fx.v, logz);
+#else
     auto x = **xs[0];
-    logz = logsumexp(x);
-    fx.v[0] = logz - x(*pval);
+    *logz = logsumexp(x);
+    fx.v[0] = *logz - x(*pval);
+#endif
   } else {
     cerr << "SoftmaxForward not implemented for multiple columns\n";
     abort();
@@ -477,11 +486,15 @@ void PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
                             Tensor& dEdxi) const {
   if (xs[0]->d.cols() == 1) {
     const auto elem = *pval;
+#if HAVE_CUDA
+    gpu::pnlsoftmax_backward(dEdxi.d.size(), elem, xs[0]->v, dEdf.v, logz, dEdxi.v);
+#else
     const float err = dEdf.v[0];
     auto x = **xs[0];
     // logz is computed in the forward pass and cached
-    *dEdxi += x.unaryExpr(FNegLogSoftmaxBackward(logz, err));
+    *dEdxi += x.unaryExpr(FNegLogSoftmaxBackward(*logz, err));
     (*dEdxi)(elem) -= err;
+#endif
   } else {
     cerr << "PickNegLogSoftmax not implemented for multiple columns\n";
     abort();
@@ -849,16 +862,7 @@ void LogisticSigmoid::backward(const vector<const Tensor*>& xs,
 void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   assert(xs.front()->d.size() == 1);
-  const auto y_pred = xs[0]->v[0];
-  assert(y_pred >= 0.);
-  assert(y_pred <= 1.);
-  const real ty = *ptarget_y;
-  assert(ty >= 0.);
-  assert(ty <= 1.);
-  auto& res = fx.v[0];
-  res = 0;
-  if (ty > 0.) res -= ty * log(y_pred);
-  if ((1 - ty) > 0.) res -= (1 - ty) * log1p(-y_pred);
+  fx.v[0] = FBinaryLogLoss()(xs[0]->v[0], *ptarget_y);
 }
 
 void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
@@ -868,10 +872,7 @@ void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
                   Tensor& dEdxi) const {
   const auto y_pred = xs[0]->v[0];
   const real ty = *ptarget_y;
-  real scale = 0;
-  if (ty > 0.) scale -= ty / y_pred;
-  if ((1 - ty) >= 0.) scale += (1 - ty) / (1 - y_pred);
-  *dEdxi += *dEdf * scale;
+  dEdxi.v[0] += FBinaryLogLossBackward()(y_pred,ty,dEdf.v[0]);
 }
 
 } // namespace cnn

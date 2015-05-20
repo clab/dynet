@@ -11,8 +11,7 @@ Trainer::~Trainer() {}
 float Trainer::clip_gradients() {
   float gscale = 1;
   if (clipping_enabled) {
-    float gg = 0;
-    model->gradient_l2_norm(&gg);
+    float gg = model->gradient_l2_norm();
     if (gg > clip_threshold) {
       ++clips;
       gscale = clip_threshold / gg;
@@ -35,7 +34,7 @@ void SimpleSGDTrainer::update(real scale) {
   for (auto p : model->lookup_parameters_list()) {
     for (auto i : p->non_zero_grads) {
 #if HAVE_CUDA
-      cerr << "implement lookup update\n"; abort();
+      gpu::sgd_update(p->values[i].d.size(), p->grads[i].v, p->values[i].v, eta * scale * gscale, lambda);
 #else
       auto reg = (*p->values[i]) * lambda;
       *p->values[i] -= (*p->grads[i] * (eta * scale * gscale) + reg);
@@ -46,27 +45,8 @@ void SimpleSGDTrainer::update(real scale) {
   ++updates;
 }
 
-#if 0
-static inline Tensor& get_or_init(Tensor& x, const Tensor& t) {
-#if WITH_THPP_BACKEND
-  if (x.ndims() == 0) {
-    x = Tensor(t.sizes());
-    x.zero();
-  }
-  return x;
-#endif
-#ifdef WITH_EIGEN_BACKEND
-  if (x.rows() == 0) {
-    x = t;
-    x.setZero();
-  }
-  return x;
-#endif
-#if WITH_MINERVA_BACKEND
-#endif
-}
-
 void MomentumSGDTrainer::update(real scale) {
+#if 0
   clip_gradients();
   for (auto p : model->parameters_list()) {
     Tensor& v = get_or_init(vp[p], p->values);
@@ -119,7 +99,7 @@ void RMSPropTrainer::update(real scale) {
     }
     p->clear();
   }
-}
 #endif
+}
 
 } // namespace cnn

@@ -34,11 +34,11 @@ void Initialize_GPU(int& argc, char**& argv) {
   CUDA_CHECK(cudaMalloc(&kSCALAR_ONE, sizeof(float)));
   CUDA_CHECK(cudaMalloc(&kSCALAR_ZERO, sizeof(float)));
   float minusone = -1;
-  CUDA_CHECK(cudaMemcpy(kSCALAR_MINUSONE, &minusone, sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpyAsync(kSCALAR_MINUSONE, &minusone, sizeof(float), cudaMemcpyHostToDevice));
   float one = 1;
-  CUDA_CHECK(cudaMemcpy(kSCALAR_ONE, &one, sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ONE, &one, sizeof(float), cudaMemcpyHostToDevice));
   float zero = 0;
-  CUDA_CHECK(cudaMemcpy(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 }
 
 } // namespace cnn

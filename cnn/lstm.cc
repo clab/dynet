@@ -82,12 +82,12 @@ void LSTMBuilder::start_new_sequence(ComputationGraph* cg,
   h0 = h_0;
   c0 = c_0;
   if (h0.empty() || c0.empty()) {
-    VariableIndex zero_input = cg->add_input(Dim({hidden_dim}), &zeros);
-    if (c0.empty()) { c0 = vector<VariableIndex>(layers, zero_input); }
-    if (h0.empty()) { h0 = vector<VariableIndex>(layers, zero_input); }
+    has_initial_state = false;
+  } else {
+    has_initial_state = true;
+    assert (h0.size() == layers);
+    assert (c0.size() == layers);
   }
-  assert (h0.size() == layers);
-  assert (c0.size() == layers);
 }
 
 VariableIndex LSTMBuilder::add_input(VariableIndex x, ComputationGraph* cg) {
@@ -102,29 +102,48 @@ VariableIndex LSTMBuilder::add_input(VariableIndex x, ComputationGraph* cg) {
     const vector<VariableIndex>& vars = param_vars[i];
     VariableIndex i_h_tm1;
     VariableIndex i_c_tm1;
+    bool has_prev_state = (t > 0 || has_initial_state);
     if (t == 0) {
-      // intial value for h and c at timestep 0 in layer i
-      // defaults to zero matrix input if not set in add_parameter_edges
-      i_h_tm1 = h0[i];
-      i_c_tm1 = c0[i];
+      if (has_initial_state) {
+        // intial value for h and c at timestep 0 in layer i
+        // defaults to zero matrix input if not set in add_parameter_edges
+        i_h_tm1 = h0[i];
+        i_c_tm1 = c0[i];
+      }
     } else {  // t > 0
       i_h_tm1 = h[t-1][i];
       i_c_tm1 = c[t-1][i];
     }
     // input
-    VariableIndex i_ait = cg->add_function<AffineTransform>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
+    VariableIndex i_ait;
+    if (has_prev_state)
+      i_ait = cg->add_function<AffineTransform>({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
+    else
+      i_ait = cg->add_function<AffineTransform>({vars[BI], vars[X2I], in});
     VariableIndex i_it = cg->add_function<LogisticSigmoid>({i_ait});
     // forget
     VariableIndex i_ft = cg->add_function<ConstantMinusX>({i_it}, 1.f);
     // write memory cell
-    VariableIndex i_awt = cg->add_function<AffineTransform>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
+    VariableIndex i_awt;
+    if (has_prev_state)
+      i_awt = cg->add_function<AffineTransform>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
+    else
+      i_awt = cg->add_function<AffineTransform>({vars[BC], vars[X2C], in});
     VariableIndex i_wt = cg->add_function<Tanh>({i_awt});
     // output
-    VariableIndex i_nwt = cg->add_function<CwiseMultiply>({i_it, i_wt});
-    VariableIndex i_crt = cg->add_function<CwiseMultiply>({i_ft, i_c_tm1});
-    ct[i] = cg->add_function<Sum>({i_crt, i_nwt}); // new memory cell at time t
+    if (has_prev_state) {
+      VariableIndex i_nwt = cg->add_function<CwiseMultiply>({i_it, i_wt});
+      VariableIndex i_crt = cg->add_function<CwiseMultiply>({i_ft, i_c_tm1});
+      ct[i] = cg->add_function<Sum>({i_crt, i_nwt}); // new memory cell at time t
+    } else {
+      ct[i] = cg->add_function<CwiseMultiply>({i_it, i_wt});
+    }
  
-    VariableIndex i_aot = cg->add_function<AffineTransform>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
+    VariableIndex i_aot;
+    if (has_prev_state)
+      i_aot = cg->add_function<AffineTransform>({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
+    else
+      i_aot = cg->add_function<AffineTransform>({vars[BO], vars[X2O], in});
     VariableIndex i_ot = cg->add_function<LogisticSigmoid>({i_aot});
     VariableIndex ph_t = cg->add_function<Tanh>({ct[i]});
     in = ht[i] = cg->add_function<CwiseMultiply>({i_ot, ph_t});

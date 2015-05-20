@@ -18,8 +18,8 @@ using namespace std;
 using namespace cnn;
 
 unsigned LAYERS = 2;
-unsigned INPUT_DIM = 8;
-unsigned HIDDEN_DIM = 24;
+unsigned INPUT_DIM = 8;  //256
+unsigned HIDDEN_DIM = 24;  // 1024
 unsigned VOCAB_SIZE = 0;
 
 cnn::Dict d;
@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
         si = 0;
         if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
-        random_shuffle(order.begin(), order.end());
+        shuffle(order.begin(), order.end(), *rndeng);
       }
 
       // build graph for this instance

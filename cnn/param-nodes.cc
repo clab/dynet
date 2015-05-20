@@ -49,7 +49,7 @@ Dim InputNode::dim_forward(const vector<Dim>& xs) const {
 void InputNode::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
 #if HAVE_CUDA
-  cudaMemcpy(fx.v, &pdata->front(), dim.size() * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpyAsync(fx.v, &pdata->front(), dim.size() * sizeof(float), cudaMemcpyHostToDevice);
 #else
   memcpy(fx.v, &pdata->front(), dim.size() * sizeof(float));
 #endif
@@ -77,7 +77,7 @@ Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
 void ScalarInputNode::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
 #if HAVE_CUDA
-  cudaMemcpy(fx.v, pdata, 1 * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpyAsync(fx.v, pdata, 1 * sizeof(float), cudaMemcpyHostToDevice);
 #else
   fx.v[0] = *pdata;
 #endif
@@ -104,7 +104,7 @@ Dim LookupNode::dim_forward(const vector<Dim>& xs) const {
 
 void LookupNode::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  *fx = *params->values[*pindex];
+  fx.v = params->values[*pindex].v;
 }
 
 void LookupNode::backward(const vector<const Tensor*>& xs,

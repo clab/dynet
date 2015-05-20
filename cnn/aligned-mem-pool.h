@@ -79,7 +79,7 @@ class AlignedMemoryPool {
   void zero_allocated_memory() {
     if (used == 0) return;
 #if HAVE_CUDA
-    CUDA_CHECK(cudaMemset(mem, 0, used));
+    CUDA_CHECK(cudaMemsetAsync(mem, 0, used));
 #else
     std::memset(mem, 0, used);
 #endif
@@ -93,7 +93,7 @@ class AlignedMemoryPool {
   void zero_all() {
     //std::cerr << "zeroing " << (used ? used : capacity) << " bytes\n";
 #if HAVE_CUDA
-    CUDA_CHECK(cudaMemset(mem, 0, capacity));
+    CUDA_CHECK(cudaMemsetAsync(mem, 0, capacity));
 #else
     std::memset(mem, 0, capacity);
 #endif

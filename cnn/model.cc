@@ -8,6 +8,7 @@
 
 #define CNN_ALIGN 256
 #if HAVE_CUDA
+#include "cnn/gpu-ops.h"
 #include "cnn/cuda.h"
 #endif
 
@@ -29,11 +30,7 @@ size_t Parameters::size() const { return dim.size(); }
 
 void Parameters::g_squared_l2norm(float* sqnorm) const {
 #if HAVE_CUDA
-//  TODO compute norm of gradient - should this be done sparsely or should the gradient
-//  be allocated in a single block?
-//  CUBLAS_CHECK(cublasSnrm2(cublas_handle, xs[0]->d.size(), xs[0]->v, 1, fx.v));
-//  cerr << "RES: " << fx << endl;
-  *sqnorm = 1;
+  gpu::l2_norm_reducer(g.d.size(), g.v, sqnorm, true, false);
 #else
   *sqnorm = (*g).squaredNorm();
 #endif
@@ -79,20 +76,32 @@ size_t LookupParameters::size() const {
 }
 
 void LookupParameters::g_squared_l2norm(float* sqnorm) const {
+#if HAVE_CUDA
+  bool acc = false;
+  for (auto i : non_zero_grads) {
+    gpu::l2_norm_reducer(grads[i].d.size(), grads[i].v, sqnorm, true, acc);
+    acc = true;
+  }
+#else
   real a = 0;
   for (auto i : non_zero_grads)
     a += (*grads[i]).squaredNorm();
   *sqnorm = a;
+#endif
 }
 
 void LookupParameters::accumulate_grad(unsigned index, const Tensor& d) {
   non_zero_grads.insert(index);
+#if HAVE_CUDA
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, d.d.size(), kSCALAR_ONE, d.v, 1, grads[index].v, 1));
+#else
   *grads[index] += *d;
+#endif
 }
 
 void LookupParameters::clear() {
   for (auto i : non_zero_grads)
-    (*grads[i]).setZero();
+    TensorTools::Zero(grads[i]);
   non_zero_grads.clear();
 }
 
@@ -100,14 +109,25 @@ Model::~Model() {
   for (auto p : all_params) delete p;
 }
 
-void Model::gradient_l2_norm(float* norm) const {
-  double gg = 0;
+float Model::gradient_l2_norm() const {
+  if (!gradient_norm_scratch)
+    gradient_norm_scratch = (float*)cnn_mm_malloc(all_params.size() * sizeof(float), 256);
+  int pi = 0;
   for (auto p : all_params) {
-    float sqn = 0;
-    p->g_squared_l2norm(&sqn);
-    gg += sqn;
+    p->g_squared_l2norm(&gradient_norm_scratch[pi]);
+    ++pi;
   }
-  *norm = sqrt(gg);
+#if HAVE_CUDA
+  float res = 0;
+  gpu::l2_norm_reducer(all_params.size(), gradient_norm_scratch, gradient_norm_scratch, false, false);
+  cudaMemcpy(&res, gradient_norm_scratch, sizeof(float),  cudaMemcpyDeviceToHost);
+  return sqrt(res);
+#else
+  double gg = 0;
+  for (unsigned i = 0; i < pi; ++i)
+    gg += gradient_norm_scratch[i];
+  return sqrt(gg);
+#endif
 }
 
 Parameters* Model::add_parameters(const Dim& d) {

@@ -40,13 +40,27 @@ struct Tensor {
   template<class Archive>
   void save(Archive& ar, const unsigned int) const {
     ar & d;
+#if HAVE_CUDA
+    float* vc = (float*)malloc(d.size() * sizeof(float));
+    CUDA_CHECK(cudaMemcpy(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    ar & boost::serialization::make_array(vc, d.size());
+    free(vc);
+#else
     ar & boost::serialization::make_array(v, d.size());
+#endif
   }
   template<class Archive>
   void load(Archive& ar, const unsigned int) {
     ar & d;
+#if HAVE_CUDA
+    CUDA_CHECK(cudaMalloc(&v, d.size() * sizeof(float)));
+    float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
+    ar & boost::serialization::make_array(vc, d.size());
+    CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
+#else
     v = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
     ar & boost::serialization::make_array(v, d.size());
+#endif
   }
   BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
@@ -64,6 +78,7 @@ struct TensorTools {
   static void RandomizeNormal(real mean, real stddev, Tensor& val);
   // AccessElement is very, very slow (potentially) - use appropriately
   static float AccessElement(const Tensor& v, const Dim& index);
+  static void SetElements(const Tensor& v, const std::vector<float>& vec);
 };
 real rand01();
 

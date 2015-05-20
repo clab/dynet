@@ -33,8 +33,8 @@ void Initialize(int& argc, char**& argv) {
   *kSCALAR_ZERO = 0;
 #endif
   random_device rd;
-//  rndeng = new mt19937(rd());
-  rndeng = new mt19937(1);
+//  rndeng = new mt19937(1);
+  rndeng = new mt19937(rd());
   cerr << "Allocating memory...\n";
   fxs = new AlignedMemoryPool<ALIGN>(100000000);
   dEdfs = new AlignedMemoryPool<ALIGN>(100000000);
