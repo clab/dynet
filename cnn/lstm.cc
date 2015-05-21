@@ -17,7 +17,7 @@ enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 LSTMBuilder::LSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
+                         Model* model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
@@ -43,8 +43,7 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
   }  // layers
 }
 
-void LSTMBuilder::new_graph(ComputationGraph* cg) {
-  sm.transition(RNNOp::new_graph);
+void LSTMBuilder::new_graph_impl(ComputationGraph* cg) {
   param_vars.clear();
 
   for (unsigned i = 0; i < layers; ++i) {
@@ -72,25 +71,24 @@ void LSTMBuilder::new_graph(ComputationGraph* cg) {
   }
 }
 
-void LSTMBuilder::start_new_sequence(ComputationGraph* cg,
-                                     vector<VariableIndex> c_0,
-                                     vector<VariableIndex> h_0) {
-  sm.transition(RNNOp::start_new_sequence);
+void LSTMBuilder::start_new_sequence_impl(const vector<VariableIndex>& hinit) {
   h.clear();
   c.clear();
-  h0 = h_0;
-  c0 = c_0;
-  if (h0.empty() || c0.empty()) {
-    has_initial_state = false;
-  } else {
+  if (hinit.size() > 0) {
+    assert(layers*2 == hinit.size());
+    h0.resize(layers);
+    c0.resize(layers);
+    for (unsigned i = 0; i < layers; ++i) {
+      h0[i] = hinit[i];
+      c0[i] = hinit[i + layers];
+    }
     has_initial_state = true;
-    assert (h0.size() == layers);
-    assert (c0.size() == layers);
+  } else {
+    has_initial_state = false;
   }
 }
 
-VariableIndex LSTMBuilder::add_input(VariableIndex x, ComputationGraph* cg) {
-  sm.transition(RNNOp::add_input);
+VariableIndex LSTMBuilder::add_input_impl(VariableIndex x, ComputationGraph* cg) {
   const unsigned t = h.size();
   h.push_back(vector<VariableIndex>(layers));
   c.push_back(vector<VariableIndex>(layers));

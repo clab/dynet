@@ -57,14 +57,14 @@ struct EncoderDecoder {
   VariableIndex BuildGraph(const vector<int>& insent, const vector<int>& osent, ComputationGraph& cg) {
     // forward encoder
     fwd_enc_builder.new_graph(&cg);
-    fwd_enc_builder.start_new_sequence(&cg);
+    fwd_enc_builder.start_new_sequence();
     for (unsigned t = 0; t < insent.size(); ++t) {
       VariableIndex i_x_t = cg.add_lookup(p_ec, insent[t]);
       fwd_enc_builder.add_input(i_x_t, &cg);
     }
     // backward encoder
     rev_enc_builder.new_graph(&cg);
-    rev_enc_builder.start_new_sequence(&cg);
+    rev_enc_builder.start_new_sequence();
     for (int t = insent.size() - 1; t >= 0; --t) {
       VariableIndex i_x_t = cg.add_lookup(p_ec, insent[t]);
       rev_enc_builder.add_input(i_x_t, &cg);
@@ -85,14 +85,13 @@ struct EncoderDecoder {
     VariableIndex i_h2oe = cg.add_parameters(p_h2oe);
     VariableIndex i_boe = cg.add_parameters(p_boe);
     VariableIndex i_nc = cg.add_function<AffineTransform>({i_boe, i_h2oe, i_h});
-    vector<VariableIndex> oein_c(LAYERS);
-    vector<VariableIndex> oein_h(LAYERS);
+    vector<VariableIndex> oein(LAYERS * 2);
     for (int i = 0; i < LAYERS; ++i) {
-      oein_c[i] = cg.add_function<PickRange>({i_nc}, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM);
-      oein_h[i] = cg.add_function<Tanh>({oein_c[i]});
+      oein[i] = cg.add_function<PickRange>({i_nc}, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM);
+      oein[i + LAYERS] = cg.add_function<Tanh>({oein[i]});
     }
     dec_builder.new_graph(&cg);
-    dec_builder.start_new_sequence(&cg, oein_c, oein_h);
+    dec_builder.start_new_sequence(oein);
 
     // decoder
     VariableIndex i_R = cg.add_parameters(p_R);

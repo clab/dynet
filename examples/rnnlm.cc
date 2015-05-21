@@ -42,7 +42,7 @@ struct RNNLanguageModel {
   VariableIndex BuildLMGraph(const vector<int>& sent, ComputationGraph& cg) {
     const unsigned slen = sent.size() - 1;
     builder.new_graph(&cg);  // reset RNN builder for new graph
-    builder.start_new_sequence(&cg);
+    builder.start_new_sequence();
     VariableIndex i_R = cg.add_parameters(p_R); // hidden -> word rep parameter
     VariableIndex i_bias = cg.add_parameters(p_bias);  // word bias
     vector<VariableIndex> errs;
@@ -82,7 +82,7 @@ struct RNNLanguageModel {
     cerr << endl;
     ComputationGraph cg;
     builder.new_graph(&cg);  // reset RNN builder for new graph
-    builder.start_new_sequence(&cg);
+    builder.start_new_sequence();
     VariableIndex i_R = cg.add_parameters(p_R); // hidden -> word rep parameter
     VariableIndex i_bias = cg.add_parameters(p_bias);  // word bias
     vector<VariableIndex> errs;
@@ -181,8 +181,7 @@ int main(int argc, char** argv) {
     sgd = new SimpleSGDTrainer(&model);
 
   RNNLanguageModel<LSTMBuilder> lm(model);
-  //RNNLanguageModel<GRUBuilder> lm(model);
-  //RNNLanguageModel<RNNBuilder> lm(model);
+  //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
     string fname = argv[3];
     ifstream in(fname);
