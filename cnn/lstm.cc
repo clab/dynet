@@ -15,27 +15,27 @@ namespace cnn {
 enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 
 LSTMBuilder::LSTMBuilder(unsigned layers,
-                       unsigned input_dim,
-                       unsigned hidden_dim,
-                       Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
+                         unsigned input_dim,
+                         unsigned hidden_dim,
+                         Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameters* p_x2i = model->add_parameters(Dim({hidden_dim, layer_input_dim}));
-    Parameters* p_h2i = model->add_parameters(Dim({hidden_dim, hidden_dim}));
-    Parameters* p_c2i = model->add_parameters(Dim({hidden_dim, hidden_dim}));
-    Parameters* p_bi = model->add_parameters(Dim({hidden_dim}));
+    Parameters* p_x2i = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameters* p_h2i = model->add_parameters({hidden_dim, hidden_dim});
+    Parameters* p_c2i = model->add_parameters({hidden_dim, hidden_dim});
+    Parameters* p_bi = model->add_parameters({hidden_dim});
     
     // o
-    Parameters* p_x2o = model->add_parameters(Dim({hidden_dim, layer_input_dim}));
-    Parameters* p_h2o = model->add_parameters(Dim({hidden_dim, hidden_dim}));
-    Parameters* p_c2o = model->add_parameters(Dim({hidden_dim, hidden_dim}));
-    Parameters* p_bo = model->add_parameters(Dim({hidden_dim}));
+    Parameters* p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameters* p_h2o = model->add_parameters({hidden_dim, hidden_dim});
+    Parameters* p_c2o = model->add_parameters({hidden_dim, hidden_dim});
+    Parameters* p_bo = model->add_parameters({hidden_dim});
 
     // c
-    Parameters* p_x2c = model->add_parameters(Dim({hidden_dim, layer_input_dim}));
-    Parameters* p_h2c = model->add_parameters(Dim({hidden_dim, hidden_dim}));
-    Parameters* p_bc = model->add_parameters(Dim({hidden_dim}));
+    Parameters* p_x2c = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameters* p_h2c = model->add_parameters({hidden_dim, hidden_dim});
+    Parameters* p_bc = model->add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
@@ -48,7 +48,6 @@ void LSTMBuilder::new_graph(ComputationGraph* cg) {
   param_vars.clear();
 
   for (unsigned i = 0; i < layers; ++i) {
-    string layer = to_string(i);
     auto& p = params[i];
 
     // i
