@@ -5,7 +5,7 @@ set(cnn_library_SRCS
     dict.cc
     dim.cc
     exec.cc
-    gru.cc
+#    gru.cc
     init.cc
     lstm.cc
     model.cc
