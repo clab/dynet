@@ -34,9 +34,9 @@ void RNNBuilder::new_graph(ComputationGraph* cg) {
     Parameters* p_x2h = params[i][0];
     Parameters* p_h2h = params[i][1];
     Parameters* p_hb = params[i][2];
-    VariableIndex i_x2h = cg->add_parameter(p_x2h);
-    VariableIndex i_h2h = cg->add_parameter(p_h2h);
-    VariableIndex i_hb = cg->add_parameter(p_hb);
+    VariableIndex i_x2h = cg->add_parameters(p_x2h);
+    VariableIndex i_h2h = cg->add_parameters(p_h2h);
+    VariableIndex i_hb = cg->add_parameters(p_hb);
     vector<VariableIndex> vars = {i_x2h, i_h2h, i_hb};
     param_vars.push_back(vars);
   }

@@ -34,13 +34,13 @@ int main(int argc, char** argv) {
   VariableIndex i_c1 = cg.add_lookup(p_c, &in_c1);
   VariableIndex i_c2 = cg.add_lookup(p_c, &in_c2);
   VariableIndex i_c3 = cg.add_lookup(p_c, &in_c3);
-  VariableIndex i_C1 = cg.add_parameter(p_C1);
-  VariableIndex i_C2 = cg.add_parameter(p_C2);
-  VariableIndex i_C3 = cg.add_parameter(p_C3);
-  VariableIndex i_hb = cg.add_parameter(p_hb);
-  VariableIndex i_R = cg.add_parameter(p_R);
+  VariableIndex i_C1 = cg.add_parameters(p_C1);
+  VariableIndex i_C2 = cg.add_parameters(p_C2);
+  VariableIndex i_C3 = cg.add_parameters(p_C3);
+  VariableIndex i_hb = cg.add_parameters(p_hb);
+  VariableIndex i_R = cg.add_parameters(p_R);
   unsigned ytrue;  // set ytrue to change the value of the input
-  VariableIndex i_bias = cg.add_parameter(p_bias);
+  VariableIndex i_bias = cg.add_parameters(p_bias);
 
   // r = hb + C1 * c1 + C2 * c2 + C3 * c3
   VariableIndex i_r = cg.add_function<AffineTransform>({i_hb, i_C1, i_c1, i_C2, i_c2, i_C3, i_c3});

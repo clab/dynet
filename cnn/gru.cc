@@ -50,19 +50,19 @@ void GRUBuilder::new_graph(ComputationGraph* hg) {
     auto& p = params[i];
 
     // z
-    VariableIndex i_x2z = hg->add_parameter(p[X2Z]);
-    VariableIndex i_h2z = hg->add_parameter(p[H2Z]);
-    VariableIndex i_bz = hg->add_parameter(p[BZ]);
+    VariableIndex i_x2z = hg->add_parameters(p[X2Z]);
+    VariableIndex i_h2z = hg->add_parameters(p[H2Z]);
+    VariableIndex i_bz = hg->add_parameters(p[BZ]);
 
     // r
-    VariableIndex i_x2r = hg->add_parameter(p[X2R]);
-    VariableIndex i_h2r = hg->add_parameter(p[H2R]);
-    VariableIndex i_br = hg->add_parameter(p[BR]);
+    VariableIndex i_x2r = hg->add_parameters(p[X2R]);
+    VariableIndex i_h2r = hg->add_parameters(p[H2R]);
+    VariableIndex i_br = hg->add_parameters(p[BR]);
 
     // h
-    VariableIndex i_x2h = hg->add_parameter(p[X2H]);
-    VariableIndex i_h2h = hg->add_parameter(p[H2H]);
-    VariableIndex i_bh = hg->add_parameter(p[BH]);
+    VariableIndex i_x2h = hg->add_parameters(p[X2H]);
+    VariableIndex i_h2h = hg->add_parameters(p[H2H]);
+    VariableIndex i_bh = hg->add_parameters(p[BH]);
 
     vector<VariableIndex> vars = {i_x2z, i_h2z, i_bz, i_x2r, i_h2r, i_br, i_x2h, i_h2h, i_bh};
     param_vars.push_back(vars);

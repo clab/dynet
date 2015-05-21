@@ -29,10 +29,10 @@ int main(int argc, char** argv) {
   ComputationGraph cg;
 
   // get symbolic variables corresponding to parameters
-  VariableIndex i_b = cg.add_parameter(&p_b);
-  VariableIndex i_a = cg.add_parameter(&p_a);
-  VariableIndex i_W = cg.add_parameter(&p_W);
-  VariableIndex i_V = cg.add_parameter(&p_V);
+  VariableIndex i_b = cg.add_parameters(&p_b);
+  VariableIndex i_a = cg.add_parameters(&p_a);
+  VariableIndex i_W = cg.add_parameters(&p_W);
+  VariableIndex i_V = cg.add_parameters(&p_V);
 
   vector<float> x_values(2);  // set x_values to change the inputs to the network
   VariableIndex i_x = cg.add_input({2}, &x_values);

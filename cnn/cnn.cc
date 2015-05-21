@@ -51,7 +51,7 @@ VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm)
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_parameter(Parameters* p) {
+VariableIndex ComputationGraph::add_parameters(Parameters* p) {
   VariableIndex new_node_index(nodes.size());
   ParameterNode* new_node = new ParameterNode(p);
   nodes.push_back(new_node);
