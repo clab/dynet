@@ -77,13 +77,13 @@ struct EncoderDecoder {
     for (auto h_l : rev_enc_builder.final_h()) to[c++] = h_l;
     assert(c == LAYERS * 2);
     VariableIndex i_combined = cg.add_function<Concatenate>(to);
-    VariableIndex i_ie2h = cg.add_parameter(p_ie2h);
-    VariableIndex i_bie = cg.add_parameter(p_bie);
+    VariableIndex i_ie2h = cg.add_parameters(p_ie2h);
+    VariableIndex i_bie = cg.add_parameters(p_bie);
     VariableIndex i_t = cg.add_function<AffineTransform>({i_bie, i_ie2h, i_combined});
     cg.incremental_forward();
     VariableIndex i_h = cg.add_function<Rectify>({i_t});
-    VariableIndex i_h2oe = cg.add_parameter(p_h2oe);
-    VariableIndex i_boe = cg.add_parameter(p_boe);
+    VariableIndex i_h2oe = cg.add_parameters(p_h2oe);
+    VariableIndex i_boe = cg.add_parameters(p_boe);
     VariableIndex i_nc = cg.add_function<AffineTransform>({i_boe, i_h2oe, i_h});
     vector<VariableIndex> oein_c(LAYERS);
     vector<VariableIndex> oein_h(LAYERS);
@@ -95,8 +95,8 @@ struct EncoderDecoder {
     dec_builder.start_new_sequence(&cg, oein_c, oein_h);
 
     // decoder
-    VariableIndex i_R = cg.add_parameter(p_R);
-    VariableIndex i_bias = cg.add_parameter(p_bias);
+    VariableIndex i_R = cg.add_parameters(p_R);
+    VariableIndex i_bias = cg.add_parameters(p_bias);
     vector<VariableIndex> errs;
     const unsigned oslen = osent.size() - 1;
     for (unsigned t = 0; t < oslen; ++t) {

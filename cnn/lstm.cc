@@ -52,21 +52,21 @@ void LSTMBuilder::new_graph(ComputationGraph* cg) {
     auto& p = params[i];
 
     // i
-    VariableIndex i_x2i = cg->add_parameter(p[X2I]);
-    VariableIndex i_h2i = cg->add_parameter(p[H2I]);
-    VariableIndex i_c2i = cg->add_parameter(p[C2I]);
-    VariableIndex i_bi = cg->add_parameter(p[BI]);
+    VariableIndex i_x2i = cg->add_parameters(p[X2I]);
+    VariableIndex i_h2i = cg->add_parameters(p[H2I]);
+    VariableIndex i_c2i = cg->add_parameters(p[C2I]);
+    VariableIndex i_bi = cg->add_parameters(p[BI]);
 
     // o
-    VariableIndex i_x2o = cg->add_parameter(p[X2O]);
-    VariableIndex i_h2o = cg->add_parameter(p[H2O]);
-    VariableIndex i_c2o = cg->add_parameter(p[C2O]);
-    VariableIndex i_bo = cg->add_parameter(p[BO]);
+    VariableIndex i_x2o = cg->add_parameters(p[X2O]);
+    VariableIndex i_h2o = cg->add_parameters(p[H2O]);
+    VariableIndex i_c2o = cg->add_parameters(p[C2O]);
+    VariableIndex i_bo = cg->add_parameters(p[BO]);
 
     // c
-    VariableIndex i_x2c = cg->add_parameter(p[X2C]);
-    VariableIndex i_h2c = cg->add_parameter(p[H2C]);
-    VariableIndex i_bc = cg->add_parameter(p[BC]);
+    VariableIndex i_x2c = cg->add_parameters(p[X2C]);
+    VariableIndex i_h2c = cg->add_parameters(p[H2C]);
+    VariableIndex i_bc = cg->add_parameters(p[BC]);
 
     vector<VariableIndex> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);

@@ -8,13 +8,6 @@ using namespace std;
 
 namespace cnn {
 
-inline ostream& operator<<(ostream& os, const vector<Dim>& ds) {
-  os << '[';
-  for (unsigned i = 0; i < ds.size(); ++i)
-    os << (i ? " " : "") << ds[i];
-  return os << ']';
-}
-
 inline bool LooksLikeVector(const Dim& d) {
   if (d.ndims() == 1) return true;
   if (d.ndims() > 1) {

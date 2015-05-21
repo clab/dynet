@@ -61,7 +61,6 @@ void SumColumns::backward(const vector<const Tensor*>& xs,
 }
 
 void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
   auto x = **xs[0];
   const int new_cols = x.cols() - n + 1;
   assert(new_cols > 0);

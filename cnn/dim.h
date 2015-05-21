@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <iosfwd>
 #include <cstring>
+#include <vector>
 
 #define CNN_MAX_TENSOR_DIM 7
 
@@ -50,6 +51,7 @@ inline bool operator==(const Dim& a, const Dim& b) {
 inline bool operator!=(const Dim& a, const Dim& b) { return !(a == b); }
 
 std::ostream& operator<<(std::ostream& os, const Dim& d);
+std::ostream& operator<<(std::ostream& os, const std::vector<Dim>& ds);
 
 } // namespace cnn
 

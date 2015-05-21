@@ -43,8 +43,8 @@ struct RNNLanguageModel {
     const unsigned slen = sent.size() - 1;
     builder.new_graph(&cg);  // reset RNN builder for new graph
     builder.start_new_sequence(&cg);
-    VariableIndex i_R = cg.add_parameter(p_R); // hidden -> word rep parameter
-    VariableIndex i_bias = cg.add_parameter(p_bias);  // word bias
+    VariableIndex i_R = cg.add_parameters(p_R); // hidden -> word rep parameter
+    VariableIndex i_bias = cg.add_parameters(p_bias);  // word bias
     vector<VariableIndex> errs;
     for (unsigned t = 0; t < slen; ++t) {
       // x_t = lookup sent[t] in parameters p_c
@@ -83,8 +83,8 @@ struct RNNLanguageModel {
     ComputationGraph cg;
     builder.new_graph(&cg);  // reset RNN builder for new graph
     builder.start_new_sequence(&cg);
-    VariableIndex i_R = cg.add_parameter(p_R); // hidden -> word rep parameter
-    VariableIndex i_bias = cg.add_parameter(p_bias);  // word bias
+    VariableIndex i_R = cg.add_parameters(p_R); // hidden -> word rep parameter
+    VariableIndex i_bias = cg.add_parameters(p_bias);  // word bias
     vector<VariableIndex> errs;
     int len = 0;
     int cur = kSOS;

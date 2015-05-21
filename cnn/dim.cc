@@ -15,5 +15,12 @@ ostream& operator<<(ostream& os, const Dim& d) {
   return os << '}';
 }
 
+ostream& operator<<(ostream& os, const vector<Dim>& ds) {
+  os << '[';
+  for (unsigned i = 0; i < ds.size(); ++i)
+    os << (i ? " " : "") << ds[i];
+  return os << ']';
+}
+
 } // namespace cnn
 
