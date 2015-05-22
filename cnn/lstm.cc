@@ -71,6 +71,8 @@ void LSTMBuilder::new_graph_impl(ComputationGraph* cg) {
   }
 }
 
+// layout: 0..layers = c
+//         layers+1..2*layers = h
 void LSTMBuilder::start_new_sequence_impl(const vector<VariableIndex>& hinit) {
   h.clear();
   c.clear();
@@ -79,8 +81,8 @@ void LSTMBuilder::start_new_sequence_impl(const vector<VariableIndex>& hinit) {
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
-      h0[i] = hinit[i];
-      c0[i] = hinit[i + layers];
+      c0[i] = hinit[i];
+      h0[i] = hinit[i + layers];
     }
     has_initial_state = true;
   } else {

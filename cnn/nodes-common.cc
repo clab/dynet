@@ -349,7 +349,7 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
     cerr << "Bad input dimensions in PickElement: " << xs << endl;
     abort();
   }
-  assert(xs[0][0] <= (int)end);
+  assert((int)end <= xs[0][0]);
   return Dim({end - start});
 }
 
