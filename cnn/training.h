@@ -1,10 +1,9 @@
 #ifndef CNN_TRAINING_H_
 #define CNN_TRAINING_H_
 
-#include <initializer_list>
 #include <vector>
-#include <unordered_map>
 #include "cnn/model.h"
+#include "cnn/shadow-params.h"
 
 namespace cnn {
 
@@ -52,11 +51,16 @@ struct SimpleSGDTrainer : public Trainer {
 
 struct MomentumSGDTrainer : public Trainer {
   explicit MomentumSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.01, real mom = 0.9) :
-    Trainer(m, e0, lam), momentum(mom) {}
+    Trainer(m, e0, lam), momentum(mom), velocity_allocated(false) {}
   void update(real scale) override;
 
   real momentum;
 
+  bool velocity_allocated;
+
+  // the following represent the current velocity
+  std::vector<ShadowParameters> vp;
+  std::vector<ShadowLookupParameters> vlp;
   //std::unordered_map<Parameters*, Tensor> vp;
   //std::unordered_map<LookupParameters*, std::unordered_map<unsigned, Tensor>> vl;
 };

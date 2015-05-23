@@ -9,6 +9,7 @@ namespace cnn {
 class Model;
 
 struct LSTMBuilder : public RNNBuilder {
+  LSTMBuilder() = default;
   explicit LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
