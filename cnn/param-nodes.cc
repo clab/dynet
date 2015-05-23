@@ -60,7 +60,7 @@ void InputNode::backward(const vector<const Tensor*>& xs,
                     const Tensor& dEdf,
                                unsigned i,
                                Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 edge\n";
+  cerr << "called backward() on arity 0 node\n";
   abort();
 }
 
@@ -88,7 +88,7 @@ void ScalarInputNode::backward(const vector<const Tensor*>& xs,
                                const Tensor& dEdf,
                                unsigned i,
                                Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 edge\n";
+  cerr << "called backward() on arity 0 node\n";
   abort();
 }
 
@@ -112,7 +112,7 @@ void LookupNode::backward(const vector<const Tensor*>& xs,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 edge\n";
+  cerr << "called backward() on arity 0 node\n";
   abort();
 }
 

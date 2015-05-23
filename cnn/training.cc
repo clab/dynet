@@ -46,30 +46,36 @@ void SimpleSGDTrainer::update(real scale) {
 }
 
 void MomentumSGDTrainer::update(real scale) {
-#if 0
-  clip_gradients();
+  // executed on the first iteration to create vectors to
+  // store the velocity
+  if (!velocity_allocated) {
+    vp = AllocateShadowParameters(*model);
+    vlp = AllocateShadowLookupParameters(*model);
+    velocity_allocated = true;
+  }
+
+  const float gscale = clip_gradients();
+  unsigned pi = 0;
   for (auto p : model->parameters_list()) {
-    Tensor& v = get_or_init(vp[p], p->values);
-    const Tensor reg = p->values * lambda;
-    v = momentum * v - (eta * scale) * p->g;
-    p->values += v;
-    p->values -= reg;
+    Tensor& v = vp[pi++].h;
+    auto reg = *p->values * lambda;
+    (*v) = momentum * (*v) - (eta * scale * gscale) * (*p->g);
+    *p->values += *v - reg;
     p->clear();
   }
+  pi = 0;
   for (auto p : model->lookup_parameters_list()) {
-    unordered_map<unsigned, Tensor>& vx = vl[p];
-    for (auto& it : p->g) {
-      Tensor& v = get_or_init(vx[it.first], it.second);
-      const Tensor reg = p->values[it.first] * lambda;
-      v = momentum * v - (eta * scale) * it.second;
-      p->values[it.first] += v;
-      p->values[it.first] -= reg;
+    vector<Tensor>& vx = vlp[pi++].h;
+    for (auto i : p->non_zero_grads) {
+      Tensor& v = vx[i];
+      auto reg = (*p->values[i]) * lambda;
+      (*v) = momentum * (*v) - (eta * scale * gscale) * (*p->grads[i]);
+      *p->values[i] += *v - reg;
     }
     p->clear();
   }
   ++updates;
 }
-#endif
 
 #if 0
 void RMSPropTrainer::update(real scale) {
@@ -99,7 +105,7 @@ void RMSPropTrainer::update(real scale) {
     }
     p->clear();
   }
-#endif
 }
+#endif
 
 } // namespace cnn

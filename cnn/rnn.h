@@ -53,6 +53,7 @@ struct RNNBuilder {
 };
 
 struct SimpleRNNBuilder : public RNNBuilder {
+  SimpleRNNBuilder() = default;
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,

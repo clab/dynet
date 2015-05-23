@@ -6,7 +6,6 @@
 #include <iostream>
 
 #include "cnn/nodes.h"
-#include "cnn/training.h"
 
 using namespace std;
 

@@ -5,6 +5,7 @@ set(cnn_library_SRCS
     dict.cc
     dim.cc
     exec.cc
+    graph.cc
 #    gru.cc
     init.cc
     lstm.cc
@@ -15,23 +16,35 @@ set(cnn_library_SRCS
     rnn.cc
     rnn-state-machine.cc
     saxe-init.cc
+    shadow-params.cc
     tensor.cc
     training.cc
 )
 
 # Headers:
 set(cnn_library_HDRS
+    aligned-mem-pool.h
+    c2w.h
     cnn.h
+    cuda.h
     dict.h
     dim.h
     exec.h
-    nodes.h
+    functors.h
+    gpu-kernels.h
+    gpu-ops.h
+    graph.h
+    gru.h
+    init.h
     lstm.h
     model.h
+    nodes.h
     param-nodes.h
-    rnn.h
+    random.h
     rnn-state-machine.h
+    rnn.h
     saxe-init.h
+    shadow-params.h
     tensor.h
     timing.h
     training.h
@@ -72,6 +85,9 @@ if(WITH_CUDA_BACKEND)
   SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
   cuda_add_library(cnncuda STATIC gpu-ops.cu)
 endif(WITH_CUDA_BACKEND)
+
+install(FILES ${cnn_library_HDRS} DESTINATION include/cnn)
+install(TARGETS cnn DESTINATION lib)
 
 # target_compile_features(cnn PRIVATE cxx_range_for)
 

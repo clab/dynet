@@ -27,29 +27,29 @@ struct C2WBuilder {
       rc2w(layers, input_dim, hidden_dim, m),
       p_lookup(m->add_lookup_parameters(vocab_size, {input_dim})) {
   }
-  void new_graph(Hypergraph* hg) {
+  void new_graph(ComputationGraph* cg) {
     words.clear();
-    fc2w.new_graph(hg);
-    rc2w.new_graph(hg);
+    fc2w.new_graph(cg);
+    rc2w.new_graph(cg);
   }
   // compute a composed representation of a word out of characters
   // wordid should be a unique index for each word *type* in the graph being built
-  VariableIndex add_word(int word_id, const std::vector<int>& chars, Hypergraph* hg) {
+  VariableIndex add_word(int word_id, const std::vector<int>& chars, ComputationGraph* cg) {
     auto it = wordid2vi.find(word_id);
     if (it == wordid2vi.end()) {
-      fc2w.start_new_sequence(hg);
-      rc2w.start_new_sequence(hg);
+      fc2w.start_new_sequence(cg);
+      rc2w.start_new_sequence(cg);
       std::vector<VariableIndex> ins(chars.size());
       std::map<int, VariableIndex> c2i;
       for (unsigned i = 0; i < ins.size(); ++i) {
         VariableIndex& v = c2i[chars[i]];
-        if (!v) v = hg->add_lookup(p_lookup, chars[i]);
+        if (!v) v = cg->add_lookup(p_lookup, chars[i]);
         ins[i] = v;
-        fc2w.add_input(v, hg);
+        fc2w.add_input(v, cg);
       }
       for (int i = ins.size() - 1; i >= 0; --i)
-        rc2w.add_input(ins[i], hg);
-      VariableIndex i_concat = hg->add_function<Concatenate>({fc2w.back(), rc2w.back()});
+        rc2w.add_input(ins[i], cg);
+      VariableIndex i_concat = cg->add_function<Concatenate>({fc2w.back(), rc2w.back()});
       it = wordid2vi.insert(std::make_pair(word_id, i_concat)).first;
     }
     return it->second;
