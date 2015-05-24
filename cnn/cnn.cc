@@ -26,6 +26,7 @@ ComputationGraph::ComputationGraph() : last_node_evaluated(),
 }
 
 ComputationGraph::~ComputationGraph() {
+  delete ee;
   for (auto n : nodes) delete n;
   --n_hgs;
 }
