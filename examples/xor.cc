@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   VariableIndex i_W = cg.add_parameters(&p_W);
   VariableIndex i_V = cg.add_parameters(&p_V);
 
-  vector<float> x_values(2);  // set x_values to change the inputs to the network
+  vector<cnn::real> x_values(2);  // set x_values to change the inputs to the network
   VariableIndex i_x = cg.add_input({2}, &x_values);
   cnn::real y_value;  // set y_value to change the target output
   VariableIndex i_y = cg.add_input(&y_value);
