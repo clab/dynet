@@ -267,7 +267,7 @@ void Concatenate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   unsigned k = 0;
   for (auto x : xs) {
     src_row_indices[k++] = ind;
-    auto xi = *x;
+    auto & xi = *x;
     assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
     const unsigned rows = xi.d.rows();
 #if HAVE_CUDA

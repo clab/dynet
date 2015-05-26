@@ -8,7 +8,7 @@
 namespace cnn {
 
 struct Trainer {
-  explicit Trainer(Model* m, real e0, real lam) :
+  explicit Trainer(Model* m, real lam, real e0) :
     eta0(e0), eta(e0), eta_decay(), epoch(), lambda(lam), clipping_enabled(true), clip_threshold(5), clips(), updates(), model(m) {}
   virtual ~Trainer();
 
@@ -45,13 +45,13 @@ struct Trainer {
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.1) : Trainer(m, e0, lam) {}
+  explicit SimpleSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.1) : Trainer(m, lam, e0) {}
   void update(real scale) override;
 };
 
 struct MomentumSGDTrainer : public Trainer {
   explicit MomentumSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.01, real mom = 0.9) :
-    Trainer(m, e0, lam), momentum(mom), velocity_allocated(false) {}
+    Trainer(m, lam, e0), momentum(mom), velocity_allocated(false) {}
   void update(real scale) override;
 
   real momentum;
