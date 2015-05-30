@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
 using namespace cnn;
@@ -26,19 +27,19 @@ int main(int argc, char** argv) {
 
   ComputationGraph cg;
 
-  unsigned in_c1, in_c2, in_c3;  // set these to set the context words
-  Expression c1 = lookup(cg, p_c, &in_c1);
-  Expression c2 = lookup(cg, p_c, &in_c2);
-  Expression c3 = lookup(cg, p_c, &in_c3);
-  Expression C1 = parameter(cg, model.add_parameters({DIM, DIM}));
-  Expression C2 = parameter(cg, model.add_parameters({DIM, DIM}));
-  Expression C3 = parameter(cg, model.add_parameters({DIM, DIM}));
+  vector<unsigned> in_c(CONTEXT); // set these to set the context words
+  vector<Expression> c(CONTEXT);
+  for (int i=0; i<CONTEXT; ++i)
+    c[i] = lookup(cg, p_c, &in_c[i]);
+
+  Expression C = parameter(cg, model.add_parameters({DIM, DIM*CONTEXT}));
   Expression hb = parameter(cg, model.add_parameters({DIM}));
   Expression R = parameter(cg, model.add_parameters({VOCAB_SIZE, DIM}));
   unsigned ytrue;  // set ytrue to change the value of the input
   Expression bias = parameter(cg, model.add_parameters({VOCAB_SIZE}));
 
-  Expression r = hb + C1 * c1 + C2 * c2 + C3 * c3;
+  Expression cc = concatenate(c);
+  Expression r = hb + C * cc;
   Expression nl = rectify(r);
   Expression o2 = bias + R * nl;
   Expression ydist = log_softmax(o2);
@@ -70,10 +71,8 @@ int main(int argc, char** argv) {
     double loss = 0;
     unsigned n = 0;
     for (auto& ci : corpus) {
-      in_c1 = ci[0];
-      in_c2 = ci[1];
-      in_c3 = ci[2];
-      ytrue  = ci[3];
+      copy(ci.begin(), ci.begin()+CONTEXT, in_c.begin());
+      ytrue  = ci.back();
       loss += as_scalar(cg.forward());
       cg.backward();
       ++n;
