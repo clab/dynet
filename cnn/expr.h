@@ -38,6 +38,7 @@ Expression binary_log_loss(const Expression& x, real* pty);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
 
 Expression pick(const Expression& x, unsigned v);
+Expression pick(const Expression& x, unsigned* pv);
 
 template <typename T>
 Expression sum(const T& xs) {
@@ -53,6 +54,14 @@ Expression concatenate_cols(const T& xs) {
   std::vector<VariableIndex> xis(xs.size());
   for (int i=0; i<xs.size(); ++i) xis[i] = xs[i].i;
   return Expression(pg, pg->add_function<ConcatenateColumns>(xis));
+}
+
+template <typename T>
+Expression concatenate(const T& xs) {
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  for (int i=0; i<xs.size(); ++i) xis[i] = xs[i].i;
+  return Expression(pg, pg->add_function<Concatenate>(xis));
 }
 
 Expression sum_cols(const Expression& x);

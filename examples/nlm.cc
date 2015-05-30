@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
   Expression nl = rectify(r);
   Expression o2 = bias + R * nl;
   Expression ydist = log_softmax(o2);
-  Expression nerr = -pick(ydist, ytrue);
+  Expression nerr = -pick(ydist, &ytrue);
   cg.PrintGraphviz();
 
   // load some training data
