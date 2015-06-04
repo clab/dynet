@@ -15,6 +15,8 @@
 #include <boost/serialization/array.hpp>
 // CNN manages its own memory. DO NOT remove the following line
 #define EIGEN_NO_MALLOC
+// This prevents Eigen from trying to allocate heap and crashing due to NO_MALLOC
+#define EIGEN_STACK_ALLOCATION_LIMIT 1000000000
 #include <Eigen/Eigen>
 
 namespace cnn {
