@@ -31,12 +31,14 @@ Dim Reshape::dim_forward(const vector<Dim>& xs) const {
 
 string SumColumns::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "sum_cols(" << arg_names[0] << ')';
+  s << "sum_cols(matrix=" << arg_names[0];
+  if (arg_names.size() == 2) s << ", col_weighting=" << arg_names[1];
+  s << ')';
   return s.str();
 }
 
 Dim SumColumns::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  assert(xs.size() == 1 || xs.size() == 2);
   return Dim({xs[0].rows()});
 }
 
