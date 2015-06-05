@@ -287,7 +287,11 @@ void Concatenate::backward(const vector<const Tensor*>& xs,
   assert(i < src_row_indices.size());
   const unsigned rows = dEdxi.d.rows();
   const unsigned begin = src_row_indices[i];
+#if HAVE_CUDA
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
+#else
   *dEdxi += (*dEdf).block(begin, 0, rows, 1);
+#endif
 }
 
 void ConcatenateColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -594,7 +598,11 @@ void PickRange::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(end <= x.rows());
   assert(start < end);
   assert(int(fx.d.rows()) == int(end-start));
+#if HAVE_CUDA
+  CUDA_CHECK(cudaMemcpyAsync(&fx.v[0], &xs[0]->v[start], sizeof(float) * (end-start), cudaMemcpyDeviceToDevice));
+#else
   (*fx) = x.block(start, 0, end-start, 1);
+#endif
 }
 
 // derivative is 0 in all dimensions except the slice range
@@ -606,7 +614,11 @@ void PickRange::backward(const vector<const Tensor*>& xs,
   assert(i == 0);
   assert(int(dEdf.d.rows()) == int(end-start));
   assert(dEdf.d.cols() == 1);
+#if HAVE_CUDA
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, end-start, kSCALAR_ONE, dEdf.v, 1, &dEdxi.v[start], 1));
+#else
   (*dEdxi).block(start, 0, end-start, 1) += (*dEdf);
+#endif
 }
 
 #if HAVE_CUDA
