@@ -46,18 +46,35 @@ void Reshape::backward(const vector<const Tensor*>& xs,
 
 void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
-  *fx = x.rowwise().sum();
+  auto y = *fx;
+  if (xs.size() == 1) {
+    y = x.rowwise().sum();
+  } else if (xs.size() == 2) {
+    auto w = **xs[1];
+    y = (x * w.asDiagonal()).rowwise().sum();
+  } else { abort(); }
 }
 
 void SumColumns::backward(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i,
-                            Tensor& dEdxi) const {
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
   auto out = *dEdxi;
   const int c = out.cols();
-  for (int j = 0; j < c; ++j)
-    out.col(j) += *dEdf;
+  if (xs.size() == 1) {
+    for (int j = 0; j < c; ++j)
+      out.col(j) += *dEdf;
+  } else if (xs.size() == 2) {
+    auto x = **xs[0];
+    auto w = **xs[1];
+    if (i == 0) { // matrix
+      for (int j = 0; j < c; ++j)
+        out.col(j) += w(j) * *dEdf;
+    } else { // column weighting
+      out += x.transpose() * *dEdf;
+    }
+  }
 }
 
 void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
