@@ -61,18 +61,18 @@ void SumColumns::backward(const vector<const Tensor*>& xs,
                           unsigned i,
                           Tensor& dEdxi) const {
   auto out = *dEdxi;
-  const int c = out.cols();
   if (xs.size() == 1) {
-    for (int j = 0; j < c; ++j)
-      out.col(j) += *dEdf;
+    // this uses Eigen's broadcast capability
+    // the following doesn't compile, so i use the next line
+    //out.colwise() += *dEdf;
+    out.colwise() += (*dEdf).col(0);
   } else if (xs.size() == 2) {
     auto x = **xs[0];
     auto w = **xs[1];
     if (i == 0) { // matrix
-      for (int j = 0; j < c; ++j)
-        out.col(j) += w(j) * *dEdf;
+      out.noalias() += *dEdf * w.transpose();
     } else { // column weighting
-      out += x.transpose() * *dEdf;
+      out.noalias() += x.transpose() * *dEdf;
     }
   }
 }
