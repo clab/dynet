@@ -46,7 +46,7 @@ Parameters& p_W = mod.add_parameters({1, 3});
 CompuationGraph cg;
 // Load the parameters into the computation graph. A VariableIndex identifies the
 // position of a particular piece of information within the computation graph.
-VariableIndex i_W = cg.add_parameters(&p_weights);
+VariableIndex i_W = cg.add_parameters(&p_W);
 // Create variables defining the input and output of the regression, and load them
 // into the computation graph. Note that we don't need to set concrete values yet.
 vector<cnn::real> x_values(3);
@@ -78,4 +78,4 @@ cg.backward();
 sgd.update(1.0);
 ```
 
-Note that this very simple example that doesn't cover things like reading/writing models, recurrent/LSTM networks, or adding biases to functions. The best way to get an idea of how to use cnn for real is to look in the `example` directory, particularly starting with the simplest `xor` example.
+Note that this very simple example that doesn't cover things like memory initialization, reading/writing models, recurrent/LSTM networks, or adding biases to functions. The best way to get an idea of how to use cnn for real is to look in the `example` directory, particularly starting with the simplest `xor` example.
