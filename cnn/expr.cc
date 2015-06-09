@@ -36,6 +36,7 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expre
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumColumns>({x.i})); }
+Expression sum_cols(const Expression& x, const Expression& w) { return Expression(x.pg, x.pg->add_function<SumColumns>({x.i,w.i})); }
 
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 
