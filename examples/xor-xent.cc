@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 
   Expression h = tanh(W*x + b);
   Expression y_pred = logistic(V*h + a);
-  Expression loss = binary_log_loss(y_pred, &y_value); // DWC: I didn't understand why second argument is a real* rather than an input
+  Expression loss = binary_log_loss(y_pred, &y_value);
 
   cg.PrintGraphviz();
   //if (argc == 2) {
