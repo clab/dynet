@@ -69,4 +69,3 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(cnn)
 add_subdirectory(examples)
-#add_subdirectory(postedit)
