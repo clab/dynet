@@ -51,29 +51,25 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   if (h0.size()) { assert(h0.size() == layers); }
 }
 
-Expression SimpleRNNBuilder::add_input_impl(Expression& x, ComputationGraph& cg) {
+Expression SimpleRNNBuilder::add_input_impl(Expression &in) {
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
-  vector<Expression>& ht = h.back();
-  Expression in = x;
+
+  Expression x = in;
+
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
-    Expression i_h3;
-    bool have_prev = (t > 0 || h0.size() > 0);
-    if (have_prev) {
-      Expression i_h_tm1;
-      if (t == 0) {
-        if (h0.size()) i_h_tm1 = h0[i];  // first time step
-      } else {  // tth time step
-        i_h_tm1 = h[t-1][i];
-      }
-      i_h3 = vars[2] + vars[0] * in + vars[1] * i_h_tm1;
-    } else {
-      i_h3 = vars[2] + vars[0] * in;
-    }
-    in = ht[i] = tanh(i_h3);
+
+    Expression y = vars[2] + vars[0] * x;
+
+    if (t == 0 && h0.size() > 0)
+      y = y + vars[1] * h0[i];
+    else if (t > 0)
+      y = y + vars[1] * h[t-1][i];
+
+    x = h[t][i] = tanh(y);
   }
-  return ht.back();
+  return h[t].back();
 }
 
 } // namespace cnn

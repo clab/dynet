@@ -90,7 +90,7 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   }
 }
 
-Expression LSTMBuilder::add_input_impl(Expression& x, ComputationGraph& cg) {
+Expression LSTMBuilder::add_input_impl(Expression& x) {
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
@@ -120,7 +120,7 @@ Expression LSTMBuilder::add_input_impl(Expression& x, ComputationGraph& cg) {
       i_ait = vars[BI] + vars[X2I] * in;
     Expression i_it = logistic(i_ait);
     // forget
-    Expression i_ft = i_it - 1.f;
+    Expression i_ft = 1.f - i_it;
     // write memory cell
     Expression i_awt;
     if (has_prev_state)
