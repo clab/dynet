@@ -65,14 +65,14 @@ struct EncoderDecoder {
     fwd_enc_builder.start_new_sequence();
     for (unsigned t = 0; t < insent.size(); ++t) {
     	Expression i_x_t = lookup(cg,p_ec,insent[t]);
-      fwd_enc_builder.add_input(i_x_t, cg);
+      fwd_enc_builder.add_input(i_x_t);
     }
     // backward encoder
     rev_enc_builder.new_graph(cg);
     rev_enc_builder.start_new_sequence();
     for (int t = insent.size() - 1; t >= 0; --t) {
       Expression i_x_t = lookup(cg, p_ec, insent[t]);
-      rev_enc_builder.add_input(i_x_t, cg);
+      rev_enc_builder.add_input(i_x_t);
     }
     
     // encoder -> decoder transformation
@@ -109,7 +109,7 @@ struct EncoderDecoder {
     const unsigned oslen = osent.size() - 1;
     for (unsigned t = 0; t < oslen; ++t) {
     	Expression i_x_t = lookup(cg, p_c, osent[t]);
-    	Expression i_y_t = dec_builder.add_input(i_x_t, cg);
+    	Expression i_y_t = dec_builder.add_input(i_x_t);
     	Expression i_r_t = i_bias + i_R * i_y_t;
     	Expression i_ydist = log_softmax(i_r_t);
     	errs.push_back(pick(i_ydist,osent[t+1]));

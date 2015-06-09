@@ -48,13 +48,11 @@ struct RNNLanguageModel {
     Expression i_bias = parameter(cg, p_bias);  // word bias
     vector<Expression> errs;
     for (unsigned t = 0; t < slen; ++t) {
-      // x_t = lookup sent[t] in parameters p_c
       Expression i_x_t = lookup(cg, p_c, sent[t]);
       // y_t = RNN(x_t)
-      Expression i_y_t = builder.add_input(i_x_t, cg);
+      Expression i_y_t = builder.add_input(i_x_t);
       Expression i_r_t =  i_bias + i_R * i_y_t;
       
-      // ydist = softmax(r_t)
       // LogSoftmax followed by PickElement can be written in one step
       // using PickNegLogSoftmax
 #if 0
@@ -78,7 +76,7 @@ struct RNNLanguageModel {
 #endif
   }
 
-  // return VariableIndex of total loss
+  // return Expression for total loss
   void RandomSample(int max_len = 150) {
     cerr << endl;
     ComputationGraph cg;
@@ -94,8 +92,7 @@ struct RNNLanguageModel {
       ++len;
       Expression i_x_t = lookup(cg, p_c, cur);
       // y_t = RNN(x_t)
-      Expression i_y_t = builder.add_input(i_x_t, cg);
-      // r_t = bias + R * y_t
+      Expression i_y_t = builder.add_input(i_x_t);
       Expression i_r_t = i_bias + i_R * i_y_t;
       
       Expression ydist = softmax(i_r_t);
