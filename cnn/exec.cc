@@ -35,6 +35,10 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
     }
     nfxs[last_node_evaluated].d = node->dim;
     nfxs[last_node_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
+    if (nfxs[last_node_evaluated].v == nullptr) {
+      cerr << "out of memory\n";
+      abort();
+    }
     node->forward(xs, nfxs[last_node_evaluated]);
   }
   return nfxs.back();
