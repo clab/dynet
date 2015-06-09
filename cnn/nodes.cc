@@ -696,7 +696,7 @@ void MatrixMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const 
 #else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
-  (*fx).noalias() = x1 * x2;
+  *fx = x1 * x2;
 #endif
 }
 

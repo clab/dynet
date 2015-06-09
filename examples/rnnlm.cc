@@ -6,6 +6,7 @@
 #include "cnn/gru.h"
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
+# include "cnn/expr.h"
 
 #include <iostream>
 #include <fstream>
@@ -38,40 +39,40 @@ struct RNNLanguageModel {
     p_bias = model.add_parameters({VOCAB_SIZE});
   }
 
-  // return VariableIndex of total loss
-  VariableIndex BuildLMGraph(const vector<int>& sent, ComputationGraph& cg) {
+  // return Expression of total loss
+  Expression BuildLMGraph(const vector<int>& sent, ComputationGraph& cg) {
     const unsigned slen = sent.size() - 1;
-    builder.new_graph(&cg);  // reset RNN builder for new graph
+    builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
-    VariableIndex i_R = cg.add_parameters(p_R); // hidden -> word rep parameter
-    VariableIndex i_bias = cg.add_parameters(p_bias);  // word bias
-    vector<VariableIndex> errs;
+    Expression i_R = parameter(cg, p_R); // hidden -> word rep parameter
+    Expression i_bias = parameter(cg, p_bias);  // word bias
+    vector<Expression> errs;
     for (unsigned t = 0; t < slen; ++t) {
       // x_t = lookup sent[t] in parameters p_c
-      VariableIndex i_x_t = cg.add_lookup(p_c, sent[t]);
+      Expression i_x_t = lookup(cg, p_c, sent[t]);
       // y_t = RNN(x_t)
-      VariableIndex i_y_t = builder.add_input(i_x_t, &cg);
-      // r_t = bias + R * y_t
-      VariableIndex i_r_t = cg.add_function<AffineTransform>({i_bias, i_R, i_y_t});
+      Expression i_y_t = builder.add_input(i_x_t, cg);
+      Expression i_r_t =  i_bias + i_R * i_y_t;
+      
       // ydist = softmax(r_t)
       // LogSoftmax followed by PickElement can be written in one step
       // using PickNegLogSoftmax
 #if 0
-      VariableIndex i_ydist = cg.add_function<LogSoftmax>({i_r_t});
-      errs.push_back(cg.add_function<PickElement>({i_ydist}, sent[t+1]));
+      Expression i_ydist = logsoftmax(i_r_t);
+      errs.push_back(pick(i_ydist, sent[t+1]));
 #if 0
-      VariableIndex i_ydist = cg.add_function<Softmax>({i_r_t});
-      i_ydist = cg.add_function<Log>({i_ydist});
-      errs.push_back(cg.add_function<PickElement>({i_ydist}, sent[t+1]));
+      Expression i_ydist = softmax(i_r_t);
+      i_ydist = log(i_ydist)
+      errs.push_back(pick(i_ydist, sent[t+1]));
 #endif
 #else
-      VariableIndex i_err = cg.add_function<PickNegLogSoftmax>({i_r_t}, sent[t+1]);
+      Expression i_err = pickneglogsoftmax(i_r_t, sent[t+1]);
       errs.push_back(i_err);
 #endif
     }
-    VariableIndex i_nerr = cg.add_function<Sum>(errs);
+    Expression i_nerr = sum(errs);
 #if 0
-    return cg.add_function<Negate>({i_nerr});
+    return -i_nerr;
 #else
     return i_nerr;
 #endif
@@ -81,23 +82,24 @@ struct RNNLanguageModel {
   void RandomSample(int max_len = 150) {
     cerr << endl;
     ComputationGraph cg;
-    builder.new_graph(&cg);  // reset RNN builder for new graph
+    builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
-    VariableIndex i_R = cg.add_parameters(p_R); // hidden -> word rep parameter
-    VariableIndex i_bias = cg.add_parameters(p_bias);  // word bias
-    vector<VariableIndex> errs;
+    
+    Expression i_R = parameter(cg, p_R);
+    Expression i_bias = parameter(cg, p_bias);
+    vector<Expression> errs;
     int len = 0;
     int cur = kSOS;
     while(len < max_len && cur != kEOS) {
       ++len;
-      // x_t = lookup sent[t] in parameters p_c
-      VariableIndex i_x_t = cg.add_lookup(p_c, cur);
+      Expression i_x_t = lookup(cg, p_c, cur);
       // y_t = RNN(x_t)
-      VariableIndex i_y_t = builder.add_input(i_x_t, &cg);
+      Expression i_y_t = builder.add_input(i_x_t, cg);
       // r_t = bias + R * y_t
-      VariableIndex i_r_t = cg.add_function<AffineTransform>({i_bias, i_R, i_y_t});
-      // ydist = softmax(r_t)
-      cg.add_function<Softmax>({i_r_t});
+      Expression i_r_t = i_bias + i_R * i_y_t;
+      
+      Expression ydist = softmax(i_r_t);
+      
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
         auto dist = as_vector(cg.incremental_forward());
@@ -178,7 +180,7 @@ int main(int argc, char** argv) {
   //if (use_momentum)
   //  sgd = new MomentumSGDTrainer(&model);
   //else
-    sgd = new SimpleSGDTrainer(&model);
+  sgd = new SimpleSGDTrainer(&model);
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
