@@ -30,8 +30,15 @@ Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
 Expression log_softmax(const Expression& x);
 
+Expression cwise_multiply(const Expression& x, const Expression& y);
+
+Expression concatenate(const std::vector<Expression>& x);
+Expression sum(const std::vector<Expression>& x);
+
+
 Expression squaredDistance(const Expression& x, const Expression& y);
 Expression pick(const Expression& x, unsigned v);
+Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
 } }
 
