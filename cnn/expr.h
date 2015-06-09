@@ -30,15 +30,13 @@ Expression operator*(const Expression& x, const Expression& y);
 //Expression cwiseMultiply(const Expression& x, const Expression& y);
 
 Expression tanh(const Expression& x);
+Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
 Expression log_softmax(const Expression& x);
+Expression softmax(const Expression& x);
 
 Expression cwise_multiply(const Expression& x, const Expression& y);
-
-Expression concatenate(const std::vector<Expression>& x);
-Expression sum(const std::vector<Expression>& x);
-
 
 Expression squaredDistance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, real ty);
@@ -48,6 +46,8 @@ Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1
 Expression pick(const Expression& x, unsigned v);
 Expression pick(const Expression& x, unsigned* pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
+
+Expression pickneglogsoftmax(const Expression& x, unsigned v);
 
 template <typename T>
 Expression sum(const T& xs) {

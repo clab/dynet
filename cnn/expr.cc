@@ -16,28 +16,13 @@ Expression operator-(const Expression& x, real y) { return Expression(x.pg, x.pg
 Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
 
 Expression tanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tanh>({x.i})); }
+Expression log(const Expression& x) { return Expression(x.pg, x.pg->add_function<Log>({x.i})); }
 Expression logistic(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogisticSigmoid>({x.i})); }
 Expression rectify(const Expression& x) { return Expression(x.pg, x.pg->add_function<Rectify>({x.i})); }
 Expression log_softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogSoftmax>({x.i})); }
+Expression softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<Softmax>({x.i})); }
 
 Expression cwise_multiply(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));}
-
-Expression concatenate(const std::vector<Expression>& x) {
-	std::vector<VariableIndex> tmp(x.size());
-	for(unsigned j = 0; j < x.size(); ++j){
-		tmp[j] = x[j].i;
-	}
-	//ComputationGraph *tpg = x[0].pg;
-	return Expression(x[0].pg, x[0].pg->add_function<Concatenate>(tmp)); 
-}
-Expression sum(const std::vector<Expression>& x) {
-	std::vector<VariableIndex> tmp(x.size());
-	for(unsigned j = 0; j < x.size(); ++j){
-		tmp[j] = x[j].i;
-	}
-	//tpg = x[0].pg;
-	return Expression(x[0].pg, x[0].pg->add_function<Sum>(tmp)); 
-}
 
 Expression squaredDistance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<SquaredEuclideanDistance>({x.i, y.i})); }
 Expression binary_log_loss(const Expression& x, real ty) { return Expression(x.pg, x.pg->add_function<BinaryLogLoss>({x.i}, &ty)); }
@@ -47,6 +32,8 @@ Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m) 
 Expression pick(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, v)); }
 Expression pick(const Expression& x, unsigned* pv) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv)); }
 Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u)); }
+
+Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumColumns>({x.i})); }
 
