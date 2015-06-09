@@ -40,10 +40,6 @@ void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
     Expression i_h2h =  parameter(cg,p_h2h);
     Expression i_hb =  parameter(cg,p_hb);
 
-    //VariableIndex i_x2h = cg->add_parameters(p_x2h);
-    //VariableIndex i_h2h = cg->add_parameters(p_h2h);
-    //VariableIndex i_hb = cg->add_parameters(p_hb);
-    //vector<VariableIndex> vars = {i_x2h, i_h2h, i_hb};
     vector<Expression> vars = {i_x2h, i_h2h, i_hb};
     param_vars.push_back(vars);
   }
@@ -71,14 +67,10 @@ Expression SimpleRNNBuilder::add_input_impl(Expression& x, ComputationGraph& cg)
       } else {  // tth time step
         i_h_tm1 = h[t-1][i];
       }
-      // h3 = hbias + h2h * h_{t-1} + x2h * in
       i_h3 = vars[2] + vars[0] * in + vars[1] * i_h_tm1;
-      //i_h3 = cg->add_function<AffineTransform>({vars[2], vars[0], in, vars[1], i_h_tm1});
     } else {
-      //i_h3 = cg->add_function<AffineTransform>({vars[2], vars[0], in});
-      i_h3 = vars[2] + vars[0] * in ;
+      i_h3 = vars[2] + vars[0] * in;
     }
-    //in = ht[i] = cg->add_function<Tanh>({i_h3});
     in = ht[i] = tanh(i_h3);
   }
   return ht.back();

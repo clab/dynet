@@ -58,7 +58,7 @@ struct EncoderDecoder {
     p_bias = model.add_parameters({OUTPUT_VOCAB_SIZE});
   }
 
-  // build graph and return VariableIndex of total loss
+  // build graph and return Expression for total loss
   Expression BuildGraph(const vector<int>& insent, const vector<int>& osent, ComputationGraph& cg) {
     // forward encoder
     fwd_enc_builder.new_graph(cg);
@@ -79,19 +79,19 @@ struct EncoderDecoder {
     vector<Expression> to;
     for (auto h_l : fwd_enc_builder.final_h()) to.push_back(h_l);
     for (auto h_l : rev_enc_builder.final_h()) to.push_back(h_l);
-
-	Expression i_combined = concatenate(to);
-	Expression i_ie2h = parameter(cg, p_ie2h);
-	Expression i_bie = parameter(cg, p_bie);
-	Expression i_t = i_bie + i_ie2h * i_combined;
-	cg.incremental_forward();
-  Expression i_h = rectify(i_t);
-	Expression i_h2oe = parameter(cg,p_h2oe);
-	Expression i_boe = parameter(cg,p_boe);
-	Expression i_nc = i_boe + i_h2oe * i_h;
-	
-	vector<Expression> oein1, oein2, oein;
-	for (int i = 0; i < LAYERS; ++i) {
+    
+    Expression i_combined = concatenate(to);
+    Expression i_ie2h = parameter(cg, p_ie2h);
+    Expression i_bie = parameter(cg, p_bie);
+    Expression i_t = i_bie + i_ie2h * i_combined;
+    cg.incremental_forward();
+    Expression i_h = rectify(i_t);
+    Expression i_h2oe = parameter(cg,p_h2oe);
+    Expression i_boe = parameter(cg,p_boe);
+    Expression i_nc = i_boe + i_h2oe * i_h;
+    
+    vector<Expression> oein1, oein2, oein;
+    for (int i = 0; i < LAYERS; ++i) {
       oein1.push_back(pickrange(i_nc, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM));
       oein2.push_back(tanh(oein1[i]));
     }
@@ -100,7 +100,6 @@ struct EncoderDecoder {
 
     dec_builder.new_graph(cg);
     dec_builder.start_new_sequence(oein);
-    
 
     // decoder
     Expression i_R = parameter(cg,p_R);
@@ -118,89 +117,87 @@ struct EncoderDecoder {
     Expression i_nerr = sum(errs);
     return -i_nerr;
   }
-
-
 };
 
 int main(int argc, char** argv) {
-	cnn::Initialize(argc, argv);
-	if (argc != 3 && argc != 4) {
-		cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
-		return 1;
-	}
-	kSOS = d.Convert("<s>");
-	kEOS = d.Convert("</s>");
-	vector<vector<int>> training, dev;
-	string line;
-	int tlc = 0;
-	int ttoks = 0;
-	cerr << "Reading training data from " << argv[1] << "...\n";
-	{
-	ifstream in(argv[1]);
-	assert(in);
-	while(getline(in, line)) {
-	  ++tlc;
-	  training.push_back(ReadSentence(line, &d));
-	  ttoks += training.back().size();
-	  if (training.back().front() != kSOS && training.back().back() != kEOS) {
-	    cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
-	    abort();
-	  }
-	}
-	cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
-	}
-	d.Freeze(); // no new word types allowed
-	INPUT_VOCAB_SIZE = d.size();
-	OUTPUT_VOCAB_SIZE = d.size();
-
-	int dlc = 0;
-	int dtoks = 0;
-	cerr << "Reading dev data from " << argv[2] << "...\n";
-	{
-	ifstream in(argv[2]);
-	assert(in);
-	while(getline(in, line)) {
-	  ++dlc;
-	  dev.push_back(ReadSentence(line, &devd));
-	  dtoks += dev.back().size();
-	  if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
-	    cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
-	    abort();
-	  }
-	}
-	cerr << dlc << " lines, " << dtoks << " tokens\n";
-	}
-	
-  ostringstream os;
-	os << "bilm"
-	 << '_' << LAYERS
-	 << '_' << INPUT_DIM
-	 << '_' << HIDDEN_DIM
-	 << "-pid" << getpid() << ".params";
-	const string fname = os.str();
-	cerr << "Parameters will be written to: " << fname << endl;
-	double best = 9e+99;
-
-	Model model;
-	bool use_momentum = false;
-	Trainer* sgd = nullptr;
-	if (use_momentum)
-		sgd = new MomentumSGDTrainer(&model);
-	else
-		sgd = new SimpleSGDTrainer(&model);
-
+  cnn::Initialize(argc, argv);
+  if (argc != 3 && argc != 4) {
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    return 1;
+  }
+  kSOS = d.Convert("<s>");
+  kEOS = d.Convert("</s>");
+  vector<vector<int>> training, dev;
+  string line;
+  int tlc = 0;
+  int ttoks = 0;
+  cerr << "Reading training data from " << argv[1] << "...\n";
+  {
+    ifstream in(argv[1]);
+    assert(in);
+    while(getline(in, line)) {
+      ++tlc;
+      training.push_back(ReadSentence(line, &d));
+      ttoks += training.back().size();
+      if (training.back().front() != kSOS && training.back().back() != kEOS) {
+	cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+	abort();
+      }
+    }
+    cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
+  }
+  d.Freeze(); // no new word types allowed
+  INPUT_VOCAB_SIZE = d.size();
+  OUTPUT_VOCAB_SIZE = d.size();
   
-	//RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
-	//EncoderDecoder<SimpleRNNBuilder> lm(model);
+  int dlc = 0;
+  int dtoks = 0;
+  cerr << "Reading dev data from " << argv[2] << "...\n";
+  {
+    ifstream in(argv[2]);
+    assert(in);
+    while(getline(in, line)) {
+      ++dlc;
+      dev.push_back(ReadSentence(line, &devd));
+      dtoks += dev.back().size();
+      if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
+	cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+	abort();
+      }
+    }
+    cerr << dlc << " lines, " << dtoks << " tokens\n";
+  }
+  
+  ostringstream os;
+  os << "bilm"
+     << '_' << LAYERS
+     << '_' << INPUT_DIM
+     << '_' << HIDDEN_DIM
+     << "-pid" << getpid() << ".params";
+  const string fname = os.str();
+  cerr << "Parameters will be written to: " << fname << endl;
+  double best = 9e+99;
+  
+  Model model;
+  bool use_momentum = false;
+  Trainer* sgd = nullptr;
+  if (use_momentum)
+    sgd = new MomentumSGDTrainer(&model);
+  else
+    sgd = new SimpleSGDTrainer(&model);
+  
+  
+  //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
+  //EncoderDecoder<SimpleRNNBuilder> lm(model);
   EncoderDecoder<LSTMBuilder> lm(model);
-	if (argc == 4) {
-		string fname = argv[3];
-		ifstream in(fname);
-		boost::archive::text_iarchive ia(in);
-		ia >> model;
-	}
-
-	unsigned report_every_i = 50;
+  if (argc == 4) {
+    string fname = argv[3];
+    ifstream in(fname);
+    boost::archive::text_iarchive ia(in);
+    ia >> model;
+  }
+  
+  unsigned report_every_i = 50;
   unsigned dev_every_i_reports = 10;
   unsigned si = training.size();
   vector<unsigned> order(training.size());
@@ -214,12 +211,12 @@ int main(int argc, char** argv) {
     unsigned chars = 0;
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
-        si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
-        cerr << "**SHUFFLE\n";
-        random_shuffle(order.begin(), order.end());
+	si = 0;
+	if (first) { first = false; } else { sgd->update_epoch(); }
+	cerr << "**SHUFFLE\n";
+	random_shuffle(order.begin(), order.end());
       }
-
+      
       // build graph for this instance
       ComputationGraph cg;
       auto& sent = training[order[si]];
@@ -227,48 +224,37 @@ int main(int argc, char** argv) {
       ++si;
       lm.BuildGraph(sent, sent, cg);
       //cg.PrintGraphviz();
-      //cerr << "Built graph" << endl;
       loss += as_scalar(cg.forward());
-      //cerr << "Did forward" << endl;
       cg.backward();
-      //cerr << "Did backward" << endl;
       sgd->update();
-      //cerr << "Updated model" << endl;
       ++lines;
     }
     sgd->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
-
+    
 #if 0
     lm.RandomSample();
 #endif
-
+    
     // show score on dev data?
     report++;
     if (report % dev_every_i_reports == 0) {
       double dloss = 0;
       int dchars = 0;
       for (auto& sent : dev) {
-        ComputationGraph cg;
-        lm.BuildGraph(sent, sent, cg);
-        dloss += as_scalar(cg.forward());
-        dchars += sent.size() - 1;
+	ComputationGraph cg;
+	lm.BuildGraph(sent, sent, cg);
+	dloss += as_scalar(cg.forward());
+	dchars += sent.size() - 1;
       }
       if (dloss < best) {
-        best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+	best = dloss;
+	ofstream out(fname);
+	boost::archive::text_oarchive oa(out);
+	oa << model;
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
   }
   delete sgd;
-
-
-
-
-
-
-
-	}
+}
