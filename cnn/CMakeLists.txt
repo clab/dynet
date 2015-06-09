@@ -9,12 +9,12 @@ set(cnn_library_SRCS
     graph.cc
 #    gru.cc
     init.cc
-    lstm-expr.cc
+    lstm.cc
     model.cc
     nodes.cc
     nodes-common.cc
     param-nodes.cc
-    rnn-expr.cc
+    rnn.cc
     rnn-state-machine.cc
     saxe-init.cc
     shadow-params.cc
@@ -38,13 +38,13 @@ set(cnn_library_HDRS
     graph.h
     gru.h
     init.h
-    lstm-expr.h
+    lstm.h
     model.h
     nodes.h
     param-nodes.h
     random.h
     rnn-state-machine.h
-    rnn-expr.h
+    rnn.h
     saxe-init.h
     shadow-params.h
     tensor.h
