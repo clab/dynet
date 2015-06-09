@@ -65,10 +65,24 @@ struct LookupParameters : public ParametersBase {
   LookupParameters() {}
   LookupParameters(unsigned n, const Dim& d);
   friend class boost::serialization::access;
-  template<class Archive> void serialize(Archive& ar, const unsigned int) {
+  template<class Archive>
+  void save(Archive& ar, const unsigned int) const {
     ar & dim;
-    ar & values;
+    int nv = values.size();
+    ar & nv;
+    for (unsigned i = 0; i < values.size(); ++i)
+      ar & values[i];
   }
+  template<class Archive>
+  void load(Archive& ar, const unsigned int) {
+    ar & dim;
+    int nv;
+    ar & nv;
+    assert(nv == (int)values.size());
+    for (unsigned i = 0; i < values.size(); ++i)
+      ar & values[i];
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 // this is a collection of parameters

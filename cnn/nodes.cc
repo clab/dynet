@@ -46,18 +46,35 @@ void Reshape::backward(const vector<const Tensor*>& xs,
 
 void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
-  *fx = x.rowwise().sum();
+  auto y = *fx;
+  if (xs.size() == 1) {
+    y = x.rowwise().sum();
+  } else if (xs.size() == 2) {
+    auto w = **xs[1];
+    y = (x * w.asDiagonal()).rowwise().sum();
+  } else { abort(); }
 }
 
 void SumColumns::backward(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i,
-                            Tensor& dEdxi) const {
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
   auto out = *dEdxi;
-  const int c = out.cols();
-  for (int j = 0; j < c; ++j)
-    out.col(j) += *dEdf;
+  if (xs.size() == 1) {
+    // this uses Eigen's broadcast capability
+    // the following doesn't compile, so i use the next line
+    //out.colwise() += *dEdf;
+    out.colwise() += (*dEdf).col(0);
+  } else if (xs.size() == 2) {
+    auto x = **xs[0];
+    auto w = **xs[1];
+    if (i == 0) { // matrix
+      out.noalias() += *dEdf * w.transpose();
+    } else { // column weighting
+      out.noalias() += x.transpose() * *dEdf;
+    }
+  }
 }
 
 void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -84,8 +101,28 @@ void KMHNGram::backward(const vector<const Tensor*>& xs,
       (*dEdxi).col(j+k) += (*dEdf).col(j);
 }
 
+//   Y_ij = A_ijk * B_k (+ C_ij)
 void InnerProduct3D_1D::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(!"not implemented");
+  auto b = **xs[1];
+  auto y = *fx;
+  const int i = y.rows();
+  const int j = y.cols();
+  const int k = b.rows();
+  // the following reshape tensors into order 1 or 2 sizes
+  // but they point to the same memory
+  Tensor ta({i*j,k}, xs[0]->v);
+  Tensor ty({i*j}, fx.v);
+  auto A = *ta;
+  if (xs.size() == 3) {
+    Tensor tc({i*j}, xs[2]->v);
+    auto c = *tc;
+    // want to do A * b + c, but it triggers memory allocation
+    (*ty) = c;
+    (*ty).noalias() += A * b;
+  } else {
+    assert(xs.size() == 2);
+    (*ty).noalias() = A * b;
+  }
 }
 
 void InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
@@ -93,7 +130,21 @@ void InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
-  assert(!"not implemented");
+  auto b = **xs[1];
+  auto y = *fx;
+  const int si = y.rows();
+  const int sj = y.cols();
+  const int sk = b.rows();
+  Tensor tdEdf({si*sj}, dEdf.v);
+  if (i == 0) { // 3-tensor
+    Tensor tdEdxi({si*sj, sk}, dEdxi.v);
+    (*tdEdxi).noalias() += *tdEdf * (**xs[1]).transpose();
+  } else if (i == 1) { // vector
+    Tensor ta({si*sj,sk}, xs[0]->v);
+    (*dEdxi).noalias() += (*ta).transpose() * *tdEdf;
+  } else { // matrix bias
+    *dEdxi += *dEdf;
+  }
 }
 
 void GaussianNoise::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -287,7 +338,11 @@ void Concatenate::backward(const vector<const Tensor*>& xs,
   assert(i < src_row_indices.size());
   const unsigned rows = dEdxi.d.rows();
   const unsigned begin = src_row_indices[i];
+#if HAVE_CUDA
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
+#else
   *dEdxi += (*dEdf).block(begin, 0, rows, 1);
+#endif
 }
 
 void ConcatenateColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -594,7 +649,11 @@ void PickRange::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(end <= x.rows());
   assert(start < end);
   assert(int(fx.d.rows()) == int(end-start));
+#if HAVE_CUDA
+  CUDA_CHECK(cudaMemcpyAsync(&fx.v[0], &xs[0]->v[start], sizeof(float) * (end-start), cudaMemcpyDeviceToDevice));
+#else
   (*fx) = x.block(start, 0, end-start, 1);
+#endif
 }
 
 // derivative is 0 in all dimensions except the slice range
@@ -606,7 +665,11 @@ void PickRange::backward(const vector<const Tensor*>& xs,
   assert(i == 0);
   assert(int(dEdf.d.rows()) == int(end-start));
   assert(dEdf.d.cols() == 1);
+#if HAVE_CUDA
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, end-start, kSCALAR_ONE, dEdf.v, 1, &dEdxi.v[start], 1));
+#else
   (*dEdxi).block(start, 0, end-start, 1) += (*dEdf);
+#endif
 }
 
 #if HAVE_CUDA
