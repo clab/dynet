@@ -16,9 +16,9 @@
 using namespace std;
 using namespace cnn;
 
-unsigned LAYERS = 2;
-unsigned INPUT_DIM = 8;
-unsigned HIDDEN_DIM = 24;
+unsigned LAYERS = 4;
+unsigned INPUT_DIM = 500;
+unsigned HIDDEN_DIM = 500;
 unsigned INPUT_VOCAB_SIZE = 0;
 unsigned OUTPUT_VOCAB_SIZE = 0;
 
@@ -137,9 +137,9 @@ int main(int argc, char** argv) {
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
-  d.Freeze(); // no new word types allowed
-  INPUT_VOCAB_SIZE = d.size();
-  OUTPUT_VOCAB_SIZE = d.size();
+  //d.Freeze(); // no new word types allowed
+  //INPUT_VOCAB_SIZE = d.size();
+  //OUTPUT_VOCAB_SIZE = d.size();
 
   int dlc = 0;
   int dtoks = 0;
@@ -158,6 +158,9 @@ int main(int argc, char** argv) {
     }
     cerr << dlc << " lines, " << dtoks << " tokens\n";
   }
+  d.Freeze();
+  INPUT_VOCAB_SIZE = d.size();
+  OUTPUT_VOCAB_SIZE = d.size();
   ostringstream os;
   os << "bilm"
      << '_' << LAYERS
