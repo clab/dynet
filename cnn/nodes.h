@@ -22,17 +22,20 @@ struct Reshape : public Node {
   Dim to;
 };
 
-// y_i = \sum_{j} x_i,j
+// with a single argument x \in R^{n x m}
+// y_i = \sum_j x_i,j
+// with two arguments x \in R^{n x m} and w \in R^{m}
+// y_i = \sum_j x_i,j * w_j
 struct SumColumns : public Node {
   template <typename T> explicit SumColumns(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
 };
 
 // y_i = \sum_{j=1}^n x_1:{i-1+j}
