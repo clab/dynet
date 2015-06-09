@@ -3,6 +3,9 @@
 
 #include "cnn/cnn.h"
 #include "cnn/rnn.h"
+#include "cnn/expr.h"
+
+using namespace cnn::expr;
 
 namespace cnn {
 
@@ -19,28 +22,29 @@ struct LSTMBuilder : public RNNBuilder {
     h.pop_back();
     c.pop_back();
   }
-  VariableIndex back() const { return h.back().back(); }
-  std::vector<VariableIndex> final_h() const { return h.back(); }
+  Expression back() const { return h.back().back(); }
+  std::vector<Expression> final_h() const { return h.back(); }
  protected:
-  void new_graph_impl(ComputationGraph* cg) override;
-  void start_new_sequence_impl(const std::vector<VariableIndex>& h0) override;
-  VariableIndex add_input_impl(VariableIndex x, ComputationGraph* cg) override;
+  void new_graph_impl(ComputationGraph& cg) override;
+  void start_new_sequence_impl(const std::vector<Expression>& h0) override;
+  //VariableIndex add_input_impl(VariableIndex x, ComputationGraph* cg) override;
+  Expression add_input_impl(Expression& x, ComputationGraph& cg) override;
 
  public:
   // first index is layer, then ...
   std::vector<std::vector<Parameters*>> params;
 
   // first index is layer, then ...
-  std::vector<std::vector<VariableIndex>> param_vars;
+  std::vector<std::vector<Expression>> param_vars;
 
   // first index is time, second is layer 
-  std::vector<std::vector<VariableIndex>> h, c;
+  std::vector<std::vector<Expression>> h, c;
 
   // initial values of h and c at each layer
   // - both default to zero matrix input
   bool has_initial_state; // if this is false, treat h0 and c0 as 0
-  std::vector<VariableIndex> h0;
-  std::vector<VariableIndex> c0;
+  std::vector<Expression> h0;
+  std::vector<Expression> c0;
   unsigned layers;
 };
 
