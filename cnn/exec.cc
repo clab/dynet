@@ -35,7 +35,6 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
     }
     nfxs[last_node_evaluated].d = node->dim;
     nfxs[last_node_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
-    //cerr << "CALLING: " << node->as_string(dummy) << endl;
     node->forward(xs, nfxs[last_node_evaluated]);
   }
   return nfxs.back();
