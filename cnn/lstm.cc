@@ -45,7 +45,6 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
 
 void LSTMBuilder::new_graph_impl(ComputationGraph& cg){
   param_vars.clear();
-  cerr << "LSTMBuilder: About to build graph"<< endl;  
 
   for (unsigned i = 0; i < layers; ++i){
     auto& p = params[i];
@@ -70,7 +69,6 @@ void LSTMBuilder::new_graph_impl(ComputationGraph& cg){
     
     
   }
-  cerr << "LSTMBuilder: Built graph"<< endl;  
 }
 
 /*void LSTMBuilder::new_graph_impl(ComputationGraph* cg) {
@@ -122,14 +120,11 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
 
 //VariableIndex LSTMBuilder::add_input_impl(VariableIndex x, ComputationGraph* cg) {
 Expression LSTMBuilder::add_input_impl(Expression& x, ComputationGraph& cg) {
-  cerr << "Input_impl: Came here!" << endl;
   const unsigned t = h.size();
-  cerr << "Input_impl: Got size" << endl;
   //h.push_back(vector<VariableIndex>(layers));
   //c.push_back(vector<VariableIndex>(layers));
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
-  cerr << "Input_impl: pushed back" << endl;
   //vector<VariableIndex>& ht = h.back();
   //vector<VariableIndex>& ct = c.back();
   vector<Expression>& ht = h.back();
@@ -171,10 +166,10 @@ Expression LSTMBuilder::add_input_impl(Expression& x, ComputationGraph& cg) {
     //VariableIndex i_awt;
     Expression i_awt;
     if (has_prev_state)
-      i_awt = vars[BV] + vars[X2C] * in + vars[H2C]*i_h_tm1;
+      i_awt = vars[BC] + vars[X2C] * in + vars[H2C]*i_h_tm1;
       //i_awt = cg->add_function<AffineTransform>({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
     else
-      i_awt = vars[BV] + vars[X2C] * in;
+      i_awt = vars[BC] + vars[X2C] * in;
       //i_awt = cg->add_function<AffineTransform>({vars[BC], vars[X2C], in});
     Expression i_wt = tanh(i_awt);
     //VariableIndex i_wt = cg->add_function<Tanh>({i_awt});
@@ -188,7 +183,7 @@ Expression LSTMBuilder::add_input_impl(Expression& x, ComputationGraph& cg) {
       ct[i] = i_crt + i_nwt;
     } else {
       //ct[i] = cg->add_function<CwiseMultiply>({i_it, i_wt});
-      ct[u] = cwise_multiply(i_it,i_wt);
+      ct[i] = cwise_multiply(i_it,i_wt);
     }
  
     //VariableIndex i_aot;
@@ -201,9 +196,9 @@ Expression LSTMBuilder::add_input_impl(Expression& x, ComputationGraph& cg) {
       //i_aot = cg->add_function<AffineTransform>({vars[BO], vars[X2O], in});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
-    in = ht[i] = cwise_multiply(i,ot,ph_t);
+    in = ht[i] = cwise_multiply(i_ot,ph_t);
 
-    cerr << "Input_impl: Did all" << endl;
+    
     //VariableIndex i_ot = cg->add_function<LogisticSigmoid>({i_aot});
     //VariableIndex ph_t = cg->add_function<Tanh>({ct[i]});
     //in = ht[i] = cg->add_function<CwiseMultiply>({i_ot, ph_t});

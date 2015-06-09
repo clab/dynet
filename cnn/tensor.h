@@ -14,7 +14,9 @@
 #endif
 #include <boost/serialization/array.hpp>
 // CNN manages its own memory. DO NOT remove the following line
-#define EIGEN_NO_MALLOC
+
+// Following line is commented out because it causes errors
+//#define EIGEN_NO_MALLOC
 #include <Eigen/Eigen>
 
 namespace cnn {
