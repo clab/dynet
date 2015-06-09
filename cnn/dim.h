@@ -25,6 +25,11 @@ struct Dim {
     for (unsigned i = 0; i < nd; ++i) p *= d[i];
     return p;
   }
+  inline int sum_dims() const {
+    int p = 0;
+    for (unsigned i = 0; i < nd; ++i) p += d[i];
+    return p;
+  }
   inline int ndims() const { return nd; }
   inline int rows() const { return d[0]; }
   inline int cols() const { return nd > 1 ? d[1] : 1; }

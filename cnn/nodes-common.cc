@@ -31,12 +31,14 @@ Dim Reshape::dim_forward(const vector<Dim>& xs) const {
 
 string SumColumns::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "sum_cols(" << arg_names[0] << ')';
+  s << "sum_cols(matrix=" << arg_names[0];
+  if (arg_names.size() == 2) s << ", col_weighting=" << arg_names[1];
+  s << ')';
   return s.str();
 }
 
 Dim SumColumns::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  assert(xs.size() == 1 || xs.size() == 2);
   return Dim({xs[0].rows()});
 }
 
@@ -58,13 +60,28 @@ Dim KMHNGram::dim_forward(const vector<Dim>& xs) const {
 
 string InnerProduct3D_1D::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "inner(" << arg_names[0] << "," << arg_names[1] << ") + " << arg_names[2];
+  s << "dot(" << arg_names[0] << "," << arg_names[1] << ')';
+  if (arg_names.size() == 3) s << " + " << arg_names[2];
   return s.str();
 }
 
 Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
-  cerr << "InnerProduct3D_1D::dim_forward not implemented\n";
-  abort();
+  if (xs.size() != 2 && xs.size() != 3) {
+    cerr << "Expected two or three arguments in InnerProduct3D_1D\n";
+    abort();
+  }
+  if (xs[0].ndims() != 3 ||
+      xs[1].ndims() != 1 ||
+      xs[0].size(2) != xs[1].size(0)) {
+    cerr << "Bad input dimensions in InnerProduct3D_1D: " << xs << endl;
+    abort();
+  }
+  Dim d({xs[0].size(0), xs[0].size(1)});
+  if (xs.size() == 3 && xs[2] != d) {
+    cerr << "Bad input dimensions in InnerProduct3D_1D: " << xs << endl;
+    abort();
+  }
+  return d;
 }
 
 string GaussianNoise::as_string(const vector<string>& arg_names) const {
