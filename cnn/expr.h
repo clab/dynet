@@ -25,9 +25,8 @@ Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);
 //Expression operator+(const Expression& x, real y);
 Expression operator-(const Expression& x, const Expression& y);
-Expression operator-(const Expression& x, real y);
+Expression operator-(real x, const Expression& y);
 Expression operator*(const Expression& x, const Expression& y);
-//Expression cwiseMultiply(const Expression& x, const Expression& y);
 
 Expression tanh(const Expression& x);
 Expression log(const Expression& x);

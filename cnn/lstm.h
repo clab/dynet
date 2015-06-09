@@ -27,8 +27,7 @@ struct LSTMBuilder : public RNNBuilder {
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
-  //VariableIndex add_input_impl(VariableIndex x, ComputationGraph* cg) override;
-  Expression add_input_impl(Expression& x, ComputationGraph& cg) override;
+  Expression add_input_impl(Expression& x) override;
 
  public:
   // first index is layer, then ...
