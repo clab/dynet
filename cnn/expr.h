@@ -38,8 +38,7 @@ Expression softmax(const Expression& x);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
 Expression squaredDistance(const Expression& x, const Expression& y);
-Expression binary_log_loss(const Expression& x, real ty);
-Expression binary_log_loss(const Expression& x, real* pty);
+Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
 
 Expression pick(const Expression& x, unsigned v);

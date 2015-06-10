@@ -475,13 +475,17 @@ Dim LogisticSigmoid::dim_forward(const vector<Dim>& xs) const {
 
 string BinaryLogLoss::as_string(const vector<string>& arg_names) const {
   ostringstream os;
-  os << "binary_log_loss(" << arg_names[0] << ", " << *ptarget_y << ')';
+  os << "binary_log_loss(" << arg_names[0] << ", " << arg_names[1] << ')';
   return os.str();
 }
 
 Dim BinaryLogLoss::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  assert(xs.size() == 2);
   if (xs[0].rows() != 2 && xs[0].ndims() != 1) {
+    cerr << "Bad input dimensions in BinaryLogLoss: " << xs << endl;
+    abort();
+  }
+  if (xs[1].rows() != 2 && xs[1].ndims() != 1) {
     cerr << "Bad input dimensions in BinaryLogLoss: " << xs << endl;
     abort();
   }

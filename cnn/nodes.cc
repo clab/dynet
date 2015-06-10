@@ -909,9 +909,7 @@ void LogisticSigmoid::backward(const vector<const Tensor*>& xs,
 // target_y is a value between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
 void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-  assert(xs.front()->d.size() == 1);
-  fx.v[0] = FBinaryLogLoss()(xs[0]->v[0], *ptarget_y);
+  fx.v[0] = FBinaryLogLoss()(xs[0]->v[0], xs[1]->v[0]);
 }
 
 void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
@@ -919,8 +917,8 @@ void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const {
-  const auto y_pred = xs[0]->v[0];
-  const real ty = *ptarget_y;
+  const auto y_pred = xs[i]->v[0];
+  const auto ty = xs[1-i]->v[0];
   dEdxi.v[0] += FBinaryLogLossBackward()(y_pred,ty,dEdf.v[0]);
 }
 

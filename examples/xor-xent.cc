@@ -32,10 +32,11 @@ int main(int argc, char** argv) {
   vector<float> x_values(2);  // set x_values to change the inputs to the network
   Expression x = input(cg, {2}, &x_values);
   cnn::real y_value;  // set y_value to change the target output
+  Expression y = input(cg, &y_value);
 
   Expression h = tanh(W*x + b);
   Expression y_pred = logistic(V*h + a);
-  Expression loss = binary_log_loss(y_pred, &y_value);
+  Expression loss = binary_log_loss(y_pred, y);
 
   cg.PrintGraphviz();
   //if (argc == 2) {
