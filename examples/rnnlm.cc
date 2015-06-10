@@ -30,13 +30,12 @@ int kEOS;
 template <class Builder>
 struct RNNLanguageModel {
   LookupParameters* p_c;
-  Parameters* p_R;
-  Parameters* p_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+  AffineBuilder o_aff;
+  explicit RNNLanguageModel(Model& model) 
+    : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
+      o_aff(model, {HIDDEN_DIM}, VOCAB_SIZE) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
-    p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
-    p_bias = model.add_parameters({VOCAB_SIZE});
   }
 
   // return Expression of total loss
@@ -44,14 +43,13 @@ struct RNNLanguageModel {
     const unsigned slen = sent.size() - 1;
     builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
-    Expression i_R = parameter(cg, p_R); // hidden -> word rep parameter
-    Expression i_bias = parameter(cg, p_bias);  // word bias
+    o_aff.add_to(cg);
     vector<Expression> errs;
     for (unsigned t = 0; t < slen; ++t) {
       Expression i_x_t = lookup(cg, p_c, sent[t]);
       // y_t = RNN(x_t)
       Expression i_y_t = builder.add_input(i_x_t);
-      Expression i_r_t =  i_bias + i_R * i_y_t;
+      Expression i_r_t = o_aff({i_y_t});
       
       // LogSoftmax followed by PickElement can be written in one step
       // using PickNegLogSoftmax
@@ -83,8 +81,6 @@ struct RNNLanguageModel {
     builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
     
-    Expression i_R = parameter(cg, p_R);
-    Expression i_bias = parameter(cg, p_bias);
     vector<Expression> errs;
     int len = 0;
     int cur = kSOS;
@@ -93,8 +89,7 @@ struct RNNLanguageModel {
       Expression i_x_t = lookup(cg, p_c, cur);
       // y_t = RNN(x_t)
       Expression i_y_t = builder.add_input(i_x_t);
-      Expression i_r_t = i_bias + i_R * i_y_t;
-      
+      Expression i_r_t = o_aff({i_y_t});
       Expression ydist = softmax(i_r_t);
       
       unsigned w = 0;

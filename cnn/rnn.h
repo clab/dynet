@@ -73,11 +73,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   std::vector<Expression> final_h() const { return h.back(); }
 
  private:
-  // first index is layer, then x2h h2h hb
-  std::vector<std::vector<Parameters*>> params;
-
-  // first index is layer, then x2h h2h hb
-  std::vector<std::vector<Expression>> param_vars;
+  std::vector<AffineBuilder> params;
 
   // first index is time, second is layer 
   std::vector<std::vector<Expression>> h;

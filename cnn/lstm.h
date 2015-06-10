@@ -30,11 +30,7 @@ struct LSTMBuilder : public RNNBuilder {
   Expression add_input_impl(const Expression& x) override;
 
  public:
-  // first index is layer, then ...
-  std::vector<std::vector<Parameters*>> params;
-
-  // first index is layer, then ...
-  std::vector<std::vector<Expression>> param_vars;
+  std::vector<AffineBuilder> i_params, o_params, c_params;
 
   // first index is time, second is layer 
   std::vector<std::vector<Expression>> h, c;

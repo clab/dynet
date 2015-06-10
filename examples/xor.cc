@@ -23,28 +23,21 @@ int main(int argc, char** argv) {
   SimpleSGDTrainer sgd(&m);
   //MomentumSGDTrainer sgd(&m);
 
-  ComputationGraph cg;
-
-  /*
-    Expression W = parameter(cg, m.add_parameters({HIDDEN_SIZE, 2}));
-  Expression b = parameter(cg, m.add_parameters({HIDDEN_SIZE}));
-  Expression V = parameter(cg, m.add_parameters({1, HIDDEN_SIZE}));
-  Expression a = parameter(cg, m.add_parameters({1}));
-  */
-  
   AffineBuilder a1(m, {2}, HIDDEN_SIZE);
   AffineBuilder a2(m, {HIDDEN_SIZE}, 1);
 
+  // inputs
+  vector<cnn::real> x_values(2);  // set x_values to change the inputs to the network
+  cnn::real y_value;  // set y_value to change the target output
+
+  // graph
+  ComputationGraph cg;
   a1.add_to(cg); a2.add_to(cg);
 
-  vector<cnn::real> x_values(2);  // set x_values to change the inputs to the network
   Expression x = input(cg, {2}, &x_values);
-  cnn::real y_value;  // set y_value to change the target output
   Expression y = input(cg, &y_value);
 
-  //Expression h = tanh(W*x + b);
   Expression h = tanh(a1({x}));
-  //Expression y_pred = V*h + a;
   Expression y_pred = a2({h});
   Expression loss = squaredDistance(y_pred, y);
 

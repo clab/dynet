@@ -84,7 +84,7 @@ struct AffineBuilder {
   std::vector<VariableIndex> i_weights;
   ComputationGraph *pg;
 
-AffineBuilder(Model& model, const std::initializer_list<int>& input_dims, int output_dim) : 
+AffineBuilder(Model& model, const std::initializer_list<long>& input_dims, int output_dim) : 
     weights(input_dims.size()),
     i_weights(input_dims.size()),
     pg(nullptr)
@@ -106,7 +106,11 @@ AffineBuilder(Model& model, const std::initializer_list<int>& input_dims, int ou
   }
 
   Expression operator() (const std::vector<Expression>& xs) {
-    assert (xs.size() == weights.size());
+    // Special trick: if xs is shorter than weights,
+    // then assume missing arguments are zero.
+
+    assert (xs.size() <= weights.size());
+    assert (xs.size() == 0 || xs[0].pg == pg);
 
     std::vector<VariableIndex> xys(xs.size()*2+1);
     xys[0] = i_bias;
