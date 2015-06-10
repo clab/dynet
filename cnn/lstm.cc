@@ -116,8 +116,10 @@ Expression LSTMBuilder::add_input_impl(const Expression& x) {
     Expression i_ait;
     if (has_prev_state)
       i_ait = vars[BI] + vars[X2I] * in + vars[H2I]*i_h_tm1 + vars[C2I] * i_c_tm1;
+//      i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
     else
       i_ait = vars[BI] + vars[X2I] * in;
+//       i_ait = affine_transform({vars[BI], vars[X2I], in});
     Expression i_it = logistic(i_ait);
     // forget
     Expression i_ft = 1.f - i_it;
@@ -125,8 +127,10 @@ Expression LSTMBuilder::add_input_impl(const Expression& x) {
     Expression i_awt;
     if (has_prev_state)
       i_awt = vars[BC] + vars[X2C] * in + vars[H2C]*i_h_tm1;
+      //i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
     else
       i_awt = vars[BC] + vars[X2C] * in;
+      //i_awt = affine_transform({vars[BC], vars[X2C], in});
     Expression i_wt = tanh(i_awt);
     // output
     if (has_prev_state) {

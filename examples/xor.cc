@@ -36,8 +36,9 @@ int main(int argc, char** argv) {
   Expression y = input(cg, &y_value);
 
   Expression h = tanh(W*x + b);
+  //Expression h = softsign(W*x + b);
   Expression y_pred = V*h + a;
-  Expression loss = squaredDistance(y_pred, y);
+  Expression loss = squared_distance(y_pred, y);
 
   cg.PrintGraphviz();
   if (argc == 2) {

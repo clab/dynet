@@ -165,14 +165,14 @@ int main(int argc, char** argv) {
       auto& sent_pair = training[order[si]];
       ++si;
       Expression s = emb.EmbedSource(sent_pair.first, cg);
-      Expression sim = squaredDistance(s, emb.EmbedTarget(sent_pair.second, cg));
+      Expression sim = squared_distance(s, emb.EmbedTarget(sent_pair.second, cg));
       float margin = 2;
       const unsigned K = 20;
       vector<Expression> noise(K);
       for (unsigned j = 0; j < K; ++j) {
         unsigned sample = rand01() * training.size();
         while (sample == order[si] || sample == training.size()) { sample = rand01() * training.size(); }
-        Expression sim_n = squaredDistance(s, emb.EmbedTarget(training[sample].second, cg));
+        Expression sim_n = squared_distance(s, emb.EmbedTarget(training[sample].second, cg));
         noise[j] = pairwise_rank_loss(sim, sim_n, margin);
       }
       Expression l = sum(noise);
