@@ -20,6 +20,12 @@ struct FProduct {
   }
 };
 
+struct FQuotient {
+  CNN_DEVICE_FUNC inline float operator()(float a, float b) const {
+    return a / b;
+  }
+};
+
 struct FConstantMinus {
   FConstantMinus(float c) : c(c) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {

@@ -27,6 +27,8 @@ Expression operator+(const Expression& x, const Expression& y);
 Expression operator-(const Expression& x, const Expression& y);
 Expression operator-(real x, const Expression& y);
 Expression operator*(const Expression& x, const Expression& y);
+// componentwise division
+Expression cdiv(const Expression& x, const Expression& y);
 
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
