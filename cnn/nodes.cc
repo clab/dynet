@@ -903,6 +903,20 @@ void LogisticSigmoid::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
+void SoftSign::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  auto x = **xs[0];
+  *fx = x.unaryExpr(FSoftSign());
+}
+
+void SoftSign::backward(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  *dEdxi += (*fx).binaryExpr(*dEdf, FSoftSignBackward());
+}
+
 // you could do this with LogisticSigmoid, Softmax or a variety of other
 // functions, but this is often useful.
 // x_1 must be a scalar that is a value between 0 and 1

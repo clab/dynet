@@ -292,6 +292,21 @@ Dim Softmax::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string SoftSign::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "softsign(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim SoftSign::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  if (!LooksLikeVector(xs[0])) {
+    cerr << "Bad input dimensions in Softsign: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string PickNegLogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "log_softmax(" << arg_names[0] << ")_{" << *pval << '}';

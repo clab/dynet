@@ -384,6 +384,19 @@ struct LogisticSigmoid : public Node {
                     Tensor& dEdxi) const override;
 };
 
+// y = x / (1 + |x|)
+struct SoftSign : public Node {
+  explicit SoftSign(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const override;
+};
+
 // z = \sum_j \exp (x_i)_j
 // y_i = (x_1)_i / z
 struct Softmax : public Node {

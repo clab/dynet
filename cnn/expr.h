@@ -29,15 +29,18 @@ Expression operator-(real x, const Expression& y);
 Expression operator*(const Expression& x, const Expression& y);
 
 Expression tanh(const Expression& x);
+Expression exp(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
 Expression log_softmax(const Expression& x);
 Expression softmax(const Expression& x);
+Expression softsign(const Expression& x);
 
+Expression affine_transform(const std::initializer_list<Expression>& xs);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
-Expression squaredDistance(const Expression& x, const Expression& y);
+Expression squared_distance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
 

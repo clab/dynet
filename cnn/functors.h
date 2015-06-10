@@ -137,6 +137,19 @@ struct FRectify {
   }
 };
 
+struct FSoftSign {
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return x / (1.f + (x < 0.f ? -x : x));
+  }
+};
+
+struct FSoftSignBackward {
+  CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
+    float a = 1.f - (t < 0.f ? -t : t);
+    return a * a * d;
+  }
+};
+
 struct FLogisticSigmoid {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
     return 1.f / (1.f + expf(-x));
