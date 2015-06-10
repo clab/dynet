@@ -109,6 +109,47 @@ template <typename T>
 inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
 inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
 
+struct AffineBuilder {
+  Parameters *bias;
+  std::vector<Parameters *> weights;
+  VariableIndex i_bias;
+  std::vector<VariableIndex> i_weights;
+  ComputationGraph *pg;
+
+AffineBuilder(Model& model, const std::initializer_list<int>& input_dims, int output_dim) : 
+    weights(input_dims.size()),
+    i_weights(input_dims.size()),
+    pg(nullptr)
+  {
+    assert (weights.size() > 0);
+    int i = 0;
+    for (const auto& input_dim : input_dims) {
+      weights[i] = model.add_parameters({output_dim, input_dim});
+      ++i;
+    }
+    bias = model.add_parameters({output_dim});
+  }
+
+  void add_to(ComputationGraph& g) {
+    pg = &g;
+    for (int i=0; i<weights.size(); ++i)
+      i_weights[i] = pg->add_parameters(weights[i]);
+    i_bias = pg->add_parameters(bias);
+  }
+
+  Expression operator() (const std::vector<Expression>& xs) {
+    assert (xs.size() == weights.size());
+
+    std::vector<VariableIndex> xys(xs.size()*2+1);
+    xys[0] = i_bias;
+    for (int i=0; i<xs.size(); ++i) {
+      xys[2*i+1] = i_weights[i];
+      xys[2*i+2] = xs[i].i;
+    }
+    return Expression(pg, pg->add_function<AffineTransform>(xys));
+  }
+};
+
 } }
 
 #endif

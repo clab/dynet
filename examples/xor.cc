@@ -25,19 +25,25 @@ int main(int argc, char** argv) {
 
   ComputationGraph cg;
 
-  Expression W = parameter(cg, m.add_parameters({HIDDEN_SIZE, 2}));
+  /*
+    Expression W = parameter(cg, m.add_parameters({HIDDEN_SIZE, 2}));
   Expression b = parameter(cg, m.add_parameters({HIDDEN_SIZE}));
   Expression V = parameter(cg, m.add_parameters({1, HIDDEN_SIZE}));
   Expression a = parameter(cg, m.add_parameters({1}));
+  */
+  
+  AffineBuilder a1(m, {2}, HIDDEN_SIZE);
+  AffineBuilder a2(m, {HIDDEN_SIZE}, 1);
+
+  a1.add_to(cg); a2.add_to(cg);
 
   vector<cnn::real> x_values(2);  // set x_values to change the inputs to the network
   Expression x = input(cg, {2}, &x_values);
   cnn::real y_value;  // set y_value to change the target output
   Expression y = input(cg, &y_value);
 
-  Expression h = tanh(W*x + b);
-  //Expression h = softsign(W*x + b);
-  Expression y_pred = V*h + a;
+  Expression h = tanh(a1({x}));
+  Expression y_pred = a2({h});
   Expression loss = squared_distance(y_pred, y);
 
   cg.PrintGraphviz();
