@@ -90,7 +90,7 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   }
 }
 
-Expression LSTMBuilder::add_input_impl(Expression& x) {
+Expression LSTMBuilder::add_input_impl(const Expression& x) {
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
