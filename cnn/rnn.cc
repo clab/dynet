@@ -51,7 +51,7 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   if (h0.size()) { assert(h0.size() == layers); }
 }
 
-Expression SimpleRNNBuilder::add_input_impl(Expression &in) {
+Expression SimpleRNNBuilder::add_input_impl(const Expression &in) {
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
 

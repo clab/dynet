@@ -32,7 +32,7 @@ struct RNNBuilder {
 
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
-  Expression add_input(Expression& x) {
+  Expression add_input(const Expression& x) {
     sm.transition(RNNOp::add_input);
     return add_input_impl(x);
   }
@@ -49,7 +49,7 @@ struct RNNBuilder {
  protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
-  virtual Expression add_input_impl(Expression& x) = 0;
+  virtual Expression add_input_impl(const Expression& x) = 0;
  private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
@@ -65,7 +65,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h_0) override;
-  Expression add_input_impl(Expression& x) override;
+  Expression add_input_impl(const Expression& x) override;
 
  public:
   void rewind_one_step() { h.pop_back(); }

@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-foreach(TARGET embed-cl encdec xor xor-xent rnnlm nlm)
+foreach(TARGET tag-bilstm embed-cl encdec xor xor-xent rnnlm nlm)
   ADD_EXECUTABLE(${TARGET} ${TARGET}.cc)
   target_link_libraries(${TARGET} cnn ${LIBS})
   if (WITH_CUDA_BACKEND)
