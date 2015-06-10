@@ -73,7 +73,6 @@ Expression concatenate(const T& xs) {
 }
 
 Expression sum_cols(const Expression& x);
-Expression sum_cols(const Expression& x, const Expression& w);
 
 Expression kmh_ngram(const Expression& x, unsigned n);
 

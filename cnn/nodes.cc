@@ -49,9 +49,6 @@ void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = *fx;
   if (xs.size() == 1) {
     y = x.rowwise().sum();
-  } else if (xs.size() == 2) {
-    auto w = **xs[1];
-    y = (x * w.asDiagonal()).rowwise().sum();
   } else { abort(); }
 }
 
@@ -61,20 +58,10 @@ void SumColumns::backward(const vector<const Tensor*>& xs,
                           unsigned i,
                           Tensor& dEdxi) const {
   auto out = *dEdxi;
-  if (xs.size() == 1) {
-    // this uses Eigen's broadcast capability
-    // the following doesn't compile, so i use the next line
-    //out.colwise() += *dEdf;
-    out.colwise() += (*dEdf).col(0);
-  } else if (xs.size() == 2) {
-    auto x = **xs[0];
-    auto w = **xs[1];
-    if (i == 0) { // matrix
-      out.noalias() += *dEdf * w.transpose();
-    } else { // column weighting
-      out.noalias() += x.transpose() * *dEdf;
-    }
-  }
+  // this uses Eigen's broadcast capability
+  // the following doesn't compile, so i use the next line
+  //out.colwise() += *dEdf;
+  out.colwise() += (*dEdf).col(0);
 }
 
 void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {

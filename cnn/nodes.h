@@ -24,8 +24,7 @@ struct Reshape : public Node {
 
 // with a single argument x \in R^{n x m}
 // y_i = \sum_j x_i,j
-// with two arguments x \in R^{n x m} and w \in R^{m}
-// y_i = \sum_j x_i,j * w_j
+// if you want to reweight the columns and then sum them, use MatrixMultiply
 struct SumColumns : public Node {
   template <typename T> explicit SumColumns(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
@@ -334,6 +333,7 @@ struct Rectify : public Node {
 // x_1 must be a scalar that is a value between 0 and 1
 // target_y is a value between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
+// TODO get rid of ty/pty and instead have this as a VariableIndex
 struct BinaryLogLoss : public Node {
   BinaryLogLoss(const std::initializer_list<VariableIndex>& a, real ty) : Node(a), target_y(ty), ptarget_y(&target_y) {}
   BinaryLogLoss(const std::initializer_list<VariableIndex>& a, real* pty) : Node(a), target_y(), ptarget_y(pty) {}
