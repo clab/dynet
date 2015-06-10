@@ -25,8 +25,7 @@ Expression softmax(const Expression& x) { return Expression(x.pg, x.pg->add_func
 Expression cwise_multiply(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));}
 
 Expression squaredDistance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<SquaredEuclideanDistance>({x.i, y.i})); }
-Expression binary_log_loss(const Expression& x, real ty) { return Expression(x.pg, x.pg->add_function<BinaryLogLoss>({x.i}, &ty)); }
-Expression binary_log_loss(const Expression& x, real* pty) { return Expression(x.pg, x.pg->add_function<BinaryLogLoss>({x.i}, pty)); }
+Expression binary_log_loss(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<BinaryLogLoss>({x.i,y.i})); }
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m) { return Expression(x.pg, x.pg->add_function<PairwiseRankLoss>({x.i, y.i}, m)); }
 
 Expression pick(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, v)); }
