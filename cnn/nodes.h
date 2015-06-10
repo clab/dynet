@@ -289,6 +289,19 @@ struct CwiseMultiply : public Node {
                   Tensor& dEdxi) const override;
 };
 
+// y = x_1 / x_2  (cwiseQuotient)
+struct CwiseQuotient : public Node {
+  explicit CwiseQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+};
+
 // y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
 struct AffineTransform : public Node {
   template <typename T> explicit AffineTransform(const T& a) : Node(a) {}

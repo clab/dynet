@@ -416,6 +416,21 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string CwiseQuotient::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " / " << arg_names[1];
+  return s.str();
+}
+
+Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 2);
+  if (xs[0] != xs[1]) {
+    cerr << "Mismatched input dimensions in CwiseQuotient: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string AffineTransform::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0];

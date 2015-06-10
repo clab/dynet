@@ -718,6 +718,29 @@ void MatrixMultiply::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
+void CwiseQuotient::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  *fx = x1.cwiseQuotient(x2);
+}
+
+void CwiseQuotient::backward(const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < 2);
+  if (i == 0) {
+    auto x2 = **xs[1];
+    *dEdxi += (*dEdf).cwiseQuotient(x2);
+  } else { // i = 1
+    auto x1 = **xs[0];
+    auto x2 = **xs[1];
+    *dEdxi -= (*dEdf).cwiseQuotient(x2.cwiseProduct(x2)).cwiseProduct(x1);
+  }
+}
+
 void CwiseMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA
