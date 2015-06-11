@@ -28,6 +28,10 @@ Parameters::Parameters(const Dim& d) : dim(d) {
 
 size_t Parameters::size() const { return dim.size(); }
 
+void Parameters::scale_parameters(float a) {
+  (*g) *= a;
+}
+
 void Parameters::g_squared_l2norm(float* sqnorm) const {
 #if HAVE_CUDA
   gpu::l2_norm_reducer(g.d.size(), g.v, sqnorm, true, false);
@@ -60,6 +64,11 @@ LookupParameters::LookupParameters(unsigned n, const Dim& d) : dim(d), values(n)
     g.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
     TensorTools::Zero(g);
   }
+}
+
+void LookupParameters::scale_parameters(float a) {
+  for (auto& p : values)
+    (*p) *= a;
 }
 
 void LookupParameters::Initialize(unsigned index, const vector<float>& val) {

@@ -19,6 +19,7 @@ namespace cnn {
 
 struct ParametersBase {
   friend class Model;
+  virtual void scale_parameters(float a) = 0;
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
   virtual size_t size() const = 0;
   virtual ~ParametersBase();
@@ -27,6 +28,7 @@ struct ParametersBase {
 // represents parameters (e.g., a weight matrix) that will be optimized
 struct Parameters : public ParametersBase {
   friend class Model;
+  void scale_parameters(float a) override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
 
@@ -49,6 +51,7 @@ struct Parameters : public ParametersBase {
 // represents a matrix/vector embedding of a discrete set
 struct LookupParameters : public ParametersBase {
   friend class Model;
+  void scale_parameters(float a) override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
   void Initialize(unsigned index, const std::vector<float>& val);

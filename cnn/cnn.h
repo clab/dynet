@@ -109,7 +109,7 @@ struct Node {
   // request the memory here (nb. you could put it on the Node object, but in general,
   // edges should not allocate tensor memory since memory is managed centrally for the
   // entire computation graph).
-  //virtual size_t aux_storage_space() const;
+  virtual size_t aux_storage_size() const;
 
   // computation
   virtual void forward(const std::vector<const Tensor*>& xs,
@@ -135,6 +135,14 @@ struct Node {
   explicit Node(const std::initializer_list<VariableIndex>& a) : args(a) {}
   template <typename T>
   explicit Node(const T&c) : args(c.begin(), c.end()) {}
+
+ public:
+  // auxiliary memory
+  mutable void* aux_mem; // this will usually be null. but, if your node needs to store intermediate values
+                 // between forward and backward, you can use store it here. request the
+                 // number of bytes you need from aux_storage_size(). Note:
+                 // this memory will be on the CPU or GPU, depending on your computation
+                 // backend
 };
 
 template <class Function>

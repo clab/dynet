@@ -39,6 +39,16 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
       cerr << "out of memory\n";
       abort();
     }
+    void* aux_mem = nullptr;
+    size_t aux_size = node->aux_storage_size();
+    if (aux_size) {
+      aux_mem = fxs->allocate(aux_size);
+      if (!aux_mem) {
+        cerr << "out of memory\n";
+        abort();
+      }
+    }
+    node->aux_mem = aux_mem;
     node->forward(xs, nfxs[last_node_evaluated]);
   }
   return nfxs.back();

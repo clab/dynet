@@ -134,13 +134,14 @@ void InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
   }
 }
 
+size_t GaussianNoise::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
 void GaussianNoise::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  cerr << "FIX IMPL GaussianNoise::f\n"; abort();
-#if 0
-  assert(xs.size() == 1);
-  const Tensor& x = *xs[0];
-  return x + RandomNormal(Dim(x.rows(), x.cols()), 0, stddev);
-#endif
+  Tensor m(dim, (float*)aux_mem);
+  TensorTools::RandomizeNormal(0, stddev, m);
+  (*fx) = **xs[0] + *m;
 }
 
 void GaussianNoise::backward(const vector<const Tensor*>& xs,
@@ -148,21 +149,17 @@ void GaussianNoise::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
-  cerr << "FIX IMPL GaussianNoise::b\n"; abort();
-#if 0
-  assert(i == 0);
-  return dEdf;
-#endif
+  *dEdxi += *dEdf;
 };
 
+size_t Dropout::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
 void Dropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  cerr << "FIX IMPL Dropout::f\n"; abort();
-#if 0
-  assert(xs.size() == 1);
-  const Tensor& x = *xs[0];
-  noise_mask = RandomBernoulli(Dim(x.rows(), x.cols()), p);
-  return x.cwiseProduct(noise_mask);
-#endif
+  Tensor m(dim, (float*)aux_mem);
+  TensorTools::RandomBernoulli(m, p);
+  (*fx) = (**xs[0]).cwiseProduct(*m);
 }
 
 void Dropout::backward(const vector<const Tensor*>& xs,
@@ -170,11 +167,8 @@ void Dropout::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
-  cerr << "FIX IMPL Dropout::b\n"; abort();
-#if 0
-  assert(i == 0);
-  return dEdf.cwiseProduct(noise_mask);
-#endif
+  Tensor m(dim, (float*)aux_mem);
+  (*dEdxi) += (*dEdf).cwiseProduct(*m);
 };
 
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {

@@ -26,6 +26,8 @@ Expression rectify(const Expression& x) { return Expression(x.pg, x.pg->add_func
 Expression log_softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogSoftmax>({x.i})); }
 Expression softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<Softmax>({x.i})); }
 Expression softsign(const Expression& x) { return Expression(x.pg, x.pg->add_function<SoftSign>({x.i})); }
+Expression noise(const Expression& x, real stddev) { return Expression(x.pg, x.pg->add_function<GaussianNoise>({x.i}, stddev)); }
+Expression dropout(const Expression& x, real p) { return Expression(x.pg, x.pg->add_function<Dropout>({x.i}, p)); }
 
 Expression affine_transform(const std::initializer_list<Expression>& xs) {
   ComputationGraph *pg = xs.begin()->pg;
