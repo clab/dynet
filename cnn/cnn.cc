@@ -14,6 +14,7 @@ float* kSCALAR_ZERO;
 int n_hgs = 0;
 
 Node::~Node() {}
+size_t Node::aux_storage_size() const { return 0; }
 
 ComputationGraph::ComputationGraph() : last_node_evaluated(),
   ee(new SimpleExecutionEngine(*this)) {

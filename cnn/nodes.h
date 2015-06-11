@@ -76,6 +76,7 @@ struct GaussianNoise : public Node {
   explicit GaussianNoise(const std::initializer_list<VariableIndex>& a, real stddev) : Node(a), stddev(stddev) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -90,13 +91,13 @@ struct Dropout : public Node {
   explicit Dropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
-  //mutable Tensor noise_mask;
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
   real p;
 };
 

@@ -103,13 +103,17 @@ void TensorTools::Randomize(Tensor& d) {
 void TensorTools::RandomBernoulli(Tensor& val, real p) {
   bernoulli_distribution distribution(p);
   auto b = [&] (real) {return distribution(*rndeng);};
-  *val = Eigen::MatrixXf::NullaryExpr(val.d.rows(), val.d.cols(), b);
+  Dim d({val.d.size()});
+  Tensor tv(d, val.v);
+  *tv = Eigen::MatrixXf::NullaryExpr(d.size(), 1, b);
 }
 
 void TensorTools::RandomizeNormal(real mean, real stddev, Tensor& val) {
   normal_distribution<real> distribution(mean, stddev);
   auto b = [&] (real) {return distribution(*rndeng);};
-  *val = Eigen::MatrixXf::NullaryExpr(val.d.rows(), val.d.cols(), b);
+  Dim d({val.d.size()});
+  Tensor tv(d, val.v);
+  *tv = Eigen::MatrixXf::NullaryExpr(d.size(), 1, b);
 }
 
 real rand01() {

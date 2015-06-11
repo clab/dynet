@@ -38,6 +38,8 @@ Expression rectify(const Expression& x);
 Expression log_softmax(const Expression& x);
 Expression softmax(const Expression& x);
 Expression softsign(const Expression& x);
+Expression noise(const Expression& x, real stddev);
+Expression dropout(const Expression& x, real p);
 
 Expression affine_transform(const std::initializer_list<Expression>& xs);
 Expression cwise_multiply(const Expression& x, const Expression& y);
