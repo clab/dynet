@@ -44,8 +44,11 @@ struct RNNBuilder {
   virtual void rewind_one_step() = 0;
   // returns node (index) of most recent output
   virtual Expression back() const = 0;
-  // access hidden state contents
+  // access the final output of each hidden layer
   virtual std::vector<Expression> final_h() const = 0;
+  // access the state of each hidden layer, in a format that can be used in
+  // start_new_sequence
+  virtual std::vector<Expression> final_s() const = 0;
  protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
@@ -71,6 +74,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   void rewind_one_step() { h.pop_back(); }
   Expression back() const { return h.back().back(); }
   std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
+  std::vector<Expression> final_s() const { return final_h(); }
 
  private:
   // first index is layer, then x2h h2h hb
