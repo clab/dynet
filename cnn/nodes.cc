@@ -228,6 +228,33 @@ void Sum::backward(const vector<const Tensor*>& xs,
 #endif
 };
 
+void Average::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  auto res = *fx;
+  const unsigned remainder = num_args % 4;
+  switch (remainder) {
+    case 0: res.setZero(); break;
+    case 1: res = **xs[0]; break;
+    case 2: res = **xs[0] + **xs[1]; break;
+    case 3: res = **xs[0] + **xs[1] + **xs[2]; break;
+  }
+  for (unsigned i = remainder; i < num_args; i += 4)
+    res += **xs[i] + **xs[i+1] + **xs[i+2] + **xs[i+3];
+  res /= num_args;
+}
+
+void Average::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  *dEdxi += (*dEdf / xs.size());
+};
+
 void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vtanh(fx.d.size(), xs[0]->v, fx.v);
