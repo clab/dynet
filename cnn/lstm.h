@@ -24,6 +24,11 @@ struct LSTMBuilder : public RNNBuilder {
   }
   Expression back() const { return h.back().back(); }
   std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
+  std::vector<Expression> final_s() const { 
+    std::vector<Expression> ret = (c.size() == 0 ? c0 : c.back());
+    for(auto my_h : final_h()) ret.push_back(my_h);
+    return ret;
+  }
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
