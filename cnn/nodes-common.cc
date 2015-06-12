@@ -135,6 +135,25 @@ Dim Sum::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string Average::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "average(" << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); ++i)
+    s << ", " << arg_names[i];
+  s << ")";
+  return s.str();
+}
+
+Dim Average::dim_forward(const vector<Dim>& xs) const {
+  for (unsigned i = 1; i < xs.size(); ++i) {
+    if (xs[0] != xs[1]) {
+      cerr << "Mismatched input dimensions in Average: " << xs << endl;
+      abort();
+    }
+  }
+  return xs[0];
+}
+
 string Tanh::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "tanh(" << arg_names[0] << ')';
