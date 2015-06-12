@@ -870,6 +870,24 @@ void Rectify::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
+void L1Distance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  auto x = **xs[0];
+  auto y = **xs[1];
+  fx.v[0] = (x - y).lpNorm<1>();
+}
+
+void L1Distance::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  assert(i < 2);
+  auto x = **xs[i];
+  real scale = dEdf.v[0];
+  cerr << "Implement L1Distance::backward()\n"; abort();
+}
+
 void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA
