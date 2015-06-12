@@ -64,6 +64,14 @@ Expression sum(const T& xs) {
 }
 
 template <typename T>
+Expression average(const T& xs) {
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  for (int i=0; i<xs.size(); ++i) xis[i] = xs[i].i;
+  return Expression(pg, pg->add_function<Average>(xis));
+}
+
+template <typename T>
 Expression concatenate_cols(const T& xs) {
   ComputationGraph *pg = xs.begin()->pg;
   std::vector<VariableIndex> xis(xs.size());
