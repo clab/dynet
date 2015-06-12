@@ -62,7 +62,7 @@ struct ComputationGraph {
   VariableIndex add_lookup(LookupParameters* p, const unsigned* pindex);
   VariableIndex add_lookup(LookupParameters* p, unsigned index);
   // just like add_lookup, but don't optimize the lookup parameters
-  VariableIndex add_const_lookup(LookupParameters* p, unsigned* pindex);
+  VariableIndex add_const_lookup(LookupParameters* p, const unsigned* pindex);
   VariableIndex add_const_lookup(LookupParameters* p, unsigned index);
 
   // COMPUTATIONS

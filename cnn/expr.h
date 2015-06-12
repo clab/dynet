@@ -20,6 +20,8 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
 Expression parameter(ComputationGraph& g, Parameters* p);
 Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
 
 Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);
