@@ -70,7 +70,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
  public:
   void rewind_one_step() { h.pop_back(); }
   Expression back() const { return h.back().back(); }
-  std::vector<Expression> final_h() const { return h.back(); }
+  std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
 
  private:
   // first index is layer, then x2h h2h hb
