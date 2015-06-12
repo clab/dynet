@@ -477,6 +477,21 @@ Dim Rectify::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string L1Distance::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
+  return s.str();
+}
+
+Dim L1Distance::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 2);
+  if (xs[0] != xs[1]) {
+    cerr << "Mismatched input dimensions in L1Distance: " << xs << endl;
+    abort();
+  }
+  return Dim({1});
+}
+
 string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
