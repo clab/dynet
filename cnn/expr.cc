@@ -32,6 +32,9 @@ Expression softsign(const Expression& x) { return Expression(x.pg, x.pg->add_fun
 Expression noise(const Expression& x, real stddev) { return Expression(x.pg, x.pg->add_function<GaussianNoise>({x.i}, stddev)); }
 Expression dropout(const Expression& x, real p) { return Expression(x.pg, x.pg->add_function<Dropout>({x.i}, p)); }
 
+Expression reshape(const Expression& x, const Dim& d) { return Expression(x.pg, x.pg->add_function<Reshape>({x.i}, d)); }
+Expression transpose(const Expression& x) { return Expression(x.pg, x.pg->add_function<Transpose>({x.i})); }
+
 Expression affine_transform(const std::initializer_list<Expression>& xs) {
   ComputationGraph *pg = xs.begin()->pg;
   std::vector<VariableIndex> xis(xs.size());
