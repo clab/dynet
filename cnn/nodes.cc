@@ -29,6 +29,22 @@ using namespace std;
 
 namespace cnn {
 
+void Transpose::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (dim.rows() == 1 || dim.cols() == 1) {
+    fx.v = xs[0]->v;
+  } else {
+    *fx = (**xs[0]).transpose();
+  }
+}
+
+void Transpose::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  *dEdxi += (*dEdf).transpose();
+}
+
 void Reshape::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
@@ -40,7 +56,7 @@ void Reshape::backward(const vector<const Tensor*>& xs,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
-  const Tensor reshaped(from, dEdf.v);
+  const Tensor reshaped(dEdxi.d, dEdf.v);
   *dEdxi += *reshaped;
 }
 

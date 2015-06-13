@@ -17,15 +17,26 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string Transpose::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << "^T";
+  return s.str();
+}
+
+Dim Transpose::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0].transpose();
+}
+
 string Reshape::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "reshape(" << arg_names[0] << ',' << from << " --> " << to << ')';
+  s << "reshape(" << arg_names[0] << " --> " << to << ')';
   return s.str();
 }
 
 Dim Reshape::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  assert(xs[0] == from);
+  assert(xs[0].size() == to.size());
   return to;
 }
 

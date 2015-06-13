@@ -44,6 +44,9 @@ Expression softsign(const Expression& x);
 Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
 
+Expression reshape(const Expression& x, const Dim& d);
+Expression transpose(const Expression& x);
+
 Expression affine_transform(const std::initializer_list<Expression>& xs);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 

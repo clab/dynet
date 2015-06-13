@@ -5,11 +5,11 @@
 
 namespace cnn {
 
-// y = reshape(x_1, from --> to)
-struct Reshape : public Node {
-  explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& from, const Dim& to) : Node(a), from(from), to(to) {
-    assert(from.size() == to.size());
-  }
+// y = x_1^T
+// NOTE: if you have a column or row vector as input, runtime is constant
+// if you have a matrix as input, the runtime is O(mn) - try to avoid using this
+struct Transpose : public Node {
+  explicit Transpose(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -18,7 +18,19 @@ struct Reshape : public Node {
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const override;
-  Dim from;
+};
+
+// y = reshape(x_1, --> to)
+struct Reshape : public Node {
+  explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& to) : Node(a), to(to) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
   Dim to;
 };
 
