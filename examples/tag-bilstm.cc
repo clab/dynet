@@ -18,16 +18,19 @@
 using namespace std;
 using namespace cnn;
 
-unsigned LAYERS = 2;
-unsigned INPUT_DIM = 32;
-unsigned HIDDEN_DIM = 64;
+float pdrop = 0.5;
+unsigned LAYERS = 1;
+unsigned INPUT_DIM = 128;
+unsigned HIDDEN_DIM = 128;
 unsigned TAG_HIDDEN_DIM = 32;
-unsigned TAG_DIM = 24;
+unsigned TAG_DIM = 32;
 unsigned TAG_SIZE = 0;
 unsigned VOCAB_SIZE = 0;
 
+bool eval = false;
 cnn::Dict d;
 cnn::Dict td;
+int kNONE;
 int kSOS;
 int kEOS;
 
@@ -55,7 +58,7 @@ struct RNNLanguageModel {
   }
 
   // return Expression of total loss
-  Expression BuildTaggingGraph(const vector<int>& sent, const vector<int>& tags, ComputationGraph& cg, double* cor = 0) {
+  Expression BuildTaggingGraph(const vector<int>& sent, const vector<int>& tags, ComputationGraph& cg, double* cor = 0, unsigned* ntagged = 0) {
     const unsigned slen = sent.size();
     l2rbuilder.new_graph(cg);  // reset RNN builder for new graph
     l2rbuilder.start_new_sequence();
@@ -75,6 +78,7 @@ struct RNNLanguageModel {
     l2rbuilder.add_input(lookup(cg, p_w, kSOS));
     for (unsigned t = 0; t < slen; ++t) {
       i_words[t] = lookup(cg, p_w, sent[t]);
+      if (!eval) { i_words[t] = noise(i_words[t], 0.1); }
       fwds[t] = l2rbuilder.add_input(i_words[t]);
     }
 
@@ -84,18 +88,25 @@ struct RNNLanguageModel {
       revs[slen - t - 1] = r2lbuilder.add_input(i_words[slen - t - 1]);
 
     for (unsigned t = 0; t < slen; ++t) {
-      Expression i_t = i_th2t * tanh(i_l2th * fwds[t] + i_r2th * revs[t] + i_thbias) + i_tbias;
-      if (cor) {
-        vector<float> dist = as_vector(cg.incremental_forward());
-        double best = -9e99;
-        int besti = -1;
-        for (int i = 0; i < dist.size(); ++i) {
-          if (dist[i] > best) { best = dist[i]; besti = i; }
+      if (tags[t] != kNONE) {
+        if (ntagged) (*ntagged)++;
+        Expression i_th = tanh(affine_transform({i_thbias, i_l2th, fwds[t], i_r2th, revs[t]}));
+        //if (!eval) { i_th = dropout(i_th, pdrop); }
+        Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
+        if (cor) {
+          vector<float> dist = as_vector(cg.incremental_forward());
+          double best = -9e99;
+          int besti = -1;
+          for (int i = 0; i < dist.size(); ++i) {
+            if (dist[i] > best) { best = dist[i]; besti = i; }
+          }
+          if (tags[t] == besti) (*cor)++;
         }
-        if (tags[t] == besti) (*cor)++;
+        if (tags[t] != kNONE) {
+          Expression i_err = pickneglogsoftmax(i_t, tags[t]);
+          errs.push_back(i_err);
+        }
       }
-      Expression i_err = pickneglogsoftmax(i_t, tags[t]);
-      errs.push_back(i_err);
     }
     return sum(errs);
   }
@@ -107,6 +118,7 @@ int main(int argc, char** argv) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
   }
+  kNONE = td.Convert("*");
   kSOS = d.Convert("<s>");
   kEOS = d.Convert("</s>");
   vector<pair<vector<int>,vector<int>>> training, dev;
@@ -119,11 +131,19 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++tlc;
+      int nc = 0;
       vector<int> x,y;
       ReadSentencePair(line, &x, &d, &y, &td);
       assert(x.size() == y.size());
       if (x.size() == 0) { cerr << line << endl; abort(); }
       training.push_back(make_pair(x,y));
+      for (unsigned i = 0; i < y.size(); ++i) {
+        if (y[i] != kNONE) { ++nc; }
+      }
+      if (nc == 0) {
+        cerr << "No tagged tokens in line " << tlc << endl;
+        abort();
+      }
       ttoks += x.size();
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
@@ -161,12 +181,12 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   Model model;
-  bool use_momentum = false;
+  bool use_momentum = true;
   Trainer* sgd = nullptr;
-  //if (use_momentum)
-  //  sgd = new MomentumSGDTrainer(&model);
-  //else
-  sgd = new SimpleSGDTrainer(&model);
+  if (use_momentum)
+    sgd = new MomentumSGDTrainer(&model);
+  else
+    sgd = new SimpleSGDTrainer(&model);
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
@@ -188,7 +208,7 @@ int main(int argc, char** argv) {
   while(1) {
     Timer iteration("completed in");
     double loss = 0;
-    unsigned chars = 0;
+    unsigned ttags = 0;
     double correct = 0;
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
@@ -201,36 +221,38 @@ int main(int argc, char** argv) {
       // build graph for this instance
       ComputationGraph cg;
       auto& sent = training[order[si]];
-      chars += sent.first.size();
       ++si;
-      lm.BuildTaggingGraph(sent.first, sent.second, cg, &correct);
+      lm.BuildTaggingGraph(sent.first, sent.second, cg, &correct, &ttags);
       loss += as_scalar(cg.forward());
       cg.backward();
-      sgd->update();
+      sgd->update(1.0);
       ++lines;
     }
     sgd->status();
-    cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << " (acc=" << (correct / chars) << ") ";
+    cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
 
     // show score on dev data?
     report++;
     if (report % dev_every_i_reports == 0) {
       double dloss = 0;
-      int dchars = 0;
+      unsigned dtags = 0;
       double dcorr = 0;
+      eval = true;
+      //lm.p_th2t->scale_parameters(pdrop);
       for (auto& sent : dev) {
         ComputationGraph cg;
-        lm.BuildTaggingGraph(sent.first, sent.second, cg, &dcorr);
+        lm.BuildTaggingGraph(sent.first, sent.second, cg, &dcorr, &dtags);
         dloss += as_scalar(cg.forward());
-        dchars += sent.first.size();
       }
+      //lm.p_th2t->scale_parameters(1/pdrop);
+      eval = false;
       if (dloss < best) {
         best = dloss;
         ofstream out(fname);
         boost::archive::text_oarchive oa(out);
         oa << model;
       }
-      cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << " acc=" << (dcorr / dchars) << ' ';
+      cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / dtags) << ' ';
     }
   }
   delete sgd;
