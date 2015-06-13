@@ -38,6 +38,7 @@ Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
 Expression log_softmax(const Expression& x);
+Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 Expression softmax(const Expression& x);
 Expression softsign(const Expression& x);
 Expression noise(const Expression& x, real stddev);
