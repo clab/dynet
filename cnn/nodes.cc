@@ -29,6 +29,18 @@ using namespace std;
 
 namespace cnn {
 
+void DotProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  *fx = (**xs[0]).transpose() * (**xs[1]);
+}
+
+void DotProduct::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  (*dEdxi) += (dEdf.v[0]) * (**xs[1 - i]);
+}
+
 void Transpose::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (dim.rows() == 1 || dim.cols() == 1) {
     fx.v = xs[0]->v;

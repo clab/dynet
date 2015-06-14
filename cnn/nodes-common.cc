@@ -17,6 +17,20 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string DotProduct::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << "^T . " << arg_names[1];
+  return s.str();
+}
+
+Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 2);
+  assert(LooksLikeVector(xs[0]));
+  assert(LooksLikeVector(xs[1]));
+  assert(xs[0].rows() == xs[1].rows());
+  return Dim({1});
+}
+
 string Transpose::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << "^T";

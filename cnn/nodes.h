@@ -5,6 +5,19 @@
 
 namespace cnn {
 
+// y = x_1^T . x_2
+struct DotProduct : public Node {
+  explicit DotProduct(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+};
+
 // y = x_1^T
 // NOTE: if you have a column or row vector as input, runtime is constant
 // if you have a matrix as input, the runtime is O(mn) - try to avoid using this

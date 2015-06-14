@@ -50,6 +50,7 @@ Expression transpose(const Expression& x);
 Expression affine_transform(const std::initializer_list<Expression>& xs);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
+Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression l1_distance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, const Expression& y);
