@@ -3,7 +3,7 @@
 
 #include <initializer_list>
 #include <type_traits>
-#include <exception>
+#include <stdexcept>
 #include <iosfwd>
 #include <cstring>
 #include <vector>
