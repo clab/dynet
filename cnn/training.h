@@ -65,6 +65,31 @@ struct MomentumSGDTrainer : public Trainer {
   //std::unordered_map<LookupParameters*, std::unordered_map<unsigned, Tensor>> vl;
 };
 
+struct AdagradTrainer : public Trainer {
+  explicit AdagradTrainer(Model* m, real lam = 1e-6, real e0 = 0.1, real eps = 1e-20) :
+    Trainer(m, lam, e0), epsilon(eps), shadow_params_allocated(false) {}
+  void update(real scale) override;
+
+  real epsilon;
+  bool shadow_params_allocated;
+  std::vector<ShadowParameters> vp;
+  std::vector<ShadowLookupParameters> vlp;
+};
+
+struct AdadeltaTrainer : public Trainer {
+  explicit AdadeltaTrainer(Model* m, real lam = 1e-6, real eps = 1e-6, real rho = 0.95) :
+    Trainer(m, lam, 1.0), epsilon(eps), rho(rho), shadow_params_allocated(false) {}
+  void update(real scale) override;
+
+  real epsilon;
+  real rho;
+  bool shadow_params_allocated;
+  std::vector<ShadowParameters> hg; // History of gradients
+  std::vector<ShadowLookupParameters> hlg;
+  std::vector<ShadowParameters> hd; // History of deltas
+  std::vector<ShadowLookupParameters> hld;
+};
+
 } // namespace cnn
 
 #endif

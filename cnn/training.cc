@@ -77,6 +77,115 @@ void MomentumSGDTrainer::update(real scale) {
   ++updates;
 }
 
+void AdagradTrainer::update(real scale) {
+  unsigned pi;
+  if (!shadow_params_allocated) {
+    vp = AllocateShadowParameters(*model); 
+    vlp = AllocateShadowLookupParameters(*model);
+    shadow_params_allocated = true;
+  }
+
+  pi = 0;
+  const float gscale = clip_gradients();
+  for (auto p : model->parameters_list()) {
+    Tensor& v = vp[pi++].h;
+    auto reg = (*p->values) * lambda;
+    auto g2 = (*p->g).cwiseProduct(*p->g);
+    (*v) += g2;
+    auto delta = -(eta * scale * gscale) * (*p->g).cwiseQuotient(((*v).array() + epsilon).matrix().cwiseSqrt());
+    *p->values += delta - reg;
+    p->clear();
+  }
+
+  pi = 0;
+  for (auto p : model->lookup_parameters_list()) {
+    vector<Tensor>& vx = vlp[pi++].h;
+    for (auto i : p->non_zero_grads) {
+      Tensor& v = vx[i];
+      auto reg = (*p->values[i]) * lambda;
+      auto g2 = (*p->grads[i]).cwiseProduct(*p->grads[i]);
+      (*v) += g2;
+      auto delta = -(eta * scale * gscale) * (*p->grads[i]).cwiseQuotient(((*v).array() + epsilon).matrix().cwiseSqrt());
+      *p->values[i] += delta - reg;
+    }
+    p->clear();
+  }
+
+  ++updates;
+}
+
+void AdadeltaTrainer::update(real scale) {
+  unsigned pi;
+  if (!shadow_params_allocated) {
+    hg = AllocateShadowParameters(*model);
+    hlg = AllocateShadowLookupParameters(*model);
+    hd = AllocateShadowParameters(*model);
+    hld = AllocateShadowLookupParameters(*model);
+
+    /*pi = 0;
+    for (auto p : model->parameters_list()) {
+      TensorTools::Constant(hg[pi].h, epsilon);
+      TensorTools::Constant(hd[pi].h, epsilon);
+      ++pi;
+    }
+
+    pi = 0;
+    for (auto p : model->lookup_parameters_list()) {
+      vector<Tensor>& hgx = hlg[pi].h;
+      vector<Tensor>& hdx = hld[pi].h;
+      for (unsigned i = 0; i < hgx.size(); ++i) {
+        TensorTools::Constant(hgx[i], epsilon);
+        TensorTools::Constant(hdx[i], epsilon);
+      }
+      ++pi;
+    }*/
+
+    shadow_params_allocated = true;
+  }
+
+  const float gscale = clip_gradients();
+  pi = 0;
+  for (auto p : model->parameters_list()) {
+    auto& g = (scale * gscale) * *p->g;
+    Tensor& hgv = hg[pi].h;
+    Tensor& hdv = hd[pi].h;
+    auto reg = (*p->values) * lambda;
+    auto g2 = g.cwiseProduct(g);
+    *hgv = rho * *hgv + (1.0 - rho) * g2;
+    auto num = -g.cwiseProduct(((*hdv).array() + epsilon).matrix().cwiseSqrt());
+    auto den = ((*hgv).array() + epsilon).matrix().cwiseSqrt();
+    auto delta = num.cwiseQuotient(den);
+    auto d2 = delta.cwiseProduct(delta);
+    *hdv = rho * *hdv + (1.0 - rho) * d2;
+    *p->values += delta - reg;
+    p->clear();
+    pi++;
+  }
+
+  pi = 0;
+  for (auto p : model->lookup_parameters_list()) {
+    vector<Tensor>& hgvx = hlg[pi].h;
+    vector<Tensor>& hdvx = hld[pi].h;
+    for (auto i : p->non_zero_grads) {
+      Tensor& hgv = hgvx[i];
+      Tensor& hdv = hdvx[i];
+      auto& g = scale * gscale * *p->grads[i];
+      auto reg = (*p->values[i]) * lambda;
+      auto g2 = g.cwiseProduct(g);
+      *hgv = rho * *hgv + (1.0 - rho) * g2;
+      auto num = -g.cwiseProduct(((*hdv).array() + epsilon).matrix().cwiseSqrt());
+      auto den = ((*hgv).array() + epsilon).matrix().cwiseSqrt();
+      auto delta = num.cwiseQuotient(den);
+      auto d2 = delta.cwiseProduct(delta);
+      *hdv = rho * *hdv + (1.0 - rho) * d2;
+      *p->values[i] += delta - reg;
+    }
+    p->clear();
+    pi++;
+  }
+  ++updates;
+}
+
 #if 0
 void RMSPropTrainer::update(real scale) {
   for (auto p : params) {
