@@ -29,6 +29,34 @@ using namespace std;
 
 namespace cnn {
 
+void DotProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  *fx = (**xs[0]).transpose() * (**xs[1]);
+}
+
+void DotProduct::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  (*dEdxi) += (dEdf.v[0]) * (**xs[1 - i]);
+}
+
+void Transpose::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (dim.rows() == 1 || dim.cols() == 1) {
+    fx.v = xs[0]->v;
+  } else {
+    *fx = (**xs[0]).transpose();
+  }
+}
+
+void Transpose::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  *dEdxi += (*dEdf).transpose();
+}
+
 void Reshape::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
@@ -40,7 +68,7 @@ void Reshape::backward(const vector<const Tensor*>& xs,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
-  const Tensor reshaped(from, dEdf.v);
+  const Tensor reshaped(dEdxi.d, dEdf.v);
   *dEdxi += *reshaped;
 }
 
@@ -49,9 +77,6 @@ void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = *fx;
   if (xs.size() == 1) {
     y = x.rowwise().sum();
-  } else if (xs.size() == 2) {
-    auto w = **xs[1];
-    y = (x * w.asDiagonal()).rowwise().sum();
   } else { abort(); }
 }
 
@@ -61,20 +86,10 @@ void SumColumns::backward(const vector<const Tensor*>& xs,
                           unsigned i,
                           Tensor& dEdxi) const {
   auto out = *dEdxi;
-  if (xs.size() == 1) {
-    // this uses Eigen's broadcast capability
-    // the following doesn't compile, so i use the next line
-    //out.colwise() += *dEdf;
-    out.colwise() += (*dEdf).col(0);
-  } else if (xs.size() == 2) {
-    auto x = **xs[0];
-    auto w = **xs[1];
-    if (i == 0) { // matrix
-      out.noalias() += *dEdf * w.transpose();
-    } else { // column weighting
-      out.noalias() += x.transpose() * *dEdf;
-    }
-  }
+  // this uses Eigen's broadcast capability
+  // the following doesn't compile, so i use the next line
+  //out.colwise() += *dEdf;
+  out.colwise() += (*dEdf).col(0);
 }
 
 void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -101,8 +116,28 @@ void KMHNGram::backward(const vector<const Tensor*>& xs,
       (*dEdxi).col(j+k) += (*dEdf).col(j);
 }
 
+//   Y_ij = A_ijk * B_k (+ C_ij)
 void InnerProduct3D_1D::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(!"not implemented");
+  auto b = **xs[1];
+  auto y = *fx;
+  const int i = y.rows();
+  const int j = y.cols();
+  const int k = b.rows();
+  // the following reshape tensors into order 1 or 2 sizes
+  // but they point to the same memory
+  Tensor ta({i*j,k}, xs[0]->v);
+  Tensor ty({i*j}, fx.v);
+  auto A = *ta;
+  if (xs.size() == 3) {
+    Tensor tc({i*j}, xs[2]->v);
+    auto c = *tc;
+    // want to do A * b + c, but it triggers memory allocation
+    (*ty) = c;
+    (*ty).noalias() += A * b;
+  } else {
+    assert(xs.size() == 2);
+    (*ty).noalias() = A * b;
+  }
 }
 
 void InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
@@ -110,16 +145,31 @@ void InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
-  assert(!"not implemented");
+  auto b = **xs[1];
+  auto y = *fx;
+  const int si = y.rows();
+  const int sj = y.cols();
+  const int sk = b.rows();
+  Tensor tdEdf({si*sj}, dEdf.v);
+  if (i == 0) { // 3-tensor
+    Tensor tdEdxi({si*sj, sk}, dEdxi.v);
+    (*tdEdxi).noalias() += *tdEdf * (**xs[1]).transpose();
+  } else if (i == 1) { // vector
+    Tensor ta({si*sj,sk}, xs[0]->v);
+    (*dEdxi).noalias() += (*ta).transpose() * *tdEdf;
+  } else { // matrix bias
+    *dEdxi += *dEdf;
+  }
+}
+
+size_t GaussianNoise::aux_storage_size() const {
+  return dim.size() * sizeof(float);
 }
 
 void GaussianNoise::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  cerr << "FIX IMPL GaussianNoise::f\n"; abort();
-#if 0
-  assert(xs.size() == 1);
-  const Tensor& x = *xs[0];
-  return x + RandomNormal(Dim(x.rows(), x.cols()), 0, stddev);
-#endif
+  Tensor m(dim, (float*)aux_mem);
+  TensorTools::RandomizeNormal(0, stddev, m);
+  (*fx) = **xs[0] + *m;
 }
 
 void GaussianNoise::backward(const vector<const Tensor*>& xs,
@@ -127,21 +177,17 @@ void GaussianNoise::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
-  cerr << "FIX IMPL GaussianNoise::b\n"; abort();
-#if 0
-  assert(i == 0);
-  return dEdf;
-#endif
+  *dEdxi += *dEdf;
 };
 
+size_t Dropout::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
 void Dropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  cerr << "FIX IMPL Dropout::f\n"; abort();
-#if 0
-  assert(xs.size() == 1);
-  const Tensor& x = *xs[0];
-  noise_mask = RandomBernoulli(Dim(x.rows(), x.cols()), p);
-  return x.cwiseProduct(noise_mask);
-#endif
+  Tensor m(dim, (float*)aux_mem);
+  TensorTools::RandomBernoulli(m, p);
+  (*fx) = (**xs[0]).cwiseProduct(*m);
 }
 
 void Dropout::backward(const vector<const Tensor*>& xs,
@@ -149,11 +195,8 @@ void Dropout::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
-  cerr << "FIX IMPL Dropout::b\n"; abort();
-#if 0
-  assert(i == 0);
-  return dEdf.cwiseProduct(noise_mask);
-#endif
+  Tensor m(dim, (float*)aux_mem);
+  (*dEdxi) += (*dEdf).cwiseProduct(*m);
 };
 
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -211,6 +254,33 @@ void Sum::backward(const vector<const Tensor*>& xs,
 #else
   *dEdxi += *dEdf;
 #endif
+};
+
+void Average::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  auto res = *fx;
+  const unsigned remainder = num_args % 4;
+  switch (remainder) {
+    case 0: res.setZero(); break;
+    case 1: res = **xs[0]; break;
+    case 2: res = **xs[0] + **xs[1]; break;
+    case 3: res = **xs[0] + **xs[1] + **xs[2]; break;
+  }
+  for (unsigned i = remainder; i < num_args; i += 4)
+    res += **xs[i] + **xs[i+1] + **xs[i+2] + **xs[i+3];
+  res /= num_args;
+}
+
+void Average::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  *dEdxi += (*dEdf / xs.size());
 };
 
 void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -662,7 +732,7 @@ void MatrixMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const 
 #else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
-  (*fx).noalias() = x1 * x2;
+  *fx = x1 * x2;
 #endif
 }
 
@@ -695,6 +765,29 @@ void MatrixMultiply::backward(const vector<const Tensor*>& xs,
     (*dEdxi).noalias() += (**xs[0]).transpose() * *dEdf;
   }
 #endif
+}
+
+void CwiseQuotient::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  *fx = x1.cwiseQuotient(x2);
+}
+
+void CwiseQuotient::backward(const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < 2);
+  if (i == 0) {
+    auto x2 = **xs[1];
+    *dEdxi += (*dEdf).cwiseQuotient(x2);
+  } else { // i = 1
+    auto x1 = **xs[0];
+    auto x2 = **xs[1];
+    *dEdxi -= (*dEdf).cwiseQuotient(x2.cwiseProduct(x2)).cwiseProduct(x1);
+  }
 }
 
 void CwiseMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -832,6 +925,24 @@ void Rectify::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
+void L1Distance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  auto x = **xs[0];
+  auto y = **xs[1];
+  fx.v[0] = (x - y).lpNorm<1>();
+}
+
+void L1Distance::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  assert(i < 2);
+  auto x = **xs[i];
+  real scale = dEdf.v[0];
+  cerr << "Implement L1Distance::backward()\n"; abort();
+}
+
 void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA
@@ -882,15 +993,27 @@ void LogisticSigmoid::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
+void SoftSign::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  auto x = **xs[0];
+  *fx = x.unaryExpr(FSoftSign());
+}
+
+void SoftSign::backward(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  *dEdxi += (*fx).binaryExpr(*dEdf, FSoftSignBackward());
+}
+
 // you could do this with LogisticSigmoid, Softmax or a variety of other
 // functions, but this is often useful.
 // x_1 must be a scalar that is a value between 0 and 1
 // target_y is a value between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
 void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-  assert(xs.front()->d.size() == 1);
-  fx.v[0] = FBinaryLogLoss()(xs[0]->v[0], *ptarget_y);
+  fx.v[0] = FBinaryLogLoss()(xs[0]->v[0], xs[1]->v[0]);
 }
 
 void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
@@ -898,8 +1021,8 @@ void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const {
-  const auto y_pred = xs[0]->v[0];
-  const real ty = *ptarget_y;
+  const auto y_pred = xs[i]->v[0];
+  const auto ty = xs[1-i]->v[0];
   dEdxi.v[0] += FBinaryLogLossBackward()(y_pred,ty,dEdf.v[0]);
 }
 

@@ -5,6 +5,7 @@ set(cnn_library_SRCS
     dict.cc
     dim.cc
     exec.cc
+    expr.cc
     graph.cc
 #    gru.cc
     init.cc
@@ -30,6 +31,7 @@ set(cnn_library_HDRS
     dict.h
     dim.h
     exec.h
+    expr.h
     functors.h
     gpu-kernels.h
     gpu-ops.h

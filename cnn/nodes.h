@@ -5,11 +5,24 @@
 
 namespace cnn {
 
-// y = reshape(x_1, from --> to)
-struct Reshape : public Node {
-  explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& from, const Dim& to) : Node(a), from(from), to(to) {
-    assert(from.size() == to.size());
-  }
+// y = x_1^T . x_2
+struct DotProduct : public Node {
+  explicit DotProduct(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+};
+
+// y = x_1^T
+// NOTE: if you have a column or row vector as input, runtime is constant
+// if you have a matrix as input, the runtime is O(mn) - try to avoid using this
+struct Transpose : public Node {
+  explicit Transpose(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -18,14 +31,25 @@ struct Reshape : public Node {
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const override;
-  Dim from;
+};
+
+// y = reshape(x_1, --> to)
+struct Reshape : public Node {
+  explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& to) : Node(a), to(to) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
   Dim to;
 };
 
 // with a single argument x \in R^{n x m}
 // y_i = \sum_j x_i,j
-// with two arguments x \in R^{n x m} and w \in R^{m}
-// y_i = \sum_j x_i,j * w_j
+// if you want to reweight the columns and then sum them, use MatrixMultiply
 struct SumColumns : public Node {
   template <typename T> explicit SumColumns(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
@@ -77,6 +101,7 @@ struct GaussianNoise : public Node {
   explicit GaussianNoise(const std::initializer_list<VariableIndex>& a, real stddev) : Node(a), stddev(stddev) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -91,13 +116,13 @@ struct Dropout : public Node {
   explicit Dropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
-  //mutable Tensor noise_mask;
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
   real p;
 };
 
@@ -290,6 +315,19 @@ struct CwiseMultiply : public Node {
                   Tensor& dEdxi) const override;
 };
 
+// y = x_1 / x_2  (cwiseQuotient)
+struct CwiseQuotient : public Node {
+  explicit CwiseQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+};
+
 // y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
 struct AffineTransform : public Node {
   template <typename T> explicit AffineTransform(const T& a) : Node(a) {}
@@ -332,11 +370,10 @@ struct Rectify : public Node {
 // you could do this with LogisticSigmoid, Softmax or a variety of other
 // functions, but this is often useful.
 // x_1 must be a scalar that is a value between 0 and 1
-// target_y is a value between 0 and 1
+// x_2 (ty) must be a scalar that is a value between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
 struct BinaryLogLoss : public Node {
-  BinaryLogLoss(const std::initializer_list<VariableIndex>& a, real ty) : Node(a), target_y(ty), ptarget_y(&target_y) {}
-  BinaryLogLoss(const std::initializer_list<VariableIndex>& a, real* pty) : Node(a), target_y(), ptarget_y(pty) {}
+  BinaryLogLoss(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -345,13 +382,24 @@ struct BinaryLogLoss : public Node {
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const override;
-  real target_y;
-  real* ptarget_y;
 };
 
 // y = \sum_i x_i
 struct Sum : public Node {
   template <typename T> explicit Sum(const T& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const override;
+};
+
+// y = ( \sum_i x_i ) / |x|
+struct Average : public Node {
+  template <typename T> explicit Average(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -375,9 +423,35 @@ struct SquaredEuclideanDistance : public Node {
                   Tensor& dEdxi) const override;
 };
 
+// y = || x_1 - x_2 ||_1
+struct L1Distance : public Node {
+  explicit L1Distance(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
+};
+
 // y = \sigma(x_1)
 struct LogisticSigmoid : public Node {
   explicit LogisticSigmoid(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const override;
+};
+
+// y = x / (1 + |x|)
+struct SoftSign : public Node {
+  explicit SoftSign(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;

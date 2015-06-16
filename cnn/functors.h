@@ -20,6 +20,12 @@ struct FProduct {
   }
 };
 
+struct FQuotient {
+  CNN_DEVICE_FUNC inline float operator()(float a, float b) const {
+    return a / b;
+  }
+};
+
 struct FConstantMinus {
   FConstantMinus(float c) : c(c) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {
@@ -134,6 +140,19 @@ struct FLogSoftmaxBackward {
 struct FRectify {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
     return (x > 0.f) ? x : 0.f;
+  }
+};
+
+struct FSoftSign {
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return x / (1.f + (x < 0.f ? -x : x));
+  }
+};
+
+struct FSoftSignBackward {
+  CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
+    float a = 1.f - (t < 0.f ? -t : t);
+    return a * a * d;
   }
 };
 
