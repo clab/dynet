@@ -3,6 +3,7 @@
 #include "cnn/training.h"
 #include "cnn/timing.h"
 #include "cnn/dict.h"
+#include "cnn/expr.h"
 
 #include <iostream>
 #include <fstream>
@@ -10,6 +11,7 @@
 
 using namespace std;
 using namespace cnn;
+using namespace cnn::expr;
 
 unsigned REP_DIM = 128;
 unsigned INPUT_VOCAB_SIZE = 0;
@@ -25,44 +27,38 @@ int kTRG_EOS;
 struct Encoder {
   LookupParameters* p_s;
   LookupParameters* p_t;
-  vector<VariableIndex> m;
+  vector<Expression> m;
   explicit Encoder(Model& model) {
     p_s = model.add_lookup_parameters(INPUT_VOCAB_SIZE, {REP_DIM}); 
     p_t = model.add_lookup_parameters(OUTPUT_VOCAB_SIZE, {REP_DIM}); 
   }
 
-  VariableIndex EmbedSource(const vector<int>& sent, ComputationGraph& cg) {
+  Expression EmbedSource(const vector<int>& sent, ComputationGraph& cg) {
     m.resize(sent.size() + 2);
-    m[0] = cg.add_lookup(p_s, kSRC_SOS);
+    m[0] = lookup(cg, p_s, kSRC_SOS);
     int i = 1;
     for (auto& w : sent)
-      m[i++] = cg.add_lookup(p_s, w);
-    m[i] = cg.add_lookup(p_s, kSRC_EOS);
+      m[i++] = lookup(cg, p_s, w);
+    m[i] = lookup(cg, p_s, kSRC_EOS);
 #define DUMB_ADDITIVE
 #ifdef DUMB_ADDITIVE
-    return cg.add_function<Sum>(m);
+    return sum(m);
 #else
-    VariableIndex i_m = cg.add_function<ConcatenateColumns>(m);
-    i_m = cg.add_function<KMHNGram>({i_m}, 2);
-    i_m = cg.add_function<Tanh>({i_m});
-    return cg.add_function<SumColumns>({i_m});
+    return sum_cols(tanh(kmh_ngram(concatenate_cols(m), 2)));
 #endif
   }
 
-  VariableIndex EmbedTarget(const vector<int>& sent, ComputationGraph& cg) {
+  Expression EmbedTarget(const vector<int>& sent, ComputationGraph& cg) {
     m.resize(sent.size() + 2);
-    m[0] = cg.add_lookup(p_s, kTRG_SOS);
+    m[0] = lookup(cg, p_s, kTRG_SOS);
     int i = 1;
     for (auto& w : sent)
-      m[i++] = cg.add_lookup(p_t, w);
-    m[i] = cg.add_lookup(p_s, kTRG_EOS);
+      m[i++] = lookup(cg, p_t, w);
+    m[i] = lookup(cg, p_s, kTRG_EOS);
 #ifdef DUMB_ADDITIVE
-    return cg.add_function<Sum>(m);
+    return sum(m);
 #else
-    VariableIndex i_m = cg.add_function<ConcatenateColumns>(m);
-    i_m = cg.add_function<KMHNGram>({i_m}, 2);
-    i_m = cg.add_function<Tanh>({i_m});
-    return cg.add_function<SumColumns>({i_m});
+    return sum_cols(tanh(kmh_ngram(concatenate_cols(m), 2)));
 #endif
   }
 };
@@ -168,22 +164,18 @@ int main(int argc, char** argv) {
       ComputationGraph cg;
       auto& sent_pair = training[order[si]];
       ++si;
-      auto& src = sent_pair.first;
-      auto& trg = sent_pair.second;
-      VariableIndex i_s = emb.EmbedSource(src, cg);
-      VariableIndex i_t = emb.EmbedTarget(trg, cg);
-      VariableIndex i_sim = cg.add_function<SquaredEuclideanDistance>({i_s,i_t});
+      Expression s = emb.EmbedSource(sent_pair.first, cg);
+      Expression sim = squared_distance(s, emb.EmbedTarget(sent_pair.second, cg));
       float margin = 2;
       const unsigned K = 20;
-      vector<VariableIndex> noise(K);
+      vector<Expression> noise(K);
       for (unsigned j = 0; j < K; ++j) {
-        unsigned s = rand01() * training.size();
-        while (s == order[si] || s == training.size()) { s = rand01() * training.size(); }
-        VariableIndex i_n_j = emb.EmbedTarget(training[s].second, cg);
-        VariableIndex i_sim_n = cg.add_function<SquaredEuclideanDistance>({i_s,i_n_j});
-        noise[j] = cg.add_function<PairwiseRankLoss>({i_sim, i_sim_n}, margin);
+        unsigned sample = rand01() * training.size();
+        while (sample == order[si] || sample == training.size()) { sample = rand01() * training.size(); }
+        Expression sim_n = squared_distance(s, emb.EmbedTarget(training[sample].second, cg));
+        noise[j] = pairwise_rank_loss(sim, sim_n, margin);
       }
-      cg.add_function<Sum>(noise);
+      Expression l = sum(noise);
       auto iloss = as_scalar(cg.forward());
       assert(iloss >= 0);
       if (iloss > 0) {

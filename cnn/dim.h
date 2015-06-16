@@ -3,6 +3,7 @@
 
 #include <initializer_list>
 #include <type_traits>
+#include <stdexcept>
 #include <iosfwd>
 #include <cstring>
 #include <vector>
@@ -25,12 +26,21 @@ struct Dim {
     for (unsigned i = 0; i < nd; ++i) p *= d[i];
     return p;
   }
+  inline int sum_dims() const {
+    int p = 0;
+    for (unsigned i = 0; i < nd; ++i) p += d[i];
+    return p;
+  }
   inline int ndims() const { return nd; }
   inline int rows() const { return d[0]; }
   inline int cols() const { return nd > 1 ? d[1] : 1; }
   inline int operator[](unsigned i) const { return i < nd ? d[i] : 1; }
   inline int size(unsigned i) const { return (*this)[i]; }
-  inline Dim transpose() const { return Dim(d[1],d[0]); }
+  inline Dim transpose() const {
+    if (nd == 1) { return Dim(1, d[0]); }
+    else if (nd == 2) { return Dim(d[1], d[0]); }
+    throw std::invalid_argument("Cannot transpose Dim object with more than 2 dimensions");
+  }
   unsigned short d[CNN_MAX_TENSOR_DIM];
   unsigned short nd;
  private:

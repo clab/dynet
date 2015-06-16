@@ -14,6 +14,7 @@ float* kSCALAR_ZERO;
 int n_hgs = 0;
 
 Node::~Node() {}
+size_t Node::aux_storage_size() const { return 0; }
 
 ComputationGraph::ComputationGraph() : last_node_evaluated(),
   ee(new SimpleExecutionEngine(*this)) {
@@ -79,7 +80,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameters* p, unsigned index) 
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned* pindex) {
+VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, const unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, pindex);
   // get rid of the following in favor of using parameter_nodes to see the needs_derivative

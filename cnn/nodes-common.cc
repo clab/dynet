@@ -17,15 +17,40 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string DotProduct::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << "^T . " << arg_names[1];
+  return s.str();
+}
+
+Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 2);
+  assert(LooksLikeVector(xs[0]));
+  assert(LooksLikeVector(xs[1]));
+  assert(xs[0].rows() == xs[1].rows());
+  return Dim({1});
+}
+
+string Transpose::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << "^T";
+  return s.str();
+}
+
+Dim Transpose::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0].transpose();
+}
+
 string Reshape::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "reshape(" << arg_names[0] << ',' << from << " --> " << to << ')';
+  s << "reshape(" << arg_names[0] << " --> " << to << ')';
   return s.str();
 }
 
 Dim Reshape::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  assert(xs[0] == from);
+  assert(xs[0].size() == to.size());
   return to;
 }
 
@@ -60,13 +85,28 @@ Dim KMHNGram::dim_forward(const vector<Dim>& xs) const {
 
 string InnerProduct3D_1D::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "inner(" << arg_names[0] << "," << arg_names[1] << ") + " << arg_names[2];
+  s << "dot(" << arg_names[0] << "," << arg_names[1] << ')';
+  if (arg_names.size() == 3) s << " + " << arg_names[2];
   return s.str();
 }
 
 Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
-  cerr << "InnerProduct3D_1D::dim_forward not implemented\n";
-  abort();
+  if (xs.size() != 2 && xs.size() != 3) {
+    cerr << "Expected two or three arguments in InnerProduct3D_1D\n";
+    abort();
+  }
+  if (xs[0].ndims() != 3 ||
+      xs[1].ndims() != 1 ||
+      xs[0].size(2) != xs[1].size(0)) {
+    cerr << "Bad input dimensions in InnerProduct3D_1D: " << xs << endl;
+    abort();
+  }
+  Dim d({xs[0].size(0), xs[0].size(1)});
+  if (xs.size() == 3 && xs[2] != d) {
+    cerr << "Bad input dimensions in InnerProduct3D_1D: " << xs << endl;
+    abort();
+  }
+  return d;
 }
 
 string GaussianNoise::as_string(const vector<string>& arg_names) const {
@@ -114,6 +154,25 @@ Dim Sum::dim_forward(const vector<Dim>& xs) const {
   for (unsigned i = 1; i < xs.size(); ++i) {
     if (xs[0] != xs[1]) {
       cerr << "Mismatched input dimensions in Sum: " << xs << endl;
+      abort();
+    }
+  }
+  return xs[0];
+}
+
+string Average::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "average(" << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); ++i)
+    s << ", " << arg_names[i];
+  s << ")";
+  return s.str();
+}
+
+Dim Average::dim_forward(const vector<Dim>& xs) const {
+  for (unsigned i = 1; i < xs.size(); ++i) {
+    if (xs[0] != xs[1]) {
+      cerr << "Mismatched input dimensions in Average: " << xs << endl;
       abort();
     }
   }
@@ -277,6 +336,21 @@ Dim Softmax::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string SoftSign::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "softsign(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim SoftSign::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  if (!LooksLikeVector(xs[0])) {
+    cerr << "Bad input dimensions in Softsign: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string PickNegLogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "log_softmax(" << arg_names[0] << ")_{" << *pval << '}';
@@ -386,6 +460,21 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string CwiseQuotient::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " / " << arg_names[1];
+  return s.str();
+}
+
+Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 2);
+  if (xs[0] != xs[1]) {
+    cerr << "Mismatched input dimensions in CwiseQuotient: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string AffineTransform::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0];
@@ -432,6 +521,21 @@ Dim Rectify::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string L1Distance::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
+  return s.str();
+}
+
+Dim L1Distance::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 2);
+  if (xs[0] != xs[1]) {
+    cerr << "Mismatched input dimensions in L1Distance: " << xs << endl;
+    abort();
+  }
+  return Dim({1});
+}
+
 string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
@@ -460,13 +564,17 @@ Dim LogisticSigmoid::dim_forward(const vector<Dim>& xs) const {
 
 string BinaryLogLoss::as_string(const vector<string>& arg_names) const {
   ostringstream os;
-  os << "binary_log_loss(" << arg_names[0] << ", " << *ptarget_y << ')';
+  os << "binary_log_loss(" << arg_names[0] << ", " << arg_names[1] << ')';
   return os.str();
 }
 
 Dim BinaryLogLoss::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  assert(xs.size() == 2);
   if (xs[0].rows() != 2 && xs[0].ndims() != 1) {
+    cerr << "Bad input dimensions in BinaryLogLoss: " << xs << endl;
+    abort();
+  }
+  if (xs[1].rows() != 2 && xs[1].ndims() != 1) {
     cerr << "Bad input dimensions in BinaryLogLoss: " << xs << endl;
     abort();
   }
