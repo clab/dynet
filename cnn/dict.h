@@ -7,6 +7,11 @@
 #include <vector>
 #include <iostream>
 
+#include <boost/serialization/split_member.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/string.hpp>
+
 namespace cnn {
 
 class Dict {
@@ -44,6 +49,13 @@ class Dict {
   bool frozen;
   std::vector<std::string> words_;
   Map d_;
+
+  friend class boost::serialization::access;
+  template<class Archive> void serialize(Archive& ar, const unsigned int) {
+    ar & frozen;
+    ar & words_;
+    ar & d_;
+  }
 };
 
 std::vector<int> ReadSentence(const std::string& line, Dict* sd);
