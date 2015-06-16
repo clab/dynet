@@ -52,6 +52,7 @@ Expression cwise_multiply(const Expression& x, const Expression& y);
 
 Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
+Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
 Expression l1_distance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);

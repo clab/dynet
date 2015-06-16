@@ -2,7 +2,6 @@
 
 #include <limits>
 #include <cmath>
-#include <sstream>
 
 #include "cnn/functors.h"
 #if HAVE_CUDA
@@ -923,6 +922,24 @@ void Rectify::backward(const vector<const Tensor*>& xs,
 #else
   *dEdxi += (*fx).binaryExpr(*dEdf, FRectifyBackward());
 #endif
+}
+
+void HuberDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  auto x = **xs[0];
+  auto y = **xs[1];
+  *fx = (x - y).unaryExpr(FHuberForward(d));
+}
+
+void HuberDistance::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  assert(i < 2);
+  auto x = **xs[i];
+  auto y = **xs[1-i];
+  *dEdxi += (x - y).binaryExpr(*dEdf, FHuberBackward(d));
 }
 
 void L1Distance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
