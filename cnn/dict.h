@@ -7,7 +7,8 @@
 #include <vector>
 #include <iostream>
 
-#if BOOSTVERSION >= 105600
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 105600
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/unordered_map.hpp>
