@@ -423,6 +423,20 @@ struct SquaredEuclideanDistance : public Node {
                   Tensor& dEdxi) const override;
 };
 
+// y = || x_1 - x_2 ||_H(d)
+struct HuberDistance : public Node {
+  explicit HuberDistance(const std::initializer_list<VariableIndex>& a, float d = 1.345f) : Node(a), d(d) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+  float d;
+};
+
 // y = || x_1 - x_2 ||_1
 struct L1Distance : public Node {
   explicit L1Distance(const std::initializer_list<VariableIndex>& a) : Node(a) {}

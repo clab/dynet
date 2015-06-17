@@ -521,9 +521,24 @@ Dim Rectify::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string HuberDistance::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||_H(" << d << ')';
+  return s.str();
+}
+
+Dim HuberDistance::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 2);
+  if (xs[0] != xs[1]) {
+    cerr << "Mismatched input dimensions in HuberDistance: " << xs << endl;
+    abort();
+  }
+  return Dim({1});
+}
+
 string L1Distance::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
+  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||_1";
   return s.str();
 }
 
