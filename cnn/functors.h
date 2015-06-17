@@ -14,6 +14,28 @@
 
 namespace cnn {
 
+struct FHuberForward {
+  FHuberForward(float c) : c(c) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    const float a = fabs(x);
+    return (a < c) ? x*x : c*(2*a - c);
+  }
+  const float c;
+};
+
+template <typename T> int sgn(T val) {
+  return (T(0) < val) - (val < T(0));
+}
+
+struct FHuberBackward {
+  FHuberBackward(float c) : c(c) {}
+  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+    const float a = fabs(x);
+    return (2 * d) * ((a < c) ? x : c * sgn(x));
+  }
+  const float c;
+};
+
 struct FProduct {
   CNN_DEVICE_FUNC inline float operator()(float a, float b) const {
     return a * b;
