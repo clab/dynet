@@ -7,10 +7,12 @@
 #include <vector>
 #include <iostream>
 
+#if BOOSTVERSION >= 105600
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/string.hpp>
+#endif
 
 namespace cnn {
 
@@ -50,12 +52,14 @@ class Dict {
   std::vector<std::string> words_;
   Map d_;
 
+#if BOOST_VERSION >= 105600
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
     ar & frozen;
     ar & words_;
     ar & d_;
   }
+#endif
 };
 
 std::vector<int> ReadSentence(const std::string& line, Dict* sd);
