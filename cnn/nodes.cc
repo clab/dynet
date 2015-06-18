@@ -46,7 +46,7 @@ void Transpose::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   } else {
 #if HAVE_CUDA
     CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
-                             kSCALAR_ONE, xs[0]->v, fx.d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.v, fx.d.rows()));
+                             kSCALAR_ONE, xs[0]->v, xs[0]->d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.v, fx.d.rows()));
 #else
     *fx = (**xs[0]).transpose();
 #endif
@@ -60,7 +60,7 @@ void Transpose::backward(const vector<const Tensor*>& xs,
                             Tensor& dEdxi) const {
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
-                           kSCALAR_ONE, dEdf.v, dEdxi.d.rows(), kSCALAR_ONE, NULL, dEdxi.d.rows(), dEdxi.v, dEdxi.d.rows()));
+                           kSCALAR_ONE, dEdf.v, dEdf.d.rows(), kSCALAR_ONE, dEdxi.v, dEdxi.d.rows(), dEdxi.v, dEdxi.d.rows()));
 #else
   *dEdxi += (*dEdf).transpose();
 #endif
@@ -572,8 +572,12 @@ void Softmax::backward(const vector<const Tensor*>& xs,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
+#if HAVE_CUDA
+  gpu::softmax_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+#else
   float off_diag_sum = -(*fx).cwiseProduct(*dEdf).sum();
   *dEdxi += (*fx).binaryExpr(*dEdf, FSoftmaxBackward(off_diag_sum));
+#endif
 }
 
 void PickNegLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
