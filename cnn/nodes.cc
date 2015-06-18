@@ -44,7 +44,12 @@ void Transpose::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (dim.rows() == 1 || dim.cols() == 1) {
     fx.v = xs[0]->v;
   } else {
+#if HAVE_CUDA
+    CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
+                             kSCALAR_ONE, xs[0]->v, fx.d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.v, fx.d.rows()));
+#else
     *fx = (**xs[0]).transpose();
+#endif
   }
 }
 
@@ -53,7 +58,12 @@ void Transpose::backward(const vector<const Tensor*>& xs,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
+#if HAVE_CUDA
+  CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
+                           kSCALAR_ONE, dEdf.v, dEdxi.d.rows(), kSCALAR_ONE, NULL, dEdxi.d.rows(), dEdxi.v, dEdxi.d.rows()));
+#else
   *dEdxi += (*dEdf).transpose();
+#endif
 }
 
 void Reshape::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -381,8 +391,16 @@ void Concatenate::backward(const vector<const Tensor*>& xs,
 }
 
 void ConcatenateColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  for (unsigned i = 0; i < xs.size(); ++i)
+  for (unsigned i = 0; i < xs.size(); ++i) {
+#if HAVE_CUDA
+    // CUBLAS matricies are column-major, so just copy the memory
+    auto & xi = *xs[i];
+    const unsigned rows = xi.d.rows();
+    CUDA_CHECK(cudaMemcpyAsync(&fx.v[i*rows], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
+#else
     (*fx).col(i) = **xs[i];
+#endif
+  }
 }
 
 void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
@@ -390,7 +408,13 @@ void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
                                     const Tensor& dEdf,
                                     unsigned i,
                                     Tensor& dEdxi) const {
+#if HAVE_CUDA
+  const unsigned rows = dEdxi.d.rows();
+  const unsigned begin = i*rows;
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
+#else
   *dEdxi += (*dEdf).col(i);
+#endif
 }
 
 void PairwiseRankLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
