@@ -183,6 +183,36 @@ void softmax(int n, const float* x0, float* y) {
   ker_softmax<<<tb.first,tb.second>>>(n, x0, y);
 }
 
+// A kernel to calculate the dot product between two arrays
+__global__ void ker_dotproduct(int n, const float* x, const float* y, float* z) {
+  __shared__ float buf[256];
+  for (int i = threadIdx.x; i < 256; i += blockDim.x) {
+    float sum = 0;
+    for (int pos = i; pos < n; pos += 256)
+      sum += x[pos] * y[pos];
+    buf[i] = sum;
+  }
+  for (int stride = 128; stride > 0; stride >>= 1) {
+    __syncthreads();
+    for (int i = threadIdx.x; i < stride; i += blockDim.x)
+        buf[i] += buf[stride + i];
+  }
+  __syncthreads();
+  if (threadIdx.x == 0)
+    z[0] = buf[0];
+}
+
+void softmax_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
+  auto tb = SizeToBlockThreadPair(n);
+  float* gpu_ods;
+  float ods;
+  cudaMalloc((void **)&gpu_ods, sizeof(float));
+  ker_dotproduct<<<tb.first, tb.second>>>(n, fx, dEdf, gpu_ods);
+  cudaMemcpy(&ods, gpu_ods, sizeof(float), cudaMemcpyDeviceToHost);
+  cudaFree(gpu_ods);  
+  accBinaryExprKernel<<<tb.first, tb.second>>>(n, fx, dEdf, dEdx, FSoftmaxBackward(-ods));
+}
+
 // adapted from NVIDIA example
 __global__ void ker_pnlsoftmax(int n, int elem_idx, const float *x0, float* res, float* logz) {
   __shared__ float buf[256];
