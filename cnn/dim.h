@@ -41,8 +41,8 @@ struct Dim {
     else if (nd == 2) { return Dim(d[1], d[0]); }
     throw std::invalid_argument("Cannot transpose Dim object with more than 2 dimensions");
   }
-  unsigned short d[CNN_MAX_TENSOR_DIM];
-  unsigned short nd;
+  unsigned int d[CNN_MAX_TENSOR_DIM];
+  unsigned intint nd;
  private:
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
