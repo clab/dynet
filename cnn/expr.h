@@ -57,6 +57,10 @@ Expression l1_distance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
 
+Expression conv1d_narrow(const Expression& x, const Expression& f);
+Expression conv1d_wide(const Expression& x, const Expression& f);
+Expression kmax_pooling(const Expression& x, unsigned k);
+
 Expression pick(const Expression& x, unsigned v);
 Expression pick(const Expression& x, unsigned* pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);

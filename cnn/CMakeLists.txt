@@ -2,6 +2,7 @@
 # Sources:
 set(cnn_library_SRCS
     cnn.cc
+    conv.cc
     dict.cc
     dim.cc
     exec.cc
@@ -27,6 +28,7 @@ set(cnn_library_HDRS
     aligned-mem-pool.h
     c2w.h
     cnn.h
+    conv.h
     cuda.h
     dict.h
     dim.h
