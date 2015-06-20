@@ -1,0 +1,39 @@
+#ifndef CNN_CONV_H_
+#define CNN_CONV_H_
+
+#include "cnn/cnn.h"
+
+namespace cnn {
+
+struct KMaxPooling : public Node {
+  explicit KMaxPooling(const std::initializer_list<VariableIndex>& a, unsigned k = 1) : Node(a), k(k) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+  unsigned k;
+};
+
+// y = x_1 *conv x_2
+// x_1 \in R^{d x s} (input)
+// x_2 \in R^{d x m} (filter)
+struct Conv1DNarrow : public Node {
+  explicit Conv1DNarrow(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+};
+
+} // namespace cnn
+
+#endif
