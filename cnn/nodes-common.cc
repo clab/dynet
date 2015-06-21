@@ -17,6 +17,20 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string ConstScalarMultiply::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " * " << alpha;
+  return s.str();
+}
+
+Dim ConstScalarMultiply::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 1) {
+    cerr << "ConstScalarMultiply expects one argument: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string DotProduct::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << "^T . " << arg_names[1];
@@ -288,13 +302,12 @@ Dim PairwiseRankLoss::dim_forward(const vector<Dim>& xs) const {
 
 string Hinge::as_string(const vector<string>& arg_names) const {
   ostringstream os;
-  os << "hinge(" << arg_names[0] << ",m=" << margin << ")";
+  os << "hinge(" << arg_names[0] << ", pe=" << pelement << ", m=" << margin << ')';
   return os.str();
 }
 
 Dim Hinge::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
-  if (!LooksLikeVector(xs[0])) {
+  if (xs.size() != 1 || !LooksLikeVector(xs[0])) {
     cerr << "Bad input dimensions in Hinge: " << xs << endl;
     abort();
   }

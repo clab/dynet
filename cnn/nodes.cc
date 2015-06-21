@@ -33,6 +33,19 @@ using namespace std;
 
 namespace cnn {
 
+void ConstScalarMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  *fx = (**xs[0]) * alpha;
+}
+
+void ConstScalarMultiply::backward(const vector<const Tensor*>& xs,
+                                   const Tensor& fx,
+                                   const Tensor& dEdf,
+                                   unsigned i,
+                                   Tensor& dEdxi) const {
+  assert(i == 0);
+  *dEdxi += *dEdf * alpha;
+}
+
 void DotProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   *fx = (**xs[0]).transpose() * (**xs[1]);
 }
@@ -448,23 +461,26 @@ void PairwiseRankLoss::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
+size_t Hinge::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
 void Hinge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  cerr << "FIX IMPL3\n"; abort();
-#if 0
   assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
+  auto x = **xs[0];
   const unsigned rows = x.rows();
-  if (u.rows() != rows)
-    u = Tensor(rows, 1);  // local forward value
-  real y = 0;
-  const real mlystar = margin - x(*pelement, 0);
-  for (unsigned i = 0; i < rows; ++i)
-    if (*pelement != i)
-      y += u(i, 0) = max(real(0), mlystar + x(i,0));
-  Tensor res(1,1);
-  res(0,0) = y;
-  return res;
-#endif
+  float y = 0;
+  float* eloss = static_cast<float*>(aux_mem);
+  const real mlystar = margin - x(*pelement);
+  for (unsigned i = 0; i < rows; ++i) {
+    if (*pelement != i) {
+      eloss[i] = max(0.f, mlystar + x(i));
+      y += eloss[i];
+    } else {
+      eloss[i] = 0;
+    }
+  }
+  fx.v[0] = y;
 }
 
 void Hinge::backward(const vector<const Tensor*>& xs,
@@ -472,20 +488,19 @@ void Hinge::backward(const vector<const Tensor*>& xs,
                        const Tensor& dEdf,
                        unsigned i,
                        Tensor& dEdxi) const {
-  cerr << "FIX IMPL4\n"; abort();
-#if 0
   assert(i == 0);
-  const Tensor& x = *xs.front();
-  const unsigned rows = x.rows();
-  Tensor dEdx = Zero(Dim(rows, 1));
-  if (fx(0,0) == 0) return dEdx;
-  const real diff = dEdf(0,0);
-  unsigned tv = 0;
-  for (unsigned i = 0; i < rows; ++i)
-    if (*pelement != i && u(i, 0) > 0) { dEdx(i, 0) = diff; tv++; }
-  dEdx(*pelement, 0) = -diff * tv;
-  return dEdx;
-#endif
+  if (fx.v[0]) { // there was some loss
+    const float d = dEdf.v[0];
+    const unsigned rows = dEdxi.d.rows();
+    const float* eloss = static_cast<const float*>(aux_mem);
+    unsigned tne = 0;  // total number of errors
+    for (unsigned i = 0; i < rows; ++i)
+      if (eloss[i] > 0) {
+        (*dEdxi)(i) += d;
+        ++tne;
+      }
+    (*dEdxi)(*pelement) -= d * tne;
+  }
 }
 
 void Identity::forward(const vector<const Tensor*>& xs, Tensor& fx) const {

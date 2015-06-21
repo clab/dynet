@@ -29,6 +29,9 @@ Expression operator+(const Expression& x, const Expression& y);
 Expression operator-(const Expression& x, const Expression& y);
 Expression operator-(real x, const Expression& y);
 Expression operator*(const Expression& x, const Expression& y);
+Expression operator*(const Expression& x, float y);
+inline Expression operator*(float y, const Expression& x) { return x * y; }
+inline Expression operator/(const Expression& x, float y) { return x * (1.f / y); }
 // componentwise division
 Expression cdiv(const Expression& x, const Expression& y);
 
@@ -37,6 +40,8 @@ Expression exp(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
+Expression hinge(const Expression& x, unsigned index, float m = 1.0);
+Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
 Expression log_softmax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 Expression softmax(const Expression& x);

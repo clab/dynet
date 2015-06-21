@@ -1,0 +1,6 @@
+what is your name ? ||| Q
+where do you live ? ||| Q
+i live in pittsburgh . ||| D
+my name is bond . ||| D
+wtf ? she asked . ||| D
+did she say " yes . " ? ||| Q
