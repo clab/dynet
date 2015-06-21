@@ -5,6 +5,20 @@
 
 namespace cnn {
 
+// y = alpha * x_1
+struct ConstScalarMultiply : public Node {
+  explicit ConstScalarMultiply(const std::initializer_list<VariableIndex>& a, float alpha) : Node(a), alpha(alpha) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+  float alpha;
+};
+
 // y = x_1^T . x_2
 struct DotProduct : public Node {
   explicit DotProduct(const std::initializer_list<VariableIndex>& a) : Node(a) {}
@@ -243,9 +257,10 @@ struct PairwiseRankLoss : public Node {
 // y = \sum{i != element} max{0, margin - x_element + x_i}
 struct Hinge : public Node {
   explicit Hinge(const std::initializer_list<VariableIndex>& a, unsigned e, real m = 1.0) : Node(a), element(e), pelement(&element), margin(m) {}
-  explicit Hinge(const std::initializer_list<VariableIndex>& a, unsigned* pe, real m = 1.0) : Node(a), element(), pelement(pe), margin(m) {}
+  explicit Hinge(const std::initializer_list<VariableIndex>& a, const unsigned* pe, real m = 1.0) : Node(a), element(), pelement(pe), margin(m) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -255,7 +270,6 @@ struct Hinge : public Node {
   unsigned element;
   const unsigned* pelement;
   real margin;
-  // mutable Tensor u; // partial forward values
 };
 
 // y = x_1
