@@ -14,13 +14,59 @@ using namespace std;
 
 namespace cnn {
 
+string FoldRows::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "fold_rows(" << arg_names[0] << ", nrows=" << nrows << ')';
+  return os.str();
+}
+
+Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
+  int orows = xs[0].rows() / nrows;
+  if ((orows * nrows != xs[0].rows()) || xs.size() != 1 || xs[0].ndims() != 2) {
+    cerr << "Bad input dimensions in FoldRows: " << xs << endl;
+    abort();
+  }
+  return Dim({orows, xs[0].cols()});
+}
+
+void FoldRows::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  auto y = *fx;
+  int orows = y.rows();
+  for (int i = 0; i < orows; ++i) {
+    for (unsigned j = 0; j < nrows; ++j) {
+      if (j)
+        y.row(i) += x.row(i * nrows + j);
+      else // j = 0
+        y.row(i) = x.row(i * nrows);
+    }
+  }
+}
+
+void FoldRows::backward(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  int orows = fx.d.rows();
+  auto d = *dEdf;
+  auto di = *dEdxi;
+  for (int i = 0; i < orows; ++i)
+    for (unsigned j = 0; j < nrows; ++j)
+      di.row(i * nrows + j) += d.row(i);
+}
+
 string Conv1DNarrow::as_string(const vector<string>& arg_names) const {
   ostringstream os;
-  os << "conv1dnarrow(" << arg_names[0] << ", f=" << arg_names[1] << ')';
+  os << "conv1d_narrow(" << arg_names[0] << ", f=" << arg_names[1] << ')';
   return os.str();
 }
 
 Dim Conv1DNarrow::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2) {
+    cerr << "Conv1DNarrow requires two inputs: " << xs << endl;
+    abort();
+  }
   int ocols = xs[0].cols() - xs[1].cols() + 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() != 2 ||
       xs[0].rows() != xs[1].rows() ||
@@ -75,6 +121,74 @@ void Conv1DNarrow::backward(const vector<const Tensor*>& xs,
       for (unsigned j = 0; j < ycols; ++j) {
         for (unsigned k = 0; k < fcols; ++k)
           di(i, k) += x(i, j + k) * d(i, j);
+      }
+    }
+  }
+}
+
+string Conv1DWide::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "conv1d_wide(" << arg_names[0] << ", f=" << arg_names[1] << ')';
+  return os.str();
+}
+
+Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2) {
+    cerr << "Conv1DWide requires two inputs: " << xs << endl;
+    abort();
+  }
+  int ocols = xs[0].cols() + xs[1].cols() - 1;
+  if (xs[0].ndims() != 2 || xs[1].ndims() != 2 ||
+      xs[0].rows() != xs[1].rows()) {
+    cerr << "Bad input dimensions in Conv1DWide: " << xs << endl;
+    abort();
+  }
+  return Dim({xs[0].rows(), ocols});
+}
+
+void Conv1DWide::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  TensorTools::Zero(fx);
+  auto x = **xs[0];  // input
+  auto f = **xs[1];  // filter
+  auto y = *fx;
+  const unsigned rows = x.rows();
+  const unsigned xcols = x.cols();
+  const unsigned fcols = f.cols();
+  for (unsigned i = 0; i < rows; ++i) {
+    for (unsigned j = 0; j < xcols; ++j) {
+      const float xij = x(i, j);
+      for (unsigned k = 0; k < fcols; ++k)
+        y(i, j + k) += f(i, k) * xij;
+    }
+  }
+}
+
+void Conv1DWide::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  assert(i < 2);
+  const unsigned rows = xs[0]->d.rows();
+  const unsigned xcols = xs[0]->d.cols();
+  const unsigned fcols = xs[1]->d.cols();
+  auto d = *dEdf;
+  auto di = *dEdxi;
+  if (i == 0) { // derivative wrt input x
+    auto f = **xs[1];
+    for (unsigned i = 0; i < rows; ++i) {
+      for (unsigned j = 0; j < xcols; ++j) {
+        for (unsigned k = 0; k < fcols; ++k)
+          di(i, j) += f(i, k) * d(i, j + k);
+      }
+    }
+  } else { // derivative wrt filter f
+    auto x = **xs[0];
+    for (unsigned i = 0; i < rows; ++i) {
+      for (unsigned j = 0; j < xcols; ++j) {
+        const float xij = x(i, j);
+        for (unsigned k = 0; k < fcols; ++k)
+          di(i, k) += xij * d(i, j + k);
       }
     }
   }
