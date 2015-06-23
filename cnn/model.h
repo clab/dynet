@@ -20,6 +20,7 @@ namespace cnn {
 struct ParametersBase {
   friend class Model;
   virtual void scale_parameters(float a) = 0;
+  virtual void squared_l2norm(float* sqnorm) const = 0;
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
   virtual size_t size() const = 0;
   virtual ~ParametersBase();
@@ -29,6 +30,7 @@ struct ParametersBase {
 struct Parameters : public ParametersBase {
   friend class Model;
   void scale_parameters(float a) override;
+  void squared_l2norm(float* sqnorm) const override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
 
@@ -40,7 +42,8 @@ struct Parameters : public ParametersBase {
   Tensor g;
  private:
   Parameters() {}
-  explicit Parameters(const Dim& d);
+  explicit Parameters(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
+                                 // or Glorot initialization if minmax = 0
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
     ar & dim;
@@ -52,6 +55,7 @@ struct Parameters : public ParametersBase {
 struct LookupParameters : public ParametersBase {
   friend class Model;
   void scale_parameters(float a) override;
+  void squared_l2norm(float* sqnorm) const override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
   void Initialize(unsigned index, const std::vector<float>& val);
@@ -97,8 +101,11 @@ class Model {
   Model() : gradient_norm_scratch() {}
   ~Model();
   float gradient_l2_norm() const;
-  Parameters* add_parameters(const Dim& d);  // initialized randomly
+  // set scale to use custom initialization
+  Parameters* add_parameters(const Dim& d, float scale = 0.0f);
   LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
+  // project weights so their L2 norm = radius
+  void project_weights(float radius = 1.0f);
 
   const std::vector<ParametersBase*>& all_parameters_list() const { return all_params; }
   const std::vector<Parameters*>& parameters_list() const { return params; }

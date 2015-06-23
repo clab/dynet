@@ -18,10 +18,10 @@ namespace cnn {
 
 ParametersBase::~ParametersBase() {}
 
-Parameters::Parameters(const Dim& d) : dim(d) {
+Parameters::Parameters(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
   values.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
-  TensorTools::Randomize(values);
+  if (scale) TensorTools::Randomize(values, scale); else TensorTools::Randomize(values);
   g.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
   TensorTools::Zero(g);
 }
@@ -30,6 +30,14 @@ size_t Parameters::size() const { return dim.size(); }
 
 void Parameters::scale_parameters(float a) {
   (*g) *= a;
+}
+
+void Parameters::squared_l2norm(float* sqnorm) const {
+#if HAVE_CUDA
+  gpu::l2_norm_reducer(values.d.size(), values.v, sqnorm, true, false);
+#else
+  *sqnorm = (*values).squaredNorm();
+#endif
 }
 
 void Parameters::g_squared_l2norm(float* sqnorm) const {
@@ -99,6 +107,21 @@ void LookupParameters::g_squared_l2norm(float* sqnorm) const {
 #endif
 }
 
+void LookupParameters::squared_l2norm(float* sqnorm) const {
+#if HAVE_CUDA
+  bool acc = false;
+  for (unsigned i = 0; i < values.size(); ++i) {
+    gpu::l2_norm_reducer(values[i].d.size(), values[i].v, sqnorm, true, acc);
+    acc = true;
+  }
+#else
+  float a = 0;
+  for (unsigned i = 0; i < values.size(); ++i)
+    a += (*values[i]).squaredNorm();
+  *sqnorm = a;
+#endif
+}
+
 void LookupParameters::accumulate_grad(unsigned index, const Tensor& d) {
   non_zero_grads.insert(index);
 #if HAVE_CUDA
@@ -116,6 +139,21 @@ void LookupParameters::clear() {
 
 Model::~Model() {
   for (auto p : all_params) delete p;
+}
+
+void Model::project_weights(float radius) {
+  static float* project_scratch = 0;
+  if (!project_scratch)
+    project_scratch = (float*)cnn_mm_malloc(all_params.size() * sizeof(float), 256);
+  int pi = 0;
+  for (auto p : all_params) {
+    p->squared_l2norm(&project_scratch[pi]);
+    ++pi;
+  }
+  double gg = 0;
+  for (unsigned i = 0; i < pi; ++i)
+    gg += project_scratch[i];
+  cerr << "NORM: " << sqrt(gg) << endl;
 }
 
 float Model::gradient_l2_norm() const {
@@ -139,8 +177,8 @@ float Model::gradient_l2_norm() const {
 #endif
 }
 
-Parameters* Model::add_parameters(const Dim& d) {
-  Parameters* p = new Parameters(d);
+Parameters* Model::add_parameters(const Dim& d, float scale) {
+  Parameters* p = new Parameters(d, scale);
   all_params.push_back(p);
   params.push_back(p);
   return p;

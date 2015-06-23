@@ -14,6 +14,40 @@ using namespace std;
 
 namespace cnn {
 
+string AddVectorToAllColumns::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "fold_rows(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return os.str();
+}
+
+Dim AddVectorToAllColumns::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || xs[0].rows() != xs[1].rows() || xs[0].ndims() != 2 || xs[1].ndims() != 1) {
+    cerr << "Bad input dimensions in AddVectorToAllColumns: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
+void AddVectorToAllColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto y = *fx;
+  auto x = **xs[0];
+  auto b = **xs[1];
+  y = x.colwise() + b.col(0);
+}
+
+void AddVectorToAllColumns::backward(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  assert(i < 2);
+  if (i == 0) { // x
+    (*dEdxi) += (*dEdf);
+  } else { // bias
+    (*dEdxi).col(0) += (*dEdf).rowwise().sum();
+  }
+}
+
 string FoldRows::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "fold_rows(" << arg_names[0] << ", nrows=" << nrows << ')';
@@ -247,6 +281,7 @@ void KMaxPooling::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
     }
     //cerr << endl; abort();
   }
+  assert(mi == dim.size());
 }
 
 void KMaxPooling::backward(const vector<const Tensor*>& xs,
@@ -262,6 +297,12 @@ void KMaxPooling::backward(const vector<const Tensor*>& xs,
     for (unsigned j = 0; j < cols; ++j) {
       assert(mi < dim.size());
       const int oj = maxmap[mi++];
+      if (oj > (*dEdxi).cols() || oj < 0) {
+        cerr << dim << (*fx) << endl << (*dEdxi) << endl;
+        cerr << "MM:"; for (int k=0;k < dim.size(); ++k) cerr << ' ' << maxmap[k];
+        cerr << endl;
+        cerr << "BAD: " << oj << endl; abort();
+      }
       (*dEdxi)(i, oj) += (*dEdf)(i, j);
     }
   }
