@@ -565,7 +565,7 @@ void MaxPooling1D::backward(const vector<const Tensor*>& xs,
 }
 
 template <class T>
-EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float logsumexp(const T& x) {
+EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   const float m = x.maxCoeff();
   float z = 0;
   for (unsigned i = 0; i < x.rows(); ++i)
@@ -664,7 +664,7 @@ void LogSoftmax::backward(const vector<const Tensor*>& xs,
 }
 
 template <class T>
-EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
+EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   real m = x(denom[0],0);
   for (auto i : denom) {
     real r = x(i,0);
