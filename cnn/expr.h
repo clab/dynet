@@ -53,7 +53,6 @@ Expression dropout(const Expression& x, real p);
 Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
 
-Expression affine_transform(const std::initializer_list<Expression>& xs);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
 Expression dot_product(const Expression& x, const Expression& y);
@@ -63,52 +62,46 @@ Expression l1_distance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
 
+// various convolutiony things
 Expression conv1d_narrow(const Expression& x, const Expression& f);
 Expression conv1d_wide(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
+Expression sum_cols(const Expression& x);
+Expression kmh_ngram(const Expression& x, unsigned n);
 
+// pick parts out of bigger objects
 Expression pick(const Expression& x, unsigned v);
 Expression pick(const Expression& x, unsigned* pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
-
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
 
-template <typename T>
-Expression sum(const T& xs) {
-  ComputationGraph *pg = xs.begin()->pg;
-  std::vector<VariableIndex> xis(xs.size());
-  for (int i=0; i<xs.size(); ++i) xis[i] = xs[i].i;
-  return Expression(pg, pg->add_function<Sum>(xis));
+namespace detail {
+  template <typename F, typename T>
+  Expression f(const T& xs) {
+    ComputationGraph *pg = xs.begin()->pg;
+    std::vector<VariableIndex> xis(xs.size());
+    int i = 0;
+    for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+    return Expression(pg, pg->add_function<F>(xis));
+  }
 }
 
 template <typename T>
-Expression average(const T& xs) {
-  ComputationGraph *pg = xs.begin()->pg;
-  std::vector<VariableIndex> xis(xs.size());
-  for (int i=0; i<xs.size(); ++i) xis[i] = xs[i].i;
-  return Expression(pg, pg->add_function<Average>(xis));
-}
+inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 
 template <typename T>
-Expression concatenate_cols(const T& xs) {
-  ComputationGraph *pg = xs.begin()->pg;
-  std::vector<VariableIndex> xis(xs.size());
-  for (int i=0; i<xs.size(); ++i) xis[i] = xs[i].i;
-  return Expression(pg, pg->add_function<ConcatenateColumns>(xis));
-}
+inline Expression average(const T& xs) { return detail::f<Average>(xs); }
 
 template <typename T>
-Expression concatenate(const T& xs) {
-  ComputationGraph *pg = xs.begin()->pg;
-  std::vector<VariableIndex> xis(xs.size());
-  for (int i=0; i<xs.size(); ++i) xis[i] = xs[i].i;
-  return Expression(pg, pg->add_function<Concatenate>(xis));
-}
+inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateColumns>(xs); }
 
-Expression sum_cols(const Expression& x);
+template <typename T>
+inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); }
 
-Expression kmh_ngram(const Expression& x, unsigned n);
+template <typename T>
+inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
+inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
 
 } }
 
