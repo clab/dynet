@@ -90,6 +90,22 @@ struct AdadeltaTrainer : public Trainer {
   std::vector<ShadowLookupParameters> hld;
 };
 
+struct AdamTrainer : public Trainer {
+  explicit AdamTrainer(Model* m, float lambda = 1e-6, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
+    Trainer(m, lambda, alpha), beta_1(beta_1), beta_2(beta_2), eps(eps), shadow_params_allocated(false) {}
+
+  void update(real scale) override;
+
+  float beta_1;
+  float beta_2;
+  float eps;
+  bool shadow_params_allocated;
+  std::vector<ShadowParameters> m; // History of gradients
+  std::vector<ShadowLookupParameters> lm;
+  std::vector<ShadowParameters> v; // History of deltas
+  std::vector<ShadowLookupParameters> lv;
+};
+
 } // namespace cnn
 
 #endif
