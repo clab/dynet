@@ -75,6 +75,7 @@ struct ComputationGraph {
   // perform computations
   const Tensor& forward();
   const Tensor& incremental_forward();  // if you want to add nodes and evaluate just the new parts
+  const Tensor& get_value(VariableIndex i);
   void backward();
 
   // debugging

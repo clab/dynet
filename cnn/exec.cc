@@ -13,6 +13,14 @@ const Tensor& SimpleExecutionEngine::forward() {
   return incremental_forward();
 }
 
+const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
+    assert(i < cg.nodes.size());
+    if (i < last_node_evaluated) {
+        incremental_forward();
+    }
+    return nfxs[i];
+}
+
 const Tensor& SimpleExecutionEngine::incremental_forward() {
   // free any old memory if this is a new HG
   if (last_node_evaluated == 0) fxs->free();
