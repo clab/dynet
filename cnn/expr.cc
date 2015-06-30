@@ -49,6 +49,9 @@ Expression affine_transform(const std::initializer_list<Expression>& xs) {
   for (auto& e : xs) xis[i++] = e.i;
   return Expression(pg, pg->add_function<AffineTransform>(xis));
 }
+Expression affine_transform(ComputationGraph& g, const std::vector<VariableIndex>& xs) {
+  return Expression(&g, g.add_function<AffineTransform>(xs));
+}
 Expression cwise_multiply(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));}
 
 Expression dot_product(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<DotProduct>({x.i, y.i})); }

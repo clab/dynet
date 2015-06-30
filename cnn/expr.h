@@ -54,6 +54,7 @@ Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
 
 Expression affine_transform(const std::initializer_list<Expression>& xs);
+Expression affine_transform(ComputationGraph& g, const std::vector<VariableIndex>& xs);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
 Expression dot_product(const Expression& x, const Expression& y);
