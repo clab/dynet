@@ -213,15 +213,15 @@ size_t Dropout::aux_storage_size() const {
 
 void Dropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem);
-  TensorTools::RandomBernoulli(m, p);
+  TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
   (*fx) = (**xs[0]).cwiseProduct(*m);
 }
 
 void Dropout::backward(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
+                       const Tensor& fx,
+                       const Tensor& dEdf,
+                       unsigned i,
+                       Tensor& dEdxi) const {
   Tensor m(dim, (float*)aux_mem);
   (*dEdxi) += (*dEdf).cwiseProduct(*m);
 };
