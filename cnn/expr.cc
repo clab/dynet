@@ -42,13 +42,6 @@ Expression dropout(const Expression& x, real p) { return Expression(x.pg, x.pg->
 Expression reshape(const Expression& x, const Dim& d) { return Expression(x.pg, x.pg->add_function<Reshape>({x.i}, d)); }
 Expression transpose(const Expression& x) { return Expression(x.pg, x.pg->add_function<Transpose>({x.i})); }
 
-Expression affine_transform(const std::initializer_list<Expression>& xs) {
-  ComputationGraph *pg = xs.begin()->pg;
-  std::vector<VariableIndex> xis(xs.size());
-  int i = 0;
-  for (auto& e : xs) xis[i++] = e.i;
-  return Expression(pg, pg->add_function<AffineTransform>(xis));
-}
 Expression affine_transform(const std::vector<Expression>& xs) {
   ComputationGraph *pg = xs.begin()->pg;
   std::vector<VariableIndex> xis(xs.size());

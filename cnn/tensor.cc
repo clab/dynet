@@ -100,9 +100,9 @@ void TensorTools::Randomize(Tensor& d) {
   Randomize(d, sqrt(6) / sqrt(d.d.sum_dims()));
 }
 
-void TensorTools::RandomBernoulli(Tensor& val, real p) {
+void TensorTools::RandomBernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
-  auto b = [&] (real) {return distribution(*rndeng);};
+  auto b = [&] (real) {return distribution(*rndeng) * scale;};
   Dim d({val.d.size()});
   Tensor tv(d, val.v);
   *tv = Eigen::MatrixXf::NullaryExpr(d.size(), 1, b);

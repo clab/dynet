@@ -213,15 +213,15 @@ size_t Dropout::aux_storage_size() const {
 
 void Dropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem);
-  TensorTools::RandomBernoulli(m, p);
+  TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
   (*fx) = (**xs[0]).cwiseProduct(*m);
 }
 
 void Dropout::backward(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
+                       const Tensor& fx,
+                       const Tensor& dEdf,
+                       unsigned i,
+                       Tensor& dEdxi) const {
   Tensor m(dim, (float*)aux_mem);
   (*dEdxi) += (*dEdf).cwiseProduct(*m);
 };
@@ -565,7 +565,7 @@ void MaxPooling1D::backward(const vector<const Tensor*>& xs,
 }
 
 template <class T>
-EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE float logsumexp(const T& x) {
+EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   const float m = x.maxCoeff();
   float z = 0;
   for (unsigned i = 0; i < x.rows(); ++i)
@@ -664,7 +664,7 @@ void LogSoftmax::backward(const vector<const Tensor*>& xs,
 }
 
 template <class T>
-EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
+EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   real m = x(denom[0],0);
   for (auto i : denom) {
     real r = x(i,0);
