@@ -73,9 +73,19 @@ struct ComputationGraph {
   template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
   // perform computations
+
+  // run complete forward pass from first node to last existing one, ignoring all precomputed values.
   const Tensor& forward();
-  const Tensor& incremental_forward();  // if you want to add nodes and evaluate just the new parts
+  // run forward pass from the last computed node to last existing.
+  // useful if you want to add nodes and evaluate just the new parts.
+  const Tensor& incremental_forward();
+  // get forward value for node at index i. used cached values if available,
+  // performs forward evaluation if note available (may compute more than strictly
+  // what is needed).
   const Tensor& get_value(VariableIndex i);
+  // clears forward caches (for get_value etc).
+  void invalidate();
+  // computes backward gradients from the front-most evaluated node.
   void backward();
 
   // debugging
