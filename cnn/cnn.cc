@@ -113,6 +113,8 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
 
 const Tensor& ComputationGraph::incremental_forward() { return ee->incremental_forward(); }
 const Tensor& ComputationGraph::forward() { return ee->forward(); }
+const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_value(i); }
+void ComputationGraph::invalidate() { ee->invalidate(); }
 void ComputationGraph::backward() { ee->backward(); }
 
 void ComputationGraph::PrintGraphviz() const {
