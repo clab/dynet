@@ -81,6 +81,7 @@ cdef extern from "cnn/training.h" namespace "cnn":
         CSimpleSGDTrainer(CModel* m, float lam, float e0)
         void update(float s)
         void update_epoch(float r)
+        void status()
 
 
 cdef extern from "cnn/expr.h" namespace "cnn::expr":
@@ -124,7 +125,7 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
     CExpression c_reshape "cnn::expr::reshape" (CExpression& x, CDim& d) #?
     CExpression c_transpose "cnn::expr::transpose" (CExpression& x) #
 
-    #CExpression c_affine_transform "cnn::expr::affine_transform" (const std::initializer_list<Expression>& xs)
+    CExpression c_affine_transform "cnn::expr::affine_transform" (const vector[CExpression]& xs)
     CExpression c_cwise_multiply "cnn::expr::cwise_multiply" (CExpression& x, CExpression& y) #
 
     CExpression c_dot_product "cnn::expr::dot_product" (CExpression& x, CExpression& y) #
@@ -145,11 +146,41 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
 
     CExpression c_pickneglogsoftmax "cnn::expr::pickneglogsoftmax" (CExpression& x, unsigned v) #
 
+    # expecting a vector of CExpression
+    CExpression c_average     "cnn::expr::average" (vector[CExpression]& xs)
+    CExpression c_concat_cols "cnn::expr::concatenate_cols" (vector[CExpression]& xs)
+    CExpression c_concat      "cnn::expr::concatenate" (vector[CExpression]& xs)
+
+    CExpression c_sum      "cnn::expr::sum" (vector[CExpression]& xs)
+
     CExpression c_sum_cols "cnn::expr::sum_cols" (CExpression& x)               #
     CExpression c_kmh_ngram "cnn::expr::kmh_ngram" (CExpression& x, unsigned n) #
 
 #cdef extern from "cnn/model.h" namespace "cnn":
 #    cdef cppclass Model:
 
+# TODO unify with LSTMBuilder using inheritance
+cdef extern from "cnn/rnn.h" namespace "cnn":
+    #cdef cppclass RNNBuilder "cnn::RNNBuilder":
+    cdef cppclass CSimpleRNNBuilder "cnn::SimpleRNNBuilder":
+        CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        void new_graph(CComputationGraph &cg)
+        void start_new_sequence(vector[CExpression] ces)
+        CExpression add_input(CExpression &x)
+        void rewind_one_step()
+        CExpression back()
+        vector[CExpression] final_h()
+        vector[CExpression] final_s()
+
+cdef extern from "cnn/lstm.h" namespace "cnn":
+    cdef cppclass CLSTMBuilder "cnn::LSTMBuilder":
+        CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        void new_graph(CComputationGraph &cg)
+        void start_new_sequence(vector[CExpression] ces)
+        CExpression add_input(CExpression &x)
+        void rewind_one_step()
+        CExpression back()
+        vector[CExpression] final_h()
+        vector[CExpression] final_s()
 
 
