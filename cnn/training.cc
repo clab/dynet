@@ -186,35 +186,61 @@ void AdadeltaTrainer::update(real scale) {
   ++updates;
 }
 
-#if 0
-void RMSPropTrainer::update(real scale) {
-  for (auto p : params) {
-    Tensor& x = p->values;
-    Tensor& g = p->g;
-    Tensor& v = vp[p];
-    v *= decay;
-    v += g.cwiseProduct(g) * (1.0 - decay);
-    const Tensor reg = x * lambda;
-    x -= eta * g.cwiseQuotient((v + Tensor::Constant(v.rows(),v.cols(),eps)).cwiseSqrt());
-    x -= reg;
-    p->clear();
+void AdamTrainer::update(real scale) {
+  unsigned pi;
+  if (!shadow_params_allocated) {
+    m = AllocateShadowParameters(*model);
+    lm = AllocateShadowLookupParameters(*model);
+    v = AllocateShadowParameters(*model);
+    lv = AllocateShadowLookupParameters(*model);
+    shadow_params_allocated = true;
   }
-  for (auto p : lookup_params) {
-    unordered_map<unsigned, Tensor>& vt = vl[p];
-    for (auto it : p->g) {
-      Tensor& x = p->values[it.first];
-      Tensor& g = it.second;
-      Tensor& v = vt[it.first];
-      if (v.rows() == 0) v = g * 0;
-      v *= decay;
-      v += g.cwiseProduct(g) * (1.0 - decay);
-      const Tensor reg = x * lambda;
-      x -= eta * g.cwiseQuotient((v + Tensor::Constant(v.rows(),v.cols(),eps)).cwiseSqrt());
-      x -= reg;
+
+  const float gscale = clip_gradients();
+  pi = 0;
+  static unsigned t = 0;
+  for (auto p : model->parameters_list()) {
+    ++t;
+    auto g_t = (scale * gscale) * *p->g;
+    auto m_t = *m[pi].h;
+    auto v_t = *v[pi].h;
+    auto reg = (*p->values) * lambda;
+    m_t = beta_1 * m_t + (1 - beta_1) * g_t;
+    auto g2 = g_t.cwiseProduct(g_t);
+    v_t = beta_2 * v_t + (1 - beta_2) * g2;
+    float s1 = 1 - pow(beta_1, t);
+    float s2 = 1 - pow(beta_2, t);
+    auto mhat = m_t / s1;
+    auto vhat = v_t / s2;
+    auto delta = (-eta * mhat).cwiseQuotient((vhat.array().sqrt() + eps).matrix());
+    *p->values += delta - reg;
+    p->clear();
+    pi++;
+  }
+
+  pi = 0;
+  for (auto p : model->lookup_parameters_list()) {
+    vector<Tensor>& vm = lm[pi].h;
+    vector<Tensor>& vv = lv[pi].h;
+    for (auto i : p->non_zero_grads) {
+      auto m_t = *vm[i];
+      auto v_t = *vv[i];
+      auto g_t = scale * gscale * *p->grads[i];
+      auto g2 = g_t.cwiseProduct(g_t);
+      auto reg = (*p->values[i]) * lambda;
+      m_t = beta_1 * m_t + (1 - beta_1) * g_t;
+      v_t = beta_2 * v_t + (1 - beta_2) * g2;
+      float s1 = 1 - pow(beta_1, t);
+      float s2 = 1 - pow(beta_2, t);
+      auto mhat = m_t / s1;
+      auto vhat = v_t / s2;
+      auto delta = (-eta * mhat).cwiseQuotient((vhat.array().sqrt() + eps).matrix());
+      *p->values[i] += delta - reg;
     }
     p->clear();
+    pi++;
   }
+  ++updates;
 }
-#endif
 
 } // namespace cnn

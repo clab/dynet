@@ -8,9 +8,20 @@ namespace cnn {
 
 ExecutionEngine::~ExecutionEngine() {}
 
+void SimpleExecutionEngine::invalidate() {
+    last_node_evaluated = 0;
+}
 const Tensor& SimpleExecutionEngine::forward() {
-  last_node_evaluated = 0;
+  invalidate();
   return incremental_forward();
+}
+
+const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
+    assert(i < cg.nodes.size());
+    if (i >= last_node_evaluated) {
+        incremental_forward();
+    }
+    return nfxs[i];
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward() {

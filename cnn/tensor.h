@@ -80,7 +80,8 @@ struct TensorTools {
   static void Zero(Tensor& d);
   static void Randomize(Tensor& val, real scale);
   static void Randomize(Tensor& d);
-  static void RandomBernoulli(Tensor& val, real p);
+  // sample some bernoulli random variables and scale them by scale
+  static void RandomBernoulli(Tensor& val, real p, real scale = 1.0);
   static void RandomizeNormal(real mean, real stddev, Tensor& val);
   // AccessElement is very, very slow (potentially) - use appropriately
   static float AccessElement(const Tensor& v, const Dim& index);
