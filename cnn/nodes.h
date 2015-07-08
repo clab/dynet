@@ -5,6 +5,19 @@
 
 namespace cnn {
 
+// y = Tr(x_1 * x_2^T)
+struct TraceOfProduct : public Node {
+  explicit TraceOfProduct(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+};
+
 // y = alpha * x_1
 struct ConstScalarMultiply : public Node {
   explicit ConstScalarMultiply(const std::initializer_list<VariableIndex>& a, float alpha) : Node(a), alpha(alpha) {}
