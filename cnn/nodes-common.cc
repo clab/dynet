@@ -17,6 +17,20 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string TraceOfProduct::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "Tr(" << arg_names[0] << " * " << arg_names[1] << "^T)";
+  return s.str();
+}
+
+Dim TraceOfProduct::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || xs[0] != xs[1]) {
+    cerr << "Bad arguments in TraceOfProduct: " << xs << endl;
+    abort();
+  }
+  return Dim({1});
+}
+
 string ConstScalarMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " * " << alpha;

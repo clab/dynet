@@ -33,6 +33,23 @@ using namespace std;
 
 namespace cnn {
 
+void TraceOfProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  fx.v[0] = (x1 * x2.transpose()).trace();
+}
+
+void TraceOfProduct::backward(const vector<const Tensor*>& xs,
+                              const Tensor& fx,
+                              const Tensor& dEdf,
+                              unsigned i,
+                              Tensor& dEdxi) const {
+  assert(i < 2);
+  const float d = dEdf.v[0];
+  auto xother = **xs[1 - i];
+  *dEdxi += d * xother;
+}
+
 void ConstScalarMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   *fx = (**xs[0]) * alpha;
 }

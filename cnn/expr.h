@@ -54,6 +54,7 @@ Expression dropout(const Expression& x, real p);
 Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
 
+Expression trace_of_product(const Expression& x, const Expression& y);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
 Expression dot_product(const Expression& x, const Expression& y);
