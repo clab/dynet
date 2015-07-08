@@ -6,7 +6,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -O3 -g -DEIGEN_FAST_MAT
 
 enable_testing()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+                    ${PROJECT_SOURCE_DIR}/external/easyloggingpp/src)
 
 function(find_cudnn)
   set(CUDNN_ROOT "" CACHE PATH "CUDNN root path")
