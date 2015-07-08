@@ -82,17 +82,14 @@ void TensorTools::Zero(Tensor& d) {
 
 void TensorTools::Randomize(Tensor& val, real scale) {
   uniform_real_distribution<real> distribution(-scale,scale);
-  auto b = [&] (real) {return distribution(*rndeng);};
+  auto b = [&] {return distribution(*rndeng);};
 #if HAVE_CUDA
   float* t = new float[val.d.size()];
-  Eigen::Map<Eigen::MatrixXf> m(t, val.d.rows(), val.d.cols());
-  m = Eigen::MatrixXf::NullaryExpr(val.d.rows(), val.d.cols(), b);
+  generate(t, t + val.d.size(), b);
   CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
   delete[] t;
 #else
-  Dim d({val.d.size()});
-  Tensor tv(d, val.v);
-  *tv = Eigen::MatrixXf::NullaryExpr(d.size(), 1, b);
+  generate(val.v, val.v + val.d.size(), b);
 #endif
 }
 
@@ -102,18 +99,14 @@ void TensorTools::Randomize(Tensor& d) {
 
 void TensorTools::RandomBernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
-  auto b = [&] (real) {return distribution(*rndeng) * scale;};
-  Dim d({val.d.size()});
-  Tensor tv(d, val.v);
-  *tv = Eigen::MatrixXf::NullaryExpr(d.size(), 1, b);
+  auto b = [&] {return distribution(*rndeng) * scale;};
+  generate(val.v, val.v + val.d.size(), b);
 }
 
 void TensorTools::RandomizeNormal(real mean, real stddev, Tensor& val) {
   normal_distribution<real> distribution(mean, stddev);
-  auto b = [&] (real) {return distribution(*rndeng);};
-  Dim d({val.d.size()});
-  Tensor tv(d, val.v);
-  *tv = Eigen::MatrixXf::NullaryExpr(d.size(), 1, b);
+  auto b = [&] {return distribution(*rndeng);};
+  generate(val.v, val.v + val.d.size(), b);
 }
 
 real rand01() {

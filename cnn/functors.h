@@ -12,6 +12,24 @@
 // if you need a new elementwise (nullary, unary, binary...)
 // functor, this is the place for it
 
+#define cast_uint32_t static_cast<uint32_t>
+
+static inline float fastpow2 (float p) {
+  float offset = (p < 0) ? 1.0f : 0.0f;
+  float clipp = (p < -126) ? -126.0f : p;
+  int w = clipp;
+  float z = clipp - w + offset;
+  union { uint32_t i; float f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 121.2740575f + 27.7280233f / (4.84252568f - z) - 1.49012907f * z) ) };
+
+  return v.f;
+}
+
+static inline float fastexp (float p) {
+  return fastpow2 (1.442695040f * p);
+}
+
+#define CNN_EXPF fastexp
+
 namespace cnn {
 
 struct FHuberForward {
@@ -105,7 +123,7 @@ struct FRectifyNegateBackward {
 struct FSoftmaxNormalize {
   explicit FSoftmaxNormalize(float logz) : logz(logz) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {
-    return expf(x - logz);
+    return CNN_EXPF(x - logz);
   }
   float logz;
 };
@@ -121,7 +139,7 @@ struct FSoftmaxBackward {
 struct FNegLogSoftmaxBackward {
   FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}
   CNN_DEVICE_FUNC inline float operator()(float t) const {
-    return expf(t - logz) * d;
+    return CNN_EXPF(t - logz) * d;
   }
   float logz;
   float d;
@@ -130,7 +148,7 @@ struct FNegLogSoftmaxBackward {
 struct FPtrNegLogSoftmaxBackward {
   FPtrNegLogSoftmaxBackward(const float* lz, const float* err) : logz(lz), d(err) {}
   CNN_DEVICE_FUNC inline float operator()(float t) const {
-    return expf(t - *logz) * *d;
+    return CNN_EXPF(t - *logz) * *d;
   }
   const float* logz;
   const float* d;
@@ -146,14 +164,14 @@ struct FLogSoftmaxNormalize {
 
 struct FWeightedError {
   float operator()(float t, float d) const {
-    return expf(t) * d / expf(t);
+    return CNN_EXPF(t) * d / CNN_EXPF(t);
   }
 };
 
 struct FLogSoftmaxBackward {
   explicit FLogSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
   CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return off_diag_sum * expf(t) + d;
+    return off_diag_sum * CNN_EXPF(t) + d;
     //return (off_diag_sum + d) * t;
   }
   float off_diag_sum;
@@ -180,7 +198,7 @@ struct FSoftSignBackward {
 
 struct FLogisticSigmoid {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
-    return 1.f / (1.f + expf(-x));
+    return 1.f / (1.f + CNN_EXPF(-x));
   }
 };
 

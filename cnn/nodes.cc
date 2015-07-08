@@ -569,7 +569,7 @@ EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   const float m = x.maxCoeff();
   float z = 0;
   for (unsigned i = 0; i < x.rows(); ++i)
-    z += expf(x(i,0) - m);
+    z += CNN_EXPF(x(i,0) - m);
   return m + logf(z);
 }
 
@@ -672,7 +672,7 @@ EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   }
   real z = 0;
   for (auto i : denom)
-    z += expf(x(i,0) - m);
+    z += CNN_EXPF(x(i,0) - m);
   return m + logf(z);
 }
 
@@ -700,7 +700,7 @@ void RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
   for (auto ind : denom)
     z += (*dEdf)(ind, 0);
   for (auto ind : denom)
-    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - expf((*fx)(ind, 0)) * z;
+    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - CNN_EXPF((*fx)(ind, 0)) * z;
 }
 
 // x_1 is a vector
