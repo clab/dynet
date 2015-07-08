@@ -10,6 +10,11 @@ You need the [development version of the Eigen library](https://bitbucket.org/ei
 
 #### Building
 
+First you need to fetch the dependent libraries
+
+   git submodule init
+   git submodule update
+
 In `src`, you need to first use [`cmake`](http://www.cmake.org/) to generate the makefiles
 
     mkdir build
