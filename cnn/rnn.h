@@ -63,7 +63,8 @@ struct SimpleRNNBuilder : public RNNBuilder {
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
-                            Model* model);
+                            Model* model,
+                            bool support_lags=false);
 
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
@@ -71,6 +72,8 @@ struct SimpleRNNBuilder : public RNNBuilder {
   Expression add_input_impl(const Expression& x) override;
 
  public:
+  Expression add_auxiliary_input(const Expression& x, const Expression &aux);
+
   void rewind_one_step() { h.pop_back(); }
   Expression back() const { return h.back().back(); }
   std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
@@ -91,6 +94,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   std::vector<Expression> h0;
 
   unsigned layers;
+  bool lagging;
 };
 
 } // namespace cnn
