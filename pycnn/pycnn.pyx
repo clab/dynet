@@ -1,5 +1,8 @@
+# on numpy arrays, see: https://github.com/cython/cython/wiki/tutorials-NumpyPointerToC
+
 import sys
 from cython.operator cimport dereference as deref
+import numpy as np
 # TODO:
 #  - set random seed (in CNN)
 #  - better input / output support
@@ -8,6 +11,11 @@ from cython.operator cimport dereference as deref
 #  - load/save models
 #  - make ComputationGraph a singleton???
 #  - NOTE: why do we need to filter short sentences in rnnlm.py or crash??
+
+# TODO:
+#  c2w.h   (build a word-from-letters encoder)
+#  dict.h  -- do we even need it?
+#  gru.h   -- it is not the same as lstm/rnn for some reason. but should be trivial to add
 
 # Examples:
 #  V xor  
@@ -43,6 +51,7 @@ cdef CDim Dim(dim):
         return CDim(dim)
     raise "Unsupported dimension",dim
 
+# {{{ Model / Parameters 
 cdef class Parameters:
     cdef CParameters *thisptr
     def __cinit__(self):
@@ -96,7 +105,7 @@ cdef class Model:
     def __contains__(self, name):
         return name in self.named_params
 
-
+# }}}
 
 # {{{ Computation Graph 
 
@@ -192,15 +201,17 @@ cdef class ComputationGraph:
     # 
     # We have the classes UnsignedValue, FloatValue and FloatVectorValue for
     # this purpose.
-    cpdef inputValue(self, FloatValue v):
-        self._inputs.append(v)
-        return inputValue(self, v)
-    cpdef inputVector(self, FloatVectorValue fv):
-        self._inputs.append(fv)
-        return inputVector(self, fv)
-    cpdef lookup(self, LookupParameters p, UnsignedValue v, update=True):
-        self._inputs.append(v)
-        return lookup(self, p, v, update)
+    cpdef inputValue(self, float v = 0.0):
+        return _inputExpression(self, v)
+    cpdef inputVector(self, int dim):
+        return _vecInputExpression(self, vector[float](dim))
+    cpdef inputMatrix(self, int d1, int d2):
+        return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
+    cpdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
+        return _lookupExpression(self, p, v, update)
+    cpdef outputPicker(self, Expression e, unsigned v = 0):
+        r = _pickerExpression(self, e, v)
+        return r
 
 
 
@@ -216,7 +227,8 @@ cdef _scalarsub(float a, Expression b): return Expression.from_cexpr(c_op_scalar
 cdef _cmul(Expression a, float b): return Expression.from_cexpr(c_op_scalar_mul(a.c(), b))
 
 cdef class Expression: #{{{
-    cdef CComputationGraph *cg
+    #cdef CComputationGraph *cg
+    cdef CComputationGraph* cg
     cdef VariableIndex vindex
     def __cinit__(self):
         self.cg = NULL
@@ -234,8 +246,31 @@ cdef class Expression: #{{{
         return str(self)
     def __str__(self):
         return "exprssion %s" % <int>self.vindex
-    #cdef scalar(self):
-    #    return c_as_scalar(self.cg.get_value(self.vindex))
+
+    cpdef scalar_value(self):
+        return c_as_scalar(self.cg.get_value(self.vindex))
+
+    cpdef vec_value(self):
+        return c_as_vector(self.cg.get_value(self.vindex))
+
+    cpdef npvalue(self):
+        cdef CTensor t
+        cdef CDim dim
+        t = self.cg.get_value(self.vindex)
+        dim = t.d
+        arr = np.array(c_as_vector(t))
+        if dim.ndims() == 2:
+            arr = arr.reshape(dim.rows(), dim.cols())
+        return arr
+
+    cpdef value(self):
+        cdef CTensor t
+        t = self.cg.get_value(self.vindex)
+        if t.d.ndims() == 2:
+            return self.npvalue()
+        vec = self.vec_value()
+        if len(vec) == 1: return vec[0]
+        return vec
 
     def __add__(self, other): return _add(self,other)
     def __mul__(self, other):
@@ -261,18 +296,7 @@ cpdef Expression parameter(ComputationGraph g, Parameters p):
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller
 
-#cdef class InputExpression(Expression):
-#    cdef float val
-#    def __cinit__(self, ComputationGraph g, float s):
-#        self.val = s
-#        self.cg = g.thisptr
-#        cdef CExpression e
-#        e = c_input(self.cg[0], &(self.val))
-#        self.vindex = e.i
-#    def set(self, float s):
-#        self.val = s
-
-cdef class inputExpression(Expression):
+cdef class _inputExpression(Expression):
     cdef FloatValue val
     def __cinit__(self, ComputationGraph g, float s):
         self.val = FloatValue(s)
@@ -282,54 +306,24 @@ cdef class inputExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, float s):
+        self.cg.invalidate()
         self.val.set(s)
-#
-#cdef class VecInputExpression(Expression):
-#    cdef vector[float] *data
-#    def __cinit__(self, ComputationGraph g, vector[float] data):
-#        cdef float f
-#        dim = len(data)
-#        self.data = new vector[float]()
-#        for f in data:
-#            self.data.push_back(f)
-#        self.cg = g.thisptr
-#        cdef CExpression e
-#        e = c_input(self.cg[0], Dim(dim), self.data)
-#        self.vindex = e.i
-#    def __dealloc__(self):
-#        print >> sys.stderr,"del"
-#        del self.data
-#    def set(self, vector[float] data):
-#        cdef float f
-#        self.data.clear()
-#        for f in data:
-#            self.data.push_back(f)
 
-cdef class vecInputExpression(Expression):
+cdef class _vecInputExpression(Expression):
     cdef FloatVectorValue val
-    def __cinit__(self, ComputationGraph g, FloatVectorValue val):
-        self.val = val
+    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None):
+        self.val = FloatVectorValue(val)
+        if dim is None: dim = self.val.size()
         self.cg = g.thisptr
         cdef CExpression e
-        e = c_input(self.cg[0], Dim(val.size()), self.val.addr())
+        e = c_input(self.cg[0], Dim(dim), self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, vector[float] data):
+        self.cg.invalidate()
         self.val.set(data)
 
-#cdef class LookupExpression(Expression):
-#    cdef unsigned index
-#    def __cinit__(self, ComputationGraph g, LookupParameters p, unsigned index=0):
-#        self.index = 1
-#        #self.pindex = &(self.index)
-#        #self.pindex[0] = index
-#        self.cg = g.thisptr
-#        cdef CExpression e
-#        e = c_lookup(self.cg[0], p.thisptr, &(self.index))
-#        self.vindex = e.i
-#    def set(self,i): self.index=i
-
-cdef class lookupExpression(Expression):
+cdef class _lookupExpression(Expression):
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, LookupParameters p, unsigned index=0, update=True):
         self.val = UnsignedValue(index)
@@ -341,50 +335,26 @@ cdef class lookupExpression(Expression):
             e = c_const_lookup(self.cg[0], p.thisptr, self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
-    def set(self,i): self.val.set(i)
+    def set(self,i):
+        self.cg.invalidate()
+        self.val.set(i)
 
-#cdef class ConstLookupExpression(Expression):
-#    """Const in the sense that the lookup table is not updated.
-#    """
-#    cdef unsigned index
-#    def __cinit__(self, ComputationGraph g, LookupParameters p, unsigned index):
-#        self.index = index
-#        self.cg = g.thisptr
-#        cdef CExpression e
-#        e = c_const_lookup(self.cg[0], p.thisptr, &(self.index))
-#        self.vindex = e.i
-#    def set_index(self, unsigned index):
-#        self.index = index
+cdef class _pickerExpression(Expression):
+    cdef UnsignedValue val
+    def __cinit__(self, ComputationGraph g, Expression e, unsigned index=0):
+        self.val = UnsignedValue(index)
+        self.cg = e.cg
+        cdef CExpression ce
+        ce = c_pick(e.c(), self.val.addr())
+        self.vindex = ce.i
+        g._inputs.append(self)
+    def set(self,i):
+        self.cg.invalidate()
+        self.val.set(i)
+
+pick = _pickerExpression
+
 # }}}
-
-#cdef class pick(Expression):
-#    cdef IntValue index
-#    def __cinit__(self, Expression x, IntValue index):
-#        self.index = index
-#        self.cg = x.cg
-#        cdef CExpression e
-#        e = c_pick(x.c(), <unsigned*>&(self.index.val))
-#        self.vindex = e.i
-#    #def set_index(self, unsigned i):
-#    #    self.index = i
-
-
-cdef Expression inputValue(ComputationGraph cg, FloatValue v):
-    return Expression.from_cexpr(c_input(cg.thisptr[0], v.addr()))
-
-cdef Expression inputVector(ComputationGraph cg, FloatVectorValue v):
-    return Expression.from_cexpr(c_input(cg.thisptr[0], Dim(v.size()), v.addr()))
-
-cdef Expression lookup(ComputationGraph cg, LookupParameters p, UnsignedValue v, update):
-    if update:
-        return Expression.from_cexpr(c_lookup(cg.thisptr[0], p.thisptr, v.addr()))
-    else:
-        return Expression.from_cexpr(c_const_lookup(cg.thisptr[0], p.thisptr, v.addr()))
-
-cpdef Expression pick(Expression x, UnsignedValue v):
-    # TODO register automatically in CG!! how?
-    #x.cg._inputs.append(v)
-    return Expression.from_cexpr(c_pick(x.c(), v.addr()))
 
 
 # binary-exp
@@ -483,7 +453,8 @@ cdef class hinge(Expression):
     
 # {{{ RNNS / Builders
 # TODO: unify these with inheritance
-cdef class SimpleRNNBuilder:
+
+cdef class SimpleRNNBuilder: # {{{
     cdef CSimpleRNNBuilder *thisptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
@@ -515,8 +486,9 @@ cdef class SimpleRNNBuilder:
         for cexp in cexps:
             res.append(Expression.from_cexpr(cexp))
         return res
+#}}}
     
-cdef class LSTMBuilder:
+cdef class LSTMBuilder: # {{{
     cdef CLSTMBuilder *thisptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
@@ -548,7 +520,8 @@ cdef class LSTMBuilder:
         for cexp in cexps:
             res.append(Expression.from_cexpr(cexp))
         return res
-    
+# }}}
+
 # }}}
 
 # {{{ Training 
@@ -556,6 +529,58 @@ cdef class SimpleSGDTrainer:
     cdef CSimpleSGDTrainer *thisptr
     def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.1):
         self.thisptr = new CSimpleSGDTrainer(m.thisptr, lam, e0)
+    def __dealloc__(self):
+        del self.thisptr
+    cpdef update(self, float s):
+        self.thisptr.update(s)
+    cpdef update_epoch(self, float r = 1.0):
+        self.thisptr.update_epoch(r)
+    cpdef status(self):
+        self.thisptr.status()
+
+cdef class MomentumSGDTrainer:
+    cdef CMomentumSGDTrainer *thisptr
+    def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.01, float mom = 0.9):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, lam, e0, mom)
+    def __dealloc__(self):
+        del self.thisptr
+    cpdef update(self, float s):
+        self.thisptr.update(s)
+    cpdef update_epoch(self, float r = 1.0):
+        self.thisptr.update_epoch(r)
+    cpdef status(self):
+        self.thisptr.status()
+
+cdef class AdagradTrainer:
+    cdef CAdagradTrainer *thisptr
+    def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.1, float eps = 1e-20):
+        self.thisptr = new CAdagradTrainer(m.thisptr, lam, e0, eps)
+    def __dealloc__(self):
+        del self.thisptr
+    cpdef update(self, float s):
+        self.thisptr.update(s)
+    cpdef update_epoch(self, float r = 1.0):
+        self.thisptr.update_epoch(r)
+    cpdef status(self):
+        self.thisptr.status()
+
+cdef class AdadeltaTrainer:
+    cdef CAdadeltaTrainer *thisptr
+    def __cinit__(self, Model m, float lam = 1e-6, float eps = 1e-6, float rho = 0.95):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, lam, eps, rho)
+    def __dealloc__(self):
+        del self.thisptr
+    cpdef update(self, float s):
+        self.thisptr.update(s)
+    cpdef update_epoch(self, float r = 1.0):
+        self.thisptr.update_epoch(r)
+    cpdef status(self):
+        self.thisptr.status()
+
+cdef class AdamTrainer:
+    cdef CAdamTrainer *thisptr
+    def __cinit__(self, Model m, float lam = 1e-6, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8 ):
+        self.thisptr = new CAdamTrainer(m.thisptr, lam, alpha, beta_1, beta_2, eps)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s):

@@ -21,6 +21,7 @@ cdef extern from "cnn/dim.h" namespace "cnn":
 
 cdef extern from "cnn/tensor.h" namespace "cnn":
     cdef cppclass CTensor "cnn::Tensor": 
+        CDim d
         pass
     float c_as_scalar "cnn::as_scalar" (CTensor& t)
     vector[float] c_as_vector "cnn::as_vector" (CTensor& t)
@@ -71,7 +72,8 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
         
         const CTensor& forward()
         const CTensor& incremental_forward()
-        #const CTensor& get_value(VariableIndex i)
+        const CTensor& get_value(VariableIndex i)
+        void invalidate()
         void backward()
 
         void PrintGraphviz() const
@@ -79,6 +81,30 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
 cdef extern from "cnn/training.h" namespace "cnn":
     cdef cppclass CSimpleSGDTrainer "cnn::SimpleSGDTrainer":
         CSimpleSGDTrainer(CModel* m, float lam, float e0)
+        void update(float s)
+        void update_epoch(float r)
+        void status()
+
+    cdef cppclass CMomentumSGDTrainer "cnn::MomentumSGDTrainer":
+        CMomentumSGDTrainer(CModel* m, float lam, float e0, float mom)
+        void update(float s)
+        void update_epoch(float r)
+        void status()
+
+    cdef cppclass CAdagradTrainer "cnn::AdagradTrainer":
+        CAdagradTrainer(CModel* m, float lam, float e0, float eps)
+        void update(float s)
+        void update_epoch(float r)
+        void status()
+
+    cdef cppclass CAdadeltaTrainer "cnn::AdadeltaTrainer":
+        CAdadeltaTrainer(CModel* m, float lam, float eps, float rho)
+        void update(float s)
+        void update_epoch(float r)
+        void status()
+
+    cdef cppclass CAdamTrainer "cnn::AdamTrainer":
+        CAdamTrainer(CModel* m, float lam, float alpha, float beta_1, float beta_2, float eps)
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -182,5 +208,4 @@ cdef extern from "cnn/lstm.h" namespace "cnn":
         CExpression back()
         vector[CExpression] final_h()
         vector[CExpression] final_s()
-
 
