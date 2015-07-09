@@ -51,6 +51,12 @@ cdef CDim Dim(dim):
         return CDim(dim)
     raise "Unsupported dimension",dim
 
+cdef c_tensor_as_np(CTensor &t):
+    # TODO: make more efficient, with less copy
+    arr = np.array(c_as_vector(t))
+    if t.d.ndims() == 1: return arr
+    else: return arr.reshape(t.d.rows(), t.d.cols())
+
 # {{{ Model / Parameters 
 cdef class Parameters:
     cdef CParameters *thisptr
@@ -62,6 +68,30 @@ cdef class Parameters:
         self.thisptr = ptr
         return self
 
+    cpdef as_array(self):
+        """
+        Return as a numpy array.
+        """
+        cdef CTensor t
+        return c_tensor_as_np(self.thisptr.values)
+
+    # TODO: make more efficient
+    cpdef load_array(self, arr):
+        cdef CTensor t
+        cdef float* vals
+        t = self.thisptr.values
+        shape = arr.shape
+        if len(shape) == 1:
+            assert(t.d.ndims() == 1)
+            assert(t.d.size() == arr.size)
+        if len(shape) == 2:
+            assert(t.d.rows() == shape[0] and t.d.cols() == shape[1])
+        vals = t.v
+        arr = arr.flatten()
+        for i in xrange(arr.size):
+            vals[i] = arr[i]
+
+
 cdef class LookupParameters:
     cdef CLookupParameters *thisptr
     def __cinit__(self):
@@ -71,6 +101,27 @@ cdef class LookupParameters:
         self = LookupParameters()
         self.thisptr = ptr
         return self
+
+    cpdef init_from_array(self, arr):
+        if len(arr) > self.thisptr.values.size():
+            raise Exception("too many rows")
+        if arr.shape[1] != self.thisptr.values[0].d.rows():
+            raise Exception("dim mismatch")
+        cdef vector[float] r
+        for i,row in enumerate(arr):
+            self.init_row(i, row)
+
+    cpdef init_row(self, unsigned i, vector[float] row):
+        self.thisptr.Initialize(i, row)
+
+    cpdef as_array(self):
+        """
+        Return as a numpy array.
+        """
+        cdef vector[CTensor] vals
+        vals = self.thisptr.values
+        return np.vstack([c_tensor_as_np(t).reshape(1,-1) for t in vals])
+
 
 cdef class Model:
     cdef CModel *thisptr
@@ -104,6 +155,13 @@ cdef class Model:
 
     def __contains__(self, name):
         return name in self.named_params
+
+    #def load(self, fname):
+    #    self.thisptr.load(fname)
+
+    #def save(self, fname):
+    #    self.thisptr.save(fname)
+
 
 # }}}
 
@@ -590,8 +648,4 @@ cdef class AdamTrainer:
     cpdef status(self):
         self.thisptr.status()
 #}}}
-
-
-
-
 

@@ -1,4 +1,5 @@
 from libcpp.vector cimport vector
+from libcpp.string cimport string
 
 ctypedef float real
 
@@ -22,6 +23,7 @@ cdef extern from "cnn/dim.h" namespace "cnn":
 cdef extern from "cnn/tensor.h" namespace "cnn":
     cdef cppclass CTensor "cnn::Tensor": 
         CDim d
+        float* v
         pass
     float c_as_scalar "cnn::as_scalar" (CTensor& t)
     vector[float] c_as_vector "cnn::as_vector" (CTensor& t)
@@ -29,6 +31,7 @@ cdef extern from "cnn/tensor.h" namespace "cnn":
 cdef extern from "cnn/model.h" namespace "cnn":
     cdef cppclass CParameters "cnn::Parameters":
         CParameters()
+        CTensor values
         #void scale_parameters(float a) # override;
         #void squared_l2norm(float* sqnorm) const # override;
         #void g_squared_l2norm(float* sqnorm) const # override;
@@ -39,13 +42,14 @@ cdef extern from "cnn/model.h" namespace "cnn":
 
     cdef cppclass CLookupParameters "cnn::LookupParameters":
         CLookupParameters()
+        vector[CTensor] values
         #void scale_parameters(float a) # override;
         #void squared_l2norm(float* sqnorm) const # override;
         #void g_squared_l2norm(float* sqnorm) const # override;
         #size_t size() const # override;
         #void accumulate_grad(const Tensor& g)
         #void clear()
-        #void Initialize(unsigned index, const vector[float]& val)
+        void Initialize(unsigned index, const vector[float]& val)
         pass
 
     cdef cppclass CModel "cnn::Model":
@@ -53,6 +57,8 @@ cdef extern from "cnn/model.h" namespace "cnn":
         #float gradient_l2_norm() const
         CParameters* add_parameters(CDim& d, float scale = 0.0)
         CLookupParameters* add_lookup_parameters(unsigned n, const CDim& d)
+        #void save(string fname)
+        #void load(string fname)
 
 cdef extern from "cnn/cnn.h" namespace "cnn":
     ctypedef unsigned VariableIndex
