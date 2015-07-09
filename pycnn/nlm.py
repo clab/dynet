@@ -31,7 +31,7 @@ cg = ComputationGraph()
 
 class InputWordIds:
     def __init__(self, cg, lookup_params, nwords):
-        self.exprs = [LookupExpression(cg, lookup_params) for _ in xrange(nwords)]
+        self.exprs = [cg.lookup(lookup_params) for _ in xrange(nwords)]
     def feed(self, word_ids):
         [e.set(i) for (e,i) in zip(self.exprs,word_ids)]
 
@@ -49,8 +49,8 @@ r = hb + (C * cvec)
 nl = rectify(r)
 o2 = bias + (R * nl)
 ydist = log_softmax(o2)
-expected_outcome = IntValue()
-nerr = -pick(ydist, expected_outcome) # TODO: make nicer API!
+val_at_expected_outcome = cg.outputPicker(ydist)
+nerr = -val_at_expected_outcome
 
 cg.PrintGraphviz()
 
@@ -64,7 +64,7 @@ for iter in xrange(100):
     start = time.time()
     for i, (context_words, target_word) in enumerate(data):
         contexts.feed([vocab.w2i[w] for w in context_words])
-        expected_outcome.set(vocab.w2i[target_word])
+        val_at_expected_outcome.set(vocab.w2i[target_word])
         loss += cg.forward_scalar()
         cg.backward()
         sgd.update(1.0)

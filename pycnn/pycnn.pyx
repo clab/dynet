@@ -47,7 +47,7 @@ cdef CDim Dim(dim):
         else:
             raise "Unsupported dimension",dim
     # hope it's a number. TODO: error checking / exception
-    if isinstance(dim, int):
+    if isinstance(dim, (int, float)):
         return CDim(dim)
     raise "Unsupported dimension",dim
 
@@ -531,7 +531,7 @@ cdef class SimpleSGDTrainer:
         self.thisptr = new CSimpleSGDTrainer(m.thisptr, lam, e0)
     def __dealloc__(self):
         del self.thisptr
-    cpdef update(self, float s):
+    cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
@@ -544,7 +544,7 @@ cdef class MomentumSGDTrainer:
         self.thisptr = new CMomentumSGDTrainer(m.thisptr, lam, e0, mom)
     def __dealloc__(self):
         del self.thisptr
-    cpdef update(self, float s):
+    cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
@@ -557,7 +557,7 @@ cdef class AdagradTrainer:
         self.thisptr = new CAdagradTrainer(m.thisptr, lam, e0, eps)
     def __dealloc__(self):
         del self.thisptr
-    cpdef update(self, float s):
+    cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
@@ -570,7 +570,7 @@ cdef class AdadeltaTrainer:
         self.thisptr = new CAdadeltaTrainer(m.thisptr, lam, eps, rho)
     def __dealloc__(self):
         del self.thisptr
-    cpdef update(self, float s):
+    cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
@@ -583,7 +583,7 @@ cdef class AdamTrainer:
         self.thisptr = new CAdamTrainer(m.thisptr, lam, alpha, beta_1, beta_2, eps)
     def __dealloc__(self):
         del self.thisptr
-    cpdef update(self, float s):
+    cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
