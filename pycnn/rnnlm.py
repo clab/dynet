@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     #fout = file("a","w")
     chars = loss = 0.0
-    for ITER in xrange(1):
+    for ITER in xrange(100):
         random.shuffle(train)
         for i,sent in enumerate(train):
             if i % 50 == 0:
@@ -112,7 +112,6 @@ if __name__ == '__main__':
                     print "".join([vocab.i2w[c] for c in samp]).strip()
                 loss = 0.0
                 chars = 0.0
-            if i > 1000: break
                 
             #if len(sent) < 4: continue
             chars += len(sent)-1
@@ -133,7 +132,3 @@ if __name__ == '__main__':
             pass
             #samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["</s>"])
             #print " ".join([vocab.i2w[c] for c in samp])
-    params = model["lookup"]
-    x = params.get()
-    print x
-    print x.shape
