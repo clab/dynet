@@ -406,11 +406,26 @@ cdef class _pickerExpression(Expression):
         ce = c_pick(e.c(), self.val.addr())
         self.vindex = ce.i
         g._inputs.append(self)
-    def set(self,i):
+    def set_index(self,i):
         self.cg.invalidate()
         self.val.set(i)
 
 pick = _pickerExpression
+
+cdef class _hingeExpression(Expression):
+    cdef UnsignedValue val
+    def __cinit__(self, ComputationGraph g, Expression x, unsigned index, float m=1.0):
+        self.val = UnsignedValue(index)
+        self.cg = x.cg
+        cdef CExpression e
+        e = c_hinge(x.c(), self.val.addr(), m)
+        self.vindex = e.i
+        g._inputs.append(self)
+    def set_index(self, unsigned i):
+        self.cg.invalidate()
+        self.val.set(i)
+
+hinge = _hingeExpression
 
 # }}}
 
@@ -495,17 +510,6 @@ cpdef Expression affine_transform(list exprs):
         ves.push_back(e.c())
     return Expression.from_cexpr(c_affine_transform(ves))
 
-#expr-ptr
-cdef class hinge(Expression):
-    cdef unsigned index
-    def __cinit__(self, Expression x, unsigned index, float m=1.0):
-        self.index = index
-        self.cg = x.cg
-        cdef CExpression e
-        e = c_hinge(x.c(), &(self.index), m)
-        self.vindex = e.i
-    def set_index(self, unsigned i):
-        self.index = i
 
 # }}}
     
