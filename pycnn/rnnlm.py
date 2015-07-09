@@ -33,7 +33,7 @@ class RNNLanguageModel:
         es=[]
         for (cw,nw) in zip(sent,sent[1:]):
             # assume word is already a word-id
-            x_t = lookupExpression(cg, self.m["lookup"], int(cw))
+            x_t = cg.lookup(self.m["lookup"], int(cw))
             y_t = builder.add_input(x_t) # TODO what does this do exactly?
             r_t = bias + (R * y_t)
             #f = softmax(r_t)
@@ -62,7 +62,7 @@ class RNNLanguageModel:
         bias = cg.parameters(self.m, "bias")
         cw = first #TODO: start symbol?
         while True:
-            x_t = lookupExpression(cg, self.m["lookup"], cw)
+            x_t = cg.lookup(self.m["lookup"], cw)
             y_t = builder.add_input(x_t) # TODO what does this do exactly?
 
             #s = concatenate(builder.final_h())
