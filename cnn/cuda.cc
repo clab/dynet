@@ -16,6 +16,8 @@ void Initialize_GPU(int& argc, char**& argv) {
     cerr << "No GPUs found, recompile without DENABLE_CUDA=1\n";
     abort();
   }
+  size_t free_bytes, total_bytes, max_free = 0;
+  int selected = 0;
   for (int i = 0; i < nDevices; i++) {
     cudaDeviceProp prop;
     CUDA_CHECK(cudaGetDeviceProperties(&prop, i));
@@ -24,8 +26,15 @@ void Initialize_GPU(int& argc, char**& argv) {
     cerr << "  Memory Clock Rate (KHz): " << prop.memoryClockRate << endl;
     cerr << "  Memory Bus Width (bits): " << prop.memoryBusWidth << endl;
     cerr << "  Peak Memory Bandwidth (GB/s): " << (2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6) << endl << endl;
+    CUDA_CHECK(cudaSetDevice(i));
+    CUDA_CHECK(cudaMemGetInfo( &free_bytes, &total_bytes ));
+    CUDA_CHECK(cudaDeviceReset());
+    cerr << "  Memory Free (MB): " << (int)free_bytes/1.0e6 << "/" << (int)total_bytes/1.0e6 << endl << endl;
+    if(free_bytes > max_free) {
+        max_free = free_bytes;
+        selected = i;
+    }
   }
-  int selected = 0;
   cerr << "**USING DEVICE: " << selected << endl;
   CUDA_CHECK(cudaSetDevice(selected));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
