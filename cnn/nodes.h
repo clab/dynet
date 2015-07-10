@@ -242,6 +242,7 @@ struct ConcatenateColumns : public Node {
   template <typename T> explicit ConcatenateColumns(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
