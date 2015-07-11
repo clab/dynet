@@ -27,8 +27,8 @@ class RNNLanguageModel:
         builder.new_graph(cg)  # TODO WHY?
         builder.start_new_sequence()
 
-        R = cg.parameters(self.m, "R")
-        bias = cg.parameters(self.m, "bias")
+        R = cg.parameters(self.m["R"])
+        bias = cg.parameters(self.m["bias"])
         errs = [] # will hold expressions
         es=[]
         for (cw,nw) in zip(sent,sent[1:]):
@@ -58,8 +58,8 @@ class RNNLanguageModel:
         builder.new_graph(cg)  # TODO WHY?
         builder.start_new_sequence()
 
-        R = cg.parameters(self.m, "R")
-        bias = cg.parameters(self.m, "bias")
+        R = cg.parameters(self.m["R"])
+        bias = cg.parameters(self.m["bias"])
         cw = first #TODO: start symbol?
         while True:
             x_t = cg.lookup(self.m["lookup"], cw)
