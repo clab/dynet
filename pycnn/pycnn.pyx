@@ -68,6 +68,10 @@ cdef class Parameters:
         self.thisptr = ptr
         return self
 
+    cpdef shape(self):
+        if self.thisptr.dim.ndims() == 1: return (self.thisptr.dim.rows())
+        return (self.thisptr.dim.rows(), self.thisptr.dim.cols())
+
     cpdef as_array(self):
         """
         Return as a numpy array.
@@ -111,6 +115,11 @@ cdef class LookupParameters:
         for i,row in enumerate(arr):
             self.init_row(i, row)
 
+    cpdef shape(self):
+        if self.thisptr.dim.cols() != 1:
+            return (self.thisptr.values.size(), self.thisptr.dim.rows(), self.thisptr.dim.cols())
+        return (self.thisptr.values.size(), self.thisptr.dim.rows())
+
     cpdef init_row(self, unsigned i, vector[float] row):
         self.thisptr.Initialize(i, row)
 
@@ -126,28 +135,36 @@ cdef class LookupParameters:
 cdef class Model:
     cdef CModel *thisptr
     cdef object named_params
+    cdef object lookups
+    cdef object regular
     def __cinit__(self):
         self.thisptr = new CModel()
     def __init__(self):
         self.named_params = {}
+        self.lookups = []
+        self.regular = []
 
     def __dealloc__(self): del self.thisptr
 
     def add_parameters(self, name, dim, scale=0):
         cdef CParameters* p
+        assert(name not in self.named_params), "name already registered"
         p = self.thisptr.add_parameters(Dim(dim))
         cdef Parameters pp = Parameters.wrap_ptr(p)
         self.named_params[name] = pp
+        self.regular.append(name)
         return pp
 
-    def add_lookup_parameters(self, name, dim, scale=0):
-        assert(isinstance(dim, tuple))
+    def add_lookup_parameters(self, name, dim):
+        assert(isinstance(dim, tuple)), "name already registered"
+        assert(name not in self.named_params)
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
         cdef CLookupParameters* p
         p = self.thisptr.add_lookup_parameters(nids, Dim(rest))
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         self.named_params[name] = pp
+        self.lookups.append(name)
         return pp
 
     def __getitem__(self, name):
@@ -155,6 +172,11 @@ cdef class Model:
 
     def __contains__(self, name):
         return name in self.named_params
+
+    def parameters(self): return self.named_params.keys()
+
+    def lookup_parameters(self): return list(self.lookups)
+    def regular_parameters(self): return list(self.regular)
 
     #def load(self, fname):
     #    self.thisptr.load(fname)
@@ -214,18 +236,29 @@ cdef class ComputationGraph:
         self._inputs = []
         return self
 
-    def parameters(self, model, name, dim=None):
-        cdef Parameters params
+    #def parameters(self, model, name, dim=None):
+    #    cdef Parameters params
+    #    cdef Expression result
+    #    if name in model:
+    #        params = model[name]
+    #    else:
+    #        assert(dim is not None)
+    #        params = model.add_parameters(name, dim)
+    #    result = Expression.from_cexpr(c_parameter(self.thisptr[0], params.thisptr))
+    #    return result
+
+    def parameters(self, Parameters params):
         cdef Expression result
-        if name in model:
-            params = model[name]
-        else:
-            assert(dim is not None)
-            params = model.add_parameters(name, dim)
         result = Expression.from_cexpr(c_parameter(self.thisptr[0], params.thisptr))
-        #result = self._expr(parameter(self.thisptr[0], params.thisptr))
-        #result = Expression.wrap_ptr(&(parameter(self.thisptr[0], params.thisptr)))
         return result
+
+    def params_from_model(self, model):
+        results = {}
+        for name in model.regular_parameters():
+            results[name] = self.parameters(model[name])
+        for name in model.lookup_parameters():
+            results[name] = self.lookup(model[name])
+        return results
 
     cpdef forward_scalar(self):
         return c_as_scalar(self.thisptr.forward())
@@ -238,6 +271,9 @@ cdef class ComputationGraph:
 
     cpdef inc_forward_vec(self):
         return c_as_vector(self.thisptr.incremental_forward())
+
+    cpdef forward(self): self.thisptr.forward()
+    cpdef inc_forward(self): self.thisptr.incremental_forward()
 
     cpdef backward(self):
         self.thisptr.backward()

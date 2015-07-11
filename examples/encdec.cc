@@ -210,24 +210,24 @@ int main(int argc, char** argv) {
     double loss = 0;
     unsigned chars = 0;
     for (unsigned i = 0; i < report_every_i; ++i) {
-      if (si == training.size()) {
-	si = 0;
-	if (first) { first = false; } else { sgd->update_epoch(); }
-	cerr << "**SHUFFLE\n";
-	random_shuffle(order.begin(), order.end());
-      }
-      
-      // build graph for this instance
-      ComputationGraph cg;
-      auto& sent = training[order[si]];
-      chars += sent.size() - 1;
-      ++si;
-      lm.BuildGraph(sent, sent, cg);
-      //cg.PrintGraphviz();
-      loss += as_scalar(cg.forward());
-      cg.backward();
-      sgd->update();
-      ++lines;
+        if (si == training.size()) {
+            si = 0;
+            if (first) { first = false; } else { sgd->update_epoch(); }
+            cerr << "**SHUFFLE\n";
+            random_shuffle(order.begin(), order.end());
+        }
+
+        // build graph for this instance
+        ComputationGraph cg;
+        auto& sent = training[order[si]];
+        chars += sent.size() - 1;
+        ++si;
+        lm.BuildGraph(sent, sent, cg);
+        //cg.PrintGraphviz();
+        loss += as_scalar(cg.forward());
+        cg.backward();
+        sgd->update();
+        ++lines;
     }
     sgd->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
