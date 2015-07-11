@@ -17,6 +17,20 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string Max::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "max{" << arg_names[0] << ", " << arg_names[1] << "}";
+  return s.str();
+}
+
+Dim Max::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || xs[0] != xs[1]) {
+    cerr << "Bad arguments in Max: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string TraceOfProduct::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "Tr(" << arg_names[0] << " * " << arg_names[1] << "^T)";
