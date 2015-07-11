@@ -21,8 +21,12 @@ float Trainer::clip_gradients() {
 }
 
 void SimpleSGDTrainer::update(real scale) {
+    update(model->lookup_parameters_list(), model->parameters_list(), scale);
+}
+
+void SimpleSGDTrainer::update(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale) {
   const float gscale = clip_gradients();
-  for (auto p : model->parameters_list()) {
+  for (auto p : params) {
 #if HAVE_CUDA
     gpu::sgd_update(p->values.d.size(), p->g.v, p->values.v, eta * scale * gscale, lambda);
 #else
@@ -31,7 +35,7 @@ void SimpleSGDTrainer::update(real scale) {
 #endif
     p->clear();
   }
-  for (auto p : model->lookup_parameters_list()) {
+  for (auto p : lookup_params) {
     for (auto i : p->non_zero_grads) {
 #if HAVE_CUDA
       gpu::sgd_update(p->values[i].d.size(), p->grads[i].v, p->values[i].v, eta * scale * gscale, lambda);
