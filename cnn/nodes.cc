@@ -33,6 +33,38 @@ using namespace std;
 
 namespace cnn {
 
+size_t Max::aux_storage_size() const {
+  return dim.size() * sizeof(char);
+}
+
+void Max::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  float* y = fx.v;
+  const float* x1 = xs[0]->v;
+  const float* x2 = xs[0]->v;
+  char* one_is_bigger = static_cast<char*>(aux_mem);
+  int s = dim.size();
+  for (int i = 0; i < s; ++i) {
+    bool o = x1[i] > x2[i];
+    one_is_bigger[i] = o;
+    y[i] = o ? x1[i] : x2[i];
+  }
+}
+
+void Max::backward(const vector<const Tensor*>& xs,
+                              const Tensor& fx,
+                              const Tensor& dEdf,
+                              unsigned i,
+                              Tensor& dEdxi) const {
+  assert(i < 2);
+  bool invert = (i == 1);
+  int s = dim.size();
+  float* d = dEdxi.v;
+  const char* one_is_bigger = static_cast<const char*>(aux_mem);
+  for (int i = 0; i < s; ++i) {
+    d[i] = one_is_bigger[i] ^ invert;
+  }
+}
+
 void TraceOfProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x1 = **xs[0];
   auto x2 = **xs[1];
