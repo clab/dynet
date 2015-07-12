@@ -24,11 +24,13 @@ static inline float fastpow2 (float p) {
   return v.f;
 }
 
+#if 1
 static inline float fastexp (float p) {
   return fastpow2 (1.442695040f * p);
 }
-
-#if 0
+#else
+// Schraudolph version, but it's a bit crappy in terms of
+// performance and not that much faster
 #define EXPAF (8388608 / 0.6931471806f)
 static inline float fastexp (float p) {
   union { float f; int32_t i; } eco;
@@ -109,6 +111,12 @@ struct FTanh {
 #else
     return tanhf(x);
 #endif
+  }
+};
+
+struct FMaxBackwardInv {
+  CNN_DEVICE_FUNC inline float operator()(float u, float d) const {
+    return (1.f - u) * d;
   }
 };
 
