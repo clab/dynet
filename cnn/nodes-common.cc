@@ -277,14 +277,17 @@ string Concatenate::as_string(const vector<string>& arg_names) const {
 
 Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   unsigned new_rows = 0;
+  Dim dr = xs[0];
   for (auto& d : xs) {
-    if (!LooksLikeVector(d)) {
+    new_rows += d[0];
+    dr.set(0, d[0]);
+    if (dr != d) {
       cerr << "Bad input dimensions in Concatenate: " << xs << endl;
       abort();
     }
-    new_rows += d[0];
   }
-  return Dim({new_rows});
+  dr.set(0, new_rows);
+  return dr;
 }
 
 string ConcatenateColumns::as_string(const vector<string>& arg_names) const {

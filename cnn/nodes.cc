@@ -431,12 +431,12 @@ void Concatenate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   for (auto x : xs) {
     src_row_indices[k++] = ind;
     auto & xi = *x;
-    assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
     const unsigned rows = xi.d.rows();
 #if HAVE_CUDA
+    assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
     CUDA_CHECK(cudaMemcpyAsync(&fx.v[ind], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
 #else
-    (*fx).block(ind, 0, rows, 1) = *xi;
+    (*fx).middleRows(ind, rows) = *xi;
 #endif
     ind += rows;
   }
@@ -453,7 +453,7 @@ void Concatenate::backward(const vector<const Tensor*>& xs,
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
 #else
-  *dEdxi += (*dEdf).block(begin, 0, rows, 1);
+  *dEdxi += (*dEdf).middleRows(begin, rows);
 #endif
 }
 
