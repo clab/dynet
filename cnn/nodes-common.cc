@@ -17,6 +17,20 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string Min::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "min{" << arg_names[0] << ", " << arg_names[1] << "}";
+  return s.str();
+}
+
+Dim Min::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || xs[0] != xs[1]) {
+    cerr << "Bad arguments in Min: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string Max::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "max{" << arg_names[0] << ", " << arg_names[1] << "}";

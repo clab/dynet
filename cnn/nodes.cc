@@ -33,6 +33,34 @@ using namespace std;
 
 namespace cnn {
 
+size_t Min::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
+void Min::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto y = *fx;
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  Tensor t(fx.d, static_cast<float*>(aux_mem));
+  auto u = *t;
+  u = (x1.array() < x2.array()).matrix().cast<float>();
+  y = x1.cwiseMin(x2);
+}
+
+void Min::backward(const vector<const Tensor*>& xs,
+                   const Tensor& fx,
+                   const Tensor& dEdf,
+                   unsigned i,
+                   Tensor& dEdxi) const {
+  assert(i < 2);
+  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem));
+  if (i == 0) {
+    *dEdxi += (*t).cwiseProduct(*dEdf);
+  } else {
+    *dEdxi += (*t).binaryExpr(*dEdf, FMaxBackwardInv());
+  }
+}
+
 size_t Max::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
