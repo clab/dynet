@@ -48,16 +48,16 @@ void Max::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 }
 
 void Max::backward(const vector<const Tensor*>& xs,
-                              const Tensor& fx,
-                              const Tensor& dEdf,
-                              unsigned i,
-                              Tensor& dEdxi) const {
+                   const Tensor& fx,
+                   const Tensor& dEdf,
+                   unsigned i,
+                   Tensor& dEdxi) const {
   assert(i < 2);
   const Tensor t(dEdxi.d, static_cast<float*>(aux_mem));
   if (i == 0) {
     *dEdxi += (*t).cwiseProduct(*dEdf);
   } else {
-    *dEdxi += (Eigen::MatrixXf::Ones(dEdxi.d.rows(), dEdxi.d.cols()) - *t).cwiseProduct(*dEdf);
+    *dEdxi += (*t).binaryExpr(*dEdf, FMaxBackwardInv());
   }
 }
 
