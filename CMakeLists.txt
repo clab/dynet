@@ -6,10 +6,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 # CNN uses Eigen which exploits modern CPU architectures. To get the
 # best possible performance, the following are recommended:
 #   1. use very recent versions of gcc or Clang to build
-#   2. try compiler options like -march=native or other architecture
+#   2. use very recent versions of Eigen (ideally the dev version)
+#   3. try compiler options like -march=native or other architecture
 #      flags (the compiler does not always make the best configuration
 #      decisions without help)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -Ofast -g -DEIGEN_FAST_MATH -Wno-unused-local-typedefs")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops -Wall -std=c++11 -Ofast -g -DEIGEN_FAST_MATH -Wno-unused-local-typedefs")
 
 enable_testing()
 
