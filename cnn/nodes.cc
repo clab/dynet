@@ -476,10 +476,8 @@ void ConcatenateColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) co
 #else
     auto xi = **xs[i];
     int d = xi.cols();
-    for (int j = 0; j < d; ++j) {
-      (*fx).col(c) = xi.col(j);
-      c++;
-    }
+    (*fx).middleCols(c, d) = xi;
+    c += d;
 #endif
   }
 }
@@ -497,10 +495,7 @@ void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
   auto dEdx = *dEdxi;
   int d = dEdx.cols();
   int c = static_cast<unsigned*>(aux_mem)[i];
-  for (int j = 0; j < d; ++j) {
-    dEdx.col(j) += (*dEdf).col(c);
-    ++c;
-  }
+  dEdx += (*dEdf).middleCols(c, d);
 #endif
 }
 
