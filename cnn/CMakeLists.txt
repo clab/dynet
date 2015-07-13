@@ -8,7 +8,7 @@ set(cnn_library_SRCS
     exec.cc
     expr.cc
     graph.cc
-#    gru.cc
+    gru.cc
     init.cc
     lstm.cc
     model.cc
