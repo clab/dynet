@@ -363,6 +363,7 @@ void Sum::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
+
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
 #else

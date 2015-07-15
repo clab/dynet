@@ -15,7 +15,7 @@ using namespace std;
 
 namespace cnn {
 
-#define ALIGN 5
+#define ALIGN 6
 AlignedMemoryPool<ALIGN>* fxs = nullptr;
 AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
 mt19937* rndeng = nullptr;
@@ -25,11 +25,11 @@ void Initialize(int& argc, char**& argv) {
 #if HAVE_CUDA
   Initialize_GPU(argc, argv);
 #else
-  kSCALAR_MINUSONE = new float;
+  kSCALAR_MINUSONE = (float*) cnn_mm_malloc(1, 32);
   *kSCALAR_MINUSONE = -1;
-  kSCALAR_ONE = new float;
+  kSCALAR_ONE = (float*) cnn_mm_malloc(1, 32);
   *kSCALAR_ONE = 1;
-  kSCALAR_ZERO = new float;
+  kSCALAR_ZERO = (float*) cnn_mm_malloc(1, 32);
   *kSCALAR_ZERO = 0;
 #endif
   random_device rd;
