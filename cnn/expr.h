@@ -26,9 +26,11 @@ Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned
 
 Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);
-//Expression operator+(const Expression& x, real y);
+Expression operator+(const Expression& x, real y);
+Expression operator+(real x, const Expression& y);
 Expression operator-(const Expression& x, const Expression& y);
 Expression operator-(real x, const Expression& y);
+Expression operator-(const Expression& x, real y);
 Expression operator*(const Expression& x, const Expression& y);
 Expression operator*(const Expression& x, float y);
 inline Expression operator*(float y, const Expression& x) { return x * y; }

@@ -66,6 +66,14 @@ struct FQuotient {
   }
 };
 
+struct FConstantPlus {
+  FConstantPlus(float c) : c(c) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return c + x;
+  }
+  float c;
+};
+
 struct FConstantMinus {
   FConstantMinus(float c) : c(c) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {
