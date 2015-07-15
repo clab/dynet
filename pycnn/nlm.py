@@ -1,7 +1,5 @@
 from pycnn import *
 
-
-
 from util import CorpusReader, Vocab
 #corpus = CorpusReader("../examples/example-data/fin-toy.txt")
 corpus = CorpusReader("ngrams")
@@ -40,10 +38,10 @@ m.add_lookup_parameters("word_lookup", (VOCAB_SIZE, DIM))
 contexts = InputWordIds(cg, m["word_lookup"], CONTEXT)
 cvec = concatenate(contexts.exprs) # TODO
 
-C = cg.parameters(m, "C", (DIM, DIM*CONTEXT))
-hb = cg.parameters(m, "hb", DIM)
-R = cg.parameters(m, "R", (VOCAB_SIZE, DIM))
-bias = cg.parameters(m, "bias", VOCAB_SIZE)
+C = cg.parameters(m.add_parameters("C", (DIM, DIM*CONTEXT)))
+hb = cg.parameters(m.add_parameters("hb", DIM))
+R = cg.parameters(m.add_parameters("R", (VOCAB_SIZE, DIM)))
+bias = cg.parameters(m.add_parameters("bias", VOCAB_SIZE))
 
 r = hb + (C * cvec)
 nl = rectify(r)
@@ -64,7 +62,7 @@ for iter in xrange(100):
     start = time.time()
     for i, (context_words, target_word) in enumerate(data):
         contexts.feed([vocab.w2i[w] for w in context_words])
-        val_at_expected_outcome.set(vocab.w2i[target_word])
+        val_at_expected_outcome.set_index(vocab.w2i[target_word])
         loss += cg.forward_scalar()
         cg.backward()
         sgd.update(1.0)
