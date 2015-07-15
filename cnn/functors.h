@@ -24,11 +24,32 @@ static inline float fastpow2 (float p) {
   return v.f;
 }
 
+#if 1
 static inline float fastexp (float p) {
   return fastpow2 (1.442695040f * p);
 }
+#else
+// Schraudolph version, but it's a bit crappy in terms of
+// performance and not that much faster
+#define EXPAF (8388608 / 0.6931471806f)
+static inline float fastexp (float p) {
+  union { float f; int32_t i; } eco;
+  eco.i = (int32_t)(EXPAF * (p)) + 1065353216;
+  return eco.f;
+}
+#endif
 
+#if defined(__GNU_LIBRARY__) && (__GLIBC__ == 2) && (__GLIBC_MINOR__ < 14)
+#define USE_FASTEXP
+#else
+#undef USE_FASTEXP
+#endif
+
+#ifdef USE_FASTEXP
 #define CNN_EXPF fastexp
+#else
+#define CNN_EXPF expf
+#endif
 
 namespace cnn {
 
@@ -98,6 +119,12 @@ struct FTanh {
 #else
     return tanhf(x);
 #endif
+  }
+};
+
+struct FMaxBackwardInv {
+  CNN_DEVICE_FUNC inline float operator()(float u, float d) const {
+    return (1.f - u) * d;
   }
 };
 
