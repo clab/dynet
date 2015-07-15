@@ -38,6 +38,7 @@ cdef extern from "cnn/model.h" namespace "cnn":
         #size_t size() const # override;
         #void accumulate_grad(const Tensor& g)
         #void clear()
+        CDim dim
         pass
 
     cdef cppclass CLookupParameters "cnn::LookupParameters":
@@ -49,6 +50,7 @@ cdef extern from "cnn/model.h" namespace "cnn":
         #size_t size() const # override;
         #void accumulate_grad(const Tensor& g)
         #void clear()
+        CDim dim
         void Initialize(unsigned index, const vector[float]& val)
         pass
 

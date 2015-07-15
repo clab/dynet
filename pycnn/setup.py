@@ -18,7 +18,8 @@ ext = Extension(
         libraries=['cnn'],             # ditto
         library_dirs=["."],
         #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
-        extra_compile_args=["-std=c++11"]
+        extra_compile_args=["-std=c++11"],
+        runtime_library_dirs=["$ORIGIN/./"],
 
         )
 
