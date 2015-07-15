@@ -17,6 +17,34 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string Min::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "min{" << arg_names[0] << ", " << arg_names[1] << "}";
+  return s.str();
+}
+
+Dim Min::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || xs[0] != xs[1]) {
+    cerr << "Bad arguments in Min: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
+string Max::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "max{" << arg_names[0] << ", " << arg_names[1] << "}";
+  return s.str();
+}
+
+Dim Max::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || xs[0] != xs[1]) {
+    cerr << "Bad arguments in Max: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string TraceOfProduct::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "Tr(" << arg_names[0] << " * " << arg_names[1] << "^T)";
@@ -274,14 +302,17 @@ string Concatenate::as_string(const vector<string>& arg_names) const {
 
 Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   unsigned new_rows = 0;
+  Dim dr = xs[0];
   for (auto& d : xs) {
-    if (!LooksLikeVector(d)) {
+    new_rows += d[0];
+    dr.set(0, d[0]);
+    if (dr != d) {
       cerr << "Bad input dimensions in Concatenate: " << xs << endl;
       abort();
     }
-    new_rows += d[0];
   }
-  return Dim({new_rows});
+  dr.set(0, new_rows);
+  return dr;
 }
 
 string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
