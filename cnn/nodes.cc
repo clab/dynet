@@ -243,6 +243,20 @@ void Dropout::backward(const vector<const Tensor*>& xs,
   (*dEdxi) += (*dEdf).cwiseProduct(*m);
 };
 
+void ConstantPlusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.unaryExpr(FConstantPlus(c));
+}
+
+void ConstantPlusX::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  *dEdxi += *dEdf;
+};
+
+
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vconstant_minusx(fx.d.size(), c, xs[0]->v, fx.v);
