@@ -16,33 +16,32 @@ using namespace cnn::expr;
 int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
 
-  unsigned CONTEXT = 3;
-  unsigned DIM = 100;
-  unsigned VOCAB_SIZE = 29;
+  const unsigned CONTEXT = 3;
+  const unsigned DIM = 100;
+  const unsigned VOCAB_SIZE = 29;
 
   // parameters
   Model model;
   SimpleSGDTrainer sgd(&model);
-  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, {DIM});
 
+  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, {DIM});
+  AffineBuilder aff1(model, {DIM*CONTEXT}, DIM);
+  AffineBuilder aff2(model, {DIM}, VOCAB_SIZE);
+
+  // inputs
+  vector<unsigned> in_c(CONTEXT); // set these to set the context words
+  unsigned ytrue;  // set ytrue to change the value of the input
+
+  //graph
   ComputationGraph cg;
 
-  vector<unsigned> in_c(CONTEXT); // set these to set the context words
   vector<Expression> c(CONTEXT);
   for (int i=0; i<CONTEXT; ++i)
     c[i] = lookup(cg, p_c, &in_c[i]);
 
-  Expression C = parameter(cg, model.add_parameters({DIM, DIM*CONTEXT}));
-  Expression hb = parameter(cg, model.add_parameters({DIM}));
-  Expression R = parameter(cg, model.add_parameters({VOCAB_SIZE, DIM}));
-  unsigned ytrue;  // set ytrue to change the value of the input
-  Expression bias = parameter(cg, model.add_parameters({VOCAB_SIZE}));
-
   Expression cc = concatenate(c);
-  Expression r = hb + C * cc;
-  Expression nl = rectify(r);
-  Expression o2 = bias + R * nl;
-  Expression ydist = log_softmax(o2);
+  Expression h = rectify(aff1({cc}));
+  Expression ydist = log_softmax(aff2({h}));
   Expression nerr = -pick(ydist, &ytrue);
   cg.PrintGraphviz();
 
