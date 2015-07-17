@@ -33,6 +33,62 @@ using namespace std;
 
 namespace cnn {
 
+size_t Min::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
+void Min::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto y = *fx;
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  Tensor t(fx.d, static_cast<float*>(aux_mem));
+  auto u = *t;
+  u = (x1.array() < x2.array()).matrix().cast<float>();
+  y = x1.cwiseMin(x2);
+}
+
+void Min::backward(const vector<const Tensor*>& xs,
+                   const Tensor& fx,
+                   const Tensor& dEdf,
+                   unsigned i,
+                   Tensor& dEdxi) const {
+  assert(i < 2);
+  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem));
+  if (i == 0) {
+    *dEdxi += (*t).cwiseProduct(*dEdf);
+  } else {
+    *dEdxi += (*t).binaryExpr(*dEdf, FMaxBackwardInv());
+  }
+}
+
+size_t Max::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
+void Max::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto y = *fx;
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  Tensor t(fx.d, static_cast<float*>(aux_mem));
+  auto u = *t;
+  u = (x1.array() > x2.array()).matrix().cast<float>();
+  y = x1.cwiseMax(x2);
+}
+
+void Max::backward(const vector<const Tensor*>& xs,
+                   const Tensor& fx,
+                   const Tensor& dEdf,
+                   unsigned i,
+                   Tensor& dEdxi) const {
+  assert(i < 2);
+  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem));
+  if (i == 0) {
+    *dEdxi += (*t).cwiseProduct(*dEdf);
+  } else {
+    *dEdxi += (*t).binaryExpr(*dEdf, FMaxBackwardInv());
+  }
+}
+
 void TraceOfProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x1 = **xs[0];
   auto x2 = **xs[1];
@@ -243,6 +299,20 @@ void Dropout::backward(const vector<const Tensor*>& xs,
   (*dEdxi) += (*dEdf).cwiseProduct(*m);
 };
 
+void ConstantPlusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.unaryExpr(FConstantPlus(c));
+}
+
+void ConstantPlusX::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  *dEdxi += *dEdf;
+};
+
+
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vconstant_minusx(fx.d.size(), c, xs[0]->v, fx.v);
@@ -293,6 +363,7 @@ void Sum::backward(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
+
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
 #else
@@ -399,12 +470,12 @@ void Concatenate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   for (auto x : xs) {
     src_row_indices[k++] = ind;
     auto & xi = *x;
-    assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
     const unsigned rows = xi.d.rows();
 #if HAVE_CUDA
+    assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
     CUDA_CHECK(cudaMemcpyAsync(&fx.v[ind], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
 #else
-    (*fx).block(ind, 0, rows, 1) = *xi;
+    (*fx).middleRows(ind, rows) = *xi;
 #endif
     ind += rows;
   }
@@ -421,19 +492,31 @@ void Concatenate::backward(const vector<const Tensor*>& xs,
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
 #else
-  *dEdxi += (*dEdf).block(begin, 0, rows, 1);
+  *dEdxi += (*dEdf).middleRows(begin, rows);
 #endif
 }
 
+#define MAX_CONCAT_COLS_ARGS 512
+size_t ConcatenateColumns::aux_storage_size() const {
+  return MAX_CONCAT_COLS_ARGS * sizeof(unsigned);
+}
+
 void ConcatenateColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  unsigned c = 0;
+  assert(xs.size() < MAX_CONCAT_COLS_ARGS);
   for (unsigned i = 0; i < xs.size(); ++i) {
+    static_cast<unsigned*>(aux_mem)[i] = c;
 #if HAVE_CUDA
+    assert(xs[i]->d.cols() == 1);
     // CUBLAS matricies are column-major, so just copy the memory
     auto & xi = *xs[i];
     const unsigned rows = xi.d.rows();
     CUDA_CHECK(cudaMemcpyAsync(&fx.v[i*rows], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
 #else
-    (*fx).col(i) = **xs[i];
+    auto xi = **xs[i];
+    int d = xi.cols();
+    (*fx).middleCols(c, d) = xi;
+    c += d;
 #endif
   }
 }
@@ -448,7 +531,10 @@ void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
   const unsigned begin = i*rows;
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
 #else
-  *dEdxi += (*dEdf).col(i);
+  auto dEdx = *dEdxi;
+  int d = dEdx.cols();
+  int c = static_cast<unsigned*>(aux_mem)[i];
+  dEdx += (*dEdf).middleCols(c, d);
 #endif
 }
 

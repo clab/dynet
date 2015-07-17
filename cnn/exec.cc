@@ -70,10 +70,11 @@ void SimpleExecutionEngine::backward() {
     cerr << "backward() called on non-scalar node.\n";
     abort();
   }
-  const unsigned node_max_index = cg.nodes.size();
-  ndEdfs.resize(node_max_index);
+
+  const unsigned num_nodes = cg.nodes.size();
+  ndEdfs.resize(num_nodes);
   dEdfs->free();
-  for (unsigned i = 0; i < node_max_index; ++i) {
+  for (unsigned i = 0; i < num_nodes; ++i) {
     const auto dim = nfxs[i].d;
     ndEdfs[i].d = dim;
     ndEdfs[i].v = static_cast<float*>(dEdfs->allocate(dim.size() * sizeof(float)));
@@ -84,7 +85,6 @@ void SimpleExecutionEngine::backward() {
   ndEdfs.back().v = kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
-  const unsigned num_nodes = cg.nodes.size();
   vector<bool> needs_derivative(num_nodes, false);
   for (auto i : cg.parameter_nodes)
     needs_derivative[i] = true;
@@ -108,8 +108,9 @@ void SimpleExecutionEngine::backward() {
     }
     ai = 0;
     for (VariableIndex arg : node->args) {
-      if (needs_derivative[arg])
+      if (needs_derivative[arg]) {
         node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
+      }
       ++ai;
     }
   }

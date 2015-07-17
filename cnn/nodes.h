@@ -5,6 +5,34 @@
 
 namespace cnn {
 
+// y = min{x_1, x_2}
+struct Min : public Node {
+  explicit Min(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+};
+
+// y = max{x_1, x_2}
+struct Max : public Node {
+  explicit Max(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+};
+
 // y = Tr(x_1 * x_2^T)
 struct TraceOfProduct : public Node {
   explicit TraceOfProduct(const std::initializer_list<VariableIndex>& a) : Node(a) {}
@@ -153,6 +181,21 @@ struct Dropout : public Node {
   real p;
 };
 
+// y = c + x_1
+// (c is a vector or matrix of the constant, usually 1, but can be configured)
+struct ConstantPlusX : public Node {
+  explicit ConstantPlusX(const std::initializer_list<VariableIndex>& a, real o) : Node(a), c(o) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
+  real c;
+};
+
 // y = c - x_1
 // (c is a vector or matrix of the constant, usually 1, but can be configured)
 struct ConstantMinusX : public Node {
@@ -242,6 +285,7 @@ struct ConcatenateColumns : public Node {
   template <typename T> explicit ConcatenateColumns(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
