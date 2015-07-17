@@ -2,11 +2,20 @@ project(cnn)
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -O3 -g -DEIGEN_FAST_MATH")
+
+# CNN uses Eigen which exploits modern CPU architectures. To get the
+# best possible performance, the following are recommended:
+#   1. use very recent versions of gcc or Clang to build
+#   2. use very recent versions of Eigen (ideally the dev version)
+#   3. try compiler options like -march=native or other architecture
+#      flags (the compiler does not always make the best configuration
+#      decisions without help)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops -Wall -std=c++11 -Ofast -g -DEIGEN_FAST_MATH -Wno-unused-local-typedefs")
 
 enable_testing()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+                    ${PROJECT_SOURCE_DIR}/external/easyloggingpp/src)
 
 function(find_cudnn)
   set(CUDNN_ROOT "" CACHE PATH "CUDNN root path")

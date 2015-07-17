@@ -151,7 +151,7 @@ void Model::project_weights(float radius) {
     ++pi;
   }
   double gg = 0;
-  for (unsigned i = 0; i < pi; ++i)
+  for (int i = 0; i < pi; ++i)
     gg += project_scratch[i];
   cerr << "NORM: " << sqrt(gg) << endl;
 }
@@ -171,7 +171,7 @@ float Model::gradient_l2_norm() const {
   return sqrt(res);
 #else
   double gg = 0;
-  for (unsigned i = 0; i < pi; ++i)
+  for (int i = 0; i < pi; ++i)
     gg += gradient_norm_scratch[i];
   return sqrt(gg);
 #endif
