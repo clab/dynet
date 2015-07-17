@@ -32,6 +32,7 @@ struct Dim {
     for (unsigned i = 0; i < nd; ++i) p += d[i];
     return p;
   }
+  inline void resize(unsigned i) { nd = i; }
   inline int ndims() const { return nd; }
   inline int rows() const { return d[0]; }
   inline int cols() const { return nd > 1 ? d[1] : 1; }

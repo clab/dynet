@@ -303,10 +303,12 @@ string Concatenate::as_string(const vector<string>& arg_names) const {
 Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   unsigned new_rows = 0;
   Dim dr = xs[0];
-  for (auto& d : xs) {
-    new_rows += d[0];
-    dr.set(0, d[0]);
-    if (dr != d) {
+  if (LooksLikeVector(dr)) dr.resize(1);
+  for (auto c : xs) {
+    if (LooksLikeVector(c)) c.resize(1);
+    new_rows += c[0];
+    dr.set(0, c[0]);
+    if (dr != c) {
       cerr << "Bad input dimensions in Concatenate: " << xs << endl;
       abort();
     }
