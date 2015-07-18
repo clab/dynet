@@ -62,6 +62,9 @@ cdef extern from "cnn/model.h" namespace "cnn":
         #void save(string fname)
         #void load(string fname)
 
+    void load_cnn_model "cnn::load_cnn_model" (string filename, CModel *model)
+    void save_cnn_model "cnn::save_cnn_model" (string filename, CModel *model)
+
 cdef extern from "cnn/cnn.h" namespace "cnn":
     ctypedef unsigned VariableIndex
     cdef cppclass CComputationGraph "cnn::ComputationGraph":
