@@ -1,9 +1,10 @@
 from pycnn import *
+import time
 import random
 
 LAYERS = 2
-INPUT_DIM = 5  #256
-HIDDEN_DIM = 50  #1024
+INPUT_DIM = 256  #256
+HIDDEN_DIM = 1024  #1024
 VOCAB_SIZE = 0
 
 from collections import defaultdict
@@ -34,46 +35,30 @@ class RNNLanguageModel:
         for (cw,nw) in zip(sent,sent[1:]):
             # assume word is already a word-id
             x_t = cg.lookup(self.m["lookup"], int(cw))
-            y_t = builder.add_input(x_t) # TODO what does this do exactly?
+            y_t = builder.add_input(x_t) 
             r_t = bias + (R * y_t)
-            #f = softmax(r_t)
-            #vec = cg.inc_forward_vec()
             err = pickneglogsoftmax(r_t, int(nw))
-            #e = cg.forward_scalar()
-            #print >> sys.stdout, " ",e,
-            #es.append(e)
-            #print >> sys.stdout, cg.inc_forward_scalar()
             errs.append(err)
-            #print >> sys.stdout, vec
-            #print >> sys.stdout, nw
-            #print >> sys.stdout, vec[nw]
         nerr = esum(errs)
-        #print >> sys.stdout, sum(es), cg.forward_scalar()
         return nerr
 
     def sample(self, first=1, nchars=0, stop=-1):
         res = [first]
         cg = self.cg.renew()
         builder = self.builder
-        builder.new_graph(cg)  # TODO WHY?
+        builder.new_graph(cg)
         builder.start_new_sequence()
 
         R = cg.parameters(self.m["R"])
         bias = cg.parameters(self.m["bias"])
-        cw = first #TODO: start symbol?
+        cw = first
         while True:
             x_t = cg.lookup(self.m["lookup"], cw)
-            y_t = builder.add_input(x_t) # TODO what does this do exactly?
-
-            #s = concatenate(builder.final_h())
-            #sv = cg.inc_forward_vec()
-            #print len(sv)
-
+            y_t = builder.add_input(x_t)
             r_t = bias + (R * y_t)
             ydist = softmax(r_t)
             dist = cg.inc_forward_vec()
             rnd = random.random()
-            assert(0 <= rnd <= 1.0)
             for i,p in enumerate(dist):
                 rnd -= p
                 if rnd <= 0: break
@@ -85,7 +70,6 @@ class RNNLanguageModel:
 
 if __name__ == '__main__':
     train = util.CharsCorpusReader(sys.argv[1],begin="<s>")
-    #train = util.CorpusReader(sys.argv[1])
     vocab = util.Vocab.from_corpus(train)
     
     VOCAB_SIZE = vocab.size()
@@ -98,37 +82,27 @@ if __name__ == '__main__':
 
     train = list(train)
 
-    #fout = file("a","w")
     chars = loss = 0.0
     for ITER in xrange(100):
         random.shuffle(train)
         for i,sent in enumerate(train):
+            _start = time.time()
             if i % 50 == 0:
                 sgd.status()
                 if chars > 0: print loss / chars,
-                #samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["</s>"])
                 for _ in xrange(1):
                     samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["\n"])
                     print "".join([vocab.i2w[c] for c in samp]).strip()
                 loss = 0.0
                 chars = 0.0
                 
-            #if len(sent) < 4: continue
             chars += len(sent)-1
-            #print sent
             isent = [vocab.w2i[w] for w in sent]
             errs = lm.BuildLMGraph(isent)
-            #st = str(errs)
-            #fout.write(str(errs))
-            #cg.PrintGraphviz()
             loss += cg.inc_forward_scalar()
-            #loss += cg.forward_scalar()
             cg.backward()
             sgd.update(1.0)
+            print "TM:",(time.time() - _start)/len(sent)
         print "ITER",ITER,loss
         sgd.status()
         sgd.update_epoch(1.0)
-        if ITER % 1 == 0:
-            pass
-            #samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["</s>"])
-            #print " ".join([vocab.i2w[c] for c in samp])

@@ -178,11 +178,11 @@ cdef class Model:
     def lookup_parameters(self): return list(self.lookups)
     def regular_parameters(self): return list(self.regular)
 
-    #def load(self, fname):
-    #    self.thisptr.load(fname)
+    def save(self, string fname):
+        save_cnn_model(fname, self.thisptr)
 
-    #def save(self, fname):
-    #    self.thisptr.save(fname)
+    def load(self, string fname):
+        load_cnn_model(fname, self.thisptr)
 
 
 # }}}

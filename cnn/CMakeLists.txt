@@ -83,6 +83,7 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 
 # actual target:
 add_library(cnn SHARED ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
+target_link_libraries(cnn ${LIBS})
 #add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
 if(WITH_CUDA_BACKEND)
   set(CUDA_SEPARABLE_COMPILATION ON)
