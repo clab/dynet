@@ -13,8 +13,7 @@ import sys
 import util
 
 class RNNLanguageModel:
-    def __init__(self, model, cg, builder=SimpleRNNBuilder):
-        self.cg = cg
+    def __init__(self, model, builder=SimpleRNNBuilder):
         self.m = model
         self.builder = builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
 
@@ -23,18 +22,18 @@ class RNNLanguageModel:
         model.add_parameters("bias", (VOCAB_SIZE))
 
     def BuildLMGraph(self, sent):
-        cg = self.cg.renew()
+        renew_cg()
         builder = self.builder
-        builder.new_graph(cg)  # TODO WHY?
+        builder.new_graph()
         builder.start_new_sequence()
 
-        R = cg.parameters(self.m["R"])
-        bias = cg.parameters(self.m["bias"])
+        R = parameter(self.m["R"])
+        bias = parameter(self.m["bias"])
         errs = [] # will hold expressions
         es=[]
         for (cw,nw) in zip(sent,sent[1:]):
             # assume word is already a word-id
-            x_t = cg.lookup(self.m["lookup"], int(cw))
+            x_t = lookup(self.m["lookup"], int(cw))
             y_t = builder.add_input(x_t) 
             r_t = bias + (R * y_t)
             err = pickneglogsoftmax(r_t, int(nw))
@@ -44,20 +43,20 @@ class RNNLanguageModel:
 
     def sample(self, first=1, nchars=0, stop=-1):
         res = [first]
-        cg = self.cg.renew()
+        renew_cg()
         builder = self.builder
-        builder.new_graph(cg)
+        builder.new_graph()
         builder.start_new_sequence()
 
-        R = cg.parameters(self.m["R"])
-        bias = cg.parameters(self.m["bias"])
+        R = parameter(self.m["R"])
+        bias = parameter(self.m["bias"])
         cw = first
         while True:
-            x_t = cg.lookup(self.m["lookup"], cw)
+            x_t = lookup(self.m["lookup"], cw)
             y_t = builder.add_input(x_t)
             r_t = bias + (R * y_t)
             ydist = softmax(r_t)
-            dist = cg.inc_forward_vec()
+            dist = cg().inc_forward_vec()
             rnd = random.random()
             for i,p in enumerate(dist):
                 rnd -= p
@@ -76,9 +75,8 @@ if __name__ == '__main__':
 
     model = Model()
     sgd = SimpleSGDTrainer(model)
-    cg = ComputationGraph()
 
-    lm = RNNLanguageModel(model, cg, builder=LSTMBuilder)
+    lm = RNNLanguageModel(model, builder=LSTMBuilder)
 
     train = list(train)
 
@@ -99,10 +97,10 @@ if __name__ == '__main__':
             chars += len(sent)-1
             isent = [vocab.w2i[w] for w in sent]
             errs = lm.BuildLMGraph(isent)
-            loss += cg.inc_forward_scalar()
-            cg.backward()
+            loss += cg().inc_forward_scalar()
+            cg().backward()
             sgd.update(1.0)
-            print "TM:",(time.time() - _start)/len(sent)
+            #print "TM:",(time.time() - _start)/len(sent)
         print "ITER",ITER,loss
         sgd.status()
         sgd.update_epoch(1.0)
