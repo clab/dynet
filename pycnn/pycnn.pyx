@@ -252,17 +252,6 @@ cdef class ComputationGraph:
 
     cpdef version(self): return self._cg_version
 
-    #def parameters(self, model, name, dim=None):
-    #    cdef Parameters params
-    #    cdef Expression result
-    #    if name in model:
-    #        params = model[name]
-    #    else:
-    #        assert(dim is not None)
-    #        params = model.add_parameters(name, dim)
-    #    result = Expression.from_cexpr(c_parameter(self.thisptr[0], params.thisptr))
-    #    return result
-
     def parameters(self, Parameters params):
         cdef Expression result
         result = Expression.from_cexpr(self._cg_version, c_parameter(self.thisptr[0], params.thisptr))
@@ -311,15 +300,15 @@ cdef class ComputationGraph:
     # 
     # We have the classes UnsignedValue, FloatValue and FloatVectorValue for
     # this purpose.
-    cpdef inputValue(self, float v = 0.0):
+    cdef inputValue(self, float v = 0.0):
         return _inputExpression(self, v)
-    cpdef inputVector(self, int dim):
+    cdef inputVector(self, int dim):
         return _vecInputExpression(self, vector[float](dim))
-    cpdef inputMatrix(self, int d1, int d2):
+    cdef inputMatrix(self, int d1, int d2):
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
-    cpdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
+    cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
-    cpdef outputPicker(self, Expression e, unsigned v = 0):
+    cdef outputPicker(self, Expression e, unsigned v = 0):
         r = _pickerExpression(self, e, v)
         return r
 
@@ -432,7 +421,7 @@ cdef class _inputExpression(Expression):
         self.val.set(s)
 
 def scalarInput(float s):
-    return _inputExpression(_cg, s)
+    return _cg.inputValue(s)
 
 cdef class _vecInputExpression(Expression):
     cdef FloatVectorValue val
@@ -449,8 +438,11 @@ cdef class _vecInputExpression(Expression):
         self.cg.invalidate()
         self.val.set(data)
 
-def vecInput(vector[float] val, dim=None):
-    return _vecInputExpression(_cg, val, dim)
+def vecInput(int dim):
+    return _cg.inputVector(dim)
+
+def matInput(int d1, int d2):
+    return _cg.inputMatrix(d1, d2)
 
 cdef class _lookupExpression(Expression):
     cdef UnsignedValue val
@@ -470,7 +462,7 @@ cdef class _lookupExpression(Expression):
         self.val.set(i)
 
 def lookup(LookupParameters p, unsigned index=0, update=True):
-    return _lookupExpression(_cg, p, index, update)
+    return _cg.lookup(p, index, update)
 
 cdef class _pickerExpression(Expression):
     cdef UnsignedValue val
@@ -487,7 +479,7 @@ cdef class _pickerExpression(Expression):
         self.val.set(i)
 
 def pick(Expression e, unsigned index=0):
-    return _pickerExpression(_cg, e, index)
+    return _cg.outputPicker(e, index)
 
 cdef class _hingeExpression(Expression):
     cdef UnsignedValue val
