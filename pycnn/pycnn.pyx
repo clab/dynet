@@ -9,7 +9,6 @@ import numpy as np
 #    WORKS, but need to be unified? for example, why "pick" takes a pointer to int, and "squared_distance" takes an expression?
 #  - load embeddings file
 #  - load/save models
-#  - make ComputationGraph a singleton???
 #  - NOTE: why do we need to filter short sentences in rnnlm.py or crash??
 
 # TODO:
@@ -36,6 +35,7 @@ cdef init():
     cdef int argc = 0
     pycnn.Initialize(argc,argv)
 init()
+
 
 cdef CDim Dim(dim):
     """
@@ -221,12 +221,25 @@ cdef class FloatVectorValue:
 
 # }}}
 
+cdef int SECRET = 923148
+cdef ComputationGraph _cg = ComputationGraph(SECRET)
+
+def cg_version(): return _cg._cg_version
+def renew_cg(): return _cg.renew()
+
+cpdef ComputationGraph cg():
+    global _cg
+    return _cg
+
 cdef class ComputationGraph:
     cdef CComputationGraph *thisptr, 
     cdef list _inputs
-    def __cinit__(self):
+    cdef int _cg_version
+    def __cinit__(self, int guard=0):
+        if guard != SECRET: raise RuntimeError("Do not instantiate ComputationGraph directly. Use pycnn.cg()")
         self.thisptr = new CComputationGraph()
         self._inputs = []
+        self._cg_version = 0
     def __dealloc__(self):
         del self.thisptr
 
@@ -234,7 +247,10 @@ cdef class ComputationGraph:
         del self.thisptr
         self.thisptr = new CComputationGraph()
         self._inputs = []
+        self._cg_version += 1
         return self
+
+    cpdef version(self): return self._cg_version
 
     #def parameters(self, model, name, dim=None):
     #    cdef Parameters params
@@ -249,7 +265,7 @@ cdef class ComputationGraph:
 
     def parameters(self, Parameters params):
         cdef Expression result
-        result = Expression.from_cexpr(c_parameter(self.thisptr[0], params.thisptr))
+        result = Expression.from_cexpr(self._cg_version, c_parameter(self.thisptr[0], params.thisptr))
         return result
 
     def params_from_model(self, model):
@@ -313,25 +329,30 @@ cdef class ComputationGraph:
 # }}}
 
 #{{{ Expressions
+cdef ensure_freshness(Expression a):
+    if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
 
-cdef _add(Expression a, Expression b): return Expression.from_cexpr(c_op_add(a.c(), b.c()))
-cdef _mul(Expression a, Expression b): return Expression.from_cexpr(c_op_mul(a.c(), b.c()))
-cdef _neg(Expression a): return Expression.from_cexpr(c_op_neg(a.c()))
-cdef _scalarsub(float a, Expression b): return Expression.from_cexpr(c_op_scalar_sub(a, b.c()))
-cdef _cmul(Expression a, float b): return Expression.from_cexpr(c_op_scalar_mul(a.c(), b))
+cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_add(a.c(), b.c()))
+cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
+cdef _neg(Expression a): return Expression.from_cexpr(a.cg_version, c_op_neg(a.c()))
+cdef _scalarsub(float a, Expression b): ensure_freshness(b); return Expression.from_cexpr(b.cg_version, c_op_scalar_sub(a, b.c()))
+cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_mul(a.c(), b))
 
 cdef class Expression: #{{{
     #cdef CComputationGraph *cg
     cdef CComputationGraph* cg
     cdef VariableIndex vindex
+    cdef int cg_version
     def __cinit__(self):
         self.cg = NULL
         self.vindex = 0
     @staticmethod
-    cdef Expression from_cexpr(CExpression cexpr):
+    cdef Expression from_cexpr(int cgv, CExpression cexpr):
+        if cgv != _cg._cg_version: raise ValueError("Attempt to use a stale expression, from a previous Computation Graph.")
         self = Expression()
         self.cg = cexpr.pg
         self.vindex = cexpr.i
+        self.cg_version = cgv
         return self
     cdef CExpression c(self):
         return CExpression(self.cg, self.vindex)
@@ -339,15 +360,18 @@ cdef class Expression: #{{{
     def __repr__(self):
         return str(self)
     def __str__(self):
-        return "exprssion %s" % <int>self.vindex
+        return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
 
     cpdef scalar_value(self):
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         return c_as_scalar(self.cg.get_value(self.vindex))
 
     cpdef vec_value(self):
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         return c_as_vector(self.cg.get_value(self.vindex))
 
     cpdef npvalue(self):
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
         cdef CDim dim
         t = self.cg.get_value(self.vindex)
@@ -358,6 +382,7 @@ cdef class Expression: #{{{
         return arr
 
     cpdef value(self):
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
         t = self.cg.get_value(self.vindex)
         if t.d.ndims() == 2:
@@ -384,8 +409,10 @@ cdef class Expression: #{{{
         else: raise NotImplementedError()
 #}}}
 
-cpdef Expression parameter(ComputationGraph g, Parameters p):
-    return Expression.from_cexpr(c_parameter(g.thisptr[0], p.thisptr))
+cdef Expression _parameter(ComputationGraph g, Parameters p):
+    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
+
+def parameter(Parameters p): return _parameter(_cg, p)
 
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller
@@ -395,6 +422,7 @@ cdef class _inputExpression(Expression):
     def __cinit__(self, ComputationGraph g, float s):
         self.val = FloatValue(s)
         self.cg = g.thisptr
+        self.cg_version = g.version()
         cdef CExpression e
         e = c_input(self.cg[0], self.val.addr())
         self.vindex = e.i
@@ -403,12 +431,16 @@ cdef class _inputExpression(Expression):
         self.cg.invalidate()
         self.val.set(s)
 
+def scalarInput(float s):
+    return _inputExpression(_cg, s)
+
 cdef class _vecInputExpression(Expression):
     cdef FloatVectorValue val
     def __cinit__(self, ComputationGraph g, vector[float] val, dim=None):
         self.val = FloatVectorValue(val)
         if dim is None: dim = self.val.size()
         self.cg = g.thisptr
+        self.cg_version = g.version()
         cdef CExpression e
         e = c_input(self.cg[0], Dim(dim), self.val.addr())
         self.vindex = e.i
@@ -417,11 +449,15 @@ cdef class _vecInputExpression(Expression):
         self.cg.invalidate()
         self.val.set(data)
 
+def vecInput(vector[float] val, dim=None):
+    return _vecInputExpression(_cg, val, dim)
+
 cdef class _lookupExpression(Expression):
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, LookupParameters p, unsigned index=0, update=True):
         self.val = UnsignedValue(index)
         self.cg = g.thisptr
+        self.cg_version = g.version()
         cdef CExpression e
         if update:
             e = c_lookup(self.cg[0], p.thisptr, self.val.addr())
@@ -433,11 +469,15 @@ cdef class _lookupExpression(Expression):
         self.cg.invalidate()
         self.val.set(i)
 
+def lookup(LookupParameters p, unsigned index=0, update=True):
+    return _lookupExpression(_cg, p, index, update)
+
 cdef class _pickerExpression(Expression):
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, Expression e, unsigned index=0):
         self.val = UnsignedValue(index)
         self.cg = e.cg
+        self.cg_version = g.version()
         cdef CExpression ce
         ce = c_pick(e.c(), self.val.addr())
         self.vindex = ce.i
@@ -446,13 +486,15 @@ cdef class _pickerExpression(Expression):
         self.cg.invalidate()
         self.val.set(i)
 
-pick = _pickerExpression
+def pick(Expression e, unsigned index=0):
+    return _pickerExpression(_cg, e, index)
 
 cdef class _hingeExpression(Expression):
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, Expression x, unsigned index, float m=1.0):
         self.val = UnsignedValue(index)
         self.cg = x.cg
+        self.cg_version = g.version()
         cdef CExpression e
         e = c_hinge(x.c(), self.val.addr(), m)
         self.vindex = e.i
@@ -461,90 +503,99 @@ cdef class _hingeExpression(Expression):
         self.cg.invalidate()
         self.val.set(i)
 
-hinge = _hingeExpression
+def hinge(Expression x, unsigned index, float m=1.0):
+    return _hingeExpression(_cg, x, index, m)
 
 # }}}
 
 
 # binary-exp
-cpdef Expression cdiv(Expression x, Expression y): return Expression.from_cexpr(c_cdiv(x.c(), y.c()))
-cpdef Expression colwise_add(Expression x, Expression y): return Expression.from_cexpr(c_colwise_add(x.c(), y.c()))
+cpdef Expression cdiv(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cdiv(x.c(), y.c()))
+cpdef Expression colwise_add(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_colwise_add(x.c(), y.c()))
 
-cpdef Expression cwise_multiply(Expression x, Expression y): return Expression.from_cexpr(c_cwise_multiply(x.c(), y.c()))
-cpdef Expression dot_product(Expression x, Expression y): return Expression.from_cexpr(c_dot_product(x.c(), y.c()))
-cpdef Expression squared_distance(Expression x, Expression y): return Expression.from_cexpr(c_squared_distance(x.c(), y.c()))
-cpdef Expression l1_distance(Expression x, Expression y): return Expression.from_cexpr(c_l1_distance(x.c(), y.c()))
-cpdef Expression binary_log_loss(Expression x, Expression y): return Expression.from_cexpr(c_binary_log_loss(x.c(), y.c()))
-cpdef Expression conv1d_narrow(Expression x, Expression y): return Expression.from_cexpr(c_conv1d_narrow(x.c(), y.c()))
-cpdef Expression conv1d_wide(Expression x, Expression y): return Expression.from_cexpr(c_conv1d_wide(x.c(), y.c()))
+cpdef Expression cwise_multiply(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cwise_multiply(x.c(), y.c()))
+cpdef Expression dot_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
+cpdef Expression squared_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_squared_distance(x.c(), y.c()))
+cpdef Expression l1_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_l1_distance(x.c(), y.c()))
+cpdef Expression binary_log_loss(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_binary_log_loss(x.c(), y.c()))
+cpdef Expression conv1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_narrow(x.c(), y.c()))
+cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_wide(x.c(), y.c()))
 
 # unary-exp
-cpdef Expression tanh(Expression x): return Expression.from_cexpr(c_tanh(x.c()))
-cpdef Expression exp(Expression x): return Expression.from_cexpr(c_exp(x.c()))
-cpdef Expression log(Expression x): return Expression.from_cexpr(c_log(x.c()))
-cpdef Expression logistic(Expression x): return Expression.from_cexpr(c_logistic(x.c()))
-cpdef Expression rectify(Expression x): return Expression.from_cexpr(c_rectify(x.c()))
+cpdef Expression tanh(Expression x): return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
+cpdef Expression exp(Expression x): return Expression.from_cexpr(x.cg_version, c_exp(x.c()))
+cpdef Expression log(Expression x): return Expression.from_cexpr(x.cg_version, c_log(x.c()))
+cpdef Expression logistic(Expression x): return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
+cpdef Expression rectify(Expression x): return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
 cpdef Expression log_softmax(Expression x, list restrict=None): 
     if restrict is None:
-        return Expression.from_cexpr(c_log_softmax(x.c()))
+        return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c()))
     cdef vector[unsigned] vec = restrict
-    return Expression.from_cexpr(c_log_softmax(x.c(), vec))
-cpdef Expression softmax(Expression x): return Expression.from_cexpr(c_softmax(x.c()))
-cpdef Expression softsign(Expression x): return Expression.from_cexpr(c_softsign(x.c()))
-cpdef Expression transpose(Expression x): return Expression.from_cexpr(c_transpose(x.c()))
-cpdef Expression sum_cols(Expression x): return Expression.from_cexpr(c_sum_cols(x.c()))
+    return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c(), vec))
+cpdef Expression softmax(Expression x): return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
+cpdef Expression softsign(Expression x): return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
+cpdef Expression transpose(Expression x): return Expression.from_cexpr(x.cg_version, c_transpose(x.c()))
+cpdef Expression sum_cols(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_cols(x.c()))
 #expr-opt
-cpdef Expression fold_rows(Expression x, unsigned nrows=2): return Expression.from_cexpr(c_fold_rows(x.c(),nrows))
+cpdef Expression fold_rows(Expression x, unsigned nrows=2): return Expression.from_cexpr(x.cg_version, c_fold_rows(x.c(),nrows))
 #expr-expr-opt
-cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0): return Expression.from_cexpr(c_pairwise_rank_loss(x.c(), y.c(), m))
-cpdef Expression huber_distance(Expression x, Expression y, float c=1.345): return Expression.from_cexpr(c_huber_distance(x.c(), y.c(), c))
+cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_pairwise_rank_loss(x.c(), y.c(), m))
+cpdef Expression huber_distance(Expression x, Expression y, float c=1.345): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_huber_distance(x.c(), y.c(), c))
 #expr-unsigned
-cpdef Expression kmax_pooling(Expression x, unsigned k): return Expression.from_cexpr(c_kmax_pooling(x.c(), k))
-cpdef Expression pickneglogsoftmax(Expression x, unsigned v): return Expression.from_cexpr(c_pickneglogsoftmax(x.c(), v))
+cpdef Expression kmax_pooling(Expression x, unsigned k): return Expression.from_cexpr(x.cg_version, c_kmax_pooling(x.c(), k))
+cpdef Expression pickneglogsoftmax(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), v))
 
-cpdef Expression kmh_ngram(Expression x, unsigned v): return Expression.from_cexpr(c_kmh_ngram(x.c(), v))
-cpdef Expression pickrange(Expression x, unsigned v, unsigned u): return Expression.from_cexpr(c_pickrange(x.c(), v, u))
+cpdef Expression kmh_ngram(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
+cpdef Expression pickrange(Expression x, unsigned v, unsigned u): return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
 #expr-float
-cpdef Expression noise(Expression x, float stddev): return Expression.from_cexpr(c_noise(x.c(), stddev))
-cpdef Expression dropout(Expression x, float p): return Expression.from_cexpr(c_dropout(x.c(), p))
+cpdef Expression noise(Expression x, float stddev): return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
+cpdef Expression dropout(Expression x, float p): return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
 #expr-dim
-cpdef Expression reshape(Expression x, tuple d): return Expression.from_cexpr(c_reshape(x.c(),Dim(d)))
+cpdef Expression reshape(Expression x, tuple d): return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d)))
 
 cpdef Expression esum(list xs):
     cdef vector[CExpression] cvec
     cvec = vector[CExpression]()
     cdef Expression x
-    for x in xs: cvec.push_back(x.c())
+    for x in xs:
+        ensure_freshness(x)
+        cvec.push_back(x.c())
     #print >> sys.stderr, cvec.size()
-    return Expression.from_cexpr(c_sum(cvec))
+    return Expression.from_cexpr(x.cg_version, c_sum(cvec))
 
 cpdef Expression average(list xs):
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs: 
+        ensure_freshness(x) 
         cvec.push_back(x.c())
         print >> sys.stderr,"pushing",cvec.back().i
-    return Expression.from_cexpr(c_average(cvec))
+    return Expression.from_cexpr(x.cg_version, c_average(cvec))
 
 cpdef Expression concatenate_cols(list xs):
     cdef vector[CExpression] cvec
     cdef Expression x
-    for x in xs: cvec.push_back(x.c())
-    return Expression.from_cexpr(c_concat_cols(cvec))
+    for x in xs:
+        ensure_freshness(x) 
+        cvec.push_back(x.c())
+    return Expression.from_cexpr(x.cg_version, c_concat_cols(cvec))
 
 cpdef Expression concatenate(list xs):
     cdef vector[CExpression] cvec
     cdef Expression x
-    for x in xs: cvec.push_back(x.c())
-    return Expression.from_cexpr(c_concat(cvec))
+    for x in xs:
+        ensure_freshness(x) 
+        cvec.push_back(x.c())
+    return Expression.from_cexpr(x.cg_version, c_concat(cvec))
 
 
 cpdef Expression affine_transform(list exprs):
     cdef Expression e
     cdef vector[CExpression] ves
     for e in exprs:
+        ensure_freshness(e) 
         ves.push_back(e.c())
-    return Expression.from_cexpr(c_affine_transform(ves))
+    return Expression.from_cexpr(e.cg_version, c_affine_transform(ves))
 
 
 # }}}
@@ -554,69 +605,99 @@ cpdef Expression affine_transform(list exprs):
 
 cdef class SimpleRNNBuilder: # {{{
     cdef CSimpleRNNBuilder *thisptr
+    cdef int cg_version 
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        self.cg_version = -1
     def __dealloc__(self):
         del self.thisptr
-    cpdef new_graph(self, ComputationGraph cg): self.thisptr.new_graph(cg.thisptr[0])
+    #cpdef new_graph(self, ComputationGraph cg): self.thisptr.new_graph(cg.thisptr[0])
+    cpdef new_graph(self):
+        self.thisptr.new_graph(_cg.thisptr[0])
+        self.cg_version = _cg.version()
     cpdef start_new_sequence(self, es=None):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef vector[CExpression] ces = vector[CExpression]()
         cdef Expression e
         if es:
-            for e in es: ces.push_back(e.c())
+            for e in es:
+                ensure_freshness(e)
+                ces.push_back(e.c())
         self.thisptr.start_new_sequence(ces)
     cpdef Expression add_input(self, Expression e):
-        return Expression.from_cexpr(self.thisptr.add_input(e.c()))
-    cpdef rewind_one_step(self): self.thisptr.rewind_one_step()
+        ensure_freshness(e)
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(e.c()))
+    cpdef rewind_one_step(self):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        self.thisptr.rewind_one_step()
     cpdef Expression back(self):
-        return Expression.from_cexpr(self.thisptr.back())
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        return Expression.from_cexpr(self.cg_version, self.thisptr.back())
     cpdef final_h(self):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef list res = []
         cdef CExpression cexp
         cdef vector[CExpression] cexps = self.thisptr.final_h()
         for cexp in cexps:
-            res.append(Expression.from_cexpr(cexp))
+            res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
     cpdef final_s(self):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef list res = []
         cdef CExpression cexp
         cdef vector[CExpression] cexps = self.thisptr.final_s()
         for cexp in cexps:
-            res.append(Expression.from_cexpr(cexp))
+            res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 #}}}
     
 cdef class LSTMBuilder: # {{{
     cdef CLSTMBuilder *thisptr
+    cdef int cg_version
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        self.cg_version = -1
     def __dealloc__(self):
         del self.thisptr
-    cpdef new_graph(self, ComputationGraph cg): self.thisptr.new_graph(cg.thisptr[0])
+    #cpdef new_graph(self, ComputationGraph cg): self.thisptr.new_graph(cg.thisptr[0])
+    cpdef new_graph(self): 
+        self.thisptr.new_graph(_cg.thisptr[0])
+        self.cg_version = _cg.version()
     cpdef start_new_sequence(self, es=None):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef vector[CExpression] ces = vector[CExpression]()
         cdef Expression e
         if es:
-            for e in es: ces.push_back(e.c())
+            for e in es: 
+                ensure_freshness(e)
+                ces.push_back(e.c())
         self.thisptr.start_new_sequence(ces)
     cpdef Expression add_input(self, Expression e):
-        return Expression.from_cexpr(self.thisptr.add_input(e.c()))
-    cpdef rewind_one_step(self): self.thisptr.rewind_one_step()
+        ensure_freshness(e)
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(e.c()))
+    cpdef rewind_one_step(self): 
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        self.thisptr.rewind_one_step()
     cpdef Expression back(self):
-        return Expression.from_cexpr(self.thisptr.back())
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        return Expression.from_cexpr(self.cg_version, self.thisptr.back())
     cpdef final_h(self):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef list res = []
         cdef CExpression cexp
         cdef vector[CExpression] cexps = self.thisptr.final_h()
         for cexp in cexps:
-            res.append(Expression.from_cexpr(cexp))
+            res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
     cpdef final_s(self):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef list res = []
         cdef CExpression cexp
         cdef vector[CExpression] cexps = self.thisptr.final_s()
         for cexp in cexps:
-            res.append(Expression.from_cexpr(cexp))
+            res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 # }}}
 
