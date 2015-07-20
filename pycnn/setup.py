@@ -15,7 +15,7 @@ ext = Extension(
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["../../cnn/",
                       "../../eigen/"],
-        libraries=['cnn'],             # ditto
+        libraries=['cnn_shared'],             # ditto
         library_dirs=["."],
         #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
         extra_compile_args=["-std=c++11"],
