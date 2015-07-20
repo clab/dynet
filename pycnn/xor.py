@@ -1,6 +1,7 @@
 from pycnn import *
 
 xsent = True
+xsent = False
 
 HIDDEN_SIZE = 8
 ITERATIONS = 2000
@@ -8,20 +9,18 @@ ITERATIONS = 2000
 m = Model()
 sgd = SimpleSGDTrainer(m)
 
-cg = ComputationGraph()
-
 m.add_parameters("W",(HIDDEN_SIZE, 2))
 m.add_parameters("b",HIDDEN_SIZE)
 m.add_parameters("V",(1, HIDDEN_SIZE))
 m.add_parameters("a",1)
 
-W = cg.parameters(m["W"])
-b = cg.parameters(m["b"])
-V = cg.parameters(m["V"])
-a = cg.parameters(m["a"])
+W = parameter(m["W"])
+b = parameter(m["b"])
+V = parameter(m["V"])
+a = parameter(m["a"])
 
-x = cg.inputVector(2)
-y = cg.inputValue(0)
+x = vecInput([1,1])
+y = scalarInput(0)
 #print type(x)
 h = tanh((W*x) + b)
 if xsent:
@@ -43,8 +42,8 @@ for iter in xrange(ITERATIONS):
         x2 = (mi / 2) % 2
         x.set([T if x1 else F, T if x2 else F])
         y.set(T if x1 != x2 else F)
-        mloss += cg.forward_scalar()
-        cg.backward()
+        mloss += cg().forward_scalar()
+        cg().backward()
         sgd.update(1.0)
     sgd.update_epoch();
     mloss /= 4.
@@ -52,17 +51,17 @@ for iter in xrange(ITERATIONS):
 
 x.set([F,T])
 z = -(-y_pred)
-print cg.forward_scalar()
+print cg().forward_scalar()
 #print y_pred.scalar()
 
-cg = cg.renew()
-W = cg.parameters(m["W"])
-b = cg.parameters(m["b"])
-V = cg.parameters(m["V"])
-a = cg.parameters(m["a"])
+renew_cg()
+W = parameter(m["W"])
+b = parameter(m["b"])
+V = parameter(m["V"])
+a = parameter(m["a"])
 
-x = cg.inputVector(2)
-y = cg.inputValue()
+x = vecInput([1,1])
+y = scalarInput(0)
 #print type(x)
 h = tanh((W*x) + b)
 if xsent:
@@ -70,5 +69,5 @@ if xsent:
 else:
     y_pred = (V*h) + a
 x.set([T,F])
-print "XX",cg.forward_scalar()
+print "XX",cg().forward_scalar()
 
