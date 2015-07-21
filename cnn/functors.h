@@ -1,6 +1,8 @@
 #ifndef CNN_GPU_FUNCTORS_H
 #define CNN_GPU_FUNCTORS_H
 
+#include <cstdint>
+
 #if HAVE_CUDA
 #  define CNN_DEVICE_FUNC __device__
 #else
@@ -28,7 +30,11 @@ static inline float fastexp (float p) {
   return fastpow2 (1.442695040f * p);
 }
 
-#define CNN_EXPF fastexp
+#if HAVE_CUDA
+#  define CNN_EXPF exp
+#else
+#  define CNN_EXPF fastexp
+#endif
 
 namespace cnn {
 
