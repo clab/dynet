@@ -6,6 +6,7 @@
 
 #include "cnn/dim.h"
 #include "cnn/random.h"
+#include "cnn/aligned-mem-pool.h"
 
 #if HAVE_CUDA
 #include <cuda.h>
@@ -64,7 +65,7 @@ struct Tensor {
     ar & boost::serialization::make_array(vc, d.size());
     CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
 #else
-    v = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
+    v = static_cast<float*>(cnn_mm_malloc(d.size() * sizeof(float), 32));
     ar & boost::serialization::make_array(v, d.size());
 #endif
   }
