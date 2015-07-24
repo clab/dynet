@@ -1,6 +1,8 @@
 #ifndef CNN_GPU_FUNCTORS_H
 #define CNN_GPU_FUNCTORS_H
 
+#include <cstdint>
+
 #if HAVE_CUDA
 #  define CNN_DEVICE_FUNC __device__
 #else
