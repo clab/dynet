@@ -1,6 +1,7 @@
 #include "cnn/graph.h"
 #include "cnn/cnn.h"
 #include <vector>
+#include "cnn/cnn-helper.h"
 
 using namespace std;
 
