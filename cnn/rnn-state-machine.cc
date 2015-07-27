@@ -1,6 +1,7 @@
 #include "cnn/rnn-state-machine.h"
 
 #include <iostream>
+#include "cnn/cnn.h"
 
 using namespace std;
 

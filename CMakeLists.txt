@@ -45,6 +45,15 @@ set(Boost_REALPATH ON)
 find_package(Boost COMPONENTS program_options serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
+# trouble shooting:
+# if boost library cannot be found, in addition to install boost library
+# check if environment variables are set
+# 
+# to set boost root and its library root in environment variable, use
+# for example
+# echo "export BOOST_LIBRARYDIR=/usr/local/lib" >> ~/.bashrc
+# echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
+# then run source ~/.bashrc to have those environment variable effective immediately
 
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
