@@ -3,6 +3,7 @@
 #include "cnn/nodes.h"
 #include "cnn/param-nodes.h"
 #include "cnn/aligned-mem-pool.h"
+#include "cnn/cnn-helper.h"
 
 using namespace std;
 
