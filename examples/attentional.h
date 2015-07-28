@@ -6,6 +6,7 @@
 #include "cnn/timing.h"
 #include "cnn/rnn.h"
 #include "cnn/gru.h"
+#include "cnn/rnnem.h"
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
@@ -25,7 +26,9 @@ struct AttentionalModel {
             unsigned layers, unsigned vocab_size_src, unsigned vocab_size_tgt, 
             unsigned hidden_dim, unsigned align_dim, bool rnn_src_embeddings,
 	    bool giza_extensions, unsigned hidden_replicates=1, 
-            LookupParameters* cs=0, LookupParameters *ct=0);
+            LookupParameters* cs=0, LookupParameters *ct=0, 
+            bool use_external_memory = false /// this is for extmem rnn memory size
+            );
 
     Expression BuildGraph(const std::vector<int> &source, const std::vector<int>& target, 
             ComputationGraph& cg, Expression *alignment=0);
@@ -88,8 +91,8 @@ template <class Builder>
 AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
     unsigned vocab_size_src, unsigned vocab_size_tgt, unsigned layers, unsigned hidden_dim, 
     unsigned align_dim, bool _rnn_src_embeddings, bool _giza_extentions, unsigned hidden_replicates, 
-    LookupParameters* cs, LookupParameters *ct)
-: builder(layers, (_rnn_src_embeddings) ? 3*hidden_dim : 2*hidden_dim, hidden_dim, &model),
+    LookupParameters* cs, LookupParameters *ct, bool use_external_memory = false)
+    : builder(layers, (_rnn_src_embeddings) ? 3 * hidden_dim : 2 * hidden_dim, hidden_dim, &model),
   builder_src_fwd(1, hidden_dim, hidden_dim, &model),
   builder_src_bwd(1, hidden_dim, hidden_dim, &model),
   rnn_src_embeddings(_rnn_src_embeddings), 
@@ -99,9 +102,14 @@ AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
     p_ct = (ct) ? ct : model.add_lookup_parameters(vocab_size_tgt, {long(hidden_dim)}); 
     p_R = model.add_parameters({long(vocab_size_tgt), long(hidden_dim)});
     p_bias = model.add_parameters({long(vocab_size_tgt)});
-    for (auto l = 0; l < layers * hidden_replicates; ++l) 
-        p_h0.push_back(model.add_parameters({long(hidden_dim)}));
-    p_Wa = model.add_parameters({long(align_dim), long(hidden_dim)});
+
+    if (use_external_memory)
+        for (auto l = 0; l < layers; ++l)
+            p_h0.push_back(model.add_parameters({ RNNEM_MEM_SIZE }));
+    for (auto l = 0; l < hidden_replicates * layers; ++l)
+        p_h0.push_back(model.add_parameters({ long(hidden_dim) }));
+
+    p_Wa = model.add_parameters({ long(align_dim), long(hidden_dim) });
     if (rnn_src_embeddings) {
         p_Ua = model.add_parameters({long(align_dim), 2*long(hidden_dim)});
     } else {

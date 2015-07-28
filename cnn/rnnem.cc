@@ -11,8 +11,6 @@ using namespace std;
 using namespace cnn::expr;
 
 
-#define MEM_SIZE 512
-
 namespace cnn {
 
 #define WTF(expression) \
@@ -29,8 +27,10 @@ namespace cnn {
     RNNEMBuilder::RNNEMBuilder(long layers,
         long input_dim,
         long hidden_dim,
-        Model* model) : layers(layers), m_mem_size(MEM_SIZE), m_mem_dim(hidden_dim) 
+        Model* model) : layers(layers), m_mem_dim(hidden_dim) 
     {
+        m_mem_size = RNNEM_MEM_SIZE;
+
         unsigned mem_dim = m_mem_dim;
         long mem_size = m_mem_size;
         unsigned layer_input_dim = input_dim;
@@ -126,9 +126,9 @@ namespace cnn {
             c0.resize(layers);
             w0.resize(layers);
             for (unsigned i = 0; i < layers; ++i) {
-                c0[i] = hinit[i];
-                h0[i] = hinit[i + layers];
-                w0[i] = hinit[i + 2 * layers];
+                w0[i] = hinit[i];
+                c0[i] = hinit[i + layers];
+                h0[i] = hinit[i + 2 * layers];
             }
             has_initial_state = true;
         }
@@ -178,7 +178,8 @@ namespace cnn {
             Expression g_t = logistic(vars[WG] * x_t);
             Expression g_v = concatenate(std::vector<Expression>(m_mem_size, g_t));
             Expression f_v = concatenate(std::vector<Expression>(m_mem_size, 1.0 - g_t));
-            i_w_t = cwise_multiply(f_v, i_w_tm1) + cwise_multiply(g_v, i_alpha_t);
+            Expression w_f_v = cwise_multiply(f_v, i_w_tm1);
+            i_w_t = w_f_v + cwise_multiply(g_v, i_alpha_t);
         }
         else
         {

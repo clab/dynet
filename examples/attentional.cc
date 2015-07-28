@@ -49,6 +49,8 @@ Corpus read_corpus(const string &filename);
 int main(int argc, char** argv) {
     cnn::Initialize(argc, argv);
 
+    bool use_external_memory = false; 
+
     // command line processing
     using namespace boost::program_options;
     variables_map vm; 
@@ -58,7 +60,7 @@ int main(int argc, char** argv) {
         ("seed,s", value<int>()->default_value(217), "random seed number")
         ("config,c", value<string>(), "config file specifying additional command line options")
         ("train,t", value<string>(), "file containing training sentences, with "
-            "each line consisting of source ||| target.")
+        "each line consisting of source ||| target.")
         ("devel,d", value<string>(), "file containing development sentences.")
         ("test,T", value<string>(), "file containing testing source sentences")
         ("initialise,i", value<string>(), "load initial parameters from file")
@@ -68,6 +70,7 @@ int main(int argc, char** argv) {
         ("hidden,h", value<int>()->default_value(HIDDEN_DIM), "use <num> dimensions for recurrent hidden states")
         ("gru", "use Gated Recurrent Unit (GRU) for recurrent structure; default RNN")
         ("lstm", "use Long Short Term Memory (GRU) for recurrent structure; default RNN")
+        ("rnnem", "use ExtMemLSTM RNN (RNNEM) for recurrent struture with past input history; default RNN")
         ("bidirectional", "use bidirectional recurrent hidden states as source embeddings, rather than word embeddings")
         ("giza", "use GIZA++ style features in attentional components")
         ("curriculum", "use 'curriculum' style learning, focusing on easy problems in earlier epochs")
@@ -103,12 +106,13 @@ int main(int argc, char** argv) {
     
     LAYERS = vm["layers"].as<int>(); 
     ALIGN_DIM = vm["align"].as<int>(); 
-    HIDDEN_DIM = vm["hidden"].as<int>(); 
+    HIDDEN_DIM = vm["hidden"].as<int>();
     bool bidir = vm.count("bidirectional");
     bool giza = vm.count("giza");
     string flavour;
     if (vm.count("gru"))	flavour = "gru";
     else if (vm.count("lstm"))	flavour = "lstm";
+    else if (vm.count("rnnem"))	flavour = "rnnem";
     else			flavour = "rnn";
     SRC_VOCAB_SIZE = sd.size();
     TGT_VOCAB_SIZE = td.size();
@@ -127,6 +131,7 @@ int main(int argc, char** argv) {
 	    << '_' << LAYERS
 	    << '_' << HIDDEN_DIM
 	    << '_' << ALIGN_DIM
+        << '_' << RNNEM_MEM_SIZE
 	    << '_' << flavour
 	    << "_b" << bidir
 	    << "_g" << giza
@@ -158,13 +163,22 @@ int main(int argc, char** argv) {
 		SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
                 LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 2);
         train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
-    } else if (vm.count("gru")) {
+    }
+    else if (vm.count("gru")) {
         cerr << "%% Using GRU recurrent units" << endl;
-        AttentionalModel<GRUBuilder> am(model, 
-		SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
-                LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 1);
+        AttentionalModel<GRUBuilder> am(model,
+            SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
+            LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 1);
         train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
-    } else {
+    }
+    else if (vm.count("rnnem")) {
+        cerr << "%% Using RNNEM recurrent units" << endl;
+        AttentionalModel<RNNEMBuilder> am(model,
+            SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
+            LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 2, nullptr, nullptr, true);
+        train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
+    }
+    else {
         cerr << "%% Using RNN recurrent units" << endl;
         AttentionalModel<SimpleRNNBuilder> am(model, 
 		SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
