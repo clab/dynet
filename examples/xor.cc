@@ -17,8 +17,8 @@ int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
 
   // parameters
-  const unsigned HIDDEN_SIZE = 8;
-  const unsigned ITERATIONS = 30;
+  const long HIDDEN_SIZE = 8;
+  const long ITERATIONS = 30;
   Model m;
   SimpleSGDTrainer sgd(&m);
   //MomentumSGDTrainer sgd(&m);

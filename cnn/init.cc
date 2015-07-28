@@ -6,10 +6,6 @@
 #include <random>
 #include <cmath>
 
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/variables_map.hpp>
-
-
 #if HAVE_CUDA
 #include "cnn/cuda.h"
 #include <device_launch_parameters.h>
@@ -24,6 +20,21 @@ AlignedMemoryPool<ALIGN>* fxs = nullptr;
 AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
 mt19937* rndeng = nullptr;
 
+char* getCmdOption(char ** begin, char ** end, const std::string & option)
+{
+    char ** itr = std::find(begin, end, option);
+    if (itr != end && ++itr != end)
+    {
+        return *itr;
+    }
+    return 0;
+}
+
+bool cmdOptionExists(char** begin, char** end, const std::string& option)
+{
+    return std::find(begin, end, option) != end;
+}
+
 void Initialize(int& argc, char**& argv) {
   cerr << "Initializing...\n";
 #if HAVE_CUDA
@@ -37,24 +48,24 @@ void Initialize(int& argc, char**& argv) {
   *kSCALAR_ZERO = 0;
 #endif
 
-  using namespace boost::program_options;
-  variables_map vm;
-  options_description opts("initialization setup");
-  opts.add_options()
-      ("seed,s", value<int>()->default_value(217), "seed number for random number genreation");
-
-  store(parse_command_line(argc, argv, opts), vm);
-
-  if (vm.count("seed")) {
-      int rseed = vm["seed"].as<int>();
+  if (cmdOptionExists(argv, argv + argc, "--seed"))
+  {
+      string seed = getCmdOption(argv, argv + argc, "--seed");
+      int rseed;
+      stringstream(seed) >> rseed; 
       rndeng = new mt19937(rseed);
   }
-  else
+  else 
   {
-      random_device rd;
-      //  rndeng = new mt19937(1);
-      rndeng = new mt19937(rd());
+      /// do nothing
+      if (rndeng == nullptr)
+      {
+          random_device rd;
+          //  rndeng = new mt19937(1);
+          rndeng = new mt19937(rd());
+      }
   }
+
   cerr << "Allocating memory...\n";
   fxs = new AlignedMemoryPool<ALIGN>(512*(1<<20));
   dEdfs = new AlignedMemoryPool<ALIGN>(512*(1<<20));

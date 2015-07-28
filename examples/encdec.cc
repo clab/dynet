@@ -6,6 +6,7 @@
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
+#include "cnn/cnn-helper.h"
 
 #include <iostream>
 #include <fstream>
@@ -19,11 +20,11 @@ using namespace cnn;
 using namespace cnn::expr;
 
 //parameters
-unsigned LAYERS = 3;
-unsigned INPUT_DIM = 500;
-unsigned HIDDEN_DIM = 500;
-unsigned INPUT_VOCAB_SIZE = 0;
-unsigned OUTPUT_VOCAB_SIZE = 0;
+long LAYERS = 3;
+long INPUT_DIM = 500;
+long HIDDEN_DIM = 500;
+long INPUT_VOCAB_SIZE = 0;
+long OUTPUT_VOCAB_SIZE = 0;
 
 cnn::Dict d, devd;
 int kSOS;

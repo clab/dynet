@@ -497,7 +497,9 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
     abort();
   }
   assert((int)end <= xs[0][0]);
-  return Dim({end - start});
+  long range = end - start;
+  assert(range >= 0);
+  return Dim({range});
 }
 
 string MatrixMultiply::as_string(const vector<string>& arg_names) const {

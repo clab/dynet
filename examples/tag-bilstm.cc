@@ -6,7 +6,8 @@
 #include "cnn/gru.h"
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
-# include "cnn/expr.h"
+#include "cnn/expr.h"
+#include "cnn/cnn-helper.h"
 
 #include <iostream>
 #include <fstream>
@@ -19,13 +20,13 @@ using namespace std;
 using namespace cnn;
 
 float pdrop = 0.5;
-unsigned LAYERS = 1;
-unsigned INPUT_DIM = 128;
-unsigned HIDDEN_DIM = 128;
-unsigned TAG_HIDDEN_DIM = 32;
-unsigned TAG_DIM = 32;
-unsigned TAG_SIZE = 0;
-unsigned VOCAB_SIZE = 0;
+long LAYERS = 1;
+long INPUT_DIM = 128;
+long HIDDEN_DIM = 128;
+long TAG_HIDDEN_DIM = 32;
+long TAG_DIM = 32;
+long TAG_SIZE = 0;
+long VOCAB_SIZE = 0;
 
 bool eval = false;
 cnn::Dict d;

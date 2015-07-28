@@ -19,22 +19,25 @@ GRUBuilder::GRUBuilder(unsigned layers,
                        unsigned hidden_dim,
                        Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
   unsigned layer_input_dim = input_dim;
+  assert(layers > 0);
+  assert(input_dim > 0);
+  assert(hidden_dim > 0);
   for (unsigned i = 0; i < layers; ++i) {
     // z
-    Parameters* p_x2z = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2z = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_bz = model->add_parameters({hidden_dim});
+    Parameters* p_x2z = model->add_parameters({long(hidden_dim), long(layer_input_dim)});
+    Parameters* p_h2z = model->add_parameters({long(hidden_dim), long(hidden_dim)});
+    Parameters* p_bz = model->add_parameters({long(hidden_dim)});
     
     // r
-    Parameters* p_x2r = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2r = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_br = model->add_parameters({hidden_dim});
+    Parameters* p_x2r = model->add_parameters({long(hidden_dim), long(layer_input_dim)});
+    Parameters* p_h2r = model->add_parameters({long(hidden_dim), long(hidden_dim)});
+    Parameters* p_br = model->add_parameters({long(hidden_dim)});
 
     // h
-    Parameters* p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_bh = model->add_parameters({hidden_dim});
-    layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
+    Parameters* p_x2h = model->add_parameters({long(hidden_dim), long(layer_input_dim)});
+    Parameters* p_h2h = model->add_parameters({long(hidden_dim), long(hidden_dim)});
+    Parameters* p_bh = model->add_parameters({long(hidden_dim)});
+    long(layer_input_dim) = long(hidden_dim);  // output (hidden) from 1st layer is input to next
 
     vector<Parameters*> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
     params.push_back(ps);

@@ -13,9 +13,9 @@ using namespace std;
 using namespace cnn;
 using namespace cnn::expr;
 
-unsigned REP_DIM = 128;
-unsigned INPUT_VOCAB_SIZE = 0;
-unsigned OUTPUT_VOCAB_SIZE = 0;
+long  REP_DIM = 128;
+long  INPUT_VOCAB_SIZE = 0;
+long  OUTPUT_VOCAB_SIZE = 0;
 
 cnn::Dict sd;
 cnn::Dict td;

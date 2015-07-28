@@ -6,7 +6,8 @@
 #include "cnn/gru.h"
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
-# include "cnn/expr.h"
+#include "cnn/expr.h"
+#include "cnn/cnn-helper.h"
 
 #include <iostream>
 #include <fstream>

@@ -20,6 +20,10 @@ namespace cnn {
     }
 #endif
 
+#ifdef WIN32
+#include <process.h>
+#endif
+
 } // namespace cnn
 
 #endif

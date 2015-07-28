@@ -8,7 +8,7 @@ set(BOOST_ROOT /cygdrive/d/tools/boost_1_58_0/boost_1_58_0)
 set(BOOST_LIBRARYDIR /usr/local/lib)
 elseif(WIN32)
 set(BOOST_ROOT C:/local/boost_1_58_0)
-set(BOOST_LIBRARYDIR C:/local/boost_1_58_0/lib64-msvc-12.0)
+set(BOOST_LIBRARYDIR C:/local/boost_1_58_0/lib32-msvc-12.0)
 endif()
 
 # best possible performance, the following are recommended:
@@ -109,6 +109,10 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+if(WIN32)
+link_directories(${BOOST_LIBRARYDIR})
+endif()
 
 add_subdirectory(cnn)
 add_subdirectory(examples)
