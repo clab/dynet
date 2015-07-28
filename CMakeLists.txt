@@ -42,9 +42,9 @@ if(DEFINED ENV{BOOST_ROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
 endif()
 set(Boost_REALPATH ON)
+find_package(Boost COMPONENTS program_options serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
-find_package(Boost COMPONENTS program_options serialization REQUIRED)
 # trouble shooting:
 # if boost library cannot be found, in addition to install boost library
 # check if environment variables are set
