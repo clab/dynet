@@ -4,9 +4,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-//#if HAVE_MM_MALLOC
+#ifdef WIN32
+#include <malloc.h>
+#else
 #include <mm_malloc.h>
-//#endif
+#endif
 #if HAVE_CUDA
 #include "cnn/cuda.h"
 #include <cuda.h>

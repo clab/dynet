@@ -3,14 +3,26 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-# CNN uses Eigen which exploits modern CPU architectures. To get the
+# may need to do some explicit setting such as the following if compilation in Cygwin and Win32 doesn't work	
+#if (CYGWIN)
+#set(BOOST_ROOT /cygdrive/d/tools/boost_1_58_0/boost_1_58_0)
+#set(BOOST_LIBRARYDIR /usr/local/lib)
+#elseif(WIN32)
+#set(BOOST_ROOT C:/local/boost_1_58_0)
+#set(BOOST_LIBRARYDIR C:/local/boost_1_58_0/lib64-msvc-12.0)
+#endif()
+
 # best possible performance, the following are recommended:
 #   1. use very recent versions of gcc or Clang to build
 #   2. use very recent versions of Eigen (ideally the dev version)
 #   3. try compiler options like -march=native or other architecture
 #      flags (the compiler does not always make the best configuration
 #      decisions without help)
+if (WIN32)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops -Wall -std=c++11 -Ofast -g -DEIGEN_FAST_MATH")
+else()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops -Wall -std=c++11 -Ofast -g -DEIGEN_FAST_MATH -Wno-unused-local-typedefs")
+endif()
 
 enable_testing()
 
@@ -41,10 +53,22 @@ endfunction()
 if(DEFINED ENV{BOOST_ROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
 endif()
+
+if (CYGWIN OR WIN32)
+set(Boost_REALPATH OFF)
+else()
 set(Boost_REALPATH ON)
+endif()
+
+if (CYGWIN OR UNIX OR LINUX)
 find_package(Boost COMPONENTS program_options serialization REQUIRED)
+endif()
 include_directories(${Boost_INCLUDE_DIR})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
+if (WIN32)
+find_package(Boost COMPONENTS program_options serialization REQUIRED)
+endif()
+
 # trouble shooting:
 # if boost library cannot be found, in addition to install boost library
 # check if environment variables are set
