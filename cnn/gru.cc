@@ -17,7 +17,7 @@ enum { X2Z, H2Z, BZ, X2R, H2R, BR, X2H, H2H, BH };
 GRUBuilder::GRUBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model) : hidden_dim(hidden_dim), layers(layers), zeros(hidden_dim, 0) {
+                       Model* model) : hidden_dim(hidden_dim), layers(layers) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // z
@@ -74,7 +74,7 @@ void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
   }
 }
 
-Expression GRUBuilder::add_input_impl(const Expression& x) {
+Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
   const bool has_initial_state = (h0.size() > 0);
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
@@ -82,18 +82,18 @@ Expression GRUBuilder::add_input_impl(const Expression& x) {
   Expression in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
-    Expression h_tm1;
-    // prev_zero means that h_tm1 should be treated as 0
+    Expression h_tprev;
+    // prev_zero means that h_tprev should be treated as 0
     bool prev_zero = false;
-    if (t > 0 || has_initial_state) {
-      h_tm1 = (t == 0) ? h0[i] : h[t-1][i];
+    if (prev >= 0 || has_initial_state) {
+      h_tprev = (prev < 0) ? h0[i] : h[prev][i];
     } else { prev_zero = true; }
     // update gate
     Expression zt;
     if (prev_zero)
       zt = affine_transform({vars[BZ], vars[X2Z], in});
     else
-      zt = affine_transform({vars[BZ], vars[X2Z], in, vars[H2Z], h_tm1});
+      zt = affine_transform({vars[BZ], vars[X2Z], in, vars[H2Z], h_tprev});
     zt = logistic(zt);
     // forget
     Expression ft = 1.f - zt;
@@ -102,7 +102,7 @@ Expression GRUBuilder::add_input_impl(const Expression& x) {
     if (prev_zero)
       rt = affine_transform({vars[BR], vars[X2R], in});
     else
-      rt = affine_transform({vars[BR], vars[X2R], in, vars[H2R], h_tm1});
+      rt = affine_transform({vars[BR], vars[X2R], in, vars[H2R], h_tprev});
     rt = logistic(rt);
 
     // candidate activation
@@ -113,11 +113,11 @@ Expression GRUBuilder::add_input_impl(const Expression& x) {
       Expression nwt = cwise_multiply(zt, ct);
       in = ht[i] = nwt;
     } else {
-      Expression ght = cwise_multiply(rt, h_tm1);
+      Expression ght = cwise_multiply(rt, h_tprev);
       ct = affine_transform({vars[BH], vars[X2H], in, vars[H2H], ght});
       ct = tanh(ct);
       Expression nwt = cwise_multiply(zt, ct);
-      Expression crt = cwise_multiply(ft, h_tm1);
+      Expression crt = cwise_multiply(ft, h_tprev);
       in = ht[i] = crt + nwt;
     }
   }
