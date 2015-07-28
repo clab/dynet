@@ -1021,8 +1021,8 @@ void L1Distance::backward(const vector<const Tensor*>& xs,
                           Tensor& dEdxi) const {
   assert(i < 2);
   auto x = **xs[i];
-  real scale = dEdf.v[0];
-  cerr << "Implement L1Distance::backward()\n"; abort();
+  auto y = **xs[1-i];
+  *dEdxi += (x - y).binaryExpr(*dEdf, FL1Backward());
 }
 
 void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
