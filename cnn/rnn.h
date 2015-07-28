@@ -11,9 +11,18 @@ namespace cnn {
 
 class Model;
 
+BOOST_STRONG_TYPEDEF(int, RNNPointer)
+inline void swap(RNNPointer& i1, RNNPointer& i2) {
+  RNNPointer t = i1; i1 = i2; i2 = t;
+}
+
 // interface for constructing an RNN, LSTM, GRU, etc.
 struct RNNBuilder {
+  RNNBuilder() : cur(-1) {}
   virtual ~RNNBuilder();
+
+  RNNPointer state() const { return cur; }
+
   // call this to reset the builder when you are working with a newly
   // created ComputationGraph object
   void new_graph(ComputationGraph& cg) {
@@ -27,6 +36,8 @@ struct RNNBuilder {
   // h_0 is used to initialize hidden layers at timestep 0 to given values
   void start_new_sequence(const std::vector<Expression>& h_0={}) {
     sm.transition(RNNOp::start_new_sequence);
+    cur = RNNPointer(-1);
+    head.clear();
     start_new_sequence_impl(h_0);
   }
 
@@ -34,14 +45,20 @@ struct RNNBuilder {
   // return the hidden representation of the deepest layer
   Expression add_input(const Expression& x) {
     sm.transition(RNNOp::add_input);
-    return add_input_impl(x);
+    head.push_back(cur);
+    int rcp = cur;
+    cur = head.size() - 1;
+    return add_input_impl(rcp, x);
   }
 
   // rewind the last timestep - this DOES NOT remove the variables
   // from the computation graph, it just means the next time step will
   // see a different previous state. You can remind as many times as
   // you want.
-  virtual void rewind_one_step() = 0;
+  void rewind_one_step() {
+    cur = head[cur];
+  }
+
   // returns node (index) of most recent output
   virtual Expression back() const = 0;
   // access the final output of each hidden layer
@@ -52,10 +69,12 @@ struct RNNBuilder {
  protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
-  virtual Expression add_input_impl(const Expression& x) = 0;
+  virtual Expression add_input_impl(int prev, const Expression& x) = 0;
  private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
+  RNNPointer cur;
+  std::vector<RNNPointer> head; // head[i] returns the head position
 };
 
 struct SimpleRNNBuilder : public RNNBuilder {
@@ -68,10 +87,9 @@ struct SimpleRNNBuilder : public RNNBuilder {
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h_0) override;
-  Expression add_input_impl(const Expression& x) override;
+  Expression add_input_impl(int prev, const Expression& x) override;
 
  public:
-  void rewind_one_step() { h.pop_back(); }
   Expression back() const { return h.back().back(); }
   std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const { return final_h(); }
