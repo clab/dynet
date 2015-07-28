@@ -51,6 +51,16 @@ struct RNNBuilder {
     return add_input_impl(rcp, x);
   }
 
+  // add another timestep, but define recurrent connection to prev
+  // rather than to head[cur]
+  // this can be used to construct trees, implement beam search, etc.
+  Expression add_input(const RNNPointer& prev, const Expression& x) {
+    sm.transition(RNNOp::add_input);
+    head.push_back(prev);
+    cur = head.size() - 1;
+    return add_input_impl(prev, x);
+  }
+
   // rewind the last timestep - this DOES NOT remove the variables
   // from the computation graph, it just means the next time step will
   // see a different previous state. You can remind as many times as
