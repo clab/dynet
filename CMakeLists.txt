@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+set(BOOST_ROOT /cygdrive/d/tools/boost_1_58_0/boost_1_58_0)
+set(BOOST_LIBRARYDIR /usr/local/lib)
+
+
 # CNN uses Eigen which exploits modern CPU architectures. To get the
 # best possible performance, the following are recommended:
 #   1. use very recent versions of gcc or Clang to build
@@ -41,11 +45,17 @@ endfunction()
 if(DEFINED ENV{BOOST_ROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
 endif()
-set(Boost_REALPATH ON)
 
+if (CYGWIN)
+set(Boost_REALPATH OFF)
+else()
+set(Boost_REALPATH ON)
+endif()
+
+find_package(Boost COMPONENTS program_options serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
-find_package(Boost COMPONENTS program_options serialization REQUIRED)
+
 # trouble shooting:
 # if boost library cannot be found, in addition to install boost library
 # check if environment variables are set
