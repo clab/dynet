@@ -29,6 +29,7 @@ struct LSTMBuilder : public RNNBuilder {
     for(auto my_h : final_h()) ret.push_back(my_h);
     return ret;
   }
+  void copy(const RNNBuilder & params) override;
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
