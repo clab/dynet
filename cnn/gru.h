@@ -16,13 +16,12 @@ struct GRUBuilder : public RNNBuilder {
                       Model* model);
   std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const { return final_h(); }
-  void rewind_one_step() { h.pop_back(); }
   Expression back() const { return h.back().back(); }
 
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
-  Expression add_input_impl(const Expression& x) override;
+  Expression add_input_impl(int prev, const Expression& x) override;
 
   // first index is layer, then ...
   std::vector<std::vector<Parameters*>> params;
@@ -39,10 +38,6 @@ struct GRUBuilder : public RNNBuilder {
 
   unsigned hidden_dim;
   unsigned layers;
-  std::vector<float> zeros;
-
-  // the state machine ensures that the caller is behaving
-  RNNStateMachine sm;
 };
 
 } // namespace cnn

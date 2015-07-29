@@ -40,11 +40,11 @@ void Initialize(int& argc, char**& argv) {
 #if HAVE_CUDA
   Initialize_GPU(argc, argv);
 #else
-  kSCALAR_MINUSONE = (float*) cnn_mm_malloc(1, 256);
+  kSCALAR_MINUSONE = (float*) cnn_mm_malloc(sizeof(float), 256);
   *kSCALAR_MINUSONE = -1;
-  kSCALAR_ONE = (float*) cnn_mm_malloc(1, 256);
+  kSCALAR_ONE = (float*) cnn_mm_malloc(sizeof(float), 256);
   *kSCALAR_ONE = 1;
-  kSCALAR_ZERO = (float*) cnn_mm_malloc(1, 256);
+  kSCALAR_ZERO = (float*) cnn_mm_malloc(sizeof(float), 256);
   *kSCALAR_ZERO = 0;
 #endif
 

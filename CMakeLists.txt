@@ -10,6 +10,14 @@ elseif(WIN32)
 set(BOOST_ROOT C:/local/boost_1_58_0)
 set(BOOST_LIBRARYDIR C:/local/boost_1_58_0/lib32-msvc-12.0)
 endif()
+# may need to do some explicit setting such as the following if compilation in Cygwin and Win32 doesn't work	
+#if (CYGWIN)
+#set(BOOST_ROOT /cygdrive/d/tools/boost_1_58_0/boost_1_58_0)
+#set(BOOST_LIBRARYDIR /usr/local/lib)
+#elseif(WIN32)
+#set(BOOST_ROOT C:/local/boost_1_58_0)
+#set(BOOST_LIBRARYDIR C:/local/boost_1_58_0/lib64-msvc-12.0)
+#endif()
 
 # best possible performance, the following are recommended:
 #   1. use very recent versions of gcc or Clang to build

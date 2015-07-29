@@ -65,7 +65,7 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   if (h0.size()) { assert(h0.size() == layers); }
 }
 
-Expression SimpleRNNBuilder::add_input_impl(const Expression &in) {
+Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
 
@@ -74,12 +74,12 @@ Expression SimpleRNNBuilder::add_input_impl(const Expression &in) {
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
 
-    Expression y = vars[HB] + vars[X2H] * x;
+    Expression y = affine_transform({vars[2], vars[0], x});
 
-    if (t == 0 && h0.size() > 0) 
-      y = y + vars[H2H] * h0[i];
-    else if (t >= 1)
-      y = y + vars[H2H] * h[t-1][i];
+    if (prev == -1 && h0.size() > 0)
+      y = y + vars[1] * h0[i];
+    else if (prev >= 0)
+      y = y + vars[1] * h[prev][i];
 
     x = h[t][i] = tanh(y);
   }
@@ -96,7 +96,7 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
     const vector<Expression>& vars = param_vars[i];
     assert(vars.size() >= L2H + 1);
 
-    Expression y = vars[HB] + vars[X2H] * x + vars[L2H] * aux;
+    Expression y = affine_transform({vars[HB], vars[X2H], x, vars[L2H], aux});
 
     if (t == 0 && h0.size() > 0) 
       y = y + vars[H2H] * h0[i];

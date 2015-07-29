@@ -218,13 +218,14 @@ string Sum::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Sum::dim_forward(const vector<Dim>& xs) const {
+  Dim d = xs[0].truncate();
   for (unsigned i = 1; i < xs.size(); ++i) {
-    if (xs[0] != xs[1]) {
+    if (d != xs[i].truncate()) {
       cerr << "Mismatched input dimensions in Sum: " << xs << endl;
       abort();
     }
   }
-  return xs[0];
+  return d;
 }
 
 string Average::as_string(const vector<string>& arg_names) const {
@@ -526,11 +527,12 @@ string CwiseMultiply::as_string(const vector<string>& arg_names) const {
 
 Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 2);
-  if (xs[0] != xs[1]) {
+  Dim d = xs[0].truncate();
+  if (d != xs[1].truncate()) {
     cerr << "Mismatched input dimensions in CwiseMultiply: " << xs << endl;
     abort();
   }
-  return xs[0];
+  return d;
 }
 
 string CwiseQuotient::as_string(const vector<string>& arg_names) const {
@@ -541,11 +543,12 @@ string CwiseQuotient::as_string(const vector<string>& arg_names) const {
 
 Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 2);
-  if (xs[0] != xs[1]) {
+  Dim d = xs[0].truncate();
+  if (d != xs[1].truncate()) {
     cerr << "Mismatched input dimensions in CwiseQuotient: " << xs << endl;
     abort();
   }
-  return xs[0];
+  return d;
 }
 
 string AffineTransform::as_string(const vector<string>& arg_names) const {
