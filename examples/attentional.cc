@@ -71,6 +71,7 @@ int main(int argc, char** argv) {
         ("gru", "use Gated Recurrent Unit (GRU) for recurrent structure; default RNN")
         ("lstm", "use Long Short Term Memory (GRU) for recurrent structure; default RNN")
         ("rnnem", "use ExtMemLSTM RNN (RNNEM) for recurrent struture with past input history; default RNN")
+        ("nmn", "use Neural Memory Network (NMN) for recurrent struture with past input history; default RNN")
         ("bidirectional", "use bidirectional recurrent hidden states as source embeddings, rather than word embeddings")
         ("giza", "use GIZA++ style features in attentional components")
         ("curriculum", "use 'curriculum' style learning, focusing on easy problems in earlier epochs")
@@ -113,6 +114,7 @@ int main(int argc, char** argv) {
     if (vm.count("gru"))	flavour = "gru";
     else if (vm.count("lstm"))	flavour = "lstm";
     else if (vm.count("rnnem"))	flavour = "rnnem";
+    else if (vm.count("nmn"))	flavour = "nmn";
     else			flavour = "rnn";
     SRC_VOCAB_SIZE = sd.size();
     TGT_VOCAB_SIZE = td.size();

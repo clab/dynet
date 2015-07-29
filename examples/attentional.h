@@ -11,6 +11,7 @@
 #include "cnn/dict.h"
 #include "cnn/expr.h"
 #include "expr-xtra.h"
+#include "../ws15mt-team/kaisheng/src/nmn.h"
 
 #include <iostream>
 #include <fstream>
@@ -104,8 +105,14 @@ AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
     p_bias = model.add_parameters({long(vocab_size_tgt)});
 
     if (use_external_memory)
+    { 
         for (auto l = 0; l < layers; ++l)
             p_h0.push_back(model.add_parameters({ RNNEM_MEM_SIZE }));
+#ifdef DBG_NEW_RNNEM
+        for (auto l = 0; l < layers; ++l)
+            p_h0.push_back(model.add_parameters({ long(hidden_dim), long(RNNEM_MEM_SIZE )}));
+#endif
+    }
     for (auto l = 0; l < hidden_replicates * layers; ++l)
         p_h0.push_back(model.add_parameters({ long(hidden_dim) }));
 
