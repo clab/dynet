@@ -34,6 +34,7 @@ struct Parameters : public ParametersBase {
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
 
+  void copy(const Parameters & val);
   void accumulate_grad(const Tensor& g);
   void clear();
 
@@ -60,6 +61,7 @@ struct LookupParameters : public ParametersBase {
   size_t size() const override;
   void Initialize(unsigned index, const std::vector<float>& val);
 
+  void copy(const LookupParameters & val);
   void accumulate_grad(unsigned index, const Tensor& g);
   void clear();
 
