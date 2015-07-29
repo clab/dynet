@@ -116,3 +116,4 @@ endif()
 
 add_subdirectory(cnn)
 add_subdirectory(examples)
+add_subdirectory(../ws15mt-team/kaisheng/src "${CMAKE_CURRENT_BINARY_DIR}/ws15mt-team/kaisheng/src")
