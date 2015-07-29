@@ -32,6 +32,15 @@ struct Dim {
     for (unsigned i = 0; i < nd; ++i) p += d[i];
     return p;
   }
+  inline Dim truncate() const {
+    Dim r = *this;
+    int m = 1;
+    int s = size();
+    for (int i = 1; i < s; ++i)
+      if (size(i) > 1) m = i;
+    r.resize(m);
+    return r;
+  }
   inline void resize(unsigned i) { nd = i; }
   inline int ndims() const { return nd; }
   inline int rows() const { return d[0]; }
