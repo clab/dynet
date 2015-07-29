@@ -37,7 +37,7 @@ struct Dim {
     int m = 1;
     int s = size();
     for (int i = 1; i < s; ++i)
-      if (size(i) > 1) m = i;
+      if (size(i) > 1) m = i + 1;
     r.resize(m);
     return r;
   }
