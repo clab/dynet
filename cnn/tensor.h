@@ -89,6 +89,7 @@ struct TensorTools {
   static void SetElements(const Tensor& v, const std::vector<float>& vec);
 };
 real rand01();
+real rand_normal();
 
 } // namespace cnn
 
