@@ -239,11 +239,6 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
 	i_e_t = transpose(tanh(i_e_t_input)) * i_va;
 	//WTF(i_e_t);
     } else {
-        /// debug
-        Expression before_tanh = i_wah_rep + i_uax;
-        Expression before_transpose = tanh(before_tanh);
-        Expression after_transpose = transpose(before_transpose);
-        Expression times_at = after_transpose * i_va;
         i_e_t = transpose(tanh(i_wah_rep + i_uax)) * i_va;
         //WTF(i_e_t);
     }

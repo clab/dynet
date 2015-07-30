@@ -16,7 +16,8 @@ class Model;
 /// this number needs to be used in attentional.h so has to be defined here so that both RNNEM and attentional model know the 
 /// memory size, which is the number of columns
 /// the momory row dimension is the same as hidden layer dimension
-#define RNNEM_MEM_SIZE 512
+#define RNNEM_MEM_SIZE 32
+/// to large can cause memory problems
 
 struct RNNEMBuilder : public RNNBuilder{
 
