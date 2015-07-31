@@ -8,6 +8,7 @@ set(cnn_library_SRCS
     dim.cc
     exec.cc
     expr.cc
+    grad-check.cc
     graph.cc
     gru.cc
     init.cc
