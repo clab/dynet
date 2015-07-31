@@ -41,6 +41,7 @@ Expression colwise_add(const Expression& x, const Expression& bias);
 
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
+Expression square(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);

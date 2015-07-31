@@ -9,7 +9,7 @@ namespace cnn {
 
 string ParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "parameters(" << dim << ')';
+  s << "parameters(" << dim << ", " << params << ')';
   return s.str();
 }
 

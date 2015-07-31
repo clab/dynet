@@ -11,11 +11,10 @@ namespace cnn {
 std::vector<int> ReadSentence(const std::string& line, Dict* sd) {
   std::istringstream in(line);
   std::string word;
-  std::string sep = "|||";
   std::vector<int> res;
   while(in) {
     in >> word;
-    if (word.empty()) break;
+    if (!in || word.empty()) break;
     res.push_back(sd->Convert(word));
   }
   return res;

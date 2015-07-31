@@ -114,4 +114,9 @@ real rand01() {
   return distribution(*rndeng);
 }
 
+real rand_normal() {
+  normal_distribution<real> distribution(0, 1);
+  return distribution(*rndeng);
+}
+
 } // namespace cnn

@@ -1,4 +1,4 @@
-#include "cnn/lstm.h"
+#include "cnn/deep-lstm.h"
 
 #include <string>
 #include <cassert>
@@ -14,7 +14,7 @@ namespace cnn {
 
 enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 
-LSTMBuilder::LSTMBuilder(unsigned layers,
+DeepLSTMBuilder::DeepLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
                          Model* model) : layers(layers) {
@@ -36,14 +36,14 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
     Parameters* p_x2c = model->add_parameters({long(hidden_dim), layer_input_dim});
     Parameters* p_h2c = model->add_parameters({long(hidden_dim), long(hidden_dim)});
     Parameters* p_bc = model->add_parameters({long(hidden_dim)});
-    layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
+    layer_input_dim = hidden_dim + input_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
     params.push_back(ps);
   }  // layers
 }
 
-void LSTMBuilder::new_graph_impl(ComputationGraph& cg){
+void DeepLSTMBuilder::new_graph_impl(ComputationGraph& cg){
   param_vars.clear();
 
   for (unsigned i = 0; i < layers; ++i){
@@ -66,14 +66,12 @@ void LSTMBuilder::new_graph_impl(ComputationGraph& cg){
 
     vector<Expression> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
-    
-    
   }
 }
 
 // layout: 0..layers = c
 //         layers+1..2*layers = h
-void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
+void DeepLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
@@ -90,13 +88,18 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   }
 }
 
-Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
+Expression DeepLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
+  o.push_back(Expression());
   vector<Expression>& ht = h.back();
   vector<Expression>& ct = c.back();
+  Expression& ot = o.back();
   Expression in = x;
+  vector<Expression> cc(layers);
   for (unsigned i = 0; i < layers; ++i) {
+    if (i > 0)
+      in = concatenate({in, x});
     const vector<Expression>& vars = param_vars[i];
     Expression i_h_tm1, i_c_tm1;
     bool has_prev_state = (prev >= 0 || has_initial_state);
@@ -150,8 +153,10 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
     in = ht[i] = cwise_multiply(i_ot,ph_t);
+    cc[i] = in;
   }
-  return ht.back();
+  ot = concatenate(cc);
+  return ot;
 }
 
 } // namespace cnn
