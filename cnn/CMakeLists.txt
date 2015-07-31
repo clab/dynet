@@ -3,6 +3,7 @@
 set(cnn_library_SRCS
     cnn.cc
     conv.cc
+    deep-lstm.cc
     dict.cc
     dim.cc
     exec.cc
