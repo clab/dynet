@@ -22,14 +22,14 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned hidden_dim,
                        Model* model, 
                        bool support_lags) : layers(layers), lagging(support_lags) {
-  unsigned layer_input_dim = input_dim;
+  long layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    Parameters* p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_hb = model->add_parameters({hidden_dim});
+    Parameters* p_x2h = model->add_parameters({long(hidden_dim), layer_input_dim});
+    Parameters* p_h2h = model->add_parameters({long(hidden_dim), long(hidden_dim)});
+    Parameters* p_hb = model->add_parameters({long(hidden_dim)});
     vector<Parameters*> ps = {p_x2h, p_h2h, p_hb};
     if (lagging)
-        ps.push_back(model->add_parameters({hidden_dim, hidden_dim}));
+        ps.push_back(model->add_parameters({long(hidden_dim), long(hidden_dim)}));
     params.push_back(ps);
     layer_input_dim = hidden_dim;
   }

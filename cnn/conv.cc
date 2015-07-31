@@ -244,7 +244,7 @@ Dim KMaxPooling::dim_forward(const vector<Dim>& xs) const {
     cerr << "Bad input dimensions in KMaxPooling: " << xs << endl;
     abort();
   }
-  return Dim({xs[0].rows(), k});
+  return Dim({long(xs[0].rows()), long(k)});
 }
 
 size_t KMaxPooling::aux_storage_size() const {

@@ -6,7 +6,8 @@
 #include "cnn/gru.h"
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
-# include "cnn/expr.h"
+#include "cnn/expr.h"
+#include "cnn/cnn-helper.h"
 
 #include <iostream>
 #include <fstream>
@@ -18,10 +19,10 @@
 using namespace std;
 using namespace cnn;
 
-unsigned LAYERS = 2;
-unsigned INPUT_DIM = 8;  //256
-unsigned HIDDEN_DIM = 24;  // 1024
-unsigned VOCAB_SIZE = 0;
+long LAYERS = 2;
+long INPUT_DIM = 8;  //256
+long HIDDEN_DIM = 24;  // 1024
+long VOCAB_SIZE = 0;
 
 cnn::Dict d;
 int kSOS;
