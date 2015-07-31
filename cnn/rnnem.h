@@ -46,7 +46,7 @@ struct RNNEMBuilder : public RNNBuilder{
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
-  Expression add_input_impl(const Expression& x) override;
+  Expression add_input_impl(int prev, const Expression& x) override;
 
  public:
   // first index is layer, then ...
