@@ -196,6 +196,7 @@ namespace cnn {
     }
 
     Expression RNNEMBuilder::add_input_impl(int prev, const Expression& x) {
+        int t = prev; 
         h.push_back(vector<Expression>(layers));
         c.push_back(vector<Expression>(layers));
         w.push_back(vector<Expression>(layers));
@@ -206,8 +207,8 @@ namespace cnn {
         for (unsigned i = 0; i < layers; ++i) {
             const vector<Expression>& vars = param_vars[i];
             Expression i_h_tm1, i_c_tm1, i_w_tm1;
-            bool has_prev_state = (prev >= 0 || has_initial_state);
-            if (prev < 0) {
+            bool has_prev_state = (t > 0 || has_initial_state);
+            if (t <= 0) {
                 if (has_initial_state) {
                     // intial value for h and c at timestep 0 in layer i
                     // defaults to zero matrix input if not set in add_parameter_edges
@@ -217,12 +218,12 @@ namespace cnn {
                 }
             }
             else {  // t > 0
-                i_h_tm1 = h[prev - 1][i];
-                i_c_tm1 = c[prev - 1][i];
-                i_w_tm1 = w[prev - 1][i];
+                i_h_tm1 = h[t - 1][i];
+                i_c_tm1 = c[t - 1][i];
+                i_w_tm1 = w[t - 1][i];
             }
 
-            vector<Expression> mem_ret = read_memory(prev, in, i);
+            vector<Expression> mem_ret = read_memory(t, in, i);
             Expression mem_wgt = mem_ret[0];
             Expression mem_c_t = mem_ret[1];
 

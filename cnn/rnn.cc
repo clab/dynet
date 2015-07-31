@@ -22,12 +22,9 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned hidden_dim,
                        Model* model, 
                        bool support_lags) : layers(layers), lagging(support_lags) {
-  unsigned layer_input_dim = input_dim;
-  assert(layers > 0);
-  assert(input_dim > 0);
-  assert(hidden_dim > 0);
+  long layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    Parameters* p_x2h = model->add_parameters({long(hidden_dim), long(layer_input_dim)});
+    Parameters* p_x2h = model->add_parameters({long(hidden_dim), layer_input_dim});
     Parameters* p_h2h = model->add_parameters({long(hidden_dim), long(hidden_dim)});
     Parameters* p_hb = model->add_parameters({long(hidden_dim)});
     vector<Parameters*> ps = {p_x2h, p_h2h, p_hb};
