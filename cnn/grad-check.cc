@@ -9,10 +9,22 @@
 
 using namespace std;
 
+// 10e-5
+#define GRADIENT_CHECK_DIGIT_SIGNIFICANT_LEVEL 5
+
 namespace cnn {
 
 void CheckGrad(Model& m, ComputationGraph& g) {
-  float alpha = 5e-4;
+  float alpha = 5e-2; /// change to this alpha, which then shows that the difference between numeric and error propagation is around 10e-5.
+  const vector<Parameters*>& ppparams = m.parameters_list();
+
+  /// reset gradients to zero
+  for (auto pp : ppparams)
+  {
+    Parameters& p = *pp;
+    p.clear();
+  }
+
   float E = as_scalar(g.forward());
   g.backward();
 
@@ -30,11 +42,14 @@ void CheckGrad(Model& m, ComputationGraph& g) {
       p.values.v[i] = old + alpha;
       float E_right = as_scalar(g.forward());
       float g = (E_right - E_left) / (2 * alpha);
-      float f = fabs(g - p.g.v[i]);
-      float m = max(fabs(g), fabs(p.g.v[i]));
-      if (f > 0.1) {
-        if (m > 0.f) f /= m;
-        if (f > 0.1) { flag = true; cerr << "***[" << f << "] "; }
+      float threshold = (float)pow(10.0,
+          max((float)0.0, ceil(log10(min(fabs(g), fabs(p.g.v[i]))))) - (int)GRADIENT_CHECK_DIGIT_SIGNIFICANT_LEVEL);
+      float diff = fabs(g - p.g.v[i]);
+      bool wrong = (std::isnan(diff) || diff > threshold);
+        
+      if (wrong)
+      {
+          flag = true; cerr << "***[" << diff << "] ";
       }
       cerr << p.g.v[i] << ' ' << g << endl;
     }

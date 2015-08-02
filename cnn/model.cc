@@ -28,6 +28,11 @@ Parameters::Parameters(const Dim& d, float scale) : dim(d) {
 
 size_t Parameters::size() const { return dim.size(); }
 
+void Parameters::reset_to_zero()
+{
+    (*values) *= 0.0;
+}
+
 void Parameters::scale_parameters(float a) {
   (*g) *= a;
 }

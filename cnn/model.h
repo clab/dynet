@@ -30,6 +30,7 @@ struct ParametersBase {
 struct Parameters : public ParametersBase {
   friend class Model;
   void scale_parameters(float a) override;
+  void reset_to_zero() ;
   void squared_l2norm(float* sqnorm) const override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
