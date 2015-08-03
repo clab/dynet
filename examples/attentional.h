@@ -33,10 +33,7 @@ struct AttentionalModel {
             );
 
     Expression BuildGraph(const std::vector<int> &source, const std::vector<int>& target,
-        ComputationGraph& cg, Expression *alignment = 0);
-
-    Expression BuildGraphWithHistory(const std::vector<int> &source, const std::vector<int>& target,
-        ComputationGraph& cg, Expression *alignment = 0);
+        ComputationGraph& cg, Expression *alignment = 0, bool usePastHitory = true);
 
     void display(const std::vector<int> &source, const std::vector<int>& target,
             ComputationGraph& cg, const Expression& alignment, Dict &sd, Dict &td);
@@ -279,8 +276,16 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
 
 template <class Builder>
 Expression AttentionalModel<Builder>::BuildGraph(const std::vector<int> &source,
-        const std::vector<int>& target, ComputationGraph& cg, Expression *alignment) 
+    const std::vector<int>& target, ComputationGraph& cg, Expression *alignment, bool usePastHitory)
 {
+    if (usePastHistory == false)
+    {
+        for (auto pp = p_h0.begin(); pp != p_h0.end(); pp++)
+        {
+            (*pp)->reset_to_zero();
+        }
+    }
+
     //std::cout << "source sentence length: " << source.size() << " target: " << target.size() << std::endl;
     start_new_instance(source, cg);
 
@@ -299,43 +304,6 @@ Expression AttentionalModel<Builder>::BuildGraph(const std::vector<int> &source,
     }
 
     Expression i_nerr = sum(errs);
-    return i_nerr;
-}
-
-/**
-This saves history of hidden state from the last sentences
-This is used for NTM or memory network 
-*/
-template <class Builder>
-Expression AttentionalModel<Builder>::BuildGraphWithHistory(const std::vector<int> &source,
-    const std::vector<int>& target, ComputationGraph& cg, Expression *alignment)
-{
-    //std::cout << "source sentence length: " << source.size() << " target: " << target.size() << std::endl;
-    start_new_instance(source, cg);
-
-    std::vector<Expression> errs;
-    const unsigned tlen = target.size() - 1;
-    for (unsigned t = 0; t < tlen; ++t) {
-        Expression i_r_t = add_input(target[t], t, cg);
-        //WTF(i_r_t);
-        Expression i_err = pickneglogsoftmax(i_r_t, target[t + 1]);
-        errs.push_back(i_err);
-    }
-    // save the alignment for later
-    if (alignment != 0) {
-        // pop off the last alignment column
-        *alignment = concatenate_cols(aligns);
-    }
-
-    Expression i_nerr = sum(errs);
-
-#ifdef DBG_NEW_RNNEM
-    vector<Expression> final_state = builder.final_s();
-    for (auto l = builder.layers; l < 2 * builder.layers; l++)
-    {
-        i_h0[l] = final_state[l];
-    }
-#endif
 
     return i_nerr;
 }
