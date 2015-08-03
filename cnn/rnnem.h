@@ -12,6 +12,10 @@ namespace cnn {
 
 class Model;
 
+/// this saves external memory as a big matrix from one sentence to the next. 
+/// there is not M_t concept within a sentence. It is fixed within a sentence.
+
+
 /// to-do : expose this to be a variable so that it can be changed 
 /// this number needs to be used in attentional.h so has to be defined here so that both RNNEM and attentional model know the 
 /// memory size, which is the number of columns
