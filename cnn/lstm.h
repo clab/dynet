@@ -25,6 +25,7 @@ struct LSTMBuilder : public RNNBuilder {
     for(auto my_h : final_h()) ret.push_back(my_h);
     return ret;
   }
+  unsigned num_h0_components() const override { return 2 * layers; }
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
