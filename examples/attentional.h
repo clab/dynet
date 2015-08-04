@@ -33,7 +33,7 @@ struct AttentionalModel {
             );
 
     Expression BuildGraph(const std::vector<int> &source, const std::vector<int>& target,
-        ComputationGraph& cg, Expression *alignment = 0, bool usePastHitory = true);
+        ComputationGraph& cg, Expression *alignment = 0, bool usePastHitory = true, bool usePastMemory = false);
 
     void display(const std::vector<int> &source, const std::vector<int>& target,
             ComputationGraph& cg, const Expression& alignment, Dict &sd, Dict &td);
@@ -53,6 +53,7 @@ struct AttentionalModel {
     Parameters* p_Ua;
     Parameters* p_va;
     Parameters* p_Ta;
+    size_t layers; 
     Builder builder;
     Builder builder_src_fwd;
     Builder builder_src_bwd;
@@ -80,21 +81,12 @@ struct AttentionalModel {
     unsigned slen;
 };
 
-#define WTF(expression) \
-    std::cout << #expression << " has dimensions " << cg.nodes[expression.i]->dim << std::endl;
-#define KTHXBYE(expression) \
-    std::cout << *cg.get_value(expression.i) << std::endl;
-
-#define LOLCAT(expression) \
-    WTF(expression) \
-    KTHXBYE(expression) 
-
 template <class Builder>
 AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
     unsigned vocab_size_src, unsigned vocab_size_tgt, unsigned layers, unsigned hidden_dim, 
     unsigned align_dim, bool _rnn_src_embeddings, bool _giza_extentions, unsigned hidden_replicates, 
     LookupParameters* cs, LookupParameters *ct, bool use_external_memory = false)
-    : builder(layers, (_rnn_src_embeddings) ? 3 * hidden_dim : 2 * hidden_dim, hidden_dim, &model),
+    : layers(layers), builder(layers, (_rnn_src_embeddings) ? 3 * hidden_dim : 2 * hidden_dim, hidden_dim, &model),
   builder_src_fwd(1, hidden_dim, hidden_dim, &model),
   builder_src_bwd(1, hidden_dim, hidden_dim, &model),
   rnn_src_embeddings(_rnn_src_embeddings), 
@@ -276,7 +268,7 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
 
 template <class Builder>
 Expression AttentionalModel<Builder>::BuildGraph(const std::vector<int> &source,
-    const std::vector<int>& target, ComputationGraph& cg, Expression *alignment, bool usePastHitory)
+    const std::vector<int>& target, ComputationGraph& cg, Expression *alignment, bool usePastHitory, bool usePastMemory)
 {
     if (usePastHistory == false)
     {
@@ -285,7 +277,15 @@ Expression AttentionalModel<Builder>::BuildGraph(const std::vector<int> &source,
             (*pp)->reset_to_zero();
         }
     }
-
+    if (usePastMemory)
+    {
+        size_t i = 0; 
+        for (auto pp = p_h0.begin(); pp != p_h0.end(); pp++, i++)
+        {
+            if (i < layers || i >= 2 * layers)
+                (*pp)->reset_to_zero();
+        }
+    }
     //std::cout << "source sentence length: " << source.size() << " target: " << target.size() << std::endl;
     start_new_instance(source, cg);
 
@@ -459,9 +459,5 @@ AttentionalModel<Builder>::sample(const std::vector<int> &source, ComputationGra
     return target;
 }
 
-
-#undef WTF
-#undef KTHXBYE
-#undef LOLCAT
 
 }; // namespace cnn
