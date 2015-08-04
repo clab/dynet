@@ -21,8 +21,8 @@ using namespace cnn::expr;
 
 //parameters
 long LAYERS = 3;
-long INPUT_DIM = 500;
-long HIDDEN_DIM = 500;
+long INPUT_DIM = 150;
+long HIDDEN_DIM = 150;
 long INPUT_VOCAB_SIZE = 0;
 long OUTPUT_VOCAB_SIZE = 0;
 
