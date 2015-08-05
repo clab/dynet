@@ -1,0 +1,200 @@
+<s> a bag of cookies and a lemon bar . </s> ||| 9
+<s> sorry , i 'll take care of the dog . </s> ||| 10
+<s> i would like two tickets for " cats " , for this thursday . </s> ||| 14
+<s> to the fairmont hotel , please . </s> ||| 7
+<s> where is the coffee shop ? </s> ||| 6
+<s> i 'd like a children 's sweater . </s> ||| 8
+<s> my suitcase is damaged . </s> ||| 5
+<s> i need a claim form , please . </s> ||| 8
+<s> your name again ? </s> ||| 4
+<s> is mr. brown there ? </s> ||| 5
+<s> okay . it costs eighty- five cents for regular mail and three dollars and zero cents extra for special delivery . </s> ||| 21
+<s> can i charter a boat for a day ? </s> ||| 9
+<s> at which window can i make a reservation ? </s> ||| 9
+<s> what 's that ? </s> ||| 4
+<s> do i have to dress up ? </s> ||| 7
+<s> could you tell me how to get to the opera ? </s> ||| 11
+<s> were n't you a bit too intoxicated last night , honey ? </s> ||| 12
+<s> please follow the instructions from our staff . </s> ||| 8
+<s> this is it . </s> ||| 4
+<s> please stop here . </s> ||| 4
+<s> is there a department store near here ? </s> ||| 8
+<s> you can get it at the book store or souvenir shop . </s> ||| 12
+<s> full tank , please . </s> ||| 5
+<s> is there any cheaper room ? </s> ||| 6
+<s> i prefer an automatic car . </s> ||| 6
+<s> i 'm going to stay at the dormitory of harvard university . </s> ||| 12
+<s> what is today 's rate ? </s> ||| 6
+<s> three glasses of cherry juice , please . </s> ||| 8
+<s> i suffer chronically from asthma . </s> ||| 6
+<s> i have about three thousand dollars . </s> ||| 7
+<s> tonight ? i think tonight is already full , but i 'll check . </s> ||| 14
+<s> all right , sir . </s> ||| 5
+<s> it comes with a choice of french fries or rice pilaf . </s> ||| 12
+<s> how do i get to this place ? </s> ||| 8
+<s> what kind of story is it ? </s> ||| 7
+<s> it 's well engineered . </s> ||| 5
+<s> three times . </s> ||| 3
+<s> which window sells stamps ? </s> ||| 5
+<s> after he attacked me , he drove away in a white van . </s> ||| 13
+<s> are there any special sights ? </s> ||| 6
+<s> all right . </s> ||| 3
+<s> please keep this tag and present it when you come to pick it up . </s> ||| 15
+<s> i would buy this if i were you . </s> ||| 9
+<s> they were listening to his speech with open ears . </s> ||| 10
+<s> two hundred dollars . </s> ||| 4
+<s> how much for a night ? </s> ||| 6
+<s> where 's the nearest bookshop ? </s> ||| 6
+<s> how long is the carry over that pond ? </s> ||| 9
+<s> surely sir , but what happened to you ? </s> ||| 9
+<s> i want something that looks more natural . </s> ||| 8
+<s> should i avoid any types of food while taking this medicine ? </s> ||| 12
+<s> will i have any difficulty with the customs ? </s> ||| 9
+<s> do you have broad toe dress shoes ? </s> ||| 8
+<s> may i have some red wine ? </s> ||| 7
+<s> you 'll get it at the gate . </s> ||| 8
+<s> tell me when we get to the museum . </s> ||| 9
+<s> does this bus go to the sheraton hotel ? </s> ||| 9
+<s> what does that come to ? </s> ||| 6
+<s> it 's a little bit hot . </s> ||| 7
+<s> how many blocks from here ? </s> ||| 6
+<s> just a shower is okay . </s> ||| 6
+<s> my eyes are bloodshot . </s> ||| 5
+<s> no . </s> ||| 2
+<s> may i suggest a twin for single use instead ? we have one . </s> ||| 14
+<s> my car is out of order . </s> ||| 7
+<s> i can n't guarantee that , but we will try our best . </s> ||| 13
+<s> i 'd like a tight perm , please . </s> ||| 9
+<s> the sea was seen far below . </s> ||| 7
+<s> she wants a beer . </s> ||| 5
+<s> you need an operation . </s> ||| 5
+<s> more eggs , please . </s> ||| 5
+<s> where is the bus stop for the central park ? </s> ||| 10
+<s> cabs ? </s> ||| 2
+<s> do you have any tickets left for " miss saigon " tomorrow 's matinee ? </s> ||| 15
+<s> here 's your key , sir . </s> ||| 7
+<s> room fifty- six twelve . </s> ||| 5
+<s> how many tablets does it contain ? </s> ||| 7
+<s> i love your sweater . </s> ||| 5
+<s> go ahead . </s> ||| 3
+<s> here we are . </s> ||| 4
+<s> this is your hotel . </s> ||| 5
+<s> when 's the basketball game on ? </s> ||| 7
+<s> good morning . </s> ||| 3
+<s> i 'm afraid i will need to see some form of identification . </s> ||| 13
+<s> what was your impression ? </s> ||| 5
+<s> certainly . </s> ||| 2
+<s> i 'm taking flight twelve to tokyo . </s> ||| 8
+<s> i 'd like to make a long distance call , please . </s> ||| 12
+<s> five months . </s> ||| 3
+<s> it is slow . </s> ||| 4
+<s> can i get a beer , please ? i 'd like another beer . </s> ||| 14
+<s> i 'd like a dual- voltage shaver , please . </s> ||| 10
+<s> to new york ? </s> ||| 4
+<s> what days of the week does it take place ? </s> ||| 10
+<s> what kind of dressing ? </s> ||| 5
+<s> this is rather cold . </s> ||| 5
+<s> my gums are very sore . </s> ||| 6
+<s> i 'd like some styling gel . </s> ||| 7
+<s> sorry , this space is already taken . </s> ||| 8
+<s> can we see a menu ? </s> ||| 6
+<s> my size is six . </s> ||| 5
+<s> i 'm all right . </s> ||| 5
+<s> thank you , that 's enough . </s> ||| 7
+<s> any taxi would not stop unless you wait for them at the taxi stand . </s> ||| 15
+<s> my budget is under fifty dollars for a night . </s> ||| 10
+<s> will you take a picture together with me ? </s> ||| 9
+<s> how much is the service charge ? </s> ||| 7
+<s> did the turnover in north america rise by more than five percent ? </s> ||| 13
+<s> where is the women 's clothing department ? </s> ||| 8
+<s> who 's your best friend ? </s> ||| 6
+<s> you did n't happen to be around the corner of twelfth and g about eight thirty tonight , did you ? </s> ||| 21
+<s> did you know that one of the grand champions of sumo , a kind of traditional japanese- style wrestling , is an american ? </s> ||| 24
+<s> health- sports day october tenth is a national holiday designed to promote the health of the people . </s> ||| 18
+<s> is this for wall street ? </s> ||| 6
+<s> i 'd like to rent it from the fifth to the tenth of december . </s> ||| 15
+<s> i left my valuables in the safety deposit box in my room . </s> ||| 13
+<s> all right . </s> ||| 3
+<s> do you want me to check under the hood ? </s> ||| 10
+<s> hello , i 'd like to make a reservation for two in july from the twenty- seventh through the thirty- first . </s> ||| 22
+<s> do you want the collision damage waiver and personal accident insurance ? </s> ||| 12
+<s> sugar ? </s> ||| 2
+<s> can i pay with master card ? </s> ||| 7
+<s> the keys go here . </s> ||| 5
+<s> is this the place to pick up the baggage for nw nine o seven ? </s> ||| 15
+<s> i 'll have this brand . </s> ||| 6
+<s> can you recommend a good nightclub ? </s> ||| 7
+<s> guess who i ran into yesterday ? </s> ||| 7
+<s> there is a very good indian restaurant near the subway station . </s> ||| 12
+<s> i 'd like a carafe of red wine , please . </s> ||| 11
+<s> i 'm so happy to have been able to come to this country . </s> ||| 14
+<s> my name and address are on it . </s> ||| 8
+<s> could you help me find my suitcase ? </s> ||| 8
+<s> what kind of stone is this ? </s> ||| 7
+<s> i 'd like to point out that our government is being unkind to the so- called boat people . </s> ||| 19
+<s> i realize that japan is already much too over- populated to let in those uninvited guests . </s> ||| 17
+<s> but , on the other hand , many sectors of our industry need manual labor resources . </s> ||| 17
+<s> from that mountain , you can see the whole city . </s> ||| 11
+<s> during this season , many different kinds of flowers are blooming . </s> ||| 12
+<s> they are very beautiful . </s> ||| 5
+<s> more fruit , please . </s> ||| 5
+<s> do you have a sunshade ? </s> ||| 6
+<s> okay. you can try on or hold them if you want . </s> ||| 12
+<s> follow me . </s> ||| 3
+<s> i think i left it near the cashier . </s> ||| 9
+<s> no , they tend to pamper their children . </s> ||| 9
+<s> some japanese parents can n't say no to them . </s> ||| 10
+<s> i enjoyed my stay with you . </s> ||| 7
+<s> please tell him that yamada called . </s> ||| 7
+<s> how can i get to the twin towers by subway ? </s> ||| 11
+<s> okay . thank you . </s> ||| 5
+<s> please take your key with you when you go out , sir . </s> ||| 13
+<s> would you make arrangements in advance ? </s> ||| 7
+<s> i would like a reservation for two , please . </s> ||| 10
+<s> i 'd like a cigarette lighter . </s> ||| 7
+<s> all right , please fill out this information here . </s> ||| 10
+<s> which would you like , beef , chicken or fish ? </s> ||| 11
+<s> we 'd like to make a reservation for two for the tour . </s> ||| 13
+<s> is it possible to take different routes going and coming back ? </s> ||| 12
+<s> is there a snack bar here ? </s> ||| 7
+<s> excuse me , sir . </s> ||| 5
+<s> i 'd like to do some sightseeing in boston . </s> ||| 10
+<s> sorry to bother you , but will we make it before the game starts ? </s> ||| 15
+<s> can i listen to this cassette ? </s> ||| 7
+<s> do you have a menu in japanese ? </s> ||| 8
+<s> service . </s> ||| 2
+<s> recently my complexion is dull and foundation does n't hold . </s> ||| 11
+<s> it 's five after one . </s> ||| 6
+<s> can you shorten the waist ? </s> ||| 6
+<s> this is not our order . </s> ||| 6
+<s> i think it 's for the next table . </s> ||| 9
+<s> i 'm being helped . </s> ||| 5
+<s> thank you . </s> ||| 3
+<s> i 'd like a pain- killer . </s> ||| 7
+<s> who is your favorite actress ? </s> ||| 6
+<s> i 'd like an oval one . </s> ||| 7
+<s> what sort of music do they play there ? </s> ||| 9
+<s> i do n't like the color . </s> ||| 7
+<s> show me another one , please . </s> ||| 7
+<s> where 's the nearest casino ? </s> ||| 6
+<s> planes are by far the most convenient for trips from tokyo to hokkaido , shikoku and kyushu . </s> ||| 18
+<s> please take me to the morning market . </s> ||| 8
+<s> to the ford museum , please . </s> ||| 7
+<s> the frame of my glasses is broken . </s> ||| 8
+<s> there are so many shopping centers . </s> ||| 7
+<s> from three o 'clock . </s> ||| 5
+<s> can i exchange the battery ? </s> ||| 6
+<s> great . </s> ||| 2
+<s> i have a window seat . </s> ||| 6
+<s> uh , if you 'd like to trade seats later , miss . </s> ||| 13
+<s> where is the closest hospital from here ? </s> ||| 8
+<s> i hope you 'll like it . </s> ||| 7
+<s> i enjoyed the sightseeing of new york yesterday . </s> ||| 9
+<s> i 'm interested in the blue handbag in the window . </s> ||| 11
+<s> it 's eight dollars a person . </s> ||| 7
+<s> contact your landlord when you have any problems . </s> ||| 9
+<s> give me a shampoo and style it as it is now , please . </s> ||| 14
+<s> there 's no more soap . </s> ||| 6
+<s> when you get there , ask someone else , please . </s> ||| 11
+<s> mr. aoki. yes , a single room for two nights ? </s> ||| 11
+<s> please tell me the fastest way to go to san francisco . </s> ||| 12
