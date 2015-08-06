@@ -68,6 +68,8 @@ Expression huber_distance(const Expression& x, const Expression& y, float c = 1.
 Expression l1_distance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
+Expression poisson_loss(const Expression& x, unsigned y);
+Expression poisson_loss(const Expression& x, const unsigned* py);
 
 // various convolutiony things
 Expression conv1d_narrow(const Expression& x, const Expression& f);
