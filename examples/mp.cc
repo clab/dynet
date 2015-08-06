@@ -28,11 +28,29 @@ struct Workload {
   int pipe[2];
 };
 
+struct ModelParameters {
+  Parameters* m;
+  Parameters* b;
+};
+
+void BuildComputationGraph(ComputationGraph& cg, ModelParameters& model_parameters, cnn::real* x_value, cnn::real* y_value) {
+  Expression m = parameter(cg, model_parameters.m);
+  Expression b = parameter(cg, model_parameters.b);
+
+  Expression x = input(cg, x_value);
+  Expression y_star = input(cg, y_value);
+  Expression y = m * x + b;
+  Expression loss = squared_distance(y, y_star);
+}
+
 vector<pair<cnn::real, cnn::real>> ReadData(string filename) {
   vector<pair<cnn::real, cnn::real>> data;
   ifstream fs(filename);
   string line;
   while (getline(fs, line)) {
+    if (line.size() > 0 && line[0] == '#') {
+      continue;
+    }
     vector<string> parts;
     boost::split(parts, line, boost::is_any_of("\t"));
     data.push_back(make_pair(atof(parts[0].c_str()), atof(parts[1].c_str())));
@@ -49,27 +67,22 @@ int main(int argc, char** argv) {
     return 1;
   }
   vector<pair<cnn::real, cnn::real>> data = ReadData(argv[1]);
+  vector<Workload> workloads(num_children);
 
   Model model;
   AdamTrainer sgd(&model, 0.0);
 
   ComputationGraph cg;
-
+  cnn::real x_value, y_value;
   Parameters* m_param = model.add_parameters({1, 1});
   Parameters* b_param = model.add_parameters({1});
-  Expression m = parameter(cg, m_param);
-  Expression b = parameter(cg, b_param);
+  ModelParameters model_params = {m_param, b_param};
+  BuildComputationGraph(cg, model_params, &x_value, &y_value);
 
-  cnn::real x_value, y_value;
-  Expression x = input(cg, &x_value);
-  Expression y_star = input(cg, &y_value);
-  Expression y = m * x + b;
-  Expression loss = squared_distance(y, y_star);
 
   // train the parameters
   for (unsigned iter = 0; true; ++iter) {
     random_shuffle(data.begin(), data.end());
-    Workload workloads[num_children];
     pid_t pid;
     unsigned cid = 0;
     for (cid = 0; cid < num_children; cid++) {
@@ -79,26 +92,23 @@ int main(int argc, char** argv) {
       workloads[cid].end = end;
       pipe(workloads[cid].pipe);
       pid = fork();
-      if (pid == 0 || pid == -1) {
+      if (pid == -1) {
+        cerr << "Fork failed. Exiting ...";
+        return 1;
+      }
+      else if (pid == 0) {
+        // children shouldn't continue looping
         break;
       }
       workloads[cid].pid = pid;
-      //cerr << "work load for child " << cid << " (pid=" << workloads[cid].pid << ") is from " << workloads[cid].start << " to " << workloads[cid].end << endl;
     }
 
-    if (pid == -1) {
-      cerr << "Fork failed. Exiting ...";
-      return 1;
-    }
-    else if (pid == 0) {
+    if (pid == 0) {
       assert (cid >= 0 && cid < num_children);
       unsigned start = workloads[cid].start;
       unsigned end = workloads[cid].end; 
       assert (start < end);
       assert (end <= data.size());
-
-      cnn::real m_start = as_scalar(m.value());
-      cnn::real b_start = as_scalar(b.value());
 
       // Actually do the training thing
       cnn::real loss = 0;
@@ -112,10 +122,8 @@ int main(int argc, char** argv) {
       }
       loss /= data.size();
 
-      cnn::real m_end = as_scalar(m.value());
-      cnn::real b_end = as_scalar(b.value());
-      //cerr << "pid = " << getpid() << "\t" << "iter = " << iter << "\t" << "loss = " << loss << "\tm = " << m_end << "/" << m_start << "\tb = " << b_end << "/" << b_start << endl;
-      //cerr << iter << "\t" << "loss = " << loss << "\tm = " << m_end << "\tb = " << b_end << endl;
+      cnn::real m_end = as_scalar(model_params.m->values);
+      cnn::real b_end = as_scalar(model_params.b->values);
 
       write(workloads[cid].pipe[1], (char*)&m_end, sizeof(cnn::real));
       write(workloads[cid].pipe[1], (char*)&b_end, sizeof(cnn::real));
@@ -123,13 +131,10 @@ int main(int argc, char** argv) {
       return 0;
     }
     else {
-      // Send the start and end indices ot the child
-      char buf[256];
       vector<cnn::real> m_values;
       vector<cnn::real> b_values;
       vector<cnn::real> loss_values;
       for(unsigned cid = 0; cid < num_children; ++cid) {
-        // Read the new m and b values from the child
         cnn::real m, b, loss;
         read(workloads[cid].pipe[0], (char*)&m, sizeof(cnn::real));
         read(workloads[cid].pipe[0], (char*)&b, sizeof(cnn::real));
@@ -137,9 +142,9 @@ int main(int argc, char** argv) {
         m_values.push_back(m);
         b_values.push_back(b);
         loss_values.push_back(loss);
-        // Wait until the child dies
         wait(NULL); 
       }
+
       cnn::real m = 0.0;
       cnn::real b = 0.0;
       cnn::real loss = 0.0;
