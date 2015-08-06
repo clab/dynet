@@ -625,6 +625,20 @@ Dim L1Distance::dim_forward(const vector<Dim>& xs) const {
   return Dim({1});
 }
 
+string PoissonRegressionLoss::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "-log Poisson(" << pty << "; lambda=\\exp" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim PoissonRegressionLoss::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 1 || xs[0].size() != 1) {
+    cerr << "Bad input dimensions in PoissonRegressionLoss: " << xs << endl;
+    abort();
+  }
+  return xs[0];
+}
+
 string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";

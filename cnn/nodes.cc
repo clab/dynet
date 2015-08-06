@@ -1111,6 +1111,24 @@ void L1Distance::backward(const vector<const Tensor*>& xs,
   *dEdxi += (x - y).binaryExpr(*dEdf, FL1Backward());
 }
 
+void PoissonRegressionLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const auto y = *pty;
+  const auto z = lgamma(y + 1);
+  const auto x = xs[0]->v[0];
+  fx.v[0] = expf(x) + z - y * x;
+}
+
+void PoissonRegressionLoss::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  const auto x = xs[0]->v[0];
+  const auto y = *pty;
+  auto& dEdx = dEdxi.v[0];
+  dEdx += expf(x) - y;
+}
+
 void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA
