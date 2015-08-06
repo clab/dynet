@@ -1,7 +1,5 @@
-#include "cnn/nodes.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
-#include "cnn/gpu-ops.h"
 #include "cnn/expr.h"
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -21,8 +19,22 @@ using namespace cnn;
 using namespace cnn::expr;
 
 typedef pair<cnn::real, cnn::real> Datum;
-
 const unsigned num_children = 2;
+
+cnn::real ReadReal(int pipe) {
+  cnn::real v;
+  read(pipe, &v, sizeof(cnn::real));
+  return v;
+}
+
+void WriteReal(int pipe, cnn::real v) {
+  write(pipe, &v, sizeof(cnn::real));
+}
+
+cnn::real Mean(const vector<cnn::real>& values) {
+  return accumulate(values.begin(), values.end(), 0.0) / values.size();
+}
+
 struct Workload {
   pid_t pid;
   unsigned start;
@@ -111,26 +123,24 @@ void RunParent(unsigned iter, vector<Workload>& workloads, ModelParameters& mode
   vector<cnn::real> m_values;
   vector<cnn::real> b_values;
   vector<cnn::real> loss_values;
-  for(unsigned cid = 0; cid < num_children; ++cid) {
-    cnn::real m, b, loss;
-    read(workloads[cid].pipe[0], (char*)&m, sizeof(cnn::real));
-    read(workloads[cid].pipe[0], (char*)&b, sizeof(cnn::real));
-    read(workloads[cid].pipe[0], (char*)&loss, sizeof(cnn::real));
+  for(unsigned cid = 0; cid < num_children; ++cid) { 
+    cnn::real m = ReadReal(workloads[cid].pipe[0]);
+    cnn::real b = ReadReal(workloads[cid].pipe[0]);
+    cnn::real loss = ReadReal(workloads[cid].pipe[0]);
     m_values.push_back(m);
     b_values.push_back(b);
     loss_values.push_back(loss);
     wait(NULL); 
   }
 
-  cnn::real m = 0.0;
+  cnn::real m = Mean(m_values);
   cnn::real b = 0.0;
   cnn::real loss = 0.0;
   for (unsigned i = 0; i < m_values.size(); ++i) {
-    m += m_values[i];
     b += b_values[i];
     loss += loss_values[i];
   }
-  m /= m_values.size();
+
   b /= b_values.size();
 
   // Update parameters to use the new m and b values
