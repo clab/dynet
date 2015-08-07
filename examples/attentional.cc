@@ -77,6 +77,7 @@ int main(int argc, char** argv) {
         ("bidirectional", "use bidirectional recurrent hidden states as source embeddings, rather than word embeddings")
         ("giza", "use GIZA++ style features in attentional components")
         ("curriculum", "use 'curriculum' style learning, focusing on easy problems in earlier epochs")
+        ("lambda", value<float>()->default_value(1e-6), "the L2 regularization coefficient; default 1e-6.")
         ("verbose,v", "be extremely chatty")
     ;
     store(parse_command_line(argc, argv, opts), vm); 
@@ -97,6 +98,7 @@ int main(int argc, char** argv) {
     kTGT_SOS = td.Convert("<s>");
     kTGT_EOS = td.Convert("</s>");
     verbose = vm.count("verbose");
+    float lambda = vm["lambda"].as<float>();
 
     typedef vector<int> Sentence;
     typedef pair<Sentence, Sentence> SentencePair;
@@ -150,7 +152,7 @@ int main(int argc, char** argv) {
     //if (use_momentum)
         //sgd = new MomentumSGDTrainer(&model);
     //else
-        sgd = new SimpleSGDTrainer(&model);
+        sgd = new SimpleSGDTrainer(&model, lambda);
     //sgd = new AdadeltaTrainer(&model);
 
     string init_file;
