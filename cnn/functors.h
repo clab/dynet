@@ -16,6 +16,8 @@
 
 #define cast_uint32_t static_cast<uint32_t>
 
+// THIS CODE IS BROKEN- sometimes it returns NaN
+// it is commented out for this reason
 static inline float fastpow2 (float p) {
   float offset = (p < 0) ? 1.0f : 0.0f;
   float clipp = (p < -126) ? -126.0f : p;
@@ -27,9 +29,15 @@ static inline float fastpow2 (float p) {
 }
 
 #if 1
+#if 0
 static inline float fastexp (float p) {
   return fastpow2 (1.442695040f * p);
 }
+#else
+static inline float fastexp (float p) {
+  return exp(p);
+}
+#endif
 #else
 // Schraudolph version, but it's a bit crappy in terms of
 // performance and not that much faster
