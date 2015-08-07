@@ -126,7 +126,8 @@ template <class LM_t>
 void train(Model &model, LM_t &lm, 
     const vector<vector<int>>& training, 
     const vector<vector<int>>& dev,
-    Trainer *sgd, const string& fname)
+    Trainer *sgd, const string& fname,
+    bool randomSample)
 {
     double best = 9e+99;
     unsigned report_every_i = 50;
@@ -163,7 +164,9 @@ void train(Model &model, LM_t &lm,
         }
         sgd->status();
         cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
-        lm.RandomSample();
+
+        if (randomSample)
+            lm.RandomSample();
 
         // show score on dev data?
         report++;
@@ -211,6 +214,7 @@ int main(int argc, char** argv) {
       ("lstm", "use Long Short Term Memory (GRU) for recurrent structure; default RNN")
       ("dglstm", "use depth-gated LSTM for recurrent structure; default RNN")
       ("verbose,v", "be extremely chatty")
+      ("generate,g", value<bool>()->default_value(false), "generate random samples")
       ;
   store(parse_command_line(argc, argv, opts), vm);
 
@@ -224,6 +228,9 @@ int main(int argc, char** argv) {
 
   LAYERS = vm["layers"].as<int>();
   HIDDEN_DIM = vm["hidden"].as<int>();
+
+  bool generateSample = false;
+  generateSample = vm["generate"].as<bool>();
 
   string fname;
   if (vm.count("parameters")) {
@@ -305,12 +312,12 @@ int main(int argc, char** argv) {
   if (vm.count("lstm")) {
       cerr << "%% Using LSTM recurrent units" << endl;
       RNNLanguageModel<LSTMBuilder> lm(model);
-      train(model, lm, training, dev, sgd, fname);
+      train(model, lm, training, dev, sgd, fname, generateSample);
   }
   else if (vm.count("dglstm")) {
       cerr << "%% Using DGLSTM recurrent units" << endl;
       RNNLanguageModel<DGLSTMBuilder> lm(model);
-      train(model, lm, training, dev, sgd, fname);
+      train(model, lm, training, dev, sgd, fname, generateSample);
   }
 
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
