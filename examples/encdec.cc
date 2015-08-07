@@ -254,6 +254,10 @@ int main(int argc, char** argv) {
 	boost::archive::text_oarchive oa(out);
 	oa << model;
       }
+      else{
+          /// reduce learning rate
+          sgd->eta *= 0.5;
+      }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
   }
