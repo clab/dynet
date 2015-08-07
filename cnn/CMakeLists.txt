@@ -23,6 +23,7 @@ set(cnn_library_SRCS
     shadow-params.cc
     tensor.cc
     training.cc
+    dglstm.cc
     rnnem.cc
 )
 
@@ -55,6 +56,7 @@ set(cnn_library_HDRS
     tensor.h
     timing.h
     training.h
+    dglstm.h
     rnnem.h
 )
 
