@@ -48,6 +48,8 @@ struct AttentionalModel {
     LookupParameters* p_ct;
     std::vector<Parameters*> p_h0;
     Parameters* p_R;
+    Parameters* p_P;
+    Parameters* p_Q;
     Parameters* p_bias;
     //Parameters* p_M;
     Parameters* p_Wa;
@@ -69,6 +71,8 @@ struct AttentionalModel {
     // state variables used in the above two methods
     Expression src;
     Expression i_R;
+    Expression i_P;
+    Expression i_Q;
     Expression i_bias;
     Expression i_Wa;
     Expression i_Ua;
@@ -123,10 +127,14 @@ AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
     }
 
     p_Wa = model.add_parameters({ long(align_dim), long(hidden_dim) });
+    p_P = model.add_parameters({ long(hidden_dim), long(hidden_dim) });
     if (rnn_src_embeddings) {
-        p_Ua = model.add_parameters({long(align_dim), 2*long(hidden_dim)});
-    } else {
+        p_Ua = model.add_parameters({ long(align_dim), 2 * long(hidden_dim) });
+        p_Q = model.add_parameters({ long(hidden_dim), 2 * long(hidden_dim) });
+    }
+    else {
         p_Ua = model.add_parameters({long(align_dim), long(hidden_dim)});
+        p_Q = model.add_parameters({ long(hidden_dim), long(hidden_dim) });
     }
     if (giza_extensions) {
         p_Ta = model.add_parameters({long(align_dim), 9});
@@ -177,6 +185,8 @@ void AttentionalModel<Builder>::start_new_instance(const std::vector<int> &sourc
         i_h0.push_back(parameter(cg, p));
     builder.start_new_sequence(i_h0);
     i_R = parameter(cg, p_R); // hidden -> word rep parameter
+    i_P = parameter(cg, p_P); // direct from hidden to output
+    i_Q = parameter(cg, p_Q); // direct from input to output
     i_bias = parameter(cg, p_bias);  // word bias
     i_Wa = parameter(cg, p_Wa); 
     i_Ua = parameter(cg, p_Ua);
@@ -261,8 +271,14 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
     // y_t = RNN([x_t, a_t])
     Expression i_y_t = builder.add_input(input);
     //WTF(i_y_t);
-    Expression i_r_t = i_bias + i_R * i_y_t;
-    //WTF(i_r_t);
+#ifndef VANILLA_TARGET_LSTM 
+    // Bahdanau does a max-out thing here; I do a tanh. Tomaatos tomateos. 
+    Expression i_tildet_t = tanh(affine_transform({ i_y_t, i_Q, i_c_t, i_P, i_x_t }));
+    
+    Expression i_r_t = affine_transform({ i_bias, i_R, i_tildet_t });
+#else
+    Expression i_r_t = affine_transform({ i_bias, i_R, i_y_t });
+#endif    
 
     return i_r_t;
 }
