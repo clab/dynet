@@ -77,18 +77,21 @@ template <typename T> int sgn(T val) {
 }
 
 struct FL1Backward {
-  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+  FL1Backward(float d) : d(d) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
     return sgn(x) * d;
   }
+  const float d;
 };
 
 struct FHuberBackward {
-  FHuberBackward(float c) : c(c) {}
-  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+  FHuberBackward(float c, float dEdf) : c(c), d(dEdf) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
     const float a = fabs(x);
     return (2 * d) * ((a < c) ? x : c * sgn(x));
   }
   const float c;
+  const float d;
 };
 
 struct FProduct {
