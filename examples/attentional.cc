@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
         ("hidden,h", value<int>()->default_value(HIDDEN_DIM), "use <num> dimensions for recurrent hidden states")
         ("gru", "use Gated Recurrent Unit (GRU) for recurrent structure; default RNN")
         ("lstm", "use Long Short Term Memory (GRU) for recurrent structure; default RNN")
+        ("dglstm", "use depth-gated LSTM for recurrent structure; default RNN")
         ("rnnem", "use ExtMemLSTM RNN (RNNEM) for recurrent struture with past input history; default RNN")
         ("bidirectional", "use bidirectional recurrent hidden states as source embeddings, rather than word embeddings")
         ("giza", "use GIZA++ style features in attentional components")
@@ -115,6 +116,7 @@ int main(int argc, char** argv) {
     if (vm.count("gru"))	flavour = "gru";
     else if (vm.count("lstm"))	flavour = "lstm";
     else if (vm.count("rnnem"))	flavour = "rnnem";
+    else if (vm.count("dglstm")) flavour = "dglstm";
     else			flavour = "rnn";
     SRC_VOCAB_SIZE = sd.size();
     TGT_VOCAB_SIZE = td.size();
@@ -164,6 +166,13 @@ int main(int argc, char** argv) {
         AttentionalModel<LSTMBuilder> am(model, 
 		SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
                 LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 2);
+        train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
+    }
+    else if (vm.count("dglstm")) {
+        cerr << "%% Using DGLSTM recurrent units" << endl;
+        AttentionalModel<DGLSTMBuilder> am(model,
+            SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
+            LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 2);
         train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
     }
     else if (vm.count("gru")) {
@@ -316,7 +325,7 @@ void train(Model &model, AM_t &am, Corpus &training, Corpus &devel,
             /**
             check gradients
             */
-            CheckGrad(model, cg);
+//            CheckGrad(model, cg);
 
             loss += as_scalar(cg.forward());
             

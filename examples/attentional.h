@@ -8,6 +8,7 @@
 #include "cnn/gru.h"
 #include "cnn/rnnem.h"
 #include "cnn/lstm.h"
+#include "cnn/dglstm.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
 #include "expr-xtra.h"
@@ -33,7 +34,7 @@ struct AttentionalModel {
             );
 
     Expression BuildGraph(const std::vector<int> &source, const std::vector<int>& target,
-        ComputationGraph& cg, Expression *alignment = 0, bool usePastHitory = true, bool usePastMemory = false);
+        ComputationGraph& cg, Expression *alignment = 0, bool usePastHitory = false, bool usePastMemory = false);
 
     void display(const std::vector<int> &source, const std::vector<int>& target,
             ComputationGraph& cg, const Expression& alignment, Dict &sd, Dict &td);
@@ -268,7 +269,7 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
 
 template <class Builder>
 Expression AttentionalModel<Builder>::BuildGraph(const std::vector<int> &source,
-    const std::vector<int>& target, ComputationGraph& cg, Expression *alignment, bool usePastHitory, bool usePastMemory)
+    const std::vector<int>& target, ComputationGraph& cg, Expression *alignment, bool usePastHistory, bool usePastMemory)
 {
     if (usePastHistory == false)
     {
