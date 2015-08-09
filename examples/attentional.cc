@@ -1,6 +1,5 @@
 #include "attentional.h"
 #include "cnn/cnn-helper.h"
-#include "cnn/grad-check.h"
 
 #include <iostream>
 #include <fstream>
@@ -13,12 +12,13 @@
 
 using namespace std;
 using namespace cnn;
+using namespace boost::program_options;
 
-long  LAYERS = 1; // 2
-long  HIDDEN_DIM = 64;  // 1024
-long  ALIGN_DIM = 32;   // 128
-long  SRC_VOCAB_SIZE = 0;
-long  TGT_VOCAB_SIZE = 0;
+unsigned LAYERS = 1; // 2
+unsigned HIDDEN_DIM = 64;  // 1024
+unsigned ALIGN_DIM = 32;   // 128
+unsigned SRC_VOCAB_SIZE = 0;
+unsigned TGT_VOCAB_SIZE = 0;
 
 cnn::Dict sd;
 cnn::Dict td;
@@ -27,6 +27,8 @@ int kSRC_EOS;
 int kTGT_SOS;
 int kTGT_EOS;
 bool verbose;
+
+float lambda;
 
 typedef vector<int> Sentence;
 typedef pair<Sentence, Sentence> SentencePair;
@@ -41,43 +43,41 @@ typedef vector<SentencePair> Corpus;
     WTF(expression) \
     KTHXBYE(expression) 
 
-template <class AM_t>
-void train(Model &model, AM_t &am, Corpus &training, Corpus &devel, 
-	Trainer &sgd, string init_file, string out_file, string test,
-	bool curriculum);
-
-Corpus read_corpus(const string &filename);
+template <class rnn_t>
+int main_body(variables_map vm, int = 2);
 
 int main(int argc, char** argv) {
     cnn::Initialize(argc, argv);
 
-    bool use_external_memory = false; 
-
     // command line processing
-    using namespace boost::program_options;
     variables_map vm; 
     options_description opts("Allowed options");
     opts.add_options()
         ("help", "print help message")
-        ("seed,s", value<int>()->default_value(217), "random seed number")
+        ("seed", value<int>()->default_value(125), "random seed")
         ("config,c", value<string>(), "config file specifying additional command line options")
         ("train,t", value<string>(), "file containing training sentences, with "
-        "each line consisting of source ||| target.")
+            "each line consisting of source ||| target.")
         ("devel,d", value<string>(), "file containing development sentences.")
-        ("test,T", value<string>(), "file containing testing source sentences")
+        ("test,T", value<string>(), "file containing testing source sentences (no training)")
+        ("testcorpus", value<string>(), "file containing test corpus with target translation")
+        ("kbest,K", value<string>(), "test on kbest inputs using mononlingual Markov model")
         ("initialise,i", value<string>(), "load initial parameters from file")
         ("parameters,p", value<string>(), "save best parameters to this file")
+        ("outputfile", value<string>(), "save decode and sample results to this file")
         ("layers,l", value<int>()->default_value(LAYERS), "use <num> layers for RNN components")
         ("align,a", value<int>()->default_value(ALIGN_DIM), "use <num> dimensions for alignment projection")
         ("hidden,h", value<int>()->default_value(HIDDEN_DIM), "use <num> dimensions for recurrent hidden states")
+        ("topk,k", value<int>()->default_value(100), "use <num> top kbest entries, used with --kbest")
+        ("epochs,e", value<int>()->default_value(50), "maximum number of training epochs")
         ("gru", "use Gated Recurrent Unit (GRU) for recurrent structure; default RNN")
         ("lstm", "use Long Short Term Memory (GRU) for recurrent structure; default RNN")
-        ("dglstm", "use depth-gated LSTM for recurrent structure; default RNN")
-        ("rnnem", "use ExtMemLSTM RNN (RNNEM) for recurrent struture with past input history; default RNN")
+        ("dglstm", "use Depth-Gated Long Short Term Memory (GRU) for recurrent structure; default RNN")
         ("bidirectional", "use bidirectional recurrent hidden states as source embeddings, rather than word embeddings")
         ("giza", "use GIZA++ style features in attentional components")
         ("curriculum", "use 'curriculum' style learning, focusing on easy problems in earlier epochs")
         ("lambda", value<float>()->default_value(1e-6), "the L2 regularization coefficient; default 1e-6.")
+        ("swap", "swap roles of source and target, i.e., learn p(source|target)")
         ("verbose,v", "be extremely chatty")
     ;
     store(parse_command_line(argc, argv, opts), vm); 
@@ -88,21 +88,51 @@ int main(int argc, char** argv) {
     }
     notify(vm);
     
-    if (vm.count("help") || vm.count("train") != 1 || (vm.count("devel") != 1 && vm.count("test") != 1)) {
+    if (vm.count("help") || vm.count("train") != 1 || (vm.count("devel") != 1 && (vm.count("test") != 1 && vm.count("kbest") != 1 && vm.count("testcorpus") != 1))) 
+    {
         cout << opts << "\n";
         return 1;
     }
 
+    lambda = vm["lambda"].as<float>();
+
+    if (vm.count("lstm"))
+    	return main_body<LSTMBuilder>(vm, 2);
+    else if (vm.count("gru"))
+        return main_body<GRUBuilder>(vm, 1);
+    else if (vm.count("dglstm"))
+        return main_body<DGLSTMBuilder>(vm, 2);
+    else
+    	return main_body<SimpleRNNBuilder>(vm, 1);
+}
+
+void initialise(Model &model, const string &filename);
+
+template <class AM_t>
+void train(Model &model, AM_t &am, Corpus &training, Corpus &devel, 
+	Trainer &sgd, string out_file, bool curriculum, int max_epochs);
+
+template <class AM_t>
+void test(Model &model, AM_t &am, string test_file);
+
+template <class AM_t>
+void test_kbest_arcs(Model &model, AM_t &am, string test_file, int top_k);
+
+Corpus read_corpus(const string &filename);
+void ReadNumberedSentencePair(const std::string& line, std::vector<int>* s, Dict* sd, std::vector<int>* t, Dict* td, int &num);
+
+template <class rnn_t>
+int main_body(variables_map vm, int repnumber)
+{
     kSRC_SOS = sd.Convert("<s>");
     kSRC_EOS = sd.Convert("</s>");
     kTGT_SOS = td.Convert("<s>");
     kTGT_EOS = td.Convert("</s>");
     verbose = vm.count("verbose");
-    float lambda = vm["lambda"].as<float>();
 
     typedef vector<int> Sentence;
     typedef pair<Sentence, Sentence> SentencePair;
-    Corpus training, devel;
+    Corpus training, devel, testcorpus;
     string line;
     cerr << "Reading training data from " << vm["train"].as<string>() << "...\n";
     training = read_corpus(vm["train"].as<string>());
@@ -111,21 +141,38 @@ int main(int argc, char** argv) {
     
     LAYERS = vm["layers"].as<int>(); 
     ALIGN_DIM = vm["align"].as<int>(); 
-    HIDDEN_DIM = vm["hidden"].as<int>();
+    HIDDEN_DIM = vm["hidden"].as<int>(); 
     bool bidir = vm.count("bidirectional");
     bool giza = vm.count("giza");
-    string flavour;
-    if (vm.count("gru"))	flavour = "gru";
-    else if (vm.count("lstm"))	flavour = "lstm";
-    else if (vm.count("rnnem"))	flavour = "rnnem";
-    else if (vm.count("dglstm")) flavour = "dglstm";
-    else			flavour = "rnn";
+    bool swap = vm.count("swap");
+
+    string flavour = "RNN";
+    if (vm.count("lstm"))	flavour = "LSTM";
+    else if (vm.count("gru"))	flavour = "GRU";
+    else if (vm.count("dglstm"))	flavour = "DGLSTM";
     SRC_VOCAB_SIZE = sd.size();
     TGT_VOCAB_SIZE = td.size();
 
     if (vm.count("devel")) {
-	cerr << "Reading dev data from " << vm["devel"].as<string>() << "...\n";
-	devel = read_corpus(vm["devel"].as<string>());
+	    cerr << "Reading dev data from " << vm["devel"].as<string>() << "...\n";
+	    devel = read_corpus(vm["devel"].as<string>());
+    }
+
+    if (vm.count("testcorpus")) {
+        cerr << "Reading test corpus from " << vm["testcorpus"].as<string>() << "...\n";
+        testcorpus = read_corpus(vm["testcorpus"].as<string>());
+    }
+
+    if (swap) {
+	cerr << "Swapping role of source and target\n";
+        std::swap(sd, td);
+        std::swap(kSRC_SOS, kTGT_SOS);
+        std::swap(kSRC_EOS, kTGT_EOS);
+        std::swap(SRC_VOCAB_SIZE, TGT_VOCAB_SIZE);
+        for (auto &sent: training)
+            std::swap(sent.first, sent.second);
+        for (auto &sent: devel)
+            std::swap(sent.first, sent.second);
     }
 
     string fname;
@@ -138,7 +185,7 @@ int main(int argc, char** argv) {
 	    << '_' << HIDDEN_DIM
 	    << '_' << ALIGN_DIM
         << '_' << RNNEM_MEM_SIZE
-	    << '_' << flavour
+        << '_' << flavour
 	    << "_b" << bidir
 	    << "_g" << giza
 	    << "-pid" << getpid() << ".params";
@@ -155,103 +202,161 @@ int main(int argc, char** argv) {
         sgd = new SimpleSGDTrainer(&model, lambda);
     //sgd = new AdadeltaTrainer(&model);
 
-    string init_file;
+    cerr << "%% Using " << flavour << " recurrent units" << endl;
+    AttentionalModel<rnn_t> am(model, SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
+        LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, repnumber);
+
     if (vm.count("initialise"))
-	init_file = vm["initialise"].as<string>();
+	initialise(model, vm["initialise"].as<string>());
 
-    string test;
-    if (vm.count("test")) 
-	test = vm["test"].as<string>();
-
-    if (vm.count("lstm")) {
-        cerr << "%% Using LSTM recurrent units" << endl;
-        AttentionalModel<LSTMBuilder> am(model, 
-		SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
-                LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 2);
-        train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
+    if (!vm.count("test") && !vm.count("kbest") &&!vm.count("testcorpus"))
+    	train(model, am, training, devel, *sgd, fname, vm.count("curriculum"), vm["epochs"].as<int>());
+    else if (vm.count("kbest"))
+        test_kbest_arcs(model, am, vm["kbest"].as<string>(), vm["topk"].as<int>());
+    else if (vm.count("testcorpus"))
+    {
+        if (vm.count("outputfile") == 0)
+        {
+            cerr << "missing recognition output file" << endl;
+            abort();
+        }
+        test(model, am, testcorpus, vm["outputfile"].as<string>());
     }
-    else if (vm.count("dglstm")) {
-        cerr << "%% Using DGLSTM recurrent units" << endl;
-        AttentionalModel<DGLSTMBuilder> am(model,
-            SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
-            LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 2);
-        train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
-    }
-    else if (vm.count("gru")) {
-        cerr << "%% Using GRU recurrent units" << endl;
-        AttentionalModel<GRUBuilder> am(model,
-            SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
-            LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 1);
-        train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
-    }
-    else if (vm.count("rnnem")) {
-        cerr << "%% Using RNNEM recurrent units" << endl;
-        AttentionalModel<RNNEMBuilder> am(model,
-            SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
-            LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 2, nullptr, nullptr, true);
-        train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
-    }
-    else {
-        cerr << "%% Using RNN recurrent units" << endl;
-        AttentionalModel<SimpleRNNBuilder> am(model, 
-		SRC_VOCAB_SIZE, TGT_VOCAB_SIZE,
-                LAYERS, HIDDEN_DIM, ALIGN_DIM, bidir, giza, 1);
-        train(model, am, training, devel, *sgd, init_file, fname, test, vm.count("curriculum"));
-    }
-
+    else
+        test(model, am, vm["test"].as<string>());
+        
     delete sgd;
 
     return EXIT_SUCCESS;
 }
 
 template <class AM_t>
-void train(Model &model, AM_t &am, Corpus &training, Corpus &devel, 
-	Trainer &sgd, string init_file, string out_file, string test_file, bool curriculum)
+void test(Model &model, AM_t &am, string test_file)
 {
-    if (!init_file.empty()) {
-	ifstream in(init_file);
-	boost::archive::text_iarchive ia(in);
-	ia >> model;
-    }
+    double tloss = 0;
+    int tchars = 0;
+    int lno = 0;
 
-    if (test_file != "") {
-	double tloss = 0;
-	int tchars = 0;
-	int lno = 0;
-
-	cerr << "Reading test examples from " << test_file << endl;
-	ifstream in(test_file);
-	assert(in);
-	string line;
-	while(getline(in, line)) {
-	    Sentence source, target;
-	    ReadSentencePair(line, &source, &sd, &target, &td);
-	    if ((source.front() != kSRC_SOS && source.back() != kSRC_EOS) ||
-		    (target.front() != kTGT_SOS && target.back() != kTGT_EOS)) {
-		cerr << "Sentence in " << test_file << ":" << lno << " didn't start or end with <s>, </s>\n";
-		abort();
-	    }
-
-	    ComputationGraph cg;
-	    am.BuildGraph(source, target, cg);
-	    double loss = as_scalar(cg.forward());
-	    for (auto &w: source)
-		cout << sd.Convert(w) << " ";
-	    cout << "|||";
-	    for (auto &w: target)
-		cout << " " << td.Convert(w);
-	    cout << "||| " << loss << endl;
-	    tloss += loss;
-	    tchars += target.size() - 1;
-
-	    if (verbose)
-		cerr << "chug " << lno++ << "\r" << flush;
+    cerr << "Reading test examples from " << test_file << endl;
+    ifstream in(test_file);
+    assert(in);
+    string line;
+    while(getline(in, line)) {
+	Sentence source, target;
+        int num = -1;
+	ReadNumberedSentencePair(line, &source, &sd, &target, &td, num);
+	if ((source.front() != kSRC_SOS && source.back() != kSRC_EOS) ||
+		(target.front() != kTGT_SOS && target.back() != kTGT_EOS)) {
+	    cerr << "Sentence in " << test_file << ":" << lno << " didn't start or end with <s>, </s>\n";
+	    abort();
 	}
 
-	cerr << "\n***TEST E = " << (tloss / tchars) << " ppl=" << exp(tloss / tchars) << ' ';
-	return;
+	ComputationGraph cg;
+	am.BuildGraph(source, target, cg);
+	double loss = as_scalar(cg.forward());
+	cout << num << " |||";
+	for (auto &w: source)
+	    cout << " " << sd.Convert(w);
+	cout << " |||";
+	for (auto &w: target)
+	    cout << " " << td.Convert(w);
+	cout << " ||| " << loss << endl;
+	tloss += loss;
+	tchars += target.size() - 1;
+
+	if (verbose)
+	    cerr << "chug " << lno++ << "\r" << flush;
     }
 
+    cerr << "\n***TEST E = " << (tloss / tchars) << " ppl=" << exp(tloss / tchars) << ' ';
+    return;
+}
+
+template <class AM_t>
+void test_kbest_arcs(Model &model, AM_t &am, string test_file, int top_k)
+{
+    // only suitable for monolingual setting, of predicting a sentence given preceeding sentence
+    cerr << "Reading test examples from " << test_file << endl;
+    unsigned lno = 0;
+    ifstream in(test_file);
+    assert(in);
+    string line, last_id, last_last_id = "-";
+    const std::string sep = "|||";
+    vector<SentencePair> items, last_items;
+    last_items.push_back(SentencePair(Sentence({ kSRC_SOS, kSRC_EOS }), Sentence({ kTGT_SOS, kTGT_EOS })));
+
+    while(getline(in, line)) {
+	Sentence source, target;
+
+	istringstream in(line);
+	string id, word;
+	in >> id >> word;
+	assert(word == sep);
+	while(in) {
+	    in >> word;
+	    if (word.empty() || word == sep) break;
+	    source.push_back(sd.Convert(word));
+	    target.push_back(td.Convert(word));
+	}
+
+	if ((source.front() != kSRC_SOS && source.back() != kSRC_EOS) ||
+		(target.front() != kTGT_SOS && target.back() != kTGT_EOS)) {
+	    cerr << "Sentence in " << test_file << ":" << lno << " didn't start or end with <s>, </s>\n";
+	    abort();
+	}
+
+	if (id != last_id && !items.empty()) {
+	    if (items.size() > top_k)
+		items.resize(top_k);
+
+	    unsigned count = 0;
+	    for (auto &prev: last_items) {
+		ComputationGraph cg;
+		auto &source = prev.first;
+		am.start_new_instance(source, cg);
+
+		for (auto &curr: items) {
+		    std::vector<Expression> errs;
+		    auto &target = curr.second;
+		    const unsigned tlen = target.size() - 1;
+		    for (unsigned t = 0; t < tlen; ++t) {
+			Expression i_r_t = am.add_input(target[t], t, cg);
+			Expression i_err = pickneglogsoftmax(i_r_t, target[t+1]);
+			errs.push_back(i_err);
+		    }
+		    Expression i_nerr = sum(errs);
+		    double loss = as_scalar(cg.incremental_forward());
+
+		    cout << last_last_id << ":" << last_id << " |||";
+		    for (auto &w: source) cout << " " << sd.Convert(w);
+		    cout << " |||";
+		    for (auto &w: target) cout << " " << td.Convert(w);
+		    cout << " ||| " << loss << "\n";
+
+		    ++count;
+		}
+	    }
+
+	    last_items = items;
+	    last_last_id = last_id;
+	    last_id = id;
+	    items.clear();
+
+	    if (verbose)
+		cerr << "chug " << lno++ << " [" << count << " pairs]\r" << flush;
+	}
+
+	last_id = id;
+	items.push_back(SentencePair(source, target));
+    }
+
+    return;
+}
+
+template <class AM_t>
+void train(Model &model, AM_t &am, Corpus &training, Corpus &devel, 
+	Trainer &sgd, string out_file, bool curriculum, int max_epochs)
+{
     double best = 9e+99;
     unsigned report_every_i = 50;
     unsigned dev_every_i_reports = 500; 
@@ -284,7 +389,7 @@ void train(Model &model, AM_t &am, Corpus &training, Corpus &devel,
     unsigned lines = 0;
     int epoch = 0;
 
-    while(1) {
+    while (sgd.epoch < max_epochs) {
         Timer iteration("completed in");
         double loss = 0;
         unsigned chars = 0;
@@ -307,7 +412,7 @@ void train(Model &model, AM_t &am, Corpus &training, Corpus &devel,
 	    }
 
 	    if (verbose && iter+1 == report_every_i) {
-		auto& spair = training[order[si]];
+		auto& spair = training[order[si % order.size()]];
 		ComputationGraph cg;
                 cerr << "\nDecoding source, greedy Viterbi: ";
                 am.decode(spair.first, cg, 1, td);
@@ -317,18 +422,12 @@ void train(Model &model, AM_t &am, Corpus &training, Corpus &devel,
 	    }
 
             // build graph for this instance
-	    auto& spair = training[order[si]];
+	    auto& spair = training[order[si % order.size()]];
 	    ComputationGraph cg;
             chars += spair.second.size() - 1;
             ++si;
             Expression alignment;
             am.BuildGraph(spair.first, spair.second, cg, &alignment);
-
-            /**
-            check gradients
-            */
-//            CheckGrad(model, cg);
-
             loss += as_scalar(cg.forward());
             
             cg.backward();
@@ -368,6 +467,55 @@ void train(Model &model, AM_t &am, Corpus &training, Corpus &devel,
     }
 }
 
+template <class AM_t>
+void test(Model &model, AM_t &am, Corpus &devel, string out_file)
+{
+    unsigned lines = 0;
+    ofstream of(out_file);
+
+    Timer iteration("completed in");
+    for (auto& spair : devel)
+    {
+        ComputationGraph cg;
+        cerr << "\nDecoding source, greedy Viterbi: ";
+        vector<int> decode_output = am.decode(spair.first, cg, 1, td);
+        of << "ref : ";
+        for (auto pp : spair.second)
+        {
+            of << td.Convert(pp) << " ";
+        }
+        of << endl;
+        of << "res : ";
+        for (auto pp : decode_output)
+        {
+            of << td.Convert(pp) << " ";
+        }
+        of << endl;
+
+        cerr << "\nDecoding source, sampling: ";
+        vector<int> sample_output = am.sample(spair.first, cg, td);
+        of << "sam : ";
+        for (auto pp : sample_output)
+        {
+            of << td.Convert(pp) << " ";
+        }
+        of << endl;
+        of << endl;
+    }
+
+    double dloss = 0;
+    int dchars = 0;
+    for (auto& spair : devel) {
+        ComputationGraph cg;
+        am.BuildGraph(spair.first, spair.second, cg);
+        dloss += as_scalar(cg.forward());
+        dchars += spair.second.size() - 1;
+    }
+    cerr << "\n***TEST E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
+
+    of.close();
+}
+
 Corpus read_corpus(const string &filename)
 {
     ifstream in(filename);
@@ -391,4 +539,34 @@ Corpus read_corpus(const string &filename)
     }
     cerr << lc << " lines, " << stoks << " & " << ttoks << " tokens (s & t), " << sd.size() << " & " << td.size() << " types\n";
     return corpus;
+}
+
+void ReadNumberedSentencePair(const std::string& line, std::vector<int>* s, Dict* sd, std::vector<int>* t, Dict* td, int &num) 
+{
+    std::istringstream in(line);
+    std::string word;
+    std::string sep = "|||";
+    Dict* d = sd;
+    std::vector<int>* v = s; 
+
+    if (in) {
+        in >> num;
+        in >> word;
+        assert(word == sep);
+    }
+
+    while(in) {
+        in >> word;
+        if (!in) break;
+        if (word == sep) { d = td; v = t; continue; }
+        v->push_back(d->Convert(word));
+    }
+}
+
+void initialise(Model &model, const string &filename)
+{
+    cerr << "Initialising model parameters from file: " << filename << endl;
+    ifstream in(filename);
+    boost::archive::text_iarchive ia(in);
+    ia >> model;
 }
