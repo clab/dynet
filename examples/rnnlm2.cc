@@ -188,7 +188,7 @@ void train(Model &model, LM_t &lm,
             else{
                 sgd->eta *= 0.5;
             }
-            cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
+            cerr << "\n***TEST E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
         }
     }
 }
