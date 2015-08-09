@@ -123,8 +123,8 @@ struct RNNLanguageModel {
 };
 
 template <class LM_t>
-void train(Model &model, LM_t &lm, 
-    const vector<vector<int>>& training, 
+void train(Model &model, LM_t &lm,
+    const vector<vector<int>>& training,
     const vector<vector<int>>& dev,
     Trainer *sgd, const string& fname,
     bool randomSample)
@@ -193,6 +193,31 @@ void train(Model &model, LM_t &lm,
     }
 }
 
+template <class LM_t>
+void testcorpus(Model &model, LM_t &lm,
+    const vector<vector<int>>& dev)
+{
+    unsigned lines = 0;
+    double dloss = 0;
+    int dchars = 0;
+    for (auto& sent : dev) {
+        ComputationGraph cg;
+        lm.BuildLMGraph(sent, cg);
+        dloss += as_scalar(cg.forward());
+        dchars += sent.size() - 1;
+    }
+
+    cerr << "\n***DEV [epoch=" << (lines / (double)dev.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
+}
+
+void initialise(Model &model, const string &filename)
+{
+    cerr << "Initialising model parameters from file: " << filename << endl;
+    ifstream in(filename);
+    boost::archive::text_iarchive ia(in);
+    ia >> model;
+}
+
 int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
 
@@ -255,7 +280,7 @@ int main(int argc, char** argv) {
 
   kSOS = d.Convert("<s>");
   kEOS = d.Convert("</s>");
-  vector<vector<int>> training, dev;
+  vector<vector<int>> training, dev, test;
   string line;
   int tlc = 0;
   int ttoks = 0;
@@ -271,7 +296,7 @@ int main(int argc, char** argv) {
       training.push_back(ReadSentence(line, &d));
       ttoks += training.back().size();
       if (training.back().front() != kSOS && training.back().back() != kEOS) {
-        cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+        cerr << "Training sentence in " << infile << ":" << tlc << " didn't start or end with <s>, </s>\n";
         abort();
       }
     }
@@ -280,26 +305,27 @@ int main(int argc, char** argv) {
   d.Freeze(); // no new word types allowed
   VOCAB_SIZE = d.size();
 
-  int dlc = 0;
-  int dtoks = 0;
-  string devfile = vm["devel"].as<string>();
-  cerr << "Reading training data from " << devfile << "...\n";
+  if (vm.count("devel") > 0)
   {
-    ifstream in(devfile);
-    assert(in);
-    while(getline(in, line)) {
-      ++dlc;
-      dev.push_back(ReadSentence(line, &d));
-      dtoks += dev.back().size();
-      if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
-        cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
-        abort();
+      int dlc = 0;
+      int dtoks = 0;
+      string devfile = vm["devel"].as<string>();
+      cerr << "Reading training data from " << devfile << "...\n";
+      {
+          ifstream in(devfile);
+          assert(in);
+          while (getline(in, line)) {
+              ++dlc;
+              dev.push_back(ReadSentence(line, &d));
+              dtoks += dev.back().size();
+              if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
+                  cerr << "Dev sentence in " << devfile << ":" << tlc << " didn't start or end with <s>, </s>\n";
+                  abort();
+              }
+          }
+          cerr << dlc << " lines, " << dtoks << " tokens\n";
       }
-    }
-    cerr << dlc << " lines, " << dtoks << " tokens\n";
   }
-
-  double best = 9e+99;
 
   Model model;
   bool use_momentum = false;
@@ -309,15 +335,57 @@ int main(int argc, char** argv) {
   //else
   sgd = new SimpleSGDTrainer(&model);
 
-  if (vm.count("lstm")) {
-      cerr << "%% Using LSTM recurrent units" << endl;
-      RNNLanguageModel<LSTMBuilder> lm(model);
-      train(model, lm, training, dev, sgd, fname, generateSample);
+  if (vm.count("test") == 0)
+  {
+      if (vm.count("lstm")) {
+          cerr << "%% Using LSTM recurrent units" << endl;
+          RNNLanguageModel<LSTMBuilder> lm(model);
+          train(model, lm, training, dev, sgd, fname, generateSample);
+      }
+      else if (vm.count("dglstm")) {
+          cerr << "%% Using DGLSTM recurrent units" << endl;
+          RNNLanguageModel<DGLSTMBuilder> lm(model);
+          train(model, lm, training, dev, sgd, fname, generateSample);
+      }
   }
-  else if (vm.count("dglstm")) {
-      cerr << "%% Using DGLSTM recurrent units" << endl;
-      RNNLanguageModel<DGLSTMBuilder> lm(model);
-      train(model, lm, training, dev, sgd, fname, generateSample);
+  else
+  {
+      string testfile = vm["test"].as<string>();
+      int dlc = 0;
+      int dtoks = 0;
+      cerr << "Reading training data from " << testfile << "...\n";
+      {
+          ifstream in(testfile);
+          assert(in);
+          while (getline(in, line)) {
+              ++dlc;
+              test.push_back(ReadSentence(line, &d));
+              dtoks += test.back().size();
+              if (test.back().front() != kSOS && test.back().back() != kEOS) {
+                  cerr << "Dev sentence in " << testfile << ":" << tlc << " didn't start or end with <s>, </s>\n";
+                  abort();
+              }
+          }
+          cerr << dlc << " lines, " << dtoks << " tokens\n";
+      }
+
+      if (vm.count("test"))
+      {
+          if (vm.count("lstm")){
+              cerr << "%% using LSTM recurrent units" << endl;
+              RNNLanguageModel<LSTMBuilder> lm(model);
+              if (vm.count("initialise"))
+                  initialise(model, vm["initialise"].as<string>());
+              testcorpus(model, lm, test);
+          }
+          if (vm.count("dglstm")){
+              cerr << "%% using LSTM recurrent units" << endl;
+              RNNLanguageModel<DGLSTMBuilder> lm(model);
+              if (vm.count("initialise"))
+                  initialise(model, vm["initialise"].as<string>());
+              testcorpus(model, lm, test);
+          }
+      }
   }
 
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
