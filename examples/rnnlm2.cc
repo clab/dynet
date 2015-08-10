@@ -5,9 +5,10 @@
 #include "cnn/rnn.h"
 #include "cnn/gru.h"
 #include "cnn/lstm.h"
+#include "cnn/rnnem.h"
 #include "cnn/dglstm.h"
 #include "cnn/dict.h"
-# include "cnn/expr.h"
+#include "cnn/expr.h"
 #include "cnn/cnn-helper.h"
 #include <iostream>
 #include <fstream>
@@ -238,6 +239,7 @@ int main(int argc, char** argv) {
       ("gru", "use Gated Recurrent Unit (GRU) for recurrent structure; default RNN")
       ("lstm", "use Long Short Term Memory (GRU) for recurrent structure; default RNN")
       ("dglstm", "use depth-gated LSTM for recurrent structure; default RNN")
+      ("nmn", "use NMN type method with external memory for recurrent structure; default RNN")
       ("verbose,v", "be extremely chatty")
       ("generate,g", value<bool>()->default_value(false), "generate random samples")
       ;
@@ -248,6 +250,7 @@ int main(int argc, char** argv) {
   else if (vm.count("lstm"))	flavour = "lstm";
   else if (vm.count("rnnem"))	flavour = "rnnem";
   else if (vm.count("dglstm")) flavour = "dglstm";
+  else if (vm.count("nmn")) flavour = "nmn";
   else			flavour = "rnn";
 
 
@@ -347,6 +350,11 @@ int main(int argc, char** argv) {
           RNNLanguageModel<DGLSTMBuilder> lm(model);
           train(model, lm, training, dev, sgd, fname, generateSample);
       }
+      else if (vm.count("nmn")) {
+          cerr << "%% Using NMN recurrent units" << endl;
+          RNNLanguageModel<NMNBuilder> lm(model);
+          train(model, lm, training, dev, sgd, fname, generateSample);
+      }
   }
   else
   {
@@ -381,6 +389,13 @@ int main(int argc, char** argv) {
           if (vm.count("dglstm")){
               cerr << "%% using LSTM recurrent units" << endl;
               RNNLanguageModel<DGLSTMBuilder> lm(model);
+              if (vm.count("initialise"))
+                  initialise(model, vm["initialise"].as<string>());
+              testcorpus(model, lm, test);
+          }
+          if (vm.count("nmn")){
+              cerr << "%% using NMN recurrent units" << endl;
+              RNNLanguageModel<NMNBuilder> lm(model);
               if (vm.count("initialise"))
                   initialise(model, vm["initialise"].as<string>());
               testcorpus(model, lm, test);
