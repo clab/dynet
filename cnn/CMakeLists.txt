@@ -25,6 +25,7 @@ set(cnn_library_SRCS
     training.cc
     dglstm.cc
     rnnem.cc
+    dglstmem.cc
 )
 
 # Headers:
@@ -58,6 +59,7 @@ set(cnn_library_HDRS
     training.h
     dglstm.h
     rnnem.h
+    dglstmem.h
 )
 
 if(WITH_CUDA_BACKEND)
