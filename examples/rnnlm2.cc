@@ -7,6 +7,7 @@
 #include "cnn/lstm.h"
 #include "cnn/rnnem.h"
 #include "cnn/dglstm.h"
+#include "cnn/dglstmem.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
 #include "cnn/cnn-helper.h"
@@ -239,6 +240,7 @@ int main(int argc, char** argv) {
       ("gru", "use Gated Recurrent Unit (GRU) for recurrent structure; default RNN")
       ("lstm", "use Long Short Term Memory (GRU) for recurrent structure; default RNN")
       ("dglstm", "use depth-gated LSTM for recurrent structure; default RNN")
+      ("dglstmem", "use depth-gated LSTM with external memory for recurrent structure; default RNN")
       ("nmn", "use NMN type method with external memory for recurrent structure; default RNN")
       ("verbose,v", "be extremely chatty")
       ("generate,g", value<bool>()->default_value(false), "generate random samples")
@@ -350,6 +352,11 @@ int main(int argc, char** argv) {
           RNNLanguageModel<DGLSTMBuilder> lm(model);
           train(model, lm, training, dev, sgd, fname, generateSample);
       }
+      else if (vm.count("dglstmem")) {
+          cerr << "%% Using DGLSTMEM recurrent units" << endl;
+          RNNLanguageModel<DGLSTMEMBuilder> lm(model);
+          train(model, lm, training, dev, sgd, fname, generateSample);
+      }
       else if (vm.count("nmn")) {
           cerr << "%% Using NMN recurrent units" << endl;
           RNNLanguageModel<NMNBuilder> lm(model);
@@ -387,8 +394,15 @@ int main(int argc, char** argv) {
               testcorpus(model, lm, test);
           }
           if (vm.count("dglstm")){
-              cerr << "%% using LSTM recurrent units" << endl;
+              cerr << "%% using DGLSTM recurrent units" << endl;
               RNNLanguageModel<DGLSTMBuilder> lm(model);
+              if (vm.count("initialise"))
+                  initialise(model, vm["initialise"].as<string>());
+              testcorpus(model, lm, test);
+          }
+          if (vm.count("dglstmem")){
+              cerr << "%% using DGLSTMEM recurrent units" << endl;
+              RNNLanguageModel<DGLSTMEMBuilder> lm(model);
               if (vm.count("initialise"))
                   initialise(model, vm["initialise"].as<string>());
               testcorpus(model, lm, test);
