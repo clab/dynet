@@ -500,6 +500,7 @@ AttentionalModel<Builder>::beam_decode(const std::vector<int> &source, Computati
     while (it < tgt_len) {
         priority_queue<Hypothesis, vector<Hypothesis>, CompareHypothesis> new_chart;
         vec_vocab = org_vec_vocab;
+        real best_score = -numeric_limits<real>::infinity() + 100.;
 
         while(!chart.empty()) {
             Hypothesis hprev = chart.top();
@@ -509,21 +510,29 @@ AttentionalModel<Builder>::beam_decode(const std::vector<int> &source, Computati
             // find the top k best next words
             unsigned w = 0;
             auto dist = as_vector(cg.incremental_forward()); // evaluates last expression, i.e., ydist
-            std::partial_sort(vec_vocab.begin(), vec_vocab.begin() + beam_width, vec_vocab.end(),
-                    [&dist](unsigned v1, unsigned v2) { return dist[v1] > dist[v2]; });
+            real mscore = log(*max_element(dist.begin(), dist.end())) + hprev.cost; 
+            if (mscore < best_score - beam_width)
+            {
+                chart.pop();
+                continue;
+            }
+
+            best_score = max(mscore, best_score);
 
             // add to chart
             size_t k = 0;
             for (auto vi : vec_vocab){
-                if (k >= beam_width) 
-                    break;
-                
-                Hypothesis hnew(builder.state(), vi, hprev.cost+log(dist[vi]), hprev);
-                if (vi == eos_sym)
-                    completed.push(hnew);
-                else
-                    new_chart.push(hnew);
+                real score = hprev.cost + log(dist[vi]);
+                if (score >= best_score - beam_width)
+                {
+                    Hypothesis hnew(builder.state(), vi, score, hprev);
+                    if (vi == eos_sym)
+                        completed.push(hnew);
+                    else
+                        new_chart.push(hnew);
+                }
             }
+
             chart.pop();
         }
 
@@ -531,16 +540,14 @@ AttentionalModel<Builder>::beam_decode(const std::vector<int> &source, Computati
             break;
 
         // beam pruning
-        size_t ik = 0;
         while (!new_chart.empty())
         {
-            if (ik < beam_width){
+            if (new_chart.top().cost > best_score - beam_width){
                 chart.push(new_chart.top());
             }
             else
                 break;
             new_chart.pop();
-            ik++;
         }
         it++;
     }
