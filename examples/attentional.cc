@@ -500,7 +500,8 @@ void test(Model &model, AM_t &am, Corpus &devel, string out_file)
         }
         of << endl;
 
-        cerr << "\nDecoding source, sampling: ";
+/*      to-do: check if there is memory issue, as beam width =3, and there is no result from sampling function      
+    cerr << "\nDecoding source, sampling: ";
         vector<int> sample_output = am.sample(spair.first, cg, td);
         of << "sam : ";
         for (auto pp : sample_output)
@@ -508,6 +509,7 @@ void test(Model &model, AM_t &am, Corpus &devel, string out_file)
             of << td.Convert(pp) << " ";
         }
         of << endl;
+        */
         of << endl;
     }
 
