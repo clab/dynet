@@ -34,10 +34,7 @@ typedef vector<int> Sentence;
 typedef pair<Sentence, Sentence> SentencePair;
 typedef vector<SentencePair> Corpus;
 
-#define WTF(expression) \
-    std::cout << #expression << " has dimensions " << cg.nodes[expression.i]->dim << std::endl;
-#define KTHXBYE(expression) \
-    std::cout << *cg.get_value(expression.i) << std::endl;
+int beam_search_decode = -1; /// -1 is the beam width
 
 #define LOLCAT(expression) \
     WTF(expression) \
@@ -57,10 +54,11 @@ int main(int argc, char** argv) {
         ("seed", value<int>()->default_value(125), "random seed")
         ("config,c", value<string>(), "config file specifying additional command line options")
         ("train,t", value<string>(), "file containing training sentences, with "
-            "each line consisting of source ||| target.")
+        "each line consisting of source ||| target.")
         ("devel,d", value<string>(), "file containing development sentences.")
         ("test,T", value<string>(), "file containing testing source sentences (no training)")
         ("testcorpus", value<string>(), "file containing test corpus with target translation")
+        ("beamsearchdecode", value<int>()->default_value(-1), "if using beam search decoding; default false")
         ("kbest,K", value<string>(), "test on kbest inputs using mononlingual Markov model")
         ("initialise,i", value<string>(), "load initial parameters from file")
         ("parameters,p", value<string>(), "save best parameters to this file")
@@ -152,6 +150,11 @@ int main_body(variables_map vm, int repnumber)
     else if (vm.count("dglstm"))	flavour = "DGLSTM";
     SRC_VOCAB_SIZE = sd.size();
     TGT_VOCAB_SIZE = td.size();
+
+    if (vm.count("beamsearchdecode"))
+    {
+        beam_search_decode = vm["beamsearchdecode"].as<int>();
+    }
 
     if (vm.count("devel")) {
 	    cerr << "Reading dev data from " << vm["devel"].as<string>() << "...\n";
@@ -478,7 +481,12 @@ void test(Model &model, AM_t &am, Corpus &devel, string out_file)
     {
         ComputationGraph cg;
         cerr << "\nDecoding source, greedy Viterbi: ";
-        vector<int> decode_output = am.decode(spair.first, cg, 1, td);
+        vector<int> decode_output;
+        if (beam_search_decode != -1)
+            decode_output = am.beam_decode(spair.first, cg, beam_search_decode, td);
+        else
+            decode_output = am.decode(spair.first, cg, 1, td);
+        
         of << "ref : ";
         for (auto pp : spair.second)
         {

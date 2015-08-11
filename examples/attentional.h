@@ -13,11 +13,14 @@
 #include "cnn/expr.h"
 #include "expr-xtra.h"
 
+#include <algorithm>
+#include <queue>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/range/irange.hpp>
 
 #define DBG_NEW_RNNEM
 
@@ -26,7 +29,7 @@ namespace cnn {
 template <class Builder>
 struct AttentionalModel {
     explicit AttentionalModel(Model& model, 
-            unsigned layers, unsigned vocab_size_src, unsigned vocab_size_tgt, 
+            unsigned layers, unsigned vocab_size_src, unsigned _vocab_size_tgt, 
             unsigned hidden_dim, unsigned align_dim, bool rnn_src_embeddings,
 	    bool giza_extensions, unsigned hidden_replicates=1, 
             LookupParameters* cs=0, LookupParameters *ct=0, 
@@ -42,6 +45,8 @@ struct AttentionalModel {
     std::vector<int> decode(const std::vector<int> &source, ComputationGraph& cg, 
             int beam_width, Dict &tdict);
 
+    std::vector<int> beam_decode(const std::vector<int> &source, ComputationGraph& cg, int beam_width, Dict &tdict);
+    
     std::vector<int> sample(const std::vector<int> &source, ComputationGraph& cg, Dict &tdict);
 
     LookupParameters* p_cs;
@@ -62,11 +67,12 @@ struct AttentionalModel {
     Builder builder_src_bwd;
     bool rnn_src_embeddings;
     bool giza_extensions;
+    int vocab_size_tgt;
 
     // statefull functions for incrementally creating computation graph, one
     // target word at a time
     void start_new_instance(const std::vector<int> &src, ComputationGraph &cg);
-    Expression add_input(int tgt_tok, int t, ComputationGraph &cg);
+    Expression add_input(int tgt_tok, int t, ComputationGraph &cg, RNNPointer *prev_state=0);
 
     // state variables used in the above two methods
     Expression src;
@@ -88,14 +94,14 @@ struct AttentionalModel {
 
 template <class Builder>
 AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
-    unsigned vocab_size_src, unsigned vocab_size_tgt, unsigned layers, unsigned hidden_dim, 
+    unsigned vocab_size_src, unsigned _vocab_size_tgt, unsigned layers, unsigned hidden_dim, 
     unsigned align_dim, bool _rnn_src_embeddings, bool _giza_extentions, unsigned hidden_replicates, 
     LookupParameters* cs, LookupParameters *ct, bool use_external_memory = false)
     : layers(layers), builder(layers, (_rnn_src_embeddings) ? 3 * hidden_dim : 2 * hidden_dim, hidden_dim, &model),
   builder_src_fwd(1, hidden_dim, hidden_dim, &model),
   builder_src_bwd(1, hidden_dim, hidden_dim, &model),
   rnn_src_embeddings(_rnn_src_embeddings), 
-  giza_extensions(_giza_extentions)
+  giza_extensions(_giza_extentions), vocab_size_tgt(_vocab_size_tgt)
 {
     p_cs = (cs) ? cs : model.add_lookup_parameters(long(vocab_size_src), {long(hidden_dim)}); 
     p_ct = (ct) ? ct : model.add_lookup_parameters(vocab_size_tgt, {long(hidden_dim)}); 
@@ -206,7 +212,7 @@ void AttentionalModel<Builder>::start_new_instance(const std::vector<int> &sourc
 }
 
 template <class Builder>
-Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationGraph &cg)
+Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationGraph &cg, RNNPointer *prev_state)
 {
     // alignment input -- FIXME: just done for top layer
     auto i_h_tm1 = (t == 0) ? i_h0.back() : builder.final_h().back();
@@ -269,7 +275,12 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
     Expression input = concatenate(std::vector<Expression>({i_x_t, i_c_t})); // vstack/hstack?
     //WTF(input);
     // y_t = RNN([x_t, a_t])
-    Expression i_y_t = builder.add_input(input);
+    Expression i_y_t;
+    if (prev_state)
+       i_y_t = builder.add_input(*prev_state, input);
+    else
+       i_y_t = builder.add_input(input);
+
     //WTF(i_y_t);
 #ifndef VANILLA_TARGET_LSTM 
     // Bahdanau does a max-out thing here; I do a tanh. Tomaatos tomateos. 
@@ -436,6 +447,113 @@ AttentionalModel<Builder>::decode(const std::vector<int> &source, ComputationGra
     std::cerr << std::endl;
 
     return target;
+}
+
+struct Hypothesis {
+    Hypothesis(RNNPointer state, int tgt, float cst, int _t)
+        : builder_state(state), target({tgt}), cost(cst), t(_t) {}
+    Hypothesis(RNNPointer state, int tgt, float cst, Hypothesis &last)
+        : builder_state(state), target(last.target), cost(cst), t(last.t+1) {
+        target.push_back(tgt);
+    }
+    RNNPointer builder_state;
+    std::vector<int> target;
+    float cost;
+    int t;
+};
+
+struct CompareHypothesis
+{
+    bool operator()(const Hypothesis& h1, const Hypothesis& h2)
+    {
+        if (h1.cost < h2.cost) return true;
+        return false; 
+    }
+};
+
+template <class Builder>
+std::vector<int> 
+AttentionalModel<Builder>::beam_decode(const std::vector<int> &source, ComputationGraph& cg, int beam_width, 
+        cnn::Dict &tdict)
+{
+    assert(!giza_extensions);
+    const int sos_sym = tdict.Convert("<s>");
+    const int eos_sym = tdict.Convert("</s>");
+
+    size_t tgt_len = 2 * source.size();
+
+    start_new_instance(source, cg);
+
+    priority_queue<Hypothesis, vector<Hypothesis>, CompareHypothesis> completed;
+    priority_queue<Hypothesis, vector<Hypothesis>, CompareHypothesis> chart;
+    chart.push(Hypothesis(builder.state(), sos_sym, 0.0f, 0));
+
+    boost::integer_range<int> vocab = boost::irange(0, vocab_size_tgt);
+    vector<int> vec_vocab(vocab_size_tgt, 0);
+    for (auto k : vocab)
+    {
+        vec_vocab[k] = k;
+    }
+    vector<int> org_vec_vocab = vec_vocab;
+
+    size_t it = 0;
+    while (it < tgt_len) {
+        priority_queue<Hypothesis, vector<Hypothesis>, CompareHypothesis> new_chart;
+        vec_vocab = org_vec_vocab;
+
+        while(!chart.empty()) {
+            Hypothesis hprev = chart.top();
+            Expression i_scores = add_input(hprev.target.back(), hprev.t, cg, &hprev.builder_state);
+            Expression ydist = softmax(i_scores); // compiler warning, but see below
+
+            // find the top k best next words
+            unsigned w = 0;
+            auto dist = as_vector(cg.incremental_forward()); // evaluates last expression, i.e., ydist
+            std::partial_sort(vec_vocab.begin(), vec_vocab.begin() + beam_width, vec_vocab.end(),
+                    [&dist](unsigned v1, unsigned v2) { return dist[v1] > dist[v2]; });
+
+            // add to chart
+            size_t k = 0;
+            for (auto vi : vec_vocab){
+                if (k >= beam_width) 
+                    break;
+                
+                Hypothesis hnew(builder.state(), vi, hprev.cost+log(dist[vi]), hprev);
+                if (vi == eos_sym)
+                    completed.push(hnew);
+                else
+                    new_chart.push(hnew);
+            }
+            chart.pop();
+        }
+
+        if (new_chart.size() == 0)
+            break;
+
+        // beam pruning
+        size_t ik = 0;
+        while (!new_chart.empty())
+        {
+            if (ik < beam_width){
+                chart.push(new_chart.top());
+            }
+            else
+                break;
+            new_chart.pop();
+            ik++;
+        }
+        it++;
+    }
+
+    vector<int> best = completed.top().target;
+
+    for (auto p : best)
+    {
+        std::cerr << " " << tdict.Convert(p) << " ";
+    }
+    cerr << endl; 
+
+    return best;
 }
 
 template <class Builder>
