@@ -57,6 +57,7 @@ int main(int argc, char** argv) {
         "each line consisting of source ||| target.")
         ("devel,d", value<string>(), "file containing development sentences.")
         ("test,T", value<string>(), "file containing testing source sentences (no training)")
+        ("rescore,r", "rescore (source, target) pairs in testing, default: translate source only")
         ("testcorpus", value<string>(), "file containing test corpus with target translation")
         ("beamsearchdecode", value<int>()->default_value(-1), "if using beam search decoding; default false")
         ("kbest,K", value<string>(), "test on kbest inputs using mononlingual Markov model")
@@ -118,6 +119,7 @@ void test_kbest_arcs(Model &model, AM_t &am, string test_file, int top_k);
 
 Corpus read_corpus(const string &filename);
 void ReadNumberedSentencePair(const std::string& line, std::vector<int>* s, Dict* sd, std::vector<int>* t, Dict* td, int &num);
+void ReadNumberedSentencePair(const std::string& line, std::vector<int>* t, Dict* td, int &num);
 
 template <class rnn_t>
 int main_body(variables_map vm, int repnumber)
@@ -216,6 +218,15 @@ int main_body(variables_map vm, int repnumber)
     	train(model, am, training, devel, *sgd, fname, vm.count("curriculum"), vm["epochs"].as<int>());
     else if (vm.count("kbest"))
         test_kbest_arcs(model, am, vm["kbest"].as<string>(), vm["topk"].as<int>());
+    else if (vm.count("rescore"))
+    {
+        if (vm.count("outputfile") == 0)
+        {
+            cerr << "missing recognition output file" << endl;
+            abort();
+        }
+        test_rescore(model, am, vm["test"].as<string>() , vm["outputfile"].as<string>());
+    }
     else if (vm.count("testcorpus"))
     {
         if (vm.count("outputfile") == 0)
@@ -226,11 +237,60 @@ int main_body(variables_map vm, int repnumber)
         test(model, am, testcorpus, vm["outputfile"].as<string>());
     }
     else
+    {
         test(model, am, vm["test"].as<string>());
-        
+    }
+
     delete sgd;
 
     return EXIT_SUCCESS;
+}
+
+template <class AM_t>
+void test_rescore(Model &model, AM_t &am, string test_file, string out_file)
+{
+    int lno = 0;
+
+    cerr << "Reading test examples from " << test_file << endl;
+    ifstream in(test_file);
+    assert(in);
+
+    ofstream of(out_file);
+    assert(of);
+
+    string line;
+
+    while (getline(in, line)) {
+        Sentence target;
+        Sentence source;
+        int num;
+        ReadNumberedSentencePair(line, &source, &sd, &target, &td, num);
+        
+        if ((source.front() != kSRC_SOS && source.back() != kSRC_EOS) ||
+            (target.front() != kTGT_SOS && target.back() != kTGT_EOS)) {
+            cerr << "Sentence in " << test_file << ":" << lno << " didn't start or end with <s>, </s>\n";
+            abort();
+        }
+
+        ComputationGraph cg;
+        am.BuildGraph(source, target, cg, nullptr);
+
+        double loss = as_scalar(cg.forward());
+        cout << num << ' ';
+        cout << "|||";
+        for (auto &w : target)
+            cout << " " << td.Convert(w);
+        cout << " ||| " << loss << endl;
+
+        of << line << " ||| " << loss << endl; 
+
+        lno++;
+    }
+    cerr << "total " << lno << " source sentences" << flush;
+
+    in.close();
+    of.close();
+    return;
 }
 
 template <class AM_t>
@@ -272,6 +332,7 @@ void test(Model &model, AM_t &am, string test_file)
     }
 
     cerr << "\n***TEST E = " << (tloss / tchars) << " ppl=" << exp(tloss / tchars) << ' ';
+    in.close();
     return;
 }
 
@@ -353,6 +414,7 @@ void test_kbest_arcs(Model &model, AM_t &am, string test_file, int top_k)
 	items.push_back(SentencePair(source, target));
     }
 
+    in.close();
     return;
 }
 
@@ -548,6 +610,7 @@ Corpus read_corpus(const string &filename)
         }
     }
     cerr << lc << " lines, " << stoks << " & " << ttoks << " tokens (s & t), " << sd.size() << " & " << td.size() << " types\n";
+    in.close();
     return corpus;
 }
 
@@ -573,10 +636,35 @@ void ReadNumberedSentencePair(const std::string& line, std::vector<int>* s, Dict
     }
 }
 
+/// read kbest list 
+/// example of input 
+/// 0 ||| can i have a table ? ||| LanguageModel=-5.64651 WordPenalty=-2.60577 SampleCountF=5.35014 IsSingletonFE=0 IsSingletonF=0 MaxLexFgivenE=4.1915 CountEF=4.19728 MaxLexEgivenF=2.02649 EgivenFCoherent=1.24972 ||| -10.2169
+void ReadNumberedSentencePair(const std::string& line, std::vector<int>* t, Dict* td, int &num)
+{
+    std::istringstream in(line);
+    std::string word;
+    std::string sep = "|||";
+    std::vector<int>* v = t;
+
+    if (in) {
+        in >> num;
+        in >> word;
+        assert(word == sep);
+    }
+
+    while (in) {
+        in >> word;
+        if (!in) break;
+        if (word == sep) { break; }
+        v->push_back(td->Convert(word));
+    }
+}
+
 void initialise(Model &model, const string &filename)
 {
     cerr << "Initialising model parameters from file: " << filename << endl;
     ifstream in(filename);
     boost::archive::text_iarchive ia(in);
     ia >> model;
+    in.close();
 }
