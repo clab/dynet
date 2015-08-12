@@ -552,7 +552,16 @@ AttentionalModel<Builder>::beam_decode(const std::vector<int> &source, Computati
         it++;
     }
 
-    vector<int> best = completed.top().target;
+    vector<int> best;
+    if (completed.size() == 0)
+    {
+        cerr << "beam search decoding beam width too small, use the best path so far" << flush;
+
+        best = chart.top().target;
+        best.push_back(eos_sym);
+    }
+    else
+        best = completed.top().target;
 
     for (auto p : best)
     {

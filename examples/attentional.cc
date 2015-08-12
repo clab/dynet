@@ -276,13 +276,17 @@ void test_rescore(Model &model, AM_t &am, string test_file, string out_file)
         am.BuildGraph(source, target, cg, nullptr);
 
         double loss = as_scalar(cg.forward());
-        cout << num << ' ';
+
+/*        cout << num << ' ';
         cout << "|||";
         for (auto &w : target)
             cout << " " << td.Convert(w);
         cout << " ||| " << loss << endl;
+        */
 
         of << line << " ||| " << loss << endl; 
+
+//        cerr << "procesed " << lno << " sentences" << endl;
 
         lno++;
     }
