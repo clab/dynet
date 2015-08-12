@@ -4,6 +4,7 @@
 #include "cnn/param-nodes.h"
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/cnn-helper.h"
+#include "cnn/expr.h"
 
 using namespace std;
 
@@ -28,9 +29,16 @@ ComputationGraph::ComputationGraph() : last_node_evaluated(),
 }
 
 ComputationGraph::~ComputationGraph() {
+  this->clear();
   delete ee;
-  for (auto n : nodes) delete n;
   --n_hgs;
+}
+
+void ComputationGraph::clear() {
+  last_node_evaluated = VariableIndex();
+  parameter_nodes.clear();
+  for (auto n : nodes) delete n;
+  nodes.clear();
 }
 
 VariableIndex ComputationGraph::add_input(real s) {
@@ -115,6 +123,7 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
 const Tensor& ComputationGraph::incremental_forward() { return ee->incremental_forward(); }
 const Tensor& ComputationGraph::forward() { return ee->forward(); }
 const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_value(i); }
+const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return this->get_value(e.i); }
 void ComputationGraph::invalidate() { ee->invalidate(); }
 void ComputationGraph::backward() { ee->backward(); }
 
