@@ -23,18 +23,18 @@ class RNNLanguageModel:
 
     def BuildLMGraph(self, sent):
         renew_cg()
-        init_state = self.builder.initial_state()
+        builder = self.builder
+        builder.new_graph()
+        builder.start_new_sequence()
 
         R = parameter(self.m["R"])
         bias = parameter(self.m["bias"])
         errs = [] # will hold expressions
         es=[]
-        state = init_state
         for (cw,nw) in zip(sent,sent[1:]):
             # assume word is already a word-id
             x_t = lookup(self.m["lookup"], int(cw))
-            state = state.add_input(x_t)
-            y_t = state.output()
+            y_t = builder.add_input(x_t) 
             r_t = bias + (R * y_t)
             err = pickneglogsoftmax(r_t, int(nw))
             errs.append(err)
@@ -44,15 +44,16 @@ class RNNLanguageModel:
     def sample(self, first=1, nchars=0, stop=-1):
         res = [first]
         renew_cg()
-        state = self.builder.initial_state()
+        builder = self.builder
+        builder.new_graph()
+        builder.start_new_sequence()
 
         R = parameter(self.m["R"])
         bias = parameter(self.m["bias"])
         cw = first
         while True:
             x_t = lookup(self.m["lookup"], cw)
-            state = state.add_input(x_t)
-            y_t = state.output()
+            y_t = builder.add_input(x_t)
             r_t = bias + (R * y_t)
             ydist = softmax(r_t)
             dist = cg().inc_forward_vec()
@@ -76,8 +77,6 @@ if __name__ == '__main__':
     sgd = SimpleSGDTrainer(model)
 
     lm = RNNLanguageModel(model, builder=LSTMBuilder)
-    #lm = RNNLanguageModel(model, builder=SimpleRNNBuilder)
-    #lm = RNNLanguageModel(model, builder=RNNBuilder)
 
     train = list(train)
 

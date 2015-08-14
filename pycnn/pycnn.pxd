@@ -196,11 +196,8 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
 #cdef extern from "cnn/model.h" namespace "cnn":
 #    cdef cppclass Model:
 
-# TODO unify with LSTMBuilder using inheritance
 cdef extern from "cnn/rnn.h" namespace "cnn":
-    #cdef cppclass RNNBuilder "cnn::RNNBuilder":
-    cdef cppclass CSimpleRNNBuilder "cnn::SimpleRNNBuilder":
-        CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+    cdef cppclass CRNNBuilder "cnn::RNNBuilder":
         void new_graph(CComputationGraph &cg)
         void start_new_sequence(vector[CExpression] ces)
         CExpression add_input(CExpression &x)
@@ -209,26 +206,38 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         CExpression back()
         vector[CExpression] final_h()
         vector[CExpression] final_s()
-        CRNNPointer prev(CRNNPointer p)
         CRNNPointer state()
+
+# TODO unify with LSTMBuilder using inheritance
+cdef extern from "cnn/rnn.h" namespace "cnn":
+    #cdef cppclass RNNBuilder "cnn::RNNBuilder":
+    cdef cppclass CSimpleRNNBuilder  "cnn::SimpleRNNBuilder" (CRNNBuilder):
+        CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        #void new_graph(CComputationGraph &cg)
+        #void start_new_sequence(vector[CExpression] ces)
+        #CExpression add_input(CExpression &x)
+        #CExpression add_input(CRNNPointer prev, CExpression &x)
+        #void rewind_one_step()
+        CExpression back()
+        vector[CExpression] final_h()
+        vector[CExpression] final_s()
+        #CRNNPointer state()
 
 cdef extern from "cnn/rnn.h" namespace "cnn":
     cdef cppclass CRNNPointer "cnn::RNNPointer":
         CRNNPointer()
         CRNNPointer(int i)
-    #cdef cppclass RNNPointer
 
 cdef extern from "cnn/lstm.h" namespace "cnn":
-    cdef cppclass CLSTMBuilder "cnn::LSTMBuilder":
+    cdef cppclass CLSTMBuilder "cnn::LSTMBuilder" (CRNNBuilder):
         CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
-        void new_graph(CComputationGraph &cg)
-        void start_new_sequence(vector[CExpression] ces)
-        CExpression add_input(CExpression &x)
-        CExpression add_input(CRNNPointer prev, CExpression &x)
-        void rewind_one_step()
+        #void new_graph(CComputationGraph &cg)
+        #void start_new_sequence(vector[CExpression] ces)
+        #CExpression add_input(CExpression &x)
+        #CExpression add_input(CRNNPointer prev, CExpression &x)
+        #void rewind_one_step()
         CExpression back()
         vector[CExpression] final_h()
         vector[CExpression] final_s()
-        CRNNPointer prev(CRNNPointer p)
-        CRNNPointer state()
+        #CRNNPointer state()
 
