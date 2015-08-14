@@ -590,18 +590,23 @@ cpdef Expression affine_transform(list exprs):
 # {{{ RNNS / Builders
 # TODO: unify these with inheritance
 
-cdef class SimpleRNNBuilder: # {{{
-    cdef CSimpleRNNBuilder *thisptr
+cdef class RNNBuilder: # {{{
+    cdef CRNNBuilder *thisptr
     cdef int cg_version 
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
-        self.cg_version = -1
+    def __cinit_(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        # TODO disable calling this directly.
+        raise RuntimeError("Cannot instantiate RNNBuilder directly.")
+    #def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    #    self.thisptr = 0 #new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+    #    self.cg_version = -1
+
     def __dealloc__(self):
         del self.thisptr
-    #cpdef new_graph(self, ComputationGraph cg): self.thisptr.new_graph(cg.thisptr[0])
+
     cpdef new_graph(self):
         self.thisptr.new_graph(_cg.thisptr[0])
         self.cg_version = _cg.version()
+
     cpdef start_new_sequence(self, es=None):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef vector[CExpression] ces = vector[CExpression]()
@@ -611,10 +616,12 @@ cdef class SimpleRNNBuilder: # {{{
                 ensure_freshness(e)
                 ces.push_back(e.c())
         self.thisptr.start_new_sequence(ces)
+
     cpdef Expression add_input(self, Expression e):
         ensure_freshness(e)
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(e.c()))
+
     cdef Expression add_input_to_prev(self, CRNNPointer prev, Expression e):
         ensure_freshness(e)
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
@@ -623,9 +630,11 @@ cdef class SimpleRNNBuilder: # {{{
     cpdef rewind_one_step(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         self.thisptr.rewind_one_step()
+
     cpdef Expression back(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         return Expression.from_cexpr(self.cg_version, self.thisptr.back())
+
     cpdef final_h(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef list res = []
@@ -634,6 +643,7 @@ cdef class SimpleRNNBuilder: # {{{
         for cexp in cexps:
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
+
     cpdef final_s(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef list res = []
@@ -648,68 +658,35 @@ cdef class SimpleRNNBuilder: # {{{
         self.start_new_sequence()
         return RNNState(self, -1)
 #}}}
+
+cdef class SimpleRNNBuilder(RNNBuilder): # {{{
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        self.cg_version = -1
+
+    def whoami(self): return "SimpleRNNBuilder"
+#}}}
     
-cdef class LSTMBuilder: # {{{
-    cdef CLSTMBuilder *thisptr
-    cdef int cg_version
+cdef class LSTMBuilder(RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
-    def __dealloc__(self):
-        del self.thisptr
-    #cpdef new_graph(self, ComputationGraph cg): self.thisptr.new_graph(cg.thisptr[0])
-    cpdef new_graph(self): 
-        self.thisptr.new_graph(_cg.thisptr[0])
-        self.cg_version = _cg.version()
-    cpdef start_new_sequence(self, es=None):
-        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
-        cdef vector[CExpression] ces = vector[CExpression]()
-        cdef Expression e
-        if es:
-            for e in es: 
-                ensure_freshness(e)
-                ces.push_back(e.c())
-        self.thisptr.start_new_sequence(ces)
-    cpdef Expression add_input(self, Expression e):
-        ensure_freshness(e)
-        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
-        return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(e.c()))
-    cdef Expression add_input_to_prev(self, CRNNPointer prev, Expression e):
-        ensure_freshness(e)
-        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
-        return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(prev, e.c()))
 
-    cpdef rewind_one_step(self): 
-        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
-        self.thisptr.rewind_one_step()
-    cpdef Expression back(self):
-        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
-        return Expression.from_cexpr(self.cg_version, self.thisptr.back())
-    cpdef final_h(self):
-        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
-        cdef list res = []
-        cdef CExpression cexp
-        cdef vector[CExpression] cexps = self.thisptr.final_h()
-        for cexp in cexps:
-            res.append(Expression.from_cexpr(self.cg_version, cexp))
-        return res
-    cpdef final_s(self):
-        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
-        cdef list res = []
-        cdef CExpression cexp
-        cdef vector[CExpression] cexps = self.thisptr.final_s()
-        for cexp in cexps:
-            res.append(Expression.from_cexpr(self.cg_version, cexp))
-        return res
+    def whoami(self): return "LSTMBuilder"
 # }}}
 
 cdef class RNNState:
-    cdef SimpleRNNBuilder builder # TODO: make RNNBuilder
+    """
+    This is the main class for working with RNNs / LSTMs / GRUs.
+    Request an RNNState initial_state() from a builder, and then progress from there.
+    """
+    # TODO add final_h and final_s support from builders.
+    cdef RNNBuilder builder
     cdef int state_idx
     cdef RNNState _prev
     cdef Expression _out
     # TODO: should be callable only from C
-    def __cinit__(self, SimpleRNNBuilder builder, int state_idx=-1, RNNState prev_state=None, Expression out=None):
+    def __cinit__(self, RNNBuilder builder, int state_idx=-1, RNNState prev_state=None, Expression out=None):
         self.builder = builder
         self.state_idx=state_idx
         self._prev = prev_state
@@ -718,7 +695,6 @@ cdef class RNNState:
     cpdef RNNState add_input(self, Expression x):
         cdef Expression res = self.builder.add_input_to_prev(CRNNPointer(self.state_idx), x)
         cdef int state_idx = <int>self.builder.thisptr.state()
-        # TODO: keep res?
         return RNNState(self.builder, state_idx, self, res)
 
     cpdef int state(self): return self.state_idx
@@ -726,6 +702,8 @@ cdef class RNNState:
     cpdef Expression output(self): return self._out
 
     cpdef RNNState prev(self): return self._prev
+
+    def b(self): return self.builder
 
 # }}}
 
