@@ -500,6 +500,7 @@ def hinge(Expression x, unsigned index, float m=1.0):
 cpdef Expression cdiv(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cdiv(x.c(), y.c()))
 cpdef Expression colwise_add(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_colwise_add(x.c(), y.c()))
 
+cpdef Expression trace_of_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_trace_of_product(x.c(), y.c()))
 cpdef Expression cwise_multiply(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cwise_multiply(x.c(), y.c()))
 cpdef Expression dot_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
 cpdef Expression squared_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_squared_distance(x.c(), y.c()))
@@ -592,6 +593,7 @@ cpdef Expression affine_transform(list exprs):
 
 cdef class RNNBuilder: # {{{
     cdef CRNNBuilder *thisptr
+    cdef RNNState _init_state
     cdef int cg_version 
     def __cinit_(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         # TODO disable calling this directly.
@@ -603,11 +605,11 @@ cdef class RNNBuilder: # {{{
     def __dealloc__(self):
         del self.thisptr
 
-    cpdef new_graph(self):
+    cdef new_graph(self):
         self.thisptr.new_graph(_cg.thisptr[0])
         self.cg_version = _cg.version()
 
-    cpdef start_new_sequence(self, es=None):
+    cdef start_new_sequence(self, es=None):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef vector[CExpression] ces = vector[CExpression]()
         cdef Expression e
@@ -617,7 +619,7 @@ cdef class RNNBuilder: # {{{
                 ces.push_back(e.c())
         self.thisptr.start_new_sequence(ces)
 
-    cpdef Expression add_input(self, Expression e):
+    cdef Expression add_input(self, Expression e):
         ensure_freshness(e)
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(e.c()))
@@ -627,15 +629,15 @@ cdef class RNNBuilder: # {{{
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(prev, e.c()))
 
-    cpdef rewind_one_step(self):
+    cdef rewind_one_step(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         self.thisptr.rewind_one_step()
 
-    cpdef Expression back(self):
+    cdef Expression back(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         return Expression.from_cexpr(self.cg_version, self.thisptr.back())
 
-    cpdef final_h(self):
+    cdef final_h(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef list res = []
         cdef CExpression cexp
@@ -644,7 +646,7 @@ cdef class RNNBuilder: # {{{
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 
-    cpdef final_s(self):
+    cdef final_s(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         cdef list res = []
         cdef CExpression cexp
@@ -653,10 +655,30 @@ cdef class RNNBuilder: # {{{
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 
+    cdef get_h(self, CRNNPointer i):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        cdef list res = []
+        cdef CExpression cexp
+        cdef vector[CExpression] cexps = self.thisptr.get_h(i)
+        for cexp in cexps:
+            res.append(Expression.from_cexpr(self.cg_version, cexp))
+        return res
+
+    cdef get_s(self, CRNNPointer i):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        cdef list res = []
+        cdef CExpression cexp
+        cdef vector[CExpression] cexps = self.thisptr.get_s(i)
+        for cexp in cexps:
+            res.append(Expression.from_cexpr(self.cg_version, cexp))
+        return res
+
     cpdef RNNState initial_state(self):
-        self.new_graph()
-        self.start_new_sequence()
-        return RNNState(self, -1)
+        if self.cg_version != _cg.version():
+            self.new_graph()
+            self.start_new_sequence()
+            self._init_state = RNNState(self, -1)
+        return self._init_state
 #}}}
 
 cdef class SimpleRNNBuilder(RNNBuilder): # {{{
@@ -675,12 +697,11 @@ cdef class LSTMBuilder(RNNBuilder): # {{{
     def whoami(self): return "LSTMBuilder"
 # }}}
 
-cdef class RNNState:
+cdef class RNNState: # {{{
     """
     This is the main class for working with RNNs / LSTMs / GRUs.
     Request an RNNState initial_state() from a builder, and then progress from there.
     """
-    # TODO add final_h and final_s support from builders.
     cdef RNNBuilder builder
     cdef int state_idx
     cdef RNNState _prev
@@ -697,13 +718,45 @@ cdef class RNNState:
         cdef int state_idx = <int>self.builder.thisptr.state()
         return RNNState(self.builder, state_idx, self, res)
 
-    cpdef int state(self): return self.state_idx
+    def add_inputs(self, xs):
+        """
+        returns the list of states obtained by adding the given inputs
+        to the current state, one by one.
+        """
+        states = []
+        cur = self
+        for x in xs:
+            cur = cur.add_input(x)
+            states.append(cur)
+        return states
+
+    #cpdef int state(self): return self.state_idx
 
     cpdef Expression output(self): return self._out
+
+    cpdef tuple h(self):
+        """
+        tuple of expressions representing the output of each hidden layer
+        of the current step.
+        the actual output of the network is at h()[-1].
+        """
+        return tuple(self.builder.get_h(CRNNPointer(self.state_idx)))
+
+    cpdef tuple s(self):
+        """
+        tuple of expressions representing the hidden state of the current
+        step.
+
+        For SimpleRNN, s() is the same as h()
+        For LSTM, s() is a series of of memory vectors, followed the series
+                  followed by the series returned by h().
+        """
+        return tuple(self.builder.get_s(CRNNPointer(self.state_idx)))
 
     cpdef RNNState prev(self): return self._prev
 
     def b(self): return self.builder
+    #}}}
 
 # }}}
 

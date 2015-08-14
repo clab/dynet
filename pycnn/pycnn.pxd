@@ -163,6 +163,8 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
     CExpression c_transpose "cnn::expr::transpose" (CExpression& x) #
 
     CExpression c_affine_transform "cnn::expr::affine_transform" (const vector[CExpression]& xs)
+
+    CExpression c_trace_of_product "cnn::expr::trace_of_product" (CExpression& x, CExpression& y);
     CExpression c_cwise_multiply "cnn::expr::cwise_multiply" (CExpression& x, CExpression& y) #
 
     CExpression c_dot_product "cnn::expr::dot_product" (CExpression& x, CExpression& y) #
@@ -197,6 +199,10 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
 #    cdef cppclass Model:
 
 cdef extern from "cnn/rnn.h" namespace "cnn":
+    cdef cppclass CRNNPointer "cnn::RNNPointer":
+        CRNNPointer()
+        CRNNPointer(int i)
+
     cdef cppclass CRNNBuilder "cnn::RNNBuilder":
         void new_graph(CComputationGraph &cg)
         void start_new_sequence(vector[CExpression] ces)
@@ -206,6 +212,8 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         CExpression back()
         vector[CExpression] final_h()
         vector[CExpression] final_s()
+        vector[CExpression] get_h(CRNNPointer i)
+        vector[CExpression] get_s(CRNNPointer i)
         CRNNPointer state()
 
 # TODO unify with LSTMBuilder using inheritance
@@ -218,15 +226,12 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         #CExpression add_input(CExpression &x)
         #CExpression add_input(CRNNPointer prev, CExpression &x)
         #void rewind_one_step()
-        CExpression back()
-        vector[CExpression] final_h()
-        vector[CExpression] final_s()
+        #CExpression back()
+        #vector[CExpression] final_h()
+        #vector[CExpression] final_s()
+        #vector[CExpression] get_h(CRNNPointer i)
+        #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
-
-cdef extern from "cnn/rnn.h" namespace "cnn":
-    cdef cppclass CRNNPointer "cnn::RNNPointer":
-        CRNNPointer()
-        CRNNPointer(int i)
 
 cdef extern from "cnn/lstm.h" namespace "cnn":
     cdef cppclass CLSTMBuilder "cnn::LSTMBuilder" (CRNNBuilder):
@@ -236,8 +241,10 @@ cdef extern from "cnn/lstm.h" namespace "cnn":
         #CExpression add_input(CExpression &x)
         #CExpression add_input(CRNNPointer prev, CExpression &x)
         #void rewind_one_step()
-        CExpression back()
-        vector[CExpression] final_h()
-        vector[CExpression] final_s()
+        #CExpression back()
+        #vector[CExpression] final_h()
+        #vector[CExpression] final_s()
+        #vector[CExpression] get_h(CRNNPointer i)
+        #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
