@@ -1,5 +1,4 @@
-
-
+# Installing the pyCNN module.
 
 First, get CNN and Eigen:
 
@@ -51,7 +50,9 @@ Now, check that everything works:
 
 ```bash
 # check that it works:
-cd pycnn
+cd ..
+cd pyexamples
 python2 xor.py
 python2 rnnlm.py rnnlm.py
+```
 
