@@ -75,9 +75,8 @@ if __name__ == '__main__':
     model = Model()
     sgd = SimpleSGDTrainer(model)
 
-    lm = RNNLanguageModel(model, builder=LSTMBuilder)
-    #lm = RNNLanguageModel(model, builder=SimpleRNNBuilder)
-    #lm = RNNLanguageModel(model, builder=RNNBuilder)
+    #lm = RNNLanguageModel(model, builder=LSTMBuilder)
+    lm = RNNLanguageModel(model, builder=SimpleRNNBuilder)
 
     train = list(train)
 
