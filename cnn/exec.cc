@@ -66,11 +66,19 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
 }
 
 void SimpleExecutionEngine::backward() {
-  if (nfxs.back().d.size() != 1) {
+    assert(nfxs.size() == cg.nodes.size());
+    backward((VariableIndex)(cg.nodes.size()-1));
+}
+
+// TODO what is happening with parameter nodes if from_where > param_node_id ?
+void SimpleExecutionEngine::backward(VariableIndex from_where) {
+  assert(from_where+1 <= nfxs.size());
+  assert(from_where+1 <= cg.nodes.size());
+  if (nfxs[from_where].d.size() != 1) {
     cerr << "backward() called on non-scalar node.\n";
     abort();
   }
-  const unsigned node_max_index = cg.nodes.size();
+  const unsigned node_max_index = from_where+1;
   ndEdfs.resize(node_max_index);
   dEdfs->free();
   for (unsigned i = 0; i < node_max_index; ++i) {
@@ -84,7 +92,7 @@ void SimpleExecutionEngine::backward() {
   ndEdfs.back().v = kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
-  const unsigned num_nodes = cg.nodes.size();
+  const unsigned num_nodes = from_where+1;
   vector<bool> needs_derivative(num_nodes, false);
   for (auto i : cg.parameter_nodes)
     needs_derivative[i] = true;

@@ -1,31 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from pycnn import *
 from collections import Counter
 import random
@@ -85,8 +57,8 @@ else:
     pO = model.add_parameters("OUT", (ntags, 50*2))
 
 builders=[
-        LSTMBuilder(2, 128, 50, model),
-        LSTMBuilder(2, 128, 50, model),
+        LSTMBuilder(1, 128, 50, model),
+        LSTMBuilder(1, 128, 50, model),
         ]
 
 def build_tagging_graph(words, tags, model, builders):
@@ -105,15 +77,12 @@ def build_tagging_graph(words, tags, model, builders):
     else:
         O = parameter(pO)
     errs = []
-    #pt = tb.add_input(lookup(model["tl"],vt.w2i["_START_"]))
     for f,b,t in zip(fw, reversed(bw), tags):
-        #f_b = concatenate([f,b,pt])
         f_b = concatenate([f,b])
         if MLP:
             r_t = O*(tanh(H * f_b))
         else:
             r_t = O * f_b
-        #pt = tb.add_input(lookup(model["tl"],np.argmax(r_t.npvalue())))
         err = pickneglogsoftmax(r_t, t)
         errs.append(err)
     return esum(errs)
@@ -132,16 +101,13 @@ def tag_sent(sent, model, builders):
     else:
         O = parameter(pO)
     tags=[]
-    #pt = tb.add_input(lookup(model["tl"],vt.w2i["_START_"]))
     for f,b,(w,t) in zip(fw,reversed(bw),sent):
-        #r_t = R * concatenate([f,b,pt])
         if MLP:
             r_t = O*(tanh(H * concatenate([f,b])))
         else:
             r_t = O*concatenate([f,b])
         out = softmax(r_t)
         chosen = np.argmax(out.npvalue())
-        #pt = tb.add_input(lookup(model["tl"],chosen))
         tags.append(vt.i2w[chosen])
     return tags
 
@@ -166,10 +132,11 @@ for ITER in xrange(50):
             print good/(good+bad)
         ws = [vw.w2i.get(w, UNK) for w,p in s]
         ps = [vt.w2i[p] for w,p in s]
-        build_tagging_graph(ws,ps,model,builders)
-        loss += cg().inc_forward_scalar()
+        sum_errs = build_tagging_graph(ws,ps,model,builders)
+        squared = -sum_errs# * sum_errs
+        loss += sum_errs.scalar_value()
         tagged += len(ps)
-        cg().backward()
+        sum_errs.backward()
         sgd.update()
 
 

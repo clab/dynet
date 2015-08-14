@@ -1,6 +1,6 @@
 from pycnn import *
 
-xsent = True
+#xsent = True
 xsent = False
 
 HIDDEN_SIZE = 8
@@ -19,9 +19,8 @@ b = parameter(m["b"])
 V = parameter(m["V"])
 a = parameter(m["a"])
 
-x = vecInput([1,1])
+x = vecInput(2)
 y = scalarInput(0)
-#print type(x)
 h = tanh((W*x) + b)
 if xsent:
     y_pred = logistic((V*h) + a)
@@ -42,8 +41,10 @@ for iter in xrange(ITERATIONS):
         x2 = (mi / 2) % 2
         x.set([T if x1 else F, T if x2 else F])
         y.set(T if x1 != x2 else F)
-        mloss += cg().forward_scalar()
-        cg().backward()
+        #mloss += cg().forward_scalar()
+        mloss += loss.scalar_value()
+        #cg().backward()
+        loss.backward()
         sgd.update(1.0)
     sgd.update_epoch();
     mloss /= 4.
@@ -51,7 +52,7 @@ for iter in xrange(ITERATIONS):
 
 x.set([F,T])
 z = -(-y_pred)
-print cg().forward_scalar()
+print z.scalar_value()
 #print y_pred.scalar()
 
 renew_cg()
@@ -60,14 +61,19 @@ b = parameter(m["b"])
 V = parameter(m["V"])
 a = parameter(m["a"])
 
-x = vecInput([1,1])
+x = vecInput(2)
 y = scalarInput(0)
-#print type(x)
 h = tanh((W*x) + b)
 if xsent:
     y_pred = logistic((V*h) + a)
 else:
     y_pred = (V*h) + a
 x.set([T,F])
-print "XX",cg().forward_scalar()
+print "TF",y_pred.scalar_value()
+x.set([F,F])
+print "FF",y_pred.scalar_value()
+x.set([T,T])
+print "TT",y_pred.scalar_value()
+x.set([F,T])
+print "FT",y_pred.scalar_value()
 
