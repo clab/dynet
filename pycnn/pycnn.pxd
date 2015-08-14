@@ -124,7 +124,7 @@ cdef extern from "cnn/training.h" namespace "cnn":
 cdef extern from "cnn/expr.h" namespace "cnn::expr":
     cdef cppclass CExpression "cnn::expr::Expression":
         CExpression()
-        CExpression(CComputationGraph *pg, long i)
+        CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
         long i
     #CExpression c_input "cnn::expr::input" (CComputationGraph& g, float s)   #
