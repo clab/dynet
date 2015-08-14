@@ -186,6 +186,46 @@ void AdadeltaTrainer::update(real scale) {
   ++updates;
 }
 
+void RmsPropTrainer::update(real scale) {
+  unsigned pi = 0;
+  if (!shadow_params_allocated) {
+    hg.resize(model->parameters_list().size());
+
+    pi = 0;
+    hlg.resize(model->lookup_parameters_list().size());
+    for (auto p : model->lookup_parameters_list()) {
+      hlg[pi++].resize(p->size());
+    }
+
+    shadow_params_allocated = true;
+  }
+
+  const float gscale = clip_gradients();
+  pi = 0;
+  for (auto p : model->parameters_list()) {
+    real& d2 = hg[pi++];
+    auto reg = (*p->values) * lambda;
+    real g2 = (*p->g).squaredNorm();
+    d2 = rho * d2 + (1.0 - rho) * g2;
+    *p->values -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * *p->g + reg);
+    p->clear();
+  }
+
+  pi = 0;
+  for (auto p : model->lookup_parameters_list()) {
+    vector<real>& hlgx = hlg[pi++];
+    for (auto i : p->non_zero_grads) {
+      real& d2 = hlgx[i];
+      auto reg = (*p->values[i]) * lambda;
+      real g2 = (*p->grads[i]).squaredNorm();
+      d2 = rho * d2 + (1.0 - rho) * g2;
+      *p->values[i] -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * *p->grads[i] + reg);
+    }
+    p->clear();
+  }
+  ++updates;
+}
+
 void AdamTrainer::update(real scale) {
   unsigned pi;
   if (!shadow_params_allocated) {

@@ -25,6 +25,10 @@ class Dict {
 
   inline unsigned size() const { return words_.size(); }
 
+  inline bool Contains(const std::string& words) {
+    return !(d_.find(words) == d_.end());
+  }
+
   void Freeze() { frozen = true; }
 
   inline int Convert(const std::string& word) {

@@ -90,6 +90,18 @@ struct AdadeltaTrainer : public Trainer {
   std::vector<ShadowLookupParameters> hld;
 };
 
+struct RmsPropTrainer : public Trainer {
+  explicit RmsPropTrainer(Model* m, real lam = 1e-6, real e0 = 0.1, real eps = 1e-20, real rho = 0.95) :
+    Trainer(m, lam, e0), epsilon(eps), rho(rho), shadow_params_allocated(false) {}
+  void update(real scale) override;
+
+  real epsilon;
+  real rho;
+  bool shadow_params_allocated;
+  std::vector<real> hg; // History of gradients
+  std::vector<std::vector<real> > hlg;
+};
+
 struct AdamTrainer : public Trainer {
   explicit AdamTrainer(Model* m, float lambda = 1e-6, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
     Trainer(m, lambda, alpha), beta_1(beta_1), beta_2(beta_2), eps(eps), shadow_params_allocated(false) {}
