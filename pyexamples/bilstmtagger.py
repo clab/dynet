@@ -4,8 +4,10 @@ import random
 
 import util
 
+# format of files: each line is "word<TAB>tag<newline>", blank line is new sentence.
 train_file="/home/yogo/Vork/Research/corpora/pos/WSJ.TRAIN"
 test_file="/home/yogo/Vork/Research/corpora/pos/WSJ.TEST"
+
 
 MLP=True
 
@@ -138,8 +140,5 @@ for ITER in xrange(50):
         tagged += len(ps)
         sum_errs.backward()
         sgd.update()
-
-
-
 
 
