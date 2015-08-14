@@ -173,17 +173,15 @@ cdef class Model:
     def __contains__(self, name):
         return name in self.named_params
 
-    def parameters(self): return self.named_params.keys()
-
-    def lookup_parameters(self): return list(self.lookups)
-    def regular_parameters(self): return list(self.regular)
+    #def parameters(self): return self.named_params.keys()
+    #def lookup_parameters(self): return list(self.lookups)
+    #def regular_parameters(self): return list(self.regular)
 
     def save(self, string fname):
         save_cnn_model(fname, self.thisptr)
 
     def load(self, string fname):
         load_cnn_model(fname, self.thisptr)
-
 
 # }}}
 
@@ -257,13 +255,13 @@ cdef class ComputationGraph:
         result = Expression.from_cexpr(self._cg_version, c_parameter(self.thisptr[0], params.thisptr))
         return result
 
-    def params_from_model(self, model):
-        results = {}
-        for name in model.regular_parameters():
-            results[name] = self.parameters(model[name])
-        for name in model.lookup_parameters():
-            results[name] = self.lookup(model[name])
-        return results
+    #def params_from_model(self, model):
+    #    results = {}
+    #    for name in model.regular_parameters():
+    #        results[name] = self.parameters(model[name])
+    #    for name in model.lookup_parameters():
+    #        results[name] = self.lookup(model[name])
+    #    return results
 
     cpdef forward_scalar(self):
         return c_as_scalar(self.thisptr.forward())
@@ -311,9 +309,6 @@ cdef class ComputationGraph:
     cdef outputPicker(self, Expression e, unsigned v = 0):
         r = _pickerExpression(self, e, v)
         return r
-
-
-
 
 # }}}
 
