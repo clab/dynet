@@ -204,10 +204,19 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         void new_graph(CComputationGraph &cg)
         void start_new_sequence(vector[CExpression] ces)
         CExpression add_input(CExpression &x)
+        CExpression add_input(CRNNPointer prev, CExpression &x)
         void rewind_one_step()
         CExpression back()
         vector[CExpression] final_h()
         vector[CExpression] final_s()
+        CRNNPointer prev(CRNNPointer p)
+        CRNNPointer state()
+
+cdef extern from "cnn/rnn.h" namespace "cnn":
+    cdef cppclass CRNNPointer "cnn::RNNPointer":
+        CRNNPointer()
+        CRNNPointer(int i)
+    #cdef cppclass RNNPointer
 
 cdef extern from "cnn/lstm.h" namespace "cnn":
     cdef cppclass CLSTMBuilder "cnn::LSTMBuilder":
@@ -215,8 +224,11 @@ cdef extern from "cnn/lstm.h" namespace "cnn":
         void new_graph(CComputationGraph &cg)
         void start_new_sequence(vector[CExpression] ces)
         CExpression add_input(CExpression &x)
+        CExpression add_input(CRNNPointer prev, CExpression &x)
         void rewind_one_step()
         CExpression back()
         vector[CExpression] final_h()
         vector[CExpression] final_s()
+        CRNNPointer prev(CRNNPointer p)
+        CRNNPointer state()
 

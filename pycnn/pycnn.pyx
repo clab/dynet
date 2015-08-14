@@ -615,6 +615,11 @@ cdef class SimpleRNNBuilder: # {{{
         ensure_freshness(e)
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(e.c()))
+    cdef Expression add_input_to_prev(self, CRNNPointer prev, Expression e):
+        ensure_freshness(e)
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(prev, e.c()))
+
     cpdef rewind_one_step(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         self.thisptr.rewind_one_step()
@@ -637,6 +642,11 @@ cdef class SimpleRNNBuilder: # {{{
         for cexp in cexps:
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
+
+    cpdef RNNState initial_state(self):
+        self.new_graph()
+        self.start_new_sequence()
+        return RNNState(self, -1)
 #}}}
     
 cdef class LSTMBuilder: # {{{
@@ -664,6 +674,11 @@ cdef class LSTMBuilder: # {{{
         ensure_freshness(e)
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(e.c()))
+    cdef Expression add_input_to_prev(self, CRNNPointer prev, Expression e):
+        ensure_freshness(e)
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(prev, e.c()))
+
     cpdef rewind_one_step(self): 
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         self.thisptr.rewind_one_step()
@@ -687,6 +702,30 @@ cdef class LSTMBuilder: # {{{
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 # }}}
+
+cdef class RNNState:
+    cdef SimpleRNNBuilder builder # TODO: make RNNBuilder
+    cdef int state_idx
+    cdef RNNState _prev
+    cdef Expression _out
+    # TODO: should be callable only from C
+    def __cinit__(self, SimpleRNNBuilder builder, int state_idx=-1, RNNState prev_state=None, Expression out=None):
+        self.builder = builder
+        self.state_idx=state_idx
+        self._prev = prev_state
+        self._out = out
+
+    cpdef RNNState add_input(self, Expression x):
+        cdef Expression res = self.builder.add_input_to_prev(CRNNPointer(self.state_idx), x)
+        cdef int state_idx = <int>self.builder.thisptr.state()
+        # TODO: keep res?
+        return RNNState(self.builder, state_idx, self, res)
+
+    cpdef int state(self): return self.state_idx
+
+    cpdef Expression output(self): return self._out
+
+    cpdef RNNState prev(self): return self._prev
 
 # }}}
 
