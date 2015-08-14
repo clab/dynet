@@ -90,8 +90,7 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   }
 }
 
-Expression LSTMBuilder::add_input_impl(const Expression& x) {
-  const unsigned t = h.size();
+Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -100,8 +99,8 @@ Expression LSTMBuilder::add_input_impl(const Expression& x) {
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
     Expression i_h_tm1, i_c_tm1;
-    bool has_prev_state = (t > 0 || has_initial_state);
-    if (t == 0) {
+    bool has_prev_state = (prev >= 0 || has_initial_state);
+    if (prev < 0) {
       if (has_initial_state) {
         // intial value for h and c at timestep 0 in layer i
         // defaults to zero matrix input if not set in add_parameter_edges
@@ -109,8 +108,8 @@ Expression LSTMBuilder::add_input_impl(const Expression& x) {
         i_c_tm1 = c0[i];
       }
     } else {  // t > 0
-      i_h_tm1 = h[t-1][i];
-      i_c_tm1 = c[t-1][i];
+      i_h_tm1 = h[prev][i];
+      i_c_tm1 = c[prev][i];
     }
     // input
     Expression i_ait;
@@ -153,6 +152,14 @@ Expression LSTMBuilder::add_input_impl(const Expression& x) {
     in = ht[i] = cwise_multiply(i_ot,ph_t);
   }
   return ht.back();
+}
+
+void LSTMBuilder::copy(const RNNBuilder & rnn) {
+  const LSTMBuilder & rnn_lstm = (const LSTMBuilder&)rnn;
+  assert(params.size() == rnn_lstm.params.size());
+  for(size_t i = 0; i < params.size(); ++i)
+      for(size_t j = 0; j < params[i].size(); ++j)
+        params[i][j]->copy(*rnn_lstm.params[i][j]);
 }
 
 } // namespace cnn

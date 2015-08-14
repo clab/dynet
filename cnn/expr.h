@@ -54,7 +54,7 @@ Expression dropout(const Expression& x, real p);
 Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
 
-Expression affine_transform(const std::vector<Expression>& xs);
+Expression trace_of_product(const Expression& x, const Expression& y);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
 Expression dot_product(const Expression& x, const Expression& y);
@@ -91,15 +91,19 @@ namespace detail {
 
 template <typename T>
 inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
+inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
 
 template <typename T>
 inline Expression average(const T& xs) { return detail::f<Average>(xs); }
+inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs); }
 
 template <typename T>
 inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateColumns>(xs); }
+inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateColumns>(xs); }
 
 template <typename T>
 inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); }
+inline Expression concatenate(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs); }
 
 template <typename T>
 inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }

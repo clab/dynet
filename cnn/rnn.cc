@@ -51,7 +51,7 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   if (h0.size()) { assert(h0.size() == layers); }
 }
 
-Expression SimpleRNNBuilder::add_input_impl(const Expression &in) {
+Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
 
@@ -60,16 +60,26 @@ Expression SimpleRNNBuilder::add_input_impl(const Expression &in) {
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
 
-    Expression y = vars[2] + vars[0] * x;
+    Expression y = affine_transform({vars[2], vars[0], x});
 
-    if (t == 0 && h0.size() > 0)
+    if (prev == -1 && h0.size() > 0)
       y = y + vars[1] * h0[i];
-    else if (t > 0)
-      y = y + vars[1] * h[t-1][i];
+    else if (prev >= 0)
+      y = y + vars[1] * h[prev][i];
 
     x = h[t][i] = tanh(y);
   }
   return h[t].back();
+}
+
+void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
+  const SimpleRNNBuilder & rnn_simple = (const SimpleRNNBuilder&)rnn;
+  assert(params.size() == rnn_simple.params.size());
+  for(size_t i = 0; i < rnn_simple.params.size(); ++i) {
+      params[i][0]->copy(*rnn_simple.params[i][0]);
+      params[i][1]->copy(*rnn_simple.params[i][1]);
+      params[i][2]->copy(*rnn_simple.params[i][2]);
+  }
 }
 
 } // namespace cnn

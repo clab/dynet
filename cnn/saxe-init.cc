@@ -10,17 +10,16 @@ using namespace std;
 
 namespace cnn {
 
-inline Eigen::MatrixXf EigenRandomNormal(int dim, real mean, real stddev) {
-  normal_distribution<real> distribution(mean, stddev);
-  auto b = [&] (real) {return distribution(*rndeng);};
-  Eigen::MatrixXf r = Eigen::MatrixXf::NullaryExpr(dim, dim, b);
-  return r;
-}
-
-void OrthonormalRandom(int dim, real g, Tensor& x) {
-  Eigen::MatrixXf m = EigenRandomNormal(dim, 0.0, 0.01);
-  Eigen::JacobiSVD<Eigen::MatrixXf> svd(m, Eigen::ComputeFullU);
+void OrthonormalRandom(int dd, float g, Tensor& x) {
+  Tensor t;
+  t.d = Dim({dd, dd});
+  t.v = new float[dd * dd];
+  normal_distribution<float> distribution(0, 0.01);
+  auto b = [&] () {return distribution(*rndeng);};
+  generate(t.v, t.v + dd*dd, b);
+  Eigen::JacobiSVD<Eigen::MatrixXf> svd(*t, Eigen::ComputeFullU);
   *x = svd.matrixU();
+  delete[] t.v;
 }
 
 }

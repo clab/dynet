@@ -33,6 +33,23 @@ using namespace std;
 
 namespace cnn {
 
+void TraceOfProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  fx.v[0] = (x1 * x2.transpose()).trace();
+}
+
+void TraceOfProduct::backward(const vector<const Tensor*>& xs,
+                              const Tensor& fx,
+                              const Tensor& dEdf,
+                              unsigned i,
+                              Tensor& dEdxi) const {
+  assert(i < 2);
+  const float d = dEdf.v[0];
+  auto xother = **xs[1 - i];
+  *dEdxi += d * xother;
+}
+
 void ConstScalarMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   *fx = (**xs[0]) * alpha;
 }
@@ -569,7 +586,7 @@ EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   const float m = x.maxCoeff();
   float z = 0;
   for (unsigned i = 0; i < x.rows(); ++i)
-    z += expf(x(i,0) - m);
+    z += CNN_EXPF(x(i,0) - m);
   return m + logf(z);
 }
 
@@ -672,7 +689,7 @@ EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   }
   real z = 0;
   for (auto i : denom)
-    z += expf(x(i,0) - m);
+    z += CNN_EXPF(x(i,0) - m);
   return m + logf(z);
 }
 
@@ -700,7 +717,7 @@ void RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
   for (auto ind : denom)
     z += (*dEdf)(ind, 0);
   for (auto ind : denom)
-    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - expf((*fx)(ind, 0)) * z;
+    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - CNN_EXPF((*fx)(ind, 0)) * z;
 }
 
 // x_1 is a vector
@@ -1004,8 +1021,8 @@ void L1Distance::backward(const vector<const Tensor*>& xs,
                           Tensor& dEdxi) const {
   assert(i < 2);
   auto x = **xs[i];
-  real scale = dEdf.v[0];
-  cerr << "Implement L1Distance::backward()\n"; abort();
+  auto y = **xs[1-i];
+  *dEdxi += (x - y).binaryExpr(*dEdf, FL1Backward());
 }
 
 void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
