@@ -86,6 +86,7 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
         const CTensor& get_value(VariableIndex i)
         void invalidate()
         void backward()
+        void backward(VariableIndex i)
 
         void PrintGraphviz() const
 

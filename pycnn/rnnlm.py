@@ -55,7 +55,7 @@ class RNNLanguageModel:
             y_t = state.output()
             r_t = bias + (R * y_t)
             ydist = softmax(r_t)
-            dist = cg().inc_forward_vec()
+            dist = ydist.vec_value()
             rnd = random.random()
             for i,p in enumerate(dist):
                 rnd -= p
@@ -97,8 +97,8 @@ if __name__ == '__main__':
             chars += len(sent)-1
             isent = [vocab.w2i[w] for w in sent]
             errs = lm.BuildLMGraph(isent)
-            loss += cg().inc_forward_scalar()
-            cg().backward()
+            loss += errs.scalar_value()
+            errs.backward()
             sgd.update(1.0)
             #print "TM:",(time.time() - _start)/len(sent)
         print "ITER",ITER,loss

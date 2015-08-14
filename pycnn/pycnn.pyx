@@ -375,6 +375,15 @@ cdef class Expression: #{{{
         if len(vec) == 1: return vec[0]
         return vec
 
+    # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
+    cpdef forward(self):
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        self.cg.incremental_forward()
+
+    cpdef backward(self):
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        self.cg.backward(self.vindex)
+
     def __add__(self, other): return _add(self,other)
     def __mul__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
