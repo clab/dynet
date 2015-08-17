@@ -13,7 +13,7 @@ import sys
 import util
 
 class RNNLanguageModel:
-    def __init__(self, model, builder=SimpleRNNBuilder):
+    def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder):
         self.m = model
         self.builder = builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     sgd = SimpleSGDTrainer(model)
 
     #lm = RNNLanguageModel(model, builder=LSTMBuilder)
-    lm = RNNLanguageModel(model, builder=SimpleRNNBuilder)
+    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
 
     train = list(train)
 
