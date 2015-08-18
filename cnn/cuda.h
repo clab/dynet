@@ -9,19 +9,14 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-namespace cnn {
-class CudaException : public std::runtime_error {
- public:
-  explicit CudaException(const char* msg) : runtime_error(msg) {}
-};
-} // namespace cnn
+#include "cnn/except.h"
 
 #define CUDA_CHECK(stmt) do {                              \
     cudaError_t err = stmt;                                \
     if (err != cudaSuccess) {                              \
       std::cerr << "CUDA failure in " << #stmt << std::endl\
                 << cudaGetErrorString(err) << std::endl;   \
-      throw CudaException(#stmt);                          \
+      throw cnn::cuda_exception(#stmt);                    \
     }                                                      \
   } while(0)
 
@@ -30,7 +25,7 @@ class CudaException : public std::runtime_error {
     if (stat != CUBLAS_STATUS_SUCCESS) {                   \
       std::cerr << "CUBLAS failure in " << #stmt           \
                 << std::endl << stat << std::endl;         \
-      throw CudaException(#stmt);                          \
+      throw cnn::cuda_exception(#stmt);                    \
     }                                                      \
   } while(0)
 

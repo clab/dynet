@@ -82,7 +82,8 @@ void LookupParameters::scale_parameters(float a) {
 void LookupParameters::Initialize(unsigned index, const vector<float>& val) {
   assert(int(val.size()) == int(dim.size()));
 #if HAVE_CUDA
-  cerr << "implement LookupParameters::Initialize\n"; abort();
+  cerr << "implement LookupParameters::Initialize\n";
+  throw cuda_not_implemented("LookupParameters::Initialize");
 #else
   memcpy(values[index].v, &val[0], val.size() * sizeof(float));
 #endif

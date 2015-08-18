@@ -342,24 +342,6 @@ struct Identity : public Node {
                   Tensor& dEdxi) const override;
 };
 
-// hyperparameter: width > 1
-// x_1 is a vector in R^n, which we write x
-// y is a vector in R^{n / width}
-// y_i = max_{x_{i * width - width + 1}, ..., x_{i * width}}
-struct MaxPooling1D : public Node {
-  MaxPooling1D(const std::initializer_list<VariableIndex>& a, unsigned w) : Node(a), width(w) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
-  unsigned width;
-  mutable std::vector<unsigned> ind;
-};
-
 // y = x_1 * x_2
 struct MatrixMultiply : public Node {
   explicit MatrixMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}

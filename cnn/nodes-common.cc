@@ -382,17 +382,6 @@ Dim Identity::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-string MaxPooling1D::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "maxpool1d(" << arg_names.front() << ",w=" << width << ")";
-  return os.str();
-}
-
-Dim MaxPooling1D::dim_forward(const vector<Dim>& xs) const {
-  cerr << "MaxPooling1D::dim_forward not implemented\n";
-  abort();
-}
-
 string Softmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "softmax(" << arg_names[0] << ')';

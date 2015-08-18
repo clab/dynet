@@ -28,8 +28,7 @@ void GraphOptimize(ComputationGraph* cg) {
     }
     cerr << "LONGEST PATH: " << longest_paths[i] << "\tx" << i << " = " << nodes[i]->as_string(x) << endl;
   }
-  abort();
+  abort();// DEBUGGING
 }
 
-
-} // namespace cnn
+} // namespaiice cnn
