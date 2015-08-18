@@ -346,6 +346,12 @@ cdef class Expression: #{{{
     def __str__(self):
         return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
 
+    def __getitem__(self, int i):
+        return pick(self, i)
+
+    def __getslice__(self, int i, int j):
+        return pickrange(self, i, j)
+
     cpdef scalar_value(self):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         return c_as_scalar(self.cg.get_value(self.vindex))
