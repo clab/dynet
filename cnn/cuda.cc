@@ -14,7 +14,7 @@ void Initialize_GPU(int& argc, char**& argv) {
   CUDA_CHECK(cudaGetDeviceCount(&nDevices));
   if (nDevices < 1) {
     cerr << "No GPUs found, recompile without DENABLE_CUDA=1\n";
-    abort();
+    throw std::runtime_error("No GPUs found but CNN compiled with CUDA support.");
   }
   size_t free_bytes, total_bytes, max_free = 0;
   int selected = 0;
