@@ -1,5 +1,5 @@
-#ifndef EXPR_H
-#define EXPR_H
+#ifndef CNN_EXPR_H
+#define CNN_EXPR_H
 
 #include "cnn/cnn.h"
 #include "cnn/nodes.h"
