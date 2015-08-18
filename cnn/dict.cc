@@ -15,7 +15,7 @@ std::vector<int> ReadSentence(const std::string& line, Dict* sd) {
   std::vector<int> res;
   while(in) {
     in >> word;
-    if (word.empty()) break;
+    if (!in) break;
     res.push_back(sd->Convert(word));
   }
   return res;
