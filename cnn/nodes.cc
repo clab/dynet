@@ -177,7 +177,9 @@ void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = *fx;
   if (xs.size() == 1) {
     y = x.rowwise().sum();
-  } else { abort(); }
+  } else {
+    throw std::invalid_argument("two inputs in SumColumns::forward!");
+  }
 }
 
 void SumColumns::backward(const vector<const Tensor*>& xs,
@@ -617,54 +619,6 @@ void Identity::backward(const vector<const Tensor*>& xs,
                   unsigned i,
                   Tensor& dEdxi) const {
   *dEdxi += *dEdf;
-}
-
-void MaxPooling1D::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  cerr << "FIX IMPL5\n"; abort();
-#if 0
-  assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  const unsigned x_rows = x.rows();
-  assert(x.cols() == 1);
-  const unsigned fx_rows = x_rows / width;
-  ind.resize(fx_rows);
-  Tensor fx = Zero(Dim(fx_rows, 1));
-  for (unsigned i = 0; i < fx_rows; ++i) {
-    unsigned from = i * width;
-    unsigned to = from + width;
-    if (to > x_rows) to = x_rows;
-    real best = x(from, 0);
-    unsigned bestr = from;
-    for (unsigned r = from + 1; r < to; ++r) {
-      if (x(r, 0) > best) {
-        best = x(r,0);
-        bestr = r;
-      }
-    }
-    ind[i] = bestr;
-    fx(i, 0) = best;
-  }
-  return fx;
-#endif
-}
-
-void MaxPooling1D::backward(const vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const {
-  cerr << "FIX IMPL6\n"; abort();
-#if 0
-  const Tensor& x = *xs.front();
-  const unsigned x_rows = x.rows();
-  Tensor dEdx = Zero(Dim(x_rows, 1));
-  const unsigned fx_rows = x_rows / width;
-  assert(fx_rows == ind.size());
-  assert(fx_rows == dEdf.rows());
-  for (unsigned i = 0; i < fx_rows; ++i)
-    dEdx(ind[i], 0) = dEdf(i, 0);
-  return dEdx;
-#endif
 }
 
 template <class T>
