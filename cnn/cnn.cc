@@ -22,9 +22,8 @@ ComputationGraph::ComputationGraph() : last_node_evaluated(),
   ee(new SimpleExecutionEngine(*this)) {
   ++n_hgs;
   if (n_hgs > 1) {
-    // TODO handle memory better
-    cerr << "Memory allocator assumes only a single hypergraph at a time.\n";
-    abort();
+    cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
+    throw std::runtime_error("Attempted to create >1 CG");
   }
 }
 

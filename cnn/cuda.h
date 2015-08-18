@@ -4,16 +4,24 @@
 
 #include <cassert>
 #include <utility>
+#include <stdexcept>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+
+namespace cnn {
+class CudaException : public std::runtime_error {
+ public:
+  explicit CudaException(const char* msg) : runtime_error(msg) {}
+};
+} // namespace cnn
 
 #define CUDA_CHECK(stmt) do {                              \
     cudaError_t err = stmt;                                \
     if (err != cudaSuccess) {                              \
       std::cerr << "CUDA failure in " << #stmt << std::endl\
                 << cudaGetErrorString(err) << std::endl;   \
-      abort();                                             \
+      throw CudaException(#stmt);                          \
     }                                                      \
   } while(0)
 
@@ -22,7 +30,7 @@
     if (stat != CUBLAS_STATUS_SUCCESS) {                   \
       std::cerr << "CUBLAS failure in " << #stmt           \
                 << std::endl << stat << std::endl;         \
-      abort();                                             \
+      throw CudaException(#stmt);                          \
     }                                                      \
   } while(0)
 

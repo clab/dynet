@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <stdexcept>
 
 #include <boost/version.hpp>
 #if BOOST_VERSION >= 105600
@@ -36,7 +37,7 @@ class Dict {
     if (i == d_.end()) {
       if (frozen) {
         std::cerr << "Unknown word encountered: " << word << std::endl;
-        abort();
+        throw std::runtime_error("Unknown word encountered in frozen dictionary: " + word);
       }
       words_.push_back(word);
       return d_[word] = words_.size() - 1;
