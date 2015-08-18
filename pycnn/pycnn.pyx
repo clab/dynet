@@ -55,7 +55,7 @@ cdef c_tensor_as_np(CTensor &t):
     # TODO: make more efficient, with less copy
     arr = np.array(c_as_vector(t))
     if t.d.ndims() == 1: return arr
-    else: return arr.reshape(t.d.rows(), t.d.cols())
+    else: return arr.reshape(t.d.rows(), t.d.cols(),order='F')
 
 # {{{ Model / Parameters 
 cdef class Parameters:
@@ -129,7 +129,7 @@ cdef class LookupParameters:
         """
         cdef vector[CTensor] vals
         vals = self.thisptr.values
-        return np.vstack([c_tensor_as_np(t).reshape(1,-1) for t in vals])
+        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
 
 cdef class Model:
@@ -368,7 +368,7 @@ cdef class Expression: #{{{
         dim = t.d
         arr = np.array(c_as_vector(t))
         if dim.ndims() == 2:
-            arr = arr.reshape(dim.rows(), dim.cols())
+            arr = arr.reshape(dim.rows(), dim.cols(),order='F')
         return arr
 
     cpdef value(self):
