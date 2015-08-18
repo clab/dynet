@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <stdexcept>
 //#if HAVE_MM_MALLOC
 #include <mm_malloc.h>
 //#endif
@@ -16,19 +17,15 @@
 namespace cnn {
 
 inline void* cnn_mm_malloc(size_t n, size_t align) {
-//#if HAVE_MM_MALLOC
   void* ptr = nullptr;
 #if HAVE_CUDA
   CUDA_CHECK(cudaMalloc(&ptr, n));
 #else
   ptr = _mm_malloc(n, align);
 #endif
-//#else
-//  return std::malloc(n, align);
-//#endif
   if (!ptr) {
     std::cerr << "Memory allocation failed n=" << n << " align=" << align << std::endl;
-    abort();
+    throw std::runtime_error("Memory allocation failed in cnn_mm_malloc()");
   }
   return ptr;
 }
