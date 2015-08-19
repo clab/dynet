@@ -542,6 +542,9 @@ cpdef Expression sum_cols(Expression x): return Expression.from_cexpr(x.cg_versi
 #expr-opt
 cpdef Expression fold_rows(Expression x, unsigned nrows=2): return Expression.from_cexpr(x.cg_version, c_fold_rows(x.c(),nrows))
 #expr-expr-opt
+# x is scalar or row vector
+# y is scalar or row vector
+# res = max(0, m - x + y)
 cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_pairwise_rank_loss(x.c(), y.c(), m))
 cpdef Expression huber_distance(Expression x, Expression y, float c=1.345): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_huber_distance(x.c(), y.c(), c))
 #expr-unsigned
