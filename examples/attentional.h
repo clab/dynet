@@ -29,15 +29,18 @@ namespace cnn {
 template <class Builder>
 struct AttentionalModel {
     explicit AttentionalModel(Model& model, 
-            unsigned layers, unsigned vocab_size_src, unsigned _vocab_size_tgt, 
-            unsigned hidden_dim, unsigned align_dim, bool rnn_src_embeddings,
+        unsigned vocab_size_src, unsigned _vocab_size_tgt, unsigned layers,
+        unsigned hidden_dim, unsigned align_dim, bool rnn_src_embeddings,
 	    bool giza_extensions, unsigned hidden_replicates=1, 
-            LookupParameters* cs=0, LookupParameters *ct=0, 
-            bool use_external_memory = false /// this is for extmem rnn memory size
-            );
+        LookupParameters* cs=0, LookupParameters *ct=0, 
+        bool use_external_memory = false /// this is for extmem rnn memory size
+    );
 
     Expression BuildGraph(const std::vector<int> &source, const std::vector<int>& target,
         ComputationGraph& cg, Expression *alignment = 0, bool usePastHitory = false, bool usePastMemory = false);
+
+    vector<Expression> BuildGraphWithoutNormalization(const std::vector<int> &source,
+        const std::vector<int>& target, ComputationGraph& cg, Expression *alignment, bool usePastHistory = false, bool usePastMemory = false);
 
     void display(const std::vector<int> &source, const std::vector<int>& target,
             ComputationGraph& cg, const Expression& alignment, Dict &sd, Dict &td);
@@ -154,34 +157,33 @@ void AttentionalModel<Builder>::start_new_instance(const std::vector<int> &sourc
     //slen = source.size() - 1; 
     slen = source.size(); 
     if (!rnn_src_embeddings) {
-	std::vector<Expression> source_embeddings;
-	for (unsigned s = 0; s < slen; ++s) 
-	    source_embeddings.push_back(lookup(cg, p_cs, source[s]));
-	src = concatenate_cols(source_embeddings); 
+	    std::vector<Expression> source_embeddings;
+	    for (unsigned s = 0; s < slen; ++s) 
+	        source_embeddings.push_back(lookup(cg, p_cs, source[s]));
+	    src = concatenate_cols(source_embeddings); 
     } else {
-	std::vector<Expression> source_embeddings;
-	// run a RNN backward and forward over the source sentence
-	// and stack the top-level hidden states from each model as 
-	// the representation at each position
-	std::vector<Expression> src_fwd(slen);
-	builder_src_fwd.new_graph(cg);
-	builder_src_fwd.start_new_sequence();
-	for (unsigned i = 0; i < slen; ++i) 
-	    src_fwd[i] = builder_src_fwd.add_input(lookup(cg, p_cs, source[i]));
+	    std::vector<Expression> source_embeddings;
+	    // run a RNN backward and forward over the source sentence
+	    // and stack the top-level hidden states from each model as 
+	    // the representation at each position
+	    std::vector<Expression> src_fwd(slen);
+	    builder_src_fwd.new_graph(cg);
+	    builder_src_fwd.start_new_sequence();
+	    for (unsigned i = 0; i < slen; ++i) 
+	        src_fwd[i] = builder_src_fwd.add_input(lookup(cg, p_cs, source[i]));
 
-	std::vector<Expression> src_bwd(slen);
-	builder_src_bwd.new_graph(cg);
-	builder_src_bwd.start_new_sequence();
-	for (int i = slen; i > 0; --i) {
-	    // offset by one position to the right, to catch </s> and generally
-	    // not duplicate the w_t already captured in src_fwd[t]
-	    src_bwd[i-1] = builder_src_bwd.add_input(lookup(cg, p_cs, source[i]));
-	}
+	    std::vector<Expression> src_bwd(slen);
+	    builder_src_bwd.new_graph(cg);
+	    builder_src_bwd.start_new_sequence();
+	    for (int i = slen; i > 0; --i) {
+	        // offset by one position to the right, to catch </s> and generally
+	        // not duplicate the w_t already captured in src_fwd[t]
+	        src_bwd[i-1] = builder_src_bwd.add_input(lookup(cg, p_cs, source[i]));
+	    }
 
-	for (unsigned i = 0; i < slen; ++i) 
-	    source_embeddings.push_back(concatenate(std::vector<Expression>({src_fwd[i], src_bwd[i]})));
-	src = concatenate_cols(source_embeddings); 
-	//WTF(src);
+	    for (unsigned i = 0; i < slen; ++i) 
+	        source_embeddings.push_back(concatenate(std::vector<Expression>({src_fwd[i], src_bwd[i]})));
+	    src = concatenate_cols(source_embeddings); 
     }
 
     // now for the target sentence
@@ -307,7 +309,7 @@ Expression AttentionalModel<Builder>::BuildGraph(const std::vector<int> &source,
     }
     if (usePastMemory)
     {
-        size_t i = 0; 
+        size_t i = 0;
         for (auto pp = p_h0.begin(); pp != p_h0.end(); pp++, i++)
         {
             if (i < layers || i >= 2 * layers)
@@ -318,22 +320,64 @@ Expression AttentionalModel<Builder>::BuildGraph(const std::vector<int> &source,
     start_new_instance(source, cg);
 
     std::vector<Expression> errs;
-    const unsigned tlen = target.size() - 1; 
+    const unsigned tlen = target.size() - 1;
     for (unsigned t = 0; t < tlen; ++t) {
         Expression i_r_t = add_input(target[t], t, cg);
-	//WTF(i_r_t);
-        Expression i_err = pickneglogsoftmax(i_r_t, target[t+1]);
+        //WTF(i_r_t);
+        Expression i_err = pickneglogsoftmax(i_r_t, target[t + 1]);
         errs.push_back(i_err);
     }
     // save the alignment for later
     if (alignment != 0) {
-	// pop off the last alignment column
+        // pop off the last alignment column
         *alignment = concatenate_cols(aligns);
     }
 
     Expression i_nerr = sum(errs);
 
     return i_nerr;
+}
+
+/// the scores before softmax normalization so that
+/// attention model output can be used for combination with other models
+template <class Builder>
+vector<Expression> AttentionalModel<Builder>::BuildGraphWithoutNormalization(const std::vector<int> &source,
+    const std::vector<int>& target, ComputationGraph& cg, Expression *alignment, bool usePastHistory, bool usePastMemory)
+{
+    if (usePastHistory == false)
+    {
+        for (auto pp = p_h0.begin(); pp != p_h0.end(); pp++)
+        {
+            (*pp)->reset_to_zero();
+        }
+    }
+    if (usePastMemory)
+    {
+        size_t i = 0;
+        for (auto pp = p_h0.begin(); pp != p_h0.end(); pp++, i++)
+        {
+            if (i < layers || i >= 2 * layers)
+                (*pp)->reset_to_zero();
+        }
+    }
+    //std::cout << "source sentence length: " << source.size() << " target: " << target.size() << std::endl;
+    start_new_instance(source, cg);
+
+    std::vector<Expression> errs;
+    const unsigned tlen = target.size() - 1;
+    for (unsigned t = 0; t < tlen; ++t) {
+        Expression i_r_t = add_input(target[t], t, cg);
+        //WTF(i_r_t);
+//        Expression i_err = pickneglogsoftmax(i_r_t, target[t + 1]);
+        errs.push_back(i_r_t);
+    }
+    // save the alignment for later
+    if (alignment != 0) {
+        // pop off the last alignment column
+        *alignment = concatenate_cols(aligns);
+    }
+
+    return errs;
 }
 
 template <class Builder>

@@ -164,6 +164,12 @@ int main_body(variables_map vm, int repnumber)
     }
 
     if (vm.count("testcorpus")) {
+        if (vm.count("outputfile") == 0)
+        {
+            cerr << "need to have outputfile" << endl;
+            abort();
+        }
+
         cerr << "Reading test corpus from " << vm["testcorpus"].as<string>() << "...\n";
         testcorpus = read_corpus(vm["testcorpus"].as<string>());
     }
@@ -552,6 +558,13 @@ void test(Model &model, AM_t &am, Corpus &devel, string out_file)
             decode_output = am.beam_decode(spair.first, cg, beam_search_decode, td);
         else
             decode_output = am.decode(spair.first, cg, 1, td);
+        
+        of << "src : ";
+        for (auto pp : spair.first)
+        {
+            of << sd.Convert(pp) << " ";
+        }
+        of << endl;
         
         of << "ref : ";
         for (auto pp : spair.second)
