@@ -36,6 +36,8 @@ struct AttentionalModel {
         bool use_external_memory = false /// this is for extmem rnn memory size
     );
 
+    ~AttentionalModel();
+
     Expression BuildGraph(const std::vector<int> &source, const std::vector<int>& target,
         ComputationGraph& cg, Expression *alignment = 0, bool usePastHitory = false, bool usePastMemory = false);
 
@@ -76,6 +78,7 @@ struct AttentionalModel {
     // target word at a time
     void start_new_instance(const std::vector<int> &src, ComputationGraph &cg);
     Expression add_input(int tgt_tok, int t, ComputationGraph &cg, RNNPointer *prev_state=0);
+    std::vector<float> *auxiliary_vector(); // memory management
 
     // state variables used in the above two methods
     Expression src;
@@ -93,6 +96,8 @@ struct AttentionalModel {
     Expression i_src_len;
     std::vector<Expression> aligns;
     unsigned slen;
+    std::vector<std::vector<float>*> aux_vecs; // special storage for constant vectors
+    unsigned num_aux_vecs;
 };
 
 template <class Builder>
@@ -104,7 +109,8 @@ AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
   builder_src_fwd(1, hidden_dim, hidden_dim, &model),
   builder_src_bwd(1, hidden_dim, hidden_dim, &model),
   rnn_src_embeddings(_rnn_src_embeddings), 
-  giza_extensions(_giza_extentions), vocab_size_tgt(_vocab_size_tgt)
+  giza_extensions(_giza_extentions), vocab_size_tgt(_vocab_size_tgt),
+  num_aux_vecs(0)
 {
     p_cs = (cs) ? cs : model.add_lookup_parameters(long(vocab_size_src), {long(hidden_dim)}); 
     p_ct = (ct) ? ct : model.add_lookup_parameters(vocab_size_tgt, {long(hidden_dim)}); 
@@ -149,6 +155,13 @@ AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
         p_Ta = model.add_parameters({long(align_dim), 9});
     }
     p_va = model.add_parameters({long(align_dim)});
+}
+
+template <class Builder>
+AttentionalModel<Builder>::~AttentionalModel()
+{
+    for (auto v : aux_vecs)
+        delete v;
 }
 
 template <class Builder>
@@ -204,13 +217,22 @@ void AttentionalModel<Builder>::start_new_instance(const std::vector<int> &sourc
     i_uax = i_Ua * src;
 
     if (giza_extensions) {
-	i_Ta = parameter(cg, p_Ta);   
-	i_src_idx = arange(cg, 0, slen, true);
-	i_src_len = repeat(cg, slen, log(1.0 + slen));
+        i_Ta = parameter(cg, p_Ta);
+        i_src_idx = arange(cg, 0, slen, true, auxiliary_vector());
+        i_src_len = repeat(cg, slen, log(1.0 + slen), auxiliary_vector());
     }
 
     aligns.clear();
-    aligns.push_back(repeat(cg, slen, 0.0f));
+    aligns.push_back(repeat(cg, slen, 0.0f, auxiliary_vector()));
+}
+
+template <class Builder>
+std::vector<float>* AttentionalModel<Builder>::auxiliary_vector()
+{
+    while (num_aux_vecs >= aux_vecs.size())
+        aux_vecs.push_back(new std::vector<float>());
+    // NB, we return the last auxiliary vector, AND increment counter
+    return aux_vecs[num_aux_vecs++];
 }
 
 template <class Builder>
@@ -229,18 +251,17 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
     if (giza_extensions) {
 	std::vector<Expression> alignment_context;
 	if (t >= 1) {
-	    auto i_aprev = concatenate_cols(aligns);
-	    auto i_asum = sum_cols(i_aprev);
-	    auto i_asum_pm = dither(cg, i_asum);
-	    //WTF(i_asum_pm);
-	    alignment_context.push_back(i_asum_pm);
-	    auto i_alast_pm = dither(cg, aligns.back());
-	    //WTF(i_alast_pm);
-	    alignment_context.push_back(i_alast_pm);
-	} else {
-	    // just 6 repeats of the 0 vector
-	    auto zeros = repeat(cg, slen, 0);
-	    //WTF(zeros);
+        auto i_aprev = concatenate_cols(aligns);
+        auto i_asum = sum_cols(i_aprev);
+        auto i_asum_pm = dither(cg, i_asum, 0.0f, auxiliary_vector());
+        alignment_context.push_back(i_asum_pm);
+        auto i_alast_pm = dither(cg, aligns.back(), 0.0f, auxiliary_vector());
+        alignment_context.push_back(i_alast_pm);
+    }
+    else {
+        // just 6 repeats of the 0 vector
+        auto zeros = repeat(cg, slen, 0, auxiliary_vector());
+        //WTF(zeros);
 	    alignment_context.push_back(zeros); 
 	    alignment_context.push_back(zeros);
 	    alignment_context.push_back(zeros);
@@ -252,8 +273,8 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
 	alignment_context.push_back(i_src_idx);
 	//WTF(i_src_len);
 	alignment_context.push_back(i_src_len);
-	auto i_tgt_idx = repeat(cg, slen, log(1.0 + t));
-	//WTF(i_tgt_idx);
+    auto i_tgt_idx = repeat(cg, slen, log(1.0 + t), auxiliary_vector());
+    //WTF(i_tgt_idx);
 	alignment_context.push_back(i_tgt_idx);
 	auto i_context = concatenate_cols(alignment_context);
 	//WTF(i_context);
