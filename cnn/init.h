@@ -5,6 +5,8 @@ namespace cnn {
 
 void Initialize(int& argc, char**& argv);
 
+void Free();
+
 } // namespace cnn
 
 #endif

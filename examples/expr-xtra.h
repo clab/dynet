@@ -13,28 +13,29 @@
 using namespace cnn;
 
 // Chris -- this should be a library function
-Expression arange(ComputationGraph &cg, unsigned begin, unsigned end, bool log_transform) 
+Expression arange(ComputationGraph &cg, unsigned begin, unsigned end, bool log_transform, std::vector<float> *aux_mem) 
 {
-    auto * as = new std::vector<float>(end-begin); // FIXME: memory leak
+    aux_mem->clear();
     for (unsigned i = begin; i < end; ++i) 
-        as->push_back((log_transform) ? log(1.0 + i) : i);
-    long dist = end - begin; 
-    return Expression(&cg, cg.add_input(Dim({dist}), as));
+        aux_mem->push_back((log_transform) ? log(1.0 + i) : i);
+    return Expression(&cg, cg.add_input(Dim({(long) (end-begin)}), aux_mem));
 }
 
 // Chris -- this should be a library function
-Expression repeat(ComputationGraph &cg, unsigned num, float value) 
+Expression repeat(ComputationGraph &cg, unsigned num, float value, std::vector<float> *aux_mem) 
 {
-    auto* rep = new std::vector<float>(num, value); // FIXME: memory leak
-    return Expression(&cg, cg.add_input(Dim({long(num)}), rep));
+    aux_mem->clear();
+    aux_mem->resize(num, value);
+    return Expression(&cg, cg.add_input(Dim({long(num)}), aux_mem));
 }
 
 // Chris -- this should be a library function
-Expression dither(ComputationGraph &cg, const Expression &expr, float pad_value=0.0)
+Expression dither(ComputationGraph &cg, const Expression &expr, float pad_value, std::vector<float> *aux_mem)
 {
     const auto& shape = cg.nodes[expr.i]->dim;
-    auto* pad = new std::vector<float>(shape.cols(), pad_value); // FIXME: memory leak
-    Expression padding(&cg, cg.add_input(Dim({shape.cols()}), pad));
+    aux_mem->clear();
+    aux_mem->resize(shape.cols(), pad_value);
+    Expression padding(&cg, cg.add_input(Dim({shape.cols()}), aux_mem));
     Expression padded = concatenate(std::vector<Expression>({padding, expr, padding}));
     Expression left_shift = pickrange(padded, 2, shape.rows()+2);
     Expression right_shift = pickrange(padded, 0, shape.rows());

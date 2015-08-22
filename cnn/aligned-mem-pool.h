@@ -53,9 +53,16 @@ template <unsigned AlignedBits>
 class AlignedMemoryPool {
  public:
   explicit AlignedMemoryPool(size_t cap) {
-    sys_alloc(cap);
-    zero_all();
+      mem = nullptr;
+      sys_alloc(cap);
+      zero_all();
   }
+  ~AlignedMemoryPool()
+  {
+      if (mem)
+          cnn_mm_free(mem); 
+  }
+
   // returns nullptr if OOM
   void* allocate(size_t n) {
     auto rounded_n = round_up_align(n);
