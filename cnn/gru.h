@@ -18,6 +18,7 @@ struct GRUBuilder : public RNNBuilder {
   std::vector<Expression> final_s() const { return final_h(); }
   Expression back() const { return h.back().back(); }
   unsigned num_h0_components() const override { return layers; }
+  void copy(const RNNBuilder & params) override;
 
  protected:
   void new_graph_impl(ComputationGraph& cg) override;

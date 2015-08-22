@@ -48,6 +48,11 @@ void Parameters::g_squared_l2norm(float* sqnorm) const {
 #endif
 }
 
+void Parameters::copy(const Parameters & param) {
+  assert(dim == param.dim);
+  TensorTools::CopyElements(values, param.values);
+}
+
 void Parameters::accumulate_grad(const Tensor& d) {
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, g.d.size(), kSCALAR_ONE, d.v, 1, g.v, 1));
@@ -121,6 +126,12 @@ void LookupParameters::squared_l2norm(float* sqnorm) const {
     a += (*values[i]).squaredNorm();
   *sqnorm = a;
 #endif
+}
+
+void LookupParameters::copy(const LookupParameters & param) {
+  assert(dim == param.dim);
+  for(size_t i = 0; i < param.values.size(); ++i)
+    TensorTools::CopyElements(values[i], param.values[i]);
 }
 
 void LookupParameters::accumulate_grad(unsigned index, const Tensor& d) {

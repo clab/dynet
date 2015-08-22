@@ -154,4 +154,12 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
   return ht.back();
 }
 
+void LSTMBuilder::copy(const RNNBuilder & rnn) {
+  const LSTMBuilder & rnn_lstm = (const LSTMBuilder&)rnn;
+  assert(params.size() == rnn_lstm.params.size());
+  for(size_t i = 0; i < params.size(); ++i)
+      for(size_t j = 0; j < params[i].size(); ++j)
+        params[i][j]->copy(*rnn_lstm.params[i][j]);
+}
+
 } // namespace cnn

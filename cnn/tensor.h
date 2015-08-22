@@ -99,6 +99,7 @@ struct TensorTools {
   // AccessElement is very, very slow (potentially) - use appropriately
   static float AccessElement(const Tensor& v, const Dim& index);
   static void SetElements(const Tensor& v, const std::vector<float>& vec);
+  static void CopyElements(const Tensor& v, const Tensor& v_src);
 };
 real rand01();
 real rand_normal();
