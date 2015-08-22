@@ -105,4 +105,14 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
   return h[t].back();
 }
 
+void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
+  const SimpleRNNBuilder & rnn_simple = (const SimpleRNNBuilder&)rnn;
+  assert(params.size() == rnn_simple.params.size());
+  for(size_t i = 0; i < rnn_simple.params.size(); ++i) {
+      params[i][0]->copy(*rnn_simple.params[i][0]);
+      params[i][1]->copy(*rnn_simple.params[i][1]);
+      params[i][2]->copy(*rnn_simple.params[i][2]);
+  }
+}
+
 } // namespace cnn

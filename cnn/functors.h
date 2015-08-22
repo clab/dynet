@@ -49,7 +49,7 @@ static inline float fastexp (float p) {
 }
 #endif
 
-#if defined(__GNU_LIBRARY__) && (__GLIBC__ == 2) && (__GLIBC_MINOR__ < 14)
+#if defined(__GNU_LIBRARY__) && (__GLIBC__ == 2) && (__GLIBC_MINOR__ < 14) && !defined(HAVE_CUDA)
 #define USE_FASTEXP
 #else
 #undef USE_FASTEXP

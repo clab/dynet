@@ -124,4 +124,12 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
   return ht.back();
 }
 
+void GRUBuilder::copy(const RNNBuilder & rnn) {
+  const GRUBuilder & rnn_gru = (const GRUBuilder&)rnn;
+  assert(params.size() == rnn_gru.params.size());
+  for(size_t i = 0; i < params.size(); ++i)
+      for(size_t j = 0; j < params[i].size(); ++j)
+        params[i][j]->copy(*rnn_gru.params[i][j]);
+}
+
 } // namespace cnn

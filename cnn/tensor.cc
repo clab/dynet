@@ -60,6 +60,14 @@ void TensorTools::SetElements(const Tensor& v, const vector<float>& vec) {
 #endif
 }
 
+void TensorTools::CopyElements(const Tensor& v, const Tensor& v_src) {
+#if HAVE_CUDA
+  cudaMemcpyAsync(v.v, v_src.v, sizeof(real) * v.d.size(), cudaMemcpyDeviceToDevice);
+#else
+  memcpy(v.v, v_src.v, sizeof(real) * v.d.size());
+#endif
+}
+
 void TensorTools::Constant(Tensor& d, float c) {
 #if HAVE_CUDA
   if (!c) {
