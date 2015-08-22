@@ -103,6 +103,8 @@ int main(int argc, char** argv) {
         return main_body<DGLSTMBuilder>(vm, 2);
     else
     	return main_body<SimpleRNNBuilder>(vm, 1);
+
+    cnn::Free();
 }
 
 void initialise(Model &model, const string &filename);
