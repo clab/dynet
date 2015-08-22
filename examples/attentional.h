@@ -151,10 +151,12 @@ AttentionalModel<Builder>::AttentionalModel(cnn::Model& model,
         p_Ua = model.add_parameters({long(align_dim), long(hidden_dim)});
         p_Q = model.add_parameters({ long(hidden_dim), long(hidden_dim) });
     }
+#ifdef ALIGNMENT
     if (giza_extensions) {
         p_Ta = model.add_parameters({long(align_dim), 9});
     }
-    p_va = model.add_parameters({long(align_dim)});
+#endif
+    p_va = model.add_parameters({ long(align_dim) });
 }
 
 template <class Builder>
@@ -212,10 +214,9 @@ void AttentionalModel<Builder>::start_new_instance(const std::vector<int> &sourc
     i_Wa = parameter(cg, p_Wa); 
     i_Ua = parameter(cg, p_Ua);
     i_va = parameter(cg, p_va);
-    //WTF(i_Ua);
-    //WTF(src);
     i_uax = i_Ua * src;
 
+#ifdef ALIGNMENT
     if (giza_extensions) {
         i_Ta = parameter(cg, p_Ta);
         i_src_idx = arange(cg, 0, slen, true, auxiliary_vector());
@@ -224,6 +225,7 @@ void AttentionalModel<Builder>::start_new_instance(const std::vector<int> &sourc
 
     aligns.clear();
     aligns.push_back(repeat(cg, slen, 0.0f, auxiliary_vector()));
+#endif
 }
 
 template <class Builder>
@@ -249,7 +251,8 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
     //WTF(i_wah_rep);
     Expression i_e_t;
     if (giza_extensions) {
-	std::vector<Expression> alignment_context;
+#ifdef ALIGNMENT
+        std::vector<Expression> alignment_context;
 	if (t >= 1) {
         auto i_aprev = concatenate_cols(aligns);
         auto i_asum = sum_cols(i_aprev);
@@ -283,13 +286,16 @@ Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationG
 	//WTF(i_e_t_input);
 	i_e_t = transpose(tanh(i_e_t_input)) * i_va;
 	//WTF(i_e_t);
+#endif
     } else {
         i_e_t = transpose(tanh(i_wah_rep + i_uax)) * i_va;
         //WTF(i_e_t);
     }
     Expression i_alpha_t = softmax(i_e_t);
     //WTF(i_alpha_t);
+#ifdef ALIGNMENT
     aligns.push_back(i_alpha_t);
+#endif
     Expression i_c_t = src * i_alpha_t; 
     //WTF(i_c_t);
     // word input
@@ -348,12 +354,14 @@ Expression AttentionalModel<Builder>::BuildGraph(const std::vector<int> &source,
         Expression i_err = pickneglogsoftmax(i_r_t, target[t + 1]);
         errs.push_back(i_err);
     }
+
+#ifdef ALIGNMENT
     // save the alignment for later
     if (alignment != 0) {
         // pop off the last alignment column
         *alignment = concatenate_cols(aligns);
     }
-
+#endif
     Expression i_nerr = sum(errs);
 
     return i_nerr;
@@ -392,12 +400,13 @@ vector<Expression> AttentionalModel<Builder>::BuildGraphWithoutNormalization(con
 //        Expression i_err = pickneglogsoftmax(i_r_t, target[t + 1]);
         errs.push_back(i_r_t);
     }
+#ifdef ALIGNMENT
     // save the alignment for later
     if (alignment != 0) {
         // pop off the last alignment column
         *alignment = concatenate_cols(aligns);
     }
-
+#endif
     return errs;
 }
 
