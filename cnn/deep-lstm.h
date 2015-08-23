@@ -20,7 +20,7 @@ struct DeepLSTMBuilder : public RNNBuilder {
 
   Expression back() const { return h.back().back(); }
   std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
-  std::vector<Expression> final_s() const { 
+  std::vector<Expression> final_s() const {
     std::vector<Expression> ret = (c.size() == 0 ? c0 : c.back());
     for(auto my_h : final_h()) ret.push_back(my_h);
     return ret;
@@ -37,7 +37,7 @@ struct DeepLSTMBuilder : public RNNBuilder {
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
 
-  // first index is time, second is layer 
+  // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
   std::vector<Expression> o;
 

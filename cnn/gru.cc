@@ -24,7 +24,7 @@ GRUBuilder::GRUBuilder(unsigned layers,
     Parameters* p_x2z = model->add_parameters({hidden_dim, layer_input_dim});
     Parameters* p_h2z = model->add_parameters({hidden_dim, hidden_dim});
     Parameters* p_bz = model->add_parameters({hidden_dim});
-    
+
     // r
     Parameters* p_x2r = model->add_parameters({hidden_dim, layer_input_dim});
     Parameters* p_h2r = model->add_parameters({hidden_dim, hidden_dim});

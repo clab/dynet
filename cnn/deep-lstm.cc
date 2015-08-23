@@ -25,7 +25,7 @@ DeepLSTMBuilder::DeepLSTMBuilder(unsigned layers,
     Parameters* p_h2i = model->add_parameters({hidden_dim, hidden_dim});
     Parameters* p_c2i = model->add_parameters({hidden_dim, hidden_dim});
     Parameters* p_bi = model->add_parameters({hidden_dim});
-    
+
     // o
     Parameters* p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
     Parameters* p_h2o = model->add_parameters({hidden_dim, hidden_dim});
@@ -142,7 +142,7 @@ Expression DeepLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     } else {
       ct[i] = cwise_multiply(i_it,i_wt);
     }
- 
+
     Expression i_aot;
     if (has_prev_state)
 //      i_aot = vars[BO] + vars[X2O] * in + vars[H2O] * i_h_tm1 + vars[C2O] * ct[i];

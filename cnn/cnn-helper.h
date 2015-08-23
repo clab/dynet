@@ -3,7 +3,7 @@
 
 #include <string>
 
-/// helper functions 
+/// helper functions
 
 namespace cnn {
 
