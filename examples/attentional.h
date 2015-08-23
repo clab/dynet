@@ -240,86 +240,94 @@ std::vector<float>* AttentionalModel<Builder>::auxiliary_vector()
 template <class Builder>
 Expression AttentionalModel<Builder>::add_input(int trg_tok, int t, ComputationGraph &cg, RNNPointer *prev_state)
 {
-    // alignment input -- FIXME: just done for top layer
-    auto i_h_tm1 = (t == 0) ? i_h0.back() : builder.final_h().back();
-    //WTF(i_h_tm1);
-    //Expression i_e_t = tanh(i_src_M * i_h_tm1); 
-    Expression i_wah = i_Wa * i_h_tm1;
-    //WTF(i_wah);
-    // want numpy style broadcasting, but have to do this manually
-    Expression i_wah_rep = concatenate_cols(std::vector<Expression>(slen, i_wah));
-    //WTF(i_wah_rep);
-    Expression i_e_t;
-    if (giza_extensions) {
+    Expression i_r_t;
+    try{
+        // alignment input -- FIXME: just done for top layer
+        auto i_h_tm1 = (t == 0) ? i_h0.back() : builder.final_h().back();
+        //WTF(i_h_tm1);
+        //Expression i_e_t = tanh(i_src_M * i_h_tm1); 
+        Expression i_wah = i_Wa * i_h_tm1;
+        //WTF(i_wah);
+        // want numpy style broadcasting, but have to do this manually
+        Expression i_wah_rep = concatenate_cols(std::vector<Expression>(slen, i_wah));
+        //WTF(i_wah_rep);
+        Expression i_e_t;
+        if (giza_extensions) {
 #ifdef ALIGNMENT
-        std::vector<Expression> alignment_context;
-	if (t >= 1) {
-        auto i_aprev = concatenate_cols(aligns);
-        auto i_asum = sum_cols(i_aprev);
-        auto i_asum_pm = dither(cg, i_asum, 0.0f, auxiliary_vector());
-        alignment_context.push_back(i_asum_pm);
-        auto i_alast_pm = dither(cg, aligns.back(), 0.0f, auxiliary_vector());
-        alignment_context.push_back(i_alast_pm);
-    }
-    else {
-        // just 6 repeats of the 0 vector
-        auto zeros = repeat(cg, slen, 0, auxiliary_vector());
-        //WTF(zeros);
-	    alignment_context.push_back(zeros); 
-	    alignment_context.push_back(zeros);
-	    alignment_context.push_back(zeros);
-	    alignment_context.push_back(zeros);
-	    alignment_context.push_back(zeros);
-	    alignment_context.push_back(zeros);
-	}
-	//WTF(i_src_idx);
-	alignment_context.push_back(i_src_idx);
-	//WTF(i_src_len);
-	alignment_context.push_back(i_src_len);
-    auto i_tgt_idx = repeat(cg, slen, log(1.0 + t), auxiliary_vector());
-    //WTF(i_tgt_idx);
-	alignment_context.push_back(i_tgt_idx);
-	auto i_context = concatenate_cols(alignment_context);
-	//WTF(i_context);
+            std::vector<Expression> alignment_context;
+            if (t >= 1) {
+                auto i_aprev = concatenate_cols(aligns);
+                auto i_asum = sum_cols(i_aprev);
+                auto i_asum_pm = dither(cg, i_asum, 0.0f, auxiliary_vector());
+                alignment_context.push_back(i_asum_pm);
+                auto i_alast_pm = dither(cg, aligns.back(), 0.0f, auxiliary_vector());
+                alignment_context.push_back(i_alast_pm);
+            }
+            else {
+                // just 6 repeats of the 0 vector
+                auto zeros = repeat(cg, slen, 0, auxiliary_vector());
+                //WTF(zeros);
+                alignment_context.push_back(zeros); 
+                alignment_context.push_back(zeros);
+                alignment_context.push_back(zeros);
+                alignment_context.push_back(zeros);
+                alignment_context.push_back(zeros);
+                alignment_context.push_back(zeros);
+            }
+            //WTF(i_src_idx);
+            alignment_context.push_back(i_src_idx);
+            //WTF(i_src_len);
+            alignment_context.push_back(i_src_len);
+            auto i_tgt_idx = repeat(cg, slen, log(1.0 + t), auxiliary_vector());
+            //WTF(i_tgt_idx);
+            alignment_context.push_back(i_tgt_idx);
+            auto i_context = concatenate_cols(alignment_context);
+            //WTF(i_context);
 
-	auto i_e_t_input = i_wah_rep + i_uax + i_Ta * transpose(i_context); 
-	//WTF(i_e_t_input);
-	i_e_t = transpose(tanh(i_e_t_input)) * i_va;
-	//WTF(i_e_t);
+            auto i_e_t_input = i_wah_rep + i_uax + i_Ta * transpose(i_context); 
+            //WTF(i_e_t_input);
+            i_e_t = transpose(tanh(i_e_t_input)) * i_va;
+            //WTF(i_e_t);
 #endif
-    } else {
-        i_e_t = transpose(tanh(i_wah_rep + i_uax)) * i_va;
-        //WTF(i_e_t);
-    }
-    Expression i_alpha_t = softmax(i_e_t);
-    //WTF(i_alpha_t);
+        }
+        else {
+            i_e_t = transpose(tanh(i_wah_rep + i_uax)) * i_va;
+            //WTF(i_e_t);
+        }
+        Expression i_alpha_t = softmax(i_e_t);
+        //WTF(i_alpha_t);
 #ifdef ALIGNMENT
-    aligns.push_back(i_alpha_t);
+        aligns.push_back(i_alpha_t);
 #endif
-    Expression i_c_t = src * i_alpha_t; 
-    //WTF(i_c_t);
-    // word input
-    Expression i_x_t = lookup(cg, p_ct, trg_tok);
-    //WTF(i_x_t);
-    Expression input = concatenate(std::vector<Expression>({i_x_t, i_c_t})); // vstack/hstack?
-    //WTF(input);
-    // y_t = RNN([x_t, a_t])
-    Expression i_y_t;
-    if (prev_state)
-       i_y_t = builder.add_input(*prev_state, input);
-    else
-       i_y_t = builder.add_input(input);
+        Expression i_c_t = src * i_alpha_t;
+        //WTF(i_c_t);
+        // word input
+        Expression i_x_t = lookup(cg, p_ct, trg_tok);
+        //WTF(i_x_t);
+        Expression input = concatenate(std::vector<Expression>({ i_x_t, i_c_t })); // vstack/hstack?
+        //WTF(input);
+        // y_t = RNN([x_t, a_t])
+        Expression i_y_t;
+        if (prev_state)
+            i_y_t = builder.add_input(*prev_state, input);
+        else
+            i_y_t = builder.add_input(input);
 
-    //WTF(i_y_t);
+        //WTF(i_y_t);
 #ifndef VANILLA_TARGET_LSTM 
-    // Bahdanau does a max-out thing here; I do a tanh. Tomaatos tomateos. 
-    Expression i_tildet_t = tanh(affine_transform({ i_y_t, i_Q, i_c_t, i_P, i_x_t }));
-    
-    Expression i_r_t = affine_transform({ i_bias, i_R, i_tildet_t });
-#else
-    Expression i_r_t = affine_transform({ i_bias, i_R, i_y_t });
-#endif    
+        // Bahdanau does a max-out thing here; I do a tanh. Tomaatos tomateos. 
+        Expression i_tildet_t = tanh(affine_transform({ i_y_t, i_Q, i_c_t, i_P, i_x_t }));
 
+        i_r_t = affine_transform({ i_bias, i_R, i_tildet_t });
+#else
+        Expression i_r_t = affine_transform({ i_bias, i_R, i_y_t });
+#endif    
+    }
+    catch (...)
+    {
+        cerr << "attentional.h :: add_input error " << endl;
+        abort();
+    }
     return i_r_t;
 }
 
