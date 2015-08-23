@@ -31,7 +31,7 @@ struct GRUBuilder : public RNNBuilder {
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
 
-  // first index is time, second is layer 
+  // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
 
   // initial values of h at each layer

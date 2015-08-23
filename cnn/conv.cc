@@ -263,7 +263,7 @@ void KMaxPooling::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   int* maxmap = static_cast<int*>(aux_mem);
   for (unsigned i=0; i < rows; ++i) {
     //cerr << "row(" << i << ")=" << x.row(i) << endl;
-    for (unsigned j=0; j < xcols; ++j) 
+    for (unsigned j=0; j < xcols; ++j)
       tmp[j] = -x(i,j);
     nth_element(tmp, tmp + (k-1), tmp + xcols);
     const float c = -tmp[k-1];  // kth largest element in row i

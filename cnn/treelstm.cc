@@ -35,7 +35,7 @@ TreeLSTMBuilder::TreeLSTMBuilder(unsigned N,
     LookupParameters* p_h2f = model->add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
     Parameters* p_c2f = model->add_parameters({hidden_dim, hidden_dim});
     Parameters* p_bf = model->add_parameters({hidden_dim});
-    
+
     // o
     Parameters* p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
     LookupParameters* p_h2o = model->add_lookup_parameters(N, {hidden_dim, hidden_dim});
@@ -90,7 +90,7 @@ void TreeLSTMBuilder::new_graph_impl(ComputationGraph& cg){
         lvars[k * (N + 3) + 3 + j] = lookup(cg, lp[H2F], k);
       }
     }
-    lparam_vars.push_back(lvars); 
+    lparam_vars.push_back(lvars);
   }
 }
 
@@ -125,7 +125,7 @@ Expression TreeLSTMBuilder::add_input(vector<int> children, const Expression& x)
     const vector<Expression>& vars = param_vars[i];
     vector<Expression> i_h_children, i_c_children;
     i_h_children.reserve(children.size() > 1 ? children.size() : 1);
-    i_c_children.reserve(children.size() > 1 ? children.size() : 1); 
+    i_c_children.reserve(children.size() > 1 ? children.size() : 1);
 
     bool has_prev_state = (children.size() > 0 || has_initial_state);
     if (children.size() == 0) {
@@ -163,7 +163,7 @@ Expression TreeLSTMBuilder::add_input(vector<int> children, const Expression& x)
       i_ait = affine_transform({vars[BI], vars[X2I], in});
     Expression i_it = logistic(i_ait);
 
-    // forget 
+    // forget
     vector<Expression> i_ft;
     for (unsigned k = 0; k < children.size(); ++k) {
       unsigned ek = (k < N) ? k : N - 1;
@@ -218,7 +218,7 @@ Expression TreeLSTMBuilder::add_input(vector<int> children, const Expression& x)
     else {
       ct[i] = cwise_multiply(i_it, i_wt);
     }
- 
+
     // output
     Expression i_aot;
     if (has_prev_state) {
