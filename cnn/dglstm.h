@@ -4,7 +4,7 @@
 #include "cnn/rnn.h"
 #include "cnn/expr.h"
 
-#include <vld.h>
+//#include <vld.h>
 
 using namespace cnn::expr;
 
