@@ -3,7 +3,7 @@
 
 namespace cnn {
 
-void Initialize(int& argc, char**& argv);
+void Initialize(int& argc, char**& argv, unsigned random_seed = 0);
 
 } // namespace cnn
 
