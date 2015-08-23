@@ -11,24 +11,34 @@ ExecutionEngine::~ExecutionEngine() {}
 void SimpleExecutionEngine::invalidate() {
     last_node_evaluated = 0;
 }
-const Tensor& SimpleExecutionEngine::forward() {
+
+const Tensor& SimpleExecutionEngine::forward() { 
+  const VariableIndex node_max_index = (VariableIndex)cg.nodes.size();
+  return forward(node_max_index);
+}
+
+const Tensor& SimpleExecutionEngine::forward(VariableIndex i) {
   invalidate();
-  return incremental_forward();
+  return incremental_forward(i);
 }
 
 const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
     assert(i < cg.nodes.size());
     if (i >= last_node_evaluated) {
-        incremental_forward();
+        incremental_forward(i);
     }
     return nfxs[i];
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward() {
+  const VariableIndex node_max_index = (VariableIndex)cg.nodes.size();
+  return incremental_forward(node_max_index);
+}
+
+const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex node_max_index) {
   // free any old memory if this is a new HG
   if (last_node_evaluated == 0) fxs->free();
 
-  const unsigned node_max_index = cg.nodes.size();
   assert(node_max_index > 0);
   nfxs.resize(node_max_index);
   if (node_max_index - last_node_evaluated == 0)
