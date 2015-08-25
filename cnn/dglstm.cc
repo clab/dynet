@@ -12,7 +12,7 @@ using namespace cnn::expr;
 
 namespace cnn {
 
-enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC, X2K, C2K, Q2K, BK, X2K0};
+    enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC, X2K, C2K, Q2K, BK, STAB, X2K0};
 
 DGLSTMBuilder::DGLSTMBuilder(unsigned layers,
                          unsigned input_dim,
@@ -21,8 +21,10 @@ DGLSTMBuilder::DGLSTMBuilder(unsigned layers,
 {
   Parameters * p_x2k, *p_c2k, *p_q2k, *p_bk, *p_x2k0;
   long layer_input_dim = input_dim;
+  input_dims = vector<int>(layers, layer_input_dim);
   p_x2k0 = model->add_parameters({ long(hidden_dim), long(layer_input_dim) });
   for (unsigned i = 0; i < layers; ++i) {
+      input_dims[i] = layer_input_dim;
     // i
     Parameters* p_x2i = model->add_parameters({long(hidden_dim), layer_input_dim});
     Parameters* p_h2i = model->add_parameters({long(hidden_dim), long(hidden_dim)});
@@ -47,11 +49,14 @@ DGLSTMBuilder::DGLSTMBuilder(unsigned layers,
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
+    Parameters * p_stab = model->add_parameters({ 1 });
+    p_stab->reset_to_zero();
+
     vector<Parameters*> ps;
     if (i==0)
-        ps = { p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc, p_x2k, p_c2k, p_q2k, p_bk, p_x2k0 };
+        ps = { p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc, p_x2k, p_c2k, p_q2k, p_bk, p_stab, p_x2k0};
     else
-        ps = { p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc, p_x2k, p_c2k, p_q2k, p_bk};
+        ps = { p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc, p_x2k, p_c2k, p_q2k, p_bk, p_stab};
 
     params.push_back(ps);
   }  // layers
@@ -86,16 +91,17 @@ void DGLSTMBuilder::new_graph_impl(ComputationGraph& cg){
     Expression i_c2k = parameter(cg, p[C2K]);
     Expression i_bk = parameter(cg, p[BK]);
 
+    Expression i_stab = parameter(cg, p[STAB]);
+
     if (i == 0)
     {
         Expression i_x2k0 = parameter(cg, p[X2K0]);
-        vars = { i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc, i_x2k, i_c2k, i_q2k, i_bk, i_x2k0 };
+        vars = { i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc, i_x2k, i_c2k, i_q2k, i_bk, i_stab, i_x2k0};
     }
     else
-        vars = { i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc, i_x2k, i_c2k, i_q2k, i_bk };
+        vars = { i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc, i_x2k, i_c2k, i_q2k, i_bk, i_stab };
 
     param_vars.push_back(vars);
-    
     
   }
 }
@@ -128,10 +134,15 @@ Expression DGLSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
   Expression lower_layer_c = x;  /// at layer 0, no lower memory but observation
   Expression in = x;
+  Expression in_stb;
 
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
+    Expression i_stabilizer = exp(vars[STAB]);
+    vector<Expression> v_stab = vector<Expression>(input_dims[i], i_stabilizer);
+    in_stb = cwise_multiply(concatenate(v_stab), in); 
     Expression i_h_tm1, i_c_tm1;
+
     bool has_prev_state = (prev >= 0 || has_initial_state);
     if (prev < 0) {
       if (has_initial_state) {
@@ -147,22 +158,18 @@ Expression DGLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     // input
     Expression i_ait;
     if (has_prev_state)
-//      i_ait = vars[BI] + vars[X2I] * in + vars[H2I]*i_h_tm1 + vars[C2I] * i_c_tm1;
-      i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
+        i_ait = affine_transform({ vars[BI], vars[X2I], in_stb, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1 });
     else
-//      i_ait = vars[BI] + vars[X2I] * in;
-      i_ait = affine_transform({vars[BI], vars[X2I], in});
+        i_ait = affine_transform({vars[BI], vars[X2I], in_stb});
     Expression i_it = logistic(i_ait);
     // forget
     Expression i_ft = 1.f - i_it;
     // write memory cell
     Expression i_awt;
     if (has_prev_state)
-//      i_awt = vars[BC] + vars[X2C] * in + vars[H2C]*i_h_tm1;
-      i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
+        i_awt = affine_transform({ vars[BC], vars[X2C], in_stb, vars[H2C], i_h_tm1 });
     else
-//      i_awt = vars[BC] + vars[X2C] * in;
-      i_awt = affine_transform({vars[BC], vars[X2C], in});
+        i_awt = affine_transform({vars[BC], vars[X2C], in_stb});
     Expression i_wt = tanh(i_awt);
     // output
     Expression i_before_add_with_lower_linearly;
@@ -178,19 +185,17 @@ Expression DGLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_k_t; 
     Expression i_k_lowerc = ((i > 0) ? cwise_multiply(vars[C2K], lower_layer_c) + vars[BK] : vars[BK]);
     if (has_prev_state)
-        i_k_t = logistic(i_k_lowerc +vars[X2K] * in + cwise_multiply(vars[Q2K], i_c_tm1));
+        i_k_t = logistic(i_k_lowerc +vars[X2K] * in_stb + cwise_multiply(vars[Q2K], i_c_tm1));
     else
-        i_k_t = logistic(i_k_lowerc + vars[X2K] * in);
+        i_k_t = logistic(i_k_lowerc + vars[X2K] * in_stb);
     ct[i] = i_before_add_with_lower_linearly + cwise_multiply(i_k_t, (i == 0) ? vars[X2K0] * lower_layer_c : lower_layer_c);
 
 
     Expression i_aot;
     if (has_prev_state)
-//      i_aot = vars[BO] + vars[X2O] * in + vars[H2O] * i_h_tm1 + vars[C2O] * ct[i];
-      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
+      i_aot = affine_transform({vars[BO], vars[X2O], in_stb, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
     else
-//      i_aot = vars[BO] + vars[X2O] * in;
-      i_aot = affine_transform({vars[BO], vars[X2O], in});
+      i_aot = affine_transform({vars[BO], vars[X2O], in_stb});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
     in = ht[i] = cwise_multiply(i_ot,ph_t);

@@ -60,6 +60,7 @@ class AlignedMemoryPool {
       if (mem)
           cnn_mm_free(mem); 
   }
+
   // returns nullptr if OOM
   void* allocate(size_t n) {
     auto rounded_n = round_up_align(n);

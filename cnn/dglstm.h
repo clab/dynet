@@ -4,6 +4,8 @@
 #include "cnn/rnn.h"
 #include "cnn/expr.h"
 
+//#include <vld.h>
+
 using namespace cnn::expr;
 
 namespace cnn {
@@ -47,6 +49,8 @@ struct DGLSTMBuilder: public RNNBuilder {
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
+
+  std::vector<int> input_dims;
 };
 
 } // namespace cnn

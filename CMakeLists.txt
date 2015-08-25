@@ -117,7 +117,8 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../ws15mt-team/kaisheng/src)
+#include_directories(${CMAKE_CURRENT_BINARY_DIR}/../ws15mt-team/kaisheng/src)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../kaisheny/dev/src)
 
 if(WIN32)
 link_directories(${BOOST_LIBRARYDIR})
@@ -125,4 +126,5 @@ endif()
 
 add_subdirectory(cnn)
 add_subdirectory(examples)
-add_subdirectory(../ws15mt-team/kaisheng/src "${CMAKE_CURRENT_BINARY_DIR}/ws15mt-team/kaisheng/src")
+add_subdirectory(../kaisheny/dev/src "${CMAKE_CURRENT_BINARY_DIR}/kaisheny/dev/src")
+#add_subdirectory(../ws15mt-team/kaisheng/src "${CMAKE_CURRENT_BINARY_DIR}/ws15mt-team/kaisheng/src")

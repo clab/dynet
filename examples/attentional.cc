@@ -57,6 +57,10 @@ int main(int argc, char** argv) {
         "each line consisting of source ||| target.")
         ("devel,d", value<string>(), "file containing development sentences.")
         ("test,T", value<string>(), "file containing testing source sentences (no training)")
+        ("writesrcdict", value<string>(), "file to write source dictionary to ")
+        ("writetgtdict", value<string>(), "file to write target dictionary to ")
+        ("readsrcdict", value<string>(), "file to read source dictionary from ")
+        ("readtgtdict", value<string>(), "file to read target dictionary from ")
         ("rescore,r", "rescore (source, target) pairs in testing, default: translate source only")
         ("testcorpus", value<string>(), "file containing test corpus with target translation")
         ("beamsearchdecode", value<int>()->default_value(-1), "if using beam search decoding; default false")
@@ -103,6 +107,8 @@ int main(int argc, char** argv) {
         return main_body<DGLSTMBuilder>(vm, 2);
     else
     	return main_body<SimpleRNNBuilder>(vm, 1);
+
+    cnn::Free();
 }
 
 void initialise(Model &model, const string &filename);
@@ -134,11 +140,55 @@ int main_body(variables_map vm, int repnumber)
     typedef pair<Sentence, Sentence> SentencePair;
     Corpus training, devel, testcorpus;
     string line;
-    cerr << "Reading training data from " << vm["train"].as<string>() << "...\n";
-    training = read_corpus(vm["train"].as<string>());
-    sd.Freeze(); // no new word types allowed
-    td.Freeze(); // no new word types allowed
-    
+
+    if (vm.count("readsrcdict"))
+    {
+        string fname = vm["readsrcdict"].as<string>();
+        ifstream in(fname);
+        boost::archive::text_iarchive ia(in);
+        ia >> sd;
+        sd.Freeze();
+    }
+    if (vm.count("readtgtdict"))
+    {
+        string fname = vm["readtgtdict"].as<string>();
+        ifstream in(fname);
+        boost::archive::text_iarchive ia(in);
+        ia >> td;
+        td.Freeze();
+    }
+
+    if (vm.count("train") > 0)
+    {
+        cerr << "Reading training data from " << vm["train"].as<string>() << "...\n";
+        training = read_corpus(vm["train"].as<string>());
+        sd.Freeze(); // no new word types allowed
+        td.Freeze(); // no new word types allowed
+
+        if (vm.count("writesrcdict"))
+        {
+            string fname = vm["writesrcdict"].as<string>();
+            ofstream on(fname);
+            boost::archive::text_oarchive oa(on);
+            oa << sd;
+        }
+        if (vm.count("writetgtdict"))
+        {
+            string fname = vm["writetgtdict"].as<string>();
+            ofstream on(fname);
+            boost::archive::text_oarchive oa(on);
+            oa << td;
+        }
+    }
+    else
+    {
+        if (vm.count("readsrcdict") == 0 || vm.count("readtgtdict") == 0)
+        {
+            cerr << "must have either training corpus or dictionary" << endl;
+            abort();
+        }
+    }
+
     LAYERS = vm["layers"].as<int>(); 
     ALIGN_DIM = vm["align"].as<int>(); 
     HIDDEN_DIM = vm["hidden"].as<int>(); 
@@ -475,25 +525,25 @@ void train(Model &model, AM_t &am, Corpus &training, Corpus &devel,
                 si = 0;
                 if (first) { first = false; } else { sgd.update_epoch(); }
 
-		if (curriculum && epoch < order_by_length.size()) {
-		    order = order_by_length[epoch++];
-		    cerr << "Curriculum learning, with " << order.size() << " examples\n";
-		} 
+		    if (curriculum && epoch < order_by_length.size()) {
+		        order = order_by_length[epoch++];
+		        cerr << "Curriculum learning, with " << order.size() << " examples\n";
+		    } 
 	    }
 
-            if (si % order.size() == 0) {
-                cerr << "**SHUFFLE\n";
-                shuffle(order.begin(), order.end(), *rndeng);
+        if (si % order.size() == 0) {
+            cerr << "**SHUFFLE\n";
+            shuffle(order.begin(), order.end(), *rndeng);
 	    }
 
 	    if (verbose && iter+1 == report_every_i) {
-		auto& spair = training[order[si % order.size()]];
-		ComputationGraph cg;
-                cerr << "\nDecoding source, greedy Viterbi: ";
-                am.decode(spair.first, cg, 1, td);
+		    auto& spair = training[order[si % order.size()]];
+		    ComputationGraph cg;
+            cerr << "\nDecoding source, greedy Viterbi: ";
+            am.decode(spair.first, cg, 1, td);
 
-                cerr << "\nDecoding source, sampling: ";
-                am.sample(spair.first, cg, td);
+            cerr << "\nDecoding source, sampling: ";
+            am.sample(spair.first, cg, td);
 	    }
 
             // build graph for this instance
@@ -509,13 +559,13 @@ void train(Model &model, AM_t &am, Corpus &training, Corpus &devel,
             sgd.update();
             ++lines;
 
-	    if (verbose) {
-		cerr << "chug " << iter << "\r" << flush;
-		if (iter+1 == report_every_i) {
-		    // display the alignment
-		    am.display(spair.first, spair.second, cg, alignment, sd, td);
-		}
-	    }
+	        if (verbose) {
+		        cerr << "chug " << iter << "\r" << flush;
+		        if (iter+1 == report_every_i) {
+		            // display the alignment
+		            am.display(spair.first, spair.second, cg, alignment, sd, td);
+		        }
+	        }
         }
         sgd.status();
         cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
@@ -540,6 +590,22 @@ void train(Model &model, AM_t &am, Corpus &training, Corpus &devel,
             cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
         }
     }
+
+    double dloss = 0;
+    int dchars = 0;
+    for (auto& spair : devel) {
+        ComputationGraph cg;
+        am.BuildGraph(spair.first, spair.second, cg);
+        dloss += as_scalar(cg.forward());
+        dchars += spair.second.size() - 1;
+    }
+    if (dloss < best) {
+        best = dloss;
+        ofstream out(out_file);
+        boost::archive::text_oarchive oa(out);
+        oa << model;
+    }
+    cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
 }
 
 template <class AM_t>
