@@ -26,7 +26,7 @@ string Min::as_string(const vector<string>& arg_names) const {
 Dim Min::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2 || xs[0] != xs[1]) {
     cerr << "Bad arguments in Min: " << xs << endl;
-    abort();
+    throw std::invalid_argument("invalid arguments to Min");
   }
   return xs[0];
 }
@@ -40,7 +40,7 @@ string Max::as_string(const vector<string>& arg_names) const {
 Dim Max::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2 || xs[0] != xs[1]) {
     cerr << "Bad arguments in Max: " << xs << endl;
-    abort();
+    throw std::invalid_argument("invalid arguments to Max");
   }
   return xs[0];
 }
@@ -54,7 +54,7 @@ string TraceOfProduct::as_string(const vector<string>& arg_names) const {
 Dim TraceOfProduct::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2 || xs[0] != xs[1]) {
     cerr << "Bad arguments in TraceOfProduct: " << xs << endl;
-    abort();
+    throw std::invalid_argument("invalid arguments to TraceOfProduct");
   }
   return Dim({1});
 }
@@ -68,7 +68,7 @@ string ConstScalarMultiply::as_string(const vector<string>& arg_names) const {
 Dim ConstScalarMultiply::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 1) {
     cerr << "ConstScalarMultiply expects one argument: " << xs << endl;
-    abort();
+    throw std::invalid_argument("ConstScalarMultiply expects one argument");
   }
   return xs[0];
 }
@@ -80,10 +80,13 @@ string DotProduct::as_string(const vector<string>& arg_names) const {
 }
 
 Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
-  assert(LooksLikeVector(xs[0]));
-  assert(LooksLikeVector(xs[1]));
-  assert(xs[0].rows() == xs[1].rows());
+  if (xs.size() != 2 ||
+      !LooksLikeVector(xs[0]) ||
+      !LooksLikeVector(xs[1]) ||
+      xs[0].rows() != xs[1].rows()) {
+    cerr << "Bad arguments to DotProduct: " << xs << endl;
+    throw std::invalid_argument("Bad arguments to DotProduct");
+  }
   return Dim({1});
 }
 
@@ -94,7 +97,10 @@ string Transpose::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Transpose::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  if (xs.size() != 1) {
+    cerr << "Bad arguments to Transpose: " << xs << endl;
+    throw std::invalid_argument("Bad arguments to Transpose");
+  }
   return xs[0].transpose();
 }
 
@@ -382,17 +388,6 @@ Dim Identity::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-string MaxPooling1D::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "maxpool1d(" << arg_names.front() << ",w=" << width << ")";
-  return os.str();
-}
-
-Dim MaxPooling1D::dim_forward(const vector<Dim>& xs) const {
-  cerr << "MaxPooling1D::dim_forward not implemented\n";
-  abort();
-}
-
 string Softmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "softmax(" << arg_names[0] << ')';
@@ -561,14 +556,14 @@ string AffineTransform::as_string(const vector<string>& arg_names) const {
 Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
   if ((xs.size() - 1) % 2 != 0) {
     cerr << "Bad number of inputs for AffineTransform: " << xs << endl;
-    abort();
+    throw std::invalid_argument("Bad number of inputs to AffineTransform");
   }
   for (unsigned i = 1; i < xs.size(); i += 2) {
     if (xs[i].cols() != xs[i+1].rows() ||
         xs[0].rows() != xs[i].rows() ||
         xs[0].cols() != xs[i+1].cols()) {
       cerr << "Bad dimensions for AffineTransform: " << xs << endl;
-      abort();
+      throw std::invalid_argument("Bad dimensions to AffineTransform");
     }
   }
   return xs[0];
@@ -624,6 +619,20 @@ Dim L1Distance::dim_forward(const vector<Dim>& xs) const {
     abort();
   }
   return Dim({1});
+}
+
+string PoissonRegressionLoss::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "-log Poisson(" << pty << "; lambda=\\exp" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim PoissonRegressionLoss::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 1 || xs[0].size() != 1) {
+    cerr << "Bad input dimensions in PoissonRegressionLoss: " << xs << endl;
+    abort();
+  }
+  return xs[0];
 }
 
 string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {

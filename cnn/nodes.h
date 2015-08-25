@@ -481,6 +481,29 @@ struct Average : public Node {
                     Tensor& dEdxi) const override;
 };
 
+// this is used to implement poisson regression
+// x_1 = log predicted mean
+// ty = true y (this is not a VariableIndex since it has to be a nonnegative integer and
+//              is therefore nondifferentiable. There are various continuous extensions
+//              using the incomplete gamma function that could be used, but meh)
+// y = log Poisson(ty; \lambda = \exp x_1)
+//   = ty*x_1 - exp(x_1) - log(ty!)
+struct PoissonRegressionLoss : public Node {
+  explicit PoissonRegressionLoss(const std::initializer_list<VariableIndex>& a, unsigned true_y) : Node(a), ty(true_y), pty(&ty) {}
+  explicit PoissonRegressionLoss(const std::initializer_list<VariableIndex>& a, const unsigned* ptrue_y) : Node(a), ty(), pty(ptrue_y) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+ private:
+  unsigned ty;
+  const unsigned* pty;
+};
+
 // y = || x_1 - x_2 ||^2
 struct SquaredEuclideanDistance : public Node {
   explicit SquaredEuclideanDistance(const std::initializer_list<VariableIndex>& a) : Node(a) {}

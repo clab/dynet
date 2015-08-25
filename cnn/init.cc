@@ -35,7 +35,7 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
     return std::find(begin, end, option) != end;
 }
 
-void Initialize(int& argc, char**& argv) {
+void Initialize(int& argc, char**& argv, unsigned random_seed) {
   cerr << "Initializing...\n";
 #if HAVE_CUDA
   Initialize_GPU(argc, argv);
@@ -48,27 +48,25 @@ void Initialize(int& argc, char**& argv) {
   *kSCALAR_ZERO = 0;
 #endif
 
-  if (cmdOptionExists(argv, argv + argc, "--seed"))
+  if (random_seed == 0)
   {
-      string seed = getCmdOption(argv, argv + argc, "--seed");
-      int rseed;
-      stringstream(seed) >> rseed; 
-      rndeng = new mt19937(rseed);
-  }
-  else 
-  {
-      /// do nothing
-      if (rndeng == nullptr)
+    if (cmdOptionExists(argv, argv + argc, "--seed"))
       {
-          random_device rd;
-          //  rndeng = new mt19937(1);
-          rndeng = new mt19937(rd());
+	string seed = getCmdOption(argv, argv + argc, "--seed");
+	stringstream(seed) >> random_seed; 
+      }
+    else
+      {
+	random_device rd;
+	random_seed = rd();
       }
   }
 
+  rndeng = new mt19937(random_seed);
+
   cerr << "Allocating memory...\n";
-  fxs = new AlignedMemoryPool<ALIGN>(512*(1<<20));
-  dEdfs = new AlignedMemoryPool<ALIGN>(512*(1<<20));
+  fxs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20));
+  dEdfs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20));
   cerr << "Done.\n";
 }
 

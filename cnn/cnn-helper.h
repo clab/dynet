@@ -3,12 +3,6 @@
 
 #include <string>
 
-#ifdef WIN32
-#include <process.h>
-#endif
-
-/// helper functions 
-
 namespace cnn {
 
 /**

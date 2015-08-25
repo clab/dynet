@@ -16,6 +16,8 @@
 
 #define cast_uint32_t static_cast<uint32_t>
 
+// THIS CODE IS BROKEN- sometimes it returns NaN
+// it is commented out for this reason
 static inline float fastpow2 (float p) {
   float offset = (p < 0) ? 1.0f : 0.0f;
   float clipp = (p < -126) ? -126.0f : p;
@@ -27,9 +29,15 @@ static inline float fastpow2 (float p) {
 }
 
 #if 1
+#if 0
 static inline float fastexp (float p) {
   return fastpow2 (1.442695040f * p);
 }
+#else
+static inline float fastexp (float p) {
+  return exp(p);
+}
+#endif
 #else
 // Schraudolph version, but it's a bit crappy in terms of
 // performance and not that much faster
@@ -41,7 +49,7 @@ static inline float fastexp (float p) {
 }
 #endif
 
-#if defined(__GNU_LIBRARY__) && (__GLIBC__ == 2) && (__GLIBC_MINOR__ < 14)
+#if defined(__GNU_LIBRARY__) && (__GLIBC__ == 2) && (__GLIBC_MINOR__ < 14) && !defined(HAVE_CUDA)
 #define USE_FASTEXP
 #else
 #undef USE_FASTEXP
@@ -69,18 +77,21 @@ template <typename T> int sgn(T val) {
 }
 
 struct FL1Backward {
-  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+  FL1Backward(float d) : d(d) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
     return sgn(x) * d;
   }
+  const float d;
 };
 
 struct FHuberBackward {
-  FHuberBackward(float c) : c(c) {}
-  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+  FHuberBackward(float c, float dEdf) : c(c), d(dEdf) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
     const float a = fabs(x);
     return (2 * d) * ((a < c) ? x : c * sgn(x));
   }
   const float c;
+  const float d;
 };
 
 struct FProduct {

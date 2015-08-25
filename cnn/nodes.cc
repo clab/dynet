@@ -177,7 +177,9 @@ void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = *fx;
   if (xs.size() == 1) {
     y = x.rowwise().sum();
-  } else { abort(); }
+  } else {
+    throw std::invalid_argument("two inputs in SumColumns::forward!");
+  }
 }
 
 void SumColumns::backward(const vector<const Tensor*>& xs,
@@ -1077,9 +1079,14 @@ void Rectify::backward(const vector<const Tensor*>& xs,
 
 void HuberDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
-  auto x = **xs[0];
-  auto y = **xs[1];
-  *fx = (x - y).unaryExpr(FHuberForward(d));
+  auto x = *xs[0];
+  auto y = *xs[1];
+  const FHuberForward fhf(d);
+  const size_t s = x.d.size();
+  float dist = 0;
+  for (size_t i = 0; i < s; ++i)
+    dist += fhf(x.v[i] - y.v[i]);
+  fx.v[0] = dist;
 }
 
 void HuberDistance::backward(const vector<const Tensor*>& xs,
@@ -1090,7 +1097,7 @@ void HuberDistance::backward(const vector<const Tensor*>& xs,
   assert(i < 2);
   auto x = **xs[i];
   auto y = **xs[1-i];
-  *dEdxi += (x - y).binaryExpr(*dEdf, FHuberBackward(d));
+  *dEdxi += (x - y).unaryExpr(FHuberBackward(d, dEdf.v[0]));
 }
 
 void L1Distance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1108,7 +1115,25 @@ void L1Distance::backward(const vector<const Tensor*>& xs,
   assert(i < 2);
   auto x = **xs[i];
   auto y = **xs[1-i];
-  *dEdxi += (x - y).binaryExpr(*dEdf, FL1Backward());
+  *dEdxi += (x - y).unaryExpr(FL1Backward(dEdf.v[0]));
+}
+
+void PoissonRegressionLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const auto y = *pty;
+  const auto z = lgamma(y + 1);
+  const auto x = xs[0]->v[0];
+  fx.v[0] = expf(x) + z - y * x;
+}
+
+void PoissonRegressionLoss::backward(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  const auto x = xs[0]->v[0];
+  const auto y = *pty;
+  auto& dEdx = dEdxi.v[0];
+  dEdx += expf(x) - y;
 }
 
 void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {

@@ -1,5 +1,5 @@
-#ifndef EXPR_H
-#define EXPR_H
+#ifndef CNN_EXPR_H
+#define CNN_EXPR_H
 
 #include "cnn/cnn.h"
 #include "cnn/nodes.h"
@@ -38,6 +38,10 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
 // componentwise division
 Expression cdiv(const Expression& x, const Expression& y);
 Expression colwise_add(const Expression& x, const Expression& bias);
+// z_ij = x_ijk * y_k
+Expression contract3d_1d(const Expression& x, const Expression& y);
+// z_ij = x_ijk * y_k + b_ij
+Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
@@ -68,6 +72,8 @@ Expression huber_distance(const Expression& x, const Expression& y, float c = 1.
 Expression l1_distance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
+Expression poisson_loss(const Expression& x, unsigned y);
+Expression poisson_loss(const Expression& x, const unsigned* py);
 
 // various convolutiony things
 Expression conv1d_narrow(const Expression& x, const Expression& f);

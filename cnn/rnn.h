@@ -76,6 +76,9 @@ struct RNNBuilder {
   // access the state of each hidden layer, in a format that can be used in
   // start_new_sequence
   virtual std::vector<Expression> final_s() const = 0;
+  virtual unsigned num_h0_components() const  = 0;
+  // copy the parameters of another builder
+  virtual void copy(const RNNBuilder & params) = 0;
  protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
@@ -106,6 +109,9 @@ struct SimpleRNNBuilder : public RNNBuilder {
   Expression back() const { return h.back().back(); }
   std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const { return final_h(); }
+  void copy(const RNNBuilder & params) override;
+
+  unsigned num_h0_components() const override { return layers; }
 
  private:
   // first index is layer, then x2h h2h hb
@@ -114,7 +120,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Expression>> param_vars;
 
-  // first index is time, second is layer 
+  // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
 
   // initial value of h

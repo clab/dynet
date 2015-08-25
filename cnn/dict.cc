@@ -25,7 +25,7 @@ void ReadSentencePair(const std::string& line, std::vector<int>* s, Dict* sd, st
   std::string word;
   std::string sep = "|||";
   Dict* d = sd;
-  std::vector<int>* v = s; 
+  std::vector<int>* v = s;
   while(in) {
     in >> word;
     if (!in) break;

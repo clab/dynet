@@ -20,7 +20,7 @@ RNNBuilder::~RNNBuilder() {}
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model, 
+                       Model* model,
                        bool support_lags) : layers(layers), lagging(support_lags) {
   long layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
@@ -95,7 +95,7 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
 
     Expression y = affine_transform({vars[HB], vars[X2H], x, vars[L2H], aux});
 
-    if (t == 0 && h0.size() > 0) 
+    if (t == 0 && h0.size() > 0)
       y = y + vars[H2H] * h0[i];
     else if (t >= 1)
       y = y + vars[H2H] * h[t-1][i];
@@ -103,6 +103,16 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
     x = h[t][i] = tanh(y);
   }
   return h[t].back();
+}
+
+void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
+  const SimpleRNNBuilder & rnn_simple = (const SimpleRNNBuilder&)rnn;
+  assert(params.size() == rnn_simple.params.size());
+  for(size_t i = 0; i < rnn_simple.params.size(); ++i) {
+      params[i][0]->copy(*rnn_simple.params[i][0]);
+      params[i][1]->copy(*rnn_simple.params[i][1]);
+      params[i][2]->copy(*rnn_simple.params[i][2]);
+  }
 }
 
 } // namespace cnn

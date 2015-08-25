@@ -84,7 +84,7 @@ void MomentumSGDTrainer::update(real scale) {
 void AdagradTrainer::update(real scale) {
   unsigned pi;
   if (!shadow_params_allocated) {
-    vp = AllocateShadowParameters(*model); 
+    vp = AllocateShadowParameters(*model);
     vlp = AllocateShadowLookupParameters(*model);
     shadow_params_allocated = true;
   }

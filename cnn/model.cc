@@ -53,6 +53,11 @@ void Parameters::g_squared_l2norm(float* sqnorm) const {
 #endif
 }
 
+void Parameters::copy(const Parameters & param) {
+  assert(dim == param.dim);
+  TensorTools::CopyElements(values, param.values);
+}
+
 void Parameters::accumulate_grad(const Tensor& d) {
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, g.d.size(), kSCALAR_ONE, d.v, 1, g.v, 1));
@@ -87,7 +92,8 @@ void LookupParameters::scale_parameters(float a) {
 void LookupParameters::Initialize(unsigned index, const vector<float>& val) {
   assert(int(val.size()) == int(dim.size()));
 #if HAVE_CUDA
-  cerr << "implement LookupParameters::Initialize\n"; abort();
+  cerr << "implement LookupParameters::Initialize\n";
+  throw cuda_not_implemented("LookupParameters::Initialize");
 #else
   memcpy(values[index].v, &val[0], val.size() * sizeof(float));
 #endif
@@ -125,6 +131,12 @@ void LookupParameters::squared_l2norm(float* sqnorm) const {
     a += (*values[i]).squaredNorm();
   *sqnorm = a;
 #endif
+}
+
+void LookupParameters::copy(const LookupParameters & param) {
+  assert(dim == param.dim);
+  for(size_t i = 0; i < param.values.size(); ++i)
+    TensorTools::CopyElements(values[i], param.values[i]);
 }
 
 void LookupParameters::accumulate_grad(unsigned index, const Tensor& d) {

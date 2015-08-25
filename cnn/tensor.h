@@ -39,6 +39,18 @@ struct Tensor {
   Eigen::Map<Eigen::MatrixXf, Eigen::Aligned> operator*() {
     return Eigen::Map<Eigen::MatrixXf, Eigen::Aligned>(v, d.rows(), d.cols());
   }
+  // this is very slow: use sparingly
+  inline bool is_valid() const {
+#if HAVE_CUDA
+    std::cerr << "is_valid() not implemented with HAVE_CUDA\n";
+    abort();
+#else
+    const size_t s = d.size();
+    for (unsigned i = 0; i < s; ++i)
+      if (std::isnan(v[i]) || std::isinf(v[i])) return false;
+    return true;
+#endif
+  }
   Dim d;
   float* v;
 
@@ -87,6 +99,7 @@ struct TensorTools {
   // AccessElement is very, very slow (potentially) - use appropriately
   static float AccessElement(const Tensor& v, const Dim& index);
   static void SetElements(const Tensor& v, const std::vector<float>& vec);
+  static void CopyElements(const Tensor& v, const Tensor& v_src);
 };
 real rand01();
 real rand_normal();

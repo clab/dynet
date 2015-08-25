@@ -17,6 +17,8 @@ struct GRUBuilder : public RNNBuilder {
   std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const { return final_h(); }
   Expression back() const { return h.back().back(); }
+  unsigned num_h0_components() const override { return layers; }
+  void copy(const RNNBuilder & params) override;
 
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
@@ -29,7 +31,7 @@ struct GRUBuilder : public RNNBuilder {
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
 
-  // first index is time, second is layer 
+  // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
 
   // initial values of h at each layer

@@ -1,6 +1,10 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
+<<<<<<< HEAD
 foreach(TARGET tag-bilstm embed-cl encdec xor xor-xent rnnlm-aevb rnnlm nlm textcat rnnlm2 mem_seq2seq_encdec attentional)
+=======
+foreach(TARGET poisson-regression tag-bilstm embed-cl encdec xor xor-xent rnnlm-aevb rnnlm nlm textcat rnnlm2 mp)
+>>>>>>> claborigin/master
   ADD_EXECUTABLE(${TARGET} ${TARGET}.cc)
   target_link_libraries(${TARGET} cnn ${LIBS})
   if (WITH_CUDA_BACKEND)
