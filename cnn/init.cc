@@ -69,6 +69,18 @@ void Initialize(int& argc, char**& argv, unsigned random_seed) {
   dEdfs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20));
   cerr << "Done.\n";
 }
+    void Free() 
+    {
+        cerr << "Freeing memory ...\n";
+        cnn_mm_free(kSCALAR_MINUSONE);
+        cnn_mm_free(kSCALAR_ONE);
+        cnn_mm_free(kSCALAR_ZERO);
+
+        delete (rndeng); 
+        delete (fxs);
+        delete (dEdfs);
+        cerr << "Done.\n";
+    }
 
 } // namespace cnn
 

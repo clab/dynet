@@ -70,6 +70,16 @@ void Parameters::clear() {
   TensorTools::Zero(g);
 }
 
+LookupParameters::~LookupParameters()
+{
+    for (unsigned i = 0; i < values.size(); ++i) {
+        auto& v = values[i];
+        cnn_mm_free(v.v);
+        auto& g = grads[i];
+        cnn_mm_free(g.v);
+    }
+}
+
 LookupParameters::LookupParameters(unsigned n, const Dim& d) : dim(d), values(n), grads(n) {
   for (unsigned i = 0; i < n; ++i) {
     auto& v = values[i];
@@ -156,6 +166,8 @@ void LookupParameters::clear() {
 
 Model::~Model() {
   for (auto p : all_params) delete p;
+  if (gradient_norm_scratch)
+      cnn_mm_free(gradient_norm_scratch); 
 }
 
 void Model::project_weights(float radius) {

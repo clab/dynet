@@ -199,4 +199,12 @@ Expression DGLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   return ht.back();
 }
 
+void DGLSTMBuilder::copy(const RNNBuilder & rnn) {
+  const DGLSTMBuilder & rnn_lstm = (const DGLSTMBuilder&)rnn;
+  assert(params.size() == rnn_lstm.params.size());
+  for(size_t i = 0; i < params.size(); ++i)
+      for(size_t j = 0; j < params[i].size(); ++j)
+        params[i][j]->copy(*rnn_lstm.params[i][j]);
+}
+
 } // namespace cnn
