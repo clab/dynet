@@ -20,16 +20,11 @@ using namespace cnn;
 using namespace cnn::expr;
 
 struct SharedObject {
-  cnn::real m;
-  cnn::real b;
-  cnn::real loss;
-
-  cnn::real temp_m;
-  cnn::real temp_b;
+  cnn::real fake;
 };
 
 typedef pair<cnn::real, cnn::real> Datum;
-const unsigned num_children = 4;
+const unsigned num_children = 1;
 SharedObject* shared_memory = nullptr;
 
 cnn::real ReadReal(int pipe) {
@@ -138,10 +133,11 @@ int RunChild(unsigned cid, ComputationGraph& cg, Trainer* trainer, vector<Worklo
 
     // Read in our workload and update our local model
     vector<unsigned> indices = ReadIntVector<unsigned>(workloads[cid].p2c[0]);
- 
-    TensorTools::SetElements(model_params.m->values, {shared_memory->m});
-    TensorTools::SetElements(model_params.b->values, {shared_memory->b});
 
+    cnn::real old_m = as_scalar(model_params.m->values);
+    cnn::real old_b = as_scalar(model_params.b->values);
+ 
+    // Run the actual training loop
     cnn::real loss = 0;
     for (unsigned i : indices) {
       assert (i < data.size());
@@ -150,38 +146,31 @@ int RunChild(unsigned cid, ComputationGraph& cg, Trainer* trainer, vector<Worklo
       y_value = get<1>(p);
       loss += as_scalar(cg.forward());
       cg.backward();
+      cnn::real old_mt = as_scalar(model_params.m->values);
       trainer->update(1.0);
+      cnn::real new_mt = as_scalar(model_params.m->values);
     }
-    loss /= indices.size();
+    trainer->update_epoch();
 
-    // Get our final values of each parameter and send them back to the parent,
-    // along with the current loss value
     cnn::real m = as_scalar(model_params.m->values);
     cnn::real b = as_scalar(model_params.b->values);
-    shared_memory->temp_m += m;
-    shared_memory->temp_b += b;
-    shared_memory->loss += loss;
 
-    /*write(workloads[cid].c2p[1], (char*)&m, sizeof(cnn::real));
-    write(workloads[cid].c2p[1], (char*)&b, sizeof(cnn::real));
-    write(workloads[cid].c2p[1], (char*)&loss, sizeof(cnn::real));*/
-    WriteReal(workloads[cid].c2p[1], 0.0);
+    // Let the parent know that we're done and return the loss value
+    WriteReal(workloads[cid].c2p[1], m);
+    WriteReal(workloads[cid].c2p[1], b);
+    WriteReal(workloads[cid].c2p[1], loss);
   }
   return 0;
 }
 
-void RunParent(vector<Datum>& data, vector<Workload>& workloads, ModelParameters& model_params, Trainer* trainer) {
-  shared_memory->m = TensorTools::AccessElement(model_params.m->values, {0, 0});
-  shared_memory->b = TensorTools::AccessElement(model_params.b->values, {0, 0});
-
-  for (unsigned iter = 0; iter < 10; ++iter) {
-    shared_memory->loss = 0.0;
-    shared_memory->temp_m = 0.0;
-    shared_memory->temp_b = 0.0;
-    /*vector<cnn::real> m_values;
-    vector<cnn::real> b_values;
-    vector<cnn::real> loss_values;*/
+void RunParent(vector<Datum>& data, unsigned num_iterations, vector<Workload>& workloads, ModelParameters& model_params, Trainer* trainer) {
+  for (unsigned iter = 0; iter < num_iterations; ++iter) {
+    vector<cnn::real> ms(num_children);
+    vector<cnn::real> bs(num_children);
+    vector<cnn::real> losses(num_children);
+    // TODO: Store the data in shared RAM, shuffle every iteration, let children's assignments live in smem too 
     for(unsigned cid = 0; cid < num_children; ++cid) {
+      // work out the indices of the data points we want this child to consider
       unsigned start = (unsigned)(1.0 * cid / num_children * data.size() + 0.5);
       unsigned end = (unsigned)(1.0 * (cid + 1) / num_children * data.size() + 0.5);
       vector<unsigned> indices;
@@ -189,41 +178,30 @@ void RunParent(vector<Datum>& data, vector<Workload>& workloads, ModelParameters
       for (unsigned i = start; i < end; ++i) {
         indices.push_back(i);
       }
+      // Tell the child it's not time to quit yet
       bool cont = true;
       write(workloads[cid].p2c[1], &cont, sizeof(bool)); 
       WriteIntVector(workloads[cid].p2c[1], indices);
+    /*}
 
-      /*cnn::real m = ReadReal(workloads[cid].c2p[0]);
-      cnn::real b = ReadReal(workloads[cid].c2p[0]);
-      cnn::real loss = ReadReal(workloads[cid].c2p[0]);
-      m_values.push_back(m);
-      b_values.push_back(b);
-      loss_values.push_back(loss);*/
+    // Wait for each child to finish training its load
+    for(unsigned cid = 0; cid < num_children; ++cid) {*/
+      ms[cid] = ReadReal(workloads[cid].c2p[0]);
+      bs[cid] = ReadReal(workloads[cid].c2p[0]);
+      losses[cid] = ReadReal(workloads[cid].c2p[0]);
     }
 
-    for(unsigned cid = 0; cid < num_children; ++cid) {
-      ReadReal(workloads[cid].c2p[0]);
+    cerr << "ID\tm\tb\tloss" << endl;
+    cerr << "============================" << endl;
+    for (unsigned cid = 0; cid < num_children; ++cid) {
+      cerr << cid << "\t" << ms[cid] << "\t" << bs[cid] << "\t" << losses[cid] << endl;
     }
 
-    /*cnn::real m = Mean(m_values);
-    cnn::real b = 0.0;
-    cnn::real loss = 0.0;
-    for (unsigned i = 0; i < m_values.size(); ++i) {
-      b += b_values[i];
-      loss += loss_values[i];
-    }
-
-    b /= b_values.size();*/
-
-    shared_memory->m = shared_memory->temp_m / num_children;
-    shared_memory->b = shared_memory->temp_b / num_children;
-
-    // Update parameters to use the new m and b values
-    //TensorTools::SetElements(model_params.m->values, {m});
-    //TensorTools::SetElements(model_params.b->values, {b});
+    // TODO: This is currently uneffective because it doesn't affect the Trainers on the child processes
     trainer->update_epoch();
-    //cerr << shared_memory->m << "\t" << iter << "\t" << "loss = " << loss << "\tm = " << m << "\tb = " << b << endl;
-    cerr << iter << "\t" << "loss = " << shared_memory->loss << "\tm = " << shared_memory->m << "\tb = " << shared_memory->b << endl;
+
+    cnn::real loss = accumulate(losses.begin(), losses.end(), 0.0) / data.size();
+    cerr << iter << "\t" << "loss = " << loss << endl; 
   }
 
   // Kill all children one by one and wait for them to exit
@@ -232,6 +210,8 @@ void RunParent(vector<Datum>& data, vector<Workload>& workloads, ModelParameters
     write(workloads[cid].p2c[1], &cont, sizeof(cont));
     wait(NULL);
   }
+
+  cnn::Cleanup();
 }
 
 int main(int argc, char** argv) {
@@ -242,11 +222,13 @@ int main(int argc, char** argv) {
     cerr << "Where data.txt contains tab-delimited pairs of floats." << endl;
     return 1;
   }
+  unsigned num_iterations = (argc >= 3) ? atoi(argv[2]) : 10;
   vector<Datum> data = ReadData(argv[1]);
   vector<Workload> workloads(num_children);
 
-  Model model;
-  AdamTrainer sgd(&model, 0.0);
+  Model model; 
+  SimpleSGDTrainer sgd(&model, 0.0, 0.001);
+  //AdamTrainer sgd(&model, 0.0);
 
   ComputationGraph cg;
   cnn::real x_value, y_value;
@@ -257,7 +239,7 @@ int main(int argc, char** argv) {
 
   unsigned shm_size = 1024;
   assert (sizeof(SharedObject) < shm_size);
-  key_t shm_key = ftok("/home/austinma/shared", 'R');
+  key_t shm_key = ftok("/Users/austinma/shared2", 'R');
   if (shm_key == -1) {
     cerr << "Unable to get shared memory key" << endl;
     return 1;
@@ -284,6 +266,6 @@ int main(int argc, char** argv) {
     return RunChild(cid, cg, &sgd, workloads, data, x_value, y_value, model_params);
   }
   else {
-    RunParent(data, workloads, model_params, &sgd);
+    RunParent(data, num_iterations, workloads, model_params, &sgd);
   }
 }

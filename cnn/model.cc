@@ -20,9 +20,11 @@ ParametersBase::~ParametersBase() {}
 
 Parameters::Parameters(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
-  values.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
+  //values.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
+  values.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
   if (scale) TensorTools::Randomize(values, scale); else TensorTools::Randomize(values);
-  g.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
+  //g.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
+  g.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
   TensorTools::Zero(g);
 }
 
@@ -69,12 +71,14 @@ LookupParameters::LookupParameters(unsigned n, const Dim& d) : dim(d), values(n)
   for (unsigned i = 0; i < n; ++i) {
     auto& v = values[i];
     v.d = d;
-    v.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
+    //v.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
+    v.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
     TensorTools::Randomize(v);
 
     auto& g = grads[i];
     g.d = d;
     g.v = (float*)cnn_mm_malloc(d.size() * sizeof(float), CNN_ALIGN);
+    g.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
     TensorTools::Zero(g);
   }
 }
