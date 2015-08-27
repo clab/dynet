@@ -14,19 +14,53 @@
 #include <utility>
 #include <sstream>
 #include <random>
+/*
+TODO:
+- Can we move the data vector into shared memory so that we can shuffle it
+  between iterations and not have to send huge vectors of integers around?
+- Can we use some sort of shared memory queue to allow threads to spread
+  work more evenly?
+*/
 
 using namespace std;
 using namespace cnn;
 using namespace cnn::expr;
 
+typedef pair<cnn::real, cnn::real> Datum;
+const unsigned num_children = 8;
+
+// This shared object/shared memory stuff is junk now
+// It used to be useful, but now I'm just leaving it here
+// so that I don't have to look up how to do all tis stuff
+// in case I ever need to use it again.
 struct SharedObject {
   cnn::real fake;
 };
-
-typedef pair<cnn::real, cnn::real> Datum;
-const unsigned num_children = 1;
 SharedObject* shared_memory = nullptr;
+SharedObject* GetSharedMemory() {
+  unsigned shm_size = 1024;
+  assert (sizeof(SharedObject) < shm_size);
+  key_t shm_key = ftok("/Users/austinma/shared2", 'R');
+  if (shm_key == -1) {
+    cerr << "Unable to get shared memory key" << endl;
+    return NULL;
+  }
+  int shm_id = shmget(shm_key, shm_size, 0644 | IPC_CREAT);
+  if (shm_id == -1) {
+    cerr << "Unable to create shared memory" << endl;
+    return NULL;
+  }
+  void* shm_p = shmat(shm_id, nullptr, 0);
+  if (shm_p == (void*)-1) {
+    cerr << "Unable to get shared memory pointer";
+    return NULL;
+  }
+  return (SharedObject*)shm_p;
+}
 
+// Some simple functions that do IO to/from pipes.
+// These are used to send data from child processes
+// to the parent process or vice/versa.
 cnn::real ReadReal(int pipe) {
   cnn::real v;
   read(pipe, &v, sizeof(cnn::real));
@@ -57,8 +91,12 @@ vector<T> ReadIntVector(int pipe) {
   return vec;
 }
 
+cnn::real SumValues(const vector<cnn::real>& values) {
+  return accumulate(values.begin(), values.end(), 0.0);
+}
+
 cnn::real Mean(const vector<cnn::real>& values) {
-  return accumulate(values.begin(), values.end(), 0.0) / values.size();
+  return SumValues(values) / values.size();
 }
 
 struct Workload {
@@ -134,9 +172,6 @@ int RunChild(unsigned cid, ComputationGraph& cg, Trainer* trainer, vector<Worklo
     // Read in our workload and update our local model
     vector<unsigned> indices = ReadIntVector<unsigned>(workloads[cid].p2c[0]);
 
-    cnn::real old_m = as_scalar(model_params.m->values);
-    cnn::real old_b = as_scalar(model_params.b->values);
- 
     // Run the actual training loop
     cnn::real loss = 0;
     for (unsigned i : indices) {
@@ -146,9 +181,7 @@ int RunChild(unsigned cid, ComputationGraph& cg, Trainer* trainer, vector<Worklo
       y_value = get<1>(p);
       loss += as_scalar(cg.forward());
       cg.backward();
-      cnn::real old_mt = as_scalar(model_params.m->values);
       trainer->update(1.0);
-      cnn::real new_mt = as_scalar(model_params.m->values);
     }
     trainer->update_epoch();
 
@@ -168,24 +201,29 @@ void RunParent(vector<Datum>& data, unsigned num_iterations, vector<Workload>& w
     vector<cnn::real> ms(num_children);
     vector<cnn::real> bs(num_children);
     vector<cnn::real> losses(num_children);
-    // TODO: Store the data in shared RAM, shuffle every iteration, let children's assignments live in smem too 
+    vector<unsigned> indices(data.size());
+    for (unsigned i = 0; i < data.size(); ++i) {
+      indices[i] = i;
+    }
+    random_shuffle(indices.begin(), indices.end());
+
     for(unsigned cid = 0; cid < num_children; ++cid) {
       // work out the indices of the data points we want this child to consider
       unsigned start = (unsigned)(1.0 * cid / num_children * data.size() + 0.5);
       unsigned end = (unsigned)(1.0 * (cid + 1) / num_children * data.size() + 0.5);
-      vector<unsigned> indices;
-      indices.reserve(end - start);
+      vector<unsigned> child_indices;
+      child_indices.reserve(end - start);
       for (unsigned i = start; i < end; ++i) {
-        indices.push_back(i);
+        child_indices.push_back(indices[i]);
       }
       // Tell the child it's not time to quit yet
       bool cont = true;
       write(workloads[cid].p2c[1], &cont, sizeof(bool)); 
-      WriteIntVector(workloads[cid].p2c[1], indices);
-    /*}
+      WriteIntVector(workloads[cid].p2c[1], child_indices);
+    }
 
     // Wait for each child to finish training its load
-    for(unsigned cid = 0; cid < num_children; ++cid) {*/
+    for(unsigned cid = 0; cid < num_children; ++cid) {
       ms[cid] = ReadReal(workloads[cid].c2p[0]);
       bs[cid] = ReadReal(workloads[cid].c2p[0]);
       losses[cid] = ReadReal(workloads[cid].c2p[0]);
@@ -200,7 +238,7 @@ void RunParent(vector<Datum>& data, unsigned num_iterations, vector<Workload>& w
     // TODO: This is currently uneffective because it doesn't affect the Trainers on the child processes
     trainer->update_epoch();
 
-    cnn::real loss = accumulate(losses.begin(), losses.end(), 0.0) / data.size();
+    cnn::real loss = SumValues(losses) / data.size();
     cerr << iter << "\t" << "loss = " << loss << endl; 
   }
 
@@ -215,7 +253,7 @@ void RunParent(vector<Datum>& data, unsigned num_iterations, vector<Workload>& w
 }
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::Initialize(argc, argv, 0, true);
 
   if (argc < 2) {
     cerr << "Usage: " << argv[0] << " data.txt" << endl;
@@ -227,8 +265,8 @@ int main(int argc, char** argv) {
   vector<Workload> workloads(num_children);
 
   Model model; 
-  SimpleSGDTrainer sgd(&model, 0.0, 0.001);
-  //AdamTrainer sgd(&model, 0.0);
+  //SimpleSGDTrainer sgd(&model, 0.0, 0.001);
+  AdamTrainer sgd(&model, 0.0);
 
   ComputationGraph cg;
   cnn::real x_value, y_value;
@@ -237,24 +275,7 @@ int main(int argc, char** argv) {
   ModelParameters model_params = {m_param, b_param};
   BuildComputationGraph(cg, model_params, &x_value, &y_value);
 
-  unsigned shm_size = 1024;
-  assert (sizeof(SharedObject) < shm_size);
-  key_t shm_key = ftok("/Users/austinma/shared2", 'R');
-  if (shm_key == -1) {
-    cerr << "Unable to get shared memory key" << endl;
-    return 1;
-  }
-  int shm_id = shmget(shm_key, shm_size, 0644 | IPC_CREAT);
-  if (shm_id == -1) {
-    cerr << "Unable to create shared memory" << endl;
-    return 1;
-  }
-  void* shm_p = shmat(shm_id, nullptr, 0);
-  if (shm_p == (void*)-1) {
-    cerr << "Unable to get shared memory pointer";
-    return 1;
-  }
-  shared_memory = (SharedObject*)shm_p;
+  shared_memory = GetSharedMemory();
 
   for (unsigned cid = 0; cid < num_children; cid++) {
     pipe(workloads[cid].p2c);
