@@ -20,6 +20,7 @@ TODO:
   between iterations and not have to send huge vectors of integers around?
 - Can we use some sort of shared memory queue to allow threads to spread
   work more evenly?
+- The shadow params in the trainers need to be shared.
 */
 
 using namespace std;
