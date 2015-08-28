@@ -6,6 +6,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/interprocess/ipc/message_queue.hpp>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -28,6 +29,7 @@ TODO:
 using namespace std;
 using namespace cnn;
 using namespace cnn::expr;
+using namespace boost::interprocess;
 
 typedef vector<int> Datum;
 unsigned num_children = 1;
@@ -87,6 +89,7 @@ unsigned VOCAB_SIZE = 5500;
 cnn::Dict d;
 int kSOS;
 int kEOS;
+const string queue_name = "cnn_mp_work_queue";
 
 template <class Builder>
 struct RNNLanguageModel {
@@ -197,7 +200,12 @@ unsigned SpawnChildren(vector<Workload>& workloads) {
 template <class T>
 int RunChild(unsigned cid, RNNLanguageModel<T>& rnnlm, Trainer* trainer, vector<Workload>& workloads,
     const vector<Datum>& data) {
-  assert (cid >= 0 && cid < num_children);
+  assert (cid >= 0 && cid < num_children); 
+  unsigned i;
+  unsigned priority;
+  message_queue::size_type recvd_size;
+  message_queue mq(open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
+ 
   while (true) {
     // Check if the parent wants us to exit
     bool cont = false;
@@ -206,12 +214,13 @@ int RunChild(unsigned cid, RNNLanguageModel<T>& rnnlm, Trainer* trainer, vector<
       break;
     }
 
-    // Read in our workload and update our local model
-    vector<unsigned> indices = ReadIntVector<unsigned>(workloads[cid].p2c[0]);
-
     // Run the actual training loop
     cnn::real loss = 0;
-    for (unsigned i : indices) {
+    while (true) {
+      mq.receive(&i, sizeof(i), recvd_size, priority);
+      if (i == -1U) {
+        break;
+      }
       assert (i < data.size());
       const Datum& datum = data[i];
       ComputationGraph cg;
@@ -225,30 +234,34 @@ int RunChild(unsigned cid, RNNLanguageModel<T>& rnnlm, Trainer* trainer, vector<
     // Let the parent know that we're done and return the loss value
     WriteReal(workloads[cid].c2p[1], loss);
   }
+
   return 0;
 }
 
 void RunParent(vector<Datum>& data, vector<Datum>& dev_data, vector<Workload>& workloads) {
-  for (unsigned iter = 0; iter < 0; ++iter) {
-    vector<unsigned> indices(data.size());
-    for (unsigned i = 0; i < data.size(); ++i) {
-      indices[i] = i;
-    }
+  message_queue mq(open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
+  vector<unsigned> indices(data.size());
+  for (unsigned i = 0; i < data.size(); ++i) {
+    indices[i] = i;
+  }
+  for (unsigned iter = 0; iter < 2; ++iter) {
     random_shuffle(indices.begin(), indices.end());
 
-    for(unsigned cid = 0; cid < num_children; ++cid) {
-      // work out the indices of the data points we want this child to consider
-      unsigned start = (unsigned)(1.0 * cid / num_children * data.size() + 0.5);
-      unsigned end = (unsigned)(1.0 * (cid + 1) / num_children * data.size() + 0.5);
-      vector<unsigned> child_indices;
-      child_indices.reserve(end - start);
-      for (unsigned i = start; i < end; ++i) {
-        child_indices.push_back(indices[i]);
-      }
-      // Tell the child it's not time to quit yet
+    // Tell all the children to start up
+    for (unsigned cid = 0; cid < num_children; ++cid) {
       bool cont = true;
-      write(workloads[cid].p2c[1], &cont, sizeof(bool)); 
-      WriteIntVector(workloads[cid].p2c[1], child_indices);
+      write(workloads[cid].p2c[1], &cont, sizeof(bool));
+    }
+
+    // Write all the indices to the queue for the children to process
+    for (unsigned i : indices) {
+      mq.send(&i, sizeof(i), 0);
+    }
+
+    // Send a bunch of stop messages to the children
+    for (unsigned cid = 0; cid < num_children; ++cid) {
+      unsigned stop = -1U;
+      mq.send(&stop, sizeof(stop), 0);
     }
 
     // Wait for each child to finish training its load
@@ -262,9 +275,9 @@ void RunParent(vector<Datum>& data, vector<Datum>& dev_data, vector<Workload>& w
   }
 
   // Kill all children one by one and wait for them to exit
-  for (unsigned cid = 0; cid < num_children; ++cid) {
+  for (unsigned cid = 0; cid < num_children; ++cid) { 
     bool cont = false;
-    write(workloads[cid].p2c[1], &cont, sizeof(cont));
+    write(workloads[cid].p2c[1], &cont, sizeof(bool));
     wait(NULL);
   }
 
@@ -292,6 +305,8 @@ int main(int argc, char** argv) {
   //AdamTrainer sgd(&model, 0.0);
 
   RNNLanguageModel<LSTMBuilder> rnnlm(model);
+
+  message_queue::remove(queue_name.c_str());
 
   for (unsigned cid = 0; cid < num_children; cid++) {
     pipe(workloads[cid].p2c);
