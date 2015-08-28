@@ -15,13 +15,15 @@ using namespace std;
 
 namespace cnn {
 
-#define ALIGN 6
+const unsigned ALIGN = 6;
+const unsigned node_value_memory_size = 512UL * (1UL << 20);
+const unsigned parameter_memory_size = 512UL * (1UL << 20);
 AlignedMemoryPool<ALIGN>* fxs = nullptr;
 AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
 AlignedMemoryPool<ALIGN>* ps = nullptr;
 mt19937* rndeng = nullptr;
 
-void Initialize(int& argc, char**& argv, unsigned random_seed) {
+void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_parameters) {
   cerr << "Initializing...\n";
 #if HAVE_CUDA
   Initialize_GPU(argc, argv);
@@ -39,9 +41,9 @@ void Initialize(int& argc, char**& argv, unsigned random_seed) {
   }
   rndeng = new mt19937(random_seed);
   cerr << "Allocating memory...\n";
-  fxs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20)); // values
-  dEdfs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20)); // gradients
-  ps = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20), true); // parameters
+  fxs = new AlignedMemoryPool<ALIGN>(node_value_memory_size); // values
+  dEdfs = new AlignedMemoryPool<ALIGN>(node_value_memory_size); // gradients
+  ps = new AlignedMemoryPool<ALIGN>(parameter_memory_size, shared_parameters); // parameters
   cerr << "Done.\n";
 }
 
