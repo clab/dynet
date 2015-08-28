@@ -1,6 +1,8 @@
 #include "cnn/cnn.h"
 #include "cnn/training.h"
 #include "cnn/expr.h"
+#include "cnn/dict.h"
+#include "cnn/lstm.h"
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/algorithm/string.hpp>
@@ -27,37 +29,8 @@ using namespace std;
 using namespace cnn;
 using namespace cnn::expr;
 
-typedef pair<cnn::real, cnn::real> Datum;
-const unsigned num_children = 8;
-
-// This shared object/shared memory stuff is junk now
-// It used to be useful, but now I'm just leaving it here
-// so that I don't have to look up how to do all tis stuff
-// in case I ever need to use it again.
-struct SharedObject {
-  cnn::real fake;
-};
-SharedObject* shared_memory = nullptr;
-SharedObject* GetSharedMemory() {
-  unsigned shm_size = 1024;
-  assert (sizeof(SharedObject) < shm_size);
-  key_t shm_key = ftok("/Users/austinma/shared2", 'R');
-  if (shm_key == -1) {
-    cerr << "Unable to get shared memory key" << endl;
-    return NULL;
-  }
-  int shm_id = shmget(shm_key, shm_size, 0644 | IPC_CREAT);
-  if (shm_id == -1) {
-    cerr << "Unable to create shared memory" << endl;
-    return NULL;
-  }
-  void* shm_p = shmat(shm_id, nullptr, 0);
-  if (shm_p == (void*)-1) {
-    cerr << "Unable to get shared memory pointer";
-    return NULL;
-  }
-  return (SharedObject*)shm_p;
-}
+typedef vector<int> Datum;
+unsigned num_children = 1;
 
 // Some simple functions that do IO to/from pipes.
 // These are used to send data from child processes
@@ -106,20 +79,87 @@ struct Workload {
   int p2c[2]; // Parent to child pipe
 };
 
-struct ModelParameters {
-  Parameters* m;
-  Parameters* b;
+unsigned LAYERS = 2;
+unsigned INPUT_DIM = 8;  //256
+unsigned HIDDEN_DIM = 24;  // 1024
+unsigned VOCAB_SIZE = 5500;
+
+cnn::Dict d;
+int kSOS;
+int kEOS;
+
+template <class Builder>
+struct RNNLanguageModel {
+  LookupParameters* p_c;
+  Parameters* p_R;
+  Parameters* p_bias;
+  Builder builder;
+  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
+    p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
+    p_bias = model.add_parameters({VOCAB_SIZE});
+  }
+
+  // return Expression of total loss
+  Expression BuildLMGraph(const vector<int>& sent, ComputationGraph& cg) {
+    const unsigned slen = sent.size() - 1;
+    builder.new_graph(cg);  // reset RNN builder for new graph
+    builder.start_new_sequence();
+    Expression i_R = parameter(cg, p_R); // hidden -> word rep parameter
+    Expression i_bias = parameter(cg, p_bias);  // word bias
+    vector<Expression> errs;
+    for (unsigned t = 0; t < slen; ++t) {
+      Expression i_x_t = lookup(cg, p_c, sent[t]);
+      // y_t = RNN(x_t)
+      Expression i_y_t = builder.add_input(i_x_t);
+      Expression i_r_t =  i_bias + i_R * i_y_t;
+      
+      // LogSoftmax followed by PickElement can be written in one step
+      // using PickNegLogSoftmax
+      Expression i_err = pickneglogsoftmax(i_r_t, sent[t+1]);
+      errs.push_back(i_err);
+    }
+    Expression i_nerr = sum(errs);
+    return i_nerr;
+  }
+
+  // return Expression for total loss
+  void RandomSample(int max_len = 150) {
+    cerr << endl;
+    ComputationGraph cg;
+    builder.new_graph(cg);  // reset RNN builder for new graph
+    builder.start_new_sequence();
+    
+    Expression i_R = parameter(cg, p_R);
+    Expression i_bias = parameter(cg, p_bias);
+    vector<Expression> errs;
+    int len = 0;
+    int cur = kSOS;
+    while(len < max_len && cur != kEOS) {
+      ++len;
+      Expression i_x_t = lookup(cg, p_c, cur);
+      // y_t = RNN(x_t)
+      Expression i_y_t = builder.add_input(i_x_t);
+      Expression i_r_t = i_bias + i_R * i_y_t;
+      
+      Expression ydist = softmax(i_r_t);
+      
+      unsigned w = 0;
+      while (w == 0 || (int)w == kSOS) {
+        auto dist = as_vector(cg.incremental_forward());
+        double p = rand01();
+        for (; w < dist.size(); ++w) {
+          p -= dist[w];
+          if (p < 0.0) { break; }
+        }
+        if (w == dist.size()) w = kEOS;
+      }
+      cerr << (len == 1 ? "" : " ") << d.Convert(w);
+      cur = w;
+    }
+    cerr << endl;
+  }
 };
-
-void BuildComputationGraph(ComputationGraph& cg, ModelParameters& model_parameters, cnn::real* x_value, cnn::real* y_value) {
-  Expression m = parameter(cg, model_parameters.m);
-  Expression b = parameter(cg, model_parameters.b);
-
-  Expression x = input(cg, x_value);
-  Expression y_star = input(cg, y_value);
-  Expression y = m * x + b;
-  Expression loss = squared_distance(y, y_star);
-}
 
 vector<Datum> ReadData(string filename) {
   vector<Datum> data;
@@ -130,12 +170,7 @@ vector<Datum> ReadData(string filename) {
   }
   string line;
   while (getline(fs, line)) {
-    if (line.size() > 0 && line[0] == '#') {
-      continue;
-    }
-    vector<string> parts;
-    boost::split(parts, line, boost::is_any_of("\t"));
-    data.push_back(make_pair(atof(parts[0].c_str()), atof(parts[1].c_str())));
+    data.push_back(ReadSentence(line, &d));
   }
   return data;
 }
@@ -159,8 +194,9 @@ unsigned SpawnChildren(vector<Workload>& workloads) {
   return cid;
 }
 
-int RunChild(unsigned cid, ComputationGraph& cg, Trainer* trainer, vector<Workload>& workloads,
-    const vector<Datum>& data, cnn::real& x_value, cnn::real& y_value, ModelParameters& model_params) {
+template <class T>
+int RunChild(unsigned cid, RNNLanguageModel<T>& rnnlm, Trainer* trainer, vector<Workload>& workloads,
+    const vector<Datum>& data) {
   assert (cid >= 0 && cid < num_children);
   while (true) {
     // Check if the parent wants us to exit
@@ -177,31 +213,23 @@ int RunChild(unsigned cid, ComputationGraph& cg, Trainer* trainer, vector<Worklo
     cnn::real loss = 0;
     for (unsigned i : indices) {
       assert (i < data.size());
-      auto p = data[i];
-      x_value = get<0>(p);
-      y_value = get<1>(p);
+      const Datum& datum = data[i];
+      ComputationGraph cg;
+      rnnlm.BuildLMGraph(datum, cg);
       loss += as_scalar(cg.forward());
       cg.backward();
       trainer->update(1.0);
     }
     trainer->update_epoch();
 
-    cnn::real m = as_scalar(model_params.m->values);
-    cnn::real b = as_scalar(model_params.b->values);
-
     // Let the parent know that we're done and return the loss value
-    WriteReal(workloads[cid].c2p[1], m);
-    WriteReal(workloads[cid].c2p[1], b);
     WriteReal(workloads[cid].c2p[1], loss);
   }
   return 0;
 }
 
-void RunParent(vector<Datum>& data, unsigned num_iterations, vector<Workload>& workloads, ModelParameters& model_params, Trainer* trainer) {
-  for (unsigned iter = 0; iter < num_iterations; ++iter) {
-    vector<cnn::real> ms(num_children);
-    vector<cnn::real> bs(num_children);
-    vector<cnn::real> losses(num_children);
+void RunParent(vector<Datum>& data, vector<Datum>& dev_data, vector<Workload>& workloads) {
+  for (unsigned iter = 0; iter < 0; ++iter) {
     vector<unsigned> indices(data.size());
     for (unsigned i = 0; i < data.size(); ++i) {
       indices[i] = i;
@@ -224,20 +252,10 @@ void RunParent(vector<Datum>& data, unsigned num_iterations, vector<Workload>& w
     }
 
     // Wait for each child to finish training its load
+    vector<cnn::real> losses(num_children);
     for(unsigned cid = 0; cid < num_children; ++cid) {
-      ms[cid] = ReadReal(workloads[cid].c2p[0]);
-      bs[cid] = ReadReal(workloads[cid].c2p[0]);
       losses[cid] = ReadReal(workloads[cid].c2p[0]);
     }
-
-    cerr << "ID\tm\tb\tloss" << endl;
-    cerr << "============================" << endl;
-    for (unsigned cid = 0; cid < num_children; ++cid) {
-      cerr << cid << "\t" << ms[cid] << "\t" << bs[cid] << "\t" << losses[cid] << endl;
-    }
-
-    // TODO: This is currently uneffective because it doesn't affect the Trainers on the child processes
-    trainer->update_epoch();
 
     cnn::real loss = SumValues(losses) / data.size();
     cerr << iter << "\t" << "loss = " << loss << endl; 
@@ -256,27 +274,24 @@ void RunParent(vector<Datum>& data, unsigned num_iterations, vector<Workload>& w
 int main(int argc, char** argv) {
   cnn::Initialize(argc, argv, 0, true);
 
-  if (argc < 2) {
-    cerr << "Usage: " << argv[0] << " data.txt" << endl;
-    cerr << "Where data.txt contains tab-delimited pairs of floats." << endl;
+  if (argc < 4) {
+    cerr << "Usage: " << argv[0] << " cores corpus.txt dev.txt" << endl;
     return 1;
   }
-  unsigned num_iterations = (argc >= 3) ? atoi(argv[2]) : 10;
-  vector<Datum> data = ReadData(argv[1]);
+  num_children = atoi(argv[1]);
+  kSOS = d.Convert("<s>");
+  kEOS = d.Convert("</s>");
+  assert (num_children > 0 && num_children <= 64);
+
+  vector<Datum> data = ReadData(argv[2]);
+  vector<Datum> dev_data = ReadData(argv[3]);
   vector<Workload> workloads(num_children);
 
   Model model; 
-  //SimpleSGDTrainer sgd(&model, 0.0, 0.001);
-  AdamTrainer sgd(&model, 0.0);
+  SimpleSGDTrainer sgd(&model, 0.0);
+  //AdamTrainer sgd(&model, 0.0);
 
-  ComputationGraph cg;
-  cnn::real x_value, y_value;
-  Parameters* m_param = model.add_parameters({1, 1});
-  Parameters* b_param = model.add_parameters({1});
-  ModelParameters model_params = {m_param, b_param};
-  BuildComputationGraph(cg, model_params, &x_value, &y_value);
-
-  shared_memory = GetSharedMemory();
+  RNNLanguageModel<LSTMBuilder> rnnlm(model);
 
   for (unsigned cid = 0; cid < num_children; cid++) {
     pipe(workloads[cid].p2c);
@@ -285,9 +300,9 @@ int main(int argc, char** argv) {
 
   unsigned cid = SpawnChildren(workloads);
   if (cid < num_children) {
-    return RunChild(cid, cg, &sgd, workloads, data, x_value, y_value, model_params);
+    return RunChild(cid, rnnlm, &sgd, workloads, data);
   }
   else {
-    RunParent(data, num_iterations, workloads, model_params, &sgd);
+    RunParent(data, dev_data, workloads);
   }
 }
