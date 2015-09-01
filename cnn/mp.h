@@ -20,7 +20,9 @@
 
 namespace cnn {
   namespace mp {
-    const std::string queue_name = "cnn_mp_work_queue"; // TODO 
+    // TODO: Pass this around instead of having it be global
+    std::string queue_name = "cnn_mp_work_queue";
+
     // Some simple functions that do IO to/from pipes.
     // These are used to send data from child processes
     // to the parent process or vice/versa.
@@ -109,7 +111,7 @@ namespace cnn {
     };
 
     template<class D>
-    void RunParent(std::vector<D>& data, std::vector<D>& dev_data,
+    void RunParent(const std::vector<D>& data, const std::vector<D>& dev_data,
        std::vector<Workload>& workloads, unsigned num_iterations) {
       const unsigned num_children = workloads.size();
       boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
@@ -117,7 +119,9 @@ namespace cnn {
       for (unsigned i = 0; i < data.size(); ++i) {
         indices[i] = i;
       }
+
       for (unsigned iter = 0; iter < num_iterations; ++iter) {
+        // Shuffle the data indices
         random_shuffle(indices.begin(), indices.end());
 
         // Tell all the children to start up
@@ -193,9 +197,17 @@ namespace cnn {
       return 0;
     }
 
+    std::string GenerateQueueName() {
+      std::ostringstream ss;
+      ss << "cnn_mp_work_queue";
+      ss << rand();
+      return ss.str();
+    }
+
     template<class D>
-    void RunMultiProcess(unsigned num_children, ILearner<D>* learner, Trainer* trainer, std::vector<D>& train_data,
-        std::vector<D>& dev_data, unsigned num_iterations) {
+    void RunMultiProcess(unsigned num_children, ILearner<D>* learner, Trainer* trainer, const std::vector<D>& train_data,
+        const std::vector<D>& dev_data, unsigned num_iterations) {
+      queue_name = GenerateQueueName();
       std::vector<Workload> workloads = CreateWorkloads(num_children);
       unsigned cid = SpawnChildren(workloads);
       if (cid < num_children) {
