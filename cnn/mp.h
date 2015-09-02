@@ -7,6 +7,9 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+#include <boost/interprocess/sync/interprocess_semaphore.hpp>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -20,8 +23,27 @@
 
 namespace cnn {
   namespace mp {
-    // TODO: Pass this around instead of having it be global
+    // TODO: Pass these around instead of having them be global
     std::string queue_name = "cnn_mp_work_queue";
+    std::string shared_memory_name = "cnn_mp_shared_memory"; 
+
+    template <class R>
+    struct SharedObject {
+      SharedObject() : reporter(), mutex(1) {}
+      R reporter;
+      boost::interprocess::interprocess_semaphore mutex;
+    };
+
+    /// XXX: We never delete these objects
+    template <class R>
+    SharedObject<R>* GetSharedMemory() {
+      auto shm = new boost::interprocess::shared_memory_object(boost::interprocess::create_only, shared_memory_name.c_str(), boost::interprocess::read_write);
+      shm->truncate(sizeof(SharedObject<R>));
+      auto region = new boost::interprocess::mapped_region (*shm, boost::interprocess::read_write);
+      void* addr = region->get_address();
+      SharedObject<R>* obj = new (addr) SharedObject<R>();
+      return obj;
+    }
 
     // Some simple functions that do IO to/from pipes.
     // These are used to send data from child processes
@@ -110,6 +132,11 @@ namespace cnn {
         virtual cnn::real LearnFromDatum(const D& datum) = 0;
     };
 
+    class IStatusReporter {
+    public:
+      virtual void Update(unsigned i, cnn::real loss) = 0;
+    };
+
     template<class D>
     void RunParent(const std::vector<D>& data, const std::vector<D>& dev_data,
        std::vector<Workload>& workloads, unsigned num_iterations) {
@@ -159,16 +186,15 @@ namespace cnn {
       }
     }
 
-    template <class D>
+    template <class D, class R>
     int RunChild(unsigned cid, ILearner<D>* learner, Trainer* trainer,
-        std::vector<Workload>& workloads, const std::vector<D>& data) {
+        std::vector<Workload>& workloads, const std::vector<D>& data, SharedObject<R>* shared_memory) {
       const unsigned num_children = workloads.size();
       assert (cid >= 0 && cid < num_children); 
       unsigned i;
       unsigned priority;
       boost::interprocess::message_queue::size_type recvd_size;
-      boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
-     
+      boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned)); 
       while (true) {
         // Check if the parent wants us to exit
         bool cont = false;
@@ -186,8 +212,13 @@ namespace cnn {
           }
           assert (i < data.size());
           const D& datum = data[i];
-          loss += learner->LearnFromDatum(datum);
+          cnn::real datum_loss = learner->LearnFromDatum(datum);
+          loss += datum_loss;
           trainer->update(1.0);
+
+          shared_memory->mutex.wait();
+          shared_memory->reporter.Update(i, datum_loss);
+          shared_memory->mutex.post();
         }
         trainer->update_epoch();
 
@@ -204,14 +235,31 @@ namespace cnn {
       return ss.str();
     }
 
-    template<class D>
+    std::string GenerateSharedMemoryName() {
+      std::ostringstream ss;
+      ss << "cnn_mp_shared_memory";
+      ss << rand();
+      return ss.str();
+    }
+
+    template<class D, class R>
     void RunMultiProcess(unsigned num_children, ILearner<D>* learner, Trainer* trainer, const std::vector<D>& train_data,
         const std::vector<D>& dev_data, unsigned num_iterations) {
       queue_name = GenerateQueueName();
+      shared_memory_name = GenerateSharedMemoryName();
+
+      struct shm_remove
+      {
+        shm_remove() { boost::interprocess::shared_memory_object::remove(queue_name.c_str()); }
+        ~shm_remove(){ boost::interprocess::shared_memory_object::remove(queue_name.c_str()); }
+      } remover;
+
+      SharedObject<R>* shared_memory = GetSharedMemory<R>();
+
       std::vector<Workload> workloads = CreateWorkloads(num_children);
       unsigned cid = SpawnChildren(workloads);
       if (cid < num_children) {
-        RunChild(cid, learner, trainer, workloads, train_data);
+        RunChild(cid, learner, trainer, workloads, train_data, shared_memory);
       }
       else {
         RunParent(train_data, dev_data, workloads, num_iterations);
