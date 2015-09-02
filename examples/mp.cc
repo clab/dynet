@@ -43,8 +43,9 @@ vector<Datum> ReadData(string filename) {
 template<class T, class D>
 class Learner : public ILearner<D> {
 public:
-  explicit Learner(RNNLanguageModel<T>& rnnlm) : rnnlm(rnnlm) {}
+  explicit Learner(RNNLanguageModel<T>& rnnlm, unsigned data_size) : rnnlm(rnnlm) {}
   ~Learner() {}
+
   cnn::real LearnFromDatum(const D& datum) {
     ComputationGraph cg;
     rnnlm.BuildLMGraph(datum, cg);
@@ -52,8 +53,30 @@ public:
     cg.backward();
     return loss;
   }
+
 private:
   RNNLanguageModel<T>& rnnlm;
+};
+
+class StatusReporter : public IStatusReporter {
+public:
+  StatusReporter() : data_size(1000), batch_count(0), datum_count(0), batch_loss(0) {}
+  void Update(unsigned index, cnn::real loss) {
+    batch_loss += loss;
+    datum_count++;
+    batch_count++;
+    if (batch_count == 50) {
+      cerr << "--" << (1.0 * datum_count / data_size) << " avg loss = " << batch_loss / batch_count << endl;
+      cerr.flush();
+      batch_count = 0;
+      batch_loss = 0.0;
+    }
+  } 
+private:
+  unsigned data_size;
+  unsigned batch_count;
+  unsigned datum_count;
+  cnn::real batch_loss;
 };
 
 int main(int argc, char** argv) {
@@ -61,13 +84,14 @@ int main(int argc, char** argv) {
     cerr << "Usage: " << argv[0] << " cores corpus.txt dev.txt [iterations]" << endl;
     return 1;
   }
+  srand(time(NULL));
   unsigned num_children = atoi(argv[1]);
-  assert (num_children > 0 && num_children <= 64);
+  assert (num_children <= 64);
   vector<Datum> data = ReadData(argv[2]);
   vector<Datum> dev_data = ReadData(argv[3]);
   unsigned num_iterations = (argc >= 5) ? atoi(argv[4]) : UINT_MAX;
 
-  cnn::Initialize(argc, argv, 0, true);
+  cnn::Initialize(argc, argv, 1, true);
 
   Model model;
   SimpleSGDTrainer sgd(&model, 0.0); 
@@ -75,8 +99,10 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> rnnlm(model);
 
   // TODO: This shouldn't be necessary if we pick a new, random queue name every run
+  //queue_name = GenerateQueueName();
+  //cerr << "Creating message queue with name: " << queue_name << endl;
   message_queue::remove(queue_name.c_str());
 
-  Learner<LSTMBuilder, Datum> learner(rnnlm);
-  RunMultiProcess(num_children, &learner, &sgd, data, dev_data, num_iterations);
+  Learner<LSTMBuilder, Datum> learner(rnnlm, data.size());
+  RunMultiProcess<Datum, StatusReporter>(num_children, &learner, &sgd, data, dev_data, num_iterations);
 }
