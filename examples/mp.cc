@@ -77,12 +77,6 @@ int main(int argc, char** argv) {
   // TODO: This shouldn't be necessary if we pick a new, random queue name every run
   message_queue::remove(queue_name.c_str());
 
-  ILearner<Datum>* learner = new Learner<LSTMBuilder, Datum>(rnnlm);
-  RunMultiProcess(num_children, learner, &sgd, data, dev_data, num_iterations);
-
-  if (learner != NULL) {
-    delete learner;
-  }
-  learner = NULL;
-  cnn::Cleanup();
+  Learner<LSTMBuilder, Datum> learner(rnnlm);
+  RunMultiProcess(num_children, &learner, &sgd, data, dev_data, num_iterations);
 }
