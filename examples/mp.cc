@@ -13,8 +13,6 @@
 #include <vector>
 /*
 TODO:
-- Can we move the data vector into shared memory so that we can shuffle it
-  between iterations and not have to send huge vectors of integers around?
 - The shadow params in the trainers need to be shared.
 */
 
@@ -46,37 +44,18 @@ public:
   explicit Learner(RNNLanguageModel<T>& rnnlm, unsigned data_size) : rnnlm(rnnlm) {}
   ~Learner() {}
 
-  cnn::real LearnFromDatum(const D& datum) {
+  cnn::real LearnFromDatum(const D& datum, bool learn) {
     ComputationGraph cg;
     rnnlm.BuildLMGraph(datum, cg);
     cnn::real loss = as_scalar(cg.forward());
-    cg.backward();
+    if (learn) {
+      cg.backward();
+    }
     return loss;
   }
 
 private:
   RNNLanguageModel<T>& rnnlm;
-};
-
-class StatusReporter : public IStatusReporter {
-public:
-  StatusReporter() : data_size(1000), batch_count(0), datum_count(0), batch_loss(0) {}
-  void Update(unsigned index, cnn::real loss) {
-    batch_loss += loss;
-    datum_count++;
-    batch_count++;
-    if (batch_count == 50) {
-      cerr << "--" << (1.0 * datum_count / data_size) << " avg loss = " << batch_loss / batch_count << endl;
-      cerr.flush();
-      batch_count = 0;
-      batch_loss = 0.0;
-    }
-  } 
-private:
-  unsigned data_size;
-  unsigned batch_count;
-  unsigned datum_count;
-  cnn::real batch_loss;
 };
 
 int main(int argc, char** argv) {
@@ -90,19 +69,18 @@ int main(int argc, char** argv) {
   vector<Datum> data = ReadData(argv[2]);
   vector<Datum> dev_data = ReadData(argv[3]);
   unsigned num_iterations = (argc >= 5) ? atoi(argv[4]) : UINT_MAX;
+  unsigned dev_frequency = 5000;
+  unsigned report_frequency = 10;
 
   cnn::Initialize(argc, argv, 1, true);
 
   Model model;
-  SimpleSGDTrainer sgd(&model, 0.0); 
+  SimpleSGDTrainer sgd(&model, 0.0, 0.2);
+  //AdagradTrainer sgd(&model, 0.0);
+  //AdamTrainer sgd(&model, 0.0);
 
   RNNLanguageModel<LSTMBuilder> rnnlm(model);
 
-  // TODO: This shouldn't be necessary if we pick a new, random queue name every run
-  //queue_name = GenerateQueueName();
-  //cerr << "Creating message queue with name: " << queue_name << endl;
-  message_queue::remove(queue_name.c_str());
-
   Learner<LSTMBuilder, Datum> learner(rnnlm, data.size());
-  RunMultiProcess<Datum, StatusReporter>(num_children, &learner, &sgd, data, dev_data, num_iterations);
+  RunMultiProcess<Datum>(num_children, &learner, &sgd, data, dev_data, num_iterations, dev_frequency, report_frequency);
 }

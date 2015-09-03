@@ -87,27 +87,6 @@ class AlignedMemoryPool {
   void sys_alloc(size_t cap) {
     capacity = round_up_align(cap);
     if (shared) {
-      /*char* shared_filename = tmpnam(NULL);
-      open(shared_filename, O_WRONLY|O_CREAT|O_NOCTTY|O_NONBLOCK, 0666);
-      key_t shm_key = ftok(shared_filename, 'R');
-      if (shm_key == -1) {
-        std::cerr << "Unable to get shared memory key" << std::endl;
-        abort();
-      }
-      int shm_id = shmget(shm_key, capacity, 0644 | IPC_CREAT);
-      if (shm_id == -1) {
-        std::cerr << "Unable to create shared memory" << std::endl;
-        std::cerr << "Requested shared memory size: " << capacity << std::endl;
-        std::cerr << "Verify that this is less than the maximum shared memory size, which" << std::endl;
-        std::cerr << "can be found in /proc/sys/kernel/shmmax" << std::endl;
-        perror("shmget");
-        abort();
-      }
-      mem = shmat(shm_id, nullptr, 0);
-      if (mem == (void*)-1) {
-        std::cerr << "Unable to get shared memory pointer" << std::endl;
-        abort();
-      }*/
       mem = mmap(NULL, capacity, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
     }
     else {

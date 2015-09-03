@@ -27,23 +27,11 @@ namespace cnn {
     std::string queue_name = "cnn_mp_work_queue";
     std::string shared_memory_name = "cnn_mp_shared_memory"; 
 
-    template <class R>
-    struct SharedObject {
-      SharedObject() : reporter(), mutex(1) {}
-      R reporter;
-      boost::interprocess::interprocess_semaphore mutex;
+    struct WorkloadHeader {
+      bool is_dev_set;
+      bool end_of_epoch;
+      unsigned report_frequency;
     };
-
-    /// XXX: We never delete these objects
-    template <class R>
-    SharedObject<R>* GetSharedMemory() {
-      auto shm = new boost::interprocess::shared_memory_object(boost::interprocess::create_only, shared_memory_name.c_str(), boost::interprocess::read_write);
-      shm->truncate(sizeof(SharedObject<R>));
-      auto region = new boost::interprocess::mapped_region (*shm, boost::interprocess::read_write);
-      void* addr = region->get_address();
-      SharedObject<R>* obj = new (addr) SharedObject<R>();
-      return obj;
-    }
 
     // Some simple functions that do IO to/from pipes.
     // These are used to send data from child processes
@@ -56,26 +44,6 @@ namespace cnn {
 
     void WriteReal(int pipe, cnn::real v) {
       write(pipe, &v, sizeof(cnn::real));
-    }
-
-    template <typename T>
-    void WriteIntVector(int pipe, const std::vector<T>& vec) {
-      unsigned length = vec.size();
-      write(pipe, &length, sizeof(unsigned));
-      for (T v : vec) {
-        write(pipe, &v, sizeof(T));
-      }
-    }
-
-    template<typename T>
-   std::vector<T> ReadIntVector(int pipe) {
-      unsigned length;
-      read(pipe, &length, sizeof(unsigned));
-      std::vector<T> vec(length);
-      for (unsigned i = 0; i < length; ++i) {
-        read(pipe, &vec[i], sizeof(T));
-      }
-      return vec;
     }
 
     cnn::real SumValues(const std::vector<cnn::real>& values) {
@@ -129,53 +97,75 @@ namespace cnn {
     class ILearner {
       public:
         virtual ~ILearner() {}
-        virtual cnn::real LearnFromDatum(const D& datum) = 0;
+        virtual cnn::real LearnFromDatum(const D& datum, bool learn) = 0;
     };
 
-    class IStatusReporter {
-    public:
-      virtual void Update(unsigned i, cnn::real loss) = 0;
-    };
-
-    template<class D>
-    void RunParent(const std::vector<D>& data, const std::vector<D>& dev_data,
-       std::vector<Workload>& workloads, unsigned num_iterations) {
+    // Called by the parent to process a chunk of data
+    cnn::real RunDataSet(std::vector<unsigned>::iterator begin, std::vector<unsigned>::iterator end, const std::vector<Workload>& workloads,
+        boost::interprocess::message_queue& mq, const WorkloadHeader& header) {
       const unsigned num_children = workloads.size();
-      boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
-      std::vector<unsigned> indices(data.size());
-      for (unsigned i = 0; i < data.size(); ++i) {
-        indices[i] = i;
+
+      // Tell all the children to start up
+      for (unsigned cid = 0; cid < num_children; ++cid) {
+        bool cont = true;
+        write(workloads[cid].p2c[1], &cont, sizeof(bool));
+        write(workloads[cid].p2c[1], &header, sizeof(WorkloadHeader));
       }
 
+      // Write all the indices to the queue for the children to process
+      for (auto curr = begin; curr != end; ++curr) {
+        unsigned i = *curr;
+        mq.send(&i, sizeof(i), 0);
+      }
+
+      // Send a bunch of stop messages to the children
+      for (unsigned cid = 0; cid < num_children; ++cid) {
+        unsigned stop = -1U;
+        mq.send(&stop, sizeof(stop), 0);
+      }
+
+      // Wait for each child to finish training its load
+      std::vector<cnn::real> losses(num_children);
+      for(unsigned cid = 0; cid < num_children; ++cid) {
+        losses[cid] = ReadReal(workloads[cid].c2p[0]);
+      }
+
+      cnn::real loss = SumValues(losses) / std::distance(begin, end);
+      return loss;
+    }
+
+    template<class D>
+    void RunParent(const std::vector<D>& train_data, const std::vector<D>& dev_data,
+       std::vector<Workload>& workloads, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
+      const unsigned num_children = workloads.size();
+      boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
+      std::vector<unsigned> train_indices(train_data.size());
+      std::iota(train_indices.begin(), train_indices.end(), 0);
+
+      std::vector<unsigned> dev_indices(dev_data.size());
+      std::iota(dev_indices.begin(), dev_indices.end(), 0);
+
       for (unsigned iter = 0; iter < num_iterations; ++iter) {
-        // Shuffle the data indices
-        random_shuffle(indices.begin(), indices.end());
+        // Shuffle the training data indices
+        random_shuffle(train_indices.begin(), train_indices.end());
 
-        // Tell all the children to start up
-        for (unsigned cid = 0; cid < num_children; ++cid) {
-          bool cont = true;
-          write(workloads[cid].p2c[1], &cont, sizeof(bool));
+        cnn::real train_loss = 0.0;
+
+        std::vector<unsigned>::iterator begin = train_indices.begin();
+        while (begin != train_indices.end()) {
+          std::vector<unsigned>::iterator end = begin + dev_frequency;
+          if (end > train_indices.end()) {
+            end = train_indices.end();
+          }
+          double fractional_iter = iter + 1.0 * distance(train_indices.begin(), end) / train_indices.size();
+          train_loss += RunDataSet(begin, end, workloads, mq, {false, end == train_indices.end(), report_frequency});
+          std::cerr << fractional_iter << "\t" << "loss = " << train_loss << std::endl;
+
+          cnn::real dev_loss = RunDataSet(dev_indices.begin(), dev_indices.end(), workloads, mq, {true, false, 50});
+          std::cerr << fractional_iter << "\t" << "dev loss = " << dev_loss << std::endl;
+
+          begin = end;
         }
-
-        // Write all the indices to the queue for the children to process
-        for (unsigned i : indices) {
-          mq.send(&i, sizeof(i), 0);
-        }
-
-        // Send a bunch of stop messages to the children
-        for (unsigned cid = 0; cid < num_children; ++cid) {
-          unsigned stop = -1U;
-          mq.send(&stop, sizeof(stop), 0);
-        }
-
-        // Wait for each child to finish training its load
-        std::vector<cnn::real> losses(num_children);
-        for(unsigned cid = 0; cid < num_children; ++cid) {
-          losses[cid] = ReadReal(workloads[cid].c2p[0]);
-        }
-
-        cnn::real loss = SumValues(losses) / data.size();
-        std::cerr << iter << "\t" << "loss = " << loss << std::endl; 
       }
 
       // Kill all children one by one and wait for them to exit
@@ -186,9 +176,10 @@ namespace cnn {
       }
     }
 
-    template <class D, class R>
+    template <class D>
     int RunChild(unsigned cid, ILearner<D>* learner, Trainer* trainer,
-        std::vector<Workload>& workloads, const std::vector<D>& data, SharedObject<R>* shared_memory) {
+        std::vector<Workload>& workloads, const std::vector<D>& train_data,
+        const std::vector<D>& dev_data) {
       const unsigned num_children = workloads.size();
       assert (cid >= 0 && cid < num_children); 
       unsigned i;
@@ -203,27 +194,42 @@ namespace cnn {
           break;
         }
 
+        // Check if we're running on the training data or the dev data
+        WorkloadHeader header;
+        read(workloads[cid].p2c[0], &header, sizeof(WorkloadHeader));
+
         // Run the actual training loop
-        cnn::real loss = 0;
+        cnn::real total_loss = 0;
+        cnn::real batch_loss = 0;
+        unsigned batch_counter = 0;
         while (true) {
           mq.receive(&i, sizeof(i), recvd_size, priority);
           if (i == -1U) {
             break;
           }
-          assert (i < data.size());
-          const D& datum = data[i];
-          cnn::real datum_loss = learner->LearnFromDatum(datum);
-          loss += datum_loss;
-          trainer->update(1.0);
-
-          shared_memory->mutex.wait();
-          shared_memory->reporter.Update(i, datum_loss);
-          shared_memory->mutex.post();
+          assert (i < (header.is_dev_set ? dev_data.size() : train_data.size()));
+          const D& datum = (header.is_dev_set ? dev_data[i] : train_data[i]);
+          cnn::real datum_loss = learner->LearnFromDatum(datum, !header.is_dev_set);
+          total_loss += datum_loss;
+          batch_loss += datum_loss;
+          batch_counter++;
+          if (!header.is_dev_set) {
+            trainer->update(1.0);
+          }
+          if (batch_counter == header.report_frequency) {
+            if (cid == 0) {
+              std::cerr << batch_loss / batch_counter << std::endl;
+            }
+            batch_loss = 0;
+            batch_counter = 0;
+          }
         }
-        trainer->update_epoch();
+        if (header.end_of_epoch) {
+          trainer->update_epoch();
+        }
 
         // Let the parent know that we're done and return the loss value
-        WriteReal(workloads[cid].c2p[1], loss);
+        WriteReal(workloads[cid].c2p[1], total_loss);
       }
       return 0;
     }
@@ -235,34 +241,18 @@ namespace cnn {
       return ss.str();
     }
 
-    std::string GenerateSharedMemoryName() {
-      std::ostringstream ss;
-      ss << "cnn_mp_shared_memory";
-      ss << rand();
-      return ss.str();
-    }
-
-    template<class D, class R>
+    template<class D>
     void RunMultiProcess(unsigned num_children, ILearner<D>* learner, Trainer* trainer, const std::vector<D>& train_data,
-        const std::vector<D>& dev_data, unsigned num_iterations) {
-      queue_name = GenerateQueueName();
-      shared_memory_name = GenerateSharedMemoryName();
-
-      struct shm_remove
-      {
-        shm_remove() { boost::interprocess::shared_memory_object::remove(queue_name.c_str()); }
-        ~shm_remove(){ boost::interprocess::shared_memory_object::remove(queue_name.c_str()); }
-      } remover;
-
-      SharedObject<R>* shared_memory = GetSharedMemory<R>();
+        const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
+      queue_name = GenerateQueueName(); 
 
       std::vector<Workload> workloads = CreateWorkloads(num_children);
       unsigned cid = SpawnChildren(workloads);
       if (cid < num_children) {
-        RunChild(cid, learner, trainer, workloads, train_data, shared_memory);
+        RunChild(cid, learner, trainer, workloads, train_data, dev_data);
       }
       else {
-        RunParent(train_data, dev_data, workloads, num_iterations);
+        RunParent(train_data, dev_data, workloads, num_iterations, dev_frequency, report_frequency);
       }
     }
   }
