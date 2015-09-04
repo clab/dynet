@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <sys/shm.h>
 #include <iostream>
+#include <limits>
 #include <fstream>
 #include <vector>
 #include <utility>
@@ -105,6 +106,7 @@ namespace cnn {
       public:
         virtual ~ILearner() {}
         virtual cnn::real LearnFromDatum(const D& datum, bool learn) = 0;
+        virtual void SaveModel() = 0;
     };
 
     // Called by the parent to process a chunk of data
@@ -142,7 +144,7 @@ namespace cnn {
     }
 
     template<class D>
-    void RunParent(const std::vector<D>& train_data, const std::vector<D>& dev_data,
+    void RunParent(const std::vector<D>& train_data, const std::vector<D>& dev_data, ILearner<D>* learner,
        std::vector<Workload>& workloads, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
       const unsigned num_children = workloads.size();
       boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
@@ -152,6 +154,7 @@ namespace cnn {
       std::vector<unsigned> dev_indices(dev_data.size());
       std::iota(dev_indices.begin(), dev_indices.end(), 0);
 
+      cnn::real best_dev_loss = std::numeric_limits<cnn::real>::max();
       for (unsigned iter = 0; iter < num_iterations; ++iter) {
         // Shuffle the training data indices
         random_shuffle(train_indices.begin(), train_indices.end());
@@ -169,7 +172,11 @@ namespace cnn {
           std::cerr << fractional_iter << "\t" << "loss = " << train_loss << std::endl;
 
           cnn::real dev_loss = RunDataSet(dev_indices.begin(), dev_indices.end(), workloads, mq, {true, false, report_frequency});
-          std::cerr << fractional_iter << "\t" << "dev loss = " << dev_loss << std::endl;
+          bool new_best = (dev_loss < best_dev_loss);
+          std::cerr << fractional_iter << "\t" << "dev loss = " << dev_loss << (new_best ? " (New best!)" : "") << std::endl;
+          if (new_best) {
+            learner->SaveModel();
+          }
 
           begin = end;
         }
@@ -262,7 +269,7 @@ namespace cnn {
         RunChild(cid, learner, trainer, workloads, train_data, dev_data);
       }
       else {
-        RunParent(train_data, dev_data, workloads, num_iterations, dev_frequency, report_frequency);
+        RunParent(train_data, dev_data, learner, workloads, num_iterations, dev_frequency, report_frequency);
       }
     }
   }
