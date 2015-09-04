@@ -54,6 +54,8 @@ public:
     return loss;
   }
 
+  void SaveModel() {}
+
 private:
   RNNLanguageModel<T>& rnnlm;
 };
