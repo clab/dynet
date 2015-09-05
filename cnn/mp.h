@@ -176,6 +176,7 @@ namespace cnn {
           std::cerr << fractional_iter << "\t" << "dev loss = " << dev_loss << (new_best ? " (New best!)" : "") << std::endl;
           if (new_best) {
             learner->SaveModel();
+            best_dev_loss = dev_loss;
           }
 
           begin = end;
