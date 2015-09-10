@@ -83,6 +83,10 @@ class AlignedMemoryPool {
     std::memset(mem, 0, used);
 #endif
   }
+
+  bool is_shared() {
+    return shared;
+  }
  private:
   void sys_alloc(size_t cap) {
     capacity = round_up_align(cap);
