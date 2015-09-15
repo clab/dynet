@@ -193,6 +193,17 @@ Dim Dropout::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string BlockDropout::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "block_dropout(" << arg_names[0] << ",dropout_probability=" << dropout_probability << ')';
+  return s.str();
+}
+
+Dim BlockDropout::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}
+
 string ConstantPlusX::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << c << " + " << arg_names[0];

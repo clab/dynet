@@ -59,6 +59,7 @@ Expression min(const Expression& x, const Expression& y);
 Expression max(const Expression& x, const Expression& y);
 Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
+Expression block_dropout(const Expression& x, real p);
 
 Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
