@@ -120,6 +120,9 @@ cdef class LookupParameters:
             return (self.thisptr.values.size(), self.thisptr.dim.rows(), self.thisptr.dim.cols())
         return (self.thisptr.values.size(), self.thisptr.dim.rows())
 
+    def __getitem__(self, int i):
+        return lookup(self, i)
+
     cpdef init_row(self, unsigned i, vector[float] row):
         self.thisptr.Initialize(i, row)
 
@@ -575,7 +578,6 @@ cpdef Expression average(list xs):
     for x in xs: 
         ensure_freshness(x) 
         cvec.push_back(x.c())
-        print >> sys.stderr,"pushing",cvec.back().i
     return Expression.from_cexpr(x.cg_version, c_average(cvec))
 
 cpdef Expression concatenate_cols(list xs):
@@ -775,6 +777,41 @@ cdef class RNNState: # {{{
 
     def b(self): return self.builder
     #}}}
+
+
+# TODO: do at least minimal testing for this
+cdef class StackedRNNState:
+    cdef list states
+    cdef StackedRNNState prev
+    def __init__(self, list states, StackedRNNState prev=None):
+        self.states = states
+        self.prev = prev
+
+    cpdef StackedRNNState add_input(self, Expression x):
+        cdef list next_states
+        next_states = []
+        for s in self.states:
+            next_states.append(s.add_input(x))
+            x = next_states[-1].output()
+        return StackedRNNState(next_states, self)
+
+    def output(self): return self.states[-1].output()
+
+    def prev(self): return self.prev
+    def h(self): return [s.h() for s in self.states]
+    def s(self): return [s.s() for s in self.states]
+
+    def add_inputs(self, xs):
+        """
+        returns the list of states obtained by adding the given inputs
+        to the current state, one by one.
+        """
+        states = []
+        cur = self
+        for x in xs:
+            cur = cur.add_input(x)
+            states.append(cur)
+        return states
 
 # }}}
 
