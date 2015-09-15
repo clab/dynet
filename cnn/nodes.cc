@@ -301,6 +301,27 @@ void Dropout::backward(const vector<const Tensor*>& xs,
   (*dEdxi) += (*dEdf).cwiseProduct(*m);
 };
 
+size_t BlockDropout::aux_storage_size() const {
+  // we just need to remember whether this entire block is turned on (1.0) or off (0.0)
+  return 1 * sizeof(float);
+}
+
+void BlockDropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  bernoulli_distribution distribution(dropout_probability);
+  float block_multiplier = distribution(*rndeng)? 1.0 : 0.0;
+  *(static_cast<float*>(aux_mem)) = block_multiplier;
+  (*fx) = **xs[0] * block_multiplier;
+}
+
+void BlockDropout::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  float block_multiplier = *(static_cast<float*>(aux_mem));
+  (*dEdxi) += (*dEdf) * block_multiplier;
+}
+
 void ConstantPlusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   *fx = x.unaryExpr(FConstantPlus(c));
