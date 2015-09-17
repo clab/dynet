@@ -307,8 +307,13 @@ size_t BlockDropout::aux_storage_size() const {
 }
 
 void BlockDropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  bernoulli_distribution distribution(dropout_probability);
+  bernoulli_distribution distribution(1.0 - dropout_probability);
   float block_multiplier = distribution(*rndeng)? 1.0 : 0.0;
+  block_multiplier = 
+    dropout_probability == 1.0? 0.0 : block_multiplier / (1.0 - dropout_probability);
+  if (dropout_probability > 1.0 || dropout_probability < 0.0) {
+    assert(false && "dropout probability must be in the range [0, 1]");
+  }
   *(static_cast<float*>(aux_mem)) = block_multiplier;
   (*fx) = **xs[0] * block_multiplier;
 }
