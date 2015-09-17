@@ -39,7 +39,7 @@ vector<Datum> ReadData(string filename) {
 }
 
 template<class T, class D>
-class Learner : public ILearner<D> {
+class Learner : public ILearner<D, cnn::real> {
 public:
   explicit Learner(RNNLanguageModel<T>& rnnlm, unsigned data_size) : rnnlm(rnnlm) {}
   ~Learner() {}

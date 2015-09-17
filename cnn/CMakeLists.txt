@@ -14,6 +14,7 @@ set(cnn_library_SRCS
     init.cc
     lstm.cc
     model.cc
+    mp.cc
     nodes.cc
     nodes-common.cc
     param-nodes.cc
@@ -45,6 +46,7 @@ set(cnn_library_HDRS
     init.h
     lstm.h
     model.h
+    mp.h
     nodes.h
     param-nodes.h
     random.h
