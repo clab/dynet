@@ -355,18 +355,21 @@ cdef class Expression: #{{{
     def __getslice__(self, int i, int j):
         return pickrange(self, i, j)
 
-    cpdef scalar_value(self):
+    cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        if recalculate: self.cg.forward()
         return c_as_scalar(self.cg.get_value(self.vindex))
 
-    cpdef vec_value(self):
+    cpdef vec_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        if recalculate: self.cg.forward()
         return c_as_vector(self.cg.get_value(self.vindex))
 
-    cpdef npvalue(self):
+    cpdef npvalue(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
         cdef CDim dim
+        if recalculate: self.cg.forward()
         t = self.cg.get_value(self.vindex)
         dim = t.d
         arr = np.array(c_as_vector(t))
@@ -374,9 +377,10 @@ cdef class Expression: #{{{
             arr = arr.reshape(dim.rows(), dim.cols(),order='F')
         return arr
 
-    cpdef value(self):
+    cpdef value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
+        if recalculate: self.cg.forward()
         t = self.cg.get_value(self.vindex)
         if t.d.ndims() == 2:
             return self.npvalue()
@@ -385,9 +389,10 @@ cdef class Expression: #{{{
         return vec
 
     # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
-    cpdef forward(self):
+    cpdef forward(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        self.cg.incremental_forward()
+        if recalculate: self.cg.forward()
+        else: self.cg.incremental_forward()
 
     cpdef backward(self):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
@@ -778,8 +783,7 @@ cdef class RNNState: # {{{
     def b(self): return self.builder
     #}}}
 
-
-# TODO: do at least minimal testing for this
+# StackedRNNState   TODO: do at least minimal testing for this #{{{
 cdef class StackedRNNState:
     cdef list states
     cdef StackedRNNState prev
@@ -812,6 +816,7 @@ cdef class StackedRNNState:
             cur = cur.add_input(x)
             states.append(cur)
         return states
+#}}}
 
 # }}}
 
