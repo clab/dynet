@@ -102,6 +102,10 @@ namespace detail {
 }
 
 template <typename T>
+inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
+inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
+
+template <typename T>
 inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
 

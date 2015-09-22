@@ -346,15 +346,45 @@ void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const 
 }
 
 void ConstantMinusX::backward(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
+                              const Tensor& fx,
+                              const Tensor& dEdf,
+                              unsigned i,
+                              Tensor& dEdxi) const {
 #if HAVE_CUDA
   gpu::vnegate_backward(dEdxi.d.size(), dEdf.v, dEdxi.v);
 #else
   *dEdxi -= *dEdf;
 #endif
+};
+
+void LogSumExp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  auto res = *fx;
+  // TODO implement so as to avoid underflow
+  res.setZero();
+  for (unsigned i = 0; i < xs.size(); ++i)
+    res.array() += (**xs[i]).array().exp();
+  res = res.array().log();
+}
+
+void LogSumExp::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  if (xs.size() == 0) {
+    *dEdxi += *dEdf;
+    return;
+  }
+  // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
+  //         = 1/{exp f(x)} * exp(x_i)
+  //         = exp(x_i - f(x))
+  auto d = *dEdxi;
+  d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
 };
 
 void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
