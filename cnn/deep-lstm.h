@@ -18,9 +18,9 @@ struct DeepLSTMBuilder : public RNNBuilder {
                            unsigned hidden_dim,
                            Model* model);
 
-  Expression back() const { return h.back().back(); }
-  std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
-  std::vector<Expression> final_s() const {
+  Expression back() const override { return h.back().back(); }
+  std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
+  std::vector<Expression> final_s() const override {
     std::vector<Expression> ret = (c.size() == 0 ? c0 : c.back());
     for(auto my_h : final_h()) ret.push_back(my_h);
     return ret;
