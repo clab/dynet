@@ -470,6 +470,20 @@ struct BinaryLogLoss : public Node {
                   Tensor& dEdxi) const override;
 };
 
+// y = \log \sum_i \exp x_i
+// done in log space carefully to avoid over/underflow issues
+struct LogSumExp : public Node {
+  template <typename T> explicit LogSumExp(const T& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const override;
+};
+
 // y = \sum_i x_i
 struct Sum : public Node {
   template <typename T> explicit Sum(const T& a) : Node(a) {}
