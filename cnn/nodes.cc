@@ -357,18 +357,26 @@ void ConstantMinusX::backward(const vector<const Tensor*>& xs,
 #endif
 };
 
+template <class T>
+EIGEN_STRONG_INLINE float logsumexp(const T& x) {
+  const float m = x.maxCoeff();
+  float z = 0;
+  for (unsigned i = 0; i < x.rows(); ++i)
+    z += CNN_EXPF(x(i,0) - m);
+  return m + logf(z);
+}
+
 void LogSumExp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) {
     fx.v = xs[0]->v;
     return;
   }
-  auto res = *fx;
   // TODO implement so as to avoid underflow
-  res.setZero();
+  Eigen::Matrix<float, Eigen::Dynamic,Eigen::Dynamic> v(xs.size(), 1);
   for (unsigned i = 0; i < xs.size(); ++i)
-    res.array() += (**xs[i]).array().exp();
-  res = res.array().log();
+    v(i,0) = (**xs[i])(0,0);
+  fx.v[0] = logsumexp(v);
 }
 
 void LogSumExp::backward(const vector<const Tensor*>& xs,
@@ -718,15 +726,6 @@ void MaxPooling1D::backward(const vector<const Tensor*>& xs,
     dEdx(ind[i], 0) = dEdf(i, 0);
   return dEdx;
 #endif
-}
-
-template <class T>
-EIGEN_STRONG_INLINE float logsumexp(const T& x) {
-  const float m = x.maxCoeff();
-  float z = 0;
-  for (unsigned i = 0; i < x.rows(); ++i)
-    z += CNN_EXPF(x(i,0) - m);
-  return m + logf(z);
 }
 
 void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {

@@ -110,6 +110,10 @@ inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
 
 template <typename T>
+inline Expression max(const T& xs) { return detail::f<Max>(xs); }
+inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
+
+template <typename T>
 inline Expression average(const T& xs) { return detail::f<Average>(xs); }
 inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs); }
 
