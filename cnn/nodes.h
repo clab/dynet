@@ -21,7 +21,7 @@ struct Min : public Node {
 
 // y = max{x_1, x_2}
 struct Max : public Node {
-  explicit Max(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  template <typename T> explicit Max(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   size_t aux_storage_size() const override;
