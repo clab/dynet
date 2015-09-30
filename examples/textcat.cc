@@ -7,6 +7,7 @@
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
+#include "cnn/cnn-helper.h"
 
 #include <iostream>
 #include <fstream>
@@ -17,10 +18,10 @@
 using namespace std;
 using namespace cnn;
 
-unsigned INPUT_DIM = 36;
-unsigned OUTPUT_DIM = 36;
-unsigned VOCAB_SIZE = 0;
-unsigned LABEL_SIZE = 0;
+long INPUT_DIM = 36;
+long OUTPUT_DIM = 36;
+long VOCAB_SIZE = 0;
+long LABEL_SIZE = 0;
 float pdropout = 0.5;
 
 cnn::Dict d;

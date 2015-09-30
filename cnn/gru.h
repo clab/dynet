@@ -38,6 +38,7 @@ struct GRUBuilder : public RNNBuilder {
   // - default to zero matrix input
   std::vector<Expression> h0;
 
+public:
   unsigned hidden_dim;
   unsigned layers;
 };

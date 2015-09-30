@@ -6,8 +6,8 @@
 #include "cnn/gru.h"
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
-# include "cnn/expr.h"
-
+#include "cnn/expr.h"
+#include "cnn/cnn-helper.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -18,13 +18,13 @@
 using namespace std;
 using namespace cnn;
 
-unsigned LAYERS = 2;
-unsigned INPUT_DIM = 32;  //256
-unsigned HIDDEN_DIM = 128;  // 1024
-unsigned HIDDEN_DIM2 = 32;
-unsigned VOCAB_SIZE = 0;
-unsigned LATENT_DIM = 2;
-unsigned L = 10;
+long LAYERS = 2;
+long INPUT_DIM = 32;  //256
+long HIDDEN_DIM = 128;  // 1024
+long HIDDEN_DIM2 = 32;
+long VOCAB_SIZE = 0;
+long LATENT_DIM = 2;
+long L = 10;
 vector<vector<float>> eps(L, vector<float>(LATENT_DIM));
 
 cnn::Dict d;

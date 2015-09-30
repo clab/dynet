@@ -3,8 +3,6 @@
 
 #include <string>
 
-/// helper functions
-
 namespace cnn {
 
 /**
@@ -18,6 +16,10 @@ namespace cnn {
       os << value;
       return os.str();
     }
+#endif
+
+#ifdef WIN32
+#include <process.h>
 #endif
 
 } // namespace cnn

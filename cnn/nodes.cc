@@ -557,7 +557,7 @@ void Concatenate::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-#define MAX_CONCAT_COLS_ARGS 512
+#define MAX_CONCAT_COLS_ARGS 8192
 size_t ConcatenateColumns::aux_storage_size() const {
   return MAX_CONCAT_COLS_ARGS * sizeof(unsigned);
 }

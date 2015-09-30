@@ -4,7 +4,7 @@
 namespace cnn {
 
 void Initialize(int& argc, char**& argv, unsigned random_seed = 0);
-
+void Free();
 } // namespace cnn
 
 #endif

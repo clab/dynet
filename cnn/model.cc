@@ -28,6 +28,11 @@ Parameters::Parameters(const Dim& d, float scale) : dim(d) {
 
 size_t Parameters::size() const { return dim.size(); }
 
+void Parameters::reset_to_zero()
+{
+    (*values) *= 0.0;
+}
+
 void Parameters::scale_parameters(float a) {
   (*g) *= a;
 }
@@ -63,6 +68,16 @@ void Parameters::accumulate_grad(const Tensor& d) {
 
 void Parameters::clear() {
   TensorTools::Zero(g);
+}
+
+LookupParameters::~LookupParameters()
+{
+    for (unsigned i = 0; i < values.size(); ++i) {
+        auto& v = values[i];
+        cnn_mm_free(v.v);
+        auto& g = grads[i];
+        cnn_mm_free(g.v);
+    }
 }
 
 LookupParameters::LookupParameters(unsigned n, const Dim& d) : dim(d), values(n), grads(n) {
@@ -151,6 +166,8 @@ void LookupParameters::clear() {
 
 Model::~Model() {
   for (auto p : all_params) delete p;
+  if (gradient_norm_scratch)
+      cnn_mm_free(gradient_norm_scratch); 
 }
 
 void Model::project_weights(float radius) {

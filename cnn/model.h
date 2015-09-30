@@ -30,6 +30,7 @@ struct ParametersBase {
 struct Parameters : public ParametersBase {
   friend class Model;
   void scale_parameters(float a) override;
+  void reset_to_zero() ;
   void squared_l2norm(float* sqnorm) const override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
@@ -43,6 +44,10 @@ struct Parameters : public ParametersBase {
   Tensor g;
  private:
   Parameters() {}
+  ~Parameters() {
+      cnn_mm_free(values.v);
+      cnn_mm_free(g.v); 
+  }
   explicit Parameters(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
                                  // or Glorot initialization if minmax = 0
   friend class boost::serialization::access;
@@ -72,6 +77,7 @@ struct LookupParameters : public ParametersBase {
   std::unordered_set<unsigned> non_zero_grads;
  private:
   LookupParameters() {}
+  ~LookupParameters();
   LookupParameters(unsigned n, const Dim& d);
   friend class boost::serialization::access;
   template<class Archive>

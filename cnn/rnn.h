@@ -126,9 +126,9 @@ struct SimpleRNNBuilder : public RNNBuilder {
   // initial value of h
   // defaults to zero matrix input
   std::vector<Expression> h0;
-
-  unsigned layers;
   bool lagging;
+public:
+    unsigned layers;
 };
 
 } // namespace cnn
