@@ -31,18 +31,19 @@ class Dict {
   }
 
   void Freeze() { frozen = true; }
+  bool is_frozen() { return frozen; }
 
   inline int Convert(const std::string& word) {
     auto i = d_.find(word);
     if (i == d_.end()) {
       if (frozen) {
-	if (map_unk) {
-	  return unk_id;
-	}
-	else {
-	  std::cerr << "Unknown word encountered: " << word << std::endl;
-	  throw std::runtime_error("Unknown word encountered in frozen dictionary: " + word);
-	}
+        if (map_unk) {
+          return unk_id;
+        }
+        else {
+          std::cerr << "Unknown word encountered: " << word << std::endl;
+          throw std::runtime_error("Unknown word encountered in frozen dictionary: " + word);
+        }
       }
       words_.push_back(word);
       return d_[word] = words_.size() - 1;
