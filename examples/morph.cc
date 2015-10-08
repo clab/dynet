@@ -73,7 +73,7 @@ class LSTM {
     phidden_to_output = m->add_parameters({vocab_len, hidden_len});
   }
 
-  void InitNewCG(ComputationGraph* cg) {
+  void AddParamsToCG(ComputationGraph* cg) {
     W_ix = parameter(*cg, pW_ix);
     W_ih = parameter(*cg, pW_ih);
     W_ic = parameter(*cg, pW_ic);
@@ -176,17 +176,24 @@ class Decoder : public LSTM {
   }
 };
 
-Expression ComputeLoss(const vector<Expression>& hidden_units,
-                       const vector<unsigned>& targets,
-                       Expression& hidden_to_output) {
-  assert(hidden_units.size() == targets.size());
-  vector<Expression> losses;
-  for (unsigned i = 0; i < hidden_units.size(); ++i) {
-   Expression out = hidden_to_output * hidden_units[i];
-   losses.push_back(pickneglogsoftmax(out, targets[i]));
+class MorphTrans {
+ public:
+  Encoder encoder;
+  Decoder decoder;
+  LookupParameters* char_vecs;
+
+  MorphTrans(const int& char_length, const int& hidden_length,
+             const int& vocab_length, Model *m) {
+    encoder.Init(char_length, hidden_length, vocab_length, m);
+    decoder.Init(char_length + hidden_length, hidden_length, vocab_length, m);
+    char_vecs = m->add_lookup_parameters(vocab_length, {char_length});
   }
-  return sum(losses);
-}
+
+  void AddParamsToCG(ComputationGraph* cg) {
+    encoder.AddParamsToCG(cg);
+    decoder.AddParamsToCG(cg);
+  }
+};
 
 int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
@@ -221,17 +228,7 @@ int main(int argc, char** argv) {
   Model m;
   float regularization_strength = 1e-6f;
   AdadeltaTrainer sgd(&m, regularization_strength); 
- 
-  LookupParameters* char_vecs = m.add_lookup_parameters(vocab_size,
-                                                        {char_size});
-
-  Encoder encoder;
-  Decoder decoder;
-  encoder.Init(char_size, hidden_size, vocab_size, &m);
-
-  // The decoder takes encoded word vector with a character vector as input
-  // at every step. Thus the input length is char_size + hidden_size
-  decoder.Init(char_size + hidden_size, hidden_size, vocab_size, &m);
+  MorphTrans nn(char_size, hidden_size, vocab_size, &m);
 
   // Read the training file and train the model
   for (unsigned iter = 0; iter < num_iter; ++iter) {
@@ -243,8 +240,7 @@ int main(int argc, char** argv) {
         chars = split_line(line, ' ');
 
         ComputationGraph cg;
-        encoder.InitNewCG(&cg);
-        decoder.InitNewCG(&cg);
+        nn.AddParamsToCG(&cg);
 
         vector<Expression> input_vecs;
         vector<Expression> target_vecs;
@@ -252,9 +248,9 @@ int main(int argc, char** argv) {
         input_vecs.clear(); target_vecs.clear(); target_ids.clear();
         bool reading_target = false;
         for (const string& ch : chars) {
-          input_vecs.push_back(lookup(cg, char_vecs, char_to_id[ch]));
+          input_vecs.push_back(lookup(cg, nn.char_vecs, char_to_id[ch]));
           if (reading_target) {
-            target_vecs.push_back(lookup(cg, char_vecs, char_to_id[ch]));
+            target_vecs.push_back(lookup(cg, nn.char_vecs, char_to_id[ch]));
             target_ids.push_back(char_to_id[ch]);
           }
           if (ch == EOW) {
@@ -265,7 +261,7 @@ int main(int argc, char** argv) {
         // Read the input char vectors and obtain word representation
         Expression encoded_input_word_vec;
         Expression h = input(cg, {hidden_size}, &ZERO);
-        encoder.EncodeInputIntoVector(input_vecs, h, h, &encoded_input_word_vec);
+        nn.encoder.EncodeInputIntoVector(input_vecs, h, h, &encoded_input_word_vec);
 
         // Use this encoded word vector to predict the transformed word
         // The input will not include '</s>'
@@ -282,8 +278,8 @@ int main(int argc, char** argv) {
         }
 
         vector<Expression> pred_target_vecs;
-        decoder.GetAllHiddenUnits(input_target_vecs, h, h, &pred_target_vecs);
-        Expression e = decoder.ComputeLoss(pred_target_vecs, output_target_ids);
+        nn.decoder.GetAllHiddenUnits(input_target_vecs, h, h, &pred_target_vecs);
+        Expression e = nn.decoder.ComputeLoss(pred_target_vecs, output_target_ids);
         loss += as_scalar(cg.forward());
         cg.backward();
         sgd.update(1.0f);
@@ -303,25 +299,24 @@ int main(int argc, char** argv) {
       chars = split_line(line, ' ');
 
       ComputationGraph cg;
-      encoder.InitNewCG(&cg);
-      decoder.InitNewCG(&cg);
+      nn.AddParamsToCG(&cg);
 
       vector<Expression> input_vecs;
       vector<unsigned> pred_target_ids;
       input_vecs.clear(); pred_target_ids.clear();
       cerr << "Input: ";
       for (const string& ch : chars) {
-        input_vecs.push_back(lookup(cg, char_vecs, char_to_id[ch]));
+        input_vecs.push_back(lookup(cg, nn.char_vecs, char_to_id[ch]));
         cerr << ch;
       }
       cerr << endl;
       // Read the input char vectors and obtain word representation
       Expression encoded_input_word_vec;
       Expression h = input(cg, {hidden_size}, &ZERO);
-      encoder.EncodeInputIntoVector(input_vecs, h, h, &encoded_input_word_vec);
-      decoder.DecodeUntilTermFound(encoded_input_word_vec, char_to_id[EOW],
-                                   char_vecs, char_to_id, h, h,
-                                   &pred_target_ids, &cg);
+      nn.encoder.EncodeInputIntoVector(input_vecs, h, h, &encoded_input_word_vec);
+      nn.decoder.DecodeUntilTermFound(encoded_input_word_vec, char_to_id[EOW],
+                                      nn.char_vecs, char_to_id, h, h,
+                                      &pred_target_ids, &cg);
       cerr << "Output: ";
       for (unsigned i = 0; i < pred_target_ids.size() - 1; ++i) {
         cerr << id_to_char[pred_target_ids[i]];
