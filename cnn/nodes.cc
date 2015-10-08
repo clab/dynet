@@ -280,7 +280,7 @@ void GaussianNoise::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += *dEdf;
-};
+}
 
 size_t Dropout::aux_storage_size() const {
   return dim.size() * sizeof(float);
@@ -299,7 +299,7 @@ void Dropout::backward(const vector<const Tensor*>& xs,
                        Tensor& dEdxi) const {
   Tensor m(dim, (float*)aux_mem);
   (*dEdxi) += (*dEdf).cwiseProduct(*m);
-};
+}
 
 size_t BlockDropout::aux_storage_size() const {
   // we just need to remember whether this entire block is turned on (1.0) or off (0.0)
@@ -338,8 +338,7 @@ void ConstantPlusX::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += *dEdf;
-};
-
+}
 
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
@@ -351,16 +350,54 @@ void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const 
 }
 
 void ConstantMinusX::backward(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
+                              const Tensor& fx,
+                              const Tensor& dEdf,
+                              unsigned i,
+                              Tensor& dEdxi) const {
 #if HAVE_CUDA
   gpu::vnegate_backward(dEdxi.d.size(), dEdf.v, dEdxi.v);
 #else
   *dEdxi -= *dEdf;
 #endif
-};
+}
+
+template <class T>
+EIGEN_STRONG_INLINE float logsumexp(const T& x) {
+  const float m = x.maxCoeff();
+  float z = 0;
+  for (unsigned i = 0; i < x.rows(); ++i)
+    z += CNN_EXPF(x(i,0) - m);
+  return m + logf(z);
+}
+
+void LogSumExp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  // TODO implement so as to avoid underflow
+  Eigen::Matrix<float, Eigen::Dynamic,Eigen::Dynamic> v(xs.size(), 1);
+  for (unsigned i = 0; i < xs.size(); ++i)
+    v(i,0) = (**xs[i])(0,0);
+  fx.v[0] = logsumexp(v);
+}
+
+void LogSumExp::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  if (xs.size() == 0) {
+    *dEdxi += *dEdf;
+    return;
+  }
+  // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
+  //         = 1/{exp f(x)} * exp(x_i)
+  //         = exp(x_i - f(x))
+  auto d = *dEdxi;
+  d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
+}
 
 void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
@@ -397,7 +434,7 @@ void Sum::backward(const vector<const Tensor*>& xs,
 #else
   *dEdxi += *dEdf;
 #endif
-};
+}
 
 void Average::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
@@ -424,7 +461,7 @@ void Average::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += (*dEdf / xs.size());
-};
+}
 
 void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
@@ -459,7 +496,7 @@ void Square::backward(const vector<const Tensor*>& xs,
                         Tensor& dEdxi) const {
   auto x = **xs[0];
   *dEdxi += (*dEdf).cwiseProduct(x) * 2;
-};
+}
 
 void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
@@ -693,15 +730,6 @@ void MaxPooling1D::backward(const vector<const Tensor*>& xs,
     dEdx(ind[i], 0) = dEdf(i, 0);
   return dEdx;
 #endif
-}
-
-template <class T>
-EIGEN_STRONG_INLINE float logsumexp(const T& x) {
-  const float m = x.maxCoeff();
-  float z = 0;
-  for (unsigned i = 0; i < x.rows(); ++i)
-    z += CNN_EXPF(x(i,0) - m);
-  return m + logf(z);
 }
 
 void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {

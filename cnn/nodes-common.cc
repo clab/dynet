@@ -226,6 +226,25 @@ Dim ConstantMinusX::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string LogSumExp::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "log(exp " << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); ++i)
+    s << " + exp " << arg_names[i];
+  s << ")";
+  return s.str();
+}
+
+Dim LogSumExp::dim_forward(const vector<Dim>& xs) const {
+  Dim d = xs[0].truncate();
+  for (unsigned i = 1; i < xs.size(); ++i) {
+    if (d != xs[i].truncate()) {
+      cerr << "Mismatched input dimensions in LogSumExp: " << xs << endl;
+      abort();
+    }
+  }
+  return d;
+}
 string Sum::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0];

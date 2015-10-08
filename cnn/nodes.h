@@ -21,7 +21,7 @@ struct Min : public Node {
 
 // y = max{x_1, x_2}
 struct Max : public Node {
-  explicit Max(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  template <typename T> explicit Max(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   size_t aux_storage_size() const override;
@@ -468,6 +468,20 @@ struct BinaryLogLoss : public Node {
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const override;
+};
+
+// y = \log \sum_i \exp x_i
+// done in log space carefully to avoid over/underflow issues
+struct LogSumExp : public Node {
+  template <typename T> explicit LogSumExp(const T& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const override;
 };
 
 // y = \sum_i x_i
