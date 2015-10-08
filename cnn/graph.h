@@ -4,6 +4,6 @@
 namespace cnn {
 struct ComputationGraph;
 void GraphOptimize(ComputationGraph* cg);
-};
+} // namespace cnn
 
 #endif
