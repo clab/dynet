@@ -106,9 +106,9 @@ struct SimpleRNNBuilder : public RNNBuilder {
  public:
   Expression add_auxiliary_input(const Expression& x, const Expression &aux);
 
-  Expression back() const { return h.back().back(); }
-  std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
-  std::vector<Expression> final_s() const { return final_h(); }
+  Expression back() const override { return h.back().back(); }
+  std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
+  std::vector<Expression> final_s() const override { return final_h(); }
   void copy(const RNNBuilder & params) override;
 
   unsigned num_h0_components() const override { return layers; }

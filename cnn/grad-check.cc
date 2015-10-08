@@ -13,7 +13,7 @@ namespace cnn {
 
 void CheckGrad(Model& m, ComputationGraph& g) {
   float alpha = 5e-4;
-  float E = as_scalar(g.forward());
+  g.forward();
   g.backward();
 
   bool flag = false;
