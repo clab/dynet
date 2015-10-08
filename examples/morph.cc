@@ -36,16 +36,23 @@ class LSTM {
   Expression W_ix, W_ih, W_ic, W_cx, W_ch,
              W_ox, W_oh, W_oc;  // Weight matrices
   Expression b_i, b_f, b_c, b_o;  // Bias vectors
+
+  // Project hidden layer for predicting words (only used by decoder)
+  Expression hidden_to_output;
+
   Parameters *pW_ix, *pW_ih, *pW_ic, *pW_cx, *pW_ch, *pW_ox, *pW_oh, *pW_oc;
   Parameters *pb_i, *pb_f, *pb_c, *pb_o;
-  int char_len, hidden_len;
+  Parameters *phidden_to_output;
+  int char_len, hidden_len, vocab_len;
 
  public:
   LSTM() {}
 
-  void Init(const int& char_length, const int& hidden_length, Model *m) {
+  void Init(const int& char_length, const int& hidden_length,
+            const int& vocab_length, Model *m) {
     char_len = char_length;
     hidden_len = hidden_length;
+    vocab_len = vocab_length;
 
     pW_ix = m->add_parameters({hidden_len, char_len});
     pW_ih = m->add_parameters({hidden_len, hidden_len});
@@ -62,6 +69,8 @@ class LSTM {
     pb_f = m->add_parameters({hidden_len, 1});
     pb_c = m->add_parameters({hidden_len, 1});
     pb_o = m->add_parameters({hidden_len, 1});
+
+    phidden_to_output = m->add_parameters({vocab_len, hidden_len});
   }
 
   void InitNewCG(ComputationGraph* cg) {
@@ -80,9 +89,11 @@ class LSTM {
     b_f = parameter(*cg, pb_f);
     b_c = parameter(*cg, pb_c);
     b_o = parameter(*cg, pb_o);
+
+    hidden_to_output = parameter(*cg, phidden_to_output);
   }
 
-  void ComputeHC (const Expression& input, Expression* h, Expression* c) {
+  void ComputeHC (const Expression& input, Expression* h, Expression* c) const {
     Expression i = logistic(affine_transform({b_i, W_ix, input, W_ih, *h, W_ic, *c}));
     Expression f = 1.f - i;
 
@@ -94,7 +105,8 @@ class LSTM {
   }
 
   void GetAllHiddenUnits(const vector<Expression>& cols, const Expression& h_init,
-                         const Expression& c_init, vector<Expression>* hidden) {
+                         const Expression& c_init, vector<Expression>* hidden)
+                         const {
     Expression h = h_init, c = c_init;
     for (unsigned t = 0; t < cols.size(); ++t) {
       ComputeHC(cols[t], &h, &c);
@@ -103,7 +115,7 @@ class LSTM {
   }
 
   void GetLastHiddenUnit(const vector<Expression>& cols, const Expression& h_init,
-                         const Expression& c_init, Expression* hidden) {
+                         const Expression& c_init, Expression* hidden) const {
     Expression h = h_init, c = c_init;
     for (unsigned t = 0; t < cols.size(); ++t) {
       ComputeHC(cols[t], &h, &c);
@@ -115,20 +127,31 @@ class LSTM {
 class Encoder : public LSTM {
  public:
   void EncodeInputIntoVector(const vector<Expression>& cols, Expression& h_init,
-                             const Expression& c_init, Expression* hidden) {
+                             const Expression& c_init, Expression* hidden) const {
     GetLastHiddenUnit(cols, h_init, c_init, hidden);
   }
 };
 
 class Decoder : public LSTM {
+
  public:
+  Expression ComputeLoss(const vector<Expression>& hidden_units,
+                         const vector<unsigned>& targets) const {
+    assert(hidden_units.size() == targets.size());
+    vector<Expression> losses;
+    for (unsigned i = 0; i < hidden_units.size(); ++i) {
+      Expression out = hidden_to_output * hidden_units[i];
+      losses.push_back(pickneglogsoftmax(out, targets[i]));
+    }
+    return sum(losses);
+  }
+
   void DecodeUntilTermFound(const Expression& encoded_word_vec, unsigned terminator,
-                            const Expression& hidden_to_output,
                             LookupParameters* char_vecs,
                             unordered_map<string, unsigned>& char_to_id,
                             const Expression& h_init, const Expression& c_init,
                             vector<unsigned>* pred_target_ids,
-                            ComputationGraph* cg) {
+                            ComputationGraph* cg) const {
     Expression input_word_vec = lookup(*cg, char_vecs, char_to_id[BOW]);
     Expression h = h_init, c = c_init;
     while (true) {
@@ -201,15 +224,14 @@ int main(int argc, char** argv) {
  
   LookupParameters* char_vecs = m.add_lookup_parameters(vocab_size,
                                                         {char_size});
-  Parameters* phidden_to_vocab = m.add_parameters({vocab_size, hidden_size});
 
   Encoder encoder;
   Decoder decoder;
-  encoder.Init(char_size, hidden_size, &m);
+  encoder.Init(char_size, hidden_size, vocab_size, &m);
 
   // The decoder takes encoded word vector with a character vector as input
   // at every step. Thus the input length is char_size + hidden_size
-  decoder.Init(char_size + hidden_size, hidden_size, &m);
+  decoder.Init(char_size + hidden_size, hidden_size, vocab_size, &m);
 
   // Read the training file and train the model
   for (unsigned iter = 0; iter < num_iter; ++iter) {
@@ -223,7 +245,6 @@ int main(int argc, char** argv) {
         ComputationGraph cg;
         encoder.InitNewCG(&cg);
         decoder.InitNewCG(&cg);
-        Expression hidden_to_vocab = parameter(cg, phidden_to_vocab);
 
         vector<Expression> input_vecs;
         vector<Expression> target_vecs;
@@ -262,8 +283,7 @@ int main(int argc, char** argv) {
 
         vector<Expression> pred_target_vecs;
         decoder.GetAllHiddenUnits(input_target_vecs, h, h, &pred_target_vecs);
-        Expression e = ComputeLoss(pred_target_vecs, output_target_ids,
-                                   hidden_to_vocab);
+        Expression e = decoder.ComputeLoss(pred_target_vecs, output_target_ids);
         loss += as_scalar(cg.forward());
         cg.backward();
         sgd.update(1.0f);
@@ -285,7 +305,6 @@ int main(int argc, char** argv) {
       ComputationGraph cg;
       encoder.InitNewCG(&cg);
       decoder.InitNewCG(&cg);
-      Expression hidden_to_vocab = parameter(cg, phidden_to_vocab);
 
       vector<Expression> input_vecs;
       vector<unsigned> pred_target_ids;
@@ -300,10 +319,9 @@ int main(int argc, char** argv) {
       Expression encoded_input_word_vec;
       Expression h = input(cg, {hidden_size}, &ZERO);
       encoder.EncodeInputIntoVector(input_vecs, h, h, &encoded_input_word_vec);
- 
       decoder.DecodeUntilTermFound(encoded_input_word_vec, char_to_id[EOW],
-                                   hidden_to_vocab, char_vecs, char_to_id, h,
-                                   h, &pred_target_ids, &cg);
+                                   char_vecs, char_to_id, h, h,
+                                   &pred_target_ids, &cg);
       cerr << "Output: ";
       for (unsigned i = 0; i < pred_target_ids.size() - 1; ++i) {
         cerr << id_to_char[pred_target_ids[i]];
