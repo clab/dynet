@@ -280,7 +280,7 @@ void GaussianNoise::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += *dEdf;
-};
+}
 
 size_t Dropout::aux_storage_size() const {
   return dim.size() * sizeof(float);
@@ -299,7 +299,7 @@ void Dropout::backward(const vector<const Tensor*>& xs,
                        Tensor& dEdxi) const {
   Tensor m(dim, (float*)aux_mem);
   (*dEdxi) += (*dEdf).cwiseProduct(*m);
-};
+}
 
 size_t BlockDropout::aux_storage_size() const {
   // we just need to remember whether this entire block is turned on (1.0) or off (0.0)
@@ -333,8 +333,7 @@ void ConstantPlusX::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += *dEdf;
-};
-
+}
 
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
@@ -355,7 +354,7 @@ void ConstantMinusX::backward(const vector<const Tensor*>& xs,
 #else
   *dEdxi -= *dEdf;
 #endif
-};
+}
 
 template <class T>
 EIGEN_STRONG_INLINE float logsumexp(const T& x) {
@@ -393,7 +392,7 @@ void LogSumExp::backward(const vector<const Tensor*>& xs,
   //         = exp(x_i - f(x))
   auto d = *dEdxi;
   d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
-};
+}
 
 void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
@@ -430,7 +429,7 @@ void Sum::backward(const vector<const Tensor*>& xs,
 #else
   *dEdxi += *dEdf;
 #endif
-};
+}
 
 void Average::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
@@ -457,7 +456,7 @@ void Average::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += (*dEdf / xs.size());
-};
+}
 
 void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
@@ -492,7 +491,7 @@ void Square::backward(const vector<const Tensor*>& xs,
                         Tensor& dEdxi) const {
   auto x = **xs[0];
   *dEdxi += (*dEdf).cwiseProduct(x) * 2;
-};
+}
 
 void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
