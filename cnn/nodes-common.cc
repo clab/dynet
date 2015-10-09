@@ -305,6 +305,17 @@ Dim Square::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string Cube::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "cube(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim Cube::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}
+
 string Exp::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "exp(" << arg_names[0] << ')';
