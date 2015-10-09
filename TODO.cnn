@@ -2,6 +2,9 @@ PRIORITIES:
 
 Multiprocessor/single memory version has to get merged with good, clear examples [cdyer needs to try it out, then work with Austin]
 
+throughout: instead of aborting, throw a proper exception type (this make's life easier
+for Yoav's Python wrapper) [volunteer!!!]
+
 cnn/init.cc [volunteer!!!]
  * This is an unlovely place that every CNN code calls as its first thing
  * it should read (and remove) any cnn specific arguments from argc, argv
