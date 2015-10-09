@@ -498,6 +498,20 @@ void Square::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf).cwiseProduct(x) * 2;
 }
 
+void Cube::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.cwiseProduct(x).cwiseProduct(x);
+}
+
+void Cube::backward(const vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const {
+  auto x = **xs[0];
+  *dEdxi += (*dEdf).cwiseProduct(x.cwiseProduct(x)) * 3;
+};
+
 void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   *fx = x.array().exp();
