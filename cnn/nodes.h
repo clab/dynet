@@ -252,6 +252,19 @@ struct Square : public Node {
                   Tensor& dEdxi) const override;
 };
 
+// y = x_1 \odot x_1 \odot x_1
+struct Cube : public Node {
+  explicit Cube(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
+};
+
 // y = exp x_1
 struct Exp : public Node {
   explicit Exp(const std::initializer_list<VariableIndex>& a) : Node(a) {}
