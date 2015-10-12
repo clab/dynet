@@ -370,17 +370,24 @@ EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   return m + logf(z);
 }
 
+// this i need to do something better, but this is a work-around
+// if this is too small, just make it bigger
+#define MAX_LOG_SUM_EXP 65536
+size_t LogSumExp::aux_storage_size() const {
+  return MAX_LOG_SUM_EXP * sizeof(float);
+}
+
 void LogSumExp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) {
     fx.v = xs[0]->v;
     return;
   }
-  // TODO implement so as to avoid underflow
-  Eigen::Matrix<float, Eigen::Dynamic,Eigen::Dynamic> v(xs.size(), 1);
   for (unsigned i = 0; i < xs.size(); ++i)
-    v(i,0) = (**xs[i])(0,0);
-  fx.v[0] = logsumexp(v);
+    static_cast<float*>(aux_mem)[i] = (**xs[i])(0,0);
+  Dim r = {(int)xs.size()};
+  Tensor v(r, static_cast<float*>(aux_mem));
+  fx.v[0] = logsumexp(*v);
 }
 
 void LogSumExp::backward(const vector<const Tensor*>& xs,
