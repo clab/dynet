@@ -1276,7 +1276,15 @@ void SoftSign::backward(const vector<const Tensor*>& xs,
 }
 
 void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  *fx = (**xs[0]).binaryExpr(**xs[1], FBinaryLogLoss());
+  auto x = *xs[0];
+  auto y = *xs[1];
+  const FBinaryLogLoss bll;
+  const size_t s = x.d.size();
+  float dist = 0;
+  for (size_t i = 0; i < s; ++i)
+    dist += bll(x.v[i], y.v[i]);
+  fx.v[0] = dist;
+//  *fx = (**xs[0]).binaryExpr(**xs[1], FBinaryLogLoss());
 }
 
 void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
