@@ -468,8 +468,8 @@ struct Rectify : public Node {
 
 // you could do this with LogisticSigmoid, Softmax or a variety of other
 // functions, but this is often useful.
-// x_1 must be a scalar that is a value between 0 and 1
-// x_2 (ty) must be a scalar that is a value between 0 and 1
+// x_1 must be a vector with values between 0 and 1
+// target_y is an equivalently sized vector w values between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
 struct BinaryLogLoss : public Node {
   BinaryLogLoss(const std::initializer_list<VariableIndex>& a) : Node(a) {}

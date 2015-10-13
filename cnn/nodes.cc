@@ -517,7 +517,7 @@ void Cube::backward(const vector<const Tensor*>& xs,
                     Tensor& dEdxi) const {
   auto x = **xs[0];
   *dEdxi += (*dEdf).cwiseProduct(x.cwiseProduct(x)) * 3;
-};
+}
 
 void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
@@ -1275,13 +1275,8 @@ void SoftSign::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*fx).binaryExpr(*dEdf, FSoftSignBackward());
 }
 
-// you could do this with LogisticSigmoid, Softmax or a variety of other
-// functions, but this is often useful.
-// x_1 must be a scalar that is a value between 0 and 1
-// target_y is a value between 0 and 1
-// y = ty * log(x_1) + (1 - ty) * log(x_1)
 void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.v[0] = FBinaryLogLoss()(xs[0]->v[0], xs[1]->v[0]);
+  *fx = (**xs[0]).binaryExpr(**xs[1], FBinaryLogLoss());
 }
 
 void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
@@ -1289,9 +1284,7 @@ void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const {
-  const auto y_pred = xs[i]->v[0];
-  const auto ty = xs[1-i]->v[0];
-  dEdxi.v[0] += FBinaryLogLossBackward()(y_pred,ty,dEdf.v[0]);
+  *dEdxi += (**xs[i]).binaryExpr(**xs[1-i], FBinaryLogLossBackward(dEdf.v[0]));
 }
 
 } // namespace cnn
