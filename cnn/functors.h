@@ -302,10 +302,12 @@ struct FBinaryLogLoss {
 };
 
 struct FBinaryLogLossBackward {
-  CNN_DEVICE_FUNC inline float operator()(float x, float x_true, float d) const {
-    float scale = (x_true > 0.f) ? -x_true/x : (1.f-x_true)/(1.-x);
+  explicit FBinaryLogLossBackward(float d) : d(d) {}
+  CNN_DEVICE_FUNC inline float operator()(float x, float x_true) const {
+    float scale = (x_true > 0.f) ? -x_true/x : (1.f-x_true)/(1.f-x);
     return d * scale;
   }
+  float d;
 };
 
 } // namespace cnn
