@@ -394,6 +394,9 @@ int main(int argc, char** argv) {
   }
   d.Freeze();  // no new word types allowed
   td.Freeze(); // no new tag types allowed
+  
+  d.SetUnk("<UNK>"); // set UNK to allow the unseen character in the dev and test set
+
   cerr << "Reading dev data from " << argv[2] << "...\n";
   {
     ifstream in(argv[2]);
