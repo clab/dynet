@@ -38,8 +38,8 @@ void Initialize(int& argc, char**& argv, unsigned random_seed) {
   }
   rndeng = new mt19937(random_seed);
   cerr << "Allocating memory...\n";
-  fxs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20));
-  dEdfs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20));
+  fxs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<24));
+  dEdfs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<24));
   cerr << "Done.\n";
 }
 
