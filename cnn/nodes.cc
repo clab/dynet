@@ -475,7 +475,8 @@ void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   gpu::vtanh(fx.d.size(), xs[0]->v, fx.v);
 #else
   auto x = **xs[0];
-  *fx = x.unaryExpr(FTanh());
+  (*fx).array() = x.array().tanh();
+//  *fx = x.unaryExpr(FTanh());
 #endif
 }
 
@@ -493,7 +494,7 @@ void Tanh::backward(const vector<const Tensor*>& xs,
 
 void Square::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
-  *fx = x.cwiseProduct(x);
+  (*fx).array() = x.array().square();
 }
 
 void Square::backward(const vector<const Tensor*>& xs,
@@ -507,7 +508,7 @@ void Square::backward(const vector<const Tensor*>& xs,
 
 void Cube::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
-  *fx = x.cwiseProduct(x).cwiseProduct(x);
+  (*fx).array() = x.array().cube();
 }
 
 void Cube::backward(const vector<const Tensor*>& xs,
@@ -516,7 +517,8 @@ void Cube::backward(const vector<const Tensor*>& xs,
                     unsigned i,
                     Tensor& dEdxi) const {
   auto x = **xs[0];
-  *dEdxi += (*dEdf).cwiseProduct(x.cwiseProduct(x)) * 3;
+//  *dEdxi += (*dEdf).cwiseProduct(x.cwiseProduct(x)) * 3;
+  (*dEdxi).array() += (*dEdf).array() * x.array().square() * 3;
 }
 
 void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1063,9 +1065,14 @@ void AffineTransform::forward(const vector<const Tensor*>& xs, Tensor& fx) const
       CUDAMatrixMultiply(*xs[i], *xs[i + 1], fx, (i == 1) ? kSCALAR_ZERO : kSCALAR_ONE);
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v, 1, fx.v, 1));
 #else
-    (*fx) = **xs[0];
-    for (unsigned i = 1; i < xs.size(); i += 2)
-      (*fx).noalias() += (**xs[i]) * (**xs[i + 1]);
+    if (xs.size() == 3) {
+      // size 3 is optimized in newer versions of eigen
+      (*fx).noalias() = **xs[0] + **xs[1] * **xs[2];
+    } else {
+      (*fx) = **xs[0];
+      for (unsigned i = 1; i < xs.size(); i += 2)
+        (*fx).noalias() += (**xs[i]) * (**xs[i + 1]);
+    }
 #endif
   }
 }
