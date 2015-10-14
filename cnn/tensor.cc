@@ -122,6 +122,13 @@ real rand01() {
   return distribution(*rndeng);
 }
 
+int rand0n(int n) {
+  assert(n > 0);
+  int x = rand01() * n;
+  while(n == x) { x = rand01() * n; }
+  return x;
+}
+
 real rand_normal() {
   normal_distribution<real> distribution(0, 1);
   return distribution(*rndeng);

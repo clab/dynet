@@ -46,6 +46,7 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression square(const Expression& x);
+Expression cube(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
@@ -59,6 +60,7 @@ Expression min(const Expression& x, const Expression& y);
 Expression max(const Expression& x, const Expression& y);
 Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
+Expression block_dropout(const Expression& x, real p);
 
 Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
@@ -101,8 +103,16 @@ namespace detail {
 }
 
 template <typename T>
+inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
+inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
+
+template <typename T>
 inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
+
+template <typename T>
+inline Expression max(const T& xs) { return detail::f<Max>(xs); }
+inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
 
 template <typename T>
 inline Expression average(const T& xs) { return detail::f<Average>(xs); }

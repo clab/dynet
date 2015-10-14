@@ -63,7 +63,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       if (aux_size) {
         aux_mem = fxs->allocate(aux_size);
         if (!aux_mem) {
-          cerr << "out of memory\n";
+          cerr << "aux out of memory\n";
           abort();
         }
       }

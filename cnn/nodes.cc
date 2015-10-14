@@ -280,7 +280,7 @@ void GaussianNoise::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += *dEdf;
-};
+}
 
 size_t Dropout::aux_storage_size() const {
   return dim.size() * sizeof(float);
@@ -299,7 +299,33 @@ void Dropout::backward(const vector<const Tensor*>& xs,
                        Tensor& dEdxi) const {
   Tensor m(dim, (float*)aux_mem);
   (*dEdxi) += (*dEdf).cwiseProduct(*m);
-};
+}
+
+size_t BlockDropout::aux_storage_size() const {
+  // we just need to remember whether this entire block is turned on (1.0) or off (0.0)
+  return 1 * sizeof(float);
+}
+
+void BlockDropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  bernoulli_distribution distribution(1.0 - dropout_probability);
+  float block_multiplier = distribution(*rndeng)? 1.0 : 0.0;
+  block_multiplier = 
+    dropout_probability == 1.0? 0.0 : block_multiplier / (1.0 - dropout_probability);
+  if (dropout_probability > 1.0 || dropout_probability < 0.0) {
+    assert(false && "dropout probability must be in the range [0, 1]");
+  }
+  *(static_cast<float*>(aux_mem)) = block_multiplier;
+  (*fx) = **xs[0] * block_multiplier;
+}
+
+void BlockDropout::backward(const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  float block_multiplier = *(static_cast<float*>(aux_mem));
+  (*dEdxi) += (*dEdf) * block_multiplier;
+}
 
 void ConstantPlusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
@@ -312,8 +338,7 @@ void ConstantPlusX::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += *dEdf;
-};
-
+}
 
 void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
@@ -325,16 +350,61 @@ void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const 
 }
 
 void ConstantMinusX::backward(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
+                              const Tensor& fx,
+                              const Tensor& dEdf,
+                              unsigned i,
+                              Tensor& dEdxi) const {
 #if HAVE_CUDA
   gpu::vnegate_backward(dEdxi.d.size(), dEdf.v, dEdxi.v);
 #else
   *dEdxi -= *dEdf;
 #endif
-};
+}
+
+template <class T>
+EIGEN_STRONG_INLINE float logsumexp(const T& x) {
+  const float m = x.maxCoeff();
+  float z = 0;
+  for (unsigned i = 0; i < x.rows(); ++i)
+    z += expf(x(i,0) - m);
+  return m + logf(z);
+}
+
+// this i need to do something better, but this is a work-around
+// if this is too small, just make it bigger
+#define MAX_LOG_SUM_EXP 65536
+size_t LogSumExp::aux_storage_size() const {
+  return MAX_LOG_SUM_EXP * sizeof(float);
+}
+
+void LogSumExp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  for (unsigned i = 0; i < xs.size(); ++i)
+    static_cast<float*>(aux_mem)[i] = (**xs[i])(0,0);
+  Dim r = {(int)xs.size()};
+  Tensor v(r, static_cast<float*>(aux_mem));
+  fx.v[0] = logsumexp(*v);
+}
+
+void LogSumExp::backward(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  if (xs.size() == 0) {
+    *dEdxi += *dEdf;
+    return;
+  }
+  // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
+  //         = 1/{exp f(x)} * exp(x_i)
+  //         = exp(x_i - f(x))
+  auto d = *dEdxi;
+  d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
+}
 
 void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
@@ -371,7 +441,7 @@ void Sum::backward(const vector<const Tensor*>& xs,
 #else
   *dEdxi += *dEdf;
 #endif
-};
+}
 
 void Average::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
@@ -398,14 +468,15 @@ void Average::backward(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
   *dEdxi += (*dEdf / xs.size());
-};
+}
 
 void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vtanh(fx.d.size(), xs[0]->v, fx.v);
 #else
   auto x = **xs[0];
-  *fx = x.unaryExpr(FTanh());
+  (*fx).array() = x.array().tanh();
+//  *fx = x.unaryExpr(FTanh());
 #endif
 }
 
@@ -423,7 +494,7 @@ void Tanh::backward(const vector<const Tensor*>& xs,
 
 void Square::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
-  *fx = x.cwiseProduct(x);
+  (*fx).array() = x.array().square();
 }
 
 void Square::backward(const vector<const Tensor*>& xs,
@@ -433,7 +504,22 @@ void Square::backward(const vector<const Tensor*>& xs,
                         Tensor& dEdxi) const {
   auto x = **xs[0];
   *dEdxi += (*dEdf).cwiseProduct(x) * 2;
-};
+}
+
+void Cube::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  (*fx).array() = x.array().cube();
+}
+
+void Cube::backward(const vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const {
+  auto x = **xs[0];
+//  *dEdxi += (*dEdf).cwiseProduct(x.cwiseProduct(x)) * 3;
+  (*dEdxi).array() += (*dEdf).array() * x.array().square() * 3;
+}
 
 void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
@@ -669,15 +755,6 @@ void MaxPooling1D::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-template <class T>
-EIGEN_STRONG_INLINE float logsumexp(const T& x) {
-  const float m = x.maxCoeff();
-  float z = 0;
-  for (unsigned i = 0; i < x.rows(); ++i)
-    z += CNN_EXPF(x(i,0) - m);
-  return m + logf(z);
-}
-
 void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
 #if HAVE_CUDA
@@ -777,7 +854,7 @@ EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   }
   real z = 0;
   for (auto i : denom)
-    z += CNN_EXPF(x(i,0) - m);
+    z += expf(x(i,0) - m);
   return m + logf(z);
 }
 
@@ -805,7 +882,7 @@ void RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
   for (auto ind : denom)
     z += (*dEdf)(ind, 0);
   for (auto ind : denom)
-    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - CNN_EXPF((*fx)(ind, 0)) * z;
+    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - expf((*fx)(ind, 0)) * z;
 }
 
 // x_1 is a vector
@@ -988,9 +1065,14 @@ void AffineTransform::forward(const vector<const Tensor*>& xs, Tensor& fx) const
       CUDAMatrixMultiply(*xs[i], *xs[i + 1], fx, (i == 1) ? kSCALAR_ZERO : kSCALAR_ONE);
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v, 1, fx.v, 1));
 #else
-    (*fx) = **xs[0];
-    for (unsigned i = 1; i < xs.size(); i += 2)
-      (*fx).noalias() += (**xs[i]) * (**xs[i + 1]);
+    if (xs.size() == 3) {
+      // size 3 is optimized in newer versions of eigen
+      (*fx).noalias() = **xs[0] + **xs[1] * **xs[2];
+    } else {
+      (*fx) = **xs[0];
+      for (unsigned i = 1; i < xs.size(); i += 2)
+        (*fx).noalias() += (**xs[i]) * (**xs[i + 1]);
+    }
 #endif
   }
 }
@@ -1200,13 +1282,15 @@ void SoftSign::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*fx).binaryExpr(*dEdf, FSoftSignBackward());
 }
 
-// you could do this with LogisticSigmoid, Softmax or a variety of other
-// functions, but this is often useful.
-// x_1 must be a scalar that is a value between 0 and 1
-// target_y is a value between 0 and 1
-// y = ty * log(x_1) + (1 - ty) * log(x_1)
 void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.v[0] = FBinaryLogLoss()(xs[0]->v[0], xs[1]->v[0]);
+  auto x = *xs[0];
+  auto y = *xs[1];
+  const FBinaryLogLoss bll;
+  const size_t s = x.d.size();
+  float dist = 0;
+  for (size_t i = 0; i < s; ++i)
+    dist += bll(x.v[i], y.v[i]);
+  fx.v[0] = dist;
 }
 
 void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
@@ -1214,9 +1298,7 @@ void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const {
-  const auto y_pred = xs[i]->v[0];
-  const auto ty = xs[1-i]->v[0];
-  dEdxi.v[0] += FBinaryLogLossBackward()(y_pred,ty,dEdf.v[0]);
+  *dEdxi += (**xs[i]).binaryExpr(**xs[1-i], FBinaryLogLossBackward(dEdf.v[0]));
 }
 
 } // namespace cnn

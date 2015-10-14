@@ -21,7 +21,7 @@ struct Min : public Node {
 
 // y = max{x_1, x_2}
 struct Max : public Node {
-  explicit Max(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  template <typename T> explicit Max(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   size_t aux_storage_size() const override;
@@ -181,6 +181,21 @@ struct Dropout : public Node {
   real p;
 };
 
+// y = block_dropout(x,p) where p specifies the probability for dropping-out the entire block
+struct BlockDropout : public Node {
+  explicit BlockDropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), dropout_probability(p) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi) const override;
+  real dropout_probability;
+};
+
 // y = c + x_1
 // (c is a vector or matrix of the constant, usually 1, but can be configured)
 struct ConstantPlusX : public Node {
@@ -227,6 +242,19 @@ struct Tanh : public Node {
 // y = x_1 \odot x_1
 struct Square : public Node {
   explicit Square(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
+};
+
+// y = x_1 \odot x_1 \odot x_1
+struct Cube : public Node {
+  explicit Cube(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -440,8 +468,8 @@ struct Rectify : public Node {
 
 // you could do this with LogisticSigmoid, Softmax or a variety of other
 // functions, but this is often useful.
-// x_1 must be a scalar that is a value between 0 and 1
-// x_2 (ty) must be a scalar that is a value between 0 and 1
+// x_1 must be a vector with values between 0 and 1
+// target_y is an equivalently sized vector w values between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
 struct BinaryLogLoss : public Node {
   BinaryLogLoss(const std::initializer_list<VariableIndex>& a) : Node(a) {}
@@ -453,6 +481,21 @@ struct BinaryLogLoss : public Node {
                   const Tensor& dEdf,
                   unsigned i,
                   Tensor& dEdxi) const override;
+};
+
+// y = \log \sum_i \exp x_i
+// done in log space carefully to avoid over/underflow issues
+struct LogSumExp : public Node {
+  template <typename T> explicit LogSumExp(const T& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
+  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const override;
 };
 
 // y = \sum_i x_i
