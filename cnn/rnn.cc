@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "cnn/nodes.h"
+#include "cnn/expr.h"
 
 using namespace std;
 using namespace cnn::expr;
@@ -71,13 +72,16 @@ Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
 
+    // y <--- f(x)
     Expression y = affine_transform({vars[2], vars[0], x});
 
+    // y <--- g(y_prev)
     if (prev == -1 && h0.size() > 0)
-      y = y + vars[1] * h0[i];
+      y = affine_transform({y, vars[1], h0[i]});
     else if (prev >= 0)
-      y = y + vars[1] * h[prev][i];
+      y = affine_transform({y, vars[1], h[prev][i]});
 
+    // x <--- tanh(y)
     x = h[t][i] = tanh(y);
   }
   return h[t].back();
@@ -96,9 +100,9 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
     Expression y = affine_transform({vars[HB], vars[X2H], x, vars[L2H], aux});
 
     if (t == 0 && h0.size() > 0)
-      y = y + vars[H2H] * h0[i];
+      y = affine_transform({y, vars[H2H], h0[i]});
     else if (t >= 1)
-      y = y + vars[H2H] * h[t-1][i];
+      y = affine_transform({y, vars[H2H], h[t-1][i]});
 
     x = h[t][i] = tanh(y);
   }

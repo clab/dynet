@@ -102,6 +102,7 @@ struct TensorTools {
   static void CopyElements(const Tensor& v, const Tensor& v_src);
 };
 real rand01();
+int rand0n(int n);
 real rand_normal();
 
 } // namespace cnn

@@ -46,6 +46,7 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression square(const Expression& x);
+Expression cube(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
