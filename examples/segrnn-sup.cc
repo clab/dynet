@@ -21,15 +21,15 @@ using namespace std;
 using namespace cnn;
 
 unsigned LAYERS = 1;
-unsigned INPUT_DIM = 64;
-unsigned XCRIBE_DIM = 64;
-unsigned SEG_DIM = 32;
-unsigned H1DIM = 48;
-unsigned H2DIM = 36;
-unsigned TAG_DIM = 16;
+unsigned INPUT_DIM = 24;
+unsigned XCRIBE_DIM = 24;
+unsigned SEG_DIM = 16;
+unsigned H1DIM = 24;
+unsigned H2DIM = 18;
+unsigned TAG_DIM = 8;
 unsigned TAG_SIZE = 0;
 unsigned VOCAB_SIZE = 0;
-unsigned DURATION_DIM = 8;
+unsigned DURATION_DIM = 4;
 
 bool eval = false;
 cnn::Dict d;
@@ -394,6 +394,9 @@ int main(int argc, char** argv) {
   }
   d.Freeze();  // no new word types allowed
   td.Freeze(); // no new tag types allowed
+  
+  d.SetUnk("<UNK>"); // set UNK to allow the unseen character in the dev and test set
+
   cerr << "Reading dev data from " << argv[2] << "...\n";
   {
     ifstream in(argv[2]);
@@ -425,8 +428,8 @@ int main(int argc, char** argv) {
     ia >> model;
   }
 
-  unsigned report_every_i = 50;
-  unsigned dev_every_i_reports = 25;
+  unsigned report_every_i = 10;
+  unsigned dev_every_i_reports = 5;
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
@@ -459,6 +462,24 @@ int main(int argc, char** argv) {
     }
     sgd->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
+    report++;
+    if (report % dev_every_i_reports == 0) {
+      double dloss = 0;
+      unsigned dtags = 0;
+      for (auto& sent : dev) {
+        ComputationGraph cg;
+        crf.SupervisedLoss(sent.first, sent.second, cg);
+        dtags += sent.second.size();
+        dloss += as_scalar(cg.forward());
+      }
+      if (dloss < best) {
+        best = dloss;
+        ofstream out(fname);
+        boost::archive::text_oarchive oa(out);
+        oa << model;
+      }
+      cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << ' ';
+    }
   }
   delete sgd;
 }
