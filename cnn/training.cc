@@ -12,6 +12,10 @@ float Trainer::clip_gradients() {
   float gscale = 1;
   if (clipping_enabled) {
     float gg = model->gradient_l2_norm();
+    if (isnan(gg) || isinf(gg)) {
+      cerr << "Magnitude of gradient is bad: " << gg << endl;
+      abort();
+    }
     if (gg > clip_threshold) {
       ++clips;
       gscale = clip_threshold / gg;

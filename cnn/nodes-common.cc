@@ -193,6 +193,17 @@ Dim Dropout::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string BlockDropout::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "block_dropout(" << arg_names[0] << ",dropout_probability=" << dropout_probability << ')';
+  return s.str();
+}
+
+Dim BlockDropout::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}
+
 string ConstantPlusX::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << c << " + " << arg_names[0];
@@ -215,6 +226,25 @@ Dim ConstantMinusX::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string LogSumExp::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "log(exp " << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); ++i)
+    s << " + exp " << arg_names[i];
+  s << ")";
+  return s.str();
+}
+
+Dim LogSumExp::dim_forward(const vector<Dim>& xs) const {
+  Dim d = xs[0].truncate();
+  for (unsigned i = 1; i < xs.size(); ++i) {
+    if (d != xs[i].truncate()) {
+      cerr << "Mismatched input dimensions in LogSumExp: " << xs << endl;
+      abort();
+    }
+  }
+  return d;
+}
 string Sum::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0];
@@ -271,6 +301,17 @@ string Square::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Square::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}
+
+string Cube::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "cube(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim Cube::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
   return xs[0];
 }
