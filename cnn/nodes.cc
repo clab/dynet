@@ -476,7 +476,6 @@ void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #else
   auto x = **xs[0];
   (*fx).array() = x.array().tanh();
-//  *fx = x.unaryExpr(FTanh());
 #endif
 }
 

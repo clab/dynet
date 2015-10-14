@@ -103,6 +103,7 @@ class Model {
   Model() : gradient_norm_scratch() {}
   ~Model();
   float gradient_l2_norm() const;
+  void reset_gradient();
   // set scale to use custom initialization
   Parameters* add_parameters(const Dim& d, float scale = 0.0f);
   LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
