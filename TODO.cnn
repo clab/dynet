@@ -22,6 +22,7 @@ tests/ [volunteer!!!]
   * we need to report very clear, detailed runtime on lots of things. in PARTICULAR: big M-v and M-M products, but also softmax. these should be as close to the "user expr.h API" as possible since we want the these tests to be stable.
   * we should have a separate mechanism for testing nodes in isolation, make sure fx can deal with non-zero numbers, make sure dEdxi does the right thing with non-zero numbers (different than fx!).
   * we should have one example that calls the fin diff gradient checker on a non-trivial example
+  * TODO(wammar): test the basic functionality of LSTMs.
 
 cnn/tensor.* [volunteer!!!]
   * big change: start using the CNN multidim tensor library when it makes sense
