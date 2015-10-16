@@ -36,7 +36,7 @@ which will train a multilayer perceptron to predict the xor function.
 If you don't have Eigen installed, the instructions below will fetch and compile
 both `Eigen` and `cnn`.
         
-    git clone https://github.com/yoavg/cnn.git
+    git clone https://github.com/clab/cnn.git
     hg clone https://bitbucket.org/eigen/eigen/
 
     cd cnn/
