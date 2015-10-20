@@ -25,7 +25,8 @@ const Tensor& SimpleExecutionEngine::forward(VariableIndex i) {
 const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
     assert(i < cg.nodes.size());
     if (i >= last_node_evaluated) {
-        incremental_forward(i);
+        // node_max_index is used as a sentinel here, so we should forward until (i+1) not i
+        incremental_forward( (VariableIndex)((unsigned int)i+1) );
     }
     return nfxs[i];
 }
