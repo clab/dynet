@@ -203,4 +203,9 @@ LookupParameters* Model::add_lookup_parameters(unsigned n, const Dim& d) {
   return p;
 }
 
+void Model::reset_gradient() {
+  for (auto p : params) { p->clear(); }
+  for (auto p : lookup_params) { p->clear(); }
+}
+
 } // namespace cnn
