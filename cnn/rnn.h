@@ -83,10 +83,10 @@ struct RNNBuilder {
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) = 0;
+  RNNPointer cur;
  private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
-  RNNPointer cur;
   std::vector<RNNPointer> head; // head[i] returns the head position
 };
 
@@ -106,7 +106,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
  public:
   Expression add_auxiliary_input(const Expression& x, const Expression &aux);
 
-  Expression back() const override { return h.back().back(); }
+  Expression back() const override { return (cur == -1? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const override { return final_h(); }
   void copy(const RNNBuilder & params) override;
