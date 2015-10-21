@@ -36,6 +36,8 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
+  assert(i < cg.nodes.size());
+
   // free any old memory if this is a new HG
   if (num_nodes_evaluated == 0) fxs->free();
 
