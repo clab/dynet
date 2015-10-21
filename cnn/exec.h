@@ -33,7 +33,7 @@ class SimpleExecutionEngine : public ExecutionEngine {
  private:
   std::vector<Tensor> nfxs;
   std::vector<Tensor> ndEdfs;
-  VariableIndex last_node_evaluated;
+  VariableIndex num_nodes_evaluated;
 };
 
 } // namespace cnn
