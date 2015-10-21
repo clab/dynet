@@ -18,7 +18,7 @@ int n_hgs = 0;
 Node::~Node() {}
 size_t Node::aux_storage_size() const { return 0; }
 
-ComputationGraph::ComputationGraph() : last_node_evaluated(),
+ComputationGraph::ComputationGraph() :
   ee(new SimpleExecutionEngine(*this)) {
   ++n_hgs;
   if (n_hgs > 1) {
@@ -34,7 +34,6 @@ ComputationGraph::~ComputationGraph() {
 }
 
 void ComputationGraph::clear() {
-  last_node_evaluated = VariableIndex();
   parameter_nodes.clear();
   for (auto n : nodes) delete n;
   nodes.clear();

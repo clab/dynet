@@ -99,7 +99,6 @@ struct ComputationGraph {
   // data
   std::vector<Node*> nodes;       // **stored in topological order**
   std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
-  VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
 
   ExecutionEngine* ee;  // handles the execution
  private:
