@@ -9,11 +9,11 @@ namespace cnn {
 ExecutionEngine::~ExecutionEngine() {}
 
 void SimpleExecutionEngine::invalidate() {
-    last_node_evaluated = 0;
+    num_nodes_evaluated = 0;
 }
 
 const Tensor& SimpleExecutionEngine::forward() { 
-  const VariableIndex node_max_index = (VariableIndex)cg.nodes.size();
+  const VariableIndex node_max_index = (VariableIndex)(cg.nodes.size() - 1);
   return forward(node_max_index);
 }
 
@@ -24,56 +24,54 @@ const Tensor& SimpleExecutionEngine::forward(VariableIndex i) {
 
 const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
     assert(i < cg.nodes.size());
-    if (i >= last_node_evaluated) {
-        // node_max_index is used as a sentinel here, so we should forward until (i+1) not i
-        incremental_forward( (VariableIndex)((unsigned int)i+1) );
+    if (i >= num_nodes_evaluated) {
+      incremental_forward();
     }
     return nfxs[i];
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward() {
-  const VariableIndex node_max_index = (VariableIndex)cg.nodes.size();
+  const VariableIndex node_max_index = (VariableIndex)(cg.nodes.size() - 1);
   return incremental_forward(node_max_index);
 }
 
-const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex node_max_index) {
+const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
   // free any old memory if this is a new HG
-  if (last_node_evaluated == 0) fxs->free();
+  if (num_nodes_evaluated == 0) fxs->free();
 
-  assert(node_max_index > 0);
-  nfxs.resize(node_max_index);
-  if (node_max_index - last_node_evaluated == 0)
-    return nfxs.back();
+  if (i >= num_nodes_evaluated) {
+    nfxs.resize(i + 1);
 
-  //vector<string> dummy(5, "x");
-  vector<const Tensor*> xs(16);
-  for (; last_node_evaluated < node_max_index; ++last_node_evaluated) {
-    const Node* node = cg.nodes[last_node_evaluated];
-    xs.resize(node->arity());
-    unsigned ai = 0;
-    for (VariableIndex arg : node->args) {
-      xs[ai] = &nfxs[arg];
-      ++ai;
-    }
-    nfxs[last_node_evaluated].d = node->dim;
-    nfxs[last_node_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
-    if (nfxs[last_node_evaluated].v == nullptr) {
-      cerr << "out of memory\n";
-      abort();
-    }
-    void* aux_mem = nullptr;
-    size_t aux_size = node->aux_storage_size();
-    if (aux_size) {
-      aux_mem = fxs->allocate(aux_size);
-      if (!aux_mem) {
-        cerr << "aux out of memory\n";
+    //vector<string> dummy(5, "x");
+    vector<const Tensor*> xs(16);
+    for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
+      const Node* node = cg.nodes[num_nodes_evaluated];
+      xs.resize(node->arity());
+      unsigned ai = 0;
+      for (VariableIndex arg : node->args) {
+        xs[ai] = &nfxs[arg];
+        ++ai;
+      }
+      nfxs[num_nodes_evaluated].d = node->dim;
+      nfxs[num_nodes_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
+      if (nfxs[num_nodes_evaluated].v == nullptr) {
+        cerr << "out of memory\n";
         abort();
       }
+      void* aux_mem = nullptr;
+      size_t aux_size = node->aux_storage_size();
+      if (aux_size) {
+        aux_mem = fxs->allocate(aux_size);
+        if (!aux_mem) {
+          cerr << "aux out of memory\n";
+          abort();
+        }
+      }
+      node->aux_mem = aux_mem;
+      node->forward(xs, nfxs[num_nodes_evaluated]);
     }
-    node->aux_mem = aux_mem;
-    node->forward(xs, nfxs[last_node_evaluated]);
   }
-  return nfxs.back();
+  return nfxs[i];
 }
 
 void SimpleExecutionEngine::backward() {
