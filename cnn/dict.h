@@ -31,6 +31,7 @@ namespace cnn {
   }
 
   void Freeze() { frozen = true; }
+  bool is_frozen() { return frozen; }
 
   inline int Convert(const std::string& word) {
     auto i = d_.find(word);
