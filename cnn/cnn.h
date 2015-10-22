@@ -24,8 +24,8 @@
 
 namespace cnn {
 
-extern AlignedMemoryPool<5>* fxs;
-extern AlignedMemoryPool<5>* dEdfs;
+extern AlignedMemoryPool<6>* fxs;
+extern AlignedMemoryPool<6>* dEdfs;
 extern float* kSCALAR_MINUSONE;
 extern float* kSCALAR_ONE;
 extern float* kSCALAR_ZERO;
@@ -33,6 +33,7 @@ extern float* kSCALAR_ZERO;
 class ExecutionEngine;
 struct ParameterNodeBase;
 struct Node;
+namespace expr { struct Expression; }
 
 BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
 inline void swap(VariableIndex& i1, VariableIndex& i2) {
@@ -72,6 +73,9 @@ struct ComputationGraph {
                                     Args&&... side_information);
   template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
+  // reset ComputationGraph to a newly created state
+  void clear();
+
   // perform computations
 
   // run complete forward pass from first node to last existing one, ignoring all precomputed values.
@@ -83,6 +87,7 @@ struct ComputationGraph {
   // performs forward evaluation if note available (may compute more than strictly
   // what is needed).
   const Tensor& get_value(VariableIndex i);
+  const Tensor& get_value(const expr::Expression& e);
   // clears forward caches (for get_value etc).
   void invalidate();
   // computes backward gradients from the front-most evaluated node.
@@ -96,7 +101,6 @@ struct ComputationGraph {
   // data
   std::vector<Node*> nodes;       // **stored in topological order**
   std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
-  VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
 
   ExecutionEngine* ee;  // handles the execution
  private:

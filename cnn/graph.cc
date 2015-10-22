@@ -1,6 +1,7 @@
 #include "cnn/graph.h"
 #include "cnn/cnn.h"
 #include <vector>
+#include "cnn/cnn-helper.h"
 
 using namespace std;
 
@@ -27,8 +28,7 @@ void GraphOptimize(ComputationGraph* cg) {
     }
     cerr << "LONGEST PATH: " << longest_paths[i] << "\tx" << i << " = " << nodes[i]->as_string(x) << endl;
   }
-  abort();
+  abort();// DEBUGGING
 }
 
-
-} // namespace cnn
+} // namespaiice cnn

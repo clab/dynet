@@ -14,28 +14,6 @@
 // if you need a new elementwise (nullary, unary, binary...)
 // functor, this is the place for it
 
-#define cast_uint32_t static_cast<uint32_t>
-
-static inline float fastpow2 (float p) {
-  float offset = (p < 0) ? 1.0f : 0.0f;
-  float clipp = (p < -126) ? -126.0f : p;
-  int w = clipp;
-  float z = clipp - w + offset;
-  union { uint32_t i; float f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 121.2740575f + 27.7280233f / (4.84252568f - z) - 1.49012907f * z) ) };
-
-  return v.f;
-}
-
-static inline float fastexp (float p) {
-  return fastpow2 (1.442695040f * p);
-}
-
-#if HAVE_CUDA
-#  define CNN_EXPF exp
-#else
-#  define CNN_EXPF fastexp
-#endif
-
 namespace cnn {
 
 struct FHuberForward {
@@ -52,18 +30,21 @@ template <typename T> int sgn(T val) {
 }
 
 struct FL1Backward {
-  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+  FL1Backward(float d) : d(d) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
     return sgn(x) * d;
   }
+  const float d;
 };
 
 struct FHuberBackward {
-  FHuberBackward(float c) : c(c) {}
-  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+  FHuberBackward(float c, float dEdf) : c(c), d(dEdf) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
     const float a = fabs(x);
     return (2 * d) * ((a < c) ? x : c * sgn(x));
   }
   const float c;
+  const float d;
 };
 
 struct FProduct {
@@ -76,6 +57,14 @@ struct FQuotient {
   CNN_DEVICE_FUNC inline float operator()(float a, float b) const {
     return a / b;
   }
+};
+
+struct FConstantPlus {
+  FConstantPlus(float c) : c(c) {}
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return c + x;
+  }
+  float c;
 };
 
 struct FConstantMinus {
@@ -100,8 +89,14 @@ struct FTanh {
     float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
     return a / b;
 #else
-    return tanhf(x);
+     return tanhf(x);
 #endif
+  }
+};
+
+struct FMaxBackwardInv {
+  CNN_DEVICE_FUNC inline float operator()(float u, float d) const {
+    return (1.f - u) * d;
   }
 };
 
@@ -135,7 +130,7 @@ struct FRectifyNegateBackward {
 struct FSoftmaxNormalize {
   explicit FSoftmaxNormalize(float logz) : logz(logz) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {
-    return CNN_EXPF(x - logz);
+    return expf(x - logz);
   }
   float logz;
 };
@@ -151,7 +146,7 @@ struct FSoftmaxBackward {
 struct FNegLogSoftmaxBackward {
   FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}
   CNN_DEVICE_FUNC inline float operator()(float t) const {
-    return CNN_EXPF(t - logz) * d;
+    return expf(t - logz) * d;
   }
   float logz;
   float d;
@@ -160,7 +155,7 @@ struct FNegLogSoftmaxBackward {
 struct FPtrNegLogSoftmaxBackward {
   FPtrNegLogSoftmaxBackward(const float* lz, const float* err) : logz(lz), d(err) {}
   CNN_DEVICE_FUNC inline float operator()(float t) const {
-    return CNN_EXPF(t - *logz) * *d;
+    return expf(t - *logz) * *d;
   }
   const float* logz;
   const float* d;
@@ -176,14 +171,14 @@ struct FLogSoftmaxNormalize {
 
 struct FWeightedError {
   float operator()(float t, float d) const {
-    return CNN_EXPF(t) * d / CNN_EXPF(t);
+    return expf(t) * d / expf(t);
   }
 };
 
 struct FLogSoftmaxBackward {
   explicit FLogSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
   CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return off_diag_sum * CNN_EXPF(t) + d;
+    return off_diag_sum * expf(t) + d;
     //return (off_diag_sum + d) * t;
   }
   float off_diag_sum;
@@ -210,7 +205,7 @@ struct FSoftSignBackward {
 
 struct FLogisticSigmoid {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
-    return 1.f / (1.f + CNN_EXPF(-x));
+    return 1.f / (1.f + expf(-x));
   }
 };
 
@@ -247,15 +242,36 @@ struct FL2SGDUpdate {
 
 struct FBinaryLogLoss {
   CNN_DEVICE_FUNC inline float operator()(float x, float x_true) const {
-    return x_true > 0.f ? -x_true * log(x) : (1.f - x_true) * log1p(-x);
+    if (x_true == 1.f) {
+      if (x == 0.f) x = std::numeric_limits<float>::min();
+      return -1.f * x_true * log(x);
+    }
+    else if (x_true == 0.f) {
+      if (x == 1.f) x = std::numeric_limits<float>::min();
+      return (x_true - 1.f) * log1p(-x);
+    }
+    else {
+      if (x == 0.f) x = std::numeric_limits<float>::min();
+      if (x == 1.f) x = std::numeric_limits<float>::min();
+      return -1.f * (x_true * log(x) + (1.f - x_true) * log1p(-x));
+    }
   }
 };
 
 struct FBinaryLogLossBackward {
-  CNN_DEVICE_FUNC inline float operator()(float x, float x_true, float d) const {
-    float scale = (x_true > 0.f) ? -x_true/x : (1.f-x_true)/(1.-x);
-    return d * scale;
+  explicit FBinaryLogLossBackward(float d) : d(d) {}
+  CNN_DEVICE_FUNC inline float operator()(float x, float x_true) const {
+    if (x == x_true) return 0;
+    if (x == 0.f) x = std::numeric_limits<float>::min();
+    if (x == 1.f) x = 0.9999999f;
+    if (x_true == 1.f) {
+      return d * -x_true / x;
+    } else if (x_true == 0.f) {
+      return d * (1.f - x_true) / (1.f - x);
+    }
+    return d * ((1.f - x_true) / (1.f - x) + (-x_true / x));
   }
+  float d;
 };
 
 } // namespace cnn

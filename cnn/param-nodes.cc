@@ -9,7 +9,7 @@ namespace cnn {
 
 string ParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "parameters(" << dim << ')';
+  s << "parameters(" << dim << ", " << params << ')';
   return s.str();
 }
 
@@ -104,6 +104,7 @@ Dim LookupNode::dim_forward(const vector<Dim>& xs) const {
 
 void LookupNode::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
+  assert(*pindex < params->values.size());
   fx.v = params->values[*pindex].v;
 }
 

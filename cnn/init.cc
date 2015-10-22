@@ -15,29 +15,31 @@ using namespace std;
 
 namespace cnn {
 
-#define ALIGN 5
+#define ALIGN 6
 AlignedMemoryPool<ALIGN>* fxs = nullptr;
 AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
 mt19937* rndeng = nullptr;
 
-void Initialize(int& argc, char**& argv) {
+void Initialize(int& argc, char**& argv, unsigned random_seed) {
   cerr << "Initializing...\n";
 #if HAVE_CUDA
   Initialize_GPU(argc, argv);
 #else
-  kSCALAR_MINUSONE = new float;
+  kSCALAR_MINUSONE = (float*) cnn_mm_malloc(sizeof(float), 256);
   *kSCALAR_MINUSONE = -1;
-  kSCALAR_ONE = new float;
+  kSCALAR_ONE = (float*) cnn_mm_malloc(sizeof(float), 256);
   *kSCALAR_ONE = 1;
-  kSCALAR_ZERO = new float;
+  kSCALAR_ZERO = (float*) cnn_mm_malloc(sizeof(float), 256);
   *kSCALAR_ZERO = 0;
 #endif
-  random_device rd;
-//  rndeng = new mt19937(1);
-  rndeng = new mt19937(rd());
+  if (random_seed == 0) {
+    random_device rd;
+    random_seed = rd();
+  }
+  rndeng = new mt19937(random_seed);
   cerr << "Allocating memory...\n";
-  fxs = new AlignedMemoryPool<ALIGN>(512*(1<<20));
-  dEdfs = new AlignedMemoryPool<ALIGN>(512*(1<<20));
+  fxs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20));
+  dEdfs = new AlignedMemoryPool<ALIGN>(512UL*(1UL<<20));
   cerr << "Done.\n";
 }
 

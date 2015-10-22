@@ -1,5 +1,5 @@
-#ifndef EXPR_H
-#define EXPR_H
+#ifndef CNN_EXPR_H
+#define CNN_EXPR_H
 
 #include "cnn/cnn.h"
 #include "cnn/nodes.h"
@@ -26,9 +26,11 @@ Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned
 
 Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);
-//Expression operator+(const Expression& x, real y);
+Expression operator+(const Expression& x, real y);
+Expression operator+(real x, const Expression& y);
 Expression operator-(const Expression& x, const Expression& y);
 Expression operator-(real x, const Expression& y);
+Expression operator-(const Expression& x, real y);
 Expression operator*(const Expression& x, const Expression& y);
 Expression operator*(const Expression& x, float y);
 inline Expression operator*(float y, const Expression& x) { return x * y; }
@@ -36,9 +38,15 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
 // componentwise division
 Expression cdiv(const Expression& x, const Expression& y);
 Expression colwise_add(const Expression& x, const Expression& bias);
+// z_ij = x_ijk * y_k
+Expression contract3d_1d(const Expression& x, const Expression& y);
+// z_ij = x_ijk * y_k + b_ij
+Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
+Expression square(const Expression& x);
+Expression cube(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
@@ -48,8 +56,11 @@ Expression log_softmax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 Expression softmax(const Expression& x);
 Expression softsign(const Expression& x);
+Expression min(const Expression& x, const Expression& y);
+Expression max(const Expression& x, const Expression& y);
 Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
+Expression block_dropout(const Expression& x, real p);
 
 Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
@@ -63,6 +74,8 @@ Expression huber_distance(const Expression& x, const Expression& y, float c = 1.
 Expression l1_distance(const Expression& x, const Expression& y);
 Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
+Expression poisson_loss(const Expression& x, unsigned y);
+Expression poisson_loss(const Expression& x, const unsigned* py);
 
 // various convolutiony things
 Expression conv1d_narrow(const Expression& x, const Expression& f);
@@ -90,8 +103,16 @@ namespace detail {
 }
 
 template <typename T>
+inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
+inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
+
+template <typename T>
 inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
+
+template <typename T>
+inline Expression max(const T& xs) { return detail::f<Max>(xs); }
+inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
 
 template <typename T>
 inline Expression average(const T& xs) { return detail::f<Average>(xs); }

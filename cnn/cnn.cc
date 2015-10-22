@@ -3,6 +3,8 @@
 #include "cnn/nodes.h"
 #include "cnn/param-nodes.h"
 #include "cnn/aligned-mem-pool.h"
+#include "cnn/cnn-helper.h"
+#include "cnn/expr.h"
 
 using namespace std;
 
@@ -16,20 +18,25 @@ int n_hgs = 0;
 Node::~Node() {}
 size_t Node::aux_storage_size() const { return 0; }
 
-ComputationGraph::ComputationGraph() : last_node_evaluated(),
+ComputationGraph::ComputationGraph() :
   ee(new SimpleExecutionEngine(*this)) {
   ++n_hgs;
   if (n_hgs > 1) {
-    // TODO handle memory better
-    cerr << "Memory allocator assumes only a single hypergraph at a time.\n";
-    abort();
+    cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
+    throw std::runtime_error("Attempted to create >1 CG");
   }
 }
 
 ComputationGraph::~ComputationGraph() {
+  this->clear();
   delete ee;
-  for (auto n : nodes) delete n;
   --n_hgs;
+}
+
+void ComputationGraph::clear() {
+  parameter_nodes.clear();
+  for (auto n : nodes) delete n;
+  nodes.clear();
 }
 
 VariableIndex ComputationGraph::add_input(real s) {
@@ -114,6 +121,7 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
 const Tensor& ComputationGraph::incremental_forward() { return ee->incremental_forward(); }
 const Tensor& ComputationGraph::forward() { return ee->forward(); }
 const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_value(i); }
+const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return this->get_value(e.i); }
 void ComputationGraph::invalidate() { ee->invalidate(); }
 void ComputationGraph::backward() { ee->backward(); }
 void ComputationGraph::backward(VariableIndex i) { ee->backward(i); }

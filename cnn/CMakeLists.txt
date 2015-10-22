@@ -3,12 +3,14 @@
 set(cnn_library_SRCS
     cnn.cc
     conv.cc
+    deep-lstm.cc
     dict.cc
     dim.cc
     exec.cc
     expr.cc
+    grad-check.cc
     graph.cc
-#    gru.cc
+    gru.cc
     init.cc
     lstm.cc
     model.cc
@@ -21,6 +23,7 @@ set(cnn_library_SRCS
     shadow-params.cc
     tensor.cc
     training.cc
+    treelstm.cc
 )
 
 # Headers:
@@ -52,6 +55,7 @@ set(cnn_library_HDRS
     tensor.h
     timing.h
     training.h
+    treelstm.h
 )
 
 if(WITH_CUDA_BACKEND)
@@ -71,13 +75,13 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
   #link to Boost libraries AND your targets and dependencies
 #  target_link_libraries(${testName} cnn ${LIBS})
 
-#  set_target_properties(${testName} PROPERTIES 
+#  set_target_properties(${testName} PROPERTIES
 #      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests.bin)
 
-  #Finally add it to test execution - 
+  #Finally add it to test execution -
   #Notice the WORKING_DIRECTORY and COMMAND
-#  add_test(NAME ${testName} 
-#     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests.bin 
+#  add_test(NAME ${testName}
+#     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests.bin
 #     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests.bin/${testName} )
 #endforeach(test_src)
 

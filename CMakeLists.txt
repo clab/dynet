@@ -2,11 +2,20 @@ project(cnn)
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -O3 -g -DEIGEN_FAST_MATH")
+
+# CNN uses Eigen which exploits modern CPU architectures. To get the
+# best possible performance, the following are recommended:
+#   1. use very recent versions of gcc or Clang to build
+#   2. use very recent versions of Eigen (ideally the dev version)
+#   3. try compiler options like -march=native or other architecture
+#      flags (the compiler does not always make the best configuration
+#      decisions without help)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops -Wall -Wpedantic -std=c++11 -Ofast -g -DEIGEN_FAST_MATH -Wno-unused-local-typedefs -march=native")
 
 enable_testing()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+                    ${PROJECT_SOURCE_DIR}/external/easyloggingpp/src)
 
 function(find_cudnn)
   set(CUDNN_ROOT "" CACHE PATH "CUDNN root path")
@@ -36,6 +45,15 @@ set(Boost_REALPATH ON)
 find_package(Boost COMPONENTS program_options serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
+# trouble shooting:
+# if boost library cannot be found, in addition to install boost library
+# check if environment variables are set
+# 
+# to set boost root and its library root in environment variable, use
+# for example
+# echo "export BOOST_LIBRARYDIR=/usr/local/lib" >> ~/.bashrc
+# echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
+# then run source ~/.bashrc to have those environment variable effective immediately
 
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
@@ -70,4 +88,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(cnn)
+add_subdirectory(tests)
 add_subdirectory(examples)
+enable_testing()
