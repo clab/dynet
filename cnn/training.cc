@@ -12,6 +12,10 @@ float Trainer::clip_gradients() {
   float gscale = 1;
   if (clipping_enabled) {
     float gg = model->gradient_l2_norm();
+    if (isnan(gg) || isinf(gg)) {
+      cerr << "Magnitude of gradient is bad: " << gg << endl;
+      abort();
+    }
     if (gg > clip_threshold) {
       ++clips;
       gscale = clip_threshold / gg;
@@ -21,8 +25,12 @@ float Trainer::clip_gradients() {
 }
 
 void SimpleSGDTrainer::update(real scale) {
+    update(model->lookup_parameters_list(), model->parameters_list(), scale);
+}
+
+void SimpleSGDTrainer::update(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale) {
   const float gscale = clip_gradients();
-  for (auto p : model->parameters_list()) {
+  for (auto p : params) {
 #if HAVE_CUDA
     gpu::sgd_update(p->values.d.size(), p->g.v, p->values.v, eta * scale * gscale, lambda);
 #else
@@ -31,7 +39,7 @@ void SimpleSGDTrainer::update(real scale) {
 #endif
     p->clear();
   }
-  for (auto p : model->lookup_parameters_list()) {
+  for (auto p : lookup_params) {
     for (auto i : p->non_zero_grads) {
 #if HAVE_CUDA
       gpu::sgd_update(p->values[i].d.size(), p->grads[i].v, p->values[i].v, eta * scale * gscale, lambda);
@@ -80,7 +88,7 @@ void MomentumSGDTrainer::update(real scale) {
 void AdagradTrainer::update(real scale) {
   unsigned pi;
   if (!shadow_params_allocated) {
-    vp = AllocateShadowParameters(*model); 
+    vp = AllocateShadowParameters(*model);
     vlp = AllocateShadowLookupParameters(*model);
     shadow_params_allocated = true;
   }

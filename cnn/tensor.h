@@ -6,6 +6,7 @@
 
 #include "cnn/dim.h"
 #include "cnn/random.h"
+#include "cnn/aligned-mem-pool.h"
 
 #if HAVE_CUDA
 #include <cuda.h>
@@ -38,6 +39,18 @@ struct Tensor {
   Eigen::Map<Eigen::MatrixXf, Eigen::Aligned> operator*() {
     return Eigen::Map<Eigen::MatrixXf, Eigen::Aligned>(v, d.rows(), d.cols());
   }
+  // this is very slow: use sparingly
+  inline bool is_valid() const {
+#if HAVE_CUDA
+    std::cerr << "is_valid() not implemented with HAVE_CUDA\n";
+    abort();
+#else
+    const size_t s = d.size();
+    for (unsigned i = 0; i < s; ++i)
+      if (std::isnan(v[i]) || std::isinf(v[i])) return false;
+    return true;
+#endif
+  }
   Dim d;
   float* v;
 
@@ -64,7 +77,7 @@ struct Tensor {
     ar & boost::serialization::make_array(vc, d.size());
     CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
 #else
-    v = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
+    v = static_cast<float*>(cnn_mm_malloc(d.size() * sizeof(float), 32));
     ar & boost::serialization::make_array(v, d.size());
 #endif
   }
@@ -89,6 +102,8 @@ struct TensorTools {
   static void CopyElements(const Tensor& v, const Tensor& v_src);
 };
 real rand01();
+int rand0n(int n);
+real rand_normal();
 
 } // namespace cnn
 

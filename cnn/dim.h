@@ -1,6 +1,7 @@
 #ifndef CNN_DIM_H
 #define CNN_DIM_H
 
+#include <cassert>
 #include <initializer_list>
 #include <type_traits>
 #include <stdexcept>
@@ -31,9 +32,20 @@ struct Dim {
     for (unsigned i = 0; i < nd; ++i) p += d[i];
     return p;
   }
+  inline Dim truncate() const {
+    Dim r = *this;
+    int m = 1;
+    int s = size();
+    for (int i = 1; i < s; ++i)
+      if (size(i) > 1) m = i + 1;
+    r.resize(m);
+    return r;
+  }
+  inline void resize(unsigned i) { nd = i; }
   inline int ndims() const { return nd; }
   inline int rows() const { return d[0]; }
   inline int cols() const { return nd > 1 ? d[1] : 1; }
+  inline void set(unsigned i, unsigned s) { assert(i < nd); assert(s > 0); d[i] = s; }
   inline int operator[](unsigned i) const { return i < nd ? d[i] : 1; }
   inline int size(unsigned i) const { return (*this)[i]; }
   inline Dim transpose() const {

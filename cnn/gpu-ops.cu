@@ -209,7 +209,7 @@ void softmax_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
   cudaMalloc((void **)&gpu_ods, sizeof(float));
   ker_dotproduct<<<tb.first, tb.second>>>(n, fx, dEdf, gpu_ods);
   cudaMemcpy(&ods, gpu_ods, sizeof(float), cudaMemcpyDeviceToHost);
-  cudaFree(gpu_ods);  
+  cudaFree(gpu_ods);
   accBinaryExprKernel<<<tb.first, tb.second>>>(n, fx, dEdf, dEdx, FSoftmaxBackward(-ods));
 }
 

@@ -9,60 +9,71 @@ namespace cnn {
 ExecutionEngine::~ExecutionEngine() {}
 
 void SimpleExecutionEngine::invalidate() {
-    last_node_evaluated = 0;
+    num_nodes_evaluated = 0;
 }
-const Tensor& SimpleExecutionEngine::forward() {
+
+const Tensor& SimpleExecutionEngine::forward() { 
+  const VariableIndex node_max_index = (VariableIndex)(cg.nodes.size() - 1);
+  return forward(node_max_index);
+}
+
+const Tensor& SimpleExecutionEngine::forward(VariableIndex i) {
   invalidate();
-  return incremental_forward();
+  return incremental_forward(i);
 }
 
 const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
     assert(i < cg.nodes.size());
-    if (i >= last_node_evaluated) {
-        incremental_forward();
+    if (i >= num_nodes_evaluated) {
+      incremental_forward();
     }
     return nfxs[i];
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward() {
+  const VariableIndex node_max_index = (VariableIndex)(cg.nodes.size() - 1);
+  return incremental_forward(node_max_index);
+}
+
+const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
+  assert(i < cg.nodes.size());
+
   // free any old memory if this is a new HG
-  if (last_node_evaluated == 0) fxs->free();
+  if (num_nodes_evaluated == 0) fxs->free();
 
-  const unsigned node_max_index = cg.nodes.size();
-  assert(node_max_index > 0);
-  nfxs.resize(node_max_index);
-  if (node_max_index - last_node_evaluated == 0)
-    return nfxs.back();
+  if (i >= num_nodes_evaluated) {
+    nfxs.resize(i + 1);
 
-  //vector<string> dummy(5, "x");
-  vector<const Tensor*> xs(16);
-  for (; last_node_evaluated < node_max_index; ++last_node_evaluated) {
-    const Node* node = cg.nodes[last_node_evaluated];
-    xs.resize(node->arity());
-    unsigned ai = 0;
-    for (VariableIndex arg : node->args) {
-      xs[ai] = &nfxs[arg];
-      ++ai;
-    }
-    nfxs[last_node_evaluated].d = node->dim;
-    nfxs[last_node_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
-    if (nfxs[last_node_evaluated].v == nullptr) {
-      cerr << "out of memory\n";
-      abort();
-    }
-    void* aux_mem = nullptr;
-    size_t aux_size = node->aux_storage_size();
-    if (aux_size) {
-      aux_mem = fxs->allocate(aux_size);
-      if (!aux_mem) {
+    //vector<string> dummy(5, "x");
+    vector<const Tensor*> xs(16);
+    for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
+      const Node* node = cg.nodes[num_nodes_evaluated];
+      xs.resize(node->arity());
+      unsigned ai = 0;
+      for (VariableIndex arg : node->args) {
+        xs[ai] = &nfxs[arg];
+        ++ai;
+      }
+      nfxs[num_nodes_evaluated].d = node->dim;
+      nfxs[num_nodes_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
+      if (nfxs[num_nodes_evaluated].v == nullptr) {
         cerr << "out of memory\n";
         abort();
       }
+      void* aux_mem = nullptr;
+      size_t aux_size = node->aux_storage_size();
+      if (aux_size) {
+        aux_mem = fxs->allocate(aux_size);
+        if (!aux_mem) {
+          cerr << "aux out of memory\n";
+          abort();
+        }
+      }
+      node->aux_mem = aux_mem;
+      node->forward(xs, nfxs[num_nodes_evaluated]);
     }
-    node->aux_mem = aux_mem;
-    node->forward(xs, nfxs[last_node_evaluated]);
   }
-  return nfxs.back();
+  return nfxs[i];
 }
 
 void SimpleExecutionEngine::backward() {
@@ -78,10 +89,11 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
     cerr << "backward() called on non-scalar node.\n";
     abort();
   }
-  const unsigned node_max_index = from_where+1;
-  ndEdfs.resize(node_max_index);
+
+  const unsigned num_nodes = from_where+1;
+  ndEdfs.resize(num_nodes);
   dEdfs->free();
-  for (unsigned i = 0; i < node_max_index; ++i) {
+  for (unsigned i = 0; i < num_nodes; ++i) {
     const auto dim = nfxs[i].d;
     ndEdfs[i].d = dim;
     ndEdfs[i].v = static_cast<float*>(dEdfs->allocate(dim.size() * sizeof(float)));
@@ -92,7 +104,6 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
   ndEdfs.back().v = kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
-  const unsigned num_nodes = from_where+1;
   vector<bool> needs_derivative(num_nodes, false);
   for (auto i : cg.parameter_nodes)
     needs_derivative[i] = true;
@@ -116,8 +127,9 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
     }
     ai = 0;
     for (VariableIndex arg : node->args) {
-      if (needs_derivative[arg])
+      if (needs_derivative[arg]) {
         node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
+      }
       ++ai;
     }
   }

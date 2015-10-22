@@ -92,7 +92,8 @@ void LookupParameters::scale_parameters(float a) {
 void LookupParameters::Initialize(unsigned index, const vector<float>& val) {
   assert(int(val.size()) == int(dim.size()));
 #if HAVE_CUDA
-  cerr << "implement LookupParameters::Initialize\n"; abort();
+  cerr << "implement LookupParameters::Initialize\n";
+  throw cuda_not_implemented("LookupParameters::Initialize");
 #else
   memcpy(values[index].v, &val[0], val.size() * sizeof(float));
 #endif
@@ -167,7 +168,7 @@ void Model::project_weights(float radius) {
     ++pi;
   }
   double gg = 0;
-  for (unsigned i = 0; i < pi; ++i)
+  for (int i = 0; i < pi; ++i)
     gg += project_scratch[i];
   cerr << "NORM: " << sqrt(gg) << endl;
 }
@@ -187,7 +188,7 @@ float Model::gradient_l2_norm() const {
   return sqrt(res);
 #else
   double gg = 0;
-  for (unsigned i = 0; i < pi; ++i)
+  for (int i = 0; i < pi; ++i)
     gg += gradient_norm_scratch[i];
   return sqrt(gg);
 #endif
@@ -207,6 +208,11 @@ LookupParameters* Model::add_lookup_parameters(unsigned n, const Dim& d) {
   return p;
 }
 
+void Model::reset_gradient() {
+  for (auto p : params) { p->clear(); }
+  for (auto p : lookup_params) { p->clear(); }
+}
+
 void save_cnn_model(std::string filename, Model* model) {
     std::ofstream out(filename);
     boost::archive::text_oarchive oa(out);
@@ -218,6 +224,5 @@ void load_cnn_model(std::string filename, Model* model) {
     boost::archive::text_iarchive ia(in);
     ia >> (*model);
 };
-
 
 } // namespace cnn

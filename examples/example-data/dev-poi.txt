@@ -1,0 +1,4 @@
+<s> i 'll take it . </s> ||| 5
+<s> we want to have a table near the window . </s> ||| 10
+<s> how can i help you ? </s> ||| 6
+<s> would you , please ? </s> ||| 5

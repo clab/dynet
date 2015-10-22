@@ -47,6 +47,7 @@ struct Trainer {
 struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.1) : Trainer(m, lam, e0) {}
   void update(real scale) override;
+  void update(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale = 1);
 };
 
 struct MomentumSGDTrainer : public Trainer {

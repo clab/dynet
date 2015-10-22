@@ -77,6 +77,7 @@ struct RNNBuilder {
   // access the state of each hidden layer, in a format that can be used in
   // start_new_sequence
   virtual std::vector<Expression> final_s() const = 0;
+  virtual unsigned num_h0_components() const  = 0;
   virtual std::vector<Expression> get_s(RNNPointer i) const = 0;
   // copy the parameters of another builder
   virtual void copy(const RNNBuilder & params) = 0;
@@ -84,10 +85,10 @@ struct RNNBuilder {
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) = 0;
+  RNNPointer cur;
  private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
-  RNNPointer cur;
   std::vector<RNNPointer> head; // head[i] returns the head position
 };
 
@@ -96,7 +97,8 @@ struct SimpleRNNBuilder : public RNNBuilder {
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
-                            Model* model);
+                            Model* model,
+                            bool support_lags=false);
 
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
@@ -104,13 +106,17 @@ struct SimpleRNNBuilder : public RNNBuilder {
   Expression add_input_impl(int prev, const Expression& x) override;
 
  public:
-  Expression back() const { return h.back().back(); }
-  std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
-  std::vector<Expression> final_s() const { return final_h(); }
+  Expression add_auxiliary_input(const Expression& x, const Expression &aux);
 
-  std::vector<Expression> get_h(RNNPointer i) const { return (i == -1 ? h0 : h[i]); }
-  std::vector<Expression> get_s(RNNPointer i) const { return get_h(i); }
+  Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
+  std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
+  std::vector<Expression> final_s() const override { return final_h(); }
+
+  std::vector<Expression> get_h(RNNPointer i) const override { return (i == -1 ? h0 : h[i]); }
+  std::vector<Expression> get_s(RNNPointer i) const override { return get_h(i); }
   void copy(const RNNBuilder & params) override;
+
+  unsigned num_h0_components() const override { return layers; }
 
  private:
   // first index is layer, then x2h h2h hb
@@ -119,7 +125,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Expression>> param_vars;
 
-  // first index is time, second is layer 
+  // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
 
   // initial value of h
@@ -127,6 +133,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   std::vector<Expression> h0;
 
   unsigned layers;
+  bool lagging;
 };
 
 } // namespace cnn
