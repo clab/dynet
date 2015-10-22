@@ -77,12 +77,20 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 }
 
 void SimpleExecutionEngine::backward() {
-  if (nfxs.back().d.size() != 1) {
+    assert(nfxs.size() == cg.nodes.size());
+    backward((VariableIndex)(cg.nodes.size()-1));
+}
+
+// TODO what is happening with parameter nodes if from_where > param_node_id ?
+void SimpleExecutionEngine::backward(VariableIndex from_where) {
+  assert(from_where+1 <= nfxs.size());
+  assert(from_where+1 <= cg.nodes.size());
+  if (nfxs[from_where].d.size() != 1) {
     cerr << "backward() called on non-scalar node.\n";
     abort();
   }
 
-  const unsigned num_nodes = cg.nodes.size();
+  const unsigned num_nodes = from_where+1;
   ndEdfs.resize(num_nodes);
   dEdfs->free();
   for (unsigned i = 0; i < num_nodes; ++i) {
