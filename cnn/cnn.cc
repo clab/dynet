@@ -124,6 +124,7 @@ const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_valu
 const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return this->get_value(e.i); }
 void ComputationGraph::invalidate() { ee->invalidate(); }
 void ComputationGraph::backward() { ee->backward(); }
+void ComputationGraph::backward(VariableIndex i) { ee->backward(i); }
 
 void ComputationGraph::PrintGraphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";

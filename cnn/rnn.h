@@ -73,10 +73,12 @@ struct RNNBuilder {
   virtual Expression back() const = 0;
   // access the final output of each hidden layer
   virtual std::vector<Expression> final_h() const = 0;
+  virtual std::vector<Expression> get_h(RNNPointer i) const = 0;
   // access the state of each hidden layer, in a format that can be used in
   // start_new_sequence
   virtual std::vector<Expression> final_s() const = 0;
   virtual unsigned num_h0_components() const  = 0;
+  virtual std::vector<Expression> get_s(RNNPointer i) const = 0;
   // copy the parameters of another builder
   virtual void copy(const RNNBuilder & params) = 0;
  protected:
@@ -109,6 +111,9 @@ struct SimpleRNNBuilder : public RNNBuilder {
   Expression back() const override { return (cur == -1? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const override { return final_h(); }
+
+  std::vector<Expression> get_h(RNNPointer i) const { return (i == -1 ? h0 : h[i]); }
+  std::vector<Expression> get_s(RNNPointer i) const { return get_h(i); }
   void copy(const RNNBuilder & params) override;
 
   unsigned num_h0_components() const override { return layers; }
