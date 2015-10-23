@@ -18,7 +18,7 @@ int n_hgs = 0;
 Node::~Node() {}
 size_t Node::aux_storage_size() const { return 0; }
 
-ComputationGraph::ComputationGraph() : last_node_evaluated(),
+ComputationGraph::ComputationGraph() :
   ee(new SimpleExecutionEngine(*this)) {
   ++n_hgs;
   if (n_hgs > 1) {
@@ -34,7 +34,6 @@ ComputationGraph::~ComputationGraph() {
 }
 
 void ComputationGraph::clear() {
-  last_node_evaluated = VariableIndex();
   parameter_nodes.clear();
   for (auto n : nodes) delete n;
   nodes.clear();
@@ -125,6 +124,7 @@ const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_valu
 const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return this->get_value(e.i); }
 void ComputationGraph::invalidate() { ee->invalidate(); }
 void ComputationGraph::backward() { ee->backward(); }
+void ComputationGraph::backward(VariableIndex i) { ee->backward(i); }
 
 void ComputationGraph::PrintGraphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";
