@@ -55,7 +55,7 @@ set(cnn_library_HDRS
     shadow-params.h
     tensor.h
     timing.h
-    training.h    
+    training.h
 )
 
 if(WITH_CUDA_BACKEND)
