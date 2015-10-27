@@ -92,6 +92,8 @@ struct ComputationGraph {
   void invalidate();
   // computes backward gradients from the front-most evaluated node.
   void backward();
+  // computes backward gradients from node i (assuming it already been evaluated).
+  void backward(VariableIndex i);
 
   // debugging
   void PrintGraphviz() const;
@@ -99,7 +101,6 @@ struct ComputationGraph {
   // data
   std::vector<Node*> nodes;       // **stored in topological order**
   std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
-  VariableIndex last_node_evaluated; // enables forward graphs to be evaluated incrementally
 
   ExecutionEngine* ee;  // handles the execution
  private:

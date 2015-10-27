@@ -6,6 +6,11 @@
 #include <unordered_set>
 #include <iostream>
 
+#include <fstream>
+#include <sstream>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 #define CNN_ALIGN 256
 #if HAVE_CUDA
 #include "cnn/gpu-ops.h"
@@ -207,5 +212,17 @@ void Model::reset_gradient() {
   for (auto p : params) { p->clear(); }
   for (auto p : lookup_params) { p->clear(); }
 }
+
+void save_cnn_model(std::string filename, Model* model) {
+    std::ofstream out(filename);
+    boost::archive::text_oarchive oa(out);
+    oa << (*model);
+};
+
+void load_cnn_model(std::string filename, Model* model) {
+    std::ifstream in(filename);
+    boost::archive::text_iarchive ia(in);
+    ia >> (*model);
+};
 
 } // namespace cnn

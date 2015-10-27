@@ -1,0 +1,14 @@
+language: cpp
+compiler:
+  - gcc
+
+before_script:
+  - hg clone https://bitbucket.org/eigen/eigen
+  - mkdir build
+  - cd build
+  - cmake .. -DEIGEN3_INCLUDE_DIR=../eigen
+
+script:
+  - make
+  - make test
+
