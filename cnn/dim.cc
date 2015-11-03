@@ -12,6 +12,7 @@ ostream& operator<<(ostream& os, const Dim& d) {
     if (i) os << ',';
     os << d.d[i];
   }
+  if(d.bd != 1) os << 'X' << d.bd;
   return os << '}';
 }
 

@@ -37,7 +37,7 @@ size_t Min::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
 
-void Min::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Min::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = *fx;
   auto x1 = **xs[0];
   auto x2 = **xs[1];
@@ -47,7 +47,7 @@ void Min::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   y = x1.cwiseMin(x2);
 }
 
-void Min::backward(const vector<const Tensor*>& xs,
+void Min::backward_impl(const vector<const Tensor*>& xs,
                    const Tensor& fx,
                    const Tensor& dEdf,
                    unsigned i,
@@ -65,7 +65,7 @@ size_t Max::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
 
-void Max::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Max::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = *fx;
   auto x1 = **xs[0];
   auto x2 = **xs[1];
@@ -75,7 +75,7 @@ void Max::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   y = x1.cwiseMax(x2);
 }
 
-void Max::backward(const vector<const Tensor*>& xs,
+void Max::backward_impl(const vector<const Tensor*>& xs,
                    const Tensor& fx,
                    const Tensor& dEdf,
                    unsigned i,
@@ -89,13 +89,13 @@ void Max::backward(const vector<const Tensor*>& xs,
   }
 }
 
-void TraceOfProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void TraceOfProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x1 = **xs[0];
   auto x2 = **xs[1];
   fx.v[0] = (x1 * x2.transpose()).trace();
 }
 
-void TraceOfProduct::backward(const vector<const Tensor*>& xs,
+void TraceOfProduct::backward_impl(const vector<const Tensor*>& xs,
                               const Tensor& fx,
                               const Tensor& dEdf,
                               unsigned i,
@@ -106,11 +106,11 @@ void TraceOfProduct::backward(const vector<const Tensor*>& xs,
   *dEdxi += d * xother;
 }
 
-void ConstScalarMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void ConstScalarMultiply::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   *fx = (**xs[0]) * alpha;
 }
 
-void ConstScalarMultiply::backward(const vector<const Tensor*>& xs,
+void ConstScalarMultiply::backward_impl(const vector<const Tensor*>& xs,
                                    const Tensor& fx,
                                    const Tensor& dEdf,
                                    unsigned i,
@@ -119,11 +119,11 @@ void ConstScalarMultiply::backward(const vector<const Tensor*>& xs,
   *dEdxi += *dEdf * alpha;
 }
 
-void DotProduct::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void DotProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   *fx = (**xs[0]).transpose() * (**xs[1]);
 }
 
-void DotProduct::backward(const vector<const Tensor*>& xs,
+void DotProduct::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& fx,
                           const Tensor& dEdf,
                           unsigned i,
@@ -131,7 +131,7 @@ void DotProduct::backward(const vector<const Tensor*>& xs,
   (*dEdxi) += (dEdf.v[0]) * (**xs[1 - i]);
 }
 
-void Transpose::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Transpose::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (dim.rows() == 1 || dim.cols() == 1) {
     fx.v = xs[0]->v;
   } else {
@@ -144,7 +144,7 @@ void Transpose::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void Transpose::backward(const vector<const Tensor*>& xs,
+void Transpose::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
                             unsigned i,
@@ -157,13 +157,13 @@ void Transpose::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void Reshape::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Reshape::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
   fx.v = xs[0]->v;
 }
 
-void Reshape::backward(const vector<const Tensor*>& xs,
+void Reshape::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
                             unsigned i,
@@ -172,7 +172,7 @@ void Reshape::backward(const vector<const Tensor*>& xs,
   *dEdxi += *reshaped;
 }
 
-void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void SumColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   auto y = *fx;
   if (xs.size() == 1) {
@@ -182,7 +182,7 @@ void SumColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void SumColumns::backward(const vector<const Tensor*>& xs,
+void SumColumns::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& fx,
                           const Tensor& dEdf,
                           unsigned i,
@@ -194,7 +194,7 @@ void SumColumns::backward(const vector<const Tensor*>& xs,
   out.colwise() += (*dEdf).col(0);
 }
 
-void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void KMHNGram::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   const int new_cols = x.cols() - n + 1;
   assert(new_cols > 0);
@@ -207,7 +207,7 @@ void KMHNGram::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void KMHNGram::backward(const vector<const Tensor*>& xs,
+void KMHNGram::backward_impl(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
@@ -219,7 +219,7 @@ void KMHNGram::backward(const vector<const Tensor*>& xs,
 }
 
 //   Y_ij = A_ijk * B_k (+ C_ij)
-void InnerProduct3D_1D::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void InnerProduct3D_1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto b = **xs[1];
   auto y = *fx;
   const int i = y.rows();
@@ -242,7 +242,7 @@ void InnerProduct3D_1D::forward(const vector<const Tensor*>& xs, Tensor& fx) con
   }
 }
 
-void InnerProduct3D_1D::backward(const vector<const Tensor*>& xs,
+void InnerProduct3D_1D::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
@@ -268,13 +268,13 @@ size_t GaussianNoise::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
 
-void GaussianNoise::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void GaussianNoise::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem);
   TensorTools::RandomizeNormal(0, stddev, m);
   (*fx) = **xs[0] + *m;
 }
 
-void GaussianNoise::backward(const vector<const Tensor*>& xs,
+void GaussianNoise::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
@@ -286,13 +286,13 @@ size_t Dropout::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
 
-void Dropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Dropout::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem);
   TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
   (*fx) = (**xs[0]).cwiseProduct(*m);
 }
 
-void Dropout::backward(const vector<const Tensor*>& xs,
+void Dropout::backward_impl(const vector<const Tensor*>& xs,
                        const Tensor& fx,
                        const Tensor& dEdf,
                        unsigned i,
@@ -306,7 +306,7 @@ size_t BlockDropout::aux_storage_size() const {
   return 1 * sizeof(float);
 }
 
-void BlockDropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void BlockDropout::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   bernoulli_distribution distribution(1.0 - dropout_probability);
   float block_multiplier = distribution(*rndeng)? 1.0 : 0.0;
   block_multiplier = 
@@ -318,7 +318,7 @@ void BlockDropout::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   (*fx) = **xs[0] * block_multiplier;
 }
 
-void BlockDropout::backward(const vector<const Tensor*>& xs,
+void BlockDropout::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
                             unsigned i,
@@ -327,12 +327,12 @@ void BlockDropout::backward(const vector<const Tensor*>& xs,
   (*dEdxi) += (*dEdf) * block_multiplier;
 }
 
-void ConstantPlusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void ConstantPlusX::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   *fx = x.unaryExpr(FConstantPlus(c));
 }
 
-void ConstantPlusX::backward(const vector<const Tensor*>& xs,
+void ConstantPlusX::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
@@ -340,7 +340,7 @@ void ConstantPlusX::backward(const vector<const Tensor*>& xs,
   *dEdxi += *dEdf;
 }
 
-void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void ConstantMinusX::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vconstant_minusx(fx.d.size(), c, xs[0]->v, fx.v);
 #else
@@ -349,7 +349,7 @@ void ConstantMinusX::forward(const vector<const Tensor*>& xs, Tensor& fx) const 
 #endif
 }
 
-void ConstantMinusX::backward(const vector<const Tensor*>& xs,
+void ConstantMinusX::backward_impl(const vector<const Tensor*>& xs,
                               const Tensor& fx,
                               const Tensor& dEdf,
                               unsigned i,
@@ -377,7 +377,7 @@ size_t LogSumExp::aux_storage_size() const {
   return MAX_LOG_SUM_EXP * sizeof(float);
 }
 
-void LogSumExp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void LogSumExp::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) {
     fx.v = xs[0]->v;
@@ -390,7 +390,7 @@ void LogSumExp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   fx.v[0] = logsumexp(*v);
 }
 
-void LogSumExp::backward(const vector<const Tensor*>& xs,
+void LogSumExp::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
@@ -406,7 +406,7 @@ void LogSumExp::backward(const vector<const Tensor*>& xs,
   d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
 }
 
-void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Sum::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) {
     fx.v = xs[0]->v;
@@ -430,7 +430,7 @@ void Sum::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #endif
 }
 
-void Sum::backward(const vector<const Tensor*>& xs,
+void Sum::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
@@ -443,7 +443,7 @@ void Sum::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void Average::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Average::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) {
     fx.v = xs[0]->v;
@@ -462,7 +462,7 @@ void Average::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   res /= num_args;
 }
 
-void Average::backward(const vector<const Tensor*>& xs,
+void Average::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
@@ -470,7 +470,7 @@ void Average::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf / xs.size());
 }
 
-void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Tanh::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vtanh(fx.d.size(), xs[0]->v, fx.v);
 #else
@@ -479,7 +479,7 @@ void Tanh::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #endif
 }
 
-void Tanh::backward(const vector<const Tensor*>& xs,
+void Tanh::backward_impl(const vector<const Tensor*>& xs,
                       const Tensor& fx,
                       const Tensor& dEdf,
                       unsigned i,
@@ -491,12 +491,12 @@ void Tanh::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void Square::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Square::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   (*fx).array() = x.array().square();
 }
 
-void Square::backward(const vector<const Tensor*>& xs,
+void Square::backward_impl(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
@@ -505,12 +505,12 @@ void Square::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf).cwiseProduct(x) * 2;
 }
 
-void Cube::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Cube::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   (*fx).array() = x.array().cube();
 }
 
-void Cube::backward(const vector<const Tensor*>& xs,
+void Cube::backward_impl(const vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
                     unsigned i,
@@ -520,12 +520,12 @@ void Cube::backward(const vector<const Tensor*>& xs,
   (*dEdxi).array() += (*dEdf).array() * x.array().square() * 3;
 }
 
-void Exp::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Exp::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   *fx = x.array().exp();
 }
 
-void Exp::backward(const vector<const Tensor*>& xs,
+void Exp::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
@@ -533,12 +533,12 @@ void Exp::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf).cwiseProduct(*fx);
 }
 
-void Log::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Log::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   *fx = x.array().log();
 }
 
-void Log::backward(const vector<const Tensor*>& xs,
+void Log::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
@@ -547,7 +547,7 @@ void Log::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf).cwiseQuotient(x);
 }
 
-void Concatenate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Concatenate::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   unsigned rows = 0;
   for (auto x : xs) rows += x->d.rows();
   // the following should use auxiliary memory
@@ -568,7 +568,7 @@ void Concatenate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void Concatenate::backward(const vector<const Tensor*>& xs,
+void Concatenate::backward_impl(const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
@@ -588,7 +588,7 @@ size_t ConcatenateColumns::aux_storage_size() const {
   return MAX_CONCAT_COLS_ARGS * sizeof(unsigned);
 }
 
-void ConcatenateColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void ConcatenateColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   unsigned c = 0;
   assert(xs.size() < MAX_CONCAT_COLS_ARGS);
   for (unsigned i = 0; i < xs.size(); ++i) {
@@ -608,7 +608,7 @@ void ConcatenateColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) co
   }
 }
 
-void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
+void ConcatenateColumns::backward_impl(const vector<const Tensor*>& xs,
                                     const Tensor& fx,
                                     const Tensor& dEdf,
                                     unsigned i,
@@ -625,7 +625,7 @@ void ConcatenateColumns::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void PairwiseRankLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void PairwiseRankLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vpairwise_rank_loss(fx.d.size(), margin, xs[0]->v, xs[1]->v, fx.v);
 #else
@@ -635,7 +635,7 @@ void PairwiseRankLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) cons
 #endif
 }
 
-void PairwiseRankLoss::backward(const vector<const Tensor*>& xs,
+void PairwiseRankLoss::backward_impl(const vector<const Tensor*>& xs,
                                 const Tensor& fx,
                                 const Tensor& dEdf,
                                 unsigned i,
@@ -655,7 +655,7 @@ size_t Hinge::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
 
-void Hinge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Hinge::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto x = **xs[0];
   const unsigned rows = x.rows();
@@ -673,7 +673,7 @@ void Hinge::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   fx.v[0] = y;
 }
 
-void Hinge::backward(const vector<const Tensor*>& xs,
+void Hinge::backward_impl(const vector<const Tensor*>& xs,
                        const Tensor& fx,
                        const Tensor& dEdf,
                        unsigned i,
@@ -693,12 +693,12 @@ void Hinge::backward(const vector<const Tensor*>& xs,
   }
 }
 
-void Identity::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Identity::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   fx.d = xs[0]->d;
   fx.v = xs[0]->v;
 }
 
-void Identity::backward(const vector<const Tensor*>& xs,
+void Identity::backward_impl(const vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i,
@@ -706,7 +706,7 @@ void Identity::backward(const vector<const Tensor*>& xs,
   *dEdxi += *dEdf;
 }
 
-void MaxPooling1D::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void MaxPooling1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   cerr << "FIX IMPL5\n"; abort();
 #if 0
   assert(xs.size() == 1);
@@ -735,7 +735,7 @@ void MaxPooling1D::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #endif
 }
 
-void MaxPooling1D::backward(const vector<const Tensor*>& xs,
+void MaxPooling1D::backward_impl(const vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i,
@@ -754,7 +754,7 @@ void MaxPooling1D::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Softmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
 #if HAVE_CUDA
     gpu::softmax(xs[0]->d.size(), xs[0]->v, fx.v);
@@ -768,7 +768,7 @@ void Softmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void Softmax::backward(const vector<const Tensor*>& xs,
+void Softmax::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
                             unsigned i,
@@ -781,7 +781,7 @@ void Softmax::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void PickNegLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void PickNegLogSoftmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
     logz = (float*)fxs->allocate(sizeof(float));
 #if HAVE_CUDA
@@ -797,7 +797,7 @@ void PickNegLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) con
   }
 }
 
-void PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
+void PickNegLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
                             unsigned i,
@@ -819,7 +819,7 @@ void PickNegLogSoftmax::backward(const vector<const Tensor*>& xs,
   }
 }
 
-void LogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void LogSoftmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   if (xs[0]->d.cols() == 1) {
     auto x = **xs[0];
@@ -830,7 +830,7 @@ void LogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void LogSoftmax::backward(const vector<const Tensor*>& xs,
+void LogSoftmax::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& fx,
                           const Tensor& dEdf,
                           unsigned i,
@@ -857,7 +857,7 @@ EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   return m + logf(z);
 }
 
-void RestrictedLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void RestrictedLogSoftmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   // TODO create auxiliary mask with -infty's
   // and do usual LogSoftmax stuff
   assert(xs.size() == 1);
@@ -871,7 +871,7 @@ void RestrictedLogSoftmax::forward(const vector<const Tensor*>& xs, Tensor& fx) 
   if (denom.size() == 1) (*fx)(denom.front(), 0) = 0;
 }
 
-void RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
+void RestrictedLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
                             unsigned i,
@@ -886,14 +886,14 @@ void RestrictedLogSoftmax::backward(const vector<const Tensor*>& xs,
 
 // x_1 is a vector
 // y = (x_1)_{*pval}
-void PickElement::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void PickElement::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto x = **xs[0];
   fx.v[0] = x(*pval);
 }
 
 // derivative is 0 in all dimensions except 1 for the selected element
-void PickElement::backward(const vector<const Tensor*>& xs,
+void PickElement::backward_impl(const vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
                     unsigned i,
@@ -905,7 +905,7 @@ void PickElement::backward(const vector<const Tensor*>& xs,
 // x_1 is a vector
 // y = (x_1)[start:end]
 // slice of vector from index start (inclusive) to index end (exclusive)
-void PickRange::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void PickRange::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto x = **xs[0];
   assert(x.cols() == 1);
@@ -921,7 +921,7 @@ void PickRange::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 }
 
 // derivative is 0 in all dimensions except the slice range
-void PickRange::backward(const vector<const Tensor*>& xs,
+void PickRange::backward_impl(const vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
                     unsigned i,
@@ -952,7 +952,7 @@ inline void CUDAMatrixMultiply(const Tensor& l, const Tensor& r, Tensor& y, cons
 }
 #endif
 
-void MatrixMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void MatrixMultiply::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA
   // fx = 0*fx + xs[0] * xs[1]
@@ -964,7 +964,7 @@ void MatrixMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const 
 #endif
 }
 
-void MatrixMultiply::backward(const vector<const Tensor*>& xs,
+void MatrixMultiply::backward_impl(const vector<const Tensor*>& xs,
                                 const Tensor& fx,
                                 const Tensor& dEdf,
                                 unsigned i,
@@ -995,14 +995,14 @@ void MatrixMultiply::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void CwiseQuotient::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void CwiseQuotient::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
   auto x1 = **xs[0];
   auto x2 = **xs[1];
   *fx = x1.cwiseQuotient(x2);
 }
 
-void CwiseQuotient::backward(const vector<const Tensor*>& xs,
+void CwiseQuotient::backward_impl(const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
@@ -1018,7 +1018,7 @@ void CwiseQuotient::backward(const vector<const Tensor*>& xs,
   }
 }
 
-void CwiseMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void CwiseMultiply::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA
   gpu::vcwise_product(fx.d.size(), xs[0]->v, xs[1]->v, fx.v);
@@ -1029,7 +1029,7 @@ void CwiseMultiply::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #endif
 }
 
-void CwiseMultiply::backward(const vector<const Tensor*>& xs,
+void CwiseMultiply::backward_impl(const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
@@ -1052,7 +1052,7 @@ void CwiseMultiply::backward(const vector<const Tensor*>& xs,
   }
 }
 
-void AffineTransform::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() % 2 == 1);
   if (xs.size() == 1) {
     fx.v = xs[0]->v;
@@ -1076,7 +1076,7 @@ void AffineTransform::forward(const vector<const Tensor*>& xs, Tensor& fx) const
   }
 }
 
-void AffineTransform::backward(const vector<const Tensor*>& xs,
+void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
                                const Tensor& fx,
                                const Tensor& dEdf,
                                unsigned i,
@@ -1113,7 +1113,7 @@ void AffineTransform::backward(const vector<const Tensor*>& xs,
   }
 }
 
-void Negate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Negate::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
 #if HAVE_CUDA
   gpu::vnegate(fx.d.size(), xs[0]->v, fx.v);
@@ -1123,7 +1123,7 @@ void Negate::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #endif
 }
 
-void Negate::backward(const vector<const Tensor*>& xs,
+void Negate::backward_impl(const vector<const Tensor*>& xs,
                       const Tensor& fx,
                       const Tensor& dEdf,
                       unsigned i,
@@ -1136,7 +1136,7 @@ void Negate::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void Rectify::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Rectify::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
 #if HAVE_CUDA
   gpu::vrelu(fx.d.size(), xs[0]->v, fx.v);
@@ -1146,7 +1146,7 @@ void Rectify::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
 #endif
 }
 
-void Rectify::backward(const vector<const Tensor*>& xs,
+void Rectify::backward_impl(const vector<const Tensor*>& xs,
                          const Tensor& fx,
                          const Tensor& dEdf,
                          unsigned i,
@@ -1158,7 +1158,7 @@ void Rectify::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void HuberDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void HuberDistance::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
   auto x = *xs[0];
   auto y = *xs[1];
@@ -1170,7 +1170,7 @@ void HuberDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   fx.v[0] = dist;
 }
 
-void HuberDistance::backward(const vector<const Tensor*>& xs,
+void HuberDistance::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& fx,
                           const Tensor& dEdf,
                           unsigned i,
@@ -1181,14 +1181,14 @@ void HuberDistance::backward(const vector<const Tensor*>& xs,
   *dEdxi += (x - y).unaryExpr(FHuberBackward(d, dEdf.v[0]));
 }
 
-void L1Distance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void L1Distance::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
   auto x = **xs[0];
   auto y = **xs[1];
   fx.v[0] = (x - y).lpNorm<1>();
 }
 
-void L1Distance::backward(const vector<const Tensor*>& xs,
+void L1Distance::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& fx,
                           const Tensor& dEdf,
                           unsigned i,
@@ -1199,14 +1199,14 @@ void L1Distance::backward(const vector<const Tensor*>& xs,
   *dEdxi += (x - y).unaryExpr(FL1Backward(dEdf.v[0]));
 }
 
-void PoissonRegressionLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void PoissonRegressionLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   const auto y = *pty;
   const auto z = lgamma(y + 1);
   const auto x = xs[0]->v[0];
   fx.v[0] = expf(x) + z - y * x;
 }
 
-void PoissonRegressionLoss::backward(const vector<const Tensor*>& xs,
+void PoissonRegressionLoss::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& fx,
                           const Tensor& dEdf,
                           unsigned i,
@@ -1217,7 +1217,7 @@ void PoissonRegressionLoss::backward(const vector<const Tensor*>& xs,
   dEdx += expf(x) - y;
 }
 
-void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void SquaredEuclideanDistance::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA
   gpu::sqeucdist(xs[0]->d.size(), xs[0]->v, xs[1]->v, fx.v);
@@ -1228,7 +1228,7 @@ void SquaredEuclideanDistance::forward(const vector<const Tensor*>& xs, Tensor& 
 #endif
 }
 
-void SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,
+void SquaredEuclideanDistance::backward_impl(const vector<const Tensor*>& xs,
                                  const Tensor& fx,
                                  const Tensor& dEdf,
                                  unsigned i,
@@ -1245,7 +1245,7 @@ void SquaredEuclideanDistance::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void LogisticSigmoid::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void LogisticSigmoid::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
 #if HAVE_CUDA
   gpu::vlogistic(fx.d.size(), xs[0]->v, fx.v);
@@ -1255,7 +1255,7 @@ void LogisticSigmoid::forward(const vector<const Tensor*>& xs, Tensor& fx) const
 #endif
 }
 
-void LogisticSigmoid::backward(const vector<const Tensor*>& xs,
+void LogisticSigmoid::backward_impl(const vector<const Tensor*>& xs,
                                  const Tensor& fx,
                                  const Tensor& dEdf,
                                  unsigned i,
@@ -1267,13 +1267,13 @@ void LogisticSigmoid::backward(const vector<const Tensor*>& xs,
 #endif
 }
 
-void SoftSign::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void SoftSign::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto x = **xs[0];
   *fx = x.unaryExpr(FSoftSign());
 }
 
-void SoftSign::backward(const vector<const Tensor*>& xs,
+void SoftSign::backward_impl(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
@@ -1281,7 +1281,7 @@ void SoftSign::backward(const vector<const Tensor*>& xs,
   *dEdxi += (*fx).binaryExpr(*dEdf, FSoftSignBackward());
 }
 
-void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void BinaryLogLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = *xs[0];
   auto y = *xs[1];
   FBinaryLogLoss bll;
@@ -1292,7 +1292,7 @@ void BinaryLogLoss::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   fx.v[0] = dist;
 }
 
-void BinaryLogLoss::backward(const vector<const Tensor*>& xs,
+void BinaryLogLoss::backward_impl(const vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i,
