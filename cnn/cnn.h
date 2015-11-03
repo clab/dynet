@@ -128,15 +128,30 @@ struct Node {
   // entire computation graph).
   virtual size_t aux_storage_size() const;
 
+  
   // computation
-  virtual void forward(const std::vector<const Tensor*>& xs,
-                       Tensor& fx) const = 0;
+  virtual void forward_impl(const std::vector<const Tensor*>& xs,
+                            Tensor& fx) const = 0;
   // accumulates the derivative of E with respect to the ith argument to f, that is, xs[i]
+  virtual void backward_impl(const std::vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const = 0;
+
+  // whether this node supports computing multiple batches in one call.
+  // if true, forward and backward will be called once with a multi-batch tensor.
+  // if false, forward and backward will be called multiple times for each item.
+  virtual bool supports_multibatch() const { return false; }
+
+  // perform the forward/backward passes in one or multiple calls
+  virtual void forward(const std::vector<const Tensor*>& xs,
+                       Tensor& fx) const final;
   virtual void backward(const std::vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
-                        Tensor& dEdxi) const = 0;
+                        Tensor& dEdxi) const final;
 
   // number of arguments to the function
   inline unsigned arity() const { return args.size(); }

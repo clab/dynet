@@ -18,6 +18,44 @@ int n_hgs = 0;
 Node::~Node() {}
 size_t Node::aux_storage_size() const { return 0; }
 
+// perform the forward/backward passes in one or multiple calls
+// TODO: This is a lot of code for something simple. Can it be shortened?
+void Node::forward(const std::vector<const Tensor*>& xs,
+                   Tensor& fx) const {
+  if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
+    forward_impl(xs, fx);
+  } else {
+    for(int b = 0; b < fx.d.batch_elems(); ++b) {
+      std::vector<const Tensor>  xs_elems;
+      std::vector<const Tensor*> xs_ptrs;
+      for(int i = 0; i < xs.size(); ++i) xs_elems.push_back(xs[i]->batch_elem(b));
+      for(int i = 0; i < xs.size(); ++i) xs_ptrs.push_back(&xs_elems[i]);
+      Tensor fx_elem(fx.batch_elem(b));
+      forward_impl(xs_ptrs, fx_elem);
+    }
+  }
+}
+void Node::backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const {
+  if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
+    backward_impl(xs, fx, dEdf, i, dEdxi);
+  } else {
+    for(int b = 0; b < fx.d.batch_elems(); ++b) {
+      std::vector<const Tensor>  xs_elems;
+      std::vector<const Tensor*> xs_ptrs;
+      for(int i = 0; i < xs.size(); ++i) xs_elems.push_back(xs[i]->batch_elem(b));
+      for(int i = 0; i < xs.size(); ++i) xs_ptrs.push_back(&xs_elems[i]);
+      Tensor fx_elem(fx.batch_elem(b));
+      Tensor dEdf_elem(dEdf.batch_elem(b));
+      Tensor dEdxi_elem(dEdxi.batch_elem(b));
+      backward_impl(xs_ptrs, fx_elem, dEdf_elem, i, dEdxi_elem);
+    }
+  }
+}
+
 ComputationGraph::ComputationGraph() :
   ee(new SimpleExecutionEngine(*this)) {
   ++n_hgs;

@@ -9,6 +9,9 @@
 #include <cstring>
 #include <vector>
 
+// DEBUG!!!
+#include <iostream>
+
 #define CNN_MAX_TENSOR_DIM 7
 
 namespace boost { namespace serialization { class access; } }
@@ -16,13 +19,29 @@ namespace boost { namespace serialization { class access; } }
 namespace cnn {
 
 struct Dim {
-  Dim() : nd() {}
-  explicit Dim(int m) : nd(1) { d[0] = m; }
-  Dim(int m, int n) : nd(2) { d[0] = m; d[1] = n; }
-  Dim(std::initializer_list<long> x) : nd() {
+  Dim() : nd(), bd(1) {}
+  // explicit Dim(int m) : nd(1), bd(1) { d[0] = m; }
+  // TODO: The constructors for dimensions w/ and w/o batches is not intuitive.
+  //       can this be fixed in some way?
+  // Dim(int m, int n) : nd(2), bd(1) { d[0] = m; d[1] = n; }
+  Dim(std::initializer_list<long> x) : nd(), bd(1) {
     for(auto v : x) d[nd++] = v;
+    std::cerr << "Dim( "; for(auto v : x) std::cerr << v << " "; std::cerr << ")" << std::endl; 
   }
+  Dim(std::initializer_list<long> x, int b) : nd(), bd(b) {
+    for(auto v : x) d[nd++] = v;
+    std::cerr << "Dim( "; for(auto v : x) std::cerr << v << " "; std::cerr << "X" << bd << " )" << std::endl; 
+  }
+  // Dim(const std::vector<long> & x) : nd(), bd(1) {
+  //   for(auto v : x) d[nd++] = v;
+  // }
+  // Dim(const std::vector<long> & x, int b) : nd(), bd(b) {
+  //   for(auto v : x) d[nd++] = v;
+  // }
   inline int size() const {
+    return batch_size() * bd;
+  }
+  inline int batch_size() const {
     int p = 1;
     for (unsigned i = 0; i < nd; ++i) p *= d[i];
     return p;
@@ -41,20 +60,27 @@ struct Dim {
     r.resize(m);
     return r;
   }
+  inline Dim single_batch() const {
+    Dim r = *this;
+    r.bd = 1;
+    return r;
+  }
   inline void resize(unsigned i) { nd = i; }
   inline int ndims() const { return nd; }
   inline int rows() const { return d[0]; }
   inline int cols() const { return nd > 1 ? d[1] : 1; }
+  inline int batch_elems() const { return bd; }
   inline void set(unsigned i, unsigned s) { assert(i < nd); assert(s > 0); d[i] = s; }
   inline int operator[](unsigned i) const { return i < nd ? d[i] : 1; }
   inline int size(unsigned i) const { return (*this)[i]; }
   inline Dim transpose() const {
-    if (nd == 1) { return Dim(1, d[0]); }
-    else if (nd == 2) { return Dim(d[1], d[0]); }
+    if (nd == 1) { return Dim({1, d[0]}, bd); }
+    else if (nd == 2) { return Dim({d[1], d[0]}, bd); }
     throw std::invalid_argument("Cannot transpose Dim object with more than 2 dimensions");
   }
   unsigned int d[CNN_MAX_TENSOR_DIM];
   unsigned int nd;
+  unsigned int bd;
  private:
   friend class boost::serialization::access;
   template<class Archive> void serialize(Archive& ar, const unsigned int) {
@@ -66,7 +92,7 @@ struct Dim {
 //static_assert(std::is_trivially_copyable<Dim>::value, "Dim must be trivially copyable");
 
 inline bool operator==(const Dim& a, const Dim& b) {
-  if (a.nd != b.nd) return false;
+  if (a.nd != b.nd || a.bd != b.bd) return false;
   return std::memcmp(a.d, b.d, a.nd) == 0;
 }
 

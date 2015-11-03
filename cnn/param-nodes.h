@@ -15,8 +15,8 @@ struct ParameterNode : public ParameterNodeBase {
   explicit ParameterNode(Parameters* p) : dim(p->dim), params(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward(const std::vector<const Tensor*>& xs,
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i,
@@ -31,8 +31,8 @@ struct InputNode : public Node {
   explicit InputNode(const Dim& d, const std::vector<float>* pd) : dim(d), pdata(pd) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward(const std::vector<const Tensor*>& xs,
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i,
@@ -47,8 +47,8 @@ struct ScalarInputNode : public Node {
   explicit ScalarInputNode(const real* ps) : data(), pdata(ps) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward(const std::vector<const Tensor*>& xs,
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i,
@@ -63,8 +63,8 @@ struct LookupNode : public ParameterNodeBase {
   LookupNode(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), params(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward(const std::vector<const Tensor*>& xs,
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
                   const Tensor& dEdf,
                   unsigned i,
