@@ -125,6 +125,25 @@ VariableIndex ComputationGraph::add_lookup(LookupParameters* p, unsigned index) 
   return new_node_index;
 }
 
+VariableIndex ComputationGraph::add_batch_lookup(LookupParameters* p, const std::vector<unsigned>& indices) {
+  VariableIndex new_node_index(nodes.size());
+  BatchLookupNode* new_node = new BatchLookupNode(p, indices);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_batch_lookup(LookupParameters* p, const std::vector<unsigned>* indices) {
+  VariableIndex new_node_index(nodes.size());
+  BatchLookupNode* new_node = new BatchLookupNode(p, indices);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+
 VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, const unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, pindex);
@@ -138,6 +157,22 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, const unsi
 VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
+  nodes.push_back(new_node);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_batch_const_lookup(LookupParameters* p, const std::vector<unsigned>& indices) {
+  VariableIndex new_node_index(nodes.size());
+  BatchLookupNode* new_node = new BatchLookupNode(p, indices);
+  nodes.push_back(new_node);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_batch_const_lookup(LookupParameters* p, const std::vector<unsigned>* indices) {
+  VariableIndex new_node_index(nodes.size());
+  BatchLookupNode* new_node = new BatchLookupNode(p, indices);
   nodes.push_back(new_node);
   set_dim_for_new_node(new_node_index);
   return new_node_index;

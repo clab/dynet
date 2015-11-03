@@ -54,15 +54,18 @@ struct Tensor {
 #endif
   }
 
-  // get a tensor representing a single batch.
+  // Get a tensor representing a single batch.
+  // If this tensor only has a single batch, then broadcast. Otherwise, check to
+  // make sure that the requested batch is smaller than the number of batches.
   // TODO: This is a bit wasteful, as it re-calculates bs.batch_size() every time.
   Tensor batch_elem(unsigned b) const {
     if(d.batch_elems() == 1) {
       return *this;
     } else {
+      assert(b < d.batch_elems());
       const unsigned bsize = d.batch_size();
       Dim new_d(d); new_d.bd = 1;
-      Tensor ret(new_d, v + bsize * (b % d.batch_elems()));
+      Tensor ret(new_d, v + bsize * b);
       // std::cerr << "Getting tensor for batch " << (b % d.batch_elems()) << " bsize: " << bsize << ", ptr=" << (long)ret.v << std::endl;
       return ret;
     }
@@ -76,6 +79,7 @@ struct Tensor {
       std::vector<Tensor> bs(d.batch_elems());
       unsigned bsize = d.batch_size();
       Dim new_d = d; new_d.bd = 1;
+      assert (d.batch_elems() >= 0);
       for(int b = 0; b < d.batch_elems(); ++b)
         bs[b] = Tensor(new_d, v + bsize * b);
       return bs;
