@@ -53,7 +53,7 @@ public:
     ComputationGraph cg;
     AddParamsToCG(&cg);
 
-    Expression x = cnn::expr::input(cg, {input.size()}, &input);
+    Expression x = cnn::expr::input(cg, {(long)input.size()}, &input);
     Expression y = cnn::expr::input(cg, &gold_output);
 
     Expression h = tanh(W*x + b);
@@ -69,7 +69,7 @@ public:
     ComputationGraph cg;
     AddParamsToCG(&cg);
 
-    Expression x = cnn::expr::input(cg, {input.size()}, &input);
+    Expression x = cnn::expr::input(cg, {(long)input.size()}, &input);
     Expression h = tanh(W*x + b);
     Expression y_pred = V*h + a;
     return as_scalar(cg.forward());
