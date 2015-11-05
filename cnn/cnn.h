@@ -51,6 +51,7 @@ struct ComputationGraph {
   // structures and make them available to the computation
   VariableIndex add_input(real s);  // add scalar
   VariableIndex add_input(const real* ps);  // add pointer to scalar
+  VariableIndex add_input(const Dim& d, const std::vector<float>& data);
   VariableIndex add_input(const Dim& d, const std::vector<float>* pdata);
 
   // PARAMETERS
