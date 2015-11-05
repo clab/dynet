@@ -31,6 +31,7 @@ struct InputNode : public Node {
   explicit InputNode(const Dim& d, const std::vector<float>* pd) : dim(d), pdata(pd) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  virtual bool supports_multibatch() const override { return true; }  
   void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward_impl(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
