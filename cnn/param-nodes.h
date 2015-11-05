@@ -59,10 +59,17 @@ struct ScalarInputNode : public Node {
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
 struct LookupNode : public ParameterNodeBase {
-  LookupNode(LookupParameters* p, unsigned ind) : dim(p->dim), index(ind), pindex(&index), params(p) {}
-  LookupNode(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), params(p) {}
+  LookupNode(LookupParameters* p, unsigned ind) : dim(p->dim), index(ind), pindex(&index), indices(), pindices(), params(p) {}
+  LookupNode(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), indices(), pindices(), params(p) {}
+  LookupNode(LookupParameters* p, const std::vector<unsigned>& indices) : dim(p->dim), index(), pindex(), indices(indices), pindices(&this->indices), params(p) {
+    dim.bd = pindices->size();
+  }
+  LookupNode(LookupParameters* p, const std::vector<unsigned>* pindices) : dim(p->dim), index(), pindex(), indices(), pindices(pindices), params(p) {
+    dim.bd = pindices->size();
+  }
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
+  virtual bool supports_multibatch() const override { return true; }  
   void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward_impl(const std::vector<const Tensor*>& xs,
                   const Tensor& fx,
@@ -73,27 +80,6 @@ struct LookupNode : public ParameterNodeBase {
   Dim dim;
   unsigned index;
   const unsigned* pindex;
-  LookupParameters* params;
-};
-
-struct BatchLookupNode : public ParameterNodeBase {
-  BatchLookupNode(LookupParameters* p, const std::vector<unsigned>& indices) : dim(p->dim), indices(indices), pindices(&this->indices), params(p) {
-    dim.bd = indices.size();
-  }
-  BatchLookupNode(LookupParameters* p, const std::vector<unsigned>* pindices) : dim(p->dim), indices(), pindices(pindices), params(p) {
-    dim.bd = indices.size();
-  }
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
-  void accumulate_grad(const Tensor& g) override;
-  virtual bool supports_multibatch() const override { return true; }
-  Dim dim;
   std::vector<unsigned> indices;
   const std::vector<unsigned>* pindices;
   LookupParameters* params;

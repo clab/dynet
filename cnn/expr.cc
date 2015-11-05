@@ -13,12 +13,12 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
 Expression parameter(ComputationGraph& g, Parameters* p) { return Expression(&g, g.add_parameters(p)); }
 Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index) { return Expression(&g, g.add_lookup(p, index)); }
 Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_lookup(p, pindex)); }
-Expression batch_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_batch_lookup(p, indices)); }
-Expression batch_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_batch_lookup(p, pindices)); }
+Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }
+Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_lookup(p, pindices)); }
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index) { return Expression(&g, g.add_const_lookup(p, index)); }
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
-Expression const_batch_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_batch_const_lookup(p, indices)); }
-Expression const_batch_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_batch_const_lookup(p, pindices)); }
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
 Expression operator+(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i})); }
