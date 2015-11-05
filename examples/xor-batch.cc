@@ -18,10 +18,9 @@ int main(int argc, char** argv) {
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
-  const unsigned ITERATIONS = 100;
+  const unsigned ITERATIONS = 200;
   Model m;
   SimpleSGDTrainer sgd(&m);
-  //MomentumSGDTrainer sgd(&m);
 
   ComputationGraph cg;
 
@@ -32,10 +31,11 @@ int main(int argc, char** argv) {
 
   // set x_values to change the inputs to the network
   Dim x_dim({2}, 4), y_dim({1}, 4);
-  vector<cnn::real> x_values = {1, 1, -1, 1, 1, -1, -1, -1};
+  cerr << "x_dim=" << x_dim << ", y_dim=" << y_dim << endl;
+  vector<cnn::real> x_values = {1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0};
   Expression x = input(cg, x_dim, &x_values);
   // set y_values expressing the output
-  vector<cnn::real> y_values = {-1, 1, 1, -1};
+  vector<cnn::real> y_values = {-1.0, 1.0, 1.0, -1.0};
   Expression y = input(cg, y_dim, &y_values);
 
   Expression h = tanh(W*x + b);
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
     vector<float> losses = as_vector(cg.forward());
     cg.backward();
-    sgd.update(0.1);
+    sgd.update(0.25);
     sgd.update_epoch();
     float loss = 0;
     for(auto l : losses)

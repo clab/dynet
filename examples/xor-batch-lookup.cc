@@ -18,10 +18,9 @@ int main(int argc, char** argv) {
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
-  const unsigned ITERATIONS = 100;
+  const unsigned ITERATIONS = 200;
   Model m;
   SimpleSGDTrainer sgd(&m);
-  //MomentumSGDTrainer sgd(&m);
 
   ComputationGraph cg;
 
@@ -61,7 +60,7 @@ int main(int argc, char** argv) {
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
     vector<float> losses = as_vector(cg.forward());
     cg.backward();
-    sgd.update(0.1);
+    sgd.update(0.25);
     sgd.update_epoch();
     float loss = 0;
     for(auto l : losses)
