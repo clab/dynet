@@ -104,8 +104,20 @@ Dim LookupNode::dim_forward(const vector<Dim>& xs) const {
 
 void LookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  assert(*pindex < params->values.size());
-  fx.v = params->values[*pindex].v;
+  if(pindex) {
+    assert(*pindex < params->values.size());
+    assert (fx.d.batch_elems() == 1);
+    fx.v = params->values[*pindex].v;
+  } else {
+    assert (pindices);
+    assert (fx.d.batch_elems() == pindices->size());
+    for (unsigned b = 0; b < pindices->size(); ++b) {
+      unsigned i = pindices->at(b);
+      assert (i < params->values.size());
+      float* v = fx.v + fx.d.batch_size() * (b % fx.d.batch_elems());
+      memcpy(v, params->values[i].v, fx.d.batch_size() * sizeof(float));
+    }
+  }
 }
 
 void LookupNode::backward_impl(const vector<const Tensor*>& xs,
@@ -118,45 +130,16 @@ void LookupNode::backward_impl(const vector<const Tensor*>& xs,
 }
 
 void LookupNode::accumulate_grad(const Tensor& g) {
-  params->accumulate_grad(*pindex, g);
-}
-
-string BatchLookupNode::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "batch_lookup_parameters(|x|=" << params->values.size() << " --> " << dim << ')';
-  return s.str();
-}
-
-Dim BatchLookupNode::dim_forward(const vector<Dim>& xs) const {
-  return dim;
-}
-
-void BatchLookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 0);
-  assert (fx.d.batch_elems() == pindices->size());
-  for (unsigned b = 0; b < pindices->size(); ++b) {
-    unsigned i = pindices->at(b);
-    assert (i < params->values.size());
-    float* v = fx.v + fx.d.batch_size() * (b % fx.d.batch_elems());
-    memcpy(v, params->values[i].v, fx.d.batch_size() * sizeof(float));
-  }
-}
-
-void BatchLookupNode::backward_impl(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i,
-                            Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 node\n";
-  abort();
-}
-
-void BatchLookupNode::accumulate_grad(const Tensor& g) {
-  const vector<Tensor>& gb = g.batch_elems();
-  for (unsigned b = 0; b < pindices->size(); ++b) {
-    unsigned i = pindices->at(b);
-    assert (i < params->values.size());
-    params->accumulate_grad(i, gb[b]);
+  if(pindex) {
+    params->accumulate_grad(*pindex, g);
+  } else {
+    assert (pindices);
+    const vector<Tensor>& gb = g.batch_elems();
+    for (unsigned b = 0; b < pindices->size(); ++b) {
+      unsigned i = pindices->at(b);
+      assert (i < params->values.size());
+      params->accumulate_grad(i, gb[b]);
+    }
   }
 }
 

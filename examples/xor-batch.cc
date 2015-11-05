@@ -41,7 +41,6 @@ int main(int argc, char** argv) {
   Expression h = tanh(W*x + b);
   //Expression h = softsign(W*x + b);
   Expression y_pred = V*h + a;
-  cg.PrintGraphviz();
   Expression loss = squared_distance(y_pred, y);
 
   cg.PrintGraphviz();
@@ -63,7 +62,7 @@ int main(int argc, char** argv) {
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
-  boost::archive::text_oarchive oa(cout);
-  oa << m;
+  //boost::archive::text_oarchive oa(cout);
+  //oa << m;
 }
 

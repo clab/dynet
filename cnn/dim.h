@@ -9,9 +9,6 @@
 #include <cstring>
 #include <vector>
 
-// DEBUG!!!
-#include <iostream>
-
 #define CNN_MAX_TENSOR_DIM 7
 
 namespace boost { namespace serialization { class access; } }
@@ -26,11 +23,9 @@ struct Dim {
   // Dim(int m, int n) : nd(2), bd(1) { d[0] = m; d[1] = n; }
   Dim(std::initializer_list<long> x) : nd(), bd(1) {
     for(auto v : x) d[nd++] = v;
-    std::cerr << "Dim( "; for(auto v : x) std::cerr << v << " "; std::cerr << ")" << std::endl; 
   }
   Dim(std::initializer_list<long> x, int b) : nd(), bd(b) {
     for(auto v : x) d[nd++] = v;
-    std::cerr << "Dim( "; for(auto v : x) std::cerr << v << " "; std::cerr << "X" << bd << " )" << std::endl; 
   }
   // Dim(const std::vector<long> & x) : nd(), bd(1) {
   //   for(auto v : x) d[nd++] = v;
