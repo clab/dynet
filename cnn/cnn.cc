@@ -53,6 +53,13 @@ VariableIndex ComputationGraph::add_input(const real* ps) {
   return new_node_index;
 }
 
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>& pm) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new InputNode(d, pm));
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
 VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new InputNode(d, pm));
