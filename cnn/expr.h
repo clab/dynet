@@ -95,6 +95,7 @@ Expression pick(const Expression& x, unsigned v);
 Expression pick(const Expression& x, unsigned* pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
 
 namespace detail {
   template <typename F, typename T>

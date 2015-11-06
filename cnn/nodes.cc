@@ -783,16 +783,27 @@ void Softmax::backward_impl(const vector<const Tensor*>& xs,
 
 void PickNegLogSoftmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
-    logz = (float*)fxs->allocate(sizeof(float));
+    logz = (float*)fxs->allocate(sizeof(float)*fx.d.batch_elems());
 #if HAVE_CUDA
+    assert(fx.d.batch_elems() == 1);
     gpu::pnlsoftmax(xs[0]->d.size(), *pval, xs[0]->v, fx.v, logz);
 #else
-    auto x = **xs[0];
-    *logz = logsumexp(x);
-    fx.v[0] = *logz - x(*pval);
+    if(pval) {
+      auto x = **xs[0];
+      *logz = logsumexp(x);
+      fx.v[0] = *logz - x(*pval);
+    } else {
+      assert(pvals);
+      assert(pvals->size() == fx.d.batch_elems());
+      for(unsigned b = 0; b < pvals->size(); ++b) {
+        auto x = xs[0]->batch_matrix(b);
+        logz[b] = logsumexp(x);
+        fx.v[b] = logz[b] - x((*pvals)[b]);
+      }
+    }
 #endif
   } else {
-    cerr << "SoftmaxForward not implemented for multiple columns\n";
+    cerr << "PickNegLogSoftmax::forward not implemented for multiple columns\n";
     abort();
   }
 }
@@ -803,15 +814,30 @@ void PickNegLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
                             unsigned i,
                             Tensor& dEdxi) const {
   if (xs[0]->d.cols() == 1) {
-    const auto elem = *pval;
 #if HAVE_CUDA
+    assert(fx.d.batch_elems() == 1);
+    const auto elem = *pval;
     gpu::pnlsoftmax_backward(dEdxi.d.size(), elem, xs[0]->v, dEdf.v, logz, dEdxi.v);
 #else
-    const float err = dEdf.v[0];
-    auto x = **xs[0];
-    // logz is computed in the forward pass and cached
-    *dEdxi += x.unaryExpr(FNegLogSoftmaxBackward(*logz, err));
-    (*dEdxi)(elem) -= err;
+    if(pval) {
+      const auto elem = *pval;
+      const float err = dEdf.v[0];
+      auto x = **xs[0];
+      // logz is computed in the forward pass and cached
+      *dEdxi += x.unaryExpr(FNegLogSoftmaxBackward(*logz, err));
+      (*dEdxi)(elem) -= err;
+    } else {
+      assert(pvals);
+      assert(pvals->size() == fx.d.batch_elems()); 
+      for(unsigned b = 0; b < pvals->size(); ++b) {
+        const auto elem = (*pvals)[b];
+        const float err = dEdf.v[b];
+        auto x = xs[0]->batch_matrix(b);
+        auto dEdxi_mat = dEdxi.batch_matrix(b);
+        dEdxi_mat += x.unaryExpr(FNegLogSoftmaxBackward(logz[b], err));
+        dEdxi_mat(elem) -= err;
+      }
+    }
 #endif
   } else {
     cerr << "PickNegLogSoftmax not implemented for multiple columns\n";
