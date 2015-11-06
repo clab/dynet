@@ -616,8 +616,8 @@ Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
         xs[0].cols() != xs[i+1].cols()) {
       cerr << "Bad dimensions for AffineTransform: " << xs << endl;
       throw std::invalid_argument("Bad dimensions to AffineTransform");
-      d.bd = max(max(d.bd, xs[0].bd), xs[1].bd);
     }
+    d.bd = max(max(d.bd, xs[i].bd), xs[i+1].bd);
   }
   return d;
 }

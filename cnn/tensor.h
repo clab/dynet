@@ -41,6 +41,14 @@ struct Tensor {
     assert(d.batch_elems() == 1);
     return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols());
   }
+  const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> batch_matrix(unsigned bid) const {
+    assert(bid < d.batch_elems());
+    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + bid*d.batch_size(), d.rows(), d.cols());
+  }
+  Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> batch_matrix(unsigned bid) {
+    assert(bid < d.batch_elems());
+    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + bid*d.batch_size(), d.rows(), d.cols());
+  }
   // this is very slow: use sparingly
   inline bool is_valid() const {
 #if HAVE_CUDA
