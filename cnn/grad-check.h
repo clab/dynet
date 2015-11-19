@@ -6,7 +6,7 @@ namespace cnn {
 class Model;
 struct ComputationGraph;
 
-void CheckGrad(Model& m, ComputationGraph& g);
+bool CheckGrad(Model& m, ComputationGraph& g);
 
 } // namespace cnn
 

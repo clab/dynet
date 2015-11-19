@@ -90,6 +90,9 @@ Expression fold_rows(const Expression& x, unsigned nrows=2);
 Expression sum_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 
+// Sum the results of multiple batches
+Expression sum_batches(const Expression& x);
+
 // pick parts out of bigger objects
 Expression pick(const Expression& x, unsigned v);
 Expression pick(const Expression& x, unsigned* pv);

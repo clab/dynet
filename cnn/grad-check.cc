@@ -11,7 +11,7 @@ using namespace std;
 
 namespace cnn {
 
-void CheckGrad(Model& m, ComputationGraph& g) {
+bool CheckGrad(Model& m, ComputationGraph& g) {
   float alpha = 5e-4;
   g.forward();
   g.backward();
@@ -73,6 +73,7 @@ void CheckGrad(Model& m, ComputationGraph& g) {
   } else {
     cerr << "\nGRADIENT CHECK PASSED\n";
   }
+  return !flag;
 }
 
 }

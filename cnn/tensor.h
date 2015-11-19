@@ -33,6 +33,7 @@ typedef float real;
 struct Tensor {
   Tensor() = default;
   Tensor(const Dim& d, float* v) : d(d), v(v) {}
+  // Get the data as a matrix
   const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> operator*() const {
     assert(d.batch_elems() == 1);
     return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols());
@@ -41,13 +42,37 @@ struct Tensor {
     assert(d.batch_elems() == 1);
     return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols());
   }
+  // Get the data as a vector
+  const Eigen::Map<Eigen::VectorXf, Eigen::Unaligned> vec() const {
+    return Eigen::Map<Eigen::VectorXf, Eigen::Unaligned>(v, d.size());
+  }
+  Eigen::Map<Eigen::VectorXf, Eigen::Unaligned> vec() {
+    return Eigen::Map<Eigen::VectorXf, Eigen::Unaligned>(v, d.size());
+  }
+  // Get the matrix for a particular batch, automatically broadcasting if the size is zero
   const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> batch_matrix(unsigned bid) const {
-    assert(bid < d.batch_elems());
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + bid*d.batch_size(), d.rows(), d.cols());
+    assert(d.bd == 1 || bid < d.bd);
+    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + (bid%d.bd)*d.batch_size(), d.rows(), d.cols());
   }
   Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> batch_matrix(unsigned bid) {
-    assert(bid < d.batch_elems());
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + bid*d.batch_size(), d.rows(), d.cols());
+    assert(d.bd == 1 || bid < d.bd);
+    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + (bid%d.bd)*d.batch_size(), d.rows(), d.cols());
+  }
+  // Get the data as a matrix, where each "row" is the concatenation of rows and columns,
+  // and each "column" is batches
+  const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> rowcol_matrix() const {
+    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows()*d.cols(), d.batch_elems());
+  }
+  Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> rowcol_matrix() {
+    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows()*d.cols(), d.batch_elems());
+  }
+  // Get the data as a matrix, where each "row" is the concatenation of rows,
+  // and each "column" is the concatenation of columns and batches
+  const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> colbatch_matrix() const {
+    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols()*d.batch_elems());
+  }
+  Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> colbatch_matrix() {
+    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols()*d.batch_elems());
   }
   // this is very slow: use sparingly
   inline bool is_valid() const {

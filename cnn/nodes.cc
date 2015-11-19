@@ -443,6 +443,42 @@ void Sum::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
+void SumBatches::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  unsigned num_args = xs[0]->d.bd;
+#if HAVE_CUDA
+  TensorTools::Zero(fx);
+  for (unsigned i = 0; i < num_args; ++i)
+    CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v + i * xs[0]->d.batch_size(), 1, fx.v, 1));
+#else
+  auto res = *fx;
+  const unsigned remainder = num_args % 4;
+  switch (remainder) {
+    case 0: res.setZero(); break;
+    case 1: res = xs[0]->batch_matrix(0); break;
+    case 2: res = xs[0]->batch_matrix(0) + xs[0]->batch_matrix(1); break;
+    case 3: res = xs[0]->batch_matrix(0) + xs[0]->batch_matrix(1) + xs[0]->batch_matrix(2); break;
+  }
+  for (unsigned i = remainder; i < num_args; i += 4)
+    res += xs[0]->batch_matrix(i) + xs[0]->batch_matrix(i+1) + xs[0]->batch_matrix(i+2) + xs[0]->batch_matrix(i+3);
+#endif
+}
+
+void SumBatches::backward_impl(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  assert(i == 0);
+#if HAVE_CUDA
+  for (unsigned i = 0; i < dEdxi.d.bd; ++i)
+    CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v + i * dEdxi.d.batch_size(), 1));
+#else
+  for (unsigned i = 0; i < dEdxi.d.bd; ++i)
+    dEdxi.batch_matrix(i) += *dEdf;
+#endif
+}
+
 void Average::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) {
@@ -982,11 +1018,22 @@ void MatrixMultiply::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) c
   assert(xs.size() == 2);
 #if HAVE_CUDA
   // fx = 0*fx + xs[0] * xs[1]
+  assert(xs[0]->d.bd == 1);
+  assert(xs[1]->d.bd == 1);
   CUDAMatrixMultiply(*xs[0], *xs[1], fx, kSCALAR_ZERO);
 #else
-  auto x1 = **xs[0];
-  auto x2 = **xs[1];
-  (*fx).noalias() = x1 * x2;
+  assert(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd));
+  if(xs[0]->d.bd == 1) {
+    // If the left side has one batch, multiply by columns
+    // [x, z, b] = [x, y] * [y, z, b]
+    // -> [x, z*b] = [x, y], [y, z*b]
+    fx.colbatch_matrix().noalias() = **xs[0] * xs[1]->colbatch_matrix();
+  } else {
+    // Otherwise, loop over the batches
+    assert(xs[1]->d.bd == 1 || xs[1]->d.bd == xs[0]->d.bd);
+    for(int b = 0; b < xs[0]->d.bd; ++b)
+      fx.batch_matrix(b).noalias() = xs[0]->batch_matrix(b) * xs[1]->batch_matrix(b);
+  }
 #endif
 }
 
@@ -1013,10 +1060,13 @@ void MatrixMultiply::backward_impl(const vector<const Tensor*>& xs,
           kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
   }
 #else
+  int max_b = max(xs[0]->d.bd, xs[1]->d.bd);
   if (i == 0) {
-    (*dEdxi).noalias() += *dEdf * (**xs[1]).transpose();
+    for(int b = 0; b < max_b; ++b)
+      dEdxi.batch_matrix(b).noalias() += dEdf.batch_matrix(b) * xs[1]->batch_matrix(b).transpose();
   } else {
-    (*dEdxi).noalias() += (**xs[0]).transpose() * *dEdf;
+    for(int b = 0; b < max_b; ++b)
+      dEdxi.batch_matrix(b).noalias() += xs[0]->batch_matrix(b).transpose() * dEdf.batch_matrix(b);
   }
 #endif
 }
@@ -1090,14 +1140,26 @@ void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) 
       CUDAMatrixMultiply(*xs[i], *xs[i + 1], fx, (i == 1) ? kSCALAR_ZERO : kSCALAR_ONE);
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v, 1, fx.v, 1));
 #else
-    if (xs.size() == 3) {
-      // size 3 is optimized in newer versions of eigen
-      (*fx).noalias() = **xs[0] + **xs[1] * **xs[2];
+    assert(fx.d.bd == 1);
+    // Add, using broadcasting or not
+    if(fx.d.bd > 1 && xs[0]->d.bd == 1) {
+      fx.rowcol_matrix().colwise() = xs[0]->vec();
     } else {
-      (*fx) = **xs[0];
-      for (unsigned i = 1; i < xs.size(); i += 2)
-        (*fx).noalias() += (**xs[i]) * (**xs[i + 1]);
+      for(int b = 0; b < fx.d.bd; ++b)
+        fx.batch_matrix(b) = xs[0]->batch_matrix(b);
     }
+
+    // Multiply
+    for (unsigned i = 1; i < xs.size(); i += 2) {
+      if(xs[i]->d.bd == 1) {
+        fx.colbatch_matrix().noalias() += **xs[i] * xs[i+1]->colbatch_matrix();
+      } else {
+        assert(xs[i+1]->d.bd == 1 || xs[i+1]->d.bd == xs[i]->d.bd);
+        for(int b = 0; b < xs[i]->d.bd; ++b)
+          fx.batch_matrix(b).noalias() += xs[i]->batch_matrix(b) * xs[i+1]->batch_matrix(b);
+      }
+    }
+
 #endif
   }
 }
@@ -1112,9 +1174,17 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
 #if HAVE_CUDA
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
 #else
-    *dEdxi += *dEdf;
+    assert(fx.d.bd == 1);
+    // Add, using broadcasting or not
+    if(dEdxi.d.bd > 1 && dEdf.d.bd == 1) {
+      dEdxi.rowcol_matrix().colwise() += dEdf.vec();
+    } else {
+      for(int b = 0; b < dEdxi.d.bd; ++b)
+        dEdxi.batch_matrix(b) += dEdf.batch_matrix(b);
+    }
 #endif
   } else if (i % 2 == 1) { // left argument of matrix multiply
+    int max_b = max(dEdf.d.bd, xs[i+1]->d.bd);
 #if HAVE_CUDA
     CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
           dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
@@ -1123,9 +1193,11 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
           xs[i+1]->v, xs[i+1]->d.rows(),
           kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
 #else
-    (*dEdxi).noalias() += *dEdf * (**xs[i+1]).transpose();
+    for(int b = 0; b < max_b; ++b)
+      dEdxi.batch_matrix(b).noalias() += dEdf.batch_matrix(b) * xs[i+1]->batch_matrix(b).transpose();
 #endif
   } else {  // right argument of matrix multiply
+    int max_b = max(xs[i-1]->d.bd, dEdf.d.bd);
 #if HAVE_CUDA
     CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
           dEdxi.d.rows(), dEdxi.d.cols(), xs[i-1]->d.rows(),
@@ -1134,7 +1206,8 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
           dEdf.v, xs[i-1]->d.rows(),
           kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
 #else
-    (*dEdxi).noalias() += (**xs[i-1]).transpose() * *dEdf;
+    for(int b = 0; b < max_b; ++b)
+      dEdxi.batch_matrix(b).noalias() += xs[i-1]->batch_matrix(b).transpose() * dEdf.batch_matrix(b);
 #endif
   }
 }
