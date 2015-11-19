@@ -268,6 +268,17 @@ Dim Sum::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string SumBatches::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "sum_batches( " << arg_names[0] << " )";
+  return s.str();
+}
+
+Dim SumBatches::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0].single_batch();
+}
+
 string Average::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "average(" << arg_names[0];
@@ -470,7 +481,14 @@ Dim SoftSign::dim_forward(const vector<Dim>& xs) const {
 
 string PickNegLogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "log_softmax(" << arg_names[0] << ")_{" << *pval << '}';
+  if(pval) {
+    s << "log_softmax(" << arg_names[0] << ")_{" << *pval << '}';
+  } else {
+    s << "log_softmax(" << arg_names[0] << ")_{";
+    string sep = "";
+    for(auto v : *pvals) { s << sep << v; sep = ","; }
+    s << '}';
+  }
   return s.str();
 }
 

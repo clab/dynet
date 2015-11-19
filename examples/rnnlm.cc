@@ -19,8 +19,8 @@ using namespace std;
 using namespace cnn;
 
 unsigned LAYERS = 2;
-unsigned INPUT_DIM = 8;  //256
-unsigned HIDDEN_DIM = 24;  // 1024
+unsigned INPUT_DIM = 256;  //256
+unsigned HIDDEN_DIM = 256;  // 1024
 unsigned VOCAB_SIZE = 0;
 
 cnn::Dict d;

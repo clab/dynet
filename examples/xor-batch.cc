@@ -39,9 +39,11 @@ int main(int argc, char** argv) {
   Expression y = input(cg, y_dim, &y_values);
 
   Expression h = tanh(W*x + b);
+  //Expression h = tanh(affine_transform({b, W, x}));
   //Expression h = softsign(W*x + b);
   Expression y_pred = V*h + a;
   Expression loss = squared_distance(y_pred, y);
+  Expression sum_loss = sum_batches(loss);
 
   cg.PrintGraphviz();
   if (argc == 2) {
@@ -52,15 +54,11 @@ int main(int argc, char** argv) {
 
   // train the parameters
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
-    vector<float> losses = as_vector(cg.forward());
+    float my_loss = as_scalar(cg.forward()) / 4;
     cg.backward();
     sgd.update(0.25);
     sgd.update_epoch();
-    float loss = 0;
-    for(auto l : losses)
-      loss += l;
-    loss /= 4;
-    cerr << "E = " << loss << endl;
+    cerr << "E = " << my_loss << endl;
   }
   //boost::archive::text_oarchive oa(cout);
   //oa << m;
