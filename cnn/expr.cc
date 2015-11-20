@@ -14,8 +14,12 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
 Expression parameter(ComputationGraph& g, Parameters* p) { return Expression(&g, g.add_parameters(p)); }
 Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index) { return Expression(&g, g.add_lookup(p, index)); }
 Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_lookup(p, pindex)); }
+Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }
+Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_lookup(p, pindices)); }
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index) { return Expression(&g, g.add_const_lookup(p, index)); }
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
 Expression operator+(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i})); }
@@ -75,8 +79,11 @@ Expression pick(const Expression& x, unsigned* pv) { return Expression(x.pg, x.p
 Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u)); }
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumColumns>({x.i})); }
+
+Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
 
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 

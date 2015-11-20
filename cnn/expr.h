@@ -24,6 +24,11 @@ Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
+// Batched versions of lookup and const_lookup
+Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
+Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
 
 Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);
@@ -86,11 +91,15 @@ Expression fold_rows(const Expression& x, unsigned nrows=2);
 Expression sum_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 
+// Sum the results of multiple batches
+Expression sum_batches(const Expression& x);
+
 // pick parts out of bigger objects
 Expression pick(const Expression& x, unsigned v);
 Expression pick(const Expression& x, unsigned* pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
 
 namespace detail {
   template <typename F, typename T>
