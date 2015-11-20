@@ -1065,8 +1065,12 @@ void MatrixMultiply::backward_impl(const vector<const Tensor*>& xs,
     for(int b = 0; b < max_b; ++b)
       dEdxi.batch_matrix(b).noalias() += dEdf.batch_matrix(b) * xs[1]->batch_matrix(b).transpose();
   } else {
-    for(int b = 0; b < max_b; ++b)
-      dEdxi.batch_matrix(b).noalias() += xs[0]->batch_matrix(b).transpose() * dEdf.batch_matrix(b);
+    if(xs[0]->d.bd == 1) {
+      dEdxi.colbatch_matrix().noalias() += (**xs[0]).transpose() * dEdf.colbatch_matrix();
+    } else {
+      for(int b = 0; b < max_b; ++b)
+        dEdxi.batch_matrix(b).noalias() += xs[0]->batch_matrix(b).transpose() * dEdf.batch_matrix(b);
+    }
   }
 #endif
 }
@@ -1206,8 +1210,12 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
           dEdf.v, xs[i-1]->d.rows(),
           kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
 #else
-    for(int b = 0; b < max_b; ++b)
-      dEdxi.batch_matrix(b).noalias() += xs[i-1]->batch_matrix(b).transpose() * dEdf.batch_matrix(b);
+    if(xs[i-1]->d.bd == 1) {
+      dEdxi.colbatch_matrix().noalias() += (**xs[i-1]).transpose() * dEdf.colbatch_matrix();
+    } else {
+      for(int b = 0; b < max_b; ++b)
+        dEdxi.batch_matrix(b).noalias() += xs[i-1]->batch_matrix(b).transpose() * dEdf.batch_matrix(b);
+    }
 #endif
   }
 }
