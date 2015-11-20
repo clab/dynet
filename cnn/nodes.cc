@@ -222,9 +222,9 @@ void KMHNGram::backward_impl(const vector<const Tensor*>& xs,
 void InnerProduct3D_1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto b = **xs[1];
   auto y = *fx;
-  const int i = y.rows();
-  const int j = y.cols();
-  const int k = b.rows();
+  const unsigned i = y.rows();
+  const unsigned j = y.cols();
+  const unsigned k = b.rows();
   // the following reshape tensors into order 1 or 2 sizes
   // but they point to the same memory
   Tensor ta({i*j,k}, xs[0]->v);
@@ -249,9 +249,9 @@ void InnerProduct3D_1D::backward_impl(const vector<const Tensor*>& xs,
                      Tensor& dEdxi) const {
   auto b = **xs[1];
   auto y = *fx;
-  const int si = y.rows();
-  const int sj = y.cols();
-  const int sk = b.rows();
+  const unsigned si = y.rows();
+  const unsigned sj = y.cols();
+  const unsigned sk = b.rows();
   Tensor tdEdf({si*sj}, dEdf.v);
   if (i == 0) { // 3-tensor
     Tensor tdEdxi({si*sj, sk}, dEdxi.v);
@@ -385,7 +385,7 @@ void LogSumExp::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const 
   }
   for (unsigned i = 0; i < xs.size(); ++i)
     static_cast<float*>(aux_mem)[i] = (**xs[i])(0,0);
-  Dim r = {(int)xs.size()};
+  Dim r = {(unsigned int)xs.size()};
   Tensor v(r, static_cast<float*>(aux_mem));
   fx.v[0] = logsumexp(*v);
 }
@@ -1031,7 +1031,7 @@ void MatrixMultiply::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) c
   } else {
     // Otherwise, loop over the batches
     assert(xs[1]->d.bd == 1 || xs[1]->d.bd == xs[0]->d.bd);
-    for(int b = 0; b < xs[0]->d.bd; ++b)
+    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
       fx.batch_matrix(b).noalias() = xs[0]->batch_matrix(b) * xs[1]->batch_matrix(b);
   }
 #endif
@@ -1149,7 +1149,7 @@ void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) 
     if(fx.d.bd > 1 && xs[0]->d.bd == 1) {
       fx.rowcol_matrix().colwise() = xs[0]->vec();
     } else {
-      for(int b = 0; b < fx.d.bd; ++b)
+      for(unsigned b = 0; b < fx.d.bd; ++b)
         fx.batch_matrix(b) = xs[0]->batch_matrix(b);
     }
 
@@ -1159,7 +1159,7 @@ void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) 
         fx.colbatch_matrix().noalias() += **xs[i] * xs[i+1]->colbatch_matrix();
       } else {
         assert(xs[i+1]->d.bd == 1 || xs[i+1]->d.bd == xs[i]->d.bd);
-        for(int b = 0; b < xs[i]->d.bd; ++b)
+        for(unsigned b = 0; b < xs[i]->d.bd; ++b)
           fx.batch_matrix(b).noalias() += xs[i]->batch_matrix(b) * xs[i+1]->batch_matrix(b);
       }
     }
@@ -1183,7 +1183,7 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
     if(dEdxi.d.bd > 1 && dEdf.d.bd == 1) {
       dEdxi.rowcol_matrix().colwise() += dEdf.vec();
     } else {
-      for(int b = 0; b < dEdxi.d.bd; ++b)
+      for(unsigned b = 0; b < dEdxi.d.bd; ++b)
         dEdxi.batch_matrix(b) += dEdf.batch_matrix(b);
     }
 #endif

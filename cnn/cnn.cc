@@ -25,7 +25,7 @@ void Node::forward(const std::vector<const Tensor*>& xs,
   if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
     forward_impl(xs, fx);
   } else {
-    for(int b = 0; b < fx.d.batch_elems(); ++b) {
+    for(unsigned b = 0; b < fx.d.batch_elems(); ++b) {
       std::vector<Tensor>  xs_elems;
       std::vector<const Tensor*> xs_ptrs;
       for(size_t i = 0; i < xs.size(); ++i) xs_elems.push_back(xs[i]->batch_elem(b));
@@ -43,7 +43,7 @@ void Node::backward(const std::vector<const Tensor*>& xs,
   if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
     backward_impl(xs, fx, dEdf, i, dEdxi);
   } else {
-    for(int b = 0; b < fx.d.batch_elems(); ++b) {
+    for(unsigned b = 0; b < fx.d.batch_elems(); ++b) {
       std::vector<Tensor>  xs_elems;
       std::vector<const Tensor*> xs_ptrs;
       for(size_t i = 0; i < xs.size(); ++i) xs_elems.push_back(xs[i]->batch_elem(b));
