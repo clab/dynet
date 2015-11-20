@@ -29,14 +29,14 @@ Dim AddVectorToAllColumns::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-void AddVectorToAllColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void AddVectorToAllColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = *fx;
   auto x = **xs[0];
   auto b = **xs[1];
   y = x.colwise() + b.col(0);
 }
 
-void AddVectorToAllColumns::backward(const vector<const Tensor*>& xs,
+void AddVectorToAllColumns::backward_impl(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
@@ -64,7 +64,7 @@ Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
   return Dim({orows, xs[0].cols()});
 }
 
-void FoldRows::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void FoldRows::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   auto y = *fx;
   int orows = y.rows();
@@ -78,7 +78,7 @@ void FoldRows::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void FoldRows::backward(const vector<const Tensor*>& xs,
+void FoldRows::backward_impl(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
@@ -112,7 +112,7 @@ Dim Conv1DNarrow::dim_forward(const vector<Dim>& xs) const {
   return Dim({xs[0].rows(), ocols});
 }
 
-void Conv1DNarrow::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Conv1DNarrow::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   // TODO this is a bad implementation- rewrite to use unsupported Eigen tensor library
   auto x = **xs[0];  // input
   auto f = **xs[1];  // filter
@@ -130,7 +130,7 @@ void Conv1DNarrow::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void Conv1DNarrow::backward(const vector<const Tensor*>& xs,
+void Conv1DNarrow::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
                             unsigned i,
@@ -181,7 +181,7 @@ Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
   return Dim({xs[0].rows(), ocols});
 }
 
-void Conv1DWide::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Conv1DWide::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   TensorTools::Zero(fx);
   auto x = **xs[0];  // input
   auto f = **xs[1];  // filter
@@ -198,7 +198,7 @@ void Conv1DWide::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void Conv1DWide::backward(const vector<const Tensor*>& xs,
+void Conv1DWide::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& fx,
                           const Tensor& dEdf,
                           unsigned i,
@@ -252,7 +252,7 @@ size_t KMaxPooling::aux_storage_size() const {
   return sizeof(int) * dim.size();
 }
 
-void KMaxPooling::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void KMaxPooling::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x=**xs[0];
   auto y=*fx;
   float tmp[1024];
@@ -284,7 +284,7 @@ void KMaxPooling::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(mi == dim.size());
 }
 
-void KMaxPooling::backward(const vector<const Tensor*>& xs,
+void KMaxPooling::backward_impl(const vector<const Tensor*>& xs,
                            const Tensor& fx,
                            const Tensor& dEdf,
                            unsigned i,

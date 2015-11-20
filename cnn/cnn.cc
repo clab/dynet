@@ -18,6 +18,44 @@ int n_hgs = 0;
 Node::~Node() {}
 size_t Node::aux_storage_size() const { return 0; }
 
+// perform the forward/backward passes in one or multiple calls
+// TODO: This is a lot of code for something simple. Can it be shortened?
+void Node::forward(const std::vector<const Tensor*>& xs,
+                   Tensor& fx) const {
+  if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
+    forward_impl(xs, fx);
+  } else {
+    for(int b = 0; b < fx.d.batch_elems(); ++b) {
+      std::vector<Tensor>  xs_elems;
+      std::vector<const Tensor*> xs_ptrs;
+      for(size_t i = 0; i < xs.size(); ++i) xs_elems.push_back(xs[i]->batch_elem(b));
+      for(size_t i = 0; i < xs.size(); ++i) xs_ptrs.push_back(&xs_elems[i]);
+      Tensor fx_elem(fx.batch_elem(b));
+      forward_impl(xs_ptrs, fx_elem);
+    }
+  }
+}
+void Node::backward(const std::vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                    unsigned i,
+                    Tensor& dEdxi) const {
+  if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
+    backward_impl(xs, fx, dEdf, i, dEdxi);
+  } else {
+    for(int b = 0; b < fx.d.batch_elems(); ++b) {
+      std::vector<Tensor>  xs_elems;
+      std::vector<const Tensor*> xs_ptrs;
+      for(size_t i = 0; i < xs.size(); ++i) xs_elems.push_back(xs[i]->batch_elem(b));
+      for(size_t i = 0; i < xs.size(); ++i) xs_ptrs.push_back(&xs_elems[i]);
+      Tensor fx_elem(fx.batch_elem(b));
+      Tensor dEdf_elem(dEdf.batch_elem(b));
+      Tensor dEdxi_elem(dEdxi.batch_elem(b));
+      backward_impl(xs_ptrs, fx_elem, dEdf_elem, i, dEdxi_elem);
+    }
+  }
+}
+
 ComputationGraph::ComputationGraph() :
   ee(new SimpleExecutionEngine(*this)) {
   ++n_hgs;
@@ -94,6 +132,25 @@ VariableIndex ComputationGraph::add_lookup(LookupParameters* p, unsigned index) 
   return new_node_index;
 }
 
+VariableIndex ComputationGraph::add_lookup(LookupParameters* p, const std::vector<unsigned>& indices) {
+  VariableIndex new_node_index(nodes.size());
+  LookupNode* new_node = new LookupNode(p, indices);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_lookup(LookupParameters* p, const std::vector<unsigned>* indices) {
+  VariableIndex new_node_index(nodes.size());
+  LookupNode* new_node = new LookupNode(p, indices);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+
 VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, const unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, pindex);
@@ -107,6 +164,22 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, const unsi
 VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
+  nodes.push_back(new_node);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, const std::vector<unsigned>& indices) {
+  VariableIndex new_node_index(nodes.size());
+  LookupNode* new_node = new LookupNode(p, indices);
+  nodes.push_back(new_node);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_const_lookup(LookupParameters* p, const std::vector<unsigned>* indices) {
+  VariableIndex new_node_index(nodes.size());
+  LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
   set_dim_for_new_node(new_node_index);
   return new_node_index;

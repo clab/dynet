@@ -18,10 +18,9 @@ int main(int argc, char** argv) {
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
-  const unsigned ITERATIONS = 30;
+  const unsigned ITERATIONS = 200;
   Model m;
   SimpleSGDTrainer sgd(&m);
-  //MomentumSGDTrainer sgd(&m);
 
   ComputationGraph cg;
 
@@ -30,16 +29,21 @@ int main(int argc, char** argv) {
   Expression V = parameter(cg, m.add_parameters({1, HIDDEN_SIZE}));
   Expression a = parameter(cg, m.add_parameters({1}));
 
-  vector<cnn::real> x_values(2);  // set x_values to change the inputs to the network
-  Expression x = input(cg, {2}, &x_values);
-  cnn::real y_value;  // set y_value to change the target output
-  Expression y = input(cg, &y_value);
+  // set x_values to change the inputs to the network
+  Dim x_dim({2}, 4), y_dim({1}, 4);
+  cerr << "x_dim=" << x_dim << ", y_dim=" << y_dim << endl;
+  vector<cnn::real> x_values = {1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0};
+  Expression x = input(cg, x_dim, &x_values);
+  // set y_values expressing the output
+  vector<cnn::real> y_values = {-1.0, 1.0, 1.0, -1.0};
+  Expression y = input(cg, y_dim, &y_values);
 
   Expression h = tanh(W*x + b);
   //Expression h = tanh(affine_transform({b, W, x}));
   //Expression h = softsign(W*x + b);
   Expression y_pred = V*h + a;
   Expression loss = squared_distance(y_pred, y);
+  Expression sum_loss = sum_batches(loss);
 
   cg.PrintGraphviz();
   if (argc == 2) {
@@ -50,22 +54,13 @@ int main(int argc, char** argv) {
 
   // train the parameters
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
-    double loss = 0;
-    for (unsigned mi = 0; mi < 4; ++mi) {
-      bool x1 = mi % 2;
-      bool x2 = (mi / 2) % 2;
-      x_values[0] = x1 ? 1 : -1;
-      x_values[1] = x2 ? 1 : -1;
-      y_value = (x1 != x2) ? 1 : -1;
-      loss += as_scalar(cg.forward());
-      cg.backward();
-      sgd.update(1.0);
-    }
+    float my_loss = as_scalar(cg.forward()) / 4;
+    cg.backward();
+    sgd.update(0.25);
     sgd.update_epoch();
-    loss /= 4;
-    cerr << "E = " << loss << endl;
+    cerr << "E = " << my_loss << endl;
   }
-  boost::archive::text_oarchive oa(cout);
-  oa << m;
+  //boost::archive::text_oarchive oa(cout);
+  //oa << m;
 }
 
