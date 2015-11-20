@@ -107,6 +107,7 @@ struct MLPDurationEmbedding : public DurationEmbedding {
 
 struct BinnedDurationEmbedding : public DurationEmbedding {
   BinnedDurationEmbedding(Model& m, unsigned dim, unsigned num_bins = 8) : max_bin(num_bins - 1) {
+    assert(num_bins > 0);
     p_e = m.add_lookup_parameters(num_bins, {dim});
   }
   void new_graph(ComputationGraph& g) override {
@@ -118,7 +119,7 @@ struct BinnedDurationEmbedding : public DurationEmbedding {
     return lookup(*cg, p_e, dur);
   }
   ComputationGraph* cg;
-  int max_bin;
+  unsigned max_bin;
   LookupParameters* p_e;
 };
 
@@ -539,7 +540,7 @@ double compute_f_score(vector<vector<pair<int,int>>>& yz_preds, vector<vector<pa
   int r_correct = 0;
   int p_total = 0; 
   int r_total = 0;
-  for (int i = 0; i < yz_preds.size(); i++){
+  for (unsigned i = 0; i < yz_preds.size(); i++){
     // for sentence i
     std::set<pair<int,int>> gold;
     std::set<pair<int,int>> pred;
@@ -585,8 +586,6 @@ int main(int argc, char** argv) {
   }
   vector<pair<vector<int>,vector<pair<int,int>>>> training, dev;
   string line;
-  int tlc = 0;
-  int ttoks = 0;
   cerr << "Reading training data from " << argv[1] << "...\n";
   {
     ifstream in(argv[1]);

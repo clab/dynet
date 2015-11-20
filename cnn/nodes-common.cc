@@ -11,7 +11,7 @@ namespace cnn {
 inline bool LooksLikeVector(const Dim& d) {
   if (d.ndims() == 1) return true;
   if (d.ndims() > 1) {
-    for (int i = 1; i < d.ndims(); ++i)
+    for (unsigned i = 1; i < d.ndims(); ++i)
       if (d[i] != 1) return false;
   }
   return true;
@@ -138,7 +138,7 @@ string KMHNGram::as_string(const vector<string>& arg_names) const {
 
 Dim KMHNGram::dim_forward(const vector<Dim>& xs) const {
   assert(xs[0].ndims() == 2);
-  const int new_cols = xs[0].cols() - n + 1;
+  const unsigned new_cols = xs[0].cols() - n + 1;
   if (new_cols < 1) {
     cerr << "Bad input dimensions in KMHNGram: " << xs << endl;
     abort();
@@ -395,16 +395,16 @@ string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
 
 Dim ConcatenateColumns::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() > 0);
-  int rows = xs[0][0];
-  int new_cols = 0;
-  int bd = 1;
+  unsigned rows = xs[0][0];
+  unsigned new_cols = 0;
+  unsigned bd = 1;
   for (auto& d : xs) {
     if (d[0] != rows) {
       cerr << "Bad input dimensions in ConcatenateColumns: " << xs << endl;
       abort();
     }
     new_cols += d[1];
-    bd = max(bd, (int)d.bd);
+    bd = max(bd, d.bd);
   }
   return Dim({rows, new_cols}, bd);
 }
@@ -560,7 +560,7 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
     cerr << "Bad input dimensions in PickElement: " << xs << endl;
     abort();
   }
-  assert((int)end <= xs[0][0]);
+  assert(end <= xs[0][0]);
   return Dim({end - start}, xs[0].bd);
 }
 

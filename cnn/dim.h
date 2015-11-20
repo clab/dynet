@@ -17,40 +17,40 @@ namespace cnn {
 
 struct Dim {
   Dim() : nd(), bd(1) {}
-  // explicit Dim(int m) : nd(1), bd(1) { d[0] = m; }
-  // TODO: The constructors for dimensions w/ and w/o batches is not intuitive.
+  // explicit Dim(unsigned int m) : nd(1), bd(1) { d[0] = m; }
+  // TODO: The constructors for dimensions w/ and w/o batches is not unsigned intuitive.
   //       can this be fixed in some way?
-  // Dim(int m, int n) : nd(2), bd(1) { d[0] = m; d[1] = n; }
-  Dim(std::initializer_list<long> x) : nd(), bd(1) {
+  // Dim(unsigned int m, unsigned int n) : nd(2), bd(1) { d[0] = m; d[1] = n; }
+  Dim(std::initializer_list<unsigned int> x) : nd(), bd(1) {
     for(auto v : x) d[nd++] = v;
   }
-  Dim(std::initializer_list<long> x, int b) : nd(), bd(b) {
+  Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(), bd(b) {
     for(auto v : x) d[nd++] = v;
   }
   // Dim(const std::vector<long> & x) : nd(), bd(1) {
   //   for(auto v : x) d[nd++] = v;
   // }
-  // Dim(const std::vector<long> & x, int b) : nd(), bd(b) {
+  // Dim(const std::vector<long> & x, unsigned int b) : nd(), bd(b) {
   //   for(auto v : x) d[nd++] = v;
   // }
-  inline int size() const {
+  inline unsigned int size() const {
     return batch_size() * bd;
   }
-  inline int batch_size() const {
-    int p = 1;
-    for (unsigned i = 0; i < nd; ++i) p *= d[i];
+  inline unsigned int batch_size() const {
+    unsigned int p = 1;
+    for (unsigned int i = 0; i < nd; ++i) p *= d[i];
     return p;
   }
-  inline int sum_dims() const {
-    int p = 0;
-    for (unsigned i = 0; i < nd; ++i) p += d[i];
+  inline unsigned int sum_dims() const {
+    unsigned int p = 0;
+    for (unsigned int i = 0; i < nd; ++i) p += d[i];
     return p;
   }
   inline Dim truncate() const {
     Dim r = *this;
-    int m = 1;
-    int s = size();
-    for (int i = 1; i < s; ++i)
+    unsigned int m = 1;
+    unsigned int s = size();
+    for (unsigned int i = 1; i < s; ++i)
       if (size(i) > 1) m = i + 1;
     r.resize(m);
     return r;
@@ -60,14 +60,14 @@ struct Dim {
     r.bd = 1;
     return r;
   }
-  inline void resize(unsigned i) { nd = i; }
-  inline int ndims() const { return nd; }
-  inline int rows() const { return d[0]; }
-  inline int cols() const { return nd > 1 ? d[1] : 1; }
-  inline int batch_elems() const { return bd; }
-  inline void set(unsigned i, unsigned s) { assert(i < nd); assert(s > 0); d[i] = s; }
-  inline int operator[](unsigned i) const { return i < nd ? d[i] : 1; }
-  inline int size(unsigned i) const { return (*this)[i]; }
+  inline void resize(unsigned int i) { nd = i; }
+  inline unsigned int ndims() const { return nd; }
+  inline unsigned int rows() const { return d[0]; }
+  inline unsigned int cols() const { return nd > 1 ? d[1] : 1; }
+  inline unsigned int batch_elems() const { return bd; }
+  inline void set(unsigned int i, unsigned int s) { assert(i < nd); assert(s > 0); d[i] = s; }
+  inline unsigned int operator[](unsigned int i) const { return i < nd ? d[i] : 1; }
+  inline unsigned int size(unsigned int i) const { return (*this)[i]; }
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
     else if (nd == 2) { return Dim({d[1], d[0]}, bd); }
