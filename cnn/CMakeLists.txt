@@ -12,6 +12,7 @@ set(cnn_library_SRCS
     grad-check.cc
     graph.cc
     gru.cc
+    hsm-builder.cc
     init.cc
     lstm.cc
     model.cc
@@ -44,6 +45,7 @@ set(cnn_library_HDRS
     gpu-ops.h
     graph.h
     gru.h
+    hsm-builder.h
     init.h
     lstm.h
     model.h
