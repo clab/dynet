@@ -30,8 +30,8 @@ struct FastLSTMBuilder : public RNNBuilder {
   }
   unsigned num_h0_components() const override { return 2 * layers; }
 
-  std::vector<Expression> get_h(RNNPointer i) const { return (i == -1 ? h0 : h[i]); }
-  std::vector<Expression> get_s(RNNPointer i) const {
+  std::vector<Expression> get_h(RNNPointer i) const override { return (i == -1 ? h0 : h[i]); }
+  std::vector<Expression> get_s(RNNPointer i) const override {
     std::vector<Expression> ret = (i == -1 ? c0 : c[i]);
     for(auto my_h : get_h(i)) ret.push_back(my_h);
     return ret;
