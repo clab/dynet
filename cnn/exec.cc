@@ -85,7 +85,7 @@ void SimpleExecutionEngine::backward() {
 void SimpleExecutionEngine::backward(VariableIndex from_where) {
   assert(from_where+1 <= nfxs.size());
   assert(from_where+1 <= cg.nodes.size());
-  if (nfxs[from_where].d.batch_size() != 1) {
+  if (nfxs[from_where].d.size() != 1) {
     cerr << "backward() called on non-scalar node.\n";
     abort();
   }
@@ -101,9 +101,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
   }
   dEdfs->zero_allocated_memory();
   // initialize dE/dE = 1
-  auto end = ndEdfs.back().v + nfxs.back().d.size();
-  for(auto it = ndEdfs.back().v; it < end; ++it)
-    *it = 1;
+  ndEdfs.back().v = kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
   vector<bool> needs_derivative(num_nodes, false);
