@@ -51,7 +51,14 @@ void InputNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const 
 #if HAVE_CUDA
   cudaMemcpyAsync(fx.v, &pdata->front(), dim.size() * sizeof(float), cudaMemcpyHostToDevice);
 #else
-  memcpy(fx.v, &pdata->front(), dim.size() * sizeof(float));
+  // TODO memcpy is only necessary if pdata->front() points to an unaligned location
+  // need to compute this value
+  bool is_input_address_aligned = false;
+  if (!is_input_address_aligned) {
+    memcpy(fx.v, &pdata->front(), dim.size() * sizeof(float));
+  } else {
+    fx.v = const_cast<float*>(&pdata->front());
+  }
 #endif
 }
 
