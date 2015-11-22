@@ -27,6 +27,9 @@ class HierarchicalSoftmaxBuilder {
   // -log(p(c | rep) * p(w | c, rep))
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
 
+  // samples a word from p(w,c | rep)
+  unsigned sample(const expr::Expression& rep);
+
  private:
   void ReadClusterFile(const std::string& cluster_file, Dict* word_dict);
   Dict cdict;

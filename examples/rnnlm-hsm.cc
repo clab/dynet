@@ -60,9 +60,9 @@ struct RNNLanguageModel {
 
   // return Expression for total loss
   void RandomSample(int max_len = 150) {
-#if 0
     cerr << endl;
     ComputationGraph cg;
+    hsm.new_graph(cg);
     builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
     vector<Expression> errs;
@@ -73,25 +73,10 @@ struct RNNLanguageModel {
       Expression i_x_t = lookup(cg, p_c, cur);
       // y_t = RNN(x_t)
       Expression i_y_t = builder.add_input(i_x_t);
-      Expression i_r_t = affine_transform({i_bias, i_R, i_y_t});
-      
-      Expression ydist = softmax(i_r_t);
-      
-      unsigned w = 0;
-      while (w == 0 || (int)w == kSOS) {
-        auto dist = as_vector(cg.incremental_forward());
-        double p = rand01();
-        for (; w < dist.size(); ++w) {
-          p -= dist[w];
-          if (p < 0.0) { break; }
-        }
-        if (w == dist.size()) w = kEOS;
-      }
-      cerr << (len == 1 ? "" : " ") << d.Convert(w);
-      cur = w;
+      cur = hsm.sample(i_y_t);
+      cerr << (len == 1 ? "" : " ") << d.Convert(cur);
     }
     cerr << endl;
-#endif
   }
 };
 
