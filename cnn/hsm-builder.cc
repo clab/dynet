@@ -43,6 +43,7 @@ void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
 }
 
 Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
+  // TODO assert that new_graph has been called
   int clusteridx = widx2cidx[wordidx];
   assert(clusteridx >= 0);  // if this fails, wordid is missing from clusters
   Expression cscores = affine_transform({cbias, r2c, rep});
@@ -56,6 +57,35 @@ Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, un
   Expression wscores = affine_transform({cwbias, r2cw, rep});
   Expression wnlp = pickneglogsoftmax(wscores, wordrow);
   return cnlp + wnlp;
+}
+
+unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
+  // TODO assert that new_graph has been called
+  Expression cscores = affine_transform({cbias, r2c, rep});
+  softmax(cscores);
+  auto cdist = as_vector(pcg->incremental_forward());
+  unsigned c = 0;
+  double p = rand01();
+  for (; c < cdist.size(); ++c) {
+    p -= cdist[c];
+    if (p < 0.0) { break; }
+  }
+  if (c == cdist.size()) --c;
+  unsigned w = 0;
+  if (!singleton_cluster[c]) {
+    Expression& cwbias = get_rc2wbias(c);
+    Expression& r2cw = get_rc2w(c);
+    Expression wscores = affine_transform({cwbias, r2cw, rep});
+    softmax(wscores);
+    auto wdist = as_vector(pcg->incremental_forward());
+    p = rand01();
+    for (; w < wdist.size(); ++w) {
+      p -= wdist[w];
+      if (p < 0.0) { break; }
+    }
+    if (w == wdist.size()) --w;
+  }
+  return cidx2words[c][w];
 }
 
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
