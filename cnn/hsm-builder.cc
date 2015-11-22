@@ -32,6 +32,8 @@ void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
   const unsigned num_clusters = cdict.size();
   r2c = parameter(cg, p_r2c);
   cbias = parameter(cg, p_cbias);
+  rc2ws.clear();
+  rc2biases.clear();
   rc2ws.resize(num_clusters);
   rc2biases.resize(num_clusters);
 }
@@ -39,9 +41,12 @@ void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
 Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
   int clusteridx = widx2cidx[wordidx];
   assert(clusteridx >= 0);  // if this fails, wordid is missing from clusters
-  unsigned wordrow = widx2cwidx[wordidx];
   Expression cscores = affine_transform({cbias, r2c, rep});
   Expression cnlp = pickneglogsoftmax(cscores, clusteridx);
+  if (singleton_cluster[clusteridx]) return cnlp;
+  // if there is only one word in the cluster, just return -log p(class | rep)
+  // otherwise predict word too
+  unsigned wordrow = widx2cwidx[wordidx];
   Expression& cwbias = get_rc2wbias(clusteridx);
   Expression& r2cw = get_rc2w(clusteridx);
   Expression wscores = affine_transform({cwbias, r2cw, rep});
@@ -84,7 +89,14 @@ void HierarchicalSoftmaxBuilder::ReadClusterFile(const std::string& cluster_file
     widx2cwidx[word] = clusterwords.size();
     clusterwords.push_back(word);
   }
-  cerr << "Read " << wc << " words in " << cdict.size() << " clusters\n";
+  singleton_cluster.resize(cidx2words.size());
+  int scs = 0;
+  for (unsigned i = 0; i < cidx2words.size(); ++i) {
+    bool sc = cidx2words[i].size() <= 1;
+    if (sc) scs++;
+    singleton_cluster[i] = sc;
+  }
+  cerr << "Read " << wc << " words in " << cdict.size() << " clusters (" << scs << " singleton clusters)\n";
 }
 
 } // namespace cnn
