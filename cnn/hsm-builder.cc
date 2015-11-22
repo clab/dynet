@@ -22,8 +22,12 @@ HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
   for (unsigned i = 0; i < num_clusters; ++i) {
     auto& words = cidx2words[i];  // vector of word ids
     const unsigned num_words_in_cluster = words.size();
-    p_rc2ws[i] = model->add_parameters({num_words_in_cluster, rep_dim});
-    p_rcwbiases[i] = model->add_parameters({num_words_in_cluster});
+    if (num_words_in_cluster > 1) {
+      // for singleton clusters, we don't need these parameters, so
+      // we don't create them
+      p_rc2ws[i] = model->add_parameters({num_words_in_cluster, rep_dim});
+      p_rcwbiases[i] = model->add_parameters({num_words_in_cluster});
+    }
   }
 }
 
