@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-foreach(TARGET tok-embed segrnn-sup poisson-regression tag-bilstm embed-cl encdec xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-batch nlm textcat rnnlm2 mp read-write)
+foreach(TARGET tok-embed segrnn-sup poisson-regression tag-bilstm embed-cl encdec xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat rnnlm2 mp read-write)
   ADD_EXECUTABLE(${TARGET} ${TARGET}.cc)
   target_link_libraries(${TARGET} cnn ${LIBS})
   if (WITH_CUDA_BACKEND)

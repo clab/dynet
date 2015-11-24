@@ -76,8 +76,8 @@ struct ConvLayer {
       p_filts[i].resize(out_nfmaps);
       p_fbias[i].resize(out_nfmaps);
       for (int j = 0; j < out_nfmaps; ++j) {
-        p_filts[i][j] = m.add_parameters({in_rows, filter_width}, 0.01);
-        p_fbias[i][j] = m.add_parameters({in_rows}, 0.05);
+        p_filts[i][j] = m.add_parameters({(unsigned)in_rows, (unsigned)filter_width}, 0.01);
+        p_fbias[i][j] = m.add_parameters({(unsigned)in_rows}, 0.05);
       }
     }
     //for (int j = 0; j < out_nfmaps; ++j)
