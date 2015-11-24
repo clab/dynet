@@ -115,7 +115,11 @@ void LookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const
       unsigned i = pindices->at(b);
       assert (i < params->values.size());
       float* v = fx.v + fx.d.batch_size() * (b % fx.d.batch_elems());
+#if HAVE_CUDA
+      cudaMemcpyAsync(v, params->values[i].v, fx.d.batch_size() * sizeof(float), cudaMemcpyDeviceToDevice);
+#else
       memcpy(v, params->values[i].v, fx.d.batch_size() * sizeof(float));
+#endif
     }
   }
 }
