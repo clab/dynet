@@ -821,8 +821,15 @@ void PickNegLogSoftmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx
   if (xs[0]->d.cols() == 1) {
     logz = (float*)fxs->allocate(sizeof(float)*fx.d.batch_elems());
 #if HAVE_CUDA
-    assert(fx.d.batch_elems() == 1);
-    gpu::pnlsoftmax(xs[0]->d.size(), *pval, xs[0]->v, fx.v, logz);
+    if(pval) {
+      gpu::pnlsoftmax(xs[0]->d.size(), *pval, xs[0]->v, fx.v, logz);
+    } else {
+      // TODO: It'd be nice to have a kernel that did all batches at once
+      assert(pvals);
+      assert(pvals->size() == fx.d.batch_elems());
+      for(unsigned b = 0; b < pvals->size(); ++b)
+        gpu::pnlsoftmax(xs[0]->d.batch_size(), (*pvals)[b], xs[0]->batch_ptr(b), fx.v+b, logz+b);
+    }
 #else
     if(pval) {
       auto x = **xs[0];
@@ -851,9 +858,18 @@ void PickNegLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
                             Tensor& dEdxi) const {
   if (xs[0]->d.cols() == 1) {
 #if HAVE_CUDA
-    assert(fx.d.batch_elems() == 1);
-    const auto elem = *pval;
-    gpu::pnlsoftmax_backward(dEdxi.d.size(), elem, xs[0]->v, dEdf.v, logz, dEdxi.v);
+    if(pval) {
+      const auto elem = *pval;
+      gpu::pnlsoftmax_backward(dEdxi.d.size(), elem, xs[0]->v, dEdf.v, logz, dEdxi.v);
+    } else {
+      assert(pvals);
+      assert(pvals->size() == fx.d.batch_elems()); 
+      // TODO: Again, it would be nice to do this with a single kernel
+      for(unsigned b = 0; b < pvals->size(); ++b) {
+        const auto elem = (*pvals)[b];
+        gpu::pnlsoftmax_backward(dEdxi.d.batch_size(), elem, xs[0]->batch_ptr(b), dEdf.v+b, logz+b, dEdxi.batch_ptr(b));
+      }
+    }
 #else
     if(pval) {
       const auto elem = *pval;
