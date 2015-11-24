@@ -1,0 +1,10 @@
+<s> i think this is wrong . can you check it ? </s>
+<s> fine . </s>
+<s> i went back to my hotel room and found a <unk> here . </s>
+<s> it would be one hundred sixty- eight dollars per night for a twin , with tax and service charge . </s>
+<s> i would like to sit down and take a rest for a little while . </s>
+<s> i am <unk> . </s>
+<s> number three . </s>
+<s> who are you ? </s>
+<s> which is the biggest department store in this city ? </s>
+<s> can i see your ticket , sir ? </s>
