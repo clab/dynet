@@ -1,4 +1,4 @@
-#include "cnn/hsm-builder.h"
+#include "cnn/cfsm-builder.h"
 
 #include <fstream>
 #include <iostream>
@@ -9,7 +9,7 @@ namespace cnn {
 
 using namespace expr;
 
-HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
+ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict* word_dict,
                              Model* model) {
@@ -31,7 +31,7 @@ HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
   }
 }
 
-void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
+void ClassFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg) {
   pcg = &cg;
   const unsigned num_clusters = cdict.size();
   r2c = parameter(cg, p_r2c);
@@ -42,7 +42,7 @@ void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
   rc2biases.resize(num_clusters);
 }
 
-Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
+Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
   // TODO assert that new_graph has been called
   int clusteridx = widx2cidx[wordidx];
   assert(clusteridx >= 0);  // if this fails, wordid is missing from clusters
@@ -59,7 +59,7 @@ Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, un
   return cnlp + wnlp;
 }
 
-unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
+unsigned ClassFactoredSoftmaxBuilder::sample(const expr::Expression& rep) {
   // TODO assert that new_graph has been called
   Expression cscores = affine_transform({cbias, r2c, rep});
   softmax(cscores);
@@ -91,7 +91,7 @@ unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
 inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
 
-void HierarchicalSoftmaxBuilder::ReadClusterFile(const std::string& cluster_file, Dict* word_dict) {
+void ClassFactoredSoftmaxBuilder::ReadClusterFile(const std::string& cluster_file, Dict* word_dict) {
   cerr << "Reading clusters from " << cluster_file << " ...\n";
   ifstream in(cluster_file);
   assert(in);
