@@ -14,12 +14,12 @@ struct Parameters;
 // helps with implementation of hierarchical softmax
 // read a file with lines of the following format
 // CLASSID   word    [freq]
-class HierarchicalSoftmaxBuilder {
+class ClassFactoredSoftmaxBuilder {
  public:
-  HierarchicalSoftmaxBuilder(unsigned rep_dim,
-                             const std::string& cluster_file,
-                             Dict* word_dict,
-                             Model* model);
+  ClassFactoredSoftmaxBuilder(unsigned rep_dim,
+                              const std::string& cluster_file,
+                              Dict* word_dict,
+                              Model* model);
 
   // call this once per ComputationGraph
   void new_graph(ComputationGraph& cg);

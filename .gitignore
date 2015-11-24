@@ -9,6 +9,7 @@ Makefile
 CMakeCache.txt
 CMakeFiles
 cmake_install.cmake
+pycnn/pycnn.cpp
 
 # binaries
 examples/embed-cl

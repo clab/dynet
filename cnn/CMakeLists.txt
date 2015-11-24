@@ -1,6 +1,7 @@
 # ########## cnn library ##########
 # Sources:
 set(cnn_library_SRCS
+    cfsm-builder.cc
     cnn.cc
     conv.cc
     deep-lstm.cc
@@ -12,7 +13,6 @@ set(cnn_library_SRCS
     grad-check.cc
     graph.cc
     gru.cc
-    hsm-builder.cc
     init.cc
     lstm.cc
     model.cc
@@ -31,6 +31,7 @@ set(cnn_library_SRCS
 # Headers:
 set(cnn_library_HDRS
     aligned-mem-pool.h
+    cfsm-builder.h
     c2w.h
     cnn.h
     conv.h
@@ -45,7 +46,6 @@ set(cnn_library_HDRS
     gpu-ops.h
     graph.h
     gru.h
-    hsm-builder.h
     init.h
     lstm.h
     model.h
