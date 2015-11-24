@@ -7,7 +7,7 @@
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
-#include "cnn/hsm-builder.h"
+#include "cnn/cfsm-builder.h"
 
 #include <iostream>
 #include <fstream>
@@ -32,8 +32,8 @@ template <class Builder>
 struct RNNLanguageModel {
   LookupParameters* p_c;
   Builder builder;
-  HierarchicalSoftmaxBuilder& hsm;
-  explicit RNNLanguageModel(Model& model, HierarchicalSoftmaxBuilder& h) :
+  ClassFactoredSoftmaxBuilder& hsm;
+  explicit RNNLanguageModel(Model& model, ClassFactoredSoftmaxBuilder& h) :
       p_c(model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
       builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
       hsm(h) {}
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
   kSOS = d.Convert("<s>");
   kEOS = d.Convert("</s>");
   Model model;
-  HierarchicalSoftmaxBuilder hsm(HIDDEN_DIM, argv[3], &d, &model);
+  ClassFactoredSoftmaxBuilder hsm(HIDDEN_DIM, argv[3], &d, &model);
   vector<vector<int>> training, dev;
   string line;
   int tlc = 0;
