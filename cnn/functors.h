@@ -9,7 +9,7 @@
 #  define CNN_DEVICE_MIN -1.175494351e-38f
 #else
 #  define CNN_DEVICE_FUNC
-#  define CNN_DEVICE_MIN CNN_DEVICE_MIN
+#  define CNN_DEVICE_MIN std::numeric_limits<float>::min()
 #endif
 
 // these functions are used both in CPU and in GPU computation
