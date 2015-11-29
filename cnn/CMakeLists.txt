@@ -16,6 +16,7 @@ set(cnn_library_SRCS
     init.cc
     lstm.cc
     model.cc
+    mp.cc
     nodes.cc
     nodes-common.cc
     param-nodes.cc
@@ -25,7 +26,6 @@ set(cnn_library_SRCS
     shadow-params.cc
     tensor.cc
     training.cc
-    treelstm.cc
 )
 
 # Headers:
@@ -49,6 +49,7 @@ set(cnn_library_HDRS
     init.h
     lstm.h
     model.h
+    mp.h
     nodes.h
     param-nodes.h
     random.h
@@ -59,7 +60,6 @@ set(cnn_library_HDRS
     tensor.h
     timing.h
     training.h
-    treelstm.h
 )
 
 if(WITH_CUDA_BACKEND)

@@ -15,9 +15,10 @@ using namespace std;
 
 namespace cnn {
 
-#define ALIGN 6
+const unsigned ALIGN = 6;
 AlignedMemoryPool<ALIGN>* fxs = nullptr;
 AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
+AlignedMemoryPool<ALIGN>* ps = nullptr;
 mt19937* rndeng = nullptr;
 
 static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
@@ -27,7 +28,7 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
   assert(argc >= 0);
 }
 
-void Initialize(int& argc, char**& argv, unsigned random_seed) {
+void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_parameters) {
 #if HAVE_CUDA
   cerr << "[cnn] using GPU\n";
   Initialize_GPU(argc, argv);
@@ -73,10 +74,19 @@ void Initialize(int& argc, char**& argv, unsigned random_seed) {
   }
   cerr << "[cnn] random seed: " << random_seed << endl;
   rndeng = new mt19937(random_seed);
+
   cerr << "[cnn] allocating memory: " << num_mb << "MB\n";
-  fxs = new AlignedMemoryPool<ALIGN>(num_mb << 20);
-  dEdfs = new AlignedMemoryPool<ALIGN>(num_mb << 20);
+  fxs = new AlignedMemoryPool<ALIGN>(num_mb << 20); // node values
+  dEdfs = new AlignedMemoryPool<ALIGN>(num_mb << 20); // node gradients
+  ps = new AlignedMemoryPool<ALIGN>(num_mb << 20, shared_parameters); // parameters
   cerr << "[cnn] memory allocation done.\n";
+}
+
+void Cleanup() {
+  delete rndeng;
+  delete fxs;
+  delete dEdfs;
+  delete ps;
 }
 
 } // namespace cnn
