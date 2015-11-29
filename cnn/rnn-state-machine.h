@@ -24,6 +24,7 @@ class RNNStateMachine {
         if (op == RNNOp::new_graph) { q_ = RNNState::GRAPH_READY; break; }
         failure(op);
       case RNNState::GRAPH_READY:
+        if (op == RNNOp::new_graph) { break; }
         if (op == RNNOp::start_new_sequence) { q_ = RNNState::READING_INPUT; break; }
         failure(op);
       case RNNState::READING_INPUT:
