@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <sys/shm.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 #include <mm_malloc.h>
 #include "cnn/except.h"
 #if HAVE_CUDA
@@ -45,10 +48,11 @@ inline void cnn_mm_free(void* mem) {
 template <unsigned AlignedBits>
 class AlignedMemoryPool {
  public:
-  explicit AlignedMemoryPool(size_t cap) {
+  explicit AlignedMemoryPool(size_t cap, bool shared = false) : shared(shared) {
     sys_alloc(cap);
     zero_all();
   }
+
   // returns nullptr if OOM
   void* allocate(size_t n) {
     auto rounded_n = round_up_align(n);
@@ -79,10 +83,19 @@ class AlignedMemoryPool {
     std::memset(mem, 0, used);
 #endif
   }
+
+  bool is_shared() {
+    return shared;
+  }
  private:
   void sys_alloc(size_t cap) {
     capacity = round_up_align(cap);
-    mem = cnn_mm_malloc(capacity, 1 << AlignedBits);
+    if (shared) {
+      mem = mmap(NULL, capacity, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+    }
+    else {
+      mem = cnn_mm_malloc(capacity, 1 << AlignedBits);
+    }
     used = 0;
   }
   void zero_all() {
@@ -100,6 +113,7 @@ class AlignedMemoryPool {
   }
   size_t capacity;
   size_t used;
+  bool shared;
   void* mem;
 };
 
