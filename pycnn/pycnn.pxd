@@ -4,19 +4,23 @@ from libcpp.string cimport string
 ctypedef float real
 
 cdef extern from "cnn/init.h" namespace "cnn":
-    cdef void Initialize(int& argc, char **& argv)
+    cdef void Initialize(int& argc, char **& argv, unsigned random_seed)
 
 cdef extern from "cnn/dim.h" namespace "cnn":
     cdef cppclass CDim "cnn::Dim":
         CDim() except +
-        CDim(int m) except +
-        CDim(int m, int n) except +
+        #CDim(int m) except +
+        #CDim(int m, int n) except +
+        CDim(vector[long]& ds) except +
         #CDim(std::initializer_list[long] x) except +
         int size()
         int sum_dims()
+        CDim truncate()
+        void resize(unsigned i)
         int ndims()
         int rows()
         int cols()
+        void set(unsigned i, unsigned s)
         int size(unsigned i)
         CDim transpose()
 
