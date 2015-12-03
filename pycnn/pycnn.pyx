@@ -30,25 +30,34 @@ import numpy as np
 from pycnn cimport *
 cimport pycnn
 
-cdef init():
+cdef init(random_seed=None):
     cdef char** argv = []
     cdef int argc = 0
-    pycnn.Initialize(argc,argv)
-init()
+    if random_seed is None:
+        pycnn.Initialize(argc,argv, 0)
+    else:
+        if random_seed == 0: random_seed = 1
+        pycnn.Initialize(argc,argv, random_seed)
+init() # TODO: allow different random seeds
 
 
 cdef CDim Dim(dim):
     """
     dim: either a tuple or an int
     """
+    cdef vector[long] cvec
     if isinstance(dim, tuple):
-        if len(dim) == 1: return CDim(dim[0])
-        elif len(dim) == 2: return CDim(dim[0],dim[1])
-        else:
-            raise "Unsupported dimension",dim
+        for d in dim: cvec.push_back(d)
+        #if len(dim) == 1: return CDim(dim[0])
+        #elif len(dim) == 2: return CDim(dim[0],dim[1])
+        #else:
+        #    raise "Unsupported dimension",dim
+        return CDim(cvec)
     # hope it's a number. TODO: error checking / exception
     if isinstance(dim, (int, float)):
-        return CDim(dim)
+        cvec.push_back(dim)
+        #return CDim(dim)
+        return CDim(cvec)
     raise "Unsupported dimension",dim
 
 cdef c_tensor_as_np(CTensor &t):

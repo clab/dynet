@@ -27,12 +27,12 @@ struct Dim {
   Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(), bd(b) {
     for(auto v : x) d[nd++] = v;
   }
-  // Dim(const std::vector<long> & x) : nd(), bd(1) {
-  //   for(auto v : x) d[nd++] = v;
-  // }
-  // Dim(const std::vector<long> & x, unsigned int b) : nd(), bd(b) {
-  //   for(auto v : x) d[nd++] = v;
-  // }
+  Dim(const std::vector<long> & x) : nd(), bd(1) {
+     for(auto v : x) d[nd++] = v;
+  }
+  Dim(const std::vector<long> & x, unsigned int b) : nd(), bd(b) {
+     for(auto v : x) d[nd++] = v;
+  }
   inline unsigned int size() const {
     return batch_size() * bd;
   }
