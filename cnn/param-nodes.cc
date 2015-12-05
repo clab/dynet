@@ -7,6 +7,31 @@ using namespace std;
 
 namespace cnn {
 
+string ConstParameterNode::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "const_parameters(" << dim << ", " << params << ')';
+  return s.str();
+}
+
+Dim ConstParameterNode::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 0);
+  return dim;
+}
+
+void ConstParameterNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+  fx.v = params->values.v;
+}
+
+void ConstParameterNode::backward_impl(const vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                               unsigned i,
+                               Tensor& dEdxi) const {
+  cerr << "called backward() on arity 0 node: i = " << i << endl;
+  abort();
+}
+
 string ParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "parameters(" << dim << ", " << params << ')';
