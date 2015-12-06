@@ -143,15 +143,22 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
 
     CExpression c_op_neg "cnn::expr::operator-" (CExpression& x) #
     CExpression c_op_add "cnn::expr::operator+" (CExpression& x, CExpression& y) #
+    CExpression c_op_scalar_add "cnn::expr::operator+" (CExpression& x, float y) #
     CExpression c_op_mul "cnn::expr::operator*" (CExpression& x, CExpression& y) #
     CExpression c_op_scalar_mul "cnn::expr::operator*" (CExpression& x, float y) #
+    CExpression c_op_scalar_div "cnn::expr::operator/" (CExpression& x, float y) #
     CExpression c_op_scalar_sub "cnn::expr::operator-" (float y, CExpression& x) #
+
+    CExpression c_bmax "cnn::expr::max" (CExpression& x, CExpression& y) #
+    CExpression c_bmin "cnn::expr::min" (CExpression& x, CExpression& y) #
 
     CExpression c_cdiv "cnn::expr::cdiv" (CExpression& x, CExpression& y) #
     CExpression c_colwise_add "cnn::expr::colwise_add" (CExpression& x, CExpression& bias) #
 
     CExpression c_tanh "cnn::expr::tanh" (CExpression& x) #
     CExpression c_exp "cnn::expr::exp" (CExpression& x) #
+    CExpression c_square "cnn::expr::square" (CExpression& x) #
+    CExpression c_cube "cnn::expr::cube" (CExpression& x) #
     CExpression c_log "cnn::expr::log" (CExpression& x) #
     CExpression c_logistic "cnn::expr::logistic" (CExpression& x) #
     CExpression c_rectify "cnn::expr::rectify" (CExpression& x) #
@@ -161,8 +168,11 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
     CExpression c_log_softmax "cnn::expr::log_softmax" (CExpression& x, vector[unsigned]& restriction) #?
     CExpression c_softmax "cnn::expr::softmax" (CExpression& x) #
     CExpression c_softsign "cnn::expr::softsign" (CExpression& x) #
+    CExpression c_bmin "cnn::expr::min" (CExpression& x, CExpression& y) #
+    CExpression c_bmax "cnn::expr::max" (CExpression& x, CExpression& y) #
     CExpression c_noise "cnn::expr::noise" (CExpression& x, float stddev) #
     CExpression c_dropout "cnn::expr::dropout" (CExpression& x, float p) #
+    CExpression c_block_dropout "cnn::expr::block_dropout" (CExpression& x, float p) #
 
     CExpression c_reshape "cnn::expr::reshape" (CExpression& x, CDim& d) #?
     CExpression c_transpose "cnn::expr::transpose" (CExpression& x) #
@@ -178,11 +188,16 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
     CExpression c_l1_distance "cnn::expr::l1_distance" (CExpression& x, CExpression& y) #
     CExpression c_binary_log_loss "cnn::expr::binary_log_loss" (CExpression& x, CExpression& y) #
     CExpression c_pairwise_rank_loss "cnn::expr::pairwise_rank_loss" (CExpression& x, CExpression& y, float m) #
+    CExpression c_poisson_loss "cnn::expr::poisson_loss" (CExpression& x, unsigned y)
 
     CExpression c_conv1d_narrow "cnn::expr::conv1d_narrow" (CExpression& x, CExpression& f) #
     CExpression c_conv1d_wide "cnn::expr::conv1d_wide" (CExpression& x, CExpression& f) #
     CExpression c_kmax_pooling "cnn::expr::kmax_pooling" (CExpression& x, unsigned k) #
     CExpression c_fold_rows "cnn::expr::fold_rows" (CExpression& x, unsigned nrows) #
+    CExpression c_sum_cols "cnn::expr::sum_cols" (CExpression& x)               #
+    CExpression c_kmh_ngram "cnn::expr::kmh_ngram" (CExpression& x, unsigned n) #
+
+    CExpression c_sum_batches "cnn::expr::sum_batches" (CExpression& x)
 
     #CExpression c_pick "cnn::expr::pick" (CExpression& x, unsigned v)   #
     CExpression c_pick "cnn::expr::pick" (CExpression& x, unsigned* pv) #
@@ -196,9 +211,8 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
     CExpression c_concat      "cnn::expr::concatenate" (vector[CExpression]& xs)
 
     CExpression c_sum      "cnn::expr::sum" (vector[CExpression]& xs)
+    CExpression c_max      "cnn::expr::vmax" (vector[CExpression]& xs)
 
-    CExpression c_sum_cols "cnn::expr::sum_cols" (CExpression& x)               #
-    CExpression c_kmh_ngram "cnn::expr::kmh_ngram" (CExpression& x, unsigned n) #
 
 #cdef extern from "cnn/model.h" namespace "cnn":
 #    cdef cppclass Model:
