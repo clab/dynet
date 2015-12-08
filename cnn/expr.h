@@ -50,6 +50,7 @@ Expression contract3d_1d(const Expression& x, const Expression& y);
 // z_ij = x_ijk * y_k + b_ij
 Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
+Expression erf(const Expression& x);
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression square(const Expression& x);

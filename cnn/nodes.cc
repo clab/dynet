@@ -506,6 +506,20 @@ void Average::backward_impl(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf / xs.size());
 }
 
+void Erf::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  (*fx) = x.unaryExpr(FErf());
+}
+
+void Erf::backward_impl(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  auto x = **xs[0];
+  *dEdxi += x.binaryExpr(*dEdf, FErfBackward());
+}
+
 void Tanh::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #if HAVE_CUDA
   gpu::vtanh(fx.d.size(), xs[0]->v, fx.v);
