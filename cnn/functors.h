@@ -84,6 +84,12 @@ struct FNegate {
   }
 };
 
+struct FErf {
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return erff(x);
+  }
+};
+
 struct FTanh {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
 #ifdef FAST_TANH
@@ -100,6 +106,12 @@ struct FTanh {
 struct FMaxBackwardInv {
   CNN_DEVICE_FUNC inline float operator()(float u, float d) const {
     return (1.f - u) * d;
+  }
+};
+
+struct FErfBackward {
+  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+    return 1.1283791670955125738961589f * expf(-x * x) * d;
   }
 };
 
