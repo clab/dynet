@@ -26,6 +26,21 @@ struct ParameterNode : public ParameterNodeBase {
   Parameters* params;
 };
 
+// represents optimizable parameters that are being held constant
+struct ConstParameterNode : public Node {
+  explicit ConstParameterNode(Parameters* p) : dim(p->dim), params(p) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
+  Dim dim;
+  Parameters* params;
+};
+
 // represents specified (not learned) inputs to the network
 struct InputNode : public Node {
   explicit InputNode(const Dim& d, const std::vector<float>& dat) : dim(d), data(dat), pdata(&data) {}

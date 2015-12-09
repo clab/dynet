@@ -2,11 +2,14 @@
 #define CNN_GPU_FUNCTORS_H
 
 #include <cstdint>
+#include <limits>
 
 #if HAVE_CUDA
 #  define CNN_DEVICE_FUNC __device__
+#  define CNN_DEVICE_MIN -1.175494351e-38f
 #else
 #  define CNN_DEVICE_FUNC
+#  define CNN_DEVICE_MIN std::numeric_limits<float>::min()
 #endif
 
 // these functions are used both in CPU and in GPU computation
@@ -81,6 +84,12 @@ struct FNegate {
   }
 };
 
+struct FErf {
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return erff(x);
+  }
+};
+
 struct FTanh {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
 #ifdef FAST_TANH
@@ -97,6 +106,12 @@ struct FTanh {
 struct FMaxBackwardInv {
   CNN_DEVICE_FUNC inline float operator()(float u, float d) const {
     return (1.f - u) * d;
+  }
+};
+
+struct FErfBackward {
+  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+    return 1.1283791670955125738961589f * expf(-x * x) * d;
   }
 };
 
@@ -243,16 +258,16 @@ struct FL2SGDUpdate {
 struct FBinaryLogLoss {
   CNN_DEVICE_FUNC inline float operator()(float x, float x_true) const {
     if (x_true == 1.f) {
-      if (x == 0.f) x = std::numeric_limits<float>::min();
+      if (x == 0.f) x = CNN_DEVICE_MIN;
       return -1.f * x_true * log(x);
     }
     else if (x_true == 0.f) {
-      if (x == 1.f) x = std::numeric_limits<float>::min();
+      if (x == 1.f) x = CNN_DEVICE_MIN;
       return (x_true - 1.f) * log1p(-x);
     }
     else {
-      if (x == 0.f) x = std::numeric_limits<float>::min();
-      if (x == 1.f) x = std::numeric_limits<float>::min();
+      if (x == 0.f) x = CNN_DEVICE_MIN;
+      if (x == 1.f) x = CNN_DEVICE_MIN;
       return -1.f * (x_true * log(x) + (1.f - x_true) * log1p(-x));
     }
   }
@@ -262,7 +277,7 @@ struct FBinaryLogLossBackward {
   explicit FBinaryLogLossBackward(float d) : d(d) {}
   CNN_DEVICE_FUNC inline float operator()(float x, float x_true) const {
     if (x == x_true) return 0;
-    if (x == 0.f) x = std::numeric_limits<float>::min();
+    if (x == 0.f) x = CNN_DEVICE_MIN;
     if (x == 1.f) x = 0.9999999f;
     if (x_true == 1.f) {
       return d * -x_true / x;

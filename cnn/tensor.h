@@ -49,13 +49,20 @@ struct Tensor {
   Eigen::Map<Eigen::VectorXf, Eigen::Unaligned> vec() {
     return Eigen::Map<Eigen::VectorXf, Eigen::Unaligned>(v, d.size());
   }
+  // Get the pointer for a particular batch, automatically broadcasting if the size is zero
+  const float* batch_ptr(unsigned bid) const {
+    assert(d.bd == 1 || bid < d.bd);
+    return v + (bid%d.bd)*d.batch_size();
+  }
+  float* batch_ptr(unsigned bid) {
+    assert(d.bd == 1 || bid < d.bd);
+    return v + (bid%d.bd)*d.batch_size();
+  }
   // Get the matrix for a particular batch, automatically broadcasting if the size is zero
   const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> batch_matrix(unsigned bid) const {
-    assert(d.bd == 1 || bid < d.bd);
     return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + (bid%d.bd)*d.batch_size(), d.rows(), d.cols());
   }
   Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> batch_matrix(unsigned bid) {
-    assert(d.bd == 1 || bid < d.bd);
     return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + (bid%d.bd)*d.batch_size(), d.rows(), d.cols());
   }
   // Get the data as a matrix, where each "row" is the concatenation of rows and columns,

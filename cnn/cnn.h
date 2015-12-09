@@ -26,6 +26,7 @@ namespace cnn {
 
 extern AlignedMemoryPool<6>* fxs;
 extern AlignedMemoryPool<6>* dEdfs;
+extern AlignedMemoryPool<6>* ps;
 extern float* kSCALAR_MINUSONE;
 extern float* kSCALAR_ONE;
 extern float* kSCALAR_ZERO;
@@ -59,6 +60,7 @@ struct ComputationGraph {
   // Torch where computational modules may have their own parameters, in CNN
   // parameters are just parameters
   VariableIndex add_parameters(Parameters* p);
+  VariableIndex add_const_parameters(Parameters* p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
   VariableIndex add_lookup(LookupParameters* p, const unsigned* pindex);

@@ -300,6 +300,17 @@ Dim Average::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string Erf::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "erf(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim Erf::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}
+
 string Tanh::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "tanh(" << arg_names[0] << ')';

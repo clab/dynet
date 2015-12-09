@@ -6,6 +6,11 @@ namespace cnn {
 
 using namespace std;
 
+template <class Derived>
+bool is_valid(const Eigen::MatrixBase<Derived>& x) {
+  return ((x - x).array() == (x - x).array()).all();
+}
+
 Trainer::~Trainer() {}
 
 float Trainer::clip_gradients() {
@@ -98,9 +103,10 @@ void AdagradTrainer::update(real scale) {
   for (auto p : model->parameters_list()) {
     Tensor& v = vp[pi++].h;
     auto reg = (*p->values) * lambda;
-    auto g2 = (*p->g).cwiseProduct(*p->g);
+    auto g = scale * gscale * (*p->g);
+    auto g2 = g.cwiseProduct(g);
     (*v) += g2;
-    auto delta = -(eta * scale * gscale) * (*p->g).cwiseQuotient(((*v).array() + epsilon).matrix().cwiseSqrt());
+    auto delta = -eta * g.cwiseQuotient(((*v).array() + epsilon).matrix().cwiseSqrt());
     *p->values += delta - reg;
     p->clear();
   }
@@ -111,9 +117,10 @@ void AdagradTrainer::update(real scale) {
     for (auto i : p->non_zero_grads) {
       Tensor& v = vx[i];
       auto reg = (*p->values[i]) * lambda;
-      auto g2 = (*p->grads[i]).cwiseProduct(*p->grads[i]);
+      auto g = scale * gscale * (*p->grads[i]);
+      auto g2 = g.cwiseProduct(g);
       (*v) += g2;
-      auto delta = -(eta * scale * gscale) * (*p->grads[i]).cwiseQuotient(((*v).array() + epsilon).matrix().cwiseSqrt());
+      auto delta = -eta * g.cwiseQuotient(((*v).array() + epsilon).matrix().cwiseSqrt());
       *p->values[i] += delta - reg;
     }
     p->clear();
