@@ -7,6 +7,31 @@ using namespace std;
 
 namespace cnn {
 
+string ConstParameterNode::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "const_parameters(" << dim << ", " << params << ')';
+  return s.str();
+}
+
+Dim ConstParameterNode::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 0);
+  return dim;
+}
+
+void ConstParameterNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+  fx.v = params->values.v;
+}
+
+void ConstParameterNode::backward_impl(const vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                               unsigned i,
+                               Tensor& dEdxi) const {
+  cerr << "called backward() on arity 0 node: i = " << i << endl;
+  abort();
+}
+
 string ParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "parameters(" << dim << ", " << params << ')';
@@ -122,7 +147,11 @@ void LookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const
       unsigned i = pindices->at(b);
       assert (i < params->values.size());
       float* v = fx.v + fx.d.batch_size() * (b % fx.d.batch_elems());
+#if HAVE_CUDA
+      cudaMemcpyAsync(v, params->values[i].v, fx.d.batch_size() * sizeof(float), cudaMemcpyDeviceToDevice);
+#else
       memcpy(v, params->values[i].v, fx.d.batch_size() * sizeof(float));
+#endif
     }
   }
 }

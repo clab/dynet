@@ -20,6 +20,7 @@ Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
 Expression parameter(ComputationGraph& g, Parameters* p);
+Expression const_parameter(ComputationGraph& g, Parameters* p);
 Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
@@ -49,6 +50,7 @@ Expression contract3d_1d(const Expression& x, const Expression& y);
 // z_ij = x_ijk * y_k + b_ij
 Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
+Expression erf(const Expression& x);
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression square(const Expression& x);

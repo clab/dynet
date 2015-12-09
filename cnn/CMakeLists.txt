@@ -16,6 +16,7 @@ set(cnn_library_SRCS
     init.cc
     lstm.cc
     model.cc
+    mp.cc
     nodes.cc
     nodes-common.cc
     param-nodes.cc
@@ -25,7 +26,6 @@ set(cnn_library_SRCS
     shadow-params.cc
     tensor.cc
     training.cc
-    treelstm.cc
 )
 
 # Headers:
@@ -49,6 +49,7 @@ set(cnn_library_HDRS
     init.h
     lstm.h
     model.h
+    mp.h
     nodes.h
     param-nodes.h
     random.h
@@ -59,7 +60,6 @@ set(cnn_library_HDRS
     tensor.h
     timing.h
     training.h
-    treelstm.h
 )
 
 if(WITH_CUDA_BACKEND)
@@ -90,8 +90,8 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 #endforeach(test_src)
 
 # actual target:
-add_library(cnn STATIC ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
-add_library(cnn_shared SHARED ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
+add_library(cnn STATIC ${cnn_library_SRCS} ${cnn_library_HDRS})
+add_library(cnn_shared SHARED ${cnn_library_SRCS} ${cnn_library_HDRS})
 target_link_libraries(cnn ${LIBS})
 target_link_libraries(cnn_shared ${LIBS})
 #add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})

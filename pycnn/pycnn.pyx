@@ -30,25 +30,34 @@ import numpy as np
 from pycnn cimport *
 cimport pycnn
 
-cdef init():
+cdef init(random_seed=None):
     cdef char** argv = []
     cdef int argc = 0
-    pycnn.Initialize(argc,argv)
-init()
+    if random_seed is None:
+        pycnn.Initialize(argc,argv, 0)
+    else:
+        if random_seed == 0: random_seed = 1
+        pycnn.Initialize(argc,argv, random_seed)
+init() # TODO: allow different random seeds
 
 
 cdef CDim Dim(dim):
     """
     dim: either a tuple or an int
     """
+    cdef vector[long] cvec
     if isinstance(dim, tuple):
-        if len(dim) == 1: return CDim(dim[0])
-        elif len(dim) == 2: return CDim(dim[0],dim[1])
-        else:
-            raise "Unsupported dimension",dim
+        for d in dim: cvec.push_back(d)
+        #if len(dim) == 1: return CDim(dim[0])
+        #elif len(dim) == 2: return CDim(dim[0],dim[1])
+        #else:
+        #    raise "Unsupported dimension",dim
+        return CDim(cvec)
     # hope it's a number. TODO: error checking / exception
     if isinstance(dim, (int, float)):
-        return CDim(dim)
+        cvec.push_back(dim)
+        #return CDim(dim)
+        return CDim(cvec)
     raise "Unsupported dimension",dim
 
 cdef c_tensor_as_np(CTensor &t):
@@ -323,7 +332,9 @@ cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.fr
 cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
 cdef _neg(Expression a): return Expression.from_cexpr(a.cg_version, c_op_neg(a.c()))
 cdef _scalarsub(float a, Expression b): ensure_freshness(b); return Expression.from_cexpr(b.cg_version, c_op_scalar_sub(a, b.c()))
+cdef _cadd(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_add(a.c(), b))
 cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_mul(a.c(), b))
+cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
 
 cdef class Expression: #{{{
     #cdef CComputationGraph *cg
@@ -398,12 +409,21 @@ cdef class Expression: #{{{
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         self.cg.backward(self.vindex)
 
-    def __add__(self, other): return _add(self,other)
+    def __add__(self, other):
+        if isinstance(self, Expression) and isinstance(other, Expression):
+            return _add(self,other)
+        elif isinstance(self, (int,float)) or isinstance(other, (int,float)):
+            return _cadd(self, other)
+        else: raise NotImplementedError()
     def __mul__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
             return _mul(self,other)
         elif isinstance(self, (int,float)) or isinstance(other, (int,float)):
             return _cmul(self, other)
+        else: raise NotImplementedError()
+    def __div__(self, other):
+        if isinstance(self, Expression) and isinstance(other, (int,float)):
+            return _cdiv(self, other)
         else: raise NotImplementedError()
     def __neg__(self):        return _neg(self)
     def __sub__(self, other):
@@ -535,6 +555,8 @@ cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); r
 # unary-exp
 cpdef Expression tanh(Expression x): return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
 cpdef Expression exp(Expression x): return Expression.from_cexpr(x.cg_version, c_exp(x.c()))
+cpdef Expression square(Expression x): return Expression.from_cexpr(x.cg_version, c_square(x.c()))
+cpdef Expression cube(Expression x): return Expression.from_cexpr(x.cg_version, c_cube(x.c()))
 cpdef Expression log(Expression x): return Expression.from_cexpr(x.cg_version, c_log(x.c()))
 cpdef Expression logistic(Expression x): return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
 cpdef Expression rectify(Expression x): return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
@@ -545,8 +567,13 @@ cpdef Expression log_softmax(Expression x, list restrict=None):
     return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c(), vec))
 cpdef Expression softmax(Expression x): return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
 cpdef Expression softsign(Expression x): return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
+cpdef Expression bmin(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
+cpdef Expression bmax(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
 cpdef Expression transpose(Expression x): return Expression.from_cexpr(x.cg_version, c_transpose(x.c()))
 cpdef Expression sum_cols(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_cols(x.c()))
+
+cpdef Expression sum_batches(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
+
 #expr-opt
 cpdef Expression fold_rows(Expression x, unsigned nrows=2): return Expression.from_cexpr(x.cg_version, c_fold_rows(x.c(),nrows))
 #expr-expr-opt
@@ -554,6 +581,7 @@ cpdef Expression fold_rows(Expression x, unsigned nrows=2): return Expression.fr
 # y is scalar or row vector
 # res = max(0, m - x + y)
 cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_pairwise_rank_loss(x.c(), y.c(), m))
+cpdef Expression poisson_loss(Expression x, unsigned y): return Expression.from_cexpr(x.cg_version, c_poisson_loss(x.c(), y))
 cpdef Expression huber_distance(Expression x, Expression y, float c=1.345): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_huber_distance(x.c(), y.c(), c))
 #expr-unsigned
 cpdef Expression kmax_pooling(Expression x, unsigned k): return Expression.from_cexpr(x.cg_version, c_kmax_pooling(x.c(), k))
@@ -564,6 +592,7 @@ cpdef Expression pickrange(Expression x, unsigned v, unsigned u): return Express
 #expr-float
 cpdef Expression noise(Expression x, float stddev): return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
 cpdef Expression dropout(Expression x, float p): return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
+cpdef Expression block_dropout(Expression x, float p): return Expression.from_cexpr(x.cg_version, c_block_dropout(x.c(), p))
 #expr-dim
 cpdef Expression reshape(Expression x, tuple d): return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d)))
 
@@ -584,6 +613,17 @@ cpdef Expression average(list xs):
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_average(cvec))
+
+cpdef Expression emax(list xs):
+    cdef Expression c
+    cdef Expression x
+    c = xs[0]
+    ensure_freshness(c) 
+    for x in xs: 
+        ensure_freshness(x) 
+        c = Expression.from_cexpr(x.cg_version, c_bmax(x.c(),c.c()))
+    return c
+    #return Expression.from_cexpr(x.cg_version, c_max(cvec))
 
 cpdef Expression concatenate_cols(list xs):
     cdef vector[CExpression] cvec
