@@ -18,6 +18,10 @@ struct LSTMBuilder : public RNNBuilder {
                        unsigned hidden_dim,
                        Model* model);
 
+  void set_dropout(float d) { dropout_rate = d; }
+  // in general, you should disable dropout at test time
+  void disable_dropout() { dropout_rate = 0; }
+
   Expression back() const override { return (cur == -1? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const override {
@@ -56,6 +60,7 @@ struct LSTMBuilder : public RNNBuilder {
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
+  float dropout_rate;
 };
 
 } // namespace cnn
