@@ -300,6 +300,17 @@ Dim Average::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string Sqrt::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "sqrt(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim Sqrt::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}
+
 string Erf::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "erf(" << arg_names[0] << ')';

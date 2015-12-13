@@ -109,6 +109,12 @@ struct FMaxBackwardInv {
   }
 };
 
+struct FSqrtBackward {
+  CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
+    return d / (2.f * t);
+  }
+};
+
 struct FErfBackward {
   CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
     return 1.1283791670955125738961589f * expf(-x * x) * d;
