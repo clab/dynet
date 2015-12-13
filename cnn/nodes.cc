@@ -506,6 +506,19 @@ void Average::backward_impl(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf / xs.size());
 }
 
+void Sqrt::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  (*fx) = x.cwiseSqrt();
+}
+
+void Sqrt::backward_impl(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  *dEdxi += (*fx).binaryExpr(*dEdf, FSqrtBackward());
+}
+
 void Erf::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   (*fx) = x.unaryExpr(FErf());
