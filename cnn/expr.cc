@@ -21,6 +21,7 @@ Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
+Expression zeroes(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Zeroes>(d)); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
 Expression operator+(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i})); }

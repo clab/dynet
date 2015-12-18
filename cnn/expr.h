@@ -30,6 +30,7 @@ Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<un
 Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
+Expression zeroes(ComputationGraph& g, const Dim& d);
 
 Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);

@@ -758,6 +758,20 @@ struct PickRange : public Node {
   unsigned end;
 };
 
+// represents a simple vector of 0s
+struct Zeroes : public Node {
+  explicit Zeroes(const Dim& d) : dim(d) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
+  Dim dim;
+};
+
 } // namespace cnn
 
 #endif
