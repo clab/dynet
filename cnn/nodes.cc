@@ -1478,4 +1478,32 @@ void BinaryLogLoss::backward_impl(const vector<const Tensor*>& xs,
   *dEdxi += (**xs[i]).binaryExpr(**xs[1-i], FBinaryLogLossBackward(dEdf.v[0]));
 }
 
+string Zeroes::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "zeroes(" << dim << ')';
+  return s.str();
+}
+
+Dim Zeroes::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
+void Zeroes::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+#if HAVE_CUDA
+  cudaMemsetAsync(fx.v, 0, dim.size() * sizeof(float), cudaMemcpyHostToDevice);
+#else
+  memset(fx.v, 0, dim.size() * sizeof(float));
+#endif
+}
+
+void Zeroes::backward_impl(const vector<const Tensor*>& xs,
+                    const Tensor& fx,
+                    const Tensor& dEdf,
+                               unsigned i,
+                               Tensor& dEdxi) const {
+  cerr << "called backward() on arity 0 node\n";
+  abort();
+}
+
 } // namespace cnn
