@@ -41,6 +41,7 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
     vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
     params.push_back(ps);
   }  // layers
+  dropout_rate = 0.0f;
 }
 
 void LSTMBuilder::new_graph_impl(ComputationGraph& cg){
