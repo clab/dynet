@@ -66,6 +66,7 @@ Expression log_softmax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 Expression softmax(const Expression& x);
 Expression softsign(const Expression& x);
+Expression pow(const Expression& x, const Expression& y);
 Expression min(const Expression& x, const Expression& y);
 Expression max(const Expression& x, const Expression& y);
 Expression noise(const Expression& x, real stddev);
