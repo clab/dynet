@@ -10,12 +10,13 @@
 // breaks backward compatibility by changing an internal interface, I want
 // the necessary changes to be localized.
 //
-// to implement your own functor, you need to
+// to implement your own functor, you need to provide
 //   1) operator() implemented on the scalar data type
 //   2) packetOp implemented using vector ("packet") type
 //   3) the functor_traits specialization for your functor
 //      that tells the compiler whether your architecture
 //      has vectorized support for the operations you need
+//      and an estimate of the cost of the operation
 
 namespace cnn {
 template<typename Scalar> struct const_add_op {
