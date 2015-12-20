@@ -5,10 +5,9 @@
 struct ConfigureCNNTest {
   ConfigureCNNTest() {
     // set up some dummy arguments to cnn
-    for (auto x : {"ConfigureCNNTest", "--cnn.mem", "1MB"}) {
+    for (auto x : {"ConfigureCNNTest", "--cnn-mem", "10"}) {
       av.push_back(strdup(x));
     }
-    av.push_back(nullptr);
     char **argv = &av[0];
     int argc = av.size();
     cnn::Initialize(argc, argv);
