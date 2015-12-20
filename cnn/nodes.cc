@@ -3,7 +3,7 @@
 #include <limits>
 #include <cmath>
 
-#include "cnn/xfunctors.h"
+#include "cnn/simd-functors.h"
 #include "cnn/functors.h"
 #if HAVE_CUDA
 #include "cnn/cuda.h"
