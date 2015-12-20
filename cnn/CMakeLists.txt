@@ -57,10 +57,10 @@ set(cnn_library_HDRS
     rnn.h
     saxe-init.h
     shadow-params.h
+    simd-functors.h
     tensor.h
     timing.h
     training.h
-    xfunctors.h
 )
 
 if(WITH_CUDA_BACKEND)
