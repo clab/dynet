@@ -330,7 +330,7 @@ void BlockDropout::backward_impl(const vector<const Tensor*>& xs,
 
 void ConstantPlusX::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
-  *fx = x.unaryExpr(FConstantPlus(c));
+  *fx = x.unaryExpr(const_add_op<float>(c));
 }
 
 void ConstantPlusX::backward_impl(const vector<const Tensor*>& xs,
@@ -346,7 +346,7 @@ void ConstantMinusX::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) c
   gpu::vconstant_minusx(fx.d.size(), c, xs[0]->v, fx.v);
 #else
   auto x = **xs[0];
-  *fx = x.unaryExpr(FConstantMinus(c));
+  *fx = x.unaryExpr(const_minus_op<float>(c));
 #endif
 }
 
@@ -522,7 +522,7 @@ void Sqrt::backward_impl(const vector<const Tensor*>& xs,
 
 void Erf::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
-  (*fx) = x.unaryExpr(FErf());
+  (*fx).array() = x.array().erf();
 }
 
 void Erf::backward_impl(const vector<const Tensor*>& xs,
@@ -531,7 +531,7 @@ void Erf::backward_impl(const vector<const Tensor*>& xs,
                         unsigned i,
                         Tensor& dEdxi) const {
   auto x = **xs[0];
-  *dEdxi += x.binaryExpr(*dEdf, FErfBackward());
+  *dEdxi += x.binaryExpr(*dEdf, scalar_erf_backward_op<float>());
 }
 
 void Tanh::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {

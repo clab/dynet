@@ -18,6 +18,56 @@
 //      has vectorized support for the operations you need
 
 namespace cnn {
+template<typename Scalar> struct const_add_op {
+  const_add_op(const Scalar& c) : c(c) {}
+  CNN_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
+    return c + x;
+  }
+  template <typename Packet>
+  CNN_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
+    using namespace Eigen::internal;
+    return padd(pset1<Packet>(c), x);
+  }
+  Scalar c;
+};
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<cnn::const_add_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::AddCost * 2,
+    PacketAccess = packet_traits<Scalar>::HasAdd
+  };
+};
+} }
+
+namespace cnn {
+template<typename Scalar> struct const_minus_op {
+  const_minus_op(const Scalar& c) : c(c) {}
+  CNN_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
+    return c - x;
+  }
+  template <typename Packet>
+  CNN_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
+    using namespace Eigen::internal;
+    return psub(pset1<Packet>(c), x);
+  }
+  Scalar c;
+};
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<cnn::const_minus_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::AddCost * 2,
+    PacketAccess = packet_traits<Scalar>::HasSub
+  };
+};
+} }
+
+namespace cnn {
 template<typename Scalar> struct scalar_logistic_sigmoid_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_logistic_sigmoid_op)
   CNN_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
@@ -41,6 +91,33 @@ struct functor_traits<cnn::scalar_logistic_sigmoid_op<Scalar> > {
     Cost = NumTraits<Scalar>::AddCost * 2 + NumTraits<Scalar>::MulCost * 6,
     PacketAccess = packet_traits<Scalar>::HasAdd && packet_traits<Scalar>::HasDiv &&
                    packet_traits<Scalar>::HasNegate && packet_traits<Scalar>::HasExp
+  };
+};
+} }
+
+namespace cnn {
+template<typename Scalar> struct scalar_erf_backward_op {
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_erf_backward_op)
+  CNN_DEVICE_FUNC inline const Scalar operator() (const Scalar& x, const Scalar& d) const {
+    using std::exp;
+    const Scalar sqrt_pi_over2(1.1283791670955125738961589);
+    return sqrt_pi_over2 * exp(-x * x) * d;
+  }
+  template <typename Packet>
+  CNN_DEVICE_FUNC inline Packet packetOp(const Packet& x, const Packet& d) const {
+    using namespace Eigen::internal;
+    const Packet sqrt_pi_over2 = pset1<Packet>(1.1283791670955125738961589);
+    return pmul(sqrt_pi_over2, pmul(pexp(pnegate(pmul(x, x))), d));
+  }
+};
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<cnn::scalar_erf_backward_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::MulCost * 8,
+    PacketAccess = packet_traits<Scalar>::HasExp && packet_traits<Scalar>::HasMul && packet_traits<Scalar>::HasNegate
   };
 };
 } }
@@ -120,6 +197,7 @@ namespace cnn {
 template<typename Scalar> struct scalar_nlsoftmax_backward_op {
   scalar_nlsoftmax_backward_op(const Scalar& lz, const Scalar& err) : logz(lz), d(err) {}
   CNN_DEVICE_FUNC EIGEN_STRONG_INLINE const Scalar operator()(const Scalar& t) const {
+    using std::exp;
     return exp(t - logz) * d;
   }
   template <typename Packet>
