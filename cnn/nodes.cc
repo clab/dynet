@@ -388,11 +388,18 @@ void ConstantMinusX::backward_impl(const vector<const Tensor*>& xs,
 
 template <class T>
 EIGEN_STRONG_INLINE float logsumexp(const T& x) {
+  using std::exp;
+  using std::log;
   const float m = x.maxCoeff();
+#if 1
+  // these are equivalent, but this can use vectorized arithmetic
+  float z = x.unaryExpr(const_add_op<float>(-m)).array().exp().matrix().sum();
+#else
   float z = 0;
   for (unsigned i = 0; i < x.rows(); ++i)
-    z += expf(x(i,0) - m);
-  return m + logf(z);
+    z += exp(x(i,0) - m);
+#endif
+  return m + log(z);
 }
 
 // this i need to do something better, but this is a work-around
