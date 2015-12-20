@@ -3,6 +3,7 @@
 #include <limits>
 #include <cmath>
 
+#include "cnn/xfunctors.h"
 #include "cnn/functors.h"
 #if HAVE_CUDA
 #include "cnn/cuda.h"
@@ -550,7 +551,7 @@ void Tanh::backward_impl(const vector<const Tensor*>& xs,
 #if HAVE_CUDA
   gpu::vtanh_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
 #else
-  *dEdxi += (*fx).binaryExpr(*dEdf, FTanhBackward());
+  *dEdxi += (*fx).binaryExpr(*dEdf, scalar_tanh_backward_op<float>());
 #endif
 }
 
@@ -904,6 +905,7 @@ void PickNegLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
       auto x = **xs[0];
       // logz is computed in the forward pass and cached
       *dEdxi += x.unaryExpr(FNegLogSoftmaxBackward(*logz, err));
+      //*dEdxi += x.unaryExpr(scalar_nlsoftmax_backward_op<float>(*logz, err));
       (*dEdxi)(elem) -= err;
     } else {
       assert(pvals);
@@ -914,6 +916,7 @@ void PickNegLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
         auto x = xs[0]->batch_matrix(b);
         auto dEdxi_mat = dEdxi.batch_matrix(b);
         dEdxi_mat += x.unaryExpr(FNegLogSoftmaxBackward(logz[b], err));
+        //dEdxi_mat += x.unaryExpr(scalar_nlsoftmax_backward_op<float>(logz[b], err));
         dEdxi_mat(elem) -= err;
       }
     }
@@ -1429,7 +1432,7 @@ void LogisticSigmoid::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) 
   gpu::vlogistic(fx.d.size(), xs[0]->v, fx.v);
 #else
   auto x = **xs[0];
-  *fx = x.unaryExpr(FLogisticSigmoid());
+  *fx = x.unaryExpr(scalar_logistic_sigmoid_op<float>());
 #endif
 }
 
@@ -1441,7 +1444,7 @@ void LogisticSigmoid::backward_impl(const vector<const Tensor*>& xs,
 #if HAVE_CUDA
   gpu::vlogistic_backward(dEdf.d.size(), fx.v, dEdf.v, dEdxi.v);
 #else
-  *dEdxi += (*fx).binaryExpr(*dEdf, FLogisticSigmoidBackward());
+  *dEdxi += (*fx).binaryExpr(*dEdf, scalar_logistic_sigmoid_backward_op<float>());
 #endif
 }
 

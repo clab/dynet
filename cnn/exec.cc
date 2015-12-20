@@ -9,7 +9,7 @@ namespace cnn {
 ExecutionEngine::~ExecutionEngine() {}
 
 void SimpleExecutionEngine::invalidate() {
-    num_nodes_evaluated = 0;
+  num_nodes_evaluated = 0;
 }
 
 const Tensor& SimpleExecutionEngine::forward() { 
@@ -23,11 +23,11 @@ const Tensor& SimpleExecutionEngine::forward(VariableIndex i) {
 }
 
 const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
-    assert(i < cg.nodes.size());
-    if (i >= num_nodes_evaluated) {
-      incremental_forward();
-    }
-    return nfxs[i];
+  assert(i < cg.nodes.size());
+  if (i >= num_nodes_evaluated) {
+    incremental_forward();
+  }
+  return nfxs[i];
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward() {
@@ -38,7 +38,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
 const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
   assert(i < cg.nodes.size());
 
-  // free any old memory if this is a new HG
+  // free any old memory if this is a new CG
   if (num_nodes_evaluated == 0) fxs->free();
 
   if (i >= num_nodes_evaluated) {
@@ -77,8 +77,8 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 }
 
 void SimpleExecutionEngine::backward() {
-    assert(nfxs.size() == cg.nodes.size());
-    backward((VariableIndex)(cg.nodes.size()-1));
+  assert(nfxs.size() == cg.nodes.size());
+  backward((VariableIndex)(cg.nodes.size()-1));
 }
 
 // TODO what is happening with parameter nodes if from_where > param_node_id ?
@@ -104,6 +104,11 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
   ndEdfs.back().v = kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
+  // by default, a node is constant unless
+  //   1) it is a parameter node
+  //   2) it depends on a non-constant node
+  // (thus, functions of constants and inputs end up being
+  //  false in this computation)
   vector<bool> needs_derivative(num_nodes, false);
   for (auto i : cg.parameter_nodes)
     needs_derivative[i] = true;

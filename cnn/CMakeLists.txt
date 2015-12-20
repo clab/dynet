@@ -60,6 +60,7 @@ set(cnn_library_HDRS
     tensor.h
     timing.h
     training.h
+    xfunctors.h
 )
 
 if(WITH_CUDA_BACKEND)

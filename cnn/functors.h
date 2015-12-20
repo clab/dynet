@@ -16,6 +16,10 @@
 // this file may be compiled with NVCC or a standard C++ tool.
 // if you need a new elementwise (nullary, unary, binary...)
 // functor, this is the place for it
+//
+// note: also see xfunctors.h - functors implemented there can
+// use Eigen's internal support for vectorized operations which
+// can give faster performance on some hardware
 
 namespace cnn {
 
