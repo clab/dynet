@@ -34,6 +34,30 @@ using namespace std;
 
 namespace cnn {
 
+void Pow::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  auto x1 = **xs[0];
+  auto x2 = xs[1]->v[0];
+  (*fx).array() = x1.array().pow(x2);
+}
+
+void Pow::backward_impl(const vector<const Tensor*>& xs,
+                        const Tensor& fx,
+                        const Tensor& dEdf,
+                        unsigned i,
+                        Tensor& dEdxi) const {
+  assert(xs.size() == 2);
+  auto x1 = **xs[0];
+  auto x2 = xs[1]->v[0];
+  if (i == 0) {
+    *dEdxi += (x2 * x1.array().pow(x2 - 1).matrix()).cwiseProduct(*dEdf);
+  } else {
+    // y = a^x
+    // dy/dx = a^x * log(a)
+    (*dEdxi).noalias() += (*fx).cwiseProduct(x1.array().log().matrix()).transpose() * (*dEdf);
+  }
+}
+
 size_t Min::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }

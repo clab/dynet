@@ -619,6 +619,22 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string Pow::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " ** " << arg_names[1];
+  return s.str();
+}
+
+Dim Pow::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 2);
+  Dim d = xs[0].truncate();
+  if (xs[1].truncate().single_batch().size() != 1) {
+    cerr << "Bad input dimensions in Pow: " << xs << endl;
+    abort();
+  }
+  return d;
+}
+
 string CwiseQuotient::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " / " << arg_names[1];
