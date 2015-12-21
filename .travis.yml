@@ -1,0 +1,26 @@
+language: cpp
+compiler:
+  - gcc
+
+install:
+- if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.8
+    - g++-4.8
+
+before_script:
+  - sudo apt-get update -qq
+  - sudo apt-get install libboost-filesystem-dev libboost-program-options-dev libboost-serialization-dev libboost-test-dev
+  - hg clone https://bitbucket.org/eigen/eigen
+  - mkdir build
+  - cd build
+  - cmake .. -DEIGEN3_INCLUDE_DIR=eigen
+
+script:
+  - make
+  - make test
+

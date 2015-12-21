@@ -1,0 +1,38 @@
+PRIORITIES:
+
+Multiprocessor/single memory version has to get merged with good, clear examples [cdyer needs to try it out, then work with Austin]
+
+throughout: instead of aborting, throw a proper exception type (this make's life easier
+for Yoav's Python wrapper) [volunteer!!!]
+
+cnn/init.cc [volunteer!!!]
+ * This is an unlovely place that every CNN code calls as its first thing
+ * it should read (and remove) any cnn specific arguments from argc, argv
+ * add a --help argument
+ * what should the other arguments do?
+     - configure memory limits
+     - possibly enable things like initialization strategies for random variables (this
+       is not trivial, but worth doing0
+     - set rnd seed behavior
+     - configure GPU nonsense
+     - configure multiproc/multithread
+
+tests/ [volunteer!!!]
+  * speaks for itself
+  * we need to report very clear, detailed runtime on lots of things. in PARTICULAR: big M-v and M-M products, but also softmax. these should be as close to the "user expr.h API" as possible since we want the these tests to be stable.
+  * we should have a separate mechanism for testing nodes in isolation, make sure fx can deal with non-zero numbers, make sure dEdxi does the right thing with non-zero numbers (different than fx!).
+  * we should have one example that calls the fin diff gradient checker on a non-trivial example
+  * TODO(wammar): test the basic functionality of LSTMs.
+
+cnn/tensor.* [volunteer!!!]
+  * big change: start using the CNN multidim tensor library when it makes sense
+  * almost as big: make it so memory lives in GPU and CPU, and the scheduler will try to do smart things with CPU memory. This will mean the behavior of where memory lives will not be #if CUDA but rather a runtime property of the tensor. this affect all nodes.
+
+cnn/exec.cc
+  * parallel execution of nodes (we've got the whole FSCKING graph). problem is, i don't know anything about how to elegantly put work like we've got into a threadpool or whatever it is the low-overhead kids are doing these days. I'd rather not pollute the Node code with this AT ALL.
+  * more importantly, auto-batching
+
+cnn/examples/rnnlm.cc
+  * add real program options to do something nontrivial
+  * give elegant example of beam search implementation
+

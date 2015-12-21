@@ -36,7 +36,7 @@ which will train a multilayer perceptron to predict the xor function.
 If you don't have Eigen installed, the instructions below will fetch and compile
 both `Eigen` and `cnn`.
         
-    git clone https://github.com/yoavg/cnn.git
+    git clone https://github.com/clab/cnn.git
     hg clone https://bitbucket.org/eigen/eigen/
 
     cd cnn/
@@ -60,33 +60,30 @@ An illustation of how models are trained (for a simple logistic regression model
 // Create a model, and an SGD trainer to update its parameters.
 Model mod;
 SimpleSGDTrainer sgd(&mod);
-// Define model parameters for a function with 3 inputs and 1 output.
-Parameters& p_W = mod.add_parameters({1, 3});
 // Create a "computation graph," which will define the flow of information.
-CompuationGraph cg;
-// Load the parameters into the computation graph. A VariableIndex identifies the
-// position of a particular piece of information within the computation graph.
-VariableIndex i_W = cg.add_parameters(&p_W);
+ComputationGraph cg;
+// Initialize a 1x3 parameter vector, and add the parameters to be part of the
+// computation graph.
+Expression W = parameter(cg, mod.add_parameters({1, 3}));
 // Create variables defining the input and output of the regression, and load them
 // into the computation graph. Note that we don't need to set concrete values yet.
 vector<cnn::real> x_values(3);
+Expression x = input(cg, {3}, &x_values);
 cnn::real y_value;
-VariableIndex i_x = cg.add_input({3}, &x_values);
-VariableIndex i_y = cg.add_input(&y_value);
+Expression y = input(cg, &y_value);
 // Next, set up the structure to multiply the input by the weight vector,  then run
-// the output of this through a sigmoid function (logistic regression).
-VariableIndex i_f = cg.add_function<MatrixMultiply>({i_W, i_x});
-VariableIndex i_y_pred = cg.add_function<Softmax>({i_f});
+// the output of this through a logistic sigmoid function (logistic regression).
+Expression y_pred = logistic(W*x);
 // Finally, we create a function to calculate the loss. The model will be optimized
 // to minimize the value of the final function in the computation graph.
-VariableIndex i_l = cg.add_function<BinaryLogLoss>({i_y_pred, i_y});
+Expression l = binary_log_loss(y_pred, y);
 // We are now done setting up the graph, and we can print out its structure:
-cg.PrintGraphViz();
+cg.PrintGraphviz();
 
 // *** Now, we perform a parameter update for a single example.
 // Set the input/output to the values specified by the training data:
-i_x = {0.5, 0.3, 0.7};
-i_y = 1.0;
+x_values = {0.5, 0.3, 0.7};
+y_value = 1.0;
 // "forward" propagates values forward through the computation graph, and returns
 // the loss.
 cnn::real loss = as_scalar(cg.forward());

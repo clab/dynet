@@ -14,9 +14,11 @@ struct GRUBuilder : public RNNBuilder {
                       unsigned input_dim,
                       unsigned hidden_dim,
                       Model* model);
-  std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
-  std::vector<Expression> final_s() const { return final_h(); }
-  Expression back() const { return h.back().back(); }
+  Expression back() const override { return (cur == -1? h0.back() : h[cur].back()); }
+  std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
+  std::vector<Expression> final_s() const override { return final_h(); }
+  std::vector<Expression> get_h(RNNPointer i) const override { return (i == -1 ? h0 : h[i]); }
+  std::vector<Expression> get_s(RNNPointer i) const override { return get_h(i); }
   unsigned num_h0_components() const override { return layers; }
   void copy(const RNNBuilder & params) override;
 

@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <unordered_set>
+#include <string>
+
 
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/vector.hpp>
@@ -103,6 +105,7 @@ class Model {
   Model() : gradient_norm_scratch() {}
   ~Model();
   float gradient_l2_norm() const;
+  void reset_gradient();
   // set scale to use custom initialization
   Parameters* add_parameters(const Dim& d, float scale = 0.0f);
   LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
@@ -148,6 +151,9 @@ class Model {
   std::vector<LookupParameters*> lookup_params;
   mutable float* gradient_norm_scratch;
 };
+
+void save_cnn_model(std::string filename, Model* model);
+void load_cnn_model(std::string filename, Model* model);
 
 } // namespace cnn
 

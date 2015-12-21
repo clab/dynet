@@ -13,7 +13,7 @@ void Initialize_GPU(int& argc, char**& argv) {
   int nDevices;
   CUDA_CHECK(cudaGetDeviceCount(&nDevices));
   if (nDevices < 1) {
-    cerr << "No GPUs found, recompile without DENABLE_CUDA=1\n";
+    cerr << "[cnn] No GPUs found, recompile without DENABLE_CUDA=1\n";
     throw std::runtime_error("No GPUs found but CNN compiled with CUDA support.");
   }
   size_t free_bytes, total_bytes, max_free = 0;
@@ -21,21 +21,21 @@ void Initialize_GPU(int& argc, char**& argv) {
   for (int i = 0; i < nDevices; i++) {
     cudaDeviceProp prop;
     CUDA_CHECK(cudaGetDeviceProperties(&prop, i));
-    cerr << "Device Number: " << i << endl;
-    cerr << "  Device name: " << prop.name << endl;
-    cerr << "  Memory Clock Rate (KHz): " << prop.memoryClockRate << endl;
-    cerr << "  Memory Bus Width (bits): " << prop.memoryBusWidth << endl;
-    cerr << "  Peak Memory Bandwidth (GB/s): " << (2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6) << endl << endl;
+    cerr << "[cnn] Device Number: " << i << endl;
+    cerr << "[cnn]   Device name: " << prop.name << endl;
+    cerr << "[cnn]   Memory Clock Rate (KHz): " << prop.memoryClockRate << endl;
+    cerr << "[cnn]   Memory Bus Width (bits): " << prop.memoryBusWidth << endl;
+    cerr << "[cnn]   Peak Memory Bandwidth (GB/s): " << (2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6) << endl << endl;
     CUDA_CHECK(cudaSetDevice(i));
     CUDA_CHECK(cudaMemGetInfo( &free_bytes, &total_bytes ));
     CUDA_CHECK(cudaDeviceReset());
-    cerr << "  Memory Free (MB): " << (int)free_bytes/1.0e6 << "/" << (int)total_bytes/1.0e6 << endl << endl;
+    cerr << "[cnn]   Memory Free (MB): " << (int)free_bytes/1.0e6 << "/" << (int)total_bytes/1.0e6 << endl << endl;
     if(free_bytes > max_free) {
         max_free = free_bytes;
         selected = i;
     }
   }
-  cerr << "**USING DEVICE: " << selected << endl;
+  cerr << "[cnn] **USING DEVICE: " << selected << endl;
   CUDA_CHECK(cudaSetDevice(selected));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
   CUBLAS_CHECK(cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE));

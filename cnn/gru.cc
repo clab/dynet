@@ -76,7 +76,6 @@ void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
 
 Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
   const bool has_initial_state = (h0.size() > 0);
-  const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
   Expression in = x;
