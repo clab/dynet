@@ -29,14 +29,14 @@ Dim AddVectorToAllColumns::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-void AddVectorToAllColumns::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void AddVectorToAllColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = *fx;
   auto x = **xs[0];
   auto b = **xs[1];
   y = x.colwise() + b.col(0);
 }
 
-void AddVectorToAllColumns::backward(const vector<const Tensor*>& xs,
+void AddVectorToAllColumns::backward_impl(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
@@ -56,7 +56,7 @@ string FoldRows::as_string(const vector<string>& arg_names) const {
 }
 
 Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
-  int orows = xs[0].rows() / nrows;
+  unsigned orows = xs[0].rows() / nrows;
   if ((orows * nrows != xs[0].rows()) || xs.size() != 1 || xs[0].ndims() != 2) {
     cerr << "Bad input dimensions in FoldRows: " << xs << endl;
     throw std::invalid_argument("bad input dimensions in FoldRows");
@@ -64,11 +64,11 @@ Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
   return Dim({orows, xs[0].cols()});
 }
 
-void FoldRows::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void FoldRows::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   auto y = *fx;
-  int orows = y.rows();
-  for (int i = 0; i < orows; ++i) {
+  unsigned orows = y.rows();
+  for (unsigned i = 0; i < orows; ++i) {
     for (unsigned j = 0; j < nrows; ++j) {
       if (j)
         y.row(i) += x.row(i * nrows + j);
@@ -78,15 +78,15 @@ void FoldRows::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void FoldRows::backward(const vector<const Tensor*>& xs,
+void FoldRows::backward_impl(const vector<const Tensor*>& xs,
                         const Tensor& fx,
                         const Tensor& dEdf,
                         unsigned i,
                         Tensor& dEdxi) const {
-  int orows = fx.d.rows();
+  unsigned orows = fx.d.rows();
   auto d = *dEdf;
   auto di = *dEdxi;
-  for (int i = 0; i < orows; ++i)
+  for (unsigned i = 0; i < orows; ++i)
     for (unsigned j = 0; j < nrows; ++j)
       di.row(i * nrows + j) += d.row(i);
 }
@@ -102,7 +102,7 @@ Dim Conv1DNarrow::dim_forward(const vector<Dim>& xs) const {
     cerr << "Conv1DNarrow requires two inputs: " << xs << endl;
     throw std::invalid_argument("Conv1DNarrow requires 2 dimensions");
   }
-  int ocols = xs[0].cols() - xs[1].cols() + 1;
+  unsigned ocols = xs[0].cols() - xs[1].cols() + 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() != 2 ||
       xs[0].rows() != xs[1].rows() ||
       ocols < 1) {
@@ -112,7 +112,7 @@ Dim Conv1DNarrow::dim_forward(const vector<Dim>& xs) const {
   return Dim({xs[0].rows(), ocols});
 }
 
-void Conv1DNarrow::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Conv1DNarrow::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   // TODO this is a bad implementation- rewrite to use unsupported Eigen tensor library
   auto x = **xs[0];  // input
   auto f = **xs[1];  // filter
@@ -130,7 +130,7 @@ void Conv1DNarrow::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void Conv1DNarrow::backward(const vector<const Tensor*>& xs,
+void Conv1DNarrow::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& fx,
                             const Tensor& dEdf,
                             unsigned i,
@@ -172,7 +172,7 @@ Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
     cerr << "Conv1DWide requires two inputs: " << xs << endl;
     throw std::invalid_argument("Conv1DWide requires two inputs");
   }
-  int ocols = xs[0].cols() + xs[1].cols() - 1;
+  unsigned ocols = xs[0].cols() + xs[1].cols() - 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() != 2 ||
       xs[0].rows() != xs[1].rows()) {
     cerr << "Bad input dimensions in Conv1DWide: " << xs << endl;
@@ -181,7 +181,7 @@ Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
   return Dim({xs[0].rows(), ocols});
 }
 
-void Conv1DWide::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void Conv1DWide::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   TensorTools::Zero(fx);
   auto x = **xs[0];  // input
   auto f = **xs[1];  // filter
@@ -198,7 +198,7 @@ void Conv1DWide::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   }
 }
 
-void Conv1DWide::backward(const vector<const Tensor*>& xs,
+void Conv1DWide::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& fx,
                           const Tensor& dEdf,
                           unsigned i,
@@ -252,12 +252,12 @@ size_t KMaxPooling::aux_storage_size() const {
   return sizeof(int) * dim.size();
 }
 
-void KMaxPooling::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
+void KMaxPooling::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x=**xs[0];
   auto y=*fx;
   float tmp[1024];
   assert(x.cols() < 1024);
-  int mi = 0;
+  unsigned mi = 0;
   const unsigned rows = x.rows();
   const unsigned xcols = x.cols();
   int* maxmap = static_cast<int*>(aux_mem);
@@ -267,7 +267,7 @@ void KMaxPooling::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
       tmp[j] = -x(i,j);
     nth_element(tmp, tmp + (k-1), tmp + xcols);
     const float c = -tmp[k-1];  // kth largest element in row i
-    int tt = 0;
+    unsigned tt = 0;
     for (unsigned j = 0; j < xcols; ++j) {
       const float xij = x(i,j);
       if (xij >= c) {
@@ -284,7 +284,7 @@ void KMaxPooling::forward(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(mi == dim.size());
 }
 
-void KMaxPooling::backward(const vector<const Tensor*>& xs,
+void KMaxPooling::backward_impl(const vector<const Tensor*>& xs,
                            const Tensor& fx,
                            const Tensor& dEdf,
                            unsigned i,
@@ -293,13 +293,13 @@ void KMaxPooling::backward(const vector<const Tensor*>& xs,
   const unsigned cols = dim.cols();
   const int* maxmap = static_cast<const int*>(aux_mem);
   for (unsigned i = 0; i < rows; ++i) {
-    int mi = 0;
+    unsigned mi = 0;
     for (unsigned j = 0; j < cols; ++j) {
       assert(mi < dim.size());
       const int oj = maxmap[mi++];
       if (oj > (*dEdxi).cols() || oj < 0) {
         cerr << dim << (*fx) << endl << (*dEdxi) << endl;
-        cerr << "MM:"; for (int k=0;k < dim.size(); ++k) cerr << ' ' << maxmap[k];
+        cerr << "MM:"; for (unsigned k=0;k < dim.size(); ++k) cerr << ' ' << maxmap[k];
         cerr << endl;
         cerr << "BAD: " << oj << endl; abort();
       }

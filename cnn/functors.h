@@ -2,64 +2,26 @@
 #define CNN_GPU_FUNCTORS_H
 
 #include <cstdint>
+#include <limits>
+
+#include <boost/math/special_functions/digamma.hpp>
 
 #if HAVE_CUDA
 #  define CNN_DEVICE_FUNC __device__
+#  define CNN_DEVICE_MIN -1.175494351e-38f
 #else
 #  define CNN_DEVICE_FUNC
+#  define CNN_DEVICE_MIN std::numeric_limits<float>::min()
 #endif
 
 // these functions are used both in CPU and in GPU computation
 // this file may be compiled with NVCC or a standard C++ tool.
 // if you need a new elementwise (nullary, unary, binary...)
 // functor, this is the place for it
-
-#define cast_uint32_t static_cast<uint32_t>
-
-// THIS CODE IS BROKEN- sometimes it returns NaN
-// it is commented out for this reason
-static inline float fastpow2 (float p) {
-  float offset = (p < 0) ? 1.0f : 0.0f;
-  float clipp = (p < -126) ? -126.0f : p;
-  int w = clipp;
-  float z = clipp - w + offset;
-  union { uint32_t i; float f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 121.2740575f + 27.7280233f / (4.84252568f - z) - 1.49012907f * z) ) };
-
-  return v.f;
-}
-
-#if 1
-#if 0
-static inline float fastexp (float p) {
-  return fastpow2 (1.442695040f * p);
-}
-#else
-static inline float fastexp (float p) {
-  return exp(p);
-}
-#endif
-#else
-// Schraudolph version, but it's a bit crappy in terms of
-// performance and not that much faster
-#define EXPAF (8388608 / 0.6931471806f)
-static inline float fastexp (float p) {
-  union { float f; int32_t i; } eco;
-  eco.i = (int32_t)(EXPAF * (p)) + 1065353216;
-  return eco.f;
-}
-#endif
-
-#if defined(__GNU_LIBRARY__) && (__GLIBC__ == 2) && (__GLIBC_MINOR__ < 14) && !defined(HAVE_CUDA)
-#define USE_FASTEXP
-#else
-#undef USE_FASTEXP
-#endif
-
-#ifdef USE_FASTEXP
-#define CNN_EXPF fastexp
-#else
-#define CNN_EXPF expf
-#endif
+//
+// note: also see xfunctors.h - functors implemented there can
+// use Eigen's internal support for vectorized operations which
+// can give faster performance on some hardware
 
 namespace cnn {
 
@@ -128,6 +90,12 @@ struct FNegate {
   }
 };
 
+struct FErf {
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return erff(x);
+  }
+};
+
 struct FTanh {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
 #ifdef FAST_TANH
@@ -136,7 +104,7 @@ struct FTanh {
     float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
     return a / b;
 #else
-    return tanhf(x);
+     return tanhf(x);
 #endif
   }
 };
@@ -144,6 +112,18 @@ struct FTanh {
 struct FMaxBackwardInv {
   CNN_DEVICE_FUNC inline float operator()(float u, float d) const {
     return (1.f - u) * d;
+  }
+};
+
+struct FSqrtBackward {
+  CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
+    return d / (2.f * t);
+  }
+};
+
+struct FErfBackward {
+  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+    return 1.1283791670955125738961589f * expf(-x * x) * d;
   }
 };
 
@@ -177,7 +157,7 @@ struct FRectifyNegateBackward {
 struct FSoftmaxNormalize {
   explicit FSoftmaxNormalize(float logz) : logz(logz) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {
-    return CNN_EXPF(x - logz);
+    return expf(x - logz);
   }
   float logz;
 };
@@ -190,10 +170,16 @@ struct FSoftmaxBackward {
   float off_diag_sum;
 };
 
+struct FLogGammaBackward {
+  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+    return boost::math::digamma(x) * d;
+  }
+};
+
 struct FNegLogSoftmaxBackward {
   FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}
   CNN_DEVICE_FUNC inline float operator()(float t) const {
-    return CNN_EXPF(t - logz) * d;
+    return expf(t - logz) * d;
   }
   float logz;
   float d;
@@ -202,7 +188,7 @@ struct FNegLogSoftmaxBackward {
 struct FPtrNegLogSoftmaxBackward {
   FPtrNegLogSoftmaxBackward(const float* lz, const float* err) : logz(lz), d(err) {}
   CNN_DEVICE_FUNC inline float operator()(float t) const {
-    return CNN_EXPF(t - *logz) * *d;
+    return expf(t - *logz) * *d;
   }
   const float* logz;
   const float* d;
@@ -218,14 +204,14 @@ struct FLogSoftmaxNormalize {
 
 struct FWeightedError {
   float operator()(float t, float d) const {
-    return CNN_EXPF(t) * d / CNN_EXPF(t);
+    return expf(t) * d / expf(t);
   }
 };
 
 struct FLogSoftmaxBackward {
   explicit FLogSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
   CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return off_diag_sum * CNN_EXPF(t) + d;
+    return off_diag_sum * expf(t) + d;
     //return (off_diag_sum + d) * t;
   }
   float off_diag_sum;
@@ -252,7 +238,7 @@ struct FSoftSignBackward {
 
 struct FLogisticSigmoid {
   CNN_DEVICE_FUNC inline float operator()(float x) const {
-    return 1.f / (1.f + CNN_EXPF(-x));
+    return 1.f / (1.f + expf(-x));
   }
 };
 
@@ -290,22 +276,35 @@ struct FL2SGDUpdate {
 struct FBinaryLogLoss {
   CNN_DEVICE_FUNC inline float operator()(float x, float x_true) const {
     if (x_true == 1.f) {
+      if (x == 0.f) x = CNN_DEVICE_MIN;
       return -1.f * x_true * log(x);
     }
     else if (x_true == 0.f) {
-      return -1.f * (1.f - x_true) * log1p(-x);
+      if (x == 1.f) x = CNN_DEVICE_MIN;
+      return (x_true - 1.f) * log1p(-x);
     }
     else {
+      if (x == 0.f) x = CNN_DEVICE_MIN;
+      if (x == 1.f) x = CNN_DEVICE_MIN;
       return -1.f * (x_true * log(x) + (1.f - x_true) * log1p(-x));
     }
   }
 };
 
 struct FBinaryLogLossBackward {
-  CNN_DEVICE_FUNC inline float operator()(float x, float x_true, float d) const {
-    float scale = (x_true > 0.f) ? -x_true/x : (1.f-x_true)/(1.-x);
-    return d * scale;
+  explicit FBinaryLogLossBackward(float d) : d(d) {}
+  CNN_DEVICE_FUNC inline float operator()(float x, float x_true) const {
+    if (x == x_true) return 0;
+    if (x == 0.f) x = CNN_DEVICE_MIN;
+    if (x == 1.f) x = 0.9999999f;
+    if (x_true == 1.f) {
+      return d * -x_true / x;
+    } else if (x_true == 0.f) {
+      return d * (1.f - x_true) / (1.f - x);
+    }
+    return d * ((1.f - x_true) / (1.f - x) + (-x_true / x));
   }
+  float d;
 };
 
 } // namespace cnn

@@ -1,6 +1,7 @@
 # ########## cnn library ##########
 # Sources:
 set(cnn_library_SRCS
+    cfsm-builder.cc
     cnn.cc
     conv.cc
     deep-lstm.cc
@@ -8,12 +9,14 @@ set(cnn_library_SRCS
     dim.cc
     exec.cc
     expr.cc
+    fast-lstm.cc
     grad-check.cc
     graph.cc
     gru.cc
     init.cc
     lstm.cc
     model.cc
+    mp.cc
     nodes.cc
     nodes-common.cc
     param-nodes.cc
@@ -23,12 +26,12 @@ set(cnn_library_SRCS
     shadow-params.cc
     tensor.cc
     training.cc
-    treelstm.cc
 )
 
 # Headers:
 set(cnn_library_HDRS
     aligned-mem-pool.h
+    cfsm-builder.h
     c2w.h
     cnn.h
     conv.h
@@ -37,6 +40,7 @@ set(cnn_library_HDRS
     dim.h
     exec.h
     expr.h
+    fast-lstm.h
     functors.h
     gpu-kernels.h
     gpu-ops.h
@@ -45,6 +49,7 @@ set(cnn_library_HDRS
     init.h
     lstm.h
     model.h
+    mp.h
     nodes.h
     param-nodes.h
     random.h
@@ -52,10 +57,10 @@ set(cnn_library_HDRS
     rnn.h
     saxe-init.h
     shadow-params.h
+    simd-functors.h
     tensor.h
     timing.h
     training.h
-    treelstm.h
 )
 
 if(WITH_CUDA_BACKEND)
@@ -86,8 +91,11 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 #endforeach(test_src)
 
 # actual target:
-add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
-#add_library(cnn SHARED ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
+add_library(cnn STATIC ${cnn_library_SRCS} ${cnn_library_HDRS})
+add_library(cnn_shared SHARED ${cnn_library_SRCS} ${cnn_library_HDRS})
+target_link_libraries(cnn ${LIBS})
+target_link_libraries(cnn_shared ${LIBS})
+#add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
 if(WITH_CUDA_BACKEND)
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_20,code=sm_20;-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-O2;-DVERBOSE")

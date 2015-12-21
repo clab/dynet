@@ -48,10 +48,10 @@ struct EncoderDecoder {
       fwd_enc_builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
 
 
-    p_ie2h = model.add_parameters({long(HIDDEN_DIM * LAYERS * 1.5), long(HIDDEN_DIM * LAYERS * 2)});
-    p_bie = model.add_parameters({long(HIDDEN_DIM * LAYERS * 1.5)});
-    p_h2oe = model.add_parameters({long(HIDDEN_DIM * LAYERS), long(HIDDEN_DIM * LAYERS * 1.5)});
-    p_boe = model.add_parameters({long(HIDDEN_DIM * LAYERS)});
+    p_ie2h = model.add_parameters({unsigned(HIDDEN_DIM * LAYERS * 1.5), unsigned(HIDDEN_DIM * LAYERS * 2)});
+    p_bie = model.add_parameters({unsigned(HIDDEN_DIM * LAYERS * 1.5)});
+    p_h2oe = model.add_parameters({unsigned(HIDDEN_DIM * LAYERS), unsigned(HIDDEN_DIM * LAYERS * 1.5)});
+    p_boe = model.add_parameters({unsigned(HIDDEN_DIM * LAYERS)});
     p_c = model.add_lookup_parameters(INPUT_VOCAB_SIZE, {INPUT_DIM}); 
     p_ec = model.add_lookup_parameters(INPUT_VOCAB_SIZE, {INPUT_DIM}); 
     p_R = model.add_parameters({OUTPUT_VOCAB_SIZE, HIDDEN_DIM});
@@ -91,12 +91,12 @@ struct EncoderDecoder {
     Expression i_nc = i_boe + i_h2oe * i_h;
     
     vector<Expression> oein1, oein2, oein;
-    for (int i = 0; i < LAYERS; ++i) {
+    for (unsigned i = 0; i < LAYERS; ++i) {
       oein1.push_back(pickrange(i_nc, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM));
       oein2.push_back(tanh(oein1[i]));
     }
-    for (int i = 0; i < LAYERS; ++i) oein.push_back(oein1[i]);
-    for (int i = 0; i < LAYERS; ++i) oein.push_back(oein2[i]);
+    for (unsigned i = 0; i < LAYERS; ++i) oein.push_back(oein1[i]);
+    for (unsigned i = 0; i < LAYERS; ++i) oein.push_back(oein2[i]);
 
     dec_builder.new_graph(cg);
     dec_builder.start_new_sequence(oein);
@@ -210,24 +210,24 @@ int main(int argc, char** argv) {
     double loss = 0;
     unsigned chars = 0;
     for (unsigned i = 0; i < report_every_i; ++i) {
-      if (si == training.size()) {
-	si = 0;
-	if (first) { first = false; } else { sgd->update_epoch(); }
-	cerr << "**SHUFFLE\n";
-	random_shuffle(order.begin(), order.end());
-      }
-      
-      // build graph for this instance
-      ComputationGraph cg;
-      auto& sent = training[order[si]];
-      chars += sent.size() - 1;
-      ++si;
-      lm.BuildGraph(sent, sent, cg);
-      //cg.PrintGraphviz();
-      loss += as_scalar(cg.forward());
-      cg.backward();
-      sgd->update();
-      ++lines;
+        if (si == training.size()) {
+            si = 0;
+            if (first) { first = false; } else { sgd->update_epoch(); }
+            cerr << "**SHUFFLE\n";
+            random_shuffle(order.begin(), order.end());
+        }
+
+        // build graph for this instance
+        ComputationGraph cg;
+        auto& sent = training[order[si]];
+        chars += sent.size() - 1;
+        ++si;
+        lm.BuildGraph(sent, sent, cg);
+        //cg.PrintGraphviz();
+        loss += as_scalar(cg.forward());
+        cg.backward();
+        sgd->update();
+        ++lines;
     }
     sgd->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';

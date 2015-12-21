@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
   Expression y = input(cg, &y_value);
 
   Expression h = tanh(W*x + b);
+  //Expression h = tanh(affine_transform({b, W, x}));
   //Expression h = softsign(W*x + b);
   Expression y_pred = V*h + a;
   Expression loss = squared_distance(y_pred, y);

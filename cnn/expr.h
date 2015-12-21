@@ -17,12 +17,20 @@ struct Expression {
 
 Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
 Expression parameter(ComputationGraph& g, Parameters* p);
+Expression const_parameter(ComputationGraph& g, Parameters* p);
 Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
+// Batched versions of lookup and const_lookup
+Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
+Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
+Expression zeroes(ComputationGraph& g, const Dim& d);
 
 Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);
@@ -43,9 +51,13 @@ Expression contract3d_1d(const Expression& x, const Expression& y);
 // z_ij = x_ijk * y_k + b_ij
 Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
+Expression sqrt(const Expression& x);
+Expression erf(const Expression& x);
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression square(const Expression& x);
+Expression cube(const Expression& x);
+Expression lgamma(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
@@ -55,10 +67,12 @@ Expression log_softmax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 Expression softmax(const Expression& x);
 Expression softsign(const Expression& x);
+Expression pow(const Expression& x, const Expression& y);
 Expression min(const Expression& x, const Expression& y);
 Expression max(const Expression& x, const Expression& y);
 Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
+Expression block_dropout(const Expression& x, real p);
 
 Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
@@ -83,11 +97,15 @@ Expression fold_rows(const Expression& x, unsigned nrows=2);
 Expression sum_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 
+// Sum the results of multiple batches
+Expression sum_batches(const Expression& x);
+
 // pick parts out of bigger objects
 Expression pick(const Expression& x, unsigned v);
 Expression pick(const Expression& x, unsigned* pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
 
 namespace detail {
   template <typename F, typename T>
@@ -101,8 +119,16 @@ namespace detail {
 }
 
 template <typename T>
+inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
+inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
+
+template <typename T>
 inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
+
+template <typename T>
+inline Expression max(const T& xs) { return detail::f<Max>(xs); }
+inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
 
 template <typename T>
 inline Expression average(const T& xs) { return detail::f<Average>(xs); }

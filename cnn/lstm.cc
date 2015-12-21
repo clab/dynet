@@ -41,6 +41,7 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
     vector<Parameters*> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
     params.push_back(ps);
   }  // layers
+  dropout_rate = 0.0f;
 }
 
 void LSTMBuilder::new_graph_impl(ComputationGraph& cg){
@@ -66,8 +67,6 @@ void LSTMBuilder::new_graph_impl(ComputationGraph& cg){
 
     vector<Expression> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
-
-
   }
 }
 
@@ -111,13 +110,13 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
       i_h_tm1 = h[prev][i];
       i_c_tm1 = c[prev][i];
     }
+    // apply dropout according to http://arxiv.org/pdf/1409.2329v5.pdf
+    if (dropout_rate) in = dropout(in, dropout_rate);
     // input
     Expression i_ait;
     if (has_prev_state)
-//      i_ait = vars[BI] + vars[X2I] * in + vars[H2I]*i_h_tm1 + vars[C2I] * i_c_tm1;
       i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
     else
-//      i_ait = vars[BI] + vars[X2I] * in;
       i_ait = affine_transform({vars[BI], vars[X2I], in});
     Expression i_it = logistic(i_ait);
     // forget
@@ -125,10 +124,8 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
     // write memory cell
     Expression i_awt;
     if (has_prev_state)
-//      i_awt = vars[BC] + vars[X2C] * in + vars[H2C]*i_h_tm1;
       i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
     else
-//      i_awt = vars[BC] + vars[X2C] * in;
       i_awt = affine_transform({vars[BC], vars[X2C], in});
     Expression i_wt = tanh(i_awt);
     // output
@@ -142,16 +139,15 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
     Expression i_aot;
     if (has_prev_state)
-//      i_aot = vars[BO] + vars[X2O] * in + vars[H2O] * i_h_tm1 + vars[C2O] * ct[i];
       i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
     else
-//      i_aot = vars[BO] + vars[X2O] * in;
       i_aot = affine_transform({vars[BO], vars[X2O], in});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
     in = ht[i] = cwise_multiply(i_ot,ph_t);
   }
-  return ht.back();
+  if (dropout_rate) return dropout(ht.back(), dropout_rate);
+    else return ht.back();
 }
 
 void LSTMBuilder::copy(const RNNBuilder & rnn) {

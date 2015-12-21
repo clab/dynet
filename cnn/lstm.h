@@ -18,14 +18,26 @@ struct LSTMBuilder : public RNNBuilder {
                        unsigned hidden_dim,
                        Model* model);
 
-  Expression back() const { return h.back().back(); }
-  std::vector<Expression> final_h() const { return (h.size() == 0 ? h0 : h.back()); }
-  std::vector<Expression> final_s() const {
+  void set_dropout(float d) { dropout_rate = d; }
+  // in general, you should disable dropout at test time
+  void disable_dropout() { dropout_rate = 0; }
+
+  Expression back() const override { return (cur == -1? h0.back() : h[cur].back()); }
+  std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
+  std::vector<Expression> final_s() const override {
     std::vector<Expression> ret = (c.size() == 0 ? c0 : c.back());
     for(auto my_h : final_h()) ret.push_back(my_h);
     return ret;
   }
   unsigned num_h0_components() const override { return 2 * layers; }
+
+  std::vector<Expression> get_h(RNNPointer i) const override { return (i == -1 ? h0 : h[i]); }
+  std::vector<Expression> get_s(RNNPointer i) const override {
+    std::vector<Expression> ret = (i == -1 ? c0 : c[i]);
+    for(auto my_h : get_h(i)) ret.push_back(my_h);
+    return ret;
+  }
+
   void copy(const RNNBuilder & params) override;
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
@@ -48,6 +60,7 @@ struct LSTMBuilder : public RNNBuilder {
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
+  float dropout_rate;
 };
 
 } // namespace cnn

@@ -15,6 +15,7 @@ class ExecutionEngine {
   virtual const Tensor& incremental_forward(VariableIndex i) = 0;
   virtual const Tensor& get_value(VariableIndex i) = 0;
   virtual void backward() = 0;
+  virtual void backward(VariableIndex i) = 0;
  protected:
   explicit ExecutionEngine(const ComputationGraph& cg) : cg(cg) {}
   const ComputationGraph& cg;
@@ -30,10 +31,11 @@ class SimpleExecutionEngine : public ExecutionEngine {
   const Tensor& incremental_forward(VariableIndex i) override;
   const Tensor& get_value(VariableIndex i) override;
   void backward() override;
+  void backward(VariableIndex i) override;
  private:
   std::vector<Tensor> nfxs;
   std::vector<Tensor> ndEdfs;
-  VariableIndex last_node_evaluated;
+  VariableIndex num_nodes_evaluated;
 };
 
 } // namespace cnn
