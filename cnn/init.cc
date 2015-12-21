@@ -45,7 +45,7 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
   int argi = 1;
   while(argi < argc) {
     string arg = argv[argi];
-    if (arg == "--cnn-mem") {
+    if (arg == "--cnn-mem" || arg == "--cnn_mem") {
       if ((argi + 1) > argc) {
         cerr << "[cnn] --cnn-mem expects an argument (the memory, in megabytes, to reserve)\n";
         abort();
@@ -54,7 +54,7 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
         istringstream c(a2); c >> num_mb;
         RemoveArgs(argc, argv, argi, 2);
       }
-    } else if (arg == "--cnn-seed") {
+    } else if (arg == "--cnn-seed" || arg == "--cnn_seed") {
       if ((argi + 1) > argc) {
         cerr << "[cnn] --cnn-seed expects an argument (the random number seed)\n";
         abort();
