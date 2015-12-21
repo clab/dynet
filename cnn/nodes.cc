@@ -628,6 +628,20 @@ void Exp::backward_impl(const vector<const Tensor*>& xs,
   *dEdxi += (*dEdf).cwiseProduct(*fx);
 }
 
+void LogGamma::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  *fx = x.array().lgamma();
+}
+
+void LogGamma::backward_impl(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  auto x = **xs[0];
+  *dEdxi += x.binaryExpr(*dEdf, FLogGammaBackward());
+}
+
 void Log::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   *fx = x.array().log();

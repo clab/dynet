@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <limits>
 
+#include <boost/math/special_functions/digamma.hpp>
+
 #if HAVE_CUDA
 #  define CNN_DEVICE_FUNC __device__
 #  define CNN_DEVICE_MIN -1.175494351e-38f
@@ -166,6 +168,12 @@ struct FSoftmaxBackward {
     return (off_diag_sum + d) * t;
   }
   float off_diag_sum;
+};
+
+struct FLogGammaBackward {
+  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+    return boost::math::digamma(x) * d;
+  }
 };
 
 struct FNegLogSoftmaxBackward {
