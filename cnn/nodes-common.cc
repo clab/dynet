@@ -366,6 +366,17 @@ Dim Exp::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string LogGamma::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "lgamma(" << arg_names[0] << ')';
+  return os.str();
+}
+
+Dim LogGamma::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}
+
 string Log::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "log(" << arg_names[0] << ')';
