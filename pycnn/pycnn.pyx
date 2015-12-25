@@ -2,6 +2,7 @@
 
 import sys
 from cython.operator cimport dereference as deref
+from libc.stdlib cimport malloc, free
 import numpy as np
 # TODO:
 #  - set random seed (in CNN)
@@ -30,16 +31,25 @@ import numpy as np
 from pycnn cimport *
 cimport pycnn
 
+
+
+
 cdef init(random_seed=None):
-    cdef char** argv = []
-    cdef int argc = 0
+    cdef int argc = len(sys.argv)
+    cdef char** c_argv
+    args = [bytes(x) for x in sys.argv]
+    c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
+    for idx, s in enumerate(args):
+        c_argv[idx] = s
+
     if random_seed is None:
-        pycnn.Initialize(argc,argv, 0)
+        pycnn.Initialize(argc,c_argv, 0)
     else:
         if random_seed == 0: random_seed = 1
-        pycnn.Initialize(argc,argv, random_seed)
-init() # TODO: allow different random seeds
+        pycnn.Initialize(argc,c_argv, random_seed)
+    free(c_argv)
 
+init() # TODO: allow different random seeds
 
 cdef CDim Dim(dim):
     """
