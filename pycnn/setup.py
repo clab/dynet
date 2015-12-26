@@ -1,5 +1,5 @@
-from distutils.core import setup
-from distutils.extension import Extension
+from setuptools import setup
+from setuptools.extension import Extension
 from Cython.Distutils import build_ext
 
 
@@ -20,9 +20,9 @@ ext = Extension(
         #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
         extra_compile_args=["-std=c++11"],
         runtime_library_dirs=["$ORIGIN/./"],
-
         )
 
 setup(ext_modules = [ext],
-        cmdclass = {'build_ext': build_ext}
+        cmdclass = {'build_ext': build_ext},
+        name="pyCNN",
         )
