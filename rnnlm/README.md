@@ -1,3 +1,8 @@
+### Obtaining LM data
+
+    ./install-examples.sh
+
+This downloads the data used in this tutorial.
 
 ### Training example
 
