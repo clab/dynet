@@ -1,9 +1,9 @@
 # cnn
 C++ neural network library
 
-#### Getting started
+#### Important: Eigen version requirement
 
-You need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. If you use the release version, you may get assertion failures or compile errors.
+You need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. **If you use the release version rather than the development version, you may get assertion failures or compile errors.**
 
 #### Building
 
