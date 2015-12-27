@@ -19,6 +19,9 @@ examples/xor-xent
 examples/rnnlm
 examples/nlm
 
+#data
+rnnlm/ptb-mikolov/
+
 # Compiled Object files
 *.slo
 *.lo
