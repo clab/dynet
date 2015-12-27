@@ -25,6 +25,7 @@ unsigned INPUT_DIM = 0;
 unsigned HIDDEN_DIM = 0;
 unsigned VOCAB_SIZE = 0;
 float DROPOUT = 0;
+bool SAMPLE = false;
 ClassFactoredSoftmaxBuilder* cfsm = nullptr;
 
 cnn::Dict d;
@@ -38,16 +39,17 @@ void InitCommandLine(int argc, char** argv, po::variables_map* conf) {
   po::options_description opts("Configuration options");
   opts.add_options()
         ("train,t", po::value<string>(), "training corpus")
-        ("dev,d", po::value<string>(), "development (validation) corpus")
+        ("dev,d", po::value<string>(), "development/validation corpus")
         ("test,p", po::value<string>(), "test corpus")
+        ("learn,x", "set this to estimate the language model from the training data")
         ("clusters,c", po::value<string>(), "word cluster file for class factored softmax")
         ("sample,s", "periodically generate random samples from model as it trains (recommended)")
         ("model,m", po::value<string>(), "load model from this file")
         ("input_dim,i", po::value<unsigned>()->default_value(128), "input embedding dimension")
-        ("hidden_dim,h", po::value<unsigned>()->default_value(128), "hidden layer size")
+        ("hidden_dim,H", po::value<unsigned>()->default_value(128), "hidden layer size")
         ("layers,l", po::value<unsigned>()->default_value(2), "number of layers in RNN")
-        ("rnn_type,r", po::value<string>()->default_value("lstm"), "RNN type, one of: LSTM, GRU, RNN")
         ("dropout,D", po::value<float>(), "dropout rate (recommended between 0.2 and 0.5)")
+        ("eta0,e", po::value<float>()->default_value(0.1f), "initial learning rate")
         ("eta_decay_onset_epoch", po::value<unsigned>(), "start decaying eta every epoch after this epoch (try 8)")
         ("eta_decay_rate", po::value<float>(), "how much to decay eta by (recommended 0.5)")
         ("help,h", "Help");
@@ -56,6 +58,10 @@ void InitCommandLine(int argc, char** argv, po::variables_map* conf) {
   po::store(parse_command_line(argc, argv, dcmdline_options), *conf);
   if (conf->count("help")) {
     cerr << dcmdline_options << endl;
+    exit(1);
+  }
+  if (conf->count("train") == 0) {
+    cerr << "Training data must always be specified (it determines the vocab mapping) with --train\n";
     exit(1);
   }
 }
@@ -107,42 +113,38 @@ struct RNNLanguageModel {
     return sum(errs);
   }
 
-  void RandomSample(int max_len = 150) {
-#if 0
-    return;
-    cerr << endl;
+  void RandomSample(int max_len = 200) {
     ComputationGraph cg;
     builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
-    
-    Expression R = parameter(cg, p_R);
-    Expression bias = parameter(cg, p_bias);
-    vector<Expression> errs;
-    int len = 0;
+    if (cfsm) cfsm->new_graph(cg);
+    Expression R = parameter(cg, p_R); // hidden -> word rep parameter
+    Expression bias = parameter(cg, p_bias);  // word bias
+    Expression h_t = builder.add_input(lookup(cg, p_c, kSOS)); // read <s>
     int cur = kSOS;
-    while(len < max_len && cur != kEOS) {
-      ++len;
-      Expression x_t = lookup(cg, p_c, cur);
-      // h_t = RNN(x_t)
-      Expression h_t = builder.add_input(x_t);
-      Expression u_t = affine_transform({bias, R, h_t});
-      Expression ydist = softmax(i_u_t);
-      
-      unsigned w = 0;
-      while (w == 0 || (int)w == kSOS) {
+    int len = 0;
+    while(len < max_len) {
+      if (cfsm) { // class-factored softmax
+        cur = cfsm->sample(h_t);
+      } else { // regular softmax
+        Expression u_t = affine_transform({bias, R, h_t});
+        softmax(u_t);
         auto dist = as_vector(cg.incremental_forward());
         double p = rand01();
-        for (; w < dist.size(); ++w) {
-          p -= dist[w];
+        cur = 0;
+        for (; cur < dist.size(); ++cur) {
+          p -= dist[cur];
           if (p < 0.0) { break; }
         }
-        if (w == dist.size()) w = kEOS;
+        if (cur == dist.size()) cur = kEOS;
       }
-      cerr << (len == 1 ? "" : " ") << d.Convert(w);
-      cur = w;
+      if (cur == kEOS) break;
+      ++len;
+      cerr << (len == 1 ? "" : " ") << d.Convert(cur);
+      Expression x_t = lookup(cg, p_c, cur);
+      h_t = builder.add_input(x_t);
     }
     cerr << endl;
-#endif
   }
 };
 
@@ -158,6 +160,7 @@ int main(int argc, char** argv) {
   LAYERS = conf["layers"].as<unsigned>();
   INPUT_DIM = conf["input_dim"].as<unsigned>();
   HIDDEN_DIM = conf["hidden_dim"].as<unsigned>();
+  SAMPLE = conf.count("sample");
   if (conf.count("dropout"))
     DROPOUT = conf["dropout"].as<float>();
   Model model;
@@ -193,105 +196,141 @@ int main(int argc, char** argv) {
   d.SetUnk("<unk>");
   VOCAB_SIZE = d.size();
 
-  int dlc = 0;
-  int dtoks = 0;
-  {
-    string devf = conf["dev"].as<string>();
-    cerr << "Reading dev data from " << devf << " ...\n";
-    ifstream in(devf);
+  if (conf.count("test")) {
+    string testf = conf["test"].as<string>();
+    cerr << "Reading test data from " << testf << " ...\n";
+    ifstream in(testf);
     assert(in);
     while(getline(in, line)) {
-      ++dlc;
-      dev.push_back(ReadSentence(line, &d));
-      dtoks += dev.back().size();
-      if (dev.back().front() == kSOS || dev.back().back() == kEOS) {
-        cerr << "Dev sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
+      test.push_back(ReadSentence(line, &d));
+      if (test.back().front() == kSOS || test.back().back() == kEOS) {
+        cerr << "Test sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
         abort();
       }
     }
-    cerr << dlc << " lines, " << dtoks << " tokens\n";
   }
-  ostringstream os;
-  os << "lm"
-     << '_' << DROPOUT
-     << '_' << LAYERS
-     << '_' << INPUT_DIM
-     << '_' << HIDDEN_DIM
-     << "-pid" << getpid() << ".params";
-  const string fname = os.str();
-  cerr << "Parameters will be written to: " << fname << endl;
-  double best = 9e+99;
 
   Trainer* sgd = new SimpleSGDTrainer(&model);
+  sgd->eta0 = sgd->eta = conf["eta0"].as<float>();
   RNNLanguageModel<LSTMBuilder> lm(model);
 
   bool has_model_to_load = conf.count("model");
   if (has_model_to_load) {
     string fname = conf["model"].as<string>();
+    cerr << "Reading parameters from " << fname << "...\n";
     ifstream in(fname);
     assert(in);
     boost::archive::binary_iarchive ia(in);
     ia >> model;
   }
 
-  unsigned report_every_i = 100;
-  unsigned dev_every_i_reports = 25;
-  unsigned si = training.size();
-  if (report_every_i > si) report_every_i = si;
-  vector<unsigned> order(training.size());
-  for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
-  int report = 0;
-  double lines = 0;
-  int completed_epoch = -1;
-  while(!INTERRUPTED) {
-    Timer iteration("completed in");
-    double loss = 0;
-    unsigned chars = 0;
-    for (unsigned i = 0; i < report_every_i; ++i) {
-      if (si == training.size()) {
-        si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
-        cerr << "**SHUFFLE\n";
-        completed_epoch++;
-        if (eta_decay_onset_epoch && completed_epoch >= (int)eta_decay_onset_epoch)
-          sgd->eta *= eta_decay_rate;
-        shuffle(order.begin(), order.end(), *rndeng);
+  bool LEARN = conf.count("learn");
+
+  if (LEARN) {
+    int dlc = 0;
+    int dtoks = 0;
+    if (conf.count("dev") == 0) {
+      cerr << "You must specify a development set (--dev file.txt) with --learn" << endl;
+      abort();
+    } else {
+      string devf = conf["dev"].as<string>();
+      cerr << "Reading dev data from " << devf << " ...\n";
+      ifstream in(devf);
+      assert(in);
+      while(getline(in, line)) {
+        ++dlc;
+        dev.push_back(ReadSentence(line, &d));
+        dtoks += dev.back().size();
+        if (dev.back().front() == kSOS || dev.back().back() == kEOS) {
+          cerr << "Dev sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
+          abort();
+        }
       }
-
-      // build graph for this instance
-      ComputationGraph cg;
-      auto& sent = training[order[si]];
-      chars += sent.size();
-      ++si;
-      lm.BuildLMGraph(sent, cg, DROPOUT > 0.f);
-      loss += as_scalar(cg.forward());
-      cg.backward();
-      sgd->update();
-      ++lines;
+      cerr << dlc << " lines, " << dtoks << " tokens\n";
     }
-    report++;
-    cerr << '#' << report << " [epoch=" << (lines / training.size()) << " eta=" << sgd->eta << "] E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
-    //lm.RandomSample();
+    ostringstream os;
+    os << "lm"
+       << '_' << DROPOUT
+       << '_' << LAYERS
+       << '_' << INPUT_DIM
+       << '_' << HIDDEN_DIM
+       << "-pid" << getpid() << ".params";
+    const string fname = os.str();
+    cerr << "Parameters will be written to: " << fname << endl;
+    double best = 9e+99;
+    unsigned report_every_i = 100;
+    unsigned dev_every_i_reports = 25;
+    unsigned si = training.size();
+    if (report_every_i > si) report_every_i = si;
+    vector<unsigned> order(training.size());
+    for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
+    bool first = true;
+    int report = 0;
+    double lines = 0;
+    int completed_epoch = -1;
+    while(!INTERRUPTED) {
+      if (SAMPLE) lm.RandomSample();
+      Timer iteration("completed in");
+      double loss = 0;
+      unsigned chars = 0;
+      for (unsigned i = 0; i < report_every_i; ++i) {
+        if (si == training.size()) {
+          si = 0;
+          if (first) { first = false; } else { sgd->update_epoch(); }
+          cerr << "**SHUFFLE\n";
+          completed_epoch++;
+          if (eta_decay_onset_epoch && completed_epoch >= (int)eta_decay_onset_epoch)
+            sgd->eta *= eta_decay_rate;
+          shuffle(order.begin(), order.end(), *rndeng);
+        }
 
-    // show score on dev data?
-    if (report % dev_every_i_reports == 0) {
-      double dloss = 0;
-      int dchars = 0;
-      for (auto& sent : dev) {
+        // build graph for this instance
         ComputationGraph cg;
-        lm.BuildLMGraph(sent, cg, false);
-        dloss += as_scalar(cg.forward());
-        dchars += sent.size();
+        auto& sent = training[order[si]];
+        chars += sent.size();
+        ++si;
+        lm.BuildLMGraph(sent, cg, DROPOUT > 0.f);
+        loss += as_scalar(cg.forward());
+        cg.backward();
+        sgd->update();
+        ++lines;
       }
-      if (dloss < best) {
-        best = dloss;
-        ofstream out(fname);
-        boost::archive::binary_oarchive oa(out);
-        oa << model;
+      report++;
+      cerr << '#' << report << " [epoch=" << (lines / training.size()) << " eta=" << sgd->eta << "] E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
+
+      // show score on dev data?
+      if (report % dev_every_i_reports == 0) {
+        double dloss = 0;
+        int dchars = 0;
+        for (auto& sent : dev) {
+          ComputationGraph cg;
+          lm.BuildLMGraph(sent, cg, false);
+          dloss += as_scalar(cg.forward());
+          dchars += sent.size();
+        }
+        if (dloss < best) {
+          best = dloss;
+          ofstream out(fname);
+          boost::archive::binary_oarchive oa(out);
+          oa << model;
+        }
+        cerr << "\n***DEV [epoch=" << (lines / training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
       }
-      cerr << "\n***DEV [epoch=" << (lines / training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
+  }  // train?
+  if (conf.count("test")) {
+    cerr << "Evaluating test data...\n";
+    double tloss = 0;
+    int tchars = 0;
+    for (auto& sent : test) {
+      ComputationGraph cg;
+      lm.BuildLMGraph(sent, cg, false);
+      tloss += as_scalar(cg.forward());
+      tchars += sent.size();
+    }
+    cerr << "TEST                -LLH = " << tloss << endl;
+    cerr << "TEST CROSS ENTOPY (NATS) = " << (tloss / tchars) << endl;
+    cerr << "TEST                 PPL = " << exp(tloss / tchars) << endl;
   }
   delete sgd;
 }
