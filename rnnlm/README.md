@@ -29,3 +29,4 @@ Evaluate a trained model:
 | ----- | ---:| ----:|
 | 5-gram KN | 188.0 | 178.9 |
 | 2x128, dropout=0.3, class-factored softmax | 164.4 | 157.7 |
+| 2x256, dropout=0.3, CFSM, decay 0.5@>10 | 129.7 | 125.4 |
