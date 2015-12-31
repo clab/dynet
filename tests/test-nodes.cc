@@ -1,8 +1,8 @@
 #include <cnn/cnn.h>
-// #define BOOST_TEST_MODULE CNNBasicTest
 #include <cnn/expr.h>
 #include <cnn/grad-check.h>
 #include <boost/test/unit_test.hpp>
+#include <stdexcept>
 
 using namespace cnn;
 using namespace cnn::expr;
@@ -17,6 +17,8 @@ struct NodeTest {
     char **argv = &av[0];
     int argc = av.size();
     cnn::Initialize(argc, argv);
+    ones3_vals = {1.f,1.f,1.f};
+    ones2_vals = {1.f,1.f};
     // Create parameters
     std::vector<float> param1_vals = {1.1f,-2.2f,3.3f};
     std::vector<float> param2_vals = {2.2f,3.4f,-1.2f};
@@ -34,6 +36,7 @@ struct NodeTest {
   ~NodeTest() {
     for (auto x : av) free(x);
   }
+  std::vector<float> ones3_vals, ones2_vals;
   std::vector<char*> av;
   cnn::Model mod;
   cnn::Parameters *param1, *param2, *param_scalar1, *param_scalar2;
@@ -48,7 +51,7 @@ BOOST_AUTO_TEST_CASE( negate_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = -x1;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -58,7 +61,7 @@ BOOST_AUTO_TEST_CASE( add_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = x1+x2;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -67,7 +70,7 @@ BOOST_AUTO_TEST_CASE( addscalar_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = x1+2.0;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -76,7 +79,7 @@ BOOST_AUTO_TEST_CASE( scalaradd_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = 2.0+x1;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -86,7 +89,7 @@ BOOST_AUTO_TEST_CASE( subtract_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = x1+x2;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -95,7 +98,7 @@ BOOST_AUTO_TEST_CASE( scalarsubtract_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = 2.0-x1;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -104,7 +107,7 @@ BOOST_AUTO_TEST_CASE( subtractscalar_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = x1-2.0;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -114,7 +117,8 @@ BOOST_AUTO_TEST_CASE( multiply_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = x1*transpose(x2);
-  sum_cols( transpose( sum_cols( y ) ) );
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  ones3 * y * transpose(ones3);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -123,7 +127,7 @@ BOOST_AUTO_TEST_CASE( multiplyscalar_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = x1*2.0;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -132,7 +136,7 @@ BOOST_AUTO_TEST_CASE( scalarmultiply_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = 2.0*x1;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -141,7 +145,7 @@ BOOST_AUTO_TEST_CASE( dividescalar_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = x1/2.0;
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -151,7 +155,7 @@ BOOST_AUTO_TEST_CASE( cdiv_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = cdiv(x1, x2);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -161,7 +165,8 @@ BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = colwise_add(x1 * transpose(x2), x2);
-  sum_cols( transpose( sum_cols(y) ) );
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  ones3 * y * transpose(ones3);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -176,7 +181,7 @@ BOOST_AUTO_TEST_CASE( sqrt_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = sqrt(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -185,7 +190,7 @@ BOOST_AUTO_TEST_CASE( erf_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = erf(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -194,7 +199,7 @@ BOOST_AUTO_TEST_CASE( tanh_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = tanh(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -203,7 +208,7 @@ BOOST_AUTO_TEST_CASE( exp_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = exp(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -212,7 +217,7 @@ BOOST_AUTO_TEST_CASE( square_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = square(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -221,7 +226,7 @@ BOOST_AUTO_TEST_CASE( cube_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = cube(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -230,7 +235,7 @@ BOOST_AUTO_TEST_CASE( lgamma_gradient ) {
   cnn::ComputationGraph cg;
   Expression x2 = parameter(cg, param2);
   Expression y = lgamma(x2);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -239,7 +244,7 @@ BOOST_AUTO_TEST_CASE( log_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = log(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -248,7 +253,7 @@ BOOST_AUTO_TEST_CASE( logistic_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = logistic(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -257,7 +262,7 @@ BOOST_AUTO_TEST_CASE( rectify_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = rectify(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -266,8 +271,7 @@ BOOST_AUTO_TEST_CASE( hinge_gradient ) {
   unsigned index = 0;
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression y = hinge(x1, index, 0.5);
-  sum_cols( transpose( y ) );
+  hinge(x1, index, 0.5);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -276,8 +280,7 @@ BOOST_AUTO_TEST_CASE( hingeptr_gradient ) {
   unsigned index = 0;
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression y = hinge(x1, &index, 0.5);
-  sum_cols( transpose( y ) );
+  hinge(x1, &index, 0.5);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -286,7 +289,7 @@ BOOST_AUTO_TEST_CASE( log_softmax_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = log_softmax(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -296,7 +299,7 @@ BOOST_AUTO_TEST_CASE( restricted_log_softmax_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = log_softmax(x1, restriction);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -305,7 +308,7 @@ BOOST_AUTO_TEST_CASE( softmax_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = softmax(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -314,7 +317,7 @@ BOOST_AUTO_TEST_CASE( softsign_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = softsign(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -324,7 +327,7 @@ BOOST_AUTO_TEST_CASE( pow_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x_scalar1 = parameter(cg, param_scalar1);
   Expression y = pow(x1, x_scalar1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -334,7 +337,7 @@ BOOST_AUTO_TEST_CASE( min_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = min(x1, x2);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -344,7 +347,7 @@ BOOST_AUTO_TEST_CASE( max_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = max(x1, x2);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -353,7 +356,7 @@ BOOST_AUTO_TEST_CASE( noise_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = noise(x1, 0.5);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -362,7 +365,7 @@ BOOST_AUTO_TEST_CASE( dropout_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = dropout(x1, 0.5);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -374,7 +377,7 @@ BOOST_AUTO_TEST_CASE( reshape_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = reshape(x1, {1,3});
-  sum_cols( y );
+  y * input(cg, {3}, ones3_vals);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -383,7 +386,7 @@ BOOST_AUTO_TEST_CASE( transpose_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = softsign(x1);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -402,7 +405,7 @@ BOOST_AUTO_TEST_CASE( cwise_multiply_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = cwise_multiply(x1, x2);
-  sum_cols( transpose( y ) );
+  input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -495,8 +498,8 @@ BOOST_AUTO_TEST_CASE( pickptr_gradient ) {
 BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression y = pickrange(x1, 0, 1);
-  sum_cols( transpose(y) );
+  Expression y = pickrange(x1, 0, 2);
+  input(cg, {1,2}, ones2_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
