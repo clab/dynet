@@ -1539,7 +1539,7 @@ Dim Zeroes::dim_forward(const vector<Dim>& xs) const {
 void Zeroes::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
 #if HAVE_CUDA
-  cudaMemsetAsync(fx.v, 0, dim.size() * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemsetAsync(fx.v, 0, dim.size() * sizeof(float));
 #else
   memset(fx.v, 0, dim.size() * sizeof(float));
 #endif
