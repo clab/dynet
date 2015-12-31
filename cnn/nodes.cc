@@ -643,8 +643,12 @@ void LogGamma::backward_impl(const vector<const Tensor*>& xs,
 }
 
 void Log::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+#if HAVE_CUDA
+  gpu::vlog(fx.d.size(), xs[0]->v, fx.v);
+#else
   auto x = **xs[0];
   *fx = x.array().log();
+#endif
 }
 
 void Log::backward_impl(const vector<const Tensor*>& xs,
@@ -652,8 +656,12 @@ void Log::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
+#if HAVE_CUDA
+  gpu::vlog_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+#else
   auto x = **xs[0];
   *dEdxi += (*dEdf).cwiseQuotient(x);
+#endif
 }
 
 void Concatenate::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {

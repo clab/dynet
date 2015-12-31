@@ -108,6 +108,12 @@ struct FTanh {
   }
 };
 
+struct FLog {
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return logf(x);
+  }
+};
+
 struct FMaxBackwardInv {
   CNN_DEVICE_FUNC inline float operator()(float u, float d) const {
     return (1.f - u) * d;
@@ -129,6 +135,12 @@ struct FErfBackward {
 struct FTanhBackward {
   CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
     return (1.f - t * t) * d;
+  }
+};
+
+struct FLogBackward {
+  CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
+    return (1.f / t) * d;
   }
 };
 
