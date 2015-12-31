@@ -11,7 +11,7 @@ using namespace std;
 
 namespace cnn {
 
-bool CheckGrad(Model& m, ComputationGraph& g) {
+bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
   // Clear the parameters first
   const vector<Parameters*>& params = m.parameters_list();
   const vector<LookupParameters*>& lookup_params = m.lookup_parameters_list();
@@ -26,9 +26,10 @@ bool CheckGrad(Model& m, ComputationGraph& g) {
   g.backward();
 
   // Check
-  bool flag = false;
+  bool flag = false, curr_flag = false;
   for (auto pp : params) {
-    cerr << "\nPARAMETERS " << pp << endl;
+    if(verbosity > 1)
+      cerr << endl << "PARAMETERS " << pp << endl;
     Parameters& p = *pp;
     size_t ts = p.dim.size();
     for (size_t i = 0; i < ts; ++i) {
@@ -44,18 +45,23 @@ bool CheckGrad(Model& m, ComputationGraph& g) {
       float m = max(fabs(g), fabs(g_act));
       if (f > 0.1) {
         if (m > 0.f) f /= m;
-        if (f > 0.1) { flag = true; cerr << "***[" << f << "] "; }
+        if (f > 0.1) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
       }
-      cerr << g_act << ' ' << g << endl;
+      if(verbosity + (curr_flag ? 1 : 0) > 1) {
+        cerr << g_act << ' ' << g << endl;
+        curr_flag = false;
+      }
     }
   }
 
   for (auto pp : lookup_params) {
-    cerr << "\nLOOKUP PARAMETERS " << pp << endl;
+    if(verbosity > 1)
+      cerr << endl << "LOOKUP PARAMETERS " << pp << endl;
     LookupParameters& p = *pp;
     size_t ts = p.dim.size();
     for (unsigned j : p.non_zero_grads) {
-      cerr << "OBJECT=" << j << endl;
+      if(verbosity > 1)
+        cerr << "OBJECT=" << j << endl;
       Tensor& v = p.values[j];
       Tensor& ag = p.grads[j];
       for (size_t i = 0; i < ts; ++i) {
@@ -71,17 +77,20 @@ bool CheckGrad(Model& m, ComputationGraph& g) {
         float m = max(fabs(g), fabs(g_act));
         if (f > 0.1) {
           if (m > 0.f) f /= m;
-          if (f > 0.1) { flag = true; cerr << "*** "; }
+          if (f > 0.1) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
         }
-        cerr << g_act << ' ' << g << endl;
+        if(verbosity + (curr_flag ? 1 : 0) > 1) {
+          cerr << g_act << ' ' << g << endl;
+          curr_flag = false;
+        }
       }
     }
   }
 
-  if (flag) {
-    cerr << "\n*** GRADIENT CHECK FAILED ***\n";
-  } else {
-    cerr << "\nGRADIENT CHECK PASSED\n";
+  if (flag && verbosity > 1) {
+    cerr << endl << "*** GRADIENT CHECK FAILED ***" << endl;
+  } else if(verbosity > 0) {
+    cerr << endl << "GRADIENT CHECK PASSED" << endl;
   }
   return !flag;
 }
