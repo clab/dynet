@@ -12,12 +12,21 @@ using namespace std;
 namespace cnn {
 
 bool CheckGrad(Model& m, ComputationGraph& g) {
+  // Clear the parameters first
+  const vector<Parameters*>& params = m.parameters_list();
+  const vector<LookupParameters*>& lookup_params = m.lookup_parameters_list();
+  for (auto pp : params)
+    pp->clear();
+  for (auto pp : lookup_params)
+    pp->clear();
+
+  // Perform forward and backward steps
   float alpha = 5e-4;
   g.forward();
   g.backward();
 
+  // Check
   bool flag = false;
-  const vector<Parameters*>& params = m.parameters_list();
   for (auto pp : params) {
     cerr << "\nPARAMETERS " << pp << endl;
     Parameters& p = *pp;
@@ -28,6 +37,7 @@ bool CheckGrad(Model& m, ComputationGraph& g) {
       float E_left = as_scalar(g.forward());
       TensorTools::SetElement(p.values, i, old + alpha);
       float E_right = as_scalar(g.forward());
+      TensorTools::SetElement(p.values, i, old);
       float g = (E_right - E_left) / (2 * alpha);
       float g_act = TensorTools::AccessElement(p.g, i);
       float f = fabs(g - g_act);
@@ -40,7 +50,6 @@ bool CheckGrad(Model& m, ComputationGraph& g) {
     }
   }
 
-  const vector<LookupParameters*>& lookup_params = m.lookup_parameters_list();
   for (auto pp : lookup_params) {
     cerr << "\nLOOKUP PARAMETERS " << pp << endl;
     LookupParameters& p = *pp;
@@ -55,6 +64,7 @@ bool CheckGrad(Model& m, ComputationGraph& g) {
         float E_left = as_scalar(g.forward());
         TensorTools::SetElement(v, i, old + alpha);
         float E_right = as_scalar(g.forward());
+        TensorTools::SetElement(v, i, old);
         float g = (E_right - E_left) / (2 * alpha);
         float g_act = TensorTools::AccessElement(ag, i);
         float f = fabs(g - g_act);
