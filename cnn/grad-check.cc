@@ -23,20 +23,20 @@ bool CheckGrad(Model& m, ComputationGraph& g) {
     Parameters& p = *pp;
     size_t ts = p.dim.size();
     for (size_t i = 0; i < ts; ++i) {
-      float old = p.values.v[i];
-      p.values.v[i] = old - alpha;
+      float old = TensorTools::AccessElement(p.values, i);
+      TensorTools::SetElement(p.values, i, old - alpha);
       float E_left = as_scalar(g.forward());
-
-      p.values.v[i] = old + alpha;
+      TensorTools::SetElement(p.values, i, old + alpha);
       float E_right = as_scalar(g.forward());
       float g = (E_right - E_left) / (2 * alpha);
-      float f = fabs(g - p.g.v[i]);
-      float m = max(fabs(g), fabs(p.g.v[i]));
+      float g_act = TensorTools::AccessElement(p.g, i);
+      float f = fabs(g - g_act);
+      float m = max(fabs(g), fabs(g_act));
       if (f > 0.1) {
         if (m > 0.f) f /= m;
         if (f > 0.1) { flag = true; cerr << "***[" << f << "] "; }
       }
-      cerr << p.g.v[i] << ' ' << g << endl;
+      cerr << g_act << ' ' << g << endl;
     }
   }
 
@@ -50,20 +50,20 @@ bool CheckGrad(Model& m, ComputationGraph& g) {
       Tensor& v = p.values[j];
       Tensor& ag = p.grads[j];
       for (size_t i = 0; i < ts; ++i) {
-        float old = v.v[i];
-        v.v[i] = old - alpha;
+        float old = TensorTools::AccessElement(v, i);
+        TensorTools::SetElement(v, i, old - alpha);
         float E_left = as_scalar(g.forward());
-
-        v.v[i] = old + alpha;
+        TensorTools::SetElement(v, i, old + alpha);
         float E_right = as_scalar(g.forward());
         float g = (E_right - E_left) / (2 * alpha);
-        float f = fabs(g - ag.v[i]);
-        float m = max(fabs(g), fabs(ag.v[i]));
+        float g_act = TensorTools::AccessElement(ag, i);
+        float f = fabs(g - g_act);
+        float m = max(fabs(g), fabs(g_act));
         if (f > 0.1) {
           if (m > 0.f) f /= m;
           if (f > 0.1) { flag = true; cerr << "*** "; }
         }
-        cerr << ag.v[i] << ' ' << g << endl;
+        cerr << g_act << ' ' << g << endl;
       }
     }
   }
