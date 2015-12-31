@@ -22,12 +22,15 @@ struct NodeTest {
     // Create parameters
     std::vector<float> param1_vals = {1.1f,-2.2f,3.3f};
     std::vector<float> param2_vals = {2.2f,3.4f,-1.2f};
+    std::vector<float> param3_vals = {1.1f,2.2f,3.3f};
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
     param1 = mod.add_parameters({3});
     TensorTools::SetElements(param1->values,param1_vals);
     param2 = mod.add_parameters({3});
     TensorTools::SetElements(param2->values,param2_vals);
+    param3 = mod.add_parameters({3});
+    TensorTools::SetElements(param3->values,param3_vals);
     param_scalar1 = mod.add_parameters({1});
     TensorTools::SetElements(param_scalar1->values,param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
@@ -39,7 +42,7 @@ struct NodeTest {
   std::vector<float> ones3_vals, ones2_vals;
   std::vector<char*> av;
   cnn::Model mod;
-  cnn::Parameters *param1, *param2, *param_scalar1, *param_scalar2;
+  cnn::Parameters *param1, *param2, *param3, *param_scalar1, *param_scalar2;
 };
 
 // define the test suite
@@ -242,8 +245,8 @@ BOOST_AUTO_TEST_CASE( lgamma_gradient ) {
 // Expression log(const Expression& x);
 BOOST_AUTO_TEST_CASE( log_gradient ) {
   cnn::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
-  Expression y = log(x1);
+  Expression x3 = parameter(cg, param3);
+  Expression y = log(x3);
   input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }

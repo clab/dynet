@@ -47,7 +47,7 @@ vector<real> as_vector(const Tensor& v) {
 float TensorTools::AccessElement(const Tensor& v, int index) {
 #if HAVE_CUDA
   float ret;
-  cudaMemcpyAsync(&ret, v.v, sizeof(real), cudaMemcpyDeviceToHost);
+  cudaMemcpyAsync(&ret, &v.v[index], sizeof(real), cudaMemcpyDeviceToHost);
   return ret;
 #else
   return v.v[index];

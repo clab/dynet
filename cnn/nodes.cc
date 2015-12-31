@@ -790,7 +790,7 @@ void Log::backward_impl(const vector<const Tensor*>& xs,
                      unsigned i,
                      Tensor& dEdxi) const {
 #if HAVE_CUDA
-  gpu::vlog_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+  gpu::vlog_backward(fx.d.size(), xs[0]->v, dEdf.v, dEdxi.v);
 #else
   auto x = **xs[0];
   *dEdxi += (*dEdf).cwiseQuotient(x);
@@ -1339,7 +1339,7 @@ void MatrixMultiply::backward_impl(const vector<const Tensor*>& xs,
             dEdxi.d.rows(), dEdxi.d.cols(), xs[0]->d.rows(),
             kSCALAR_ONE,
             xs[0]->batch_ptr(b), xs[0]->d.rows(),
-            dEdf.batch_ptr(b), xs[0]->d.rows(),
+            dEdf.batch_ptr(b), dEdf.d.rows(),
             kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
   }
 #else
