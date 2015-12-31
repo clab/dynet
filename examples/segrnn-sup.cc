@@ -20,10 +20,38 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
-namespace po = boost::program_options;
+
 
 using namespace std;
 using namespace cnn;
+
+namespace po = boost::program_options;
+
+struct PKey {
+  PKey(int x1, int x2, unsigned x3)
+    : t(x1,x2,x3) {}
+  tuple<int, int, unsigned> t;
+};
+
+bool operator==(const PKey &a, const PKey &b)
+{
+  return std::get<0>(a.t) == std::get<0>(b.t) &&
+         std::get<1>(a.t) == std::get<1>(b.t) &&
+         std::get<2>(a.t) == std::get<2>(b.t);
+}
+
+namespace std {
+  template <>
+  struct hash<PKey>
+  {
+    std::size_t operator()(const PKey& e) const
+    {
+      return (std::get<0>(e.t)) | (std::get<1>(e.t) << 16) | (std::get<2>(e.t) << 24);
+    }
+  };
+
+}
+
 
 unsigned LAYERS = 1;
 unsigned INPUT_DIM = 64;
@@ -44,6 +72,25 @@ string pretrained_embeding = "";
 struct SymbolEmbedding {
   SymbolEmbedding(Model& m, unsigned n, unsigned dim) {
     p_labels = m.add_lookup_parameters(n, {dim});
+  }
+  void load_embedding(cnn::Dict& d, string pretrain_path){
+    ifstream fin(pretrain_path);  
+       string s;
+       while( getline(fin,s) )
+       {   
+        vector <string> fields;
+        boost::algorithm::trim(s);
+        boost::algorithm::split( fields, s, boost::algorithm::is_any_of( " " ) );
+        string word = fields[0];
+        vector<float> p_embeding;
+        for (int ind = 1; ind < fields.size(); ++ind){
+          p_embeding.push_back(std::stod(fields[ind]));
+        }
+        if (d.Contains(word)){
+          // cout << "init" << endl;
+          p_labels->Initialize(d.Convert(word), p_embeding);
+        }
+      }
   }
   void new_graph(ComputationGraph& g) { cg = &g; }
   Expression embed(unsigned label_id) {
@@ -248,28 +295,9 @@ struct SegmentalRNN {
     d = d_;
     td = td_;
     xe = new SymbolEmbedding(model, d.size(), INPUT_DIM);
-
     if (use_pretrained_embeding) {
-       ifstream fin(pretrained_embeding);  
-       string s;
-       while( getline(fin,s) )
-       {   
-        vector <string> fields;
-        boost::algorithm::trim(s);
-        boost::algorithm::split( fields, s, boost::algorithm::is_any_of( " " ) );
-        string word = fields[0];
-        vector<float> p_embeding;
-        for (int ind = 1; ind < fields.size(); ++ind){
-          p_embeding.push_back(std::stod(fields[ind]));
-        }
-        if (d.Contains(word)){
-          // cout << "init" << endl;
-          xe->p_labels->Initialize(d.Convert(word), p_embeding);
-        }
-
-      }
+       xe->load_embedding(d, pretrained_embeding);
     }
-
     ye = new SymbolEmbedding(model, td.size(), TAG_DIM);
     de = new BinnedDurationEmbedding(model, DURATION_DIM);
 
@@ -295,13 +323,76 @@ struct SegmentalRNN {
     p_ce2h1 = model.add_parameters({H1DIM, XCRIBE_DIM});
   }
 
+  // Adapted the ConstructInput to apply the SegmentRNNs to different inputs
+  vector<Expression> ConstructInput(const vector<int>& x,
+                                  ComputationGraph& cg){
+  xe->new_graph(cg);
+  vector<Expression> xins(x.size());
+  for (int i = 0; i < x.size(); ++i)
+    xins[i] = xe->embed(x[i]);
+    return xins;
+  }
+
+  unordered_map<PKey,Expression> ConstructSegmentMap(vector<Expression>& xins,
+                                                     ComputationGraph& cg,
+                                                     int max_seg_len = 0)
+  {
+    unordered_map<PKey, Expression> p_map;
+    int len = xins.size();
+
+    // context aware
+    Expression c_start = parameter(cg, p_c_start);
+    Expression c_end = parameter(cg, p_c_end);
+    Expression cf2h1 = parameter(cg, p_cf2h1);
+    Expression ce2h1 = parameter(cg, p_ce2h1);
+
+    ye->new_graph(cg);
+    de->new_graph(cg);
+    Expression d2h1 = parameter(cg, p_d2h1);
+    Expression y2h1 = parameter(cg, p_y2h1);
+    Expression fwd2h1 = parameter(cg, p_fwd2h1);
+    Expression rev2h1 = parameter(cg, p_rev2h1);
+    Expression h1b = parameter(cg, p_h1b);
+    Expression h12h2 = parameter(cg, p_h12h2);
+    Expression h2b = parameter(cg, p_h2b);
+    Expression h22o = parameter(cg, p_h22o);
+    Expression ob = parameter(cg, p_ob);
+
+    vector<Expression> c = bt.transcribe(cg, xins);
+    seb.construct_chart(cg, c, max_seg_len);
+
+    // careful: in the other algorithms spans are [i,j], here they are [i,j)
+    for (int j = 1; j <= len; ++j) {
+      for (unsigned tag = 0; tag < td.size(); ++tag) {
+        Expression y = ye->embed(tag);
+        const int i_start = max_seg_len ? max(0, j - max_seg_len) : 0;
+        for (int i = i_start; i < j; ++i) {  // i is the starting position
+          PKey key_tuple(i,j,tag);
+          auto seg_embedding_ij = seb(i, j-1); // pair<expr, expr>
+          Expression d = de->embed(j - i);
+          // To be context aware, add c_{i-1} and c_{j}
+          Expression cf_embeding = (i == 0) ? c_start : c[i-1];
+          Expression ce_embeding = (j == len) ? c_end : c[j];
+
+          Expression h1 = rectify(affine_transform({h1b, d2h1, d, y2h1, y, fwd2h1, seg_embedding_ij.first, rev2h1, seg_embedding_ij.second, cf2h1, cf_embeding, ce2h1, ce_embeding}));
+          Expression h2 = tanh(affine_transform({h2b, h12h2, h1}));
+          //Expression p = exp(affine_transform({ob, h22o, h2}));
+          Expression p = affine_transform({ob, h22o, h2});
+          p_map[key_tuple] = p;
+        }
+      }
+    }
+    return p_map;
+
+  }
+  
   // return Expression of total loss
-  Expression SupervisedLoss(const vector<int>& x,
+  Expression SupervisedLoss(vector<Expression>& xins,
                             const vector<pair<int,int>>& yz,  // .first = y, .second = duration (z)
                             ComputationGraph& cg,
                             int max_seg_len = 0) {
-    int len = x.size();
-
+    int len = xins.size();
+    unordered_map<PKey, Expression> p_map = ConstructSegmentMap(xins, cg, max_seg_len);
     // is_ref[i][j][y] returns true iff, in the reference, span(i,j) is labeled y
     vector<vector<vector<bool>>> is_ref(len, vector<vector<bool>>(len+1, vector<bool>(td.size(), false)));
     unsigned cur = 0;
@@ -321,29 +412,6 @@ struct SegmentalRNN {
     }
     assert(cur == len);
 
-    // context aware
-    Expression c_start = parameter(cg, p_c_start);
-    Expression c_end = parameter(cg, p_c_end);
-    Expression cf2h1 = parameter(cg, p_cf2h1);
-    Expression ce2h1 = parameter(cg, p_ce2h1);
-
-    xe->new_graph(cg);
-    ye->new_graph(cg);
-    de->new_graph(cg);
-    Expression d2h1 = parameter(cg, p_d2h1);
-    Expression y2h1 = parameter(cg, p_y2h1);
-    Expression fwd2h1 = parameter(cg, p_fwd2h1);
-    Expression rev2h1 = parameter(cg, p_rev2h1);
-    Expression h1b = parameter(cg, p_h1b);
-    Expression h12h2 = parameter(cg, p_h12h2);
-    Expression h2b = parameter(cg, p_h2b);
-    Expression h22o = parameter(cg, p_h22o);
-    Expression ob = parameter(cg, p_ob);
-    vector<Expression> xins(x.size());
-    for (int i = 0; i < len; ++i)
-      xins[i] = xe->embed(x[i]);
-    vector<Expression> c = bt.transcribe(cg, xins);
-    seb.construct_chart(cg, c, max_seg_len);
     vector<Expression> fwd(len+1);  // fwd trellis for model
     vector<Expression> ref_fwd(len+1); // fwd trellis for reference
     vector<Expression> f, fr;
@@ -355,31 +423,16 @@ struct SegmentalRNN {
       f.clear(); // f stores all additive contributions to item [j]
       fr.clear();
       for (unsigned tag = 0; tag < td.size(); ++tag) {
-        Expression y = ye->embed(tag);
         const int i_start = max_seg_len ? max(0, j - max_seg_len) : 0;
         for (int i = i_start; i < j; ++i) {  // i is the starting position
           bool matches_ref = is_ref[i][j][tag];
-          auto seg_embedding_ij = seb(i, j-1); // pair<expr, expr>
-          Expression d = de->embed(j - i);
-          // factor includes: fwd embedding, rev embedding, duration embedding, label embedding
-          // Expression h1 = rectify(affine_transform({h1b, d2h1, d, y2h1, y, fwd2h1, seg_embedding_ij.first, rev2h1, seg_embedding_ij.second}));
-          
-          // To be context aware, add c_{i-1} and c_{j}
-          Expression cf_embeding = (i == 0) ? c_start : c[i-1];
-          Expression ce_embeding = (j == len) ? c_end : c[j];
-
-          // Expression h1 = rectify(affine_transform({h1b, d2h1, d, y2h1, y, fwd2h1, seg_embedding_ij.first, rev2h1, seg_embedding_ij.second, cf2h1, cf_embeding, ce2h1, ce_embeding}));
-          Expression h1 = rectify(affine_transform({h1b, y2h1, y, fwd2h1, seg_embedding_ij.first, rev2h1, seg_embedding_ij.second, cf2h1, cf_embeding, ce2h1, ce_embeding}));
-
-          Expression h2 = tanh(affine_transform({h2b, h12h2, h1}));
-          //Expression p = exp(affine_transform({ob, h22o, h2}));
-          Expression p = affine_transform({ob, h22o, h2});
+          PKey key_tuple(i,j,tag);
+          assert(p_map.find (key_tuple) != p_map.end());
+          Expression p = p_map.at(key_tuple);
           if (i == 0) { // fwd[0] is the path up and including -1, so it's the empty set, i.e., its probability is 1
             f.push_back(p);
             if (matches_ref) fr.push_back(p);
           } else {
-            // f.push_back(p * fwd[i]);
-            // if (matches_ref) fr.push_back(p * ref_fwd[i]);
             f.push_back(p + fwd[i]);
             if (matches_ref) fr.push_back(p + ref_fwd[i]);
           }
@@ -401,41 +454,19 @@ struct SegmentalRNN {
     return fwd.back() - ref_fwd.back();
   }
 
-  Expression ViterbiDecode(const vector<int>& x,
-                            const vector<pair<int,int>>& yz_gold,  // .first = y, .second = duration (z)
-                            ComputationGraph& cg,
-                            vector<pair<int, int>> &yz_pred,
-                            int max_seg_len = 0) {
+  Expression ViterbiDecode(vector<Expression>& xins,
+                           const vector<pair<int,int>>& yz_gold,  // .first = y, .second = duration (z)
+                           ComputationGraph& cg,
+                           vector<pair<int, int>> &yz_pred,
+                           int max_seg_len = 0) {
     yz_pred.clear();
-    int len = x.size();
+    int len = xins.size();
+    unordered_map<PKey, Expression> p_map = ConstructSegmentMap(xins, cg, max_seg_len);
 
-    // context aware
-    Expression c_start = parameter(cg, p_c_start);
-    Expression c_end = parameter(cg, p_c_end);
-    Expression cf2h1 = parameter(cg, p_cf2h1);
-    Expression ce2h1 = parameter(cg, p_ce2h1);
-
-    xe->new_graph(cg);
-    ye->new_graph(cg);
-    de->new_graph(cg);
-    Expression d2h1 = parameter(cg, p_d2h1);
-    Expression y2h1 = parameter(cg, p_y2h1);
-    Expression fwd2h1 = parameter(cg, p_fwd2h1);
-    Expression rev2h1 = parameter(cg, p_rev2h1);
-    Expression h1b = parameter(cg, p_h1b);
-    Expression h12h2 = parameter(cg, p_h12h2);
-    Expression h2b = parameter(cg, p_h2b);
-    Expression h22o = parameter(cg, p_h22o);
-    Expression ob = parameter(cg, p_ob);
-    vector<Expression> xins(x.size());
-    for (int i = 0; i < len; ++i)
-      xins[i] = xe->embed(x[i]);
-    vector<Expression> c = bt.transcribe(cg, xins);
-    seb.construct_chart(cg, c, max_seg_len);
     vector<Expression> fwd(len+1);  // fwd trellis for model
     vector<Expression> f, fr;
-    vector<std::tuple<int, int, unsigned>> ijt; // ijt stores positions where we get the max (i.e. i, j and tag)
-    vector<std::tuple<int, int, unsigned>> it; // it stores positions where we get the max ending at j
+    vector<tuple<int, int, unsigned>> ijt; // ijt stores positions where we get the max (i.e. i, j and tag)
+    vector<tuple<int, int, unsigned>> it; // it stores positions where we get the max ending at j
     it.push_back(make_tuple(0,0,0)); // push one to make the index consistent, now it[j] means j rather than j+1
     // careful: in the other algorithms spans are [i,j], here they are [i,j)
     for (int j = 1; j <= len; ++j) {
@@ -445,31 +476,17 @@ struct SegmentalRNN {
       fr.clear();
       ijt.clear();
       for (unsigned tag = 0; tag < td.size(); ++tag) {
-        Expression y = ye->embed(tag);
         const int i_start = max_seg_len ? max(0, j - max_seg_len) : 0;
         for (int i = i_start; i < j; ++i) {  // i is the starting position
-          auto seg_embedding_ij = seb(i, j-1); // pair<expr, expr>
-          Expression d = de->embed(j - i);
-          // factor includes: fwd embedding, rev embedding, duration embedding, label embedding
-          // Expression h1 = rectify(affine_transform({h1b, d2h1, d, y2h1, y, fwd2h1, seg_embedding_ij.first, rev2h1, seg_embedding_ij.second}));
-          
-          // To be context aware, add c_{i-1} and c_{j}
-          Expression cf_embeding = (i == 0) ? c_start : c[i-1];
-          Expression ce_embeding = (j == len) ? c_end : c[j];
-
-          Expression h1 = rectify(affine_transform({h1b, y2h1, y, fwd2h1, seg_embedding_ij.first, rev2h1, seg_embedding_ij.second, cf2h1, cf_embeding, ce2h1, ce_embeding}));
-
-
-          Expression h2 = tanh(affine_transform({h2b, h12h2, h1}));
-          //Expression p = exp(affine_transform({ob, h22o, h2}));
-          Expression p = affine_transform({ob, h22o, h2});
+          PKey key_tuple(i,j,tag);
+          Expression p = p_map.at(key_tuple);
 
           if (i == 0) { // fwd[0] is the path up and including -1, so it's the empty set, i.e., its probability is 1
             f.push_back(p);
           } else {
             f.push_back(p + fwd[i]);
           }
-          ijt.push_back(std::make_tuple(i, j, tag));
+          ijt.push_back(make_tuple(i, j, tag));
         }
       }
       // cerr << "size of vector f at j = " << j << " equals " << f.size() << endl;
@@ -491,7 +508,7 @@ struct SegmentalRNN {
     //   cerr << j << "\t" << std::get<0>(it[j]) << "\t" << std::get<1>(it[j]) << "\t" << std::get<2>(it[j]) << endl;
     // }
     auto cur_j = len;
-    vector<std::tuple<int, int, unsigned>> pred;
+    vector<tuple<int, int, unsigned>> pred;
     while(cur_j > 0){
       auto cur_i = std::get<0>(it[cur_j]);
       pred.push_back(make_tuple(cur_i, cur_j, std::get<2>(it[cur_j])));
@@ -595,7 +612,7 @@ double evaluate(vector<vector<pair<int,int>>>& yz_preds,
   int p_w_t_total = 0;
   int r_w_t_total = 0;
   int tag_o = ner_tagging ? td.Convert("O") : -1;
-  for (int i = 0; i < yz_preds.size(); i++){
+  for (unsigned int i = 0; i < yz_preds.size(); i++){
     // for sentence i
     std::set<pair<int,int>> gold;
     std::set<pair<int,int>> pred;
@@ -664,14 +681,6 @@ double evaluate(vector<vector<pair<int,int>>>& yz_preds,
 
 }
 
-void train(string& save_model_file, 
-           string& save_dict_file,
-           const vector<pair<vector<int>,vector<pair<int,int>>>>& train, 
-           const vector<pair<vector<int>,vector<pair<int,int>>>>& dev)
-{
-
-}
-
 void test_only(SegmentalRNN<LSTMBuilder>& crf,
           vector<pair<vector<int>,vector<pair<int,int>>>>& test_set,
           int max_seg_len = 0)
@@ -679,8 +688,9 @@ void test_only(SegmentalRNN<LSTMBuilder>& crf,
   for (auto& sent : test_set) {
     ComputationGraph cg;
     vector<pair<int, int>> yz_pred;
-    crf.ViterbiDecode(sent.first, sent.second, cg, yz_pred, max_seg_len);
-    int i;
+    vector<Expression> xins = crf.ConstructInput(sent.first, cg);
+    crf.ViterbiDecode(xins, sent.second, cg, yz_pred, max_seg_len);
+    unsigned int i;
     for(i = 0; i < yz_pred.size()-1; ++i){
       auto pred = yz_pred[i];
       cout << pred.first << ":" << pred.second << " ";
@@ -784,12 +794,14 @@ double predict_and_evaluate(SegmentalRNN<LSTMBuilder>& crf,
   for (auto& sent : input_set) {
     ComputationGraph cg;
     if(check_max_seg(sent.second, max_seg_len)){
-      crf.SupervisedLoss(sent.first, sent.second, cg, max_seg_len);
+      vector<Expression> xins = crf.ConstructInput(sent.first, cg);
+      crf.SupervisedLoss(xins, sent.second, cg, max_seg_len);
       dtags += sent.second.size();
       dloss += as_scalar(cg.forward());
     }
     vector<pair<int, int>> yz_pred;
-    crf.ViterbiDecode(sent.first, sent.second, cg, yz_pred, max_seg_len);
+    vector<Expression> xins = crf.ConstructInput(sent.first, cg);
+    crf.ViterbiDecode(xins, sent.second, cg, yz_pred, max_seg_len);
     yz_golds.push_back(sent.second);
     yz_preds.push_back(yz_pred);
   }
@@ -890,7 +902,8 @@ int main(int argc, char** argv) {
         auto& sent = training[order[si]];
         ++si;
         if(check_max_seg(sent.second, max_seg_len)){
-          crf.SupervisedLoss(sent.first, sent.second, cg, max_seg_len);
+          vector<Expression> xins = crf.ConstructInput(sent.first, cg);
+          crf.SupervisedLoss(xins, sent.second, cg, max_seg_len);
           ttags += sent.second.size();
           loss += as_scalar(cg.forward());
           cg.backward();
