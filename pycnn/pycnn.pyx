@@ -472,7 +472,7 @@ cdef class _inputExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, float s):
-        self.cg().invalidate()
+        self.cgp().invalidate()
         self.val.set(s)
 
 def scalarInput(float s):
@@ -490,7 +490,7 @@ cdef class _vecInputExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, vector[float] data):
-        self.cg().invalidate()
+        self.cgp().invalidate()
         self.val.set(data)
 
 def vecInput(int dim):
@@ -513,7 +513,7 @@ cdef class _lookupExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set(self,i):
-        self.cg().invalidate()
+        self.cgp().invalidate()
         self.val.set(i)
 
 def lookup(LookupParameters p, unsigned index=0, update=True):
@@ -530,7 +530,7 @@ cdef class _pickerExpression(Expression):
         self.vindex = ce.i
         g._inputs.append(self)
     def set_index(self,i):
-        self.cg().invalidate()
+        self.cgp().invalidate()
         self.val.set(i)
 
 def pick(Expression e, unsigned index=0):
@@ -547,7 +547,7 @@ cdef class _hingeExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set_index(self, unsigned i):
-        self.cg().invalidate()
+        self.cgp().invalidate()
         self.val.set(i)
 
 def hinge(Expression x, unsigned index, float m=1.0):
