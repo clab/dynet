@@ -8,6 +8,7 @@ using namespace cnn;
 using namespace cnn::expr;
 using namespace std;
 
+
 struct NodeTest {
   NodeTest() {
     // set up some dummy arguments to cnn
@@ -18,6 +19,7 @@ struct NodeTest {
     int argc = av.size();
     cnn::Initialize(argc, argv);
     ones3_vals = {1.f,1.f,1.f};
+    first_one_vals = {1.f,0.f,0.f};
     ones2_vals = {1.f,1.f};
     // Create parameters
     std::vector<float> param1_vals = {1.1f,-2.2f,3.3f};
@@ -39,7 +41,17 @@ struct NodeTest {
   ~NodeTest() {
     for (auto x : av) free(x);
   }
-  std::vector<float> ones3_vals, ones2_vals;
+
+  template <class T>
+  std::string print_vec(const std::vector<T> vec) {
+    ostringstream oss;
+    if(vec.size()) oss << vec[0];
+    for(size_t i = 1; i < vec.size(); i++)
+      oss << ' ' << vec[i];
+    return oss.str();
+  }
+
+  std::vector<float> ones3_vals, ones2_vals, first_one_vals;
   std::vector<char*> av;
   cnn::Model mod;
   cnn::Parameters *param1, *param2, *param3, *param_scalar1, *param_scalar2;
@@ -182,8 +194,8 @@ BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
 // Expression sqrt(const Expression& x);
 BOOST_AUTO_TEST_CASE( sqrt_gradient ) {
   cnn::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
-  Expression y = sqrt(x1);
+  Expression x3 = parameter(cg, param3);
+  Expression y = sqrt(x3);
   input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
@@ -292,17 +304,17 @@ BOOST_AUTO_TEST_CASE( log_softmax_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = log_softmax(x1);
-  input(cg, {1,3}, ones3_vals) * y;
+  input(cg, {1,3}, first_one_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
 // Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 BOOST_AUTO_TEST_CASE( restricted_log_softmax_gradient ) {
-  vector<unsigned> restriction = {1,2};
+  vector<unsigned> restriction = {0,1};
   cnn::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
-  Expression y = log_softmax(x1, restriction);
-  input(cg, {1,3}, ones3_vals) * y;
+  Expression x3 = parameter(cg, param3);
+  Expression y = exp( log_softmax(x3, restriction) );
+  input(cg, {1,3}, first_one_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -311,7 +323,7 @@ BOOST_AUTO_TEST_CASE( softmax_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = softmax(x1);
-  input(cg, {1,3}, ones3_vals) * y;
+  input(cg, {1,3}, first_one_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -327,9 +339,9 @@ BOOST_AUTO_TEST_CASE( softsign_gradient ) {
 // Expression pow(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( pow_gradient ) {
   cnn::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
+  Expression x3 = parameter(cg, param3);
   Expression x_scalar1 = parameter(cg, param_scalar1);
-  Expression y = pow(x1, x_scalar1);
+  Expression y = pow(x3, x_scalar1);
   input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
@@ -451,8 +463,8 @@ BOOST_AUTO_TEST_CASE( l1_distance_gradient ) {
 // Expression binary_log_loss(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( binary_log_loss_gradient ) {
   cnn::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
-  Expression x2 = parameter(cg, param2);
+  Expression x1 = logistic( parameter(cg, param1) );
+  Expression x2 = input(cg, {3}, ones3_vals);
   binary_log_loss(x1, x2);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
