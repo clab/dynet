@@ -210,10 +210,12 @@ void Transpose::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const 
     fx.v = xs[0]->v;
   } else {
 #if HAVE_CUDA
-    CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
-                             kSCALAR_ONE, xs[0]->v, xs[0]->d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.v, fx.d.rows()));
+    for(unsigned b = 0; b < l.d.bd; ++b)
+      CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
+                               kSCALAR_ONE, xs[0]->batch_ptr(b), xs[0]->d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.batch_ptr(b), fx.d.rows()));
 #else
-    *fx = (**xs[0]).transpose();
+    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
+      fx.batch_matrix(b).noalias() = xs[0]->batch_matrix(b).transpose();
 #endif
   }
 }
@@ -224,10 +226,12 @@ void Transpose::backward_impl(const vector<const Tensor*>& xs,
                             unsigned i,
                             Tensor& dEdxi) const {
 #if HAVE_CUDA
-  CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
-                           kSCALAR_ONE, dEdf.v, dEdf.d.rows(), kSCALAR_ONE, dEdxi.v, dEdxi.d.rows(), dEdxi.v, dEdxi.d.rows()));
+  for(unsigned b = 0; b < l.d.bd; ++b)
+    CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
+                             kSCALAR_ONE, dEdf.batch_ptr(b), dEdf.d.rows(), kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows(), dEdxi.batch_ptr(b), dEdxi.d.rows()));
 #else
-  *dEdxi += (*dEdf).transpose();
+  for(unsigned b = 0; b < xs[0]->d.bd; ++b)
+    dEdxi.batch_matrix(b) += dEdf.batch_matrix(b).transpose();
 #endif
 }
 
@@ -382,7 +386,7 @@ void Dropout::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #else
   Tensor m(dim, (float*)aux_mem);
   TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
-  (*fx) = (**xs[0]).cwiseProduct(*m);
+  fx.vec() = xs[0]->vec().cwiseProduct(m.vec());
 #endif
 }
 
@@ -395,7 +399,7 @@ void Dropout::backward_impl(const vector<const Tensor*>& xs,
   throw std::runtime_error("Pow not yet implemented for CUDA");
 #else
   Tensor m(dim, (float*)aux_mem);
-  (*dEdxi) += (*dEdf).cwiseProduct(*m);
+  dEdxi.vec() += dEdf.vec().cwiseProduct(m.vec());
 #endif
 }
 
