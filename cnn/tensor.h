@@ -168,8 +168,11 @@ struct TensorTools {
   // sample some bernoulli random variables and scale them by scale
   static void RandomBernoulli(Tensor& val, real p, real scale = 1.0);
   static void RandomizeNormal(real mean, real stddev, Tensor& val);
-  // AccessElement is very, very slow (potentially) - use appropriately
+  // AccessElement and SetElement are very, very slow (potentially) - use appropriately
+  static float AccessElement(const Tensor& v, int index);
   static float AccessElement(const Tensor& v, const Dim& index);
+  static void SetElement(const Tensor& v, int index, float value);
+
   static void SetElements(const Tensor& v, const std::vector<float>& vec);
   static void CopyElements(const Tensor& v, const Tensor& v_src);
 };

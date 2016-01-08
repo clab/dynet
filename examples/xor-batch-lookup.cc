@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
   //Expression h = softsign(W*x + b);
   Expression y_pred = V*h + a;
   Expression loss = squared_distance(y_pred, y);
+  Expression sum_loss = sum_batches(loss);
 
   cg.PrintGraphviz();
   if (argc == 2) {

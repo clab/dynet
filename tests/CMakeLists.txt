@@ -5,7 +5,12 @@ include_directories (${TEST_SOURCE_DIR}/src
 
 add_definitions (-DBOOST_TEST_DYN_LINK)
 
-add_executable (test-cnn test-cnn.cc)
+# Sources:
+set(test_cnn_SRCS
+    test-nodes.cc
+)
+
+add_executable (test-cnn test-cnn.cc ${test_cnn_SRCS})
 target_link_libraries (test-cnn cnn ${LIBS}
                        ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
                        )
