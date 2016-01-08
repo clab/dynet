@@ -347,23 +347,30 @@ cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_
 cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
 
 cdef class Expression: #{{{
-    #cdef CComputationGraph *cg
-    cdef CComputationGraph* cg
+    #cdef CComputationGraph* cg
+    # cg is a singleton, so there is no need to keep it inside the expression.
+    # not keeping cg() in the expression will preserve memory.
+    # if CNN comes to support multiple computation graphs, this will need to change.
+    cdef inline ComputationGraph cg(self):
+        return cg()
+    cdef inline CComputationGraph* cgp(self):
+        return cg().thisptr
+
     cdef VariableIndex vindex
     cdef int cg_version
     def __cinit__(self):
-        self.cg = NULL
+        #self.cg = NULL
         self.vindex = 0
     @staticmethod
     cdef Expression from_cexpr(int cgv, CExpression cexpr):
         if cgv != _cg._cg_version: raise ValueError("Attempt to use a stale expression, from a previous Computation Graph.")
         self = Expression()
-        self.cg = cexpr.pg
+        #self.cg = cexpr.pg
         self.vindex = cexpr.i
         self.cg_version = cgv
         return self
     cdef CExpression c(self):
-        return CExpression(self.cg, self.vindex)
+        return CExpression(self.cgp(), self.vindex)
 
     def __repr__(self):
         return str(self)
@@ -378,20 +385,20 @@ cdef class Expression: #{{{
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg.forward()
-        return c_as_scalar(self.cg.get_value(self.vindex))
+        if recalculate: self.cg().forward()
+        return c_as_scalar(self.cgp().get_value(self.vindex))
 
     cpdef vec_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg.forward()
-        return c_as_vector(self.cg.get_value(self.vindex))
+        if recalculate: self.cg().forward()
+        return c_as_vector(self.cgp().get_value(self.vindex))
 
     cpdef npvalue(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
         cdef CDim dim
-        if recalculate: self.cg.forward()
-        t = self.cg.get_value(self.vindex)
+        if recalculate: self.cg().forward()
+        t = self.cgp().get_value(self.vindex)
         dim = t.d
         arr = np.array(c_as_vector(t))
         if dim.ndims() == 2:
@@ -401,8 +408,8 @@ cdef class Expression: #{{{
     cpdef value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
-        if recalculate: self.cg.forward()
-        t = self.cg.get_value(self.vindex)
+        if recalculate: self.cg().forward()
+        t = self.cgp().get_value(self.vindex)
         if t.d.ndims() == 2:
             return self.npvalue()
         vec = self.vec_value()
@@ -412,12 +419,12 @@ cdef class Expression: #{{{
     # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
     cpdef forward(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg.forward()
-        else: self.cg.incremental_forward()
+        if recalculate: self.cg().forward()
+        else: self.cg().incremental_forward()
 
     cpdef backward(self):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        self.cg.backward(self.vindex)
+        self.cgp().backward(self.vindex)
 
     def __add__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
@@ -458,14 +465,14 @@ cdef class _inputExpression(Expression):
     cdef FloatValue val
     def __cinit__(self, ComputationGraph g, float s):
         self.val = FloatValue(s)
-        self.cg = g.thisptr
+        #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cg[0], self.val.addr())
+        e = c_input(self.cgp()[0], self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, float s):
-        self.cg.invalidate()
+        self.cgp().invalidate()
         self.val.set(s)
 
 def scalarInput(float s):
@@ -476,14 +483,14 @@ cdef class _vecInputExpression(Expression):
     def __cinit__(self, ComputationGraph g, vector[float] val, dim=None):
         self.val = FloatVectorValue(val)
         if dim is None: dim = self.val.size()
-        self.cg = g.thisptr
+        #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cg[0], Dim(dim), self.val.addr())
+        e = c_input(self.cgp()[0], Dim(dim), self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, vector[float] data):
-        self.cg.invalidate()
+        self.cgp().invalidate()
         self.val.set(data)
 
 def vecInput(int dim):
@@ -496,17 +503,17 @@ cdef class _lookupExpression(Expression):
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, LookupParameters p, unsigned index=0, update=True):
         self.val = UnsignedValue(index)
-        self.cg = g.thisptr
+        #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
         if update:
-            e = c_lookup(self.cg[0], p.thisptr, self.val.addr())
+            e = c_lookup(self.cgp()[0], p.thisptr, self.val.addr())
         else:
-            e = c_const_lookup(self.cg[0], p.thisptr, self.val.addr())
+            e = c_const_lookup(self.cgp()[0], p.thisptr, self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self,i):
-        self.cg.invalidate()
+        self.cgp().invalidate()
         self.val.set(i)
 
 def lookup(LookupParameters p, unsigned index=0, update=True):
@@ -516,14 +523,14 @@ cdef class _pickerExpression(Expression):
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, Expression e, unsigned index=0):
         self.val = UnsignedValue(index)
-        self.cg = e.cg
+        #self.cg = e.cg
         self.cg_version = g.version()
         cdef CExpression ce
         ce = c_pick(e.c(), self.val.addr())
         self.vindex = ce.i
         g._inputs.append(self)
     def set_index(self,i):
-        self.cg.invalidate()
+        self.cgp().invalidate()
         self.val.set(i)
 
 def pick(Expression e, unsigned index=0):
@@ -533,14 +540,14 @@ cdef class _hingeExpression(Expression):
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, Expression x, unsigned index, float m=1.0):
         self.val = UnsignedValue(index)
-        self.cg = x.cg
+        #self.cg = x.cg
         self.cg_version = g.version()
         cdef CExpression e
         e = c_hinge(x.c(), self.val.addr(), m)
         self.vindex = e.i
         g._inputs.append(self)
     def set_index(self, unsigned i):
-        self.cg.invalidate()
+        self.cgp().invalidate()
         self.val.set(i)
 
 def hinge(Expression x, unsigned index, float m=1.0):
@@ -797,6 +804,18 @@ cdef class RNNState: # {{{
         """
         returns the list of states obtained by adding the given inputs
         to the current state, one by one.
+
+        see also transduce(xs)
+
+        .transduce(xs) is different from .add_inputs(xs) in the following way:
+
+            .add_inputs(xs) returns a list of RNNState. RNNState objects can be
+             queried in various ways. In particular, they allow access to the previous
+             state, as well as to the state-vectors (h() and s() )
+
+            .transduce(xs) returns a list of Expression. These are just the output
+             expressions. For many cases, this suffices. 
+             transduce is much more memory efficient than add_inputs. 
         """
         states = []
         cur = self
@@ -804,6 +823,33 @@ cdef class RNNState: # {{{
             cur = cur.add_input(x)
             states.append(cur)
         return states
+    
+    cpdef transduce(self, xs):
+        """
+        returns the list of output Expressions obtained by adding the given inputs
+        to the current state, one by one.
+        
+        see also add_inputs(xs)
+
+        .transduce(xs) is different from .add_inputs(xs) in the following way:
+
+            .add_inputs(xs) returns a list of RNNState. RNNState objects can be
+             queried in various ways. In particular, they allow access to the previous
+             state, as well as to the state-vectors (h() and s() )
+
+            .transduce(xs) returns a list of Expression. These are just the output
+             expressions. For many cases, this suffices. 
+             transduce is much more memory efficient than add_inputs. 
+        """
+        cdef list exprs = []
+        cdef Expression res
+        cdef Expression x
+        cdef int state_idx = self.state_idx
+        for x in xs:
+            res = self.builder.add_input_to_prev(CRNNPointer(state_idx), x)
+            state_idx = <int>self.builder.thisptr.state()
+            exprs.append(res)
+        return exprs
 
     #cpdef int state(self): return self.state_idx
 

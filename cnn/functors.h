@@ -4,12 +4,11 @@
 #include <cstdint>
 #include <limits>
 
-#include <boost/math/special_functions/digamma.hpp>
-
 #if HAVE_CUDA
 #  define CNN_DEVICE_FUNC __device__
 #  define CNN_DEVICE_MIN -1.175494351e-38f
 #else
+#  include <boost/math/special_functions/digamma.hpp>
 #  define CNN_DEVICE_FUNC
 #  define CNN_DEVICE_MIN std::numeric_limits<float>::min()
 #endif
@@ -109,6 +108,12 @@ struct FTanh {
   }
 };
 
+struct FLog {
+  CNN_DEVICE_FUNC inline float operator()(float x) const {
+    return logf(x);
+  }
+};
+
 struct FMaxBackwardInv {
   CNN_DEVICE_FUNC inline float operator()(float u, float d) const {
     return (1.f - u) * d;
@@ -130,6 +135,12 @@ struct FErfBackward {
 struct FTanhBackward {
   CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
     return (1.f - t * t) * d;
+  }
+};
+
+struct FLogBackward {
+  CNN_DEVICE_FUNC inline float operator()(float t, float d) const {
+    return (1.f / t) * d;
   }
 };
 
@@ -172,7 +183,12 @@ struct FSoftmaxBackward {
 
 struct FLogGammaBackward {
   CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+#ifndef HAVE_CUDA
     return boost::math::digamma(x) * d;
+#else
+    assert(false); // Not supported on GPUs?
+    return 0;
+#endif
   }
 };
 

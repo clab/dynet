@@ -68,6 +68,16 @@ void vtanh_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
   accBinaryExprKernel<<<tb.first, tb.second>>>(n, fx, dEdf, dEdx, FTanhBackward());
 }
 
+void vlog(int n, const float* x, float* y) {
+  auto tb = SizeToBlockThreadPair(n);
+  unaryExprKernel<<<tb.first, tb.second>>>(n, x, y, FLog());
+}
+
+void vlog_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
+  auto tb = SizeToBlockThreadPair(n);
+  accBinaryExprKernel<<<tb.first, tb.second>>>(n, fx, dEdf, dEdx, FLogBackward());
+}
+
 void vlogistic(int n, const float* x, float* y) {
   auto tb = SizeToBlockThreadPair(n);
   unaryExprKernel<<<tb.first, tb.second>>>(n, x, y, FLogisticSigmoid());

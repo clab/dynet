@@ -30,10 +30,14 @@ Dim AddVectorToAllColumns::dim_forward(const vector<Dim>& xs) const {
 }
 
 void AddVectorToAllColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef HAVE_CUDA
+    throw std::runtime_error("AddVectorToAllColumns::forward not implemented for CUDA");
+#else
   auto y = *fx;
   auto x = **xs[0];
   auto b = **xs[1];
   y = x.colwise() + b.col(0);
+#endif
 }
 
 void AddVectorToAllColumns::backward_impl(const vector<const Tensor*>& xs,
@@ -65,6 +69,9 @@ Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
 }
 
 void FoldRows::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("FoldRows::forward not implemented for CUDA");
+#else
   auto x = **xs[0];
   auto y = *fx;
   unsigned orows = y.rows();
@@ -76,6 +83,7 @@ void FoldRows::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
         y.row(i) = x.row(i * nrows);
     }
   }
+#endif
 }
 
 void FoldRows::backward_impl(const vector<const Tensor*>& xs,
@@ -83,12 +91,16 @@ void FoldRows::backward_impl(const vector<const Tensor*>& xs,
                         const Tensor& dEdf,
                         unsigned i,
                         Tensor& dEdxi) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("AddVectorToAllColumns::backward not implemented for CUDA");
+#else
   unsigned orows = fx.d.rows();
   auto d = *dEdf;
   auto di = *dEdxi;
   for (unsigned i = 0; i < orows; ++i)
     for (unsigned j = 0; j < nrows; ++j)
       di.row(i * nrows + j) += d.row(i);
+#endif
 }
 
 string Conv1DNarrow::as_string(const vector<string>& arg_names) const {
@@ -113,6 +125,9 @@ Dim Conv1DNarrow::dim_forward(const vector<Dim>& xs) const {
 }
 
 void Conv1DNarrow::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("Conv1DNarrow::forward not implemented for CUDA");
+#else
   // TODO this is a bad implementation- rewrite to use unsupported Eigen tensor library
   auto x = **xs[0];  // input
   auto f = **xs[1];  // filter
@@ -128,6 +143,7 @@ void Conv1DNarrow::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) con
       y(i, j) = t;
     }
   }
+#endif
 }
 
 void Conv1DNarrow::backward_impl(const vector<const Tensor*>& xs,
@@ -135,6 +151,9 @@ void Conv1DNarrow::backward_impl(const vector<const Tensor*>& xs,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("Conv1DNarrow::backward not implemented for CUDA");
+#else
   // TODO this is a bad implementation- rewrite to use unsupported Eigen tensor library
   assert(i < 2);
   const unsigned rows = xs[0]->d.rows();
@@ -159,6 +178,7 @@ void Conv1DNarrow::backward_impl(const vector<const Tensor*>& xs,
       }
     }
   }
+#endif
 }
 
 string Conv1DWide::as_string(const vector<string>& arg_names) const {
@@ -182,6 +202,9 @@ Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
 }
 
 void Conv1DWide::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("Conv1DWide::forward not implemented for CUDA");
+#else
   TensorTools::Zero(fx);
   auto x = **xs[0];  // input
   auto f = **xs[1];  // filter
@@ -196,6 +219,7 @@ void Conv1DWide::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const
         y(i, j + k) += f(i, k) * xij;
     }
   }
+#endif
 }
 
 void Conv1DWide::backward_impl(const vector<const Tensor*>& xs,
@@ -203,6 +227,9 @@ void Conv1DWide::backward_impl(const vector<const Tensor*>& xs,
                           const Tensor& dEdf,
                           unsigned i,
                           Tensor& dEdxi) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("Conv1DWide::backward not implemented for CUDA");
+#else
   assert(i < 2);
   const unsigned rows = xs[0]->d.rows();
   const unsigned xcols = xs[0]->d.cols();
@@ -227,6 +254,7 @@ void Conv1DWide::backward_impl(const vector<const Tensor*>& xs,
       }
     }
   }
+#endif
 }
 
 string KMaxPooling::as_string(const vector<string>& arg_names) const {
@@ -253,6 +281,9 @@ size_t KMaxPooling::aux_storage_size() const {
 }
 
 void KMaxPooling::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("KMaxPooling::forward not implemented for CUDA");
+#else
   auto x=**xs[0];
   auto y=*fx;
   float tmp[1024];
@@ -282,6 +313,7 @@ void KMaxPooling::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) cons
     //cerr << endl; abort();
   }
   assert(mi == dim.size());
+#endif
 }
 
 void KMaxPooling::backward_impl(const vector<const Tensor*>& xs,
@@ -289,6 +321,9 @@ void KMaxPooling::backward_impl(const vector<const Tensor*>& xs,
                            const Tensor& dEdf,
                            unsigned i,
                            Tensor& dEdxi) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("KMaxPooling::backward not implemented for CUDA");
+#else
   const unsigned rows = dim.rows();
   const unsigned cols = dim.cols();
   const int* maxmap = static_cast<const int*>(aux_mem);
@@ -306,6 +341,7 @@ void KMaxPooling::backward_impl(const vector<const Tensor*>& xs,
       (*dEdxi)(i, oj) += (*dEdf)(i, j);
     }
   }
+#endif
 }
 
 } // namespace cnn
