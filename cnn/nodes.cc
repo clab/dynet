@@ -210,7 +210,7 @@ void Transpose::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const 
     fx.v = xs[0]->v;
   } else {
 #if HAVE_CUDA
-    for(unsigned b = 0; b < l.d.bd; ++b)
+    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
       CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
                                kSCALAR_ONE, xs[0]->batch_ptr(b), xs[0]->d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.batch_ptr(b), fx.d.rows()));
 #else
@@ -226,7 +226,7 @@ void Transpose::backward_impl(const vector<const Tensor*>& xs,
                             unsigned i,
                             Tensor& dEdxi) const {
 #if HAVE_CUDA
-  for(unsigned b = 0; b < l.d.bd; ++b)
+  for(unsigned b = 0; b < xs[0]->d.bd; ++b)
     CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
                              kSCALAR_ONE, dEdf.batch_ptr(b), dEdf.d.rows(), kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows(), dEdxi.batch_ptr(b), dEdxi.d.rows()));
 #else
