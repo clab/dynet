@@ -3,7 +3,7 @@ C++ neural network library
 
 #### Important: Eigen version requirement
 
-You need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. **If you use the release version rather than the development version, you may get assertion failures or compile errors.**
+You need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. **If you use any of the released versions, you may get assertion failures or compile errors.**
 
 #### Building
 
@@ -31,7 +31,7 @@ which will train a multilayer perceptron to predict the xor function.
 #### Building without Eigen installed
 
 If you don't have Eigen installed, the instructions below will fetch and compile
-both `Eigen` and `cnn`.
+both `Eigen` and `cnn`. Eigen does not have to be compiled, so “installing” it is easy.
         
     git clone https://github.com/clab/cnn.git
     hg clone https://bitbucket.org/eigen/eigen/
@@ -42,7 +42,7 @@ both `Eigen` and `cnn`.
     cmake .. -DEIGEN3_INCLUDE_DIR=../eigen
     make -j 2
 
-#### Debugging
+#### Debugging build problems
 
 If you want to see the compile commands that are used, you can run
 
