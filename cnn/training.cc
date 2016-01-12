@@ -39,8 +39,8 @@ void SimpleSGDTrainer::update(const std::vector<LookupParameters*> &lookup_param
 #if HAVE_CUDA
     gpu::sgd_update(p->values.d.size(), p->g.v, p->values.v, eta * scale * gscale, lambda);
 #else
-    auto reg = (*p->values) * lambda;
-    *p->values -= ((eta * scale * gscale) * *p->g + reg);
+    auto reg = (p->values.vec()) * lambda;
+    p->values.vec() -= ((eta * scale * gscale) * p->g.vec() + reg);
 #endif
     p->clear();
   }
@@ -49,8 +49,8 @@ void SimpleSGDTrainer::update(const std::vector<LookupParameters*> &lookup_param
 #if HAVE_CUDA
       gpu::sgd_update(p->values[i].d.size(), p->grads[i].v, p->values[i].v, eta * scale * gscale, lambda);
 #else
-      auto reg = (*p->values[i]) * lambda;
-      *p->values[i] -= (*p->grads[i] * (eta * scale * gscale) + reg);
+      auto reg = (p->values[i].vec()) * lambda;
+      p->values[i].vec() -= (p->grads[i].vec() * (eta * scale * gscale) + reg);
 #endif
     }
     p->clear();
@@ -71,9 +71,9 @@ void MomentumSGDTrainer::update(real scale) {
   unsigned pi = 0;
   for (auto p : model->parameters_list()) {
     Tensor& v = vp[pi++].h;
-    auto reg = *p->values * lambda;
-    (*v) = momentum * (*v) - (eta * scale * gscale) * (*p->g);
-    *p->values += *v - reg;
+    auto reg = p->values.vec() * lambda;
+    v.vec() = momentum * v.vec() - (eta * scale * gscale) * (p->g.vec());
+    p->values.vec() += v.vec() - reg;
     p->clear();
   }
   pi = 0;
@@ -81,9 +81,9 @@ void MomentumSGDTrainer::update(real scale) {
     vector<Tensor>& vx = vlp[pi++].h;
     for (auto i : p->non_zero_grads) {
       Tensor& v = vx[i];
-      auto reg = (*p->values[i]) * lambda;
-      (*v) = momentum * (*v) - (eta * scale * gscale) * (*p->grads[i]);
-      *p->values[i] += *v - reg;
+      auto reg = (p->values[i].vec()) * lambda;
+      v.vec() = momentum * v.vec() - (eta * scale * gscale) * (p->grads[i].vec());
+      p->values[i].vec() += v.vec() - reg;
     }
     p->clear();
   }
@@ -102,12 +102,12 @@ void AdagradTrainer::update(real scale) {
   const float gscale = clip_gradients();
   for (auto p : model->parameters_list()) {
     Tensor& v = vp[pi++].h;
-    auto reg = (*p->values) * lambda;
-    auto g = scale * gscale * (*p->g);
+    auto reg = p->values.vec() * lambda;
+    auto g = scale * gscale * p->g.vec();
     auto g2 = g.cwiseProduct(g);
-    (*v) += g2;
-    auto delta = -eta * g.cwiseQuotient(((*v).array() + epsilon).matrix().cwiseSqrt());
-    *p->values += delta - reg;
+    v.vec() += g2;
+    auto delta = -eta * g.cwiseQuotient((v.vec().array() + epsilon).matrix().cwiseSqrt());
+    p->values.vec() += delta - reg;
     p->clear();
   }
 
@@ -116,12 +116,12 @@ void AdagradTrainer::update(real scale) {
     vector<Tensor>& vx = vlp[pi++].h;
     for (auto i : p->non_zero_grads) {
       Tensor& v = vx[i];
-      auto reg = (*p->values[i]) * lambda;
-      auto g = scale * gscale * (*p->grads[i]);
+      auto reg = p->values[i].vec() * lambda;
+      auto g = scale * gscale * p->grads[i].vec();
       auto g2 = g.cwiseProduct(g);
-      (*v) += g2;
-      auto delta = -eta * g.cwiseQuotient(((*v).array() + epsilon).matrix().cwiseSqrt());
-      *p->values[i] += delta - reg;
+      v.vec() += g2;
+      auto delta = -eta * g.cwiseQuotient((v.vec().array() + epsilon).matrix().cwiseSqrt());
+      p->values[i].vec() += delta - reg;
     }
     p->clear();
   }
@@ -161,18 +161,18 @@ void AdadeltaTrainer::update(real scale) {
   const float gscale = clip_gradients();
   pi = 0;
   for (auto p : model->parameters_list()) {
-    auto& g = (scale * gscale) * *p->g;
+    auto& g = (scale * gscale) * p->g.vec();
     Tensor& hgv = hg[pi].h;
     Tensor& hdv = hd[pi].h;
-    auto reg = (*p->values) * lambda;
+    auto reg = p->values.vec() * lambda;
     auto g2 = g.cwiseProduct(g);
-    *hgv = rho * *hgv + (1.0 - rho) * g2;
-    auto num = -g.cwiseProduct(((*hdv).array() + epsilon).matrix().cwiseSqrt());
-    auto den = ((*hgv).array() + epsilon).matrix().cwiseSqrt();
+    hgv.vec() = rho * hgv.vec() + (1.0 - rho) * g2;
+    auto num = -g.cwiseProduct((hdv.vec().array() + epsilon).matrix().cwiseSqrt());
+    auto den = (hgv.vec().array() + epsilon).matrix().cwiseSqrt();
     auto delta = num.cwiseQuotient(den);
     auto d2 = delta.cwiseProduct(delta);
-    *hdv = rho * *hdv + (1.0 - rho) * d2;
-    *p->values += delta - reg;
+    hdv.vec() = rho * hdv.vec() + (1.0 - rho) * d2;
+    p->values.vec() += delta - reg;
     p->clear();
     pi++;
   }
@@ -184,16 +184,16 @@ void AdadeltaTrainer::update(real scale) {
     for (auto i : p->non_zero_grads) {
       Tensor& hgv = hgvx[i];
       Tensor& hdv = hdvx[i];
-      auto& g = scale * gscale * *p->grads[i];
-      auto reg = (*p->values[i]) * lambda;
+      auto& g = scale * gscale * p->grads[i].vec();
+      auto reg = p->values[i].vec() * lambda;
       auto g2 = g.cwiseProduct(g);
-      *hgv = rho * *hgv + (1.0 - rho) * g2;
-      auto num = -g.cwiseProduct(((*hdv).array() + epsilon).matrix().cwiseSqrt());
-      auto den = ((*hgv).array() + epsilon).matrix().cwiseSqrt();
+      hgv.vec() = rho * hgv.vec() + (1.0 - rho) * g2;
+      auto num = -g.cwiseProduct((hdv.vec().array() + epsilon).matrix().cwiseSqrt());
+      auto den = (hgv.vec().array() + epsilon).matrix().cwiseSqrt();
       auto delta = num.cwiseQuotient(den);
       auto d2 = delta.cwiseProduct(delta);
-      *hdv = rho * *hdv + (1.0 - rho) * d2;
-      *p->values[i] += delta - reg;
+      hdv.vec() = rho * hdv.vec() + (1.0 - rho) * d2;
+      p->values[i].vec() += delta - reg;
     }
     p->clear();
     pi++;
@@ -219,10 +219,10 @@ void RmsPropTrainer::update(real scale) {
   pi = 0;
   for (auto p : model->parameters_list()) {
     real& d2 = hg[pi++];
-    auto reg = (*p->values) * lambda;
-    real g2 = (*p->g).squaredNorm();
+    auto reg = p->values.vec() * lambda;
+    real g2 = p->g.vec().squaredNorm();
     d2 = rho * d2 + (1.0 - rho) * g2;
-    *p->values -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * *p->g + reg);
+    p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec() + reg);
     p->clear();
   }
 
@@ -231,10 +231,10 @@ void RmsPropTrainer::update(real scale) {
     vector<real>& hlgx = hlg[pi++];
     for (auto i : p->non_zero_grads) {
       real& d2 = hlgx[i];
-      auto reg = (*p->values[i]) * lambda;
-      real g2 = (*p->grads[i]).squaredNorm();
+      auto reg = p->values[i].vec() * lambda;
+      real g2 = p->grads[i].vec().squaredNorm();
       d2 = rho * d2 + (1.0 - rho) * g2;
-      *p->values[i] -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * *p->grads[i] + reg);
+      p->values[i].vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->grads[i].vec() + reg);
     }
     p->clear();
   }
@@ -256,10 +256,10 @@ void AdamTrainer::update(real scale) {
   static unsigned t = 0;
   for (auto p : model->parameters_list()) {
     ++t;
-    auto g_t = (scale * gscale) * *p->g;
-    auto m_t = *m[pi].h;
-    auto v_t = *v[pi].h;
-    auto reg = (*p->values) * lambda;
+    auto g_t = (scale * gscale) * p->g.vec();
+    auto m_t = m[pi].h.vec();
+    auto v_t = v[pi].h.vec();
+    auto reg = p->values.vec() * lambda;
     m_t = beta_1 * m_t + (1 - beta_1) * g_t;
     auto g2 = g_t.cwiseProduct(g_t);
     v_t = beta_2 * v_t + (1 - beta_2) * g2;
@@ -268,7 +268,7 @@ void AdamTrainer::update(real scale) {
     auto mhat = m_t / s1;
     auto vhat = v_t / s2;
     auto delta = (-eta * mhat).cwiseQuotient((vhat.array().sqrt() + eps).matrix());
-    *p->values += delta - reg;
+    p->values.vec() += delta - reg;
     p->clear();
     pi++;
   }
@@ -278,11 +278,11 @@ void AdamTrainer::update(real scale) {
     vector<Tensor>& vm = lm[pi].h;
     vector<Tensor>& vv = lv[pi].h;
     for (auto i : p->non_zero_grads) {
-      auto m_t = *vm[i];
-      auto v_t = *vv[i];
-      auto g_t = scale * gscale * *p->grads[i];
+      auto m_t = vm[i].vec();
+      auto v_t = vv[i].vec();
+      auto g_t = scale * gscale * p->grads[i].vec();
       auto g2 = g_t.cwiseProduct(g_t);
-      auto reg = (*p->values[i]) * lambda;
+      auto reg = p->values[i].vec() * lambda;
       m_t = beta_1 * m_t + (1 - beta_1) * g_t;
       v_t = beta_2 * v_t + (1 - beta_2) * g2;
       float s1 = 1 - pow(beta_1, t);
@@ -290,7 +290,7 @@ void AdamTrainer::update(real scale) {
       auto mhat = m_t / s1;
       auto vhat = v_t / s2;
       auto delta = (-eta * mhat).cwiseQuotient((vhat.array().sqrt() + eps).matrix());
-      *p->values[i] += delta - reg;
+      p->values[i].vec() += delta - reg;
     }
     p->clear();
     pi++;

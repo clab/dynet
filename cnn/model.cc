@@ -54,7 +54,7 @@ void Parameters::g_squared_l2norm(float* sqnorm) const {
 #if HAVE_CUDA
   gpu::l2_norm_reducer(g.d.size(), g.v, sqnorm, true, false);
 #else
-  *sqnorm = (*g).squaredNorm();
+  *sqnorm = g.vec().squaredNorm();
 #endif
 }
 
@@ -67,7 +67,7 @@ void Parameters::accumulate_grad(const Tensor& d) {
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, g.d.size(), kSCALAR_ONE, d.v, 1, g.v, 1));
 #else
-  *g += *d;
+  g.vec() += d.vec();
 #endif
 }
 

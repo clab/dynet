@@ -165,6 +165,19 @@ struct InnerProduct3D_1D : public Node {
                   Tensor& dEdxi) const override;
 };
 
+//   Y_i = A_ijk * B_k * C_j
+struct InnerProduct3D_1D_1D : public Node {
+  InnerProduct3D_1D_1D(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const override;
+};
+
 // n_{i,j} ~ N(0,stddev)
 // y = x + n
 struct GaussianNoise : public Node {

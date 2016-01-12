@@ -171,6 +171,32 @@ Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string InnerProduct3D_1D_1D::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dotdot(" << arg_names[0] << "," << arg_names[1] << "," << arg_names[2] << ')';
+  if (arg_names.size() == 4) s << " + " << arg_names[3];
+  return s.str();
+}
+
+Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 3 && xs.size() != 4)
+    throw std::invalid_argument("Expected three or four arguments in InnerProduct3D_1D");
+  if (xs[0].ndims() != 3 ||
+      xs[1].ndims() != 1 ||
+      xs[2].ndims() != 1) {
+    // TODO fix add check
+    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  Dim d({xs[0].size(0)}, max(max(xs[0].bd, xs[1].bd), xs[2].bd));
+  if(xs.size() == 4) d.bd = max(d.bd, xs[3].bd);
+  if (xs.size() == 4 && xs[3] != d) {
+    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  return d;
+}
+
 string GaussianNoise::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " + N(0," << stddev << ')';
