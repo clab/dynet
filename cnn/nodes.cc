@@ -369,6 +369,10 @@ void InnerProduct3D_1D_1D::backward_impl(const vector<const Tensor*>& xs,
     auto c = xs[2]->t<1>();
     dEdxi.t<3>() += tdEdf.contract(c, Eigen::array<DimPair, 0>{{}}).contract(b, Eigen::array<DimPair, 0>{{}});
   } else if (i == 1) { // vector 1
+    // TODO these should be reorganized so the contraction is first with tdEdf and then with c or b.
+    // in theory, that intermediate result could be cached (although CNN doesn't support this). the fact that it
+    // this part of the product is redone when i=1 and again when i=2 is probably why this is slower
+    // (or maybe it's the contract implementation?)
     Eigen::array<DimPair, 1> dims({{DimPair(1, 0)}});
     Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
     auto A = xs[0]->t<3>();
