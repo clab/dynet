@@ -342,24 +342,17 @@ void InnerProduct3D_1D::backward_impl(const vector<const Tensor*>& xs,
 
 //   Y_ij = A_ijk * B_k * C_j (+ D_i)
 void InnerProduct3D_1D_1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  abort(); // finish impl
-  auto b = **xs[1];
-  auto y = *fx;
-  const unsigned i = y.rows();
-  const unsigned j = y.cols();
-  const unsigned k = b.rows();
-  Tensor ta({i*j,k}, xs[0]->v);
-  Tensor ty({i*j}, fx.v);
-  auto A = *ta;
+  auto A = xs[0]->t<3>();
+  auto b = xs[1]->t<1>();
+  auto c = xs[2]->t<1>();
+  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
+  Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
+  Eigen::array<DimPair, 1> dims2({{DimPair(1, 0)}});
   if (xs.size() == 3) {
-    Tensor tc({i*j}, xs[2]->v);
-    auto c = *tc;
-    // want to do A * b + c, but it triggers memory allocation
-    (*ty) = c;
-    (*ty).noalias() += A * b;
+    fx.t<1>() = A.contract(b, dims).contract(c, dims2);
   } else {
-    assert(xs.size() == 2);
-    (*ty).noalias() = A * b;
+    auto d = xs[3]->t<1>();
+    fx.t<1>() = A.contract(b, dims).contract(c, dims2) + d;
   }
 }
 
@@ -368,21 +361,29 @@ void InnerProduct3D_1D_1D::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
-  abort(); // finish impl
-  auto b = **xs[1];
-  auto y = *fx;
-  const unsigned si = y.rows();
-  const unsigned sj = y.cols();
-  const unsigned sk = b.rows();
-  Tensor tdEdf({si*sj}, dEdf.v);
-  if (i == 0) { // 3-tensor
-    Tensor tdEdxi({si*sj, sk}, dEdxi.v);
-    (*tdEdxi).noalias() += *tdEdf * (**xs[1]).transpose();
-  } else if (i == 1) { // vector
-    Tensor ta({si*sj,sk}, xs[0]->v);
-    (*dEdxi).noalias() += (*ta).transpose() * *tdEdf;
-  } else { // matrix bias
-    *dEdxi += *dEdf;
+  auto tdEdf = dEdf.t<1>();  // vector
+  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
+  if (i == 0) { // 3 tensor
+    // tensor product
+    auto b = xs[1]->t<1>();
+    auto c = xs[2]->t<1>();
+    dEdxi.t<3>() += tdEdf.contract(c, Eigen::array<DimPair, 0>{{}}).contract(b, Eigen::array<DimPair, 0>{{}});
+  } else if (i == 1) { // vector 1
+    Eigen::array<DimPair, 1> dims({{DimPair(1, 0)}});
+    Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
+    auto A = xs[0]->t<3>();
+    auto c = xs[2]->t<1>();
+    dEdxi.t<1>() += A.contract(c, dims).contract(tdEdf, dims2);
+  } else if (i == 2) { // vector 2
+    Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
+    Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
+    auto A = xs[0]->t<3>();
+    auto b = xs[1]->t<1>();
+    dEdxi.t<1>() += A.contract(b, dims).contract(tdEdf, dims2);
+  } else if (i == 3) { // vector bias
+    dEdxi.t<1>() += tdEdf;
+  } else {
+    cerr << "shouldn't happen\n"; abort();
   }
 }
 
