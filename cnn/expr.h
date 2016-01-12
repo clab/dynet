@@ -48,8 +48,9 @@ Expression cdiv(const Expression& x, const Expression& y);
 Expression colwise_add(const Expression& x, const Expression& bias);
 // z_ij = x_ijk * y_k
 Expression contract3d_1d(const Expression& x, const Expression& y);
-// z_ij = x_ijk * y_k * z_j
+// z_i = x_ijk * y_k * z_j (+ b_i)
 Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z);
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
 // z_ij = x_ijk * y_k + b_ij
 Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
