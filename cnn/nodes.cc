@@ -306,13 +306,48 @@ void KMHNGram::backward_impl(const vector<const Tensor*>& xs,
 
 //   Y_ij = A_ijk * B_k (+ C_ij)
 void InnerProduct3D_1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto A = xs[0]->t<3>();
+  auto b = xs[1]->t<1>();
+  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
+  Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
+  if (xs.size() == 2) {
+    fx.t<2>() = A.contract(b, dims);
+  } else {
+    auto C = xs[2]->t<2>();
+    fx.t<2>() = A.contract(b, dims) + C;
+  }
+}
+
+void InnerProduct3D_1D::backward_impl(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  auto tdEdf = dEdf.t<2>();  // 2 tensor
+  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
+  if (i == 0) { // 3 tensor
+    // tensor product
+    auto b = xs[1]->t<1>();
+    dEdxi.t<3>() += tdEdf.contract(b, Eigen::array<DimPair, 0>{{}});
+  } else if (i == 1) {
+    auto A = xs[0]->t<3>();  // A is 3 tensor
+    Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
+    dEdxi.t<1>() += tdEdf.contract(A, dims);
+  } else if (i == 2) {
+    dEdxi.t<2>() += tdEdf;
+  } else {
+    cerr << "shouldn't happen\n"; abort();
+  }
+}
+
+//   Y_ij = A_ijk * B_k * C_j (+ D_i)
+void InnerProduct3D_1D_1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  abort(); // finish impl
   auto b = **xs[1];
   auto y = *fx;
   const unsigned i = y.rows();
   const unsigned j = y.cols();
   const unsigned k = b.rows();
-  // the following reshape tensors into order 1 or 2 sizes
-  // but they point to the same memory
   Tensor ta({i*j,k}, xs[0]->v);
   Tensor ty({i*j}, fx.v);
   auto A = *ta;
@@ -328,11 +363,12 @@ void InnerProduct3D_1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx
   }
 }
 
-void InnerProduct3D_1D::backward_impl(const vector<const Tensor*>& xs,
+void InnerProduct3D_1D_1D::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
                      unsigned i,
                      Tensor& dEdxi) const {
+  abort(); // finish impl
   auto b = **xs[1];
   auto y = *fx;
   const unsigned si = y.rows();
@@ -1548,7 +1584,7 @@ void Rectify::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   gpu::vrelu(fx.d.size(), xs[0]->v, fx.v);
 #else
   auto x = **xs[0];
-  *fx = x.unaryExpr(FRectify());
+  *fx = x.cwiseMax(0.f);
 #endif
 }
 
