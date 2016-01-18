@@ -121,12 +121,17 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
   }
 
   // loop in reverse topological order
+  // consider only nodes that participate in the computation.
+  vector<bool> in_computation(num_nodes, false);
+  in_computation[num_nodes - 1] = true;
   vector<const Tensor*> xs;
   for (int i = num_nodes - 1; i >= 0; --i) {
+    if (!in_computation[i]) continue;
     const Node* node = cg.nodes[i];
     xs.resize(node->arity());
     unsigned ai = 0;
     for (VariableIndex arg : node->args) {
+      in_computation[arg] = true;
       xs[ai] = &nfxs[arg];
       ++ai;
     }
