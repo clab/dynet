@@ -77,8 +77,15 @@ Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
 Expression block_dropout(const Expression& x, real p);
 
+// reshape::forward is O(1), but backward is O(n)
 Expression reshape(const Expression& x, const Dim& d);
+// transpose requires O(n)
 Expression transpose(const Expression& x);
+Expression select_rows(const Expression& x, const std::vector<unsigned>& rows);
+Expression select_rows(const Expression& x, const std::vector<unsigned>* prows);
+// select_cols is more efficient than select_rows since Eigen uses column-major order
+Expression select_cols(const Expression& x, const std::vector<unsigned>& cols);
+Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
 
 Expression trace_of_product(const Expression& x, const Expression& y);
 Expression cwise_multiply(const Expression& x, const Expression& y);
