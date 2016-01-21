@@ -9,6 +9,39 @@ namespace cnn {
 
 using namespace expr;
 
+inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
+inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
+
+NonFactoredSoftmaxBuilder::NonFactoredSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model* model) {
+  p_w = model->add_parameters({vocab_size, rep_dim});
+  p_b = model->add_parameters({vocab_size});
+}
+
+void NonFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg) {
+  pcg = &cg;
+  w = parameter(cg, p_w);
+  b = parameter(cg, p_b);
+}
+
+Expression NonFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
+  return pickneglogsoftmax(affine_transform({b, w, rep}), wordidx);
+}
+
+unsigned NonFactoredSoftmaxBuilder::sample(const expr::Expression& rep) {
+  softmax(affine_transform({b, w, rep}));
+  vector<float> dist = as_vector(pcg->incremental_forward());
+  unsigned c = 0;
+  double p = rand01();
+  for (; c < dist.size(); ++c) {
+    p -= dist[c];
+    if (p < 0.0) { break; }
+  }
+  if (c == dist.size()) {
+    --c;
+  }
+  return c;
+}
+
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict* word_dict,
@@ -87,9 +120,6 @@ unsigned ClassFactoredSoftmaxBuilder::sample(const expr::Expression& rep) {
   }
   return cidx2words[c][w];
 }
-
-inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
-inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
 
 void ClassFactoredSoftmaxBuilder::ReadClusterFile(const std::string& cluster_file, Dict* word_dict) {
   cerr << "Reading clusters from " << cluster_file << " ...\n";

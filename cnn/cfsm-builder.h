@@ -1,5 +1,5 @@
-#ifndef CNN_HSMBUILDER_H
-#define CNN_HSMBUILDER_H
+#ifndef CNN_CFSMBUILDER_H
+#define CNN_CFSMBUILDER_H
 
 #include <vector>
 #include <string>
@@ -11,23 +11,44 @@ namespace cnn {
 
 struct Parameters;
 
+class FactoredSoftmaxBuilder {
+public:
+  // call this once per ComputationGraph
+  virtual void new_graph(ComputationGraph& cg) = 0;
+
+  // -log(p(c | rep) * p(w | c, rep))
+  virtual expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx) = 0;
+
+  // samples a word from p(w,c | rep)
+  virtual unsigned sample(const expr::Expression& rep) = 0;
+};
+
+class NonFactoredSoftmaxBuilder : public FactoredSoftmaxBuilder {
+public:
+  NonFactoredSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model* model);
+  void new_graph(ComputationGraph& cg);
+  expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
+  unsigned sample(const expr::Expression& rep);
+private:
+  Parameters* p_w;
+  Parameters* p_b;
+  expr::Expression w;
+  expr::Expression b;
+  ComputationGraph* pcg;
+};
+
 // helps with implementation of hierarchical softmax
 // read a file with lines of the following format
 // CLASSID   word    [freq]
-class ClassFactoredSoftmaxBuilder {
+class ClassFactoredSoftmaxBuilder : public FactoredSoftmaxBuilder {
  public:
   ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                               const std::string& cluster_file,
                               Dict* word_dict,
                               Model* model);
 
-  // call this once per ComputationGraph
   void new_graph(ComputationGraph& cg);
-
-  // -log(p(c | rep) * p(w | c, rep))
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
-
-  // samples a word from p(w,c | rep)
   unsigned sample(const expr::Expression& rep);
 
  private:
