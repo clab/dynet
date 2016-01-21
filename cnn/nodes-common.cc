@@ -17,6 +17,37 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string SelectRows::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "select_rows(" << arg_names[0] << ", {rsize=" << prows->size() << "})";
+  return s.str();
+}
+
+Dim SelectRows::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 1 || xs[0].ndims() > 2) {
+    cerr << "Bad arguments in SelectRows: " << xs << endl;
+    throw std::invalid_argument("invalid arguments to SelectRows");
+  }
+  unsigned nrows = prows->size();
+  if (xs[0].ndims() == 1) return Dim({nrows});
+  return Dim({nrows, xs[0].cols()});
+}
+
+string SelectCols::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "select_cols(" << arg_names[0] << ", {csize=" << pcols->size() << "})";
+  return s.str();
+}
+
+Dim SelectCols::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 1 || xs[0].ndims() != 2) {
+    cerr << "Bad arguments in SelectCols: " << xs << endl;
+    throw std::invalid_argument("invalid arguments to SelectCols");
+  }
+  unsigned ncols = pcols->size();
+  return Dim({xs[0].rows(), ncols});
+}
+
 string Min::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "min{" << arg_names[0] << ", " << arg_names[1] << "}";
