@@ -35,6 +35,66 @@ using namespace std;
 
 namespace cnn {
 
+void SelectRows::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+#ifdef HAVE_CUDA
+  throw std::runtime_error("SelectRows not yet implemented for CUDA");
+#else
+  auto x = **xs[0];
+  auto y = *fx;
+  auto& rm = *prows;
+  for (unsigned i = 0; i < rm.size(); ++i)
+    y.row(i) = x.row(rm[i]);
+#endif
+}
+
+void SelectRows::backward_impl(const vector<const Tensor*>& xs,
+                               const Tensor& fx,
+                               const Tensor& dEdf,
+                               unsigned i,
+                               Tensor& dEdxi) const {
+  assert(xs.size() == 1);
+#ifdef HAVE_CUDA
+  throw std::runtime_error("SelectRows not yet implemented for CUDA");
+#else
+  auto dEdx = *dEdxi;
+  auto d = *dEdf;
+  auto& rm = *prows;
+  for (unsigned i = 0; i < rm.size(); ++i)
+    dEdx.row(rm[i]) += d.row(i);
+#endif
+}
+
+void SelectCols::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+#ifdef HAVE_CUDA
+  throw std::runtime_error("SelectCols not yet implemented for CUDA");
+#else
+  auto x = **xs[0];
+  auto y = *fx;
+  auto& cm = *pcols;
+  for (unsigned i = 0; i < cm.size(); ++i)
+    y.col(i) = x.col(cm[i]);
+#endif
+}
+
+void SelectCols::backward_impl(const vector<const Tensor*>& xs,
+                               const Tensor& fx,
+                               const Tensor& dEdf,
+                               unsigned i,
+                               Tensor& dEdxi) const {
+  assert(xs.size() == 1);
+#ifdef HAVE_CUDA
+  throw std::runtime_error("SelectCols not yet implemented for CUDA");
+#else
+  auto dEdx = *dEdxi;
+  auto d = *dEdf;
+  auto& cm = *pcols;
+  for (unsigned i = 0; i < cm.size(); ++i)
+    dEdx.col(cm[i]) += d.col(i);
+#endif
+}
+
 void Pow::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #ifdef HAVE_CUDA
