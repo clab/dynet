@@ -8,6 +8,7 @@
 #include "cnn/dict.h"
 #include "cnn/expr.h"
 #include "cnn/cfsm-builder.h"
+#include "cnn/hsm-builder.h"
 
 #include <iostream>
 #include <fstream>
@@ -26,7 +27,7 @@ unsigned HIDDEN_DIM = 0;
 unsigned VOCAB_SIZE = 0;
 float DROPOUT = 0;
 bool SAMPLE = false;
-ClassFactoredSoftmaxBuilder* cfsm = nullptr;
+FactoredSoftmaxBuilder* cfsm = nullptr;
 
 cnn::Dict d;
 int kSOS;
@@ -43,6 +44,7 @@ void InitCommandLine(int argc, char** argv, po::variables_map* conf) {
         ("test,p", po::value<string>(), "test corpus")
         ("learn,x", "set this to estimate the language model from the training data")
         ("clusters,c", po::value<string>(), "word cluster file for class factored softmax")
+        ("paths,b", po::value<string>(), "word paths file for hierarchical softmax")
         ("sample,s", "periodically generate random samples from model as it trains (recommended)")
         ("model,m", po::value<string>(), "load model from this file")
         ("input_dim,i", po::value<unsigned>()->default_value(128), "input embedding dimension")
@@ -166,6 +168,8 @@ int main(int argc, char** argv) {
   Model model;
   if (conf.count("clusters"))
     cfsm = new ClassFactoredSoftmaxBuilder(HIDDEN_DIM, conf["clusters"].as<string>(), &d, &model);
+  else if (conf.count("paths"))
+    cfsm = new HierarchicalSoftmaxBuilder(HIDDEN_DIM, conf["paths"].as<string>(), &d, &model);
   float eta_decay_rate = 1;
   unsigned eta_decay_onset_epoch = 0;
   if (conf.count("eta_decay_onset_epoch"))
@@ -195,6 +199,8 @@ int main(int argc, char** argv) {
   d.Freeze(); // no new word types allowed
   d.SetUnk("<unk>");
   VOCAB_SIZE = d.size();
+  if (!cfsm)
+    cfsm = new NonFactoredSoftmaxBuilder(HIDDEN_DIM, VOCAB_SIZE, &model);
 
   if (conf.count("test")) {
     string testf = conf["test"].as<string>();
