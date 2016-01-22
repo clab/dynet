@@ -1,5 +1,6 @@
 #include "cnn/param-nodes.h"
 #include "cnn/tensor.h"
+#include "cnn/weight-decay.h"
 
 #include <sstream>
 
@@ -20,7 +21,7 @@ Dim ConstParameterNode::dim_forward(const vector<Dim>& xs) const {
 
 void ConstParameterNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  fx.v = params->values.v;
+  *fx = *params->values * global_weight_decay.CurrentWeightDecay();
 }
 
 void ConstParameterNode::backward_impl(const vector<const Tensor*>& xs,
@@ -45,14 +46,24 @@ Dim ParameterNode::dim_forward(const vector<Dim>& xs) const {
 
 void ParameterNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
+// TODO
+//  if (params->not_regularized) {
+//    fx.v = params->values.v;
+//    return;
+//  }
+#if HAVE_CUDA
   fx.v = params->values.v;
+  cerr << "ParameterNode::forward_impl - implement * global_weight_scale for CUDA\n";
+#else
+  *fx = *params->values * global_weight_decay.CurrentWeightDecay();
+#endif
 }
 
 void ParameterNode::backward_impl(const vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                               unsigned i,
-                               Tensor& dEdxi) const {
+                                  const Tensor& fx,
+                                  const Tensor& dEdf,
+                                  unsigned i,
+                                  Tensor& dEdxi) const {
   cerr << "called backward() on arity 0 node: i = " << i << endl;
   abort();
 }
@@ -139,7 +150,7 @@ void LookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const
   if(pindex) {
     assert(*pindex < params->values.size());
     assert (fx.d.batch_elems() == 1);
-    fx.v = params->values[*pindex].v;
+    *fx = *params->values[*pindex] * global_weight_decay.CurrentWeightDecay();
   } else {
     assert (pindices);
     assert (fx.d.batch_elems() == pindices->size());
@@ -152,6 +163,7 @@ void LookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const
 #else
       memcpy(v, params->values[i].v, fx.d.batch_size() * sizeof(float));
 #endif
+      cerr << "TODO: implement * global_weight_scale\n";
     }
   }
 }

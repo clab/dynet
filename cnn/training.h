@@ -8,8 +8,8 @@
 namespace cnn {
 
 struct Trainer {
-  explicit Trainer(Model* m, real lam, real e0) :
-    eta0(e0), eta(e0), eta_decay(), epoch(), lambda(lam), clipping_enabled(true), clip_threshold(5), clips(), updates(), model(m) {}
+  explicit Trainer(Model* m, real e0) :
+    eta0(e0), eta(e0), eta_decay(), epoch(), clipping_enabled(true), clip_threshold(5), clips(), updates(), model(m) {}
   virtual ~Trainer();
 
   virtual void update(real scale = 1.0) = 0;
@@ -28,8 +28,6 @@ struct Trainer {
   real eta_decay;
   real epoch;
 
-  real lambda; // weight regularization (l2)
-
   // clipping
   real clipping_enabled;
   real clip_threshold;
@@ -42,17 +40,20 @@ struct Trainer {
   }
 
   Model* model;  // parameters and gradients live here
+
+ protected:
+  void rescale_and_reset_weight_decay();
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.1) : Trainer(m, lam, e0) {}
+  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1) : Trainer(m, e0) {}
   void update(real scale) override;
   void update(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale = 1);
 };
 
 struct MomentumSGDTrainer : public Trainer {
-  explicit MomentumSGDTrainer(Model* m, real lam = 1e-6, real e0 = 0.01, real mom = 0.9) :
-    Trainer(m, lam, e0), momentum(mom), velocity_allocated(false) {}
+  explicit MomentumSGDTrainer(Model* m, real e0 = 0.01, real mom = 0.9) :
+    Trainer(m, e0), momentum(mom), velocity_allocated(false) {}
   void update(real scale) override;
 
   real momentum;
@@ -67,8 +68,8 @@ struct MomentumSGDTrainer : public Trainer {
 };
 
 struct AdagradTrainer : public Trainer {
-  explicit AdagradTrainer(Model* m, real lam = 1e-6, real e0 = 0.1, real eps = 1e-20) :
-    Trainer(m, lam, e0), epsilon(eps), shadow_params_allocated(false) {}
+  explicit AdagradTrainer(Model* m, real e0 = 0.1, real eps = 1e-20) :
+    Trainer(m, e0), epsilon(eps), shadow_params_allocated(false) {}
   void update(real scale) override;
 
   real epsilon;
@@ -78,8 +79,8 @@ struct AdagradTrainer : public Trainer {
 };
 
 struct AdadeltaTrainer : public Trainer {
-  explicit AdadeltaTrainer(Model* m, real lam = 1e-6, real eps = 1e-6, real rho = 0.95) :
-    Trainer(m, lam, 1.0), epsilon(eps), rho(rho), shadow_params_allocated(false) {}
+  explicit AdadeltaTrainer(Model* m, real eps = 1e-6, real rho = 0.95) :
+    Trainer(m, 1.0), epsilon(eps), rho(rho), shadow_params_allocated(false) {}
   void update(real scale) override;
 
   real epsilon;
@@ -92,8 +93,8 @@ struct AdadeltaTrainer : public Trainer {
 };
 
 struct RmsPropTrainer : public Trainer {
-  explicit RmsPropTrainer(Model* m, real lam = 1e-6, real e0 = 0.1, real eps = 1e-20, real rho = 0.95) :
-    Trainer(m, lam, e0), epsilon(eps), rho(rho), shadow_params_allocated(false) {}
+  explicit RmsPropTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95) :
+    Trainer(m, e0), epsilon(eps), rho(rho), shadow_params_allocated(false) {}
   void update(real scale) override;
 
   real epsilon;
@@ -104,8 +105,8 @@ struct RmsPropTrainer : public Trainer {
 };
 
 struct AdamTrainer : public Trainer {
-  explicit AdamTrainer(Model* m, float lambda = 1e-6, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
-    Trainer(m, lambda, alpha), beta_1(beta_1), beta_2(beta_2), eps(eps), shadow_params_allocated(false) {}
+  explicit AdamTrainer(Model* m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
+    Trainer(m, alpha), beta_1(beta_1), beta_2(beta_2), eps(eps), shadow_params_allocated(false) {}
 
   void update(real scale) override;
 
