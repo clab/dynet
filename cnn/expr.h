@@ -43,6 +43,8 @@ Expression operator*(const Expression& x, const Expression& y);
 Expression operator*(const Expression& x, float y);
 inline Expression operator*(float y, const Expression& x) { return x * y; }
 inline Expression operator/(const Expression& x, float y) { return x * (1.f / y); }
+// colwise addition
+Expression addmv(const Expression& M, const Expression& v);
 // componentwise division
 Expression cdiv(const Expression& x, const Expression& y);
 Expression colwise_add(const Expression& x, const Expression& bias);
@@ -86,6 +88,8 @@ Expression select_rows(const Expression& x, const std::vector<unsigned>* prows);
 // select_cols is more efficient than select_rows since Eigen uses column-major order
 Expression select_cols(const Expression& x, const std::vector<unsigned>& cols);
 Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
+// matrix inverse
+Expression inverse(const Expression& x);
 
 Expression trace_of_product(const Expression& x, const Expression& y);
 Expression cwise_multiply(const Expression& x, const Expression& y);
