@@ -150,7 +150,7 @@ void LookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const
   if(pindex) {
     assert(*pindex < params->values.size());
     assert (fx.d.batch_elems() == 1);
-    *fx = *params->values[*pindex] * global_weight_decay.CurrentWeightDecay();
+    fx.vec() = params->values[*pindex].vec() * global_weight_decay.CurrentWeightDecay();
   } else {
     assert (pindices);
     assert (fx.d.batch_elems() == pindices->size());
@@ -161,10 +161,12 @@ void LookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const
 #if HAVE_CUDA
       cudaMemcpyAsync(v, params->values[i].v, fx.d.batch_size() * sizeof(float), cudaMemcpyDeviceToDevice);
 #else
+      // we should use colwise() instead of memcpy to get rid of the
+      // extra multiply by global_weight_decay.CurrentWeightDecay()
       memcpy(v, params->values[i].v, fx.d.batch_size() * sizeof(float));
 #endif
-      cerr << "TODO: implement * global_weight_scale\n";
     }
+    fx.vec() *= global_weight_decay.CurrentWeightDecay();
   }
 }
 
