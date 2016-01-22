@@ -17,6 +17,33 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string MatrixInverse::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "inverse(" << arg_names[0] << ")";
+  return s.str();
+}
+
+Dim MatrixInverse::dim_forward(const vector<Dim>& xs) const {
+  return xs[0];
+}
+
+string AddMv::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "addmv(" << arg_names[0] << ", " << arg_names[1] << ")";
+  return s.str();
+}
+
+Dim AddMv::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 ||
+      xs[0].ndims() > 2 ||
+      xs[0].rows() != xs[1].rows() ||
+      xs[1].ndims() != 1) {
+    cerr << "Bad arguments in AddMv: " << xs << endl;
+    throw std::invalid_argument("invalid arguments to AddMv");
+  }
+  return xs[0];
+}
+
 string SelectRows::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "select_rows(" << arg_names[0] << ", {rsize=" << prows->size() << "})";

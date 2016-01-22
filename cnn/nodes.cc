@@ -35,6 +35,63 @@ using namespace std;
 
 namespace cnn {
 
+void MatrixInverse::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+#ifdef HAVE_CUDA
+  throw std::runtime_error("MatrixInverse not yet implemented for CUDA");
+#else
+  auto x = **xs[0];
+  auto y = *fx;
+  y = x.inverse();
+#endif
+}
+
+void MatrixInverse::backward_impl(const vector<const Tensor*>& xs,
+                                  const Tensor& fx,
+                                  const Tensor& dEdf,
+                                  unsigned i,
+                                  Tensor& dEdxi) const {
+  assert(xs.size() == 1);
+#ifdef HAVE_CUDA
+  throw std::runtime_error("MatrixInverse not yet implemented for CUDA");
+#else
+  auto d = *dEdf;
+  auto y = *fx;
+  (*dEdxi) -= y * d * y;
+#endif
+}
+
+void AddMv::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+#ifdef HAVE_CUDA
+  throw std::runtime_error("AddMv not yet implemented for CUDA");
+#else
+  auto M = **xs[0];
+  auto v = **xs[1];
+  auto y = *fx;
+  y = M.colwise() + v.col(0);
+#endif
+}
+
+void AddMv::backward_impl(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  assert(xs.size() == 2);
+#ifdef HAVE_CUDA
+  throw std::runtime_error("AddMv not yet implemented for CUDA");
+#else
+  auto dEdx = *dEdxi;
+  auto d = *dEdf;
+  if (i == 0) { // Matrix
+    dEdx += d;
+  } else { // vector
+    dEdx += d.rowwise().sum();
+  }
+#endif
+}
+
 void SelectRows::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
 #ifdef HAVE_CUDA
