@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
   cnn::Initialize(argc, argv, 1, true);
 
   Model model;
-  SimpleSGDTrainer sgd(&model, 0.0, 0.2);
+  SimpleSGDTrainer sgd(&model, 0.2);
   //AdagradTrainer sgd(&model, 0.0);
   //AdamTrainer sgd(&model, 0.0);
 

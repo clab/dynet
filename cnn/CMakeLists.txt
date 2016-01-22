@@ -27,6 +27,7 @@ set(cnn_library_SRCS
     shadow-params.cc
     tensor.cc
     training.cc
+    weight-decay.cc
 )
 
 # Headers:
@@ -63,6 +64,7 @@ set(cnn_library_HDRS
     tensor.h
     timing.h
     training.h
+    weight-decay.h
 )
 
 if(WITH_CUDA_BACKEND)
