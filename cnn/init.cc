@@ -1,6 +1,7 @@
 #include "cnn/init.h"
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/cnn.h"
+#include "cnn/weight-decay.h"
 
 #include <iostream>
 #include <random>
@@ -53,6 +54,21 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
         string a2 = argv[argi+1];
         istringstream c(a2); c >> num_mb;
         RemoveArgs(argc, argv, argi, 2);
+      }
+    } else if (arg == "--cnn-l2" || arg == "--cnn_l2") {
+      if ((argi + 1) > argc) {
+        cerr << "[cnn] --cnn-l2 requires an argument (the weight decay per update)\n";
+        abort();
+      } else {
+        string a2 = argv[argi+1];
+        float decay = 0;
+        istringstream d(a2); d >> decay;
+        RemoveArgs(argc, argv, argi, 2);
+        if (decay < 0 || decay >= 1) {
+          cerr << "[cnn] weight decay parameter must be between 0 and 1 (probably very small like 1e-6)\n";
+          abort();
+        }
+        global_weight_decay.SetLambda(decay);
       }
     } else if (arg == "--cnn-seed" || arg == "--cnn_seed") {
       if ((argi + 1) > argc) {
