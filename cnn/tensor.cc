@@ -126,13 +126,27 @@ void TensorTools::Randomize(Tensor& d) {
 void TensorTools::RandomBernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
   auto b = [&] {return distribution(*rndeng) * scale;};
+#if HAVE_CUDA
+  float* t = new float[val.d.size()];
+  generate(t, t + val.d.size(), b);
+  CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+  delete[] t;
+#else
   generate(val.v, val.v + val.d.size(), b);
+#endif
 }
 
 void TensorTools::RandomizeNormal(real mean, real stddev, Tensor& val) {
   normal_distribution<real> distribution(mean, stddev);
   auto b = [&] {return distribution(*rndeng);};
+#if HAVE_CUDA
+  float* t = new float[val.d.size()];
+  generate(t, t + val.d.size(), b);
+  CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+  delete[] t;
+#else
   generate(val.v, val.v + val.d.size(), b);
+#endif
 }
 
 real rand01() {

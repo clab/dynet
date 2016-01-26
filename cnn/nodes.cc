@@ -539,11 +539,11 @@ size_t Dropout::aux_storage_size() const {
 }
 
 void Dropout::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Dropout not yet implemented for CUDA");
-#else
   Tensor m(dim, (float*)aux_mem);
   TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
+#ifdef HAVE_CUDA
+  gpu::vcwise_product(fx.d.size(), xs[0]->v, m.v, fx.v);
+#else
   fx.vec() = xs[0]->vec().cwiseProduct(m.vec());
 #endif
 }
@@ -553,10 +553,10 @@ void Dropout::backward_impl(const vector<const Tensor*>& xs,
                        const Tensor& dEdf,
                        unsigned i,
                        Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Pow not yet implemented for CUDA");
-#else
   Tensor m(dim, (float*)aux_mem);
+#ifdef HAVE_CUDA
+  gpu::vcwise_product(dEdf.d.size(), dEdf.v, m.v, fx.v);
+#else
   dEdxi.vec() += dEdf.vec().cwiseProduct(m.vec());
 #endif
 }
