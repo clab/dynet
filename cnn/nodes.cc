@@ -649,6 +649,34 @@ EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   return m + log(z);
 }
 
+// set use_cholesky if M is symmetric - it's faster and more stable
+// for dep paring it won't be
+template <typename MatrixType>
+inline typename MatrixType::Scalar logdet(const MatrixType& M, bool use_cholesky = false) {
+  using namespace Eigen;
+  using std::log;
+  typedef typename MatrixType::Scalar Scalar;
+  Scalar ld = 0;
+  if (use_cholesky) {
+    LLT<Matrix<Scalar,Dynamic,Dynamic>> chol(M);
+    auto& U = chol.matrixL();
+    for (unsigned i = 0; i < M.rows(); ++i)
+      ld += log(U(i,i));
+    ld *= 2;
+  } else {
+    PartialPivLU<Matrix<Scalar,Dynamic,Dynamic>> lu(M);
+    auto& LU = lu.matrixLU();
+    Scalar c = lu.permutationP().determinant(); // -1 or 1
+    for (unsigned i = 0; i < LU.rows(); ++i) {
+      const auto& lii = LU(i,i);
+      if (lii < Scalar(0)) c *= -1;
+      ld += log(abs(lii));
+    }
+    ld += log(c);
+  }
+  return ld;
+}
+
 // this i need to do something better, but this is a work-around
 // if this is too small, just make it bigger
 #define MAX_LOG_SUM_EXP 65536
@@ -669,6 +697,11 @@ void LogSumExp::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const 
   fx.v[0] = logsumexp(*v);
 }
 
+void LogDet::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  fx.v[0] = logdet(**xs[0], false);
+}
+
 void LogSumExp::backward_impl(const vector<const Tensor*>& xs,
                      const Tensor& fx,
                      const Tensor& dEdf,
@@ -683,6 +716,15 @@ void LogSumExp::backward_impl(const vector<const Tensor*>& xs,
   //         = exp(x_i - f(x))
   auto d = *dEdxi;
   d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
+}
+
+void LogDet::backward_impl(const vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const {
+  auto trans = (**xs[0]).transpose();
+  (*dEdxi) += (dEdf.v[0]) * trans.inverse();
 }
 
 void Sum::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
