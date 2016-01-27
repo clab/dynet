@@ -1362,7 +1362,11 @@ void RestrictedLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
 // x_1 is a vector
 // y = (x_1)_{*pval}
 void PickElement::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
+  if (*pval >= xs[0]->d.rows()) {
+    cerr << "PickElement::forward_impl requested element " << *pval
+         << "from a vector of length " << xs[0]->d.rows() << endl;
+    abort();
+  }
 #ifdef HAVE_CUDA
   throw std::runtime_error("PickElement not yet implemented for CUDA");
 #else
