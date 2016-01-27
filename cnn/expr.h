@@ -15,6 +15,7 @@ struct Expression {
   const Tensor& value() { return pg->get_value(i); }
 };
 
+
 Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
@@ -90,6 +91,7 @@ Expression select_cols(const Expression& x, const std::vector<unsigned>& cols);
 Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
 // matrix inverse
 Expression inverse(const Expression& x);
+Expression logdet(const Expression& x);
 
 Expression trace_of_product(const Expression& x, const Expression& y);
 Expression cwise_multiply(const Expression& x, const Expression& y);
