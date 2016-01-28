@@ -11,6 +11,8 @@ enum class DeviceType {CPU, GPU};
 class Device {
  protected:
   Device(DeviceType t) : type(t) {}
+  Device(const Device&) = delete;
+  Device& operator=(const Device&) = delete;
   virtual ~Device();
  public:
   DeviceType type;
