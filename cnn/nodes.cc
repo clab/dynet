@@ -1608,9 +1608,13 @@ void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) 
     for (unsigned i = 1; i < xs.size(); i += 2)
       // fx = (acc_sclar)*fx + xs[0] * xs[1]
       CUDAMatrixMultiply(*xs[i], *xs[i + 1], fx, (i == 1) ? kSCALAR_ZERO : kSCALAR_ONE);
-    assert(fx.d.bd == 1);
-    assert(xs[0]->d.bd == 1);
-    CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v, 1, fx.v, 1));
+    if(fx.d.bd == xs[0]->d.bd) {
+      CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v, 1, fx.v, 1));
+    } else {
+      // TODO: Any better way to do broadcasting?
+      for(unsigned b = 0; b < fx.d.bd; ++b)
+        CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.batch_size(), kSCALAR_ONE, xs[0]->batch_ptr(b), 1, fx.batch_ptr(b), 1));
+    }
 #else
     assert(fx.d.bd == 1);
     // Add, using broadcasting or not
@@ -1672,14 +1676,23 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
   } else {  // right argument of matrix multiply
     int max_b = max(xs[i-1]->d.bd, dEdf.d.bd);
 #if HAVE_CUDA
-    // TODO: Add reverse
-    for(int b = 0; b < max_b; ++b)
-      CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
-            dEdxi.d.rows(), dEdxi.d.cols(), xs[i-1]->d.rows(),
+    // Do a single multiply if xs[i-1] has one batch
+    if(xs[i-1]->d.bd == 1) {
+      CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, 
+            dEdxi.d.rows(), dEdxi.d.cols()*dEdxi.d.batch_elems(), xs[i-1]->d.rows(),
             kSCALAR_ONE,
-            xs[i-1]->batch_ptr(b), xs[i-1]->d.rows(),
-            dEdf.batch_ptr(b), xs[i-1]->d.rows(),
-            kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+            xs[i-1]->v, xs[i-1]->d.rows(),
+            dEdf.v, dEdf.d.rows(),
+            kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+    } else {
+      for(int b = 0; b < max_b; ++b)
+        CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+              dEdxi.d.rows(), dEdxi.d.cols(), xs[i-1]->d.rows(),
+              kSCALAR_ONE,
+              xs[i-1]->batch_ptr(b), xs[i-1]->d.rows(),
+              dEdf.batch_ptr(b), dEdf.d.rows(),
+              kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+    }
 #else
     if(xs[i-1]->d.bd == 1) {
       dEdxi.colbatch_matrix().noalias() += (**xs[i-1]).transpose() * dEdf.colbatch_matrix();
