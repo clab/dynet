@@ -1616,7 +1616,6 @@ void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) 
         CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.batch_size(), kSCALAR_ONE, xs[0]->batch_ptr(b), 1, fx.batch_ptr(b), 1));
     }
 #else
-    assert(fx.d.bd == 1);
     // Add, using broadcasting or not
     if(fx.d.bd > 1 && xs[0]->d.bd == 1) {
       fx.rowcol_matrix().colwise() = xs[0]->vec();
@@ -1650,7 +1649,6 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
 #if HAVE_CUDA
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
 #else
-    assert(fx.d.bd == 1);
     // Add, using broadcasting or not
     if(dEdxi.d.bd > 1 && dEdf.d.bd == 1) {
       dEdxi.rowcol_matrix().colwise() += dEdf.vec();
