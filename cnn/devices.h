@@ -27,6 +27,7 @@ class Device {
 class Device_GPU : public Device {
  public:
   Device_GPU(int device_id);
+  ~Device_GPU();
   int cuda_device_id;
 };
 #endif
@@ -34,6 +35,7 @@ class Device_GPU : public Device {
 class Device_CPU : public Device {
  public:
   Device_CPU();
+  ~Device_CPU();
 };
 
 } // namespace cnn
