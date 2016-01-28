@@ -1499,14 +1499,24 @@ void MatrixMultiply::backward_impl(const vector<const Tensor*>& xs,
             xs[1]->batch_ptr(b), xs[1]->d.rows(),
             kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
   } else {
-    // TODO: Fix this to share
-    for(int b = 0; b < max_b; ++b)
+    // Do a single multiply if xs[0] has one batch
+    if(xs[0]->d.bd == 1) {
+      // dEdxi.colbatch_matrix().noalias() += (**xs[0]).transpose() * dEdf.colbatch_matrix();
       CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
-            dEdxi.d.rows(), dEdxi.d.cols(), xs[0]->d.rows(),
+            dEdxi.d.rows(), dEdxi.d.cols()*dEdxi.d.batch_elems(), xs[0]->d.rows(),
             kSCALAR_ONE,
-            xs[0]->batch_ptr(b), xs[0]->d.rows(),
-            dEdf.batch_ptr(b), dEdf.d.rows(),
-            kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+            xs[0]->v, xs[0]->d.rows(),
+            dEdf.v, dEdf.d.rows(),
+            kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+    } else {
+      for(int b = 0; b < max_b; ++b)
+        CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+              dEdxi.d.rows(), dEdxi.d.cols(), xs[0]->d.rows(),
+              kSCALAR_ONE,
+              xs[0]->batch_ptr(b), xs[0]->d.rows(),
+              dEdf.batch_ptr(b), dEdf.d.rows(),
+              kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+    }
   }
 #else
   if (i == 0) {
