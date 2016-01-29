@@ -35,7 +35,7 @@ void Initialize_GPU(int& argc, char**& argv) {
   int argi = 1;
   bool ngpus_requested = false;
   bool ids_requested = false;
-  while(argi < argc) {
+  for( ;argi < argc; ++argi) {
     string arg = argv[argi];
     if (arg == "--cnn_gpus" || arg == "--cnn-gpus") {
       if ((argi + 1) > argc) {
