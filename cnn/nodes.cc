@@ -1830,6 +1830,29 @@ void PoissonRegressionLoss::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
+void SquaredNorm::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+#if HAVE_CUDA
+  throw std::runtime_error("SquaredNorm not yet implemented for CUDA");
+#else
+  fx.v[0] = xs[0]->vec().squaredNorm();
+#endif
+}
+
+void SquaredNorm::backward_impl(const vector<const Tensor*>& xs,
+                                 const Tensor& fx,
+                                 const Tensor& dEdf,
+                                 unsigned i,
+                                 Tensor& dEdxi) const {
+  assert(i < 1);
+#if HAVE_CUDA
+  throw std::runtime_error("SquaredNorm not yet implemented for CUDA");
+#else
+  real scale = dEdf.v[0] * 2;
+  dEdxi.vec().noalias() += scale * xs[0]->vec();
+#endif
+}
+
 void SquaredEuclideanDistance::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #if HAVE_CUDA

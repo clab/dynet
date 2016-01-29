@@ -837,6 +837,17 @@ Dim PoissonRegressionLoss::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string SquaredNorm::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "|| " << arg_names[0] << " ||^2";
+  return s.str();
+}
+
+Dim SquaredNorm::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return Dim({1}, xs[0].bd);
+}
+
 string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
