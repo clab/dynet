@@ -21,6 +21,7 @@ struct NodeTest {
     ones3_vals = {1.f,1.f,1.f};
     first_one_vals = {1.f,0.f,0.f};
     ones2_vals = {1.f,1.f};
+    batch_vals = {1.f,2.f,3.f,4.f,5.f,6.f};
     // Create parameters
     std::vector<float> param1_vals = {1.1f,-2.2f,3.3f};
     std::vector<float> param2_vals = {2.2f,3.4f,-1.2f};
@@ -51,7 +52,7 @@ struct NodeTest {
     return oss.str();
   }
 
-  std::vector<float> ones3_vals, ones2_vals, first_one_vals;
+  std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
   cnn::Model mod;
   cnn::Parameters *param1, *param2, *param3, *param_scalar1, *param_scalar2;
@@ -366,23 +367,25 @@ BOOST_AUTO_TEST_CASE( max_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
-// Expression noise(const Expression& x, real stddev);
-BOOST_AUTO_TEST_CASE( noise_gradient ) {
-  cnn::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
-  Expression y = noise(x1, 0.5);
-  input(cg, {1,3}, ones3_vals) * y;
-  BOOST_CHECK(CheckGrad(mod, cg, 0));
-}
+// TODO: Noise is random, so it cannot be tested simply?
+// // Expression noise(const Expression& x, real stddev);
+// BOOST_AUTO_TEST_CASE( noise_gradient ) {
+//   cnn::ComputationGraph cg;
+//   Expression x1 = parameter(cg, param1);
+//   Expression y = noise(x1, 0.5);
+//   input(cg, {1,3}, ones3_vals) * y;
+//   BOOST_CHECK(CheckGrad(mod, cg, 0));
+// }
 
-// Expression dropout(const Expression& x, real p);
-BOOST_AUTO_TEST_CASE( dropout_gradient ) {
-  cnn::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
-  Expression y = dropout(x1, 0.5);
-  input(cg, {1,3}, ones3_vals) * y;
-  BOOST_CHECK(CheckGrad(mod, cg, 0));
-}
+// TODO: Dropout scales the gradients at training time, so they don't match.
+// // Expression dropout(const Expression& x, real p);
+// BOOST_AUTO_TEST_CASE( dropout_gradient ) {
+//   cnn::ComputationGraph cg;
+//   Expression x1 = parameter(cg, param1);
+//   Expression y = dropout(x1, 0.5);
+//   input(cg, {1,3}, ones3_vals) * y;
+//   BOOST_CHECK(CheckGrad(mod, cg, 0));
+// }
 
 // Expression block_dropout(const Expression& x, real p);
 // TODO
@@ -509,6 +512,16 @@ BOOST_AUTO_TEST_CASE( pickptr_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression pickneglogsoftmax(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
+  std::vector<unsigned> idx = {1,2};
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  sum_batches(pick(x1+x2, idx));
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression pickrange(const Expression& x, unsigned v, unsigned u);
 BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
   cnn::ComputationGraph cg;
@@ -527,7 +540,14 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
-// Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
-// TODO: Not covered yet
+// Expression pickneglogsoftmax(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pickneglogsoftmax_batch_gradient ) {
+  std::vector<unsigned> idx = {1,2};
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  sum_batches(pickneglogsoftmax(x1+x2, idx));
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
 
 BOOST_AUTO_TEST_SUITE_END()

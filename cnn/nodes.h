@@ -655,7 +655,9 @@ struct Sum : public Node {
   template <typename T> explicit Sum(const T& a) : Node(a) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
-  virtual bool supports_multibatch() const override { return true; }
+  // TODO: Sum should be be implemented over the entire mini-batch, but this is not
+  //       super-easy in the current implementation
+  // virtual bool supports_multibatch() const override { return true; }
   void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward_impl(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
@@ -829,10 +831,10 @@ struct LogSoftmax : public Node {
 // y = (x_1)_element - \log z
 struct PickNegLogSoftmax : public Node {
   explicit PickNegLogSoftmax(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val), vals(), pvals() {}
-  // use this constructor if you want to change the value after the graph is constructed
-  explicit PickNegLogSoftmax(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv), vals(), pvals() {}
+  // use this constructor if you want to perform mini-batching
   explicit PickNegLogSoftmax(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v) : Node(a), val(), pval(), vals(v), pvals(&vals) {}
-  // use this constructor if you want to change the value after the graph is constructed
+  // use these constructors if you want to change the value after the graph is constructed
+  explicit PickNegLogSoftmax(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv), vals(), pvals() {}
   explicit PickNegLogSoftmax(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv) : Node(a), val(), pval(), vals(), pvals(pv) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
@@ -869,9 +871,13 @@ struct RestrictedLogSoftmax : public Node {
 // y = (x_1)_{*pval}
 // this is used to implement cross-entropy training
 struct PickElement : public Node {
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val) {}
-  // use this constructor if you want to change the value after the graph is constructed
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv) {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val), vals(), pvals() {}
+  // use this constructor if you want to perform mini-batching
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v) : Node(a), val(), pval(), vals(v), pvals(&vals) {}
+  // use these constructors if you want to change the value after the graph is constructed
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv), vals(), pvals() {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv) : Node(a), val(), pval(), vals(), pvals(pv) {}
+  virtual bool supports_multibatch() const override { return true; }
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -882,6 +888,8 @@ struct PickElement : public Node {
                     Tensor& dEdxi) const override;
   unsigned val;
   const unsigned* pval;
+  std::vector<unsigned> vals;
+  const std::vector<unsigned>* pvals;
 };
 
 // x_1 is a vector

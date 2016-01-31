@@ -1347,16 +1347,25 @@ void RestrictedLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
 // x_1 is a vector
 // y = (x_1)_{*pval}
 void PickElement::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  if (*pval >= xs[0]->d.rows()) {
-    cerr << "PickElement::forward_impl requested element " << *pval
-         << "from a vector of length " << xs[0]->d.rows() << endl;
-    abort();
-  }
 #ifdef HAVE_CUDA
   throw std::runtime_error("PickElement not yet implemented for CUDA");
 #else
-  auto x = **xs[0];
-  fx.v[0] = x(*pval);
+  if(pval) {
+    if (*pval >= xs[0]->d.rows()) {
+      cerr << "PickElement::forward_impl requested element " << *pval
+           << "from a vector of length " << xs[0]->d.rows() << endl;
+      abort();
+    }
+    auto x = **xs[0];
+    fx.v[0] = x(*pval);
+  } else {
+    assert(pvals);
+    assert(pvals->size() == fx.d.batch_elems());
+    for(unsigned b = 0; b < pvals->size(); ++b) {
+      auto x = xs[0]->batch_matrix(b);
+      fx.v[b] = x((*pvals)[b]);
+    }
+  }
 #endif
 }
 
@@ -1370,7 +1379,13 @@ void PickElement::backward_impl(const vector<const Tensor*>& xs,
 #ifdef HAVE_CUDA
   throw std::runtime_error("PickElement not yet implemented for CUDA");
 #else
-  (*dEdxi)(*pval) += dEdf.v[0];
+  if(pval) {
+    (*dEdxi)(*pval) += dEdf.v[0];
+  } else {
+    assert(pvals);
+    for(unsigned b = 0; b < pvals->size(); ++b)
+      dEdxi.batch_matrix(b)((*pvals)[b]) += dEdf.v[b];
+  }
 #endif
 }
 
