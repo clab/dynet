@@ -488,7 +488,7 @@ Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
     if (LooksLikeVector(c)) c.resize(1);
     new_rows += c[0];
     dr.set(0, c[0]);
-    if (dr != c) {
+    if (dr.single_batch() != c.single_batch()) {
       ostringstream s; s << "Bad input dimensions in Concatenate: " << xs;
       throw std::invalid_argument(s.str());
     }
