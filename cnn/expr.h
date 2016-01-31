@@ -117,10 +117,14 @@ Expression sum_batches(const Expression& x);
 
 // pick parts out of bigger objects
 Expression pick(const Expression& x, unsigned v);
-Expression pick(const Expression& x, unsigned* pv);
+Expression pick(const Expression& x, const std::vector<unsigned> & v);
+Expression pick(const Expression& x, unsigned * pv);
+Expression pick(const Expression& x, const std::vector<unsigned> * pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
 Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
+Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
 
 namespace detail {
   template <typename F, typename T>
