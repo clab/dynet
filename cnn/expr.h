@@ -12,7 +12,7 @@ struct Expression {
 
   Expression() : pg(nullptr) { }
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
-  const Tensor& value() { return pg->get_value(i); }
+  const Tensor& value() const { return pg->get_value(i); }
 };
 
 Expression input(ComputationGraph& g, real s);
