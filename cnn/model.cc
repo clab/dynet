@@ -159,6 +159,64 @@ void LookupParameters::clear() {
   non_zero_grads.clear();
 }
 
+ParameterIndex::ParameterIndex() {
+  mp = nullptr;
+  index = 0;
+}
+
+ParameterIndex::ParameterIndex(const Model* mp, unsigned long index) : mp(mp), index(index) {}
+
+Parameters* ParameterIndex::get() const {
+  return mp->parameters_list()[index];
+}
+
+Dim& ParameterIndex::dim() const {
+  return get()->dim;
+} 
+
+Tensor& ParameterIndex::values() const {
+  return get()->values;
+}
+
+void ParameterIndex::accumulate_grad(const Tensor& g) const {
+  get()->accumulate_grad(g);
+}
+
+void ParameterIndex::scale_parameters(float a) {
+  get()->scale_parameters(a);
+}
+
+LookupParameterIndex::LookupParameterIndex() {
+  mp = nullptr;
+  index = 0;
+}
+
+LookupParameterIndex::LookupParameterIndex(const Model* mp, unsigned long index) : mp(mp), index(index) {}
+
+LookupParameters* LookupParameterIndex::get() const {
+  return mp->lookup_parameters_list()[index];
+}
+
+Dim& LookupParameterIndex::dim() const {
+  return get()->dim;
+} 
+
+vector<Tensor>& LookupParameterIndex::values() const {
+  return get()->values;
+}
+
+void LookupParameterIndex::accumulate_grad(unsigned index, const Tensor& g) const {
+  get()->accumulate_grad(index, g);
+}
+
+void LookupParameterIndex::Initialize(unsigned index, const std::vector<float>& val) const {
+  get()->Initialize(index, val);
+}
+
+void LookupParameterIndex::scale_parameters(float a) {
+  get()->scale_parameters(a);
+}
+
 Model::~Model() {
   for (auto p : all_params) delete p;
 }
@@ -199,18 +257,22 @@ float Model::gradient_l2_norm() const {
 #endif
 }
 
-Parameters* Model::add_parameters(const Dim& d, float scale) {
+ParameterIndex Model::add_parameters(const Dim& d, float scale) {
   Parameters* p = new Parameters(d, scale);
+  ParameterIndex r(this, params.size());
+  //cerr << "Adding parameters with dim " << d << endl;
   all_params.push_back(p);
   params.push_back(p);
-  return p;
+  return r;
 }
 
-LookupParameters* Model::add_lookup_parameters(unsigned n, const Dim& d) {
+LookupParameterIndex Model::add_lookup_parameters(unsigned n, const Dim& d) {
   LookupParameters* p = new LookupParameters(n,d);
+  LookupParameterIndex r(this, lookup_params.size());
+  //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);
   lookup_params.push_back(p);
-  return p;
+  return r;
 }
 
 void Model::reset_gradient() {

@@ -96,6 +96,34 @@ struct LookupParameters : public ParametersBase {
   BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
+class Model;
+struct ParameterIndex {
+  ParameterIndex();
+  ParameterIndex(const Model* mp, unsigned long index);
+  Parameters* get() const;
+  Dim& dim() const;
+  Tensor& values() const;
+  void accumulate_grad(const Tensor& g) const;
+  void scale_parameters(float a);
+
+  const Model* mp;
+  unsigned long index;
+};
+
+struct LookupParameterIndex {
+  LookupParameterIndex();
+  LookupParameterIndex(const Model* mp, unsigned long index);
+  LookupParameters* get() const;
+  Dim& dim() const;
+  std::vector<Tensor>& values() const;
+  void accumulate_grad(unsigned index, const Tensor& g) const;
+  void Initialize(unsigned index, const std::vector<float>& val) const;
+  void scale_parameters(float a);
+
+  const Model* mp;
+  unsigned long index;
+};
+
 // this is a collection of parameters
 // if you need a matrix of parameters, or a lookup table - ask an instance of this class
 // this knows how to serialize itself
@@ -107,8 +135,8 @@ class Model {
   float gradient_l2_norm() const;
   void reset_gradient();
   // set scale to use custom initialization
-  Parameters* add_parameters(const Dim& d, float scale = 0.0f);
-  LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
+  ParameterIndex add_parameters(const Dim& d, float scale = 0.0f);
+  LookupParameterIndex add_lookup_parameters(unsigned n, const Dim& d);
   // project weights so their L2 norm = radius
   void project_weights(float radius = 1.0f);
 

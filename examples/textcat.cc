@@ -29,11 +29,11 @@ int kSOS;
 int kEOS;
 
 struct NeuralBagOfWords {
-  LookupParameters* p_w;
-  Parameters* p_c2h;
-  Parameters* p_hbias;
-  Parameters* p_h2o;
-  Parameters* p_obias;
+  LookupParameterIndex p_w;
+  ParameterIndex p_c2h;
+  ParameterIndex p_hbias;
+  ParameterIndex p_h2o;
+  ParameterIndex p_obias;
 
   explicit NeuralBagOfWords(Model& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
@@ -108,17 +108,17 @@ struct ConvLayer {
     }
     return r;
   }
-  vector<vector<Parameters*>> p_filts; // [feature map index from][feature map index to]
-  vector<vector<Parameters*>> p_fbias; // [feature map index from][feature map index to]
+  vector<vector<ParameterIndex>> p_filts; // [feature map index from][feature map index to]
+  vector<vector<ParameterIndex>> p_fbias; // [feature map index from][feature map index to]
   int k_fold_rows;
 };
 
 struct ConvNet {
-  LookupParameters* p_w;
+  LookupParameterIndex p_w;
   ConvLayer cl1;
   ConvLayer cl2;
-  Parameters* p_t2o;
-  Parameters* p_obias;
+  ParameterIndex p_t2o;
+  ParameterIndex p_obias;
 
   explicit ConvNet(Model& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
       for (auto& sent : dev) {
         const auto& x = sent.first;
         const int y = sent.second;
-        nbow.p_t2o->scale_parameters(pdropout);
+        nbow.p_t2o.scale_parameters(pdropout);
         ComputationGraph cg;
         Expression y_pred = nbow.BuildClassifier(x, cg, false);
         if (IsCurrentPredictionCorrection(cg, y)) dcorr++;
@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
         HingeLoss(y_pred, y);
         //cerr << "DEVLINE: " << dtags << endl;
         dloss += as_scalar(cg.incremental_forward());
-        nbow.p_t2o->scale_parameters(1.f/pdropout);
+        nbow.p_t2o.scale_parameters(1.f/pdropout);
         dtags++;
       }
       if (dloss < best) {

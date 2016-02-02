@@ -53,8 +53,8 @@ inline unsigned int UTF8Len(unsigned char x) {
 struct PrefixNode {
   PrefixNode() :
       terminal(false),
-      bias(nullptr), pred(nullptr), zero_cond(nullptr), zero_child(nullptr),
-      one_cond(nullptr), one_child(nullptr) {}
+      bias(), pred(), zero_cond(), zero_child(nullptr),
+      one_cond(), one_child(nullptr) {}
 
   ~PrefixNode() {
     delete zero_child;
@@ -62,11 +62,11 @@ struct PrefixNode {
   }
 
   bool terminal;
-  Parameters* bias;
-  Parameters* pred;
-  Parameters* zero_cond;
+  ParameterIndex bias;
+  ParameterIndex pred;
+  ParameterIndex zero_cond;
   PrefixNode* zero_child;
-  Parameters* one_cond;
+  ParameterIndex one_cond;
   PrefixNode* one_child;
 };
 
@@ -127,13 +127,13 @@ struct SymbolEmbedding {
     return lookup(*cg, p_labels, label_id);
   }
   ComputationGraph* cg;
-  LookupParameters* p_labels;
+  LookupParameterIndex p_labels;
 };
 
 struct PrefixCodeDecoder {
   LSTMBuilder decoder;
   PrefixCode* pfc;
-  Parameters* p_start;
+  ParameterIndex p_start;
   explicit PrefixCodeDecoder(Model& model, PrefixCode* pc) :
       decoder(LAYERS, CHAR_DIM, EMBED_DIM, &model), pfc(pc) {
     p_start = model.add_parameters({EMBED_DIM});
@@ -171,11 +171,11 @@ template <class Builder>
 struct BiCharLSTM {
   Builder l2rbuilder;
   Builder r2lbuilder;
-  Parameters* p_f2c;
-  Parameters* p_r2c;
-  Parameters* p_cb;
-  Parameters* p_c2x;
-  Parameters* p_xb;
+  ParameterIndex p_f2c;
+  ParameterIndex p_r2c;
+  ParameterIndex p_cb;
+  ParameterIndex p_c2x;
+  ParameterIndex p_xb;
   SymbolEmbedding sym;
 
   explicit BiCharLSTM(Model& model) :
