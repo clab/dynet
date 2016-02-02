@@ -25,8 +25,8 @@ int kTRG_SOS;
 int kTRG_EOS;
 
 struct Encoder {
-  LookupParameters* p_s;
-  LookupParameters* p_t;
+  LookupParameterIndex p_s;
+  LookupParameterIndex p_t;
   vector<Expression> m;
   explicit Encoder(Model& model) {
     p_s = model.add_lookup_parameters(INPUT_VOCAB_SIZE, {REP_DIM}); 

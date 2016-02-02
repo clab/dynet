@@ -32,7 +32,7 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
   assert(argc >= 0);
 }
 
-void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_parameters) {
+void Initialize(int& argc, char**& argv, bool shared_parameters) {
 #if HAVE_CUDA
   cerr << "[cnn] initializing CUDA\n";
   Initialize_GPU(argc, argv);
@@ -45,6 +45,7 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
   *kSCALAR_ZERO = 0;
 #endif
   unsigned long num_mb = 512UL;
+  unsigned random_seed = 0;
   int argi = 1;
   while(argi < argc) {
     string arg = argv[argi];

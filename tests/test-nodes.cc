@@ -29,15 +29,15 @@ struct NodeTest {
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
     param1 = mod.add_parameters({3});
-    TensorTools::SetElements(param1->values,param1_vals);
+    TensorTools::SetElements(param1.values(),param1_vals);
     param2 = mod.add_parameters({3});
-    TensorTools::SetElements(param2->values,param2_vals);
+    TensorTools::SetElements(param2.values(),param2_vals);
     param3 = mod.add_parameters({3});
-    TensorTools::SetElements(param3->values,param3_vals);
+    TensorTools::SetElements(param3.values(),param3_vals);
     param_scalar1 = mod.add_parameters({1});
-    TensorTools::SetElements(param_scalar1->values,param_scalar1_vals);
+    TensorTools::SetElements(param_scalar1.values(),param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
-    TensorTools::SetElements(param_scalar2->values,param_scalar2_vals);
+    TensorTools::SetElements(param_scalar2.values(),param_scalar2_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);
@@ -55,7 +55,7 @@ struct NodeTest {
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
   cnn::Model mod;
-  cnn::Parameters *param1, *param2, *param3, *param_scalar1, *param_scalar2;
+  cnn::ParameterIndex param1, param2, param3, param_scalar1, param_scalar2;
 };
 
 // define the test suite

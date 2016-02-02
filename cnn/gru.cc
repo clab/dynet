@@ -21,22 +21,22 @@ GRUBuilder::GRUBuilder(unsigned layers,
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // z
-    Parameters* p_x2z = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2z = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_bz = model->add_parameters({hidden_dim});
+    ParameterIndex p_x2z = model->add_parameters({hidden_dim, layer_input_dim});
+    ParameterIndex p_h2z = model->add_parameters({hidden_dim, hidden_dim});
+    ParameterIndex p_bz = model->add_parameters({hidden_dim});
 
     // r
-    Parameters* p_x2r = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2r = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_br = model->add_parameters({hidden_dim});
+    ParameterIndex p_x2r = model->add_parameters({hidden_dim, layer_input_dim});
+    ParameterIndex p_h2r = model->add_parameters({hidden_dim, hidden_dim});
+    ParameterIndex p_br = model->add_parameters({hidden_dim});
 
     // h
-    Parameters* p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_bh = model->add_parameters({hidden_dim});
+    ParameterIndex p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
+    ParameterIndex p_h2h = model->add_parameters({hidden_dim, hidden_dim});
+    ParameterIndex p_bh = model->add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
-    vector<Parameters*> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
+    vector<ParameterIndex> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
     params.push_back(ps);
   }  // layers
 }
@@ -128,7 +128,7 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
   assert(params.size() == rnn_gru.params.size());
   for(size_t i = 0; i < params.size(); ++i)
       for(size_t j = 0; j < params[i].size(); ++j)
-        params[i][j]->copy(*rnn_gru.params[i][j]);
+        params[i][j] = rnn_gru.params[i][j];
 }
 
 } // namespace cnn

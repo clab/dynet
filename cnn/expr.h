@@ -19,17 +19,17 @@ Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
-Expression parameter(ComputationGraph& g, Parameters* p);
-Expression const_parameter(ComputationGraph& g, Parameters* p);
-Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
-Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
+Expression parameter(ComputationGraph& g, ParameterIndex p);
+Expression const_parameter(ComputationGraph& g, ParameterIndex p);
+Expression lookup(ComputationGraph& g, LookupParameterIndex p, unsigned index);
+Expression lookup(ComputationGraph& g, LookupParameterIndex p, const unsigned* pindex);
+Expression const_lookup(ComputationGraph& g, LookupParameterIndex p, unsigned index);
+Expression const_lookup(ComputationGraph& g, LookupParameterIndex p, const unsigned* pindex);
 // Batched versions of lookup and const_lookup
-Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
-Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
+Expression lookup(ComputationGraph& g, LookupParameterIndex p, const std::vector<unsigned>& indices);
+Expression lookup(ComputationGraph& g, LookupParameterIndex p, const std::vector<unsigned>* pindices);
+Expression const_lookup(ComputationGraph& g, LookupParameterIndex p, const std::vector<unsigned>& indices);
+Expression const_lookup(ComputationGraph& g, LookupParameterIndex p, const std::vector<unsigned>* pindices);
 Expression zeroes(ComputationGraph& g, const Dim& d);
 
 Expression operator-(const Expression& x);

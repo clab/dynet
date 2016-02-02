@@ -292,5 +292,79 @@ namespace cnn {
         RunParent(train_data, dev_data, learner, workloads, num_iterations, dev_frequency, report_frequency);
       }
     }
+
+    template<class D, class S>
+    void RunSingleProcess(ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
+        const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
+      std::vector<unsigned> train_indices(train_data.size());
+      std::iota(train_indices.begin(), train_indices.end(), 0);
+
+      std::vector<unsigned> dev_indices(dev_data.size());
+      std::iota(dev_indices.begin(), dev_indices.end(), 0);
+
+      S best_dev_loss = S();
+      bool first_dev_run = true;
+      std::mt19937 rndeng(42);
+      for (unsigned iter = 0; iter < num_iterations && !stop_requested; ++iter) {
+        // Shuffle the training data indices
+        //std::shuffle(train_indices.begin(), train_indices.end(), rndeng);
+
+        S train_loss = S();
+
+        unsigned data_processed = 0;
+        unsigned data_until_report = report_frequency;
+        std::vector<unsigned>::iterator begin = train_indices.begin();
+        while (begin != train_indices.end()) {
+          std::vector<unsigned>::iterator end = begin + dev_frequency;
+          if (end > train_indices.end()) {
+            end = train_indices.end();
+          }
+          S batch_loss;
+          for (auto it = begin; it != end; ++it) {
+            unsigned i = *it;
+            assert (i < train_data.size());
+            const D& datum = train_data[i];
+            S datum_loss = learner->LearnFromDatum(datum, true);
+            batch_loss += datum_loss;
+            train_loss += datum_loss;
+            trainer->update();
+            data_processed++;
+
+            if (--data_until_report == 0) {
+              data_until_report = report_frequency;
+              double fractional_iter = iter + 1.0 * data_processed / train_indices.size();
+              std::cerr << fractional_iter << "\t" << "loss = " << batch_loss << std::endl;
+              batch_loss = S();
+            }
+          }
+
+          if (stop_requested) {
+            break;
+          }
+
+          S dev_loss;
+          for (auto it = dev_indices.begin(); it != dev_indices.end(); ++it) {
+            unsigned i = *it;
+            assert (i < dev_data.size());
+            const D& datum = dev_data[i];
+            S datum_loss = learner->LearnFromDatum(datum, false);
+            dev_loss += datum_loss;
+          }
+          bool new_best = (first_dev_run || dev_loss < best_dev_loss);
+          first_dev_run = false;
+          double fractional_iter = iter + 1.0 * data_processed / train_indices.size();
+          std::cerr << fractional_iter << "\t" << "dev loss = " << dev_loss << (new_best ? " (New best!)" : "") << std::endl;
+          if (stop_requested) {
+            break;
+          }
+          if (new_best) {
+            learner->SaveModel();
+            best_dev_loss = dev_loss;
+          }
+
+          begin = end;
+        }
+      }
+    }
   }
 }
