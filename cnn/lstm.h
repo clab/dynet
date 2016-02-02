@@ -61,6 +61,16 @@ struct LSTMBuilder : public RNNBuilder {
   std::vector<Expression> c0;
   unsigned layers;
   float dropout_rate;
+
+private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & params;
+    ar & layers;
+    ar & dropout_rate;
+  }
+
 };
 
 } // namespace cnn
