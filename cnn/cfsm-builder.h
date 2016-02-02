@@ -3,10 +3,6 @@
 
 #include <vector>
 #include <string>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 #include "cnn/cnn.h"
 #include "cnn/expr.h"
 #include "cnn/dict.h"
@@ -25,14 +21,6 @@ public:
 
   // samples a word from p(w,c | rep)
   virtual unsigned sample(const expr::Expression& rep) = 0;
-
-  // add parameters to a model. Usually called after deserializing.
-  virtual void initialize(Model& model) = 0;
-
-private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {}
 };
 
 class StandardSoftmaxBuilder : public SoftmaxBuilder {
@@ -41,25 +29,14 @@ public:
   void new_graph(ComputationGraph& cg);
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
-  void initialize(Model& model);
 
 private:
   StandardSoftmaxBuilder();
-  unsigned rep_dim, vocab_size;
   ParameterIndex p_w;
   ParameterIndex p_b;
   expr::Expression w;
   expr::Expression b;
   ComputationGraph* pcg;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    boost::serialization::void_cast_register<StandardSoftmaxBuilder, SoftmaxBuilder>();
-    std::cerr << "serializing standardsoftmaxbuilder" << std::endl;
-    ar & rep_dim;
-    ar & vocab_size;
-  }
 };
 
 // helps with implementation of hierarchical softmax
@@ -75,13 +52,11 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   void new_graph(ComputationGraph& cg);
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
-  void initialize(Model& model);
 
  private:
   ClassFactoredSoftmaxBuilder();
   void ReadClusterFile(const std::string& cluster_file, Dict* word_dict);
 
-  unsigned rep_dim;
   Dict cdict;
   std::vector<int> widx2cidx; // will be -1 if not present
   std::vector<unsigned> widx2cwidx; // word index to word index inside of cluster
@@ -113,20 +88,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   std::vector<expr::Expression> rc2ws;
   std::vector<expr::Expression> rc2biases;
 
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    boost::serialization::void_cast_register<ClassFactoredSoftmaxBuilder, SoftmaxBuilder>();
-    ar & rep_dim;
-    ar & cdict;
-    ar & widx2cidx;
-    ar & widx2cwidx;
-    ar & cidx2words;
-    ar & singleton_cluster;
-  }
 };
 }  // namespace cnn
-BOOST_CLASS_EXPORT_KEY(cnn::StandardSoftmaxBuilder)
-BOOST_CLASS_EXPORT_KEY(cnn::ClassFactoredSoftmaxBuilder)
 
 #endif

@@ -4,10 +4,6 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 #include "cnn/cnn.h"
 #include "cnn/expr.h"
 #include "cnn/dict.h"
@@ -93,17 +89,7 @@ class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
 
   ComputationGraph* pcg;
   Cluster* root;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    boost::serialization::void_cast_register<HierarchicalSoftmaxBuilder, SoftmaxBuilder>();
-    ar & widx2path;
-    ar & path_symbols;
-    ar & root;
-  }
 };
 }  // namespace cnn
-BOOST_CLASS_EXPORT_KEY(cnn::HierarchicalSoftmaxBuilder);
 
 #endif

@@ -3,9 +3,6 @@
 #include <fstream>
 #include <iostream>
 
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::StandardSoftmaxBuilder)
-//BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ClassFactoredSoftmaxBuilder)
-
 using namespace std;
 
 namespace cnn {
@@ -19,19 +16,9 @@ SoftmaxBuilder::~SoftmaxBuilder() {}
 
 StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
 
-StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model* model) : rep_dim(rep_dim), vocab_size(vocab_size) {
-  initialize(*model);
-}
-
-void StandardSoftmaxBuilder::initialize(Model& model) {
-  std::cerr << "initializing StandardSoftmax builder:" << vocab_size << ", " << rep_dim << std::endl;
-  if (p_w.mp == nullptr) {
-    p_w = model.add_parameters({vocab_size, rep_dim});
-    p_b = model.add_parameters({vocab_size});
-  }
-  else {
-    std::cerr << "jk lol" << std::endl;
-  }
+StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model* model) {
+  p_w = model->add_parameters({vocab_size, rep_dim});
+  p_b = model->add_parameters({vocab_size});
 }
 
 void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg) {
@@ -64,15 +51,11 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict* word_dict,
-                             Model* model) : rep_dim(rep_dim) {
+                             Model* model) {
   ReadClusterFile(cluster_file, word_dict);
-  initialize(*model);
-}
-
-void ClassFactoredSoftmaxBuilder::initialize(Model& model) {
   const unsigned num_clusters = cdict.size();
-  p_r2c = model.add_parameters({num_clusters, rep_dim});
-  p_cbias = model.add_parameters({num_clusters});
+  p_r2c = model->add_parameters({num_clusters, rep_dim});
+  p_cbias = model->add_parameters({num_clusters});
   p_rc2ws.resize(num_clusters);
   p_rcwbiases.resize(num_clusters);
   for (unsigned i = 0; i < num_clusters; ++i) {
@@ -81,8 +64,8 @@ void ClassFactoredSoftmaxBuilder::initialize(Model& model) {
     if (num_words_in_cluster > 1) {
       // for singleton clusters, we don't need these parameters, so
       // we don't create them
-      p_rc2ws[i] = model.add_parameters({num_words_in_cluster, rep_dim});
-      p_rcwbiases[i] = model.add_parameters({num_words_in_cluster});
+      p_rc2ws[i] = model->add_parameters({num_words_in_cluster, rep_dim});
+      p_rcwbiases[i] = model->add_parameters({num_words_in_cluster});
     }
   }
 }
