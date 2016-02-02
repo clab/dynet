@@ -21,6 +21,10 @@ public:
 
   // samples a word from p(w,c | rep)
   virtual unsigned sample(const expr::Expression& rep) = 0;
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {}
 };
 
 class StandardSoftmaxBuilder : public SoftmaxBuilder {
@@ -37,6 +41,14 @@ private:
   expr::Expression w;
   expr::Expression b;
   ComputationGraph* pcg;
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    boost::serialization::base_object<SoftmaxBuilder>(*this);
+    ar & p_w;
+    ar & p_b;
+  }
 };
 
 // helps with implementation of hierarchical softmax
@@ -88,7 +100,22 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   std::vector<expr::Expression> rc2ws;
   std::vector<expr::Expression> rc2biases;
 
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    boost::serialization::base_object<SoftmaxBuilder>(*this);
+    ar & cdict;
+    ar & widx2cidx;
+    ar & widx2cwidx;
+    ar & cidx2words;
+    ar & singleton_cluster;
+    ar & p_r2c;
+    ar & p_cbias;
+    ar & p_rc2ws;
+    ar & p_rcwbiases;
+  }
 };
 }  // namespace cnn
-
+BOOST_CLASS_EXPORT_KEY(cnn::StandardSoftmaxBuilder)
+BOOST_CLASS_EXPORT_KEY(cnn::ClassFactoredSoftmaxBuilder)
 #endif
