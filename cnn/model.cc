@@ -19,6 +19,9 @@
 
 using namespace std;
 
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::Parameters)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameters)
+
 namespace cnn {
 
 ParametersBase::~ParametersBase() {}
