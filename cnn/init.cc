@@ -21,6 +21,10 @@ AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
 AlignedMemoryPool<ALIGN>* ps = nullptr;
 mt19937* rndeng = nullptr;
 
+// these should maybe live in a file called globals.cc or something
+std::vector<Device*> devices;
+Device* default_device;
+
 static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
@@ -30,10 +34,9 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
 
 void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_parameters) {
 #if HAVE_CUDA
-  cerr << "[cnn] using GPU\n";
+  cerr << "[cnn] initializing CUDA\n";
   Initialize_GPU(argc, argv);
 #else
-  cerr << "[cnn] using CPU\n";
   kSCALAR_MINUSONE = (float*) cnn_mm_malloc(sizeof(float), 256);
   *kSCALAR_MINUSONE = -1;
   kSCALAR_ONE = (float*) cnn_mm_malloc(sizeof(float), 256);
