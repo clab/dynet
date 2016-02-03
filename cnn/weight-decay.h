@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <cmath>
+#include <iostream>
 
 namespace cnn {
 
@@ -28,7 +29,10 @@ struct L2WeightDecay {
   bool ParametersNeedRescaled() const {
     return (weight_decay < 0.25f);
   }
-  void ResetWeightDecay() { weight_decay = 1.0f; }
+  void ResetWeightDecay() {
+    std::cerr << "RESCALE WEIGHT DECAY FROM " << weight_decay << " to 1.0\n";
+    weight_decay = 1.0f;
+  }
  private:
   float weight_decay;
   float lambda;

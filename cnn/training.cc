@@ -38,29 +38,34 @@ float Trainer::clip_gradients() {
   return gscale;
 }
 
-void SimpleSGDTrainer::update(real scale) {
-  update(model->lookup_parameters_list(), model->parameters_list(), scale);
-  global_weight_decay.UpdateWeightDecay();  // update global weight scale
+// this calls the rule-specific
+void Trainer::update(real scale) {
+  update_impl(scale);
+  global_weight_decay.UpdateWeightDecay(); // update global weight scale
   if (global_weight_decay.ParametersNeedRescaled())
     rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
 }
 
-void SimpleSGDTrainer::update(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale) {
+void SimpleSGDTrainer::update_impl(real scale) {
+  update_params(model->lookup_parameters_list(), model->parameters_list(), scale);
+}
+
+void SimpleSGDTrainer::update_params(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale) {
   const float gscale = clip_gradients();
   for (auto p : params) {
 #if HAVE_CUDA
-    gpu::sgd_update(p->values.d.size(), p->g.v, p->values.v, eta * scale * gscale, 0);
+    gpu::sgd_update(p->values.d.size(), p->g.v, p->values.v, eta * scale * gscale / global_weight_decay.CurrentWeightDecay(), 0);
 #else
-    p->values.vec() -= ((eta * scale * gscale) * p->g.vec());
+    p->values.vec() -= ((eta * scale * gscale) * p->g.vec() / global_weight_decay.CurrentWeightDecay());
 #endif
     p->clear();
   }
   for (auto p : lookup_params) {
     for (auto i : p->non_zero_grads) {
 #if HAVE_CUDA
-      gpu::sgd_update(p->values[i].d.size(), p->grads[i].v, p->values[i].v, eta * scale * gscale, 0);
+      gpu::sgd_update(p->values[i].d.size(), p->grads[i].v, p->values[i].v, eta * scale * gscale / global_weight_decay.CurrentWeightDecay(), 0);
 #else
-      p->values[i].vec() -= (p->grads[i].vec() * (eta * scale * gscale));
+      p->values[i].vec() -= (p->grads[i].vec() * (eta * scale * gscale) / global_weight_decay.CurrentWeightDecay());
 #endif
     }
     p->clear();
@@ -68,7 +73,7 @@ void SimpleSGDTrainer::update(const std::vector<LookupParameters*> &lookup_param
   ++updates;
 }
 
-void MomentumSGDTrainer::update(real scale) {
+void MomentumSGDTrainer::update_impl(real scale) {
   // executed on the first iteration to create vectors to
   // store the velocity
   if (!velocity_allocated) {
@@ -82,7 +87,7 @@ void MomentumSGDTrainer::update(real scale) {
   for (auto p : model->parameters_list()) {
     Tensor& v = vp[pi++].h;
     v.vec() = momentum * v.vec() - (eta * scale * gscale) * p->g.vec();
-    p->values.vec() += v.vec();
+    p->values.vec() += v.vec() / global_weight_decay.CurrentWeightDecay();
     p->clear();
   }
   pi = 0;
@@ -91,14 +96,14 @@ void MomentumSGDTrainer::update(real scale) {
     for (auto i : p->non_zero_grads) {
       Tensor& v = vx[i];
       v.vec() = momentum * v.vec() - (eta * scale * gscale) * (p->grads[i].vec());
-      p->values[i].vec() += v.vec();
+      p->values[i].vec() += v.vec() / global_weight_decay.CurrentWeightDecay();
     }
     p->clear();
   }
   ++updates;
 }
 
-void AdagradTrainer::update(real scale) {
+void AdagradTrainer::update_impl(real scale) {
   unsigned pi;
   if (!shadow_params_allocated) {
     vp = AllocateShadowParameters(*model);
@@ -114,7 +119,7 @@ void AdagradTrainer::update(real scale) {
     auto g2 = g.cwiseProduct(g);
     v.vec() += g2;
     auto delta = -eta * g.cwiseQuotient((v.vec().array() + epsilon).matrix().cwiseSqrt());
-    p->values.vec() += delta;
+    p->values.vec() += delta / global_weight_decay.CurrentWeightDecay();
     p->clear();
   }
 
@@ -127,7 +132,7 @@ void AdagradTrainer::update(real scale) {
       auto g2 = g.cwiseProduct(g);
       v.vec() += g2;
       auto delta = -eta * g.cwiseQuotient((v.vec().array() + epsilon).matrix().cwiseSqrt());
-      p->values[i].vec() += delta;
+      p->values[i].vec() += delta / global_weight_decay.CurrentWeightDecay();
     }
     p->clear();
   }
@@ -135,7 +140,7 @@ void AdagradTrainer::update(real scale) {
   ++updates;
 }
 
-void AdadeltaTrainer::update(real scale) {
+void AdadeltaTrainer::update_impl(real scale) {
   unsigned pi;
   if (!shadow_params_allocated) {
     hg = AllocateShadowParameters(*model);
@@ -177,7 +182,7 @@ void AdadeltaTrainer::update(real scale) {
     auto delta = num.cwiseQuotient(den);
     auto d2 = delta.cwiseProduct(delta);
     hdv.vec() = rho * hdv.vec() + (1.0 - rho) * d2;
-    p->values.vec() += delta;
+    p->values.vec() += delta / global_weight_decay.CurrentWeightDecay();
     p->clear();
     pi++;
   }
@@ -197,7 +202,7 @@ void AdadeltaTrainer::update(real scale) {
       auto delta = num.cwiseQuotient(den);
       auto d2 = delta.cwiseProduct(delta);
       hdv.vec() = rho * hdv.vec() + (1.0 - rho) * d2;
-      p->values[i].vec() += delta;
+      p->values[i].vec() += delta / global_weight_decay.CurrentWeightDecay();
     }
     p->clear();
     pi++;
@@ -205,7 +210,7 @@ void AdadeltaTrainer::update(real scale) {
   ++updates;
 }
 
-void RmsPropTrainer::update(real scale) {
+void RmsPropTrainer::update_impl(real scale) {
   unsigned pi = 0;
   if (!shadow_params_allocated) {
     hg.resize(model->parameters_list().size());
@@ -225,7 +230,7 @@ void RmsPropTrainer::update(real scale) {
     real& d2 = hg[pi++];
     real g2 = p->g.vec().squaredNorm();
     d2 = rho * d2 + (1.0 - rho) * g2;
-    p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec());
+    p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec()) / global_weight_decay.CurrentWeightDecay();
     p->clear();
   }
 
@@ -236,14 +241,14 @@ void RmsPropTrainer::update(real scale) {
       real& d2 = hlgx[i];
       real g2 = p->grads[i].vec().squaredNorm();
       d2 = rho * d2 + (1.0 - rho) * g2;
-      p->values[i].vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->grads[i].vec());
+      p->values[i].vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->grads[i].vec()) / global_weight_decay.CurrentWeightDecay();
     }
     p->clear();
   }
   ++updates;
 }
 
-void AdamTrainer::update(real scale) {
+void AdamTrainer::update_impl(real scale) {
   unsigned pi;
   if (!shadow_params_allocated) {
     m = AllocateShadowParameters(*model);
@@ -269,7 +274,7 @@ void AdamTrainer::update(real scale) {
     auto mhat = m_t / s1;
     auto vhat = v_t / s2;
     auto delta = (-eta * mhat).cwiseQuotient((vhat.array().sqrt() + eps).matrix());
-    p->values.vec() += delta;
+    p->values.vec() += delta / global_weight_decay.CurrentWeightDecay();
     p->clear();
     pi++;
   }
@@ -290,7 +295,7 @@ void AdamTrainer::update(real scale) {
       auto mhat = m_t / s1;
       auto vhat = v_t / s2;
       auto delta = (-eta * mhat).cwiseQuotient((vhat.array().sqrt() + eps).matrix());
-      p->values[i].vec() += delta;
+      p->values[i].vec() += delta / global_weight_decay.CurrentWeightDecay();
     }
     p->clear();
     pi++;
