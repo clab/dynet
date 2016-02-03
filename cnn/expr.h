@@ -12,7 +12,7 @@ struct Expression {
 
   Expression() : pg(nullptr) { }
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
-  const Tensor& value() { return pg->get_value(i); }
+  const Tensor& value() const { return pg->get_value(i); }
 };
 
 Expression input(ComputationGraph& g, real s);
@@ -94,6 +94,7 @@ Expression inverse(const Expression& x);
 Expression trace_of_product(const Expression& x, const Expression& y);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
+Expression squared_norm(const Expression& x);
 Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
@@ -116,10 +117,14 @@ Expression sum_batches(const Expression& x);
 
 // pick parts out of bigger objects
 Expression pick(const Expression& x, unsigned v);
-Expression pick(const Expression& x, unsigned* pv);
+Expression pick(const Expression& x, const std::vector<unsigned> & v);
+Expression pick(const Expression& x, unsigned * pv);
+Expression pick(const Expression& x, const std::vector<unsigned> * pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
 Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
+Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
 
 namespace detail {
   template <typename F, typename T>
