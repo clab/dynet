@@ -12,6 +12,7 @@
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/tensor.h"
 #include "cnn/model.h"
+#include "cnn/devices.h"
 
 // Computation graph where nodes represent forward and backward intermediate
 // values, and edges represent functions of multiple values. To represent the
@@ -30,6 +31,8 @@ extern AlignedMemoryPool<6>* ps;
 extern float* kSCALAR_MINUSONE;
 extern float* kSCALAR_ONE;
 extern float* kSCALAR_ZERO;
+
+extern Device* default_device;
 
 class ExecutionEngine;
 struct ParameterNodeBase;
