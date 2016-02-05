@@ -99,10 +99,6 @@ struct ParameterIndex {
   ParameterIndex();
   ParameterIndex(const Model* mp, unsigned long index);
   Parameters* get() const;
-  Dim& dim() const;
-  Tensor& values() const;
-  void accumulate_grad(const Tensor& g) const;
-  void scale_parameters(float a);
 
   const Model* mp;
   unsigned long index;
@@ -120,11 +116,7 @@ struct LookupParameterIndex {
   LookupParameterIndex();
   LookupParameterIndex(const Model* mp, unsigned long index);
   LookupParameters* get() const;
-  Dim& dim() const;
-  std::vector<Tensor>& values() const;
-  void accumulate_grad(unsigned index, const Tensor& g) const;
   void Initialize(unsigned index, const std::vector<float>& val) const;
-  void scale_parameters(float a);
 
   const Model* mp;
   unsigned long index;

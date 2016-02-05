@@ -173,22 +173,6 @@ Parameters* ParameterIndex::get() const {
   return mp->parameters_list()[index];
 }
 
-Dim& ParameterIndex::dim() const {
-  return get()->dim;
-} 
-
-Tensor& ParameterIndex::values() const {
-  return get()->values;
-}
-
-void ParameterIndex::accumulate_grad(const Tensor& g) const {
-  get()->accumulate_grad(g);
-}
-
-void ParameterIndex::scale_parameters(float a) {
-  get()->scale_parameters(a);
-}
-
 LookupParameterIndex::LookupParameterIndex() {
   mp = nullptr;
   index = 0;
@@ -200,24 +184,8 @@ LookupParameters* LookupParameterIndex::get() const {
   return mp->lookup_parameters_list()[index];
 }
 
-Dim& LookupParameterIndex::dim() const {
-  return get()->dim;
-} 
-
-vector<Tensor>& LookupParameterIndex::values() const {
-  return get()->values;
-}
-
-void LookupParameterIndex::accumulate_grad(unsigned index, const Tensor& g) const {
-  get()->accumulate_grad(index, g);
-}
-
 void LookupParameterIndex::Initialize(unsigned index, const std::vector<float>& val) const {
   get()->Initialize(index, val);
-}
-
-void LookupParameterIndex::scale_parameters(float a) {
-  get()->scale_parameters(a);
 }
 
 Model::~Model() {
