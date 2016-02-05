@@ -20,7 +20,7 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
 
 #define MAX_GPUS 256
 
-void Initialize_GPU(int& argc, char**& argv) {
+vector<Device*> Initialize_GPU(int& argc, char**& argv) {
   int nDevices;
   CUDA_CHECK(cudaGetDeviceCount(&nDevices));
   if (nDevices < 1) {
@@ -99,7 +99,8 @@ void Initialize_GPU(int& argc, char**& argv) {
     cerr << "[cnn] Request for " << requested_gpus << " specific GPU" << (requested_gpus == 1 ? "" : "s") << " ...\n";
   }
 
-  if (requested_gpus == 0) return;
+  vector<Device*> gpudevices;
+  if (requested_gpus == 0) return gpudevices;
   if (requested_gpus > nDevices) {
     cerr << "You requested " << requested_gpus << " GPUs but system only reports " << nDevices << endl;
     abort();
@@ -139,22 +140,17 @@ void Initialize_GPU(int& argc, char**& argv) {
   cerr << "[cnn] Device(s) selected:";
   for (int i = 0; i < requested_gpus; ++i) {
     cerr << ' ' << gpus[i];
-    //Device* d = new Device_GPU(gpus[i]);
+    int mb = 512;
+    Device* d = new Device_GPU(mb, gpus[i]);
+    gpudevices.push_back(d);
   }
-  selected = gpus[0];
-  cerr << "[cnn] **USING DEVICE: " << selected << endl;
-  CUDA_CHECK(cudaSetDevice(selected));
+  cerr << endl;
+
+  // eventually kill the global handle
+  CUDA_CHECK(cudaSetDevice(gpus[0]));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
   CUBLAS_CHECK(cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE));
-  CUDA_CHECK(cudaMalloc(&kSCALAR_MINUSONE, sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&kSCALAR_ONE, sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&kSCALAR_ZERO, sizeof(float)));
-  float minusone = -1;
-  CUDA_CHECK(cudaMemcpyAsync(kSCALAR_MINUSONE, &minusone, sizeof(float), cudaMemcpyHostToDevice));
-  float one = 1;
-  CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ONE, &one, sizeof(float), cudaMemcpyHostToDevice));
-  float zero = 0;
-  CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
+  return gpudevices;
 }
 
 } // namespace cnn

@@ -25,9 +25,9 @@
 
 namespace cnn {
 
-extern AlignedMemoryPool<6>* fxs;
-extern AlignedMemoryPool<6>* dEdfs;
-extern AlignedMemoryPool<6>* ps;
+extern AlignedMemoryPool* fxs;
+extern AlignedMemoryPool* dEdfs;
+extern AlignedMemoryPool* ps;
 extern float* kSCALAR_MINUSONE;
 extern float* kSCALAR_ONE;
 extern float* kSCALAR_ZERO;
@@ -37,7 +37,7 @@ extern float* kSCALAR_ZERO;
 // to the GPU as well as the memory pools for the device
 // Device is not copyable, so you can use the pointer to uniquely
 // identify the device
-extern std::vector<Device*> devices; // [0] is always the CPU
+//extern std::vector<Device*> devices; // [0] is always the CPU
 extern Device* default_device; // where parameters go by default
 
 class ExecutionEngine;
