@@ -17,7 +17,6 @@ int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
 
   // parameters
-  const unsigned HIDDEN_SIZE = 8;
   const unsigned ITERATIONS = 30;
   Model m;
   SimpleSGDTrainer sgd(&m);
@@ -31,6 +30,7 @@ int main(int argc, char** argv) {
     ia >> m >> p_W >> p_b >> p_V >> p_a;
   }
   else {
+    const unsigned HIDDEN_SIZE = 8;
     p_W = m.add_parameters({HIDDEN_SIZE, 2});
     p_b = m.add_parameters({HIDDEN_SIZE});
     p_V = m.add_parameters({1, HIDDEN_SIZE});
