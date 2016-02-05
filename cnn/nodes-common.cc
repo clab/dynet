@@ -27,6 +27,20 @@ Dim MatrixInverse::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+Dim LogDet::dim_forward(const vector<Dim>& xs) const {
+    if (xs[0].ndims() > 2 || (xs[0].rows() != xs[0].cols())) {
+        cerr << "Bad arguments in LogDet: " << xs << endl;
+        throw std::invalid_argument("invalid arguments to LogDet");
+    }
+    return Dim({1});
+}
+
+string LogDet::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "logdet(" << arg_names[0] << ")";
+  return s.str();
+}
+
 string AddMv::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "addmv(" << arg_names[0] << ", " << arg_names[1] << ")";

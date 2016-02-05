@@ -16,15 +16,13 @@ using namespace std;
 
 namespace cnn {
 
-const unsigned ALIGN = 6;
-AlignedMemoryPool<ALIGN>* fxs = nullptr;
-AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
-AlignedMemoryPool<ALIGN>* ps = nullptr;
-mt19937* rndeng = nullptr;
-
 // these should maybe live in a file called globals.cc or something
+AlignedMemoryPool* fxs = nullptr;
+AlignedMemoryPool* dEdfs = nullptr;
+AlignedMemoryPool* ps = nullptr;
+mt19937* rndeng = nullptr;
 std::vector<Device*> devices;
-Device* default_device;
+Device* default_device = nullptr;
 
 static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
@@ -34,16 +32,10 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
 }
 
 void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_parameters) {
+  vector<Device*> gpudevices;
 #if HAVE_CUDA
   cerr << "[cnn] initializing CUDA\n";
-  Initialize_GPU(argc, argv);
-#else
-  kSCALAR_MINUSONE = (float*) cnn_mm_malloc(sizeof(float), 256);
-  *kSCALAR_MINUSONE = -1;
-  kSCALAR_ONE = (float*) cnn_mm_malloc(sizeof(float), 256);
-  *kSCALAR_ONE = 1;
-  kSCALAR_ZERO = (float*) cnn_mm_malloc(sizeof(float), 256);
-  *kSCALAR_ZERO = 0;
+  gpudevices = Initialize_GPU(argc, argv);
 #endif
   unsigned long num_mb = 512UL;
   int argi = 1;
@@ -95,9 +87,22 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
   rndeng = new mt19937(random_seed);
 
   cerr << "[cnn] allocating memory: " << num_mb << "MB\n";
-  fxs = new AlignedMemoryPool<ALIGN>(num_mb << 20); // node values
-  dEdfs = new AlignedMemoryPool<ALIGN>(num_mb << 20); // node gradients
-  ps = new AlignedMemoryPool<ALIGN>(num_mb << 20, shared_parameters); // parameters
+  devices.push_back(new Device_CPU(num_mb, shared_parameters));
+  int default_index = 0;
+  if (gpudevices.size() > 0) {
+    for (auto gpu : gpudevices)
+      devices.push_back(gpu);
+    default_index++;
+  }
+  default_device = devices[default_index];
+
+  // TODO these should be accessed through the relevant device and removed here
+  fxs = default_device->fxs;
+  dEdfs = default_device->dEdfs;
+  ps = default_device->ps;
+  kSCALAR_MINUSONE = default_device->kSCALAR_MINUSONE;
+  kSCALAR_ONE = default_device->kSCALAR_ONE;
+  kSCALAR_ZERO = default_device->kSCALAR_ZERO;
   cerr << "[cnn] memory allocation done.\n";
 }
 
