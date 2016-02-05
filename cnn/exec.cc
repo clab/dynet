@@ -97,7 +97,10 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
     const auto dim = nfxs[i].d;
     ndEdfs[i].d = dim;
     ndEdfs[i].v = static_cast<float*>(dEdfs->allocate(dim.size() * sizeof(float)));
-    assert(ndEdfs[i].v);
+    if (!ndEdfs[i].v) {
+      cerr << "out of memory while attempting to allocate space for derivatives\n";
+      abort();
+    }
   }
   dEdfs->zero_allocated_memory();
   // initialize dE/dE = 1

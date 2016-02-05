@@ -17,6 +17,7 @@ set(cnn_library_SRCS
     hsm-builder.cc
     init.cc
     lstm.cc
+    mem.cc
     model.cc
     mp.cc
     nodes.cc

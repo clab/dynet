@@ -11,7 +11,6 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#define CNN_ALIGN 256
 #if HAVE_CUDA
 #include "cnn/gpu-ops.h"
 #include "cnn/cuda.h"
@@ -166,7 +165,7 @@ Model::~Model() {
 void Model::project_weights(float radius) {
   static float* project_scratch = 0;
   if (!project_scratch)
-    project_scratch = (float*)cnn_mm_malloc(all_params.size() * sizeof(float), 256);
+    project_scratch = (float*)default_device->mem->malloc(all_params.size() * sizeof(float));
   int pi = 0;
   for (auto p : all_params) {
     p->squared_l2norm(&project_scratch[pi]);
@@ -180,7 +179,7 @@ void Model::project_weights(float radius) {
 
 float Model::gradient_l2_norm() const {
   if (!gradient_norm_scratch)
-    gradient_norm_scratch = (float*)cnn_mm_malloc(all_params.size() * sizeof(float), 256);
+    gradient_norm_scratch = (float*)default_device->mem->malloc(all_params.size() * sizeof(float));
   int pi = 0;
   for (auto p : all_params) {
     p->g_squared_l2norm(&gradient_norm_scratch[pi]);

@@ -129,15 +129,18 @@ struct Tensor {
     }
   }
 
-  Dim d;
-  float* v;
+  Dim d;  // shape of tensor
+  float* v;  // pointer to memory
   std::vector<Tensor> bs;
+  // TODO start using this
+  //Device* device; // which device does it live on?
 
  private:
   friend class boost::serialization::access;
   template<class Archive>
   void save(Archive& ar, const unsigned int) const {
     ar & d;
+    // TODO(mem) save device
 #if HAVE_CUDA
     float* vc = (float*)malloc(d.size() * sizeof(float));
     CUDA_CHECK(cudaMemcpy(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
@@ -150,13 +153,15 @@ struct Tensor {
   template<class Archive>
   void load(Archive& ar, const unsigned int) {
     ar & d;
+    // TODO(mem) - load device and use it to create memory allocator
+    // Devices should probably know how to load and save data to disk
 #if HAVE_CUDA
     CUDA_CHECK(cudaMalloc(&v, d.size() * sizeof(float)));
     float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
     ar & boost::serialization::make_array(vc, d.size());
     CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
 #else
-    v = static_cast<float*>(cnn_mm_malloc(d.size() * sizeof(float), 32));
+    v = static_cast<float*>(_mm_malloc(d.size() * sizeof(float), 32));
     ar & boost::serialization::make_array(v, d.size());
 #endif
   }

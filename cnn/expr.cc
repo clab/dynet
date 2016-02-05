@@ -72,9 +72,12 @@ Expression select_rows(const Expression& x, const vector<unsigned>* prows) { ret
 Expression select_cols(const Expression& x, const vector<unsigned>& cols) { return Expression(x.pg, x.pg->add_function<SelectCols>({x.i}, cols)); }
 Expression select_cols(const Expression& x, const vector<unsigned>* pcols) { return Expression(x.pg, x.pg->add_function<SelectCols>({x.i}, pcols)); }
 Expression inverse(const Expression& x) { return Expression(x.pg, x.pg->add_function<MatrixInverse>({x.i})); }
+Expression logdet(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogDet>({x.i})); }
 
 Expression trace_of_product(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<TraceOfProduct>({x.i, y.i}));}
 Expression cwise_multiply(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));}
+
+Expression squared_norm(const Expression& x) { return Expression(x.pg, x.pg->add_function<SquaredNorm>({x.i})); }
 
 Expression dot_product(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<DotProduct>({x.i, y.i})); }
 Expression squared_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<SquaredEuclideanDistance>({x.i, y.i})); }
@@ -91,11 +94,16 @@ Expression kmax_pooling(const Expression& x, unsigned k) { return Expression(x.p
 Expression fold_rows(const Expression& x, unsigned nrows) { return Expression(x.pg, x.pg->add_function<FoldRows>({x.i}, nrows)); }
 
 Expression pick(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, v)); }
+Expression pick(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, v)); }
 Expression pick(const Expression& x, unsigned* pv) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv)); }
+Expression pick(const Expression& x, const vector<unsigned> * pv) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv)); }
+
 Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u)); }
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
+Expression pickneglogsoftmax(const Expression& x, unsigned* pv) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, pv)); }
+Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> * pv) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, pv)); }
 
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumColumns>({x.i})); }
 

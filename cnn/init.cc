@@ -15,10 +15,12 @@ using namespace std;
 
 namespace cnn {
 
-AlignedMemoryPool<ALIGN>* fxs = nullptr;
-AlignedMemoryPool<ALIGN>* dEdfs = nullptr;
-AlignedMemoryPool<ALIGN>* ps = nullptr;
+// these should maybe live in a file called globals.cc or something
+AlignedMemoryPool* fxs = nullptr;
+AlignedMemoryPool* dEdfs = nullptr;
+AlignedMemoryPool* ps = nullptr;
 mt19937* rndeng = nullptr;
+std::vector<Device*> devices;
 Device* default_device = nullptr;
 
 static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
@@ -29,9 +31,10 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
 }
 
 void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_parameters) {
+  vector<Device*> gpudevices;
 #if HAVE_CUDA
   cerr << "[cnn] initializing CUDA\n";
-  Initialize_GPU(argc, argv);
+  gpudevices = Initialize_GPU(argc, argv);
 #endif
   unsigned long num_mb = 512UL;
   int argi = 1;
@@ -68,7 +71,14 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
   rndeng = new mt19937(random_seed);
 
   cerr << "[cnn] allocating memory: " << num_mb << "MB\n";
-  default_device = new Device_CPU(num_mb, shared_parameters);
+  devices.push_back(new Device_CPU(num_mb, shared_parameters));
+  int default_index = 0;
+  if (gpudevices.size() > 0) {
+    for (auto gpu : gpudevices)
+      devices.push_back(gpu);
+    default_index++;
+  }
+  default_device = devices[default_index];
 
   // TODO these should be accessed through the relevant device and removed here
   fxs = default_device->fxs;
