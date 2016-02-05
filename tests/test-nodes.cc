@@ -29,15 +29,15 @@ struct NodeTest {
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
     param1 = mod.add_parameters({3});
-    TensorTools::SetElements(param1.values(),param1_vals);
+    TensorTools::SetElements(param1.get()->values,param1_vals);
     param2 = mod.add_parameters({3});
-    TensorTools::SetElements(param2.values(),param2_vals);
+    TensorTools::SetElements(param2.get()->values,param2_vals);
     param3 = mod.add_parameters({3});
-    TensorTools::SetElements(param3.values(),param3_vals);
+    TensorTools::SetElements(param3.get()->values,param3_vals);
     param_scalar1 = mod.add_parameters({1});
-    TensorTools::SetElements(param_scalar1.values(),param_scalar1_vals);
+    TensorTools::SetElements(param_scalar1.get()->values,param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
-    TensorTools::SetElements(param_scalar2.values(),param_scalar2_vals);
+    TensorTools::SetElements(param_scalar2.get()->values,param_scalar2_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);

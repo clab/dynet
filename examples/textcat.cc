@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
       for (auto& sent : dev) {
         const auto& x = sent.first;
         const int y = sent.second;
-        nbow.p_t2o.scale_parameters(pdropout);
+        nbow.p_t2o.get()->scale_parameters(pdropout);
         ComputationGraph cg;
         Expression y_pred = nbow.BuildClassifier(x, cg, false);
         if (IsCurrentPredictionCorrection(cg, y)) dcorr++;
@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
         HingeLoss(y_pred, y);
         //cerr << "DEVLINE: " << dtags << endl;
         dloss += as_scalar(cg.incremental_forward());
-        nbow.p_t2o.scale_parameters(1.f/pdropout);
+        nbow.p_t2o.get()->scale_parameters(1.f/pdropout);
         dtags++;
       }
       if (dloss < best) {
