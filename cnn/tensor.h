@@ -19,6 +19,7 @@
 //#define EIGEN_NO_MALLOC
 
 #include <Eigen/Eigen>
+#include <unsupported/Eigen/CXX11/Tensor>
 
 namespace cnn {
 
@@ -30,21 +31,27 @@ struct Tensor {
   Tensor() = default;
   Tensor(const Dim& d, float* v) : d(d), v(v) {}
   // Get the data as a matrix
-  const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> operator*() const {
+  const Eigen::Map<Eigen::MatrixXf> operator*() const {
     assert(d.batch_elems() == 1);
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols());
+    assert(d.ndims() < 3);
+    return Eigen::Map<Eigen::MatrixXf>(v, d.rows(), d.cols());
   }
-  Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> operator*() {
+  Eigen::Map<Eigen::MatrixXf> operator*() {
     assert(d.batch_elems() == 1);
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols());
+    assert(d.ndims() < 3);
+    return Eigen::Map<Eigen::MatrixXf>(v, d.rows(), d.cols());
   }
   // Get the data as a vector
-  const Eigen::Map<Eigen::VectorXf, Eigen::Unaligned> vec() const {
-    return Eigen::Map<Eigen::VectorXf, Eigen::Unaligned>(v, d.size());
+  // this returns the full tensor contents even if it has many dimensions
+  const Eigen::Map<Eigen::VectorXf> vec() const {
+    return Eigen::Map<Eigen::VectorXf>(v, d.size());
   }
-  Eigen::Map<Eigen::VectorXf, Eigen::Unaligned> vec() {
-    return Eigen::Map<Eigen::VectorXf, Eigen::Unaligned>(v, d.size());
+  Eigen::Map<Eigen::VectorXf> vec() {
+    return Eigen::Map<Eigen::VectorXf>(v, d.size());
   }
+  // Get view as a Tensor (see specializations below-- this is to work Eigen's and CNNs compile-type vs. run-time differences)
+  template <int Order> Eigen::TensorMap<Eigen::Tensor<float,Order>> t();
+  template <int Order> const Eigen::TensorMap<Eigen::Tensor<float,Order>> t() const;
   // Get the pointer for a particular batch, automatically broadcasting if the size is zero
   const float* batch_ptr(unsigned bid) const {
     assert(d.bd == 1 || bid < d.bd);
@@ -55,27 +62,27 @@ struct Tensor {
     return v + (bid%d.bd)*d.batch_size();
   }
   // Get the matrix for a particular batch, automatically broadcasting if the size is zero
-  const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> batch_matrix(unsigned bid) const {
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + (bid%d.bd)*d.batch_size(), d.rows(), d.cols());
+  const Eigen::Map<Eigen::MatrixXf> batch_matrix(unsigned bid) const {
+    return Eigen::Map<Eigen::MatrixXf>(v + (bid%d.bd)*d.batch_size(), d.rows(), d.cols());
   }
-  Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> batch_matrix(unsigned bid) {
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v + (bid%d.bd)*d.batch_size(), d.rows(), d.cols());
+  Eigen::Map<Eigen::MatrixXf> batch_matrix(unsigned bid) {
+    return Eigen::Map<Eigen::MatrixXf>(v + (bid%d.bd)*d.batch_size(), d.rows(), d.cols());
   }
   // Get the data as a matrix, where each "row" is the concatenation of rows and columns,
   // and each "column" is batches
-  const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> rowcol_matrix() const {
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows()*d.cols(), d.batch_elems());
+  const Eigen::Map<Eigen::MatrixXf> rowcol_matrix() const {
+    return Eigen::Map<Eigen::MatrixXf>(v, d.rows()*d.cols(), d.batch_elems());
   }
-  Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> rowcol_matrix() {
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows()*d.cols(), d.batch_elems());
+  Eigen::Map<Eigen::MatrixXf> rowcol_matrix() {
+    return Eigen::Map<Eigen::MatrixXf>(v, d.rows()*d.cols(), d.batch_elems());
   }
   // Get the data as a matrix, where each "row" is the concatenation of rows,
   // and each "column" is the concatenation of columns and batches
-  const Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> colbatch_matrix() const {
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols()*d.batch_elems());
+  const Eigen::Map<Eigen::MatrixXf> colbatch_matrix() const {
+    return Eigen::Map<Eigen::MatrixXf>(v, d.rows(), d.cols()*d.batch_elems());
   }
-  Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned> colbatch_matrix() {
-    return Eigen::Map<Eigen::MatrixXf, Eigen::Unaligned>(v, d.rows(), d.cols()*d.batch_elems());
+  Eigen::Map<Eigen::MatrixXf> colbatch_matrix() {
+    return Eigen::Map<Eigen::MatrixXf>(v, d.rows(), d.cols()*d.batch_elems());
   }
   // this is very slow: use sparingly
   inline bool is_valid() const {
@@ -122,15 +129,18 @@ struct Tensor {
     }
   }
 
-  Dim d;
-  float* v;
+  Dim d;  // shape of tensor
+  float* v;  // pointer to memory
   std::vector<Tensor> bs;
+  // TODO start using this
+  //Device* device; // which device does it live on?
 
  private:
   friend class boost::serialization::access;
   template<class Archive>
   void save(Archive& ar, const unsigned int) const {
     ar & d;
+    // TODO(mem) save device
 #if HAVE_CUDA
     float* vc = (float*)malloc(d.size() * sizeof(float));
     CUDA_CHECK(cudaMemcpy(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
@@ -143,18 +153,54 @@ struct Tensor {
   template<class Archive>
   void load(Archive& ar, const unsigned int) {
     ar & d;
+    // TODO(mem) - load device and use it to create memory allocator
+    // Devices should probably know how to load and save data to disk
 #if HAVE_CUDA
     CUDA_CHECK(cudaMalloc(&v, d.size() * sizeof(float)));
     float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
     ar & boost::serialization::make_array(vc, d.size());
     CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
 #else
-    v = static_cast<float*>(cnn_mm_malloc(d.size() * sizeof(float), 32));
+    v = static_cast<float*>(_mm_malloc(d.size() * sizeof(float), 32));
     ar & boost::serialization::make_array(v, d.size());
 #endif
   }
   BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
+
+template<> inline Eigen::TensorMap<Eigen::Tensor<float,1>> Tensor::t<1>() {
+  assert(d.ndims() == 1);
+  return Eigen::TensorMap<Eigen::Tensor<float,1>>(v, (int)d[0]);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<float,1>> Tensor::t<1>() const {
+  assert(d.ndims() == 1);
+  return Eigen::TensorMap<Eigen::Tensor<float,1>>(v, (int)d[0]);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<float,2>> Tensor::t<2>() {
+  assert(d.ndims() == 2);
+  return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, (int)d[0], (int)d[1]);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<float,2>> Tensor::t<2>() const {
+  assert(d.ndims() == 2);
+  return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, (int)d[0], (int)d[1]);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<float,3>> Tensor::t<3>() {
+  assert(d.ndims() == 3);
+  return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)d[1], (int)d[2]);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<float,3>> Tensor::t<3>() const {
+  assert(d.ndims() == 3);
+  return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)d[1], (int)d[2]);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<float,4>> Tensor::t<4>() {
+  assert(d.ndims() == 4);
+  return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3]);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<float,4>> Tensor::t<4>() const {
+  assert(d.ndims() == 4);
+  return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3]);
+}
+// ...
 
 std::ostream& operator<<(std::ostream& os, const Tensor& t);
 real as_scalar(const Tensor& t);

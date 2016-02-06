@@ -1,3 +1,4 @@
+#include "cnn/cnn.h"
 #include "cnn/shadow-params.h"
 #include "cnn/tensor.h"
 #include "cnn/aligned-mem-pool.h"
@@ -8,13 +9,13 @@ using namespace std;
 namespace cnn {
 
 ShadowParameters::ShadowParameters(const Parameters& p) : h(p.values) {
-  h.v = (float*)cnn_mm_malloc(h.d.size() * sizeof(float), 256);
+  h.v = (float*)default_device->mem->malloc(h.d.size() * sizeof(float));
   TensorTools::Zero(h);
 }
 
 ShadowLookupParameters::ShadowLookupParameters(const LookupParameters& lp) : h(lp.values) {
   for (auto& t : h) {
-    t.v = (float*)cnn_mm_malloc(t.d.size() * sizeof(float), 256);
+    t.v = (float*)default_device->mem->malloc(t.d.size() * sizeof(float));
     TensorTools::Zero(t);
   }
 }

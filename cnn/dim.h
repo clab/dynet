@@ -18,7 +18,7 @@ namespace cnn {
 struct Dim {
   Dim() : nd(), bd(1) {}
   // explicit Dim(unsigned int m) : nd(1), bd(1) { d[0] = m; }
-  // TODO: The constructors for dimensions w/ and w/o batches is not unsigned intuitive.
+  // TODO: The constructors for dimensions w/ and w/o batches is not intuitive.
   //       can this be fixed in some way?
   // Dim(unsigned int m, unsigned int n) : nd(2), bd(1) { d[0] = m; d[1] = n; }
   Dim(std::initializer_list<unsigned int> x) : nd(), bd(1) {

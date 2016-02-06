@@ -52,7 +52,6 @@ namespace std {
 
 }
 
-
 unsigned LAYERS = 1;
 unsigned INPUT_DIM = 64;
 unsigned XCRIBE_DIM = 32;
@@ -64,7 +63,9 @@ unsigned DURATION_DIM = 4;
 
 unsigned int DATA_MAX_SEG_LEN = 0;
 
-bool use_pretrained_embeding = true;
+bool use_pretrained_embeding = false;
+bool use_dropout = false;
+float dropout_rate; 
 bool ner_tagging = false;
 string pretrained_embeding = "";
 
@@ -184,8 +185,18 @@ struct BiTrans {
 
   vector<Expression> transcribe(ComputationGraph& cg, const vector<Expression>& x) {
     l2rbuilder.new_graph(cg);
+    if(use_dropout){
+      l2rbuilder.set_dropout(dropout_rate);
+    }else{
+      l2rbuilder.disable_dropout();
+    }
     l2rbuilder.start_new_sequence();
     r2lbuilder.new_graph(cg);
+    if(use_dropout){
+      r2lbuilder.set_dropout(dropout_rate);
+    }else{
+      r2lbuilder.disable_dropout();
+    }
     r2lbuilder.start_new_sequence();
     Expression f2c = parameter(cg, p_f2c);
     Expression r2c = parameter(cg, p_r2c);
@@ -221,6 +232,11 @@ struct SegEmbedUni {
     h.resize(len);
     Expression h0 = parameter(cg, p_h0);
     builder.new_graph(cg);
+    if(use_dropout){
+      builder.set_dropout(dropout_rate);
+    }else{
+      builder.disable_dropout();
+    }
     for (int i = 0; i < len; ++i) {
       int max_j = i + len;
       if (max_seg_len) max_j = i + max_seg_len;
@@ -375,8 +391,12 @@ struct SegmentalRNN {
           Expression ce_embeding = (j == len) ? c_end : c[j];
 
           Expression h1 = rectify(affine_transform({h1b, d2h1, d, y2h1, y, fwd2h1, seg_embedding_ij.first, rev2h1, seg_embedding_ij.second, cf2h1, cf_embeding, ce2h1, ce_embeding}));
-          Expression h2 = tanh(affine_transform({h2b, h12h2, h1}));
-          //Expression p = exp(affine_transform({ob, h22o, h2}));
+          Expression h2;
+          if(use_dropout){
+            h2 = dropout(tanh(affine_transform({h2b, h12h2, h1})), dropout_rate);
+          }else{
+            h2 = tanh(affine_transform({h2b, h12h2, h1}));
+          }
           Expression p = affine_transform({ob, h22o, h2});
           p_map[key_tuple] = p;
         }
@@ -385,9 +405,9 @@ struct SegmentalRNN {
     return p_map;
 
   }
-  
+
   // return Expression of total loss
-  Expression SupervisedLoss(vector<Expression>& xins,
+  Expression SupervisedCRFLoss(vector<Expression>& xins,
                             const vector<pair<int,int>>& yz,  // .first = y, .second = duration (z)
                             ComputationGraph& cg,
                             int max_seg_len = 0) {
@@ -454,31 +474,48 @@ struct SegmentalRNN {
     return fwd.back() - ref_fwd.back();
   }
 
-  Expression ViterbiDecode(vector<Expression>& xins,
-                           const vector<pair<int,int>>& yz_gold,  // .first = y, .second = duration (z)
-                           ComputationGraph& cg,
-                           vector<pair<int, int>> &yz_pred,
-                           int max_seg_len = 0) {
-    yz_pred.clear();
+  Expression PartiallySupervisedCRFLoss(vector<Expression>& xins,
+                            const vector<pair<int,int>>& yz,  // .first = y, .second = duration (z)
+                            ComputationGraph& cg,
+                            int max_seg_len = 0) {
+    
+    // I keep the z here although I am not going to use it
     int len = xins.size();
     unordered_map<PKey, Expression> p_map = ConstructSegmentMap(xins, cg, max_seg_len);
 
     vector<Expression> fwd(len+1);  // fwd trellis for model
-    vector<Expression> f, fr;
-    vector<tuple<int, int, unsigned>> ijt; // ijt stores positions where we get the max (i.e. i, j and tag)
-    vector<tuple<int, int, unsigned>> it; // it stores positions where we get the max ending at j
-    it.push_back(make_tuple(0,0,0)); // push one to make the index consistent, now it[j] means j rather than j+1
+    vector<Expression> f;
+
+    vector<vector<Expression>> fwd_iq(len+1);
+    for (int ind = 0; ind < fwd_iq.size(); ++ind){
+      // if yz.size() == 2, then we have end state q = 2 means already consume 2 labels
+      // therefore here, should resize to yz.size() + 1 so that fwd_iq[len][2] is the end state
+      fwd_iq[ind].resize(yz.size()+1);
+    }
+
+    vector<vector<Expression>> fq;
+    // cg.forward();
+    // cerr << "here" << endl;
+    // cerr << len << endl;
+
     // careful: in the other algorithms spans are [i,j], here they are [i,j)
     for (int j = 1; j <= len; ++j) {
+      // cg.forward();
+      // cerr << "j: " << j << endl;
       // fwd[j] is the total unnoramlized probability for all segmentations / labels
       // ending (and including) the symbol at position j-1
       f.clear(); // f stores all additive contributions to item [j]
-      fr.clear();
-      ijt.clear();
+      fq.clear();
+      fq.resize(yz.size() + 1);
+      for(auto e : fq){
+        e.clear();
+      }
+
       for (unsigned tag = 0; tag < td.size(); ++tag) {
         const int i_start = max_seg_len ? max(0, j - max_seg_len) : 0;
         for (int i = i_start; i < j; ++i) {  // i is the starting position
           PKey key_tuple(i,j,tag);
+          assert(p_map.find (key_tuple) != p_map.end());
           Expression p = p_map.at(key_tuple);
 
           if (i == 0) { // fwd[0] is the path up and including -1, so it's the empty set, i.e., its probability is 1
@@ -486,21 +523,145 @@ struct SegmentalRNN {
           } else {
             f.push_back(p + fwd[i]);
           }
+          
+          for (int q = 0; (q < yz.size()+1 && q <= j) ; ++q){
+            if (i == 0){
+              if(tag == yz[q-1].first && q == 1){
+                // q can be 0 now and must be 0 now
+                // cerr << "j: " << j << " i: " << i << " q: " << q << endl;
+                fq[q].push_back(p);
+                // cg.forward();
+              }
+            } else {
+              if(tag == yz[q-1].first && q > 1 && q-1 <= i ) {
+                // if q == 0, it's not possible because i > 0, i already consume at least one lable
+                // how to default value 0
+                // note fwd_iq[max_seg_len+1] can't only consume 1 tag
+                // basically, (i-1)/max_seg_len < q-1
+                if ((i-1)/max_seg_len < q-1){
+                  fq[q].push_back(p + fwd_iq[i][q-1]);
+                }
+                // else this item got cut
+              }
+            } 
+          }
+        }
+      }
+      fwd[j] = logsumexp(f);
+      for (int q = 0; q < yz.size()+1 && q <= j; ++q){
+        if(fq[q].size() > 0){
+          fwd_iq[j][q] = logsumexp(fq[q]);
+        }
+      }
+    }
+
+    return fwd.back() - fwd_iq.back().back();
+  }
+
+
+  Expression SumParts(int len,
+                      const vector<pair<int,int>>& yz,
+                      unordered_map<PKey, Expression>& p_map,
+                      ComputationGraph& cg,
+                      int max_seg_len = 0
+                      ) {
+    vector<Expression> useful_parts;
+    unsigned cur = 0;
+    for (unsigned ri = 0; ri < yz.size(); ++ri) {
+      assert(cur < len);
+      int y = yz[ri].first;
+      int dur = yz[ri].second;
+      if (max_seg_len && dur > max_seg_len) {
+        cerr << "max_seg_len=" << max_seg_len << " but reference duration is " << dur << endl;
+        abort();
+      }
+      unsigned j = cur + dur;
+      assert(j <= len);
+
+      PKey key_tuple(cur,j,y);
+      assert(p_map.find (key_tuple) != p_map.end());
+      Expression p = p_map.at(key_tuple);
+      useful_parts.push_back(p);
+      cur = j;
+    }
+    assert(cur == len);
+    assert(useful_parts.size() > 0);
+    Expression s = sum(useful_parts);
+    return s;
+  }
+
+    // return Expression of total loss
+  Expression SupervisedHingeLoss(vector<Expression>& xins,
+                            const vector<pair<int,int>>& yz,  // .first = y, .second = duration (z)
+                            ComputationGraph& cg,
+                            int max_seg_len = 0) {
+    int len = xins.size();
+    unordered_map<PKey, Expression> p_map = ConstructSegmentMap(xins, cg, max_seg_len);
+    cg.forward();
+    vector<Expression> tempvec;
+    Expression gold_score = SumParts(len, yz, p_map, cg, max_seg_len);
+    tempvec.push_back(gold_score);
+    vector<pair<int,int>> yz_pred; 
+    PureDecode(len, p_map, cg, yz_pred, max_seg_len);
+    Expression predict_score = SumParts(len, yz_pred, p_map, cg, max_seg_len);
+    tempvec.push_back(predict_score);
+    Expression loss = hinge(concatenate(tempvec), (unsigned)0, (float)10);
+    return loss;
+  }
+
+  void PureDecode(int len,
+                  unordered_map<PKey,Expression>& p_map,
+                  ComputationGraph& cg,
+                  vector<pair<int, int>> &yz_pred,
+                  int max_seg_len = 0){
+    yz_pred.clear();
+    // vector<Expression> fwd(len+1);  // fwd trellis for model
+    // vector<Expression> f;
+    vector<float> v_fwd(len+1);
+    vector<float> v_f;
+
+    vector<tuple<int, int, unsigned>> ijt; // ijt stores positions where we get the max (i.e. i, j and tag)
+    vector<tuple<int, int, unsigned>> it; // it stores positions where we get the max ending at j
+    it.push_back(make_tuple(0,0,0)); // push one to make the index consistent, now it[j] means j rather than j+1
+    // careful: in the other algorithms spans are [i,j], here they are [i,j)
+    for (int j = 1; j <= len; ++j) {
+      // fwd[j] is the total unnoramlized probability for all segmentations / labels
+      // ending (and including) the symbol at position j-1
+      // f.clear(); // f stores all additive contributions to item [j]
+      v_f.clear();
+      ijt.clear();
+      for (unsigned tag = 0; tag < td.size(); ++tag) {
+        const int i_start = max_seg_len ? max(0, j - max_seg_len) : 0;
+        for (int i = i_start; i < j; ++i) {  // i is the starting position
+          PKey key_tuple(i,j,tag);
+          Expression p = p_map.at(key_tuple);
+          float v_p = as_scalar(cg.get_value(p.i));
+          if (i == 0) { // fwd[0] is the path up and including -1, so it's the empty set, i.e., its probability is 1
+            // f.push_back(p);
+            v_f.push_back(v_p);
+          } else {
+            // f.push_back(p + fwd[i]);
+            v_f.push_back(v_p + v_fwd[i]);
+          }
           ijt.push_back(make_tuple(i, j, tag));
         }
       }
       // cerr << "size of vector f at j = " << j << " equals " << f.size() << endl;
       unsigned max_ind = 0;
-      auto max_val = as_scalar(cg.get_value(f[0].i));
-      for(auto ind = 1; ind < f.size(); ++ind){
-        auto val = as_scalar(cg.get_value(f[ind].i));
+      // auto max_val = as_scalar(cg.get_value(f[0].i));
+      auto max_val = v_f[0];
+      // for(auto ind = 1; ind < f.size(); ++ind){
+      for(auto ind = 1; ind < v_f.size(); ++ind){
+        // auto val = as_scalar(cg.get_value(f[ind].i));
+        auto val = v_f[ind];
         // cerr << val << endl;
         if (max_val < val){
           max_val = val;
           max_ind = ind;
         }
       }
-      fwd[j] = f[max_ind];
+      // fwd[j] = f[max_ind];
+      v_fwd[j] = v_f[max_ind];
       it.push_back(ijt[max_ind]);
       // cerr << "max value = \t" << as_scalar(cg.get_value(fwd[j])) << endl;
     }
@@ -517,29 +678,23 @@ struct SegmentalRNN {
     }
     std::reverse(pred.begin(),pred.end());
     std::reverse(yz_pred.begin(),yz_pred.end());
-    // cout << "==pred==" << endl;
-    // for(auto e : pred){
-    //   cout << std::get<0>(e) << "\t" << std::get<1>(e) << "\t" << std::get<2>(e) << endl;
-    // }
-
-    // for(auto e: yz_pred){
-    //   cout << e.first << "," << e.second << "\t";
-    // }
-    // cout << endl;
-
-    // cout << "==gold==" << endl;
-    // for(auto e: yz_gold){
-    //   cout << e.first << "," << e.second << "\t";
-    // }
-    // cout << endl;
-
-    // abort();
-    return fwd.back();
   }
-  
 
-  
+  void ViterbiDecode(vector<Expression>& xins,
+                           const vector<pair<int,int>>& yz_gold,  // .first = y, .second = duration (z)
+                           ComputationGraph& cg,
+                           vector<pair<int, int>> &yz_pred,
+                           int max_seg_len = 0) {
+    
+    int len = xins.size();
+    unordered_map<PKey, Expression> p_map = ConstructSegmentMap(xins, cg, max_seg_len);
 
+    // Compute everything at this step and use them later
+    cg.forward();
+
+    PureDecode(len, p_map, cg, yz_pred, max_seg_len);
+    return;
+  }
 
   Parameters* p_d2h1, *p_y2h1, *p_fwd2h1, *p_rev2h1, *p_h1b;
   Parameters* p_h12h2, *p_h2b;
@@ -681,23 +836,23 @@ double evaluate(vector<vector<pair<int,int>>>& yz_preds,
 
 }
 
-void test_only(SegmentalRNN<LSTMBuilder>& crf,
+void test_only(SegmentalRNN<LSTMBuilder>& segrnn,
           vector<pair<vector<int>,vector<pair<int,int>>>>& test_set,
           int max_seg_len = 0)
 {
   for (auto& sent : test_set) {
     ComputationGraph cg;
     vector<pair<int, int>> yz_pred;
-    vector<Expression> xins = crf.ConstructInput(sent.first, cg);
-    crf.ViterbiDecode(xins, sent.second, cg, yz_pred, max_seg_len);
+    vector<Expression> xins = segrnn.ConstructInput(sent.first, cg);
+    segrnn.ViterbiDecode(xins, sent.second, cg, yz_pred, max_seg_len);
     unsigned int i;
     for(i = 0; i < yz_pred.size()-1; ++i){
       auto pred = yz_pred[i];
-      cout << pred.first << ":" << pred.second << " ";
+      cout << segrnn.td.Convert(pred.first) << ":" << pred.second << " ";
     }
     if(i >= 0 && (i == yz_pred.size()-1)){
       auto pred = yz_pred[i];
-      cout << pred.first << ":" << pred.second;
+      cout << segrnn.td.Convert(pred.first) << ":" << pred.second;
     }
     cout << endl;
   }
@@ -780,48 +935,99 @@ void load_dicts(string model_file_prefix,
   cerr << "loading dicts finished" << endl;
 }
 
-double predict_and_evaluate(SegmentalRNN<LSTMBuilder>& crf,
-                            const vector<pair<vector<int>,vector<pair<int,int>>>>& input_set,
-                            int max_seg_len = 0,
-                            string set_name = "DEV"
-                            )
+unsigned int edit_distance(const std::string& s1, const std::string& s2)
 {
-  double dloss = 0;
-  unsigned dtags = 0;
+  const std::size_t len1 = s1.size(), len2 = s2.size();
+  std::vector<std::vector<unsigned int>> d(len1 + 1, std::vector<unsigned int>(len2 + 1));
 
+  d[0][0] = 0;
+  for(unsigned int i = 1; i <= len1; ++i) d[i][0] = i;
+    for(unsigned int i = 1; i <= len2; ++i) d[0][i] = i;
+      for(unsigned int i = 1; i <= len1; ++i)
+        for(unsigned int j = 1; j <= len2; ++j)
+          d[i][j] = std::min({ d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1) });
+        return d[len1][len2];
+}
+
+double evaluate_partial(vector<vector<pair<int,int>>>& yz_preds,
+                       vector<vector<pair<int,int>>>& yz_golds,
+                       cnn::Dict& d,
+                       cnn::Dict& td){
+  assert(yz_preds.size() == yz_golds.size());
+
+  int total_length_gold = 0;
+  int total_length_pred = 0;
+  int total_editing_distance = 0;
+
+  for (int i = 0; i < yz_preds.size(); i++){
+    // for sentence i
+    vector<pair<int,int>>& yz_pred = yz_preds[i];
+    vector<pair<int,int>>& yz_gold = yz_golds[i];
+    std::string pred_s = "";
+    for (auto e : yz_pred){
+      pred_s.append(td.Convert(e.first));
+      total_length_pred++;
+    } 
+    std::string gold_s = "";
+    for (auto e : yz_gold){
+      gold_s.append(td.Convert(e.first));
+      total_length_gold++;
+    }
+    auto dis = edit_distance(pred_s, gold_s);
+    total_editing_distance += dis;
+    
+  }
+  cerr << "total_editing_distance: " << total_editing_distance << "\ttotal_length_gold: " << total_length_gold << "\ttotal_length_pred: " << total_length_pred << endl;
+  double score = (((float) total_editing_distance) * 2.0)/((float)(total_length_gold + total_length_pred));
+  cerr << "score: " << score << endl;
+  return score; 
+}
+
+double predict_and_evaluate(SegmentalRNN<LSTMBuilder>& segrnn,
+                            const vector<pair<vector<int>,vector<pair<int,int>>>>& input_set,
+                            bool partial,
+                            int max_seg_len,
+                            string set_name = "DEV"
+                            ){
   vector<vector<pair<int,int>>> yz_preds;
   vector<vector<pair<int,int>>> yz_golds;
   for (auto& sent : input_set) {
     ComputationGraph cg;
-    if(check_max_seg(sent.second, max_seg_len)){
-      vector<Expression> xins = crf.ConstructInput(sent.first, cg);
-      crf.SupervisedLoss(xins, sent.second, cg, max_seg_len);
-      dtags += sent.second.size();
-      dloss += as_scalar(cg.forward());
-    }
     vector<pair<int, int>> yz_pred;
-    vector<Expression> xins = crf.ConstructInput(sent.first, cg);
-    crf.ViterbiDecode(xins, sent.second, cg, yz_pred, max_seg_len);
+    vector<Expression> xins = segrnn.ConstructInput(sent.first, cg);
+    segrnn.ViterbiDecode(xins, sent.second, cg, yz_pred, max_seg_len);
     yz_golds.push_back(sent.second);
     yz_preds.push_back(yz_pred);
   }
-  double f = evaluate(yz_preds, yz_golds, crf.d, crf.td);
+  
+  double f1 = evaluate(yz_preds, yz_golds, segrnn.d, segrnn.td);
+  double f2 = evaluate_partial(yz_preds, yz_golds, segrnn.d, segrnn.td);
 
-  cout << set_name << endl;
-  cerr << "\n***"<< set_name << " E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << ' ';
+  double f = partial ? f2 : f1;
+  cerr << set_name << endl;
   return f;
 }
 
+
 int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
-
+  int test_max_seg_len;
+  int max_consider_sentence_len;
+  unsigned dev_every_i_reports;
   po::options_description desc("Allowed options");
   desc.add_options()
       ("help", "produce help message")
       ("train", po::bool_switch()->default_value(false), "the training mode")
+      ("hinge", po::bool_switch()->default_value(false), "training use the hinge loss")
+      ("partial", po::bool_switch()->default_value(false), "the partially supervised training mode, where we don't have z")
+      ("train_max_seg_len", po::value<int>(), "in the partially supervised training mode, the max len we consider")
       ("load_original_model", po::bool_switch()->default_value(false), "continuing the training by loading the model, only valid during training")
+      ("max_consider_sentence_len", po::value<int>(&max_consider_sentence_len)->default_value(1000))
+      ("dropout_rate", po::value<float>(), "dropout rate, also indicts using dropout during training")
       ("evaluate_test", po::bool_switch()->default_value(false), "evaluate test set every training iteration")
       ("test", po::bool_switch()->default_value(false), "the test mode")
+      ("test_max_seg_len", po::value<int>(&test_max_seg_len)->default_value(30))
+      ("dev_every_i_reports", po::value<unsigned>(&dev_every_i_reports)->default_value(1000))
       ("train_file", po::value<string>(), "path of the train file")
       ("dev_file", po::value<string>(), "path of the dev file")
       ("test_file", po::value<string>(), "path of the test file")
@@ -847,6 +1053,15 @@ int main(int argc, char** argv) {
       use_pretrained_embeding = false;
       cerr << "not using pre-trained embeding" << endl;
     }
+
+    if (vm.count("dropout_rate")){
+      use_dropout = true;
+      dropout_rate = vm["dropout_rate"].as<float>();
+      cerr << "using dropout training, dropout rate: " << dropout_rate << endl;
+    }else{
+      use_dropout = false;
+    }
+
     // create two dictionaries
     cnn::Dict d;
     cnn::Dict td;
@@ -866,10 +1081,13 @@ int main(int argc, char** argv) {
     // auto sgd = new SimpleSGDTrainer(&model);
     auto sgd = new AdamTrainer(&model, 1e-6, 0.0005, 0.01, 0.9999, 1e-8);
     int max_seg_len = DATA_MAX_SEG_LEN + 1;
+    if(vm.count("train_max_seg_len")){
+      max_seg_len = vm["train_max_seg_len"].as<int>();
+    }
 
     cerr << "set max_seg_len = " << max_seg_len << endl;
 
-    SegmentalRNN<LSTMBuilder> crf(model, d, td);
+    SegmentalRNN<LSTMBuilder> segrnn(model, d, td);
 
     if(vm["load_original_model"].as<bool>()){
       load_models(vm["model_file_prefix"].as<string>(), model);
@@ -877,7 +1095,7 @@ int main(int argc, char** argv) {
 
     double f_best = 0;
     unsigned report_every_i = 10;
-    unsigned dev_every_i_reports = 1000;
+
     unsigned si = training.size();
     vector<unsigned> order(training.size());
     for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
@@ -902,8 +1120,25 @@ int main(int argc, char** argv) {
         auto& sent = training[order[si]];
         ++si;
         if(check_max_seg(sent.second, max_seg_len)){
-          vector<Expression> xins = crf.ConstructInput(sent.first, cg);
-          crf.SupervisedLoss(xins, sent.second, cg, max_seg_len);
+          if (sent.first.size() > max_consider_sentence_len){
+            cerr << "skip a sentence because its length " << sent.first.size() << " > " << max_consider_sentence_len << endl;
+            continue;
+          }
+          vector<Expression> xins = segrnn.ConstructInput(sent.first, cg);
+          if(vm["partial"].as<bool>()){
+              if(vm["hinge"].as<bool>()){
+                cerr << "Hingle Loss for partially supervised setting is not avaiable at this moment." << endl;
+                abort();
+              }else{
+                segrnn.PartiallySupervisedCRFLoss(xins, sent.second, cg, max_seg_len);
+              }
+          }else{
+            if(vm["hinge"].as<bool>()){
+              segrnn.SupervisedHingeLoss(xins, sent.second, cg, max_seg_len);
+            }else{
+              segrnn.SupervisedCRFLoss(xins, sent.second, cg, max_seg_len);
+            }
+          }
           ttags += sent.second.size();
           loss += as_scalar(cg.forward());
           cg.backward();
@@ -915,31 +1150,32 @@ int main(int argc, char** argv) {
       cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
       report++;
       if (report % dev_every_i_reports == 0) {
-        double f = predict_and_evaluate(crf, dev, max_seg_len);
+        double f = predict_and_evaluate(segrnn, dev, vm["partial"].as<bool>(), max_seg_len);
         if (f > f_best) {
           f_best = f;
           save_models(vm["model_file_prefix"].as<string>(), d, td, model);
         }
         if (vm["evaluate_test"].as<bool>()){
-          predict_and_evaluate(crf, test, max_seg_len, "TEST");
+          predict_and_evaluate(segrnn, test, vm["partial"].as<bool>(), max_seg_len, "TEST");
         }
       }
     }
     delete sgd;
   }else if(vm["test"].as<bool>()){
+    use_pretrained_embeding = false;
+    use_dropout = false;
     Model model;
     cnn::Dict d;
     cnn::Dict td;
     load_dicts(vm["model_file_prefix"].as<string>(), d, td);
-    SegmentalRNN<LSTMBuilder> crf(model, d, td);
+    SegmentalRNN<LSTMBuilder> segrnn(model, d, td);
     load_models(vm["model_file_prefix"].as<string>(), model);
     vector<pair<vector<int>,vector<pair<int,int>>>> test;
     read_file(vm["test_file"].as<string>(), d, td, test, true);
     
-    test_only(crf, test);
+    test_only(segrnn, test);
   }
 
 }
-
 
 

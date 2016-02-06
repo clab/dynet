@@ -5,6 +5,7 @@ set(cnn_library_SRCS
     cnn.cc
     conv.cc
     deep-lstm.cc
+    devices.cc
     dict.cc
     dim.cc
     exec.cc
@@ -13,8 +14,10 @@ set(cnn_library_SRCS
     grad-check.cc
     graph.cc
     gru.cc
+    hsm-builder.cc
     init.cc
     lstm.cc
+    mem.cc
     model.cc
     mp.cc
     nodes.cc
@@ -46,6 +49,7 @@ set(cnn_library_HDRS
     gpu-ops.h
     graph.h
     gru.h
+    hsm-builder.h
     init.h
     lstm.h
     model.h

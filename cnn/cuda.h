@@ -2,6 +2,7 @@
 #define CNN_CUDA_H
 #if HAVE_CUDA
 
+#include <vector>
 #include <cassert>
 #include <utility>
 #include <stdexcept>
@@ -31,6 +32,8 @@
 
 namespace cnn {
 
+struct Device;
+
 inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   assert(n);
   int logn;
@@ -45,7 +48,7 @@ inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   return std::make_pair(blocks, threads);
 }
 
-void Initialize_GPU(int& argc, char**& argv);
+std::vector<Device*> Initialize_GPU(int& argc, char**& argv);
 extern cublasHandle_t cublas_handle;
 
 } // namespace cnn
