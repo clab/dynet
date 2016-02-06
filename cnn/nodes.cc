@@ -35,6 +35,61 @@ using namespace std;
 
 namespace cnn {
 
+size_t Sparsemax::aux_storage_size() const {
+  return (dim.size() + 1) * sizeof(float);
+}
+
+void Sparsemax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (xs[0]->d.cols() == 1) {
+#if HAVE_CUDA
+    throw std::runtime_error("Sparsemax not implemented on GPU");
+#else
+    const unsigned rows = xs[0]->d.rows();
+    float *zs = static_cast<float*>(aux_mem);
+    std::partial_sort_copy(xs[0]->v, xs[0]->v+rows, zs, zs + rows, std::greater<float>());
+    float sum = 0, maxsum = 0;
+    unsigned k = 0;
+    for (k = 0; k < rows; ++k) {
+      sum += zs[k];
+      float t = 1 + (k + 1) * zs[k];
+      if (t <= sum) break;
+      maxsum = sum;
+    }
+    float tau = (maxsum - 1) / k;
+    auto x = **xs[0];
+    auto y = *fx;
+    y = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
+    int c = 1;
+    int *cc = static_cast<int*>(aux_mem);
+    for (unsigned i = 0; i < rows; ++i)
+      if (y(i,0) > 0.f) cc[c++] = i;
+    cc[0] = c - 1;
+#endif
+  } else {
+    throw std::runtime_error("Sparsemax not yet implemented for multiple columns");
+  }
+}
+
+void Sparsemax::backward_impl(const vector<const Tensor*>& xs,
+                              const Tensor& fx,
+                              const Tensor& dEdf,
+                              unsigned i,
+                              Tensor& dEdxi) const {
+#if HAVE_CUDA
+  throw std::runtime_error("Sparsemax not implemented on GPU");
+#else
+  const int ssize = static_cast<int*>(aux_mem)[0];
+  int *support = static_cast<int*>(aux_mem) + 1;
+  float dhat = 0;
+  auto& d = *dEdf;
+  for (int i = 0; i < ssize; ++i)
+    dhat += d(support[i], 0);
+  dhat /= ssize;
+  for (int i = 0; i < ssize; ++i)
+    (*dEdxi)(support[i], 0) += d(support[i], 0) - dhat;
+#endif
+}
+
 void MatrixInverse::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
 #ifdef HAVE_CUDA
@@ -1225,8 +1280,10 @@ void Softmax::backward_impl(const vector<const Tensor*>& xs,
 #if HAVE_CUDA
   gpu::softmax_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
 #else
-  float off_diag_sum = -(*fx).cwiseProduct(*dEdf).sum();
-  *dEdxi += (*fx).binaryExpr(*dEdf, FSoftmaxBackward(off_diag_sum));
+  auto y = *fx;
+  if (y.rows() == 1) { return; } // no error if softmax = 0
+  float off_diag_sum = -y.cwiseProduct(*dEdf).sum();
+  *dEdxi += y.binaryExpr(*dEdf, FSoftmaxBackward(off_diag_sum));
 #endif
 }
 
