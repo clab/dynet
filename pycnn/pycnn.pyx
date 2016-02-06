@@ -140,6 +140,9 @@ cdef class LookupParameters:
     def __getitem__(self, int i):
         return lookup(self, i)
 
+    cpdef batch(self, vector[unsigned] i):
+        return lookup_batch(self, i)
+
     cpdef init_row(self, unsigned i, vector[float] row):
         self.thisptr.Initialize(i, row)
 
@@ -222,6 +225,20 @@ cdef class FloatValue:
     def set(self, val): self.val = val
     def get(self): return self.val
     cdef float* addr(self): return &(self.val)
+
+cdef class UnsignedVectorValue:
+    cdef vector[unsigned] *vals
+    def __cinit__(self, vals):
+        self.vals = new vector[unsigned]()
+        self.set(vals)
+    def __dealloc__(self):
+        del self.vals
+    def set(self, newval):
+        self.vals.clear()
+        for f in newval: self.vals.push_back(f)
+    def get(self): return deref(self.vals)
+    def size(self): return len(deref(self.vals))
+    cdef vector[unsigned]* addr(self): return self.vals
 
 cdef class FloatVectorValue:
     cdef vector[float] *vals
@@ -326,8 +343,13 @@ cdef class ComputationGraph:
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
-    cdef outputPicker(self, Expression e, unsigned v = 0):
+    cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
+        return _lookupBatchExpression(self, p, vs, update)
+    cdef outputPicker(self, Expression e, unsigned v=0):
         r = _pickerExpression(self, e, v)
+        return r
+    cdef outputBatchPicker(self, Expression e, vector[unsigned] vs):
+        r = _pickerBatchExpression(self, e, vs)
         return r
 
 # }}}
@@ -514,8 +536,27 @@ cdef class _lookupExpression(Expression):
         self.cgp().invalidate()
         self.val.set(i)
 
+cdef class _lookupBatchExpression(Expression):
+    cdef UnsignedVectorValue val
+    def __cinit__(self, ComputationGraph g, LookupParameters p, vector[unsigned] indices, update=True):
+        self.val = UnsignedVectorValue(indices)
+        self.cg_version = g.version()
+        cdef CExpression e
+        if update:
+            e = c_lookup(self.cgp()[0], p.thisptr, self.val.addr())
+        else:
+            e = c_const_lookup(self.cgp()[0], p.thisptr, self.val.addr())
+        self.vindex = e.i
+        g._inputs.append(self)
+    def set(self,i):
+        self.cgp().invalidate()
+        self.val.set(i)
+
 def lookup(LookupParameters p, unsigned index=0, update=True):
     return _cg.lookup(p, index, update)
+
+def lookup_batch(LookupParameters p, vector[unsigned] indices, update=True):
+    return _cg.lookup_batch(p, indices, update)
 
 cdef class _pickerExpression(Expression):
     cdef UnsignedValue val
@@ -533,6 +574,22 @@ cdef class _pickerExpression(Expression):
 
 def pick(Expression e, unsigned index=0):
     return _cg.outputPicker(e, index)
+
+cdef class _pickerBatchExpression(Expression):
+    cdef UnsignedVectorValue val
+    def __cinit__(self, ComputationGraph g, Expression e, vector[unsigned] indices):
+        self.val = UnsignedVectorValue(indices)
+        self.cg_version = g.version()
+        cdef CExpression ce
+        ce = c_pick(e.c(), self.val.addr())
+        self.vindex = ce.i
+        g._inputs.append(self)
+    def set_index(self,i):
+        self.cgp().invalidate()
+        self.val.set(i)
+
+def pick_batch(Expression e, vector[unsigned] indices):
+    return _cg.outputBatchPicker(e, indices)
 
 cdef class _hingeExpression(Expression):
     cdef UnsignedValue val
@@ -601,6 +658,7 @@ cpdef Expression huber_distance(Expression x, Expression y, float c=1.345): ensu
 #expr-unsigned
 cpdef Expression kmax_pooling(Expression x, unsigned k): return Expression.from_cexpr(x.cg_version, c_kmax_pooling(x.c(), k))
 cpdef Expression pickneglogsoftmax(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), v))
+cpdef Expression pickneglogsoftmax_batch(Expression x, vector[unsigned] vs): return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), vs))
 
 cpdef Expression kmh_ngram(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
 cpdef Expression pickrange(Expression x, unsigned v, unsigned u): return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
