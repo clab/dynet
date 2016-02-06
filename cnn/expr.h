@@ -71,6 +71,7 @@ Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
 Expression log_softmax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
+Expression sparsemax(const Expression& x);
 Expression softmax(const Expression& x);
 Expression softsign(const Expression& x);
 Expression pow(const Expression& x, const Expression& y);
