@@ -32,8 +32,6 @@ from pycnn cimport *
 cimport pycnn
 
 
-
-
 cdef init(random_seed=None):
     cdef int argc = len(sys.argv)
     cdef char** c_argv
@@ -755,10 +753,18 @@ cdef class RNNBuilder: # {{{
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 
-    cpdef RNNState initial_state(self):
+    cpdef RNNState initial_state(self,vecs=None):
         if self.cg_version != _cg.version():
             self.new_graph()
-            self.start_new_sequence()
+            if vecs is not None:
+                es = []
+                for v in vecs:
+                    e = vecInput(len(v))
+                    e.set(v)
+                    es.append(e)
+                self.start_new_sequence(es)
+            else:
+                self.start_new_sequence()
             self._init_state = RNNState(self, -1)
         return self._init_state
 #}}}
