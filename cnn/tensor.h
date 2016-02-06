@@ -7,6 +7,7 @@
 #include "cnn/dim.h"
 #include "cnn/random.h"
 #include "cnn/aligned-mem-pool.h"
+#include "cnn/devices.h"
 
 #if HAVE_CUDA
 #include <cuda.h>
@@ -29,7 +30,7 @@ typedef float real;
 
 struct Tensor {
   Tensor() = default;
-  Tensor(const Dim& d, float* v) : d(d), v(v) {}
+  Tensor(const Dim& d, float* v, Device* dev) : d(d), v(v), device(dev) {}
   // Get the data as a matrix
   const Eigen::Map<Eigen::MatrixXf> operator*() const {
     assert(d.batch_elems() == 1);
@@ -108,7 +109,7 @@ struct Tensor {
       assert(b < d.batch_elems());
       const unsigned bsize = d.batch_size();
       Dim new_d(d); new_d.bd = 1;
-      Tensor ret(new_d, v + bsize * b);
+      Tensor ret(new_d, v + bsize * b, device);
       // std::cerr << "Getting tensor for batch " << (b % d.batch_elems()) << " bsize: " << bsize << ", ptr=" << (long)ret.v << std::endl;
       return ret;
     }
@@ -124,7 +125,7 @@ struct Tensor {
       Dim new_d = d; new_d.bd = 1;
       assert (d.batch_elems() >= 0);
       for(unsigned b = 0; b < d.batch_elems(); ++b)
-        bs[b] = Tensor(new_d, v + bsize * b);
+        bs[b] = Tensor(new_d, v + bsize * b, device);
       return bs;
     }
   }
@@ -132,8 +133,7 @@ struct Tensor {
   Dim d;  // shape of tensor
   float* v;  // pointer to memory
   std::vector<Tensor> bs;
-  // TODO start using this
-  //Device* device; // which device does it live on?
+  Device* device;
 
  private:
   friend class boost::serialization::access;

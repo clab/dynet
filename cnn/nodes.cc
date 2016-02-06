@@ -195,7 +195,7 @@ void Min::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = fx.vec();
   auto x1 = xs[0]->vec();
   auto x2 = xs[1]->vec();
-  Tensor t(fx.d, static_cast<float*>(aux_mem));
+  Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device);
   auto u = t.vec();
   u = (x1.array() < x2.array()).matrix().cast<float>();
   y = x1.cwiseMin(x2);
@@ -211,7 +211,7 @@ void Min::backward_impl(const vector<const Tensor*>& xs,
 #ifdef HAVE_CUDA
   throw std::runtime_error("Min not yet implemented for CUDA");
 #else
-  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem));
+  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem), fx.device);
   if (i == 0) {
     dEdxi.vec() += t.vec().cwiseProduct(dEdf.vec());
   } else {
@@ -231,7 +231,7 @@ void Max::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto y = fx.vec();
   auto x1 = xs[0]->vec();
   auto x2 = xs[1]->vec();
-  Tensor t(fx.d, static_cast<float*>(aux_mem));
+  Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device);
   auto u = t.vec();
   u = (x1.array() > x2.array()).matrix().cast<float>();
   y = x1.cwiseMax(x2);
@@ -247,7 +247,7 @@ void Max::backward_impl(const vector<const Tensor*>& xs,
 #ifdef HAVE_CUDA
   throw std::runtime_error("Max not yet implemented for CUDA");
 #else
-  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem));
+  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem), fx.device);
   if (i == 0) {
     dEdxi.vec() += t.vec().cwiseProduct(dEdf.vec());
   } else {
@@ -370,7 +370,7 @@ void Reshape::backward_impl(const vector<const Tensor*>& xs,
 #ifdef HAVE_CUDA
   throw std::runtime_error("Reshape not yet implemented for CUDA");
 #else
-  const Tensor reshaped(dEdxi.d, dEdf.v);
+  const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device);
   *dEdxi += *reshaped;
 #endif
 }
@@ -516,7 +516,7 @@ void GaussianNoise::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) co
 #ifdef HAVE_CUDA
   throw std::runtime_error("GaussianNoise not yet implemented for CUDA");
 #else
-  Tensor m(dim, (float*)aux_mem);
+  Tensor m(dim, (float*)aux_mem, fx.device);
   TensorTools::RandomizeNormal(0, stddev, m);
   fx.vec() = xs[0]->vec() + m.vec();
 #endif
@@ -539,7 +539,7 @@ size_t Dropout::aux_storage_size() const {
 }
 
 void Dropout::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  Tensor m(dim, (float*)aux_mem);
+  Tensor m(dim, (float*)aux_mem, fx.device);
   TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
 #ifdef HAVE_CUDA
   gpu::vcwise_product(fx.d.size(), xs[0]->v, m.v, fx.v);
@@ -553,7 +553,7 @@ void Dropout::backward_impl(const vector<const Tensor*>& xs,
                        const Tensor& dEdf,
                        unsigned i,
                        Tensor& dEdxi) const {
-  Tensor m(dim, (float*)aux_mem);
+  Tensor m(dim, (float*)aux_mem, fx.device);
 #ifdef HAVE_CUDA
   gpu::vcwise_product(dEdf.d.size(), dEdf.v, m.v, fx.v);
 #else
@@ -691,12 +691,11 @@ void LogSumExp::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const 
   for (unsigned i = 0; i < xs.size(); ++i)
     static_cast<float*>(aux_mem)[i] = (**xs[i])(0,0);
   Dim r = {(unsigned int)xs.size()};
-  Tensor v(r, static_cast<float*>(aux_mem));
+  Tensor v(r, static_cast<float*>(aux_mem), fx.device);
   fx.v[0] = logsumexp(*v);
 }
 
 void LogDet::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  const unsigned num_args = xs.size();
   fx.v[0] = logdet(**xs[0], false);
 }
 
@@ -1207,7 +1206,11 @@ void Softmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
     gpu::softmax(xs[0]->d.size(), xs[0]->v, fx.v);
 #else
     auto x = **xs[0];
-    *fx = x.unaryExpr(FSoftmaxNormalize(logsumexp(x)));
+    if (x.rows() == 1) {
+      fx.v[0] = 1;
+    } else {
+      *fx = x.unaryExpr(FSoftmaxNormalize(logsumexp(x)));
+    }
 #endif
   } else {
     throw std::runtime_error("Softmax not yet implemented for multiple columns");
