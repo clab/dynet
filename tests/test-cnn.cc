@@ -22,7 +22,12 @@ struct ConfigureCNNTest {
 BOOST_GLOBAL_FIXTURE(ConfigureCNNTest);
 
 BOOST_AUTO_TEST_CASE( aligned_allocator ) {
-    void* mem = cnn::cnn_mm_malloc(1024, 0x100);
-    BOOST_CHECK_EQUAL(((unsigned long)(mem) & 0xff), 0);
+  cnn::CPUAllocator a;
+  void* mem = a.malloc(1024);
+  BOOST_CHECK_EQUAL(((unsigned long)(mem) & 0x1f), 0);
+  ((char*)mem)[0] = 99;
+  a.zero(mem, 1024);
+  BOOST_CHECK_EQUAL(((char*)mem)[0], 0);
+  a.free(mem);
 }
 

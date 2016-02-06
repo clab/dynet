@@ -83,10 +83,12 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
     }
   }
 
-  if (flag && verbosity > 1) {
-    cerr << endl << "*** GRADIENT CHECK FAILED ***" << endl;
-  } else if(verbosity > 0) {
-    cerr << endl << "GRADIENT CHECK PASSED" << endl;
+  if (flag) {
+    if (verbosity > 1)
+      cerr << endl << "*** GRADIENT CHECK FAILED ***" << endl;
+  } else {
+    if (verbosity > 0)
+      cerr << endl << "GRADIENT CHECK PASSED" << endl;
   }
   return !flag;
 }

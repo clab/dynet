@@ -12,8 +12,9 @@ struct Expression {
 
   Expression() : pg(nullptr) { }
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
-  const Tensor& value() { return pg->get_value(i); }
+  const Tensor& value() const { return pg->get_value(i); }
 };
+
 
 Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
@@ -43,11 +44,16 @@ Expression operator*(const Expression& x, const Expression& y);
 Expression operator*(const Expression& x, float y);
 inline Expression operator*(float y, const Expression& x) { return x * y; }
 inline Expression operator/(const Expression& x, float y) { return x * (1.f / y); }
+// colwise addition
+Expression addmv(const Expression& M, const Expression& v);
 // componentwise division
 Expression cdiv(const Expression& x, const Expression& y);
 Expression colwise_add(const Expression& x, const Expression& bias);
 // z_ij = x_ijk * y_k
 Expression contract3d_1d(const Expression& x, const Expression& y);
+// z_i = x_ijk * y_k * z_j (+ b_i)
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z);
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
 // z_ij = x_ijk * y_k + b_ij
 Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
@@ -74,12 +80,23 @@ Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
 Expression block_dropout(const Expression& x, real p);
 
+// reshape::forward is O(1), but backward is O(n)
 Expression reshape(const Expression& x, const Dim& d);
+// transpose requires O(n)
 Expression transpose(const Expression& x);
+Expression select_rows(const Expression& x, const std::vector<unsigned>& rows);
+Expression select_rows(const Expression& x, const std::vector<unsigned>* prows);
+// select_cols is more efficient than select_rows since Eigen uses column-major order
+Expression select_cols(const Expression& x, const std::vector<unsigned>& cols);
+Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
+// matrix inverse
+Expression inverse(const Expression& x);
+Expression logdet(const Expression& x);
 
 Expression trace_of_product(const Expression& x, const Expression& y);
 Expression cwise_multiply(const Expression& x, const Expression& y);
 
+Expression squared_norm(const Expression& x);
 Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
@@ -102,10 +119,14 @@ Expression sum_batches(const Expression& x);
 
 // pick parts out of bigger objects
 Expression pick(const Expression& x, unsigned v);
-Expression pick(const Expression& x, unsigned* pv);
+Expression pick(const Expression& x, const std::vector<unsigned> & v);
+Expression pick(const Expression& x, unsigned * pv);
+Expression pick(const Expression& x, const std::vector<unsigned> * pv);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
 Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
+Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
 
 namespace detail {
   template <typename F, typename T>

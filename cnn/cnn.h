@@ -12,6 +12,7 @@
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/tensor.h"
 #include "cnn/model.h"
+#include "cnn/devices.h"
 
 // Computation graph where nodes represent forward and backward intermediate
 // values, and edges represent functions of multiple values. To represent the
@@ -24,12 +25,20 @@
 
 namespace cnn {
 
-extern AlignedMemoryPool<6>* fxs;
-extern AlignedMemoryPool<6>* dEdfs;
-extern AlignedMemoryPool<6>* ps;
+extern AlignedMemoryPool* fxs;
+extern AlignedMemoryPool* dEdfs;
+extern AlignedMemoryPool* ps;
 extern float* kSCALAR_MINUSONE;
 extern float* kSCALAR_ONE;
 extern float* kSCALAR_ZERO;
+
+// devices provide information about GPUs and CPUs
+// these include any API information that is required to make calls
+// to the GPU as well as the memory pools for the device
+// Device is not copyable, so you can use the pointer to uniquely
+// identify the device
+//extern std::vector<Device*> devices; // [0] is always the CPU
+extern Device* default_device; // where parameters go by default
 
 class ExecutionEngine;
 struct ParameterNodeBase;

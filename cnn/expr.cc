@@ -7,20 +7,22 @@
 
 namespace cnn { namespace expr {
 
+using std::vector;
+
 Expression input(ComputationGraph& g, real s) { return Expression(&g, g.add_input(s)); }
 Expression input(ComputationGraph& g, const real *ps) { return Expression(&g, g.add_input(ps)); }
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data) { return Expression(&g, g.add_input(d, data)); }
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata) { return Expression(&g, g.add_input(d, pdata)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data) { return Expression(&g, g.add_input(d, data)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata) { return Expression(&g, g.add_input(d, pdata)); }
 Expression const_parameter(ComputationGraph& g, Parameters* p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression parameter(ComputationGraph& g, Parameters* p) { return Expression(&g, g.add_parameters(p)); }
 Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index) { return Expression(&g, g.add_lookup(p, index)); }
 Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_lookup(p, pindex)); }
-Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }
-Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_lookup(p, pindices)); }
+Expression lookup(ComputationGraph& g, LookupParameters* p, const vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }
+Expression lookup(ComputationGraph& g, LookupParameters* p, const vector<unsigned>* pindices) { return Expression(&g, g.add_lookup(p, pindices)); }
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index) { return Expression(&g, g.add_const_lookup(p, index)); }
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
+Expression const_lookup(ComputationGraph& g, LookupParameters* p, const vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
 Expression zeroes(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Zeroes>(d)); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
@@ -32,8 +34,11 @@ Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg
 Expression operator-(const Expression& x, real y) { return -(y-x); }
 Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
 Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
+Expression addmv(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<AddMv>({x.i, y.i})); }
 Expression cdiv(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<CwiseQuotient>({x.i, y.i})); }
 Expression colwise_add(const Expression& x, const Expression& bias) { return Expression(x.pg, x.pg->add_function<AddVectorToAllColumns>({x.i, bias.i})); }
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z) { return Expression(x.pg, x.pg->add_function<InnerProduct3D_1D_1D>({x.i, y.i, z.i})); }
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b) { return Expression(x.pg, x.pg->add_function<InnerProduct3D_1D_1D>({x.i, y.i, z.i, b.i})); }
 Expression contract3d_1d(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<InnerProduct3D_1D>({x.i, y.i})); }
 Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b) { return Expression(x.pg, x.pg->add_function<InnerProduct3D_1D>({x.i, y.i, b.i})); }
 
@@ -50,7 +55,7 @@ Expression rectify(const Expression& x) { return Expression(x.pg, x.pg->add_func
 Expression hinge(const Expression& x, unsigned index, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, index, m)); }
 Expression hinge(const Expression& x, const unsigned* pindex, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, pindex, m)); }
 Expression log_softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogSoftmax>({x.i})); }
-Expression log_softmax(const Expression& x, const std::vector<unsigned>& d) { return Expression(x.pg, x.pg->add_function<RestrictedLogSoftmax>({x.i}, d)); }
+Expression log_softmax(const Expression& x, const vector<unsigned>& d) { return Expression(x.pg, x.pg->add_function<RestrictedLogSoftmax>({x.i}, d)); }
 Expression softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<Softmax>({x.i})); }
 Expression softsign(const Expression& x) { return Expression(x.pg, x.pg->add_function<SoftSign>({x.i})); }
 Expression pow(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Pow>({x.i, y.i})); }
@@ -62,9 +67,17 @@ Expression block_dropout(const Expression& x, real p) { return Expression(x.pg, 
 
 Expression reshape(const Expression& x, const Dim& d) { return Expression(x.pg, x.pg->add_function<Reshape>({x.i}, d)); }
 Expression transpose(const Expression& x) { return Expression(x.pg, x.pg->add_function<Transpose>({x.i})); }
+Expression select_rows(const Expression& x, const vector<unsigned>& rows) { return Expression(x.pg, x.pg->add_function<SelectRows>({x.i}, rows)); }
+Expression select_rows(const Expression& x, const vector<unsigned>* prows) { return Expression(x.pg, x.pg->add_function<SelectRows>({x.i}, prows)); }
+Expression select_cols(const Expression& x, const vector<unsigned>& cols) { return Expression(x.pg, x.pg->add_function<SelectCols>({x.i}, cols)); }
+Expression select_cols(const Expression& x, const vector<unsigned>* pcols) { return Expression(x.pg, x.pg->add_function<SelectCols>({x.i}, pcols)); }
+Expression inverse(const Expression& x) { return Expression(x.pg, x.pg->add_function<MatrixInverse>({x.i})); }
+Expression logdet(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogDet>({x.i})); }
 
 Expression trace_of_product(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<TraceOfProduct>({x.i, y.i}));}
 Expression cwise_multiply(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));}
+
+Expression squared_norm(const Expression& x) { return Expression(x.pg, x.pg->add_function<SquaredNorm>({x.i})); }
 
 Expression dot_product(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<DotProduct>({x.i, y.i})); }
 Expression squared_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<SquaredEuclideanDistance>({x.i, y.i})); }
@@ -81,11 +94,16 @@ Expression kmax_pooling(const Expression& x, unsigned k) { return Expression(x.p
 Expression fold_rows(const Expression& x, unsigned nrows) { return Expression(x.pg, x.pg->add_function<FoldRows>({x.i}, nrows)); }
 
 Expression pick(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, v)); }
+Expression pick(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, v)); }
 Expression pick(const Expression& x, unsigned* pv) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv)); }
+Expression pick(const Expression& x, const vector<unsigned> * pv) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv)); }
+
 Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u)); }
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
-Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
+Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
+Expression pickneglogsoftmax(const Expression& x, unsigned* pv) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, pv)); }
+Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> * pv) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, pv)); }
 
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumColumns>({x.i})); }
 
