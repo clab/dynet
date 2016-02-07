@@ -1718,13 +1718,13 @@ void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) 
         CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.batch_size(), kSCALAR_ONE, xs[0]->batch_ptr(b), 1, fx.batch_ptr(b), 1));
     }
 #else
-    // Add, using broadcasting or not
-    if(fx.d.bd > 1 && xs[0]->d.bd == 1) {
-      fx.rowcol_matrix().colwise() = xs[0]->vec();
-    } else {
+    // // Add, using broadcasting or not
+    // if(fx.d.bd > 1 && xs[0]->d.bd == 1) {
+    //   fx.rowcol_matrix().colwise() = xs[0]->vec();
+    // } else {
       for(unsigned b = 0; b < fx.d.bd; ++b)
         fx.batch_matrix(b) = xs[0]->batch_matrix(b);
-    }
+    // }
 
     // Multiply
     for (unsigned i = 1; i < xs.size(); i += 2) {
@@ -1752,10 +1752,10 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
 #else
     // Add, using broadcasting or not
-    if(dEdxi.d.bd > 1 && dEdf.d.bd == 1) {
-      dEdxi.rowcol_matrix().colwise() += dEdf.vec();
+    if(dEdxi.d.bd == 1 && dEdf.d.bd > 1) {
+      (*dEdxi) += dEdf.rowcol_matrix().rowwise().sum();
     } else {
-      for(unsigned b = 0; b < dEdxi.d.bd; ++b)
+      for(unsigned b = 0; b < dEdf.d.bd; ++b)
         dEdxi.batch_matrix(b) += dEdf.batch_matrix(b);
     }
 #endif
