@@ -138,8 +138,10 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
     CExpression c_parameter "cnn::expr::parameter" (CComputationGraph& g, CParameters* p) #
     #CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
     CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned* pindex) #
+    CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters* p, vector[unsigned]* pindices) #
     #CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
     CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned* pindex) #
+    CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, vector[unsigned]* pindices) #
 
     CExpression c_op_neg "cnn::expr::operator-" (CExpression& x) #
     CExpression c_op_add "cnn::expr::operator+" (CExpression& x, CExpression& y) #
@@ -201,9 +203,11 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
 
     #CExpression c_pick "cnn::expr::pick" (CExpression& x, unsigned v)   #
     CExpression c_pick "cnn::expr::pick" (CExpression& x, unsigned* pv) #
+    CExpression c_pick "cnn::expr::pick" (CExpression& x, vector[unsigned]* pv) #
     CExpression c_pickrange "cnn::expr::pickrange" (CExpression& x, unsigned v, unsigned u) #
 
     CExpression c_pickneglogsoftmax "cnn::expr::pickneglogsoftmax" (CExpression& x, unsigned v) #
+    CExpression c_pickneglogsoftmax "cnn::expr::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) #
 
     # expecting a vector of CExpression
     CExpression c_average     "cnn::expr::average" (vector[CExpression]& xs)

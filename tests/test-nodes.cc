@@ -138,6 +138,41 @@ BOOST_AUTO_TEST_CASE( multiply_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression operator*(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( multiply_batch_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  Expression y = x1*transpose(x2);
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  sum_batches(ones3 * y * transpose(ones3));
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression operator*(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( affine_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression scalar = parameter(cg, param_scalar1);
+  Expression x2 = parameter(cg, param2);
+  Expression y = affine_transform({x1, x2, scalar});
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  ones3 * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression operator*(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( affine_batch_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression scalar = parameter(cg, param_scalar1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  Expression y = affine_transform({x1, x2, scalar});
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  sum_batches(ones3 * y);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression operator*(const Expression& x, float y);
 BOOST_AUTO_TEST_CASE( multiplyscalar_gradient ) {
   cnn::ComputationGraph cg;
