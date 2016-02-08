@@ -35,8 +35,84 @@ using namespace std;
 
 namespace cnn {
 
+#define MAX_SPARSEMAX_LOSS_ROWS 65536
+
+size_t SparsemaxLoss::aux_storage_size() const {
+  // first dim.size dimensions is the sparsemax
+  const unsigned rows = MAX_SPARSEMAX_LOSS_ROWS;  // this should be xs[0]->d.rows()
+  return rows * sizeof(float);
+}
+
+void SparsemaxLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (xs[0]->d.cols() == 1) {
+#if HAVE_CUDA
+    throw std::runtime_error("SparsemaxLoss not implemented on GPU");
+#else
+    const int rows = xs[0]->d.rows();
+    if (rows > MAX_SPARSEMAX_LOSS_ROWS) {
+      cerr << "MAX_SPARSEMAX_LOSS_ROWS is not sufficient. Recompile with larger value.\n";
+      abort();
+    }
+    float& y = fx.v[0];  // loss
+    const unsigned qsupport_size = pq->size();
+    const float qprop = 1.f / qsupport_size;
+
+    float *zs = static_cast<float*>(aux_mem);
+    std::partial_sort_copy(xs[0]->v, xs[0]->v+rows, zs, zs + rows, std::greater<float>());
+    float sum = 0, maxsum = 0;
+    unsigned k = 0;
+    for (k = 0; k < rows; ++k) {
+      sum += zs[k];
+      float t = 1 + (k + 1) * zs[k];
+      if (t <= sum) break;
+      maxsum = sum;
+    }
+    float tau = (maxsum - 1) / k;
+    Tensor tsm(xs[0]->d, (float*)aux_mem);
+    auto x = **xs[0];
+    auto sm = *tsm;
+    sm = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
+    y = 0;
+    float tau_sq = tau * tau;
+    for (unsigned i = 0; i < rows; ++i) {
+      if (sm(i, 0)) {
+        const float x_s = x(i, 0);
+        y += x_s * x_s - tau_sq;
+      }
+    }
+    y /= 2;
+    y += qprop * qprop * qsupport_size / 2;
+    for (unsigned i = 0; i < qsupport_size; ++i)
+      y -= qprop * x((*pq)[i], 0);
+#endif
+  } else {
+    throw std::runtime_error("SparsemaxLoss not yet implemented for multiple columns");
+  }
+}
+
+void SparsemaxLoss::backward_impl(const vector<const Tensor*>& xs,
+                                  const Tensor& fx,
+                                  const Tensor& dEdf,
+                                  unsigned i,
+                                  Tensor& dEdxi) const {
+#if HAVE_CUDA
+  throw std::runtime_error("SparsemaxLoss not implemented on GPU");
+#else
+  const float d = dEdf.v[0];
+  float* psm = static_cast<float*>(aux_mem);
+  float dqprop = d / pq->size();
+  Tensor tsm(xs[0]->d, psm);
+  auto sm = *tsm;  // sparsemax(z)
+  *dEdxi += sm * d;
+  for (unsigned i = 0; i < pq->size(); ++i)
+    (*dEdxi)((*pq)[i], 0) -= dqprop;
+#endif
+}
+
 size_t Sparsemax::aux_storage_size() const {
-  return (dim.size() + 1) * sizeof(float);
+  return (1 + dim.size()) * max(sizeof(int), sizeof(float));
+  // first is the size of the support
+  // then comes the indices of the support
 }
 
 void Sparsemax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
