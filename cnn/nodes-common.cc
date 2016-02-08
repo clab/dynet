@@ -17,6 +17,20 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string SparsemaxLoss::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "sparsemax(" << arg_names[0] << ", q)";
+  return s.str();
+}
+
+Dim SparsemaxLoss::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 1 || !LooksLikeVector(xs[0])) {
+    ostringstream s; s << "Bad input dimensions in SparsemaxLoss: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  return Dim({1});
+}
+
 string Sparsemax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "sparsemax(" << arg_names[0] << ")";
