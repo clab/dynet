@@ -5,6 +5,25 @@
 
 namespace cnn {
 
+// y = L_sparsemax(x_0; q)
+// where x_0 is a vector of "unnormalized" probabilities
+// q are the vector of labels
+struct SparsemaxLoss : public Node {
+  explicit SparsemaxLoss(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& target) : Node(a), q(target), pq(&q) {}
+  explicit SparsemaxLoss(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* ptarget) : Node(a), q(), pq(ptarget) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  size_t aux_storage_size() const override;
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const override;
+  const std::vector<unsigned> q;
+  const std::vector<unsigned>* pq;
+};
+
 // y = sparsemax(x)
 // y = arg min_y ||y - x||^2
 struct Sparsemax : public Node {
