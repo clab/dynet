@@ -1718,22 +1718,23 @@ void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) 
         CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.batch_size(), kSCALAR_ONE, xs[0]->batch_ptr(b), 1, fx.batch_ptr(b), 1));
     }
 #else
-    // // Add, using broadcasting or not
-    // if(fx.d.bd > 1 && xs[0]->d.bd == 1) {
-    //   fx.rowcol_matrix().colwise() = xs[0]->vec();
-    // } else {
+    // Add, using broadcasting or not
+    if(fx.d.bd > 1 && xs[0]->d.bd == 1) {
+      fx.rowcol_matrix().colwise() = xs[0]->vec();
+    } else {
       for(unsigned b = 0; b < fx.d.bd; ++b)
         fx.batch_matrix(b) = xs[0]->batch_matrix(b);
-    // }
+    }
 
     // Multiply
     for (unsigned i = 1; i < xs.size(); i += 2) {
-      if(xs[i]->d.bd == 1) {
+      if(xs[i]->d.bd == 1 && xs[i+1]->d.bd == fx.d.bd) {
         fx.colbatch_matrix().noalias() += **xs[i] * xs[i+1]->colbatch_matrix();
       } else {
         assert(xs[i+1]->d.bd == 1 || xs[i+1]->d.bd == xs[i]->d.bd);
-        for(unsigned b = 0; b < xs[i]->d.bd; ++b)
+        for(unsigned b = 0; b < fx.d.bd; ++b) {
           fx.batch_matrix(b).noalias() += xs[i]->batch_matrix(b) * xs[i+1]->batch_matrix(b);
+        }
       }
     }
 
@@ -1794,7 +1795,7 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
               kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
     }
 #else
-    if(xs[i-1]->d.bd == 1) {
+    if(xs[i-1]->d.bd == 1 && dEdxi.d.bd == dEdf.d.bd) {
       dEdxi.colbatch_matrix().noalias() += (**xs[i-1]).transpose() * dEdf.colbatch_matrix();
     } else {
       for(int b = 0; b < max_b; ++b)
