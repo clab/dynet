@@ -67,7 +67,7 @@ struct RNNLanguageModel {
       errs.push_back(i_err);
       last_arr = next_arr;
     }
-    Expression i_nerr = sum(errs);
+    Expression i_nerr = sum_batches(sum(errs));
     return i_nerr;
   }
 
@@ -221,9 +221,7 @@ int main(int argc, char** argv) {
       ComputationGraph cg;
       unsigned bsize = std::min((unsigned)training.size()-order[si], BATCH_SIZE); // Batch size
       lm.BuildLMGraphs(training, order[si], bsize, chars, cg);
-      vector<float> losses = as_vector(cg.forward());
-      for(float l : losses)
-        loss += l;
+      loss += as_scalar(cg.forward());
       cg.backward();
       sgd->update();
       lines += bsize;
