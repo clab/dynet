@@ -72,6 +72,9 @@ void SparsemaxLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) co
     auto x = **xs[0];
     auto sm = *tsm;
     sm = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
+    //cerr << "SpM: " << (sm).transpose() << " |||";
+    //for (unsigned i = 0; i < pq->size(); ++i) cerr << ' ' << (*pq)[i];
+    //cerr << endl;
     y = 0;
     float tau_sq = tau * tau;
     for (unsigned i = 0; i < rows; ++i) {
@@ -84,6 +87,7 @@ void SparsemaxLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) co
     y += qprop * qprop * qsupport_size / 2;
     for (unsigned i = 0; i < qsupport_size; ++i)
       y -= qprop * x((*pq)[i], 0);
+    if (y < 0) y = 0;
 #endif
   } else {
     throw std::runtime_error("SparsemaxLoss not yet implemented for multiple columns");
