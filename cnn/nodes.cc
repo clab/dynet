@@ -68,7 +68,7 @@ void SparsemaxLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) co
       maxsum = sum;
     }
     float tau = (maxsum - 1) / k;
-    Tensor tsm(xs[0]->d, (float*)aux_mem);
+    Tensor tsm(xs[0]->d, (float*)aux_mem, xs[0]->device);
     auto x = **xs[0];
     auto sm = *tsm;
     sm = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
@@ -105,7 +105,7 @@ void SparsemaxLoss::backward_impl(const vector<const Tensor*>& xs,
   const float d = dEdf.v[0];
   float* psm = static_cast<float*>(aux_mem);
   float dqprop = d / pq->size();
-  Tensor tsm(xs[0]->d, psm);
+  Tensor tsm(xs[0]->d, psm, xs[0]->device);
   auto sm = *tsm;  // sparsemax(z)
   *dEdxi += sm * d;
   for (unsigned i = 0; i < pq->size(); ++i)
