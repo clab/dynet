@@ -214,7 +214,7 @@ namespace cnn {
       assert (cid >= 0 && cid < num_children);
       unsigned i;
       unsigned priority;
-      boost::interprocess::message_queue::size_type recvd_size;
+      unsigned long recvd_size;
       boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
       while (true) {
         // Check if the parent wants us to exit
