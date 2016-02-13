@@ -51,7 +51,7 @@ struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model* m, real e0 = 0.1) : Trainer(m, e0) {}
  protected:
   void update_impl(real scale) override;
-  void update_params(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale = 1);
+  void update_params(const std::vector<LookupParameterStorage*> &lookup_params, const std::vector<ParameterStorage*> &params, real scale = 1);
 };
 
 struct MomentumSGDTrainer : public Trainer {
@@ -67,8 +67,8 @@ struct MomentumSGDTrainer : public Trainer {
   // the following represent the current velocity
   std::vector<ShadowParameters> vp;
   std::vector<ShadowLookupParameters> vlp;
-  //std::unordered_map<Parameters*, Tensor> vp;
-  //std::unordered_map<LookupParameters*, std::unordered_map<unsigned, Tensor>> vl;
+  //std::unordered_map<ParameterStorage*, Tensor> vp;
+  //std::unordered_map<LookupParameterStorage*, std::unordered_map<unsigned, Tensor>> vl;
 };
 
 struct AdagradTrainer : public Trainer {

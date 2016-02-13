@@ -11,16 +11,14 @@
 
 namespace cnn {
 
-struct Parameters;
-
 class Cluster {
 private:
   std::vector<Cluster*> children;
   std::vector<unsigned> path;
   std::vector<unsigned> terminals;
   std::unordered_map<unsigned, unsigned> word2ind;
-  ParameterIndex p_weights;
-  ParameterIndex p_bias;
+  Parameter p_weights;
+  Parameter p_bias;
   mutable expr::Expression weights;
   mutable expr::Expression bias;
   bool initialized;

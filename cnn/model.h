@@ -22,27 +22,27 @@ namespace cnn {
 // * LookupParameters represents a table of vectors that are used to embed a
 //   set of discrete objects. These are sparsely updated.
 
-struct ParametersBase {
+struct ParameterStorageBase {
   friend class Model;
   virtual void scale_parameters(float a) = 0;
   virtual void squared_l2norm(float* sqnorm) const = 0;
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
   virtual size_t size() const = 0;
-  virtual ~ParametersBase();
+  virtual ~ParameterStorageBase();
   friend class boost::serialization::access;
   template<class Archive> 
   void serialize(Archive& ar, const unsigned int) {}
 };
 
 // represents parameters (e.g., a weight matrix) that will be optimized
-struct Parameters : public ParametersBase {
+struct ParameterStorage : public ParameterStorageBase {
   friend class Model;
   void scale_parameters(float a) override;
   void squared_l2norm(float* sqnorm) const override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
 
-  void copy(const Parameters & val);
+  void copy(const ParameterStorage & val);
   void accumulate_grad(const Tensor& g);
   void clear();
 
@@ -50,13 +50,13 @@ struct Parameters : public ParametersBase {
   Tensor values;
   Tensor g;
  private:
-  Parameters() {}
-  explicit Parameters(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
+  ParameterStorage() {}
+  explicit ParameterStorage(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
                                  // or Glorot initialization if minmax = 0
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int) {
-    boost::serialization::base_object<ParametersBase>(*this);
+    boost::serialization::base_object<ParameterStorageBase>(*this);
     ar & dim;
     ar & values;
     ar & g;
@@ -64,7 +64,7 @@ struct Parameters : public ParametersBase {
 };
 
 // represents a matrix/vector embedding of a discrete set
-struct LookupParameters : public ParametersBase {
+struct LookupParameterStorage : public ParameterStorageBase {
   friend class Model;
   void scale_parameters(float a) override;
   void squared_l2norm(float* sqnorm) const override;
@@ -72,7 +72,7 @@ struct LookupParameters : public ParametersBase {
   size_t size() const override;
   void Initialize(unsigned index, const std::vector<float>& val);
 
-  void copy(const LookupParameters & val);
+  void copy(const LookupParameterStorage & val);
   void accumulate_grad(unsigned index, const Tensor& g);
   void clear();
 
@@ -82,12 +82,12 @@ struct LookupParameters : public ParametersBase {
   // gradients are sparse, so track which components are nonzero
   std::unordered_set<unsigned> non_zero_grads;
  private:
-  LookupParameters() {}
-  LookupParameters(unsigned n, const Dim& d);
+  LookupParameterStorage() {}
+  LookupParameterStorage(unsigned n, const Dim& d);
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int) {
-    boost::serialization::base_object<ParametersBase>(*this);
+    boost::serialization::base_object<ParameterStorageBase>(*this);
     ar & dim;
     ar & values;
     ar & grads;
@@ -95,10 +95,10 @@ struct LookupParameters : public ParametersBase {
 };
 
 class Model;
-struct ParameterIndex {
-  ParameterIndex();
-  ParameterIndex(const Model* mp, unsigned long index);
-  Parameters* get() const;
+struct Parameter {
+  Parameter();
+  Parameter(const Model* mp, unsigned long index);
+  ParameterStorage* get() const;
 
   const Model* mp;
   unsigned long index;
@@ -112,10 +112,10 @@ private:
   }
 };
 
-struct LookupParameterIndex {
-  LookupParameterIndex();
-  LookupParameterIndex(const Model* mp, unsigned long index);
-  LookupParameters* get() const;
+struct LookupParameter {
+  LookupParameter();
+  LookupParameter(const Model* mp, unsigned long index);
+  LookupParameterStorage* get() const;
   void Initialize(unsigned index, const std::vector<float>& val) const;
 
   const Model* mp;
@@ -141,14 +141,14 @@ class Model {
   float gradient_l2_norm() const;
   void reset_gradient();
   // set scale to use custom initialization
-  ParameterIndex add_parameters(const Dim& d, float scale = 0.0f);
-  LookupParameterIndex add_lookup_parameters(unsigned n, const Dim& d);
+  Parameter add_parameters(const Dim& d, float scale = 0.0f);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
   // project weights so their L2 norm = radius
   void project_weights(float radius = 1.0f);
 
-  const std::vector<ParametersBase*>& all_parameters_list() const { return all_params; }
-  const std::vector<Parameters*>& parameters_list() const { return params; }
-  const std::vector<LookupParameters*>& lookup_parameters_list() const { return lookup_params; }
+  const std::vector<ParameterStorageBase*>& all_parameters_list() const { return all_params; }
+  const std::vector<ParameterStorage*>& parameters_list() const { return params; }
+  const std::vector<LookupParameterStorage*>& lookup_parameters_list() const { return lookup_params; }
 
   // Returns the total number of tunable parameters (i. e. scalars) contained within this model.
   // That is to say, a 2x2 matrix counts as four parameters.
@@ -163,9 +163,9 @@ class Model {
     ar & lookup_params;
   }
 
-  std::vector<ParametersBase*> all_params;
-  std::vector<Parameters*> params;
-  std::vector<LookupParameters*> lookup_params;
+  std::vector<ParameterStorageBase*> all_params;
+  std::vector<ParameterStorage*> params;
+  std::vector<LookupParameterStorage*> lookup_params;
   mutable float* gradient_norm_scratch;
 };
 
@@ -173,7 +173,7 @@ void save_cnn_model(std::string filename, Model* model);
 void load_cnn_model(std::string filename, Model* model);
 
 } // namespace cnn
-BOOST_CLASS_EXPORT_KEY(cnn::Parameters)
-BOOST_CLASS_EXPORT_KEY(cnn::LookupParameters)
+BOOST_CLASS_EXPORT_KEY(cnn::ParameterStorage)
+BOOST_CLASS_EXPORT_KEY(cnn::LookupParameterStorage)
 
 #endif

@@ -72,19 +72,19 @@ struct ComputationGraph {
   // parameters are things that are optimized. in contrast to a system like
   // Torch where computational modules may have their own parameters, in CNN
   // parameters are just parameters
-  VariableIndex add_parameters(ParameterIndex p);
-  VariableIndex add_const_parameters(ParameterIndex p);
+  VariableIndex add_parameters(Parameter p);
+  VariableIndex add_const_parameters(Parameter p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
-  VariableIndex add_lookup(LookupParameterIndex p, const unsigned* pindex);
-  VariableIndex add_lookup(LookupParameterIndex p, unsigned index);
-  VariableIndex add_lookup(LookupParameterIndex p, const std::vector<unsigned>* pindices);
-  VariableIndex add_lookup(LookupParameterIndex p, const std::vector<unsigned>& indices);
+  VariableIndex add_lookup(LookupParameter p, const unsigned* pindex);
+  VariableIndex add_lookup(LookupParameter p, unsigned index);
+  VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>& indices);
   // just like add_lookup, but don't optimize the lookup parameters
-  VariableIndex add_const_lookup(LookupParameterIndex p, const unsigned* pindex);
-  VariableIndex add_const_lookup(LookupParameterIndex p, unsigned index);
-  VariableIndex add_const_lookup(LookupParameterIndex p, const std::vector<unsigned>* pindices);
-  VariableIndex add_const_lookup(LookupParameterIndex p, const std::vector<unsigned>& indices);
+  VariableIndex add_const_lookup(LookupParameter p, const unsigned* pindex);
+  VariableIndex add_const_lookup(LookupParameter p, unsigned index);
+  VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>& indices);
 
   // COMPUTATIONS
   template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);

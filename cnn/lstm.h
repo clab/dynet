@@ -46,7 +46,7 @@ struct LSTMBuilder : public RNNBuilder {
 
  public:
   // first index is layer, then ...
-  std::vector<std::vector<ParameterIndex>> params;
+  std::vector<std::vector<Parameter>> params;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;

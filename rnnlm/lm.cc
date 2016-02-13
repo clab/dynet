@@ -70,9 +70,9 @@ void InitCommandLine(int argc, char** argv, po::variables_map* conf) {
 
 template <class Builder>
 struct RNNLanguageModel {
-  LookupParameterIndex p_c;
-  ParameterIndex p_R;
-  ParameterIndex p_bias;
+  LookupParameter p_c;
+  Parameter p_R;
+  Parameter p_bias;
   Builder builder;
   explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 

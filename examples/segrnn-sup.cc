@@ -98,7 +98,7 @@ struct SymbolEmbedding {
     return lookup(*cg, p_labels, label_id);
   }
   ComputationGraph* cg;
-  LookupParameterIndex p_labels;
+  LookupParameter p_labels;
 };
 
 struct DurationEmbedding {
@@ -143,11 +143,11 @@ struct MLPDurationEmbedding : public DurationEmbedding {
   ComputationGraph* cg;
   vector<vector<float>> dur_xs;
   Expression zero, d2h, hb, h2o, ob;
-  ParameterIndex p_zero;
-  ParameterIndex p_d2h;
-  ParameterIndex p_hb;
-  ParameterIndex p_h2o;
-  ParameterIndex p_ob;
+  Parameter p_zero;
+  Parameter p_d2h;
+  Parameter p_hb;
+  Parameter p_h2o;
+  Parameter p_ob;
 };
 
 struct BinnedDurationEmbedding : public DurationEmbedding {
@@ -164,16 +164,16 @@ struct BinnedDurationEmbedding : public DurationEmbedding {
   }
   ComputationGraph* cg;
   int max_bin;
-  LookupParameterIndex p_e;
+  LookupParameter p_e;
 };
 
 template <class Builder>
 struct BiTrans {
   Builder l2rbuilder;
   Builder r2lbuilder;
-  ParameterIndex p_f2c;
-  ParameterIndex p_r2c;
-  ParameterIndex p_cb;
+  Parameter p_f2c;
+  Parameter p_r2c;
+  Parameter p_cb;
 
   explicit BiTrans(Model& model) :
       l2rbuilder(LAYERS, INPUT_DIM, XCRIBE_DIM, &model),
@@ -218,7 +218,7 @@ struct BiTrans {
 // first call construct_chart(sequence), then access the embeddings of the spans with operator()(i,j)
 template <class Builder>
 struct SegEmbedUni {
-  ParameterIndex p_h0;
+  Parameter p_h0;
   int len;
   Builder builder;
   vector<vector<Expression>> h;  // h[i][length of segment - 1]
@@ -696,12 +696,12 @@ struct SegmentalRNN {
     return;
   }
 
-  ParameterIndex p_d2h1, p_y2h1, p_fwd2h1, p_rev2h1, p_h1b;
-  ParameterIndex p_h12h2, p_h2b;
-  ParameterIndex p_h22o, p_ob;
+  Parameter p_d2h1, p_y2h1, p_fwd2h1, p_rev2h1, p_h1b;
+  Parameter p_h12h2, p_h2b;
+  Parameter p_h22o, p_ob;
   // used in the context awareness 
-  ParameterIndex p_c_start, p_c_end;
-  ParameterIndex p_cf2h1, p_ce2h1;
+  Parameter p_c_start, p_c_end;
+  Parameter p_cf2h1, p_ce2h1;
 };
 
 // a a 0 1 a ||| O:1 O:1 N:2 O:1

@@ -105,7 +105,7 @@ VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm)
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_parameters(ParameterIndex p) {
+VariableIndex ComputationGraph::add_parameters(Parameter p) {
   VariableIndex new_node_index(nodes.size());
   ParameterNode* new_node = new ParameterNode(p);
   nodes.push_back(new_node);
@@ -114,7 +114,7 @@ VariableIndex ComputationGraph::add_parameters(ParameterIndex p) {
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_const_parameters(ParameterIndex p) {
+VariableIndex ComputationGraph::add_const_parameters(Parameter p) {
   VariableIndex new_node_index(nodes.size());
   ConstParameterNode* new_node = new ConstParameterNode(p);
   nodes.push_back(new_node);
@@ -122,7 +122,7 @@ VariableIndex ComputationGraph::add_const_parameters(ParameterIndex p) {
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_lookup(LookupParameterIndex p, const unsigned* pindex) {
+VariableIndex ComputationGraph::add_lookup(LookupParameter p, const unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, pindex);
   nodes.push_back(new_node);
@@ -131,7 +131,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameterIndex p, const unsigne
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_lookup(LookupParameterIndex p, unsigned index) {
+VariableIndex ComputationGraph::add_lookup(LookupParameter p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
   nodes.push_back(new_node);
@@ -140,7 +140,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameterIndex p, unsigned inde
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_lookup(LookupParameterIndex p, const std::vector<unsigned>& indices) {
+VariableIndex ComputationGraph::add_lookup(LookupParameter p, const std::vector<unsigned>& indices) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
@@ -149,7 +149,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameterIndex p, const std::ve
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_lookup(LookupParameterIndex p, const std::vector<unsigned>* indices) {
+VariableIndex ComputationGraph::add_lookup(LookupParameter p, const std::vector<unsigned>* indices) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
@@ -159,7 +159,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameterIndex p, const std::ve
 }
 
 
-VariableIndex ComputationGraph::add_const_lookup(LookupParameterIndex p, const unsigned* pindex) {
+VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, pindex);
   // get rid of the following in favor of using parameter_nodes to see the needs_derivative
@@ -169,7 +169,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameterIndex p, const u
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_const_lookup(LookupParameterIndex p, unsigned index) {
+VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
   nodes.push_back(new_node);
@@ -177,7 +177,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameterIndex p, unsigne
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_const_lookup(LookupParameterIndex p, const std::vector<unsigned>& indices) {
+VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const std::vector<unsigned>& indices) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
@@ -185,7 +185,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameterIndex p, const s
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_const_lookup(LookupParameterIndex p, const std::vector<unsigned>* indices) {
+VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const std::vector<unsigned>* indices) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);

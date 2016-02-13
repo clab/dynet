@@ -13,8 +13,8 @@ namespace cnn {
 
 bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
   // Clear the parameters first
-  const vector<Parameters*>& params = m.parameters_list();
-  const vector<LookupParameters*>& lookup_params = m.lookup_parameters_list();
+  const vector<ParameterStorage*>& params = m.parameters_list();
+  const vector<LookupParameterStorage*>& lookup_params = m.lookup_parameters_list();
   for (auto pp : params)
     pp->clear();
   for (auto pp : lookup_params)
@@ -30,7 +30,7 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
   for (auto pp : params) {
     if(verbosity > 1)
       cerr << endl << "PARAMETERS " << pp << endl;
-    Parameters& p = *pp;
+    ParameterStorage& p = *pp;
     size_t ts = p.dim.size();
     for (size_t i = 0; i < ts; ++i) {
       float old = TensorTools::AccessElement(p.values, i);
@@ -55,7 +55,7 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
   for (auto pp : lookup_params) {
     if(verbosity > 1)
       cerr << endl << "LOOKUP PARAMETERS " << pp << endl;
-    LookupParameters& p = *pp;
+    LookupParameterStorage& p = *pp;
     size_t ts = p.dim.size();
     for (unsigned j : p.non_zero_grads) {
       if(verbosity > 1)

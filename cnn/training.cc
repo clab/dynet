@@ -50,7 +50,7 @@ void SimpleSGDTrainer::update_impl(real scale) {
   update_params(model->lookup_parameters_list(), model->parameters_list(), scale);
 }
 
-void SimpleSGDTrainer::update_params(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale) {
+void SimpleSGDTrainer::update_params(const std::vector<LookupParameterStorage*> &lookup_params, const std::vector<ParameterStorage*> &params, real scale) {
   const float gscale = clip_gradients();
   for (auto p : params) {
 #if HAVE_CUDA
