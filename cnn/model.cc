@@ -250,6 +250,14 @@ void Model::reset_gradient() {
   for (auto p : lookup_params) { p->clear(); }
 }
 
+size_t Model::parameter_count() const {
+  size_t r = 0;
+  for (const ParametersBase* param : all_params) {
+    r += param->size();
+  }
+  return r;
+}
+
 void save_cnn_model(std::string filename, Model* model) {
     std::ofstream out(filename);
     boost::archive::text_oarchive oa(out);

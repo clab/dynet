@@ -150,6 +150,10 @@ class Model {
   const std::vector<Parameters*>& parameters_list() const { return params; }
   const std::vector<LookupParameters*>& lookup_parameters_list() const { return lookup_params; }
 
+  // Returns the total number of tunable parameters (i. e. scalars) contained within this model.
+  // That is to say, a 2x2 matrix counts as four parameters.
+  size_t parameter_count() const;
+
  private:
   friend class boost::serialization::access;
   template<class Archive>
