@@ -36,8 +36,8 @@ public:
 
 private:
   StandardSoftmaxBuilder();
-  ParameterIndex p_w;
-  ParameterIndex p_b;
+  Parameter p_w;
+  Parameter p_b;
   expr::Expression w;
   expr::Expression b;
   ComputationGraph* pcg;
@@ -76,10 +76,10 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   std::vector<bool> singleton_cluster; // does cluster contain a single word type?
 
   // parameters
-  ParameterIndex p_r2c;
-  ParameterIndex p_cbias;
-  std::vector<ParameterIndex> p_rc2ws;     // len = number of classes
-  std::vector<ParameterIndex> p_rcwbiases; // len = number of classes
+  Parameter p_r2c;
+  Parameter p_cbias;
+  std::vector<Parameter> p_rc2ws;     // len = number of classes
+  std::vector<Parameter> p_rcwbiases; // len = number of classes
 
   // Expressions for current graph
   inline expr::Expression& get_rc2w(unsigned cluster_idx) {

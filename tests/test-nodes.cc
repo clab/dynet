@@ -55,7 +55,7 @@ struct NodeTest {
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
   cnn::Model mod;
-  cnn::ParameterIndex param1, param2, param3, param_scalar1, param_scalar2;
+  cnn::Parameter param1, param2, param3, param_scalar1, param_scalar2;
 };
 
 // define the test suite

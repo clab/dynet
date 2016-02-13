@@ -29,11 +29,11 @@ int kSOS;
 int kEOS;
 
 struct NeuralBagOfWords {
-  LookupParameterIndex p_w;
-  ParameterIndex p_c2h;
-  ParameterIndex p_hbias;
-  ParameterIndex p_h2o;
-  ParameterIndex p_obias;
+  LookupParameter p_w;
+  Parameter p_c2h;
+  Parameter p_hbias;
+  Parameter p_h2o;
+  Parameter p_obias;
 
   explicit NeuralBagOfWords(Model& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
@@ -108,17 +108,17 @@ struct ConvLayer {
     }
     return r;
   }
-  vector<vector<ParameterIndex>> p_filts; // [feature map index from][feature map index to]
-  vector<vector<ParameterIndex>> p_fbias; // [feature map index from][feature map index to]
+  vector<vector<Parameter>> p_filts; // [feature map index from][feature map index to]
+  vector<vector<Parameter>> p_fbias; // [feature map index from][feature map index to]
   int k_fold_rows;
 };
 
 struct ConvNet {
-  LookupParameterIndex p_w;
+  LookupParameter p_w;
   ConvLayer cl1;
   ConvLayer cl2;
-  ParameterIndex p_t2o;
-  ParameterIndex p_obias;
+  Parameter p_t2o;
+  Parameter p_obias;
 
   explicit ConvNet(Model& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),

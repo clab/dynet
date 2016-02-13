@@ -18,14 +18,14 @@
 
 using namespace std;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::Parameters)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameters)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ParameterStorage)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameterStorage)
 
 namespace cnn {
 
-ParametersBase::~ParametersBase() {}
+ParameterStorageBase::~ParameterStorageBase() {}
 
-Parameters::Parameters(const Dim& d, float scale) : dim(d) {
+ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
   values.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
   if (scale) {
@@ -38,13 +38,13 @@ Parameters::Parameters(const Dim& d, float scale) : dim(d) {
   TensorTools::Zero(g);
 }
 
-size_t Parameters::size() const { return dim.size(); }
+size_t ParameterStorage::size() const { return dim.size(); }
 
-void Parameters::scale_parameters(float a) {
+void ParameterStorage::scale_parameters(float a) {
   values.vec() *= a;
 }
 
-void Parameters::squared_l2norm(float* sqnorm) const {
+void ParameterStorage::squared_l2norm(float* sqnorm) const {
 #if HAVE_CUDA
   gpu::l2_norm_reducer(values.d.size(), values.v, sqnorm, true, false);
 #else
@@ -52,7 +52,7 @@ void Parameters::squared_l2norm(float* sqnorm) const {
 #endif
 }
 
-void Parameters::g_squared_l2norm(float* sqnorm) const {
+void ParameterStorage::g_squared_l2norm(float* sqnorm) const {
 #if HAVE_CUDA
   gpu::l2_norm_reducer(g.d.size(), g.v, sqnorm, true, false);
 #else
@@ -60,12 +60,12 @@ void Parameters::g_squared_l2norm(float* sqnorm) const {
 #endif
 }
 
-void Parameters::copy(const Parameters & param) {
+void ParameterStorage::copy(const ParameterStorage & param) {
   assert(dim == param.dim);
   TensorTools::CopyElements(values, param.values);
 }
 
-void Parameters::accumulate_grad(const Tensor& d) {
+void ParameterStorage::accumulate_grad(const Tensor& d) {
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, g.d.size(), kSCALAR_ONE, d.v, 1, g.v, 1));
 #else
@@ -73,11 +73,11 @@ void Parameters::accumulate_grad(const Tensor& d) {
 #endif
 }
 
-void Parameters::clear() {
+void ParameterStorage::clear() {
   TensorTools::Zero(g);
 }
 
-LookupParameters::LookupParameters(unsigned n, const Dim& d) : dim(d), values(n), grads(n) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d), values(n), grads(n) {
   for (unsigned i = 0; i < n; ++i) {
     auto& v = values[i];
     v.d = d;
@@ -91,26 +91,26 @@ LookupParameters::LookupParameters(unsigned n, const Dim& d) : dim(d), values(n)
   }
 }
 
-void LookupParameters::scale_parameters(float a) {
+void LookupParameterStorage::scale_parameters(float a) {
   for (auto& p : values)
     (*p) *= a;
 }
 
-void LookupParameters::Initialize(unsigned index, const vector<float>& val) {
+void LookupParameterStorage::Initialize(unsigned index, const vector<float>& val) {
   assert(int(val.size()) == int(dim.size()));
 #if HAVE_CUDA
-  cerr << "implement LookupParameters::Initialize\n";
-  throw cuda_not_implemented("LookupParameters::Initialize");
+  cerr << "implement LookupParameterStorage::Initialize\n";
+  throw cuda_not_implemented("LookupParameterStorage::Initialize");
 #else
   memcpy(values[index].v, &val[0], val.size() * sizeof(float));
 #endif
 }
 
-size_t LookupParameters::size() const {
+size_t LookupParameterStorage::size() const {
   return values.size() * dim.size();
 }
 
-void LookupParameters::g_squared_l2norm(float* sqnorm) const {
+void LookupParameterStorage::g_squared_l2norm(float* sqnorm) const {
 #if HAVE_CUDA
   bool acc = false;
   for (auto i : non_zero_grads) {
@@ -125,7 +125,7 @@ void LookupParameters::g_squared_l2norm(float* sqnorm) const {
 #endif
 }
 
-void LookupParameters::squared_l2norm(float* sqnorm) const {
+void LookupParameterStorage::squared_l2norm(float* sqnorm) const {
 #if HAVE_CUDA
   bool acc = false;
   for (unsigned i = 0; i < values.size(); ++i) {
@@ -140,13 +140,13 @@ void LookupParameters::squared_l2norm(float* sqnorm) const {
 #endif
 }
 
-void LookupParameters::copy(const LookupParameters & param) {
+void LookupParameterStorage::copy(const LookupParameterStorage& param) {
   assert(dim == param.dim);
   for(size_t i = 0; i < param.values.size(); ++i)
     TensorTools::CopyElements(values[i], param.values[i]);
 }
 
-void LookupParameters::accumulate_grad(unsigned index, const Tensor& d) {
+void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
   non_zero_grads.insert(index);
 #if HAVE_CUDA
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, d.d.size(), kSCALAR_ONE, d.v, 1, grads[index].v, 1));
@@ -155,35 +155,35 @@ void LookupParameters::accumulate_grad(unsigned index, const Tensor& d) {
 #endif
 }
 
-void LookupParameters::clear() {
+void LookupParameterStorage::clear() {
   for (auto i : non_zero_grads)
     TensorTools::Zero(grads[i]);
   non_zero_grads.clear();
 }
 
-ParameterIndex::ParameterIndex() {
+Parameter::Parameter() {
   mp = nullptr;
   index = 0;
 }
 
-ParameterIndex::ParameterIndex(const Model* mp, unsigned long index) : mp(mp), index(index) {}
+Parameter::Parameter(const Model* mp, unsigned long index) : mp(mp), index(index) {}
 
-Parameters* ParameterIndex::get() const {
+ParameterStorage* Parameter::get() const {
   return mp->parameters_list()[index];
 }
 
-LookupParameterIndex::LookupParameterIndex() {
+LookupParameter::LookupParameter() {
   mp = nullptr;
   index = 0;
 }
 
-LookupParameterIndex::LookupParameterIndex(const Model* mp, unsigned long index) : mp(mp), index(index) {}
+LookupParameter::LookupParameter(const Model* mp, unsigned long index) : mp(mp), index(index) {}
 
-LookupParameters* LookupParameterIndex::get() const {
+LookupParameterStorage* LookupParameter::get() const {
   return mp->lookup_parameters_list()[index];
 }
 
-void LookupParameterIndex::Initialize(unsigned index, const std::vector<float>& val) const {
+void LookupParameter::Initialize(unsigned index, const std::vector<float>& val) const {
   get()->Initialize(index, val);
 }
 
@@ -227,18 +227,18 @@ float Model::gradient_l2_norm() const {
 #endif
 }
 
-ParameterIndex Model::add_parameters(const Dim& d, float scale) {
-  Parameters* p = new Parameters(d, scale);
-  ParameterIndex r(this, params.size());
+Parameter Model::add_parameters(const Dim& d, float scale) {
+  ParameterStorage* p = new ParameterStorage(d, scale);
+  Parameter r(this, params.size());
   //cerr << "Adding parameters with dim " << d << endl;
   all_params.push_back(p);
   params.push_back(p);
   return r;
 }
 
-LookupParameterIndex Model::add_lookup_parameters(unsigned n, const Dim& d) {
-  LookupParameters* p = new LookupParameters(n,d);
-  LookupParameterIndex r(this, lookup_params.size());
+LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
+  LookupParameterStorage* p = new LookupParameterStorage(n,d);
+  LookupParameter r(this, lookup_params.size());
   //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);
   lookup_params.push_back(p);
@@ -252,7 +252,7 @@ void Model::reset_gradient() {
 
 size_t Model::parameter_count() const {
   size_t r = 0;
-  for (const ParametersBase* param : all_params) {
+  for (const ParameterStorageBase* param : all_params) {
     r += param->size();
   }
   return r;

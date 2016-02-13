@@ -31,14 +31,14 @@ int kEOS;
 
 template <class Builder>
 struct EncoderDecoder {
-  LookupParameterIndex p_c;
-  LookupParameterIndex p_ec;  // map input to embedding (used in fwd and rev models)
-  ParameterIndex p_ie2h;
-  ParameterIndex p_bie;
-  ParameterIndex p_h2oe;
-  ParameterIndex p_boe;
-  ParameterIndex p_R;
-  ParameterIndex p_bias;
+  LookupParameter p_c;
+  LookupParameter p_ec;  // map input to embedding (used in fwd and rev models)
+  Parameter p_ie2h;
+  Parameter p_bie;
+  Parameter p_h2oe;
+  Parameter p_boe;
+  Parameter p_R;
+  Parameter p_bias;
   Builder dec_builder;
   Builder rev_enc_builder;
   Builder fwd_enc_builder;

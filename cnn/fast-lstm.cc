@@ -26,24 +26,24 @@ FastLSTMBuilder::FastLSTMBuilder(unsigned layers,
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    ParameterIndex p_x2i = model->add_parameters({hidden_dim, layer_input_dim});
-    ParameterIndex p_h2i = model->add_parameters({hidden_dim, hidden_dim});
-    ParameterIndex p_c2i = model->add_parameters({hidden_dim, 1});
-    ParameterIndex p_bi = model->add_parameters({hidden_dim});
+    Parameter p_x2i = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2i = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2i = model->add_parameters({hidden_dim, 1});
+    Parameter p_bi = model->add_parameters({hidden_dim});
 
     // o
-    ParameterIndex p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
-    ParameterIndex p_h2o = model->add_parameters({hidden_dim, hidden_dim});
-    ParameterIndex p_c2o = model->add_parameters({hidden_dim, 1});
-    ParameterIndex p_bo = model->add_parameters({hidden_dim});
+    Parameter p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2o = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2o = model->add_parameters({hidden_dim, 1});
+    Parameter p_bo = model->add_parameters({hidden_dim});
 
     // c
-    ParameterIndex p_x2c = model->add_parameters({hidden_dim, layer_input_dim});
-    ParameterIndex p_h2c = model->add_parameters({hidden_dim, hidden_dim});
-    ParameterIndex p_bc = model->add_parameters({hidden_dim});
+    Parameter p_x2c = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2c = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bc = model->add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
-    vector<ParameterIndex> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
+    vector<Parameter> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
     params.push_back(ps);
   }  // layers
 }

@@ -100,10 +100,10 @@ struct MLCBuilder {
     Expression by = parameter(cg, p_by);
     return affine_transform({by, h2y, h});
   }
-  LookupParameterIndex p_xe;
-  ParameterIndex p_bh;
-  ParameterIndex p_h2y;
-  ParameterIndex p_by;
+  LookupParameter p_xe;
+  Parameter p_bh;
+  Parameter p_h2y;
+  Parameter p_by;
 };
 
 int main(int argc, char** argv) {

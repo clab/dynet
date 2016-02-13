@@ -25,10 +25,10 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        bool support_lags) : layers(layers), lagging(support_lags) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    ParameterIndex p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    ParameterIndex p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    ParameterIndex p_hb = model->add_parameters({hidden_dim});
-    vector<ParameterIndex> ps = {p_x2h, p_h2h, p_hb};
+    Parameter p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_hb = model->add_parameters({hidden_dim});
+    vector<Parameter> ps = {p_x2h, p_h2h, p_hb};
     if (lagging)
         ps.push_back(model->add_parameters({hidden_dim, hidden_dim}));
     params.push_back(ps);
@@ -39,16 +39,16 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
 void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
   param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
-    ParameterIndex p_x2h = params[i][X2H];
-    ParameterIndex p_h2h = params[i][H2H];
-    ParameterIndex p_hb = params[i][HB];
+    Parameter p_x2h = params[i][X2H];
+    Parameter p_h2h = params[i][H2H];
+    Parameter p_hb = params[i][HB];
     Expression i_x2h =  parameter(cg,p_x2h);
     Expression i_h2h =  parameter(cg,p_h2h);
     Expression i_hb =  parameter(cg,p_hb);
     vector<Expression> vars = {i_x2h, i_h2h, i_hb};
 
     if (lagging) {
-        ParameterIndex p_l2h = params[i][L2H];
+        Parameter p_l2h = params[i][L2H];
         Expression i_l2h =  parameter(cg,p_l2h);
         vars.push_back(i_l2h);
     }

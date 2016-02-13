@@ -33,9 +33,6 @@ class AlignedMemoryPool {
     a->zero(mem, used);
   }
 
-  bool is_shared() {
-    return shared;
-  }
  private:
   void sys_alloc(size_t cap) {
     capacity = a->round_up_align(cap);
@@ -49,7 +46,6 @@ class AlignedMemoryPool {
   }
   size_t capacity;
   size_t used;
-  bool shared;
   MemAllocator* a;
   void* mem;
 };

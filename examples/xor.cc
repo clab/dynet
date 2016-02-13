@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   //MomentumSGDTrainer sgd(&m);
 
   ComputationGraph cg;
-  ParameterIndex p_W, p_b, p_V, p_a;
+  Parameter p_W, p_b, p_V, p_a;
   if (argc == 2) {
     ifstream in(argv[1]);
     boost::archive::text_iarchive ia(in);

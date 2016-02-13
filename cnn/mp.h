@@ -277,7 +277,7 @@ namespace cnn {
     template<class D, class S>
     void RunMultiProcess(unsigned num_children, ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
         const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
-      assert (cnn::ps->is_shared());
+      //assert (cnn::ps->is_shared());
       queue_name = GenerateQueueName();
       boost::interprocess::message_queue::remove(queue_name.c_str());
       boost::interprocess::message_queue::remove(queue_name.c_str());
