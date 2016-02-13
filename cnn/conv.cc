@@ -15,44 +15,6 @@ using namespace std;
 
 namespace cnn {
 
-string AddVectorToAllColumns::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "fold_rows(" << arg_names[0] << ", " << arg_names[1] << ')';
-  return os.str();
-}
-
-Dim AddVectorToAllColumns::dim_forward(const vector<Dim>& xs) const {
-  if (xs.size() != 2 || xs[0].rows() != xs[1].rows() || xs[0].ndims() != 2 || xs[1].ndims() != 1) {
-    cerr << "Bad input dimensions in AddVectorToAllColumns: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in AddVectorToAllColumns");
-  }
-  return xs[0];
-}
-
-void AddVectorToAllColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-    throw std::runtime_error("AddVectorToAllColumns::forward not implemented for CUDA");
-#else
-  auto y = *fx;
-  auto x = **xs[0];
-  auto b = **xs[1];
-  y = x.colwise() + b.col(0);
-#endif
-}
-
-void AddVectorToAllColumns::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-  assert(i < 2);
-  if (i == 0) { // x
-    (*dEdxi) += (*dEdf);
-  } else { // bias
-    (*dEdxi).col(0) += (*dEdf).rowwise().sum();
-  }
-}
-
 string FoldRows::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "fold_rows(" << arg_names[0] << ", nrows=" << nrows << ')';

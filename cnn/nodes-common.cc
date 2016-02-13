@@ -17,6 +17,34 @@ inline bool LooksLikeVector(const Dim& d) {
   return true;
 }
 
+string AddVectorToAllColumns::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "fold_rows(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return os.str();
+}
+
+Dim AddVectorToAllColumns::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || xs[0].rows() != xs[1].rows() || xs[0].ndims() != 2 || (xs[1].ndims() != 1 && (xs[1].ndims() != 2 || xs[1].cols() != 1))) {
+    cerr << "Bad input dimensions in AddVectorToAllColumns: " << xs << endl;
+    throw std::invalid_argument("bad input dimensions in AddVectorToAllColumns");
+  }
+  return xs[0];
+}
+
+string Sparsemax::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "sparsemax(" << arg_names[0] << ")";
+  return s.str();
+}
+
+Dim Sparsemax::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 1 || !LooksLikeVector(xs[0])) {
+    ostringstream s; s << "Bad input dimensions in Sparsemax: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  return xs[0];
+}
+
 string MatrixInverse::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "inverse(" << arg_names[0] << ")";
@@ -37,7 +65,7 @@ Dim AddMv::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2 ||
       xs[0].ndims() > 2 ||
       xs[0].rows() != xs[1].rows() ||
-      xs[1].ndims() != 1) {
+      !LooksLikeVector(xs[1])) {
     cerr << "Bad arguments in AddMv: " << xs << endl;
     throw std::invalid_argument("invalid arguments to AddMv");
   }
@@ -215,7 +243,7 @@ Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2 && xs.size() != 3)
     throw std::invalid_argument("Expected two or three arguments in InnerProduct3D_1D");
   if (xs[0].ndims() != 3 ||
-      xs[1].ndims() != 1 ||
+      !LooksLikeVector(xs[1]) ||
       xs[0].size(2) != xs[1].size(0)) {
     ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D: " << xs;
     throw std::invalid_argument(s.str());
@@ -240,8 +268,8 @@ Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 3 && xs.size() != 4)
     throw std::invalid_argument("Expected three or four arguments in InnerProduct3D_1D");
   if (xs[0].ndims() != 3 ||
-      xs[1].ndims() != 1 ||
-      xs[2].ndims() != 1) {
+      !LooksLikeVector(xs[1]) ||
+      !LooksLikeVector(xs[2])) {
     // TODO fix add check
     ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
     throw std::invalid_argument(s.str());
