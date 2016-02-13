@@ -307,7 +307,7 @@ namespace cnn {
       std::mt19937 rndeng(42);
       for (unsigned iter = 0; iter < num_iterations && !stop_requested; ++iter) {
         // Shuffle the training data indices
-        //std::shuffle(train_indices.begin(), train_indices.end(), rndeng);
+        std::shuffle(train_indices.begin(), train_indices.end(), rndeng);
 
         S train_loss = S();
 
@@ -362,6 +362,7 @@ namespace cnn {
             best_dev_loss = dev_loss;
           }
 
+          trainer->update_epoch();
           begin = end;
         }
       }
