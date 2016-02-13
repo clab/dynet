@@ -5,6 +5,9 @@
 
 using namespace std;
 
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::StandardSoftmaxBuilder)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ClassFactoredSoftmaxBuilder)
+
 namespace cnn {
 
 using namespace expr;
@@ -12,22 +15,26 @@ using namespace expr;
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
 inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
 
-NonFactoredSoftmaxBuilder::NonFactoredSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model* model) {
+SoftmaxBuilder::~SoftmaxBuilder() {}
+
+StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
+
+StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model* model) {
   p_w = model->add_parameters({vocab_size, rep_dim});
   p_b = model->add_parameters({vocab_size});
 }
 
-void NonFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg) {
+void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg) {
   pcg = &cg;
   w = parameter(cg, p_w);
   b = parameter(cg, p_b);
 }
 
-Expression NonFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
+Expression StandardSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
   return pickneglogsoftmax(affine_transform({b, w, rep}), wordidx);
 }
 
-unsigned NonFactoredSoftmaxBuilder::sample(const expr::Expression& rep) {
+unsigned StandardSoftmaxBuilder::sample(const expr::Expression& rep) {
   softmax(affine_transform({b, w, rep}));
   vector<float> dist = as_vector(pcg->incremental_forward());
   unsigned c = 0;
@@ -41,6 +48,8 @@ unsigned NonFactoredSoftmaxBuilder::sample(const expr::Expression& rep) {
   }
   return c;
 }
+
+ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,

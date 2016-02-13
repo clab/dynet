@@ -19,19 +19,30 @@ private:
   std::vector<unsigned> path;
   std::vector<unsigned> terminals;
   std::unordered_map<unsigned, unsigned> word2ind;
-  Parameters* p_weights;
-  Parameters* p_bias;
+  ParameterIndex p_weights;
+  ParameterIndex p_bias;
   mutable expr::Expression weights;
   mutable expr::Expression bias;
   bool initialized;
+  unsigned rep_dim;
   unsigned output_size;
 
   expr::Expression predict(expr::Expression h, ComputationGraph& cg) const;
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & rep_dim;
+    ar & children;
+    ar & path;
+    ar & terminals;
+    ar & word2ind;
+  }
 
 public:
   Cluster();
   Cluster* add_child(unsigned sym);
   void add_word(unsigned word);
+  void initialize(Model& model);
   void initialize(unsigned rep_dim, Model* model);
 
   void new_graph(ComputationGraph& cg);
@@ -52,13 +63,16 @@ public:
 // helps with implementation of hierarchical softmax
 // read a file with lines of the following format
 // CLASSID   word    [freq]
-class HierarchicalSoftmaxBuilder : public FactoredSoftmaxBuilder {
+class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
  public:
   HierarchicalSoftmaxBuilder(unsigned rep_dim,
                               const std::string& cluster_file,
                               Dict* word_dict,
                               Model* model);
   ~HierarchicalSoftmaxBuilder();
+
+  void initialize(Model& model);
+
   // call this once per ComputationGraph
   void new_graph(ComputationGraph& cg);
 
@@ -76,7 +90,6 @@ class HierarchicalSoftmaxBuilder : public FactoredSoftmaxBuilder {
   ComputationGraph* pcg;
   Cluster* root;
 };
-
 }  // namespace cnn
 
 #endif

@@ -120,7 +120,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
 
  private:
   // first index is layer, then x2h h2h hb
-  std::vector<std::vector<Parameters*>> params;
+  std::vector<std::vector<ParameterIndex>> params;
 
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Expression>> param_vars;

@@ -10,7 +10,7 @@ namespace cnn {
 
 string ConstParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "const_parameters(" << dim << ", " << params << ')';
+  s << "const_parameters(" << dim << ')';
   return s.str();
 }
 
@@ -21,7 +21,7 @@ Dim ConstParameterNode::dim_forward(const vector<Dim>& xs) const {
 
 void ConstParameterNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  *fx = *params->values * global_weight_decay.CurrentWeightDecay();
+  *fx.v = *params.get()->values.v * global_weight_decay.CurrentWeightDecay();
 }
 
 void ConstParameterNode::backward_impl(const vector<const Tensor*>& xs,
@@ -35,7 +35,7 @@ void ConstParameterNode::backward_impl(const vector<const Tensor*>& xs,
 
 string ParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "parameters(" << dim << ", " << params << ')';
+  s << "parameters(" << dim << ')';
   return s.str();
 }
 
@@ -52,10 +52,10 @@ void ParameterNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) co
 //    return;
 //  }
 #if HAVE_CUDA
-  fx.v = params->values.v;
+  fx.v = params.get()->values.v;
   cerr << "ParameterNode::forward_impl - implement * global_weight_scale for CUDA\n";
 #else
-  *fx = *params->values * global_weight_decay.CurrentWeightDecay();
+  *fx = *params.get()->values * global_weight_decay.CurrentWeightDecay();
 #endif
 }
 
@@ -69,7 +69,7 @@ void ParameterNode::backward_impl(const vector<const Tensor*>& xs,
 }
 
 void ParameterNode::accumulate_grad(const Tensor& g) {
-  params->accumulate_grad(g);
+  params.get()->accumulate_grad(g);
 }
 
 string InputNode::as_string(const vector<string>& arg_names) const {
@@ -137,7 +137,7 @@ void ScalarInputNode::backward_impl(const vector<const Tensor*>& xs,
 
 string LookupNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "lookup_parameters(|x|=" << params->values.size() << " --> " << dim << ')';
+  s << "lookup_parameters(|x|=" << params.get()->values.size() << " --> " << dim << ')';
   return s.str();
 }
 
@@ -148,22 +148,23 @@ Dim LookupNode::dim_forward(const vector<Dim>& xs) const {
 void LookupNode::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
   if(pindex) {
-    assert(*pindex < params->values.size());
+    assert(*pindex < params.get()->values.size());
     assert (fx.d.batch_elems() == 1);
-    fx.vec() = params->values[*pindex].vec() * global_weight_decay.CurrentWeightDecay();
+    fx.vec() = params.get()->values[*pindex].vec() * global_weight_decay.CurrentWeightDecay();
   } else {
     assert (pindices);
     assert (fx.d.batch_elems() == pindices->size());
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
-      assert (i < params->values.size());
+      assert (i < params.get()->values.size());
       float* v = fx.v + fx.d.batch_size() * (b % fx.d.batch_elems());
 #if HAVE_CUDA
-      cudaMemcpyAsync(v, params->values[i].v, fx.d.batch_size() * sizeof(float), cudaMemcpyDeviceToDevice);
+      cudaMemcpyAsync(v, params.get()->values[i].v, fx.d.batch_size() * sizeof(float), cudaMemcpyDeviceToDevice);
 #else
       // we should use colwise() instead of memcpy to get rid of the
       // extra multiply by global_weight_decay.CurrentWeightDecay()
-      memcpy(v, params->values[i].v, fx.d.batch_size() * sizeof(float));
+      memcpy(v, params.get()->values[i].v, fx.d.batch_size() * sizeof(float));
+
 #endif
     }
     fx.vec() *= global_weight_decay.CurrentWeightDecay();
@@ -181,14 +182,14 @@ void LookupNode::backward_impl(const vector<const Tensor*>& xs,
 
 void LookupNode::accumulate_grad(const Tensor& g) {
   if(pindex) {
-    params->accumulate_grad(*pindex, g);
+    params.get()->accumulate_grad(*pindex, g);
   } else {
     assert (pindices);
     const vector<Tensor>& gb = g.batch_elems();
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
-      assert (i < params->values.size());
-      params->accumulate_grad(i, gb[b]);
+      assert (i < params.get()->values.size());
+      params.get()->accumulate_grad(i, gb[b]);
     }
   }
 }
