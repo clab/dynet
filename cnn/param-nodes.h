@@ -12,7 +12,7 @@ struct ParameterNodeBase : public Node {
 
 // represents optimizable parameters
 struct ParameterNode : public ParameterNodeBase {
-  explicit ParameterNode(Parameters* p) : dim(p->dim), params(p) {}
+  explicit ParameterNode(ParameterIndex p) : dim(p.get()->dim), params(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -23,12 +23,12 @@ struct ParameterNode : public ParameterNodeBase {
                   Tensor& dEdxi) const override;
   void accumulate_grad(const Tensor& g) override;
   Dim dim;
-  Parameters* params;
+  ParameterIndex params;
 };
 
 // represents optimizable parameters that are being held constant
 struct ConstParameterNode : public Node {
-  explicit ConstParameterNode(Parameters* p) : dim(p->dim), params(p) {}
+  explicit ConstParameterNode(ParameterIndex p) : dim(p.get()->dim), params(p) {}
   std::string as_string(const std::vector<std::string>& arg_names) const override;
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
@@ -38,7 +38,7 @@ struct ConstParameterNode : public Node {
                   unsigned i,
                   Tensor& dEdxi) const override;
   Dim dim;
-  Parameters* params;
+  ParameterIndex params;
 };
 
 // represents specified (not learned) inputs to the network
@@ -77,12 +77,12 @@ struct ScalarInputNode : public Node {
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
 struct LookupNode : public ParameterNodeBase {
-  LookupNode(LookupParameters* p, unsigned ind) : dim(p->dim), index(ind), pindex(&index), indices(), pindices(), params(p) {}
-  LookupNode(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), indices(), pindices(), params(p) {}
-  LookupNode(LookupParameters* p, const std::vector<unsigned>& indices) : dim(p->dim), index(), pindex(), indices(indices), pindices(&this->indices), params(p) {
+  LookupNode(LookupParameterIndex p, unsigned ind) : dim(p.get()->dim), index(ind), pindex(&index), indices(), pindices(), params(p) {}
+  LookupNode(LookupParameterIndex p, const unsigned* pind) : dim(p.get()->dim), index(), pindex(pind), indices(), pindices(), params(p) {}
+  LookupNode(LookupParameterIndex p, const std::vector<unsigned>& indices) : dim(p.get()->dim), index(), pindex(), indices(indices), pindices(&this->indices), params(p) {
     dim.bd = pindices->size();
   }
-  LookupNode(LookupParameters* p, const std::vector<unsigned>* pindices) : dim(p->dim), index(), pindex(), indices(), pindices(pindices), params(p) {
+  LookupNode(LookupParameterIndex p, const std::vector<unsigned>* pindices) : dim(p.get()->dim), index(), pindex(), indices(), pindices(pindices), params(p) {
     dim.bd = pindices->size();
   }
   std::string as_string(const std::vector<std::string>& arg_names) const override;
@@ -100,7 +100,7 @@ struct LookupNode : public ParameterNodeBase {
   const unsigned* pindex;
   std::vector<unsigned> indices;
   const std::vector<unsigned>* pindices;
-  LookupParameters* params;
+  LookupParameterIndex params;
 };
 
 } // namespace cnn

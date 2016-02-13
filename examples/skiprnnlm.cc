@@ -41,9 +41,9 @@ typedef vector<Document> Corpus;
 
 
 struct RNNSkipLM {
-    LookupParameters* p_c;
-    Parameters* p_R;
-    Parameters* p_bias;
+    LookupParameterIndex p_c;
+    ParameterIndex p_R;
+    ParameterIndex p_bias;
     SimpleRNNBuilder builder;
     explicit RNNSkipLM(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model, true) {
         p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 

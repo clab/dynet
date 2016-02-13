@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
   unsigned dev_frequency = 5000;
   unsigned report_frequency = 10;
 
-  cnn::Initialize(argc, argv, 1, true);
+  cnn::Initialize(argc, argv, true);
 
   Model model;
   SimpleSGDTrainer sgd(&model, 0.2);

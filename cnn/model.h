@@ -5,9 +5,12 @@
 #include <unordered_set>
 #include <string>
 
-
-#include <boost/serialization/split_member.hpp>
+#include <boost/serialization/export.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 #include "cnn/tensor.h"
 
@@ -26,6 +29,9 @@ struct ParametersBase {
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
   virtual size_t size() const = 0;
   virtual ~ParametersBase();
+  friend class boost::serialization::access;
+  template<class Archive> 
+  void serialize(Archive& ar, const unsigned int) {}
 };
 
 // represents parameters (e.g., a weight matrix) that will be optimized
@@ -48,9 +54,12 @@ struct Parameters : public ParametersBase {
   explicit Parameters(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
                                  // or Glorot initialization if minmax = 0
   friend class boost::serialization::access;
-  template<class Archive> void serialize(Archive& ar, const unsigned int) {
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    boost::serialization::base_object<ParametersBase>(*this);
     ar & dim;
     ar & values;
+    ar & g;
   }
 };
 
@@ -77,23 +86,48 @@ struct LookupParameters : public ParametersBase {
   LookupParameters(unsigned n, const Dim& d);
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive& ar, const unsigned int) const {
+  void serialize(Archive& ar, const unsigned int) {
+    boost::serialization::base_object<ParametersBase>(*this);
     ar & dim;
-    int nv = values.size();
-    ar & nv;
-    for (unsigned i = 0; i < values.size(); ++i)
-      ar & values[i];
+    ar & values;
+    ar & grads;
   }
+};
+
+class Model;
+struct ParameterIndex {
+  ParameterIndex();
+  ParameterIndex(const Model* mp, unsigned long index);
+  Parameters* get() const;
+
+  const Model* mp;
+  unsigned long index;
+
+private:
+  friend class boost::serialization::access;
   template<class Archive>
-  void load(Archive& ar, const unsigned int) {
-    ar & dim;
-    int nv;
-    ar & nv;
-    assert(nv == (int)values.size());
-    for (unsigned i = 0; i < values.size(); ++i)
-      ar & values[i];
+  void serialize(Archive& ar, const unsigned int) {
+    ar & mp;
+    ar & index;
   }
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
+};
+
+struct LookupParameterIndex {
+  LookupParameterIndex();
+  LookupParameterIndex(const Model* mp, unsigned long index);
+  LookupParameters* get() const;
+  void Initialize(unsigned index, const std::vector<float>& val) const;
+
+  const Model* mp;
+  unsigned long index;
+
+private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & mp;
+    ar & index;
+  }
 };
 
 // this is a collection of parameters
@@ -107,8 +141,8 @@ class Model {
   float gradient_l2_norm() const;
   void reset_gradient();
   // set scale to use custom initialization
-  Parameters* add_parameters(const Dim& d, float scale = 0.0f);
-  LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
+  ParameterIndex add_parameters(const Dim& d, float scale = 0.0f);
+  LookupParameterIndex add_lookup_parameters(unsigned n, const Dim& d);
   // project weights so their L2 norm = radius
   void project_weights(float radius = 1.0f);
 
@@ -119,32 +153,11 @@ class Model {
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive& ar, const unsigned int) const {
-    int np = params.size();
-    int nlp = lookup_params.size();
-    ar & np;
-    ar & nlp;
-    for (unsigned i = 0; i < params.size(); ++i)
-      ar & *params[i];
-    for (unsigned i = 0; i < lookup_params.size(); ++i)
-      ar & *lookup_params[i];
+  void serialize(Archive& ar, const unsigned int) {
+    ar & all_params;
+    ar & params;
+    ar & lookup_params;
   }
-  template<class Archive>
-  void load(Archive& ar, const unsigned int) {
-    int np, nlp;
-    ar & np;
-    ar & nlp;
-    assert(np == (int)params.size());
-    assert(nlp == (int)lookup_params.size());
-    for (unsigned i = 0; i < params.size(); ++i)
-      ar & *params[i];
-    for (unsigned i = 0; i < lookup_params.size(); ++i)
-      ar & *lookup_params[i];
-    all_params.clear();
-    for (auto p : params) all_params.push_back(p);
-    for (auto p : lookup_params) all_params.push_back(p);
-  }
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
 
   std::vector<ParametersBase*> all_params;
   std::vector<Parameters*> params;
@@ -156,5 +169,7 @@ void save_cnn_model(std::string filename, Model* model);
 void load_cnn_model(std::string filename, Model* model);
 
 } // namespace cnn
+BOOST_CLASS_EXPORT_KEY(cnn::Parameters)
+BOOST_CLASS_EXPORT_KEY(cnn::LookupParameters)
 
 #endif

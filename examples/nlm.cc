@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   // parameters
   Model model;
   SimpleSGDTrainer sgd(&model);
-  LookupParameters* p_c = model.add_lookup_parameters(VOCAB_SIZE, {DIM});
+  LookupParameterIndex p_c = model.add_lookup_parameters(VOCAB_SIZE, {DIM});
 
   ComputationGraph cg;
 

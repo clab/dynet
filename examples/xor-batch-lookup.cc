@@ -29,16 +29,16 @@ int main(int argc, char** argv) {
   Expression V = parameter(cg, m.add_parameters({1, HIDDEN_SIZE}));
   Expression a = parameter(cg, m.add_parameters({1}));
 
-  LookupParameters* x_values = m.add_lookup_parameters(4, {2});
-  LookupParameters* y_values = m.add_lookup_parameters(4, {1});
-  x_values->Initialize(0, {1.0, 1.0});
-  x_values->Initialize(1, {-1.0, 1.0});
-  x_values->Initialize(2, {1.0, -1.0});
-  x_values->Initialize(3, {-1.0, -1.0});
-  y_values->Initialize(0, {-1.0});
-  y_values->Initialize(1, {1.0});
-  y_values->Initialize(2, {1.0});
-  y_values->Initialize(3, {-1.0});
+  LookupParameterIndex x_values = m.add_lookup_parameters(4, {2});
+  LookupParameterIndex y_values = m.add_lookup_parameters(4, {1});
+  x_values.Initialize(0, {1.0, 1.0});
+  x_values.Initialize(1, {-1.0, 1.0});
+  x_values.Initialize(2, {1.0, -1.0});
+  x_values.Initialize(3, {-1.0, -1.0});
+  y_values.Initialize(0, {-1.0});
+  y_values.Initialize(1, {1.0});
+  y_values.Initialize(2, {1.0});
+  y_values.Initialize(3, {-1.0});
 
   Expression x = const_lookup(cg, x_values, {0, 1, 2, 3});
   Expression y = const_lookup(cg, y_values, {0, 1, 2, 3});

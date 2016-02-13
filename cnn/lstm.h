@@ -46,7 +46,7 @@ struct LSTMBuilder : public RNNBuilder {
 
  public:
   // first index is layer, then ...
-  std::vector<std::vector<Parameters*>> params;
+  std::vector<std::vector<ParameterIndex>> params;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
@@ -61,6 +61,16 @@ struct LSTMBuilder : public RNNBuilder {
   std::vector<Expression> c0;
   unsigned layers;
   float dropout_rate;
+
+private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & params;
+    ar & layers;
+    ar & dropout_rate;
+  }
+
 };
 
 } // namespace cnn

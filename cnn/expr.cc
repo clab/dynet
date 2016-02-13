@@ -13,16 +13,16 @@ Expression input(ComputationGraph& g, real s) { return Expression(&g, g.add_inpu
 Expression input(ComputationGraph& g, const real *ps) { return Expression(&g, g.add_input(ps)); }
 Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data) { return Expression(&g, g.add_input(d, data)); }
 Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata) { return Expression(&g, g.add_input(d, pdata)); }
-Expression const_parameter(ComputationGraph& g, Parameters* p) { return Expression(&g, g.add_const_parameters(p)); }
-Expression parameter(ComputationGraph& g, Parameters* p) { return Expression(&g, g.add_parameters(p)); }
-Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index) { return Expression(&g, g.add_lookup(p, index)); }
-Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_lookup(p, pindex)); }
-Expression lookup(ComputationGraph& g, LookupParameters* p, const vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }
-Expression lookup(ComputationGraph& g, LookupParameters* p, const vector<unsigned>* pindices) { return Expression(&g, g.add_lookup(p, pindices)); }
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index) { return Expression(&g, g.add_const_lookup(p, index)); }
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
+Expression const_parameter(ComputationGraph& g, ParameterIndex p) { return Expression(&g, g.add_const_parameters(p)); }
+Expression parameter(ComputationGraph& g, ParameterIndex p) { return Expression(&g, g.add_parameters(p)); }
+Expression lookup(ComputationGraph& g, LookupParameterIndex p, unsigned index) { return Expression(&g, g.add_lookup(p, index)); }
+Expression lookup(ComputationGraph& g, LookupParameterIndex p, const unsigned* pindex) { return Expression(&g, g.add_lookup(p, pindex)); }
+Expression lookup(ComputationGraph& g, LookupParameterIndex p, const vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }
+Expression lookup(ComputationGraph& g, LookupParameterIndex p, const vector<unsigned>* pindices) { return Expression(&g, g.add_lookup(p, pindices)); }
+Expression const_lookup(ComputationGraph& g, LookupParameterIndex p, unsigned index) { return Expression(&g, g.add_const_lookup(p, index)); }
+Expression const_lookup(ComputationGraph& g, LookupParameterIndex p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
+Expression const_lookup(ComputationGraph& g, LookupParameterIndex p, const vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
+Expression const_lookup(ComputationGraph& g, LookupParameterIndex p, const vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
 Expression zeroes(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Zeroes>(d)); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
@@ -34,7 +34,6 @@ Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg
 Expression operator-(const Expression& x, real y) { return -(y-x); }
 Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
 Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
-Expression addmv(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<AddMv>({x.i, y.i})); }
 Expression cdiv(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<CwiseQuotient>({x.i, y.i})); }
 Expression colwise_add(const Expression& x, const Expression& bias) { return Expression(x.pg, x.pg->add_function<AddVectorToAllColumns>({x.i, bias.i})); }
 Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z) { return Expression(x.pg, x.pg->add_function<InnerProduct3D_1D_1D>({x.i, y.i, z.i})); }

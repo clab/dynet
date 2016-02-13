@@ -33,21 +33,21 @@ int kEOS;
 
 template <class Builder>
 struct RNNLanguageModel {
-  LookupParameters* p_c;  // should we have two of these?
+  LookupParameterIndex p_c;  // should we have two of these?
   Builder ebuilder;
-  Parameters* p_H;
-  Parameters* p_hb;
-  Parameters* p_h2m;
-  Parameters* p_mb;
-  Parameters* p_h2s;
-  Parameters* p_sb;
+  ParameterIndex p_H;
+  ParameterIndex p_hb;
+  ParameterIndex p_h2m;
+  ParameterIndex p_mb;
+  ParameterIndex p_h2s;
+  ParameterIndex p_sb;
 
   // DECODER
   Builder dbuilder;
-  Parameters* p_R;
-  Parameters* p_bias;
-  Parameters* p_z2h0;
-  Parameters* p_h0b;
+  ParameterIndex p_R;
+  ParameterIndex p_bias;
+  ParameterIndex p_z2h0;
+  ParameterIndex p_h0b;
 
   explicit RNNLanguageModel(Model& model) :
       ebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),

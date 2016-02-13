@@ -22,7 +22,7 @@ public:
   unsigned hidden_size;
 
   Expression W, b, V, a;
-  Parameters *pW, *pb, *pV, *pa;
+  ParameterIndex pW, pb, pV, pa;
 
   // It is important to have a null default constructor for the class, as
   // we would first need to read the class object from the file, followed by
