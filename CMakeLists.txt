@@ -42,7 +42,7 @@ if(DEFINED ENV{BOOST_ROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
 endif()
 set(Boost_REALPATH ON)
-find_package(Boost COMPONENTS program_options serialization REQUIRED)
+find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 # trouble shooting:
