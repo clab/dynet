@@ -179,8 +179,8 @@ cdef class Model:
         return pp
 
     def add_lookup_parameters(self, name, dim):
-        assert(isinstance(dim, tuple)), "name already registered"
-        assert(name not in self.named_params)
+        assert(isinstance(dim, tuple))
+        assert(name not in self.named_params), "name already registered"
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
         cdef CLookupParameters* p
