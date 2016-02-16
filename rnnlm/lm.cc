@@ -12,11 +12,14 @@
 
 #include <iostream>
 #include <fstream>
+#include <regex>
 #include <sstream>
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/regex.hpp>
 
 using namespace std;
 using namespace cnn;
@@ -42,6 +45,7 @@ void InitCommandLine(int argc, char** argv, po::variables_map* conf) {
         ("train,t", po::value<string>(), "training corpus")
         ("dev,d", po::value<string>(), "development/validation corpus")
         ("test,p", po::value<string>(), "test corpus")
+        ("nbest", po::value<string>(), "N-best list to score (- for stdin)")
         ("learn,x", "set this to estimate the language model from the training data")
         ("clusters,c", po::value<string>(), "word cluster file for class factored softmax")
         ("paths,b", po::value<string>(), "word paths file for hierarchical softmax")
@@ -338,6 +342,56 @@ int main(int argc, char** argv) {
     cerr << "TEST CROSS ENTOPY (NATS) = " << (tloss / tchars) << endl;
     cerr << "TEST                 PPL = " << exp(tloss / tchars) << endl;
   }
+
+  // N-best scoring
+  if (conf.count("nbest")) {
+    // cdec: index ||| hypothesis ||| feature=val ... ||| ...
+    // Moses: index ||| hypothesis ||| feature= val(s) ... ||| ...
+    const int HYP_FIELD = 1;
+    const int FEAT_FIELD = 2;
+    const string FEAT_NAME = "RNNLM";
+    // Input
+    string nbestf = conf["nbest"].as<string>();
+    cerr << "Scoring N-best list " << nbestf << " ..." << endl;
+    shared_ptr<istream> in;
+    if (nbestf == "-") {
+      in.reset(&cin, [](...){});
+    } else {
+      in.reset(new ifstream(nbestf));
+    }
+    // Split on |||, consume whitespace
+    boost::regex delim("\\s*\\|\\|\\|\\s*");
+    boost::sregex_token_iterator end;
+    // Match spacing of input file
+    string sep = "=";
+    bool sep_detected = false;
+    // Input lines
+    while (getline(*in, line)) {
+      vector<string> fields;
+      boost::sregex_token_iterator it(line.begin(), line.end(), delim, -1);
+      while (it != end) {
+        fields.push_back(*it++);
+      }
+      // Check sep if needed
+      if (!sep_detected) {
+        sep_detected = true;
+        int i = fields[FEAT_FIELD].find("=");
+        if (fields[FEAT_FIELD].substr(i + 1, 1) == " ") {
+          sep = "= ";
+        }
+      }
+      // Score hypothesis
+      ComputationGraph cg;
+      lm.BuildLMGraph(ReadSentence(fields[HYP_FIELD], &d), cg, false);
+      double loss = as_scalar(cg.forward());
+      // Add score
+      ostringstream os;
+      os << fields[FEAT_FIELD] << " " << FEAT_NAME << sep << loss;
+      fields[FEAT_FIELD] = os.str();
+      // Write augmented line
+      cout << boost::algorithm::join(fields, " ||| ") << endl;
+    }
+  }
+
   delete sgd;
 }
-
