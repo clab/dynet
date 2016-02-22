@@ -265,7 +265,7 @@ namespace cnn {
           }
         }
         if (header.end_of_epoch) {
-          //trainer->update_epoch();
+          trainer->update_epoch();
         }
 
         // Let the parent know that we're done and return the loss value

@@ -239,6 +239,10 @@ unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
   return node->get_word(c);
 }
 
+Expression HierarchicalSoftmaxBuilder::full_log_distribution(const Expression& rep) {
+  assert (false && "full_distribution not implemented for HierarchicalSoftmaxBuilder");
+}
+
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
 inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
 

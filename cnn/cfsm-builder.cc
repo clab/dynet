@@ -34,7 +34,7 @@ Expression StandardSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsign
   return pickneglogsoftmax(affine_transform({b, w, rep}), wordidx);
 }
 
-unsigned StandardSoftmaxBuilder::sample(const expr::Expression& rep) {
+unsigned StandardSoftmaxBuilder::sample(const Expression& rep) {
   softmax(affine_transform({b, w, rep}));
   vector<float> dist = as_vector(pcg->incremental_forward());
   unsigned c = 0;
@@ -47,6 +47,10 @@ unsigned StandardSoftmaxBuilder::sample(const expr::Expression& rep) {
     --c;
   }
   return c;
+}
+
+Expression StandardSoftmaxBuilder::full_log_distribution(const Expression& rep) {
+  return log(softmax(affine_transform({b, w, rep})));
 }
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
@@ -101,7 +105,7 @@ Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, u
   return cnlp + wnlp;
 }
 
-unsigned ClassFactoredSoftmaxBuilder::sample(const expr::Expression& rep) {
+unsigned ClassFactoredSoftmaxBuilder::sample(const Expression& rep) {
   // TODO assert that new_graph has been called
   Expression cscores = affine_transform({cbias, r2c, rep});
   softmax(cscores);
@@ -128,6 +132,27 @@ unsigned ClassFactoredSoftmaxBuilder::sample(const expr::Expression& rep) {
     if (w == wdist.size()) --w;
   }
   return cidx2words[c][w];
+}
+
+Expression ClassFactoredSoftmaxBuilder::full_log_distribution(const Expression& rep) {
+  vector<Expression> full_dist(widx2cidx.size());
+  for (unsigned i = 0; i < widx2cidx.size(); ++i) {
+    assert (widx2cidx[i] != -1);
+  }
+
+  for (unsigned c = 0; c < p_rc2ws.size(); ++c) {
+    Expression& cwbias = get_rc2wbias(c);
+    Expression& r2cw = get_rc2w(c);
+    Expression wscores = affine_transform({cwbias, r2cw, rep});
+    Expression wdist = softmax(wscores);
+
+    for (unsigned i = 0; i < cidx2words[c].size(); ++i) {
+      unsigned w = cidx2words[c][i];
+      full_dist[w] = pick(wdist, i);
+    }
+  }
+
+  return log(softmax(concatenate(full_dist)));
 }
 
 void ClassFactoredSoftmaxBuilder::ReadClusterFile(const std::string& cluster_file, Dict* word_dict) {

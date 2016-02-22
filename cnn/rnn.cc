@@ -12,6 +12,8 @@ using namespace std;
 using namespace cnn::expr;
 using namespace cnn;
 
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::RNNBuilder)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::SimpleRNNBuilder)
 namespace cnn {
 
 enum { X2H=0, H2H, HB, L2H };

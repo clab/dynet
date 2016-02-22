@@ -16,11 +16,15 @@ public:
   // call this once per ComputationGraph
   virtual void new_graph(ComputationGraph& cg) = 0;
 
-  // -log(p(c | rep) * p(w | c, rep))
+  // -log(p(w | rep))
   virtual expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx) = 0;
 
-  // samples a word from p(w,c | rep)
+  // samples a word from p(w | rep)
   virtual unsigned sample(const expr::Expression& rep) = 0;
+
+  // returns an Expression representing a vector the size of the vocabulary.
+  // The ith dimension gives log p(w_i | rep). This function may be SLOW. Avoid if possible.
+  virtual expr::Expression full_log_distribution(const expr::Expression& rep) = 0;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -33,6 +37,7 @@ public:
   void new_graph(ComputationGraph& cg);
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
+  expr::Expression full_log_distribution(const expr::Expression& rep);
 
 private:
   StandardSoftmaxBuilder();
@@ -64,6 +69,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   void new_graph(ComputationGraph& cg);
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
+  expr::Expression full_log_distribution(const expr::Expression& rep);
 
  private:
   ClassFactoredSoftmaxBuilder();
