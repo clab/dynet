@@ -1,6 +1,7 @@
 #ifndef CNN_RNN_H_
 #define CNN_RNN_H_
 
+#include <boost/serialization/access.hpp>
 #include "cnn/cnn.h"
 #include "cnn/rnn-state-machine.h"
 #include "cnn/expr.h"
@@ -90,6 +91,14 @@ struct RNNBuilder {
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
   std::vector<RNNPointer> head; // head[i] returns the head position
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & cur;
+    ar & head;
+    ar & sm;
+  } 
 };
 
 struct SimpleRNNBuilder : public RNNBuilder {
@@ -134,8 +143,30 @@ struct SimpleRNNBuilder : public RNNBuilder {
 
   unsigned layers;
   bool lagging;
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & boost::serialization::base_object<RNNBuilder>(*this);
+    ar & params;
+    ar & layers;
+    ar & lagging;
+  }
 };
 
 } // namespace cnn
 
+
+namespace boost {
+  namespace serialization {
+    template<class Archive>
+    void serialize(Archive& ar, cnn::RNNPointer& p, const unsigned int version)
+    {
+        ar & p.t;
+    }
+  } // namespace serialization
+} // namespace boost
+
+BOOST_CLASS_EXPORT_KEY(cnn::RNNBuilder)
+BOOST_CLASS_EXPORT_KEY(cnn::SimpleRNNBuilder)
 #endif

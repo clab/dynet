@@ -80,6 +80,8 @@ class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
   // samples a word from p(w,c | rep)
   unsigned sample(const expr::Expression& rep);
 
+  expr::Expression full_log_distribution(const expr::Expression& rep);
+
  private:
   Cluster* ReadClusterFile(const std::string& cluster_file, Dict* word_dict);
   std::vector<Cluster*> widx2path; // will be NULL if not found
