@@ -1525,7 +1525,7 @@ void PickElement::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) cons
   if(pval) {
     if (*pval >= xs[0]->d.rows()) {
       cerr << "PickElement::forward_impl requested element " << *pval
-           << "from a vector of length " << xs[0]->d.rows() << endl;
+           << " from a vector of length " << xs[0]->d.rows() << endl;
       abort();
     }
     auto x = **xs[0];
@@ -1534,6 +1534,11 @@ void PickElement::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) cons
     assert(pvals);
     assert(pvals->size() == fx.d.batch_elems());
     for(unsigned b = 0; b < pvals->size(); ++b) {
+      if ((*pvals)[b] >= xs[0]->d.rows()) {
+        cerr << "PickElement::forward_impl requested element " << (*pvals)[b]
+             << " from a vector of length " << xs[0]->d.rows() << endl;
+        abort();
+      }
       auto x = xs[0]->batch_matrix(b);
       fx.v[b] = x((*pvals)[b]);
     }
