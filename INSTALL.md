@@ -5,19 +5,15 @@ First, get CNN and Eigen:
 ```bash
 mkdir cnn
 cd cnn
-git clone https://github.com/yoavg/cnn.git
+git clone https://github.com/clab/cnn.git
 hg clone https://bitbucket.org/eigen/eigen/
 ```
 
 Compile CNN.
-Note that we are currently relying on the CNN code that is in the
-`pycnn` branch (it has a few modifications needed for pyCNN to work), 
-but at some point this will be merged into cnn proper.
 (modify the code below to point to the correct boost location)
 
 ```bash
 cd cnn
-git checkout pycnn # branch
 mkdir build
 cd build
 cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DBOOST_ROOT=/home/yogo/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
