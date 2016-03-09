@@ -1,5 +1,6 @@
 #include "cnn/lstm.h"
 
+#include <fstream>
 #include <string>
 #include <cassert>
 #include <vector>
@@ -156,6 +157,46 @@ void LSTMBuilder::copy(const RNNBuilder & rnn) {
   for(size_t i = 0; i < params.size(); ++i)
       for(size_t j = 0; j < params[i].size(); ++j)
         params[i][j] = rnn_lstm.params[i][j];
+}
+
+void LSTMBuilder::save_parameters_pretraining(const string& fname) const {
+  cerr << "Writing LSTM parameters to " << fname << endl;
+  ofstream of(fname);
+  assert(of);
+  boost::archive::binary_oarchive oa(of);
+  std::string id = "LSTMBuilder:params";
+  oa << id;
+  oa << layers;
+  for (unsigned i = 0; i < layers; ++i) {
+    for (auto p : params[i]) {
+      oa << p.get()->values;
+    }
+  }
+}
+
+void LSTMBuilder::load_parameters_pretraining(const string& fname) {
+  cerr << "Loading LSTM parameters from " << fname << endl;
+  ifstream of(fname);
+  assert(of);
+  boost::archive::binary_iarchive ia(of);
+  std::string id;
+  ia >> id;
+  if (id != "LSTMBuilder:params") {
+    cerr << "Bad id read\n";
+    abort();
+  }
+  unsigned l = 0;
+  ia >> l;
+  if (l != layers) {
+    cerr << "Bad number of layers\n";
+    abort();
+  }
+  // TODO check other dimensions
+  for (unsigned i = 0; i < layers; ++i) {
+    for (auto p : params[i]) {
+      ia >> p.get()->values;
+    }
+  }
 }
 
 } // namespace cnn
