@@ -23,6 +23,7 @@ set(cnn_library_SRCS
     nodes.cc
     nodes-common.cc
     param-nodes.cc
+    pretrain.cc
     rnn.cc
     rnn-state-machine.cc
     saxe-init.cc

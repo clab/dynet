@@ -3,7 +3,10 @@
 #include <string>
 #include <cassert>
 #include <vector>
+#include <fstream>
 #include <iostream>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 #include "cnn/nodes.h"
 #include "cnn/expr.h"
@@ -19,6 +22,16 @@ namespace cnn {
 enum { X2H=0, H2H, HB, L2H };
 
 RNNBuilder::~RNNBuilder() {}
+
+void RNNBuilder::save_parameters_pretraining(const string& fname) const {
+  cerr << "RNNBuilder::save_parameters_pretraining not overridden.\n";
+  abort();
+}
+
+void RNNBuilder::load_parameters_pretraining(const string& fname) {
+  cerr << "RNNBuilder::load_parameters_pretraining not overridden.\n";
+  abort();
+}
 
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
@@ -120,5 +133,46 @@ void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
       params[i][2] = rnn_simple.params[i][2];
   }
 }
+
+void SimpleRNNBuilder::save_parameters_pretraining(const string& fname) const {
+  cerr << "Writing parameters to " << fname << endl;
+  ofstream of(fname);
+  assert(of);
+  boost::archive::binary_oarchive oa(of);
+  std::string id = "SimpleRNNBuilder:params";
+  oa << id;
+  oa << layers;
+  for (unsigned i = 0; i < layers; ++i) {
+    for (auto p : params[i]) {
+      oa << p.get()->values;
+    }
+  }
+}
+
+void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
+  cerr << "Loading parameters from " << fname << endl;
+  ifstream of(fname);
+  assert(of);
+  boost::archive::binary_iarchive ia(of);
+  std::string id;
+  ia >> id;
+  if (id != "SimpleRNNBuilder:params") {
+    cerr << "Bad id read\n";
+    abort();
+  }
+  unsigned l = 0;
+  ia >> l;
+  if (l != layers) {
+    cerr << "Bad number of layers\n";
+    abort();
+  }
+  // TODO check other dimensions
+  for (unsigned i = 0; i < layers; ++i) {
+    for (auto p : params[i]) {
+      ia >> p.get()->values;
+    }
+  }
+}
+
 
 } // namespace cnn
