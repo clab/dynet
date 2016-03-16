@@ -52,3 +52,8 @@ python2 xor.py
 python2 rnnlm.py rnnlm.py
 ```
 
+Alternatively, if the following script works for you, then your installation is likely to be working:
+```
+from pycnn import *
+model = Model()
+```
