@@ -20,7 +20,7 @@ Compile CNN.
 cd $HOME/cnn/
 mkdir build
 cd build
-cmake -DEIGEN3_INCLUDE_DIR=./eigen -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
+cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
 make -j 2
 ```
 
