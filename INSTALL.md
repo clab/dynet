@@ -6,7 +6,9 @@ First, get CNN and Eigen:
 mkdir cnn
 cd cnn
 git clone https://github.com/clab/cnn.git
-hg clone https://bitbucket.org/eigen/eigen/
+# hg clone https://bitbucket.org/eigen/eigen/ # Latest version (17.03.16) of Eigen fails to compile.
+wget u.cs.biu.ac.il/~yogo/eigen.tgz
+tar zxvf eigen.tgz # or "dtrx eigen.tgz" if you have dtrx installed.
 ```
 
 Compile CNN.
