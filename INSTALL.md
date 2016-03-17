@@ -3,9 +3,9 @@
 First, get CNN and Eigen:
 
 ```bash
-mkdir cnn
-cd cnn
+cd $HOME
 git clone https://github.com/clab/cnn.git
+cd cnn
 # hg clone https://bitbucket.org/eigen/eigen/ # Latest version (17.03.16) of Eigen fails to compile.
 wget u.cs.biu.ac.il/~yogo/eigen.tgz
 tar zxvf eigen.tgz # or "dtrx eigen.tgz" if you have dtrx installed.
@@ -15,10 +15,7 @@ Compile CNN.
 (modify the code below to point to the correct boost location)
 
 ```bash
-cd cnn
-mkdir build
-cd build
-cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DBOOST_ROOT=/home/yogo/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
+cmake -DEIGEN3_INCLUDE_DIR=./eigen -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
 make -j 2
 ```
 
@@ -28,7 +25,7 @@ If you don't have cython, it can be installed with either `pip install cython` o
 
 ```bash
 pip2 install cython --user
-cd ../pycnn
+cd $HOME/cnn/pycnn
 make
 make install
 ```
@@ -41,7 +38,7 @@ Add the following line to your profile (`.zshrc` or `.bashrc`), change
 according to your installation location.
 
 ```bash
-export LD_LIBRARY_PATH=/home/yogo/cnn/cnn/pycnn
+export LD_LIBRARY_PATH=$HOME/cnn/pycnn
 ```
 
 Now, check that everything works:
