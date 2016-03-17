@@ -1,5 +1,6 @@
 # Installing the pyCNN module.
 
+
 First, get CNN:
 
 ```bash
@@ -66,10 +67,6 @@ cd build
 cmake .. -DEIGEN3_INCLUDE_DIR=$PATH_TO_EIGEN -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
 make -j 2
 ```
-
-# hg clone https://bitbucket.org/eigen/eigen/ # Latest version (17.03.16) of Eigen fails to compile.
-wget u.cs.biu.ac.il/~yogo/eigen.tgz
-tar zxvf eigen.tgz # or "dtrx eigen.tgz" if you have dtrx installed.
 
 Now that CNN is compiled, we need to compile the pycnn module.
 This requires having cython installed.
