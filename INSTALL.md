@@ -25,7 +25,10 @@ If you don't have cython, it can be installed with either `pip install cython` o
 
 ```bash
 pip2 install cython --user
-cd $HOME/cnn/pycnn
+cd $HOME/cnn
+mkdir build/cnn
+cp cnn/libcnn_shared.so build/cnn/
+cd pycnn
 make
 make install
 ```
