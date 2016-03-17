@@ -42,7 +42,7 @@ pip2 install cython --user
 Customize the `setup.py` to include (i) the parent directory where the main `cnn` directory is saved and (ii) the path to the main `eigen` directy:
 
 ```bash
-cd $HOME/cnn/pycnn
+cd $PARENT_DIR_OF_CNN/cnn/pycnn
 sed -i  "s|..\/..\/cnn\/|$PARENT_DIR_OF_CNN|g" setup.py 
 sed -i  "s|..\/..\/eigen\/|$PATH_TO_EIGEN|g" setup.py
 make
