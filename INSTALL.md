@@ -55,7 +55,7 @@ In file included from /home/user/cnn/cnn/cnn.h:13:0,
 compilation terminated.
 ```
 
-Then, you can download a stable version of Eigen and re-build CNN as such:
+If CNN fails to compile with the error above, then you can download a stable version of Eigen and re-build CNN as such:
 
 ```
 cd PARENT_DIR_OF_CNN/cnn
