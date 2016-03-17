@@ -14,7 +14,7 @@ ext = Extension(
         ["pycnn.pyx"],           # filename of our Pyrex/Cython source
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["../../cnn/", # this should be the parent directory of cnn
-                      "../eigen/"], # this is the directory where eigen is saved.
+                      "../../eigen/"], # this is the directory where eigen is saved.
         libraries=['cnn_shared'],             # ditto
         library_dirs=["."],
         #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
