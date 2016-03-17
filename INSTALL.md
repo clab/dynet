@@ -13,7 +13,7 @@ git submodule update # To be consistent with CNN's installation instructions.
 
 Then get Eigen:
 
-```
+```bash
 cd $HOME
 cd cnn
 # Latest version (17.03.16) of Eigen fails to compile , so we revert "-r" to the latest stable version.
@@ -41,7 +41,7 @@ make -j 2
 
 If CNN fails to compile and throws an error like this:
 
-```
+```bash
 $ make -j 2
 Scanning dependencies of target cnn
 Scanning dependencies of target cnn_shared
@@ -58,7 +58,7 @@ compilation terminated.
 
 If CNN fails to compile with the error above, then you can download a stable version of Eigen and re-build CNN as such:
 
-```
+```bash
 cd PARENT_DIR_OF_CNN/cnn
 wget u.cs.biu.ac.il/~yogo/eigen.tgz
 tar zxvf eigen.tgz # or "dtrx eigen.tgz" if you have dtrx installed
