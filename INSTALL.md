@@ -13,14 +13,21 @@ wget u.cs.biu.ac.il/~yogo/eigen.tgz
 tar zxvf eigen.tgz # or "dtrx eigen.tgz" if you have dtrx installed.
 ```
 
+To simplify the following steps, we can set a bash variable to hold where we have saved the main directories of `cnn` and `eigen` (In case you have gotten `ccn` and `eigen` differently from the instructions above and saved them in different location(s)):
+
+```bash
+PARENT_DIR_OF_CNN=$HOME 
+PATH_TO_EIGEN=$HOME/cnn/eigen
+```
+
 Compile CNN.
 (modify the code below to point to the correct boost location)
 
 ```bash
-cd $HOME/cnn/
+cd PARENT_DIR_OF_CNN/cnn
 mkdir build
 cd build
-cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
+cmake .. -DEIGEN3_INCLUDE_DIR=$PATH_TO_EIGEN -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
 make -j 2
 ```
 
@@ -30,7 +37,14 @@ If you don't have cython, it can be installed with either `pip install cython` o
 
 ```bash
 pip2 install cython --user
+```
+
+Customize the `setup.py` to include (i) the parent directory where the main `cnn` directory is saved and (ii) the path to the main `eigen` directy:
+
+```bash
 cd $HOME/cnn/pycnn
+sed -i  "s|..\/..\/cnn\/|$PARENT_DIR_OF_CNN|g" setup.py 
+sed -i  "s|..\/..\/eigen\/|$PATH_TO_EIGEN|g" setup.py
 make
 make install
 ```
