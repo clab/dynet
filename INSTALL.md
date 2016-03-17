@@ -13,7 +13,7 @@ wget u.cs.biu.ac.il/~yogo/eigen.tgz
 tar zxvf eigen.tgz # or "dtrx eigen.tgz" if you have dtrx installed.
 ```
 
-To simplify the following steps, we can set a bash variable to hold where we have saved the main directories of `cnn` and `eigen` (In case you have gotten `ccn` and `eigen` differently from the instructions above and saved them in different location(s)):
+To simplify the following steps, we can set a bash variable to hold where we have saved the main directories of `cnn` and `eigen`. In case you have gotten `ccn` and `eigen` differently from the instructions above and saved them in different location(s), these variables will be helpful:
 
 ```bash
 PARENT_DIR_OF_CNN=$HOME 
@@ -57,7 +57,7 @@ Add the following line to your profile (`.zshrc` or `.bashrc`), change
 according to your installation location.
 
 ```bash
-export LD_LIBRARY_PATH=$HOME/cnn/pycnn
+export LD_LIBRARY_PATH=$PARENT_DIR_OF_CNN/cnn/pycnn
 ```
 
 Now, check that everything works:
