@@ -15,6 +15,9 @@ Compile CNN.
 (modify the code below to point to the correct boost location)
 
 ```bash
+cd $HOME/cnn/
+mkdir build
+cd build
 cmake -DEIGEN3_INCLUDE_DIR=./eigen -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
 make -j 2
 ```
@@ -25,10 +28,7 @@ If you don't have cython, it can be installed with either `pip install cython` o
 
 ```bash
 pip2 install cython --user
-cd $HOME/cnn
-mkdir build/cnn
-cp cnn/libcnn_shared.so build/cnn/
-cd pycnn
+cd $HOME/cnn/pycnn
 make
 make install
 ```
