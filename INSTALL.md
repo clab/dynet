@@ -10,7 +10,7 @@ git submodule init # To be consistent with CNN's installation instructions.
 git submodule update # To be consistent with CNN's installation instructions.
 # hg clone https://bitbucket.org/eigen/eigen/ # Latest version (17.03.16) of Eigen fails to compile.
 wget u.cs.biu.ac.il/~yogo/eigen.tgz
-tar zxvf eigen.tgz # or "dtrx eigen.tgz" if you have dtrx installed.
+tar zxvf eigen.tgz # or "dtrx eigen.tgz" if you have dtrx installed, e.g. with "sudo apt-get install dtrx"
 ```
 
 To simplify the following steps, we can set a bash variable to hold where we have saved the main directories of `cnn` and `eigen`. In case you have gotten `ccn` and `eigen` differently from the instructions above and saved them in different location(s), these variables will be helpful:
