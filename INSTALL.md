@@ -50,7 +50,7 @@ Now, check that everything works:
 
 ```bash
 # check that it works:
-cd ..
+cd $HOME/cnn
 cd pyexamples
 python2 xor.py
 python2 rnnlm.py rnnlm.py
