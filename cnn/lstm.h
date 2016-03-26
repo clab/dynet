@@ -39,6 +39,9 @@ struct LSTMBuilder : public RNNBuilder {
   }
 
   void copy(const RNNBuilder & params) override;
+
+  void save_parameters_pretraining(const std::string& fname) const override;
+  void load_parameters_pretraining(const std::string& fname) override;
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
