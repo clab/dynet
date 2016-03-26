@@ -82,6 +82,15 @@ struct RNNBuilder {
   virtual std::vector<Expression> get_s(RNNPointer i) const = 0;
   // copy the parameters of another builder
   virtual void copy(const RNNBuilder & params) = 0;
+
+  // the following functions save all the parameters associated with a particular
+  // RNNBuilder's derived class to a file. These should not be used to seralize
+  // models, they should only be used to load and save parameters for pretraining.
+  // If you are interested in serializing models, use the boost serialization
+  // API against your model class
+  virtual void save_parameters_pretraining(const std::string& fname) const;
+  virtual void load_parameters_pretraining(const std::string& fname);
+
  protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
@@ -126,6 +135,9 @@ struct SimpleRNNBuilder : public RNNBuilder {
   void copy(const RNNBuilder & params) override;
 
   unsigned num_h0_components() const override { return layers; }
+
+  void save_parameters_pretraining(const std::string& fname) const override;
+  void load_parameters_pretraining(const std::string& fname) override;
 
  private:
   // first index is layer, then x2h h2h hb

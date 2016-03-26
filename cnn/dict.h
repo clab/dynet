@@ -71,6 +71,9 @@ public:
   
     map_unk = true;
   }
+
+  int GetUnkId() const { return unk_id; }
+  const std::vector<std::string> & GetWords() const { return words_; }
   
   void clear() { words_.clear(); d_.clear(); }
 
