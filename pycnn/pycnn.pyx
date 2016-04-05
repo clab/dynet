@@ -815,7 +815,12 @@ cdef class RNNBuilder: # {{{
         if self.cg_version != _cg.version():
             self.new_graph()
             if vecs is not None:
-                self.start_new_sequence(vecs)
+                es = []
+                for v in vecs:
+                    e = vecInput(len(v))
+                    e.set(v)
+                    es.append(e)
+                self.start_new_sequence(es)
             else:
                 self.start_new_sequence()
             self._init_state = RNNState(self, -1)
