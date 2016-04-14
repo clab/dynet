@@ -440,7 +440,7 @@ cdef class Expression: #{{{
     cpdef forward(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward()
-        else: self.cg().incremental_forward()
+        else: self.cg().inc_forward()
 
     cpdef backward(self):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
