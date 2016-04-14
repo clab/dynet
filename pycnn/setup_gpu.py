@@ -26,5 +26,5 @@ ext = Extension(
 
 setup(ext_modules = [ext],
         cmdclass = {'build_ext': build_ext},
-        name="pyCNN",
+        name="gpyCNN",
         )
