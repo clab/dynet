@@ -143,14 +143,14 @@ Now, build the python modules (as above, we assume cython is installed):
 The GPU module (gpycnn):
 ```bash
 cd ../pycnn
-make gpycnn
+make gpycnn.so
 make ginstall
 ```
 
 The CPU module (pycnn):
 ```bash
 cd ../pycnn
-make pycnn
+make pycnn.so
 make install
 ```
 
