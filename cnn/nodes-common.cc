@@ -209,8 +209,16 @@ string Reshape::as_string(const vector<string>& arg_names) const {
 
 Dim Reshape::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  assert(xs[0].size() == to.size());
-  return to;
+  if(to.size() == xs[0].size()) {
+    return to;
+  } else if(to.batch_elems() == 1 && to.batch_size() == xs[0].batch_size()) {
+    Dim ret(to);
+    ret.bd = xs[0].batch_elems();
+    return ret;
+  } else {
+    cerr << "Bad arguments to Reshape: " << to << ", " << xs[0] << endl;
+    throw std::invalid_argument("Bad arguments to Reshape");
+  }
 }
 
 string SumColumns::as_string(const vector<string>& arg_names) const {
@@ -687,7 +695,19 @@ Dim RestrictedLogSoftmax::dim_forward(const vector<Dim>& xs) const {
 
 string PickElement::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "pick(" << arg_names[0] << ',' << *pval << ')';
+  s << "pick(" << arg_names[0] << ',';
+  if(pval) { 
+    s << *pval << ')';
+  } else {
+    assert(pvals);
+    s << '[';
+    if(pvals->size()) {
+      s << (*pvals)[0];
+      for(size_t i = 1; i < pvals->size(); ++i)
+        s << ',' << (*pvals)[i];
+    }
+    s << "])";
+  }
   return s.str();
 }
 
