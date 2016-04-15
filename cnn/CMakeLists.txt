@@ -23,6 +23,7 @@ set(cnn_library_SRCS
     nodes.cc
     nodes-common.cc
     param-nodes.cc
+    peepholetreelstm.cc
     rnn.cc
     rnn-state-machine.cc
     saxe-init.cc
@@ -56,6 +57,7 @@ set(cnn_library_HDRS
     mp.h
     nodes.h
     param-nodes.h
+    peepholetreelstm.h
     random.h
     rnn-state-machine.h
     rnn.h
