@@ -174,6 +174,18 @@ BOOST_AUTO_TEST_CASE( affine_batch_gradient ) {
 }
 
 // Expression operator*(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( affine_batch_col_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression scalar = parameter(cg, param_scalar1);
+  Expression x2 = input(cg, Dim({1,3},2), batch_vals);
+  Expression y = affine_transform({transpose(x1), scalar, x2});
+  Expression ones3 = input(cg, {3,1}, ones3_vals);
+  sum_batches(y * ones3);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression operator*(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( affine_batch2_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = input(cg, Dim({1,3},2), batch_vals);

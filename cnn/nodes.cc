@@ -496,7 +496,7 @@ void Reshape::backward_impl(const vector<const Tensor*>& xs,
   throw std::runtime_error("Reshape not yet implemented for CUDA");
 #else
   const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device);
-  *dEdxi += *reshaped;
+  dEdxi.vec() += reshaped.vec();
 #endif
 }
 
@@ -1829,7 +1829,7 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
 #else
     // Add, using broadcasting or not
     if(dEdxi.d.bd == 1 && dEdf.d.bd > 1) {
-      (*dEdxi) += dEdf.rowcol_matrix().rowwise().sum();
+      dEdxi.vec() += dEdf.rowcol_matrix().rowwise().sum();
     } else {
       for(unsigned b = 0; b < dEdf.d.bd; ++b)
         dEdxi.batch_matrix(b) += dEdf.batch_matrix(b);
