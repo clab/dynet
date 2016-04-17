@@ -71,7 +71,7 @@ protected:
     void new_graph_impl(ComputationGraph& cg) override;
     void start_new_sequence_impl(const vector<Expression>& h0) override;
     Expression add_input_impl(int idx, std::vector<int> children,
-            const Expression& x);
+            const Expression& x) ;
 
 public:
     // first index is layer, then ...
