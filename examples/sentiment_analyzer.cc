@@ -1,13 +1,22 @@
 #include "cnn/peepholetreelstm.h"
-#include "cnn/dict.h"
+#include "cnn/model.h"
 #include "cnn/training.h"
+#include "cnn/dict.h"
+
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <set>
 
 cnn::Dict tokdict, tagdict, depreldict;
 int VOCAB_SIZE = 0, DEPREL_SIZE = 0, TAG_SIZE = 0;
+
+int LAYERS = 1;
+int INPUT_DIM = 100;
+int HIDDEN_DIM = 100;
 
 struct DepTree {
     unsigned numnodes;
@@ -15,14 +24,23 @@ struct DepTree {
     vector<unsigned> sent;
     vector<unsigned> deprels;
     // TODO: fill the data structures below
-//    set<unsigned> leaves;
-//    vector<unsigned> dfo; // depth-first ordering of the nodes
+    set<unsigned> leaves;
+    map<unsigned, vector<unsigned>> children;
+    vector<unsigned> dfo; // depth-first ordering of the nodes
     explicit DepTree(vector<unsigned> parents, vector<unsigned> deprels,
             vector<unsigned> sent) {
         this->numnodes = parents.size();
         this->parents = parents;
         this->sent = sent;
         this->deprels = deprels;
+
+        for (unsigned int i = 1; i <= numnodes; i++) {
+            leaves.insert(i);
+        }
+        for (const unsigned parent : parents) {
+            leaves.erase(parent);
+        }
+        get_children();
     }
 
     void printTree() {
@@ -36,6 +54,52 @@ struct DepTree {
             cerr << i + 1 << "<-" << depreldict.Convert(deprels[i]) << "-"
                     << parents[i] << endl;
         }
+        cerr << "Leaves: ";
+        for (unsigned leaf : leaves)
+            cerr << leaf << " ";
+        cerr << endl;
+        get_dfo();
+    }
+
+private:
+    void get_children() {
+        for (unsigned child = 1; child <= numnodes; child++) {
+            unsigned parent = parents[child - 1];
+            vector<unsigned> clist;
+            if (children.find(parent) != children.end()) {
+                clist = children[parent];
+            }
+            clist.push_back(child);
+            children[parent] = clist;
+        }
+    }
+
+    void get_dfo() {
+        vector<unsigned> stack;
+        set<unsigned> seen;
+        stack.push_back(0);
+        cerr << "depth first ordering" << endl;
+        while (!stack.empty()) {
+            int top = stack.back();
+
+            if (children.find(top) != children.end()
+                    && seen.find(top) == seen.end()) {
+                vector<unsigned> clist = children[top];
+                for (auto itr2 = clist.rbegin(); itr2 != clist.rend(); ++itr2) {
+                    stack.push_back(*itr2);
+                }
+                seen.insert(top);
+            } else if (children.find(top) != children.end()
+                    && seen.find(top) != seen.end()) {
+                cerr << top << "->";
+                stack.pop_back();
+            } else {
+                cerr << top << "->";
+                stack.pop_back();
+            }
+
+        }
+        cerr << endl;
     }
 };
 
@@ -138,5 +202,14 @@ int main(int argc, char** argv) {
 
     cerr << "Reading dev data from " << argv[2] << "...\n";
     ReadCoNLLFile(argv[2], dev);
+
+    dev[0].first.printTree();
+
+    ostringstream os;
+    os << "tagger" << '_' << LAYERS << '_' << INPUT_DIM << '_' << HIDDEN_DIM
+            << "-pid" << getpid() << ".params";
+    const string fname = os.str();
+    cerr << "Parameters will be written to: " << fname << endl;
+    bool soft_link_created = false;
 
 }
