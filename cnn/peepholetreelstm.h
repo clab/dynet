@@ -24,7 +24,7 @@ struct TreeLSTMBuilder: public RNNBuilder {
     TreeLSTMBuilder() = default;
 
     explicit TreeLSTMBuilder(unsigned layers, unsigned input_dim,
-            unsigned hidden_dim, unsigned sent_len, Model* model);
+            unsigned hidden_dim, Model* model);
 
     void set_dropout(float d) {
         dropout_rate = d;
@@ -67,11 +67,15 @@ struct TreeLSTMBuilder: public RNNBuilder {
 
     void copy(const RNNBuilder & params) override;
 
+    Expression add_input(int idx, vector<unsigned> children,
+            const Expression& x);
+
+    void initialize_structure(unsigned sent_len);
+
 protected:
     void new_graph_impl(ComputationGraph& cg) override;
     void start_new_sequence_impl(const vector<Expression>& h0) override;
-    Expression add_input_impl(int idx, std::vector<int> children,
-            const Expression& x) ;
+    Expression add_input_impl(int idx, const Expression& x) override;
 
 public:
     // first index is layer, then ...

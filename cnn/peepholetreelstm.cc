@@ -24,14 +24,10 @@ enum {
 };
 
 TreeLSTMBuilder::TreeLSTMBuilder(unsigned layers, unsigned input_dim,
-        unsigned hidden_dim, unsigned sent_len, Model* model) :
+        unsigned hidden_dim, Model* model) :
         layers(layers) {
 
     unsigned layer_input_dim = input_dim;
-    for (unsigned i = 0; i < sent_len; i++) {
-        h.push_back(vector < Expression > (layers));
-        c.push_back(vector < Expression > (layers));
-    }
 
     for (unsigned i = 0; i < layers; ++i) {
         // i
@@ -60,6 +56,14 @@ TreeLSTMBuilder::TreeLSTMBuilder(unsigned layers, unsigned input_dim,
         params.push_back(ps);
     }  // layers
     dropout_rate = 0.0f;
+}
+
+void TreeLSTMBuilder::initialize_structure(unsigned sent_len) {
+    for (unsigned i = 0; i < sent_len; i++) {
+        h.push_back(vector < Expression > (layers));
+        c.push_back(vector < Expression > (layers));
+    }
+
 }
 
 void TreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -107,7 +111,7 @@ void TreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
     }
 }
 
-Expression TreeLSTMBuilder::add_input_impl(int idx, vector<int> children,
+Expression TreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
         const Expression& x) {
 //    h.push_back(vector < Expression > (layers)); In the header now !!
 //    c.push_back(vector < Expression > (layers)); In the header now !!
@@ -135,9 +139,12 @@ Expression TreeLSTMBuilder::add_input_impl(int idx, vector<int> children,
             }
         }
 
-        Expression i_h_k_sum = i_h_k[0]; // TODO: what happens if this is empty?
-        for (unsigned k = 1; k < children.size(); k++) {
-            i_h_k_sum = i_h_k_sum + i_h_k[k];
+        Expression i_h_k_sum;
+        if (has_children) {
+            i_h_k_sum = i_h_k[0];
+            for (unsigned k = 1; k < children.size(); k++) {
+                i_h_k_sum = i_h_k_sum + i_h_k[k];
+            }
         }
 
         // apply dropout according to http://arxiv.org/pdf/1409.2329v5.pdf
@@ -157,15 +164,21 @@ Expression TreeLSTMBuilder::add_input_impl(int idx, vector<int> children,
 
         vector<Expression> i_itk, i_ftk;
         Expression i_itk_sum;
-        for (unsigned k = 0; k < children.size(); k++) {
-            i_itk.push_back(logistic(i_aitk[k]));
-            if (k == 0) {
-                i_itk_sum = i_itk[k];
-            } else {
-                i_itk_sum = i_itk_sum + i_itk[k];
+        if (has_children) {
+            for (unsigned k = 0; k < children.size(); k++) {
+                i_itk.push_back(logistic(i_aitk[k]));
+                if (k == 0) {
+                    i_itk_sum = i_itk[k];
+                } else {
+                    i_itk_sum = i_itk_sum + i_itk[k];
+                }
+                // forget
+                i_ftk.push_back(1.f - i_itk[k]);
             }
-            // forget
-            i_ftk.push_back(1.f - i_itk[k]);
+        } else {
+            i_itk.push_back(logistic(i_aitk[0]));
+            i_ftk.push_back(1.f - i_itk[0]);
+            i_itk_sum = i_itk[0];
         }
 
         // write memory cell
@@ -208,6 +221,11 @@ Expression TreeLSTMBuilder::add_input_impl(int idx, vector<int> children,
     } else {
         return ht.back();
     }
+}
+
+Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) {
+    assert(false);
+    return x;
 }
 
 void TreeLSTMBuilder::copy(const RNNBuilder & rnn) {
