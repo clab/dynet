@@ -1,8 +1,9 @@
-#include "cnn/peepholetreelstm.h"
 #include "cnn/dict.h"
-# include "cnn/expr.h"
+#include "cnn/expr.h"
 #include "cnn/model.h"
+#include "cnn/peepholetreelstm.h"
 #include "cnn/rnn.h"
+#include "cnn/timing.h"
 #include "cnn/training.h"
 
 #include <boost/archive/text_iarchive.hpp>
@@ -17,6 +18,7 @@ using namespace cnn;
 
 //TODO: add code for POS tag dictionary
 cnn::Dict tokdict, sentimenttagdict, depreldict;
+vector<unsigned> sentiments;
 const unsigned int ROOT = 0;
 const string R = "ROOT";
 const string UNK = "UNK";
@@ -36,6 +38,7 @@ struct DepTree {
     set<unsigned> leaves;
 
     vector<unsigned> dfo; // depth-first ordering of the nodes
+    map<unsigned, vector<unsigned>> children;
 
     explicit DepTree(vector<unsigned> parents, vector<unsigned> deprels,
             vector<unsigned> sent) {
@@ -81,7 +84,7 @@ struct DepTree {
     }
 
 private:
-    map<unsigned, vector<unsigned>> children;
+
     void set_children() {
         for (unsigned child = 1; child < numnodes; child++) {
             unsigned parent = parents[child];
@@ -133,70 +136,36 @@ private:
     }
 };
 
-//template<class Builder>
-//struct LSTMModel {
-//    LookupParameters* p_w;
-//    LookupParameters* p_d;
-//
-//    Parameters* p_tok2l;
-//    Parameters* p_dep2l;
-//    Parameters* p_inp_bias;
-//
-//    Parameters* p_root2senti;
-//    Parameters* p_sentibias;
-//
-//    Builder treebuilder;
-//
-//    explicit LSTMModel(Model &model, const unsigned &sent_len) :
-//            treebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &sent_len, &model) {
-//        p_w = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
-//        p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
-//
-//        p_tok2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
-//        p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
-//        p_inp_bias = model.add_parameters( { HIDDEN_DIM });
-//        // TODO: Change to add a regular BiLSTM below the tree
-//
-//        p_root2senti = model.add_parameters( { SENTI_TAG_SIZE, HIDDEN_DIM });
-//        p_sentibias = model.add_parameters( { SENTI_TAG_SIZE });
-//    }
-//
-//    Expression BuildTreeCompGraph(const DepTree& tree,
-//            const vector<int>& sentilabel, ComputationGraph& cg,
-//            int* predlabel) {
-//        vector < Expression > errs; // the sum of this is to be returned...
-//
-//        treebuilder.new_graph(cg);
-//
-//        Expression tok2l = parameter(cg, p_tok2l);
-//        Expression dep2l = parameter(cg, p_dep2l);
-//        Expression inp_bias = parameter(cg, p_inp_bias);
-//
-//        Expression root2senti = parameter(cg, p_root2senti);
-//        Expression senti_bias = parameter(cg, p_sentibias);
-//
-//        vector < Expression > i_words(tree.numnodes + 1);
-//        vector < Expression > i_deprels(tree.numnodes);
-//        Expression h_root;
-//        for (unsigned node : tree.dfo) {
-//            Expression i_word = lookup(cg, p_w, tree.sent[node]);
-//            Expression i_deprel = lookup(cg, p_d, tree.deprels[node]);
-//            Expression input = affine_transform( { inp_bias, tok2l, i_word,
-//                    dep2l, i_deprel });
-//            // TODO: add POS
-//
-//            h_root = treebuilder.add_input(node, tree.get_children(node),
-//                    input);
-//
-//            Expression i_root = affine_transform( { senti_bias, root2senti,
-//                    h_root });
-//            Expression i_err = pickneglogsoftmax(i_root, sentilabel[node]);
-//            errs.push_back(i_err);
-//            // TODO: if test, do the argmax
-//        }
-//        return sum(errs);
-//    }
-//};
+template<class Builder>
+struct StanfordTreeLSTMModel {
+    LookupParameters* p_w;
+    // TODO: input should also contain deprel to parent
+    //LookupParameters* p_d;
+
+    Parameters* p_tok2l;
+    Parameters* p_dep2l;
+    Parameters* p_inp_bias;
+
+    Parameters* p_root2senti;
+    Parameters* p_sentibias;
+
+    Builder treebuilder;
+
+    explicit StanfordTreeLSTMModel(Model &model) :
+            treebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+        p_w = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
+        //p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
+
+        p_tok2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
+        p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
+        p_inp_bias = model.add_parameters( { HIDDEN_DIM });
+        // TODO: Change to add a regular BiLSTM below the tree
+
+        p_root2senti = model.add_parameters( { SENTI_TAG_SIZE, HIDDEN_DIM });
+        p_sentibias = model.add_parameters( { SENTI_TAG_SIZE });
+    }
+
+};
 
 // Split string str on any delimiting character in delim, and write the result
 // as a vector of strings.
@@ -220,8 +189,8 @@ void StringSplit(const string &str, const string &delim,
         results->push_back(tmp);
 }
 
-void ReadCoNLL09Line(string& line, unsigned* id, unsigned *token,
-        unsigned* parent, unsigned* deprel, int *sentiment) {
+void ReadCoNLL09Line(string& line, int* id, unsigned *token, unsigned* parent,
+        unsigned* deprel, int *sentiment) {
     if (line.length() <= 0) {
         *id = -1; // end of sentence in CoNLL file
         return;
@@ -251,7 +220,8 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
     ifstream in(conll_fname);
     assert(in);
     while (getline(in, line)) {
-        unsigned id, token, parent, deprel;
+        int id;
+        unsigned token, parent, deprel;
         int sentiment;
         ReadCoNLL09Line(line, &id, &token, &parent, &deprel, &sentiment);
         ttoks += 1;
@@ -285,6 +255,21 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
     << endl;
 }
 
+void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, StanfordTreeLSTMModel<TreeLSTMBuilder>& mytree) {
+
+}
+
+void RunTraining(Model& model, Trainer* sgd,
+        StanfordTreeLSTMModel<TreeLSTMBuilder>& mytree,
+        vector<pair<DepTree, vector<int>>>& training,vector<pair<DepTree, vector<int>>>& dev) {
+//    ostringstream os;
+//    os << "sentanalyzer" << '_' << LAYERS << '_' << INPUT_DIM << '_'
+//    << HIDDEN_DIM << "-pid" << getpid() << ".params";
+//    const string savedmodelfname = os.str();
+//    cerr << "Parameters will be written to: " << savedmodelfname << endl;
+//    bool soft_link_created = false;
+}
+
 int main(int argc, char** argv) {
     cnn::Initialize(argc, argv);
     if (argc != 3 && argc != 4) {
@@ -301,6 +286,9 @@ int main(int argc, char** argv) {
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK);
     sentimenttagdict.Freeze(); // no new tag types allowed
+    for (unsigned i = 0; i < sentimenttagdict.size(); ++i) {
+        sentiments.push_back(i);
+    }
     depreldict.Freeze();
 
     VOCAB_SIZE = tokdict.size();
@@ -310,15 +298,6 @@ int main(int argc, char** argv) {
     cerr << "Reading dev data from " << argv[2] << "...\n";
     ReadCoNLLFile(argv[2], dev);
 
-    dev[5].first.printTree();
-
-    ostringstream os;
-    os << "tagger" << '_' << LAYERS << '_' << INPUT_DIM << '_' << HIDDEN_DIM
-            << "-pid" << getpid() << ".params";
-    const string fname = os.str();
-    cerr << "Parameters will be written to: " << fname << endl;
-    bool soft_link_created = false;
-
     Model model;
     bool use_momentum = true;
     Trainer* sgd = nullptr;
@@ -327,4 +306,12 @@ int main(int argc, char** argv) {
     else
         sgd = new SimpleSGDTrainer(&model);
 
+    StanfordTreeLSTMModel<TreeLSTMBuilder> mytree(model);
+    if (argc == 4) { // test mode
+        string model_fname = argv[3];
+        RunTest(model_fname, model, dev, mytree);
+        exit(1);
+    }
+
+    RunTraining(model, sgd, mytree, training, dev);
 }
