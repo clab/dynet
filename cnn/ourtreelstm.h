@@ -19,11 +19,11 @@ namespace cnn {
 
 class Model;
 
-struct TreeLSTMBuilder: public RNNBuilder {
+struct OurTreeLSTMBuilder: public RNNBuilder {
 
-    TreeLSTMBuilder() = default;
+    OurTreeLSTMBuilder() = default;
 
-    explicit TreeLSTMBuilder(unsigned layers, unsigned input_dim,
+    explicit OurTreeLSTMBuilder(unsigned layers, unsigned input_dim,
             unsigned hidden_dim, Model* model);
 
     void set_dropout(float d) {

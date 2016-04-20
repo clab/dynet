@@ -5,7 +5,7 @@
  *      Author: swabha
  */
 
-#include "cnn/peepholetreelstm.h"
+#include "cnn/ourtreelstm.h"
 
 #include <string>
 #include <cassert>
@@ -23,7 +23,7 @@ enum {
     X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC
 };
 
-TreeLSTMBuilder::TreeLSTMBuilder(unsigned layers, unsigned input_dim,
+OurTreeLSTMBuilder::OurTreeLSTMBuilder(unsigned layers, unsigned input_dim,
         unsigned hidden_dim, Model* model) :
         layers(layers) {
 
@@ -58,15 +58,14 @@ TreeLSTMBuilder::TreeLSTMBuilder(unsigned layers, unsigned input_dim,
     dropout_rate = 0.0f;
 }
 
-void TreeLSTMBuilder::initialize_structure(unsigned sent_len) {
+void OurTreeLSTMBuilder::initialize_structure(unsigned sent_len) {
     for (unsigned i = 0; i < sent_len; i++) {
         h.push_back(vector < Expression > (layers));
         c.push_back(vector < Expression > (layers));
     }
-
 }
 
-void TreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void OurTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
     param_vars.clear();
 
     for (unsigned i = 0; i < layers; ++i) {
@@ -94,7 +93,8 @@ void TreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 
 // layout: 0..layers = c
 //         layers+1..2*layers = h
-void TreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
+void OurTreeLSTMBuilder::start_new_sequence_impl(
+        const vector<Expression>& hinit) {
     h.clear();
     c.clear();
     if (hinit.size() > 0) {
@@ -111,7 +111,7 @@ void TreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
     }
 }
 
-Expression TreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
+Expression OurTreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
         const Expression& x) {
 //    h.push_back(vector < Expression > (layers)); In the header now !!
 //    c.push_back(vector < Expression > (layers)); In the header now !!
@@ -223,13 +223,13 @@ Expression TreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
     }
 }
 
-Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) {
+Expression OurTreeLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     assert(false);
     return x;
 }
 
-void TreeLSTMBuilder::copy(const RNNBuilder & rnn) {
-    const TreeLSTMBuilder & rnn_treelstm = (const TreeLSTMBuilder&) rnn;
+void OurTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
+    const OurTreeLSTMBuilder & rnn_treelstm = (const OurTreeLSTMBuilder&) rnn;
     assert(params.size() == rnn_treelstm.params.size());
     for (size_t i = 0; i < params.size(); ++i)
         for (size_t j = 0; j < params[i].size(); ++j)

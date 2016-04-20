@@ -1,7 +1,6 @@
 #include "cnn/dict.h"
 #include "cnn/expr.h"
 #include "cnn/model.h"
-#include "cnn/peepholetreelstm.h"
 #include "cnn/rnn.h"
 #include "cnn/timing.h"
 #include "cnn/training.h"
@@ -13,22 +12,23 @@
 #include <fstream>
 #include <sstream>
 #include <set>
+#include "../cnn/ourtreelstm.h"
 
 using namespace cnn;
 
-//TODO: add code for POS tag dictionary
-cnn::Dict tokdict, sentimenttagdict, depreldict;
-vector<unsigned> sentiments;
+//TODO: add code for POS tag dictionary and dependency relation dictionary
+cnn::Dict tokdict, sentitagdict, depreldict;
+vector<unsigned> sentitaglist; // a list of all sentiment tags
+
 const unsigned int DUMMY_ROOT = 0;
 const string DUMMY_ROOT_STR = "ROOT";
 const string UNK_STR = "UNK";
 
-unsigned VOCAB_SIZE = 0, DEPREL_SIZE = 0, SENTI_TAG_SIZE = 0;
+unsigned VOCAB_SIZE = 0, SENTI_TAG_SIZE = 0;
 
 unsigned LAYERS = 1;
 unsigned INPUT_DIM = 100;
 unsigned HIDDEN_DIM = 100;
-unsigned TAG_HIDDEN_DIM = 10;
 
 struct DepTree {
     unsigned numnodes;
@@ -141,7 +141,7 @@ private:
 };
 
 template<class Builder>
-struct FirstTreeLSTMModel {
+struct SentimentModel {
     LookupParameters* p_w;
     // TODO: input should also contain deprel to parent
     //LookupParameters* p_d;
@@ -155,7 +155,7 @@ struct FirstTreeLSTMModel {
 
     Builder treebuilder;
 
-    explicit FirstTreeLSTMModel(Model &model) :
+    explicit SentimentModel(Model &model) :
             treebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
         p_w = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
         //p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
@@ -206,7 +206,7 @@ struct FirstTreeLSTMModel {
             Expression i_root = affine_transform( { senti_bias, root2senti,
                     h_root });
 
-            Expression prob_dist = log_softmax(i_root, sentiments);
+            Expression prob_dist = log_softmax(i_root, sentitaglist);
             vector<float> prob_dist_vec = as_vector(cg->incremental_forward());
 
             int chosen_sentiment;
@@ -276,7 +276,7 @@ void ReadCoNLL09Line(string& line, int* id, unsigned *token, unsigned* parent,
     *token = tokdict.Convert(fields[1]); // LEMMA
     *parent = stoi(fields[6]); // PHEAD
     *deprel = depreldict.Convert(fields[7]); // PDEPREL
-    *sentiment = sentimenttagdict.Convert(fields[2]);
+    *sentiment = sentitagdict.Convert(fields[2]);
 }
 
 void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>& dataset) {
@@ -290,7 +290,7 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
     sentence.push_back(tokdict.Convert(DUMMY_ROOT_STR));
 
     vector<int> sentiments;
-    sentiments.push_back(sentimenttagdict.Convert(DUMMY_ROOT_STR)); // dummy root doesn't have a sentiment
+    sentiments.push_back(sentitagdict.Convert(DUMMY_ROOT_STR)); // dummy root doesn't have a sentiment
 
     ifstream in(conll_fname);
     assert(in);
@@ -316,7 +316,7 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
             sentence.push_back(tokdict.Convert(DUMMY_ROOT_STR));
 
             sentiments.clear();
-            sentiments.push_back(sentimenttagdict.Convert(DUMMY_ROOT_STR));
+            sentiments.push_back(sentitagdict.Convert(DUMMY_ROOT_STR));
         } else {
             assert(id == parents.size());
             parents.push_back(parent);
@@ -326,11 +326,11 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
         }
     }
     cerr << numex << " sentences, " << ttoks << " tokens, " << tokdict.size()
-    << " types -- " << sentimenttagdict.size() << " tags in data set"
+    << " types -- " << sentitagdict.size() << " tags in data set"
     << endl;
 }
 
-void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, FirstTreeLSTMModel<TreeLSTMBuilder>& mytree) {
+void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, SentimentModel<OurTreeLSTMBuilder>& mytree) {
     ifstream in(fname);
     boost::archive::text_iarchive ia(in);
     ia >> model;
@@ -354,7 +354,7 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
 }
 
 void RunTraining(Model& model, Trainer* sgd,
-        FirstTreeLSTMModel<TreeLSTMBuilder>& mytree,
+        SentimentModel<OurTreeLSTMBuilder>& mytree,
         vector<pair<DepTree, vector<int>>>& training,vector<pair<DepTree, vector<int>>>& dev) {
     ostringstream os;
     os << "sentanalyzer" << '_' << LAYERS << '_' << INPUT_DIM << '_'
@@ -477,15 +477,14 @@ int main(int argc, char** argv) {
 
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
-    sentimenttagdict.Freeze(); // no new tag types allowed
-    for (unsigned i = 0; i < sentimenttagdict.size(); ++i) {
-        sentiments.push_back(i);
+    sentitagdict.Freeze(); // no new tag types allowed
+    for (unsigned i = 0; i < sentitagdict.size(); ++i) {
+        sentitaglist.push_back(i);
     }
     depreldict.Freeze();
 
     VOCAB_SIZE = tokdict.size();
-    DEPREL_SIZE = depreldict.size();
-    SENTI_TAG_SIZE = sentimenttagdict.size();
+    SENTI_TAG_SIZE = sentitagdict.size();
 
     cerr << "Reading dev data from " << argv[2] << "...\n";
     ReadCoNLLFile(argv[2], dev);
@@ -498,7 +497,7 @@ int main(int argc, char** argv) {
     else
         sgd = new SimpleSGDTrainer(&model);
 
-    FirstTreeLSTMModel<TreeLSTMBuilder> mytree(model);
+    SentimentModel<OurTreeLSTMBuilder> mytree(model);
     if (argc == 4) { // test mode
         string model_fname = argv[3];
         RunTest(model_fname, model, dev, mytree);
