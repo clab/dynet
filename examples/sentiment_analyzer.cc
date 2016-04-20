@@ -19,9 +19,9 @@ using namespace cnn;
 //TODO: add code for POS tag dictionary
 cnn::Dict tokdict, sentimenttagdict, depreldict;
 vector<unsigned> sentiments;
-const unsigned int ROOT = 0;
-const string R = "ROOT";
-const string UNK = "UNK";
+const unsigned int DUMMY_ROOT = 0;
+const string DUMMY_ROOT_STR = "ROOT";
+const string UNK_STR = "UNK";
 
 unsigned VOCAB_SIZE = 0, DEPREL_SIZE = 0, SENTI_TAG_SIZE = 0;
 
@@ -107,7 +107,7 @@ private:
     void set_dfo() {
         vector<unsigned> stack;
         set<unsigned> seen;
-        stack.push_back(ROOT);
+        stack.push_back(DUMMY_ROOT);
 
         while (!stack.empty()) {
             int top = stack.back();
@@ -131,7 +131,7 @@ private:
             }
         }
         // TODO: should we maintain root in dfo? No
-        assert(dfo.back() == ROOT);
+        assert(dfo.back() == DUMMY_ROOT);
         dfo.pop_back();
     }
 };
@@ -210,12 +210,12 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
     string line;
 
     vector<unsigned> parents, deprels, sentence;
-    parents.push_back(ROOT);
-    deprels.push_back(depreldict.Convert(R));
-    sentence.push_back(tokdict.Convert(R));
+    parents.push_back(DUMMY_ROOT);
+    deprels.push_back(depreldict.Convert(DUMMY_ROOT_STR));
+    sentence.push_back(tokdict.Convert(DUMMY_ROOT_STR));
 
     vector<int> sentiments;
-    sentiments.push_back(sentimenttagdict.Convert(R)); // dummy root doesn't have a sentiment
+    sentiments.push_back(sentimenttagdict.Convert(DUMMY_ROOT_STR)); // dummy root doesn't have a sentiment
 
     ifstream in(conll_fname);
     assert(in);
@@ -232,16 +232,16 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
             dataset.push_back(make_pair(tree, sentiments));
 
             parents.clear();
-            parents.push_back(ROOT);
+            parents.push_back(DUMMY_ROOT);
 
             deprels.clear();
-            deprels.push_back(depreldict.Convert(R));
+            deprels.push_back(depreldict.Convert(DUMMY_ROOT_STR));
 
             sentence.clear();
-            sentence.push_back(tokdict.Convert(R));
+            sentence.push_back(tokdict.Convert(DUMMY_ROOT_STR));
 
             sentiments.clear();
-            sentiments.push_back(sentimenttagdict.Convert(R));
+            sentiments.push_back(sentimenttagdict.Convert(DUMMY_ROOT_STR));
         } else {
             assert(id == parents.size());
             parents.push_back(parent);
@@ -262,19 +262,76 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
 void RunTraining(Model& model, Trainer* sgd,
         StanfordTreeLSTMModel<TreeLSTMBuilder>& mytree,
         vector<pair<DepTree, vector<int>>>& training,vector<pair<DepTree, vector<int>>>& dev) {
-//    ostringstream os;
-//    os << "sentanalyzer" << '_' << LAYERS << '_' << INPUT_DIM << '_'
-//    << HIDDEN_DIM << "-pid" << getpid() << ".params";
-//    const string savedmodelfname = os.str();
-//    cerr << "Parameters will be written to: " << savedmodelfname << endl;
-//    bool soft_link_created = false;
+    ostringstream os;
+    os << "sentanalyzer" << '_' << LAYERS << '_' << INPUT_DIM << '_'
+    << HIDDEN_DIM << "-pid" << getpid() << ".params";
+    const string savedmodelfname = os.str();
+    cerr << "Parameters will be written to: " << savedmodelfname << endl;
+    bool soft_link_created = false;
+
+    unsigned report_every_i = 100;
+    unsigned dev_every_i_reports = 25;
+    unsigned si = training.size();
+
+    vector<unsigned> order(training.size());
+    for (unsigned i = 0; i < order.size(); ++i) {
+        order[i] = i;
+    }
+
+    double tot_seen = 0;
+    bool first = true;
+    int report = 0;
+    unsigned trs = 0;
+    double llh = 0;
+    double best_acc = 0.0;
+    int iter = -1;
+
+    while (1) {
+        ++iter;
+        if (tot_seen >= training.size()) {cerr << "In " << iter << endl; break;}
+
+        Timer iteration("completed in");
+        double llh = 0;
+        unsigned ttags = 0;
+
+        for (unsigned tr_idx = 0; tr_idx < report_every_i; ++tr_idx) {
+            if (si == training.size()) {
+                si = 0;
+                if (first) {
+                    first = false;
+                } else {
+                    sgd->update_epoch();
+                }
+                cerr << "**SHUFFLE\n";
+                shuffle(order.begin(), order.end(), *rndeng);
+            }
+
+            // build graph for this instance
+
+            auto& sent = training[order[si]];
+            vector<int> results;
+
+            ttags += results.size();
+            ++si;
+            ++trs;
+            ++tot_seen;
+        }
+        cerr << "update #" << iter << " (epoch " << (tot_seen / training.size()) << ")\t" << endl;
+
+        // show score on dev data
+        if (report % dev_every_i_reports == 0) {
+            cerr << "**DEV" << endl;
+        }
+        report++;
+    }
+    delete sgd;
 }
 
 int main(int argc, char** argv) {
     cnn::Initialize(argc, argv);
     if (argc != 3 && argc != 4) {
         cerr << "Usage: " << argv[0]
-                << " train.conll dev.conll [model.params]\n";
+                << " train.conll dev.conll [trained.model]\n";
         return 1;
     }
 
@@ -284,7 +341,7 @@ int main(int argc, char** argv) {
     ReadCoNLLFile(argv[1], training);
 
     tokdict.Freeze(); // no new word types allowed
-    tokdict.SetUnk(UNK);
+    tokdict.SetUnk(UNK_STR);
     sentimenttagdict.Freeze(); // no new tag types allowed
     for (unsigned i = 0; i < sentimenttagdict.size(); ++i) {
         sentiments.push_back(i);
