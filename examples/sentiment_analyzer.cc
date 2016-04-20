@@ -137,7 +137,7 @@ private:
 };
 
 template<class Builder>
-struct StanfordTreeLSTMModel {
+struct FirstTreeLSTMModel {
     LookupParameters* p_w;
     // TODO: input should also contain deprel to parent
     //LookupParameters* p_d;
@@ -151,13 +151,13 @@ struct StanfordTreeLSTMModel {
 
     Builder treebuilder;
 
-    explicit StanfordTreeLSTMModel(Model &model) :
+    explicit FirstTreeLSTMModel(Model &model) :
             treebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
         p_w = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
         //p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
 
         p_tok2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
-        p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
+        // p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
         p_inp_bias = model.add_parameters( { HIDDEN_DIM });
         // TODO: Change to add a regular BiLSTM below the tree
 
@@ -165,6 +165,66 @@ struct StanfordTreeLSTMModel {
         p_sentibias = model.add_parameters( { SENTI_TAG_SIZE });
     }
 
+    Expression BuildTreeCompGraph(const DepTree& tree,
+            const vector<int>& sentilabel, ComputationGraph* cg,
+            vector<int>* predictions) {
+        bool is_training = true;
+        if (sentilabel.size() == 0) {
+            is_training = false;
+        }
+        vector < Expression > errs; // the sum of this is to be returned...
+
+        treebuilder.new_graph(*cg);
+        treebuilder.start_new_sequence();
+        treebuilder.initialize_structure(tree.numnodes);
+
+        Expression tok2l = parameter(*cg, p_tok2l);
+        //  Expression dep2l = parameter(*cg, p_dep2l);
+        Expression inp_bias = parameter(*cg, p_inp_bias);
+
+        Expression root2senti = parameter(*cg, p_root2senti);
+        Expression senti_bias = parameter(*cg, p_sentibias);
+
+        Expression h_root;
+        for (unsigned node : tree.dfo) {
+            Expression i_word = lookup(*cg, p_w, tree.sent[node]);
+            //Expression i_deprel = lookup(*cg, p_d, tree.deprels[node]);
+            Expression input = affine_transform( { inp_bias, tok2l, i_word });
+            //dep2l, i_deprel });
+            // TODO: add POS, dep rel
+
+            vector<unsigned> clist; // TODO: why does it not compile with get_children?
+            if (tree.children.find(node) != tree.children.end()) {
+                clist = tree.children.find(node)->second;
+            }
+            h_root = treebuilder.add_input(node, clist, input);
+
+            Expression i_root = affine_transform( { senti_bias, root2senti,
+                    h_root });
+
+            Expression prob_dist = log_softmax(i_root, sentiments);
+            vector<float> prob_dist_vec = as_vector(cg->incremental_forward());
+
+            int chosen_sentiment;
+            if (is_training) {
+                chosen_sentiment = sentilabel[node];
+            } else { // the argmax TODO: only for the root
+//
+//                double best_score = prob_dist_vec[0];
+//                chosen_sentiment = 0;
+//                for (unsigned i = 1; i < prob_dist_vec.size(); ++i) {
+//                    if (prob_dist_vec[i] > best_score) {
+//                        best_score = prob_dist_vec[i];
+//                        chosen_sentiment = i;
+//                    }
+//                }
+            }
+            predictions->push_back(chosen_sentiment);
+            Expression logprob = pick(prob_dist, chosen_sentiment);
+            errs.push_back(logprob);
+        }
+        return -sum(errs);
+    }
 };
 
 // Split string str on any delimiting character in delim, and write the result
@@ -255,12 +315,12 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
     << endl;
 }
 
-void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, StanfordTreeLSTMModel<TreeLSTMBuilder>& mytree) {
+void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, FirstTreeLSTMModel<TreeLSTMBuilder>& mytree) {
 
 }
 
 void RunTraining(Model& model, Trainer* sgd,
-        StanfordTreeLSTMModel<TreeLSTMBuilder>& mytree,
+        FirstTreeLSTMModel<TreeLSTMBuilder>& mytree,
         vector<pair<DepTree, vector<int>>>& training,vector<pair<DepTree, vector<int>>>& dev) {
     ostringstream os;
     os << "sentanalyzer" << '_' << LAYERS << '_' << INPUT_DIM << '_'
@@ -288,7 +348,6 @@ void RunTraining(Model& model, Trainer* sgd,
 
     while (1) {
         ++iter;
-        if (tot_seen >= training.size()) {cerr << "In " << iter << endl; break;}
 
         Timer iteration("completed in");
         double llh = 0;
@@ -311,12 +370,19 @@ void RunTraining(Model& model, Trainer* sgd,
             auto& sent = training[order[si]];
             vector<int> results;
 
+            ComputationGraph cg;
+            mytree.BuildTreeCompGraph(sent.first, sent.second, &cg, &results);
+            llh += as_scalar(cg.incremental_forward());
+            cg.backward();
+            sgd->update(1.0);
+
             ttags += results.size();
             ++si;
             ++trs;
             ++tot_seen;
         }
-        cerr << "update #" << iter << " (epoch " << (tot_seen / training.size()) << ")\t" << endl;
+        sgd->status();
+        cerr << "update #" << iter << " (epoch " << (tot_seen / training.size()) << ")\t" << " llh: " << llh << " ppl = " << exp(llh / trs);
 
         // show score on dev data
         if (report % dev_every_i_reports == 0) {
@@ -363,7 +429,7 @@ int main(int argc, char** argv) {
     else
         sgd = new SimpleSGDTrainer(&model);
 
-    StanfordTreeLSTMModel<TreeLSTMBuilder> mytree(model);
+    FirstTreeLSTMModel<TreeLSTMBuilder> mytree(model);
     if (argc == 4) { // test mode
         string model_fname = argv[3];
         RunTest(model_fname, model, dev, mytree);
