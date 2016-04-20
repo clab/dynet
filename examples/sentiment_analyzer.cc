@@ -12,6 +12,8 @@
 #include <fstream>
 #include <sstream>
 #include <set>
+
+#include "conll_helper.cc"
 #include "../cnn/ourtreelstm.h"
 
 using namespace cnn;
@@ -20,8 +22,6 @@ using namespace cnn;
 cnn::Dict tokdict, sentitagdict, depreldict;
 vector<unsigned> sentitaglist; // a list of all sentiment tags
 
-const unsigned int DUMMY_ROOT = 0;
-const string DUMMY_ROOT_STR = "ROOT";
 const string UNK_STR = "UNK";
 
 unsigned VOCAB_SIZE = 0, SENTI_TAG_SIZE = 0;
@@ -29,116 +29,6 @@ unsigned VOCAB_SIZE = 0, SENTI_TAG_SIZE = 0;
 unsigned LAYERS = 1;
 unsigned INPUT_DIM = 100;
 unsigned HIDDEN_DIM = 100;
-
-struct DepTree {
-    unsigned numnodes;
-    unsigned root;
-    vector<unsigned> parents;
-    vector<unsigned> sent;
-    vector<unsigned> deprels;
-    set<unsigned> leaves;
-
-    vector<unsigned> dfo; // depth-first ordering of the nodes
-    map<unsigned, vector<unsigned>> children;
-
-    explicit DepTree(vector<unsigned> parents, vector<unsigned> deprels,
-            vector<unsigned> sent) {
-        this->numnodes = parents.size(); // = (length of the sentence + 1) to accommodate root
-        this->parents = parents;
-        this->sent = sent;
-        this->deprels = deprels;
-
-        set_children_and_root();
-        set_leaves();
-        set_dfo();
-    }
-
-    void printTree() {
-        cerr << "Tree for sentence \"";
-        for (unsigned int i = 0; i < numnodes; i++) {
-            cerr << tokdict.Convert(sent[i]) << " ";
-        }
-        cerr << "\"" << endl;
-
-        for (unsigned int i = 0; i < numnodes; i++) {
-            cerr << i << "<-" << depreldict.Convert(deprels[i]) << "-"
-                    << parents[i] << endl;
-        }
-        cerr << "Leaves: ";
-        for (unsigned leaf : leaves)
-            cerr << leaf << " ";
-        cerr << endl;
-        cerr << "Depth-first Ordering:" << endl;
-        for (unsigned node : dfo) {
-            cerr << node << "->";
-        }
-        cerr << endl;
-    }
-
-    vector<unsigned> get_children(unsigned node) {
-        vector<unsigned> clist;
-        if (children.find(node) == children.end()) {
-            return clist;
-        } else {
-            return children[node];
-        }
-    }
-
-private:
-
-    void set_children_and_root() {
-        for (unsigned child = 1; child < numnodes; child++) {
-            unsigned parent = parents[child];
-            if (parent == DUMMY_ROOT) {
-                root = child;
-            }
-            vector<unsigned> clist;
-            if (children.find(parent) != children.end()) {
-                clist = children[parent];
-            }
-            clist.push_back(child);
-            children[parent] = clist;
-        }
-    }
-
-    void set_leaves() {
-        for (unsigned node = 0; node < numnodes; ++node) {
-            if (get_children(node).size() == 0)
-                leaves.insert(node);
-        }
-    }
-
-    void set_dfo() {
-        vector<unsigned> stack;
-        set<unsigned> seen;
-        stack.push_back(DUMMY_ROOT);
-
-        while (!stack.empty()) {
-            int top = stack.back();
-
-            if (children.find(top) != children.end()
-                    && seen.find(top) == seen.end()) {
-                vector<unsigned> clist = children[top];
-                for (auto itr2 = clist.rbegin(); itr2 != clist.rend(); ++itr2) {
-                    stack.push_back(*itr2);
-                }
-                seen.insert(top);
-            } else if (children.find(top) != children.end()
-                    && seen.find(top) != seen.end()) {
-                unsigned tobepopped = stack.back();
-                dfo.push_back(tobepopped);
-                stack.pop_back();
-            } else {
-                unsigned tobepopped = stack.back();
-                dfo.push_back(tobepopped);
-                stack.pop_back();
-            }
-        }
-        // TODO: should we maintain root in dfo? No
-        assert(dfo.back() == DUMMY_ROOT);
-        dfo.pop_back();
-    }
-};
 
 template<class Builder>
 struct SentimentModel {
@@ -242,98 +132,11 @@ void EvaluateTags(DepTree tree, vector<int>& gold, int& predicted, double* corr,
     (*tot)++;
 }
 
-// Split string str on any delimiting character in delim, and write the result
-// as a vector of strings.
-void StringSplit(const string &str, const string &delim,
-        vector<string> *results, bool ignore_multiple_separators) {
-    size_t cutAt;
-    string tmp = str;
-    while ((cutAt = tmp.find_first_of(delim)) != tmp.npos) {
-        if ((ignore_multiple_separators && cutAt > 0)
-                || (!ignore_multiple_separators)) {
-            // Note: this "if" guarantees that every field is not empty.
-            // This complies with multiple consecutive occurrences of the
-            // delimiter (e.g. several consecutive occurrences of a whitespace
-            // will count as a single delimiter).
-            // To allow empty fields, this if-condition should be removed.
-            results->push_back(tmp.substr(0, cutAt));
-        }
-        tmp = tmp.substr(cutAt + 1);
-    }
-    if (tmp.length() > 0)
-        results->push_back(tmp);
-}
-
-void ReadCoNLL09Line(string& line, int* id, unsigned *token, unsigned* parent,
-        unsigned* deprel, int *sentiment) {
-    if (line.length() <= 0) {
-        *id = -1; // end of sentence in CoNLL file
-        return;
-    }
-    vector < string > fields;
-    StringSplit(line, "\t", &fields, true);
-    *id = stoi(fields[0]);
-    *token = tokdict.Convert(fields[1]); // LEMMA
-    *parent = stoi(fields[6]); // PHEAD
-    *deprel = depreldict.Convert(fields[7]); // PDEPREL
-    *sentiment = sentitagdict.Convert(fields[2]);
-}
-
-void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>& dataset) {
-    int numex = 0;
-    int ttoks = 0;
-    string line;
-
-    vector<unsigned> parents, deprels, sentence;
-    parents.push_back(DUMMY_ROOT);
-    deprels.push_back(depreldict.Convert(DUMMY_ROOT_STR));
-    sentence.push_back(tokdict.Convert(DUMMY_ROOT_STR));
-
-    vector<int> sentiments;
-    sentiments.push_back(sentitagdict.Convert(DUMMY_ROOT_STR)); // dummy root doesn't have a sentiment
-
-    ifstream in(conll_fname);
-    assert(in);
-    while (getline(in, line)) {
-        int id;
-        unsigned token, parent, deprel;
-        int sentiment;
-        ReadCoNLL09Line(line, &id, &token, &parent, &deprel, &sentiment);
-        ttoks += 1;
-        if (id == -1) { // end of conll
-            ttoks -= 1;
-            numex += 1;
-            DepTree tree(parents, deprels, sentence);
-            dataset.push_back(make_pair(tree, sentiments));
-
-            parents.clear();
-            parents.push_back(DUMMY_ROOT);
-
-            deprels.clear();
-            deprels.push_back(depreldict.Convert(DUMMY_ROOT_STR));
-
-            sentence.clear();
-            sentence.push_back(tokdict.Convert(DUMMY_ROOT_STR));
-
-            sentiments.clear();
-            sentiments.push_back(sentitagdict.Convert(DUMMY_ROOT_STR));
-        } else {
-            assert(id == parents.size());
-            parents.push_back(parent);
-            deprels.push_back(deprel);
-            sentence.push_back(token);
-            sentiments.push_back(sentiment);
-        }
-    }
-    cerr << numex << " sentences, " << ttoks << " tokens, " << tokdict.size()
-    << " types -- " << sentitagdict.size() << " tags in data set"
-    << endl;
-}
-
 void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, SentimentModel<OurTreeLSTMBuilder>& mytree) {
     ifstream in(fname);
     boost::archive::text_iarchive ia(in);
     ia >> model;
+
     double cor = 0;
     double tot = 0;
 
@@ -342,10 +145,9 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
         ComputationGraph cg;
         int predicted_sentiment;
         mytree.BuildTreeCompGraph(test_ex.first, vector<int>(), &cg, &predicted_sentiment);
-        //dloss += as_scalar(cg.forward());
         EvaluateTags(test_ex.first, test_ex.second, predicted_sentiment, &cor, &tot);
     }
-    //lm.p_th2t->scale_parameters(1/pdrop);
+
     double acc = cor/tot;
     auto time_end = chrono::high_resolution_clock::now();
     cerr << "TEST accuracy: " << acc << "\t[" << test.size() << " sents in "
@@ -473,7 +275,7 @@ int main(int argc, char** argv) {
     vector<pair<DepTree, vector<int>>> training, dev;
 
     cerr << "Reading training data from " << argv[1] << "...\n";
-    ReadCoNLLFile(argv[1], training);
+    ReadCoNLLFile(argv[1], training, &tokdict, &depreldict, &sentitagdict);
 
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
@@ -487,7 +289,7 @@ int main(int argc, char** argv) {
     SENTI_TAG_SIZE = sentitagdict.size();
 
     cerr << "Reading dev data from " << argv[2] << "...\n";
-    ReadCoNLLFile(argv[2], dev);
+    ReadCoNLLFile(argv[2], dev, &tokdict, &depreldict, &sentitagdict);
 
     Model model;
     bool use_momentum = true;
