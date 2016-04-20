@@ -32,6 +32,7 @@ unsigned TAG_HIDDEN_DIM = 100;
 
 struct DepTree {
     unsigned numnodes;
+    unsigned root;
     vector<unsigned> parents;
     vector<unsigned> sent;
     vector<unsigned> deprels;
@@ -47,7 +48,7 @@ struct DepTree {
         this->sent = sent;
         this->deprels = deprels;
 
-        set_children();
+        set_children_and_root();
         set_leaves();
         set_dfo();
     }
@@ -85,9 +86,12 @@ struct DepTree {
 
 private:
 
-    void set_children() {
+    void set_children_and_root() {
         for (unsigned child = 1; child < numnodes; child++) {
             unsigned parent = parents[child];
+            if (parent == DUMMY_ROOT) {
+                root = child;
+            }
             vector<unsigned> clist;
             if (children.find(parent) != children.end()) {
                 clist = children[parent];
@@ -143,7 +147,7 @@ struct FirstTreeLSTMModel {
     //LookupParameters* p_d;
 
     Parameters* p_tok2l;
-    Parameters* p_dep2l;
+//    Parameters* p_dep2l;
     Parameters* p_inp_bias;
 
     Parameters* p_root2senti;
@@ -167,7 +171,7 @@ struct FirstTreeLSTMModel {
 
     Expression BuildTreeCompGraph(const DepTree& tree,
             const vector<int>& sentilabel, ComputationGraph* cg,
-            vector<int>* predictions) {
+            int* prediction) {
         bool is_training = true;
         if (sentilabel.size() == 0) {
             is_training = false;
@@ -208,24 +212,35 @@ struct FirstTreeLSTMModel {
             int chosen_sentiment;
             if (is_training) {
                 chosen_sentiment = sentilabel[node];
-            } else { // the argmax TODO: only for the root
-//
-//                double best_score = prob_dist_vec[0];
-//                chosen_sentiment = 0;
-//                for (unsigned i = 1; i < prob_dist_vec.size(); ++i) {
-//                    if (prob_dist_vec[i] > best_score) {
-//                        best_score = prob_dist_vec[i];
-//                        chosen_sentiment = i;
-//                    }
-//                }
+            } else { // the argmax
+
+                double best_score = prob_dist_vec[0];
+                chosen_sentiment = 0;
+                for (unsigned i = 1; i < prob_dist_vec.size(); ++i) {
+                    if (prob_dist_vec[i] > best_score) {
+                        best_score = prob_dist_vec[i];
+                        chosen_sentiment = i;
+                    }
+                }
+                if (node == tree.root) {  // -- only for the root
+                    *prediction = chosen_sentiment;
+                }
             }
-            predictions->push_back(chosen_sentiment);
+
             Expression logprob = pick(prob_dist, chosen_sentiment);
             errs.push_back(logprob);
         }
         return -sum(errs);
     }
 };
+
+void EvaluateTags(DepTree tree, vector<int>& gold, int& predicted, double* corr,
+        double* tot) {
+    if (gold[tree.root] == predicted) {
+        (*corr)++;
+    }
+    (*tot)++;
+}
 
 // Split string str on any delimiting character in delim, and write the result
 // as a vector of strings.
@@ -351,7 +366,6 @@ void RunTraining(Model& model, Trainer* sgd,
 
         Timer iteration("completed in");
         double llh = 0;
-        unsigned ttags = 0;
 
         for (unsigned tr_idx = 0; tr_idx < report_every_i; ++tr_idx) {
             if (si == training.size()) {
@@ -368,15 +382,14 @@ void RunTraining(Model& model, Trainer* sgd,
             // build graph for this instance
 
             auto& sent = training[order[si]];
-            vector<int> results;
+            int predicted_sentiment;
 
             ComputationGraph cg;
-            mytree.BuildTreeCompGraph(sent.first, sent.second, &cg, &results);
+            mytree.BuildTreeCompGraph(sent.first, sent.second, &cg, &predicted_sentiment);
             llh += as_scalar(cg.incremental_forward());
             cg.backward();
             sgd->update(1.0);
 
-            ttags += results.size();
             ++si;
             ++trs;
             ++tot_seen;
@@ -386,7 +399,43 @@ void RunTraining(Model& model, Trainer* sgd,
 
         // show score on dev data
         if (report % dev_every_i_reports == 0) {
-            cerr << "**DEV" << endl;
+            //double dloss = 0;
+            double dcor = 0;
+            double dtags = 0;
+            //lm.p_th2t->scale_parameters(pdrop);
+            for (auto& dev_ex : dev) {
+                ComputationGraph dev_cg;
+                int dev_predicted_sentiment;
+
+                mytree.BuildTreeCompGraph(dev_ex.first, vector<int>(), &dev_cg,
+                &dev_predicted_sentiment);
+                //dloss += as_scalar(dev_cg.forward());
+                EvaluateTags(dev_ex.first, dev_ex.second, dev_predicted_sentiment, &dcor, &dtags);
+            }
+            cerr << "\n***DEV [epoch=" << (tot_seen / training.size())
+            << "]" << " accuracy = " << (dcor/dtags);
+
+            double acc = dcor/dtags;
+
+            if (acc > best_acc) {
+                best_acc = acc;
+                ofstream out(savedmodelfname);
+                boost::archive::text_oarchive oa(out);
+                oa << model;
+                cerr << "Updated model! " << endl;
+
+                if (soft_link_created == false) {
+                    string softlink = string(" tobechanged");
+                    if (system((string("rm -f ") + softlink).c_str()) == 0
+                    && system(
+                            (string("ln -s ") + savedmodelfname + softlink).c_str())
+                    == 0) {
+                        cerr << "Created " << softlink << " as a soft link to "
+                        << savedmodelfname << " for convenience.";
+                    }
+                    soft_link_created = true;
+                }
+            }
         }
         report++;
     }
