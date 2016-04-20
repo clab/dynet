@@ -28,7 +28,7 @@ unsigned VOCAB_SIZE = 0, DEPREL_SIZE = 0, SENTI_TAG_SIZE = 0;
 unsigned LAYERS = 1;
 unsigned INPUT_DIM = 100;
 unsigned HIDDEN_DIM = 100;
-unsigned TAG_HIDDEN_DIM = 100;
+unsigned TAG_HIDDEN_DIM = 10;
 
 struct DepTree {
     unsigned numnodes;
@@ -331,7 +331,26 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
 }
 
 void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, FirstTreeLSTMModel<TreeLSTMBuilder>& mytree) {
+    ifstream in(fname);
+    boost::archive::text_iarchive ia(in);
+    ia >> model;
+    double cor = 0;
+    double tot = 0;
 
+    auto time_begin = chrono::high_resolution_clock::now();
+    for (auto& test_ex : test) {
+        ComputationGraph cg;
+        int predicted_sentiment;
+        mytree.BuildTreeCompGraph(test_ex.first, vector<int>(), &cg, &predicted_sentiment);
+        //dloss += as_scalar(cg.forward());
+        EvaluateTags(test_ex.first, test_ex.second, predicted_sentiment, &cor, &tot);
+    }
+    //lm.p_th2t->scale_parameters(1/pdrop);
+    double acc = cor/tot;
+    auto time_end = chrono::high_resolution_clock::now();
+    cerr << "TEST accuracy: " << acc << "\t[" << test.size() << " sents in "
+    << std::chrono::duration<double, std::milli>(time_end - time_begin).count()
+    << " ms]" << endl;
 }
 
 void RunTraining(Model& model, Trainer* sgd,
@@ -363,6 +382,9 @@ void RunTraining(Model& model, Trainer* sgd,
 
     while (1) {
         ++iter;
+        if (tot_seen > 20 * training.size()) {
+            break; // early stopping
+        }
 
         Timer iteration("completed in");
         double llh = 0;
@@ -425,11 +447,9 @@ void RunTraining(Model& model, Trainer* sgd,
                 cerr << "Updated model! " << endl;
 
                 if (soft_link_created == false) {
-                    string softlink = string(" tobechanged");
+                    string softlink = string(" latest_model_");
                     if (system((string("rm -f ") + softlink).c_str()) == 0
-                    && system(
-                            (string("ln -s ") + savedmodelfname + softlink).c_str())
-                    == 0) {
+                    && system((string("ln -s ") + savedmodelfname + softlink).c_str()) == 0) {
                         cerr << "Created " << softlink << " as a soft link to "
                         << savedmodelfname << " for convenience.";
                     }
