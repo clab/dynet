@@ -39,6 +39,7 @@ set(cnn_library_HDRS
     cnn.h
     conv.h
     cuda.h
+    devices.h
     dict.h
     dim.h
     exec.h
@@ -52,6 +53,7 @@ set(cnn_library_HDRS
     hsm-builder.h
     init.h
     lstm.h
+    mem.h
     model.h
     mp.h
     nodes.h
