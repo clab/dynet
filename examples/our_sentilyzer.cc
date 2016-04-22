@@ -24,17 +24,17 @@ vector<unsigned> sentitaglist; // a list of all sentiment tags
 
 const string UNK_STR = "UNK";
 
-unsigned VOCAB_SIZE = 0, SENTI_TAG_SIZE = 0;
+unsigned VOCAB_SIZE = 0, DEPREL_SIZE, SENTI_TAG_SIZE = 0;
 
 unsigned LAYERS = 1;
 unsigned INPUT_DIM = 300;
 unsigned HIDDEN_DIM = 168;
 
 template<class Builder>
-struct SentimentModel {
-    LookupParameters* p_w;
+struct OurSentimentModel {
+    LookupParameters* p_x;
     // TODO: input should also contain deprel to parent
-    //LookupParameters* p_d;
+    LookupParameters* p_e;
 
     Parameters* p_tok2l;
 //    Parameters* p_dep2l;
@@ -45,10 +45,10 @@ struct SentimentModel {
 
     Builder treebuilder;
 
-    explicit SentimentModel(Model &model) :
+    explicit OurSentimentModel(Model &model) :
             treebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
-        p_w = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
-        //p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
+        p_x = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
+        p_e = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
 
         p_tok2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
         // p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
@@ -72,53 +72,6 @@ struct SentimentModel {
         treebuilder.start_new_sequence();
         treebuilder.initialize_structure(tree.numnodes);
 
-        Expression tok2l = parameter(*cg, p_tok2l);
-        //  Expression dep2l = parameter(*cg, p_dep2l);
-        Expression inp_bias = parameter(*cg, p_inp_bias);
-
-        Expression root2senti = parameter(*cg, p_root2senti);
-        Expression senti_bias = parameter(*cg, p_sentibias);
-
-        Expression h_root;
-        for (unsigned node : tree.dfo) {
-            Expression i_word = lookup(*cg, p_w, tree.sent[node]);
-            //Expression i_deprel = lookup(*cg, p_d, tree.deprels[node]);
-            // Expression input = affine_transform( { inp_bias, tok2l, i_word });
-            //dep2l, i_deprel }); // TODO: add POS, dep rel and then use this
-
-            vector<unsigned> clist; // TODO: why does it not compile with get_children?
-            if (tree.children.find(node) != tree.children.end()) {
-                clist = tree.children.find(node)->second;
-            }
-            h_root = treebuilder.add_input(node, clist, i_word);
-
-            Expression i_root = affine_transform( { senti_bias, root2senti,
-                    h_root });
-
-            Expression prob_dist = log_softmax(i_root, sentitaglist);
-            vector<float> prob_dist_vec = as_vector(cg->incremental_forward());
-
-            int chosen_sentiment;
-            if (is_training) {
-                chosen_sentiment = sentilabel[node];
-            } else { // the argmax
-
-                double best_score = prob_dist_vec[0];
-                chosen_sentiment = 0;
-                for (unsigned i = 1; i < prob_dist_vec.size(); ++i) {
-                    if (prob_dist_vec[i] > best_score) {
-                        best_score = prob_dist_vec[i];
-                        chosen_sentiment = i;
-                    }
-                }
-                if (node == tree.root) {  // -- only for the root
-                    *prediction = chosen_sentiment;
-                }
-            }
-
-            Expression logprob = pick(prob_dist, chosen_sentiment);
-            errs.push_back(logprob);
-        }
         return -sum(errs);
     }
 };
@@ -131,7 +84,7 @@ void EvaluateTags(DepTree tree, vector<int>& gold, int& predicted, double* corr,
     (*tot)++;
 }
 
-void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, SentimentModel<TreeLSTMBuilder>& mytree) {
+void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, OurSentimentModel<TreeLSTMBuilder>& mytree) {
     ifstream in(fname);
     boost::archive::text_iarchive ia(in);
     ia >> model;
@@ -141,9 +94,9 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
 
     auto time_begin = chrono::high_resolution_clock::now();
     for (auto& test_ex : test) {
-        ComputationGraph cg;
+        ComputationGraph test_cg;
         int predicted_sentiment;
-        mytree.BuildTreeCompGraph(test_ex.first, vector<int>(), &cg, &predicted_sentiment);
+        mytree.BuildTreeCompGraph(test_ex.first, vector<int>(), &test_cg, &predicted_sentiment);
         EvaluateTags(test_ex.first, test_ex.second, predicted_sentiment, &cor, &tot);
     }
 
@@ -155,7 +108,7 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
 }
 
 void RunTraining(Model& model, Trainer* sgd,
-        SentimentModel<TreeLSTMBuilder>& mytree,
+        OurSentimentModel<TreeLSTMBuilder>& mytree,
         vector<pair<DepTree, vector<int>>>& training,vector<pair<DepTree, vector<int>>>& dev) {
     ostringstream os;
     os << "sentanalyzer" << '_' << LAYERS << '_' << INPUT_DIM << '_'
@@ -276,6 +229,35 @@ int main(int argc, char** argv) {
     cerr << "Reading training data from " << argv[1] << "...\n";
     ReadCoNLLFile(argv[1], training, &tokdict, &depreldict, &sentitagdict);
 
+    for (unsigned i = 0; i < training.size(); ++i) {
+        DepTree t = training[i].first;
+        assert(t.neighbors.size() == t.dfo_edges.size());
+        if (t.numnodes <= 10) {
+            t.printTree(tokdict, depreldict);
+            cerr << "\nEdge DFO:\n";
+            for (DepEdge e : t.dfo_edges) {
+                e.print(depreldict);
+                cerr << endl;
+            }
+
+            cerr << "\nNeighbors:\n";
+            for (DepEdge e : t.dfo_edges) {
+                e.print();
+                cerr << " has neighbors: ";
+                vector < DepEdge > *vec = t.neighbors[e];
+
+                for (unsigned i = 0; i < vec->size(); ++i) {
+                    DepEdge ee = vec->at(i);
+                    ee.print();
+                    cerr << "\t";
+                }
+                cerr << endl;
+            }
+            cerr << endl;
+            break;
+        }
+    }
+
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
     sentitagdict.Freeze(); // no new tag types allowed
@@ -290,20 +272,20 @@ int main(int argc, char** argv) {
     cerr << "Reading dev data from " << argv[2] << "...\n";
     ReadCoNLLFile(argv[2], dev, &tokdict, &depreldict, &sentitagdict);
 
-    Model model;
-    bool use_momentum = true;
-    Trainer* sgd = nullptr;
-    if (use_momentum)
-        sgd = new MomentumSGDTrainer(&model);
-    else
-        sgd = new AdamTrainer(&model);
-
-    SentimentModel<TreeLSTMBuilder> mytree(model);
-    if (argc == 4) { // test mode
-        string model_fname = argv[3];
-        RunTest(model_fname, model, dev, mytree);
-        exit(1);
-    }
-
-    RunTraining(model, sgd, mytree, training, dev);
+//    Model model;
+//    bool use_momentum = true;
+//    Trainer* sgd = nullptr;
+//    if (use_momentum)
+//        sgd = new MomentumSGDTrainer(&model);
+//    else
+//        sgd = new AdamTrainer(&model);
+//
+//    OurSentimentModel<TreeLSTMBuilder> mytree(model);
+//    if (argc == 4) { // test mode
+//        string model_fname = argv[3];
+//        RunTest(model_fname, model, dev, mytree);
+//        exit(1);
+//    }
+//
+//    RunTraining(model, sgd, mytree, training, dev);
 }

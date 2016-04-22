@@ -3,9 +3,10 @@
  *
  *  Created on: Apr 14, 2016
  *      Author: swabha
+ *      TODO: add attention to the sum of hidden state
  */
 
-#include "cnn/ourtreelstm.h"
+#include "cnn/treelstm.h"
 
 #include <string>
 #include <cassert>
@@ -23,7 +24,7 @@ enum {
     X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC
 };
 
-OurTreeLSTMBuilder::OurTreeLSTMBuilder(unsigned layers, unsigned input_dim,
+TreeLSTMBuilder::TreeLSTMBuilder(unsigned layers, unsigned input_dim,
         unsigned hidden_dim, Model* model) :
         layers(layers) {
 
@@ -58,14 +59,14 @@ OurTreeLSTMBuilder::OurTreeLSTMBuilder(unsigned layers, unsigned input_dim,
     dropout_rate = 0.0f;
 }
 
-void OurTreeLSTMBuilder::initialize_structure(unsigned sent_len) {
+void TreeLSTMBuilder::initialize_structure(unsigned sent_len) {
     for (unsigned i = 0; i < sent_len; i++) {
         h.push_back(vector < Expression > (layers));
         c.push_back(vector < Expression > (layers));
     }
 }
 
-void OurTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void TreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
     param_vars.clear();
 
     for (unsigned i = 0; i < layers; ++i) {
@@ -93,8 +94,7 @@ void OurTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 
 // layout: 0..layers = c
 //         layers+1..2*layers = h
-void OurTreeLSTMBuilder::start_new_sequence_impl(
-        const vector<Expression>& hinit) {
+void TreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
     h.clear();
     c.clear();
     if (hinit.size() > 0) {
@@ -111,7 +111,7 @@ void OurTreeLSTMBuilder::start_new_sequence_impl(
     }
 }
 
-Expression OurTreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
+Expression TreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
         const Expression& x) {
 //    h.push_back(vector < Expression > (layers)); In the header now !!
 //    c.push_back(vector < Expression > (layers)); In the header now !!
@@ -223,13 +223,13 @@ Expression OurTreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
     }
 }
 
-Expression OurTreeLSTMBuilder::add_input_impl(int prev, const Expression& x) {
+Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     assert(false);
     return x;
 }
 
-void OurTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
-    const OurTreeLSTMBuilder & rnn_treelstm = (const OurTreeLSTMBuilder&) rnn;
+void TreeLSTMBuilder::copy(const RNNBuilder & rnn) {
+    const TreeLSTMBuilder & rnn_treelstm = (const TreeLSTMBuilder&) rnn;
     assert(params.size() == rnn_treelstm.params.size());
     for (size_t i = 0; i < params.size(); ++i)
         for (size_t j = 0; j < params[i].size(); ++j)

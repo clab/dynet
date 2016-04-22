@@ -3,6 +3,45 @@ using namespace std;
 const unsigned int DUMMY_ROOT = 0;
 const string DUMMY_ROOT_STR = "ROOT";
 
+struct DepEdge {
+    unsigned head;
+    unsigned modifier;
+    unsigned relation;
+
+    explicit DepEdge(unsigned head, unsigned modifier, unsigned relation) {
+        this->head = head;
+        this->modifier = modifier;
+        this->relation = relation;
+    }
+
+    void print(cnn::Dict& depreldict) const {
+        cerr << head << "-" << depreldict.Convert(relation) << "->" << modifier;
+    }
+
+    void print() const {
+        cerr << head << "->" << modifier;
+    }
+
+    bool operator <(const DepEdge& other) const {
+        if (head < other.head)
+            return true;
+        else if (head > other.head)
+            return false;
+        if (modifier < other.modifier)
+            return true;
+        else if (modifier > other.modifier)
+            return false;
+        if (relation < other.relation)
+            return true;
+        return false;
+    }
+
+    bool operator ==(const DepEdge& other) const {
+        return (head == other.head) && (modifier == other.modifier)
+                && (relation == other.relation);
+    }
+};
+
 struct DepTree {
     unsigned numnodes;
     unsigned root;
@@ -14,6 +53,9 @@ struct DepTree {
     vector<unsigned> dfo; // depth-first ordering of the nodes
     map<unsigned, vector<unsigned>> children;
 
+    vector<DepEdge> dfo_edges; // depth-first ordering in terms of the edges (bottom-up + top-down)
+    map<DepEdge, vector<DepEdge>*> neighbors;
+
     explicit DepTree(vector<unsigned> parents, vector<unsigned> deprels,
             vector<unsigned> sent) {
         this->numnodes = parents.size(); // = (length of the sentence + 1) to accommodate root
@@ -24,6 +66,8 @@ struct DepTree {
         set_children_and_root();
         set_leaves();
         set_dfo();
+        set_edge_dfo();
+        set_neighboring_edges();
     }
 
     void printTree(cnn::Dict& tokdict, cnn::Dict& depreldict) {
@@ -33,28 +77,41 @@ struct DepTree {
         }
         cerr << "\"" << endl;
 
-        for (unsigned int i = 0; i < numnodes; i++) {
-            cerr << i << "<-" << depreldict.Convert(deprels[i]) << "-"
-                    << parents[i] << endl;
+        for (auto itr = children.begin(); itr != children.end(); ++itr) {
+            unsigned node = itr->first;
+            for (unsigned child : get_children(node)) {
+                cerr << node << "-" << depreldict.Convert(deprels[child])
+                        << "->" << child << endl;
+            }
         }
+
         cerr << "Leaves: ";
         for (unsigned leaf : leaves)
             cerr << leaf << " ";
         cerr << endl;
+
         cerr << "Depth-first Ordering:" << endl;
         for (unsigned node : dfo) {
-            cerr << node << "->";
+            cerr << node << "...";
         }
         cerr << endl;
     }
 
-    vector<unsigned> get_children(unsigned node) {
-        vector<unsigned> clist;
+    vector<unsigned> get_children(unsigned& node) {
         if (children.find(node) == children.end()) {
-            return clist;
+            return vector<unsigned>();
         } else {
             return children[node];
         }
+
+    }
+
+    vector<DepEdge> get_all_edges() {
+        vector<DepEdge> edges;
+        for (unsigned node = 1; node < parents.size(); ++node) {
+            edges.push_back(DepEdge(parents[node], node, deprels[node]));
+        }
+        return edges;
     }
 
 private:
@@ -70,6 +127,7 @@ private:
                 clist = children[parent];
             }
             clist.push_back(child);
+            //children.insert(make_pair(parent, clist));
             children[parent] = clist;
         }
     }
@@ -107,8 +165,52 @@ private:
                 stack.pop_back();
             }
         }
-        // TODO: should we maintain root in dfo? No
+        assert(dfo.size() == numnodes);
+        // not retaining the dummy root node in dfo
         assert(dfo.back() == DUMMY_ROOT);
         dfo.pop_back();
     }
-};
+
+    void set_edge_dfo() { // does not include root -> dummyroot and dummyroot -> root
+        for (unsigned node : dfo) {
+            dfo_edges.push_back(DepEdge(node, parents[node], deprels[node]));
+        }
+        dfo_edges.pop_back();
+        for (auto itr = dfo.rbegin(); itr != dfo.rend(); itr++) {
+            unsigned node = *itr;
+            if (node == root) {
+                continue;
+            }
+            dfo_edges.push_back(DepEdge(parents[node], node, deprels[node]));
+        }
+        assert(dfo_edges.size() == (2 * (numnodes - 2)));
+    }
+
+    void set_neighboring_edges() {
+        for (DepEdge edge : dfo_edges) {
+            vector<DepEdge>* neighbor_list = new vector<DepEdge>();
+            neighbors.insert(make_pair(edge, neighbor_list));
+
+            unsigned node = edge.head; // main node in question...
+            unsigned avoid = edge.modifier;
+
+            if (parents[node] != avoid && node != root) { // we don't want dummyroot -> root edge
+                neighbor_list->push_back(
+                        DepEdge(parents[node], node, deprels[node]));
+            }
+
+            vector<unsigned> children = get_children(node);
+            for (unsigned child : children) {
+                if (child == avoid) {
+                    continue;
+                }
+                neighbor_list->push_back(DepEdge(child, node, deprels[child]));
+            }
+            assert(neighbors.find(edge) != neighbors.end());
+        }
+        assert(neighbors.size() == dfo_edges.size());
+    }
+
+}
+;
+

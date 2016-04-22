@@ -56,7 +56,7 @@ set(cnn_library_HDRS
     model.h
     mp.h
     nodes.h
-    ourtreelstm.h
+    treelstm.h
     param-nodes.h
     random.h
     rnn-state-machine.h
