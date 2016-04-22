@@ -138,6 +138,13 @@ Expression ClassFactoredSoftmaxBuilder::full_log_distribution(const Expression& 
   vector<Expression> full_dist(widx2cidx.size());
   Expression cscores = log(softmax(affine_transform({cbias, r2c, rep})));
 
+  for (unsigned i = 0; i < widx2cidx.size(); ++i) {
+    if (widx2cidx[i] == -1) {
+      // XXX: Should be -inf
+      full_dist[i] = input(*pcg, -10000);
+    }
+  }
+
   for (unsigned c = 0; c < p_rc2ws.size(); ++c) {
     Expression cscore = pick(cscores, c);
     if (singleton_cluster[c]) {
