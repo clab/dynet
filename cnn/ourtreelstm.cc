@@ -59,8 +59,8 @@ TreeLSTMBuilder::TreeLSTMBuilder(unsigned layers, unsigned input_dim,
     dropout_rate = 0.0f;
 }
 
-void TreeLSTMBuilder::initialize_structure(unsigned sent_len) {
-    for (unsigned i = 0; i < sent_len; i++) {
+void TreeLSTMBuilder::initialize_structure(unsigned graph_size) {
+    for (unsigned i = 0; i < graph_size; i++) {
         h.push_back(vector < Expression > (layers));
         c.push_back(vector < Expression > (layers));
     }
@@ -120,8 +120,8 @@ Expression TreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
     vector < Expression > &ct = c[idx]; // ct is a vector of size layers
 
     Expression in = x;
-    for (unsigned i = 0; i < layers; ++i) {
-        const vector<Expression>& vars = param_vars[i];
+    for (unsigned layer = 0; layer < layers; ++layer) {
+        const vector<Expression>& vars = param_vars[layer];
         vector<Expression> i_h_k, i_c_k; // hidden layer and cell state of children
 
         bool has_children = (children.size() > 0);
@@ -129,13 +129,14 @@ Expression TreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
             if (has_initial_state) {
                 // intial value for h and c at timestep 0 in layer i
                 // defaults to zero matrix input if not set in add_parameter_edges
-                i_h_k.push_back(h0[i]);
-                i_c_k.push_back(c0[i]);
+                i_h_k.push_back(h0[layer]);
+                i_c_k.push_back(c0[layer]);
+                // TODO: how to initialize non-leaf nodes?
             }
         } else {  // parent node
             for (int k : children) {
-                i_h_k.push_back(h[k][i]);
-                i_c_k.push_back(c[k][i]);
+                i_h_k.push_back(h[k][layer]);
+                i_c_k.push_back(c[k][layer]);
             }
         }
 
@@ -145,12 +146,13 @@ Expression TreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
             for (unsigned k = 1; k < children.size(); k++) {
                 i_h_k_sum = i_h_k_sum + i_h_k[k];
             }
-        }
+        } // else won't be used. TODO: make more robust
 
         // apply dropout according to http://arxiv.org/pdf/1409.2329v5.pdf
         if (dropout_rate) {
             in = dropout(in, dropout_rate);
         }
+
         // input
         vector < Expression > i_aitk;
         if (has_children) {
@@ -182,45 +184,44 @@ Expression TreeLSTMBuilder::add_input(int idx, vector<unsigned> children,
         }
 
         // write memory cell
-        Expression i_awt;
+        Expression i_act;
         if (has_children) {
-            i_awt = affine_transform( { vars[BC], vars[X2C], in, vars[H2C],
+            i_act = affine_transform( { vars[BC], vars[X2C], in, vars[H2C],
                     i_h_k_sum });
         } else {
-            i_awt = affine_transform( { vars[BC], vars[X2C], in });
+            i_act = affine_transform( { vars[BC], vars[X2C], in });
         }
-        Expression i_wt = tanh(i_awt);
+        Expression i_tct = tanh(i_act);
+        Expression i_cit = cwise_multiply(i_itk_sum, i_tct);
+
+        if (has_children) {
+            Expression i_cft = cwise_multiply(i_ftk[0], i_c_k[0]);
+            for (unsigned k = 1; k < children.size(); k++) {
+                i_cft = i_cft + cwise_multiply(i_ftk[k], i_c_k[k]);
+            }
+            ct[layer] = i_cft + i_cit;
+        } else {
+            ct[layer] = i_cit;
+        }
 
         // output
-        if (has_children) {
-            Expression i_crtk = cwise_multiply(i_ftk[0], i_c_k[0]);
-            for (unsigned k = 1; k < children.size(); k++) {
-                i_crtk = i_crtk + cwise_multiply(i_ftk[k], i_c_k[k]);
-            }
-            Expression i_nwt = cwise_multiply(i_itk_sum, i_wt);
-            ct[i] = i_crtk + i_nwt;
-        } else {
-            ct[i] = cwise_multiply(i_itk[0], i_wt);
-        }
-
         Expression i_aot;
         if (has_children) {
             i_aot = affine_transform( { vars[BO], vars[X2O], in, vars[H2O],
-                    i_h_k_sum, vars[C2O], ct[i] });
+                    i_h_k_sum, vars[C2O], ct[layer] });
         } else {
             i_aot = affine_transform( { vars[BO], vars[X2O], in, vars[C2O],
-                    ct[i] });
+                    ct[layer] });
         }
 
         Expression i_ot = logistic(i_aot);
-        Expression ph_t = tanh(ct[i]);
-        in = ht[i] = cwise_multiply(i_ot, ph_t);
+        Expression ph_t = tanh(ct[layer]);
+        in = ht[layer] = cwise_multiply(i_ot, ph_t);
+        if (dropout_rate) {
+            ht[layer] = dropout(ht[layer], dropout_rate); // TODO: not sure is correct
+        }
     }
-    if (dropout_rate) {
-        return dropout(ht.back(), dropout_rate);
-    } else {
-        return ht.back();
-    }
+    return ht.back();
 }
 
 Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) {

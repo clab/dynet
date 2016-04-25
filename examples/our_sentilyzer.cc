@@ -27,17 +27,18 @@ const string UNK_STR = "UNK";
 unsigned VOCAB_SIZE = 0, DEPREL_SIZE, SENTI_TAG_SIZE = 0;
 
 unsigned LAYERS = 1;
-unsigned INPUT_DIM = 300;
+unsigned GLOVE_DIM = 300;
+unsigned DEPREL_DIM = 100;
+unsigned LSTM_INPUT_DIM = 300;
 unsigned HIDDEN_DIM = 168;
 
 template<class Builder>
 struct OurSentimentModel {
     LookupParameters* p_x;
-    // TODO: input should also contain deprel to parent
     LookupParameters* p_e;
 
     Parameters* p_tok2l;
-//    Parameters* p_dep2l;
+    Parameters* p_dep2l;
     Parameters* p_inp_bias;
 
     Parameters* p_root2senti;
@@ -46,13 +47,13 @@ struct OurSentimentModel {
     Builder treebuilder;
 
     explicit OurSentimentModel(Model &model) :
-            treebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
-        p_x = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
-        p_e = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
+            treebuilder(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, &model) {
+        p_x = model.add_lookup_parameters(VOCAB_SIZE, { GLOVE_DIM });
+        p_e = model.add_lookup_parameters(DEPREL_SIZE, { DEPREL_DIM });
 
-        p_tok2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
-        // p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
-        p_inp_bias = model.add_parameters( { HIDDEN_DIM });
+        p_tok2l = model.add_parameters( { LSTM_INPUT_DIM, GLOVE_DIM });
+        p_dep2l = model.add_parameters( { LSTM_INPUT_DIM, DEPREL_DIM });
+        p_inp_bias = model.add_parameters( { LSTM_INPUT_DIM });
         // TODO: Change to add a regular BiLSTM below the tree
 
         p_root2senti = model.add_parameters( { SENTI_TAG_SIZE, HIDDEN_DIM });
@@ -70,11 +71,87 @@ struct OurSentimentModel {
 
         treebuilder.new_graph(*cg);
         treebuilder.start_new_sequence();
-        treebuilder.initialize_structure(tree.numnodes);
+        treebuilder.initialize_structure(tree.nummsgs + tree.numnodes - 1);
 
+        Expression tok2l = parameter(*cg, p_tok2l);
+        Expression dep2l = parameter(*cg, p_dep2l);
+        Expression inp_bias = parameter(*cg, p_inp_bias);
+
+        Expression root2senti = parameter(*cg, p_root2senti);
+        Expression senti_bias = parameter(*cg, p_sentibias);
+
+        vector<Expression> i_words, i_deprels, inputs;
+        for (unsigned n = 0; n < tree.numnodes; n++) {
+            i_words.push_back(lookup(*cg, p_x, tree.sent[n]));
+            i_deprels.push_back(lookup(*cg, p_e, tree.deprels[n]));
+
+            inputs.push_back(affine_transform( { inp_bias, tok2l,
+                    i_words.back(), dep2l, i_deprels.back() })); // TODO: add POS
+        }
+
+//        cerr << "Full graph size = " << (tree.nummsgs + tree.numnodes - 1)
+//                << endl;
+//        cerr << "Tree num msgs = " << tree.nummsgs << endl;
+        for (DepEdge edge : tree.dfo_msgs) { // Bottom up and top down
+            unsigned node = edge.head;
+
+            // find id of edge
+            auto edgeid_pos = tree.msgdict.find(edge);
+            assert(edgeid_pos != tree.msgdict.end());
+            unsigned edgeid = edgeid_pos->second;
+
+            auto nbrs_vec = tree.msg_nbrs.find(edgeid);
+            assert(nbrs_vec != tree.msg_nbrs.end());
+            vector<unsigned> msg_neighbors = nbrs_vec->second;
+            treebuilder.add_input(edgeid, msg_neighbors, inputs[node]);
+//            cerr << "processing " << edgeid->second << " ";
+//            edge.print();
+//            cerr << endl;
+        }
+
+        for (unsigned node : tree.dfo) {
+
+            auto nbrs_vec = tree.node_msg_nbrs.find(node);
+            assert(nbrs_vec != tree.node_msg_nbrs.end());
+            vector<unsigned> edge_neighbors = nbrs_vec->second;
+
+            unsigned nodeincg = tree.nummsgs + node - 1;
+            Expression z_node = treebuilder.add_input(nodeincg, edge_neighbors,
+                    inputs[node]);
+//            cerr << "finalizing " << n << " graphnode at "
+//                    << tree.nummsgs + n - 1 << endl;
+
+            Expression i_node = affine_transform( { senti_bias, root2senti,
+                    z_node });
+
+            Expression prob_dist = log_softmax(i_node, sentitaglist);
+            vector<float> prob_dist_vec = as_vector(cg->incremental_forward());
+
+            int chosen_sentiment;
+            if (is_training) {
+                chosen_sentiment = sentilabel[node];
+            } else { // the argmax
+
+                double best_score = prob_dist_vec[0];
+                chosen_sentiment = 0;
+                for (unsigned i = 1; i < prob_dist_vec.size(); ++i) {
+                    if (prob_dist_vec[i] > best_score) {
+                        best_score = prob_dist_vec[i];
+                        chosen_sentiment = i;
+                    }
+                }
+                if (node == tree.root) {  // -- only for the root
+                    *prediction = chosen_sentiment;
+                }
+            }
+            Expression logprob = pick(prob_dist, chosen_sentiment);
+            errs.push_back(logprob);
+        }
+        assert(errs.size() == tree.dfo.size());
         return -sum(errs);
     }
-};
+}
+;
 
 void EvaluateTags(DepTree tree, vector<int>& gold, int& predicted, double* corr,
         double* tot) {
@@ -111,7 +188,7 @@ void RunTraining(Model& model, Trainer* sgd,
         OurSentimentModel<TreeLSTMBuilder>& mytree,
         vector<pair<DepTree, vector<int>>>& training,vector<pair<DepTree, vector<int>>>& dev) {
     ostringstream os;
-    os << "sentanalyzer" << '_' << LAYERS << '_' << INPUT_DIM << '_'
+    os << "sentanalyzer" << '_' << LAYERS << '_' << LSTM_INPUT_DIM << '_'
     << HIDDEN_DIM << "-pid" << getpid() << ".params";
     const string savedmodelfname = os.str();
     cerr << "Parameters will be written to: " << savedmodelfname << endl;
@@ -136,9 +213,6 @@ void RunTraining(Model& model, Trainer* sgd,
 
     while (1) {
         ++iter;
-        if (tot_seen > 20 * training.size()) {
-            break; // early stopping
-        }
 
         Timer iteration("completed in");
         double llh = 0;
@@ -158,10 +232,12 @@ void RunTraining(Model& model, Trainer* sgd,
             // build graph for this instance
 
             auto& sent = training[order[si]];
+            //sent.first.printTree(tokdict, depreldict);
             int predicted_sentiment;
 
             ComputationGraph cg;
             mytree.BuildTreeCompGraph(sent.first, sent.second, &cg, &predicted_sentiment);
+
             llh += as_scalar(cg.incremental_forward());
             cg.backward();
             sgd->update(1.0);
@@ -216,6 +292,60 @@ void RunTraining(Model& model, Trainer* sgd,
     delete sgd;
 }
 
+void test_tree(DepTree t, cnn::Dict depreldict) {
+    assert(t.msg_nbrs.size() == t.dfo_msgs.size());
+    if (t.numnodes <= 10) {
+        t.printTree(tokdict, depreldict);
+        cerr << "\nEdge DFO:\n";
+        for (DepEdge e : t.dfo_msgs) {
+            e.print(depreldict);
+            cerr << "(";
+            auto nid = t.msgdict.find(e);
+            assert(nid != t.msgdict.end());
+            cerr << nid->second << ")\t";
+            cerr << endl;
+        }
+
+        cerr << "\nEdge Neighbors:\n";
+        for (DepEdge e : t.dfo_msgs) {
+            e.print();
+            cerr << " has neighbors: ";
+            auto mid = t.msgdict.find(e);
+            assert(mid != t.msgdict.end());
+
+            vector<unsigned> neighbors = t.msg_nbrs[mid->second];
+
+            for (unsigned i : neighbors) {
+                DepEdge ee = t.dfo_msgs[i];
+                ee.print();
+                cerr << "(";
+                auto nid = t.msgdict.find(ee);
+                assert(nid != t.msgdict.end());
+                cerr << nid->second << ")\t";
+            }
+            cerr << endl;
+        }
+        cerr << endl;
+
+        cerr << "\nNode - Incoming Messages:\n";
+        for (unsigned n = 1; n < t.numnodes; ++n) {
+            cerr << n << " will receive  ";
+            vector<unsigned> neighbors = t.node_msg_nbrs[n];
+
+            for (unsigned i : neighbors) {
+                DepEdge ee = t.dfo_msgs[i];
+                ee.print();
+                cerr << "(";
+                auto nid = t.msgdict.find(ee);
+                assert(nid != t.msgdict.end());
+                cerr << nid->second << ")\t";
+            }
+            cerr << endl;
+        }
+        cerr << endl;
+    }
+}
+
 int main(int argc, char** argv) {
     cnn::Initialize(argc, argv);
     if (argc != 3 && argc != 4) {
@@ -229,34 +359,13 @@ int main(int argc, char** argv) {
     cerr << "Reading training data from " << argv[1] << "...\n";
     ReadCoNLLFile(argv[1], training, &tokdict, &depreldict, &sentitagdict);
 
-    for (unsigned i = 0; i < training.size(); ++i) {
-        DepTree t = training[i].first;
-        assert(t.neighbors.size() == t.dfo_edges.size());
-        if (t.numnodes <= 10) {
-            t.printTree(tokdict, depreldict);
-            cerr << "\nEdge DFO:\n";
-            for (DepEdge e : t.dfo_edges) {
-                e.print(depreldict);
-                cerr << endl;
-            }
-
-            cerr << "\nNeighbors:\n";
-            for (DepEdge e : t.dfo_edges) {
-                e.print();
-                cerr << " has neighbors: ";
-                vector < DepEdge > *vec = t.neighbors[e];
-
-                for (unsigned i = 0; i < vec->size(); ++i) {
-                    DepEdge ee = vec->at(i);
-                    ee.print();
-                    cerr << "\t";
-                }
-                cerr << endl;
-            }
-            cerr << endl;
-            break;
-        }
-    }
+//    for (pair<DepTree, vector<int>> ex : training) {
+//        DepTree tree = ex.first;
+//        if (tree.numnodes <= 10) {
+//            test_tree(tree, depreldict);
+//            break;
+//        }
+//    }
 
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
@@ -267,25 +376,26 @@ int main(int argc, char** argv) {
     depreldict.Freeze();
 
     VOCAB_SIZE = tokdict.size();
+    DEPREL_SIZE = depreldict.size();
     SENTI_TAG_SIZE = sentitagdict.size();
 
     cerr << "Reading dev data from " << argv[2] << "...\n";
     ReadCoNLLFile(argv[2], dev, &tokdict, &depreldict, &sentitagdict);
 
-//    Model model;
-//    bool use_momentum = true;
-//    Trainer* sgd = nullptr;
-//    if (use_momentum)
-//        sgd = new MomentumSGDTrainer(&model);
-//    else
-//        sgd = new AdamTrainer(&model);
-//
-//    OurSentimentModel<TreeLSTMBuilder> mytree(model);
-//    if (argc == 4) { // test mode
-//        string model_fname = argv[3];
-//        RunTest(model_fname, model, dev, mytree);
-//        exit(1);
-//    }
-//
-//    RunTraining(model, sgd, mytree, training, dev);
+    Model model;
+    bool use_momentum = true;
+    Trainer* sgd = nullptr;
+    if (use_momentum)
+        sgd = new MomentumSGDTrainer(&model);
+    else
+        sgd = new AdamTrainer(&model);
+
+    OurSentimentModel<TreeLSTMBuilder> mytree(model);
+    if (argc == 4) { // test mode
+        string model_fname = argv[3];
+        RunTest(model_fname, model, dev, mytree);
+        exit(1);
+    }
+
+    RunTraining(model, sgd, mytree, training, dev);
 }

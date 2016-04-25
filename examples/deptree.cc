@@ -49,12 +49,15 @@ struct DepTree {
     vector<unsigned> sent;
     vector<unsigned> deprels;
     set<unsigned> leaves;
-
-    vector<unsigned> dfo; // depth-first ordering of the nodes
     map<unsigned, vector<unsigned>> children;
 
-    vector<DepEdge> dfo_edges; // depth-first ordering in terms of the edges (bottom-up + top-down)
-    map<DepEdge, vector<DepEdge>*> neighbors;
+    vector<unsigned> dfo; // depth-first ordering of the nodes
+    vector<DepEdge> dfo_msgs; // depth-first ordering in terms of the edges (bottom-up + top-down)
+    map<DepEdge, unsigned> msgdict; // given a message edge, gives the order/id associated with it
+    map<unsigned, vector<unsigned>> msg_nbrs; // all incoming msg ids for a msg id, except destination
+    unsigned nummsgs;
+
+    map<unsigned, vector<unsigned>> node_msg_nbrs; // all incoming msg ids to a node
 
     explicit DepTree(vector<unsigned> parents, vector<unsigned> deprels,
             vector<unsigned> sent) {
@@ -63,16 +66,20 @@ struct DepTree {
         this->sent = sent;
         this->deprels = deprels;
 
+        // DO NOT change order -- ugh!!
         set_children_and_root();
         set_leaves();
         set_dfo();
-        set_edge_dfo();
-        set_neighboring_edges();
+        set_dfo_msgs();
+        nummsgs = dfo_msgs.size();
+        set_msg_neighbors();
+        set_incoming_messages();
+
     }
 
     void printTree(cnn::Dict& tokdict, cnn::Dict& depreldict) {
-        cerr << "Tree for sentence \"";
-        for (unsigned int i = 0; i < numnodes; i++) {
+        cerr << "\nTree for sentence \"";
+        for (unsigned int i = 1; i < numnodes; i++) {
             cerr << tokdict.Convert(sent[i]) << " ";
         }
         cerr << "\"" << endl;
@@ -95,6 +102,12 @@ struct DepTree {
             cerr << node << "...";
         }
         cerr << endl;
+
+        for (DepEdge msg : dfo_msgs) {
+            msg.print(depreldict);
+            cerr << endl;
+        }
+        cerr << endl;
     }
 
     vector<unsigned> get_children(unsigned& node) {
@@ -115,6 +128,7 @@ struct DepTree {
     }
 
 private:
+    map<DepEdge, vector<DepEdge>*> neighbors;
 
     void set_children_and_root() {
         for (unsigned child = 1; child < numnodes; child++) {
@@ -171,32 +185,49 @@ private:
         dfo.pop_back();
     }
 
-    void set_edge_dfo() { // does not include root -> dummyroot and dummyroot -> root
+    void set_dfo_msgs() { // does not include root -> dummyroot and dummyroot -> root
+        unsigned messageid = 0;
         for (unsigned node : dfo) {
-            dfo_edges.push_back(DepEdge(node, parents[node], deprels[node]));
+            if (node == root) {
+                continue;
+            }
+            DepEdge bottomup(node, parents[node], deprels[node]);
+            dfo_msgs.push_back(bottomup);
+            msgdict.insert(make_pair(bottomup, messageid));
+            ++messageid;
         }
-        dfo_edges.pop_back();
         for (auto itr = dfo.rbegin(); itr != dfo.rend(); itr++) {
             unsigned node = *itr;
             if (node == root) {
                 continue;
             }
-            dfo_edges.push_back(DepEdge(parents[node], node, deprels[node]));
+            DepEdge topdown(parents[node], node, deprels[node]);
+            dfo_msgs.push_back(topdown);
+            msgdict.insert(make_pair(topdown, messageid));
+            ++messageid;
         }
-        assert(dfo_edges.size() == (2 * (numnodes - 2)));
+        assert(dfo_msgs.size() == (2 * (numnodes - 2)));
     }
 
-    void set_neighboring_edges() {
-        for (DepEdge edge : dfo_edges) {
+    void set_msg_neighbors() {
+        for (unsigned edgnum = 0; edgnum < dfo_msgs.size(); ++edgnum) {
+            DepEdge edge = dfo_msgs[edgnum];
             vector<DepEdge>* neighbor_list = new vector<DepEdge>();
+
             neighbors.insert(make_pair(edge, neighbor_list));
+            msg_nbrs.insert(
+                    pair<unsigned, vector<unsigned>>(edgnum,
+                            vector<unsigned>()));
 
             unsigned node = edge.head; // main node in question...
             unsigned avoid = edge.modifier;
 
-            if (parents[node] != avoid && node != root) { // we don't want dummyroot -> root edge
-                neighbor_list->push_back(
-                        DepEdge(parents[node], node, deprels[node]));
+            if (node != root && parents[node] != avoid) { // we don't want dummyroot -> root edge
+                DepEdge np(parents[node], node, deprels[node]);
+                auto nbr_id = msgdict.find(np);
+                assert(nbr_id != msgdict.end());
+                neighbor_list->push_back(np);
+                msg_nbrs[edgnum].push_back(nbr_id->second);
             }
 
             vector<unsigned> children = get_children(node);
@@ -204,13 +235,30 @@ private:
                 if (child == avoid) {
                     continue;
                 }
-                neighbor_list->push_back(DepEdge(child, node, deprels[child]));
+                DepEdge nc(child, node, deprels[child]);
+                neighbor_list->push_back(nc);
+                auto msgid = msgdict.find(nc);
+                assert(msgid != msgdict.end());
+                msg_nbrs[edgnum].push_back(msgid->second);
             }
             assert(neighbors.find(edge) != neighbors.end());
         }
-        assert(neighbors.size() == dfo_edges.size());
+        assert(neighbors.size() == dfo_msgs.size());
+        assert(neighbors.size() == msg_nbrs.size());
     }
 
+    void set_incoming_messages() {
+        for (unsigned node = 1; node < numnodes; ++node) {
+            node_msg_nbrs.insert(
+                    pair<unsigned, vector<unsigned>>(node, vector<unsigned>()));
+        }
+        for (DepEdge msg : dfo_msgs) {
+            auto t = msgdict.find(msg);
+            assert(t != msgdict.end());
+            node_msg_nbrs[msg.modifier].push_back(t->second);
+        }
+        assert(node_msg_nbrs.size() == numnodes - 1);
+    }
 }
 ;
 

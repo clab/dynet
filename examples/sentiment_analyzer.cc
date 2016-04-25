@@ -27,7 +27,7 @@ const string UNK_STR = "UNK";
 unsigned VOCAB_SIZE = 0, SENTI_TAG_SIZE = 0;
 
 unsigned LAYERS = 1;
-unsigned INPUT_DIM = 300;
+unsigned LSTM_INPUT_DIM = 300;
 unsigned HIDDEN_DIM = 168;
 
 template<class Builder>
@@ -46,11 +46,11 @@ struct SentimentModel {
     Builder treebuilder;
 
     explicit SentimentModel(Model &model) :
-            treebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
-        p_w = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
+            treebuilder(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, &model) {
+        p_w = model.add_lookup_parameters(VOCAB_SIZE, { LSTM_INPUT_DIM });
         //p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
 
-        p_tok2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
+        p_tok2l = model.add_parameters( { HIDDEN_DIM, LSTM_INPUT_DIM });
         // p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
         p_inp_bias = model.add_parameters( { HIDDEN_DIM });
         // TODO: Change to add a regular BiLSTM below the tree
@@ -72,9 +72,9 @@ struct SentimentModel {
         treebuilder.start_new_sequence();
         treebuilder.initialize_structure(tree.numnodes);
 
-        Expression tok2l = parameter(*cg, p_tok2l);
+        //Expression tok2l = parameter(*cg, p_tok2l);
         //  Expression dep2l = parameter(*cg, p_dep2l);
-        Expression inp_bias = parameter(*cg, p_inp_bias);
+        //Expression inp_bias = parameter(*cg, p_inp_bias);
 
         Expression root2senti = parameter(*cg, p_root2senti);
         Expression senti_bias = parameter(*cg, p_sentibias);
@@ -158,7 +158,7 @@ void RunTraining(Model& model, Trainer* sgd,
         SentimentModel<TreeLSTMBuilder>& mytree,
         vector<pair<DepTree, vector<int>>>& training,vector<pair<DepTree, vector<int>>>& dev) {
     ostringstream os;
-    os << "sentanalyzer" << '_' << LAYERS << '_' << INPUT_DIM << '_'
+    os << "sentanalyzer" << '_' << LAYERS << '_' << LSTM_INPUT_DIM << '_'
     << HIDDEN_DIM << "-pid" << getpid() << ".params";
     const string savedmodelfname = os.str();
     cerr << "Parameters will be written to: " << savedmodelfname << endl;
