@@ -1,18 +1,11 @@
 #include "theirsentimentmodel.cc"
+#include "sentilyzer_helper.cc"
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 bool USE_MOMENTUM = false;
 
-void EvaluateTags(DepTree tree, vector<int>& gold, int& predicted, double* corr,
-        double* tot) {
-    if (gold[tree.root] == predicted) {
-        (*corr)++;
-    }
-    (*tot)++;
-}
-
-void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, TheirSentimentModel<TreeLSTMBuilder>& mytree) {
+void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, TheirSentimentModel<TreeLSTMBuilder>& sentimodel) {
     ifstream in(fname);
     boost::archive::text_iarchive ia(in);
     ia >> model;
@@ -24,7 +17,7 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
     for (auto& test_ex : test) {
         ComputationGraph cg;
         int predicted_sentiment;
-        mytree.BuildTreeCompGraph(test_ex.first, vector<int>(), &cg, &predicted_sentiment);
+        sentimodel.BuildTreeCompGraph(test_ex.first, vector<int>(), &cg, &predicted_sentiment);
         EvaluateTags(test_ex.first, test_ex.second, predicted_sentiment, &cor, &tot);
     }
 
@@ -36,7 +29,7 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
 }
 
 void RunTraining(Model& model, Trainer* sgd,
-        TheirSentimentModel<TreeLSTMBuilder>& mytree,
+        TheirSentimentModel<TreeLSTMBuilder>& sentimodel,
         vector<pair<DepTree, vector<int>>>& training,
 vector<pair<DepTree, vector<int>>>& dev, string* softlinkname) {
     ostringstream os;
@@ -90,7 +83,7 @@ vector<pair<DepTree, vector<int>>>& dev, string* softlinkname) {
             int predicted_sentiment;
 
             ComputationGraph cg;
-            mytree.BuildTreeCompGraph(sent.first, sent.second, &cg, &predicted_sentiment);
+            sentimodel.BuildTreeCompGraph(sent.first, sent.second, &cg, &predicted_sentiment);
 
             llh += as_scalar(cg.incremental_forward());
             cg.backward();
@@ -113,7 +106,7 @@ vector<pair<DepTree, vector<int>>>& dev, string* softlinkname) {
                 ComputationGraph dev_cg;
                 int dev_predicted_sentiment;
 
-                mytree.BuildTreeCompGraph(dev_ex.first, vector<int>(), &dev_cg,
+                sentimodel.BuildTreeCompGraph(dev_ex.first, vector<int>(), &dev_cg,
                 &dev_predicted_sentiment);
                 //dloss += as_scalar(dev_cg.forward());
                 EvaluateTags(dev_ex.first, dev_ex.second, dev_predicted_sentiment, &dcor, &dtags);
@@ -234,16 +227,16 @@ int main(int argc, char** argv) {
     else
         sgd = new AdamTrainer(&model);
 
-    TheirSentimentModel < TreeLSTMBuilder > mytree(model);
+    TheirSentimentModel < TreeLSTMBuilder > sentimodel(model);
     if (conf.count("train")) { // test mode
         string softlinkname;
         if (conf.count("out_model")) {
             softlinkname = conf["out_model"].as<string>();
         }
-        RunTraining(model, sgd, mytree, training, dev, &softlinkname);
+        RunTraining(model, sgd, sentimodel, training, dev, &softlinkname);
     }
 
     string model_fname = conf["model"].as<string>();
-    RunTest(model_fname, model, dev, mytree);
+    RunTest(model_fname, model, dev, sentimodel);
 
 }
