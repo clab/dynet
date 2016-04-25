@@ -25,7 +25,7 @@ unordered_map<unsigned, vector<float>> pretrained;
 
 const string UNK_STR = "UNK";
 
-unsigned VOCAB_SIZE = 0, DEPREL_SIZE, SENTI_TAG_SIZE = 0;
+unsigned VOCAB_SIZE = 0, DEPREL_SIZE = 0, SENTI_TAG_SIZE = 0;
 
 unsigned LAYERS = 1;
 unsigned PRETRAINED_DIM = 300;

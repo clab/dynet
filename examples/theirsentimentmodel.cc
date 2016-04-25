@@ -27,7 +27,9 @@ const string UNK_STR = "UNK";
 unsigned VOCAB_SIZE = 0, DEPREL_SIZE = 0, SENTI_TAG_SIZE = 0;
 
 unsigned LAYERS = 1;
-unsigned LSTM_INPUT_DIM = 300;
+unsigned PRETRAINED_DIM = 300;
+unsigned DEPREL_DIM = 100;
+unsigned LSTM_INPUT_DIM = PRETRAINED_DIM;
 unsigned HIDDEN_DIM = 168;
 
 template<class Builder>
@@ -36,9 +38,9 @@ struct TheirSentimentModel {
     // TODO: input should also contain deprel to parent
     //LookupParameters* p_d;
 
-    Parameters* p_tok2l;
+//    Parameters* p_tok2l;
 //    Parameters* p_dep2l;
-    Parameters* p_inp_bias;
+//    Parameters* p_inp_bias;
 
     Parameters* p_root2senti;
     Parameters* p_sentibias;
@@ -47,12 +49,12 @@ struct TheirSentimentModel {
 
     explicit TheirSentimentModel(Model &model) :
             treebuilder(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, &model) {
-        p_w = model.add_lookup_parameters(VOCAB_SIZE, { LSTM_INPUT_DIM });
-        //p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
+        p_w = model.add_lookup_parameters(VOCAB_SIZE, { PRETRAINED_DIM });
+//        p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
 
-        p_tok2l = model.add_parameters( { HIDDEN_DIM, LSTM_INPUT_DIM });
-        // p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
-        p_inp_bias = model.add_parameters( { HIDDEN_DIM });
+//        p_tok2l = model.add_parameters( { HIDDEN_DIM, LSTM_INPUT_DIM });
+//        p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
+//        p_inp_bias = model.add_parameters( { HIDDEN_DIM });
         // TODO: Change to add a regular BiLSTM below the tree
 
         p_root2senti = model.add_parameters( { SENTI_TAG_SIZE, HIDDEN_DIM });

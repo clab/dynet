@@ -1,4 +1,8 @@
 #include "oursentimentmodel.cc"
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
+bool USE_MOMENTUM = false;
 
 void EvaluateTags(DepTree tree, vector<int>& gold, int& predicted, double* corr,
         double* tot) {
@@ -18,9 +22,9 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
 
     auto time_begin = chrono::high_resolution_clock::now();
     for (auto& test_ex : test) {
-        ComputationGraph test_cg;
+        ComputationGraph cg;
         int predicted_sentiment;
-        mytree.BuildTreeCompGraph(test_ex.first, vector<int>(), &test_cg, &predicted_sentiment);
+        mytree.BuildTreeCompGraph(test_ex.first, vector<int>(), &cg, &predicted_sentiment);
         EvaluateTags(test_ex.first, test_ex.second, predicted_sentiment, &cor, &tot);
     }
 
@@ -33,7 +37,8 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
 
 void RunTraining(Model& model, Trainer* sgd,
         OurSentimentModel<TreeLSTMBuilder>& mytree,
-        vector<pair<DepTree, vector<int>>>& training,vector<pair<DepTree, vector<int>>>& dev) {
+        vector<pair<DepTree, vector<int>>>& training,
+vector<pair<DepTree, vector<int>>>& dev, string* softlinkname) {
     ostringstream os;
     os << "sentanalyzer" << '_' << LAYERS << '_' << LSTM_INPUT_DIM << '_'
     << HIDDEN_DIM << "-pid" << getpid() << ".params";
@@ -123,10 +128,13 @@ void RunTraining(Model& model, Trainer* sgd,
                 ofstream out(savedmodelfname);
                 boost::archive::text_oarchive oa(out);
                 oa << model;
-                cerr << "Updated model! " << endl;
+                cerr << " ^^ Updated model ^^" << endl;
 
                 if (soft_link_created == false) {
-                    string softlink = string(" latest_model_");
+                    string softlink = string(" our_latest_model_");
+                    if (softlinkname) { // if output model file is specified
+                        softlink = " " + *softlinkname;
+                    }
                     if (system((string("rm -f ") + softlink).c_str()) == 0
                     && system((string("ln -s ") + savedmodelfname + softlink).c_str()) == 0) {
                         cerr << "Created " << softlink << " as a soft link to "
@@ -143,16 +151,65 @@ void RunTraining(Model& model, Trainer* sgd,
 
 int main(int argc, char** argv) {
     cnn::Initialize(argc, argv);
-    if (argc != 3 && argc != 4) {
-        cerr << "Usage: " << argv[0]
-                << " train.conll dev.conll [trained.model]\n";
-        return 1;
+
+    cerr << "COMMAND:";
+    for (unsigned i = 0; i < static_cast<unsigned>(argc); ++i)
+        cerr << ' ' << argv[i];
+    cerr << endl;
+
+    po::variables_map conf;
+    po::options_description opts("Configuration options");
+
+    opts.add_options()("training_data,T", po::value<string>(),
+            "Training corpus in CoNLL format")("dev_data,D",
+            po::value<string>(), "Development corpus in CoNLL format")(
+            "model,m", po::value<string>(), "load saved model from this file")(
+            "out_model,o", po::value<string>(),
+            "save output model to this soft link")("use_pos_tags,P",
+            "make POS tags visible to parser")("layers",
+            po::value<unsigned>()->default_value(1), "number of LSTM layers")(
+            "lstm_input_dim", po::value<unsigned>()->default_value(300),
+            "LSTM input dimension")("input_dim",
+            po::value<unsigned>()->default_value(32), "input embedding size")(
+            "hidden_dim", po::value<unsigned>()->default_value(168),
+            "hidden dimension")("pretrained_dim",
+            po::value<unsigned>()->default_value(300), "pretrained input dim")(
+            "pos_dim", po::value<unsigned>()->default_value(12),
+            "POS dimension")("deprel_dim",
+            po::value<unsigned>()->default_value(100),
+            "dependency relation dimension")("dropout",
+            po::value<float>()->default_value(0.0f), "Dropout rate")("train,t",
+            "Should training be run?")("words,w", po::value<string>(),
+            "pretrained word embeddings")("help,h", "Help");
+
+    po::options_description dcmdline_options;
+    dcmdline_options.add(opts);
+    po::store(parse_command_line(argc, argv, dcmdline_options), conf);
+    if (conf.count("help")) {
+        cerr << dcmdline_options << endl;
+        exit(1);
     }
+    if (conf.count("training_data") == 0) {
+        cerr << "Please specify --traing_data (-T):"
+                " this is required to determine the vocabulary mapping,"
+                " even if the parser is used in prediction mode.\n";
+        exit(1);
+    }
+
+    LAYERS = conf["layers"].as<unsigned>();
+//    INPUT_DIM = conf["input_dim"].as<unsigned>();
+    PRETRAINED_DIM = conf["pretrained_dim"].as<unsigned>();
+    HIDDEN_DIM = conf["hidden_dim"].as<unsigned>();
+    LSTM_INPUT_DIM = conf["lstm_input_dim"].as<unsigned>();
+//    POS_DIM = conf["pos_dim"].as<unsigned>();
+    DEPREL_DIM = conf["deprel_dim"].as<unsigned>();
 
     vector<pair<DepTree, vector<int>>> training, dev;
 
-    cerr << "Reading training data from " << argv[1] << "...\n";
-    ReadCoNLLFile(argv[1], training, &tokdict, &depreldict, &sentitagdict);
+    string training_fname = conf["training_data"].as<string>();
+    cerr << "Reading training data from " << training_fname << "...\n";
+    ReadCoNLLFile(training_fname, training, &tokdict, &depreldict,
+            &sentitagdict);
 
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
@@ -166,23 +223,27 @@ int main(int argc, char** argv) {
     DEPREL_SIZE = depreldict.size();
     SENTI_TAG_SIZE = sentitagdict.size();
 
-    cerr << "Reading dev data from " << argv[2] << "...\n";
-    ReadCoNLLFile(argv[2], dev, &tokdict, &depreldict, &sentitagdict);
+    string dev_fname = conf["dev_data"].as<string>();
+    cerr << "Reading dev data from " << dev_fname << "...\n";
+    ReadCoNLLFile(dev_fname, dev, &tokdict, &depreldict, &sentitagdict);
 
     Model model;
-    bool use_momentum = false;
     Trainer* sgd = nullptr;
-    if (use_momentum)
+    if (USE_MOMENTUM)
         sgd = new MomentumSGDTrainer(&model);
     else
         sgd = new AdamTrainer(&model);
 
     OurSentimentModel < TreeLSTMBuilder > mytree(model);
-    if (argc == 4) { // test mode
-        string model_fname = argv[3];
-        RunTest(model_fname, model, dev, mytree);
-        exit(1);
+    if (conf.count("train")) { // test mode
+        string softlinkname;
+        if (conf.count("out_model")) {
+            softlinkname = conf["out_model"].as<string>();
+        }
+        RunTraining(model, sgd, mytree, training, dev, &softlinkname);
     }
 
-    RunTraining(model, sgd, mytree, training, dev);
+    string model_fname = conf["model"].as<string>();
+    RunTest(model_fname, model, dev, mytree);
+
 }
