@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
 
     LAYERS = conf["layers"].as<unsigned>();
 //    INPUT_DIM = conf["input_dim"].as<unsigned>();
-//    PRETRAINED_DIM = conf["pretrained_dim"].as<unsigned>();
+    PRETRAINED_DIM = conf["pretrained_dim"].as<unsigned>();
     HIDDEN_DIM = conf["hidden_dim"].as<unsigned>();
     LSTM_INPUT_DIM = conf["lstm_input_dim"].as<unsigned>();
 //    POS_DIM = conf["pos_dim"].as<unsigned>();
@@ -203,6 +203,7 @@ int main(int argc, char** argv) {
     cerr << "Reading training data from " << training_fname << "...\n";
     ReadCoNLLFile(training_fname, training, &tokdict, &depreldict,
             &sentitagdict);
+    unsigned kUNK = tokdict.Convert(UNK_STR);
 
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
@@ -212,9 +213,41 @@ int main(int argc, char** argv) {
     }
     depreldict.Freeze();
 
-    VOCAB_SIZE = tokdict.size();
+    VOCAB_SIZE = tokdict.size(); // this is the training vocab size + pretrained embedding size
     DEPREL_SIZE = depreldict.size();
     SENTI_TAG_SIZE = sentitagdict.size();
+
+    // Loading pretrained word embeddings....
+    if (conf.count("words")) {
+        string pretrained_fname = conf["words"].as<string>();
+        pretrained[kUNK] = vector<float>(PRETRAINED_DIM, 0);
+        cerr << "Loading from " << pretrained_fname << " with "
+                << PRETRAINED_DIM << " dimensions\n";
+        ifstream in(pretrained_fname);
+        if (!in.is_open()) {
+            cerr << "Pretrained embeddings FILE NOT FOUND!" << endl;
+            exit(1);
+        }
+
+        string line;
+        getline(in, line);
+        vector<float> v(PRETRAINED_DIM, 0);
+        string word;
+        while (getline(in, line)) {
+            istringstream lin(line);
+            lin >> word;
+            if (tokdict.Contains(word) == false)
+                continue; // TODO: change -- it doesn't read vectors for unk words
+
+            for (unsigned i = 0; i < PRETRAINED_DIM; ++i)
+                lin >> v[i];
+            unsigned id = tokdict.Convert(word);
+            pretrained[id] = v;
+        }
+        in.close();
+    }
+    cerr << "\n#pretrained embeddings known: " << pretrained.size() << endl
+            << endl;
 
     string dev_fname = conf["dev_data"].as<string>();
     cerr << "Reading dev data from " << dev_fname << "...\n";
@@ -227,7 +260,7 @@ int main(int argc, char** argv) {
     else
         sgd = new AdamTrainer(&model);
 
-    TheirSentimentModel < TreeLSTMBuilder > sentimodel(model);
+    TheirSentimentModel < TreeLSTMBuilder > sentimodel(model, pretrained);
     if (conf.count("train")) { // test mode
         string softlinkname;
         if (conf.count("out_model")) {

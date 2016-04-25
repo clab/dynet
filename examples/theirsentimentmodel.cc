@@ -21,6 +21,7 @@ using namespace cnn;
 //TODO: add code for POS tag dictionary and dependency relation dictionary
 cnn::Dict tokdict, sentitagdict, depreldict;
 vector<unsigned> sentitaglist; // a list of all sentiment tags
+unordered_map<unsigned, vector<float>> pretrained;
 
 const string UNK_STR = "UNK";
 
@@ -35,8 +36,10 @@ unsigned HIDDEN_DIM = 168;
 template<class Builder>
 struct TheirSentimentModel {
     LookupParameters* p_w;
+    LookupParameters* p_emb; // pre-trained word embeddings (not updated)
     // TODO: input should also contain deprel to parent
     //LookupParameters* p_d;
+    Parameters* p_emb2l; // pre-trained word embeddings to LSTM input
 
 //    Parameters* p_tok2l;
 //    Parameters* p_dep2l;
@@ -47,7 +50,8 @@ struct TheirSentimentModel {
 
     Builder treebuilder;
 
-    explicit TheirSentimentModel(Model &model) :
+    explicit TheirSentimentModel(Model &model,
+            const unordered_map<unsigned, vector<float>>& pretrained) :
             treebuilder(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, &model) {
         p_w = model.add_lookup_parameters(VOCAB_SIZE, { PRETRAINED_DIM });
 //        p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
@@ -59,6 +63,17 @@ struct TheirSentimentModel {
 
         p_root2senti = model.add_parameters( { SENTI_TAG_SIZE, HIDDEN_DIM });
         p_sentibias = model.add_parameters( { SENTI_TAG_SIZE });
+
+        if (pretrained.size() > 0) { // using word vectors
+            p_emb = model.add_lookup_parameters(VOCAB_SIZE, { PRETRAINED_DIM });
+            for (auto it : pretrained) {
+                p_emb->Initialize(it.first, it.second);
+            }
+            p_emb2l = model.add_parameters( { LSTM_INPUT_DIM, PRETRAINED_DIM });
+        } else {
+            p_emb = nullptr;
+            p_emb2l = nullptr;
+        }
     }
 
     Expression BuildTreeCompGraph(const DepTree& tree,
@@ -77,6 +92,10 @@ struct TheirSentimentModel {
         //Expression tok2l = parameter(*cg, p_tok2l);
         //  Expression dep2l = parameter(*cg, p_dep2l);
         //Expression inp_bias = parameter(*cg, p_inp_bias);
+        Expression emb2l;
+        if (p_emb2l) {
+            emb2l = parameter(*cg, p_emb2l);
+        }
 
         Expression root2senti = parameter(*cg, p_root2senti);
         Expression senti_bias = parameter(*cg, p_sentibias);
@@ -84,6 +103,10 @@ struct TheirSentimentModel {
         Expression h_root;
         for (unsigned node : tree.dfo) {
             Expression i_word = lookup(*cg, p_w, tree.sent[node]);
+            if (p_emb && pretrained.count(tree.sent[node])) {
+                Expression pre = const_lookup(*cg, p_emb, tree.sent[node]);
+                i_word = affine_transform( { i_word, emb2l, pre });
+            }
             //Expression i_deprel = lookup(*cg, p_d, tree.deprels[node]);
             // Expression input = affine_transform( { inp_bias, tok2l, i_word });
             //dep2l, i_deprel }); // TODO: add POS, dep rel and then use this

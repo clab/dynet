@@ -63,8 +63,7 @@ struct OurSentimentModel {
         p_sentibias = model.add_parameters( { SENTI_TAG_SIZE });
 
         if (pretrained.size() > 0) {
-            p_emb = model.add_lookup_parameters(tokdict.size(), {
-                    PRETRAINED_DIM, 1 });
+            p_emb = model.add_lookup_parameters(VOCAB_SIZE, { PRETRAINED_DIM });
             for (auto it : pretrained) {
                 p_emb->Initialize(it.first, it.second);
             }
@@ -92,12 +91,22 @@ struct OurSentimentModel {
         Expression dep2l = parameter(*cg, p_dep2l);
         Expression inp_bias = parameter(*cg, p_inp_bias);
 
+        Expression emb2l;
+        if (p_emb2l) {
+            emb2l = parameter(*cg, p_emb2l);
+        }
+
         Expression root2senti = parameter(*cg, p_root2senti);
         Expression senti_bias = parameter(*cg, p_sentibias);
 
         vector<Expression> i_words, i_deprels, inputs;
         for (unsigned n = 0; n < tree.numnodes; n++) {
-            i_words.push_back(lookup(*cg, p_x, tree.sent[n]));
+            Expression i_word = lookup(*cg, p_x, tree.sent[n]);
+            if (p_emb && pretrained.count(tree.sent[n])) {
+                Expression pre = const_lookup(*cg, p_emb, tree.sent[n]);
+                i_word = affine_transform( { i_word, emb2l, pre });
+            }
+            i_words.push_back(i_word);
             i_deprels.push_back(lookup(*cg, p_e, tree.deprels[n]));
 
             inputs.push_back(affine_transform( { inp_bias, tok2l,

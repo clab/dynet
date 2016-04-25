@@ -38,7 +38,11 @@ void ReadCoNLL09Line(string& line, int* id, unsigned *token, unsigned* parent,
     vector < string > fields;
     StringSplit(line, "\t", &fields, true);
     *id = stoi(fields[0]);
-    *token = tokdict->Convert(fields[1]); // LEMMA
+    string mixedcase_token = fields[1];
+    transform(mixedcase_token.begin(), mixedcase_token.end(),
+            mixedcase_token.begin(), ::tolower); // need to lower case the token, to associate with
+    // word embeddings
+    *token = tokdict->Convert(mixedcase_token); // LEMMA
     *parent = stoi(fields[6]); // PHEAD
     *deprel = depreldict->Convert(fields[7]); // PDEPREL
     *sentiment = sentitagdict->Convert(fields[2]);

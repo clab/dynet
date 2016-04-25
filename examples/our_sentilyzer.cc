@@ -203,6 +203,7 @@ int main(int argc, char** argv) {
     cerr << "Reading training data from " << training_fname << "...\n";
     ReadCoNLLFile(training_fname, training, &tokdict, &depreldict,
             &sentitagdict);
+    unsigned kUNK = tokdict.Convert(UNK_STR);
 
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
@@ -215,6 +216,38 @@ int main(int argc, char** argv) {
     VOCAB_SIZE = tokdict.size();
     DEPREL_SIZE = depreldict.size();
     SENTI_TAG_SIZE = sentitagdict.size();
+
+    // Loading pretrained word embeddings....
+    if (conf.count("words")) {
+        string pretrained_fname = conf["words"].as<string>();
+        pretrained[kUNK] = vector<float>(PRETRAINED_DIM, 0);
+        cerr << "Loading from " << pretrained_fname << " with "
+                << PRETRAINED_DIM << " dimensions\n";
+        ifstream in(pretrained_fname);
+        if (!in.is_open()) {
+            cerr << "Pretrained embeddings FILE NOT FOUND!" << endl;
+            exit(1);
+        }
+
+        string line;
+        getline(in, line);
+        vector<float> v(PRETRAINED_DIM, 0);
+        string word;
+        while (getline(in, line)) {
+            istringstream lin(line);
+            lin >> word;
+            if (tokdict.Contains(word) == false)
+                continue; // TODO: change -- it doesn't read vectors for unk words
+
+            for (unsigned i = 0; i < PRETRAINED_DIM; ++i)
+                lin >> v[i];
+            unsigned id = tokdict.Convert(word);
+            pretrained[id] = v;
+        }
+        in.close();
+    }
+    cerr << "\n#pretrained embeddings known: " << pretrained.size() << endl
+            << endl;
 
     string dev_fname = conf["dev_data"].as<string>();
     cerr << "Reading dev data from " << dev_fname << "...\n";
