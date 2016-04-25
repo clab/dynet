@@ -213,6 +213,9 @@ void RunTraining(Model& model, Trainer* sgd,
 
     while (1) {
         ++iter;
+        if (tot_seen > 20 * training.size()) {
+            break; // early stopping
+        }
 
         Timer iteration("completed in");
         double llh = 0;
