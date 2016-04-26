@@ -5,6 +5,11 @@
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/cuda.h"
 
+namespace Eigen {
+  struct DefaultDevice;
+  struct CudaStreamDevice;
+}
+
 namespace cnn {
 
 enum class DeviceType {CPU, GPU};
@@ -30,19 +35,23 @@ class Device {
 #if HAVE_CUDA
 class Device_GPU : public Device {
  public:
+  typedef Eigen::CudaStreamDevice EigenDevice;
   explicit Device_GPU(int mb, int device_id);
   ~Device_GPU();
   int cuda_device_id;
   cublasHandle_t cublas_handle;
+  Eigen::CudaStreamDevice* edevice;
   GPUAllocator gpu_mem;
 };
 #endif
 
 class Device_CPU : public Device {
  public:
+  typedef Eigen::DefaultDevice EigenDevice;
   explicit Device_CPU(int mb, bool shared);
   ~Device_CPU();
   CPUAllocator cpu_mem;
+  Eigen::DefaultDevice* edevice;
   MemAllocator* shmem;
 };
 

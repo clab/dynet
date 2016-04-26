@@ -2,6 +2,68 @@
 #define CNN_NODES_H_
 
 #include "cnn/cnn.h"
+#include "cnn/devices.h"
+
+// A macro to dispatch things to the appropriate device
+#ifdef HAVE_CUDA
+#define CNN_NODE_DEFINE_DEV_IMPL() \
+  std::string as_string(const std::vector<std::string>& arg_names) const override; \
+  Dim dim_forward(const std::vector<Dim>& xs) const override; \
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override { \
+    assert(fx.device); \
+    if(fx.device == DeviceType::CPU) { forward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx); } \
+    else if(fx.device == DeviceType::GPU) { forward_dev_impl<cnn::Device_GPU>(*(cnn::Device_GPU*)fx.device,xs,fx); } \
+    else { abort(); } \
+  } \
+  template <class MyDevice> \
+  void forward_dev_impl(const MyDevice & dev, const std::vector<const Tensor*>& xs, Tensor& fx) const; \
+  void backward_impl(const std::vector<const Tensor*>& xs, \
+                const Tensor& fx, \
+                const Tensor& dEdf, \
+                unsigned i, \
+                Tensor& dEdxi) const override { \
+    assert(fx.device); \
+    if(fx.device->type == DeviceType::CPU) { backward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
+    else if(fx.device->type == DeviceType::GPU) { backward_dev_impl<cnn::Device_GPU>(*(cnn::Device_GPU*)fx.device,xs,fx,dEdf,i,dEdxi;) } \
+    else { abort(); } \
+  } \
+  template <class MyDevice> \
+  void backward_dev_impl( \
+                const MyDevice & dev, \
+                const std::vector<const Tensor*>& xs, \
+                const Tensor& fx, \
+                const Tensor& dEdf, \
+                unsigned i, \
+                Tensor& dEdxi) const;
+#else
+#define CNN_NODE_DEFINE_DEV_IMPL() \
+  std::string as_string(const std::vector<std::string>& arg_names) const override; \
+  Dim dim_forward(const std::vector<Dim>& xs) const override; \
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override { \
+    assert(fx.device); \
+    if(fx.device->type == DeviceType::CPU) { forward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx); } \
+    else { abort(); } \
+  } \
+  template <class MyDevice> \
+  void forward_dev_impl(const MyDevice & dev, const std::vector<const Tensor*>& xs, Tensor& fx) const; \
+  void backward_impl(const std::vector<const Tensor*>& xs, \
+                const Tensor& fx, \
+                const Tensor& dEdf, \
+                unsigned i, \
+                Tensor& dEdxi) const override { \
+    assert(fx.device); \
+    if(fx.device->type == DeviceType::CPU) { backward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
+    else { abort(); } \
+  } \
+  template <class MyDevice> \
+  void backward_dev_impl( \
+                const MyDevice & dev, \
+                const std::vector<const Tensor*>& xs, \
+                const Tensor& fx, \
+                const Tensor& dEdf, \
+                unsigned i, \
+                Tensor& dEdxi) const;
+#endif
 
 namespace cnn {
 // M = x_0, v = x_1
@@ -12,10 +74,10 @@ struct AddVectorToAllColumns : public Node {
   Dim dim_forward(const std::vector<Dim>& xs) const override;
   void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
   void backward_impl(const std::vector<const Tensor*>& xs,
-                const Tensor& fx,
-                const Tensor& dEdf,
-                unsigned i,
-                Tensor& dEdxi) const override;
+                     const Tensor& fx,
+                     const Tensor& dEdf,
+                     unsigned i,
+                     Tensor& dEdxi) const override;
 };
 
 // y = L_sparsemax(x_0; q)
@@ -387,15 +449,8 @@ struct Erf : public Node {
 // y = tanh x_1
 struct Tanh : public Node {
   explicit Tanh(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = x_1 \odot x_1

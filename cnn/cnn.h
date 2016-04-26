@@ -182,11 +182,15 @@ struct Node {
   // memory size
   Dim dim;  // will be .size() = 0 initially filled in by forward() -- TODO fix this
 
+  // pointer to the node, or null to inherit device from first input,
+  // or default when there is no input
+  Device* device;
+
  protected:
-  Node() : args() {}
-  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a) {}
+  Node() : args(), device(nullptr) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(nullptr) {}
   template <typename T>
-  explicit Node(const T&c) : args(c.begin(), c.end()) {}
+  explicit Node(const T&c) : args(c.begin(), c.end()), device(nullptr) {}
 
  public:
   // auxiliary memory
