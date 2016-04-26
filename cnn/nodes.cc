@@ -33,6 +33,36 @@ using namespace std;
 // 2) dEdxi must accummulate (see point 4 above!)
 //
 
+// A macro to instantiate templated device functions
+// If the implementation is the same for both devices use this, otherwise
+// directly implement the templated functions
+#ifdef HAVE_CUDA
+#define CNN_NODE_INST_DEV_IMPL(MyNode) \
+  template void MyNode::forward_dev_impl<Device_CPU>(const Device_CPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
+  template void MyNode::backward_dev_impl<Device_CPU>(const Device_CPU & dev, \
+                                           const vector<const Tensor*>& xs, \
+                                           const Tensor& fx, \
+                                           const Tensor& dEdf, \
+                                           unsigned i, \
+                                           Tensor& dEdxi) const; \
+  template void MyNode::forward_dev_impl<Device_GPU>(const Device_GPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
+  template void MyNode::backward_dev_impl<Device_GPU>(const Device_GPU & dev, \
+                                           const vector<const Tensor*>& xs, \
+                                           const Tensor& fx, \
+                                           const Tensor& dEdf, \
+                                           unsigned i, \
+                                           Tensor& dEdxi) const;
+#else
+#define CNN_NODE_INST_DEV_IMPL(MyNode) \
+  template void MyNode::forward_dev_impl<Device_CPU>(const Device_CPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
+  template void MyNode::backward_dev_impl<Device_CPU>(const Device_CPU & dev, \
+                                           const vector<const Tensor*>& xs, \
+                                           const Tensor& fx, \
+                                           const Tensor& dEdf, \
+                                           unsigned i, \
+                                           Tensor& dEdxi) const;
+#endif
+
 namespace cnn {
 void AddVectorToAllColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
@@ -989,25 +1019,23 @@ void Erf::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-void Tanh::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#if HAVE_CUDA
-  gpu::vtanh(fx.d.size(), xs[0]->v, fx.v);
-#else
-  fx.vec().array() = xs[0]->vec().array().tanh();
-#endif
+
+template<class MyDevice>
+void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().tanh();
 }
 
-void Tanh::backward_impl(const vector<const Tensor*>& xs,
-                      const Tensor& fx,
-                      const Tensor& dEdf,
-                      unsigned i,
-                      Tensor& dEdxi) const {
-#if HAVE_CUDA
-  gpu::vtanh_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
-#else
-  dEdxi.vec() += fx.vec().binaryExpr(dEdf.vec(), scalar_tanh_backward_op<float>());
-#endif
+template<class MyDevice>
+void Tanh::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
 }
+CNN_NODE_INST_DEV_IMPL(Tanh)
+
 
 void Square::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA

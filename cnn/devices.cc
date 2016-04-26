@@ -1,6 +1,7 @@
 #include "cnn/devices.h"
 
 #include <iostream>
+#include <unsupported/Eigen/CXX11/Tensor>
 
 #include "cnn/cuda.h"
 
@@ -26,6 +27,9 @@ Device_GPU::Device_GPU(int mb, int device_id) :
   float zero = 0;
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 
+  // Initialize the Eigen device
+  edevice = new Eigen::CudaStreamDevice(device);
+
   // this is the big memory allocation
   size_t byte_count = (size_t)mb << 20;
   fxs = new AlignedMemoryPool(byte_count, mem); // memory for node values
@@ -50,6 +54,9 @@ Device_CPU::Device_CPU(int mb, bool shared) :
   *kSCALAR_ONE = 1;
   kSCALAR_ZERO = (float*) mem->malloc(sizeof(float));
   *kSCALAR_ZERO = 0;
+
+  // Initialize the Eigen device
+  edevice = new Eigen::DefaultDevice;
 
   // this is the big memory allocation: the pools
   size_t byte_count = (size_t)mb << 20;

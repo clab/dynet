@@ -55,6 +55,15 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
         ++ai;
       }
       nfxs[num_nodes_evaluated].d = node->dim;
+      // Get the device
+      if(node->device != nullptr) {
+        nfxs[num_nodes_evaluated].device = node->device;
+      } else if(xs.size() > 0) {
+        nfxs[num_nodes_evaluated].device = xs[0]->device;
+      } else {
+        nfxs[num_nodes_evaluated].device = cnn::default_device;
+      }
+      // Get the memory
       nfxs[num_nodes_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
       if (nfxs[num_nodes_evaluated].v == nullptr) {
         cerr << "out of memory\n";
@@ -70,6 +79,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
         }
       }
       node->aux_mem = aux_mem;
+
       node->forward(xs, nfxs[num_nodes_evaluated]);
     }
   }

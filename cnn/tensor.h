@@ -50,6 +50,14 @@ struct Tensor {
   Eigen::Map<Eigen::VectorXf> vec() {
     return Eigen::Map<Eigen::VectorXf>(v, d.size());
   }
+  // this returns the full tensor contents as a one dimensional Eigen tensor
+  // which can be used for on-device processing where dimensions aren't important
+  const Eigen::TensorMap<Eigen::Tensor<float,1>> tvec() const {
+    return Eigen::TensorMap<Eigen::Tensor<float,1>>(v, d.size());
+  }
+  Eigen::TensorMap<Eigen::Tensor<float,1>> tvec() {
+    return Eigen::TensorMap<Eigen::Tensor<float,1>>(v, d.size());
+  }
   // Get view as a Tensor (see specializations below-- this is to work Eigen's and CNNs compile-type vs. run-time differences)
   template <int Order> Eigen::TensorMap<Eigen::Tensor<float,Order>> t();
   template <int Order> const Eigen::TensorMap<Eigen::Tensor<float,Order>> t() const;
