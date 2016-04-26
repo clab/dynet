@@ -8,6 +8,7 @@
 namespace Eigen {
   struct DefaultDevice;
   struct CudaStreamDevice;
+  struct GpuDevice;
 }
 
 namespace cnn {
@@ -40,7 +41,8 @@ class Device_GPU : public Device {
   ~Device_GPU();
   int cuda_device_id;
   cublasHandle_t cublas_handle;
-  Eigen::CudaStreamDevice* edevice;
+  Eigen::GpuDevice* edevice;
+  Eigen::CudaStreamDevice* estream;
   GPUAllocator gpu_mem;
 };
 #endif

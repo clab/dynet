@@ -11,8 +11,8 @@
   Dim dim_forward(const std::vector<Dim>& xs) const override; \
   void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override { \
     assert(fx.device); \
-    if(fx.device == DeviceType::CPU) { forward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx); } \
-    else if(fx.device == DeviceType::GPU) { forward_dev_impl<cnn::Device_GPU>(*(cnn::Device_GPU*)fx.device,xs,fx); } \
+    if(fx.device->type == DeviceType::CPU) { forward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx); } \
+    else if(fx.device->type == DeviceType::GPU) { forward_dev_impl<cnn::Device_GPU>(*(cnn::Device_GPU*)fx.device,xs,fx); } \
     else { abort(); } \
   } \
   template <class MyDevice> \
@@ -24,7 +24,7 @@
                 Tensor& dEdxi) const override { \
     assert(fx.device); \
     if(fx.device->type == DeviceType::CPU) { backward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
-    else if(fx.device->type == DeviceType::GPU) { backward_dev_impl<cnn::Device_GPU>(*(cnn::Device_GPU*)fx.device,xs,fx,dEdf,i,dEdxi;) } \
+    else if(fx.device->type == DeviceType::GPU) { backward_dev_impl<cnn::Device_GPU>(*(cnn::Device_GPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
     else { abort(); } \
   } \
   template <class MyDevice> \
