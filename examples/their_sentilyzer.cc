@@ -194,6 +194,12 @@ int main(int argc, char** argv) {
 //    POS_DIM = conf["pos_dim"].as<unsigned>();
 //    REL_DIM = conf["deprel_dim"].as<unsigned>();
 
+    if (conf.count("dropout")) {
+        USE_DROPOUT = true;
+        DROPOUT = conf["dropout"].as<float>();
+        cerr << "\nUsing dropout = " << DROPOUT << endl;
+    }
+
     vector<pair<DepTree, vector<int>>> training, dev;
 
     string training_fname = conf["training_data"].as<string>();

@@ -33,6 +33,9 @@ unsigned DEPREL_DIM = 100;
 unsigned LSTM_INPUT_DIM = PRETRAINED_DIM;
 unsigned HIDDEN_DIM = 168;
 
+bool USE_DROPOUT = false;
+float DROPOUT = 0.0f;
+
 template<class Builder>
 struct TheirSentimentModel {
     LookupParameters* p_w;
@@ -89,6 +92,12 @@ struct TheirSentimentModel {
         treebuilder.start_new_sequence();
         treebuilder.initialize_structure(tree.numnodes);
 
+        if (USE_DROPOUT && is_training) {
+            treebuilder.set_dropout(DROPOUT);
+        } else {
+            treebuilder.disable_dropout();
+        }
+
         Expression tok2l = parameter(*cg, p_tok2l);
         //  Expression dep2l = parameter(*cg, p_dep2l);
         Expression inp_bias = parameter(*cg, p_inp_bias);
@@ -118,8 +127,13 @@ struct TheirSentimentModel {
             }
             h_root = treebuilder.add_input(node, clist, input);
 
-            Expression i_root = affine_transform( { senti_bias, root2senti,
-                    h_root });
+            Expression i_root;
+            if (is_training && USE_DROPOUT) {
+                i_root = dropout(affine_transform( { senti_bias, root2senti,
+                        h_root }), DROPOUT);
+            } else {
+                i_root = affine_transform( { senti_bias, root2senti, h_root });
+            }
 
             Expression prob_dist = log_softmax(i_root, sentitaglist);
             vector<float> prob_dist_vec = as_vector(cg->incremental_forward());
