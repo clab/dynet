@@ -37,11 +37,11 @@ template<class Builder>
 struct TheirSentimentModel {
     LookupParameters* p_w;
     LookupParameters* p_emb; // pre-trained word embeddings (not updated)
-    // TODO: input should also contain deprel to parent
-    //LookupParameters* p_d;
-    Parameters* p_emb2l; // pre-trained word embeddings to LSTM input
+//    LookupParameters* p_d; // TODO: input should also contain deprel to parent
 
-//    Parameters* p_tok2l;
+    Parameters* p_tok2l;
+    Parameters* p_inp_bias;
+    Parameters* p_emb2l; // pre-trained word embeddings to LSTM input
 //    Parameters* p_dep2l;
 //    Parameters* p_inp_bias;
 
@@ -56,9 +56,9 @@ struct TheirSentimentModel {
         p_w = model.add_lookup_parameters(VOCAB_SIZE, { PRETRAINED_DIM });
 //        p_d = model.add_lookup_parameters(DEPREL_SIZE, { INPUT_DIM });
 
-//        p_tok2l = model.add_parameters( { HIDDEN_DIM, LSTM_INPUT_DIM });
+        p_tok2l = model.add_parameters( { LSTM_INPUT_DIM, PRETRAINED_DIM });
 //        p_dep2l = model.add_parameters( { HIDDEN_DIM, INPUT_DIM });
-//        p_inp_bias = model.add_parameters( { HIDDEN_DIM });
+        p_inp_bias = model.add_parameters( { LSTM_INPUT_DIM });
         // TODO: Change to add a regular BiLSTM below the tree
 
         p_root2senti = model.add_parameters( { SENTI_TAG_SIZE, HIDDEN_DIM });
@@ -89,9 +89,9 @@ struct TheirSentimentModel {
         treebuilder.start_new_sequence();
         treebuilder.initialize_structure(tree.numnodes);
 
-        //Expression tok2l = parameter(*cg, p_tok2l);
+        Expression tok2l = parameter(*cg, p_tok2l);
         //  Expression dep2l = parameter(*cg, p_dep2l);
-        //Expression inp_bias = parameter(*cg, p_inp_bias);
+        Expression inp_bias = parameter(*cg, p_inp_bias);
         Expression emb2l;
         if (p_emb2l) {
             emb2l = parameter(*cg, p_emb2l);
@@ -103,19 +103,20 @@ struct TheirSentimentModel {
         Expression h_root;
         for (unsigned node : tree.dfo) {
             Expression i_word = lookup(*cg, p_w, tree.sent[node]);
+            //Expression i_deprel = lookup(*cg, p_d, tree.deprels[node]);
+
+            Expression input = affine_transform( { inp_bias, tok2l, i_word });
+            //dep2l, i_deprel }); // TODO: add POS, dep rel and then use this
             if (p_emb && pretrained.count(tree.sent[node])) {
                 Expression pre = const_lookup(*cg, p_emb, tree.sent[node]);
-                i_word = affine_transform( { i_word, emb2l, pre });
+                input = affine_transform( { input, emb2l, pre });
             }
-            //Expression i_deprel = lookup(*cg, p_d, tree.deprels[node]);
-            // Expression input = affine_transform( { inp_bias, tok2l, i_word });
-            //dep2l, i_deprel }); // TODO: add POS, dep rel and then use this
 
             vector<unsigned> clist; // TODO: why does it not compile with get_children?
             if (tree.children.find(node) != tree.children.end()) {
                 clist = tree.children.find(node)->second;
             }
-            h_root = treebuilder.add_input(node, clist, i_word);
+            h_root = treebuilder.add_input(node, clist, input);
 
             Expression i_root = affine_transform( { senti_bias, root2senti,
                     h_root });
