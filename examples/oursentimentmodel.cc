@@ -39,12 +39,12 @@ float DROPOUT = 0.0f;
 template<class Builder>
 struct OurSentimentModel {
     LookupParameters* p_x;
-//    LookupParameters* p_e;
+    LookupParameters* p_e;
     LookupParameters* p_emb;
 
     Parameters* p_emb2l;
     Parameters* p_tok2l;
-//    Parameters* p_dep2l;
+    Parameters* p_dep2l;
     Parameters* p_inp_bias;
 
     Parameters* p_root2senti;
@@ -55,10 +55,10 @@ struct OurSentimentModel {
     explicit OurSentimentModel(Model &model) :
             treebuilder(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, &model) {
         p_x = model.add_lookup_parameters(VOCAB_SIZE, { PRETRAINED_DIM });
-//        p_e = model.add_lookup_parameters(DEPREL_SIZE, { DEPREL_DIM });
+        p_e = model.add_lookup_parameters(DEPREL_SIZE, { DEPREL_DIM });
 
         p_tok2l = model.add_parameters( { LSTM_INPUT_DIM, PRETRAINED_DIM });
-//        p_dep2l = model.add_parameters( { LSTM_INPUT_DIM, DEPREL_DIM });
+        p_dep2l = model.add_parameters( { LSTM_INPUT_DIM, DEPREL_DIM });
         p_inp_bias = model.add_parameters( { LSTM_INPUT_DIM });
         // TODO: Change to add a regular BiLSTM below the tree
 
@@ -97,7 +97,7 @@ struct OurSentimentModel {
         }
 
         Expression tok2l = parameter(*cg, p_tok2l);
-//        Expression dep2l = parameter(*cg, p_dep2l);
+        Expression dep2l = parameter(*cg, p_dep2l);
         Expression inp_bias = parameter(*cg, p_inp_bias);
 
         Expression emb2l;
@@ -113,9 +113,10 @@ struct OurSentimentModel {
         for (unsigned n = 0; n < tree.numnodes; n++) {
             Expression i_word = lookup(*cg, p_x, tree.sent[n]);
 //            i_words.push_back(i_word);
-//            i_deprels.push_back(lookup(*cg, p_e, tree.deprels[n]));
+            Expression i_deprel = lookup(*cg, p_e, tree.deprels[n]);
 
-            Expression input = affine_transform( { inp_bias, tok2l, i_word });
+            Expression input = affine_transform( { inp_bias, tok2l, i_word,
+                    dep2l, i_deprel });
             if (p_emb && pretrained.count(tree.sent[n])) {
                 Expression pre = const_lookup(*cg, p_emb, tree.sent[n]);
                 input = affine_transform( { input, emb2l, pre });
