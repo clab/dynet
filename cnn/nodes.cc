@@ -2178,8 +2178,8 @@ inline string print_vec(const vector<float> & flt) {
 
 template<class MyDevice>
 void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  // fx.tvec().device(*dev.edevice) = xs[0]->tvec().tanh();
-  gpu::vtanh(fx.d.size(), xs[0]->v, fx.v); 
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().tanh();
+  // gpu::vtanh(fx.d.size(), xs[0]->v, fx.v); 
 }
 
 template<class MyDevice>
@@ -2189,8 +2189,8 @@ void Tanh::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  // dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
-  gpu::vtanh_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+  dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
+  // gpu::vtanh_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
 }
 CNN_NODE_INST_DEV_IMPL(Tanh)
 

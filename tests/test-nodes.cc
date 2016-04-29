@@ -42,7 +42,6 @@ struct NodeTest {
   }
   ~NodeTest() {
     for (auto x : av) free(x);
-    cnn::Cleanup();
   }
 
   template <class T>
