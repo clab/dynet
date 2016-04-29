@@ -27,14 +27,14 @@ ParameterStorageBase::~ParameterStorageBase() {}
 
 ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
-  values.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
+  values.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
   if (scale) {
     TensorTools::Randomize(values, scale);
   }
   else {
     TensorTools::Randomize(values);
   }
-  g.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
+  g.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
   TensorTools::Zero(g);
 }
 
@@ -81,12 +81,12 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
   for (unsigned i = 0; i < n; ++i) {
     auto& v = values[i];
     v.d = d;
-    v.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
+    v.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
     TensorTools::Randomize(v);
 
     auto& g = grads[i];
     g.d = d;
-    g.v = static_cast<float*>(ps->allocate(d.size() * sizeof(float)));
+    g.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
     TensorTools::Zero(g);
   }
 }

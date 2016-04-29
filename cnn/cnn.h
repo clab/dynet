@@ -29,9 +29,6 @@
 
 namespace cnn {
 
-extern AlignedMemoryPool* fxs;
-extern AlignedMemoryPool* dEdfs;
-extern AlignedMemoryPool* ps;
 extern float* kSCALAR_MINUSONE;
 extern float* kSCALAR_ONE;
 extern float* kSCALAR_ZERO;

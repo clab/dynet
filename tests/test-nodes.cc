@@ -15,6 +15,7 @@ struct NodeTest {
     for (auto x : {"NodeTest", "--cnn-mem", "10"}) {
       av.push_back(strdup(x));
     }
+
     char **argv = &av[0];
     int argc = av.size();
     cnn::Initialize(argc, argv);
@@ -41,6 +42,7 @@ struct NodeTest {
   }
   ~NodeTest() {
     for (auto x : av) free(x);
+    cnn::Cleanup();
   }
 
   template <class T>

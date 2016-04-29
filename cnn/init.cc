@@ -16,14 +16,6 @@ using namespace std;
 
 namespace cnn {
 
-// these should maybe live in a file called globals.cc or something
-AlignedMemoryPool* fxs = nullptr;
-AlignedMemoryPool* dEdfs = nullptr;
-AlignedMemoryPool* ps = nullptr;
-mt19937* rndeng = nullptr;
-std::vector<Device*> devices;
-Device* default_device = nullptr;
-
 static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
@@ -98,9 +90,6 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
   default_device = devices[default_index];
 
   // TODO these should be accessed through the relevant device and removed here
-  fxs = default_device->fxs;
-  dEdfs = default_device->dEdfs;
-  ps = default_device->ps;
   kSCALAR_MINUSONE = default_device->kSCALAR_MINUSONE;
   kSCALAR_ONE = default_device->kSCALAR_ONE;
   kSCALAR_ZERO = default_device->kSCALAR_ZERO;
@@ -109,9 +98,10 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
 
 void Cleanup() {
   delete rndeng;
-  delete fxs;
-  delete dEdfs;
-  delete ps;
+  // TODO: Devices cannot be deleted at the moment
+  // for(Device* device : devices) delete device;
+  devices.clear();
+  default_device = nullptr;
 }
 
 } // namespace cnn
