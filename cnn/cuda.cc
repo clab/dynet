@@ -31,7 +31,7 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
   // or you request a certain number of GPUs explicitly
   // or you request the device ids
   int requested_gpus = -1;
-  vector<int> gpu_mask(MAX_GPUS);
+  vector<int> gpu_mask(MAX_GPUS,0);
   int argi = 1;
   bool ngpus_requested = false;
   bool ids_requested = false;

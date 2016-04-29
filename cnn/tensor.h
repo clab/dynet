@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "cnn/dim.h"
-#include "cnn/random.h"
+#include "cnn/globals.h"
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/devices.h"
 

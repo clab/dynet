@@ -6,7 +6,8 @@
 
 #include "cnn/simd-functors.h"
 #include "cnn/functors.h"
-#if HAVE_CUDA
+
+#if defined(HAVE_CUDA)
 #include "cnn/cuda.h"
 #include "cnn/gpu-ops.h"
 #endif
@@ -36,15 +37,8 @@ using namespace std;
 // A macro to instantiate templated device functions
 // If the implementation is the same for both devices use this, otherwise
 // directly implement the templated functions
-#ifdef HAVE_CUDA
+#if defined(__CUDACC__)
 #define CNN_NODE_INST_DEV_IMPL(MyNode) \
-  template void MyNode::forward_dev_impl<Device_CPU>(const Device_CPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
-  template void MyNode::backward_dev_impl<Device_CPU>(const Device_CPU & dev, \
-                                           const vector<const Tensor*>& xs, \
-                                           const Tensor& fx, \
-                                           const Tensor& dEdf, \
-                                           unsigned i, \
-                                           Tensor& dEdxi) const; \
   template void MyNode::forward_dev_impl<Device_GPU>(const Device_GPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
   template void MyNode::backward_dev_impl<Device_GPU>(const Device_GPU & dev, \
                                            const vector<const Tensor*>& xs, \
@@ -64,6 +58,10 @@ using namespace std;
 #endif
 
 namespace cnn {
+
+// ======= Functions to be compiled on only CPU
+#if !defined(__CUDACC__)
+
 void AddVectorToAllColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
     throw std::runtime_error("AddVectorToAllColumns::forward not implemented for CUDA");
@@ -1019,24 +1017,6 @@ void Erf::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-
-template<class MyDevice>
-void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().tanh();
-}
-
-template<class MyDevice>
-void Tanh::backward_dev_impl(const MyDevice & dev,
-                             const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
-}
-CNN_NODE_INST_DEV_IMPL(Tanh)
-
-
 void Square::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
   throw std::runtime_error("Square not yet implemented for CUDA");
@@ -1387,7 +1367,7 @@ void Softmax::backward_impl(const vector<const Tensor*>& xs,
 
 void PickNegLogSoftmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
-    logz = (float*)fxs->allocate(sizeof(float)*fx.d.batch_elems());
+    logz = (float*)device->fxs->allocate(sizeof(float)*fx.d.batch_elems());
 #if HAVE_CUDA
     if(pval) {
       gpu::pnlsoftmax(xs[0]->d.size(), *pval, xs[0]->v, fx.v, logz);
@@ -2184,5 +2164,34 @@ void Zeroes::backward_impl(const vector<const Tensor*>& xs,
                            Tensor& dEdxi) const {
   throw std::runtime_error("Called backward() on an arity 0 node");
 }
+
+#endif // Finish CPU only functions
+
+// ===== Functions to be compiled on both CPU and GPU
+
+inline string print_vec(const vector<float> & flt) {
+  ostringstream oss;
+  if(flt.size()) oss << flt[0];
+  for(size_t i = 1; i < flt.size(); i++) oss << ' ' << flt[i];
+  return oss.str();
+}
+
+template<class MyDevice>
+void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // fx.tvec().device(*dev.edevice) = xs[0]->tvec().tanh();
+  gpu::vtanh(fx.d.size(), xs[0]->v, fx.v); 
+}
+
+template<class MyDevice>
+void Tanh::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  // dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
+  gpu::vtanh_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
+}
+CNN_NODE_INST_DEV_IMPL(Tanh)
 
 } // namespace cnn

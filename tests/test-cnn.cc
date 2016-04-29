@@ -14,6 +14,7 @@ struct ConfigureCNNTest {
   }
   ~ConfigureCNNTest() {
     for (auto x : av) free(x);
+    cnn::Cleanup();
   }
   std::vector<char*> av;
 };
