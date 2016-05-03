@@ -25,11 +25,14 @@ int main(int argc, char** argv) {
   ComputationGraph cg;
   Parameter p_W, p_b, p_V, p_a;
   if (argc == 2) {
+    // Load the model and parameters from
+    // file if given.
     ifstream in(argv[1]);
     boost::archive::text_iarchive ia(in);
     ia >> m >> p_W >> p_b >> p_V >> p_a;
   }
   else {
+    // Otherwise, just create a new model.
     const unsigned HIDDEN_SIZE = 8;
     p_W = m.add_parameters({HIDDEN_SIZE, 2});
     p_b = m.add_parameters({HIDDEN_SIZE});
@@ -53,6 +56,7 @@ int main(int argc, char** argv) {
   Expression y_pred = V*h + a;
   Expression loss = squared_distance(y_pred, y);
 
+  // Show the computation graph, just for fun.
   cg.PrintGraphviz();
 
   // train the parameters
@@ -72,6 +76,9 @@ int main(int argc, char** argv) {
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
+
+  // Output the model and parameter objects
+  // to a cout.
   boost::archive::text_oarchive oa(cout);
   oa << m << p_W << p_b << p_V << p_a;
 }
