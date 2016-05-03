@@ -70,6 +70,9 @@ int main(int argc, char** argv) {
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
+
+  // Output the model and parameter objects
+  // to a cout.
   boost::archive::text_oarchive oa(cout);
   oa << m << p_W << p_b << p_V << p_a;
 }
