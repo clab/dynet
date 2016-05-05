@@ -5,7 +5,7 @@
 namespace po = boost::program_options;
 bool USE_MOMENTUM = false;
 
-void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, TheirSentimentModel<TreeLSTMBuilder>& sentimodel) {
+void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, TheirSentimentModel<TheirTreeLSTMBuilder>& sentimodel) {
     ifstream in(fname);
     boost::archive::text_iarchive ia(in);
     ia >> model;
@@ -29,7 +29,7 @@ void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& tes
 }
 
 void RunTraining(Model& model, Trainer* sgd,
-        TheirSentimentModel<TreeLSTMBuilder>& sentimodel,
+        TheirSentimentModel<TheirTreeLSTMBuilder>& sentimodel,
         vector<pair<DepTree, vector<int>>>& training,
 vector<pair<DepTree, vector<int>>>& dev, string* softlinkname) {
     ostringstream os;
@@ -272,7 +272,7 @@ int main(int argc, char** argv) {
     else
         sgd = new AdamTrainer(&model);
 
-    TheirSentimentModel < TreeLSTMBuilder > sentimodel(model, pretrained);
+    TheirSentimentModel < TheirTreeLSTMBuilder > sentimodel(model, pretrained);
     if (conf.count("train")) { // test mode
         string softlinkname;
         if (conf.count("out_model")) {

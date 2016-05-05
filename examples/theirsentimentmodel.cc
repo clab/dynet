@@ -13,7 +13,7 @@
 #include <sstream>
 #include <set>
 
-#include "cnn/treelstm.h"
+#include "cnn/theirtreelstm.h"
 #include "conll_helper.cc"
 
 using namespace cnn;

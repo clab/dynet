@@ -29,6 +29,7 @@ set(cnn_library_SRCS
     saxe-init.cc
     shadow-params.cc
     tensor.cc
+    theirtreelstm.cc
     training.cc
 )
 
@@ -56,6 +57,7 @@ set(cnn_library_HDRS
     model.h
     mp.h
     nodes.h
+    theirtreelstm.h
     treelstm.h
     param-nodes.h
     random.h
