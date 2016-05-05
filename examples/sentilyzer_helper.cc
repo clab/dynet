@@ -8,7 +8,3 @@ void EvaluateTags(DepTree tree, vector<int>& gold, int& predicted, double* corr,
     }
     (*tot)++;
 }
-
-void ReadPretrainedVectors() {
-
-}

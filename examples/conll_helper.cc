@@ -49,7 +49,7 @@ void ReadCoNLL09Line(string& line, int* id, unsigned *token, unsigned* parent,
 }
 
 void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>&dataset, cnn::Dict* tokdict,
-        cnn::Dict* depreldict, cnn::Dict* sentitagdict) {
+cnn::Dict* depreldict, cnn::Dict* sentitagdict) {
     int numex = 0;
     int ttoks = 0;
     string line;
@@ -98,4 +98,41 @@ void ReadCoNLLFile(const string& conll_fname, vector<pair<DepTree, vector<int>>>
     cerr << numex << " sentences, " << ttoks << " tokens, " << tokdict->size()
     << " types -- " << sentitagdict->size() << " tags in data set"
     << endl;
+}
+
+void ReadTestFileVocab(const string& conll_fname,
+        unordered_set<string>* test_vocab) {
+    string line;
+    ifstream in(conll_fname);
+    assert(in);
+    while (getline(in, line)) {
+        vector < string > fields;
+        StringSplit(line, "\t", &fields, true);
+        if (fields.size() > 2)
+            test_vocab->insert(fields[1]);
+    }
+    in.close();
+}
+
+/** add words to vocabulary if pretrained embeddings are known, but word is not seen at train time*/
+void PreReadPretrainedVectors(const string& pretrainedfile,
+        const unordered_set<string>& test_vocab, cnn::Dict* tokdict) {
+    ifstream in(pretrainedfile);
+    if (!in.is_open()) {
+        cerr << "Pretrained embeddings FILE NOT FOUND!" << endl;
+        exit(1);
+    }
+
+    string line;
+    getline(in, line);
+    string word;
+    while (getline(in, line)) {
+        istringstream lin(line);
+        lin >> word;
+        if (test_vocab.find(word) != test_vocab.end()
+                && tokdict->Contains(word) == false) {
+            tokdict->Convert(word);
+        }
+    }
+    in.close();
 }

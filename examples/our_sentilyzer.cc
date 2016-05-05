@@ -208,6 +208,15 @@ int main(int argc, char** argv) {
             &sentitagdict);
     unsigned kUNK = tokdict.Convert(UNK_STR);
 
+    string dev_fname = conf["dev_data"].as<string>();
+    if (conf.count("words")) {
+        string pretrained_fname = conf["words"].as<string>();
+        unordered_set < string > test_vocab;
+        ReadTestFileVocab(dev_fname, &test_vocab);
+        PreReadPretrainedVectors(pretrained_fname, test_vocab, &tokdict);
+        cerr << "Modified vocab size = " << tokdict.size() << endl;
+    }
+
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
     sentitagdict.Freeze(); // no new tag types allowed
@@ -252,7 +261,6 @@ int main(int argc, char** argv) {
     cerr << "\n#pretrained embeddings known: " << pretrained.size() << endl
             << endl;
 
-    string dev_fname = conf["dev_data"].as<string>();
     cerr << "Reading dev data from " << dev_fname << "...\n";
     ReadCoNLLFile(dev_fname, dev, &tokdict, &depreldict, &sentitagdict);
 

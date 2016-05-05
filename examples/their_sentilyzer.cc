@@ -208,6 +208,15 @@ int main(int argc, char** argv) {
             &sentitagdict);
     unsigned kUNK = tokdict.Convert(UNK_STR);
 
+    string dev_fname = conf["dev_data"].as<string>();
+    if (conf.count("words")) {
+        string pretrained_fname = conf["words"].as<string>();
+        unordered_set < string > test_vocab;
+        ReadTestFileVocab(dev_fname, &test_vocab);
+        PreReadPretrainedVectors(pretrained_fname, test_vocab, &tokdict);
+        cerr << "Modified vocab size = " << tokdict.size() << endl;
+    }
+
     tokdict.Freeze(); // no new word types allowed
     tokdict.SetUnk(UNK_STR);
     sentitagdict.Freeze(); // no new tag types allowed
@@ -224,8 +233,9 @@ int main(int argc, char** argv) {
     if (conf.count("words")) {
         string pretrained_fname = conf["words"].as<string>();
         pretrained[kUNK] = vector<float>(PRETRAINED_DIM, 0);
-        cerr << "Loading from " << pretrained_fname << " with "
-                << PRETRAINED_DIM << " dimensions\n";
+        cerr << "\nLoading from " << pretrained_fname << " with "
+                << PRETRAINED_DIM << " dimensions" << endl;
+
         ifstream in(pretrained_fname);
         if (!in.is_open()) {
             cerr << "Pretrained embeddings FILE NOT FOUND!" << endl;
@@ -249,10 +259,9 @@ int main(int argc, char** argv) {
         }
         in.close();
     }
-    cerr << "\n#pretrained embeddings known: " << pretrained.size() << endl
+    cerr << "#pretrained embeddings known: " << pretrained.size() << endl
             << endl;
 
-    string dev_fname = conf["dev_data"].as<string>();
     cerr << "Reading dev data from " << dev_fname << "...\n";
     ReadCoNLLFile(dev_fname, dev, &tokdict, &depreldict, &sentitagdict);
 
