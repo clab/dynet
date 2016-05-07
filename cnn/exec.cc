@@ -75,7 +75,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       void* aux_mem = nullptr;
       size_t aux_size = node->aux_storage_size();
       if (aux_size) {
-        aux_mem = node->device->fxs->allocate(aux_size);
+        aux_mem = nfxs[num_nodes_evaluated].device->fxs->allocate(aux_size);
         if (!aux_mem) {
           cerr << "aux out of memory\n";
           abort();
