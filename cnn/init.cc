@@ -24,6 +24,10 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
 }
 
 void Initialize(int& argc, char**& argv, bool shared_parameters) {
+  if(default_device != nullptr) {
+    cerr << "WARNING: Attempting to initialize cnn twice. Ignoring duplicate initialization." << endl;
+    return;
+  }
   vector<Device*> gpudevices;
 #if HAVE_CUDA
   cerr << "[cnn] initializing CUDA\n";
