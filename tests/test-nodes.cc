@@ -11,14 +11,16 @@ using namespace std;
 
 struct NodeTest {
   NodeTest() {
-    // set up some dummy arguments to cnn
-    for (auto x : {"NodeTest", "--cnn-mem", "10"}) {
-      av.push_back(strdup(x));
+    // Initialize if necessary
+    if(default_device == nullptr) {
+      for (auto x : {"NodeTest", "--cnn-mem", "10"}) {
+        av.push_back(strdup(x));
+      }
+      char **argv = &av[0];
+      int argc = av.size();
+      cnn::Initialize(argc, argv);
     }
 
-    char **argv = &av[0];
-    int argc = av.size();
-    cnn::Initialize(argc, argv);
     ones3_vals = {1.f,1.f,1.f};
     first_one_vals = {1.f,0.f,0.f};
     ones2_vals = {1.f,1.f};
