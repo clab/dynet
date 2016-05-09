@@ -5,10 +5,7 @@
 namespace po = boost::program_options;
 bool USE_MOMENTUM = false;
 
-void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, TheirSentimentModel<TheirTreeLSTMBuilder>& sentimodel) {
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+void RunTest(vector<pair<DepTree, vector<int>>>& test, TheirSentimentModel<TheirTreeLSTMBuilder>& sentimodel) {
 
     double cor = 0;
     double tot = 0;
@@ -211,10 +208,7 @@ int main(int argc, char** argv) {
     string dev_fname = conf["dev_data"].as<string>();
     if (conf.count("words")) {
         string pretrained_fname = conf["words"].as<string>();
-        unordered_set < string > test_vocab;
-        ReadTestFileVocab(dev_fname, &test_vocab);
-        PreReadPretrainedVectors(pretrained_fname, test_vocab, &tokdict);
-        cerr << "Modified vocab size = " << tokdict.size() << endl;
+        PreReadPretrainedVectors(pretrained_fname, &tokdict);
     }
 
     tokdict.Freeze(); // no new word types allowed
@@ -249,9 +243,12 @@ int main(int argc, char** argv) {
         while (getline(in, line)) {
             istringstream lin(line);
             lin >> word;
-            if (tokdict.Contains(word) == false)
-                continue; // TODO: change -- it doesn't read vectors for unk words
-
+            if (tokdict.Contains(word) == false) {
+                // TODO: change -- it doesn't read vectors for unk words
+                cerr << "Not reading correct pretrained embeddings file!!!";
+                cerr << " File must have all vocab words" << endl;
+                exit(1);
+            }
             for (unsigned i = 0; i < PRETRAINED_DIM; ++i)
                 lin >> v[i];
             unsigned id = tokdict.Convert(word);
@@ -273,6 +270,14 @@ int main(int argc, char** argv) {
         sgd = new AdamTrainer(&model);
 
     TheirSentimentModel < TheirTreeLSTMBuilder > sentimodel(model, pretrained);
+    if (conf.count("model")) {
+        string model_fname = conf["model"].as<string>().c_str();
+        ifstream in(model_fname);
+        boost::archive::text_iarchive ia(in);
+        ia >> model;
+    }
+    cerr << "Loaded the model..." << endl;
+
     if (conf.count("train")) { // test mode
         string softlinkname;
         if (conf.count("out_model")) {
@@ -281,7 +286,6 @@ int main(int argc, char** argv) {
         RunTraining(model, sgd, sentimodel, training, dev, &softlinkname);
     }
 
-    string model_fname = conf["model"].as<string>();
-    RunTest(model_fname, model, dev, sentimodel);
-
+    cerr << "Testing..." << endl;
+    RunTest(dev, sentimodel);
 }

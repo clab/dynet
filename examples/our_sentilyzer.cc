@@ -5,11 +5,7 @@
 namespace po = boost::program_options;
 bool USE_MOMENTUM = false;
 
-void RunTest(string fname, Model& model, vector<pair<DepTree, vector<int>>>& test, OurSentimentModel<TreeLSTMBuilder>& sentimodel) {
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
-
+void RunTest(vector<pair<DepTree, vector<int>>>& test, OurSentimentModel<TreeLSTMBuilder>& sentimodel) {
     double cor = 0;
     double tot = 0;
 
@@ -211,10 +207,7 @@ int main(int argc, char** argv) {
     string dev_fname = conf["dev_data"].as<string>();
     if (conf.count("words")) {
         string pretrained_fname = conf["words"].as<string>();
-        unordered_set < string > test_vocab;
-        ReadTestFileVocab(dev_fname, &test_vocab);
-        PreReadPretrainedVectors(pretrained_fname, test_vocab, &tokdict);
-        cerr << "Modified vocab size = " << tokdict.size() << endl;
+        PreReadPretrainedVectors(pretrained_fname, &tokdict);
     }
 
     tokdict.Freeze(); // no new word types allowed
@@ -272,6 +265,14 @@ int main(int argc, char** argv) {
         sgd = new AdamTrainer(&model);
 
     OurSentimentModel < TreeLSTMBuilder > sentimodel(model);
+    if (conf.count("model")) {
+        string model_fname = conf["model"].as<string>().c_str();
+        ifstream in(model_fname);
+        boost::archive::text_iarchive ia(in);
+        ia >> model;
+    }
+    cerr << "Loaded the model..." << endl;
+
     if (conf.count("train")) { // test mode
         string softlinkname;
         if (conf.count("out_model")) {
@@ -280,7 +281,7 @@ int main(int argc, char** argv) {
         RunTraining(model, sgd, sentimodel, training, dev, &softlinkname);
     }
 
-    string model_fname = conf["model"].as<string>();
-    RunTest(model_fname, model, dev, sentimodel);
+    cerr << "Testing..." << endl;
+    RunTest(dev, sentimodel);
 
 }

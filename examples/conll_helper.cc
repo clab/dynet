@@ -114,9 +114,9 @@ void ReadTestFileVocab(const string& conll_fname,
     in.close();
 }
 
-/** add words to vocabulary if pretrained embeddings are known, but word is not seen at train time*/
+/** add words to vocabulary if pretrained embeddings are known */
 void PreReadPretrainedVectors(const string& pretrainedfile,
-        const unordered_set<string>& test_vocab, cnn::Dict* tokdict) {
+        cnn::Dict* tokdict) {
     ifstream in(pretrainedfile);
     if (!in.is_open()) {
         cerr << "Pretrained embeddings FILE NOT FOUND!" << endl;
@@ -129,10 +129,7 @@ void PreReadPretrainedVectors(const string& pretrainedfile,
     while (getline(in, line)) {
         istringstream lin(line);
         lin >> word;
-        if (test_vocab.find(word) != test_vocab.end()
-                && tokdict->Contains(word) == false) {
-            tokdict->Convert(word);
-        }
+        tokdict->Convert(word);
     }
     in.close();
 }
