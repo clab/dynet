@@ -32,7 +32,7 @@
 
 namespace cnn {
 
-struct Device;
+class Device;
 
 inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   assert(n);
