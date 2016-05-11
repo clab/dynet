@@ -853,6 +853,14 @@ cdef class LSTMBuilder(RNNBuilder): # {{{
     def whoami(self): return "LSTMBuilder"
 # }}}
 
+cdef class FastLSTMBuilder(RNNBuilder): # {{{
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        self.cg_version = -1
+
+    def whoami(self): return "FastLSTMBuilder"
+# }}}
+
 cdef class RNNState: # {{{
     """
     This is the main class for working with RNNs / LSTMs / GRUs.
