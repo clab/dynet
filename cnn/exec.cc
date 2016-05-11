@@ -59,13 +59,8 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       }
       nfxs[num_nodes_evaluated].d = node->dim;
       // Get the device
-      if(node->device != nullptr) {
-        nfxs[num_nodes_evaluated].device = node->device;
-      } else if(xs.size() > 0) {
-        nfxs[num_nodes_evaluated].device = xs[0]->device;
-      } else {
-        nfxs[num_nodes_evaluated].device = cnn::default_device;
-      }
+      assert(node->device != nullptr);
+      nfxs[num_nodes_evaluated].device = node->device;
       // Get the memory
       nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->fxs->allocate(node->dim.size() * sizeof(float)));
       if (nfxs[num_nodes_evaluated].v == nullptr) {

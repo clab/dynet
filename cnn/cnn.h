@@ -184,10 +184,10 @@ struct Node {
   Device* device;
 
  protected:
-  Node() : args(), device(nullptr) {}
-  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(nullptr) {}
+  Node() : args(), device(default_device) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
   template <typename T>
-  explicit Node(const T&c) : args(c.begin(), c.end()), device(nullptr) {}
+  explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
 
  public:
   // auxiliary memory
