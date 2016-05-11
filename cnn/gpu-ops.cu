@@ -58,15 +58,15 @@ void vrelu_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
   accBinaryExprKernel<<<tb.first, tb.second>>>(n, fx, dEdf, dEdx, FRectifyBackward());
 }
 
-void vtanh(int n, const float* x, float* y) {
-  auto tb = SizeToBlockThreadPair(n);
-  unaryExprKernel<<<tb.first, tb.second>>>(n, x, y, FTanh());
-}
-
-void vtanh_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
-  auto tb = SizeToBlockThreadPair(n);
-  accBinaryExprKernel<<<tb.first, tb.second>>>(n, fx, dEdf, dEdx, FTanhBackward());
-}
+// void vtanh(int n, const float* x, float* y) {
+//   auto tb = SizeToBlockThreadPair(n);
+//   unaryExprKernel<<<tb.first, tb.second>>>(n, x, y, FTanh());
+// }
+// 
+// void vtanh_backward(int n, const float* fx, const float* dEdf, float* dEdx) {
+//   auto tb = SizeToBlockThreadPair(n);
+//   accBinaryExprKernel<<<tb.first, tb.second>>>(n, fx, dEdf, dEdx, FTanhBackward());
+// }
 
 void vlog(int n, const float* x, float* y) {
   auto tb = SizeToBlockThreadPair(n);

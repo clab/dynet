@@ -7,7 +7,7 @@
 
 namespace Eigen {
   struct DefaultDevice;
-  struct CudaStreamDevice;
+  class CudaStreamDevice;
   struct GpuDevice;
 }
 
