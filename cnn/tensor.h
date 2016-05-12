@@ -176,6 +176,14 @@ struct Tensor {
   BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
+template<> inline Eigen::TensorMap<Eigen::Tensor<float,0>> Tensor::t<0>() {
+  assert(d.size() == 1);
+  return Eigen::TensorMap<Eigen::Tensor<float,0>>(v);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<float,0>> Tensor::t<0>() const {
+  assert(d.size() == 1);
+  return Eigen::TensorMap<Eigen::Tensor<float,0>>(v);
+}
 template<> inline Eigen::TensorMap<Eigen::Tensor<float,1>> Tensor::t<1>() {
   assert(d.ndims() == 1);
   return Eigen::TensorMap<Eigen::Tensor<float,1>>(v, (int)d[0]);
