@@ -7,7 +7,7 @@
 #include "cnn/simd-functors.h"
 #include "cnn/functors.h"
 
-#if defined(HAVE_CUDA)
+#ifdef HAVE_CUDA
 #include "cnn/cuda.h"
 #include "cnn/gpu-ops.h"
 #endif
@@ -35,9 +35,12 @@ using namespace std;
 //
 
 // A macro to instantiate templated device functions
-// If the implementation is the same for both devices use this, otherwise
-// directly implement the templated functions
-#if defined(__CUDACC__)
+// If the implementation is the same for both devices (using Eigen Tensors),
+//  then this will instantiate both CPU and GPU implementations, and the
+//  code can be the same.
+// If the implementation is different for both devices, use #ifdef __CUDACC__
+//  within the function, and create alternative code paths for CPU and GPU implementations
+#ifdef __CUDACC__
 #define CNN_NODE_INST_DEV_IMPL(MyNode) \
   template void MyNode::forward_dev_impl<Device_GPU>(const Device_GPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
   template void MyNode::backward_dev_impl<Device_GPU>(const Device_GPU & dev, \
@@ -60,7 +63,7 @@ using namespace std;
 namespace cnn {
 
 // ======= Functions to be compiled on only CPU
-#if !defined(__CUDACC__)
+#ifndef __CUDACC__
 
 void AddVectorToAllColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
@@ -434,27 +437,6 @@ void TraceOfProduct::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-void ConstScalarMultiply::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("ConstantScalarMultiply not yet implemented for CUDA");
-#else
-  fx.vec() = xs[0]->vec() * alpha;
-#endif
-}
-
-void ConstScalarMultiply::backward_impl(const vector<const Tensor*>& xs,
-                                   const Tensor& fx,
-                                   const Tensor& dEdf,
-                                   unsigned i,
-                                   Tensor& dEdxi) const {
-  assert(i == 0);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("ScalarMultiply not yet implemented for CUDA");
-#else
-  dEdxi.vec() += dEdf.vec() * alpha;
-#endif
-}
-
 void DotProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
   throw std::runtime_error("DotProduct not yet implemented for CUDA");
@@ -661,129 +643,6 @@ void InnerProduct3D_1D_1D::backward_impl(const vector<const Tensor*>& xs,
   }
 }
 
-size_t GaussianNoise::aux_storage_size() const {
-  return dim.size() * sizeof(float);
-}
-
-void GaussianNoise::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("GaussianNoise not yet implemented for CUDA");
-#else
-  Tensor m(dim, (float*)aux_mem, fx.device);
-  TensorTools::RandomizeNormal(0, stddev, m);
-  fx.vec() = xs[0]->vec() + m.vec();
-#endif
-}
-
-void GaussianNoise::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("GaussianNoise not yet implemented for CUDA");
-#else
-  dEdxi.vec() += dEdf.vec();
-#endif
-}
-
-size_t Dropout::aux_storage_size() const {
-  return dim.size() * sizeof(float);
-}
-
-void Dropout::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  Tensor m(dim, (float*)aux_mem, fx.device);
-  TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
-#ifdef HAVE_CUDA
-  gpu::vcwise_product(fx.d.size(), xs[0]->v, m.v, fx.v);
-#else
-  fx.vec() = xs[0]->vec().cwiseProduct(m.vec());
-#endif
-}
-
-void Dropout::backward_impl(const vector<const Tensor*>& xs,
-                       const Tensor& fx,
-                       const Tensor& dEdf,
-                       unsigned i,
-                       Tensor& dEdxi) const {
-  Tensor m(dim, (float*)aux_mem, fx.device);
-#ifdef HAVE_CUDA
-  gpu::vcwise_product(dEdf.d.size(), dEdf.v, m.v, fx.v);
-#else
-  dEdxi.vec() += dEdf.vec().cwiseProduct(m.vec());
-#endif
-}
-
-size_t BlockDropout::aux_storage_size() const {
-  // we just need to remember whether this entire block is turned on (1.0) or off (0.0)
-  return 1 * sizeof(float);
-}
-
-void BlockDropout::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("BlockDropout not yet implemented for CUDA");
-#else
-  bernoulli_distribution distribution(1.0 - dropout_probability);
-  float block_multiplier = distribution(*rndeng)? 1.0 : 0.0;
-  block_multiplier = 
-    dropout_probability == 1.0? 0.0 : block_multiplier / (1.0 - dropout_probability);
-  if (dropout_probability > 1.0 || dropout_probability < 0.0) {
-    assert(false && "dropout probability must be in the range [0, 1]");
-  }
-  *(static_cast<float*>(aux_mem)) = block_multiplier;
-  (*fx) = **xs[0] * block_multiplier;
-#endif
-}
-
-void BlockDropout::backward_impl(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i,
-                            Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("BlockDropout not yet implemented for CUDA");
-#else
-  float block_multiplier = *(static_cast<float*>(aux_mem));
-  (*dEdxi) += (*dEdf) * block_multiplier;
-#endif
-}
-
-void ConstantPlusX::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("ConstantPlusX not yet implemented for CUDA");
-#else
-  fx.vec() = xs[0]->vec().unaryExpr(const_add_op<float>(c));
-#endif
-}
-
-void ConstantPlusX::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-  dEdxi.vec() += dEdf.vec();
-}
-
-void ConstantMinusX::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#if HAVE_CUDA
-  gpu::vconstant_minusx(fx.d.size(), c, xs[0]->v, fx.v);
-#else
-  fx.vec() = xs[0]->vec().unaryExpr(const_minus_op<float>(c));
-#endif
-}
-
-void ConstantMinusX::backward_impl(const vector<const Tensor*>& xs,
-                              const Tensor& fx,
-                              const Tensor& dEdf,
-                              unsigned i,
-                              Tensor& dEdxi) const {
-#if HAVE_CUDA
-  gpu::vnegate_backward(dEdxi.d.size(), dEdf.v, dEdxi.v);
-#else
-  dEdxi.vec() -= dEdf.vec();
-#endif
-}
-
 template <class T>
 EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   using std::exp;
@@ -977,147 +836,6 @@ void Average::backward_impl(const vector<const Tensor*>& xs,
   dEdxi.vec() += (dEdf.vec() / xs.size());
 }
 
-void Sqrt::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Sqrt not yet implemented for CUDA");
-#else
-  fx.vec() = xs[0]->vec().cwiseSqrt();
-#endif
-}
-
-void Sqrt::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Sqrt not yet implemented for CUDA");
-#else
-  dEdxi.vec() += fx.vec().binaryExpr(*dEdf, FSqrtBackward());
-#endif
-}
-
-void Erf::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Erf not yet implemented for CUDA");
-#else
-  fx.vec().array() = xs[0]->vec().array().erf();
-#endif
-}
-
-void Erf::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Erf not yet implemented for CUDA");
-#else
-  dEdxi.vec() += xs[0]->vec().binaryExpr(dEdf.vec(), scalar_erf_backward_op<float>());
-#endif
-}
-
-void Square::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Square not yet implemented for CUDA");
-#else
-  fx.vec().array() = xs[0]->vec().array().square();
-#endif
-}
-
-void Square::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Square not yet implemented for CUDA");
-#else
-  dEdxi.vec() += dEdf.vec().cwiseProduct(xs[0]->vec()) * 2;
-#endif
-}
-
-void Cube::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Square not yet implemented for CUDA");
-#else
-  fx.vec().array() = xs[0]->vec().array().cube();
-#endif
-}
-
-void Cube::backward_impl(const vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Cube not yet implemented for CUDA");
-#else
-//  *dEdxi += (*dEdf).cwiseProduct(x.cwiseProduct(x)) * 3;
-  dEdxi.vec().array() += dEdf.vec().array() * xs[0]->vec().array().square() * 3;
-#endif
-}
-
-void Exp::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Exp not yet implemented for CUDA");
-#else
-  fx.vec() = xs[0]->vec().array().exp();
-#endif
-}
-
-void Exp::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Exp not yet implemented for CUDA");
-#else
-  dEdxi.vec() += dEdf.vec().cwiseProduct(fx.vec());
-#endif
-}
-
-void LogGamma::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("LogGamma not yet implemented for CUDA");
-#else
-  fx.vec() = xs[0]->vec().array().lgamma();
-#endif
-}
-
-void LogGamma::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("LogGamma not yet implemented for CUDA");
-#else
-  dEdxi.vec() += xs[0]->vec().binaryExpr(dEdf.vec(), FLogGammaBackward());
-#endif
-}
-
-void Log::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#if HAVE_CUDA
-  gpu::vlog(fx.d.size(), xs[0]->v, fx.v);
-#else
-  fx.vec() = xs[0]->vec().array().log();
-#endif
-}
-
-void Log::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-#if HAVE_CUDA
-  gpu::vlog_backward(fx.d.size(), xs[0]->v, dEdf.v, dEdxi.v);
-#else
-  dEdxi.vec() += dEdf.vec().cwiseQuotient(xs[0]->vec());
-#endif
-}
-
 void Concatenate::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   unsigned rows = 0;
   for (auto x : xs) rows += x->d.rows();
@@ -1196,32 +914,6 @@ void ConcatenateColumns::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-void PairwiseRankLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#if HAVE_CUDA
-  gpu::vpairwise_rank_loss(fx.d.size(), margin, xs[0]->v, xs[1]->v, fx.v);
-#else
-  auto a = xs[0]->vec();
-  auto b = xs[1]->vec();
-  fx.vec() = a.binaryExpr(b, FPairwiseRankLoss(margin));
-#endif
-}
-
-void PairwiseRankLoss::backward_impl(const vector<const Tensor*>& xs,
-                                const Tensor& fx,
-                                const Tensor& dEdf,
-                                unsigned i,
-                                Tensor& dEdxi) const {
-#if HAVE_CUDA
-  gpu::vpairwise_rank_loss_backward(dEdf.d.size(), (i == 0), fx.v, dEdf.v, dEdxi.v);
-#else
-  if (i == 0) {
-    dEdxi.vec() -= fx.vec().binaryExpr(dEdf.vec(), FRectifyBackward());
-  } else {
-    dEdxi.vec() += fx.vec().binaryExpr(dEdf.vec(), FRectifyBackward());
-  }
-#endif
-}
-
 size_t Hinge::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
@@ -1270,19 +962,6 @@ void Hinge::backward_impl(const vector<const Tensor*>& xs,
     (*dEdxi)(*pelement) -= d * tne;
   }
 #endif
-}
-
-void Identity::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.d = xs[0]->d;
-  fx.v = xs[0]->v;
-}
-
-void Identity::backward_impl(const vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const {
-  dEdxi.vec() += dEdf.vec();
 }
 
 void MaxPooling1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1718,71 +1397,6 @@ void MatrixMultiply::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-void CwiseQuotient::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 2);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("CwiseQuotient::forward not yet implemented for CUDA");
-#else
-  auto x1 = xs[0]->vec();
-  auto x2 = xs[1]->vec();
-  fx.vec() = x1.cwiseQuotient(x2);
-#endif
-}
-
-void CwiseQuotient::backward_impl(const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
-  assert(i < 2);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("CwiseQuotient::backward not yet implemented for CUDA");
-#else
-  if (i == 0) {
-    auto x2 = xs[1]->vec();
-    dEdxi.vec() += dEdf.vec().cwiseQuotient(x2);
-  } else { // i = 1
-    auto x1 = xs[0]->vec();
-    auto x2 = xs[1]->vec();
-    dEdxi.vec() -= dEdf.vec().cwiseQuotient(x2.cwiseProduct(x2)).cwiseProduct(x1);
-  }
-#endif
-}
-
-void CwiseMultiply::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 2);
-#if HAVE_CUDA
-  gpu::vcwise_product(fx.d.size(), xs[0]->v, xs[1]->v, fx.v);
-#else
-  auto x1 = xs[0]->vec();
-  auto x2 = xs[1]->vec();
-  fx.vec() = x1.cwiseProduct(x2);
-#endif
-}
-
-void CwiseMultiply::backward_impl(const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
-  assert(i < 2);
-  if (i == 0) {
-#if HAVE_CUDA
-    gpu::vcwise_product_backward(fx.d.size(), dEdf.v, xs[1]->v, dEdxi.v);
-#else
-    auto x2 = xs[1]->vec();
-    dEdxi.vec() += dEdf.vec().cwiseProduct(x2);
-#endif
-  } else {
-#if HAVE_CUDA
-    gpu::vcwise_product_backward(fx.d.size(), dEdf.v, xs[0]->v, dEdxi.v);
-#else
-    auto x1 = xs[0]->vec();
-    dEdxi.vec() += dEdf.vec().cwiseProduct(x1);
-#endif
-  }
-}
-
 void AffineTransform::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() % 2 == 1);
   if (xs.size() == 1) {
@@ -1886,51 +1500,6 @@ void AffineTransform::backward_impl(const vector<const Tensor*>& xs,
     }
 #endif
   }
-}
-
-void Negate::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-#if HAVE_CUDA
-  gpu::vnegate(fx.d.size(), xs[0]->v, fx.v);
-#else
-  auto x = xs[0]->vec();
-  fx.vec() = -x;
-#endif
-}
-
-void Negate::backward_impl(const vector<const Tensor*>& xs,
-                      const Tensor& fx,
-                      const Tensor& dEdf,
-                      unsigned i,
-                      Tensor& dEdxi) const {
-  assert(i == 0);
-#if HAVE_CUDA
-  gpu::vnegate_backward(fx.d.size(), dEdf.v, dEdxi.v);
-#else
-  dEdxi.vec() -= dEdf.vec();
-#endif
-}
-
-void Rectify::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-#if HAVE_CUDA
-  gpu::vrelu(fx.d.size(), xs[0]->v, fx.v);
-#else
-  auto x = xs[0]->vec();
-  fx.vec() = x.cwiseMax(0.f);
-#endif
-}
-
-void Rectify::backward_impl(const vector<const Tensor*>& xs,
-                         const Tensor& fx,
-                         const Tensor& dEdf,
-                         unsigned i,
-                         Tensor& dEdxi) const {
-#if HAVE_CUDA
-  gpu::vrelu_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
-#else
-  dEdxi.vec() += fx.vec().binaryExpr(dEdf.vec(), FRectifyBackward());
-#endif
 }
 
 void HuberDistance::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -2067,50 +1636,6 @@ void SquaredEuclideanDistance::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-void LogisticSigmoid::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-#if HAVE_CUDA
-  gpu::vlogistic(fx.d.size(), xs[0]->v, fx.v);
-#else
-  auto x = xs[0]->vec();
-  fx.vec() = x.unaryExpr(scalar_logistic_sigmoid_op<float>());
-#endif
-}
-
-void LogisticSigmoid::backward_impl(const vector<const Tensor*>& xs,
-                                 const Tensor& fx,
-                                 const Tensor& dEdf,
-                                 unsigned i,
-                                 Tensor& dEdxi) const {
-#if HAVE_CUDA
-  gpu::vlogistic_backward(dEdf.d.size(), fx.v, dEdf.v, dEdxi.v);
-#else
-  dEdxi.vec() += fx.vec().binaryExpr(dEdf.vec(), scalar_logistic_sigmoid_backward_op<float>());
-#endif
-}
-
-void SoftSign::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("SoftSign not yet implemented for CUDA");
-#else
-  auto x = xs[0]->vec();
-  fx.vec() = x.unaryExpr(FSoftSign());
-#endif
-}
-
-void SoftSign::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("SoftSign not yet implemented for CUDA");
-#else
-  dEdxi.vec() += fx.vec().binaryExpr(dEdf.vec(), FSoftSignBackward());
-#endif
-}
-
 void BinaryLogLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
   throw std::runtime_error("BinaryLogLoss not yet implemented for CUDA");
@@ -2138,43 +1663,395 @@ void BinaryLogLoss::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-string Zeroes::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "zeroes(" << dim << ')';
-  return s.str();
-}
-
-Dim Zeroes::dim_forward(const vector<Dim>& xs) const {
-  return dim;
-}
-
-void Zeroes::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 0);
-#if HAVE_CUDA
-  cudaMemsetAsync(fx.v, 0, dim.size() * sizeof(float));
-#else
-  memset(fx.v, 0, dim.size() * sizeof(float));
-#endif
-}
-
-void Zeroes::backward_impl(const vector<const Tensor*>& xs,
-                           const Tensor& fx,
-                           const Tensor& dEdf,
-                           unsigned i,
-                           Tensor& dEdxi) const {
-  throw std::runtime_error("Called backward() on an arity 0 node");
-}
-
 #endif // Finish CPU only functions
 
 // ===== Functions to be compiled on both CPU and GPU
 
-inline string print_vec(const vector<float> & flt) {
-  ostringstream oss;
-  if(flt.size()) oss << flt[0];
-  for(size_t i = 1; i < flt.size(); i++) oss << ' ' << flt[i];
-  return oss.str();
+size_t BlockDropout::aux_storage_size() const {
+  // we just need to remember whether this entire block is turned on (1.0) or off (0.0)
+  return 1 * sizeof(float);
 }
+
+template<class MyDevice>
+void BlockDropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  bernoulli_distribution distribution(1.0 - dropout_probability);
+  float block_multiplier = distribution(*rndeng)? 1.0 : 0.0;
+  block_multiplier = 
+    dropout_probability == 1.0? 0.0 : block_multiplier / (1.0 - dropout_probability);
+  if (dropout_probability > 1.0 || dropout_probability < 0.0) {
+    assert(false && "dropout probability must be in the range [0, 1]");
+  }
+  *(static_cast<float*>(aux_mem)) = block_multiplier;
+  fx.tvec() = xs[0]->tvec() * block_multiplier;
+}
+
+template<class MyDevice>
+void BlockDropout::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  float block_multiplier = *(static_cast<float*>(aux_mem));
+  dEdxi.tvec() += dEdf.tvec() * block_multiplier;
+}
+CNN_NODE_INST_DEV_IMPL(BlockDropout)
+
+template<class MyDevice>
+void ConstantMinusX::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(const_minus_op<float>(c));
+}
+
+template<class MyDevice>
+void ConstantMinusX::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec();
+}
+CNN_NODE_INST_DEV_IMPL(ConstantMinusX)
+
+template<class MyDevice>
+void ConstantPlusX::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(const_add_op<float>(c));
+}
+
+template<class MyDevice>
+void ConstantPlusX::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+}
+CNN_NODE_INST_DEV_IMPL(ConstantPlusX)
+
+template<class MyDevice>
+void ConstScalarMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec() * alpha;
+}
+
+template<class MyDevice>
+void ConstScalarMultiply::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i == 0);
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * alpha;
+}
+CNN_NODE_INST_DEV_IMPL(ConstScalarMultiply)
+
+template<class MyDevice>
+void Cube::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().cube();
+}
+
+template<class MyDevice>
+void Cube::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[0]->tvec().square() * 3.f;
+}
+CNN_NODE_INST_DEV_IMPL(Cube)
+
+template<class MyDevice>
+void CwiseQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec() / xs[1]->tvec();
+}
+
+template<class MyDevice>
+void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < 2);
+  if (i == 0) {
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() / xs[1]->tvec();
+  } else { // i = 1
+    dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec() / xs[1]->tvec().square() * xs[0]->tvec();
+  }
+}
+CNN_NODE_INST_DEV_IMPL(CwiseQuotient)
+
+template<class MyDevice>
+void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec();
+}
+
+template<class MyDevice>
+void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < 2);
+  if (i == 0) {
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1]->tvec();
+  } else {
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[0]->tvec();
+  }
+}
+CNN_NODE_INST_DEV_IMPL(CwiseMultiply)
+
+size_t Dropout::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
+template<class MyDevice>
+void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Tensor m(dim, (float*)aux_mem, fx.device);
+  TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec() * m.tvec();
+}
+
+template<class MyDevice>
+void Dropout::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  Tensor m(dim, (float*)aux_mem, fx.device);
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * m.tvec();
+}
+CNN_NODE_INST_DEV_IMPL(Dropout)
+
+template<class MyDevice>
+void Erf::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().erf();
+}
+
+template<class MyDevice>
+void Erf::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), scalar_erf_backward_op<float>());
+}
+CNN_NODE_INST_DEV_IMPL(Erf)
+
+template<class MyDevice>
+void Exp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().exp();
+}
+
+template<class MyDevice>
+void Exp::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * fx.tvec();
+}
+CNN_NODE_INST_DEV_IMPL(Exp)
+
+size_t GaussianNoise::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
+template<class MyDevice>
+void GaussianNoise::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Tensor m(dim, (float*)aux_mem, fx.device);
+  TensorTools::RandomizeNormal(0, stddev, m);
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec() + m.tvec();
+}
+
+template<class MyDevice>
+void GaussianNoise::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+}
+CNN_NODE_INST_DEV_IMPL(GaussianNoise)
+
+template<class MyDevice>
+void Identity::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.d = xs[0]->d;
+  fx.v = xs[0]->v;
+}
+
+template<class MyDevice>
+void Identity::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec() += dEdf.tvec();
+}
+CNN_NODE_INST_DEV_IMPL(Identity)
+
+template<class MyDevice>
+void Log::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().log();
+}
+
+template<class MyDevice>
+void Log::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() / xs[0]->tvec();
+}
+CNN_NODE_INST_DEV_IMPL(Log)
+
+template<class MyDevice>
+void LogGamma::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().lgamma();
+}
+
+template<class MyDevice>
+void LogGamma::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FLogGammaBackward());
+}
+CNN_NODE_INST_DEV_IMPL(LogGamma)
+
+template<class MyDevice>
+void LogisticSigmoid::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(scalar_logistic_sigmoid_op<float>());
+}
+
+template<class MyDevice>
+void LogisticSigmoid::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec() += fx.tvec().binaryExpr(dEdf.tvec(), scalar_logistic_sigmoid_backward_op<float>());
+}
+CNN_NODE_INST_DEV_IMPL(LogisticSigmoid)
+
+template<class MyDevice>
+void Negate::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  fx.tvec().device(*dev.edevice) = -xs[0]->tvec();
+}
+
+template<class MyDevice>
+void Negate::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i == 0);
+  dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec();
+}
+CNN_NODE_INST_DEV_IMPL(Negate)
+
+template<class MyDevice>
+void PairwiseRankLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().binaryExpr(xs[1]->tvec(), FPairwiseRankLoss(margin));
+}
+
+template<class MyDevice>
+void PairwiseRankLoss::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  if (i == 0) {
+    dEdxi.tvec().device(*dev.edevice) -= fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
+  } else {
+    dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
+  }
+}
+CNN_NODE_INST_DEV_IMPL(PairwiseRankLoss)
+
+template<class MyDevice>
+void Rectify::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().cwiseMax(0.f);
+}
+
+template<class MyDevice>
+void Rectify::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
+}
+CNN_NODE_INST_DEV_IMPL(Rectify)
+
+template<class MyDevice>
+void SoftSign::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FSoftSign());
+}
+
+template<class MyDevice>
+void SoftSign::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FSoftSignBackward());
+}
+CNN_NODE_INST_DEV_IMPL(SoftSign)
+
+template<class MyDevice>
+void Square::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().square();
+}
+
+template<class MyDevice>
+void Square::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[0]->tvec() * 2.f;
+}
+CNN_NODE_INST_DEV_IMPL(Square)
+
+template<class MyDevice>
+void Sqrt::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().sqrt();
+}
+
+template<class MyDevice>
+void Sqrt::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FSqrtBackward());
+}
+CNN_NODE_INST_DEV_IMPL(Sqrt)
 
 template<class MyDevice>
 void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -2191,5 +2068,26 @@ void Tanh::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
 }
 CNN_NODE_INST_DEV_IMPL(Tanh)
+
+template<class MyDevice>
+void Zeroes::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+#ifdef __CUDACC__
+  cudaMemsetAsync(fx.v, 0, dim.size() * sizeof(float));
+#else
+  memset(fx.v, 0, dim.size() * sizeof(float));
+#endif
+}
+
+template<class MyDevice>
+void Zeroes::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  throw std::runtime_error("Called backward() on an arity 0 node");
+}
+CNN_NODE_INST_DEV_IMPL(Zeroes)
 
 } // namespace cnn

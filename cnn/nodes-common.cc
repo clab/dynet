@@ -952,4 +952,14 @@ Dim BinaryLogLoss::dim_forward(const vector<Dim>& xs) const {
   return Dim({1}, max(xs[0].bd, xs[1].bd));
 }
 
+string Zeroes::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "zeroes(" << dim << ')';
+  return s.str();
+}
+
+Dim Zeroes::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
 } // namespace cnn
