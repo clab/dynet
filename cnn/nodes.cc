@@ -308,38 +308,6 @@ void SelectCols::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-void Pow::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 2);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Pow not yet implemented for CUDA");
-#else
-  auto x1 = **xs[0];
-  auto x2 = xs[1]->v[0];
-  (*fx).array() = x1.array().pow(x2);
-#endif
-}
-
-void Pow::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-  assert(xs.size() == 2);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Pow not yet implemented for CUDA");
-#else
-  auto x1 = **xs[0];
-  auto x2 = xs[1]->v[0];
-  if (i == 0) {
-    *dEdxi += (x2 * x1.array().pow(x2 - 1).matrix()).cwiseProduct(*dEdf);
-  } else {
-    // y = a^x
-    // dy/dx = a^x * log(a)
-    (*dEdxi).noalias() += (*fx).cwiseProduct(x1.array().log().matrix()).transpose() * (*dEdf);
-  }
-#endif
-}
-
 void TraceOfProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
   throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
@@ -362,26 +330,6 @@ void TraceOfProduct::backward_impl(const vector<const Tensor*>& xs,
   const float d = dEdf.v[0];
   auto xother = **xs[1 - i];
   *dEdxi += d * xother;
-#endif
-}
-
-void DotProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("DotProduct not yet implemented for CUDA");
-#else
-  *fx = (**xs[0]).transpose() * (**xs[1]);
-#endif
-}
-
-void DotProduct::backward_impl(const vector<const Tensor*>& xs,
-                          const Tensor& fx,
-                          const Tensor& dEdf,
-                          unsigned i,
-                          Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("DotProduct not yet implemented for CUDA");
-#else
-  (*dEdxi) += (dEdf.v[0]) * (**xs[1 - i]);
 #endif
 }
 
@@ -1633,6 +1581,20 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
 }
 CNN_NODE_INST_DEV_IMPL(CwiseMultiply)
 
+
+void DotProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() * xs[1]->tvec()).sum();
+}
+
+void DotProduct::backward_impl(const vector<const Tensor*>& xs,
+                          const Tensor& fx,
+                          const Tensor& dEdf,
+                          unsigned i,
+                          Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += xs[1 - i]->tvec() * as_scalar(dEdf);
+}
+CNN_NODE_INST_DEV_IMPL(DotProduct)
+
 template<class MyDevice>
 void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem, fx.device);
@@ -1889,6 +1851,31 @@ void PairwiseRankLoss::backward_dev_impl(const MyDevice & dev,
   }
 }
 CNN_NODE_INST_DEV_IMPL(PairwiseRankLoss)
+
+template<class MyDevice>
+void Pow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 2);
+  fx->tvec().device(*dev.edevice) = xs[0]->tvec().pow(as_scalar(*xs[0]));
+}
+
+template<class MyDevice>
+void Pow::backward_dev_impl(const MyDevice & dev,
+                            const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  assert(xs.size() == 2);
+  real x2 = as_scalar(*xs[1]);
+  if (i == 0) {
+    dEdxi.tvec().device(*dev.edevice) += (xs[0]->tvec().pow(x2 - 1) * x2) * dEdf.tvec();
+  } else {
+    // y = a^x
+    // dy/dx = a^x * log(a)
+    dEdxi.t<0>().device(*dev.edevice) += (fx->tvec() * xs[0]->tvec().log() * dEdf.tvec()).sum();
+  }
+}
+CNN_NODE_INST_DEV_IMPL(Pow)
 
 template<class MyDevice>
 void Rectify::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
