@@ -133,14 +133,7 @@ struct MatrixInverse : public Node {
 struct SelectRows : public Node {
   explicit SelectRows(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& r) : Node(a), rows(r), prows(&rows) {}
   explicit SelectRows(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pr) : Node(a), prows(pr) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   std::vector<unsigned> rows;
   const std::vector<unsigned>* prows;
 };
@@ -150,14 +143,7 @@ struct SelectRows : public Node {
 struct SelectCols : public Node {
   explicit SelectCols(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& c) : Node(a), cols(c), pcols(&cols) {}
   explicit SelectCols(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pc) : Node(a), pcols(pc) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   std::vector<unsigned> cols;
   const std::vector<unsigned>* pcols;
 };

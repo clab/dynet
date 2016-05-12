@@ -248,66 +248,6 @@ void MatrixInverse::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-void SelectRows::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("SelectRows not yet implemented for CUDA");
-#else
-  auto x = **xs[0];
-  auto y = *fx;
-  auto& rm = *prows;
-  for (unsigned i = 0; i < rm.size(); ++i)
-    y.row(i) = x.row(rm[i]);
-#endif
-}
-
-void SelectRows::backward_impl(const vector<const Tensor*>& xs,
-                               const Tensor& fx,
-                               const Tensor& dEdf,
-                               unsigned i,
-                               Tensor& dEdxi) const {
-  assert(xs.size() == 1);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("SelectRows not yet implemented for CUDA");
-#else
-  auto dEdx = *dEdxi;
-  auto d = *dEdf;
-  auto& rm = *prows;
-  for (unsigned i = 0; i < rm.size(); ++i)
-    dEdx.row(rm[i]) += d.row(i);
-#endif
-}
-
-void SelectCols::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("SelectCols not yet implemented for CUDA");
-#else
-  auto x = **xs[0];
-  auto y = *fx;
-  auto& cm = *pcols;
-  for (unsigned i = 0; i < cm.size(); ++i)
-    y.col(i) = x.col(cm[i]);
-#endif
-}
-
-void SelectCols::backward_impl(const vector<const Tensor*>& xs,
-                               const Tensor& fx,
-                               const Tensor& dEdf,
-                               unsigned i,
-                               Tensor& dEdxi) const {
-  assert(xs.size() == 1);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("SelectCols not yet implemented for CUDA");
-#else
-  auto dEdx = *dEdxi;
-  auto d = *dEdf;
-  auto& cm = *pcols;
-  for (unsigned i = 0; i < cm.size(); ++i)
-    dEdx.col(cm[i]) += d.col(i);
-#endif
-}
-
 void TraceOfProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
   throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
@@ -1894,6 +1834,54 @@ void Rectify::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
 }
 CNN_NODE_INST_DEV_IMPL(Rectify)
+
+template<class MyDevice>
+void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  auto& rm = *pcols;
+  for (unsigned i = 0; i < rm.size(); ++i)
+    fx.t<2>().chip<1>(i) = xs[0]->t<2>().chip<1>(rm[i]);
+    // fx.t<2>().device(*dev.edevice).chip<1>(i) = xs[0]->t<2>().chip<1>(rm[i]);
+}
+
+template<class MyDevice>
+void SelectCols::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(xs.size() == 1);
+  auto& rm = *pcols;
+  for (unsigned i = 0; i < rm.size(); ++i)
+    dEdxi.t<2>().chip<1>(rm[i]) = dEdf.t<2>().chip<1>(i);
+    // dEdxi.t<2>().device(*dev.edevice).chip<0>(rm[i]) = dEdf.t<2>().chip<0>(i);
+}
+CNN_NODE_INST_DEV_IMPL(SelectCols)
+
+template<class MyDevice>
+void SelectRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  auto& rm = *prows;
+  for (unsigned i = 0; i < rm.size(); ++i)
+    fx.t<2>().chip<0>(i) = xs[0]->t<2>().chip<0>(rm[i]);
+    // fx.t<2>().device(*dev.edevice).chip<0>(i) = xs[0]->t<2>().chip<0>(rm[i]);
+}
+
+template<class MyDevice>
+void SelectRows::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(xs.size() == 1);
+  auto& rm = *prows;
+  for (unsigned i = 0; i < rm.size(); ++i)
+    dEdxi.t<2>().chip<0>(rm[i]) = dEdf.t<2>().chip<0>(i);
+    // dEdxi.t<2>().device(*dev.edevice).chip<0>(rm[i]) = dEdf.t<2>().chip<0>(i);
+}
+CNN_NODE_INST_DEV_IMPL(SelectRows)
 
 template<class MyDevice>
 void SoftSign::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
