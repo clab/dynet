@@ -339,6 +339,8 @@ cdef class ComputationGraph:
         return _inputExpression(self, v)
     cdef inputVector(self, int dim):
         return _vecInputExpression(self, vector[float](dim))
+    cdef inputVectorLiteral(self, vector[float] v):
+        return _vecInputExpression(self, v)
     cdef inputMatrix(self, int d1, int d2):
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
@@ -515,6 +517,9 @@ cdef class _vecInputExpression(Expression):
 
 def vecInput(int dim):
     return _cg.inputVector(dim)
+
+def inputVector(vector[float] v):
+    return _cg.inputVectorLiteral(v)
 
 def matInput(int d1, int d2):
     return _cg.inputMatrix(d1, d2)
