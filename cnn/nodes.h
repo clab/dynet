@@ -222,15 +222,8 @@ struct TraceOfProduct : public Node {
 // y = alpha * x_1
 struct ConstScalarMultiply : public Node {
   explicit ConstScalarMultiply(const std::initializer_list<VariableIndex>& a, float alpha) : Node(a), alpha(alpha) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                const Tensor& fx,
-                const Tensor& dEdf,
-                unsigned i,
-                Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   float alpha;
 };
 
@@ -342,47 +335,26 @@ struct InnerProduct3D_1D_1D : public Node {
 // y = x + n
 struct GaussianNoise : public Node {
   explicit GaussianNoise(const std::initializer_list<VariableIndex>& a, real stddev) : Node(a), stddev(stddev) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   real stddev;
 };
 
 // y = dropout(x,p) where p specifies the dropout probability
 struct Dropout : public Node {
   explicit Dropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                const Tensor& fx,
-                const Tensor& dEdf,
-                unsigned i,
-                Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   real p;
 };
 
 // y = block_dropout(x,p) where p specifies the probability for dropping-out the entire block
 struct BlockDropout : public Node {
   explicit BlockDropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), dropout_probability(p) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   size_t aux_storage_size() const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                const Tensor& fx,
-                const Tensor& dEdf,
-                unsigned i,
-                Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   real dropout_probability;
 };
 
@@ -390,15 +362,8 @@ struct BlockDropout : public Node {
 // (c is a vector or matrix of the constant, usually 1, but can be configured)
 struct ConstantPlusX : public Node {
   explicit ConstantPlusX(const std::initializer_list<VariableIndex>& a, real o) : Node(a), c(o) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   real c;
 };
 
@@ -406,44 +371,23 @@ struct ConstantPlusX : public Node {
 // (c is a vector or matrix of the constant, usually 1, but can be configured)
 struct ConstantMinusX : public Node {
   explicit ConstantMinusX(const std::initializer_list<VariableIndex>& a, real o) : Node(a), c(o) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   real c;
 };
 
 // y = sqrt x_1
 struct Sqrt : public Node {
   explicit Sqrt(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = erf x_1
 struct Erf : public Node {
   explicit Erf(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = tanh x_1
@@ -456,71 +400,36 @@ struct Tanh : public Node {
 // y = x_1 \odot x_1
 struct Square : public Node {
   explicit Square(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = x_1 \odot x_1 \odot x_1
 struct Cube : public Node {
   explicit Cube(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = exp x_1
 struct Exp : public Node {
   explicit Exp(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = lgamma x_1
 struct LogGamma : public Node {
   explicit LogGamma(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = log x_1  (base e, i.e., natural log)
 struct Log : public Node {
   explicit Log(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // concatenate rows
@@ -559,15 +468,8 @@ struct ConcatenateColumns : public Node {
 // y = max(0, margin - x_1 + x_2)
 struct PairwiseRankLoss : public Node {
   explicit PairwiseRankLoss(const std::initializer_list<VariableIndex>& a, real m = 1.0) : Node(a), margin(m) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   real margin;
 };
 
@@ -593,15 +495,8 @@ struct Hinge : public Node {
 // y = x_1
 struct Identity : public Node {
   explicit Identity(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // hyperparameter: width > 1
@@ -639,29 +534,15 @@ struct MatrixMultiply : public Node {
 // y = x_1 \cdot x_2  (Hadamard product)
 struct CwiseMultiply : public Node {
   explicit CwiseMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = x_1 / x_2  (cwiseQuotient)
 struct CwiseQuotient : public Node {
   explicit CwiseQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                const Tensor& fx,
-                const Tensor& dEdf,
-                unsigned i,
-                Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
@@ -681,29 +562,15 @@ struct AffineTransform : public Node {
 // y = -x_1
 struct Negate : public Node {
   explicit Negate(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  virtual bool supports_multibatch() const override { return true; } 
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = max(0,x)
 struct Rectify : public Node {
   explicit Rectify(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // you could do this with LogisticSigmoid, Softmax or a variety of other
@@ -875,29 +742,15 @@ struct L1Distance : public Node {
 // y = \sigma(x_1)
 struct LogisticSigmoid : public Node {
   explicit LogisticSigmoid(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = x / (1 + |x|)
 struct SoftSign : public Node {
   explicit SoftSign(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // z = \sum_j \exp (x_i)_j
@@ -1013,14 +866,7 @@ struct PickRange : public Node {
 // represents a simple vector of 0s
 struct Zeroes : public Node {
   explicit Zeroes(const Dim& d) : dim(d) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   Dim dim;
 };
 
