@@ -726,7 +726,7 @@ cpdef Expression concatenate(list xs):
 
 
 cpdef Expression affine_transform(list exprs):
-    assert xs, 'List input to affine_transform must not be empty.'
+    assert exprs, 'List input to affine_transform must not be empty.'
     cdef Expression e
     cdef vector[CExpression] ves
     for e in exprs:
