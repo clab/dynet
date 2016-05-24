@@ -134,7 +134,7 @@ make -j 4
 
 To build a GPU version on a computer with CUDA:
 ```bash
-cmake .. -DBACKEND=cuda -DCUDA_TOOLKIT_ROOT_DIR=/use/local/cuda-7.5/
+cmake .. -DBACKEND=cuda -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.5/
 make -j 4
 ```
 
