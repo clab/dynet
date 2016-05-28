@@ -536,6 +536,20 @@ struct Hinge : public Node {
   real margin;
 };
 
+// y = x_1, but dy/dx is set to 0
+struct NoBackprop : public Node {
+  explicit NoBackprop(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  std::string as_string(const std::vector<std::string>& arg_names) const override;
+  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  virtual bool supports_multibatch() const override { return true; }
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
+  void backward_impl(const std::vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const override;
+};
+
 // y = x_1
 struct Identity : public Node {
   explicit Identity(const std::initializer_list<VariableIndex>& a) : Node(a) {}

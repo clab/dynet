@@ -1287,6 +1287,19 @@ void Identity::backward_impl(const vector<const Tensor*>& xs,
   dEdxi.vec() += dEdf.vec();
 }
 
+void NoBackprop::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.d = xs[0]->d;
+  fx.v = xs[0]->v;
+}
+
+void NoBackprop::backward_impl(const vector<const Tensor*>& xs,
+                  const Tensor& fx,
+                  const Tensor& dEdf,
+                  unsigned i,
+                  Tensor& dEdxi) const {
+  // no op
+}
+
 void MaxPooling1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   cerr << "FIX IMPL5\n"; abort();
 #if 0
