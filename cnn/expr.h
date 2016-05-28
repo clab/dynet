@@ -33,6 +33,10 @@ Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vec
 Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
 Expression zeroes(ComputationGraph& g, const Dim& d);
 
+// special functions for controlling flow of information in graph
+Expression nobackprop(const Expression& x);
+
+// operators
 Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);
 Expression operator+(const Expression& x, real y);
