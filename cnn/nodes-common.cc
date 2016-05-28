@@ -606,6 +606,17 @@ Dim Identity::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string NoBackprop::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "nobackprop(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim NoBackprop::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}
+
 string Softmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "softmax(" << arg_names[0] << ')';
