@@ -181,16 +181,11 @@ struct FSoftmaxBackward {
   float off_diag_sum;
 };
 
-struct FLogGammaBackward {
-  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
-#ifndef HAVE_CUDA
-    return boost::math::digamma(x) * d;
-#else
-    assert(false); // Not supported on GPUs?
-    return 0;
-#endif
-  }
-};
+// struct FLogGammaBackward {
+//   CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+//     return boost::math::digamma(x) * d;
+//   }
+// };
 
 struct FNegLogSoftmaxBackward {
   FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}
