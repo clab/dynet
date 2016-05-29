@@ -35,6 +35,34 @@
                 const Tensor& dEdf, \
                 unsigned i, \
                 Tensor& dEdxi) const;
+
+#define CNN_NODE_DEFINE_NOGPU_IMPL() \
+  std::string as_string(const std::vector<std::string>& arg_names) const override; \
+  Dim dim_forward(const std::vector<Dim>& xs) const override; \
+  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override { \
+    assert(fx.device); \
+    if(fx.device->type == DeviceType::CPU) { forward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx); } \
+    else { throw std::runtime_error("No GPU implementation yet"); } \
+  } \
+  template <class MyDevice> \
+  void forward_dev_impl(const MyDevice & dev, const std::vector<const Tensor*>& xs, Tensor& fx) const; \
+  void backward_impl(const std::vector<const Tensor*>& xs, \
+                const Tensor& fx, \
+                const Tensor& dEdf, \
+                unsigned i, \
+                Tensor& dEdxi) const override { \
+    assert(fx.device); \
+    if(fx.device->type == DeviceType::CPU) { backward_dev_impl<cnn::Device_CPU>(*(cnn::Device_CPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
+    else { throw std::runtime_error("No GPU implementation yet"); } \
+  } \
+  template <class MyDevice> \
+  void backward_dev_impl( \
+                const MyDevice & dev, \
+                const std::vector<const Tensor*>& xs, \
+                const Tensor& fx, \
+                const Tensor& dEdf, \
+                unsigned i, \
+                Tensor& dEdxi) const;
 #else
 #define CNN_NODE_DEFINE_DEV_IMPL() \
   std::string as_string(const std::vector<std::string>& arg_names) const override; \
@@ -63,6 +91,7 @@
                 const Tensor& dEdf, \
                 unsigned i, \
                 Tensor& dEdxi) const;
+#define CNN_NODE_DEFINE_NOGPU_IMPL() CNN_NODE_DEFINE_DEV_IMPL()
 #endif
 
 namespace cnn {
@@ -160,7 +189,8 @@ struct Min : public Node {
   explicit Min(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
-  CNN_NODE_DEFINE_DEV_IMPL()
+  // TODO: GPU implementations confirmed to break, debug
+  CNN_NODE_DEFINE_NOGPU_IMPL()
 };
 
 // y = max{x_1, x_2}
@@ -168,7 +198,8 @@ struct Max : public Node {
   template <typename T> explicit Max(const T& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
-  CNN_NODE_DEFINE_DEV_IMPL()
+  // TODO: GPU implementations confirmed to break, debug
+  CNN_NODE_DEFINE_NOGPU_IMPL()
 };
 
 // y = Tr(x_1 * x_2^T)
@@ -295,7 +326,8 @@ struct GaussianNoise : public Node {
   explicit GaussianNoise(const std::initializer_list<VariableIndex>& a, real stddev) : Node(a), stddev(stddev) {}
   virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
-  CNN_NODE_DEFINE_DEV_IMPL()
+  // TODO: GPU implementations confirmed to break, debug
+  CNN_NODE_DEFINE_NOGPU_IMPL()
   real stddev;
 };
 
@@ -304,7 +336,8 @@ struct Dropout : public Node {
   explicit Dropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
   size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
-  CNN_NODE_DEFINE_DEV_IMPL()
+  // TODO: GPU implementations confirmed to break, debug
+  CNN_NODE_DEFINE_NOGPU_IMPL()
   real p;
 };
 
@@ -312,7 +345,8 @@ struct Dropout : public Node {
 struct BlockDropout : public Node {
   explicit BlockDropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), dropout_probability(p) {}
   size_t aux_storage_size() const override;
-  CNN_NODE_DEFINE_DEV_IMPL()
+  // TODO: GPU implementations probably will break
+  CNN_NODE_DEFINE_NOGPU_IMPL()
   real dropout_probability;
 };
 
