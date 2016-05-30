@@ -99,14 +99,7 @@ namespace cnn {
 // y = M + v (broadcasting over columns)
 struct AddVectorToAllColumns : public Node {
   explicit AddVectorToAllColumns(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = L_sparsemax(x_0; q)
@@ -211,28 +204,14 @@ struct DotProduct : public Node {
 // if you have a matrix as input, the runtime is O(mn) - try to avoid using this
 struct Transpose : public Node {
   explicit Transpose(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
 };
 
 // y = reshape(x_1, --> to)
 struct Reshape : public Node {
   explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& to) : Node(a), to(to) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   Dim to;
 };
 
@@ -241,14 +220,7 @@ struct Reshape : public Node {
 // if you want to reweight the columns and then sum them, use MatrixMultiply
 struct SumColumns : public Node {
   template <typename T> explicit SumColumns(const T& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                const Tensor& fx,
-                const Tensor& dEdf,
-                unsigned i,
-                Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y_i = \sum_{j=1}^n x_1:{i-1+j}

@@ -74,30 +74,6 @@ namespace cnn {
 // ======= Functions to be compiled on only CPU
 #ifndef __CUDACC__
 
-void AddVectorToAllColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-    throw std::runtime_error("AddVectorToAllColumns::forward not implemented for CUDA");
-#else
-  auto y = *fx;
-  auto x = **xs[0];
-  auto b = **xs[1];
-  y = x.colwise() + b.col(0);
-#endif
-}
-
-void AddVectorToAllColumns::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-  assert(i < 2);
-  if (i == 0) { // x
-    (*dEdxi) += (*dEdf);
-  } else { // bias
-    (*dEdxi).col(0) += (*dEdf).rowwise().sum();
-  }
-}
-
 void TraceOfProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
   throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
@@ -121,81 +97,6 @@ void TraceOfProduct::backward_impl(const vector<const Tensor*>& xs,
   auto xother = **xs[1 - i];
   *dEdxi += d * xother;
 #endif
-}
-
-void Transpose::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  if (dim.rows() == 1 || dim.cols() == 1) {
-    fx.v = xs[0]->v;
-  } else {
-#if HAVE_CUDA
-    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
-      CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
-                               kSCALAR_ONE, xs[0]->batch_ptr(b), xs[0]->d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.batch_ptr(b), fx.d.rows()));
-#else
-    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
-      fx.batch_matrix(b).noalias() = xs[0]->batch_matrix(b).transpose();
-#endif
-  }
-}
-
-void Transpose::backward_impl(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i,
-                            Tensor& dEdxi) const {
-#if HAVE_CUDA
-  for(unsigned b = 0; b < xs[0]->d.bd; ++b)
-    CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
-                             kSCALAR_ONE, dEdf.batch_ptr(b), dEdf.d.rows(), kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows(), dEdxi.batch_ptr(b), dEdxi.d.rows()));
-#else
-  for(unsigned b = 0; b < xs[0]->d.bd; ++b)
-    dEdxi.batch_matrix(b) += dEdf.batch_matrix(b).transpose();
-#endif
-}
-
-void Reshape::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  // just point to the input memory and change dimensions
-  // dimensions are handled by forward_dim
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Reshape not yet implemented for CUDA");
-#else
-  fx.v = xs[0]->v;
-#endif
-}
-
-void Reshape::backward_impl(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i,
-                            Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Reshape not yet implemented for CUDA");
-#else
-  const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device);
-  dEdxi.vec() += reshaped.vec();
-#endif
-}
-
-void SumColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  auto x = **xs[0];
-  auto y = *fx;
-  if (xs.size() == 1) {
-    y = x.rowwise().sum();
-  } else {
-    throw std::invalid_argument("two inputs in SumColumns::forward!");
-  }
-}
-
-void SumColumns::backward_impl(const vector<const Tensor*>& xs,
-                          const Tensor& fx,
-                          const Tensor& dEdf,
-                          unsigned i,
-                          Tensor& dEdxi) const {
-  auto out = *dEdxi;
-  // this uses Eigen's broadcast capability
-  // the following doesn't compile, so i use the next line
-  //out.colwise() += *dEdf;
-  out.colwise() += (*dEdf).col(0);
 }
 
 void KMHNGram::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -400,6 +301,25 @@ void LogDet::backward_impl(const vector<const Tensor*>& xs,
                      Tensor& dEdxi) const {
   auto trans = (**xs[0]).transpose();
   (*dEdxi) += (dEdf.v[0]) * trans.inverse();
+}
+
+void Average::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  auto res = fx.vec();
+  const unsigned remainder = num_args % 4;
+  switch (remainder) {
+    case 0: res.setZero(); break;
+    case 1: res = xs[0]->vec(); break;
+    case 2: res = xs[0]->vec() + xs[1]->vec(); break;
+    case 3: res = xs[0]->vec() + xs[1]->vec() + xs[2]->vec(); break;
+  }
+  for (unsigned i = remainder; i < num_args; i += 4)
+    res += xs[i]->vec() + xs[i+1]->vec() + xs[i+2]->vec() + xs[i+3]->vec();
+  res /= num_args;
 }
 
 void Average::backward_impl(const vector<const Tensor*>& xs,
@@ -783,6 +703,32 @@ inline void CUDAMatrixMultiply(const Tensor& l, const Tensor& r, Tensor& y, cons
   }
 }
 #endif
+
+template<class MyDevice>
+void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  array<ptrdiff_t, 2> broadcasts;
+  broadcasts[0] = 1;
+  broadcasts[1] = xs[0]->d[1];
+  fx.t<2>().device(*dev.edevice) = xs[0]->t<2>() + xs[1]->t<2>().broadcast(broadcasts);
+}
+
+template<class MyDevice>
+void AddVectorToAllColumns::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < 2);
+  if (i == 0) { // x
+    dEdxi.tvec() += dEdf.tvec();
+  } else { // bias
+    for(size_t i = 0; i < xs[0]->d[1]; i++)
+      dEdxi.t<1>() += dEdf.t<2>().chip<1>(i);
+    // TODO: This is not great. Can we use broadcasting similar to SumColumns?
+  }
+}  
+CNN_NODE_INST_DEV_IMPL(AddVectorToAllColumns)
 
 // Affine transform uses different impleentations for CPU and GPU because this is 
 // much faster than using Eigen's tensor contractions (as of the writing)
@@ -1609,6 +1555,25 @@ void Rectify::backward_dev_impl(const MyDevice & dev,
 CNN_NODE_INST_DEV_IMPL(Rectify)
 
 template<class MyDevice>
+void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // just point to the input memory and change dimensions
+  // dimensions are handled by forward_dim
+  fx.v = xs[0]->v;
+}
+
+template<class MyDevice>
+void Reshape::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device);
+  dEdxi.tvec() += reshaped.tvec();
+}
+CNN_NODE_INST_DEV_IMPL(Reshape)
+
+template<class MyDevice>
 void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto& rm = *pcols;
@@ -1990,24 +1955,31 @@ void SumBatches::backward_dev_impl(const MyDevice & dev,
 }
 CNN_NODE_INST_DEV_IMPL(SumBatches)
 
-void Average::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  const unsigned num_args = xs.size();
-  if (num_args == 1) {
-    fx.v = xs[0]->v;
-    return;
-  }
-  auto res = fx.vec();
-  const unsigned remainder = num_args % 4;
-  switch (remainder) {
-    case 0: res.setZero(); break;
-    case 1: res = xs[0]->vec(); break;
-    case 2: res = xs[0]->vec() + xs[1]->vec(); break;
-    case 3: res = xs[0]->vec() + xs[1]->vec() + xs[2]->vec(); break;
-  }
-  for (unsigned i = remainder; i < num_args; i += 4)
-    res += xs[i]->vec() + xs[i+1]->vec() + xs[i+2]->vec() + xs[i+3]->vec();
-  res /= num_args;
+template<class MyDevice>
+void SumColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  array<ptrdiff_t, 1> reduction_axis;
+  reduction_axis[0] = 1;
+  fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().sum(reduction_axis);
 }
+
+template<class MyDevice>
+void SumColumns::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  auto out = *dEdxi;
+  for(size_t i = 0; i < xs[0]->d[1]; i++)
+    dEdxi.t<1>() += dEdf.t<2>().chip<1>(i);
+  // TODO: This is not great. Can we use broadcasting similar to the following?
+  // array<ptrdiff_t, 2> broadcasts;
+  // broadcasts[0] = 1;
+  // broadcasts[1] = xs[0]->d[1];
+  // dEdxi.t<2>().broadcast(broadcasts) += dEdf.t<2>();
+}
+CNN_NODE_INST_DEV_IMPL(SumColumns)
 
 template<class MyDevice>
 void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -2024,6 +1996,40 @@ void Tanh::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
 }
 CNN_NODE_INST_DEV_IMPL(Tanh)
+
+template<class MyDevice>
+void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (dim.rows() == 1 || dim.cols() == 1) {
+    fx.v = xs[0]->v;
+  } else {
+#if HAVE_CUDA
+    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
+      CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
+                               kSCALAR_ONE, xs[0]->batch_ptr(b), xs[0]->d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.batch_ptr(b), fx.d.rows()));
+#else
+    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
+      fx.batch_matrix(b).noalias() = xs[0]->batch_matrix(b).transpose();
+#endif
+  }
+}
+
+template<class MyDevice>
+void Transpose::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+#if HAVE_CUDA
+  for(unsigned b = 0; b < xs[0]->d.bd; ++b)
+    CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
+                             kSCALAR_ONE, dEdf.batch_ptr(b), dEdf.d.rows(), kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows(), dEdxi.batch_ptr(b), dEdxi.d.rows()));
+#else
+  for(unsigned b = 0; b < xs[0]->d.bd; ++b)
+    dEdxi.batch_matrix(b) += dEdf.batch_matrix(b).transpose();
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(Transpose)
 
 template<class MyDevice>
 void Zeroes::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {

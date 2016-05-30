@@ -193,28 +193,40 @@ template<> inline const Eigen::TensorMap<Eigen::Tensor<float,1>> Tensor::t<1>() 
   return Eigen::TensorMap<Eigen::Tensor<float,1>>(v, (int)d[0]);
 }
 template<> inline Eigen::TensorMap<Eigen::Tensor<float,2>> Tensor::t<2>() {
-  assert(d.ndims() == 2);
-  return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, (int)d[0], (int)d[1]);
+  assert(d.ndims() <= 2);
+  if(d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, (int)d[0], (int)d[1]);
+  else               return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, (int)d[0], (int)1);
 }
 template<> inline const Eigen::TensorMap<Eigen::Tensor<float,2>> Tensor::t<2>() const {
-  assert(d.ndims() == 2);
-  return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, (int)d[0], (int)d[1]);
+  assert(d.ndims() <= 2);
+  if(d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, (int)d[0], (int)d[1]);
+  else               return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, (int)d[0], (int)1);
 }
 template<> inline Eigen::TensorMap<Eigen::Tensor<float,3>> Tensor::t<3>() {
-  assert(d.ndims() == 3);
-  return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)d[1], (int)d[2]);
+  assert(d.ndims() <= 3);
+  if(d.ndims() == 3)      return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)d[1], (int)d[2]);
+  else if(d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)d[1], (int)1);
+  else                    return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)1, (int)1);
 }
 template<> inline const Eigen::TensorMap<Eigen::Tensor<float,3>> Tensor::t<3>() const {
-  assert(d.ndims() == 3);
-  return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)d[1], (int)d[2]);
+  assert(d.ndims() <= 3);
+  if(d.ndims() == 3)      return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)d[1], (int)d[2]);
+  else if(d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)d[1], (int)1);
+  else                    return Eigen::TensorMap<Eigen::Tensor<float,3>>(v, (int)d[0], (int)1, (int)1);
 }
 template<> inline Eigen::TensorMap<Eigen::Tensor<float,4>> Tensor::t<4>() {
-  assert(d.ndims() == 4);
-  return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3]);
+  assert(d.ndims() <= 4);
+  if(d.ndims() == 4)      return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3]);
+  else if(d.ndims() == 3) return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)1);
+  else if(d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)1, (int)1);
+  else                    return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)1, (int)1, (int)1);
 }
 template<> inline const Eigen::TensorMap<Eigen::Tensor<float,4>> Tensor::t<4>() const {
-  assert(d.ndims() == 4);
-  return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3]);
+  assert(d.ndims() <= 4);
+  if(d.ndims() == 4)      return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3]);
+  else if(d.ndims() == 3) return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)1);
+  else if(d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)d[1], (int)1, (int)1);
+  else                    return Eigen::TensorMap<Eigen::Tensor<float,4>>(v, (int)d[0], (int)1, (int)1, (int)1);
 }
 // ...
 
