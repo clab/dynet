@@ -31,6 +31,7 @@ struct NodeTest {
     std::vector<float> param3_vals = {1.1f,2.2f,3.3f};
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
+    std::vector<float> param_square1_vals = {1.1f,2.2f,3.3f,1.2f,2.2f,3.2f,1.3f,2.3f,3.3f};
     param1 = mod.add_parameters({3});
     TensorTools::SetElements(param1.get()->values,param1_vals);
     param2 = mod.add_parameters({3});
@@ -41,6 +42,8 @@ struct NodeTest {
     TensorTools::SetElements(param_scalar1.get()->values,param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
     TensorTools::SetElements(param_scalar2.get()->values,param_scalar2_vals);
+    param_square1 = mod.add_parameters({3,3});
+    TensorTools::SetElements(param_square1.get()->values,param_square1_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);
@@ -58,7 +61,7 @@ struct NodeTest {
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
   cnn::Model mod;
-  cnn::Parameter param1, param2, param3, param_scalar1, param_scalar2;
+  cnn::Parameter param1, param2, param3, param_scalar1, param_scalar2, param_square1;
 };
 
 // define the test suite
@@ -390,6 +393,24 @@ BOOST_AUTO_TEST_CASE( softmax_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression sparsemax(const Expression& x);
+BOOST_AUTO_TEST_CASE( sparsemax_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = sparsemax(x1);
+  input(cg, {1,3}, first_one_vals) * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression sparsemax_loss(const Expression& x);
+BOOST_AUTO_TEST_CASE( sparsemax_loss_gradient ) {
+  std::vector<unsigned> idxs(2); idxs[0] = 1; idxs[1] = 2;
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  sparsemax_loss(x1, idxs);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression softsign(const Expression& x);
 BOOST_AUTO_TEST_CASE( softsign_gradient ) {
   cnn::ComputationGraph cg;
@@ -449,8 +470,8 @@ BOOST_AUTO_TEST_CASE( max_gradient ) {
 //   BOOST_CHECK(CheckGrad(mod, cg, 0));
 // }
 
+// TODO: Dropout scales the gradients at training time, so they don't match.
 // Expression block_dropout(const Expression& x, real p);
-// TODO
 
 // Expression reshape(const Expression& x, const Dim& d);
 BOOST_AUTO_TEST_CASE( reshape_gradient ) {
@@ -467,6 +488,15 @@ BOOST_AUTO_TEST_CASE( transpose_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression y = softsign(x1);
   input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression trace_of_product(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( inverse_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x = parameter(cg, param_square1);
+  Expression y = inverse(x);
+  input(cg, {1,3}, ones3_vals) * y * input(cg, {3,1}, ones3_vals);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -543,10 +573,15 @@ BOOST_AUTO_TEST_CASE( pairwise_rank_loss_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
-// TODO: These are all unimplemented
 // Expression poisson_loss(const Expression& x, unsigned y);
-// Expression poisson_loss(const Expression& x, const unsigned* py);
-// 
+BOOST_AUTO_TEST_CASE( possion_loss_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression scalar = parameter(cg, param_scalar1);
+  poisson_loss(scalar, 3);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// TODO: These are all unimplemented
 // Expression conv1d_narrow(const Expression& x, const Expression& f);
 // Expression conv1d_wide(const Expression& x, const Expression& f);
 // Expression kmax_pooling(const Expression& x, unsigned k);

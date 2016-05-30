@@ -98,165 +98,6 @@ void AddVectorToAllColumns::backward_impl(const vector<const Tensor*>& xs,
   }
 }
 
-size_t Sparsemax::aux_storage_size() const {
-  return (dim.size() + 1) * sizeof(float);
-}
-
-void Sparsemax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  if (xs[0]->d.cols() == 1) {
-#if HAVE_CUDA
-    throw std::runtime_error("Sparsemax not implemented on GPU");
-#else
-    const unsigned rows = xs[0]->d.rows();
-    float *zs = static_cast<float*>(aux_mem);
-    std::partial_sort_copy(xs[0]->v, xs[0]->v+rows, zs, zs + rows, std::greater<float>());
-    float sum = 0, maxsum = 0;
-    unsigned k = 0;
-    for (k = 0; k < rows; ++k) {
-      sum += zs[k];
-      float t = 1 + (k + 1) * zs[k];
-      if (t <= sum) break;
-      maxsum = sum;
-    }
-    float tau = (maxsum - 1) / k;
-    auto x = **xs[0];
-    auto y = *fx;
-    y = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
-    int c = 1;
-    int *cc = static_cast<int*>(aux_mem);
-    for (unsigned i = 0; i < rows; ++i)
-      if (y(i,0) > 0.f) cc[c++] = i;
-    cc[0] = c - 1;
-#endif
-  } else {
-    throw std::runtime_error("Sparsemax not yet implemented for multiple columns");
-  }
-}
-
-void Sparsemax::backward_impl(const vector<const Tensor*>& xs,
-                              const Tensor& fx,
-                              const Tensor& dEdf,
-                              unsigned i,
-                              Tensor& dEdxi) const {
-#if HAVE_CUDA
-  throw std::runtime_error("Sparsemax not implemented on GPU");
-#else
-  const int ssize = static_cast<int*>(aux_mem)[0];
-  int *support = static_cast<int*>(aux_mem) + 1;
-  float dhat = 0;
-  auto& d = *dEdf;
-  for (int i = 0; i < ssize; ++i)
-    dhat += d(support[i], 0);
-  dhat /= ssize;
-  for (int i = 0; i < ssize; ++i)
-    (*dEdxi)(support[i], 0) += d(support[i], 0) - dhat;
-#endif
-}
-
-#define MAX_SPARSEMAX_LOSS_ROWS 65536
-
-size_t SparsemaxLoss::aux_storage_size() const {
-  // first dim.size dimensions is the sparsemax
-  const unsigned rows = MAX_SPARSEMAX_LOSS_ROWS;  // this should be xs[0]->d.rows()
-  return rows * sizeof(float);
-}
-
-void SparsemaxLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  if (xs[0]->d.cols() == 1) {
-#if HAVE_CUDA
-    throw std::runtime_error("SparsemaxLoss not implemented on GPU");
-#else
-    const int rows = xs[0]->d.rows();
-    if (rows > MAX_SPARSEMAX_LOSS_ROWS) {
-      cerr << "MAX_SPARSEMAX_LOSS_ROWS is not sufficient. Recompile with larger value.\n";
-      abort();
-    }
-    float& y = fx.v[0];  // loss
-    const unsigned qsupport_size = pq->size();
-    const float qprop = 1.f / qsupport_size;
-
-    float *zs = static_cast<float*>(aux_mem);
-    std::partial_sort_copy(xs[0]->v, xs[0]->v+rows, zs, zs + rows, std::greater<float>());
-    float sum = 0, maxsum = 0;
-    unsigned k = 0;
-    for (k = 0; k < rows; ++k) {
-      sum += zs[k];
-      float t = 1 + (k + 1) * zs[k];
-      if (t <= sum) break;
-      maxsum = sum;
-    }
-    float tau = (maxsum - 1) / k;
-    Tensor tsm(xs[0]->d, (float*)aux_mem, xs[0]->device);
-    auto x = **xs[0];
-    auto sm = *tsm;
-    sm = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
-    //cerr << "SpM: " << (sm).transpose() << " |||";
-    //for (unsigned i = 0; i < pq->size(); ++i) cerr << ' ' << (*pq)[i];
-    //cerr << endl;
-    y = 0;
-    float tau_sq = tau * tau;
-    for (unsigned i = 0; i < rows; ++i) {
-      if (sm(i, 0)) {
-        const float x_s = x(i, 0);
-        y += x_s * x_s - tau_sq;
-      }
-    }
-    y /= 2;
-    y += qprop * qprop * qsupport_size / 2;
-    for (unsigned i = 0; i < qsupport_size; ++i)
-      y -= qprop * x((*pq)[i], 0);
-    if (y < 0) y = 0;
-#endif
-  } else {
-    throw std::runtime_error("SparsemaxLoss not yet implemented for multiple columns");
-  }
-}
-
-void SparsemaxLoss::backward_impl(const vector<const Tensor*>& xs,
-                                  const Tensor& fx,
-                                  const Tensor& dEdf,
-                                  unsigned i,
-                                  Tensor& dEdxi) const {
-#if HAVE_CUDA
-  throw std::runtime_error("SparsemaxLoss not implemented on GPU");
-#else
-  const float d = dEdf.v[0];
-  float* psm = static_cast<float*>(aux_mem);
-  float dqprop = d / pq->size();
-  Tensor tsm(xs[0]->d, psm, xs[0]->device);
-  auto sm = *tsm;  // sparsemax(z)
-  *dEdxi += sm * d;
-  for (unsigned i = 0; i < pq->size(); ++i)
-    (*dEdxi)((*pq)[i], 0) -= dqprop;
-#endif
-}
-
-void MatrixInverse::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("MatrixInverse not yet implemented for CUDA");
-#else
-  auto x = **xs[0];
-  auto y = *fx;
-  y = x.inverse();
-#endif
-}
-
-void MatrixInverse::backward_impl(const vector<const Tensor*>& xs,
-                                  const Tensor& fx,
-                                  const Tensor& dEdf,
-                                  unsigned i,
-                                  Tensor& dEdxi) const {
-  assert(xs.size() == 1);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("MatrixInverse not yet implemented for CUDA");
-#else
-  auto d = *dEdf;
-  auto y = *fx;
-  (*dEdxi) -= y * d * y;
-#endif
-}
-
 void TraceOfProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef HAVE_CUDA
   throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
@@ -1112,32 +953,6 @@ void PickRange::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-void PoissonRegressionLoss::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("PoissonRegressionLoss not yet implemented for CUDA");
-#else
-  const auto y = *pty;
-  const auto z = lgamma(y + 1);
-  const auto x = as_scalar(*xs[0]);
-  fx.v[0] = expf(x) + z - y * x;
-#endif
-}
-
-void PoissonRegressionLoss::backward_impl(const vector<const Tensor*>& xs,
-                          const Tensor& fx,
-                          const Tensor& dEdf,
-                          unsigned i,
-                          Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("PoissonRegressionLoss not yet implemented for CUDA");
-#else
-  const auto x = xs[0]->v[0];
-  const auto y = *pty;
-  auto& dEdx = dEdxi.v[0];
-  dEdx += expf(x) - y;
-#endif
-}
-
 // ===== Auxiliary functions
 
 size_t BlockDropout::aux_storage_size() const {
@@ -1159,6 +974,18 @@ size_t Max::aux_storage_size() const {
 
 size_t Min::aux_storage_size() const {
   return dim.size() * sizeof(float);
+}
+
+size_t Sparsemax::aux_storage_size() const {
+  return (dim.size() + 1) * sizeof(float);
+}
+
+#define MAX_SPARSEMAX_LOSS_ROWS 65536
+
+size_t SparsemaxLoss::aux_storage_size() const {
+  // first dim.size dimensions is the sparsemax
+  const unsigned rows = MAX_SPARSEMAX_LOSS_ROWS;  // this should be xs[0]->d.rows()
+  return rows * sizeof(float);
 }
 
 #endif // Finish CPU only functions
@@ -1642,6 +1469,38 @@ void LogisticSigmoid::backward_dev_impl(const MyDevice & dev,
 CNN_NODE_INST_DEV_IMPL(LogisticSigmoid)
 
 template<class MyDevice>
+void MatrixInverse::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+#ifdef __CUDACC__
+  throw std::runtime_error("MatrixInverse not yet implemented for CUDA");
+#else
+  auto x = **xs[0];
+  auto y = *fx;
+  y = x.inverse();
+#endif
+  // TODO: Change into tensors after resolving test errors
+  // fx.t<2>().device(*dev.edevice) = xs[0]->t<2>().inverse();
+}
+
+template<class MyDevice>
+void MatrixInverse::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(xs.size() == 1);
+#ifdef __CUDACC__
+  throw std::runtime_error("MatrixInverse not yet implemented for CUDA");
+#else
+  auto d = *dEdf;
+  auto y = *fx;
+  (*dEdxi) -= y * d * y;
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(MatrixInverse)
+
+template<class MyDevice>
 void MatrixMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
 #ifdef __CUDACC__
@@ -1804,6 +1663,26 @@ void PairwiseRankLoss::backward_dev_impl(const MyDevice & dev,
 CNN_NODE_INST_DEV_IMPL(PairwiseRankLoss)
 
 template<class MyDevice>
+void PoissonRegressionLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  const real y = *pty;
+  const auto z = lgamma(y + 1);
+  // const auto x = as_scalar(*xs[0]);
+  fx.t<0>().device(*dev.edevice) = xs[0]->t<0>().exp() + z - xs[0]->t<0>() * y;
+}
+
+template<class MyDevice>
+void PoissonRegressionLoss::backward_dev_impl(const MyDevice & dev,
+                            const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  const real y = *pty;
+  dEdxi.t<0>().device(*dev.edevice) += xs[0]->t<0>().exp() - y;
+}
+CNN_NODE_INST_DEV_IMPL(PoissonRegressionLoss)
+
+template<class MyDevice>
 void Pow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
   fx.tvec().device(*dev.edevice) = xs[0]->tvec().pow(as_scalar(*xs[1]));
@@ -1909,6 +1788,135 @@ void SoftSign::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FSoftSignBackward());
 }
 CNN_NODE_INST_DEV_IMPL(SoftSign)
+
+template<class MyDevice>
+void Sparsemax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (xs[0]->d.cols() == 1) {
+#ifdef __CUDACC__
+    throw std::runtime_error("Sparsemax not implemented on GPU");
+#else
+    const unsigned rows = xs[0]->d.rows();
+    float *zs = static_cast<float*>(aux_mem);
+    std::partial_sort_copy(xs[0]->v, xs[0]->v+rows, zs, zs + rows, std::greater<float>());
+    float sum = 0, maxsum = 0;
+    unsigned k = 0;
+    for (k = 0; k < rows; ++k) {
+      sum += zs[k];
+      float t = 1 + (k + 1) * zs[k];
+      if (t <= sum) break;
+      maxsum = sum;
+    }
+    float tau = (maxsum - 1) / k;
+    auto x = **xs[0];
+    auto y = *fx;
+    y = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
+    int c = 1;
+    int *cc = static_cast<int*>(aux_mem);
+    for (unsigned i = 0; i < rows; ++i)
+      if (y(i,0) > 0.f) cc[c++] = i;
+    cc[0] = c - 1;
+#endif
+  } else {
+    throw std::runtime_error("Sparsemax not yet implemented for multiple columns");
+  }
+}
+
+template<class MyDevice>
+void Sparsemax::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("Sparsemax not implemented on GPU");
+#else
+  const int ssize = static_cast<int*>(aux_mem)[0];
+  int *support = static_cast<int*>(aux_mem) + 1;
+  float dhat = 0;
+  auto& d = *dEdf;
+  for (int i = 0; i < ssize; ++i)
+    dhat += d(support[i], 0);
+  dhat /= ssize;
+  for (int i = 0; i < ssize; ++i)
+    (*dEdxi)(support[i], 0) += d(support[i], 0) - dhat;
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(Sparsemax)
+
+template<class MyDevice>
+void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (xs[0]->d.cols() == 1) {
+#ifdef __CUDACC__
+    throw std::runtime_error("SparsemaxLoss not implemented on GPU");
+#else
+    const int rows = xs[0]->d.rows();
+    if (rows > MAX_SPARSEMAX_LOSS_ROWS) {
+      cerr << "MAX_SPARSEMAX_LOSS_ROWS is not sufficient. Recompile with larger value.\n";
+      abort();
+    }
+    float& y = fx.v[0];  // loss
+    const unsigned qsupport_size = pq->size();
+    const float qprop = 1.f / qsupport_size;
+
+    float *zs = static_cast<float*>(aux_mem);
+    std::partial_sort_copy(xs[0]->v, xs[0]->v+rows, zs, zs + rows, std::greater<float>());
+    float sum = 0, maxsum = 0;
+    unsigned k = 0;
+    for (k = 0; k < rows; ++k) {
+      sum += zs[k];
+      float t = 1 + (k + 1) * zs[k];
+      if (t <= sum) break;
+      maxsum = sum;
+    }
+    float tau = (maxsum - 1) / k;
+    Tensor tsm(xs[0]->d, (float*)aux_mem, xs[0]->device);
+    auto x = **xs[0];
+    auto sm = *tsm;
+    sm = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
+    //cerr << "SpM: " << (sm).transpose() << " |||";
+    //for (unsigned i = 0; i < pq->size(); ++i) cerr << ' ' << (*pq)[i];
+    //cerr << endl;
+    y = 0;
+    float tau_sq = tau * tau;
+    for (unsigned i = 0; i < rows; ++i) {
+      if (sm(i, 0)) {
+        const float x_s = x(i, 0);
+        y += x_s * x_s - tau_sq;
+      }
+    }
+    y /= 2;
+    y += qprop * qprop * qsupport_size / 2;
+    for (unsigned i = 0; i < qsupport_size; ++i)
+      y -= qprop * x((*pq)[i], 0);
+    if (y < 0) y = 0;
+#endif
+  } else {
+    throw std::runtime_error("SparsemaxLoss not yet implemented for multiple columns");
+  }
+}
+
+template<class MyDevice>
+void SparsemaxLoss::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("SparsemaxLoss not implemented on GPU");
+#else
+  const float d = dEdf.v[0];
+  float* psm = static_cast<float*>(aux_mem);
+  float dqprop = d / pq->size();
+  Tensor tsm(xs[0]->d, psm, xs[0]->device);
+  auto sm = *tsm;  // sparsemax(z)
+  *dEdxi += sm * d;
+  for (unsigned i = 0; i < pq->size(); ++i)
+    (*dEdxi)((*pq)[i], 0) -= dqprop;
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(SparsemaxLoss)
 
 template<class MyDevice>
 void Square::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
