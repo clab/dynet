@@ -74,31 +74,6 @@ namespace cnn {
 // ======= Functions to be compiled on only CPU
 #ifndef __CUDACC__
 
-void TraceOfProduct::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
-#else
-  auto x1 = **xs[0];
-  auto x2 = **xs[1];
-  fx.v[0] = (x1 * x2.transpose()).trace();
-#endif
-}
-
-void TraceOfProduct::backward_impl(const vector<const Tensor*>& xs,
-                              const Tensor& fx,
-                              const Tensor& dEdf,
-                              unsigned i,
-                              Tensor& dEdxi) const {
-  assert(i < 2);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
-#else
-  const float d = dEdf.v[0];
-  auto xother = **xs[1 - i];
-  *dEdxi += d * xother;
-#endif
-}
-
 void KMHNGram::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x = **xs[0];
   const int new_cols = x.cols() - n + 1;
@@ -408,56 +383,6 @@ void ConcatenateColumns::backward_impl(const vector<const Tensor*>& xs,
 #endif
 }
 
-size_t Hinge::aux_storage_size() const {
-  return dim.size() * sizeof(float);
-}
-
-void Hinge::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Hinge not yet implemented for CUDA");
-#else
-  auto x = **xs[0];
-  const unsigned rows = x.rows();
-  float y = 0;
-  float* eloss = static_cast<float*>(aux_mem);
-  const real mlystar = margin - x(*pelement);
-  for (unsigned i = 0; i < rows; ++i) {
-    if (*pelement != i) {
-      eloss[i] = max(0.f, mlystar + x(i));
-      y += eloss[i];
-    } else {
-      eloss[i] = 0;
-    }
-  }
-  fx.v[0] = y;
-#endif
-}
-
-void Hinge::backward_impl(const vector<const Tensor*>& xs,
-                       const Tensor& fx,
-                       const Tensor& dEdf,
-                       unsigned i,
-                       Tensor& dEdxi) const {
-  assert(i == 0);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Hinge not yet implemented for CUDA");
-#else
-  if (fx.v[0]) { // there was some loss
-    const float d = dEdf.v[0];
-    const unsigned rows = dEdxi.d.rows();
-    const float* eloss = static_cast<const float*>(aux_mem);
-    unsigned tne = 0;  // total number of errors
-    for (unsigned i = 0; i < rows; ++i)
-      if (eloss[i] > 0) {
-        (*dEdxi)(i) += d;
-        ++tne;
-      }
-    (*dEdxi)(*pelement) -= d * tne;
-  }
-#endif
-}
-
 void MaxPooling1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
   cerr << "FIX IMPL5\n"; abort();
 #if 0
@@ -650,6 +575,10 @@ size_t Dropout::aux_storage_size() const {
 }
 
 size_t GaussianNoise::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
+size_t Hinge::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
 
@@ -1075,6 +1004,34 @@ void GaussianNoise::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
 }
 CNN_NODE_INST_DEV_IMPL(GaussianNoise)
+
+template<class MyDevice>
+void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
+  const real mlystar = margin - xs[0]->tvec()(*pelement);
+  eloss.tvec().device(*dev.edevice) = (xs[0]->tvec() + mlystar).cwiseMax(0.f);
+  eloss.tvec()(*pelement) = 0.f;
+  fx.t<0>() = eloss.tvec().sum();
+}
+
+template<class MyDevice>
+void Hinge::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i == 0);
+  if(as_scalar(fx)) { // there was some loss
+    const float d = as_scalar(dEdf);
+    Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
+    // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
+    dEdxi.tvec() += (eloss.tvec() > 0.f).cast<float>() * d;
+    dEdxi.tvec().chip<0>(*pelement) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
+  }
+}
+CNN_NODE_INST_DEV_IMPL(Hinge)
 
 template<class MyDevice>
 void HuberDistance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1980,6 +1937,35 @@ void SumColumns::backward_dev_impl(const MyDevice & dev,
   // dEdxi.t<2>().broadcast(broadcasts) += dEdf.t<2>();
 }
 CNN_NODE_INST_DEV_IMPL(SumColumns)
+
+template<class MyDevice>
+void TraceOfProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
+#else
+  auto x1 = **xs[0];
+  auto x2 = **xs[1];
+  fx.v[0] = (x1 * x2.transpose()).trace();
+#endif
+}
+
+template<class MyDevice>
+void TraceOfProduct::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < 2);
+#ifdef __CUDACC__
+  throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
+#else
+  const float d = dEdf.v[0];
+  auto xother = **xs[1 - i];
+  *dEdxi += d * xother;
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(TraceOfProduct)
 
 template<class MyDevice>
 void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
