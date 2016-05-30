@@ -1341,7 +1341,7 @@ void BlockDropout::backward_dev_impl(const MyDevice & dev,
   float block_multiplier = *(static_cast<float*>(aux_mem));
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * block_multiplier;
 }
-CNN_NODE_INST_NOGPU_IMPL(BlockDropout)
+CNN_NODE_INST_DEV_IMPL(BlockDropout)
 
 template<class MyDevice>
 void ConstantMinusX::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1486,7 +1486,7 @@ void Dropout::backward_dev_impl(const MyDevice & dev,
   Tensor m(dim, (float*)aux_mem, fx.device);
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * m.tvec();
 }
-CNN_NODE_INST_NOGPU_IMPL(Dropout)
+CNN_NODE_INST_DEV_IMPL(Dropout)
 
 template<class MyDevice>
 void Erf::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1536,7 +1536,7 @@ void GaussianNoise::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
 }
-CNN_NODE_INST_NOGPU_IMPL(GaussianNoise)
+CNN_NODE_INST_DEV_IMPL(GaussianNoise)
 
 template<class MyDevice>
 void HuberDistance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1739,7 +1739,7 @@ void Max::backward_dev_impl(const MyDevice & dev,
     dEdxi.tvec().device(*dev.edevice) += t.tvec().binaryExpr(dEdf.tvec(), FMaxBackwardInv());
   }
 }
-CNN_NODE_INST_NOGPU_IMPL(Max)
+CNN_NODE_INST_DEV_IMPL(Max)
 
 template<class MyDevice>
 void Min::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1763,7 +1763,7 @@ void Min::backward_dev_impl(const MyDevice & dev,
     dEdxi.tvec().device(*dev.edevice) += t.tvec().binaryExpr(dEdf.tvec(), FMaxBackwardInv());
   }
 }
-CNN_NODE_INST_NOGPU_IMPL(Min)
+CNN_NODE_INST_DEV_IMPL(Min)
 
 template<class MyDevice>
 void Negate::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
