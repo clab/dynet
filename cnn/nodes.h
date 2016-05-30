@@ -187,19 +187,17 @@ struct Pow : public Node {
 // y = min{x_1, x_2}
 struct Min : public Node {
   explicit Min(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
-  // TODO: GPU implementations confirmed to break, debug
-  CNN_NODE_DEFINE_NOGPU_IMPL()
 };
 
 // y = max{x_1, x_2}
 struct Max : public Node {
   template <typename T> explicit Max(const T& a) : Node(a) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
-  // TODO: GPU implementations confirmed to break, debug
-  CNN_NODE_DEFINE_NOGPU_IMPL()
 };
 
 // y = Tr(x_1 * x_2^T)
@@ -324,29 +322,26 @@ struct InnerProduct3D_1D_1D : public Node {
 // y = x + n
 struct GaussianNoise : public Node {
   explicit GaussianNoise(const std::initializer_list<VariableIndex>& a, real stddev) : Node(a), stddev(stddev) {}
-  virtual bool supports_multibatch() const override { return true; }
+  CNN_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
-  // TODO: GPU implementations confirmed to break, debug
-  CNN_NODE_DEFINE_NOGPU_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   real stddev;
 };
 
 // y = dropout(x,p) where p specifies the dropout probability
 struct Dropout : public Node {
   explicit Dropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
-  // TODO: GPU implementations confirmed to break, debug
-  CNN_NODE_DEFINE_NOGPU_IMPL()
   real p;
 };
 
 // y = block_dropout(x,p) where p specifies the probability for dropping-out the entire block
 struct BlockDropout : public Node {
   explicit BlockDropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), dropout_probability(p) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
-  // TODO: GPU implementations probably will break
-  CNN_NODE_DEFINE_NOGPU_IMPL()
   real dropout_probability;
 };
 
