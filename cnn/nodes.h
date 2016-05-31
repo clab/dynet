@@ -308,14 +308,7 @@ struct Identity : public Node {
 // y_i = max_{x_{i * width - width + 1}, ..., x_{i * width}}
 struct MaxPooling1D : public Node {
   MaxPooling1D(const std::initializer_list<VariableIndex>& a, unsigned w) : Node(a), width(w) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   unsigned width;
   mutable std::vector<unsigned> ind;
 };
@@ -498,14 +491,7 @@ struct PickNegLogSoftmax : public Node {
 // y_i = (x_1)_i - \log z
 struct RestrictedLogSoftmax : public Node {
   explicit RestrictedLogSoftmax(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& d) : Node(a), denom(d) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   std::vector<unsigned> denom;
 };
 
@@ -519,15 +505,8 @@ struct PickElement : public Node {
   // use these constructors if you want to change the value after the graph is constructed
   explicit PickElement(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv), vals(), pvals() {}
   explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv) : Node(a), val(), pval(), vals(), pvals(pv) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const override;
   unsigned val;
   const unsigned* pval;
   std::vector<unsigned> vals;
@@ -539,14 +518,7 @@ struct PickElement : public Node {
 // (start inclusive, end exclusive)
 struct PickRange : public Node {
   explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned start, unsigned end) : Node(a), start(start), end(end) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   unsigned start;
   unsigned end;
 };

@@ -84,54 +84,6 @@ inline typename MatrixType::Scalar logdet(const MatrixType& M, bool use_cholesky
   return ld;
 }
 
-void MaxPooling1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  cerr << "FIX IMPL5\n"; abort();
-#if 0
-  assert(xs.size() == 1);
-  const Tensor& x = *xs.front();
-  const unsigned x_rows = x.rows();
-  assert(x.cols() == 1);
-  const unsigned fx_rows = x_rows / width;
-  ind.resize(fx_rows);
-  Tensor fx = Zero(Dim(fx_rows, 1));
-  for (unsigned i = 0; i < fx_rows; ++i) {
-    unsigned from = i * width;
-    unsigned to = from + width;
-    if (to > x_rows) to = x_rows;
-    real best = x(from, 0);
-    unsigned bestr = from;
-    for (unsigned r = from + 1; r < to; ++r) {
-      if (x(r, 0) > best) {
-        best = x(r,0);
-        bestr = r;
-      }
-    }
-    ind[i] = bestr;
-    fx(i, 0) = best;
-  }
-  return fx;
-#endif
-}
-
-void MaxPooling1D::backward_impl(const vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const {
-  cerr << "FIX IMPL6\n"; abort();
-#if 0
-  const Tensor& x = *xs.front();
-  const unsigned x_rows = x.rows();
-  Tensor dEdx = Zero(Dim(x_rows, 1));
-  const unsigned fx_rows = x_rows / width;
-  assert(fx_rows == ind.size());
-  assert(fx_rows == dEdf.rows());
-  for (unsigned i = 0; i < fx_rows; ++i)
-    dEdx(ind[i], 0) = dEdf(i, 0);
-  return dEdx;
-#endif
-}
-
 template <class T>
 EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   real m = x(denom[0],0);
@@ -143,125 +95,6 @@ EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
   for (auto i : denom)
     z += expf(x(i,0) - m);
   return m + logf(z);
-}
-
-void RestrictedLogSoftmax::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("RestrictedLogSoftmax not yet implemented for CUDA");
-#else
-  // TODO create auxiliary mask with -infty's
-  // and do usual LogSoftmax stuff
-  assert(xs.size() == 1);
-  assert(denom.size() > 0);
-  auto x = **xs[0];
-  assert(x.cols() == 1);
-  const real logz = logsumexp(x, denom);
-  TensorTools::Constant(fx, -numeric_limits<real>::infinity());
-  for (auto i : denom)
-    (*fx)(i,0) = x(i,0) - logz;
-  if (denom.size() == 1) (*fx)(denom.front(), 0) = 0;
-#endif
-}
-
-void RestrictedLogSoftmax::backward_impl(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i,
-                            Tensor& dEdxi) const {
-  assert(i == 0);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("RestrictedLogSoftmax not yet implemented for CUDA");
-#else
-  float z = 0;
-  for (auto ind : denom)
-    z += (*dEdf)(ind, 0);
-  for (auto ind : denom)
-    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - expf((*fx)(ind, 0)) * z;
-#endif
-}
-
-// x_1 is a vector
-// y = (x_1)_{*pval}
-void PickElement::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("PickElement not yet implemented for CUDA");
-#else
-  if(pval) {
-    if (*pval >= xs[0]->d.rows()) {
-      cerr << "PickElement::forward_impl requested element " << *pval
-           << " from a vector of length " << xs[0]->d.rows() << endl;
-      abort();
-    }
-    auto x = **xs[0];
-    fx.v[0] = x(*pval);
-  } else {
-    assert(pvals);
-    assert(pvals->size() == fx.d.batch_elems());
-    for(unsigned b = 0; b < pvals->size(); ++b) {
-      if ((*pvals)[b] >= xs[0]->d.rows()) {
-        cerr << "PickElement::forward_impl requested element " << (*pvals)[b]
-             << " from a vector of length " << xs[0]->d.rows() << endl;
-        abort();
-      }
-      auto x = xs[0]->batch_matrix(b);
-      fx.v[b] = x((*pvals)[b]);
-    }
-  }
-#endif
-}
-
-// derivative is 0 in all dimensions except 1 for the selected element
-void PickElement::backward_impl(const vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const {
-  assert(i == 0);
-#ifdef HAVE_CUDA
-  throw std::runtime_error("PickElement not yet implemented for CUDA");
-#else
-  if(pval) {
-    (*dEdxi)(*pval) += dEdf.v[0];
-  } else {
-    assert(pvals);
-    for(unsigned b = 0; b < pvals->size(); ++b)
-      dEdxi.batch_matrix(b)((*pvals)[b]) += dEdf.v[b];
-  }
-#endif
-}
-
-// x_1 is a vector
-// y = (x_1)[start:end]
-// slice of vector from index start (inclusive) to index end (exclusive)
-void PickRange::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-  auto x = **xs[0];
-  assert(x.cols() == 1);
-  assert(start >= 0);
-  assert(end <= x.rows());
-  assert(start < end);
-  assert(int(fx.d.rows()) == int(end-start));
-#if HAVE_CUDA
-  CUDA_CHECK(cudaMemcpyAsync(&fx.v[0], &xs[0]->v[start], sizeof(float) * (end-start), cudaMemcpyDeviceToDevice));
-#else
-  (*fx) = x.block(start, 0, end-start, 1);
-#endif
-}
-
-// derivative is 0 in all dimensions except the slice range
-void PickRange::backward_impl(const vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const {
-  assert(i == 0);
-  assert(int(dEdf.d.rows()) == int(end-start));
-  assert(dEdf.d.cols() == 1);
-#if HAVE_CUDA
-  CUBLAS_CHECK(cublasSaxpy(cublas_handle, end-start, kSCALAR_ONE, dEdf.v, 1, &dEdxi.v[start], 1));
-#else
-  (*dEdxi).block(start, 0, end-start, 1) += (*dEdf);
-#endif
 }
 
 // ===== Auxiliary functions
@@ -1325,6 +1158,58 @@ void Max::backward_dev_impl(const MyDevice & dev,
 CNN_NODE_INST_DEV_IMPL(Max)
 
 template<class MyDevice>
+void MaxPooling1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  throw std::runtime_error("MaxPooling1D::forward_dev_impl not implemented yet");
+#if 0
+  assert(xs.size() == 1);
+  const Tensor& x = *xs.front();
+  const unsigned x_rows = x.rows();
+  assert(x.cols() == 1);
+  const unsigned fx_rows = x_rows / width;
+  ind.resize(fx_rows);
+  Tensor fx = Zero(Dim(fx_rows, 1));
+  for (unsigned i = 0; i < fx_rows; ++i) {
+    unsigned from = i * width;
+    unsigned to = from + width;
+    if (to > x_rows) to = x_rows;
+    real best = x(from, 0);
+    unsigned bestr = from;
+    for (unsigned r = from + 1; r < to; ++r) {
+      if (x(r, 0) > best) {
+        best = x(r,0);
+        bestr = r;
+      }
+    }
+    ind[i] = bestr;
+    fx(i, 0) = best;
+  }
+  return fx;
+#endif
+}
+
+template<class MyDevice>
+void MaxPooling1D::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  throw std::runtime_error("MaxPooling1D::backward_dev_impl not implemented yet");
+#if 0
+  const Tensor& x = *xs.front();
+  const unsigned x_rows = x.rows();
+  Tensor dEdx = Zero(Dim(x_rows, 1));
+  const unsigned fx_rows = x_rows / width;
+  assert(fx_rows == ind.size());
+  assert(fx_rows == dEdf.rows());
+  for (unsigned i = 0; i < fx_rows; ++i)
+    dEdx(ind[i], 0) = dEdf(i, 0);
+  return dEdx;
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(MaxPooling1D)
+
+template<class MyDevice>
 void Min::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device);
   t.tvec().device(*dev.edevice) = (xs[0]->tvec() < xs[1]->tvec()).cast<float>();
@@ -1385,6 +1270,60 @@ void PairwiseRankLoss::backward_dev_impl(const MyDevice & dev,
   }
 }
 CNN_NODE_INST_DEV_IMPL(PairwiseRankLoss)
+
+// x_1 is a vector
+// y = (x_1)_{*pval}
+template<class MyDevice>
+void PickElement::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("PickElement not yet implemented for CUDA");
+#else
+  if(pval) {
+    if (*pval >= xs[0]->d.rows()) {
+      cerr << "PickElement::forward_impl requested element " << *pval
+           << " from a vector of length " << xs[0]->d.rows() << endl;
+      abort();
+    }
+    auto x = **xs[0];
+    fx.v[0] = x(*pval);
+  } else {
+    assert(pvals);
+    assert(pvals->size() == fx.d.batch_elems());
+    for(unsigned b = 0; b < pvals->size(); ++b) {
+      if ((*pvals)[b] >= xs[0]->d.rows()) {
+        cerr << "PickElement::forward_impl requested element " << (*pvals)[b]
+             << " from a vector of length " << xs[0]->d.rows() << endl;
+        abort();
+      }
+      auto x = xs[0]->batch_matrix(b);
+      fx.v[b] = x((*pvals)[b]);
+    }
+  }
+#endif
+}
+
+// derivative is 0 in all dimensions except 1 for the selected element
+template<class MyDevice>
+void PickElement::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i == 0);
+#ifdef __CUDACC__
+  throw std::runtime_error("PickElement not yet implemented for CUDA");
+#else
+  if(pval) {
+    (*dEdxi)(*pval) += dEdf.v[0];
+  } else {
+    assert(pvals);
+    for(unsigned b = 0; b < pvals->size(); ++b)
+      dEdxi.batch_matrix(b)((*pvals)[b]) += dEdf.v[b];
+  }
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(PickElement)
 
 template<class MyDevice>
 void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1470,6 +1409,44 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
 }
 CNN_NODE_INST_DEV_IMPL(PickNegLogSoftmax)
 
+// x_1 is a vector
+// y = (x_1)[start:end]
+// slice of vector from index start (inclusive) to index end (exclusive)
+template<class MyDevice>
+void PickRange::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  auto x = **xs[0];
+  assert(x.cols() == 1);
+  assert(start >= 0);
+  assert(end <= x.rows());
+  assert(start < end);
+  assert(int(fx.d.rows()) == int(end-start));
+#if __CUDACC__
+  CUDA_CHECK(cudaMemcpyAsync(&fx.v[0], &xs[0]->v[start], sizeof(float) * (end-start), cudaMemcpyDeviceToDevice));
+#else
+  (*fx) = x.block(start, 0, end-start, 1);
+#endif
+}
+
+// derivative is 0 in all dimensions except the slice range
+template<class MyDevice>
+void PickRange::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i == 0);
+  assert(int(dEdf.d.rows()) == int(end-start));
+  assert(dEdf.d.cols() == 1);
+#if __CUDACC__
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, end-start, kSCALAR_ONE, dEdf.v, 1, &dEdxi.v[start], 1));
+#else
+  (*dEdxi).block(start, 0, end-start, 1) += (*dEdf);
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(PickRange)
+
 template<class MyDevice>
 void PoissonRegressionLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const real y = *pty;
@@ -1550,6 +1527,45 @@ void Reshape::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec() += reshaped.tvec();
 }
 CNN_NODE_INST_DEV_IMPL(Reshape)
+
+template<class MyDevice>
+void RestrictedLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("RestrictedLogSoftmax not yet implemented for CUDA");
+#else
+  // TODO create auxiliary mask with -infty's
+  // and do usual LogSoftmax stuff
+  assert(xs.size() == 1);
+  assert(denom.size() > 0);
+  auto x = **xs[0];
+  assert(x.cols() == 1);
+  const real logz = logsumexp(x, denom);
+  TensorTools::Constant(fx, -numeric_limits<real>::infinity());
+  for (auto i : denom)
+    (*fx)(i,0) = x(i,0) - logz;
+  if (denom.size() == 1) (*fx)(denom.front(), 0) = 0;
+#endif
+}
+
+template<class MyDevice>
+void RestrictedLogSoftmax::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i == 0);
+#ifdef __CUDACC__
+  throw std::runtime_error("RestrictedLogSoftmax not yet implemented for CUDA");
+#else
+  float z = 0;
+  for (auto ind : denom)
+    z += (*dEdf)(ind, 0);
+  for (auto ind : denom)
+    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - expf((*fx)(ind, 0)) * z;
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(RestrictedLogSoftmax)
 
 template<class MyDevice>
 void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
