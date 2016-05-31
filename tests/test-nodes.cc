@@ -32,6 +32,9 @@ struct NodeTest {
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
     std::vector<float> param_square1_vals = {1.1f,2.2f,3.3f,1.2f,2.2f,3.2f,1.3f,2.3f,3.3f};
+    std::vector<float> param_cube1_vals = {1.1f,2.2f,3.3f,1.2f,2.2f,3.2f,1.3f,2.3f,3.3f,
+                                           11.1f,12.2f,13.3f,11.2f,12.2f,13.2f,11.3f,12.3f,13.3f,
+                                           21.1f,22.2f,23.3f,21.2f,22.2f,23.2f,21.3f,22.3f,23.3f};
     param1 = mod.add_parameters({3});
     TensorTools::SetElements(param1.get()->values,param1_vals);
     param2 = mod.add_parameters({3});
@@ -44,6 +47,8 @@ struct NodeTest {
     TensorTools::SetElements(param_scalar2.get()->values,param_scalar2_vals);
     param_square1 = mod.add_parameters({3,3});
     TensorTools::SetElements(param_square1.get()->values,param_square1_vals);
+    param_cube1 = mod.add_parameters({3,3,3});
+    TensorTools::SetElements(param_cube1.get()->values,param_cube1_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);
@@ -61,7 +66,7 @@ struct NodeTest {
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
   cnn::Model mod;
-  cnn::Parameter param1, param2, param3, param_scalar1, param_scalar2, param_square1;
+  cnn::Parameter param1, param2, param3, param_scalar1, param_scalar2, param_square1, param_cube1;
 };
 
 // define the test suite
@@ -251,11 +256,30 @@ BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
-// Expression contract3d_1d(const Expression& x, const Expression& y);
-// TODO
-
 // Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
-// TODO
+BOOST_AUTO_TEST_CASE( contract3d_1d_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression square1 = parameter(cg, param_square1);
+  Expression cube1 = parameter(cg, param_cube1);
+  Expression y = contract3d_1d(cube1, x1, square1);
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  ones3 * y * transpose(ones3);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
+BOOST_AUTO_TEST_CASE( contract3d_1d_1d_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression x3 = parameter(cg, param3);
+  Expression cube1 = parameter(cg, param_cube1);
+  Expression y = contract3d_1d_1d(cube1, x1, x2, x3);
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  ones3 * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
 
 // Expression sqrt(const Expression& x);
 BOOST_AUTO_TEST_CASE( sqrt_gradient ) {

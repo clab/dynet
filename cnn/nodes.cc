@@ -6,6 +6,7 @@
 
 #include "cnn/simd-functors.h"
 #include "cnn/functors.h"
+#include "cnn/node-macros.h"
 
 #ifdef HAVE_CUDA
 #include "cnn/cuda.h"
@@ -34,41 +35,6 @@ using namespace std;
 // 2) dEdxi must accummulate (see point 4 above!)
 //
 
-// A macro to instantiate templated device functions
-// If the implementation is the same for both devices (using Eigen Tensors),
-//  then this will instantiate both CPU and GPU implementations, and the
-//  code can be the same.
-// If the implementation is different for both devices, use #ifdef __CUDACC__
-//  within the function, and create alternative code paths for CPU and GPU implementations
-#ifdef __CUDACC__
-#define CNN_NODE_INST_NOGPU_IMPL(MyNode)
-#define CNN_NODE_INST_DEV_IMPL(MyNode) \
-  template void MyNode::forward_dev_impl<Device_GPU>(const Device_GPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
-  template void MyNode::backward_dev_impl<Device_GPU>(const Device_GPU & dev, \
-                                           const vector<const Tensor*>& xs, \
-                                           const Tensor& fx, \
-                                           const Tensor& dEdf, \
-                                           unsigned i, \
-                                           Tensor& dEdxi) const;
-#else
-#define CNN_NODE_INST_NOGPU_IMPL(MyNode) \
-  template void MyNode::forward_dev_impl<Device_CPU>(const Device_CPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
-  template void MyNode::backward_dev_impl<Device_CPU>(const Device_CPU & dev, \
-                                           const vector<const Tensor*>& xs, \
-                                           const Tensor& fx, \
-                                           const Tensor& dEdf, \
-                                           unsigned i, \
-                                           Tensor& dEdxi) const;
-#define CNN_NODE_INST_DEV_IMPL(MyNode) \
-  template void MyNode::forward_dev_impl<Device_CPU>(const Device_CPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
-  template void MyNode::backward_dev_impl<Device_CPU>(const Device_CPU & dev, \
-                                           const vector<const Tensor*>& xs, \
-                                           const Tensor& fx, \
-                                           const Tensor& dEdf, \
-                                           unsigned i, \
-                                           Tensor& dEdxi) const;
-#endif
-
 namespace cnn {
 
 // ======= Functions to be compiled on only CPU
@@ -96,93 +62,6 @@ void KMHNGram::backward_impl(const vector<const Tensor*>& xs,
   for (int j = 0; j < c; ++j)
     for (unsigned k = 0; k < n; ++k)
       (*dEdxi).col(j+k) += (*dEdf).col(j);
-}
-
-//   Y_ij = A_ijk * B_k (+ C_ij)
-void InnerProduct3D_1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  auto A = xs[0]->t<3>();
-  auto b = xs[1]->t<1>();
-  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
-  Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
-  if (xs.size() == 2) {
-    fx.t<2>() = A.contract(b, dims);
-  } else {
-    auto C = xs[2]->t<2>();
-    fx.t<2>() = A.contract(b, dims) + C;
-  }
-}
-
-void InnerProduct3D_1D::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-  auto tdEdf = dEdf.t<2>();  // 2 tensor
-  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
-  if (i == 0) { // 3 tensor
-    // tensor product
-    auto b = xs[1]->t<1>();
-    dEdxi.t<3>() += tdEdf.contract(b, Eigen::array<DimPair, 0>{{}});
-  } else if (i == 1) {
-    auto A = xs[0]->t<3>();  // A is 3 tensor
-    Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
-    dEdxi.t<1>() += tdEdf.contract(A, dims);
-  } else if (i == 2) {
-    dEdxi.t<2>() += tdEdf;
-  } else {
-    cerr << "shouldn't happen\n"; abort();
-  }
-}
-
-//   Y_ij = A_ijk * B_k * C_j (+ D_i)
-void InnerProduct3D_1D_1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  auto A = xs[0]->t<3>();
-  auto b = xs[1]->t<1>();
-  auto c = xs[2]->t<1>();
-  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
-  Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
-  Eigen::array<DimPair, 1> dims2({{DimPair(1, 0)}});
-  if (xs.size() == 3) {
-    fx.t<1>() = A.contract(b, dims).contract(c, dims2);
-  } else {
-    auto d = xs[3]->t<1>();
-    fx.t<1>() = A.contract(b, dims).contract(c, dims2) + d;
-  }
-}
-
-void InnerProduct3D_1D_1D::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-  auto tdEdf = dEdf.t<1>();  // vector
-  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
-  if (i == 0) { // 3 tensor
-    // tensor product
-    auto b = xs[1]->t<1>();
-    auto c = xs[2]->t<1>();
-    dEdxi.t<3>() += tdEdf.contract(c, Eigen::array<DimPair, 0>{{}}).contract(b, Eigen::array<DimPair, 0>{{}});
-  } else if (i == 1) { // vector 1
-    // TODO these should be reorganized so the contraction is first with tdEdf and then with c or b.
-    // in theory, that intermediate result could be cached (although CNN doesn't support this). the fact that it
-    // this part of the product is redone when i=1 and again when i=2 is probably why this is slower
-    // (or maybe it's the contract implementation?)
-    Eigen::array<DimPair, 1> dims({{DimPair(1, 0)}});
-    Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
-    auto A = xs[0]->t<3>();
-    auto c = xs[2]->t<1>();
-    dEdxi.t<1>() += A.contract(c, dims).contract(tdEdf, dims2);
-  } else if (i == 2) { // vector 2
-    Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
-    Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
-    auto A = xs[0]->t<3>();
-    auto b = xs[1]->t<1>();
-    dEdxi.t<1>() += A.contract(b, dims).contract(tdEdf, dims2);
-  } else if (i == 3) { // vector bias
-    dEdxi.t<1>() += tdEdf;
-  } else {
-    cerr << "shouldn't happen\n"; abort();
-  }
 }
 
 template <class T>
@@ -1067,6 +946,101 @@ void Identity::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
 }
 CNN_NODE_INST_DEV_IMPL(Identity)
+
+//   Y_ij = A_ijk * B_k (+ C_ij)
+template<class MyDevice>
+void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto A = xs[0]->t<3>();
+  auto b = xs[1]->t<1>();
+  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
+  Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
+  if (xs.size() == 2) {
+    fx.t<2>() = A.contract(b, dims);
+  } else {
+    auto C = xs[2]->t<2>();
+    fx.t<2>() = A.contract(b, dims) + C;
+  }
+}
+
+template<class MyDevice>
+void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  auto tdEdf = dEdf.t<2>();  // 2 tensor
+  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
+  if (i == 0) { // 3 tensor
+    // tensor product
+    auto b = xs[1]->t<1>();
+    dEdxi.t<3>() += tdEdf.contract(b, Eigen::array<DimPair, 0>{{}});
+  } else if (i == 1) {
+    auto A = xs[0]->t<3>();  // A is 3 tensor
+    Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
+    dEdxi.t<1>() += tdEdf.contract(A, dims);
+  } else if (i == 2) {
+    dEdxi.t<2>() += tdEdf;
+  } else {
+    cerr << "shouldn't happen\n"; abort();
+  }
+}
+CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D)
+
+//   Y_ij = A_ijk * B_k * C_j (+ D_i)
+template<class MyDevice>
+void InnerProduct3D_1D_1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto A = xs[0]->t<3>();
+  auto b = xs[1]->t<1>();
+  auto c = xs[2]->t<1>();
+  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
+  Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
+  Eigen::array<DimPair, 1> dims2({{DimPair(1, 0)}});
+  if (xs.size() == 3) {
+    fx.t<1>() = A.contract(b, dims).contract(c, dims2);
+  } else {
+    auto d = xs[3]->t<1>();
+    fx.t<1>() = A.contract(b, dims).contract(c, dims2) + d;
+  }
+}
+
+template<class MyDevice>
+void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  auto tdEdf = dEdf.t<1>();  // vector
+  typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
+  if (i == 0) { // 3 tensor
+    // tensor product
+    auto b = xs[1]->t<1>();
+    auto c = xs[2]->t<1>();
+    dEdxi.t<3>() += tdEdf.contract(c, Eigen::array<DimPair, 0>{{}}).contract(b, Eigen::array<DimPair, 0>{{}});
+  } else if (i == 1) { // vector 1
+    // TODO these should be reorganized so the contraction is first with tdEdf and then with c or b.
+    // in theory, that intermediate result could be cached (although CNN doesn't support this). the fact that it
+    // this part of the product is redone when i=1 and again when i=2 is probably why this is slower
+    // (or maybe it's the contract implementation?)
+    Eigen::array<DimPair, 1> dims({{DimPair(1, 0)}});
+    Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
+    auto A = xs[0]->t<3>();
+    auto c = xs[2]->t<1>();
+    dEdxi.t<1>() += A.contract(c, dims).contract(tdEdf, dims2);
+  } else if (i == 2) { // vector 2
+    Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
+    Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
+    auto A = xs[0]->t<3>();
+    auto b = xs[1]->t<1>();
+    dEdxi.t<1>() += A.contract(b, dims).contract(tdEdf, dims2);
+  } else if (i == 3) { // vector bias
+    dEdxi.t<1>() += tdEdf;
+  } else {
+    cerr << "shouldn't happen\n"; abort();
+  }
+}
+CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D_1D)
 
 template<class MyDevice>
 void L1Distance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
