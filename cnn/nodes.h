@@ -133,14 +133,7 @@ struct SumColumns : public Node {
 // y_i = \sum_{j=1}^n x_1:{i-1+j}
 struct KMHNGram : public Node {
   explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) : Node(a), n(n) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   unsigned n;  // width, n=2 for Karl's paper
 };
 
@@ -266,14 +259,7 @@ struct Log : public Node {
 // concatenate rows
 struct Concatenate : public Node {
   template <typename T> explicit Concatenate(const T& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   // src_row_indices[i] says what row in fx the ith x vector was assigned to
   // used to simplify backprop
   mutable std::vector<unsigned> src_row_indices;
@@ -283,15 +269,8 @@ struct Concatenate : public Node {
 // x_i must be a column vector in R^n
 struct ConcatenateColumns : public Node {
   template <typename T> explicit ConcatenateColumns(const T& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
 };
 
 // x_1 is a scalar (or row vector)
@@ -397,28 +376,13 @@ struct BinaryLogLoss : public Node {
 // done in log space carefully to avoid over/underflow issues
 struct LogSumExp : public Node {
   template <typename T> explicit LogSumExp(const T& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const override;
 };
 
 struct LogDet : public Node {
   template <typename T> explicit LogDet(const T& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  //size_t aux_storage_size() const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = \sum_i x_i
@@ -439,15 +403,8 @@ struct SumBatches : public Node {
 // y = ( \sum_i x_i ) / |x|
 struct Average : public Node {
   template <typename T> explicit Average(const T& a) : Node(a) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                    const Tensor& fx,
-                    const Tensor& dEdf,
-                    unsigned i,
-                    Tensor& dEdxi) const override;
 };
 
 // this is used to implement poisson regression

@@ -40,30 +40,6 @@ namespace cnn {
 // ======= Functions to be compiled on only CPU
 #ifndef __CUDACC__
 
-void KMHNGram::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  auto x = **xs[0];
-  const int new_cols = x.cols() - n + 1;
-  assert(new_cols > 0);
-  auto res = *fx;
-  res.setZero();
-  for (int j = 0; j < new_cols; ++j) {
-    auto c_j = res.col(j);
-    for (unsigned k = 0; k < n; ++k)
-      c_j += x.col(j + k);
-  }
-}
-
-void KMHNGram::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-  const int c = dEdf.d.cols();
-  for (int j = 0; j < c; ++j)
-    for (unsigned k = 0; k < n; ++k)
-      (*dEdxi).col(j+k) += (*dEdf).col(j);
-}
-
 template <class T>
 EIGEN_STRONG_INLINE float logsumexp(const T& x) {
   using std::exp;
@@ -106,160 +82,6 @@ inline typename MatrixType::Scalar logdet(const MatrixType& M, bool use_cholesky
     ld += log(c);
   }
   return ld;
-}
-
-// this i need to do something better, but this is a work-around
-// if this is too small, just make it bigger
-#define MAX_LOG_SUM_EXP 65536
-size_t LogSumExp::aux_storage_size() const {
-  return MAX_LOG_SUM_EXP * sizeof(float);
-}
-
-void LogSumExp::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  const unsigned num_args = xs.size();
-  if (num_args == 1) {
-    fx.v = xs[0]->v;
-    return;
-  }
-  for (unsigned i = 0; i < xs.size(); ++i)
-    static_cast<float*>(aux_mem)[i] = (**xs[i])(0,0);
-  Dim r = {(unsigned int)xs.size()};
-  Tensor v(r, static_cast<float*>(aux_mem), fx.device);
-  fx.v[0] = logsumexp(*v);
-}
-
-void LogDet::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.v[0] = logdet(**xs[0], false);
-}
-
-void LogSumExp::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-  if (xs.size() == 0) {
-    *dEdxi += *dEdf;
-    return;
-  }
-  // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
-  //         = 1/{exp f(x)} * exp(x_i)
-  //         = exp(x_i - f(x))
-  auto d = *dEdxi;
-  d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
-}
-
-void LogDet::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-  auto trans = (**xs[0]).transpose();
-  (*dEdxi) += (dEdf.v[0]) * trans.inverse();
-}
-
-void Average::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  const unsigned num_args = xs.size();
-  if (num_args == 1) {
-    fx.v = xs[0]->v;
-    return;
-  }
-  auto res = fx.vec();
-  const unsigned remainder = num_args % 4;
-  switch (remainder) {
-    case 0: res.setZero(); break;
-    case 1: res = xs[0]->vec(); break;
-    case 2: res = xs[0]->vec() + xs[1]->vec(); break;
-    case 3: res = xs[0]->vec() + xs[1]->vec() + xs[2]->vec(); break;
-  }
-  for (unsigned i = remainder; i < num_args; i += 4)
-    res += xs[i]->vec() + xs[i+1]->vec() + xs[i+2]->vec() + xs[i+3]->vec();
-  res /= num_args;
-}
-
-void Average::backward_impl(const vector<const Tensor*>& xs,
-                     const Tensor& fx,
-                     const Tensor& dEdf,
-                     unsigned i,
-                     Tensor& dEdxi) const {
-  dEdxi.vec() += (dEdf.vec() / xs.size());
-}
-
-void Concatenate::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  unsigned rows = 0;
-  for (auto x : xs) rows += x->d.rows();
-  // the following should use auxiliary memory
-  src_row_indices.resize(xs.size());
-  unsigned ind = 0;
-  unsigned k = 0;
-  for (auto x : xs) {
-    src_row_indices[k++] = ind;
-    auto & xi = *x;
-    const unsigned rows = xi.d.rows();
-#if HAVE_CUDA
-    assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
-    CUDA_CHECK(cudaMemcpyAsync(&fx.v[ind], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
-#else
-    (*fx).middleRows(ind, rows) = *xi;
-#endif
-    ind += rows;
-  }
-}
-
-void Concatenate::backward_impl(const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
-  assert(i < src_row_indices.size());
-  const unsigned rows = dEdxi.d.rows();
-  const unsigned begin = src_row_indices[i];
-#if HAVE_CUDA
-  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
-#else
-  *dEdxi += (*dEdf).middleRows(begin, rows);
-#endif
-}
-
-#define MAX_CONCAT_COLS_ARGS 512
-size_t ConcatenateColumns::aux_storage_size() const {
-  return MAX_CONCAT_COLS_ARGS * sizeof(unsigned);
-}
-
-void ConcatenateColumns::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-  unsigned c = 0;
-  assert(xs.size() < MAX_CONCAT_COLS_ARGS);
-  for (unsigned i = 0; i < xs.size(); ++i) {
-    static_cast<unsigned*>(aux_mem)[i] = c;
-#if HAVE_CUDA
-    assert(xs[i]->d.cols() == 1);
-    // CUBLAS matricies are column-major, so just copy the memory
-    auto & xi = *xs[i];
-    const unsigned rows = xi.d.rows();
-    CUDA_CHECK(cudaMemcpyAsync(&fx.v[i*rows], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
-#else
-    auto xi = **xs[i];
-    int d = xi.cols();
-    (*fx).middleCols(c, d) = xi;
-    c += d;
-#endif
-  }
-}
-
-void ConcatenateColumns::backward_impl(const vector<const Tensor*>& xs,
-                                    const Tensor& fx,
-                                    const Tensor& dEdf,
-                                    unsigned i,
-                                    Tensor& dEdxi) const {
-#if HAVE_CUDA
-  const unsigned rows = dEdxi.d.rows();
-  const unsigned begin = i*rows;
-  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
-#else
-  auto dEdx = *dEdxi;
-  int d = dEdx.cols();
-  int c = static_cast<unsigned*>(aux_mem)[i];
-  dEdx += (*dEdf).middleCols(c, d);
-#endif
 }
 
 void MaxPooling1D::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -449,6 +271,11 @@ size_t BlockDropout::aux_storage_size() const {
   return 1 * sizeof(float);
 }
 
+#define MAX_CONCAT_COLS_ARGS 512
+size_t ConcatenateColumns::aux_storage_size() const {
+  return MAX_CONCAT_COLS_ARGS * sizeof(unsigned);
+}
+
 size_t Dropout::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
@@ -459,6 +286,13 @@ size_t GaussianNoise::aux_storage_size() const {
 
 size_t Hinge::aux_storage_size() const {
   return dim.size() * sizeof(float);
+}
+
+// this i need to do something better, but this is a work-around
+// if this is too small, just make it bigger
+#define MAX_LOG_SUM_EXP 65536
+size_t LogSumExp::aux_storage_size() const {
+  return MAX_LOG_SUM_EXP * sizeof(float);
 }
 
 size_t Max::aux_storage_size() const {
@@ -474,7 +308,6 @@ size_t Sparsemax::aux_storage_size() const {
 }
 
 #define MAX_SPARSEMAX_LOSS_ROWS 65536
-
 size_t SparsemaxLoss::aux_storage_size() const {
   // first dim.size dimensions is the sparsemax
   const unsigned rows = MAX_SPARSEMAX_LOSS_ROWS;  // this should be xs[0]->d.rows()
@@ -647,6 +480,118 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
   }
 }
 CNN_NODE_INST_DEV_IMPL(AffineTransform)
+
+template<class MyDevice>
+void Average::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  auto res = fx.tvec();
+  const unsigned remainder = num_args % 4;
+  switch (remainder) {
+    case 0: res.setZero(); break;
+    case 1: res.device(*dev.edevice) = xs[0]->tvec(); break;
+    case 2: res.device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec(); break;
+    case 3: res.device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec(); break;
+  }
+  for (unsigned i = remainder; i < num_args; i += 4)
+    res.device(*dev.edevice) += xs[i]->tvec() + xs[i+1]->tvec() + xs[i+2]->tvec() + xs[i+3]->tvec();
+  res.device(*dev.edevice) = res / (float)num_args;
+}
+
+template<class MyDevice>
+void Average::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += (dEdf.tvec() / (float)xs.size());
+}
+CNN_NODE_INST_DEV_IMPL(Average)
+
+template<class MyDevice>
+void Concatenate::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  unsigned rows = 0;
+  for (auto x : xs) rows += x->d.rows();
+  // the following should use auxiliary memory
+  src_row_indices.resize(xs.size());
+  unsigned ind = 0;
+  unsigned k = 0;
+  for (auto x : xs) {
+    src_row_indices[k++] = ind;
+    auto & xi = *x;
+    const unsigned rows = xi.d.rows();
+#if __CUDACC__
+    assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
+    CUDA_CHECK(cudaMemcpyAsync(&fx.v[ind], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
+#else
+    (*fx).middleRows(ind, rows) = *xi;
+#endif
+    ind += rows;
+  }
+}
+
+template<class MyDevice>
+void Concatenate::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < src_row_indices.size());
+  const unsigned rows = dEdxi.d.rows();
+  const unsigned begin = src_row_indices[i];
+#if __CUDACC__
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
+#else
+  *dEdxi += (*dEdf).middleRows(begin, rows);
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(Concatenate)
+
+template<class MyDevice>
+void ConcatenateColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  unsigned c = 0;
+  assert(xs.size() < MAX_CONCAT_COLS_ARGS);
+  for (unsigned i = 0; i < xs.size(); ++i) {
+    static_cast<unsigned*>(aux_mem)[i] = c;
+#if __CUDACC__
+    assert(xs[i]->d.cols() == 1);
+    // CUBLAS matricies are column-major, so just copy the memory
+    auto & xi = *xs[i];
+    const unsigned rows = xi.d.rows();
+    CUDA_CHECK(cudaMemcpyAsync(&fx.v[i*rows], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
+#else
+    auto xi = **xs[i];
+    int d = xi.cols();
+    (*fx).middleCols(c, d) = xi;
+    c += d;
+#endif
+  }
+}
+
+template<class MyDevice>
+void ConcatenateColumns::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+#if __CUDACC__
+  const unsigned rows = dEdxi.d.rows();
+  const unsigned begin = i*rows;
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
+#else
+  auto dEdx = *dEdxi;
+  int d = dEdx.cols();
+  int c = static_cast<unsigned*>(aux_mem)[i];
+  dEdx += (*dEdf).middleCols(c, d);
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(ConcatenateColumns)
 
 template<class MyDevice>
 void BinaryLogLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1043,6 +988,42 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
 CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D_1D)
 
 template<class MyDevice>
+void KMHNGram::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("KMHNGram not implemented on GPU");
+#else
+  auto x = **xs[0];
+  const int new_cols = x.cols() - n + 1;
+  assert(new_cols > 0);
+  auto res = *fx;
+  res.setZero();
+  for (int j = 0; j < new_cols; ++j) {
+    auto c_j = res.col(j);
+    for (unsigned k = 0; k < n; ++k)
+      c_j += x.col(j + k);
+  }
+#endif
+}
+
+template<class MyDevice>
+void KMHNGram::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("KMHNGram not implemented on GPU");
+#else
+  const int c = dEdf.d.cols();
+  for (int j = 0; j < c; ++j)
+    for (unsigned k = 0; k < n; ++k)
+      (*dEdxi).col(j+k) += (*dEdf).col(j);
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(KMHNGram)
+
+template<class MyDevice>
 void L1Distance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
   fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() - xs[1]->tvec()).abs().sum();
@@ -1075,6 +1056,31 @@ void Log::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() / xs[0]->tvec();
 }
 CNN_NODE_INST_DEV_IMPL(Log)
+
+template<class MyDevice>
+void LogDet::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("LogDet not implemented on GPU");
+#else
+  fx.v[0] = logdet(**xs[0], false);
+#endif
+}
+
+template<class MyDevice>
+void LogDet::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("KMHNGram not implemented on GPU");
+#else
+  auto trans = (**xs[0]).transpose();
+  (*dEdxi) += (dEdf.v[0]) * trans.inverse();
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(LogDet)
 
 template<class MyDevice>
 void LogGamma::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -1144,6 +1150,47 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
   }
 }
 CNN_NODE_INST_DEV_IMPL(LogSoftmax)
+
+template<class MyDevice>
+void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("LogSumExp not implemented on GPU");
+#else
+  const unsigned num_args = xs.size();
+  if (num_args == 1) {
+    fx.v = xs[0]->v;
+    return;
+  }
+  for (unsigned i = 0; i < xs.size(); ++i)
+    static_cast<float*>(aux_mem)[i] = (**xs[i])(0,0);
+  Dim r = {(unsigned int)xs.size()};
+  Tensor v(r, static_cast<float*>(aux_mem), fx.device);
+  fx.v[0] = logsumexp(*v);
+#endif
+}
+
+template<class MyDevice>
+void LogSumExp::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("LogSumExp not implemented on GPU");
+#else
+  if (xs.size() == 0) {
+    *dEdxi += *dEdf;
+    return;
+  }
+  // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
+  //         = 1/{exp f(x)} * exp(x_i)
+  //         = exp(x_i - f(x))
+  auto d = *dEdxi;
+  d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
+#endif
+}
+CNN_NODE_INST_DEV_IMPL(LogSumExp)
 
 template<class MyDevice>
 void MatrixInverse::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
