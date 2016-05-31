@@ -37,6 +37,11 @@ using namespace std;
 
 namespace cnn {
 
+// ======= Shared definitions
+#define MAX_CONCAT_COLS_ARGS 512
+#define MAX_LOG_SUM_EXP 65536
+#define MAX_SPARSEMAX_LOSS_ROWS 65536
+
 // ======= Functions to be compiled on only CPU
 #ifndef __CUDACC__
 
@@ -104,7 +109,6 @@ size_t BlockDropout::aux_storage_size() const {
   return 1 * sizeof(float);
 }
 
-#define MAX_CONCAT_COLS_ARGS 512
 size_t ConcatenateColumns::aux_storage_size() const {
   return MAX_CONCAT_COLS_ARGS * sizeof(unsigned);
 }
@@ -123,7 +127,6 @@ size_t Hinge::aux_storage_size() const {
 
 // this i need to do something better, but this is a work-around
 // if this is too small, just make it bigger
-#define MAX_LOG_SUM_EXP 65536
 size_t LogSumExp::aux_storage_size() const {
   return MAX_LOG_SUM_EXP * sizeof(float);
 }
@@ -140,7 +143,6 @@ size_t Sparsemax::aux_storage_size() const {
   return (dim.size() + 1) * sizeof(float);
 }
 
-#define MAX_SPARSEMAX_LOSS_ROWS 65536
 size_t SparsemaxLoss::aux_storage_size() const {
   // first dim.size dimensions is the sparsemax
   const unsigned rows = MAX_SPARSEMAX_LOSS_ROWS;  // this should be xs[0]->d.rows()
@@ -728,6 +730,10 @@ CNN_NODE_INST_DEV_IMPL(Identity)
 //   Y_ij = A_ijk * B_k (+ C_ij)
 template<class MyDevice>
 void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#if __CUDACC__
+  // TODO: this is giving a compile error
+  throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl not implemented on CUDA");
+#else
   auto A = xs[0]->t<3>();
   auto b = xs[1]->t<1>();
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
@@ -738,6 +744,7 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
     auto C = xs[2]->t<2>();
     fx.t<2>() = A.contract(b, dims) + C;
   }
+#endif
 }
 
 template<class MyDevice>
@@ -747,6 +754,10 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+#if __CUDACC__
+  // TODO: this is giving a compile error
+  throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl not implemented on CUDA");
+#else
   auto tdEdf = dEdf.t<2>();  // 2 tensor
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   if (i == 0) { // 3 tensor
@@ -762,12 +773,17 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
   } else {
     cerr << "shouldn't happen\n"; abort();
   }
+#endif
 }
 CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D)
 
 //   Y_ij = A_ijk * B_k * C_j (+ D_i)
 template<class MyDevice>
 void InnerProduct3D_1D_1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#if __CUDACC__
+  // TODO: this is giving a compile error
+  throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl not implemented on CUDA");
+#else
   auto A = xs[0]->t<3>();
   auto b = xs[1]->t<1>();
   auto c = xs[2]->t<1>();
@@ -780,6 +796,7 @@ void InnerProduct3D_1D_1D::forward_dev_impl(const MyDevice & dev, const vector<c
     auto d = xs[3]->t<1>();
     fx.t<1>() = A.contract(b, dims).contract(c, dims2) + d;
   }
+#endif
 }
 
 template<class MyDevice>
@@ -789,6 +806,10 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+#if __CUDACC__
+  // TODO: this is giving a compile error
+  throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl not implemented on CUDA");
+#else
   auto tdEdf = dEdf.t<1>();  // vector
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   if (i == 0) { // 3 tensor
@@ -817,6 +838,7 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
   } else {
     cerr << "shouldn't happen\n"; abort();
   }
+#endif
 }
 CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D_1D)
 
@@ -1417,7 +1439,6 @@ void PickRange::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
   assert(xs.size() == 1);
   auto x = **xs[0];
   assert(x.cols() == 1);
-  assert(start >= 0);
   assert(end <= x.rows());
   assert(start < end);
   assert(int(fx.d.rows()) == int(end-start));
@@ -1450,7 +1471,7 @@ CNN_NODE_INST_DEV_IMPL(PickRange)
 template<class MyDevice>
 void PoissonRegressionLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const real y = *pty;
-  const auto z = lgamma(y + 1);
+  const auto z = std::lgamma(y + 1);
   // const auto x = as_scalar(*xs[0]);
   fx.t<0>().device(*dev.edevice) = xs[0]->t<0>().exp() + z - xs[0]->t<0>() * y;
 }
@@ -1875,7 +1896,7 @@ void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs
     fx.v = xs[0]->v;
     return;
   }
-#if HAVE_CUDA
+#if __CUDACC__
   TensorTools::Zero(fx);
   for (unsigned i = 0; i < num_args; ++i)
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[i]->v, 1, fx.v, 1));
@@ -1901,7 +1922,7 @@ void Sum::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 
-#if HAVE_CUDA
+#if __CUDACC__
   CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
 #else
   dEdxi.vec() += dEdf.vec();
@@ -1913,7 +1934,7 @@ template<class MyDevice>
 void SumBatches::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   unsigned num_args = xs[0]->d.bd;
-#if HAVE_CUDA
+#if __CUDACC__
   TensorTools::Zero(fx);
   for (unsigned i = 0; i < num_args; ++i)
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v + i * xs[0]->d.batch_size(), 1, fx.v, 1));
@@ -1939,7 +1960,7 @@ void SumBatches::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i == 0);
-#if HAVE_CUDA
+#if __CUDACC__
   for (unsigned i = 0; i < dEdxi.d.bd; ++i)
     CUBLAS_CHECK(cublasSaxpy(cublas_handle, fx.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v + i * dEdxi.d.batch_size(), 1));
 #else
@@ -1952,9 +1973,10 @@ CNN_NODE_INST_DEV_IMPL(SumBatches)
 template<class MyDevice>
 void SumColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  array<ptrdiff_t, 1> reduction_axis;
-  reduction_axis[0] = 1;
-  fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().sum(reduction_axis);
+  throw std::runtime_error("SumColumns not implemented yet");
+  // array<ptrdiff_t, 1> reduction_axis;
+  // reduction_axis[0] = 1;
+  // fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().sum(reduction_axis);
 }
 
 template<class MyDevice>
@@ -1964,9 +1986,10 @@ void SumColumns::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  auto out = *dEdxi;
-  for(size_t i = 0; i < xs[0]->d[1]; i++)
-    dEdxi.t<1>() += dEdf.t<2>().chip<1>(i);
+  throw std::runtime_error("SumColumns not implemented yet");
+  // TODO: This causes a compile error
+  // for(size_t i = 0; i < xs[0]->d[1]; i++)
+  //   dEdxi.t<1>().device(*dev.edevice) += dEdf.t<2>().chip<1>(i);
   // TODO: This is not great. Can we use broadcasting similar to the following?
   // array<ptrdiff_t, 2> broadcasts;
   // broadcasts[0] = 1;
@@ -1977,7 +2000,7 @@ CNN_NODE_INST_DEV_IMPL(SumColumns)
 
 template<class MyDevice>
 void TraceOfProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
+#ifdef __CUDACC__
   throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
 #else
   auto x1 = **xs[0];
@@ -2025,7 +2048,7 @@ void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
   if (dim.rows() == 1 || dim.cols() == 1) {
     fx.v = xs[0]->v;
   } else {
-#if HAVE_CUDA
+#if __CUDACC__
     for(unsigned b = 0; b < xs[0]->d.bd; ++b)
       CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
                                kSCALAR_ONE, xs[0]->batch_ptr(b), xs[0]->d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.batch_ptr(b), fx.d.rows()));
@@ -2043,7 +2066,7 @@ void Transpose::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-#if HAVE_CUDA
+#if __CUDACC__
   for(unsigned b = 0; b < xs[0]->d.bd; ++b)
     CUBLAS_CHECK(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
                              kSCALAR_ONE, dEdf.batch_ptr(b), dEdf.d.rows(), kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows(), dEdxi.batch_ptr(b), dEdxi.d.rows()));
@@ -2057,11 +2080,7 @@ CNN_NODE_INST_DEV_IMPL(Transpose)
 template<class MyDevice>
 void Zeroes::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-#ifdef __CUDACC__
-  cudaMemsetAsync(fx.v, 0, dim.size() * sizeof(float));
-#else
-  memset(fx.v, 0, dim.size() * sizeof(float));
-#endif
+  TensorTools::Zero(fx);
 }
 
 template<class MyDevice>
