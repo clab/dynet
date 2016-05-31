@@ -3,7 +3,7 @@
 
 #include "cnn/cnn.h"
 #include "cnn/model.h"
-#include "cnn/node-macros.h"
+#include "cnn/nodes-macros.h"
 
 namespace cnn {
 
