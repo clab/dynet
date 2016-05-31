@@ -6,7 +6,7 @@
 
 #include "cnn/simd-functors.h"
 #include "cnn/functors.h"
-#include "cnn/node-macros.h"
+#include "cnn/nodes-macros.h"
 
 #ifdef HAVE_CUDA
 #include "cnn/cuda.h"
