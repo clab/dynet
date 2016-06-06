@@ -14,7 +14,7 @@ addons:
 
 before_script:
   - sudo apt-get update -qq
-  - sudo apt-get install libboost-filesystem-dev libboost-program-options-dev libboost-serialization-dev libboost-test-dev
+  - sudo apt-get install libboost-filesystem-dev libboost-program-options-dev libboost-serialization-dev libboost-test-dev libboost-regex-dev
   - hg clone https://bitbucket.org/eigen/eigen
   - mkdir build
   - cd build
