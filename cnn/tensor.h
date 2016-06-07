@@ -245,6 +245,7 @@ struct TensorTools {
   static float AccessElement(const Tensor& v, int index);
   static float AccessElement(const Tensor& v, const Dim& index);
   static void SetElement(const Tensor& v, int index, float value);
+  static void CopyElement(const Tensor& l, int lindex, Tensor& r, int rindex);
 
   static void SetElements(const Tensor& v, const std::vector<float>& vec);
   static void CopyElements(const Tensor& v, const Tensor& v_src);
