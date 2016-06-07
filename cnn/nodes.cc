@@ -197,10 +197,10 @@ void AddVectorToAllColumns::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   assert(i < 2);
   if (i == 0) { // x
-    dEdxi.tvec() += dEdf.tvec();
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
   } else { // bias
     for(size_t i = 0; i < xs[0]->d[1]; i++)
-      dEdxi.t<1>() += dEdf.t<2>().chip<1>(i);
+      dEdxi.t<1>().device(*dev.edevice) += dEdf.t<2>().chip<1>(i);
     // TODO: This is not great. Can we use broadcasting similar to SumColumns?
   }
 }  
@@ -668,10 +668,11 @@ template<class MyDevice>
 void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
-  const real mlystar = margin - xs[0]->tvec()(*pelement);
+  // TODO: Can we do this on device?
+  const real mlystar = margin - TensorTools::AccessElement(*xs[0], *pelement);
   eloss.tvec().device(*dev.edevice) = (xs[0]->tvec() + mlystar).cwiseMax(0.f);
-  eloss.tvec()(*pelement) = 0.f;
-  fx.t<0>() = eloss.tvec().sum();
+  TensorTools::SetElement(eloss, *pelement, 0.f);
+  fx.t<0>().device(*dev.edevice) = eloss.tvec().sum();
 }
 
 template<class MyDevice>
@@ -686,8 +687,8 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
     const float d = as_scalar(dEdf);
     Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
     // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
-    dEdxi.tvec() += (eloss.tvec() > 0.f).cast<float>() * d;
-    dEdxi.tvec().chip<0>(*pelement) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
+    dEdxi.tvec().device(*dev.edevice) += (eloss.tvec() > 0.f).cast<float>() * d;
+    dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
   }
 }
 CNN_NODE_INST_DEV_IMPL(Hinge)
@@ -845,7 +846,7 @@ CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D_1D)
 template<class MyDevice>
 void KMHNGram::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
-  throw std::runtime_error("KMHNGram not implemented on GPU");
+  throw std::runtime_error("KMHNGram not implemented for CUDA");
 #else
   auto x = **xs[0];
   const int new_cols = x.cols() - n + 1;
@@ -868,7 +869,7 @@ void KMHNGram::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  throw std::runtime_error("KMHNGram not implemented on GPU");
+  throw std::runtime_error("KMHNGram not implemented for CUDA");
 #else
   const int c = dEdf.d.cols();
   for (int j = 0; j < c; ++j)
@@ -915,7 +916,7 @@ CNN_NODE_INST_DEV_IMPL(Log)
 template<class MyDevice>
 void LogDet::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
-  throw std::runtime_error("LogDet not implemented on GPU");
+  throw std::runtime_error("LogDet not implemented for CUDA");
 #else
   fx.v[0] = logdet(**xs[0], false);
 #endif
@@ -929,7 +930,7 @@ void LogDet::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  throw std::runtime_error("KMHNGram not implemented on GPU");
+  throw std::runtime_error("KMHNGram not implemented for CUDA");
 #else
   auto trans = (**xs[0]).transpose();
   (*dEdxi) += (dEdf.v[0]) * trans.inverse();
@@ -1009,7 +1010,7 @@ CNN_NODE_INST_DEV_IMPL(LogSoftmax)
 template<class MyDevice>
 void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
-  throw std::runtime_error("LogSumExp not implemented on GPU");
+  throw std::runtime_error("LogSumExp not implemented for CUDA");
 #else
   const unsigned num_args = xs.size();
   if (num_args == 1) {
@@ -1032,7 +1033,7 @@ void LogSumExp::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  throw std::runtime_error("LogSumExp not implemented on GPU");
+  throw std::runtime_error("LogSumExp not implemented for CUDA");
 #else
   if (xs.size() == 0) {
     *dEdxi += *dEdf;
@@ -1545,7 +1546,7 @@ void Reshape::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device);
-  dEdxi.tvec() += reshaped.tvec();
+  dEdxi.tvec().device(*dev.edevice) += reshaped.tvec();
 }
 CNN_NODE_INST_DEV_IMPL(Reshape)
 
@@ -1693,7 +1694,7 @@ template<class MyDevice>
 void Sparsemax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
 #ifdef __CUDACC__
-    throw std::runtime_error("Sparsemax not implemented on GPU");
+    throw std::runtime_error("Sparsemax not implemented for CUDA");
 #else
     const unsigned rows = xs[0]->d.rows();
     float *zs = static_cast<float*>(aux_mem);
@@ -1729,7 +1730,7 @@ void Sparsemax::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  throw std::runtime_error("Sparsemax not implemented on GPU");
+  throw std::runtime_error("Sparsemax not implemented for CUDA");
 #else
   const int ssize = static_cast<int*>(aux_mem)[0];
   int *support = static_cast<int*>(aux_mem) + 1;
@@ -1748,7 +1749,7 @@ template<class MyDevice>
 void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
 #ifdef __CUDACC__
-    throw std::runtime_error("SparsemaxLoss not implemented on GPU");
+    throw std::runtime_error("SparsemaxLoss not implemented for CUDA");
 #else
     const int rows = xs[0]->d.rows();
     if (rows > MAX_SPARSEMAX_LOSS_ROWS) {
@@ -1804,7 +1805,7 @@ void SparsemaxLoss::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  throw std::runtime_error("SparsemaxLoss not implemented on GPU");
+  throw std::runtime_error("SparsemaxLoss not implemented for CUDA");
 #else
   const float d = dEdf.v[0];
   float* psm = static_cast<float*>(aux_mem);
