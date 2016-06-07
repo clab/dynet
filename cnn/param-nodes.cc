@@ -4,22 +4,8 @@
 #include <cmath>
 #include <stdexcept>
 
-#include "cnn/simd-functors.h"
-#include "cnn/functors.h"
 #include "cnn/nodes-macros.h"
-
-#ifdef HAVE_CUDA
-#include "cnn/cuda.h"
-#include "cnn/gpu-ops.h"
-#endif
-
-// #include "cnn/param-nodes.h"
-// #include "cnn/tensor.h"
 #include "cnn/weight-decay.h"
-// // DEBUG
-// #include "cnn/simd-functors.h"
-// 
-// #include <sstream>
 
 using namespace std;
 

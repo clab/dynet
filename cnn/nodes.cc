@@ -155,7 +155,7 @@ size_t SparsemaxLoss::aux_storage_size() const {
 
 #ifdef __CUDACC__
 inline void CUDAMatrixMultiply(const Tensor& l, const Tensor& r, Tensor& y, const float* acc_scalar) {
-  if(l.d.bd == 1) {
+  if(l.d.bd == 1 && r.d.bd == y.d.bd) {
     // If the left side has one batch, multiply by columns
     // [x, z, b] = [x, y] * [y, z, b]
     // -> [x, z*b] = [x, y], [y, z*b]
@@ -168,7 +168,7 @@ inline void CUDAMatrixMultiply(const Tensor& l, const Tensor& r, Tensor& y, cons
   } else {
     // Otherwise, loop over the batches
     assert(r.d.bd == 1 || r.d.bd == l.d.bd);
-    for(unsigned b = 0; b < l.d.bd; ++b) {
+    for(unsigned b = 0; b < y.d.bd; ++b) {
       CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
             y.d.rows(), y.d.cols(), l.d.cols(),
             kSCALAR_ONE,
@@ -260,7 +260,13 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
   assert(i < xs.size());
   if (i == 0) { // bias term
 #if __CUDACC__
-    CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
+    if(fx.d.bd == xs[0]->d.bd) {
+      CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
+    } else {
+      // TODO: Can we use broadcasting?
+      for(unsigned b = 0; b < dEdf.d.bd; ++b)
+        CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.batch_size(), kSCALAR_ONE, dEdf.batch_ptr(b), 1, dEdxi.batch_ptr(b), 1));
+    }
 #else
     // Add, using broadcasting or not
     if(dEdxi.d.bd == 1 && dEdf.d.bd > 1) {
@@ -288,7 +294,7 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
     int max_b = max(xs[i-1]->d.bd, dEdf.d.bd);
 #if __CUDACC__
     // Do a single multiply if xs[i-1] has one batch
-    if(xs[i-1]->d.bd == 1) {
+    if(xs[i-1]->d.bd == 1 && dEdxi.d.bd == dEdf.d.bd) {
       CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, 
             dEdxi.d.rows(), dEdxi.d.cols()*dEdxi.d.batch_elems(), xs[i-1]->d.rows(),
             kSCALAR_ONE,
