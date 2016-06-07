@@ -5,7 +5,7 @@
 #include "cnn/devices.h"
 #include "cnn/nodes-macros.h"
 
-// See nodes-macros.h for more details about CNN_NODE_DEFINE_DEV_IMPL.
+// See nodes-macros.h for more details about CNN_NODE_DEFINE_DEV_IMPL().
 
 namespace cnn {
 

@@ -52,12 +52,8 @@ struct ScalarInputNode : public Node {
 struct LookupNode : public ParameterNodeBase {
   LookupNode(LookupParameter p, unsigned ind) : dim(p.get()->dim), index(ind), pindex(&index), indices(), pindices(), params(p) {}
   LookupNode(LookupParameter p, const unsigned* pind) : dim(p.get()->dim), index(), pindex(pind), indices(), pindices(), params(p) {}
-  LookupNode(LookupParameter p, const std::vector<unsigned>& indices) : dim(p.get()->dim), index(), pindex(), indices(indices), pindices(&this->indices), params(p) {
-    dim.bd = pindices->size();
-  }
-  LookupNode(LookupParameter p, const std::vector<unsigned>* pindices) : dim(p.get()->dim), index(), pindex(), indices(), pindices(pindices), params(p) {
-    dim.bd = pindices->size();
-  }
+  LookupNode(LookupParameter p, const std::vector<unsigned>& indices) : dim(p.get()->dim), index(), pindex(), indices(indices), pindices(&this->indices), params(p) { dim.bd = pindices->size(); }
+  LookupNode(LookupParameter p, const std::vector<unsigned>* pindices) : dim(p.get()->dim), index(), pindex(), indices(), pindices(pindices), params(p) { dim.bd = pindices->size(); }
   CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }  
   void accumulate_grad(const Tensor& g) override;
