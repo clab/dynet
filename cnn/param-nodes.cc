@@ -1,8 +1,25 @@
 #include "cnn/param-nodes.h"
-#include "cnn/tensor.h"
-#include "cnn/weight-decay.h"
 
-#include <sstream>
+#include <limits>
+#include <cmath>
+#include <stdexcept>
+
+#include "cnn/simd-functors.h"
+#include "cnn/functors.h"
+#include "cnn/nodes-macros.h"
+
+#ifdef HAVE_CUDA
+#include "cnn/cuda.h"
+#include "cnn/gpu-ops.h"
+#endif
+
+// #include "cnn/param-nodes.h"
+// #include "cnn/tensor.h"
+#include "cnn/weight-decay.h"
+// // DEBUG
+// #include "cnn/simd-functors.h"
+// 
+// #include <sstream>
 
 using namespace std;
 
@@ -85,7 +102,7 @@ void LookupNode::accumulate_grad(const Tensor& g) {
 template<class MyDevice>
 void ConstParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  fx.tvec() = params.get()->values.tvec() * global_weight_decay.CurrentWeightDecay();
+  fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * global_weight_decay.CurrentWeightDecay();
 }
 
 template<class MyDevice>
@@ -108,7 +125,7 @@ void ParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Te
 //    fx.v = params->values.v;
 //    return;
 //  }
-  fx.tvec() = params.get()->values.tvec() * global_weight_decay.CurrentWeightDecay();
+  fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * global_weight_decay.CurrentWeightDecay();
 }
 
 template<class MyDevice>
@@ -180,7 +197,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   if(pindex) {
     assert(*pindex < params.get()->values.size());
     assert (fx.d.batch_elems() == 1);
-    fx.vec() = params.get()->values[*pindex].vec() * global_weight_decay.CurrentWeightDecay();
+    fx.tvec().device(*dev.edevice) = params.get()->values[*pindex].tvec() * global_weight_decay.CurrentWeightDecay();
   } else {
     assert (pindices);
     assert (fx.d.batch_elems() == pindices->size());
@@ -197,7 +214,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
 
 #endif
     }
-    fx.vec() *= global_weight_decay.CurrentWeightDecay();
+    fx.tvec().device(*dev.edevice) = fx.tvec() * global_weight_decay.CurrentWeightDecay();
   }
 }
 
