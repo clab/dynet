@@ -1345,7 +1345,7 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
     assert(pvals);
     for(unsigned b = 0; b < pvals->size(); ++b)
 #ifdef __CUDACC__
-      CUBLAS_CHECK(cublasSaxpy(cublas_handle, 1, kSCALAR_ONE, dEdf.v + b, 1, dEdxi.batch_ptr(b)(*pvals)[b], 1));
+      CUBLAS_CHECK(cublasSaxpy(cublas_handle, 1, kSCALAR_ONE, dEdf.v + b, 1, dEdxi.batch_ptr(b) + (*pvals)[b], 1));
 #else
       dEdxi.batch_matrix(b)((*pvals)[b]) += dEdf.v[b];
 #endif
