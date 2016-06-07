@@ -1304,31 +1304,26 @@ CNN_NODE_INST_DEV_IMPL(PairwiseRankLoss)
 // y = (x_1)_{*pval}
 template<class MyDevice>
 void PickElement::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef __CUDACC__
-  throw std::runtime_error("PickElement not yet implemented for CUDA");
-#else
   if(pval) {
     if (*pval >= xs[0]->d.rows()) {
       cerr << "PickElement::forward_impl requested element " << *pval
            << " from a vector of length " << xs[0]->d.rows() << endl;
       abort();
     }
-    auto x = **xs[0];
-    fx.v[0] = x(*pval);
+    TensorTools::CopyElement(*xs[0], *pval, fx, 0);
   } else {
     assert(pvals);
     assert(pvals->size() == fx.d.batch_elems());
+    int batch_size = xs[0]->d.batch_size();
     for(unsigned b = 0; b < pvals->size(); ++b) {
       if ((*pvals)[b] >= xs[0]->d.rows()) {
         cerr << "PickElement::forward_impl requested element " << (*pvals)[b]
              << " from a vector of length " << xs[0]->d.rows() << endl;
         abort();
       }
-      auto x = xs[0]->batch_matrix(b);
-      fx.v[b] = x((*pvals)[b]);
+      TensorTools::CopyElement(*xs[0], b*batch_size + (*pvals)[b], fx, b);
     }
   }
-#endif
 }
 
 // derivative is 0 in all dimensions except 1 for the selected element
@@ -1340,17 +1335,21 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i == 0);
-#ifdef __CUDACC__
-  throw std::runtime_error("PickElement not yet implemented for CUDA");
-#else
   if(pval) {
+#ifdef __CUDACC__
+    CUBLAS_CHECK(cublasSaxpy(cublas_handle, 1, kSCALAR_ONE, dEdf.v, 1, dEdxi.v + *pval, 1));
+#else
     (*dEdxi)(*pval) += dEdf.v[0];
+#endif
   } else {
     assert(pvals);
     for(unsigned b = 0; b < pvals->size(); ++b)
+#ifdef __CUDACC__
+      CUBLAS_CHECK(cublasSaxpy(cublas_handle, 1, kSCALAR_ONE, dEdf.v + b, 1, dEdxi.batch_ptr(b)(*pvals)[b], 1));
+#else
       dEdxi.batch_matrix(b)((*pvals)[b]) += dEdf.v[b];
-  }
 #endif
+  }
 }
 CNN_NODE_INST_DEV_IMPL(PickElement)
 
