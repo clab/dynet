@@ -4,18 +4,11 @@
 #include <cmath>
 #include <sstream>
 
+#include "cnn/nodes-macros.h"
+
 using namespace std;
 
 namespace cnn {
-
-inline bool LooksLikeVector(const Dim& d) {
-  if (d.ndims() == 1) return true;
-  if (d.ndims() > 1) {
-    for (unsigned i = 1; i < d.ndims(); ++i)
-      if (d[i] != 1) return false;
-  }
-  return true;
-}
 
 string AddVectorToAllColumns::as_string(const vector<string>& arg_names) const {
   ostringstream os;
@@ -249,57 +242,6 @@ Dim KMHNGram::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument(s.str());
   }
   return Dim({xs[0][0], new_cols});
-}
-
-string InnerProduct3D_1D::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "dot(" << arg_names[0] << "," << arg_names[1] << ')';
-  if (arg_names.size() == 3) s << " + " << arg_names[2];
-  return s.str();
-}
-
-Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
-  if (xs.size() != 2 && xs.size() != 3)
-    throw std::invalid_argument("Expected two or three arguments in InnerProduct3D_1D");
-  if (xs[0].ndims() != 3 ||
-      !LooksLikeVector(xs[1]) ||
-      xs[0].size(2) != xs[1].size(0)) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  Dim d({xs[0].size(0), xs[0].size(1)}, max(xs[0].bd, xs[1].bd));
-  if(xs.size() == 3) d.bd = max(d.bd, xs[2].bd);
-  if (xs.size() == 3 && xs[2] != d) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  return d;
-}
-
-string InnerProduct3D_1D_1D::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "dotdot(" << arg_names[0] << "," << arg_names[1] << "," << arg_names[2] << ')';
-  if (arg_names.size() == 4) s << " + " << arg_names[3];
-  return s.str();
-}
-
-Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
-  if (xs.size() != 3 && xs.size() != 4)
-    throw std::invalid_argument("Expected three or four arguments in InnerProduct3D_1D");
-  if (xs[0].ndims() != 3 ||
-      !LooksLikeVector(xs[1]) ||
-      !LooksLikeVector(xs[2])) {
-    // TODO fix add check
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  Dim d({xs[0].size(0)}, max(max(xs[0].bd, xs[1].bd), xs[2].bd));
-  if(xs.size() == 4) d.bd = max(d.bd, xs[3].bd);
-  if (xs.size() == 4 && xs[3] != d) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  return d;
 }
 
 string GaussianNoise::as_string(const vector<string>& arg_names) const {

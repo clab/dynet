@@ -1,6 +1,21 @@
 #ifndef CNN_NODE_MACROS_H_
 #define CNN_NODE_MACROS_H_
 
+#include "cnn/dim.h"
+
+namespace cnn {
+
+inline bool LooksLikeVector(const Dim& d) {
+  if (d.ndims() == 1) return true;
+  if (d.ndims() > 1) {
+    for (unsigned i = 1; i < d.ndims(); ++i)
+      if (d[i] != 1) return false;
+  }
+  return true;
+}
+
+}
+
 // A macro to dispatch things to the appropriate device
 #define CNN_NODE_DEFINE_DEV_IMPL() \
   std::string as_string(const std::vector<std::string>& arg_names) const override; \
