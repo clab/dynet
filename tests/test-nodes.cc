@@ -92,6 +92,15 @@ BOOST_AUTO_TEST_CASE( add_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression logsumexp(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( logsumexp_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_scalar1);
+  Expression x2 = parameter(cg, param_scalar2);
+  logsumexp({x1, x2});
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression operator+(const Expression& x, real y);
 BOOST_AUTO_TEST_CASE( addscalar_gradient ) {
   cnn::ComputationGraph cg;
