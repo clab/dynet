@@ -31,7 +31,7 @@ struct NodeTest {
     std::vector<float> param3_vals = {1.1f,2.2f,3.3f};
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
-    std::vector<float> param_square1_vals = {1.1f,2.2f,3.3f,1.2f,2.2f,3.2f,1.3f,2.3f,3.3f};
+    std::vector<float> param_square1_vals = {1.1f,2.2f,3.3f,1.2f,2.5f,3.2f,5.3f,2.3f,3.3f};
     std::vector<float> param_cube1_vals = {1.1f,2.2f,3.3f,1.2f,2.2f,3.2f,1.3f,2.3f,3.3f,
                                            11.1f,12.2f,13.3f,11.2f,12.2f,13.2f,11.3f,12.3f,13.3f,
                                            21.1f,22.2f,23.3f,21.2f,22.2f,23.2f,21.3f,22.3f,23.3f};
