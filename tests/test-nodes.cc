@@ -642,7 +642,7 @@ BOOST_AUTO_TEST_CASE( pickptr_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
-// Expression pickneglogsoftmax(const Expression& x, unsigned v);
+// Expression pick(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
   std::vector<unsigned> idx = {1,2};
   cnn::ComputationGraph cg;
