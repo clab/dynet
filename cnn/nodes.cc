@@ -45,25 +45,6 @@ namespace cnn {
 // ======= Functions to be compiled on only CPU
 #ifndef __CUDACC__
 
-template <class MyDevice>
-EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor& z) {
-  if(x.d.bd == 1) {
-    z.t<0>().device(*dev.edevice) = x.t<1>().maximum();
-    float m = TensorTools::AccessElement(z, 0);
-    z.t<0>().device(*dev.edevice) += (x.t<1>() - m).exp().sum().log();
-  } else {
-    // Calculate the max for all batches at once
-    array<ptrdiff_t, 1> reduction_axis;
-    reduction_axis[0] = 0;
-    z.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(reduction_axis);
-    // Broadcast
-    array<ptrdiff_t, 2> broadcasts;
-    broadcasts[0] = x.d.rows();
-    broadcasts[1] = 1;
-    z.tb<0>().device(*dev.edevice) += (x.tb<1>() - z.tb<1>().broadcast(broadcasts)).exp().sum(reduction_axis).log();
-  }
-}
-
 // set use_cholesky if M is symmetric - it's faster and more stable
 // for dep paring it won't be
 template <typename MatrixType>
@@ -161,6 +142,36 @@ size_t SparsemaxLoss::aux_storage_size() const {
 }
 
 #endif // Finish CPU only functions
+
+// ===== Auxiliary functions for both CPU and GPU
+
+template <class MyDevice>
+EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor& z) {
+  if(x.d.bd == 1) {
+    z.t<0>().device(*dev.edevice) = x.t<1>().maximum();
+    float m = TensorTools::AccessElement(z, 0);
+    z.t<0>().device(*dev.edevice) += (x.t<1>() - m).exp().sum().log();
+  } else {
+#ifdef __CUDACC__
+    // nvcc doesn't work with the following reductions, so do something simpler
+    for(size_t b = 0; b < x.d.bd; b++) {
+      z.tb<0>().chip<0>(b).device(*dev.edevice) = x.tb<1>().chip<1>(b).maximum();
+      float m = TensorTools::AccessElement(z, b);
+      z.tb<0>().chip<0>(b).device(*dev.edevice) += (x.tb<1>().chip<1>(b) - m).exp().sum().log();
+    }
+#else
+    // Calculate the max for all batches at once. This dies for nvcc
+    array<ptrdiff_t, 1> reduction_axis;
+    reduction_axis[0] = 0;
+    z.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(reduction_axis);
+    // Broadcast
+    array<ptrdiff_t, 2> broadcasts;
+    broadcasts[0] = x.d.rows();
+    broadcasts[1] = 1;
+    z.tb<0>().device(*dev.edevice) += (x.tb<1>() - z.tb<1>().broadcast(broadcasts)).exp().sum(reduction_axis).log();
+#endif
+  }
+}
 
 // ===== Functions to be compiled on both CPU and GPU
 
@@ -1273,9 +1284,7 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
       const float logz_val = TensorTools::AccessElement(z, 0);
       // logz is computed in the forward pass and cached
       dEdxi.t<1>().device(*dev.edevice) += (xs[0]->t<1>() - logz_val).exp() * err_val;
-      //*dEdxi += x.unaryExpr(scalar_nlsoftmax_backward_op<float>(*logz, err));
-      auto my_chip = dEdxi.t<1>().chip<0>(elem);
-      my_chip.device(*dev.edevice) = my_chip - err_val;
+      dEdxi.t<1>().chip<0>(elem).device(*dev.edevice) = dEdxi.t<1>().chip<0>(elem) - err_val;
     } else {
       assert(pvals);
       assert(pvals->size() == fx.d.batch_elems()); 
@@ -1286,8 +1295,7 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
       dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(broadcasts)).exp() * dEdf.tb<1>().broadcast(broadcasts);
       // TODO: It'd be better if we didn't need this loop
       for(unsigned b = 0; b < pvals->size(); ++b) {
-        auto my_chip = dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]);
-        my_chip.device(*dev.edevice) = my_chip - dEdf.tb<0>().chip<0>(b);
+        dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]).device(*dev.edevice) = dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]) - dEdf.tb<0>().chip<0>(b);
       }
     }
   } else {
