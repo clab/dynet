@@ -6,6 +6,9 @@
 
 #include "cnn/nodes-macros.h"
 
+// This file takes a long time to compile on GPU. Uncomment this line to skip it.
+// #define CNN_SKIP_CUDA_CONTRACTIONS
+
 using namespace std;
 
 namespace cnn {
@@ -68,6 +71,9 @@ Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
 //   Y_ij = A_ijk * B_k (+ C_ij)
 template<class MyDevice>
 void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#if defined(__CUDACC__) && defined(CNN_SKIP_CUDA_CONTRACTIONS)
+  throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl disabled on CUDA");
+#else
   auto A = xs[0]->t<3>();
   auto b = xs[1]->t<1>();
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
@@ -78,6 +84,7 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
     auto C = xs[2]->t<2>();
     fx.t<2>().device(*dev.edevice) = A.contract(b, dims) + C;
   }
+#endif
 }
 
 template<class MyDevice>
@@ -87,6 +94,9 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+#if defined(__CUDACC__) && defined(CNN_SKIP_CUDA_CONTRACTIONS)
+  throw std::runtime_error("InnerProduct3D_1D::backward_dev_impl disabled on CUDA");
+#else
   auto tdEdf = dEdf.t<2>();  // 2 tensor
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   if (i == 0) { // 3 tensor
@@ -102,12 +112,16 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
   } else {
     cerr << "shouldn't happen\n"; abort();
   }
+#endif
 }
 CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D)
 
 //   Y_ij = A_ijk * B_k * C_j (+ D_i)
 template<class MyDevice>
 void InnerProduct3D_1D_1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#if defined(__CUDACC__) && defined(CNN_SKIP_CUDA_CONTRACTIONS)
+  throw std::runtime_error("InnerProduct3D_1D_1D::forward_dev_impl disabled on CUDA");
+#else
   auto A = xs[0]->t<3>();
   auto b = xs[1]->t<1>();
   auto c = xs[2]->t<1>();
@@ -120,6 +134,7 @@ void InnerProduct3D_1D_1D::forward_dev_impl(const MyDevice & dev, const vector<c
     auto d = xs[3]->t<1>();
     fx.t<1>().device(*dev.edevice) = A.contract(b, dims).contract(c, dims2) + d;
   }
+#endif
 }
 
 template<class MyDevice>
@@ -129,6 +144,9 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
                                              const Tensor& dEdf,
                                              unsigned i,
                                              Tensor& dEdxi) const {
+#if defined(__CUDACC__) && defined(CNN_SKIP_CUDA_CONTRACTIONS)
+  throw std::runtime_error("InnerProduct3D_1D_1D::backward_dev_impl disabled on CUDA");
+#else
   auto tdEdf = dEdf.t<1>();  // vector
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   if (i == 0) { // 3 tensor
@@ -157,6 +175,7 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
   } else {
     cerr << "shouldn't happen\n"; abort();
   }
+#endif
 }
 CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D_1D)
 
