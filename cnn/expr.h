@@ -3,6 +3,7 @@
 
 #include "cnn/cnn.h"
 #include "cnn/nodes.h"
+#include "cnn/nodes-contract.h"
 
 namespace cnn { namespace expr {
 
