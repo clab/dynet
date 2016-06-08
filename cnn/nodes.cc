@@ -45,20 +45,23 @@ namespace cnn {
 // ======= Functions to be compiled on only CPU
 #ifndef __CUDACC__
 
-template <class T>
-EIGEN_STRONG_INLINE float logsumexp(const T& x) {
-  using std::exp;
-  using std::log;
-  const float m = x.maxCoeff();
-#if 1
-  // these are equivalent, but this can use vectorized arithmetic
-  float z = x.unaryExpr(const_add_op<float>(-m)).array().exp().matrix().sum();
-#else
-  float z = 0;
-  for (unsigned i = 0; i < x.rows(); ++i)
-    z += exp(x(i,0) - m);
-#endif
-  return m + log(z);
+template <class MyDevice>
+EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor& z) {
+  if(x.d.bd == 1) {
+    z.t<0>().device(*dev.edevice) = x.t<1>().maximum();
+    float m = TensorTools::AccessElement(z, 0);
+    z.t<0>().device(*dev.edevice) += (x.t<1>() - m).exp().sum().log();
+  } else {
+    // Calculate the max for all batches at once
+    array<ptrdiff_t, 1> reduction_axis;
+    reduction_axis[0] = 0;
+    z.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(reduction_axis);
+    // Broadcast
+    array<ptrdiff_t, 2> broadcasts;
+    broadcasts[0] = x.d.rows();
+    broadcasts[1] = 1;
+    z.tb<0>().device(*dev.edevice) += (x.tb<1>() - z.tb<1>().broadcast(broadcasts)).exp().sum(reduction_axis).log();
+  }
 }
 
 // set use_cholesky if M is symmetric - it's faster and more stable
@@ -125,6 +128,10 @@ size_t Hinge::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
 
+size_t LogSoftmax::aux_storage_size() const {
+  return dim.batch_elems() * sizeof(float);
+}
+
 // this i need to do something better, but this is a work-around
 // if this is too small, just make it bigger
 size_t LogSumExp::aux_storage_size() const {
@@ -137,6 +144,10 @@ size_t Max::aux_storage_size() const {
 
 size_t Min::aux_storage_size() const {
   return dim.size() * sizeof(float);
+}
+
+size_t Softmax::aux_storage_size() const {
+  return dim.batch_elems() * sizeof(float);
 }
 
 size_t Sparsemax::aux_storage_size() const {
@@ -867,12 +878,10 @@ template<class MyDevice>
 void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   if (xs[0]->d.cols() == 1) {
-#if __CUDACC__
-    throw std::runtime_error("LogSoftmax::forward not yet implemented for CUDA");
-#else
-    auto x = **xs[0];
-    *fx = x.unaryExpr(FLogSoftmaxNormalize(logsumexp(x)));
-#endif
+    Tensor z({1}, (float*)aux_mem, fx.device);
+    logsumexp(dev, *xs[0], z);
+    // TODO: Can this stay on the device?
+    fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - TensorTools::AccessElement(z, 0);
   } else {
     throw std::runtime_error("LogSoftmax::forward not yet implemented for multiple columns");
   }
@@ -885,13 +894,11 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
- if (xs[0]->d.cols() == 1) {
-#if __CUDACC__
-    throw std::runtime_error("LogSoftmax::backward not yet implemented for CUDA");
-#else
-    float off_diag_sum = -(*fx).binaryExpr(*dEdf, FWeightedError()).sum();
-    *dEdxi += (*fx).binaryExpr(*dEdf, FLogSoftmaxBackward(off_diag_sum));
-#endif
+  if (xs[0]->d.cols() == 1) {
+    Tensor z({1}, (float*)aux_mem, fx.device);
+    z.t<0>().device(*dev.edevice) = -fx.t<1>().binaryExpr(dEdf.t<1>(), FWeightedError()).sum();
+    float off_diag_sum = TensorTools::AccessElement(z, 0);
+    dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().binaryExpr(dEdf.t<1>(), FLogSoftmaxBackward(off_diag_sum));
   } else {
     throw std::runtime_error("LogSoftmax::backward not yet implemented for multiple columns");
   }
@@ -900,20 +907,16 @@ CNN_NODE_INST_DEV_IMPL(LogSoftmax)
 
 template<class MyDevice>
 void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef __CUDACC__
-  throw std::runtime_error("LogSumExp not implemented for CUDA");
-#else
   const unsigned num_args = xs.size();
   if (num_args == 1) {
     fx.v = xs[0]->v;
-    return;
+  } else {
+    Dim r = {(unsigned int)xs.size()};
+    Tensor v(r, static_cast<float*>(aux_mem), fx.device);
+    for (unsigned i = 0; i < xs.size(); ++i)
+      TensorTools::CopyElement(*xs[i], 0, v, i);
+    logsumexp(dev, v, fx);
   }
-  for (unsigned i = 0; i < xs.size(); ++i)
-    static_cast<float*>(aux_mem)[i] = (**xs[i])(0,0);
-  Dim r = {(unsigned int)xs.size()};
-  Tensor v(r, static_cast<float*>(aux_mem), fx.device);
-  fx.v[0] = logsumexp(*v);
-#endif
 }
 
 template<class MyDevice>
@@ -923,19 +926,14 @@ void LogSumExp::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-#ifdef __CUDACC__
-  throw std::runtime_error("LogSumExp not implemented for CUDA");
-#else
   if (xs.size() == 0) {
-    *dEdxi += *dEdf;
-    return;
+    dEdxi.t<0>().device(*dev.edevice) += dEdf.t<0>();
+  } else {
+    // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
+    //         = 1/{exp f(x)} * exp(x_i)
+    //         = exp(x_i - f(x))
+    dEdxi.t<1>().device(*dev.edevice) += (xs[i]->t<1>() - fx.t<1>()).exp() * dEdf.t<1>();
   }
-  // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
-  //         = 1/{exp f(x)} * exp(x_i)
-  //         = exp(x_i - f(x))
-  auto d = *dEdxi;
-  d.array() += (**xs[i] - *fx).array().exp() * (*dEdf).array();
-#endif
 }
 CNN_NODE_INST_DEV_IMPL(LogSumExp)
 
@@ -1242,31 +1240,19 @@ template<class MyDevice>
 void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
     logz = (float*)device->fxs->allocate(sizeof(float)*fx.d.batch_elems());
-#if __CUDACC__
+    Tensor z(Dim({1},fx.d.batch_elems()), (float*)logz, fx.device);
     if(pval) {
-      gpu::pnlsoftmax(xs[0]->d.size(), *pval, xs[0]->v, fx.v, logz);
+      logsumexp(dev, *xs[0], z);
+      fx.t<0>().device(*dev.edevice) = z.t<0>() - xs[0]->t<1>().chip<0>(*pval);
     } else {
-      // TODO: It'd be nice to have a kernel that did all batches at once
       assert(pvals);
       assert(pvals->size() == fx.d.batch_elems());
+      logsumexp(dev, *xs[0], z);
+      int batch_size = xs[0]->d.batch_size();
       for(unsigned b = 0; b < pvals->size(); ++b)
-        gpu::pnlsoftmax(xs[0]->d.batch_size(), (*pvals)[b], xs[0]->batch_ptr(b), fx.v+b, logz+b);
+        TensorTools::CopyElement(*xs[0], batch_size * b + (*pvals)[b], fx, b);
+      fx.tvec().device(*dev.edevice) = z.tvec() - fx.tvec();
     }
-#else
-    if(pval) {
-      auto x = **xs[0];
-      *logz = logsumexp(x);
-      fx.v[0] = *logz - x(*pval);
-    } else {
-      assert(pvals);
-      assert(pvals->size() == fx.d.batch_elems());
-      for(unsigned b = 0; b < pvals->size(); ++b) {
-        auto x = xs[0]->batch_matrix(b);
-        logz[b] = logsumexp(x);
-        fx.v[b] = logz[b] - x((*pvals)[b]);
-      }
-    }
-#endif
   } else {
     throw std::runtime_error("PickNegLogSoftmax::forward not yet implemented for multiple columns");
   }
@@ -1280,42 +1266,30 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
                             unsigned i,
                             Tensor& dEdxi) const {
   if (xs[0]->d.cols() == 1) {
-#if __CUDACC__
+    Tensor z(Dim({1},fx.d.batch_elems()), (float*)logz, fx.device);
     if(pval) {
       const auto elem = *pval;
-      gpu::pnlsoftmax_backward(dEdxi.d.size(), elem, xs[0]->v, dEdf.v, logz, dEdxi.v);
-    } else {
-      assert(pvals);
-      assert(pvals->size() == fx.d.batch_elems()); 
-      // TODO: Again, it would be nice to do this with a single kernel
-      for(unsigned b = 0; b < pvals->size(); ++b) {
-        const auto elem = (*pvals)[b];
-        gpu::pnlsoftmax_backward(dEdxi.d.batch_size(), elem, xs[0]->batch_ptr(b), dEdf.v+b, logz+b, dEdxi.batch_ptr(b));
-      }
-    }
-#else
-    if(pval) {
-      const auto elem = *pval;
-      const float err = dEdf.v[0];
-      auto x = **xs[0];
+      const float err_val = TensorTools::AccessElement(dEdf, 0);
+      const float logz_val = TensorTools::AccessElement(z, 0);
       // logz is computed in the forward pass and cached
-      *dEdxi += x.unaryExpr(FNegLogSoftmaxBackward(*logz, err));
+      dEdxi.t<1>().device(*dev.edevice) += (xs[0]->t<1>() - logz_val).exp() * err_val;
       //*dEdxi += x.unaryExpr(scalar_nlsoftmax_backward_op<float>(*logz, err));
-      (*dEdxi)(elem) -= err;
+      auto my_chip = dEdxi.t<1>().chip<0>(elem);
+      my_chip.device(*dev.edevice) = my_chip - err_val;
     } else {
       assert(pvals);
       assert(pvals->size() == fx.d.batch_elems()); 
+      // Add and do broadcasting
+      array<ptrdiff_t, 2> broadcasts;
+      broadcasts[0] = xs[0]->d.rows();
+      broadcasts[1] = 1;
+      dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(broadcasts)).exp() * dEdf.tb<1>().broadcast(broadcasts);
+      // TODO: It'd be better if we didn't need this loop
       for(unsigned b = 0; b < pvals->size(); ++b) {
-        const auto elem = (*pvals)[b];
-        const float err = dEdf.v[b];
-        auto x = xs[0]->batch_matrix(b);
-        auto dEdxi_mat = dEdxi.batch_matrix(b);
-        dEdxi_mat += x.unaryExpr(FNegLogSoftmaxBackward(logz[b], err));
-        //dEdxi_mat += x.unaryExpr(scalar_nlsoftmax_backward_op<float>(logz[b], err));
-        dEdxi_mat(elem) -= err;
+        auto my_chip = dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]);
+        my_chip.device(*dev.edevice) = my_chip - dEdf.tb<0>().chip<0>(b);
       }
     }
-#endif
   } else {
     throw std::runtime_error("PickNegLogSoftmax::backward not yet implemented for multiple columns");
   }
@@ -1484,8 +1458,7 @@ void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   assert(xs.size() == 1);
   auto& rm = *pcols;
   for (unsigned i = 0; i < rm.size(); ++i)
-    fx.t<2>().chip<1>(i) = xs[0]->t<2>().chip<1>(rm[i]);
-    // fx.t<2>().device(*dev.edevice).chip<1>(i) = xs[0]->t<2>().chip<1>(rm[i]);
+    fx.t<2>().chip<1>(i).device(*dev.edevice) = xs[0]->t<2>().chip<1>(rm[i]);
 }
 
 template<class MyDevice>
@@ -1498,8 +1471,7 @@ void SelectCols::backward_dev_impl(const MyDevice & dev,
   assert(xs.size() == 1);
   auto& rm = *pcols;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<1>(rm[i]) = dEdf.t<2>().chip<1>(i);
-    // dEdxi.t<2>().device(*dev.edevice).chip<0>(rm[i]) = dEdf.t<2>().chip<0>(i);
+    dEdxi.t<2>().chip<1>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<1>(i);
 }
 CNN_NODE_INST_DEV_IMPL(SelectCols)
 
@@ -1530,16 +1502,10 @@ CNN_NODE_INST_DEV_IMPL(SelectRows)
 template<class MyDevice>
 void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
-#if __CUDACC__
-    gpu::softmax(xs[0]->d.size(), xs[0]->v, fx.v);
-#else
-    auto x = **xs[0];
-    if (x.rows() == 1) {
-      fx.v[0] = 1;
-    } else {
-      *fx = x.unaryExpr(FSoftmaxNormalize(logsumexp(x)));
-    }
-#endif
+    Tensor z({1}, (float*)aux_mem, fx.device);
+    logsumexp(dev, *xs[0], z);
+    // TODO: Can this stay on the device?
+    fx.t<1>().device(*dev.edevice) = (xs[0]->t<1>() - TensorTools::AccessElement(z, 0)).exp();
   } else {
     throw std::runtime_error("Softmax not yet implemented for multiple columns");
   }
@@ -1552,14 +1518,14 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-#if __CUDACC__
-  gpu::softmax_backward(fx.d.size(), fx.v, dEdf.v, dEdxi.v);
-#else
-  auto y = *fx;
-  if (y.rows() == 1) { return; } // no error if softmax = 0
-  float off_diag_sum = -y.cwiseProduct(*dEdf).sum();
-  *dEdxi += y.binaryExpr(*dEdf, FSoftmaxBackward(off_diag_sum));
-#endif
+  if (xs[0]->d.cols() == 1) {
+    Tensor z({1}, (float*)aux_mem, fx.device);
+    z.t<0>().device(*dev.edevice) = -(fx.t<1>() * dEdf.t<1>()).sum();
+    float off_diag_sum = TensorTools::AccessElement(z, 0);
+    dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().binaryExpr(dEdf.t<1>(), FSoftmaxBackward(off_diag_sum));
+  } else {
+    throw std::runtime_error("Softmax::backward not yet implemented for multiple columns");
+  }
 }
 CNN_NODE_INST_DEV_IMPL(Softmax)
 
