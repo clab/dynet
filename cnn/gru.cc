@@ -39,6 +39,7 @@ GRUBuilder::GRUBuilder(unsigned layers,
     vector<Parameter> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
     params.push_back(ps);
   }  // layers
+  dropout_rate = 0.f;
 }
 
 void GRUBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -75,6 +76,8 @@ void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
 }
 
 Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
+  if(dropout_rate != 0.f)
+    throw std::runtime_error("GRUBuilder doesn't support dropout yet");
   const bool has_initial_state = (h0.size() > 0);
   h.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();

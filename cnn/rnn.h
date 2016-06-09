@@ -70,6 +70,10 @@ struct RNNBuilder {
     cur = head[cur];
   }
 
+  // Set dropout. In general, you should disable dropout at test time
+  void set_dropout(float d) { dropout_rate = d; }
+  void disable_dropout() { dropout_rate = 0; }
+
   // returns node (index) of most recent output
   virtual Expression back() const = 0;
   // access the final output of each hidden layer
@@ -96,6 +100,7 @@ struct RNNBuilder {
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) = 0;
   RNNPointer cur;
+  float dropout_rate;  
  private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;

@@ -4,8 +4,6 @@
 #include "cnn/lstm.h"
 #include "cnn/mp.h"
 #include "rnnlm.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <iostream>

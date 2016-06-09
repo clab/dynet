@@ -29,29 +29,28 @@ public:
   // the cnn model which has saved parameters.
   XORModel() {}
 
-  XORModel(const unsigned& hidden_len, Model *m) {
+  XORModel(unsigned hidden_len, Model& m) {
     hidden_size = hidden_len;
     InitParams(m);
   }
 
-  void InitParams(Model *m) {
-    pW = m->add_parameters({hidden_size, 2});
-    pb = m->add_parameters({hidden_size});
-    pV = m->add_parameters({1, hidden_size});
-    pa = m->add_parameters({1});
+  void InitParams(Model& m) {
+    pW = m.add_parameters({hidden_size, 2});
+    pb = m.add_parameters({hidden_size});
+    pV = m.add_parameters({1, hidden_size});
+    pa = m.add_parameters({1});
   }
 
-  void AddParamsToCG(ComputationGraph *cg) {
-    W = parameter(*cg, pW);
-    b = parameter(*cg, pb);
-    V = parameter(*cg, pV);
-    a = parameter(*cg, pa);
+  void NewGraph(ComputationGraph& cg) {
+    W = parameter(cg, pW);
+    b = parameter(cg, pb);
+    V = parameter(cg, pV);
+    a = parameter(cg, pa);
   }
 
-  float Train(vector<cnn::real> &input, cnn::real &gold_output,
-              SimpleSGDTrainer *sgd) {
+  float Train(const vector<cnn::real>& input, cnn::real gold_output, SimpleSGDTrainer* sgd) {
     ComputationGraph cg;
-    AddParamsToCG(&cg);
+    NewGraph(cg);
 
     Expression x = cnn::expr::input(cg, {(unsigned int)input.size()}, &input);
     Expression y = cnn::expr::input(cg, &gold_output);
@@ -59,15 +58,16 @@ public:
     Expression h = tanh(W*x + b);
     Expression y_pred = V*h + a;
     Expression loss = squared_distance(y_pred, y);
+
     float return_loss = as_scalar(cg.forward());
     cg.backward();
     sgd->update(1.0);
     return return_loss;
   }
 
-  float Decode(vector<cnn::real> &input) {
+  float Decode(vector<cnn::real>& input) {
     ComputationGraph cg;
-    AddParamsToCG(&cg);
+    NewGraph(cg);
 
     Expression x = cnn::expr::input(cg, {(unsigned int)input.size()}, &input);
     Expression h = tanh(W*x + b);
@@ -83,34 +83,45 @@ public:
     // This can either save or read the value of hidden_size from ar,
     // depending on whether its the output or input archive.
     ar & hidden_size;
+
+    // We may save class data, such as the hidden size
+    // but we must be sure to save all Parameter objects
+    // that are members of this class.
+    ar & pW;
+    ar & pV;
+    ar & pa;
+    ar & pb;
   }
 };
 
-void WriteToFile(string& filename, XORModel &model, Model &cnn_model) {
+void WriteToFile(string& filename, XORModel& model, Model& cnn_model) {
   ofstream outfile(filename);
   if (!outfile.is_open()) {
     cerr << "File opening failed" << endl;
+    exit(1);
   }
 
+  // Write out the CNN model and the XOR model.
+  // It's important to write the CNN model first.
+  // Since the XOR model uses the CNN model,
+  // saving in the opposite order will generate a
+  // boost archive "Pointer Conflict" exception.
   boost::archive::text_oarchive oa(outfile);
-  oa & model;  // Write down your class object.
   oa & cnn_model;  // Write down the cnn::Model object.
+  oa & model;  // Write down your class object.
   outfile.close();
 }
 
-void ReadFromFile(string& filename, XORModel *model, Model *cnn_model) {
+void ReadFromFile(string& filename, XORModel& model, Model& cnn_model) {
   ifstream infile(filename);
   if (!infile.is_open()) {
     cerr << "File opening failed" << endl;
+    exit(1);
   }
 
   boost::archive::text_iarchive ia(infile);
-  ia & *model;  // Read your class object
-
-  // Now determine structure of cnn::Model depending on the
-  // the structure of your class object
-  model->InitParams(cnn_model);
-  ia & *cnn_model;  // Read the cnn::Model
+  ia & cnn_model;  // Read the cnn::Model
+  ia & model;  // Read your class object
 
   infile.close();
 }
@@ -123,7 +134,7 @@ int main(int argc, char** argv) {
   const unsigned ITERATIONS = 20;
   Model m;
   SimpleSGDTrainer sgd(&m);
-  XORModel model(HIDDEN, &m);
+  XORModel model(HIDDEN, m);
 
   vector<cnn::real> x_values(2);  // set x_values to change the inputs
   cnn::real y_value;  // set y_value to change the target output
@@ -152,7 +163,7 @@ int main(int argc, char** argv) {
   XORModel read_model;
 
   cerr << "Reading model from File: " << outfile << endl;
-  ReadFromFile(outfile, &read_model, &read_cnn_model);  // Reading from file
+  ReadFromFile(outfile, read_model, read_cnn_model);  // Reading from file
   cerr << "Output for the input: " << x_values[0] << " " << x_values[1] << endl;
   cerr << read_model.Decode(x_values);  // Checking output for sanity
 }
