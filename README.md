@@ -1,11 +1,11 @@
 # cnn
 C++ neural network library
 
-#### Important: Eigen version requirement
+### Important: Eigen version requirement
 
 You need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. **If you use any of the released versions, you may get assertion failures or compile errors.**
 
-#### Building
+### Building
 
 First you need to fetch the dependent libraries
 
@@ -42,13 +42,22 @@ both `Eigen` and `cnn`. Eigen does not have to be compiled, so “installing” 
     cmake .. -DEIGEN3_INCLUDE_DIR=../eigen
     make -j 2
 
+#### Building with GPU Support
+
+`cnn` supports running programs on GPUs with CUDA. If you have CUDA installed, you
+can build cnn to be run on GPUs by adding `-DBACKEND=cuda` to your cmake options
+as follows:
+
+    cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DBACKEND=cuda
+
 #### Debugging build problems
 
 If you want to see the compile commands that are used, you can run
 
     make VERBOSE=1
 
-#### Training Models
+
+### Training Models
 
 An illustation of how models are trained (for a simple logistic regression model) is below:
 
