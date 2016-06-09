@@ -1,5 +1,6 @@
 # Installing the pyCNN module.
 
+(for instructions on installing on a computer with GPU, see below)
 
 First, get CNN:
 
@@ -112,3 +113,50 @@ Alternatively, if the following script works for you, then your installation is 
 from pycnn import *
 model = Model()
 ```
+
+## Installing with GPU support
+
+For installing on a computer with GPU, first install CUDA.
+Here, we assume CUDA is installed in `/usr/local/cuda-7.5`
+
+There are two modules, `pycnn` which is the regular CPU module, and `gpycnn` which is the GPU
+module. You can import either of them, these are two independent modules. The GPU support
+is incomplete: some operations (i.e. `hubber_distance`) are not available for the GPU.
+
+First step is to build the CNN modules.
+Checkout and go to the `build` directory (same instructions as above). Then:
+
+To build a CPU version on a computer with CUDA:
+```bash
+cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DBACKEND=eigen
+make -j 4
+```
+
+To build a GPU version on a computer with CUDA:
+```bash
+cmake .. -DBACKEND=cuda -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.5/
+make -j 4
+```
+
+Now, build the python modules (as above, we assume cython is installed):
+
+The GPU module (gpycnn):
+```bash
+cd ../pycnn
+make gpycnn.so
+make ginstall
+```
+
+The CPU module (pycnn):
+```bash
+cd ../pycnn
+make pycnn.so
+make install
+```
+
+Add the following to your env:
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PATH_TO_CNN/pycnn`
+
+Once both the `pycnn` and `gpycnn` are installed, run `python ../pyexamples/cpu_vs_gpu.py` for a small timing example.
+
+
