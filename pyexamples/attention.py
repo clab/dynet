@@ -16,16 +16,13 @@ STATE_SIZE = 32
 
 model = pc.Model()
 
-model.add_lookup_parameters("lookup", (VOCAB_SIZE, EMBEDDINGS_SIZE))
-
 enc_fwd_lstm = pc.LSTMBuilder(LSTM_NUM_OF_LAYERS, EMBEDDINGS_SIZE, STATE_SIZE, model)
-
 enc_bwd_lstm = pc.LSTMBuilder(LSTM_NUM_OF_LAYERS, EMBEDDINGS_SIZE, STATE_SIZE, model)
-
-model.add_parameters("attention_w", (1, STATE_SIZE*2+STATE_SIZE*LSTM_NUM_OF_LAYERS*2))
 
 dec_lstm = pc.LSTMBuilder(LSTM_NUM_OF_LAYERS, STATE_SIZE*2, STATE_SIZE, model)
 
+model.add_lookup_parameters("lookup", (VOCAB_SIZE, EMBEDDINGS_SIZE))
+model.add_parameters("attention_w", (1, STATE_SIZE*2+STATE_SIZE*LSTM_NUM_OF_LAYERS*2))
 model.add_parameters("decoder_w", (VOCAB_SIZE, STATE_SIZE))
 model.add_parameters("decoder_b", (VOCAB_SIZE))
 
@@ -33,8 +30,6 @@ model.add_parameters("decoder_b", (VOCAB_SIZE))
 def embedd_sentence(model, sentence):
     sentence = [EOS] + list(sentence) + [EOS]
     sentence = [char2int[c] for c in sentence]
-
-    pc.renew_cg()
 
     lookup = model["lookup"]
 
@@ -67,11 +62,14 @@ def attend(model, vectors, state):
     w = pc.parameter(model['attention_w'])
     attention_weights = []
     for vector in vectors:
+        #concatenate each encoded vector with the current decoder state
         attention_input = pc.concatenate([vector, pc.concatenate(list(state.s()))])
-        attention_weight = pc.tanh(w * attention_input)
-        attention_weights.append(attention_weight)
-    attention_weights = pc.concatenate(attention_weights)
-    vectors = pc.softmax(pc.esum([vector*attention_weight for vector, attention_weight in zip(vectors, attention_weights)]))
+        #get the attention wieght for the decoded vector
+        attention_weights.append(w * attention_input)
+    #normalize the weights
+    attention_weights = pc.softmax(pc.concatenate(attention_weights))
+    #apply the weights
+    vectors = pc.esum([vector*attention_weight for vector, attention_weight in zip(vectors, attention_weights)])
     return vectors
 
 
@@ -104,6 +102,7 @@ def generate(model, input, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
             rnd -= p
             if rnd <= 0: break
         return i
+
     embedded = embedd_sentence(model, input)
     encoded = encode_sentence(model, enc_fwd_lstm, enc_bwd_lstm, embedded)
 
@@ -130,12 +129,17 @@ def generate(model, input, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
     return out
 
 
+def get_loss(model, input_sentence, output_sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
+    pc.renew_cg()
+    embedded = embedd_sentence(model, input_sentence)
+    encoded = encode_sentence(model, enc_fwd_lstm, enc_bwd_lstm, embedded)
+    return decode(model, dec_lstm, encoded, output_sentence)
+
+
 def train(model, sentence):
     trainer = pc.SimpleSGDTrainer(model)
     for i in xrange(400):
-        embedded = embedd_sentence(model, sentence)
-        encoded = encode_sentence(model, enc_fwd_lstm, enc_bwd_lstm, embedded)
-        loss = decode(model, dec_lstm, encoded, sentence)
+        loss = get_loss(model, sentence, sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm)
         loss_value = loss.value()
         loss.backward()
         trainer.update()
