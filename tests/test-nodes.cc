@@ -429,6 +429,16 @@ BOOST_AUTO_TEST_CASE( log_softmax_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression log_softmax(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( log_softmax_batch_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  Expression y = log_softmax(x1+x2);
+  sum_batches(input(cg, {1,3}, first_one_vals) * y);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 BOOST_AUTO_TEST_CASE( restricted_log_softmax_gradient ) {
   vector<unsigned> restriction = {0,1};
@@ -445,6 +455,16 @@ BOOST_AUTO_TEST_CASE( softmax_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression y = softmax(x1);
   input(cg, {1,3}, first_one_vals) * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression softmax(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( softmax_batch_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  Expression y = softmax(x1+x2);
+  sum_batches(input(cg, {1,3}, first_one_vals) * y);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 

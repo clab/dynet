@@ -379,8 +379,8 @@ void Concatenate::forward_dev_impl(const MyDevice & dev, const vector<const Tens
     const unsigned row_size = xs[i]->d.rows();
 #if __CUDACC__
     // CUBLAS matricies are col major, so this is non-trivial
-    if(row_size != 1) throw std::runtime_error("Concatenating matricies with multiple cols on CUDA not supported yet");
     const unsigned cols = xs[i]->d.cols();
+    if(cols != 1 && row_size != 1) throw std::runtime_error("Concatenating matricies with more than one column and row on CUDA not supported yet");
     CUDA_CHECK(cudaMemcpyAsync(fx.v + curr_row*cols, xs[i]->v, sizeof(float) * cols * row_size, cudaMemcpyDeviceToDevice));
 #else
     (*fx).middleRows(curr_row, row_size) = **xs[i];
@@ -876,13 +876,17 @@ CNN_NODE_INST_DEV_IMPL(LogisticSigmoid)
 template<class MyDevice>
 void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  if (xs[0]->d.cols() == 1) {
-    Tensor z({1}, (float*)aux_mem, fx.device);
-    logsumexp(dev, *xs[0], z);
-    // TODO: Can this stay on the device?
+  if (xs[0]->d.cols() != 1)
+    throw std::runtime_error("LogSoftmax::forward not yet implemented for multiple columns");
+  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
+  logsumexp(dev, *xs[0], z);
+  if(fx.d.bd == 1) {
     fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - TensorTools::AccessElement(z, 0);
   } else {
-    throw std::runtime_error("LogSoftmax::forward not yet implemented for multiple columns");
+    array<ptrdiff_t, 2> broadcasts;
+    broadcasts[0] = xs[0]->d.rows();
+    broadcasts[1] = 1;
+    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() - z.tb<1>().broadcast(broadcasts);
   }
 }
 
@@ -893,13 +897,30 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  if (xs[0]->d.cols() == 1) {
-    Tensor z({1}, (float*)aux_mem, fx.device);
+  if (xs[0]->d.cols() != 1) 
+    throw std::runtime_error("LogSoftmax::backward not yet implemented for multiple columns");
+  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
+  if(fx.d.bd == 1) {
     z.t<0>().device(*dev.edevice) = -fx.t<1>().binaryExpr(dEdf.t<1>(), FWeightedError()).sum();
     float off_diag_sum = TensorTools::AccessElement(z, 0);
-    dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().binaryExpr(dEdf.t<1>(), FLogSoftmaxBackward(off_diag_sum));
+    dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().exp() * off_diag_sum + dEdf.t<1>();
   } else {
-    throw std::runtime_error("LogSoftmax::backward not yet implemented for multiple columns");
+#ifdef __CUDACC__
+    // nvcc doesn't work with the following reductions, so do something simpler
+    for(size_t b = 0; b < fx.d.bd; b++) {
+      z.tb<0>().chip<0>(b).device(*dev.edevice) = -fx.tb<1>().chip<1>(b).binaryExpr(dEdf.tb<1>().chip<1>(b), FWeightedError()).sum();
+      float off_diag_sum = TensorTools::AccessElement(z, b);
+      dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += fx.tb<1>().chip<1>(b).exp() * off_diag_sum + dEdf.tb<1>().chip<1>(b);
+    }
+#else
+    array<ptrdiff_t, 1> reduction_axis;
+    reduction_axis[0] = 0;
+    z.tb<0>().device(*dev.edevice) = -fx.tb<1>().binaryExpr(dEdf.tb<1>(), FWeightedError()).sum(reduction_axis);
+    array<ptrdiff_t, 2> broadcasts;
+    broadcasts[0] = xs[0]->d.rows();
+    broadcasts[1] = 1;
+    dEdxi.tb<1>().device(*dev.edevice) += fx.tb<1>().exp() * z.tb<1>().broadcast(broadcasts) + dEdf.tb<1>();
+#endif
   }
 }
 CNN_NODE_INST_DEV_IMPL(LogSoftmax)
@@ -1497,13 +1518,17 @@ CNN_NODE_INST_DEV_IMPL(SelectRows)
 
 template<class MyDevice>
 void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  if (xs[0]->d.cols() == 1) {
-    Tensor z({1}, (float*)aux_mem, fx.device);
-    logsumexp(dev, *xs[0], z);
-    // TODO: Can this stay on the device?
+  if (xs[0]->d.cols() != 1)
+    throw std::runtime_error("Softmax not yet implemented for multiple columns");
+  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
+  logsumexp(dev, *xs[0], z);
+  if(fx.d.bd == 1) {
     fx.t<1>().device(*dev.edevice) = (xs[0]->t<1>() - TensorTools::AccessElement(z, 0)).exp();
   } else {
-    throw std::runtime_error("Softmax not yet implemented for multiple columns");
+    array<ptrdiff_t, 2> broadcasts;
+    broadcasts[0] = xs[0]->d.rows();
+    broadcasts[1] = 1;
+    fx.tb<1>().device(*dev.edevice) = (xs[0]->tb<1>() - z.tb<1>().broadcast(broadcasts)).exp();
   }
 }
 
@@ -1514,13 +1539,31 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  if (xs[0]->d.cols() == 1) {
-    Tensor z({1}, (float*)aux_mem, fx.device);
+  if (xs[0]->d.cols() != 1)
+    throw std::runtime_error("Softmax::backward not yet implemented for multiple columns");
+
+  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
+  if(fx.d.bd == 1) {
     z.t<0>().device(*dev.edevice) = -(fx.t<1>() * dEdf.t<1>()).sum();
     float off_diag_sum = TensorTools::AccessElement(z, 0);
     dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().binaryExpr(dEdf.t<1>(), FSoftmaxBackward(off_diag_sum));
   } else {
-    throw std::runtime_error("Softmax::backward not yet implemented for multiple columns");
+#ifdef __CUDACC__
+    // nvcc doesn't work with the following reductions, so do something simpler
+    for(size_t b = 0; b < fx.d.bd; b++) {
+      z.tb<0>().chip<0>(b).device(*dev.edevice) = -(fx.tb<1>().chip<1>(b) * dEdf.tb<1>().chip<1>(b)).sum();
+      float off_diag_sum = TensorTools::AccessElement(z, b);
+      dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += fx.tb<1>().chip<1>(b).binaryExpr(dEdf.tb<1>().chip<1>(b), FSoftmaxBackward(off_diag_sum));
+    }
+#else
+    array<ptrdiff_t, 1> reduction_axis;
+    reduction_axis[0] = 0;
+    z.tb<0>().device(*dev.edevice) = -(fx.tb<1>() * dEdf.tb<1>()).sum(reduction_axis);
+    array<ptrdiff_t, 2> broadcasts;
+    broadcasts[0] = xs[0]->d.rows();
+    broadcasts[1] = 1;
+    dEdxi.tb<1>().device(*dev.edevice) += (fx.tb<1>() + z.tb<1>().broadcast(broadcasts)) * dEdf.tb<1>();
+#endif
   }
 }
 CNN_NODE_INST_DEV_IMPL(Softmax)
