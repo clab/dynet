@@ -49,6 +49,7 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
     params.push_back(ps);
     layer_input_dim = hidden_dim;
   }
+  dropout_rate = 0.f;
 }
 
 void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -79,6 +80,8 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
 }
 
 Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
+  if(dropout_rate != 0.f)
+    throw std::runtime_error("SimpleRNNBuilder doesn't support dropout yet");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
 

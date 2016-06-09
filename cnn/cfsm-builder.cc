@@ -136,19 +136,33 @@ unsigned ClassFactoredSoftmaxBuilder::sample(const Expression& rep) {
 
 Expression ClassFactoredSoftmaxBuilder::full_log_distribution(const Expression& rep) {
   vector<Expression> full_dist(widx2cidx.size());
+  Expression cscores = log(softmax(affine_transform({cbias, r2c, rep})));
+
   for (unsigned i = 0; i < widx2cidx.size(); ++i) {
-    assert (widx2cidx[i] != -1);
+    if (widx2cidx[i] == -1) {
+      // XXX: Should be -inf
+      full_dist[i] = input(*pcg, -10000);
+    }
   }
 
   for (unsigned c = 0; c < p_rc2ws.size(); ++c) {
-    Expression& cwbias = get_rc2wbias(c);
-    Expression& r2cw = get_rc2w(c);
-    Expression wscores = affine_transform({cwbias, r2cw, rep});
-    Expression wdist = softmax(wscores);
+    Expression cscore = pick(cscores, c);
+    if (singleton_cluster[c]) {
+      for (unsigned i = 0; i < cidx2words[c].size(); ++i) {
+        unsigned w = cidx2words[c][i];
+        full_dist[w] = cscore;
+      }
+    }
+    else {
+      Expression& cwbias = get_rc2wbias(c);
+      Expression& r2cw = get_rc2w(c);
+      Expression wscores = affine_transform({cwbias, r2cw, rep});
+      Expression wdist = softmax(wscores);
 
-    for (unsigned i = 0; i < cidx2words[c].size(); ++i) {
-      unsigned w = cidx2words[c][i];
-      full_dist[w] = pick(wdist, i);
+      for (unsigned i = 0; i < cidx2words[c].size(); ++i) {
+        unsigned w = cidx2words[c][i];
+        full_dist[w] = pick(wdist, i) + cscore;
+      }
     }
   }
 
