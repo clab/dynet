@@ -441,16 +441,18 @@ struct SoftSign : public Node {
 // y_i = (x_1)_i / z
 struct Softmax : public Node {
   explicit Softmax(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  size_t aux_storage_size() const override;
   CNN_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
+  virtual bool supports_multibatch() const override { return true; }
 };
 
 // z = \sum_j \exp (x_i)_j
 // y_i = (x_1)_i - \log z
 struct LogSoftmax : public Node {
   explicit LogSoftmax(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  size_t aux_storage_size() const override;
   CNN_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
+  virtual bool supports_multibatch() const override { return true; }
 };
 
 // z = \sum_j \exp (x_i)_j
