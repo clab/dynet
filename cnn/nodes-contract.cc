@@ -7,7 +7,7 @@
 #include "cnn/nodes-macros.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
-// #define CNN_SKIP_CUDA_CONTRACTIONS
+#define CNN_SKIP_CUDA_CONTRACTIONS
 
 using namespace std;
 
@@ -72,7 +72,7 @@ Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #if defined(__CUDACC__) && defined(CNN_SKIP_CUDA_CONTRACTIONS)
-  throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl disabled on CUDA");
+  throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl disabled on CUDA. Comment out CNN_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
   auto A = xs[0]->t<3>();
   auto b = xs[1]->t<1>();
@@ -95,7 +95,7 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #if defined(__CUDACC__) && defined(CNN_SKIP_CUDA_CONTRACTIONS)
-  throw std::runtime_error("InnerProduct3D_1D::backward_dev_impl disabled on CUDA");
+  throw std::runtime_error("InnerProduct3D_1D::backward_dev_impl disabled on CUDA. Comment out CNN_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
   auto tdEdf = dEdf.t<2>();  // 2 tensor
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
@@ -120,7 +120,7 @@ CNN_NODE_INST_DEV_IMPL(InnerProduct3D_1D)
 template<class MyDevice>
 void InnerProduct3D_1D_1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #if defined(__CUDACC__) && defined(CNN_SKIP_CUDA_CONTRACTIONS)
-  throw std::runtime_error("InnerProduct3D_1D_1D::forward_dev_impl disabled on CUDA");
+  throw std::runtime_error("InnerProduct3D_1D_1D::forward_dev_impl disabled on CUDA. Comment out CNN_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
   auto A = xs[0]->t<3>();
   auto b = xs[1]->t<1>();
@@ -145,7 +145,7 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
                                              unsigned i,
                                              Tensor& dEdxi) const {
 #if defined(__CUDACC__) && defined(CNN_SKIP_CUDA_CONTRACTIONS)
-  throw std::runtime_error("InnerProduct3D_1D_1D::backward_dev_impl disabled on CUDA");
+  throw std::runtime_error("InnerProduct3D_1D_1D::backward_dev_impl disabled on CUDA. Comment out CNN_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
   auto tdEdf = dEdf.t<1>();  // vector
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
