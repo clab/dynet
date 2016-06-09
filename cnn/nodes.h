@@ -252,7 +252,7 @@ struct Concatenate : public Node {
 struct ConcatenateColumns : public Node {
   template <typename T> explicit ConcatenateColumns(const T& a) : Node(a) {}
   CNN_NODE_DEFINE_DEV_IMPL()
-  size_t aux_storage_size() const override;
+  mutable std::vector<unsigned> src_col_indices;
 };
 
 // x_1 is a scalar (or row vector)
