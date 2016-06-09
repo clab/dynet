@@ -905,22 +905,23 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
     float off_diag_sum = TensorTools::AccessElement(z, 0);
     dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().exp() * off_diag_sum + dEdf.t<1>();
   } else {
-#ifdef __CUDACC__
+// #ifdef __CUDACC__
     // nvcc doesn't work with the following reductions, so do something simpler
     for(size_t b = 0; b < fx.d.bd; b++) {
       z.tb<0>().chip<0>(b).device(*dev.edevice) = -fx.tb<1>().chip<1>(b).binaryExpr(dEdf.tb<1>().chip<1>(b), FWeightedError()).sum();
       float off_diag_sum = TensorTools::AccessElement(z, b);
       dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += fx.tb<1>().chip<1>(b).exp() * off_diag_sum + dEdf.tb<1>().chip<1>(b);
     }
-#else
-    array<ptrdiff_t, 1> reduction_axis;
-    reduction_axis[0] = 0;
-    z.tb<0>().device(*dev.edevice) = -fx.tb<1>().binaryExpr(dEdf.tb<1>(), FWeightedError()).sum(reduction_axis);
-    array<ptrdiff_t, 2> broadcasts;
-    broadcasts[0] = xs[0]->d.rows();
-    broadcasts[1] = 1;
-    dEdxi.tb<1>().device(*dev.edevice) += fx.tb<1>().exp() * z.tb<1>().broadcast(broadcasts) + dEdf.tb<1>();
-#endif
+    // TODO: These should work, but are unstable and giving NaNs. Figure out why.
+// #else
+//     array<ptrdiff_t, 1> reduction_axis;
+//     reduction_axis[0] = 0;
+//     z.tb<0>().device(*dev.edevice) = -fx.tb<1>().binaryExpr(dEdf.tb<1>(), FWeightedError()).sum(reduction_axis);
+//     array<ptrdiff_t, 2> broadcasts;
+//     broadcasts[0] = xs[0]->d.rows();
+//     broadcasts[1] = 1;
+//     dEdxi.tb<1>().device(*dev.edevice) += fx.tb<1>().exp() * z.tb<1>().broadcast(broadcasts) + dEdf.tb<1>();
+// #endif
   }
 }
 CNN_NODE_INST_DEV_IMPL(LogSoftmax)
@@ -1548,22 +1549,23 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
     float off_diag_sum = TensorTools::AccessElement(z, 0);
     dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().binaryExpr(dEdf.t<1>(), FSoftmaxBackward(off_diag_sum));
   } else {
-#ifdef __CUDACC__
+// #ifdef __CUDACC__
     // nvcc doesn't work with the following reductions, so do something simpler
     for(size_t b = 0; b < fx.d.bd; b++) {
       z.tb<0>().chip<0>(b).device(*dev.edevice) = -(fx.tb<1>().chip<1>(b) * dEdf.tb<1>().chip<1>(b)).sum();
       float off_diag_sum = TensorTools::AccessElement(z, b);
       dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += fx.tb<1>().chip<1>(b).binaryExpr(dEdf.tb<1>().chip<1>(b), FSoftmaxBackward(off_diag_sum));
     }
-#else
-    array<ptrdiff_t, 1> reduction_axis;
-    reduction_axis[0] = 0;
-    z.tb<0>().device(*dev.edevice) = -(fx.tb<1>() * dEdf.tb<1>()).sum(reduction_axis);
-    array<ptrdiff_t, 2> broadcasts;
-    broadcasts[0] = xs[0]->d.rows();
-    broadcasts[1] = 1;
-    dEdxi.tb<1>().device(*dev.edevice) += (fx.tb<1>() + z.tb<1>().broadcast(broadcasts)) * dEdf.tb<1>();
-#endif
+    // TODO: These should work, but are unstable and giving NaNs. Figure out why.
+// #else
+//     array<ptrdiff_t, 1> reduction_axis;
+//     reduction_axis[0] = 0;
+//     z.tb<0>().device(*dev.edevice) = -(fx.tb<1>() * dEdf.tb<1>()).sum(reduction_axis);
+//     array<ptrdiff_t, 2> broadcasts;
+//     broadcasts[0] = xs[0]->d.rows();
+//     broadcasts[1] = 1;
+//     dEdxi.tb<1>().device(*dev.edevice) += (fx.tb<1>() + z.tb<1>().broadcast(broadcasts)) * dEdf.tb<1>();
+// #endif
   }
 }
 CNN_NODE_INST_DEV_IMPL(Softmax)
