@@ -147,24 +147,24 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
     float m = TensorTools::AccessElement(z, 0);
     z.t<0>().device(*dev.edevice) += (x.t<1>() - m).exp().sum().log();
   } else {
-#ifdef __CUDACC__
+// #ifdef __CUDACC__
     // nvcc doesn't work with the following reductions, so do something simpler
     for(size_t b = 0; b < x.d.bd; b++) {
       z.tb<0>().chip<0>(b).device(*dev.edevice) = x.tb<1>().chip<1>(b).maximum();
       float m = TensorTools::AccessElement(z, b);
       z.tb<0>().chip<0>(b).device(*dev.edevice) += (x.tb<1>().chip<1>(b) - m).exp().sum().log();
     }
-#else
-    // Calculate the max for all batches at once. This dies for nvcc
-    array<ptrdiff_t, 1> reduction_axis;
-    reduction_axis[0] = 0;
-    z.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(reduction_axis);
-    // Broadcast
-    array<ptrdiff_t, 2> broadcasts;
-    broadcasts[0] = x.d.rows();
-    broadcasts[1] = 1;
-    z.tb<0>().device(*dev.edevice) += (x.tb<1>() - z.tb<1>().broadcast(broadcasts)).exp().sum(reduction_axis).log();
-#endif
+// #else
+//     // Calculate the max for all batches at once. This dies for nvcc
+//     array<ptrdiff_t, 1> reduction_axis;
+//     reduction_axis[0] = 0;
+//     z.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(reduction_axis);
+//     // Broadcast
+//     array<ptrdiff_t, 2> broadcasts;
+//     broadcasts[0] = x.d.rows();
+//     broadcasts[1] = 1;
+//     z.tb<0>().device(*dev.edevice) += (x.tb<1>() - z.tb<1>().broadcast(broadcasts)).exp().sum(reduction_axis).log();
+// #endif
   }
 }
 
@@ -1298,14 +1298,17 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
     } else {
       assert(pvals);
       assert(pvals->size() == fx.d.batch_elems()); 
-      // Add and do broadcasting
-      array<ptrdiff_t, 2> broadcasts;
-      broadcasts[0] = xs[0]->d.rows();
-      broadcasts[1] = 1;
-      dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(broadcasts)).exp() * dEdf.tb<1>().broadcast(broadcasts);
-      // TODO: It'd be better if we didn't need this loop
+      // // Add and do broadcasting. TODO: But broadcasting is slow, so we use a loop instead.
+      // array<ptrdiff_t, 2> broadcasts;
+      // broadcasts[0] = xs[0]->d.rows();
+      // broadcasts[1] = 1;
+      // dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(broadcasts)).exp() * dEdf.tb<1>().broadcast(broadcasts);
       for(unsigned b = 0; b < pvals->size(); ++b) {
-        dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]).device(*dev.edevice) = dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]) - dEdf.tb<0>().chip<0>(b);
+        const auto elem = (*pvals)[b];
+        const float err_val = TensorTools::AccessElement(dEdf, b);
+        const float logz_val = TensorTools::AccessElement(z, b);
+        dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (xs[0]->tb<1>().chip<1>(b) - logz_val).exp() * err_val;
+        dEdxi.tb<1>().chip<1>(b).chip<0>(elem).device(*dev.edevice) = dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]) - dEdf.tb<0>().chip<0>(b);
       }
     }
   } else {
