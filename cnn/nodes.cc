@@ -1091,6 +1091,23 @@ void Max::backward_dev_impl(const MyDevice & dev,
 CNN_NODE_INST_DEV_IMPL(Max)
 
 template<class MyDevice>
+void NoBackprop::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.d = xs[0]->d;
+  fx.v = xs[0]->v;
+}
+
+template<class MyDevice>
+void NoBackprop::backward_dev_impl(const MyDevice & dev,
+                                   const vector<const Tensor*>& xs,
+                                   const Tensor& fx,
+                                   const Tensor& dEdf,
+                                   unsigned i,
+                                   Tensor& dEdxi) const {
+  // no op
+}
+CNN_NODE_INST_DEV_IMPL(NoBackprop)
+
+template<class MyDevice>
 void MaxPooling1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   throw std::runtime_error("MaxPooling1D::forward_dev_impl not implemented yet");
 #if 0

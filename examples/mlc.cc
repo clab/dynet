@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
       Expression u = mlc.BuildPredictionScores(cg, xy.feats);
 
       if (rand01() < 0.004) {
-        sparsemax(u * 3.5);
+        sparsemax(u * 1.5);  // this increases sparsity at test time, which Andre found the be useful
         vector<float> p = as_vector(cg.incremental_forward());
         for (unsigned j = 0; j < p.size(); ++j)
           if (p[j] > 0) cerr << j << ' ';

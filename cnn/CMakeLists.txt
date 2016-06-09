@@ -43,6 +43,7 @@ set(cnn_library_HDRS
     cnn.h
     conv.h
     cuda.h
+    devices.h
     dict.h
     dim.h
     exec.h
@@ -57,6 +58,7 @@ set(cnn_library_HDRS
     hsm-builder.h
     init.h
     lstm.h
+    mem.h
     model.h
     mp.h
     nodes.h
@@ -102,15 +104,21 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 
 # actual target:
 add_library(cnn STATIC ${cnn_library_SRCS} ${cnn_library_HDRS})
-add_library(cnn_shared SHARED ${cnn_library_SRCS} ${cnn_library_HDRS})
 target_link_libraries(cnn ${LIBS})
-target_link_libraries(cnn_shared ${LIBS})
+if(WITH_CUDA_BACKEND)
+	add_library(gcnn_shared SHARED ${cnn_library_SRCS} ${cnn_library_HDRS})
+	target_link_libraries(gcnn_shared ${LIBS})
+else()
+	add_library(cnn_shared SHARED ${cnn_library_SRCS} ${cnn_library_HDRS})
+	target_link_libraries(cnn_shared ${LIBS})
+endif(WITH_CUDA_BACKEND)
 #add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
 if(WITH_CUDA_BACKEND)
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-O2;-DVERBOSE;-DEIGEN_USE_GPU")
   SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
   cuda_add_library(cnncuda STATIC gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-param-nodes.cu)
+  cuda_add_library(cnncuda_shared SHARED gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-param-nodes.cu)
 endif(WITH_CUDA_BACKEND)
 
 install(FILES ${cnn_library_HDRS} DESTINATION include/cnn)

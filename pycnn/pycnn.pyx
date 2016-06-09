@@ -339,6 +339,8 @@ cdef class ComputationGraph:
         return _inputExpression(self, v)
     cdef inputVector(self, int dim):
         return _vecInputExpression(self, vector[float](dim))
+    cdef inputVectorLiteral(self, vector[float] v):
+        return _vecInputExpression(self, v)
     cdef inputMatrix(self, int d1, int d2):
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
@@ -440,7 +442,7 @@ cdef class Expression: #{{{
     cpdef forward(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward()
-        else: self.cg().incremental_forward()
+        else: self.cg().inc_forward()
 
     cpdef backward(self):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
@@ -515,6 +517,9 @@ cdef class _vecInputExpression(Expression):
 
 def vecInput(int dim):
     return _cg.inputVector(dim)
+
+def inputVector(vector[float] v):
+    return _cg.inputVectorLiteral(v)
 
 def matInput(int d1, int d2):
     return _cg.inputMatrix(d1, d2)
@@ -670,6 +675,7 @@ cpdef Expression block_dropout(Expression x, float p): return Expression.from_ce
 cpdef Expression reshape(Expression x, tuple d): return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d)))
 
 cpdef Expression esum(list xs):
+    assert xs, 'List is empty, nothing to esum.'
     cdef vector[CExpression] cvec
     cvec = vector[CExpression]()
     cdef Expression x
@@ -680,6 +686,7 @@ cpdef Expression esum(list xs):
     return Expression.from_cexpr(x.cg_version, c_sum(cvec))
 
 cpdef Expression average(list xs):
+    assert xs, 'List is empty, nothing to average.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs: 
@@ -688,6 +695,7 @@ cpdef Expression average(list xs):
     return Expression.from_cexpr(x.cg_version, c_average(cvec))
 
 cpdef Expression emax(list xs):
+    assert xs, 'List is empty, nothing to emax.'
     cdef Expression c
     cdef Expression x
     c = xs[0]
@@ -699,6 +707,7 @@ cpdef Expression emax(list xs):
     #return Expression.from_cexpr(x.cg_version, c_max(cvec))
 
 cpdef Expression concatenate_cols(list xs):
+    assert xs, 'List is empty, nothing to concatenate.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
@@ -707,6 +716,7 @@ cpdef Expression concatenate_cols(list xs):
     return Expression.from_cexpr(x.cg_version, c_concat_cols(cvec))
 
 cpdef Expression concatenate(list xs):
+    assert xs, 'List is empty, nothing to concatenate.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
@@ -716,6 +726,7 @@ cpdef Expression concatenate(list xs):
 
 
 cpdef Expression affine_transform(list exprs):
+    assert exprs, 'List input to affine_transform must not be empty.'
     cdef Expression e
     cdef vector[CExpression] ves
     for e in exprs:
@@ -815,6 +826,16 @@ cdef class RNNBuilder: # {{{
         if self.cg_version != _cg.version():
             self.new_graph()
             if vecs is not None:
+                self.start_new_sequence(vecs)
+            else:
+                self.start_new_sequence()
+            self._init_state = RNNState(self, -1)
+        return self._init_state
+
+    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None):
+        if self.cg_version != _cg.version():
+            self.new_graph()
+            if vecs is not None:
                 es = []
                 for v in vecs:
                     e = vecInput(len(v))
@@ -841,6 +862,14 @@ cdef class LSTMBuilder(RNNBuilder): # {{{
         self.cg_version = -1
 
     def whoami(self): return "LSTMBuilder"
+# }}}
+
+cdef class FastLSTMBuilder(RNNBuilder): # {{{
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        self.cg_version = -1
+
+    def whoami(self): return "FastLSTMBuilder"
 # }}}
 
 cdef class RNNState: # {{{

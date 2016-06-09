@@ -142,7 +142,7 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
     if (has_prev_state)
       i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
     else
-      i_aot = affine_transform({vars[BO], vars[X2O], in});
+      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], ct[i]});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
     in = ht[i] = cwise_multiply(i_ot,ph_t);

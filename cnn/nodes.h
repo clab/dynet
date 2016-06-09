@@ -277,6 +277,13 @@ struct Hinge : public Node {
   real margin;
 };
 
+// y = x_1, but dy/dx is set to 0
+struct NoBackprop : public Node {
+  explicit NoBackprop(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  CNN_NODE_DEFINE_DEV_IMPL()
+};
+
 // y = x_1
 struct Identity : public Node {
   explicit Identity(const std::initializer_list<VariableIndex>& a) : Node(a) {}
