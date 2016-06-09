@@ -12,7 +12,7 @@ using namespace cnn::expr;
 int main(int argc, char** argv) {
   cnn::Initialize(argc, argv);
 
-  default_random_engine rng();
+  default_random_engine rng;
   normal_distribution<float> normal(0.0f, 1.0f);
 
   vector<float> xs;
