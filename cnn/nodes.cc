@@ -38,7 +38,6 @@ using namespace std;
 namespace cnn {
 
 // ======= Shared definitions
-#define MAX_CONCAT_COLS_ARGS 512
 #define MAX_LOG_SUM_EXP 65536
 #define MAX_SPARSEMAX_LOSS_ROWS 65536
 
@@ -91,10 +90,6 @@ EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
 size_t BlockDropout::aux_storage_size() const {
   // we just need to remember whether this entire block is turned on (1.0) or off (0.0)
   return 1 * sizeof(float);
-}
-
-size_t ConcatenateColumns::aux_storage_size() const {
-  return MAX_CONCAT_COLS_ARGS * sizeof(unsigned);
 }
 
 size_t Dropout::aux_storage_size() const {
@@ -377,23 +372,20 @@ CNN_NODE_INST_DEV_IMPL(Average)
 
 template<class MyDevice>
 void Concatenate::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  unsigned rows = 0;
-  for (auto x : xs) rows += x->d.rows();
-  // the following should use auxiliary memory
+  unsigned curr_row = 0;
   src_row_indices.resize(xs.size());
-  unsigned ind = 0;
-  unsigned k = 0;
-  for (auto x : xs) {
-    src_row_indices[k++] = ind;
-    auto & xi = *x;
-    const unsigned rows = xi.d.rows();
+  for (unsigned i = 0; i < xs.size(); ++i) {
+    src_row_indices[i] = curr_row;
+    const unsigned row_size = xs[i]->d.rows();
 #if __CUDACC__
-    assert(xi.d.cols() == 1); // this can be relaxed to the same everywhere
-    CUDA_CHECK(cudaMemcpyAsync(&fx.v[ind], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
+    // CUBLAS matricies are col major, so this is non-trivial
+    if(row_size != 1) throw std::runtime_error("Concatenating matricies with multiple cols on CUDA not supported yet");
+    const unsigned cols = xs[i]->d.cols();
+    CUDA_CHECK(cudaMemcpyAsync(fx.v + curr_row*cols, xs[i]->v, sizeof(float) * cols * row_size, cudaMemcpyDeviceToDevice));
 #else
-    (*fx).middleRows(ind, rows) = *xi;
+    (*fx).middleRows(curr_row, row_size) = **xs[i];
 #endif
-    ind += rows;
+    curr_row += row_size;
   }
 }
 
@@ -405,34 +397,32 @@ void Concatenate::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i < src_row_indices.size());
-  const unsigned rows = dEdxi.d.rows();
-  const unsigned begin = src_row_indices[i];
+  const unsigned row_size = dEdxi.d.rows();
+  const unsigned curr_row = src_row_indices[i];
 #if __CUDACC__
-  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
+  const unsigned cols = dEdxi.d.cols();
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, row_size*cols, kSCALAR_ONE, dEdf.v + curr_row*cols, 1, dEdxi.v, 1));
 #else
-  *dEdxi += (*dEdf).middleRows(begin, rows);
+  *dEdxi += (*dEdf).middleRows(curr_row, row_size);
 #endif
 }
 CNN_NODE_INST_DEV_IMPL(Concatenate)
 
 template<class MyDevice>
 void ConcatenateColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  unsigned c = 0;
-  assert(xs.size() < MAX_CONCAT_COLS_ARGS);
+  unsigned curr_col = 0;
+  src_col_indices.resize(xs.size());
   for (unsigned i = 0; i < xs.size(); ++i) {
-    static_cast<unsigned*>(aux_mem)[i] = c;
+    src_col_indices[i] = curr_col;
+    const unsigned col_size = xs[i]->d.cols();
 #if __CUDACC__
-    assert(xs[i]->d.cols() == 1);
     // CUBLAS matricies are column-major, so just copy the memory
-    auto & xi = *xs[i];
-    const unsigned rows = xi.d.rows();
-    CUDA_CHECK(cudaMemcpyAsync(&fx.v[i*rows], &xi.v[0], sizeof(float) * rows, cudaMemcpyDeviceToDevice));
+    const unsigned rows = xs[i]->d.rows();
+    CUDA_CHECK(cudaMemcpyAsync(fx.v + curr_col*rows, xs[i]->v, sizeof(float) * rows * col_size, cudaMemcpyDeviceToDevice));
 #else
-    auto xi = **xs[i];
-    int d = xi.cols();
-    (*fx).middleCols(c, d) = xi;
-    c += d;
+    (*fx).middleCols(curr_col, col_size) = **xs[i];
 #endif
+    curr_col += col_size;
   }
 }
 
@@ -443,15 +433,13 @@ void ConcatenateColumns::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+  const unsigned col_size = dEdxi.d.cols();
+  const unsigned curr_col = src_col_indices[i];
 #if __CUDACC__
   const unsigned rows = dEdxi.d.rows();
-  const unsigned begin = i*rows;
-  CUBLAS_CHECK(cublasSaxpy(cublas_handle, rows, kSCALAR_ONE, &dEdf.v[begin], 1, dEdxi.v, 1));
+  CUBLAS_CHECK(cublasSaxpy(cublas_handle, col_size*rows, kSCALAR_ONE, dEdf.v + curr_col*rows, 1, dEdxi.v, 1));
 #else
-  auto dEdx = *dEdxi;
-  int d = dEdx.cols();
-  int c = static_cast<unsigned*>(aux_mem)[i];
-  dEdx += (*dEdf).middleCols(c, d);
+  *dEdxi += (*dEdf).middleCols(curr_col, col_size);
 #endif
 }
 CNN_NODE_INST_DEV_IMPL(ConcatenateColumns)

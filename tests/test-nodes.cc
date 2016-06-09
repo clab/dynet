@@ -265,6 +265,28 @@ BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression concatenate_cols(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression y = concatenate_cols({x1, x2, x1});
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  ones3 * y * transpose(ones3);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression concatenate(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( concatenate_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = transpose(parameter(cg, param1));
+  Expression x2 = transpose(parameter(cg, param2));
+  Expression y = concatenate({x1, x2, x1});
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  ones3 * y * transpose(ones3);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 BOOST_AUTO_TEST_CASE( contract3d_1d_gradient ) {
   cnn::ComputationGraph cg;
