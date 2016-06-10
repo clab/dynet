@@ -685,10 +685,21 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
   assert(xs.size() == 1);
   Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
   // TODO: Can we do this on device?
-  const real mlystar = margin - TensorTools::AccessElement(*xs[0], *pelement);
-  eloss.tvec().device(*dev.edevice) = (xs[0]->tvec() + mlystar).cwiseMax(0.f);
-  TensorTools::SetElement(eloss, *pelement, 0.f);
-  fx.t<0>().device(*dev.edevice) = eloss.tvec().sum();
+  if(pelement != nullptr) {
+    const real mlystar = margin - TensorTools::AccessElement(*xs[0], *pelement);
+    eloss.tvec().device(*dev.edevice) = (xs[0]->tvec() + mlystar).cwiseMax(0.f);
+    TensorTools::SetElement(eloss, *pelement, 0.f);
+    fx.t<0>().device(*dev.edevice) = eloss.tvec().sum();
+  } else {
+    assert(pelements != nullptr); 
+    size_t batch_size = fx.d.batch_size();
+    for(size_t b = 0; b < fx.d.bd; b++) {
+      const real mlystar = margin - TensorTools::AccessElement(*xs[0], b*batch_size + (*pelements)[b]);
+      eloss.tb<1>().chip<1>(b).device(*dev.edevice) = (xs[0]->tb<1>().chip<1>(b) + mlystar).cwiseMax(0.f);
+      TensorTools::SetElement(eloss, b*batch_size + (*pelements)[b], 0.f);
+      fx.tb<0>().chip<0>(b).device(*dev.edevice) = eloss.tb<1>().chip<1>(b).sum();
+    }
+  }
 }
 
 template<class MyDevice>
@@ -699,12 +710,26 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i == 0);
-  if(as_scalar(fx)) { // there was some loss
-    const float d = as_scalar(dEdf);
+  if(pelement != nullptr) {
+    if(as_scalar(fx)) { // there was some loss
+      const float d = as_scalar(dEdf);
+      Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
+      // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
+      dEdxi.tvec().device(*dev.edevice) += (eloss.tvec() > 0.f).cast<float>() * d;
+      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
+    }
+  } else {
+    assert(pelements != nullptr); 
+    vector<float> fx_vec = as_vector(fx);
+    vector<float> d_vec = as_vector(dEdf);
     Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
-    // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
-    dEdxi.tvec().device(*dev.edevice) += (eloss.tvec() > 0.f).cast<float>() * d;
-    dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
+    for(size_t b = 0; b < fx.d.bd; b++) {
+      if(fx_vec[b]) { // there was some loss
+        // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
+        dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>() * d_vec[b];
+        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>().sum() * d_vec[b];
+      }
+    }
   }
 }
 CNN_NODE_INST_DEV_IMPL(Hinge)

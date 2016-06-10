@@ -411,6 +411,16 @@ BOOST_AUTO_TEST_CASE( hinge_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression hinge(const Expression& x, unsigned index, float m = 1.0);
+BOOST_AUTO_TEST_CASE( hinge_batch_gradient ) {
+  std::vector<unsigned> idx = {1,2};
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  sum_batches(hinge(x1+x2, idx, 2.f));
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
 BOOST_AUTO_TEST_CASE( hingeptr_gradient ) {
   unsigned index = 0;
