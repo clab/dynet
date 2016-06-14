@@ -147,7 +147,7 @@ template <class MyDevice>
 void AdagradTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
   ts[2]->tvec().device(*dev.edevice) += ts[1]->tvec().square();
-  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() * (ts[2]->tvec() + epsilon).sqrt() * (-eta / global_weight_decay.CurrentWeightDecay());
+  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / (ts[2]->tvec() + epsilon).sqrt() * (-eta / global_weight_decay.CurrentWeightDecay());
 }
 CNN_TRAINER_INST_DEV_IMPL(AdagradTrainer)
 
@@ -173,7 +173,7 @@ template <class MyDevice>
 void AdadeltaTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho);
-  ts[1]->tvec().device(*dev.edevice) = - ts[1]->tvec() * (ts[3]->tvec() + epsilon).sqrt() * (ts[2]->tvec() + epsilon).sqrt();
+  ts[1]->tvec().device(*dev.edevice) = - ts[1]->tvec() * (ts[3]->tvec() + epsilon).sqrt() / (ts[2]->tvec() + epsilon).sqrt();
   ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho);
   ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / global_weight_decay.CurrentWeightDecay();
 }
@@ -239,12 +239,11 @@ void RmsPropTrainer::alloc_impl() {
 template <class MyDevice>
 void AdamTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
-  ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * beta_1 + ts[1]->tvec() * (1 - beta_1);
-  ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * beta_2 + ts[1]->tvec().square() * (1 - beta_2);
-  // TODO: Is updates really appropriate here?
-  float s1 = 1 - pow(beta_1, updates);
-  float s2 = 1 - pow(beta_2, updates);
-  ts[0]->tvec() += ts[2]->tvec() * ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / global_weight_decay.CurrentWeightDecay());
+  ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * beta_1 + ts[1]->tvec() * (1.f - beta_1);
+  ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * beta_2 + ts[1]->tvec().square() * (1.f - beta_2);
+  float s1 = 1 - pow(beta_1, updates+1);
+  float s2 = 1 - pow(beta_2, updates+1);
+  ts[0]->tvec() += ts[2]->tvec() / ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / global_weight_decay.CurrentWeightDecay());
 }
 CNN_TRAINER_INST_DEV_IMPL(AdamTrainer)
 
