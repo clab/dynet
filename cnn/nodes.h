@@ -514,7 +514,7 @@ struct PickElement : public Node {
 // y = x_1[start:end]
 // (start inclusive, end exclusive)
 struct PickRange : public Node {
-  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned start, unsigned end) : Node(a), start(start), end(end) {}
+  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e) : Node(a), start(s), end(e) {}
   CNN_NODE_DEFINE_DEV_IMPL()
   unsigned start;
   unsigned end;

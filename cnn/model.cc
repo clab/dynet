@@ -28,6 +28,7 @@ ParameterStorageBase::~ParameterStorageBase() {}
 ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
   values.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
+  values.device = default_device;
   if (scale) {
     TensorTools::Randomize(values, scale);
   }
