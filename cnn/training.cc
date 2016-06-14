@@ -76,12 +76,16 @@ void Trainer::update(real scale) {
   // Perform gradient clipping and cycle through parameters
   const float gscale = clip_gradients();
   const auto & params = model->parameters_list();
-  for(size_t i = 0; i < params.size(); ++i)
+  for(size_t i = 0; i < params.size(); ++i) {
     update_params(scale, gscale, i);
+    params[i]->clear();
+  }
   const auto & lookup_params = model->lookup_parameters_list();
-  for(size_t i = 0; i < lookup_params.size(); ++i)
+  for(size_t i = 0; i < lookup_params.size(); ++i) {
     for (auto j : lookup_params[i]->non_zero_grads)
       update_lookup_params(scale, gscale, i, j);
+    lookup_params[i]->clear();
+  }
   ++updates;
 
   global_weight_decay.UpdateWeightDecay(); // update global weight scale
