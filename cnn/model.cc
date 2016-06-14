@@ -28,7 +28,7 @@ ParameterStorageBase::~ParameterStorageBase() {}
 ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
   values.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
-  values.device = default_device;
+  values.device = g.device = default_device;
   if (scale) {
     TensorTools::Randomize(values, scale);
   }
@@ -83,11 +83,13 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
     auto& v = values[i];
     v.d = d;
     v.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
+    v.device = default_device;
     TensorTools::Randomize(v);
 
     auto& g = grads[i];
     g.d = d;
     g.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
+    g.device = default_device;
     TensorTools::Zero(g);
   }
 }
