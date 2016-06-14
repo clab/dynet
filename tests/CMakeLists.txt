@@ -8,6 +8,7 @@ add_definitions (-DBOOST_TEST_DYN_LINK)
 # Sources:
 set(test_cnn_SRCS
     test-nodes.cc
+    test-trainers.cc
 )
 
 add_executable (test-cnn test-cnn.cc ${test_cnn_SRCS})
