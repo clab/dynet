@@ -615,6 +615,7 @@ def hinge(Expression x, unsigned index, float m=1.0):
 
 # }}}
 
+cpdef Expression nobackprop(Expression x): return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
 
 # binary-exp
 cpdef Expression cdiv(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cdiv(x.c(), y.c()))
