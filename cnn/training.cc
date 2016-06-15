@@ -8,7 +8,7 @@
 #ifdef __CUDACC__
 #define CNN_TRAINER_INST_DEV_IMPL(MyTrainer) \
   template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real scale, real gscale, const std::vector<Tensor*> & values);
-#elif defined(HAVE_GPU)
+#elif defined(HAVE_CUDA)
 #define CNN_TRAINER_INST_DEV_IMPL(MyTrainer) \
   extern template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
@@ -243,7 +243,7 @@ void AdamTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale,
   ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * beta_2 + ts[1]->tvec().square() * (1.f - beta_2);
   float s1 = 1 - pow(beta_1, updates+1);
   float s2 = 1 - pow(beta_2, updates+1);
-  ts[0]->tvec() += ts[2]->tvec() / ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / global_weight_decay.CurrentWeightDecay());
+  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / global_weight_decay.CurrentWeightDecay());
 }
 CNN_TRAINER_INST_DEV_IMPL(AdamTrainer)
 
