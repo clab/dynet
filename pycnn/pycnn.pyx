@@ -343,6 +343,8 @@ cdef class ComputationGraph:
         return _vecInputExpression(self, v)
     cdef inputMatrix(self, int d1, int d2):
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
+    def inputMatrixLiteral(self, vector[float] v, tuple d):
+        return _vecInputExpression(self, v, d)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -523,6 +525,9 @@ def inputVector(vector[float] v):
 
 def matInput(int d1, int d2):
     return _cg.inputMatrix(d1, d2)
+
+def inputMatrix(vector[float] v, tuple d):
+    return _cg.inputMatrixLiteral(v, d)
 
 cdef class _lookupExpression(Expression):
     cdef UnsignedValue val
