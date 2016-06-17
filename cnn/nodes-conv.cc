@@ -1,4 +1,4 @@
-#include "cnn/conv.h"
+#include "cnn/nodes-conv.h"
 
 #include <sstream>
 #include <limits>
