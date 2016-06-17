@@ -745,7 +745,7 @@ cdef class RNNBuilder: # {{{
     cdef CRNNBuilder *thisptr
     cdef RNNState _init_state
     cdef int cg_version 
-    def __cinit_(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         # TODO disable calling this directly.
         raise RuntimeError("Cannot instantiate RNNBuilder directly.")
     #def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
