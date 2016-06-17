@@ -3,7 +3,6 @@
 set(cnn_library_SRCS
     cfsm-builder.cc
     cnn.cc
-    conv.cc
     deep-lstm.cc
     devices.cc
     dict.cc
@@ -24,6 +23,7 @@ set(cnn_library_SRCS
     nodes.cc
     nodes-common.cc
     nodes-contract.cc
+    nodes-conv.cc
     param-nodes.cc
     pretrain.cc
     rnn.cc
@@ -41,7 +41,6 @@ set(cnn_library_HDRS
     cfsm-builder.h
     c2w.h
     cnn.h
-    conv.h
     cuda.h
     devices.h
     dict.h
@@ -63,6 +62,7 @@ set(cnn_library_HDRS
     mp.h
     nodes.h
     nodes-contract.h
+    nodes-conv.h
     param-nodes.h
     rnn-state-machine.h
     rnn.h

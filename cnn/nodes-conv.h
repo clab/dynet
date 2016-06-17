@@ -1,5 +1,5 @@
-#ifndef CNN_CONV_H_
-#define CNN_CONV_H_
+#ifndef CNN_NODES_CONV_H_
+#define CNN_NODES_CONV_H_
 
 #include "cnn/cnn.h"
 

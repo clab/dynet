@@ -3,7 +3,7 @@
 #include <initializer_list>
 
 #include "cnn/nodes.h"
-#include "cnn/conv.h"
+#include "cnn/nodes-conv.h"
 
 namespace cnn { namespace expr {
 
