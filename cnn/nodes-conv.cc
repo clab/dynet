@@ -6,6 +6,8 @@
 #include <stdexcept>
 
 #include "cnn/functors.h"
+#include "cnn/nodes-macros.h"
+
 #if HAVE_CUDA
 #include "cnn/cuda.h"
 #include "cnn/gpu-ops.h"
@@ -14,6 +16,8 @@
 using namespace std;
 
 namespace cnn {
+
+#ifndef __CUDACC__
 
 string FoldRows::as_string(const vector<string>& arg_names) const {
   ostringstream os;
@@ -28,41 +32,6 @@ Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument("bad input dimensions in FoldRows");
   }
   return Dim({orows, xs[0].cols()});
-}
-
-void FoldRows::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("FoldRows::forward not implemented for CUDA");
-#else
-  auto x = **xs[0];
-  auto y = *fx;
-  unsigned orows = y.rows();
-  for (unsigned i = 0; i < orows; ++i) {
-    for (unsigned j = 0; j < nrows; ++j) {
-      if (j)
-        y.row(i) += x.row(i * nrows + j);
-      else // j = 0
-        y.row(i) = x.row(i * nrows);
-    }
-  }
-#endif
-}
-
-void FoldRows::backward_impl(const vector<const Tensor*>& xs,
-                        const Tensor& fx,
-                        const Tensor& dEdf,
-                        unsigned i,
-                        Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("FoldRows::backward not implemented for CUDA");
-#else
-  unsigned orows = fx.d.rows();
-  auto d = *dEdf;
-  auto di = *dEdxi;
-  for (unsigned i = 0; i < orows; ++i)
-    for (unsigned j = 0; j < nrows; ++j)
-      di.row(i * nrows + j) += d.row(i);
-#endif
 }
 
 string Conv1DNarrow::as_string(const vector<string>& arg_names) const {
@@ -86,63 +55,6 @@ Dim Conv1DNarrow::dim_forward(const vector<Dim>& xs) const {
   return Dim({xs[0].rows(), ocols});
 }
 
-void Conv1DNarrow::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Conv1DNarrow::forward not implemented for CUDA");
-#else
-  // TODO this is a bad implementation- rewrite to use unsupported Eigen tensor library
-  auto x = **xs[0];  // input
-  auto f = **xs[1];  // filter
-  auto y = *fx;
-  const unsigned rows = x.rows();
-  const unsigned ycols = dim.cols();
-  const unsigned fcols = f.cols();
-  for (unsigned i = 0; i < rows; ++i) {
-    for (unsigned j = 0; j < ycols; ++j) {
-      float t = 0;
-      for (unsigned k = 0; k < fcols; ++k)
-        t += f(i, k) * x(i, j + k);
-      y(i, j) = t;
-    }
-  }
-#endif
-}
-
-void Conv1DNarrow::backward_impl(const vector<const Tensor*>& xs,
-                            const Tensor& fx,
-                            const Tensor& dEdf,
-                            unsigned i,
-                            Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Conv1DNarrow::backward not implemented for CUDA");
-#else
-  // TODO this is a bad implementation- rewrite to use unsupported Eigen tensor library
-  assert(i < 2);
-  const unsigned rows = xs[0]->d.rows();
-  const unsigned ycols = dim.cols();
-  const unsigned fcols = xs[1]->d.cols();
-  auto d = *dEdf;
-  auto di = *dEdxi;
-  if (i == 0) { // derivative wrt input x
-    auto f = **xs[1];
-    for (unsigned i = 0; i < rows; ++i) {
-      for (unsigned j = 0; j < ycols; ++j) {
-        for (unsigned k = 0; k < fcols; ++k)
-          di(i, j + k) += f(i, k) * d(i, j);
-      }
-    }
-  } else { // derivative wrt filter f
-    auto x = **xs[0];
-    for (unsigned i = 0; i < rows; ++i) {
-      for (unsigned j = 0; j < ycols; ++j) {
-        for (unsigned k = 0; k < fcols; ++k)
-          di(i, k) += x(i, j + k) * d(i, j);
-      }
-    }
-  }
-#endif
-}
-
 string Conv1DWide::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "conv1d_wide(" << arg_names[0] << ", f=" << arg_names[1] << ')';
@@ -161,62 +73,6 @@ Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument("bad input dimensions in Conv1DWide");
   }
   return Dim({xs[0].rows(), ocols});
-}
-
-void Conv1DWide::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Conv1DWide::forward not implemented for CUDA");
-#else
-  TensorTools::Zero(fx);
-  auto x = **xs[0];  // input
-  auto f = **xs[1];  // filter
-  auto y = *fx;
-  const unsigned rows = x.rows();
-  const unsigned xcols = x.cols();
-  const unsigned fcols = f.cols();
-  for (unsigned i = 0; i < rows; ++i) {
-    for (unsigned j = 0; j < xcols; ++j) {
-      const float xij = x(i, j);
-      for (unsigned k = 0; k < fcols; ++k)
-        y(i, j + k) += f(i, k) * xij;
-    }
-  }
-#endif
-}
-
-void Conv1DWide::backward_impl(const vector<const Tensor*>& xs,
-                          const Tensor& fx,
-                          const Tensor& dEdf,
-                          unsigned i,
-                          Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("Conv1DWide::backward not implemented for CUDA");
-#else
-  assert(i < 2);
-  const unsigned rows = xs[0]->d.rows();
-  const unsigned xcols = xs[0]->d.cols();
-  const unsigned fcols = xs[1]->d.cols();
-  auto d = *dEdf;
-  auto di = *dEdxi;
-  if (i == 0) { // derivative wrt input x
-    auto f = **xs[1];
-    for (unsigned i = 0; i < rows; ++i) {
-      for (unsigned j = 0; j < xcols; ++j) {
-        for (unsigned k = 0; k < fcols; ++k)
-          di(i, j) += f(i, k) * d(i, j + k);
-      }
-    }
-  } else { // derivative wrt filter f
-    auto x = **xs[0];
-    for (unsigned i = 0; i < rows; ++i) {
-      for (unsigned j = 0; j < xcols; ++j) {
-        const float xij = x(i, j);
-        for (unsigned k = 0; k < fcols; ++k)
-          di(i, k) += xij * d(i, j + k);
-      }
-    }
-  }
-#endif
 }
 
 string KMaxPooling::as_string(const vector<string>& arg_names) const {
@@ -242,10 +98,147 @@ size_t KMaxPooling::aux_storage_size() const {
   return sizeof(int) * dim.size();
 }
 
-void KMaxPooling::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("KMaxPooling::forward not implemented for CUDA");
-#else
+#endif
+
+template<class MyDevice>
+void FoldRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  auto x = **xs[0];
+  auto y = *fx;
+  unsigned orows = y.rows();
+  for (unsigned i = 0; i < orows; ++i) {
+    for (unsigned j = 0; j < nrows; ++j) {
+      if (j)
+        y.row(i) += x.row(i * nrows + j);
+      else // j = 0
+        y.row(i) = x.row(i * nrows);
+    }
+  }
+}
+
+template<class MyDevice>
+void FoldRows::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  unsigned orows = fx.d.rows();
+  auto d = *dEdf;
+  auto di = *dEdxi;
+  for (unsigned i = 0; i < orows; ++i)
+    for (unsigned j = 0; j < nrows; ++j)
+      di.row(i * nrows + j) += d.row(i);
+}
+CNN_NODE_INST_DEV_IMPL(FoldRows)
+
+template<class MyDevice>
+void Conv1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // TODO this is a bad implementation- rewrite to use unsupported Eigen tensor library
+  auto x = **xs[0];  // input
+  auto f = **xs[1];  // filter
+  auto y = *fx;
+  const unsigned rows = x.rows();
+  const unsigned ycols = dim.cols();
+  const unsigned fcols = f.cols();
+  for (unsigned i = 0; i < rows; ++i) {
+    for (unsigned j = 0; j < ycols; ++j) {
+      float t = 0;
+      for (unsigned k = 0; k < fcols; ++k)
+        t += f(i, k) * x(i, j + k);
+      y(i, j) = t;
+    }
+  }
+}
+
+template<class MyDevice>
+void Conv1DNarrow::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  // TODO this is a bad implementation- rewrite to use unsupported Eigen tensor library
+  assert(i < 2);
+  const unsigned rows = xs[0]->d.rows();
+  const unsigned ycols = dim.cols();
+  const unsigned fcols = xs[1]->d.cols();
+  auto d = *dEdf;
+  auto di = *dEdxi;
+  if (i == 0) { // derivative wrt input x
+    auto f = **xs[1];
+    for (unsigned i = 0; i < rows; ++i) {
+      for (unsigned j = 0; j < ycols; ++j) {
+        for (unsigned k = 0; k < fcols; ++k)
+          di(i, j + k) += f(i, k) * d(i, j);
+      }
+    }
+  } else { // derivative wrt filter f
+    auto x = **xs[0];
+    for (unsigned i = 0; i < rows; ++i) {
+      for (unsigned j = 0; j < ycols; ++j) {
+        for (unsigned k = 0; k < fcols; ++k)
+          di(i, k) += x(i, j + k) * d(i, j);
+      }
+    }
+  }
+}
+CNN_NODE_INST_DEV_IMPL(Conv1DNarrow)
+
+template<class MyDevice>
+void Conv1DWide::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  TensorTools::Zero(fx);
+  auto x = **xs[0];  // input
+  auto f = **xs[1];  // filter
+  auto y = *fx;
+  const unsigned rows = x.rows();
+  const unsigned xcols = x.cols();
+  const unsigned fcols = f.cols();
+  for (unsigned i = 0; i < rows; ++i) {
+    for (unsigned j = 0; j < xcols; ++j) {
+      const float xij = x(i, j);
+      for (unsigned k = 0; k < fcols; ++k)
+        y(i, j + k) += f(i, k) * xij;
+    }
+  }
+}
+
+
+template<class MyDevice>
+void Conv1DWide::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < 2);
+  const unsigned rows = xs[0]->d.rows();
+  const unsigned xcols = xs[0]->d.cols();
+  const unsigned fcols = xs[1]->d.cols();
+  auto d = *dEdf;
+  auto di = *dEdxi;
+  if (i == 0) { // derivative wrt input x
+    auto f = **xs[1];
+    for (unsigned i = 0; i < rows; ++i) {
+      for (unsigned j = 0; j < xcols; ++j) {
+        for (unsigned k = 0; k < fcols; ++k)
+          di(i, j) += f(i, k) * d(i, j + k);
+      }
+    }
+  } else { // derivative wrt filter f
+    auto x = **xs[0];
+    for (unsigned i = 0; i < rows; ++i) {
+      for (unsigned j = 0; j < xcols; ++j) {
+        const float xij = x(i, j);
+        for (unsigned k = 0; k < fcols; ++k)
+          di(i, k) += xij * d(i, j + k);
+      }
+    }
+  }
+}
+CNN_NODE_INST_DEV_IMPL(Conv1DWide)
+
+template<class MyDevice>
+void KMaxPooling::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   auto x=**xs[0];
   auto y=*fx;
   float tmp[1024];
@@ -275,17 +268,15 @@ void KMaxPooling::forward_impl(const vector<const Tensor*>& xs, Tensor& fx) cons
     //cerr << endl; abort();
   }
   assert(mi == dim.size());
-#endif
 }
 
-void KMaxPooling::backward_impl(const vector<const Tensor*>& xs,
-                           const Tensor& fx,
-                           const Tensor& dEdf,
-                           unsigned i,
-                           Tensor& dEdxi) const {
-#ifdef HAVE_CUDA
-  throw std::runtime_error("KMaxPooling::backward not implemented for CUDA");
-#else
+template<class MyDevice>
+void KMaxPooling::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
   const unsigned rows = dim.rows();
   const unsigned cols = dim.cols();
   const int* maxmap = static_cast<const int*>(aux_mem);
@@ -303,7 +294,7 @@ void KMaxPooling::backward_impl(const vector<const Tensor*>& xs,
       (*dEdxi)(i, oj) += (*dEdf)(i, j);
     }
   }
-#endif
 }
+CNN_NODE_INST_DEV_IMPL(KMaxPooling)
 
 } // namespace cnn
