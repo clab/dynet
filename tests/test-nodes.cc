@@ -667,14 +667,13 @@ BOOST_AUTO_TEST_CASE( possion_loss_gradient ) {
 }
 
 // TODO: These are all unimplemented
+
 // Expression conv1d_narrow(const Expression& x, const Expression& f);
 // Expression conv1d_wide(const Expression& x, const Expression& f);
 // Expression kmax_pooling(const Expression& x, unsigned k);
 // Expression fold_rows(const Expression& x, unsigned nrows=2);
 // Expression sum_cols(const Expression& x);
 // Expression kmh_ngram(const Expression& x, unsigned n);
-// 
-// Expression sum_batches(const Expression& x);
 
 // Expression pick(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( pick_gradient ) {
