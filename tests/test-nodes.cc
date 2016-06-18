@@ -29,8 +29,10 @@ struct NodeTest {
     std::vector<float> param1_vals = {1.1f,-2.2f,3.3f};
     std::vector<float> param2_vals = {2.2f,3.4f,-1.2f};
     std::vector<float> param3_vals = {1.1f,2.2f,3.3f};
+    std::vector<float> param4_vals = {1.1f,2.2f,3.3f,-1.2f,2.1f,3.4f};
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
+    std::vector<float> param_kernel1_vals = {1.1f, 2.2f,-1.0f,1.2f,-3.4f,-0.2f};
     std::vector<float> param_square1_vals = {1.1f,2.2f,3.3f,1.2f,2.5f,3.2f,5.3f,2.3f,3.3f};
     std::vector<float> param_cube1_vals = {1.1f,2.2f,3.3f,1.2f,2.2f,3.2f,1.3f,2.3f,3.3f,
                                            11.1f,12.2f,13.3f,11.2f,12.2f,13.2f,11.3f,12.3f,13.3f,
@@ -41,10 +43,14 @@ struct NodeTest {
     TensorTools::SetElements(param2.get()->values,param2_vals);
     param3 = mod.add_parameters({3});
     TensorTools::SetElements(param3.get()->values,param3_vals);
+    param4 = mod.add_parameters({6});
+    TensorTools::SetElements(param4.get()->values,param4_vals);
     param_scalar1 = mod.add_parameters({1});
     TensorTools::SetElements(param_scalar1.get()->values,param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
     TensorTools::SetElements(param_scalar2.get()->values,param_scalar2_vals);
+    param_kernel1 = mod.add_parameters({3,2});
+    TensorTools::SetElements(param_kernel1.get()->values,param_kernel1_vals);
     param_square1 = mod.add_parameters({3,3});
     TensorTools::SetElements(param_square1.get()->values,param_square1_vals);
     param_cube1 = mod.add_parameters({3,3,3});
@@ -66,7 +72,7 @@ struct NodeTest {
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
   cnn::Model mod;
-  cnn::Parameter param1, param2, param3, param_scalar1, param_scalar2, param_square1, param_cube1;
+  cnn::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_square1, param_cube1;
 };
 
 // define the test suite
@@ -666,12 +672,38 @@ BOOST_AUTO_TEST_CASE( possion_loss_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
-// TODO: These are all unimplemented
-
 // Expression conv1d_narrow(const Expression& x, const Expression& f);
+BOOST_AUTO_TEST_CASE( conv1d_narrow_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression xsquare = parameter(cg, param_square1);
+  Expression xkernel = parameter(cg, param_kernel1);
+  Expression y = conv1d_narrow(xsquare, xkernel);
+  input(cg, {1,3}, ones3_vals) * y * input(cg, {2,1}, ones2_vals);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression conv1d_wide(const Expression& x, const Expression& f);
+BOOST_AUTO_TEST_CASE( conv1d_wide_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression xkernel = parameter(cg, param_kernel1);
+  Expression y = conv1d_wide(xkernel, xkernel);
+  input(cg, {1,3}, ones3_vals) * y * input(cg, {3,1}, ones3_vals);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// TODO: These are all unimplemented
 // Expression kmax_pooling(const Expression& x, unsigned k);
+
 // Expression fold_rows(const Expression& x, unsigned nrows=2);
+BOOST_AUTO_TEST_CASE( fold_rows_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x4 = parameter(cg, param4);
+  Expression y = fold_rows(x4, 2);
+  input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// TODO: These are all unimplemented
 // Expression sum_cols(const Expression& x);
 // Expression kmh_ngram(const Expression& x, unsigned n);
 
