@@ -741,16 +741,10 @@ cpdef Expression affine_transform(list exprs):
 # {{{ RNNS / Builders
 # TODO: unify these with inheritance
 
-cdef class RNNBuilder: # {{{
+cdef class _RNNBuilder: # {{{
     cdef CRNNBuilder *thisptr
     cdef RNNState _init_state
     cdef int cg_version 
-    #def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-    #    # TODO disable calling this directly.
-    #    raise RuntimeError("Cannot instantiate RNNBuilder directly.")
-    #def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-    #    self.thisptr = 0 #new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
-    #    self.cg_version = -1
 
     def __dealloc__(self):
         del self.thisptr
@@ -849,7 +843,7 @@ cdef class RNNBuilder: # {{{
         return self._init_state
 #}}}
 
-cdef class SimpleRNNBuilder(RNNBuilder): # {{{
+cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
@@ -857,7 +851,7 @@ cdef class SimpleRNNBuilder(RNNBuilder): # {{{
     def whoami(self): return "SimpleRNNBuilder"
 #}}}
     
-cdef class LSTMBuilder(RNNBuilder): # {{{
+cdef class LSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
@@ -865,7 +859,7 @@ cdef class LSTMBuilder(RNNBuilder): # {{{
     def whoami(self): return "LSTMBuilder"
 # }}}
 
-cdef class FastLSTMBuilder(RNNBuilder): # {{{
+cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
@@ -878,12 +872,12 @@ cdef class RNNState: # {{{
     This is the main class for working with RNNs / LSTMs / GRUs.
     Request an RNNState initial_state() from a builder, and then progress from there.
     """
-    cdef RNNBuilder builder
+    cdef _RNNBuilder builder
     cdef int state_idx
     cdef RNNState _prev
     cdef Expression _out
     # TODO: should be callable only from C
-    def __cinit__(self, RNNBuilder builder, int state_idx=-1, RNNState prev_state=None, Expression out=None):
+    def __cinit__(self, _RNNBuilder builder, int state_idx=-1, RNNState prev_state=None, Expression out=None):
         self.builder = builder
         self.state_idx=state_idx
         self._prev = prev_state
