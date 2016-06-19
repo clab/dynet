@@ -1914,34 +1914,6 @@ void SumBatches::backward_dev_impl(const MyDevice & dev,
 CNN_NODE_INST_DEV_IMPL(SumBatches)
 
 template<class MyDevice>
-void SumColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-  throw std::runtime_error("SumColumns not implemented yet");
-  // array<ptrdiff_t, 1> reduction_axis;
-  // reduction_axis[0] = 1;
-  // fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().sum(reduction_axis);
-}
-
-template<class MyDevice>
-void SumColumns::backward_dev_impl(const MyDevice & dev,
-                             const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
-  throw std::runtime_error("SumColumns not implemented yet");
-  // TODO: This causes a compile error
-  // for(size_t i = 0; i < xs[0]->d[1]; i++)
-  //   dEdxi.t<1>().device(*dev.edevice) += dEdf.t<2>().chip<1>(i);
-  // TODO: This is not great. Can we use broadcasting similar to the following?
-  // array<ptrdiff_t, 2> broadcasts;
-  // broadcasts[0] = 1;
-  // broadcasts[1] = xs[0]->d[1];
-  // dEdxi.t<2>().broadcast(broadcasts) += dEdf.t<2>();
-}
-CNN_NODE_INST_DEV_IMPL(SumColumns)
-
-template<class MyDevice>
 void TraceOfProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
   throw std::runtime_error("TraceOfProduct not yet implemented for CUDA");
