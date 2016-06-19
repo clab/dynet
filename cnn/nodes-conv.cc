@@ -19,6 +19,18 @@ namespace cnn {
 
 #ifndef __CUDACC__
 
+string AverageColumns::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "average_cols(matrix=" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim AverageColumns::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1 || xs.size() == 2);
+  int bd = (xs.size() == 1 ? xs[0].bd : max(xs[0].bd, xs[1].bd));
+  return Dim({xs[0].rows()}, bd);
+}
+
 string FoldRows::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "fold_rows(" << arg_names[0] << ", nrows=" << nrows << ')';
@@ -95,39 +107,44 @@ Dim KMaxPooling::dim_forward(const vector<Dim>& xs) const {
 
 size_t KMaxPooling::aux_storage_size() const {
   // map of where the entries in f(x) go to entries in x
-  return sizeof(int) * dim.size();
+  return sizeof(Eigen::DenseIndex) * dim.size();
+}
+
+string SumColumns::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "sum_cols(matrix=" << arg_names[0];
+  if (arg_names.size() == 2) s << ", col_weighting=" << arg_names[1];
+  s << ')';
+  return s.str();
+}
+
+Dim SumColumns::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1 || xs.size() == 2);
+  int bd = (xs.size() == 1 ? xs[0].bd : max(xs[0].bd, xs[1].bd));
+  return Dim({xs[0].rows()}, bd);
 }
 
 #endif
 
 template<class MyDevice>
-void FoldRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  unsigned orows = fx.d.rows();
-  for (unsigned i = 0; i < orows; ++i) {
-    fx.tb<2>().chip<0>(i).device(*dev.edevice) = xs[0]->tb<2>().chip<0>(i * nrows);
-    for (unsigned j = 1; j < nrows; ++j) 
-      fx.tb<2>().chip<0>(i).device(*dev.edevice) += xs[0]->tb<2>().chip<0>(i * nrows + j); 
-  }
-  // TODO: This broadcasting should work?
-  // array<ptrdiff_t, 1> broadcasts; broadcasts[0] = nrows;
-  // fx.tvec().broadcast(broadcasts).device(*dev.edevice) += xs[0]->tvec();
+void AverageColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  // throw std::runtime_error("AverageColumns not implemented yet");
+  array<ptrdiff_t, 1> reduction_axis; reduction_axis[0] = 1;
+  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis) / (float)xs[0]->d[1];
 }
 
 template<class MyDevice>
-void FoldRows::backward_dev_impl(const MyDevice & dev,
+void AverageColumns::backward_dev_impl(const MyDevice & dev,
                              const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  array<ptrdiff_t, 1> broadcasts; broadcasts[0] = nrows;
-  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec().broadcast(broadcasts);
-  // unsigned orows = fx.d.rows();
-  // for (unsigned i = 0; i < orows; ++i)
-  //   for (unsigned j = 0; j < nrows; ++j)
-  //     dEdxi.tb<2>().chip<0>(i * nrows + j) += d.tb<2>().chip<0>(i);
+  array<ptrdiff_t, 2> broadcasts; broadcasts[0] = 1; broadcasts[1] = xs[0]->d[1];
+  dEdxi.t<2>().device(*dev.edevice) += (dEdf.t<2>() / (float)xs[0]->d[1]).broadcast(broadcasts);
 }
-CNN_NODE_INST_DEV_IMPL(FoldRows)
+CNN_NODE_INST_DEV_IMPL(AverageColumns)
 
 template<class MyDevice>
 void Conv1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -199,40 +216,74 @@ void Conv1DWide::backward_dev_impl(const MyDevice & dev,
 CNN_NODE_INST_DEV_IMPL(Conv1DWide)
 
 template<class MyDevice>
+void FoldRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  unsigned orows = fx.d.rows();
+  for (unsigned i = 0; i < orows; ++i) {
+    fx.tb<2>().chip<0>(i).device(*dev.edevice) = xs[0]->tb<2>().chip<0>(i * nrows);
+    for (unsigned j = 1; j < nrows; ++j) 
+      fx.tb<2>().chip<0>(i).device(*dev.edevice) += xs[0]->tb<2>().chip<0>(i * nrows + j); 
+  }
+  // TODO: This broadcasting should work?
+  // array<ptrdiff_t, 1> broadcasts; broadcasts[0] = nrows;
+  // fx.tvec().broadcast(broadcasts).device(*dev.edevice) += xs[0]->tvec();
+}
+
+template<class MyDevice>
+void FoldRows::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  array<ptrdiff_t, 1> broadcasts; broadcasts[0] = nrows;
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec().broadcast(broadcasts);
+  // unsigned orows = fx.d.rows();
+  // for (unsigned i = 0; i < orows; ++i)
+  //   for (unsigned j = 0; j < nrows; ++j)
+  //     dEdxi.tb<2>().chip<0>(i * nrows + j) += d.tb<2>().chip<0>(i);
+}
+CNN_NODE_INST_DEV_IMPL(FoldRows)
+
+template<class MyDevice>
 void KMaxPooling::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Eigen::DenseIndex* maxmap = static_cast<Eigen::DenseIndex*>(aux_mem);
+  if(k == 1) {
+    Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex,1>> locs(maxmap, dim.size());
+    locs.device(*dev.edevice) = xs[0]->t<2>().argmax(1);
+    array<ptrdiff_t, 1> reduction_axis; reduction_axis[0] = 1;
+    fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().maximum(reduction_axis);
+  } else {
 #ifdef __CUDACC__
-  throw std::runtime_error("KMaxPooling::forward_dev_impl not working on CUDA yet");
+    // TODO: Can this be done by CUDNN?
+    throw std::runtime_error("KMaxPooling::forward_dev_impl for k>1 not working on CUDA yet");
 #else
-  auto x=**xs[0];
-  auto y=*fx;
-  float tmp[1024];
-  assert(x.cols() < 1024);
-  unsigned mi = 0;
-  const unsigned rows = x.rows();
-  const unsigned xcols = x.cols();
-  int* maxmap = static_cast<int*>(aux_mem);
-  for (unsigned i=0; i < rows; ++i) {
-    //cerr << "row(" << i << ")=" << x.row(i) << endl;
-    for (unsigned j=0; j < xcols; ++j)
-      tmp[j] = -x(i,j);
-    nth_element(tmp, tmp + (k-1), tmp + xcols);
-    const float c = -tmp[k-1];  // kth largest element in row i
-    unsigned tt = 0;
-    for (unsigned j = 0; j < xcols; ++j) {
-      const float xij = x(i,j);
-      if (xij >= c) {
-        //cerr << xij << ' ';
-        y(i,tt) = xij;
-        //assert(mi < dim.size());
-        maxmap[mi++] = j;
-        ++tt;
-        if (tt == k) break;  // could happen in case of ties
+    auto x=**xs[0];
+    auto y=*fx;
+    float tmp[1024];
+    assert(x.cols() < 1024);
+    unsigned mi = 0;
+    const unsigned rows = x.rows();
+    const unsigned xcols = x.cols();
+    for (unsigned i=0; i < rows; ++i) {
+      for (unsigned j=0; j < xcols; ++j)
+        tmp[j] = -x(i,j);
+      nth_element(tmp, tmp + (k-1), tmp + xcols);
+      const float c = -tmp[k-1];  // kth largest element in row i
+      unsigned tt = 0;
+      for (unsigned j = 0; j < xcols; ++j) {
+        const float xij = x(i,j);
+        if (xij >= c) {
+          y(i,tt) = xij;
+          //assert(mi < dim.size());
+          maxmap[mi++] = j;
+          ++tt;
+          if (tt == k) break;  // could happen in case of ties
+        }
       }
     }
-    //cerr << endl; abort();
-  }
-  assert(mi == dim.size());
+    assert(mi == dim.size());
 #endif
+  }
 }
 
 template<class MyDevice>
@@ -242,28 +293,40 @@ void KMaxPooling::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+  // TODO: This is not at all efficient on GPU. Switch to CUDNN?
 #ifdef __CUDACC__
-  throw std::runtime_error("Conv1DWide::backward_dev_impl not working on CUDA yet");
+  vector<Eigen::DenseIndex> indices(dim.size());
+  const Eigen::DenseIndex* maxmap = &indices[0];
+  CUDA_CHECK(cudaMemcpyAsync(maxmap, aux_mem, sizeof(DenseIndex) * dim.size(), cudaMemcpyDeviceToHost));
 #else
-  const unsigned rows = dim.rows();
-  const unsigned cols = dim.cols();
-  const int* maxmap = static_cast<const int*>(aux_mem);
-  for (unsigned i = 0; i < rows; ++i) {
-    unsigned mi = 0;
-    for (unsigned j = 0; j < cols; ++j) {
-      assert(mi < dim.size());
-      const int oj = maxmap[mi++];
-      if (oj > (*dEdxi).cols() || oj < 0) {
-        cerr << dim << (*fx) << endl << (*dEdxi) << endl;
-        cerr << "MM:"; for (unsigned k=0;k < dim.size(); ++k) cerr << ' ' << maxmap[k];
-        cerr << endl;
-        cerr << "BAD: " << oj << endl; abort();
-      }
-      (*dEdxi)(i, oj) += (*dEdf)(i, j);
-    }
-  }
+  const Eigen::DenseIndex* maxmap = static_cast<const Eigen::DenseIndex*>(aux_mem);
 #endif
+  const unsigned rows = dim.rows();
+  for(unsigned i = 0; i < rows; ++i)
+    for(unsigned j = 0; j < k; ++j, ++maxmap)
+      dEdxi.t<2>().chip<1>(*maxmap).chip<0>(i).device(*dev.edevice) += dEdf.t<2>().chip<1>(j).chip<0>(i);
 }
 CNN_NODE_INST_DEV_IMPL(KMaxPooling)
+
+template<class MyDevice>
+void SumColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 1);
+  // throw std::runtime_error("SumColumns not implemented yet");
+  array<ptrdiff_t, 1> reduction_axis; reduction_axis[0] = 1;
+  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis);
+}
+
+template<class MyDevice>
+void SumColumns::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  array<ptrdiff_t, 2> broadcasts; broadcasts[0] = 1; broadcasts[1] = xs[0]->d[1];
+  dEdxi.t<2>().device(*dev.edevice) += dEdf.t<2>().broadcast(broadcasts);
+}
+CNN_NODE_INST_DEV_IMPL(SumColumns)
+
 
 } // namespace cnn

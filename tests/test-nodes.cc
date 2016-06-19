@@ -33,7 +33,7 @@ struct NodeTest {
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
     std::vector<float> param_kernel1_vals = {1.1f, 2.2f,-1.0f,1.2f,-3.4f,-0.2f};
-    std::vector<float> param_square1_vals = {1.1f,2.2f,3.3f,1.2f,2.5f,3.2f,5.3f,2.3f,3.3f};
+    std::vector<float> param_square1_vals = {1.1f,2.2f,3.4f,1.2f,2.5f,3.2f,5.3f,2.3f,3.3f};
     std::vector<float> param_cube1_vals = {1.1f,2.2f,3.3f,1.2f,2.2f,3.2f,1.3f,2.3f,3.3f,
                                            11.1f,12.2f,13.3f,11.2f,12.2f,13.2f,11.3f,12.3f,13.3f,
                                            21.1f,22.2f,23.3f,21.2f,22.2f,23.2f,21.3f,22.3f,23.3f};
@@ -691,8 +691,23 @@ BOOST_AUTO_TEST_CASE( conv1d_wide_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
-// TODO: These are all unimplemented
 // Expression kmax_pooling(const Expression& x, unsigned k);
+BOOST_AUTO_TEST_CASE( kmax_pooling_keq1_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression xsquare = parameter(cg, param_square1);
+  Expression y = tanh(kmax_pooling(xsquare, 1));
+  input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression kmax_pooling(const Expression& x, unsigned k);
+BOOST_AUTO_TEST_CASE( kmax_pooling_keq2_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression xsquare = parameter(cg, param_square1);
+  Expression y = tanh(kmax_pooling(xsquare, 2));
+  input(cg, {1,3}, ones3_vals) * y * input(cg, {2,1}, ones2_vals);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
 
 // Expression fold_rows(const Expression& x, unsigned nrows=2);
 BOOST_AUTO_TEST_CASE( fold_rows_gradient ) {
@@ -703,8 +718,26 @@ BOOST_AUTO_TEST_CASE( fold_rows_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
-// TODO: These are all unimplemented
+// Expression average_cols(const Expression& x);
+BOOST_AUTO_TEST_CASE( average_cols_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression xsquare = parameter(cg, param_square1);
+  Expression y = tanh(average_cols(xsquare));
+  input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression sum_cols(const Expression& x);
+BOOST_AUTO_TEST_CASE( sum_cols_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression xsquare = parameter(cg, param_square1);
+  Expression y = tanh(sum_cols(xsquare));
+  input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+
+// TODO: These are all unimplemented
 // Expression kmh_ngram(const Expression& x, unsigned n);
 
 // Expression pick(const Expression& x, unsigned v);
