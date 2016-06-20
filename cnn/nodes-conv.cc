@@ -151,9 +151,17 @@ Dim SumColumns::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void AverageColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  // throw std::runtime_error("AverageColumns not implemented yet");
+  unsigned cols = xs[0]->d.cols();
+#ifdef __CUDACC__
+  // The reduction used on CPU is better, but not implemented in GPU
+  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().chip<1>(0);
+  for(unsigned i = 1; i < cols; ++i)
+    fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().chip<1>(i);
+  fx.t<1>().device(*dev.edevice) = fx.t<1>() / (float)cols;
+#else
   array<ptrdiff_t, 1> reduction_axis; reduction_axis[0] = 1;
-  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis) / (float)xs[0]->d[1];
+  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis) / (float)cols;
+#endif
 }
 
 template<class MyDevice>
@@ -270,24 +278,26 @@ void Filter1DNarrow::backward_dev_impl(const MyDevice & dev,
   const unsigned fids = (xs[1]->d.ndims() > 2 ? xs[1]->d[2] : 1);
   Eigen::DSizes<ptrdiff_t, 2> sizes(rows,fcols);
   Eigen::DSizes<ptrdiff_t, 2> indices(0,0);
+  // TODO: This implementation is by no means optimized. Is there a better way to do it?
+  vector<float> dEdf_vec = as_vector(dEdf);
   if(i == 0) {
     for(unsigned i = 0; i < ycols; i++) {
       indices[1] = i;
       if(fids == 1) {
-        dEdxi.t<2>().slice(indices, sizes).device(*dev.edevice) += xs[1]->t<2>() * dEdf.t<2>()(0, i);
+        dEdxi.t<2>().slice(indices, sizes).device(*dev.edevice) += xs[1]->t<2>() * dEdf_vec[i];
       } else {
         for(unsigned fid = 0; fid < fids; fid++)
-          dEdxi.t<2>().slice(indices, sizes).device(*dev.edevice) += xs[1]->t<3>().chip<2>(fid) * dEdf.t<2>()(fid, i);
+          dEdxi.t<2>().slice(indices, sizes).device(*dev.edevice) += xs[1]->t<3>().chip<2>(fid) * dEdf_vec[fid + i * fids];
       }
     }
   } else {
     for(unsigned i = 0; i < ycols; i++) {
       indices[1] = i;
       if(fids == 1) {
-        dEdxi.t<2>().device(*dev.edevice) += xs[0]->t<2>().slice(indices, sizes) * dEdf.t<2>()(0, i);
+        dEdxi.t<2>().device(*dev.edevice) += xs[0]->t<2>().slice(indices, sizes) * dEdf_vec[i];
       } else {
         for(unsigned fid = 0; fid < fids; fid++)
-          dEdxi.t<3>().chip<2>(fid).device(*dev.edevice) += xs[0]->t<2>().slice(indices, sizes) * dEdf.t<2>()(fid, i);
+          dEdxi.t<3>().chip<2>(fid).device(*dev.edevice) += xs[0]->t<2>().slice(indices, sizes) * dEdf_vec[fid + i * fids];
       }
     }
   }
@@ -331,7 +341,12 @@ void KMaxPooling::forward_dev_impl(const MyDevice & dev, const vector<const Tens
     Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex,1>> locs(maxmap, dim.size());
     locs.device(*dev.edevice) = xs[0]->t<2>().argmax(1);
     array<ptrdiff_t, 1> reduction_axis; reduction_axis[0] = 1;
+#ifdef __CUDACC__
+    // TODO: The code that works on CPU does not compile on CUDA
+    throw std::runtime_error("KMaxPooling::forward_dev_impl not working on CUDA yet");
+#else
     fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().maximum(reduction_axis);
+#endif
   } else {
 #ifdef __CUDACC__
     // TODO: Can this be done by CUDNN?
@@ -377,7 +392,7 @@ void KMaxPooling::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
   vector<Eigen::DenseIndex> indices(dim.size());
   const Eigen::DenseIndex* maxmap = &indices[0];
-  CUDA_CHECK(cudaMemcpyAsync(maxmap, aux_mem, sizeof(DenseIndex) * dim.size(), cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpyAsync((void*)maxmap, aux_mem, sizeof(Eigen::DenseIndex) * dim.size(), cudaMemcpyDeviceToHost));
 #else
   const Eigen::DenseIndex* maxmap = static_cast<const Eigen::DenseIndex*>(aux_mem);
 #endif
@@ -391,9 +406,16 @@ CNN_NODE_INST_DEV_IMPL(KMaxPooling)
 template<class MyDevice>
 void SumColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  // throw std::runtime_error("SumColumns not implemented yet");
+#ifdef __CUDACC__
+  // The reduction used on CPU is better, but not implemented in GPU
+  unsigned cols = xs[0]->d.cols();
+  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().chip<1>(0);
+  for(unsigned i = 1; i < cols; ++i)
+    fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().chip<1>(i);
+#else
   array<ptrdiff_t, 1> reduction_axis; reduction_axis[0] = 1;
   fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis);
+#endif
 }
 
 template<class MyDevice>
