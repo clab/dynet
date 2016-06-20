@@ -343,6 +343,8 @@ cdef class ComputationGraph:
         return _vecInputExpression(self, v)
     cdef inputMatrix(self, int d1, int d2):
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
+    def inputMatrixLiteral(self, vector[float] v, tuple d):
+        return _vecInputExpression(self, v, d)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -524,6 +526,9 @@ def inputVector(vector[float] v):
 def matInput(int d1, int d2):
     return _cg.inputMatrix(d1, d2)
 
+def inputMatrix(vector[float] v, tuple d):
+    return _cg.inputMatrixLiteral(v, d)
+
 cdef class _lookupExpression(Expression):
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, LookupParameters p, unsigned index=0, update=True):
@@ -615,6 +620,7 @@ def hinge(Expression x, unsigned index, float m=1.0):
 
 # }}}
 
+cpdef Expression nobackprop(Expression x): return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
 
 # binary-exp
 cpdef Expression cdiv(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cdiv(x.c(), y.c()))
@@ -740,16 +746,10 @@ cpdef Expression affine_transform(list exprs):
 # {{{ RNNS / Builders
 # TODO: unify these with inheritance
 
-cdef class RNNBuilder: # {{{
+cdef class _RNNBuilder: # {{{
     cdef CRNNBuilder *thisptr
     cdef RNNState _init_state
     cdef int cg_version 
-    def __cinit_(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        # TODO disable calling this directly.
-        raise RuntimeError("Cannot instantiate RNNBuilder directly.")
-    #def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-    #    self.thisptr = 0 #new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
-    #    self.cg_version = -1
 
     def __dealloc__(self):
         del self.thisptr
@@ -848,7 +848,7 @@ cdef class RNNBuilder: # {{{
         return self._init_state
 #}}}
 
-cdef class SimpleRNNBuilder(RNNBuilder): # {{{
+cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
@@ -856,7 +856,7 @@ cdef class SimpleRNNBuilder(RNNBuilder): # {{{
     def whoami(self): return "SimpleRNNBuilder"
 #}}}
     
-cdef class LSTMBuilder(RNNBuilder): # {{{
+cdef class LSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
@@ -864,7 +864,7 @@ cdef class LSTMBuilder(RNNBuilder): # {{{
     def whoami(self): return "LSTMBuilder"
 # }}}
 
-cdef class FastLSTMBuilder(RNNBuilder): # {{{
+cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
@@ -872,17 +872,103 @@ cdef class FastLSTMBuilder(RNNBuilder): # {{{
     def whoami(self): return "FastLSTMBuilder"
 # }}}
 
+class BiRNNBuilder(object):
+    """
+    Builder for BiRNNs that delegates to regular RNNs and wires them together.  
+    
+        builder = BiRNNBuilder(1, 128, 100, model, LSTMBuilder)
+        [o1,o2,o3] = builder.transduce([i1,i2,i3])
+    """
+    def __init__(self, num_layers, input_dim, hidden_dim, model, rnn_builder_factory):
+        """
+        @param num_layers: depth of the BiRNN
+        @param input_dim: size of the inputs
+        @param hidden_dim: size of the outputs (and intermediate layer representations)
+        @param model
+        @param rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
+        """
+        assert num_layers > 0
+        assert hidden_dim % 2 == 0
+        self.builder_layers = []
+        f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
+        b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
+        self.builder_layers.append((f,b))
+        for _ in xrange(num_layers-1):
+            f = rnn_builder_factory(1, hidden_dim, hidden_dim/2, model)
+            b = rnn_builder_factory(1, hidden_dim, hidden_dim/2, model)
+            self.builder_layers.append((f,b))
+
+    def whoami(self): return "BiRNNBuilder"
+
+    def add_inputs(self, es):
+        """
+        returns the list of state pairs (stateF, stateB) obtained by adding 
+        inputs to both forward (stateF) and backward (stateB) RNNs.  
+
+        @param es: a list of Expression
+
+        see also transduce(xs)
+
+        .transduce(xs) is different from .add_inputs(xs) in the following way:
+
+            .add_inputs(xs) returns a list of RNNState pairs. RNNState objects can be
+             queried in various ways. In particular, they allow access to the previous
+             state, as well as to the state-vectors (h() and s() )
+
+            .transduce(xs) returns a list of Expression. These are just the output
+             expressions. For many cases, this suffices. 
+             transduce is much more memory efficient than add_inputs. 
+        """
+        for e in es:
+            ensure_freshness(e)
+        for (fb,bb) in self.builder_layers[:-1]:
+            fs = fb.initial_state().transduce(es)
+            bs = bb.initial_state().transduce(reversed(es))
+            es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
+        (fb,bb) = self.builder_layers[-1]
+        fs = fb.initial_state().add_inputs(es)
+        bs = bb.initial_state().add_inputs(reversed(es))
+        return [(f,b) for f,b in zip(fs, reversed(bs))]
+
+    def transduce(self, es):
+        """
+        returns the list of output Expressions obtained by adding the given inputs
+        to the current state, one by one, to both the forward and backward RNNs, 
+        and concatenating.
+        
+        @param es: a list of Expression
+
+        see also add_inputs(xs)
+
+        .transduce(xs) is different from .add_inputs(xs) in the following way:
+
+            .add_inputs(xs) returns a list of RNNState pairs. RNNState objects can be
+             queried in various ways. In particular, they allow access to the previous
+             state, as well as to the state-vectors (h() and s() )
+
+            .transduce(xs) returns a list of Expression. These are just the output
+             expressions. For many cases, this suffices. 
+             transduce is much more memory efficient than add_inputs. 
+        """
+        for e in es:
+            ensure_freshness(e)
+        for (fb,bb) in self.builder_layers:
+            fs = fb.initial_state().transduce(es)
+            bs = bb.initial_state().transduce(reversed(es))
+            es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
+        return es
+
 cdef class RNNState: # {{{
     """
     This is the main class for working with RNNs / LSTMs / GRUs.
     Request an RNNState initial_state() from a builder, and then progress from there.
     """
-    cdef RNNBuilder builder
+    cdef _RNNBuilder builder
     cdef int state_idx
     cdef RNNState _prev
     cdef Expression _out
     # TODO: should be callable only from C
-    def __cinit__(self, RNNBuilder builder, int state_idx=-1, RNNState prev_state=None, Expression out=None):
+    def __cinit__(self, _RNNBuilder builder, int state_idx=-1, RNNState prev_state=None, Expression out=None):
         self.builder = builder
         self.state_idx=state_idx
         self._prev = prev_state
