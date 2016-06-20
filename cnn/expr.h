@@ -120,9 +120,11 @@ Expression poisson_loss(const Expression& x, const unsigned* py);
 // various convolutiony things
 Expression conv1d_narrow(const Expression& x, const Expression& f);
 Expression conv1d_wide(const Expression& x, const Expression& f);
+Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
 Expression sum_cols(const Expression& x);
+Expression average_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 
 // Sum the results of multiple batches

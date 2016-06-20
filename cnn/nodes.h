@@ -122,14 +122,6 @@ struct Reshape : public Node {
   Dim to;
 };
 
-// with a single argument x \in R^{n x m}
-// y_i = \sum_j x_i,j
-// if you want to reweight the columns and then sum them, use MatrixMultiply
-struct SumColumns : public Node {
-  template <typename T> explicit SumColumns(const T& a) : Node(a) {}
-  CNN_NODE_DEFINE_DEV_IMPL()
-};
-
 // y_i = \sum_{j=1}^n x_1:{i-1+j}
 struct KMHNGram : public Node {
   explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) : Node(a), n(n) {}
