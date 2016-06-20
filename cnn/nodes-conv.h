@@ -29,6 +29,14 @@ struct Conv1DWide : public Node {
   CNN_NODE_DEFINE_DEV_IMPL()
 };
 
+// y = x_1 *filter x_2
+// x_1 \in R^{d x s} (input)
+// x_2 \in R^{d x m} (filter)
+struct Filter1DNarrow : public Node {
+  explicit Filter1DNarrow(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
+};
+
 struct FoldRows : public Node {
   explicit FoldRows(const std::initializer_list<VariableIndex>& a, unsigned nrows) : Node(a), nrows(nrows) {}
   CNN_NODE_DEFINE_DEV_IMPL()
