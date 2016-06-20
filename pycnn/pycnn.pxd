@@ -143,6 +143,9 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
     CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned* pindex) #
     CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, vector[unsigned]* pindices) #
 
+    # identity function, but derivative is not propagated through it
+    CExpression c_nobackprop "cnn::expr::nobackprop" (CExpression& x) #
+
     CExpression c_op_neg "cnn::expr::operator-" (CExpression& x) #
     CExpression c_op_add "cnn::expr::operator+" (CExpression& x, CExpression& y) #
     CExpression c_op_scalar_add "cnn::expr::operator+" (CExpression& x, float y) #
