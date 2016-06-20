@@ -87,6 +87,28 @@ Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
   return Dim({xs[0].rows(), ocols});
 }
 
+string Filter1DNarrow::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "conv1d_narrow(" << arg_names[0] << ", f=" << arg_names[1] << ')';
+  return os.str();
+}
+
+Dim Filter1DNarrow::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2) {
+    cerr << "Filter1DNarrow requires two inputs: " << xs << endl;
+    throw std::invalid_argument("Filter1DNarrow requires 2 dimensions");
+  }
+  int ocols = xs[0].cols() - xs[1].cols() + 1;
+  if (xs[0].ndims() != 2 || xs[1].ndims() < 2 ||
+      xs[0].rows() != xs[1].rows() ||
+      ocols < 1) {
+    cerr << "Bad input dimensions in Filter1DNarrow: " << xs << endl;
+    throw std::invalid_argument("bad input dimensions in Filter1DNarrow");
+  }
+  const unsigned fids = (xs[1].ndims() > 2 ? xs[1][2] : 1);
+  return Dim({fids, (unsigned)ocols});
+}
+
 string KMaxPooling::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "kmaxpool(" << arg_names[0] << ", k=" << k << ')';
@@ -214,6 +236,64 @@ void Conv1DWide::backward_dev_impl(const MyDevice & dev,
   }
 }
 CNN_NODE_INST_DEV_IMPL(Conv1DWide)
+
+
+template<class MyDevice>
+void Filter1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Eigen::array<ptrdiff_t, 2> dims; dims[0] = 0; dims[1] = 1;
+  if(xs[1]->d.ndims() == 2) {
+    fx.t<2>().device(*dev.edevice) = xs[0]->t<2>().convolve(xs[1]->t<2>(), dims);
+  } else {
+    assert(xs[1]->d.ndims() > 2);
+    const unsigned fids = xs[1]->d[2];
+    const unsigned ycols = dim.cols();
+    Eigen::DSizes<ptrdiff_t, 2> indices(0,0);
+    Eigen::DSizes<ptrdiff_t, 2> sizes(1,ycols);
+    for(unsigned fid = 0; fid < fids; ++fid) {
+      indices[0] = fid;
+      fx.t<2>().slice(indices, sizes).device(*dev.edevice) = xs[0]->t<2>().convolve(xs[1]->t<3>().chip<2>(fid), dims);
+    }
+  }
+}
+
+template<class MyDevice>
+void Filter1DNarrow::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  assert(i < 2);
+  const unsigned rows = xs[1]->d.rows();
+  const unsigned ycols = dim.cols();
+  const unsigned fcols = xs[1]->d.cols();
+  const unsigned fids = (xs[1]->d.ndims() > 2 ? xs[1]->d[2] : 1);
+  Eigen::DSizes<ptrdiff_t, 2> sizes(rows,fcols);
+  Eigen::DSizes<ptrdiff_t, 2> indices(0,0);
+  if(i == 0) {
+    for(unsigned i = 0; i < ycols; i++) {
+      indices[1] = i;
+      if(fids == 1) {
+        dEdxi.t<2>().slice(indices, sizes).device(*dev.edevice) += xs[1]->t<2>() * dEdf.t<2>()(0, i);
+      } else {
+        for(unsigned fid = 0; fid < fids; fid++)
+          dEdxi.t<2>().slice(indices, sizes).device(*dev.edevice) += xs[1]->t<3>().chip<2>(fid) * dEdf.t<2>()(fid, i);
+      }
+    }
+  } else {
+    for(unsigned i = 0; i < ycols; i++) {
+      indices[1] = i;
+      if(fids == 1) {
+        dEdxi.t<2>().device(*dev.edevice) += xs[0]->t<2>().slice(indices, sizes) * dEdf.t<2>()(0, i);
+      } else {
+        for(unsigned fid = 0; fid < fids; fid++)
+          dEdxi.t<3>().chip<2>(fid).device(*dev.edevice) += xs[0]->t<2>().slice(indices, sizes) * dEdf.t<2>()(fid, i);
+      }
+    }
+  }
+}
+CNN_NODE_INST_DEV_IMPL(Filter1DNarrow)
+
 
 template<class MyDevice>
 void FoldRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
