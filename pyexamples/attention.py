@@ -11,8 +11,9 @@ char2int = {c:i for i,c in enumerate(characters)}
 VOCAB_SIZE = len(characters)
 
 LSTM_NUM_OF_LAYERS = 2
-EMBEDDINGS_SIZE = 16
+EMBEDDINGS_SIZE = 32
 STATE_SIZE = 32
+ATTENTION_SIZE = 32
 
 model = pc.Model()
 
@@ -22,7 +23,9 @@ enc_bwd_lstm = pc.LSTMBuilder(LSTM_NUM_OF_LAYERS, EMBEDDINGS_SIZE, STATE_SIZE, m
 dec_lstm = pc.LSTMBuilder(LSTM_NUM_OF_LAYERS, STATE_SIZE*2, STATE_SIZE, model)
 
 model.add_lookup_parameters("lookup", (VOCAB_SIZE, EMBEDDINGS_SIZE))
-model.add_parameters("attention_w", (1, STATE_SIZE*2+STATE_SIZE*LSTM_NUM_OF_LAYERS*2))
+model.add_parameters("attention_w1", (ATTENTION_SIZE, STATE_SIZE*2))
+model.add_parameters("attention_w2", (ATTENTION_SIZE, STATE_SIZE*LSTM_NUM_OF_LAYERS*2))
+model.add_parameters("attention_v", (1, ATTENTION_SIZE))
 model.add_parameters("decoder_w", (VOCAB_SIZE, STATE_SIZE))
 model.add_parameters("decoder_b", (VOCAB_SIZE))
 
@@ -58,19 +61,19 @@ def encode_sentence(model, enc_fwd_lstm, enc_bwd_lstm, sentence):
     return vectors
 
 
-def attend(model, vectors, state):
-    w = pc.parameter(model['attention_w'])
+def attend(model, input_vectors, state):
+    w1 = pc.parameter(model['attention_w1'])
+    w2 = pc.parameter(model['attention_w2'])
+    v = pc.parameter(model['attention_v'])
     attention_weights = []
-    for vector in vectors:
-        #concatenate each encoded vector with the current decoder state
-        attention_input = pc.concatenate([vector, pc.concatenate(list(state.s()))])
-        #get the attention wieght for the decoded vector
-        attention_weights.append(w * attention_input)
-    #normalize the weights
+
+    w2dt = w2*pc.concatenate(list(state.s()))
+    for input_vector in input_vectors:
+        attention_weight = v*pc.tanh(w1*input_vector + w2dt)
+        attention_weights.append(attention_weight)
     attention_weights = pc.softmax(pc.concatenate(attention_weights))
-    #apply the weights
-    vectors = pc.esum([vector*attention_weight for vector, attention_weight in zip(vectors, attention_weights)])
-    return vectors
+    output_vectors = pc.esum([vector*attention_weight for vector, attention_weight in zip(input_vectors, attention_weights)])
+    return output_vectors
 
 
 def decode(model, dec_lstm, vectors, output):
@@ -79,7 +82,6 @@ def decode(model, dec_lstm, vectors, output):
 
     w = pc.parameter(model["decoder_w"])
     b = pc.parameter(model["decoder_b"])
-
 
     s = dec_lstm.initial_state().add_input(pc.vecInput(STATE_SIZE*2))
 
@@ -138,7 +140,7 @@ def get_loss(model, input_sentence, output_sentence, enc_fwd_lstm, enc_bwd_lstm,
 
 def train(model, sentence):
     trainer = pc.SimpleSGDTrainer(model)
-    for i in xrange(400):
+    for i in xrange(600):
         loss = get_loss(model, sentence, sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm)
         loss_value = loss.value()
         loss.backward()
