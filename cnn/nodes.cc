@@ -145,13 +145,18 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
   if(x.d.bd == 1) {
     z.t<0>().device(*dev.edevice) = x.t<1>().maximum();
     float m = TensorTools::AccessElement(z, 0);
+#if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
+    throw std::runtime_error("CUDA memory allocation in logsumexp");
+#endif
     z.t<0>().device(*dev.edevice) += (x.t<1>() - m).exp().sum().log();
   } else {
 // #ifdef __CUDACC__
-    // nvcc doesn't work with the following reductions, so do something simpler
     for(size_t b = 0; b < x.d.bd; b++) {
       z.tb<0>().chip<0>(b).device(*dev.edevice) = x.tb<1>().chip<1>(b).maximum();
       float m = TensorTools::AccessElement(z, b);
+#if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
+      throw std::runtime_error("CUDA memory allocation in logsumexp");
+#endif
       z.tb<0>().chip<0>(b).device(*dev.edevice) += (x.tb<1>().chip<1>(b) - m).exp().sum().log();
     }
 // #else
@@ -716,6 +721,9 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
       Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
       // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
       dEdxi.tvec().device(*dev.edevice) += (eloss.tvec() > 0.f).cast<float>() * d;
+#if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
+    throw std::runtime_error("CUDA memory allocation in hinge");
+#endif
       dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
     }
   } else {
@@ -727,6 +735,9 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
       if(fx_vec[b]) { // there was some loss
         // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
         dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>() * d_vec[b];
+#if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
+    throw std::runtime_error("CUDA memory allocation in hinge");
+#endif
         dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>().sum() * d_vec[b];
       }
     }
@@ -1432,8 +1443,11 @@ void Pow::backward_dev_impl(const MyDevice & dev,
   assert(xs.size() == 2);
   real x2 = as_scalar(*xs[1]);
   if (i == 0) {
-    dEdxi.tvec().device(*dev.edevice) += (xs[0]->tvec().pow(x2 - 1) * x2) * dEdf.tvec();
+    dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().pow(x2 - 1) * dEdf.tvec() * x2;
   } else {
+#if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
+    throw std::runtime_error("CUDA memory allocation in Pow");
+#endif
     // y = a^x
     // dy/dx = a^x * log(a)
     dEdxi.t<0>().device(*dev.edevice) += (fx.tvec() * xs[0]->tvec().log() * dEdf.tvec()).sum();
