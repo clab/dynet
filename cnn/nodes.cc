@@ -145,19 +145,17 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
   if(x.d.bd == 1) {
     z.t<0>().device(*dev.edevice) = x.t<1>().maximum();
     float m = TensorTools::AccessElement(z, 0);
-#if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
-    throw std::runtime_error("CUDA memory allocation in logsumexp");
-#endif
-    z.t<0>().device(*dev.edevice) += (x.t<1>() - m).exp().sum().log();
+    // This needs to be split into two lines to prevent memory allocation
+    z.t<0>().device(*dev.edevice) = (x.t<1>() - m).exp().sum();
+    z.t<0>().device(*dev.edevice) = z.t<0>().log() + m;
   } else {
 // #ifdef __CUDACC__
     for(size_t b = 0; b < x.d.bd; b++) {
       z.tb<0>().chip<0>(b).device(*dev.edevice) = x.tb<1>().chip<1>(b).maximum();
       float m = TensorTools::AccessElement(z, b);
-#if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
-      throw std::runtime_error("CUDA memory allocation in logsumexp");
-#endif
-      z.tb<0>().chip<0>(b).device(*dev.edevice) += (x.tb<1>().chip<1>(b) - m).exp().sum().log();
+      // This needs to be split into two lines to prevent memory allocation
+      z.tb<0>().chip<0>(b).device(*dev.edevice) = (x.tb<1>().chip<1>(b) - m).exp().sum();
+      z.tb<0>().chip<0>(b).device(*dev.edevice) = z.tb<0>().chip<0>(b).log() + m;
     }
 // #else
 //     // Calculate the max for all batches at once. This dies for nvcc
@@ -937,15 +935,15 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
     throw std::runtime_error("LogSoftmax::backward not yet implemented for multiple columns");
   Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
   if(fx.d.bd == 1) {
-    z.t<0>().device(*dev.edevice) = -fx.t<1>().binaryExpr(dEdf.t<1>(), FWeightedError()).sum();
-    float off_diag_sum = TensorTools::AccessElement(z, 0);
+    z.t<0>().device(*dev.edevice) = fx.t<1>().binaryExpr(dEdf.t<1>(), FWeightedError()).sum();
+    float off_diag_sum = - TensorTools::AccessElement(z, 0);
     dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().exp() * off_diag_sum + dEdf.t<1>();
   } else {
 // #ifdef __CUDACC__
     // nvcc doesn't work with the following reductions, so do something simpler
     for(size_t b = 0; b < fx.d.bd; b++) {
-      z.tb<0>().chip<0>(b).device(*dev.edevice) = -fx.tb<1>().chip<1>(b).binaryExpr(dEdf.tb<1>().chip<1>(b), FWeightedError()).sum();
-      float off_diag_sum = TensorTools::AccessElement(z, b);
+      z.tb<0>().chip<0>(b).device(*dev.edevice) = fx.tb<1>().chip<1>(b).binaryExpr(dEdf.tb<1>().chip<1>(b), FWeightedError()).sum();
+      float off_diag_sum = - TensorTools::AccessElement(z, b);
       dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += fx.tb<1>().chip<1>(b).exp() * off_diag_sum + dEdf.tb<1>().chip<1>(b);
     }
     // TODO: These should work, but are unstable and giving NaNs. Figure out why.
@@ -1604,15 +1602,15 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
 
   Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
   if(fx.d.bd == 1) {
-    z.t<0>().device(*dev.edevice) = -(fx.t<1>() * dEdf.t<1>()).sum();
-    float off_diag_sum = TensorTools::AccessElement(z, 0);
+    z.t<0>().device(*dev.edevice) = (fx.t<1>() * dEdf.t<1>()).sum();
+    float off_diag_sum = - TensorTools::AccessElement(z, 0);
     dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().binaryExpr(dEdf.t<1>(), FSoftmaxBackward(off_diag_sum));
   } else {
 // #ifdef __CUDACC__
     // nvcc doesn't work with the following reductions, so do something simpler
     for(size_t b = 0; b < fx.d.bd; b++) {
-      z.tb<0>().chip<0>(b).device(*dev.edevice) = -(fx.tb<1>().chip<1>(b) * dEdf.tb<1>().chip<1>(b)).sum();
-      float off_diag_sum = TensorTools::AccessElement(z, b);
+      z.tb<0>().chip<0>(b).device(*dev.edevice) = (fx.tb<1>().chip<1>(b) * dEdf.tb<1>().chip<1>(b)).sum();
+      float off_diag_sum = - TensorTools::AccessElement(z, b);
       dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += fx.tb<1>().chip<1>(b).binaryExpr(dEdf.tb<1>().chip<1>(b), FSoftmaxBackward(off_diag_sum));
     }
     // TODO: These should work, but are unstable and giving NaNs. Figure out why.
