@@ -28,7 +28,9 @@ To see that things have built properly, you can run
 
 which will train a multilayer perceptron to predict the xor function.
 
-#### Building without Eigen installed
+#### Build options
+
+##### Building without Eigen installed
 
 If you don't have Eigen installed, the instructions below will fetch and compile
 both `Eigen` and `cnn`. Eigen does not have to be compiled, so “installing” it is easy.
@@ -42,13 +44,22 @@ both `Eigen` and `cnn`. Eigen does not have to be compiled, so “installing” 
     cmake .. -DEIGEN3_INCLUDE_DIR=../eigen
     make -j 2
 
-#### Building with GPU Support
+##### GPU (CUDA) support
 
 `cnn` supports running programs on GPUs with CUDA. If you have CUDA installed, you
-can build cnn to be run on GPUs by adding `-DBACKEND=cuda` to your cmake options
-as follows:
+can build cnn to be run on GPUs by adding `-DBACKEND=cuda` to your cmake options.
 
-    cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DBACKEND=cuda
+##### Non-standard Boost location
+
+`cnn` supports boost, and will find it if it is in the standard location. If boost is
+in a non-standard location, say `$HOME/boost`, you can specify the location by adding
+the following to your cmake options:
+
+    -DBOOST_ROOT:PATHNAME=$HOME/boost -DBoost_LIBRARY_DIRS:FILEPATH=$HOME/boost/lib
+    -DBoost_NO_BOOST_CMAKE=TRUE -DBoost_NO_SYSTEM_PATHS=TRUE
+
+Note that you will also have to set your `LD_LIBRARY_PATH` to point to the `boost/lib`
+directory.
 
 #### Debugging build problems
 
@@ -56,8 +67,22 @@ If you want to see the compile commands that are used, you can run
 
     make VERBOSE=1
 
+### Command line options
 
-### Training Models
+All programs using cnn have a few command line options. These must be specified at the
+very beginning of the command line, before other options.
+
+* `--cnn-mem NUMBER`: cnn runs by default with 512MB of memory each for the forward and
+  backward steps, as well as parameter storage. You will often want to increase this amount.
+  By setting NUMBER here, cnn will allocate more memory. Note that it will allocate 3 times
+  more memory than the number specified here, so if you want to use 3GB, specify "1024".
+* `--cnn-l2 NUMBER`: Specifies the level of l2 regularization to use.
+* `--cnn-gpus NUMBER`: Specify how many GPUs you want to use, if cnn is compiled with CUDA.
+  Currently, only one GPU is supported.
+* `--cnn-gpu-ids X,Y,Z`: Specify the GPUs that you want to use by device ID. Currently only
+  one GPU is supported, but if you use this command you can select which one to use.
+
+### Creating your own models
 
 An illustation of how models are trained (for a simple logistic regression model) is below:
 
