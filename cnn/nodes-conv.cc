@@ -259,6 +259,9 @@ void Filter1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const T
     Eigen::DSizes<ptrdiff_t, 2> sizes(1,ycols);
     for(unsigned fid = 0; fid < fids; ++fid) {
       indices[0] = fid;
+#if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
+      throw std::runtime_error("CUDA memory allocation in Filter1DNarrow");
+#endif
       fx.t<2>().slice(indices, sizes).device(*dev.edevice) = xs[0]->t<2>().convolve(xs[1]->t<3>().chip<2>(fid), dims);
     }
   }
