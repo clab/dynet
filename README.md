@@ -28,7 +28,9 @@ To see that things have built properly, you can run
 
 which will train a multilayer perceptron to predict the xor function.
 
-#### Building without Eigen installed
+#### Build options
+
+##### Building without Eigen installed
 
 If you don't have Eigen installed, the instructions below will fetch and compile
 both `Eigen` and `cnn`. Eigen does not have to be compiled, so “installing” it is easy.
@@ -42,13 +44,22 @@ both `Eigen` and `cnn`. Eigen does not have to be compiled, so “installing” 
     cmake .. -DEIGEN3_INCLUDE_DIR=../eigen
     make -j 2
 
-#### Building with GPU Support
+##### GPU (CUDA) support
 
 `cnn` supports running programs on GPUs with CUDA. If you have CUDA installed, you
-can build cnn to be run on GPUs by adding `-DBACKEND=cuda` to your cmake options
-as follows:
+can build cnn to be run on GPUs by adding `-DBACKEND=cuda` to your cmake options.
 
-    cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DBACKEND=cuda
+##### Non-standard Boost location
+
+`cnn` supports boost, and will find it if it is in the standard location. If boost is
+in a non-standard location, say `$HOME/boost`, you can specify the location by adding
+the following to your cmake options:
+
+    -DBOOST_ROOT:PATHNAME=$HOME/boost -DBoost_LIBRARY_DIRS:FILEPATH=$HOME/boost/lib
+    -DBoost_NO_BOOST_CMAKE=TRUE -DBoost_NO_SYSTEM_PATHS=TRUE
+
+Note that you will also have to set your `LD_LIBRARY_PATH` to point to the `boost/lib`
+directory.
 
 #### Debugging build problems
 
