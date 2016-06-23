@@ -382,7 +382,12 @@ void Concatenate::forward_dev_impl(const MyDevice & dev, const vector<const Tens
     indices[0] = src_row_indices[i] = curr_row;
     const unsigned row_size = xs[i]->d.rows();
     sizes[0] = row_size;
-    fx.tb<2>().slice(indices, sizes).device(*dev.edevice) = xs[i]->tb<2>();
+    if(fx.d.bd == xs[i]->d.bd) {
+      fx.tb<2>().slice(indices, sizes).device(*dev.edevice) = xs[i]->tb<2>();
+    } else {
+      Eigen::array<int, 3> bcast({1,1,(int)fx.d.bd});
+      fx.tb<2>().slice(indices, sizes).device(*dev.edevice) = xs[i]->tb<2>().broadcast(bcast);
+    }
     curr_row += row_size;
   }
 }
@@ -397,7 +402,12 @@ void Concatenate::backward_dev_impl(const MyDevice & dev,
   assert(i < src_row_indices.size());
   Eigen::DSizes<ptrdiff_t, 3> indices(src_row_indices[i],0,0);
   Eigen::DSizes<ptrdiff_t, 3> sizes(dEdxi.d.rows(),fx.d.cols(),fx.d.bd);
-  dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().slice(indices, sizes);
+  if(dEdxi.d.bd == dEdf.d.bd) {
+    dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().slice(indices, sizes);
+  } else {
+    for(unsigned b = 0; b < dEdf.d.bd; ++b)
+      dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().chip<2>(b).slice(indices, sizes);
+  }
 }
 CNN_NODE_INST_DEV_IMPL(Concatenate)
 
