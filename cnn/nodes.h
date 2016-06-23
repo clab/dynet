@@ -233,6 +233,7 @@ struct Log : public Node {
 // concatenate rows
 struct Concatenate : public Node {
   template <typename T> explicit Concatenate(const T& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   CNN_NODE_DEFINE_DEV_IMPL()
   // src_row_indices[i] says what row in fx the ith x vector was assigned to
   // used to simplify backprop
@@ -469,7 +470,7 @@ struct PickNegLogSoftmax : public Node {
   explicit PickNegLogSoftmax(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv) : Node(a), val(), pval(), vals(), pvals(pv) {}
   CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  mutable float* logz;
+  size_t aux_storage_size() const override;
   unsigned val;
   const unsigned* pval;
   std::vector<unsigned> vals;
