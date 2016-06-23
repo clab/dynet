@@ -281,7 +281,7 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
   // multiple batches, cache the sum
   Tensor dEdf_sum;
   if(dEdxi.d.bd == 1 && dEdf.d.bd != 1 && dEdf_mem == nullptr) {
-    dEdf_mem = (float*)device->mem->malloc(sizeof(float) * dEdf.d.batch_size());
+    dEdf_mem = (float*)device->fxs->allocate(sizeof(float) * dEdf.d.batch_size());
     Dim dEdf_dim = dEdf.d; dEdf_dim.bd = 1;
     dEdf_sum = Tensor(dEdf_dim, dEdf_mem, device);
     Eigen::array<int, 1> red_axis({2});
