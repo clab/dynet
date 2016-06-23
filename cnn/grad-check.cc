@@ -43,8 +43,8 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
       float g_act = TensorTools::AccessElement(p.g, i);
       float f = fabs(g - g_act);
       float m = max(fabs(g), fabs(g_act));
-      if (f > 0.1 && m > 0.f) f /= m;
-      if (f > 0.1 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
+      if (f > 0.01 && m > 0.f) f /= m;
+      if (f > 0.01 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
       if(verbosity + (curr_flag ? 1 : 0) > 1) {
         cerr << g_act << ' ' << g << endl;
         curr_flag = false;
@@ -73,8 +73,8 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
         float g_act = TensorTools::AccessElement(ag, i);
         float f = fabs(g - g_act);
         float m = max(fabs(g), fabs(g_act));
-        if (f > 0.1 && m > 0.f) f /= m;
-        if (f > 0.1 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
+        if (f > 0.01 && m > 0.f) f /= m;
+        if (f > 0.01 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
         if(verbosity + (curr_flag ? 1 : 0) > 1) {
           cerr << g_act << ' ' << g << endl;
           curr_flag = false;

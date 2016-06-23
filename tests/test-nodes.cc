@@ -473,7 +473,7 @@ BOOST_AUTO_TEST_CASE( restricted_log_softmax_gradient ) {
 BOOST_AUTO_TEST_CASE( softmax_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression y = softmax(x1);
+  Expression y = log(softmax(x1));
   input(cg, {1,3}, first_one_vals) * y;
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
@@ -483,7 +483,7 @@ BOOST_AUTO_TEST_CASE( softmax_batch_gradient ) {
   cnn::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
-  Expression y = softmax(x1+x2);
+  Expression y = log(softmax(x1+x2));
   sum_batches(input(cg, {1,3}, first_one_vals) * y);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
