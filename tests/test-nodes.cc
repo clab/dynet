@@ -623,6 +623,15 @@ BOOST_AUTO_TEST_CASE( dot_product_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression dot_product(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( dot_product_batch_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  sum_batches(dot_product(x1, x2) + dot_product(x2, x1) * 2);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression squared_distance(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( squared_distance_gradient ) {
   cnn::ComputationGraph cg;
