@@ -225,7 +225,7 @@ void AddVectorToAllColumns::backward_dev_impl(const MyDevice & dev,
 }  
 CNN_NODE_INST_DEV_IMPL(AddVectorToAllColumns)
 
-// Affine transform uses different impleentations for CPU and GPU because this is 
+// Affine transform uses different implementations for CPU and GPU because this is 
 // much faster than using Eigen's tensor contractions (as of the writing)
 template<class MyDevice>
 void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -277,37 +277,52 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i < xs.size());
+  // In the common case that dEdxi has a single batch, and the output has
+  // multiple batches, cache the sum
+  Tensor dEdf_sum;
+  if(dEdxi.d.bd == 1 && dEdf.d.bd != 1 && dEdf_mem == nullptr) {
+    dEdf_mem = (float*)device->mem->malloc(sizeof(float) * dEdf.d.batch_size());
+    Dim dEdf_dim = dEdf.d; dEdf_dim.bd = 1;
+    dEdf_sum = Tensor(dEdf_dim, dEdf_mem, device);
+    Eigen::array<int, 1> red_axis({2});
+    dEdf_sum.t<2>().device(*dev.edevice) = dEdf.tb<2>().sum(red_axis);
+  }
+
+  // Bias term
   if (i == 0) { // bias term
-#if __CUDACC__
-    if(fx.d.bd == xs[0]->d.bd) {
-      CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
+    if(dEdxi.d.bd == dEdf.d.bd) {
+      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
     } else {
-      // TODO: Can we use broadcasting?
-      for(unsigned b = 0; b < dEdf.d.bd; ++b)
-        CUBLAS_CHECK(cublasSaxpy(cublas_handle, dEdxi.d.batch_size(), kSCALAR_ONE, dEdf.batch_ptr(b), 1, dEdxi.batch_ptr(b), 1));
+      dEdxi.tvec().device(*dev.edevice) += dEdf_sum.tvec();
     }
-#else
-    // Add, using broadcasting or not
-    if(dEdxi.d.bd == 1 && dEdf.d.bd > 1) {
-      dEdxi.vec() += dEdf.rowcol_matrix().rowwise().sum();
-    } else {
-      for(unsigned b = 0; b < dEdf.d.bd; ++b)
-        dEdxi.batch_matrix(b) += dEdf.batch_matrix(b);
-    }
-#endif
-  } else if (i % 2 == 1) { // left argument of matrix multiply
+
+  // Left argument of matrix multiply
+  } else if (i % 2 == 1) {
     int max_b = max(dEdf.d.bd, xs[i+1]->d.bd);
 #if __CUDACC__
-    for(int b = 0; b < max_b; ++b)
+    if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[i+1]->d.bd)) {
       CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
-            dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
+            dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols() * dEdf.d.batch_elems(),
             kSCALAR_ONE,
-            dEdf.batch_ptr(b), dEdf.d.rows(),
-            xs[i+1]->batch_ptr(b), xs[i+1]->d.rows(),
-            kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+            dEdf.v, dEdf.d.rows(),
+            xs[i+1]->v, xs[i+1]->d.rows(),
+            kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+    } else {
+      for(int b = 0; b < max_b; ++b)
+        CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+              dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
+              kSCALAR_ONE,
+              dEdf.batch_ptr(b), dEdf.d.rows(),
+              xs[i+1]->batch_ptr(b), xs[i+1]->d.rows(),
+              kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+    }
 #else
-    for(int b = 0; b < max_b; ++b)
-      dEdxi.batch_matrix(b).noalias() += dEdf.batch_matrix(b) * xs[i+1]->batch_matrix(b).transpose();
+    if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[i+1]->d.bd)) {
+      (*dEdxi).noalias() += dEdf.colbatch_matrix() * xs[i+1]->colbatch_matrix().transpose();
+    } else {
+      for(int b = 0; b < max_b; ++b)
+        dEdxi.batch_matrix(b).noalias() += dEdf.batch_matrix(b) * xs[i+1]->batch_matrix(b).transpose();
+    }
 #endif
   } else {  // right argument of matrix multiply
     int max_b = max(xs[i-1]->d.bd, dEdf.d.bd);
@@ -1045,13 +1060,22 @@ void MatrixMultiply::backward_dev_impl(const MyDevice & dev,
   int max_b = max(xs[0]->d.bd, xs[1]->d.bd);
 #if __CUDACC__
   if (i == 0) {
-    for(int b = 0; b < max_b; ++b)
+    if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[1]->d.bd)) {
       CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
-            dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
+            dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols() * dEdf.d.batch_elems(),
             kSCALAR_ONE,
-            dEdf.batch_ptr(b), dEdf.d.rows(),
-            xs[1]->batch_ptr(b), xs[1]->d.rows(),
-            kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+            dEdf.v, dEdf.d.rows(),
+            xs[1]->v, xs[1]->d.rows(),
+            kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+    } else {
+      for(int b = 0; b < max_b; ++b)
+        CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+              dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
+              kSCALAR_ONE,
+              dEdf.batch_ptr(b), dEdf.d.rows(),
+              xs[1]->batch_ptr(b), xs[1]->d.rows(),
+              kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+    }
   } else {
     // Do a single multiply if xs[0] has one batch
     if(xs[0]->d.bd == 1) {
@@ -1074,8 +1098,12 @@ void MatrixMultiply::backward_dev_impl(const MyDevice & dev,
   }
 #else
   if (i == 0) {
-    for(int b = 0; b < max_b; ++b)
-      dEdxi.batch_matrix(b).noalias() += dEdf.batch_matrix(b) * xs[1]->batch_matrix(b).transpose();
+    if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[1]->d.bd)) {
+      (*dEdxi).noalias() += dEdf.colbatch_matrix() * xs[1]->colbatch_matrix().transpose();
+    } else {
+      for(int b = 0; b < max_b; ++b)
+        dEdxi.batch_matrix(b).noalias() += dEdf.batch_matrix(b) * xs[1]->batch_matrix(b).transpose();
+    }
   } else {
     if(xs[0]->d.bd == 1) {
       dEdxi.colbatch_matrix().noalias() += (**xs[0]).transpose() * dEdf.colbatch_matrix();
