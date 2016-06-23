@@ -615,7 +615,17 @@ CNN_NODE_INST_DEV_IMPL(CwiseMultiply)
 
 template<class MyDevice>
 void DotProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() * xs[1]->tvec()).sum();
+  Eigen::array<int, 1> red_axis({0});
+  Eigen::array<int, 2> bcast({1, (int)fx.d.bd});
+  if(fx.d.bd == 1) {
+    fx.t<0>().device(*dev.edevice) = (xs[0]->t<1>() * xs[1]->t<1>()).sum();
+  } else if(xs[0]->d.bd == xs[1]->d.bd) {
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tb<1>() * xs[1]->tb<1>()).sum(red_axis);
+  } else if(xs[0]->d.bd == 1) {
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tb<1>().broadcast(bcast) * xs[1]->tb<1>()).sum(red_axis);
+  } else {
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tb<1>() * xs[1]->tb<1>().broadcast(bcast)).sum(red_axis);
+  }
 }
 
 template<class MyDevice>
@@ -625,7 +635,21 @@ void DotProduct::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += xs[1 - i]->tvec() * as_scalar(dEdf);
+  if(fx.d.bd == 1) {
+    Eigen::array<int, 1> bcast({(int)xs[i]->d.rows()});
+    dEdxi.t<1>().device(*dev.edevice) += xs[1-i]->t<1>() * dEdf.t<1>().broadcast(bcast);
+  } else {
+    Eigen::array<int, 2> bcast({(int)xs[i]->d.rows(), 1});
+    if(xs[0]->d.bd == xs[1]->d.bd) {
+      dEdxi.tb<1>().device(*dev.edevice) += xs[1-i]->tb<1>() * dEdf.tb<1>().broadcast(bcast);
+    } else if(dEdxi.d.bd == 1) {
+      Eigen::array<int, 1> red_axis({1});
+      dEdxi.t<1>().device(*dev.edevice) += (xs[1-i]->tb<1>() * dEdf.tb<1>().broadcast(bcast)).sum(red_axis);
+    } else {
+      Eigen::array<int, 2> batchcast({1, (int)fx.d.bd});
+      dEdxi.tb<1>().device(*dev.edevice) += (xs[1-i]->tb<1>().broadcast(batchcast) * dEdf.tb<1>().broadcast(bcast));
+    }
+  }
 }
 CNN_NODE_INST_DEV_IMPL(DotProduct)
 

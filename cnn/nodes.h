@@ -103,6 +103,7 @@ struct ConstScalarMultiply : public Node {
 // y = x_1^T . x_2
 struct DotProduct : public Node {
   explicit DotProduct(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   CNN_NODE_DEFINE_DEV_IMPL()
 };
 
