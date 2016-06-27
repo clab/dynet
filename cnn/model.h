@@ -25,6 +25,7 @@ namespace cnn {
 struct ParameterStorageBase {
   friend class Model;
   virtual void scale_parameters(float a) = 0;
+  virtual void zero() = 0;
   virtual void squared_l2norm(float* sqnorm) const = 0;
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
   virtual size_t size() const = 0;
@@ -38,6 +39,7 @@ struct ParameterStorageBase {
 struct ParameterStorage : public ParameterStorageBase {
   friend class Model;
   void scale_parameters(float a) override;
+  void zero() override;
   void squared_l2norm(float* sqnorm) const override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
@@ -67,6 +69,7 @@ struct ParameterStorage : public ParameterStorageBase {
 struct LookupParameterStorage : public ParameterStorageBase {
   friend class Model;
   void scale_parameters(float a) override;
+  void zero() override;
   void squared_l2norm(float* sqnorm) const override;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
@@ -100,6 +103,9 @@ struct Parameter {
   Parameter(const Model* mp, unsigned long index);
   ParameterStorage* get() const;
 
+  // Zero the parameters
+  void zero();
+
   const Model* mp;
   unsigned long index;
 
@@ -117,6 +123,9 @@ struct LookupParameter {
   LookupParameter(const Model* mp, unsigned long index);
   LookupParameterStorage* get() const;
   void Initialize(unsigned index, const std::vector<float>& val) const;
+
+  // Zero the parameters
+  void zero();
 
   const Model* mp;
   unsigned long index;
