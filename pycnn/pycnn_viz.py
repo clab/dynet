@@ -751,7 +751,7 @@ class GVNode(object):
   def __repr__(self): return 'GVNode(%s)' % ', '.join(map(str, self))
   def __str__(self): return repr(self)
 
-def make_network_graph(compact, lookup_names_lookups, expression_names_lookups):
+def make_network_graph(compact, expression_names, lookup_names):
   """
   Make a network graph, represented as of nodes and a set of edges.  
   The nodes are represented as tuples: (name: string, input_dim: Dim, label: string, output_dim: Dim, children: set[name], features: string)
@@ -802,7 +802,7 @@ def make_network_graph(compact, lookup_names_lookups, expression_names_lookups):
     elif f_name == 'lookup':
       [p, idx, update] = args
       [name, _dim] = p.args
-      item_name = ('\\"%s\\"' % (lookup_names_lookups[name][idx],)) if (lookup_names_lookups and (name in lookup_names_lookups)) else None
+      item_name = ('\\"%s\\"' % (lookup_names[name][idx],)) if (lookup_names and (name in lookup_names)) else None
       if compact:
         f_name = item_name if item_name is not None else ('%s[%s]' % (name, idx))
         arg_strs = []
@@ -895,8 +895,8 @@ def make_network_graph(compact, lookup_names_lookups, expression_names_lookups):
     var_name = '%s' % (var_name_dict.get(vidx, 'v%d' % (vidx))) if not compact else ''
 #     if show_dims:
 #       str_repr = '%s\\n%s' % (shape_str(e.dim), str_repr)
-    if expression_names_lookups and (e in expression_names_lookups):
-      str_repr = '%s\\n%s' % (str_repr, expression_names_lookups[e])
+    if expression_names and (e in expression_names):
+      str_repr = '%s\\n%s' % (str_repr, expression_names[e])
     label = str_repr
     if not compact:
       label = '%s = %s' % (var_name, label)
@@ -967,8 +967,8 @@ def collapse_birnn_states(nodes, compact):
       new_nodes.append(GVNode(name, input_dim, label, output_dim, new_children, features, node_type))
   return (new_nodes, rnn_groups)
 
-def PrintGraphviz(compact=False, show_dims=True, lookup_names_lookups=None, expression_names_lookups=None, collapse_birnns=False):
-  original_nodes = make_network_graph(compact, lookup_names_lookups, expression_names_lookups)
+def PrintGraphviz(compact=False, show_dims=True, expression_names=None, lookup_names=None, collapse_birnns=False):
+  original_nodes = make_network_graph(compact, expression_names, lookup_names)
   nodes = original_nodes
   collapse_to = dict()
   if collapse_birnns:
