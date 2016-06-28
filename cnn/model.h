@@ -103,6 +103,9 @@ struct Parameter {
   const Model* mp;
   unsigned long index;
 
+  Dim dim() { return get()->dim; }
+  Tensor* values() { return &(get()->values); } 
+
 private:
   friend class boost::serialization::access;
   template<class Archive>
@@ -120,6 +123,9 @@ struct LookupParameter {
 
   const Model* mp;
   unsigned long index;
+
+  Dim dim() { return get()->dim; }
+  std::vector<Tensor>* values() { return &(get()->values); } 
 
 private:
   friend class boost::serialization::access;
