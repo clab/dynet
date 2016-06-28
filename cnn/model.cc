@@ -211,6 +211,8 @@ void LookupParameter::Initialize(unsigned index, const std::vector<float>& val) 
 
 Model::~Model() {
   for (auto p : all_params) delete p;
+  if(gradient_norm_scratch)
+    default_device->mem->free(gradient_norm_scratch);
 }
 
 void Model::project_weights(float radius) {

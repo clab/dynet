@@ -145,7 +145,7 @@ private:
 // parameters know how to track their gradients, but any extra information (like velocity) will live here
 class Model {
  public:
-  Model() : gradient_norm_scratch() {}
+  Model() : gradient_norm_scratch(nullptr) {}
   ~Model();
   float gradient_l2_norm() const;
   void reset_gradient();
