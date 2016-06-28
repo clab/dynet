@@ -760,7 +760,7 @@ def make_network_graph(compact, expression_names, lookup_names):
   nodes = set()
 #   edges = defaultdict(set) # parent -> (child, extra)
   
-  var_name_dict = dict() # parameters get named
+  var_name_dict = {e.vindex: expression_names[e] for e in graphviz_items if e in expression_names}
   rnn_bldr_name = defaultdict(lambda: chr(len(rnn_bldr_name)+ord('A')))
   def vidx2str(vidx): return '%s%s' % ('N', vidx)
 
