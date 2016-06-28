@@ -76,31 +76,32 @@ cdef c_tensor_as_np(CTensor &t):
 
 # {{{ Model / Parameters 
 cdef class Parameters:
-    cdef CParameters *thisptr
+    cdef CParameters thisptr # TODO -- no longer pointer
     def __cinit__(self):
-        self.thisptr = NULL
+        #self.thisptr = p
+        pass
     @staticmethod
-    cdef wrap_ptr(CParameters* ptr):
+    cdef wrap_ptr(CParameters ptr):
         self = Parameters()
         self.thisptr = ptr
         return self
 
     cpdef shape(self):
-        if self.thisptr.dim.ndims() == 1: return (self.thisptr.dim.rows())
-        return (self.thisptr.dim.rows(), self.thisptr.dim.cols())
+        if self.thisptr.get().dim.ndims() == 1: return (self.thisptr.get().dim.rows())
+        return (self.thisptr.get().dim.rows(), self.thisptr.get().dim.cols())
 
     cpdef as_array(self):
         """
         Return as a numpy array.
         """
         cdef CTensor t
-        return c_tensor_as_np(self.thisptr.values)
+        return c_tensor_as_np(self.thisptr.get().values)
 
     # TODO: make more efficient
     cpdef load_array(self, arr):
         cdef CTensor t
         cdef float* vals
-        t = self.thisptr.values
+        t = self.thisptr.get().values
         shape = arr.shape
         if len(shape) == 1:
             assert(t.d.ndims() == 1)
@@ -114,28 +115,28 @@ cdef class Parameters:
 
 
 cdef class LookupParameters:
-    cdef CLookupParameters *thisptr
+    cdef CLookupParameters thisptr # TODO -- no longer pointer
     def __cinit__(self):
-        self.thisptr = NULL
+        pass
     @staticmethod
-    cdef wrap_ptr(CLookupParameters* ptr):
+    cdef wrap_ptr(CLookupParameters ptr):
         self = LookupParameters()
         self.thisptr = ptr
         return self
 
     cpdef init_from_array(self, arr):
-        if len(arr) > self.thisptr.values.size():
+        if len(arr) > self.thisptr.get().values.size():
             raise Exception("too many rows")
-        if arr.shape[1] != self.thisptr.values[0].d.rows():
+        if arr.shape[1] != self.thisptr.get().values[0].d.rows():
             raise Exception("dim mismatch")
         cdef vector[float] r
         for i,row in enumerate(arr):
             self.init_row(i, row)
 
     cpdef shape(self):
-        if self.thisptr.dim.cols() != 1:
-            return (self.thisptr.values.size(), self.thisptr.dim.rows(), self.thisptr.dim.cols())
-        return (self.thisptr.values.size(), self.thisptr.dim.rows())
+        if self.thisptr.get().dim.cols() != 1:
+            return (self.thisptr.get().values.size(), self.thisptr.get().dim.rows(), self.thisptr.get().dim.cols())
+        return (self.thisptr.get().values.size(), self.thisptr.get().dim.rows())
 
     def __getitem__(self, int i):
         return lookup(self, i)
@@ -151,60 +152,118 @@ cdef class LookupParameters:
         Return as a numpy array.
         """
         cdef vector[CTensor] vals
-        vals = self.thisptr.values
+        vals = self.thisptr.get().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
 
 cdef class Model:
     cdef CModel *thisptr
-    cdef object named_params
-    cdef object lookups
-    cdef object regular
     def __cinit__(self):
         self.thisptr = new CModel()
     def __init__(self):
-        self.named_params = {}
-        self.lookups = []
-        self.regular = []
+        pass
 
     def __dealloc__(self): del self.thisptr
 
-    def add_parameters(self, name, dim, scale=0):
-        cdef CParameters* p
-        assert(name not in self.named_params), "name already registered"
-        p = self.thisptr.add_parameters(Dim(dim))
+    # TODO: for debug, remove
+    cpdef pl(self): return self.thisptr.parameters_list().size()
+
+    cpdef add_parameters(self, dim, scale=0):
+        assert(isinstance(dim,(tuple,int)))
+        cdef CParameters p = self.thisptr.add_parameters(Dim(dim))
         cdef Parameters pp = Parameters.wrap_ptr(p)
-        self.named_params[name] = pp
-        self.regular.append(name)
+        #self.regular.append(pp) # TODO do we even need regular?
         return pp
 
-    def add_lookup_parameters(self, name, dim):
+    cpdef add_lookup_parameters(self, dim):
         assert(isinstance(dim, tuple))
-        assert(name not in self.named_params), "name already registered"
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
-        cdef CLookupParameters* p
-        p = self.thisptr.add_lookup_parameters(nids, Dim(rest))
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest))
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
-        self.named_params[name] = pp
-        self.lookups.append(name)
         return pp
 
-    def __getitem__(self, name):
-        return self.named_params[name]
-
-    def __contains__(self, name):
-        return name in self.named_params
-
-    #def parameters(self): return self.named_params.keys()
-    #def lookup_parameters(self): return list(self.lookups)
-    #def regular_parameters(self): return list(self.regular)
-
-    def save(self, string fname):
+    def save_all(self, string fname):
         save_cnn_model(fname, self.thisptr)
 
-    def load(self, string fname):
+    def load_all(self, string fname):
         load_cnn_model(fname, self.thisptr)
+
+    # TODO support python "components", e.g. MLP
+    def save(self, string fname, components=None):
+        if not components:
+            self.save_all(fname)
+            return
+        fh = file(fname+".pym","w")
+        cdef CModelSaver *saver = new CModelSaver(fname, self.thisptr)
+        if isinstance(components,dict):
+            components = components.iteritems()
+        elif isinstance(components,list):
+            components = [('',c) for c in components]
+        else:
+            raise TypeError("The components parameter must be list or dict.")
+        for n,c in components:
+            # would be nicer to have polymorphism/dispatch-by-type
+            # but we cannot because we need to bind to the c-type.
+            if isinstance(c, Parameters):
+                saver.add_parameter((<Parameters>c).thisptr)
+                fh.write("param|%s " % n)
+            elif isinstance(c, LookupParameters):
+                saver.add_lookup_parameter((<LookupParameters>c).thisptr)
+                fh.write("lookup|%s " % n)
+            elif isinstance(c, LSTMBuilder):
+                saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
+                fh.write("lstm_builder|%s " % n)
+            elif isinstance(c, SimpleRNNBuilder):
+                saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
+                fh.write("srnn_builder|%s " % n)
+            else:
+                raise TypeError("Cannot save model component of type " + type(c))
+        saver.done()
+        fh.close()
+        del saver
+
+    # TODO support python "components", e.g. MLP
+    cpdef load(self, string fname):
+        #TODO if fails, just run the load_all
+        with file(fname+".pym","r") as fh:
+            types = fh.read().strip().split()
+        print self.pl()
+        cdef CModelLoader *loader = new CModelLoader(fname, self.thisptr)
+        print self.pl()
+        cdef CParameters p
+        cdef CLookupParameters lp
+        cdef LSTMBuilder lb_
+        cdef SimpleRNNBuilder sb_
+        params = []
+        names = []
+        for tp_name in types:
+            tp,name = tp_name.split("|",1)
+            if name: names.append(name)
+            if tp == "param":
+                loader.fill_parameter(p)
+                params.append(Parameters.wrap_ptr(p))
+            elif tp == "lookup":
+                loader.fill_lookup_parameter(lp)
+                params.append(LookupParameters.wrap_ptr(lp))
+            elif tp == "lstm_builder":
+                lb_ = LSTMBuilder(0,0,0,self) # empty builder
+                loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
+                params.append(lb_)
+            elif tp == "srnn_builder":
+                sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
+                loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
+                params.append(sb_)
+            else:
+                assert(False,"unsupported type " + tp)
+        loader.done()
+        del loader
+        if names:
+            assert(len(names)==len(params))
+            return dict(zip(names,params))
+        else:
+            return params
+
 
 # }}}
 
@@ -850,7 +909,10 @@ cdef class _RNNBuilder: # {{{
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        if layers > 0:
+            self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        else:
+            self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
 
     def whoami(self): return "SimpleRNNBuilder"
@@ -858,7 +920,10 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     
 cdef class LSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        if layers > 0:
+            self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        else:
+            self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
 
     def whoami(self): return "LSTMBuilder"
@@ -1098,8 +1163,8 @@ cdef class StackedRNNState:
 # {{{ Training 
 cdef class SimpleSGDTrainer:
     cdef CSimpleSGDTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.1):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr, lam, e0)
+    def __cinit__(self, Model m, float e0 = 0.1):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1111,8 +1176,8 @@ cdef class SimpleSGDTrainer:
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.01, float mom = 0.9):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr, lam, e0, mom)
+    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1124,8 +1189,8 @@ cdef class MomentumSGDTrainer:
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.1, float eps = 1e-20):
-        self.thisptr = new CAdagradTrainer(m.thisptr, lam, e0, eps)
+    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20):
+        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1137,8 +1202,8 @@ cdef class AdagradTrainer:
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float eps = 1e-6, float rho = 0.95):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr, lam, eps, rho)
+    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1150,8 +1215,8 @@ cdef class AdadeltaTrainer:
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8 ):
-        self.thisptr = new CAdamTrainer(m.thisptr, lam, alpha, beta_1, beta_2, eps)
+    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8 ):
+        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
