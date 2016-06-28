@@ -511,6 +511,7 @@ struct PickElement : public Node {
 struct PickRange : public Node {
   explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e) : Node(a), start(s), end(e) {}
   CNN_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   unsigned start;
   unsigned end;
 };
