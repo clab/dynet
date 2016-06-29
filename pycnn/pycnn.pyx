@@ -4,6 +4,7 @@ import sys
 from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
 import numpy as np
+import cPickle as pickle
 # TODO:
 #  - set random seed (in CNN)
 #  - better input / output support
@@ -155,6 +156,28 @@ cdef class LookupParameters:
         vals = self.thisptr.get().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
+# TODO document this
+class Saveable(object):
+    def __init__(self):
+        pass
+
+    def __getstate__(self):
+        odict = self.__dict__.copy() # copy the dict since we change it
+        params = self.get_components()
+        for k,v in odict.items(): # remove unpicklable things which we save otherwise
+            if v in params:
+                del odict[k]
+        return odict
+
+    def get_components(self):
+        """
+        List of parameter-containing components that are
+        members of this object and are created by it.
+        """
+        return NotImplemented
+
+    def restore_components(self, components):
+        return NotImplemented
 
 cdef class Model:
     cdef CModel *thisptr
@@ -189,81 +212,98 @@ cdef class Model:
     def load_all(self, string fname):
         load_cnn_model(fname, self.thisptr)
 
+    cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
+        # would be nicer to have polymorphism/dispatch-by-type
+        # but we cannot because we need to bind to the c-type.
+        c = component
+        if isinstance(c, Parameters):
+            fh.write("param ")
+            saver.add_parameter((<Parameters>c).thisptr)
+        elif isinstance(c, LookupParameters):
+            fh.write("lookup ")
+            saver.add_lookup_parameter((<LookupParameters>c).thisptr)
+        elif isinstance(c, LSTMBuilder):
+            fh.write("lstm_builder ")
+            saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
+        elif isinstance(c, SimpleRNNBuilder):
+            saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
+            fh.write("srnn_builder ")
+        elif isinstance(c, Saveable):
+            cs = c.get_components()
+            fh.write("user~%s " % len(cs))
+            pickle.dump(c,pfh)
+            for subc in cs:
+                self._save_one(subc,saver,fh,pfh)
+        else:
+            raise TypeError("Cannot save model component of type %s" % type(c))
+
     # TODO support python "components", e.g. MLP
     def save(self, string fname, components=None):
         if not components:
             self.save_all(fname)
             return
         fh = file(fname+".pym","w")
+        pfh = file(fname+".pyk","w")
         cdef CModelSaver *saver = new CModelSaver(fname, self.thisptr)
-        if isinstance(components,dict):
-            components = components.iteritems()
-        elif isinstance(components,list):
-            components = [('',c) for c in components]
-        else:
-            raise TypeError("The components parameter must be list or dict.")
-        for n,c in components:
-            # would be nicer to have polymorphism/dispatch-by-type
-            # but we cannot because we need to bind to the c-type.
-            if isinstance(c, Parameters):
-                saver.add_parameter((<Parameters>c).thisptr)
-                fh.write("param|%s " % n)
-            elif isinstance(c, LookupParameters):
-                saver.add_lookup_parameter((<LookupParameters>c).thisptr)
-                fh.write("lookup|%s " % n)
-            elif isinstance(c, LSTMBuilder):
-                saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
-                fh.write("lstm_builder|%s " % n)
-            elif isinstance(c, SimpleRNNBuilder):
-                saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
-                fh.write("srnn_builder|%s " % n)
-            else:
-                raise TypeError("Cannot save model component of type " + type(c))
+        for c in components:
+            self._save_one(c,saver,fh,pfh)
         saver.done()
         fh.close()
+        pfh.close()
         del saver
+
+    cdef _load_one(self, itypes, CModelLoader *loader, pfh):
+        cdef CParameters p
+        cdef CLookupParameters lp
+        cdef LSTMBuilder lb_
+        cdef SimpleRNNBuilder sb_
+        tp = itypes.next()
+        print "Loading:",tp
+        if tp == "param":
+            loader.fill_parameter(p)
+            param = Parameters.wrap_ptr(p)
+            return param
+        elif tp == "lookup":
+            loader.fill_lookup_parameter(lp)
+            param = LookupParameters.wrap_ptr(lp)
+            return param
+        elif tp == "lstm_builder":
+            lb_ = LSTMBuilder(0,0,0,self) # empty builder
+            loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
+            return lb_
+        elif tp == "srnn_builder":
+            sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
+            loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
+            return sb_
+        elif tp.startswith("user~"):
+            # user defiend type
+            tp,num = tp.split("~",1)
+            saveable = pickle.load(pfh)
+            num = int(num)
+            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
+            saveable.restore_components(items)
+            return saveable
+        else:
+            print "Huh?"
+            assert False,"unsupported type " + tp
 
     # TODO support python "components", e.g. MLP
     cpdef load(self, string fname):
         #TODO if fails, just run the load_all
         with file(fname+".pym","r") as fh:
             types = fh.read().strip().split()
-        print self.pl()
         cdef CModelLoader *loader = new CModelLoader(fname, self.thisptr)
-        print self.pl()
-        cdef CParameters p
-        cdef CLookupParameters lp
-        cdef LSTMBuilder lb_
-        cdef SimpleRNNBuilder sb_
-        params = []
-        names = []
-        for tp_name in types:
-            tp,name = tp_name.split("|",1)
-            if name: names.append(name)
-            if tp == "param":
-                loader.fill_parameter(p)
-                params.append(Parameters.wrap_ptr(p))
-            elif tp == "lookup":
-                loader.fill_lookup_parameter(lp)
-                params.append(LookupParameters.wrap_ptr(lp))
-            elif tp == "lstm_builder":
-                lb_ = LSTMBuilder(0,0,0,self) # empty builder
-                loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
-                params.append(lb_)
-            elif tp == "srnn_builder":
-                sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
-                loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
-                params.append(sb_)
-            else:
-                assert(False,"unsupported type " + tp)
+        with file(fname+".pyk","r") as pfh:
+            params = []
+            itypes = iter(types)
+            while True: # until iterator is done
+                try:
+                    param = self._load_one(itypes,loader,pfh)
+                except StopIteration: break
+                params.append(param)
         loader.done()
         del loader
-        if names:
-            assert(len(names)==len(params))
-            return dict(zip(names,params))
-        else:
-            return params
-
+        return params
 
 # }}}
 
