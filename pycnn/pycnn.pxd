@@ -242,6 +242,8 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         vector[CExpression] get_h(CRNNPointer i)
         vector[CExpression] get_s(CRNNPointer i)
         CRNNPointer state()
+        void set_dropout(float f)
+        void disable_dropout()
 
 # TODO unify with LSTMBuilder using inheritance
 cdef extern from "cnn/rnn.h" namespace "cnn":
