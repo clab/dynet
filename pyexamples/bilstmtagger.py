@@ -5,8 +5,8 @@ import random
 import util
 
 # format of files: each line is "word<TAB>tag<newline>", blank line is new sentence.
-train_file="/home/yogo/Vork/Research/corpora/pos/WSJ.TRAIN"
-test_file="/home/yogo/Vork/Research/corpora/pos/WSJ.TEST"
+train_file="/Users/yogo/Vork/Research/corpora/pos/WSJ.TRAIN"
+test_file="/Users/yogo/Vork/Research/corpora/pos/WSJ.TEST"
 
 
 MLP=True
@@ -50,24 +50,24 @@ ntags  = vt.size()
 model = Model()
 sgd = SimpleSGDTrainer(model)
 
-model.add_lookup_parameters("lookup", (nwords, 128))
-model.add_lookup_parameters("tl", (ntags, 30))
+E = model.add_lookup_parameters((nwords, 128))
+p_t1  = model.add_lookup_parameters((ntags, 30))
 if MLP:
-    pH = model.add_parameters("HID", (32, 50*2))
-    pO = model.add_parameters("OUT", (ntags, 32))
+    pH = model.add_parameters((32, 50*2))
+    pO = model.add_parameters((ntags, 32))
 else:
-    pO = model.add_parameters("OUT", (ntags, 50*2))
+    pO = model.add_parameters((ntags, 50*2))
 
 builders=[
         LSTMBuilder(1, 128, 50, model),
         LSTMBuilder(1, 128, 50, model),
         ]
 
-def build_tagging_graph(words, tags, model, builders):
+def build_tagging_graph(words, tags, builders):
     renew_cg()
     f_init, b_init = [b.initial_state() for b in builders]
 
-    wembs = [lookup(model["lookup"], w) for w in words]
+    wembs = [E[w] for w in words]
     wembs = [noise(we,0.1) for we in wembs]
 
     fw = [x.output() for x in f_init.add_inputs(wembs)]
@@ -89,10 +89,10 @@ def build_tagging_graph(words, tags, model, builders):
         errs.append(err)
     return esum(errs)
 
-def tag_sent(sent, model, builders):
+def tag_sent(sent, builders):
     renew_cg()
     f_init, b_init = [b.initial_state() for b in builders]
-    wembs = [lookup(model["lookup"], vw.w2i.get(w, UNK)) for w,t in sent]
+    wembs = [E[vw.w2i.get(w, UNK)] for w,t in sent]
 
     fw = [x.output() for x in f_init.add_inputs(wembs)]
     bw = [x.output() for x in b_init.add_inputs(reversed(wembs))]
@@ -126,7 +126,7 @@ for ITER in xrange(50):
         if i % 10000 == 0:
             good = bad = 0.0
             for sent in test:
-                tags = tag_sent(sent, model, builders)
+                tags = tag_sent(sent, builders)
                 golds = [t for w,t in sent]
                 for go,gu in zip(golds,tags):
                     if go == gu: good +=1 
@@ -134,7 +134,7 @@ for ITER in xrange(50):
             print good/(good+bad)
         ws = [vw.w2i.get(w, UNK) for w,p in s]
         ps = [vt.w2i[p] for w,p in s]
-        sum_errs = build_tagging_graph(ws,ps,model,builders)
+        sum_errs = build_tagging_graph(ws,ps,builders)
         squared = -sum_errs# * sum_errs
         loss += sum_errs.scalar_value()
         tagged += len(ps)

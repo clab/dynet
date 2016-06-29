@@ -15,23 +15,22 @@ import util
 
 class RNNLanguageModel:
     def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder):
-        self.m = model
         self.builder = builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
 
-        model.add_lookup_parameters("lookup", (VOCAB_SIZE, INPUT_DIM))
-        model.add_parameters("R", (VOCAB_SIZE, HIDDEN_DIM))
-        model.add_parameters("bias", (VOCAB_SIZE))
+        self.lookup = model.add_lookup_parameters((VOCAB_SIZE, INPUT_DIM))
+        self.R = model.add_parameters((VOCAB_SIZE, HIDDEN_DIM))
+        self.bias = model.add_parameters((VOCAB_SIZE))
 
     def BuildLMGraph(self, sent):
         renew_cg()
         init_state = self.builder.initial_state()
 
-        R = parameter(self.m["R"])
-        bias = parameter(self.m["bias"])
+        R = parameter(self.R)
+        bias = parameter(self.bias)
         errs = [] # will hold expressions
         es=[]
         state = init_state
-        lookup = self.m["lookup"]
+        lookup = self.lookup
         inputs = [lookup[int(cw)] for cw in sent[:-1]]
         expected_outputs = [int(nw) for nw in sent[1:]]
         outputs = state.transduce(inputs)
@@ -46,11 +45,11 @@ class RNNLanguageModel:
         renew_cg()
         state = self.builder.initial_state()
 
-        R = parameter(self.m["R"])
-        bias = parameter(self.m["bias"])
+        R = parameter(self.R)
+        bias = parameter(self.bias)
         cw = first
         while True:
-            x_t = lookup(self.m["lookup"], cw)
+            x_t = lookup(self.lookup, cw)
             state = state.add_input(x_t)
             y_t = state.output()
             r_t = bias + (R * y_t)
@@ -75,8 +74,8 @@ if __name__ == '__main__':
     model = Model()
     sgd = SimpleSGDTrainer(model)
 
-    #lm = RNNLanguageModel(model, builder=LSTMBuilder)
-    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
+    #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
+    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=LSTMBuilder)
 
     train = list(train)
 

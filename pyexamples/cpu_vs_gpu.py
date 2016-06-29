@@ -5,8 +5,8 @@ import pycnn as C
 cm = C.Model()
 gm = G.Model()
 
-cpW = cm.add_parameters("W",(1000,1000))
-gpW = gm.add_parameters("W",(1000,1000))
+cpW = cm.add_parameters((1000,1000))
+gpW = gm.add_parameters((1000,1000))
 
 def do_cpu():
 	C.renew_cg()
