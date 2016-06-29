@@ -5,6 +5,7 @@ from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
 import numpy as np
 import cPickle as pickle
+import os.path
 # TODO:
 #  - set random seed (in CNN)
 #  - better input / output support
@@ -179,7 +180,7 @@ class Saveable(object):
     def restore_components(self, components):
         return NotImplemented
 
-cdef class Model:
+cdef class Model: # {{{
     cdef CModel *thisptr
     def __cinit__(self):
         self.thisptr = new CModel()
@@ -258,7 +259,6 @@ cdef class Model:
         cdef LSTMBuilder lb_
         cdef SimpleRNNBuilder sb_
         tp = itypes.next()
-        print "Loading:",tp
         if tp == "param":
             loader.fill_parameter(p)
             param = Parameters.wrap_ptr(p)
@@ -289,9 +289,12 @@ cdef class Model:
 
     # TODO support python "components", e.g. MLP
     cpdef load(self, string fname):
-        #TODO if fails, just run the load_all
+        if not os.path.isfile(fname+".pym"):
+            self.load_all(fname)
+            return
         with file(fname+".pym","r") as fh:
             types = fh.read().strip().split()
+
         cdef CModelLoader *loader = new CModelLoader(fname, self.thisptr)
         with file(fname+".pyk","r") as pfh:
             params = []
@@ -304,6 +307,7 @@ cdef class Model:
         loader.done()
         del loader
         return params
+    #}}}
 
 # }}}
 
