@@ -863,6 +863,9 @@ cdef class _RNNBuilder: # {{{
     def __dealloc__(self):
         del self.thisptr
 
+    cpdef set_dropout(self, float f): self.thisptr.set_dropout(f)
+    cpdef disable_dropout(self): self.thisptr.disable_dropout()
+
     cdef new_graph(self):
         self.thisptr.new_graph(_cg.thisptr[0])
         self.cg_version = _cg.version()
