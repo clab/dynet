@@ -2,7 +2,7 @@ from pycnn import *
 import numpy as np
 
 m = Model()
-lp = m.add_lookup_parameters("a",(100,10))
+lp = m.add_lookup_parameters((100,10))
 
 # regular lookup
 a = lp[1].npvalue()
@@ -23,7 +23,7 @@ print np.hstack([a,b,c])
 # use pick and pickneglogsoftmax in batch mode
 # (must be used in conjunction with lookup_batch):
 print "\nPick"
-W = parameter( m.add_parameters("W", (5, 10)) )
+W = parameter( m.add_parameters((5, 10)) )
 h = W * lp.batch([1,2,3])
 print h.npvalue()
 print pick_batch(h,[1,2,3]).npvalue()
