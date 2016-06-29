@@ -292,7 +292,7 @@ cdef extern from "cnn/fast-lstm.h" namespace "cnn":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
-cdef extern from "cnn/pybridge.h" namespace "pycnn":
+cdef extern from "pybridge.h" namespace "pycnn":
     cdef cppclass CModelSaver "pycnn::ModelSaver":
         CModelSaver(string filename, CModel *model)
         CModelSaver add_parameter(CParameters p)
