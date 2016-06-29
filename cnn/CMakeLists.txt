@@ -64,7 +64,6 @@ set(cnn_library_HDRS
     nodes-contract.h
     nodes-conv.h
     param-nodes.h
-    pybridge.h
     rnn-state-machine.h
     rnn.h
     saxe-init.h
