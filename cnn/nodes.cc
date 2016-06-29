@@ -1404,22 +1404,14 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
 }
 CNN_NODE_INST_DEV_IMPL(PickNegLogSoftmax)
 
-// x_1 is a vector
+// x_1 is a matrix
 // y = (x_1)[start:end]
-// slice of vector from index start (inclusive) to index end (exclusive)
+// slice of matrix from index start (inclusive) to index end (exclusive)
 template<class MyDevice>
 void PickRange::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
-  auto x = **xs[0];
-  assert(x.cols() == 1);
-  assert(end <= x.rows());
-  assert(start < end);
-  assert(int(fx.d.rows()) == int(end-start));
-#if __CUDACC__
-  CUDA_CHECK(cudaMemcpyAsync(&fx.v[0], &xs[0]->v[start], sizeof(float) * (end-start), cudaMemcpyDeviceToDevice));
-#else
-  (*fx) = x.block(start, 0, end-start, 1);
-#endif
+  Eigen::DSizes<ptrdiff_t, 3> indices(start,0,0);
+  Eigen::DSizes<ptrdiff_t, 3> sizes(end-start,fx.d.cols(),fx.d.bd);
+  fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().slice(indices, sizes);
 }
 
 // derivative is 0 in all dimensions except the slice range
@@ -1430,14 +1422,9 @@ void PickRange::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  assert(i == 0);
-  assert(int(dEdf.d.rows()) == int(end-start));
-  assert(dEdf.d.cols() == 1);
-#if __CUDACC__
-  CUBLAS_CHECK(cublasSaxpy(cublas_handle, end-start, kSCALAR_ONE, dEdf.v, 1, &dEdxi.v[start], 1));
-#else
-  (*dEdxi).block(start, 0, end-start, 1) += (*dEdf);
-#endif
+  Eigen::DSizes<ptrdiff_t, 3> indices(start,0,0);
+  Eigen::DSizes<ptrdiff_t, 3> sizes(end-start,fx.d.cols(),fx.d.bd);
+  dEdxi.tb<2>().slice(indices, sizes).device(*dev.edevice) += dEdf.tb<2>();
 }
 CNN_NODE_INST_DEV_IMPL(PickRange)
 
@@ -1694,7 +1681,7 @@ void Sparsemax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
     float tau = (maxsum - 1) / k;
     auto x = **xs[0];
     auto y = *fx;
-    y = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
+    fx.tvec() = (xs[0]->tvec() - tau).cwiseMax(0.f);
     int c = 1;
     int *cc = static_cast<int*>(aux_mem);
     for (unsigned i = 0; i < rows; ++i)
@@ -1740,7 +1727,6 @@ void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Te
       cerr << "MAX_SPARSEMAX_LOSS_ROWS is not sufficient. Recompile with larger value.\n";
       abort();
     }
-    float& y = fx.v[0];  // loss
     const unsigned qsupport_size = pq->size();
     const float qprop = 1.f / qsupport_size;
 
@@ -1756,25 +1742,12 @@ void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Te
     }
     float tau = (maxsum - 1) / k;
     Tensor tsm(xs[0]->d, (float*)aux_mem, xs[0]->device);
-    auto x = **xs[0];
-    auto sm = *tsm;
-    sm = (x - Eigen::MatrixXf::Ones(rows, 1)*tau).cwiseMax(0.f);
-    //cerr << "SpM: " << (sm).transpose() << " |||";
-    //for (unsigned i = 0; i < pq->size(); ++i) cerr << ' ' << (*pq)[i];
-    //cerr << endl;
-    y = 0;
-    float tau_sq = tau * tau;
-    for (unsigned i = 0; i < rows; ++i) {
-      if (sm(i, 0)) {
-        const float x_s = x(i, 0);
-        y += x_s * x_s - tau_sq;
-      }
-    }
-    y /= 2;
-    y += qprop * qprop * qsupport_size / 2;
+    tsm.t<1>() = (xs[0]->t<1>() - tau).cwiseMax(0.f);
+    fx.t<0>() = ( (tsm.t<1>() != 0.f).cast<float>() * (xs[0]->t<1>().square() - (tau * tau)) ).sum();
+    fx.t<0>() = ( fx.t<0>() + qprop * qprop * qsupport_size ) / 2.f;
     for (unsigned i = 0; i < qsupport_size; ++i)
-      y -= qprop * x((*pq)[i], 0);
-    if (y < 0) y = 0;
+      fx.t<0>() = fx.t<0>() - xs[0]->t<1>().chip<0>((*pq)[i]) * qprop;
+    fx.t<0>() = fx.t<0>().cwiseMax(0.f);
 #endif
   } else {
     throw std::runtime_error("SparsemaxLoss not yet implemented for multiple columns");
