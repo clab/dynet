@@ -46,13 +46,14 @@ cdef extern from "cnn/model.h" namespace "cnn":
     cdef cppclass CParameters "cnn::Parameter":
         CParameters()
         CParameterStorage *get()
+        void zero()
 
     cdef cppclass CLookupParameters "cnn::LookupParameter":
         CLookupParameters()
         CLookupParameterStorage *get()
         CDim dim
         void Initialize(unsigned index, const vector[float]& val)
-        pass
+        void zero()
 
     cdef cppclass CModel "cnn::Model":
         CModel()
@@ -60,8 +61,6 @@ cdef extern from "cnn/model.h" namespace "cnn":
         CParameters add_parameters(CDim& d, float scale = 0.0)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
         vector[CParameterStorage] parameters_list()
-        #void save(string fname)
-        #void load(string fname)
 
     void load_cnn_model "cnn::load_cnn_model" (string filename, CModel *model)
     void save_cnn_model "cnn::save_cnn_model" (string filename, CModel *model)
@@ -198,6 +197,7 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
 
     CExpression c_conv1d_narrow "cnn::expr::conv1d_narrow" (CExpression& x, CExpression& f) #
     CExpression c_conv1d_wide "cnn::expr::conv1d_wide" (CExpression& x, CExpression& f) #
+    CExpression c_filter1d_narrow "cnn::expr::filter1d_narrow" (CExpression& x, CExpression& f) #
     CExpression c_kmax_pooling "cnn::expr::kmax_pooling" (CExpression& x, unsigned k) #
     CExpression c_fold_rows "cnn::expr::fold_rows" (CExpression& x, unsigned nrows) #
     CExpression c_sum_cols "cnn::expr::sum_cols" (CExpression& x)               #

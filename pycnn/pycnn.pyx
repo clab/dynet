@@ -115,6 +115,9 @@ cdef class Parameters:
         for i in xrange(arr.size):
             vals[i] = arr[i]
 
+    cpdef zero(self): self.thisptr.zero()
+
+
 
 cdef class LookupParameters:
     cdef CLookupParameters thisptr # TODO -- no longer pointer
@@ -156,6 +159,8 @@ cdef class LookupParameters:
         cdef vector[CTensor] vals
         vals = self.thisptr.get().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
+
+    cpdef zero(self): self.thisptr.zero()
 
 # TODO document this
 class Saveable(object):
@@ -737,6 +742,7 @@ cpdef Expression l1_distance(Expression x, Expression y): ensure_freshness(y); r
 cpdef Expression binary_log_loss(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_binary_log_loss(x.c(), y.c()))
 cpdef Expression conv1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_narrow(x.c(), y.c()))
 cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_wide(x.c(), y.c()))
+cpdef Expression filter1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_filter1d_narrow(x.c(), y.c()))
 
 # unary-exp
 cpdef Expression tanh(Expression x): return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
