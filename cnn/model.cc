@@ -45,6 +45,11 @@ void ParameterStorage::scale_parameters(float a) {
   values.vec() *= a;
 }
 
+void ParameterStorage::zero() {
+  TensorTools::Zero(values);
+  clear();
+}
+
 void ParameterStorage::squared_l2norm(float* sqnorm) const {
 #if HAVE_CUDA
   gpu::l2_norm_reducer(values.d.size(), values.v, sqnorm, true, false);
@@ -97,6 +102,12 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
 void LookupParameterStorage::scale_parameters(float a) {
   for (auto& p : values)
     (*p) *= a;
+}
+
+void LookupParameterStorage::zero() {
+  for (auto& p : values)
+    TensorTools::Zero(p);
+  clear();
 }
 
 void LookupParameterStorage::Initialize(unsigned index, const vector<float>& val) {
@@ -175,6 +186,10 @@ ParameterStorage* Parameter::get() const {
   return mp->parameters_list()[index];
 }
 
+void Parameter::zero() {
+  return mp->parameters_list()[index]->zero();
+}
+
 LookupParameter::LookupParameter() {
   mp = nullptr;
   index = 0;
@@ -186,12 +201,18 @@ LookupParameterStorage* LookupParameter::get() const {
   return mp->lookup_parameters_list()[index];
 }
 
+void LookupParameter::zero() {
+  return mp->lookup_parameters_list()[index]->zero();
+}
+
 void LookupParameter::Initialize(unsigned index, const std::vector<float>& val) const {
   get()->Initialize(index, val);
 }
 
 Model::~Model() {
   for (auto p : all_params) delete p;
+  if(gradient_norm_scratch)
+    default_device->mem->free(gradient_norm_scratch);
 }
 
 void Model::project_weights(float radius) {

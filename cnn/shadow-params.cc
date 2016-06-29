@@ -13,11 +13,20 @@ ShadowParameters::ShadowParameters(const ParameterStorage& p) : h(p.values) {
   TensorTools::Zero(h);
 }
 
+ShadowParameters::~ShadowParameters() {
+  default_device->mem->free(h.v);
+}
+
 ShadowLookupParameters::ShadowLookupParameters(const LookupParameterStorage& lp) : h(lp.values) {
   for (auto& t : h) {
     t.v = (float*)default_device->mem->malloc(t.d.size() * sizeof(float));
     TensorTools::Zero(t);
   }
+}
+
+ShadowLookupParameters::~ShadowLookupParameters() {
+  for (auto& t : h)
+    default_device->mem->free(t.v);
 }
 
 vector<ShadowParameters> AllocateShadowParameters(const Model& m) {

@@ -16,21 +16,21 @@ namespace boost { namespace serialization { class access; } }
 namespace cnn {
 
 struct Dim {
-  Dim() : nd(), bd(1) {}
+  Dim() : nd(0), bd(1) {}
   // explicit Dim(unsigned int m) : nd(1), bd(1) { d[0] = m; }
   // TODO: The constructors for dimensions w/ and w/o batches is not intuitive.
   //       can this be fixed in some way?
   // Dim(unsigned int m, unsigned int n) : nd(2), bd(1) { d[0] = m; d[1] = n; }
-  Dim(std::initializer_list<unsigned int> x) : nd(), bd(1) {
+  Dim(std::initializer_list<unsigned int> x) : nd(0), bd(1) {
     for(auto v : x) d[nd++] = v;
   }
-  Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(), bd(b) {
+  Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(0), bd(b) {
     for(auto v : x) d[nd++] = v;
   }
-  Dim(const std::vector<long> & x) : nd(), bd(1) {
+  Dim(const std::vector<long> & x) : nd(0), bd(1) {
      for(auto v : x) d[nd++] = v;
   }
-  Dim(const std::vector<long> & x, unsigned int b) : nd(), bd(b) {
+  Dim(const std::vector<long> & x, unsigned int b) : nd(0), bd(b) {
      for(auto v : x) d[nd++] = v;
   }
   inline unsigned int size() const {
