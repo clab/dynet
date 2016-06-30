@@ -999,9 +999,10 @@ def PrintGraphviz(compact=False, show_dims=True, expression_names=None, lookup_n
   for n in nodes:
     label = n.label
     if show_dims:
-      label = '%s\\n%s' % (shape_str(n.output_dim), n.label)
+      label = n.label
       if n.expr_name is not None:
-        label = '%s\\n%s' % (label, n.expr_name)
+        label = '%s\\n%s' % (n.expr_name, label)
+      label = '%s\\n%s' % (shape_str(n.output_dim), label)
       if n.input_dim is not None:
         label = '%s\\n%s' % (label, shape_str(n.input_dim))
     if n.output_dim.invalid() or (n.input_dim is not None and n.input_dim.invalid()):
