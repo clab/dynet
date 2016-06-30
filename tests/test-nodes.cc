@@ -264,6 +264,16 @@ BOOST_AUTO_TEST_CASE( cdiv_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cdiv_batch_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  Expression y = cdiv(x1, x2) + cdiv(x2, x1);
+  sum_batches(input(cg, {1,3}, ones3_vals) * y);
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
 // Expression colwise_add(const Expression& x, const Expression& bias);
 BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
   cnn::ComputationGraph cg;
@@ -611,6 +621,16 @@ BOOST_AUTO_TEST_CASE( cwise_multiply_gradient ) {
   Expression x2 = parameter(cg, param2);
   Expression y = cwise_multiply(x1, x2);
   input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression cwise_multiply(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cwise_multiply_batch_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  Expression y = cwise_multiply(x1, x2) + cwise_multiply(x2, x1);
+  sum_batches(input(cg, {1,3}, ones3_vals) * y);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
