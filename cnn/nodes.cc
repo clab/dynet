@@ -569,7 +569,15 @@ CNN_NODE_INST_DEV_IMPL(Cube)
 template<class MyDevice>
 void CwiseQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec() / xs[1]->tvec();
+  if(xs[0]->d.bd == xs[1]->d.bd) {
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() / xs[1]->tvec();
+  } else if(xs[0]->d.bd == 1) {
+    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>().broadcast(bcast) / xs[1]->tb<1>();
+  } else {
+    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() / xs[1]->tb<1>().broadcast(bcast);
+  }
 }
 
 template<class MyDevice>
@@ -581,9 +589,26 @@ void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   assert(i < 2);
   if (i == 0) {
-    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() / xs[1]->tvec();
+    if(xs[0]->d.bd == xs[1]->d.bd) {
+      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() / xs[1]->tvec();
+    } else if(xs[1]->d.bd == 1) {
+      Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+      dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>() / xs[1]->tb<1>().broadcast(bcast);
+    } else {
+      Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+      dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() / xs[1]->tb<1>()).sum(red_axis);
+    }
   } else { // i = 1
-    dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec() / xs[1]->tvec().square() * xs[0]->tvec();
+    if(xs[0]->d.bd == xs[1]->d.bd) {
+      dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec() / xs[1]->tvec().square() * xs[0]->tvec();
+    } else if(xs[1]->d.bd == 1) {
+      Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+      Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+      dEdxi.t<1>().device(*dev.edevice) -= (dEdf.tb<1>() / xs[1]->tb<1>().square().broadcast(bcast) * xs[0]->tb<1>()).sum(red_axis);
+    } else {
+      Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+      dEdxi.tb<1>().device(*dev.edevice) -= dEdf.tb<1>() / xs[1]->tb<1>().square() * xs[0]->tb<1>().broadcast(bcast);
+    }
   }
 }
 CNN_NODE_INST_DEV_IMPL(CwiseQuotient)
@@ -591,7 +616,15 @@ CNN_NODE_INST_DEV_IMPL(CwiseQuotient)
 template<class MyDevice>
 void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 2);
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec();
+  if(xs[0]->d.bd == xs[1]->d.bd) {
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec();
+  } else {
+    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+    if(xs[0]->d.bd == 1)
+      fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>().broadcast(bcast) * xs[1]->tb<1>();
+    else
+      fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() * xs[1]->tb<1>().broadcast(bcast);
+  }
 }
 
 template<class MyDevice>
@@ -602,10 +635,14 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i < 2);
-  if (i == 0) {
-    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1]->tvec();
+  if(xs[0]->d.bd == xs[1]->d.bd) {
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
+  } else if(xs[1-i]->d.bd == 1) {
+    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+    dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>() * xs[1-i]->tb<1>().broadcast(bcast);
   } else {
-    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[0]->tvec();
+    Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+    dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() * xs[1-i]->tb<1>()).sum(red_axis);
   }
 }
 CNN_NODE_INST_DEV_IMPL(CwiseMultiply)
@@ -1675,7 +1712,6 @@ void Sparsemax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
       maxsum = sum;
     }
     float tau = (maxsum - 1) / k;
-    auto x = **xs[0];
     auto y = *fx;
     fx.tvec() = (xs[0]->tvec() - tau).cwiseMax(0.f);
     int c = 1;
@@ -1729,7 +1765,7 @@ void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Te
     float *zs = static_cast<float*>(aux_mem);
     std::partial_sort_copy(xs[0]->v, xs[0]->v+rows, zs, zs + rows, std::greater<float>());
     float sum = 0, maxsum = 0;
-    unsigned k = 0;
+    int k = 0;
     for (k = 0; k < rows; ++k) {
       sum += zs[k];
       float t = 1 + (k + 1) * zs[k];
