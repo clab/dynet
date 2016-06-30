@@ -154,7 +154,7 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
     z.t<0>().device(*dev.edevice) = (x.t<1>() - mval).exp().sum();
     z.t<0>().device(*dev.edevice) = z.t<0>().log() + mval;
   } else {
-    Eigen::array<int, 1> red_axis({0});
+    Eigen::array<int, 1> red_axis; red_axis[0] = 0;
     m.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(red_axis);
     // TODO: We want to do this in a single command, but this is causing incorrect results.
     //  Eigen::array<int, 2> bcast({(int)x.d.rows(), 1});
@@ -201,10 +201,8 @@ inline void CUDAMatrixMultiply(const Tensor& l, const Tensor& r, Tensor& y, cons
 
 template<class MyDevice>
 void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  array<ptrdiff_t, 2> broadcasts;
-  broadcasts[0] = 1;
-  broadcasts[1] = xs[0]->d[1];
-  fx.t<2>().device(*dev.edevice) = xs[0]->t<2>() + xs[1]->t<2>().broadcast(broadcasts);
+  Eigen::array<int, 2> bcasts; bcasts[0] = 1; bcasts[1] = xs[0]->d[1];
+  fx.t<2>().device(*dev.edevice) = xs[0]->t<2>() + xs[1]->t<2>().broadcast(bcasts);
 }
 
 template<class MyDevice>
@@ -284,7 +282,7 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
     dEdf_mem = (float*)device->fxs->allocate(sizeof(float) * dEdf.d.batch_size());
     Dim dEdf_dim = dEdf.d; dEdf_dim.bd = 1;
     dEdf_sum = Tensor(dEdf_dim, dEdf_mem, device);
-    Eigen::array<int, 1> red_axis({2});
+    Eigen::array<int, 1> red_axis; red_axis[0] = 2;
     dEdf_sum.t<2>().device(*dev.edevice) = dEdf.tb<2>().sum(red_axis);
   }
 
@@ -400,7 +398,7 @@ void Concatenate::forward_dev_impl(const MyDevice & dev, const vector<const Tens
     if(fx.d.bd == xs[i]->d.bd) {
       fx.tb<2>().slice(indices, sizes).device(*dev.edevice) = xs[i]->tb<2>();
     } else {
-      Eigen::array<int, 3> bcast({1,1,(int)fx.d.bd});
+      Eigen::array<int, 3> bcast; bcast[0] = bcast[1] = 1; bcast[2] = fx.d.bd;
       fx.tb<2>().slice(indices, sizes).device(*dev.edevice) = xs[i]->tb<2>().broadcast(bcast);
     }
     curr_row += row_size;
@@ -615,8 +613,8 @@ CNN_NODE_INST_DEV_IMPL(CwiseMultiply)
 
 template<class MyDevice>
 void DotProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Eigen::array<int, 1> red_axis({0});
-  Eigen::array<int, 2> bcast({1, (int)fx.d.bd});
+  Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+  Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
   if(fx.d.bd == 1) {
     fx.t<0>().device(*dev.edevice) = (xs[0]->t<1>() * xs[1]->t<1>()).sum();
   } else if(xs[0]->d.bd == xs[1]->d.bd) {
@@ -636,17 +634,17 @@ void DotProduct::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   if(fx.d.bd == 1) {
-    Eigen::array<int, 1> bcast({(int)xs[i]->d.rows()});
+    Eigen::array<int, 1> bcast; bcast[0] = xs[i]->d.rows();
     dEdxi.t<1>().device(*dev.edevice) += xs[1-i]->t<1>() * dEdf.t<1>().broadcast(bcast);
   } else {
-    Eigen::array<int, 2> bcast({(int)xs[i]->d.rows(), 1});
+    Eigen::array<int, 2> bcast; bcast[0] =xs[i]->d.rows(); bcast[1] = 1;
     if(xs[0]->d.bd == xs[1]->d.bd) {
       dEdxi.tb<1>().device(*dev.edevice) += xs[1-i]->tb<1>() * dEdf.tb<1>().broadcast(bcast);
     } else if(dEdxi.d.bd == 1) {
-      Eigen::array<int, 1> red_axis({1});
+      Eigen::array<int, 1> red_axis; red_axis[0] = 1;
       dEdxi.t<1>().device(*dev.edevice) += (xs[1-i]->tb<1>() * dEdf.tb<1>().broadcast(bcast)).sum(red_axis);
     } else {
-      Eigen::array<int, 2> batchcast({1, (int)fx.d.bd});
+      Eigen::array<int, 2> batchcast; batchcast[0] = 1; batchcast[1] = fx.d.bd;
       dEdxi.tb<1>().device(*dev.edevice) += (xs[1-i]->tb<1>().broadcast(batchcast) * dEdf.tb<1>().broadcast(bcast));
     }
   }
@@ -957,10 +955,8 @@ void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   if(fx.d.bd == 1) {
     fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - as_scalar(z);
   } else {
-    array<ptrdiff_t, 2> broadcasts;
-    broadcasts[0] = xs[0]->d.rows();
-    broadcasts[1] = 1;
-    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() - z.tb<1>().broadcast(broadcasts);
+    Eigen::array<int, 2> bcasts; bcasts[0] = xs[0]->d.rows(); bcasts[1] = 1;
+    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() - z.tb<1>().broadcast(bcasts);
   }
 }
 
@@ -976,12 +972,12 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
   Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
   if(fx.d.bd == 1) {
     z.t<0>().device(*dev.edevice) = fx.t<1>().binaryExpr(dEdf.t<1>(), FWeightedError()).sum();
-    Eigen::array<int, 1> bcast({(int)fx.d.rows()});
+    Eigen::array<int, 1> bcast; bcast[0] = fx.d.rows();
     dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().exp() * -z.t<1>().broadcast(bcast) + dEdf.t<1>();
   } else {
-    Eigen::array<int, 1> red_axis({0});
+    Eigen::array<int, 1> red_axis; red_axis[0] = 0;
     z.tb<0>().device(*dev.edevice) = (fx.tb<1>().binaryExpr(dEdf.tb<1>(), FWeightedError())).sum(red_axis);
-    Eigen::array<int, 2> bcast({(int)fx.d.rows(), 1});
+    Eigen::array<int, 2> bcast; bcast[0] = fx.d.rows(); bcast[1] = 1;
     dEdxi.tb<1>().device(*dev.edevice) += fx.tb<1>().exp() * -z.tb<1>().broadcast(bcast) + dEdf.tb<1>();
   }
 }
@@ -1607,7 +1603,7 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   if(fx.d.bd == 1) {
     fx.t<1>().device(*dev.edevice) = (xs[0]->t<1>() - as_scalar(z)).exp();
   } else {
-    Eigen::array<int, 2> bcast({(int)xs[0]->d.rows(), 1});
+    Eigen::array<int, 2> bcast; bcast[0] = xs[0]->d.rows(); bcast[1] = 1;
     fx.tb<1>().device(*dev.edevice) = (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp();
   }
 }
