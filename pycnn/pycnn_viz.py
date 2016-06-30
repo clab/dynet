@@ -739,15 +739,16 @@ def shape_str(e_dim):
       return '{{%s,%s}}' % (e_dim[0],e_dim[1])
 
 class GVNode(object):
-  def __init__(self, name, input_dim, label, output_dim, children, features, node_type):
+  def __init__(self, name, input_dim, label, output_dim, children, features, node_type, expr_name):
     self.name = name
     self.input_dim = input_dim
     self.label = label
     self.output_dim = output_dim
     self.children = children
     self.features = features
-    self.node_type = node_type   
-  def __iter__(self): return iter([self.name, self.input_dim, self.label, self.output_dim, self.children, self.features, self.node_type])
+    self.node_type = node_type
+    self.expr_name = expr_name
+  def __iter__(self): return iter([self.name, self.input_dim, self.label, self.output_dim, self.children, self.features, self.node_type, self.expr_name])
   def __repr__(self): return 'GVNode(%s)' % ', '.join(map(str, self))
   def __str__(self): return repr(self)
 
@@ -900,8 +901,6 @@ def make_network_graph(compact, expression_names, lookup_names):
     var_name = '%s' % (var_name_dict.get(vidx, 'v%d' % (vidx))) if not compact else ''
 #     if show_dims:
 #       str_repr = '%s\\n%s' % (shape_str(e.dim), str_repr)
-    if compact and expression_names and (e in expression_names) and (expression_names[e] != f_name):
-      str_repr = '%s\\n%s' % (str_repr, expression_names[e])
     label = str_repr
     if not compact:
       label = '%s = %s' % (var_name, label)
@@ -909,7 +908,8 @@ def make_network_graph(compact, expression_names, lookup_names):
 #     if output_dim.invalid():
 #       features += " [color=red,style=filled,fillcolor=red]"
 #     node_def_lines.append('  %s [label="%s%s"] %s;' % (vidx2str(vidx), label_prefix, str_repr, ''))
-    nodes.add(GVNode(name, input_dim, label, output_dim, frozenset(children), features, node_type))
+    expr_name = expression_names[e] if compact and expression_names and (e in expression_names) and (expression_names[e] != f_name) else None
+    nodes.add(GVNode(name, input_dim, label, output_dim, frozenset(children), features, node_type, expr_name))
 
   return nodes
 
@@ -953,7 +953,7 @@ def collapse_birnn_states(nodes, compact):
       if not compact:
         new_rnn_group_state_label = '%s\\n%s' % (node_info[out_e].label, new_rnn_group_state_label)
       cat_output_dim = make_dim(output_dim[0]*2, output_dim[1])
-      new_rnn_group_state = GVNode(new_rnn_group_state_name, input_dim, new_rnn_group_state_label, cat_output_dim, frozenset([in_e]), '', '3_rnn_state')
+      new_rnn_group_state = GVNode(new_rnn_group_state_name, input_dim, new_rnn_group_state_label, cat_output_dim, frozenset([in_e]), '', '3_rnn_state', node_info[out_e].expr_name)
       for n in ns:
         rnn_groups[n.name] = new_rnn_group_state.name
 #         children_forwards[n.name] = new_rnn_group_state.name
@@ -962,14 +962,14 @@ def collapse_birnn_states(nodes, compact):
       nodes.add(new_rnn_group_state)
       nodes_to_delete.add(out_e)
   # TODO: WHEN WE DELETE A CAT NODE, MAKE SURE WE FORWARD TO THE **NEW GROPU STATE NODE**
-  for (name, input_dim, label, output_dim, children, features, node_type) in nodes:
+  for (name, input_dim, label, output_dim, children, features, node_type, expr_name) in nodes:
     if name not in nodes_to_delete:
       new_children = []
       for c in children:
         while c in children_forwards:
           c = children_forwards[c]
         new_children.append(c)
-      new_nodes.append(GVNode(name, input_dim, label, output_dim, new_children, features, node_type))
+      new_nodes.append(GVNode(name, input_dim, label, output_dim, new_children, features, node_type, expr_name))
   return (new_nodes, rnn_groups)
 
 def PrintGraphviz(compact=False, show_dims=True, expression_names=None, lookup_names=None, collapse_birnns=False):
@@ -1000,6 +1000,8 @@ def PrintGraphviz(compact=False, show_dims=True, expression_names=None, lookup_n
     label = n.label
     if show_dims:
       label = '%s\\n%s' % (shape_str(n.output_dim), n.label)
+      if n.expr_name is not None:
+        label = '%s\\n%s' % (label, n.expr_name)
       if n.input_dim is not None:
         label = '%s\\n%s' % (label, shape_str(n.input_dim))
     if n.output_dim.invalid() or (n.input_dim is not None and n.input_dim.invalid()):
