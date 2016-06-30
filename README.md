@@ -76,7 +76,7 @@ very beginning of the command line, before other options.
   backward steps, as well as parameter storage. You will often want to increase this amount.
   By setting NUMBER here, cnn will allocate more memory. Note that it will allocate 3 times
   more memory than the number specified here, so if you want to use 3GB, specify "1024".
-* `--cnn-l2 NUMBER`: Specifies the level of l2 regularization to use.
+* `--cnn-l2 NUMBER`: Specifies the level of l2 regularization to use (default 1e-6).
 * `--cnn-gpus NUMBER`: Specify how many GPUs you want to use, if cnn is compiled with CUDA.
   Currently, only one GPU is supported.
 * `--cnn-gpu-ids X,Y,Z`: Specify the GPUs that you want to use by device ID. Currently only
