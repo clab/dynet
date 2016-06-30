@@ -760,7 +760,14 @@ def make_network_graph(compact, expression_names, lookup_names):
   nodes = set()
 #   edges = defaultdict(set) # parent -> (child, extra)
   
-  var_name_dict = {e.vindex: expression_names[e] for e in graphviz_items if e in expression_names}
+  var_name_dict = dict()
+  for e in graphviz_items: # e: Expression
+    if e in expression_names:
+      var_name_dict[e.vindex] = expression_names[e]
+    elif e.name == 'parameters' or e.name == 'lookup_parameters':
+      [name, _dim] = e.args
+      var_name_dict[e.vindex] = name
+  
   rnn_bldr_name = defaultdict(lambda: chr(len(rnn_bldr_name)+ord('A')))
   def vidx2str(vidx): return '%s%s' % ('N', vidx)
 
@@ -787,14 +794,12 @@ def make_network_graph(compact, expression_names, lookup_names):
       arg_strs = []
     elif f_name == 'parameters':
       [name, _dim] = args
-      var_name_dict[vidx] = name
       arg_strs = []
       if compact:
         f_name = var_name_dict[vidx]
       node_type = '1_param'
     elif f_name == 'lookup_parameters':
       [name, _dim] = args
-      var_name_dict[vidx] = name
       arg_strs = []
       if compact:
         f_name = var_name_dict[vidx]
@@ -895,7 +900,7 @@ def make_network_graph(compact, expression_names, lookup_names):
     var_name = '%s' % (var_name_dict.get(vidx, 'v%d' % (vidx))) if not compact else ''
 #     if show_dims:
 #       str_repr = '%s\\n%s' % (shape_str(e.dim), str_repr)
-    if expression_names and (e in expression_names):
+    if compact and expression_names and (e in expression_names) and (expression_names[e] != f_name):
       str_repr = '%s\\n%s' % (str_repr, expression_names[e])
     label = str_repr
     if not compact:
