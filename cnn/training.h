@@ -30,6 +30,11 @@ struct Trainer {
   // scale the gradient by (otherwise 1)
   float clip_gradients();
 
+  // TODO: This is unprotected temporarily until there is a better solution
+  //       for serializing the weight decay when saving models
+  // Rescale all the parameters handled by this model
+  void rescale_and_reset_weight_decay();
+
   // learning rates
   real eta0;
   real eta;
@@ -52,7 +57,6 @@ struct Trainer {
   Model* model;  // parameters and gradients live here
 
  protected:
-  void rescale_and_reset_weight_decay();
   virtual void alloc_impl() { }
   virtual void update_rule(real scale, real gscale, const std::vector<Tensor*> & values) = 0;
   virtual void update_params(real scale, real gscale, size_t idx) = 0;
