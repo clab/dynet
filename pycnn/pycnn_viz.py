@@ -162,30 +162,6 @@ def GVExpr(name, args, dim):
   graphviz_items.append(e)
   return e
 
-# class Parameters(Expression):
-#   def __init__(self, name, args, dim):
-#     super(LookupParameters, self).__init__(name, args, dim)
-#     graphviz_items.append(self)
-#   def shape(self):
-#       if self.thisptr.dim.ndims() == 1: return (self.thisptr.dim.rows())
-#       return (self.thisptr.dim.rows(), self.thisptr.dim.cols())
-#   def as_array(self): return None
-#   def load_array(self, arr): pass
-# 
-# class LookupParameters(Expression):
-#   def __init__(self, name, args, dim):
-#     super(LookupParameters, self).__init__(name, args, dim)
-#     graphviz_items.append(self)
-#   def init_from_array(self, arr): pass
-#   def shape(self):
-#       if self.thisptr.dim.cols() != 1:
-#           return (self.thisptr.values.size(), self.thisptr.dim.rows(), self.thisptr.dim.cols())
-#       return (self.thisptr.values.size(), self.thisptr.dim.rows())
-#   def __getitem__(self, i): return lookup(self, i)
-#   def batch(self, i): return lookup_batch(self, i)
-#   def init_row(self, i, row): pass
-#   def as_array(self): return None
-
 
 class Model(object):
     def __init__(self):
@@ -396,10 +372,7 @@ def new_builder_num():
   builder_num += 1
   return builder_num
 
-class RNNBuilder(object):
-  def __init__(self, layers, input_dim, hidden_dim, model):
-    raise RuntimeError("Cannot instantiate RNNBuilder directly.")
-
+class _RNNBuilder(object):
   def new_graph(self):
       self.cg_version = _cg.version()
       self.builder_version = new_builder_num()
@@ -486,7 +459,7 @@ class RNNBuilder(object):
           self._init_state = RNNState(self, -1)
       return self._init_state
 
-class SimpleRNNBuilder(RNNBuilder):
+class SimpleRNNBuilder(_RNNBuilder):
   def __init__(self, layers, input_dim, hidden_dim, model): 
     self.cg_version = -1
     self.layers = layers
@@ -496,7 +469,7 @@ class SimpleRNNBuilder(RNNBuilder):
     self._init_state = None
     self.builder_version = new_builder_num()
   def whoami(self): return "SimpleRNNBuilder"
-class LSTMBuilder(RNNBuilder):
+class LSTMBuilder(_RNNBuilder):
   def __init__(self, layers, input_dim, hidden_dim, model): 
     self.cg_version = -1
     self.layers = layers
@@ -506,7 +479,7 @@ class LSTMBuilder(RNNBuilder):
     self._init_state = None
     self.builder_version = new_builder_num()
   def whoami(self): return "LSTMBuilder"
-class FastLSTMBuilder(RNNBuilder):
+class FastLSTMBuilder(_RNNBuilder):
   def __init__(self, layers, input_dim, hidden_dim, model): 
     self.cg_version = -1
     self.layers = layers
@@ -634,25 +607,6 @@ class RNNState(object): # {{{
 
     def output(self): return self._out
 
-#     def h(self):
-#         """
-#         tuple of expressions representing the output of each hidden layer
-#         of the current step.
-#         the actual output of the network is at h()[-1].
-#         """
-#         return tuple(self.builder.get_h(CRNNPointer(self.state_idx)))
-# 
-#     def s(self):
-#         """
-#         tuple of expressions representing the hidden state of the current
-#         step.
-# 
-#         For SimpleRNN, s() is the same as h()
-#         For LSTM, s() is a series of of memory vectors, followed the series
-#                   followed by the series returned by h().
-#         """
-#         return tuple(self.builder.get_s(CRNNPointer(self.state_idx)))
-
     def prev(self): return self._prev
     def b(self): return self.builder
     def get_state_idx(self): return self.state_idx
@@ -763,7 +717,7 @@ def make_network_graph(compact, expression_names, lookup_names):
   
   var_name_dict = dict()
   for e in graphviz_items: # e: Expression
-    if e in expression_names:
+    if expression_names and (e in expression_names):
       var_name_dict[e.vindex] = expression_names[e]
     elif e.name == 'parameters' or e.name == 'lookup_parameters':
       [name, _dim] = e.args
@@ -1031,82 +985,3 @@ def PrintGraphviz(compact=False, show_dims=True, expression_names=None, lookup_n
     print '  %s -> %s [style=dotted];' % (name_p, name_n) # ,dir=both
 
   print '}'
-
-
-
-
-
-
-
-
-
-
-
-class BiRNNBuilder(object):
-    def __init__(self, num_layers, input_dim, hidden_dim, model, rnn_builder_factory):
-        assert num_layers > 0
-        assert hidden_dim % 2 == 0
-        self.builder_layers = []
-        f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
-        b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
-        self.builder_layers.append((f,b))
-        for _ in xrange(num_layers-1):
-            f = rnn_builder_factory(1, hidden_dim, hidden_dim/2, model)
-            b = rnn_builder_factory(1, hidden_dim, hidden_dim/2, model)
-            self.builder_layers.append((f,b))
-
-    def whoami(self): return "BiRNNBuilder"
-
-    def add_inputs(self, es):
-        """
-        returns the list of state pairs (stateF, stateB) obtained by adding 
-        inputs to both forward (stateF) and backward (stateB) RNNs.  
-
-        see also transduce(xs)
-
-        .transduce(xs) is different from .add_inputs(xs) in the following way:
-
-            .add_inputs(xs) returns a list of RNNState pairs. RNNState objects can be
-             queried in various ways. In particular, they allow access to the previous
-             state, as well as to the state-vectors (h() and s() )
-
-            .transduce(xs) returns a list of Expression. These are just the output
-             expressions. For many cases, this suffices. 
-             transduce is much more memory efficient than add_inputs. 
-        """
-        for e in es:
-            ensure_freshness(e)
-        for (fb,bb) in self.builder_layers[:-1]:
-            fs = fb.initial_state().transduce(es)
-            bs = bb.initial_state().transduce(reversed(es))
-            es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
-        (fb,bb) = self.builder_layers[-1]
-        fs = fb.initial_state().add_inputs(es)
-        bs = bb.initial_state().add_inputs(reversed(es))
-        return [(f,b) for f,b in zip(fs, reversed(bs))]
-
-    def transduce(self, es):
-        """
-        returns the list of output Expressions obtained by adding the given inputs
-        to the current state, one by one, to both the forward and backward RNNs, 
-        and concatenating.
-        
-        see also add_inputs(xs)
-
-        .transduce(xs) is different from .add_inputs(xs) in the following way:
-
-            .add_inputs(xs) returns a list of RNNState pairs. RNNState objects can be
-             queried in various ways. In particular, they allow access to the previous
-             state, as well as to the state-vectors (h() and s() )
-
-            .transduce(xs) returns a list of Expression. These are just the output
-             expressions. For many cases, this suffices. 
-             transduce is much more memory efficient than add_inputs. 
-        """
-        for e in es:
-            ensure_freshness(e)
-        for (fb,bb) in self.builder_layers:
-            fs = fb.initial_state().transduce(es)
-            bs = bb.initial_state().transduce(reversed(es))
-            es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
-        return es
