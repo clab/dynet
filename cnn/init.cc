@@ -60,7 +60,7 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
           cerr << "[cnn] weight decay parameter must be between 0 and 1 (probably very small like 1e-6)\n";
           abort();
         }
-        global_weight_decay.SetLambda(decay);
+        weight_decay_lambda = decay;
       }
     } else if (arg == "--cnn-seed" || arg == "--cnn_seed") {
       if ((argi + 1) > argc) {

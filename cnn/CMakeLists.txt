@@ -32,7 +32,6 @@ set(cnn_library_SRCS
     shadow-params.cc
     tensor.cc
     training.cc
-    weight-decay.cc
 )
 
 # Headers:
