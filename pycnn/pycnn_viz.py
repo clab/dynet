@@ -269,6 +269,14 @@ def conv1d_wide(x, y):
   else:
     d = make_dim(x.dim[0], x.dim[1] + y.dim[1] - 1)
   return GVExpr('conv1d_wide', [x,y], d)
+def filter1d_narrow(x, y): 
+  if x.dim.invalid() or y.dim.invalid():
+    d = InvalidDim
+  elif x.dim[0] != y.dim[0]:
+    d = InvalidConcreteDim(x.dim, y.dim)
+  else:
+    d = make_dim(x.dim[0], x.dim[1] - y.dim[1] + 1)
+  return GVExpr('filter1d_narrow', [x,y], d)
 
 # unary-exp
 def tanh(x): return GVExpr('tanh', [x], copy_dim(x))
@@ -364,6 +372,9 @@ def new_builder_num():
   return builder_num
 
 class _RNNBuilder(object):
+  def set_dropout(self, f): pass
+  def disable_dropout(self): pass
+
   def new_graph(self):
       self.cg_version = _cg.version()
       self.builder_version = new_builder_num()
