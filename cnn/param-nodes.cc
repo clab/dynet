@@ -88,7 +88,7 @@ void LookupNode::accumulate_grad(const Tensor& g) {
 template<class MyDevice>
 void ConstParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * global_weight_decay.CurrentWeightDecay();
+  fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.CurrentWeightDecay();
 }
 
 template<class MyDevice>
@@ -111,7 +111,7 @@ void ParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Te
 //    fx.v = params->values.v;
 //    return;
 //  }
-  fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * global_weight_decay.CurrentWeightDecay();
+  fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.CurrentWeightDecay();
 }
 
 template<class MyDevice>
@@ -183,7 +183,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   if(pindex) {
     assert(*pindex < params.get()->values.size());
     assert (fx.d.batch_elems() == 1);
-    fx.tvec().device(*dev.edevice) = params.get()->values[*pindex].tvec() * global_weight_decay.CurrentWeightDecay();
+    fx.tvec().device(*dev.edevice) = params.get()->values[*pindex].tvec() * params.mp->weight_decay.CurrentWeightDecay();
   } else {
     assert (pindices);
     assert (fx.d.batch_elems() == pindices->size());
@@ -195,12 +195,12 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
       cudaMemcpyAsync(v, params.get()->values[i].v, fx.d.batch_size() * sizeof(float), cudaMemcpyDeviceToDevice);
 #else
       // we should use colwise() instead of memcpy to get rid of the
-      // extra multiply by global_weight_decay.CurrentWeightDecay()
+      // extra multiply by params.mp->weight_decay.CurrentWeightDecay()
       memcpy(v, params.get()->values[i].v, fx.d.batch_size() * sizeof(float));
 
 #endif
     }
-    fx.tvec().device(*dev.edevice) = fx.tvec() * global_weight_decay.CurrentWeightDecay();
+    fx.tvec().device(*dev.edevice) = fx.tvec() * params.mp->weight_decay.CurrentWeightDecay();
   }
 }
 

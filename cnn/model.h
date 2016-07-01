@@ -13,6 +13,7 @@
 #include <boost/archive/text_oarchive.hpp>
 
 #include "cnn/tensor.h"
+#include "cnn/weight-decay.h"
 
 namespace cnn {
 
@@ -151,7 +152,7 @@ private:
 // parameters know how to track their gradients, but any extra information (like velocity) will live here
 class Model {
  public:
-  Model() : gradient_norm_scratch(nullptr) {}
+  Model();
   ~Model();
   float gradient_l2_norm() const;
   void reset_gradient();
@@ -169,6 +170,7 @@ class Model {
   // That is to say, a 2x2 matrix counts as four parameters.
   size_t parameter_count() const;
 
+  L2WeightDecay weight_decay;
  private:
   friend class boost::serialization::access;
   template<class Archive>
@@ -176,6 +178,7 @@ class Model {
     ar & all_params;
     ar & params;
     ar & lookup_params;
+    ar & weight_decay;
   }
 
   std::vector<ParameterStorageBase*> all_params;

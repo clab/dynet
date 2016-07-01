@@ -34,11 +34,16 @@ struct L2WeightDecay {
     weight_decay = 1.0f;
   }
  private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & weight_decay;
+    ar & lambda;
+  }
+
   float weight_decay;
   float lambda;
 };
-
-extern L2WeightDecay global_weight_decay;
 
 } // namespace cnn
 

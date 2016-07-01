@@ -209,6 +209,10 @@ void LookupParameter::Initialize(unsigned index, const std::vector<float>& val) 
   get()->Initialize(index, val);
 }
 
+Model::Model() : gradient_norm_scratch(nullptr) {
+  weight_decay.SetLambda(weight_decay_lambda);
+}
+
 Model::~Model() {
   for (auto p : all_params) delete p;
   if(gradient_norm_scratch)
