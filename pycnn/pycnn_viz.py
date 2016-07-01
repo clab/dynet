@@ -118,7 +118,7 @@ class Expression(object): #{{{
 
   def __repr__(self): return str(self)
   def __str__(self): return '%s([%s], %s, %s/%s)' % (self.name, ', '.join(map(str,self.args)), self.dim, self.vindex, self.cg_version)  #"expression %s/%s" % (self.vindex, self.cg_version)
-  def __getitem__(self, i): return None
+  def __getitem__(self, i): return lookup(self, i)
   def __getslice__(self, i, j): return None
   def scalar_value(self, recalculate=False): return 0.0
   def vec_value(self, recalculate=False): return []
@@ -126,6 +126,7 @@ class Expression(object): #{{{
   def value(self, recalculate=False): return None
   def forward(self, recalculate=False): return None
   def set(self, x): pass
+  def batch(self, i): return lookup_batch(self, i)
 
   def backward(self): pass
 
@@ -164,28 +165,18 @@ def GVExpr(name, args, dim):
 
 
 class Model(object):
-    def __init__(self):
-        self.named_params = {}
-        self.lookups = []
-        self.regular = []
-
-    def add_parameters(self, name, dim, scale=0):
-        assert(name not in self.named_params), "name already registered"
-        pp = Expression('parameters', [name, dim], make_dim(dim))
-        self.named_params[name] = pp
-        self.regular.append(name)
+    def add_parameters(self, dim, scale=0):
+        assert(isinstance(dim,(tuple,int)))
+        pp = Expression('parameters', [dim], make_dim(dim))
         return pp
 
-    def add_lookup_parameters(self, name, dim):
+    def add_lookup_parameters(self, dim):
         assert(isinstance(dim, tuple))
-        assert(name not in self.named_params), "name already registered"
-        pp = Expression('lookup_parameters', [name, dim], make_dim(dim[1]))
-        self.named_params[name] = pp
-        self.lookups.append(name)
+        pp = Expression('lookup_parameters', [dim], make_dim(dim[1]))
         return pp
 
-    def __getitem__(self, name): return self.named_params[name]
-    def __contains__(self, name): return name in self.named_params
+    def save_all(self, fname): pass
+    def load_all(self, fname): pass
     def save(self, fname): pass
     def load(self, fname): pass
 
@@ -651,15 +642,15 @@ class Trainer(object):
   def update_epoch(self, r = 1.0): pass
   def status(self): pass
 class SimpleSGDTrainer(Trainer):
-    def __init__(self, m, lam = 1e-6, e0 = 0.1): pass
+    def __init__(self, m, e0 = 0.1): pass
 class MomentumSGDTrainer(Trainer):
-    def __init__(self, m, lam = 1e-6, e0 = 0.01, mom = 0.9): pass
+    def __init__(self, m, e0 = 0.01, mom = 0.9): pass
 class AdagradTrainer(Trainer):
-    def __init__(self, m, lam = 1e-6, e0 = 0.1, eps = 1e-20): pass
+    def __init__(self, m, e0 = 0.1, eps = 1e-20): pass
 class AdadeltaTrainer(Trainer):
-    def __init__(self, m, lam = 1e-6, eps = 1e-6, rho = 0.95): pass
+    def __init__(self, m, eps = 1e-6, rho = 0.95): pass
 class AdamTrainer(Trainer):
-    def __init__(self, m, lam = 1e-6, alpha = 0.001, beta_1 = 0.9, beta_2 = 0.999, eps = 1e-8 ): pass
+    def __init__(self, m, alpha = 0.001, beta_1 = 0.9, beta_2 = 0.999, eps = 1e-8 ): pass
 
 
 
@@ -716,12 +707,10 @@ def make_network_graph(compact, expression_names, lookup_names):
 #   edges = defaultdict(set) # parent -> (child, extra)
   
   var_name_dict = dict()
-  for e in graphviz_items: # e: Expression
-    if expression_names and (e in expression_names):
-      var_name_dict[e.vindex] = expression_names[e]
-    elif e.name == 'parameters' or e.name == 'lookup_parameters':
-      [name, _dim] = e.args
-      var_name_dict[e.vindex] = name
+  if expression_names:
+    for e in graphviz_items: # e: Expression
+      if e in expression_names:
+        var_name_dict[e.vindex] = expression_names[e]
   
   rnn_bldr_name = defaultdict(lambda: chr(len(rnn_bldr_name)+ord('A')))
   def vidx2str(vidx): return '%s%s' % ('N', vidx)
@@ -748,23 +737,35 @@ def make_network_graph(compact, expression_names, lookup_names):
       [_v, _d] = args
       arg_strs = []
     elif f_name == 'parameters':
-      [name, _dim] = args
+      [_dim] = args
       arg_strs = []
       if compact:
-        f_name = var_name_dict[vidx]
+        if vidx in var_name_dict:
+          f_name = var_name_dict[vidx]
       node_type = '1_param'
     elif f_name == 'lookup_parameters':
-      [name, _dim] = args
+      [_dim] = args
       arg_strs = []
       if compact:
-        f_name = var_name_dict[vidx]
+        if vidx in var_name_dict:
+          f_name = var_name_dict[vidx]
       node_type = '1_param'
     elif f_name == 'lookup':
       [p, idx, update] = args
-      [name, _dim] = p.args
-      item_name = ('\\"%s\\"' % (lookup_names[name][idx],)) if (lookup_names and (name in lookup_names)) else None
+      [_dim] = p.args
+      if vidx in var_name_dict:
+        name = var_name_dict[vidx]
+        item_name = ('\\"%s\\"' % (lookup_names[name][idx],)) if (lookup_names and (name in lookup_names)) else None
+      else:
+        name = None
+        item_name = None
       if compact:
-        f_name = item_name if item_name is not None else ('%s[%s]' % (name, idx))
+        if item_name is not None:
+          f_name = item_name
+        elif name is not None:
+          f_name = '%s[%s]' % (name, idx)
+        else:
+          f_name = 'lookup(%s)' % (idx)
         arg_strs = []
       else:
         arg_strs = [var_name_dict.get(p.vindex, 'v%d' % (p.vindex))]
