@@ -41,11 +41,17 @@ struct ParameterStorage : public ParameterStorageBase {
   friend class Model;
   void scale_parameters(float a) override;
   void zero() override;
+  template <class MyDevice>
+  void squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void squared_l2norm(float* sqnorm) const override;
+  template <class MyDevice>
+  void g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
 
   void copy(const ParameterStorage & val);
+  template <class MyDevice>
+  void accumulate_grad_dev(MyDevice & dev, const Tensor& g);
   void accumulate_grad(const Tensor& g);
   void clear();
 
@@ -71,12 +77,20 @@ struct LookupParameterStorage : public ParameterStorageBase {
   friend class Model;
   void scale_parameters(float a) override;
   void zero() override;
+  template <class MyDevice>
+  void squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void squared_l2norm(float* sqnorm) const override;
+  template <class MyDevice>
+  void g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
-  void Initialize(unsigned index, const std::vector<float>& val);
+  template <class MyDevice>
+  void initialize_dev(MyDevice & dev, unsigned index, const std::vector<float>& val);
+  void initialize(unsigned index, const std::vector<float>& val);
 
   void copy(const LookupParameterStorage & val);
+  template <class MyDevice>
+  void accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& g);
   void accumulate_grad(unsigned index, const Tensor& g);
   void clear();
 
@@ -126,7 +140,7 @@ struct LookupParameter {
   LookupParameter();
   LookupParameter(const Model* mp, unsigned long index);
   LookupParameterStorage* get() const;
-  void Initialize(unsigned index, const std::vector<float>& val) const;
+  void initialize(unsigned index, const std::vector<float>& val) const;
 
   // Zero the parameters
   void zero();
@@ -154,6 +168,8 @@ class Model {
  public:
   Model();
   ~Model();
+  template <class MyDevice>
+  float gradient_l2_norm_dev(MyDevice & dev) const;
   float gradient_l2_norm() const;
   void reset_gradient();
   // set scale to use custom initialization

@@ -11,9 +11,27 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#if HAVE_CUDA
-#include "cnn/gpu-ops.h"
-#include "cnn/cuda.h"
+// Macros for defining functions over parameters
+// NOTE: This only works on the default device, as parameters are currently defined over default devices
+#ifdef __CUDACC__
+#define CNN_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
+  template void MyParam::dev_func<Device_GPU>(Device_GPU & dev, float *sqnorm) const;
+#elif defined(HAVE_CUDA)
+#define CNN_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
+  extern template void MyParam::dev_func<Device_GPU>(Device_GPU & dev, float *sqnorm) const; \
+  template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \
+  void MyParam::regular_func(float *sqnorm) const { \
+    if(default_device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)default_device,sqnorm); } \
+    else if(default_device->type == DeviceType::GPU) { dev_func(*(Device_GPU*)default_device,sqnorm); } \
+    else { abort(); } \
+  }
+#else
+#define CNN_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
+  template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \
+  void MyParam::regular_func(float *sqnorm) const { \
+    if(default_device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)default_device,sqnorm); } \
+    else { abort(); } \
+  }
 #endif
 
 using namespace std;
@@ -22,6 +40,9 @@ BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ParameterStorage)
 BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameterStorage)
 
 namespace cnn {
+
+// CPU only functions
+#ifndef __CUDACC__
 
 ParameterStorageBase::~ParameterStorageBase() {}
 
@@ -50,33 +71,9 @@ void ParameterStorage::zero() {
   clear();
 }
 
-void ParameterStorage::squared_l2norm(float* sqnorm) const {
-#if HAVE_CUDA
-  gpu::l2_norm_reducer(values.d.size(), values.v, sqnorm, true, false);
-#else
-  *sqnorm = (*values).squaredNorm();
-#endif
-}
-
-void ParameterStorage::g_squared_l2norm(float* sqnorm) const {
-#if HAVE_CUDA
-  gpu::l2_norm_reducer(g.d.size(), g.v, sqnorm, true, false);
-#else
-  *sqnorm = g.vec().squaredNorm();
-#endif
-}
-
 void ParameterStorage::copy(const ParameterStorage & param) {
   assert(dim == param.dim);
   TensorTools::CopyElements(values, param.values);
-}
-
-void ParameterStorage::accumulate_grad(const Tensor& d) {
-#if HAVE_CUDA
-  CUBLAS_CHECK(cublasSaxpy(cublas_handle, g.d.size(), kSCALAR_ONE, d.v, 1, g.v, 1));
-#else
-  g.vec() += d.vec();
-#endif
 }
 
 void ParameterStorage::clear() {
@@ -110,63 +107,14 @@ void LookupParameterStorage::zero() {
   clear();
 }
 
-void LookupParameterStorage::Initialize(unsigned index, const vector<float>& val) {
-  assert(int(val.size()) == int(dim.size()));
-#if HAVE_CUDA
-  cerr << "implement LookupParameterStorage::Initialize\n";
-  throw cuda_not_implemented("LookupParameterStorage::Initialize");
-#else
-  memcpy(values[index].v, &val[0], val.size() * sizeof(float));
-#endif
-}
-
 size_t LookupParameterStorage::size() const {
   return values.size() * dim.size();
-}
-
-void LookupParameterStorage::g_squared_l2norm(float* sqnorm) const {
-#if HAVE_CUDA
-  bool acc = false;
-  for (auto i : non_zero_grads) {
-    gpu::l2_norm_reducer(grads[i].d.size(), grads[i].v, sqnorm, true, acc);
-    acc = true;
-  }
-#else
-  real a = 0;
-  for (auto i : non_zero_grads)
-    a += (*grads[i]).squaredNorm();
-  *sqnorm = a;
-#endif
-}
-
-void LookupParameterStorage::squared_l2norm(float* sqnorm) const {
-#if HAVE_CUDA
-  bool acc = false;
-  for (unsigned i = 0; i < values.size(); ++i) {
-    gpu::l2_norm_reducer(values[i].d.size(), values[i].v, sqnorm, true, acc);
-    acc = true;
-  }
-#else
-  float a = 0;
-  for (unsigned i = 0; i < values.size(); ++i)
-    a += (*values[i]).squaredNorm();
-  *sqnorm = a;
-#endif
 }
 
 void LookupParameterStorage::copy(const LookupParameterStorage& param) {
   assert(dim == param.dim);
   for(size_t i = 0; i < param.values.size(); ++i)
     TensorTools::CopyElements(values[i], param.values[i]);
-}
-
-void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
-  non_zero_grads.insert(index);
-#if HAVE_CUDA
-  CUBLAS_CHECK(cublasSaxpy(cublas_handle, d.d.size(), kSCALAR_ONE, d.v, 1, grads[index].v, 1));
-#else
-  *grads[index] += *d;
-#endif
 }
 
 void LookupParameterStorage::clear() {
@@ -205,8 +153,8 @@ void LookupParameter::zero() {
   return mp->lookup_parameters_list()[index]->zero();
 }
 
-void LookupParameter::Initialize(unsigned index, const std::vector<float>& val) const {
-  get()->Initialize(index, val);
+void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
+  get()->initialize(index, val);
 }
 
 Model::Model() : gradient_norm_scratch(nullptr) {
@@ -232,27 +180,6 @@ void Model::project_weights(float radius) {
   for (int i = 0; i < pi; ++i)
     gg += project_scratch[i];
   cerr << "NORM: " << sqrt(gg) << endl;
-}
-
-float Model::gradient_l2_norm() const {
-  if (!gradient_norm_scratch)
-    gradient_norm_scratch = (float*)default_device->mem->malloc(all_params.size() * sizeof(float));
-  int pi = 0;
-  for (auto p : all_params) {
-    p->g_squared_l2norm(&gradient_norm_scratch[pi]);
-    ++pi;
-  }
-#if HAVE_CUDA
-  float res = 0;
-  gpu::l2_norm_reducer(all_params.size(), gradient_norm_scratch, gradient_norm_scratch, false, false);
-  cudaMemcpy(&res, gradient_norm_scratch, sizeof(float),  cudaMemcpyDeviceToHost);
-  return sqrt(res);
-#else
-  double gg = 0;
-  for (int i = 0; i < pi; ++i)
-    gg += gradient_norm_scratch[i];
-  return sqrt(gg);
-#endif
 }
 
 Parameter Model::add_parameters(const Dim& d, float scale) {
@@ -297,5 +224,157 @@ void load_cnn_model(std::string filename, Model* model) {
     boost::archive::text_iarchive ia(in);
     ia >> (*model);
 };
+
+#endif
+
+// CPU/GPU code
+// TODO: It's a bit annoying to re-implement the CPU/GPU control code for each
+//       function, but it's not clear how to handle heterogeneous functions w/
+//       macros
+
+// Take the squared norm
+template <class MyDevice>
+void ParameterStorage::squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
+  Tensor sqnorm_t({1}, sqnorm, &dev);
+  sqnorm_t.t<0>().device(*dev.edevice) = values.tvec().square().sum();
+}
+CNN_PARAMNORM_INST_DEV_IMPL(ParameterStorage, squared_l2norm, squared_l2norm_dev)
+
+// Take the squared norm of the gradient
+template <class MyDevice>
+void ParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
+  Tensor sqnorm_t({1}, sqnorm, &dev);
+  sqnorm_t.t<0>().device(*dev.edevice) = g.tvec().square().sum();
+}
+CNN_PARAMNORM_INST_DEV_IMPL(ParameterStorage, g_squared_l2norm, g_squared_l2norm_dev)
+
+template <class MyDevice>
+void ParameterStorage::accumulate_grad_dev(MyDevice & dev, const Tensor& d) {
+  g.tvec().device(*dev.edevice) += d.tvec();
+}
+#ifdef __CUDACC__
+  template void ParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d) const;
+#elif defined(HAVE_CUDA)
+  extern template void ParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d) const;
+  template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d) const;
+  void ParameterStorage::accumulate_grad(const Tensor& d) {
+    if(values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device,d); }
+    else if(values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values.device,d); }
+    else { abort(); }
+  }
+#else
+  template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
+  void ParameterStorage::accumulate_grad(const Tensor& d) {
+    if(default_device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)default_device,d); }
+    else { abort(); }
+  }
+#endif
+
+template <class MyDevice>
+void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, const vector<float>& val) {
+  assert(int(val.size()) == int(dim.size()));
+#ifdef __CUDACC__
+  cudaMemcpyAsync(values[index].v, &val[0], val.size() * sizeof(float), cudaMemcpyHostToDevice);
+#else
+  memcpy(values[index].v, &val[0], val.size() * sizeof(float));
+#endif
+}
+#ifdef __CUDACC__
+  template void LookupParameterStorage::initialize_dev<Device_GPU>(Device_GPU & dev, unsigned index, const vector<float>& val) const;
+#elif defined(HAVE_CUDA)
+  extern template void LookupParameterStorage::initialize_dev<Device_GPU>(Device_GPU & dev, unsigned index, const vector<float>& val) const;
+  template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val) const;
+  void LookupParameterStorage::initialize(const Tensor& d) {
+    if(values.device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values.device,index,val); }
+    else if(values.device->type == DeviceType::GPU) { initialize_dev(*(Device_GPU*)values.device,index,val); }
+    else { abort(); }
+  }
+#else
+  template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val);
+  void LookupParameterStorage::initialize(unsigned index, const vector<float>& val) {
+    if(default_device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)default_device,index,val); }
+    else { abort(); }
+  }
+#endif
+
+template <class MyDevice>
+void LookupParameterStorage::squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
+  Tensor sqnorm_t({1}, sqnorm, &dev);
+  sqnorm_t.t<0>().device(*dev.edevice) = values[0].tvec().square().sum();
+  for (unsigned i = 1; i < values.size(); ++i)
+    sqnorm_t.t<0>().device(*dev.edevice) += values[i].tvec().square().sum();
+}
+CNN_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, squared_l2norm, squared_l2norm_dev)
+
+template <class MyDevice>
+void LookupParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
+  Tensor sqnorm_t({1}, sqnorm, &dev);
+  auto it = non_zero_grads.begin();
+  assert(it != non_zero_grads.end());
+  sqnorm_t.t<0>().device(*dev.edevice) = grads[*(it++)].tvec().square().sum();
+  while(it != non_zero_grads.end())
+    sqnorm_t.t<0>().device(*dev.edevice) += grads[*(it++)].tvec().square().sum();
+}
+CNN_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, g_squared_l2norm, g_squared_l2norm_dev)
+
+template <class MyDevice>
+void LookupParameterStorage::accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& d) {
+  non_zero_grads.insert(index);
+  grads[index].tvec().device(*dev.edevice) += d.tvec();
+}
+#ifdef __CUDACC__
+  template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, unsigned index, const Tensor& d);
+#elif defined(HAVE_CUDA)
+  extern template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, unsigned index, const Tensor& d);
+  template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, unsigned index, const Tensor& d);
+  void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
+    if(values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device,index,d); }
+    else if(values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values.device,index,d); }
+    else { abort(); }
+  }
+#else
+  template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, unsigned index, const Tensor& d);
+  void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
+    if(default_device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)default_device,index,d); }
+    else { abort(); }
+  }
+#endif
+
+template <class MyDevice>
+float Model::gradient_l2_norm_dev(MyDevice & dev) const {
+  if (!gradient_norm_scratch)
+    gradient_norm_scratch = (float*)default_device->mem->malloc((all_params.size()+1) * sizeof(float));
+  size_t pi;
+  for(pi = 0; pi < all_params.size(); ++pi)
+    all_params[pi]->g_squared_l2norm(&gradient_norm_scratch[pi]);
+  Tensor scratch_t({(unsigned int)all_params.size()}, gradient_norm_scratch, &dev);
+  Tensor sum_t({1}, gradient_norm_scratch+pi, &dev);
+  sum_t.t<0>().device(*dev.edevice) = scratch_t.t<1>().sum().sqrt();
+#ifdef __CUDACC__
+  float res = 0;
+  cudaMemcpy(&res, gradient_norm_scratch, sizeof(float),  cudaMemcpyDeviceToHost);
+  return res;
+#else
+  return gradient_norm_scratch[pi];
+#endif
+}
+#ifdef __CUDACC__
+  template float Model::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
+#elif defined(HAVE_CUDA)
+  extern template float Model::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
+  template float Model::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
+  float Model::gradient_l2_norm() const {
+    if(values.device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)values.device); }
+    else if(values.device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_GPU*)values.device); }
+    else { abort(); }
+  }
+#else
+  template float Model::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
+  float Model::gradient_l2_norm() const {
+    if(default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
+    else { abort(); }
+  }
+#endif
+
 
 } // namespace cnn
