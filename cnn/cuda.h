@@ -49,7 +49,6 @@ inline std::pair<int,int> SizeToBlockThreadPair(int n) {
 }
 
 std::vector<Device*> Initialize_GPU(int& argc, char**& argv);
-extern cublasHandle_t cublas_handle;
 
 } // namespace cnn
 
