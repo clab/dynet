@@ -9,8 +9,6 @@ using namespace std;
 
 namespace cnn {
 
-cublasHandle_t cublas_handle;
-
 static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
@@ -155,10 +153,6 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
   }
   cerr << endl;
 
-  // eventually kill the global handle
-  CUDA_CHECK(cudaSetDevice(gpus[0]));
-  CUBLAS_CHECK(cublasCreate(&cublas_handle));
-  CUBLAS_CHECK(cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE));
   return gpudevices;
 }
 
