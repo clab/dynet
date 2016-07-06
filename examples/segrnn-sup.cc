@@ -89,7 +89,7 @@ struct SymbolEmbedding {
         }
         if (d.Contains(word)){
           // cout << "init" << endl;
-          p_labels.Initialize(d.Convert(word), p_embeding);
+          p_labels.initialize(d.Convert(word), p_embeding);
         }
       }
   }

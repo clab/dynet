@@ -42,14 +42,14 @@ int main(int argc, char** argv) {
 
     LookupParameter x_values = m.add_lookup_parameters(4, {2});
     LookupParameter y_values = m.add_lookup_parameters(4, {1});
-    x_values.Initialize(0, {1.0, 1.0});
-    x_values.Initialize(1, {-1.0, 1.0});
-    x_values.Initialize(2, {1.0, -1.0});
-    x_values.Initialize(3, {-1.0, -1.0});
-    y_values.Initialize(0, {-1.0});
-    y_values.Initialize(1, {1.0});
-    y_values.Initialize(2, {1.0});
-    y_values.Initialize(3, {-1.0});
+    x_values.initialize(0, {1.0, 1.0});
+    x_values.initialize(1, {-1.0, 1.0});
+    x_values.initialize(2, {1.0, -1.0});
+    x_values.initialize(3, {-1.0, -1.0});
+    y_values.initialize(0, {-1.0});
+    y_values.initialize(1, {1.0});
+    y_values.initialize(2, {1.0});
+    y_values.initialize(3, {-1.0});
   }
 
   Expression W = parameter(cg, p_W);
