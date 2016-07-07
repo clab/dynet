@@ -105,6 +105,13 @@ VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm)
   return new_node_index;
 }
 
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new SparseInputNode(d, ids, data, defdata));
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
 VariableIndex ComputationGraph::add_parameters(Parameter p) {
   VariableIndex new_node_index(nodes.size());
   ParameterNode* new_node = new ParameterNode(p);

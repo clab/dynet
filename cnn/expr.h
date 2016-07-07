@@ -21,6 +21,7 @@ Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 Expression parameter(ComputationGraph& g, Parameter p);
 Expression const_parameter(ComputationGraph& g, Parameter p);
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);

@@ -28,7 +28,7 @@ using namespace std;
 //    EIGEN_NO_MALLOC option. If you get an error about Eigen attempting to allocate
 //    memory, it is (probably) because of an implicit creation of a temporary variable.
 //    To tell Eigen this is not necessary, the noalias() method is available. If you really
-//    do need a temporary variable, its capacity must be requested by Node::aux_storage_space
+//    do need a temporary variable, its capacity must be requested by Node::aux_storage_size
 //
 // notes on debugging problems with differentiable components
 // 1) fx is uninitialized when forward is called- are you relying on it being 0?
