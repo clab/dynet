@@ -7,6 +7,10 @@
 #include "cnn/nodes-macros.h"
 #include "cnn/weight-decay.h"
 
+#ifdef HAVE_CUDA
+#include "cnn/gpu-ops.h"
+#endif
+
 using namespace std;
 
 namespace cnn {
@@ -174,11 +178,12 @@ template<class MyDevice>
 void SparseInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
 #if __CUDACC__
-  size_t id_bytes = ids.size() * sizeof(unsigned int);
-  cudaMemcpyAsync(aux_mem, &ids->front(), id_bytes, cudaMemcpyHostToDevice);
-  cudaMemcpyAsync(aux_mem+id_bytes, &data->front(), data.size() * sizeof(float), cudaMemcpyHostToDevice);
+  unsigned int* ids_ptr = (unsigned int*)aux_mem;
+  float* data_ptr = (float*)(ids_ptr + ids.size());
+  cudaMemcpyAsync(ids_ptr, &ids[0], ids.size() * sizeof(unsigned int), cudaMemcpyHostToDevice);
+  cudaMemcpyAsync(data_ptr, &data[0], data.size() * sizeof(float), cudaMemcpyHostToDevice);
   cnn::gpu::const_init(dim.size(), defdata, fx.v);
-  cnn::gpu::sparse_assign(ids.size(), (unsigned int*)aux_mem, (float*)aux_mem+id_bytes, fx.v);
+  cnn::gpu::sparse_assign(ids.size(), ids_ptr, data_ptr, fx.v);
 #else
   std::fill(fx.v, fx.v + dim.size(), defdata);
   for(size_t i = 0; i < ids.size(); ++i)
