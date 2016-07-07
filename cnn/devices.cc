@@ -4,12 +4,32 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 
 #include "cnn/cuda.h"
+#include "cnn/cnn.h"
 
 using namespace std;
 
 namespace cnn {
 
 Device::~Device() {}
+
+DeviceMemCheckpoint Device::mark(ComputationGraph *cg) {
+    cg->incremental_forward(); // needed so that we actually allocate the needed memory
+                               // for all existing nodes.
+    DeviceMemCheckpoint cp;
+    cp.fxs_used   = fxs->used;
+    cp.dEdfs_used = dEdfs->used;
+    cp.ps_used    = ps->used;
+    return cp;
+}
+
+void Device::revert(DeviceMemCheckpoint cp) {
+    assert(cp.fxs_used   <= fxs->used);
+    assert(cp.dEdfs_used <= dEdfs->used);
+    assert(cp.ps_used    <= ps->used);
+    fxs->used   = cp.fxs_used;
+    dEdfs->used = cp.dEdfs_used;
+    ps->used    = cp.ps_used;
+}
 
 #if HAVE_CUDA
 Device_GPU::Device_GPU(int mb, int device_id) :

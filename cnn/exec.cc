@@ -85,7 +85,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 }
 
 void SimpleExecutionEngine::backward() {
-  assert(nfxs.size() == cg.nodes.size());
+  assert(nfxs.size() >= cg.nodes.size());
   backward((VariableIndex)(cg.nodes.size()-1));
 }
 

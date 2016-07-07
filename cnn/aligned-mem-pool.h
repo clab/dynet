@@ -33,6 +33,7 @@ class AlignedMemoryPool {
     a->zero(mem, used);
   }
 
+  size_t used;
  private:
   void sys_alloc(size_t cap) {
     capacity = a->round_up_align(cap);
@@ -45,7 +46,6 @@ class AlignedMemoryPool {
     a->zero(mem, capacity);
   }
   size_t capacity;
-  size_t used;
   MemAllocator* a;
   void* mem;
 };

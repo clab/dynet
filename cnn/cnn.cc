@@ -77,6 +77,27 @@ void ComputationGraph::clear() {
   nodes.clear();
 }
 
+CGCheckpoint ComputationGraph::get_checkpoint() {
+    CGCheckpoint p;
+    p.device_mem_checkpoint = default_device->mark(this);
+    p.node_idx = nodes.size();
+    p.par_node_idx = parameter_nodes.size();
+    return p;
+}
+
+void ComputationGraph::revert(CGCheckpoint p) {
+    default_device->revert(p.device_mem_checkpoint);
+    // clear all nodes at position >= p.node_idx
+    if (nodes.size() > p.node_idx) {
+        nodes.resize(p.node_idx); // TODO verify deletion of nodes.
+    }
+    // clear all parameter nodes at position >= p.par_node_idx
+    if (parameter_nodes.size() > p.par_node_idx) {
+        parameter_nodes.resize(p.par_node_idx);
+    }
+}
+
+
 VariableIndex ComputationGraph::add_input(real s) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new ScalarInputNode(s));
