@@ -15,6 +15,9 @@ namespace cnn {
 
 enum class DeviceType {CPU, GPU};
 
+struct ComputationGraph; // TODO is there a nicer way to resolve this cyclic dependency?
+struct DeviceMemCheckpoint;
+
 class Device {
  protected:
   Device(DeviceType t, MemAllocator* m) : type(t), mem(m) {}
@@ -31,6 +34,8 @@ class Device {
   float* kSCALAR_ONE;
   float* kSCALAR_ZERO;
   std::string name;
+  virtual DeviceMemCheckpoint mark(ComputationGraph *cg);
+  virtual void revert(DeviceMemCheckpoint cp);
 };
 
 #if HAVE_CUDA
