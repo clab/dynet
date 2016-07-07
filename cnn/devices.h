@@ -30,7 +30,7 @@ class Device {
 #if HAVE_CUDA
 class Device_GPU : public Device {
  public:
-  explicit Device_GPU(int mb, int device_id);
+  explicit Device_GPU(size_t mb, int device_id);
   ~Device_GPU();
   int cuda_device_id;
   cublasHandle_t cublas_handle;
@@ -40,7 +40,7 @@ class Device_GPU : public Device {
 
 class Device_CPU : public Device {
  public:
-  explicit Device_CPU(int mb, bool shared);
+  explicit Device_CPU(size_t mb, bool shared);
   ~Device_CPU();
   CPUAllocator cpu_mem;
   MemAllocator* shmem;
