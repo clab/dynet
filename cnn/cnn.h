@@ -47,6 +47,12 @@ struct Node;
 namespace expr { struct Expression; }
 
 BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
+
+struct CGCheckpoint {
+    int node_idx;
+    int par_node_idx;
+};
+
 inline void swap(VariableIndex& i1, VariableIndex& i2) {
   VariableIndex t = i1;
   i1 = i2;
@@ -92,6 +98,9 @@ struct ComputationGraph {
 
   // reset ComputationGraph to a newly created state
   void clear();
+  CGCheckpoint get_checkpoint();
+  void revert(CGCheckpoint checkpoint);
+
 
   // perform computations
 
