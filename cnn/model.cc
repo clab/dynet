@@ -8,8 +8,11 @@
 
 #include <fstream>
 #include <sstream>
+
+#ifndef __CUDACC__
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#endif
 
 // Macros for defining functions over parameters
 // NOTE: This only works on the default device, as parameters are currently defined over default devices
@@ -36,8 +39,10 @@
 
 using namespace std;
 
+#ifndef __CUDACC__
 BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ParameterStorage)
 BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameterStorage)
+#endif
 
 namespace cnn {
 
@@ -253,10 +258,10 @@ void ParameterStorage::accumulate_grad_dev(MyDevice & dev, const Tensor& d) {
   g.tvec().device(*dev.edevice) += d.tvec();
 }
 #ifdef __CUDACC__
-  template void ParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d) const;
+  template void ParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d);
 #elif defined(HAVE_CUDA)
-  extern template void ParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d) const;
-  template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d) const;
+  extern template void ParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d);
+  template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
   void ParameterStorage::accumulate_grad(const Tensor& d) {
     if(values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device,d); }
     else if(values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values.device,d); }
@@ -280,13 +285,13 @@ void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, cons
 #endif
 }
 #ifdef __CUDACC__
-  template void LookupParameterStorage::initialize_dev<Device_GPU>(Device_GPU & dev, unsigned index, const vector<float>& val) const;
+  template void LookupParameterStorage::initialize_dev<Device_GPU>(Device_GPU & dev, unsigned index, const vector<float>& val);
 #elif defined(HAVE_CUDA)
-  extern template void LookupParameterStorage::initialize_dev<Device_GPU>(Device_GPU & dev, unsigned index, const vector<float>& val) const;
-  template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val) const;
-  void LookupParameterStorage::initialize(const Tensor& d) {
-    if(values.device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values.device,index,val); }
-    else if(values.device->type == DeviceType::GPU) { initialize_dev(*(Device_GPU*)values.device,index,val); }
+  extern template void LookupParameterStorage::initialize_dev<Device_GPU>(Device_GPU & dev, unsigned index, const vector<float>& val);
+  template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val);
+  void LookupParameterStorage::initialize(unsigned index, const vector<float>& val) {
+    if(values[index].device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values[index].device,index,val); }
+    else if(values[index].device->type == DeviceType::GPU) { initialize_dev(*(Device_GPU*)values[index].device,index,val); }
     else { abort(); }
   }
 #else
@@ -328,8 +333,8 @@ void LookupParameterStorage::accumulate_grad_dev(MyDevice & dev, unsigned index,
   extern template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, unsigned index, const Tensor& d);
   template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, unsigned index, const Tensor& d);
   void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
-    if(values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device,index,d); }
-    else if(values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values.device,index,d); }
+    if(values[index].device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values[index].device,index,d); }
+    else if(values[index].device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values[index].device,index,d); }
     else { abort(); }
   }
 #else
@@ -364,8 +369,8 @@ float Model::gradient_l2_norm_dev(MyDevice & dev) const {
   extern template float Model::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
   template float Model::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
   float Model::gradient_l2_norm() const {
-    if(values.device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)values.device); }
-    else if(values.device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_GPU*)values.device); }
+    if(default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
+    else if(default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_GPU*)default_device); }
     else { abort(); }
   }
 #else
