@@ -5,6 +5,7 @@
 #include <cstring>
 
 #if HAVE_CUDA
+#include "cnn/gpu-ops.h"
 #include "cnn/cuda.h"
 #endif
 
