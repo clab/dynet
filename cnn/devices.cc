@@ -11,7 +11,7 @@ namespace cnn {
 Device::~Device() {}
 
 #if HAVE_CUDA
-Device_GPU::Device_GPU(int mb, int device_id) :
+Device_GPU::Device_GPU(size_t mb, int device_id) :
     Device(DeviceType::GPU, &gpu_mem), cuda_device_id(device_id), gpu_mem(device_id) {
   CUDA_CHECK(cudaSetDevice(device_id));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
@@ -40,7 +40,7 @@ Device_GPU::~Device_GPU() {}
 // CPU -- 0 params
 //     -- 50mb fxs
 //     -- 50mb dEdfx
-Device_CPU::Device_CPU(int mb, bool shared) :
+Device_CPU::Device_CPU(size_t mb, bool shared) :
     Device(DeviceType::CPU, &cpu_mem), shmem(mem) {
   if (shared) shmem = new SharedAllocator();
   kSCALAR_MINUSONE = (float*) mem->malloc(sizeof(float));
