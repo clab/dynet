@@ -49,6 +49,21 @@ Dim InputNode::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
+string SparseInputNode::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "sparse_constant(" << dim << ')';
+  return s.str();
+}
+
+Dim SparseInputNode::dim_forward(const vector<Dim>& xs) const {
+  assert(ids.size() == data.size());
+  return dim;
+}
+
+size_t SparseInputNode::aux_storage_size() const {
+  return ids.size() * (sizeof(float) + sizeof(unsigned int));
+}
+
 string ScalarInputNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "scalar_constant(" << pdata << ')';
@@ -154,6 +169,34 @@ void InputNode::backward_dev_impl(const MyDevice & dev,
   abort();
 }
 CNN_NODE_INST_DEV_IMPL(InputNode)
+
+template<class MyDevice>
+void SparseInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+#if __CUDACC__
+  size_t id_bytes = ids.size() * sizeof(unsigned int);
+  cudaMemcpyAsync(aux_mem, &ids->front(), id_bytes, cudaMemcpyHostToDevice);
+  cudaMemcpyAsync(aux_mem+id_bytes, &data->front(), data.size() * sizeof(float), cudaMemcpyHostToDevice);
+  cnn::gpu::const_init(dim.size(), defdata, fx.v);
+  cnn::gpu::sparse_assign(ids.size(), (unsigned int*)aux_mem, (float*)aux_mem+id_bytes, fx.v);
+#else
+  std::fill(fx.v, fx.v + dim.size(), defdata);
+  for(size_t i = 0; i < ids.size(); ++i)
+    fx.v[ids[i]] = data[i];
+#endif
+}
+
+template<class MyDevice>
+void SparseInputNode::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  cerr << "called backward() on arity 0 node\n";
+  abort();
+}
+CNN_NODE_INST_DEV_IMPL(SparseInputNode)
 
 template<class MyDevice>
 void ScalarInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {

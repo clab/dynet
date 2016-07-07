@@ -64,6 +64,7 @@ struct ComputationGraph {
   VariableIndex add_input(const real* ps);  // add pointer to scalar
   VariableIndex add_input(const Dim& d, const std::vector<float>& data);
   VariableIndex add_input(const Dim& d, const std::vector<float>* pdata);
+  VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 
   // PARAMETERS
   // parameters are things that are optimized. in contrast to a system like

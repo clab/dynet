@@ -839,4 +839,16 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_batch_gradient ) {
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
+// Expression sparse_input(vector<unsigned int>& ids, vector<float>& src, float def);
+BOOST_AUTO_TEST_CASE( sparse_input_test ) {
+  cnn::ComputationGraph cg;
+  std::vector<unsigned int> ids = {0, 4};
+  input(cg, Dim({3},2), ids, ones2_vals, 0.5);
+  std::vector<float> exp = {1.0f, 0.5f, 0.5f, 0.5f, 1.0f, 0.5f};
+  std::vector<float> act = as_vector(cg.forward());
+  assert(exp.size() == act.size());
+  for(size_t i = 0; i < exp.size(); ++i)
+    BOOST_CHECK_CLOSE(exp[i], act[i], 0.001);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

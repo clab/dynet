@@ -99,7 +99,7 @@ void TensorTools::Constant(Tensor& d, float c) {
   if (!c) {
     CUDA_CHECK(cudaMemsetAsync(d.v, 0, d.d.size() * sizeof(float)));
   } else {
-    fill(d.v, d.v + d.d.size(), c);
+    cnn::gpu::const_init(d.d.size(), c, d.v);
   }
 #else
   if (!c) {

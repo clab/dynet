@@ -39,6 +39,23 @@ struct InputNode : public Node {
   const std::vector<float>* pdata;
 };
 
+// Represents specified (not learned) inputs to the network in sparse array format,
+// with an optional default value. Note that indexes refer to where the memory is actually
+// indexed in column-major format. When multiple batches are used they will also be
+// consecutive in memory. This doesn't support pointer input, because this would require
+// dynamic changing of the size of auxiliary memory on GPUs, although this could possibly
+// be fixed in the future.
+struct SparseInputNode : public Node {
+  explicit SparseInputNode(const Dim& d, const std::vector<unsigned int>& id, const std::vector<float>& dat, float defdat = 0.f) : dim(d), ids(id), data(dat), defdata(defdat) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  size_t aux_storage_size() const override;
+  Dim dim;
+  const std::vector<unsigned int> ids;
+  const std::vector<float> data;
+  float defdata;
+};
+
 // represents specified (not learned) scalar inputs to the network
 struct ScalarInputNode : public Node {
   explicit ScalarInputNode(real s) : data(s), pdata(&data) {}
