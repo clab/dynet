@@ -48,9 +48,16 @@ namespace expr { struct Expression; }
 
 BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
 
+struct DeviceMemCheckpoint {
+    size_t fxs_used;
+    size_t dEdfs_used;
+    size_t ps_used;
+};
+
 struct CGCheckpoint {
     int node_idx;
     int par_node_idx;
+    DeviceMemCheckpoint device_mem_checkpoint;
 };
 
 inline void swap(VariableIndex& i1, VariableIndex& i2) {
