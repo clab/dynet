@@ -67,6 +67,9 @@ cdef extern from "cnn/model.h" namespace "cnn":
 
 cdef extern from "cnn/cnn.h" namespace "cnn":
     ctypedef unsigned VariableIndex
+    cdef cppclass C_CGCheckpoint "cnn::CGCheckpoint":
+        pass
+
     cdef cppclass CComputationGraph "cnn::ComputationGraph":
         CComputationGraph() except +
         # Inputs
@@ -87,6 +90,10 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
         void invalidate()
         void backward()
         void backward(VariableIndex i)
+
+        # checkpointing
+        C_CGCheckpoint get_checkpoint()
+        void revert(C_CGCheckpoint cp)
 
         void PrintGraphviz() const
 
