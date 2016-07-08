@@ -17,8 +17,10 @@ __global__ void ker_sparse_assign(int n, unsigned int *idx, float *src, float *t
 }
 
 void sparse_assign(int n, unsigned int *idx, float *src, float *trg) {
-  auto tb = SizeToBlockThreadPair(n);
-  ker_sparse_assign<<<tb.first, tb.second>>>(n, idx, src, trg);
+  if(n > 0) {
+    auto tb = SizeToBlockThreadPair(n);
+    ker_sparse_assign<<<tb.first, tb.second>>>(n, idx, src, trg);
+  }
 }
 
 // CUDA kernel. Each thread takes care of one element of c
