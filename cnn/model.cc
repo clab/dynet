@@ -67,10 +67,6 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
 
 size_t ParameterStorage::size() const { return dim.size(); }
 
-void ParameterStorage::scale_parameters(float a) {
-  values.vec() *= a;
-}
-
 void ParameterStorage::zero() {
   TensorTools::Zero(values);
   clear();
@@ -99,11 +95,6 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
     g.device = default_device;
     TensorTools::Zero(g);
   }
-}
-
-void LookupParameterStorage::scale_parameters(float a) {
-  for (auto& p : values)
-    (*p) *= a;
 }
 
 void LookupParameterStorage::zero() {
@@ -270,7 +261,29 @@ void ParameterStorage::accumulate_grad_dev(MyDevice & dev, const Tensor& d) {
 #else
   template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
   void ParameterStorage::accumulate_grad(const Tensor& d) {
-    if(default_device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)default_device,d); }
+    if(values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device,d); }
+    else { abort(); }
+  }
+#endif
+
+template <class MyDevice>
+void ParameterStorage::scale_parameters_dev(MyDevice & dev, float a) {
+  values.tvec().device(*dev.edevice) = values.tvec() * a;
+}
+#ifdef __CUDACC__
+  template void ParameterStorage::scale_parameters_dev<Device_GPU>(Device_GPU & dev, float a);
+#elif defined(HAVE_CUDA)
+  extern template void ParameterStorage::scale_parameters_dev<Device_GPU>(Device_GPU & dev, float a);
+  template void ParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
+  void ParameterStorage::scale_parameters(float a) {
+    if(values.device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values.device,a); }
+    else if(values.device->type == DeviceType::GPU) { scale_parameters_dev(*(Device_GPU*)values.device,a); }
+    else { abort(); }
+  }
+#else
+  template void ParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
+  void ParameterStorage::scale_parameters(float a) {
+    if(values.device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values.device,a); }
     else { abort(); }
   }
 #endif
@@ -297,7 +310,7 @@ void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, cons
 #else
   template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val);
   void LookupParameterStorage::initialize(unsigned index, const vector<float>& val) {
-    if(default_device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)default_device,index,val); }
+    if(values[index].device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values[index].device,index,val); }
     else { abort(); }
   }
 #endif
@@ -340,7 +353,30 @@ void LookupParameterStorage::accumulate_grad_dev(MyDevice & dev, unsigned index,
 #else
   template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, unsigned index, const Tensor& d);
   void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
-    if(default_device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)default_device,index,d); }
+    if(values[index].device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values[index].device,index,d); }
+    else { abort(); }
+  }
+#endif
+
+template <class MyDevice>
+void LookupParameterStorage::scale_parameters_dev(MyDevice & dev, float a) {
+  for (auto& p : values)
+    p.tvec().device(*dev.edevice) = p.tvec() * a;
+}
+#ifdef __CUDACC__
+  template void LookupParameterStorage::scale_parameters_dev<Device_GPU>(Device_GPU & dev, float a);
+#elif defined(HAVE_CUDA)
+  extern template void LookupParameterStorage::scale_parameters_dev<Device_GPU>(Device_GPU & dev, float a);
+  template void LookupParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
+  void LookupParameterStorage::scale_parameters(float a) {
+    if(values[0].device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values[0].device,a); }
+    else if(values[0].device->type == DeviceType::GPU) { scale_parameters_dev(*(Device_GPU*)values[0].device,a); }
+    else { abort(); }
+  }
+#else
+  template void LookupParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
+  void LookupParameterStorage::scale_parameters(float a) {
+    if(values[0].device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values[0].device,a); }
     else { abort(); }
   }
 #endif
@@ -380,6 +416,5 @@ float Model::gradient_l2_norm_dev(MyDevice & dev) const {
     else { abort(); }
   }
 #endif
-
 
 } // namespace cnn

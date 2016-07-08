@@ -39,6 +39,8 @@ struct ParameterStorageBase {
 // represents parameters (e.g., a weight matrix) that will be optimized
 struct ParameterStorage : public ParameterStorageBase {
   friend class Model;
+  template <class MyDevice>
+  void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
   void zero() override;
   template <class MyDevice>
@@ -75,6 +77,8 @@ struct ParameterStorage : public ParameterStorageBase {
 // represents a matrix/vector embedding of a discrete set
 struct LookupParameterStorage : public ParameterStorageBase {
   friend class Model;
+  template <class MyDevice>
+  void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
   void zero() override;
   template <class MyDevice>
