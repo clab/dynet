@@ -90,6 +90,7 @@ void ComputationGraph::revert(CGCheckpoint p) {
     // clear all nodes at position >= p.node_idx
     if (nodes.size() > p.node_idx) {
         nodes.resize(p.node_idx); // TODO verify deletion of nodes.
+        ee->invalidate(p.node_idx-1); // clear precomputed forward values
     }
     // clear all parameter nodes at position >= p.par_node_idx
     if (parameter_nodes.size() > p.par_node_idx) {

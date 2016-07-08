@@ -13,6 +13,10 @@ void SimpleExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
 }
 
+void SimpleExecutionEngine::invalidate(unsigned i) {
+  num_nodes_evaluated = i;
+}
+
 const Tensor& SimpleExecutionEngine::forward() { 
   const VariableIndex node_max_index = (VariableIndex)(cg.nodes.size() - 1);
   return forward(node_max_index);
