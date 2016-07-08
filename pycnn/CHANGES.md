@@ -1,5 +1,8 @@
 # pycnn API changes for v2
 
+* Model no longer holds named parameters
+* checkpoint / revert mechanism for computation graph (useful for beam search etc)
+
 ## Model no longer holds named parameters
 
 The major API change in v2 of pycnn is in the `Model` class.
@@ -152,3 +155,39 @@ output2 = mlp2(E2[3])
 
 assert(numpy.array_equal(output2.npvalue(), output.npvalue()))
 ```
+
+## Checkpoint / revert mechanism for computation graph
+
+When doing beam search, we often do multiple calculations and then discard most of them.
+If the calculations are done with the compuation graph, the computation graph can grow very
+large (and hence become slow and memory consuming) as the expressions resulting from the discarded
+computation are not discarded from the graph.
+
+The new checkpointing mechanism deals with this problem by allowing to mark certain points in the graph lifestage, and then returning back to them (deleting everything that was created after the checkpoint).
+
+The API is using `cg_checkpoint()` to mark a checkpoint, and `cg_revert()` to return to the last checkpoint.
+The checkpoints are treated as a stack, so you can create several checkpoints and then return to them
+in reverse order.
+
+Be careful with this feature, as expressions that were created after the checkpoint will be invaludated after the revert, but this is not enforced in code so accessing them _may work_, but result in wrong computations.
+
+Example usage:
+```python
+
+m = Model();
+px = m.add_parameters((10,10))
+x = parameter(px)
+y = x*x
+cg_checkpoint()
+z = y+y
+w = z+y
+print w.npvalue()
+cg_revert()
+# at this point x and y are still alive, but z and w are deleted,
+# they are not part of the computation graph anymore and the c-level memory
+# for them is freed.
+
+```
+
+
+
