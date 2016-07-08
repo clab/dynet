@@ -109,8 +109,9 @@ def new_style_save_and_load():
     # create new model and load:
     m2 = Model()
     [xa,xb,xt1,xt2,xtt,xc,xlb,xlb2,xnp] = m2.load("test_new")
-    m3 = Model()
-    [rnp,rlb2,rlb,rc,rtt,rt2,rt1,rb,ra] = m3.load("test_new_r")
+    #m3 = Model()
+    #[rnp,rlb2,rlb,rc,rtt,rt2,rt1,rb,ra] = m3.load("test_new_r")
+    m3,[rnp,rlb2,rlb,rc,rtt,rt2,rt1,rb,ra] = Model.from_file("test_new_r")
 
     # partial save and load:
     m.save("test_new_partial", [a,tt,lb2])

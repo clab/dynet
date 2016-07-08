@@ -52,7 +52,7 @@ cdef extern from "cnn/model.h" namespace "cnn":
         CLookupParameters()
         CLookupParameterStorage *get()
         CDim dim
-        void Initialize(unsigned index, const vector[float]& val)
+        void initialize(unsigned index, const vector[float]& val)
         void zero()
 
     cdef cppclass CModel "cnn::Model":
