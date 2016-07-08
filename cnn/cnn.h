@@ -106,8 +106,8 @@ struct ComputationGraph {
 
   // reset ComputationGraph to a newly created state
   void clear();
-  CGCheckpoint get_checkpoint();
-  void revert(CGCheckpoint checkpoint);
+  void checkpoint();
+  void revert();
 
 
   // perform computations
@@ -139,6 +139,10 @@ struct ComputationGraph {
   ExecutionEngine* ee;  // handles the execution
  private:
   void set_dim_for_new_node(const VariableIndex& i);
+
+  std::vector<CGCheckpoint> checkpoints;
+  CGCheckpoint _get_checkpoint();
+  void _revert(CGCheckpoint checkpoint);
 };
 
 // represents an SSA variable
