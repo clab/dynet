@@ -77,7 +77,7 @@ void ComputationGraph::clear() {
   nodes.clear();
 }
 
-CGCheckpoint ComputationGraph::get_checkpoint() {
+CGCheckpoint ComputationGraph::_get_checkpoint() {
     CGCheckpoint p;
     p.device_mem_checkpoint = default_device->mark(this);
     p.node_idx = nodes.size();
@@ -85,7 +85,7 @@ CGCheckpoint ComputationGraph::get_checkpoint() {
     return p;
 }
 
-void ComputationGraph::revert(CGCheckpoint p) {
+void ComputationGraph::_revert(CGCheckpoint p) {
     default_device->revert(p.device_mem_checkpoint);
     // clear all nodes at position >= p.node_idx
     if (nodes.size() > p.node_idx) {
@@ -96,6 +96,16 @@ void ComputationGraph::revert(CGCheckpoint p) {
     if (parameter_nodes.size() > p.par_node_idx) {
         parameter_nodes.resize(p.par_node_idx);
     }
+}
+
+void ComputationGraph::checkpoint() {
+    checkpoints.push_back(_get_checkpoint());
+}
+
+void ComputationGraph::revert() {
+    if (checkpoints.size() == 0) return;
+    _revert(checkpoints.back());
+    checkpoints.pop_back();
 }
 
 
