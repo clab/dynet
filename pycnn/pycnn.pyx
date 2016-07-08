@@ -150,7 +150,7 @@ cdef class LookupParameters:
         return lookup_batch(self, i)
 
     cpdef init_row(self, unsigned i, vector[float] row):
-        self.thisptr.Initialize(i, row)
+        self.thisptr.initialize(i, row)
 
     cpdef as_array(self):
         """
@@ -194,6 +194,12 @@ cdef class Model: # {{{
 
     def __dealloc__(self): del self.thisptr
 
+    @staticmethod
+    def from_file(fname):
+        model = Model()
+        res = model.load(fname)
+        return model, res
+
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
@@ -215,7 +221,7 @@ cdef class Model: # {{{
     def save_all(self, string fname):
         save_cnn_model(fname, self.thisptr)
 
-    def load_all(self, string fname):
+    cdef load_all(self, string fname):
         load_cnn_model(fname, self.thisptr)
 
     cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
@@ -243,7 +249,6 @@ cdef class Model: # {{{
         else:
             raise TypeError("Cannot save model component of type %s" % type(c))
 
-    # TODO support python "components", e.g. MLP
     def save(self, string fname, components=None):
         if not components:
             self.save_all(fname)
@@ -292,7 +297,6 @@ cdef class Model: # {{{
             print "Huh?"
             assert False,"unsupported type " + tp
 
-    # TODO support python "components", e.g. MLP
     cpdef load(self, string fname):
         if not os.path.isfile(fname+".pym"):
             self.load_all(fname)
