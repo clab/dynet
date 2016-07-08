@@ -10,6 +10,8 @@ CMakeCache.txt
 CMakeFiles
 cmake_install.cmake
 pycnn/pycnn.cpp
+pycnn/dist/
+pycnn/pyCNN.egg-info/
 
 # binaries
 examples/embed-cl
