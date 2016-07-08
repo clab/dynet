@@ -373,8 +373,8 @@ cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
 def cg_version(): return _cg._cg_version
 def renew_cg(): return _cg.renew()
-def cg_checkpoint(): return _cg.get_checkpoint()
-def cg_revert(int cp): return _cg.revert(cp)
+def cg_checkpoint(): _cg.checkpoint()
+def cg_revert():     _cg.revert()
 
 cpdef ComputationGraph cg():
     global _cg
@@ -384,7 +384,6 @@ cdef class ComputationGraph:
     cdef CComputationGraph *thisptr, 
     cdef list _inputs
     cdef int _cg_version
-    cdef vector[C_CGCheckpoint] checkpoints
     def __cinit__(self, int guard=0):
         if guard != SECRET: raise RuntimeError("Do not instantiate ComputationGraph directly. Use pycnn.cg()")
         self.thisptr = new CComputationGraph()
@@ -436,16 +435,11 @@ cdef class ComputationGraph:
     cpdef PrintGraphviz(self):
         self.thisptr.PrintGraphviz()
 
-    cpdef get_checkpoint(self):
-        cdef C_CGCheckpoint cp
-        cp = self.thisptr.get_checkpoint()
-        self.checkpoints.push_back(cp)
-        return self.checkpoints.size() - 1
+    cpdef void checkpoint(self):
+        self.thisptr.checkpoint()
 
-    cpdef void revert(self, int checkpoint):
-        self.thisptr.revert(self.checkpoints[checkpoint])
-
-
+    cpdef void revert(self):
+        self.thisptr.revert()
 
     # CNN handles changing inputs keeping pointers to memoty locations.
     # Because of python's memory management, objects that wrap such pointers
