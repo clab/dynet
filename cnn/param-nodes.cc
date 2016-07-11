@@ -177,15 +177,14 @@ CNN_NODE_INST_DEV_IMPL(InputNode)
 template<class MyDevice>
 void SparseInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
+  fx.tvec().device(*dev.edevice) = fx.tvec().constant(defdata);
 #if __CUDACC__
   unsigned int* ids_ptr = (unsigned int*)aux_mem;
   float* data_ptr = (float*)(ids_ptr + ids.size());
   cudaMemcpyAsync(ids_ptr, &ids[0], ids.size() * sizeof(unsigned int), cudaMemcpyHostToDevice);
   cudaMemcpyAsync(data_ptr, &data[0], data.size() * sizeof(float), cudaMemcpyHostToDevice);
-  cnn::gpu::const_init(dim.size(), defdata, fx.v);
   cnn::gpu::sparse_assign(ids.size(), ids_ptr, data_ptr, fx.v);
 #else
-  std::fill(fx.v, fx.v + dim.size(), defdata);
   for(size_t i = 0; i < ids.size(); ++i)
     fx.v[ids[i]] = data[i];
 #endif
