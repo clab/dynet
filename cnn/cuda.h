@@ -44,7 +44,7 @@ inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   ++logn;
   int threads = 1 << logn;
   int blocks = (n + threads - 1) >> logn;
-  blocks = blocks > 128 ? 128 : blocks;
+  blocks = blocks > 65535 ? 65535 : blocks;
   return std::make_pair(blocks, threads);
 }
 

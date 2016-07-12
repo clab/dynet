@@ -275,23 +275,14 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i < xs.size());
-  // In the common case that dEdxi has a single batch, and the output has
-  // multiple batches, cache the sum
-  Tensor dEdf_sum;
-  if(dEdxi.d.bd == 1 && dEdf.d.bd != 1 && dEdf_mem == nullptr) {
-    dEdf_mem = (float*)device->fxs->allocate(sizeof(float) * dEdf.d.batch_size());
-    Dim dEdf_dim = dEdf.d; dEdf_dim.bd = 1;
-    dEdf_sum = Tensor(dEdf_dim, dEdf_mem, device);
-    Eigen::array<int, 1> red_axis; red_axis[0] = 2;
-    dEdf_sum.t<2>().device(*dev.edevice) = dEdf.tb<2>().sum(red_axis);
-  }
-
   // Bias term
   if (i == 0) { // bias term
     if(dEdxi.d.bd == dEdf.d.bd) {
       dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
     } else {
-      dEdxi.tvec().device(*dev.edevice) += dEdf_sum.tvec();
+      assert(dEdxi.d.bd == 1 && dEdf.d.bd != 1);
+      Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+      dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
     }
 
   // Left argument of matrix multiply

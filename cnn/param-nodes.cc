@@ -19,7 +19,7 @@ namespace cnn {
 
 string ConstParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "const_parameters(" << dim << ')';
+  s << "const_parameters(" << dim << ") @ " << params.get();
   return s.str();
 }
 
@@ -30,7 +30,7 @@ Dim ConstParameterNode::dim_forward(const vector<Dim>& xs) const {
 
 string ParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "parameters(" << dim << ')';
+  s << "parameters(" << dim << ") @ " << params.get();
   return s.str();
 }
 
@@ -80,7 +80,7 @@ Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
 
 string LookupNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "lookup_parameters(|x|=" << params.get()->values.size() << " --> " << dim << ')';
+  s << "lookup_parameters(|x|=" << params.get()->values.size() << " --> " << dim << ") @ " << params.get();
   return s.str();
 }
 
