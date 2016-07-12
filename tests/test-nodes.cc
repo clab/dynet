@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE( affine_batch3_gradient ) {
   Expression y = affine_transform({x1, x2, inp });
   Expression ones3 = input(cg, {1,3}, ones3_vals);
   sum_batches(ones3 * sqrt(y));
-  BOOST_CHECK(CheckGrad(mod, cg, 2));
+  BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
 // Expression operator*(const Expression& x, float y);
