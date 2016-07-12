@@ -323,7 +323,7 @@ struct CwiseQuotient : public Node {
 
 // y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
 struct AffineTransform : public Node {
-  template <typename T> explicit AffineTransform(const T& a) : Node(a), dEdf_mem(nullptr) {}
+  template <typename T> explicit AffineTransform(const T& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
   CNN_NODE_DEFINE_DEV_IMPL()
   mutable float* dEdf_mem;
