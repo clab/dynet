@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE( affine_gradient ) {
   Expression x2 = parameter(cg, param2);
   Expression y = affine_transform({x1, x2, scalar});
   Expression ones3 = input(cg, {1,3}, ones3_vals);
-  ones3 * y;
+  ones3 * sqrt(y);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE( affine_batch_gradient ) {
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression y = affine_transform({x1, x2, scalar});
   Expression ones3 = input(cg, {1,3}, ones3_vals);
-  sum_batches(ones3 * y);
+  sum_batches(ones3 * sqrt(y));
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE( affine_batch_col_gradient ) {
   Expression x2 = input(cg, Dim({1,3},2), batch_vals);
   Expression y = affine_transform({transpose(x1), scalar, x2});
   Expression ones3 = input(cg, {3,1}, ones3_vals);
-  sum_batches(y * ones3);
+  sum_batches(sqrt(y) * ones3);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
 }
 
@@ -223,8 +223,20 @@ BOOST_AUTO_TEST_CASE( affine_batch2_gradient ) {
   Expression x2 = parameter(cg, param2);
   Expression y = affine_transform({x1, scalar, transpose(x2) });
   Expression ones3 = input(cg, {3,1}, ones3_vals);
-  sum_batches(y * ones3);
+  sum_batches(sqrt(y) * ones3);
   BOOST_CHECK(CheckGrad(mod, cg, 0));
+}
+
+// Expression operator*(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( affine_batch3_gradient ) {
+  cnn::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param_square1);
+  Expression inp = input(cg, Dim({3},2), batch_vals);
+  Expression y = affine_transform({x1, x2, inp });
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  sum_batches(ones3 * sqrt(y));
+  BOOST_CHECK(CheckGrad(mod, cg, 2));
 }
 
 // Expression operator*(const Expression& x, float y);
