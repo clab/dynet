@@ -232,26 +232,21 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
     fx.v = xs[0]->v;
     return;
   } else {
+    // Add the first matrix
+    if(fx.d.bd == xs[0]->d.bd) {
+      fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+    } else {
+      assert(xs[0]->d.bd == 1 && fx.d.bd != 1);
+      Eigen::array<int, 3> bcast; bcast[0] = bcast[1] = 1; bcast[2] = fx.d.bd;
+      fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcast);
+    }
+
+    // Perform multiplication
 #ifdef __CUDACC__
     for (unsigned i = 1; i < xs.size(); i += 2)
       // fx = (acc_sclar)*fx + xs[0] * xs[1]
-      CUDAMatrixMultiply(dev, *xs[i], *xs[i + 1], fx, (i == 1) ? kSCALAR_ZERO : kSCALAR_ONE);
-    if(fx.d.bd == xs[0]->d.bd) {
-      CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v, 1, fx.v, 1));
-    } else {
-      // TODO: Any better way to do broadcasting?
-      for(unsigned b = 0; b < fx.d.bd; ++b)
-        CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, fx.d.batch_size(), kSCALAR_ONE, xs[0]->batch_ptr(b), 1, fx.batch_ptr(b), 1));
-    }
+      CUDAMatrixMultiply(dev, *xs[i], *xs[i + 1], fx, kSCALAR_ONE);
 #else
-    // Add, using broadcasting or not
-    if(fx.d.bd > 1 && xs[0]->d.bd == 1) {
-      fx.rowcol_matrix().colwise() = xs[0]->vec();
-    } else {
-      for(unsigned b = 0; b < fx.d.bd; ++b)
-        fx.batch_matrix(b) = xs[0]->batch_matrix(b);
-    }
-
     // Multiply
     for (unsigned i = 1; i < xs.size(); i += 2) {
       if(xs[i]->d.bd == 1 && xs[i+1]->d.bd == fx.d.bd) {
