@@ -163,6 +163,10 @@ Model::~Model() {
     default_device->mem->free(gradient_norm_scratch);
 }
 
+void Model::set_weight_decay_lambda(float lambda) {
+  weight_decay.SetLambda(lambda);
+}
+
 void Model::project_weights(float radius) {
   static float* project_scratch = 0;
   if (!project_scratch)

@@ -181,6 +181,7 @@ class Model {
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
   // project weights so their L2 norm = radius
   void project_weights(float radius = 1.0f);
+  void set_weight_decay_lambda(float lambda);
 
   const std::vector<ParameterStorageBase*>& all_parameters_list() const { return all_params; }
   const std::vector<ParameterStorage*>& parameters_list() const { return params; }
