@@ -7,6 +7,10 @@
 #include <initializer_list>
 #include <utility>
 #include <boost/serialization/strong_typedef.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 
 #include "cnn/init.h"
 #include "cnn/aligned-mem-pool.h"
@@ -25,9 +29,6 @@
 
 namespace cnn {
 
-extern AlignedMemoryPool* fxs;
-extern AlignedMemoryPool* dEdfs;
-extern AlignedMemoryPool* ps;
 extern float* kSCALAR_MINUSONE;
 extern float* kSCALAR_ONE;
 extern float* kSCALAR_ZERO;
@@ -46,6 +47,19 @@ struct Node;
 namespace expr { struct Expression; }
 
 BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
+
+struct DeviceMemCheckpoint {
+    size_t fxs_used;
+    size_t dEdfs_used;
+    size_t ps_used;
+};
+
+struct CGCheckpoint {
+    int node_idx;
+    int par_node_idx;
+    DeviceMemCheckpoint device_mem_checkpoint;
+};
+
 inline void swap(VariableIndex& i1, VariableIndex& i2) {
   VariableIndex t = i1;
   i1 = i2;
@@ -63,24 +77,25 @@ struct ComputationGraph {
   VariableIndex add_input(const real* ps);  // add pointer to scalar
   VariableIndex add_input(const Dim& d, const std::vector<float>& data);
   VariableIndex add_input(const Dim& d, const std::vector<float>* pdata);
+  VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 
   // PARAMETERS
   // parameters are things that are optimized. in contrast to a system like
   // Torch where computational modules may have their own parameters, in CNN
   // parameters are just parameters
-  VariableIndex add_parameters(Parameters* p);
-  VariableIndex add_const_parameters(Parameters* p);
+  VariableIndex add_parameters(Parameter p);
+  VariableIndex add_const_parameters(Parameter p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
-  VariableIndex add_lookup(LookupParameters* p, const unsigned* pindex);
-  VariableIndex add_lookup(LookupParameters* p, unsigned index);
-  VariableIndex add_lookup(LookupParameters* p, const std::vector<unsigned>* pindices);
-  VariableIndex add_lookup(LookupParameters* p, const std::vector<unsigned>& indices);
+  VariableIndex add_lookup(LookupParameter p, const unsigned* pindex);
+  VariableIndex add_lookup(LookupParameter p, unsigned index);
+  VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>& indices);
   // just like add_lookup, but don't optimize the lookup parameters
-  VariableIndex add_const_lookup(LookupParameters* p, const unsigned* pindex);
-  VariableIndex add_const_lookup(LookupParameters* p, unsigned index);
-  VariableIndex add_const_lookup(LookupParameters* p, const std::vector<unsigned>* pindices);
-  VariableIndex add_const_lookup(LookupParameters* p, const std::vector<unsigned>& indices);
+  VariableIndex add_const_lookup(LookupParameter p, const unsigned* pindex);
+  VariableIndex add_const_lookup(LookupParameter p, unsigned index);
+  VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>& indices);
 
   // COMPUTATIONS
   template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);
@@ -91,6 +106,9 @@ struct ComputationGraph {
 
   // reset ComputationGraph to a newly created state
   void clear();
+  void checkpoint();
+  void revert();
+
 
   // perform computations
 
@@ -121,6 +139,10 @@ struct ComputationGraph {
   ExecutionEngine* ee;  // handles the execution
  private:
   void set_dim_for_new_node(const VariableIndex& i);
+
+  std::vector<CGCheckpoint> checkpoints;
+  CGCheckpoint _get_checkpoint();
+  void _revert(CGCheckpoint checkpoint);
 };
 
 // represents an SSA variable
@@ -178,11 +200,15 @@ struct Node {
   // memory size
   Dim dim;  // will be .size() = 0 initially filled in by forward() -- TODO fix this
 
+  // pointer to the node, or null to inherit device from first input,
+  // or default when there is no input
+  Device* device;
+
  protected:
-  Node() : args() {}
-  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a) {}
+  Node() : args(), device(default_device) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
   template <typename T>
-  explicit Node(const T&c) : args(c.begin(), c.end()) {}
+  explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
 
  public:
   // auxiliary memory

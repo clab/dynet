@@ -1,14 +1,35 @@
 #include "cnn/devices.h"
 
 #include <iostream>
+#include <unsupported/Eigen/CXX11/Tensor>
 
 #include "cnn/cuda.h"
+#include "cnn/cnn.h"
 
 using namespace std;
 
 namespace cnn {
 
 Device::~Device() {}
+
+DeviceMemCheckpoint Device::mark(ComputationGraph *cg) {
+    cg->incremental_forward(); // needed so that we actually allocate the needed memory
+                               // for all existing nodes.
+    DeviceMemCheckpoint cp;
+    cp.fxs_used   = fxs->used;
+    cp.dEdfs_used = dEdfs->used;
+    cp.ps_used    = ps->used;
+    return cp;
+}
+
+void Device::revert(DeviceMemCheckpoint cp) {
+    assert(cp.fxs_used   <= fxs->used);
+    assert(cp.dEdfs_used <= dEdfs->used);
+    assert(cp.ps_used    <= ps->used);
+    fxs->used   = cp.fxs_used;
+    dEdfs->used = cp.dEdfs_used;
+    ps->used    = cp.ps_used;
+}
 
 #if HAVE_CUDA
 Device_GPU::Device_GPU(int mb, int device_id) :
@@ -26,10 +47,15 @@ Device_GPU::Device_GPU(int mb, int device_id) :
   float zero = 0;
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 
+  // Initialize the Eigen device
+  estream = new Eigen::CudaStreamDevice(device_id);
+  edevice = new Eigen::GpuDevice(estream);
+
   // this is the big memory allocation
-  fxs = new AlignedMemoryPool(mb << 20, mem); // memory for node values
-  dEdfs = new AlignedMemoryPool(mb << 20, mem); // memory for node gradients
-  ps = new AlignedMemoryPool(mb << 20, mem); // memory for parameters
+  size_t byte_count = (size_t)mb << 20;
+  fxs = new AlignedMemoryPool(byte_count, mem); // memory for node values
+  dEdfs = new AlignedMemoryPool(byte_count, mem); // memory for node gradients
+  ps = new AlignedMemoryPool(byte_count, mem); // memory for parameters
 }
 
 Device_GPU::~Device_GPU() {}
@@ -50,10 +76,14 @@ Device_CPU::Device_CPU(int mb, bool shared) :
   kSCALAR_ZERO = (float*) mem->malloc(sizeof(float));
   *kSCALAR_ZERO = 0;
 
+  // Initialize the Eigen device
+  edevice = new Eigen::DefaultDevice;
+
   // this is the big memory allocation: the pools
-  fxs = new AlignedMemoryPool(mb << 20, mem); // memory for node values
-  dEdfs = new AlignedMemoryPool(mb << 20, mem); // memory for node gradients
-  ps = new AlignedMemoryPool(mb << 20, shmem); // memory for parameters
+  size_t byte_count = (size_t)mb << 20;
+  fxs = new AlignedMemoryPool(byte_count, mem); // memory for node values
+  dEdfs = new AlignedMemoryPool(byte_count, mem); // memory for node gradients
+  ps = new AlignedMemoryPool(byte_count, shmem); // memory for parameters
 }
 
 Device_CPU::~Device_CPU() {}

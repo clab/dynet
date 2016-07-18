@@ -9,15 +9,15 @@ ITERATIONS = 2000
 m = Model()
 sgd = SimpleSGDTrainer(m)
 
-m.add_parameters("W",(HIDDEN_SIZE, 2))
-m.add_parameters("b",HIDDEN_SIZE)
-m.add_parameters("V",(1, HIDDEN_SIZE))
-m.add_parameters("a",1)
+pW = m.add_parameters((HIDDEN_SIZE, 2))
+pb = m.add_parameters(HIDDEN_SIZE)
+pV = m.add_parameters((1, HIDDEN_SIZE))
+pa = m.add_parameters(1)
 
-W = parameter(m["W"])
-b = parameter(m["b"])
-V = parameter(m["V"])
-a = parameter(m["a"])
+W = parameter(pW)
+b = parameter(pb)
+V = parameter(pV)
+a = parameter(pa)
 
 x = vecInput(2)
 y = scalarInput(0)
@@ -41,9 +41,7 @@ for iter in xrange(ITERATIONS):
         x2 = (mi / 2) % 2
         x.set([T if x1 else F, T if x2 else F])
         y.set(T if x1 != x2 else F)
-        #mloss += cg().forward_scalar()
         mloss += loss.scalar_value()
-        #cg().backward()
         loss.backward()
         sgd.update(1.0)
     sgd.update_epoch();
@@ -53,13 +51,12 @@ for iter in xrange(ITERATIONS):
 x.set([F,T])
 z = -(-y_pred)
 print z.scalar_value()
-#print y_pred.scalar()
 
 renew_cg()
-W = parameter(m["W"])
-b = parameter(m["b"])
-V = parameter(m["V"])
-a = parameter(m["a"])
+W = parameter(pW)
+b = parameter(pb)
+V = parameter(pV)
+a = parameter(pa)
 
 x = vecInput(2)
 y = scalarInput(0)

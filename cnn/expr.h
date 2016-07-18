@@ -3,6 +3,7 @@
 
 #include "cnn/cnn.h"
 #include "cnn/nodes.h"
+#include "cnn/nodes-contract.h"
 
 namespace cnn { namespace expr {
 
@@ -20,17 +21,18 @@ Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
-Expression parameter(ComputationGraph& g, Parameters* p);
-Expression const_parameter(ComputationGraph& g, Parameters* p);
-Expression lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
-Expression lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, unsigned index);
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const unsigned* pindex);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
+Expression parameter(ComputationGraph& g, Parameter p);
+Expression const_parameter(ComputationGraph& g, Parameter p);
+Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
+Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
+Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
+Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 // Batched versions of lookup and const_lookup
-Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
-Expression lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>& indices);
-Expression const_lookup(ComputationGraph& g, LookupParameters* p, const std::vector<unsigned>* pindices);
+Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
+Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
+Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
+Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 Expression zeroes(ComputationGraph& g, const Dim& d);
 
 // special functions for controlling flow of information in graph
@@ -72,8 +74,11 @@ Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
 Expression hinge(const Expression& x, unsigned index, float m = 1.0);
+Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m = 1.0);
 Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
+Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, float m = 1.0);
 Expression log_softmax(const Expression& x);
+Expression sparsemax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 Expression sparsemax(const Expression& x);
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
@@ -116,9 +121,11 @@ Expression poisson_loss(const Expression& x, const unsigned* py);
 // various convolutiony things
 Expression conv1d_narrow(const Expression& x, const Expression& f);
 Expression conv1d_wide(const Expression& x, const Expression& f);
+Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
 Expression sum_cols(const Expression& x);
+Expression average_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 
 // Sum the results of multiple batches

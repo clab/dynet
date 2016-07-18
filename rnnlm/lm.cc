@@ -30,7 +30,7 @@ unsigned HIDDEN_DIM = 0;
 unsigned VOCAB_SIZE = 0;
 float DROPOUT = 0;
 bool SAMPLE = false;
-FactoredSoftmaxBuilder* cfsm = nullptr;
+SoftmaxBuilder* cfsm = nullptr;
 
 cnn::Dict d;
 int kSOS;
@@ -74,9 +74,9 @@ void InitCommandLine(int argc, char** argv, po::variables_map* conf) {
 
 template <class Builder>
 struct RNNLanguageModel {
-  LookupParameters* p_c;
-  Parameters* p_R;
-  Parameters* p_bias;
+  LookupParameter p_c;
+  Parameter p_R;
+  Parameter p_bias;
   Builder builder;
   explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
   d.SetUnk("<unk>");
   VOCAB_SIZE = d.size();
   if (!cfsm)
-    cfsm = new NonFactoredSoftmaxBuilder(HIDDEN_DIM, VOCAB_SIZE, &model);
+    cfsm = new StandardSoftmaxBuilder(HIDDEN_DIM, VOCAB_SIZE, &model);
 
   if (conf.count("test")) {
     string testf = conf["test"].as<string>();

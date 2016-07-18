@@ -3,7 +3,10 @@
 #include <string>
 #include <cassert>
 #include <vector>
+#include <fstream>
 #include <iostream>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 #include "cnn/nodes.h"
 #include "cnn/expr.h"
@@ -12,11 +15,23 @@ using namespace std;
 using namespace cnn::expr;
 using namespace cnn;
 
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::RNNBuilder)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::SimpleRNNBuilder)
 namespace cnn {
 
 enum { X2H=0, H2H, HB, L2H };
 
 RNNBuilder::~RNNBuilder() {}
+
+void RNNBuilder::save_parameters_pretraining(const string& fname) const {
+  cerr << "RNNBuilder::save_parameters_pretraining not overridden.\n";
+  abort();
+}
+
+void RNNBuilder::load_parameters_pretraining(const string& fname) {
+  cerr << "RNNBuilder::load_parameters_pretraining not overridden.\n";
+  abort();
+}
 
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
@@ -25,30 +40,31 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        bool support_lags) : layers(layers), lagging(support_lags) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    Parameters* p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_hb = model->add_parameters({hidden_dim});
-    vector<Parameters*> ps = {p_x2h, p_h2h, p_hb};
+    Parameter p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_hb = model->add_parameters({hidden_dim});
+    vector<Parameter> ps = {p_x2h, p_h2h, p_hb};
     if (lagging)
         ps.push_back(model->add_parameters({hidden_dim, hidden_dim}));
     params.push_back(ps);
     layer_input_dim = hidden_dim;
   }
+  dropout_rate = 0.f;
 }
 
 void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
   param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
-    Parameters* p_x2h = params[i][X2H];
-    Parameters* p_h2h = params[i][H2H];
-    Parameters* p_hb = params[i][HB];
+    Parameter p_x2h = params[i][X2H];
+    Parameter p_h2h = params[i][H2H];
+    Parameter p_hb = params[i][HB];
     Expression i_x2h =  parameter(cg,p_x2h);
     Expression i_h2h =  parameter(cg,p_h2h);
     Expression i_hb =  parameter(cg,p_hb);
     vector<Expression> vars = {i_x2h, i_h2h, i_hb};
 
     if (lagging) {
-        Parameters* p_l2h = params[i][L2H];
+        Parameter p_l2h = params[i][L2H];
         Expression i_l2h =  parameter(cg,p_l2h);
         vars.push_back(i_l2h);
     }
@@ -64,6 +80,8 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
 }
 
 Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
+  if(dropout_rate != 0.f)
+    throw std::runtime_error("SimpleRNNBuilder doesn't support dropout yet");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
 
@@ -113,10 +131,51 @@ void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
   const SimpleRNNBuilder & rnn_simple = (const SimpleRNNBuilder&)rnn;
   assert(params.size() == rnn_simple.params.size());
   for(size_t i = 0; i < rnn_simple.params.size(); ++i) {
-      params[i][0]->copy(*rnn_simple.params[i][0]);
-      params[i][1]->copy(*rnn_simple.params[i][1]);
-      params[i][2]->copy(*rnn_simple.params[i][2]);
+      params[i][0] = rnn_simple.params[i][0];
+      params[i][1] = rnn_simple.params[i][1];
+      params[i][2] = rnn_simple.params[i][2];
   }
 }
+
+void SimpleRNNBuilder::save_parameters_pretraining(const string& fname) const {
+  cerr << "Writing parameters to " << fname << endl;
+  ofstream of(fname);
+  assert(of);
+  boost::archive::binary_oarchive oa(of);
+  std::string id = "SimpleRNNBuilder:params";
+  oa << id;
+  oa << layers;
+  for (unsigned i = 0; i < layers; ++i) {
+    for (auto p : params[i]) {
+      oa << p.get()->values;
+    }
+  }
+}
+
+void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
+  cerr << "Loading parameters from " << fname << endl;
+  ifstream of(fname);
+  assert(of);
+  boost::archive::binary_iarchive ia(of);
+  std::string id;
+  ia >> id;
+  if (id != "SimpleRNNBuilder:params") {
+    cerr << "Bad id read\n";
+    abort();
+  }
+  unsigned l = 0;
+  ia >> l;
+  if (l != layers) {
+    cerr << "Bad number of layers\n";
+    abort();
+  }
+  // TODO check other dimensions
+  for (unsigned i = 0; i < layers; ++i) {
+    for (auto p : params[i]) {
+      ia >> p.get()->values;
+    }
+  }
+}
+
 
 } // namespace cnn

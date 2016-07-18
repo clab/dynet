@@ -15,7 +15,7 @@ namespace cnn {
 struct C2WBuilder {
   LSTMBuilder fc2w;
   LSTMBuilder rc2w;
-  LookupParameters* p_lookup;
+  LookupParameter p_lookup;
   std::vector<VariableIndex> words;
   std::map<int, VariableIndex> wordid2vi;
   explicit C2WBuilder(int vocab_size,

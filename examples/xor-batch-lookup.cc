@@ -23,22 +23,39 @@ int main(int argc, char** argv) {
   SimpleSGDTrainer sgd(&m);
 
   ComputationGraph cg;
+  Parameter p_W, p_b, p_V, p_a;
+  LookupParameter x_values, y_values;
+  if (argc == 2) {
+    // Load the model and parameters from
+    // file if given.
+    ifstream in(argv[1]);
+    boost::archive::text_iarchive ia(in);
+    ia >> m >> p_W >> p_b >> p_V >> p_a;
+  }
+  else {
+    // Otherwise, just create a new model.
+    const unsigned HIDDEN_SIZE = 8;
+    p_W = m.add_parameters({HIDDEN_SIZE, 2});
+    p_b = m.add_parameters({HIDDEN_SIZE});
+    p_V = m.add_parameters({1, HIDDEN_SIZE});
+    p_a = m.add_parameters({1});
 
-  Expression W = parameter(cg, m.add_parameters({HIDDEN_SIZE, 2}));
-  Expression b = parameter(cg, m.add_parameters({HIDDEN_SIZE}));
-  Expression V = parameter(cg, m.add_parameters({1, HIDDEN_SIZE}));
-  Expression a = parameter(cg, m.add_parameters({1}));
+    LookupParameter x_values = m.add_lookup_parameters(4, {2});
+    LookupParameter y_values = m.add_lookup_parameters(4, {1});
+    x_values.initialize(0, {1.0, 1.0});
+    x_values.initialize(1, {-1.0, 1.0});
+    x_values.initialize(2, {1.0, -1.0});
+    x_values.initialize(3, {-1.0, -1.0});
+    y_values.initialize(0, {-1.0});
+    y_values.initialize(1, {1.0});
+    y_values.initialize(2, {1.0});
+    y_values.initialize(3, {-1.0});
+  }
 
-  LookupParameters* x_values = m.add_lookup_parameters(4, {2});
-  LookupParameters* y_values = m.add_lookup_parameters(4, {1});
-  x_values->Initialize(0, {1.0, 1.0});
-  x_values->Initialize(1, {-1.0, 1.0});
-  x_values->Initialize(2, {1.0, -1.0});
-  x_values->Initialize(3, {-1.0, -1.0});
-  y_values->Initialize(0, {-1.0});
-  y_values->Initialize(1, {1.0});
-  y_values->Initialize(2, {1.0});
-  y_values->Initialize(3, {-1.0});
+  Expression W = parameter(cg, p_W);
+  Expression b = parameter(cg, p_b);
+  Expression V = parameter(cg, p_V);
+  Expression a = parameter(cg, p_a);
 
   Expression x = const_lookup(cg, x_values, {0, 1, 2, 3});
   Expression y = const_lookup(cg, y_values, {0, 1, 2, 3});
@@ -51,11 +68,6 @@ int main(int argc, char** argv) {
   Expression sum_loss = sum_batches(loss);
 
   cg.PrintGraphviz();
-  if (argc == 2) {
-    ifstream in(argv[1]);
-    boost::archive::text_iarchive ia(in);
-    ia >> m;
-  }
 
   // train the parameters
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
@@ -69,7 +81,9 @@ int main(int argc, char** argv) {
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
-  //boost::archive::text_oarchive oa(cout);
-  //oa << m;
+  // Output the model and parameter objects
+  // to a cout.
+  boost::archive::text_oarchive oa(cout);
+  oa << m << p_W << p_b << p_V << p_a << x_values << y_values;
 }
 

@@ -5,11 +5,15 @@
 #include <unordered_set>
 #include <string>
 
-
-#include <boost/serialization/split_member.hpp>
+#include <boost/serialization/export.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 #include "cnn/tensor.h"
+#include "cnn/weight-decay.h"
 
 namespace cnn {
 
@@ -19,24 +23,37 @@ namespace cnn {
 // * LookupParameters represents a table of vectors that are used to embed a
 //   set of discrete objects. These are sparsely updated.
 
-struct ParametersBase {
+struct ParameterStorageBase {
   friend class Model;
   virtual void scale_parameters(float a) = 0;
+  virtual void zero() = 0;
   virtual void squared_l2norm(float* sqnorm) const = 0;
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
   virtual size_t size() const = 0;
-  virtual ~ParametersBase();
+  virtual ~ParameterStorageBase();
+  friend class boost::serialization::access;
+  template<class Archive> 
+  void serialize(Archive& ar, const unsigned int) {}
 };
 
 // represents parameters (e.g., a weight matrix) that will be optimized
-struct Parameters : public ParametersBase {
+struct ParameterStorage : public ParameterStorageBase {
   friend class Model;
+  template <class MyDevice>
+  void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
+  void zero() override;
+  template <class MyDevice>
+  void squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void squared_l2norm(float* sqnorm) const override;
+  template <class MyDevice>
+  void g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
 
-  void copy(const Parameters & val);
+  void copy(const ParameterStorage & val);
+  template <class MyDevice>
+  void accumulate_grad_dev(MyDevice & dev, const Tensor& g);
   void accumulate_grad(const Tensor& g);
   void clear();
 
@@ -44,26 +61,40 @@ struct Parameters : public ParametersBase {
   Tensor values;
   Tensor g;
  private:
-  Parameters() {}
-  explicit Parameters(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
+  ParameterStorage() {}
+  explicit ParameterStorage(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
                                  // or Glorot initialization if minmax = 0
   friend class boost::serialization::access;
-  template<class Archive> void serialize(Archive& ar, const unsigned int) {
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    boost::serialization::base_object<ParameterStorageBase>(*this);
     ar & dim;
     ar & values;
+    ar & g;
   }
 };
 
 // represents a matrix/vector embedding of a discrete set
-struct LookupParameters : public ParametersBase {
+struct LookupParameterStorage : public ParameterStorageBase {
   friend class Model;
+  template <class MyDevice>
+  void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
+  void zero() override;
+  template <class MyDevice>
+  void squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void squared_l2norm(float* sqnorm) const override;
+  template <class MyDevice>
+  void g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
-  void Initialize(unsigned index, const std::vector<float>& val);
+  template <class MyDevice>
+  void initialize_dev(MyDevice & dev, unsigned index, const std::vector<float>& val);
+  void initialize(unsigned index, const std::vector<float>& val);
 
-  void copy(const LookupParameters & val);
+  void copy(const LookupParameterStorage & val);
+  template <class MyDevice>
+  void accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& g);
   void accumulate_grad(unsigned index, const Tensor& g);
   void clear();
 
@@ -73,27 +104,64 @@ struct LookupParameters : public ParametersBase {
   // gradients are sparse, so track which components are nonzero
   std::unordered_set<unsigned> non_zero_grads;
  private:
-  LookupParameters() {}
-  LookupParameters(unsigned n, const Dim& d);
+  LookupParameterStorage() {}
+  LookupParameterStorage(unsigned n, const Dim& d);
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive& ar, const unsigned int) const {
+  void serialize(Archive& ar, const unsigned int) {
+    boost::serialization::base_object<ParameterStorageBase>(*this);
     ar & dim;
-    int nv = values.size();
-    ar & nv;
-    for (unsigned i = 0; i < values.size(); ++i)
-      ar & values[i];
+    ar & values;
+    ar & grads;
   }
+};
+
+class Model;
+struct Parameter {
+  Parameter();
+  Parameter(const Model* mp, unsigned long index);
+  ParameterStorage* get() const;
+
+  // Zero the parameters
+  void zero();
+
+  const Model* mp;
+  unsigned long index;
+
+  Dim dim() { return get()->dim; }
+  Tensor* values() { return &(get()->values); } 
+
+private:
+  friend class boost::serialization::access;
   template<class Archive>
-  void load(Archive& ar, const unsigned int) {
-    ar & dim;
-    int nv;
-    ar & nv;
-    assert(nv == (int)values.size());
-    for (unsigned i = 0; i < values.size(); ++i)
-      ar & values[i];
+  void serialize(Archive& ar, const unsigned int) {
+    ar & mp;
+    ar & index;
   }
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
+};
+
+struct LookupParameter {
+  LookupParameter();
+  LookupParameter(const Model* mp, unsigned long index);
+  LookupParameterStorage* get() const;
+  void initialize(unsigned index, const std::vector<float>& val) const;
+
+  // Zero the parameters
+  void zero();
+
+  const Model* mp;
+  unsigned long index;
+
+  Dim dim() { return get()->dim; }
+  std::vector<Tensor>* values() { return &(get()->values); } 
+
+private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & mp;
+    ar & index;
+  }
 };
 
 // this is a collection of parameters
@@ -102,53 +170,41 @@ struct LookupParameters : public ParametersBase {
 // parameters know how to track their gradients, but any extra information (like velocity) will live here
 class Model {
  public:
-  Model() : gradient_norm_scratch() {}
+  Model();
   ~Model();
+  template <class MyDevice>
+  float gradient_l2_norm_dev(MyDevice & dev) const;
   float gradient_l2_norm() const;
   void reset_gradient();
   // set scale to use custom initialization
-  Parameters* add_parameters(const Dim& d, float scale = 0.0f);
-  LookupParameters* add_lookup_parameters(unsigned n, const Dim& d);
+  Parameter add_parameters(const Dim& d, float scale = 0.0f);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
   // project weights so their L2 norm = radius
   void project_weights(float radius = 1.0f);
+  void set_weight_decay_lambda(float lambda);
 
-  const std::vector<ParametersBase*>& all_parameters_list() const { return all_params; }
-  const std::vector<Parameters*>& parameters_list() const { return params; }
-  const std::vector<LookupParameters*>& lookup_parameters_list() const { return lookup_params; }
+  const std::vector<ParameterStorageBase*>& all_parameters_list() const { return all_params; }
+  const std::vector<ParameterStorage*>& parameters_list() const { return params; }
+  const std::vector<LookupParameterStorage*>& lookup_parameters_list() const { return lookup_params; }
 
+  // Returns the total number of tunable parameters (i. e. scalars) contained within this model.
+  // That is to say, a 2x2 matrix counts as four parameters.
+  size_t parameter_count() const;
+
+  L2WeightDecay weight_decay;
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive& ar, const unsigned int) const {
-    int np = params.size();
-    int nlp = lookup_params.size();
-    ar & np;
-    ar & nlp;
-    for (unsigned i = 0; i < params.size(); ++i)
-      ar & *params[i];
-    for (unsigned i = 0; i < lookup_params.size(); ++i)
-      ar & *lookup_params[i];
+  void serialize(Archive& ar, const unsigned int) {
+    ar & all_params;
+    ar & params;
+    ar & lookup_params;
+    ar & weight_decay;
   }
-  template<class Archive>
-  void load(Archive& ar, const unsigned int) {
-    int np, nlp;
-    ar & np;
-    ar & nlp;
-    assert(np == (int)params.size());
-    assert(nlp == (int)lookup_params.size());
-    for (unsigned i = 0; i < params.size(); ++i)
-      ar & *params[i];
-    for (unsigned i = 0; i < lookup_params.size(); ++i)
-      ar & *lookup_params[i];
-    all_params.clear();
-    for (auto p : params) all_params.push_back(p);
-    for (auto p : lookup_params) all_params.push_back(p);
-  }
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-  std::vector<ParametersBase*> all_params;
-  std::vector<Parameters*> params;
-  std::vector<LookupParameters*> lookup_params;
+  std::vector<ParameterStorageBase*> all_params;
+  std::vector<ParameterStorage*> params;
+  std::vector<LookupParameterStorage*> lookup_params;
   mutable float* gradient_norm_scratch;
 };
 
@@ -156,5 +212,7 @@ void save_cnn_model(std::string filename, Model* model);
 void load_cnn_model(std::string filename, Model* model);
 
 } // namespace cnn
+BOOST_CLASS_EXPORT_KEY(cnn::ParameterStorage)
+BOOST_CLASS_EXPORT_KEY(cnn::LookupParameterStorage)
 
 #endif

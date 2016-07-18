@@ -1,6 +1,7 @@
 #include "cnn/init.h"
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/cnn.h"
+#include "cnn/weight-decay.h"
 
 #include <iostream>
 #include <random>
@@ -15,14 +16,6 @@ using namespace std;
 
 namespace cnn {
 
-// these should maybe live in a file called globals.cc or something
-AlignedMemoryPool* fxs = nullptr;
-AlignedMemoryPool* dEdfs = nullptr;
-AlignedMemoryPool* ps = nullptr;
-mt19937* rndeng = nullptr;
-std::vector<Device*> devices;
-Device* default_device = nullptr;
-
 static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
@@ -30,13 +23,18 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
   assert(argc >= 0);
 }
 
-void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_parameters) {
+void Initialize(int& argc, char**& argv, bool shared_parameters) {
+  if(default_device != nullptr) {
+    cerr << "WARNING: Attempting to initialize cnn twice. Ignoring duplicate initialization." << endl;
+    return;
+  }
   vector<Device*> gpudevices;
 #if HAVE_CUDA
   cerr << "[cnn] initializing CUDA\n";
   gpudevices = Initialize_GPU(argc, argv);
 #endif
   unsigned long num_mb = 512UL;
+  unsigned random_seed = 0;
   int argi = 1;
   while(argi < argc) {
     string arg = argv[argi];
@@ -48,6 +46,21 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
         string a2 = argv[argi+1];
         istringstream c(a2); c >> num_mb;
         RemoveArgs(argc, argv, argi, 2);
+      }
+    } else if (arg == "--cnn-l2" || arg == "--cnn_l2") {
+      if ((argi + 1) > argc) {
+        cerr << "[cnn] --cnn-l2 requires an argument (the weight decay per update)\n";
+        abort();
+      } else {
+        string a2 = argv[argi+1];
+        float decay = 0;
+        istringstream d(a2); d >> decay;
+        RemoveArgs(argc, argv, argi, 2);
+        if (decay < 0 || decay >= 1) {
+          cerr << "[cnn] weight decay parameter must be between 0 and 1 (probably very small like 1e-6)\n";
+          abort();
+        }
+        weight_decay_lambda = decay;
       }
     } else if (arg == "--cnn-seed" || arg == "--cnn_seed") {
       if ((argi + 1) > argc) {
@@ -81,9 +94,6 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
   default_device = devices[default_index];
 
   // TODO these should be accessed through the relevant device and removed here
-  fxs = default_device->fxs;
-  dEdfs = default_device->dEdfs;
-  ps = default_device->ps;
   kSCALAR_MINUSONE = default_device->kSCALAR_MINUSONE;
   kSCALAR_ONE = default_device->kSCALAR_ONE;
   kSCALAR_ZERO = default_device->kSCALAR_ZERO;
@@ -92,9 +102,10 @@ void Initialize(int& argc, char**& argv, unsigned random_seed, bool shared_param
 
 void Cleanup() {
   delete rndeng;
-  delete fxs;
-  delete dEdfs;
-  delete ps;
+  // TODO: Devices cannot be deleted at the moment
+  // for(Device* device : devices) delete device;
+  devices.clear();
+  default_device = nullptr;
 }
 
 } // namespace cnn

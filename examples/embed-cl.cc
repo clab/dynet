@@ -8,6 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <boost/serialization/access.hpp>
 
 using namespace std;
 using namespace cnn;
@@ -25,9 +26,12 @@ int kTRG_SOS;
 int kTRG_EOS;
 
 struct Encoder {
-  LookupParameters* p_s;
-  LookupParameters* p_t;
+  LookupParameter p_s;
+  LookupParameter p_t;
   vector<Expression> m;
+
+  Encoder() {}
+
   explicit Encoder(Model& model) {
     p_s = model.add_lookup_parameters(INPUT_VOCAB_SIZE, {REP_DIM}); 
     p_t = model.add_lookup_parameters(OUTPUT_VOCAB_SIZE, {REP_DIM}); 
@@ -60,6 +64,13 @@ struct Encoder {
 #else
     return sum_cols(tanh(kmh_ngram(concatenate_cols(m), 2)));
 #endif
+  }
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & p_s;
+    ar & p_t;
   }
 };
 
@@ -123,22 +134,23 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 #endif
   Model model;
+  Encoder emb;
+  if (argc == 4) {
+    string fname = argv[3];
+    ifstream in(fname);
+    boost::archive::text_iarchive ia(in);
+    ia >> model >> emb;
+  }
+  else {
+    emb = Encoder(model);
+  }
+
   bool use_momentum = false;
   Trainer* sgd = nullptr;
   if (use_momentum)
     sgd = new MomentumSGDTrainer(&model);
   else
     sgd = new SimpleSGDTrainer(&model);
-
-  Encoder emb(model);
-#if 0
-  if (argc == 4) {
-    string fname = argv[3];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
-  }
-#endif
 
   unsigned report_every_i = 100;
   unsigned dev_every_i_reports = 10;
@@ -207,7 +219,7 @@ int main(int argc, char** argv) {
         best = dloss;
         ofstream out(fname);
         boost::archive::text_oarchive oa(out);
-        oa << model;
+        oa << model << emb;
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }

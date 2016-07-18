@@ -5,6 +5,7 @@
 #include <cstring>
 
 #if HAVE_CUDA
+#include "cnn/gpu-ops.h"
 #include "cnn/cuda.h"
 #endif
 
@@ -70,6 +71,14 @@ void TensorTools::SetElement(const Tensor& v, int index, float value) {
 #endif
 }
 
+void TensorTools::CopyElement(const Tensor& l, int lindex, Tensor& r, int rindex) {
+#if HAVE_CUDA
+  cudaMemcpyAsync(&r.v[rindex], &l.v[lindex], sizeof(real), cudaMemcpyDeviceToDevice);
+#else
+  r.v[rindex] = l.v[lindex];
+#endif
+}
+
 void TensorTools::SetElements(const Tensor& v, const vector<float>& vec) {
 #if HAVE_CUDA
   cudaMemcpyAsync(v.v, &vec[0], sizeof(real) * vec.size(), cudaMemcpyHostToDevice);
@@ -91,7 +100,7 @@ void TensorTools::Constant(Tensor& d, float c) {
   if (!c) {
     CUDA_CHECK(cudaMemsetAsync(d.v, 0, d.d.size() * sizeof(float)));
   } else {
-    fill(d.v, d.v + d.d.size(), c);
+    cnn::gpu::const_init(d.d.size(), c, d.v);
   }
 #else
   if (!c) {

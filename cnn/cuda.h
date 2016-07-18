@@ -32,7 +32,7 @@
 
 namespace cnn {
 
-struct Device;
+class Device;
 
 inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   assert(n);
@@ -44,12 +44,11 @@ inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   ++logn;
   int threads = 1 << logn;
   int blocks = (n + threads - 1) >> logn;
-  blocks = blocks > 128 ? 128 : blocks;
+  blocks = blocks > 65535 ? 65535 : blocks;
   return std::make_pair(blocks, threads);
 }
 
 std::vector<Device*> Initialize_GPU(int& argc, char**& argv);
-extern cublasHandle_t cublas_handle;
 
 } // namespace cnn
 

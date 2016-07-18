@@ -5,6 +5,8 @@
 #include <cassert>
 #include <sstream>
 
+//BOOST_CLASS_EXPORT_IMPLEMENT(cnn::HierarchicalSoftmaxBuilder)
+
 #undef assert
 #define assert(x) {}
 
@@ -30,6 +32,7 @@ Cluster* Cluster::add_child(unsigned sym) {
   unsigned i;
   if (it == word2ind.end()) {
     Cluster* c = new Cluster();
+    c->rep_dim = rep_dim;
     c->path = path;
     c->path.push_back(sym);
     i = children.size();
@@ -51,25 +54,28 @@ void Cluster::add_word(unsigned word) {
 }
 
 void Cluster::initialize(unsigned rep_dim, Model* model) {
+  this->rep_dim = rep_dim;
+  initialize(*model);
+}
+
+void Cluster::initialize(Model& model) {
   assert (!initialized);
   output_size = (children.size() > 0) ? children.size() : terminals.size();
   assert (output_size > 0);
 
   if (output_size == 1) {
-    p_weights = NULL;
-    p_bias = NULL;
   }
   else if (output_size == 2) {
-    p_weights = model->add_parameters({1, rep_dim});
-    p_bias = model->add_parameters({1});
+    p_weights = model.add_parameters({1, rep_dim});
+    p_bias = model.add_parameters({1});
   }
   else {
-    p_weights = model->add_parameters({output_size, rep_dim});
-    p_bias = model->add_parameters({output_size});
+    p_weights = model.add_parameters({output_size, rep_dim});
+    p_bias = model.add_parameters({output_size});
   }
 
   for (Cluster* child : children) {
-    child->initialize(rep_dim, model);
+    child->initialize(model);
   }
 }
 
@@ -183,6 +189,10 @@ HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
 HierarchicalSoftmaxBuilder::~HierarchicalSoftmaxBuilder() {
 }
 
+void HierarchicalSoftmaxBuilder::initialize(Model& model) {
+ root->initialize(model);
+}
+
 void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
   pcg = &cg;
   root->new_graph(cg);
@@ -227,6 +237,11 @@ unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
 
   c = node->sample(rep, *pcg);
   return node->get_word(c);
+}
+
+Expression HierarchicalSoftmaxBuilder::full_log_distribution(const Expression& rep) {
+  assert (false && "full_distribution not implemented for HierarchicalSoftmaxBuilder");
+  return cnn::expr::Expression();
 }
 
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }

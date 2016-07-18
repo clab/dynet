@@ -14,9 +14,6 @@
 #include <sstream>
 #include <cstdlib>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 using namespace std;
 using namespace cnn;
 
@@ -53,8 +50,8 @@ inline unsigned int UTF8Len(unsigned char x) {
 struct PrefixNode {
   PrefixNode() :
       terminal(false),
-      bias(nullptr), pred(nullptr), zero_cond(nullptr), zero_child(nullptr),
-      one_cond(nullptr), one_child(nullptr) {}
+      bias(), pred(), zero_cond(), zero_child(nullptr),
+      one_cond(), one_child(nullptr) {}
 
   ~PrefixNode() {
     delete zero_child;
@@ -62,11 +59,11 @@ struct PrefixNode {
   }
 
   bool terminal;
-  Parameters* bias;
-  Parameters* pred;
-  Parameters* zero_cond;
+  Parameter bias;
+  Parameter pred;
+  Parameter zero_cond;
   PrefixNode* zero_child;
-  Parameters* one_cond;
+  Parameter one_cond;
   PrefixNode* one_child;
 };
 
@@ -127,13 +124,13 @@ struct SymbolEmbedding {
     return lookup(*cg, p_labels, label_id);
   }
   ComputationGraph* cg;
-  LookupParameters* p_labels;
+  LookupParameter p_labels;
 };
 
 struct PrefixCodeDecoder {
   LSTMBuilder decoder;
   PrefixCode* pfc;
-  Parameters* p_start;
+  Parameter p_start;
   explicit PrefixCodeDecoder(Model& model, PrefixCode* pc) :
       decoder(LAYERS, CHAR_DIM, EMBED_DIM, &model), pfc(pc) {
     p_start = model.add_parameters({EMBED_DIM});
@@ -171,11 +168,11 @@ template <class Builder>
 struct BiCharLSTM {
   Builder l2rbuilder;
   Builder r2lbuilder;
-  Parameters* p_f2c;
-  Parameters* p_r2c;
-  Parameters* p_cb;
-  Parameters* p_c2x;
-  Parameters* p_xb;
+  Parameter p_f2c;
+  Parameter p_r2c;
+  Parameter p_cb;
+  Parameter p_c2x;
+  Parameter p_xb;
   SymbolEmbedding sym;
 
   explicit BiCharLSTM(Model& model) :

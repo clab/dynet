@@ -1,6 +1,7 @@
 #include "cnn/exec.h"
 
 #include "cnn/param-nodes.h"
+#include "cnn/globals.h"
 
 using namespace std;
 
@@ -10,6 +11,10 @@ ExecutionEngine::~ExecutionEngine() {}
 
 void SimpleExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
+}
+
+void SimpleExecutionEngine::invalidate(unsigned i) {
+  num_nodes_evaluated = i;
 }
 
 const Tensor& SimpleExecutionEngine::forward() { 
@@ -39,7 +44,9 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
   assert(i < cg.nodes.size());
 
   // free any old memory if this is a new CG
-  if (num_nodes_evaluated == 0) fxs->free();
+  if (num_nodes_evaluated == 0)
+    for(Device* dev : cnn::devices)
+      dev->fxs->free();
 
   if (i >= num_nodes_evaluated) {
     nfxs.resize(i + 1);
@@ -55,7 +62,11 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
         ++ai;
       }
       nfxs[num_nodes_evaluated].d = node->dim;
-      nfxs[num_nodes_evaluated].v = static_cast<float*>(fxs->allocate(node->dim.size() * sizeof(float)));
+      // Get the device
+      assert(node->device != nullptr);
+      nfxs[num_nodes_evaluated].device = node->device;
+      // Get the memory
+      nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->fxs->allocate(node->dim.size() * sizeof(float)));
       if (nfxs[num_nodes_evaluated].v == nullptr) {
         cerr << "out of memory\n";
         abort();
@@ -63,13 +74,14 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       void* aux_mem = nullptr;
       size_t aux_size = node->aux_storage_size();
       if (aux_size) {
-        aux_mem = fxs->allocate(aux_size);
+        aux_mem = nfxs[num_nodes_evaluated].device->fxs->allocate(aux_size);
         if (!aux_mem) {
           cerr << "aux out of memory\n";
           abort();
         }
       }
       node->aux_mem = aux_mem;
+
       node->forward(xs, nfxs[num_nodes_evaluated]);
     }
   }
@@ -77,7 +89,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 }
 
 void SimpleExecutionEngine::backward() {
-  assert(nfxs.size() == cg.nodes.size());
+  assert(nfxs.size() >= cg.nodes.size());
   backward((VariableIndex)(cg.nodes.size()-1));
 }
 
@@ -92,17 +104,20 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
 
   const unsigned num_nodes = from_where+1;
   ndEdfs.resize(num_nodes);
-  dEdfs->free();
+  for(Device* device : devices)
+    device->dEdfs->free();
   for (unsigned i = 0; i < num_nodes; ++i) {
     const auto dim = nfxs[i].d;
     ndEdfs[i].d = dim;
-    ndEdfs[i].v = static_cast<float*>(dEdfs->allocate(dim.size() * sizeof(float)));
+    ndEdfs[i].device = nfxs[i].device;
+    ndEdfs[i].v = static_cast<float*>(ndEdfs[i].device->dEdfs->allocate(dim.size() * sizeof(float)));
     if (!ndEdfs[i].v) {
       cerr << "out of memory while attempting to allocate space for derivatives\n";
       abort();
     }
   }
-  dEdfs->zero_allocated_memory();
+  for(Device* device : devices)
+    device->dEdfs->zero_allocated_memory();
   // initialize dE/dE = 1
   ndEdfs.back().v = kSCALAR_ONE;
 

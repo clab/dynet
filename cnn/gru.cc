@@ -21,24 +21,25 @@ GRUBuilder::GRUBuilder(unsigned layers,
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // z
-    Parameters* p_x2z = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2z = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_bz = model->add_parameters({hidden_dim});
+    Parameter p_x2z = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2z = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bz = model->add_parameters({hidden_dim});
 
     // r
-    Parameters* p_x2r = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2r = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_br = model->add_parameters({hidden_dim});
+    Parameter p_x2r = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2r = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_br = model->add_parameters({hidden_dim});
 
     // h
-    Parameters* p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameters* p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    Parameters* p_bh = model->add_parameters({hidden_dim});
+    Parameter p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bh = model->add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
-    vector<Parameters*> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
+    vector<Parameter> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
     params.push_back(ps);
   }  // layers
+  dropout_rate = 0.f;
 }
 
 void GRUBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -75,6 +76,8 @@ void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
 }
 
 Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
+  if(dropout_rate != 0.f)
+    throw std::runtime_error("GRUBuilder doesn't support dropout yet");
   const bool has_initial_state = (h0.size() > 0);
   h.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -128,7 +131,7 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
   assert(params.size() == rnn_gru.params.size());
   for(size_t i = 0; i < params.size(); ++i)
       for(size_t j = 0; j < params[i].size(); ++j)
-        params[i][j]->copy(*rnn_gru.params[i][j]);
+        params[i][j] = rnn_gru.params[i][j];
 }
 
 } // namespace cnn

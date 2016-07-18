@@ -11,16 +11,18 @@
 namespace cnn {
 
 class Model;
-struct Parameters;
-struct LookupParameters;
+struct ParameterStorage;
+struct LookupParameterStorage;
 
 struct ShadowParameters {
-  explicit ShadowParameters(const Parameters& p);
+  explicit ShadowParameters(const ParameterStorage& p);
+  ~ShadowParameters();
   Tensor h;
 };
 
 struct ShadowLookupParameters {
-  explicit ShadowLookupParameters(const LookupParameters& lp);
+  explicit ShadowLookupParameters(const LookupParameterStorage& lp);
+  ~ShadowLookupParameters();
   std::vector<Tensor> h;
 };
 

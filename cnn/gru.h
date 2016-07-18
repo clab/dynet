@@ -28,7 +28,7 @@ struct GRUBuilder : public RNNBuilder {
   Expression add_input_impl(int prev, const Expression& x) override;
 
   // first index is layer, then ...
-  std::vector<std::vector<Parameters*>> params;
+  std::vector<std::vector<Parameter>> params;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;

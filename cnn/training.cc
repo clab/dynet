@@ -1,6 +1,34 @@
 #include "cnn/training.h"
 
-#include "cnn/gpu-ops.h"
+// #include "cnn/gpu-ops.h"
+#include "cnn/param-nodes.h"
+#include "cnn/weight-decay.h"
+
+// Macros for defining parameter update functions
+#ifdef __CUDACC__
+#define CNN_TRAINER_INST_DEV_IMPL(MyTrainer) \
+  template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real scale, real gscale, const std::vector<Tensor*> & values);
+#elif defined(HAVE_CUDA)
+// This is correct, but dying when models are read and written.
+// if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,scale,gscale,values); } 
+// else if(values[0]->device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)values[0]->device,scale,gscale,values); } 
+// else { abort(); }
+#define CNN_TRAINER_INST_DEV_IMPL(MyTrainer) \
+  extern template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
+  template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
+  void MyTrainer::update_rule(real scale, real gscale, const std::vector<Tensor*> & values) { \
+    if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,scale,gscale,values); } \
+    else if(default_device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)default_device,scale,gscale,values); } \
+    else { abort(); } \
+  }
+#else
+#define CNN_TRAINER_INST_DEV_IMPL(MyTrainer) \
+  template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
+  void MyTrainer::update_rule(real scale, real gscale, const std::vector<Tensor*> & values) { \
+    if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,scale,gscale,values); } \
+    else { abort(); } \
+  }
+#endif
 
 namespace cnn {
 
@@ -11,7 +39,19 @@ bool is_valid(const Eigen::MatrixBase<Derived>& x) {
   return ((x - x).array() == (x - x).array()).all();
 }
 
+// --- The actual update code for each operation, implemented on various devices
+
+// Trainer base class is run on CPUs
+#ifndef __CUDACC__
+
 Trainer::~Trainer() {}
+
+void Trainer::rescale_and_reset_weight_decay() {
+  const float weight_decay = model->weight_decay.CurrentWeightDecay();
+  for (auto p : model->parameters_list())
+    p->scale_parameters(weight_decay);
+  model->weight_decay.ResetWeightDecay();
+}
 
 float Trainer::clip_gradients() {
   float gscale = 1;
@@ -29,273 +69,203 @@ float Trainer::clip_gradients() {
   return gscale;
 }
 
-void SimpleSGDTrainer::update(real scale) {
-    update(model->lookup_parameters_list(), model->parameters_list(), scale);
+// this calls the rule-specific
+void Trainer::update(real scale) {
+  // Allocate if necessary
+  if(!aux_allocated) {
+    alloc_impl();
+    aux_allocated = true;
+  }
+
+  // Perform gradient clipping and cycle through parameters
+  const float gscale = clip_gradients();
+  const auto & params = model->parameters_list();
+  for(size_t i = 0; i < params.size(); ++i) {
+    update_params(scale, gscale, i);
+    params[i]->clear();
+  }
+  const auto & lookup_params = model->lookup_parameters_list();
+  for(size_t i = 0; i < lookup_params.size(); ++i) {
+    for (auto j : lookup_params[i]->non_zero_grads)
+      update_lookup_params(scale, gscale, i, j);
+    lookup_params[i]->clear();
+  }
+  ++updates;
+
+  model->weight_decay.UpdateWeightDecay(); // update global weight scale
+  if (model->weight_decay.ParametersNeedRescaled())
+    rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
 }
 
-void SimpleSGDTrainer::update(const std::vector<LookupParameters*> &lookup_params, const std::vector<Parameters*> &params, real scale) {
-  const float gscale = clip_gradients();
-  for (auto p : params) {
-#if HAVE_CUDA
-    gpu::sgd_update(p->values.d.size(), p->g.v, p->values.v, eta * scale * gscale, lambda);
-#else
-    auto reg = (p->values.vec()) * lambda;
-    p->values.vec() -= ((eta * scale * gscale) * p->g.vec() + reg);
 #endif
-    p->clear();
-  }
-  for (auto p : lookup_params) {
-    for (auto i : p->non_zero_grads) {
-#if HAVE_CUDA
-      gpu::sgd_update(p->values[i].d.size(), p->grads[i].v, p->values[i].v, eta * scale * gscale, lambda);
-#else
-      auto reg = (p->values[i].vec()) * lambda;
-      p->values[i].vec() -= (p->grads[i].vec() * (eta * scale * gscale) + reg);
+
+// --- SimpleSGDTrainer
+
+// Perform update of ts[0]=parameters, ts[1]=gradients
+template <class MyDevice>
+void SimpleSGDTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  ts[0]->tvec().device(*dev.edevice) -= ts[1]->tvec() * (eta * scale * gscale / model->weight_decay.CurrentWeightDecay());
+}
+CNN_TRAINER_INST_DEV_IMPL(SimpleSGDTrainer)
+
+#ifndef __CUDACC__
+void SimpleSGDTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g});
+}
+void SimpleSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx]});
+}
 #endif
-    }
-    p->clear();
-  }
-  ++updates;
+
+// --- MomentumSGDTrainer
+
+// Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=momentum
+template <class MyDevice>
+void MomentumSGDTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * momentum - ts[1]->tvec() * (eta * scale * gscale);
+  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / model->weight_decay.CurrentWeightDecay();
 }
+CNN_TRAINER_INST_DEV_IMPL(MomentumSGDTrainer)
 
-void MomentumSGDTrainer::update(real scale) {
-  // executed on the first iteration to create vectors to
-  // store the velocity
-  if (!velocity_allocated) {
-    vp = AllocateShadowParameters(*model);
-    vlp = AllocateShadowLookupParameters(*model);
-    velocity_allocated = true;
-  }
-
-  const float gscale = clip_gradients();
-  unsigned pi = 0;
-  for (auto p : model->parameters_list()) {
-    Tensor& v = vp[pi++].h;
-    auto reg = p->values.vec() * lambda;
-    v.vec() = momentum * v.vec() - (eta * scale * gscale) * (p->g.vec());
-    p->values.vec() += v.vec() - reg;
-    p->clear();
-  }
-  pi = 0;
-  for (auto p : model->lookup_parameters_list()) {
-    vector<Tensor>& vx = vlp[pi++].h;
-    for (auto i : p->non_zero_grads) {
-      Tensor& v = vx[i];
-      auto reg = (p->values[i].vec()) * lambda;
-      v.vec() = momentum * v.vec() - (eta * scale * gscale) * (p->grads[i].vec());
-      p->values[i].vec() += v.vec() - reg;
-    }
-    p->clear();
-  }
-  ++updates;
+#ifndef __CUDACC__
+void MomentumSGDTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g, &vp[idx].h});
 }
-
-void AdagradTrainer::update(real scale) {
-  unsigned pi;
-  if (!shadow_params_allocated) {
-    vp = AllocateShadowParameters(*model);
-    vlp = AllocateShadowLookupParameters(*model);
-    shadow_params_allocated = true;
-  }
-
-  pi = 0;
-  const float gscale = clip_gradients();
-  for (auto p : model->parameters_list()) {
-    Tensor& v = vp[pi++].h;
-    auto reg = p->values.vec() * lambda;
-    auto g = scale * gscale * p->g.vec();
-    auto g2 = g.cwiseProduct(g);
-    v.vec() += g2;
-    auto delta = -eta * g.cwiseQuotient((v.vec().array() + epsilon).matrix().cwiseSqrt());
-    p->values.vec() += delta - reg;
-    p->clear();
-  }
-
-  pi = 0;
-  for (auto p : model->lookup_parameters_list()) {
-    vector<Tensor>& vx = vlp[pi++].h;
-    for (auto i : p->non_zero_grads) {
-      Tensor& v = vx[i];
-      auto reg = p->values[i].vec() * lambda;
-      auto g = scale * gscale * p->grads[i].vec();
-      auto g2 = g.cwiseProduct(g);
-      v.vec() += g2;
-      auto delta = -eta * g.cwiseQuotient((v.vec().array() + epsilon).matrix().cwiseSqrt());
-      p->values[i].vec() += delta - reg;
-    }
-    p->clear();
-  }
-
-  ++updates;
+void MomentumSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]});
 }
-
-void AdadeltaTrainer::update(real scale) {
-  unsigned pi;
-  if (!shadow_params_allocated) {
-    hg = AllocateShadowParameters(*model);
-    hlg = AllocateShadowLookupParameters(*model);
-    hd = AllocateShadowParameters(*model);
-    hld = AllocateShadowLookupParameters(*model);
-
-    /*pi = 0;
-    for (auto p : model->parameters_list()) {
-      TensorTools::Constant(hg[pi].h, epsilon);
-      TensorTools::Constant(hd[pi].h, epsilon);
-      ++pi;
-    }
-
-    pi = 0;
-    for (auto p : model->lookup_parameters_list()) {
-      vector<Tensor>& hgx = hlg[pi].h;
-      vector<Tensor>& hdx = hld[pi].h;
-      for (unsigned i = 0; i < hgx.size(); ++i) {
-        TensorTools::Constant(hgx[i], epsilon);
-        TensorTools::Constant(hdx[i], epsilon);
-      }
-      ++pi;
-    }*/
-
-    shadow_params_allocated = true;
-  }
-
-  const float gscale = clip_gradients();
-  pi = 0;
-  for (auto p : model->parameters_list()) {
-    auto& g = (scale * gscale) * p->g.vec();
-    Tensor& hgv = hg[pi].h;
-    Tensor& hdv = hd[pi].h;
-    auto reg = p->values.vec() * lambda;
-    auto g2 = g.cwiseProduct(g);
-    hgv.vec() = rho * hgv.vec() + (1.0 - rho) * g2;
-    auto num = -g.cwiseProduct((hdv.vec().array() + epsilon).matrix().cwiseSqrt());
-    auto den = (hgv.vec().array() + epsilon).matrix().cwiseSqrt();
-    auto delta = num.cwiseQuotient(den);
-    auto d2 = delta.cwiseProduct(delta);
-    hdv.vec() = rho * hdv.vec() + (1.0 - rho) * d2;
-    p->values.vec() += delta - reg;
-    p->clear();
-    pi++;
-  }
-
-  pi = 0;
-  for (auto p : model->lookup_parameters_list()) {
-    vector<Tensor>& hgvx = hlg[pi].h;
-    vector<Tensor>& hdvx = hld[pi].h;
-    for (auto i : p->non_zero_grads) {
-      Tensor& hgv = hgvx[i];
-      Tensor& hdv = hdvx[i];
-      auto& g = scale * gscale * p->grads[i].vec();
-      auto reg = p->values[i].vec() * lambda;
-      auto g2 = g.cwiseProduct(g);
-      hgv.vec() = rho * hgv.vec() + (1.0 - rho) * g2;
-      auto num = -g.cwiseProduct((hdv.vec().array() + epsilon).matrix().cwiseSqrt());
-      auto den = (hgv.vec().array() + epsilon).matrix().cwiseSqrt();
-      auto delta = num.cwiseQuotient(den);
-      auto d2 = delta.cwiseProduct(delta);
-      hdv.vec() = rho * hdv.vec() + (1.0 - rho) * d2;
-      p->values[i].vec() += delta - reg;
-    }
-    p->clear();
-    pi++;
-  }
-  ++updates;
+void MomentumSGDTrainer::alloc_impl() {
+  vp = AllocateShadowParameters(*model);
+  vlp = AllocateShadowLookupParameters(*model);
 }
+#endif
 
-void RmsPropTrainer::update(real scale) {
-  unsigned pi = 0;
-  if (!shadow_params_allocated) {
-    hg.resize(model->parameters_list().size());
+// --- AdagradTrainer
 
-    pi = 0;
-    hlg.resize(model->lookup_parameters_list().size());
-    for (auto p : model->lookup_parameters_list()) {
-      hlg[pi++].resize(p->size());
-    }
-
-    shadow_params_allocated = true;
-  }
-
-  const float gscale = clip_gradients();
-  pi = 0;
-  for (auto p : model->parameters_list()) {
-    real& d2 = hg[pi++];
-    auto reg = p->values.vec() * lambda;
-    real g2 = p->g.vec().squaredNorm();
-    d2 = rho * d2 + (1.0 - rho) * g2;
-    p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec() + reg);
-    p->clear();
-  }
-
-  pi = 0;
-  for (auto p : model->lookup_parameters_list()) {
-    vector<real>& hlgx = hlg[pi++];
-    for (auto i : p->non_zero_grads) {
-      real& d2 = hlgx[i];
-      auto reg = p->values[i].vec() * lambda;
-      real g2 = p->grads[i].vec().squaredNorm();
-      d2 = rho * d2 + (1.0 - rho) * g2;
-      p->values[i].vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->grads[i].vec() + reg);
-    }
-    p->clear();
-  }
-  ++updates;
+// Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=stddev
+template <class MyDevice>
+void AdagradTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
+  ts[2]->tvec().device(*dev.edevice) += ts[1]->tvec().square();
+  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / (ts[2]->tvec() + epsilon).sqrt() * (-eta / model->weight_decay.CurrentWeightDecay());
 }
+CNN_TRAINER_INST_DEV_IMPL(AdagradTrainer)
 
-void AdamTrainer::update(real scale) {
-  unsigned pi;
-  if (!shadow_params_allocated) {
-    m = AllocateShadowParameters(*model);
-    lm = AllocateShadowLookupParameters(*model);
-    v = AllocateShadowParameters(*model);
-    lv = AllocateShadowLookupParameters(*model);
-    shadow_params_allocated = true;
-  }
-
-  const float gscale = clip_gradients();
-  pi = 0;
-  static unsigned t = 0;
-  for (auto p : model->parameters_list()) {
-    ++t;
-    auto g_t = (scale * gscale) * p->g.vec();
-    auto m_t = m[pi].h.vec();
-    auto v_t = v[pi].h.vec();
-    auto reg = p->values.vec() * lambda;
-    m_t = beta_1 * m_t + (1 - beta_1) * g_t;
-    auto g2 = g_t.cwiseProduct(g_t);
-    v_t = beta_2 * v_t + (1 - beta_2) * g2;
-    float s1 = 1 - pow(beta_1, t);
-    float s2 = 1 - pow(beta_2, t);
-    auto mhat = m_t / s1;
-    auto vhat = v_t / s2;
-    auto delta = (-eta * mhat).cwiseQuotient((vhat.array().sqrt() + eps).matrix());
-    p->values.vec() += delta - reg;
-    p->clear();
-    pi++;
-  }
-
-  pi = 0;
-  for (auto p : model->lookup_parameters_list()) {
-    vector<Tensor>& vm = lm[pi].h;
-    vector<Tensor>& vv = lv[pi].h;
-    for (auto i : p->non_zero_grads) {
-      auto m_t = vm[i].vec();
-      auto v_t = vv[i].vec();
-      auto g_t = scale * gscale * p->grads[i].vec();
-      auto g2 = g_t.cwiseProduct(g_t);
-      auto reg = p->values[i].vec() * lambda;
-      m_t = beta_1 * m_t + (1 - beta_1) * g_t;
-      v_t = beta_2 * v_t + (1 - beta_2) * g2;
-      float s1 = 1 - pow(beta_1, t);
-      float s2 = 1 - pow(beta_2, t);
-      auto mhat = m_t / s1;
-      auto vhat = v_t / s2;
-      auto delta = (-eta * mhat).cwiseQuotient((vhat.array().sqrt() + eps).matrix());
-      p->values[i].vec() += delta - reg;
-    }
-    p->clear();
-    pi++;
-  }
-  ++updates;
+#ifndef __CUDACC__
+void AdagradTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g, &vp[idx].h});
 }
+void AdagradTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]});
+}
+void AdagradTrainer::alloc_impl() {
+  vp = AllocateShadowParameters(*model);
+  vlp = AllocateShadowLookupParameters(*model);
+}
+#endif
+
+// --- AdadeltaTrainer
+
+// Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=hg, ts[3]=hd
+template <class MyDevice>
+void AdadeltaTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
+  ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho);
+  ts[1]->tvec().device(*dev.edevice) = - ts[1]->tvec() * (ts[3]->tvec() + epsilon).sqrt() / (ts[2]->tvec() + epsilon).sqrt();
+  ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho);
+  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / model->weight_decay.CurrentWeightDecay();
+}
+CNN_TRAINER_INST_DEV_IMPL(AdadeltaTrainer)
+
+#ifndef __CUDACC__
+void AdadeltaTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g, &hg[idx].h, &hd[idx].h});
+}
+void AdadeltaTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlg[idx].h[lidx], &hld[idx].h[lidx]});
+}
+void AdadeltaTrainer::alloc_impl() {
+  hg = AllocateShadowParameters(*model);
+  hlg = AllocateShadowLookupParameters(*model);
+  hd = AllocateShadowParameters(*model);
+  hld = AllocateShadowLookupParameters(*model);
+}
+#endif
+
+// --- RmsPropTrainer
+// TODO: This is not finished yet, because it memorizes a scalar for each set of parameters, not each parameter itself.
+//       We could implement this with one tensor for each scalar, but this is pretty wasteful
+
+// Perform update of ts[0]=parameters, ts[1]=gradients
+template <class MyDevice>
+void RmsPropTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  throw std::runtime_error("RMSProp optimization not implemented yet.");
+  // real& d2 = hg[pi++];
+  // real g2 = p->g.vec().squaredNorm();
+  // d2 = rho * d2 + (1.f - rho) * g2;
+  // p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec()) / model->weight_decay.CurrentWeightDecay();
+}
+CNN_TRAINER_INST_DEV_IMPL(RmsPropTrainer)
+
+#ifndef __CUDACC__
+void RmsPropTrainer::update_params(real scale, real gscale, size_t idx) {
+  throw std::runtime_error("RMSProp optimization not implemented yet.");
+  // auto & p = model->parameters_list()[idx];
+  // update_rule(scale, gscale, {&p->values, &p->g, &hg[idx].h, &hd[idx].h});
+}
+void RmsPropTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  throw std::runtime_error("RMSProp optimization not implemented yet.");
+  // auto & p = model->lookup_parameters_list()[idx];
+  // update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlg[idx].h[lidx], &hld[idx].h[lidx]});
+}
+void RmsPropTrainer::alloc_impl() {
+  throw std::runtime_error("RMSProp optimization not implemented yet.");
+  // hg.resize(model->parameters_list().size());
+  // unsigned pi = 0;
+  // hlg.resize(model->lookup_parameters_list().size());
+  // for (auto p : model->lookup_parameters_list()) {
+  //   hlg[pi++].resize(p->size());
+  // }
+}
+#endif
+
+// --- AdamTrainer
+
+// Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=mean, ts[3]=variance
+template <class MyDevice>
+void AdamTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
+  ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * beta_1 + ts[1]->tvec() * (1.f - beta_1);
+  ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * beta_2 + ts[1]->tvec().square() * (1.f - beta_2);
+  float s1 = 1 - pow(beta_1, updates+1);
+  float s2 = 1 - pow(beta_2, updates+1);
+  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / model->weight_decay.CurrentWeightDecay());
+}
+CNN_TRAINER_INST_DEV_IMPL(AdamTrainer)
+
+#ifndef __CUDACC__
+void AdamTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g, &m[idx].h, &v[idx].h});
+}
+void AdamTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx]});
+}
+void AdamTrainer::alloc_impl() {
+  m = AllocateShadowParameters(*model);
+  lm = AllocateShadowLookupParameters(*model);
+  v = AllocateShadowParameters(*model);
+  lv = AllocateShadowLookupParameters(*model);
+}
+#endif
 
 } // namespace cnn

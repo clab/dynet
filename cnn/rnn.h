@@ -1,6 +1,7 @@
 #ifndef CNN_RNN_H_
 #define CNN_RNN_H_
 
+#include <boost/serialization/access.hpp>
 #include "cnn/cnn.h"
 #include "cnn/rnn-state-machine.h"
 #include "cnn/expr.h"
@@ -69,6 +70,10 @@ struct RNNBuilder {
     cur = head[cur];
   }
 
+  // Set dropout. In general, you should disable dropout at test time
+  void set_dropout(float d) { dropout_rate = d; }
+  void disable_dropout() { dropout_rate = 0; }
+
   // returns node (index) of most recent output
   virtual Expression back() const = 0;
   // access the final output of each hidden layer
@@ -81,15 +86,33 @@ struct RNNBuilder {
   virtual std::vector<Expression> get_s(RNNPointer i) const = 0;
   // copy the parameters of another builder
   virtual void copy(const RNNBuilder & params) = 0;
+
+  // the following functions save all the parameters associated with a particular
+  // RNNBuilder's derived class to a file. These should not be used to seralize
+  // models, they should only be used to load and save parameters for pretraining.
+  // If you are interested in serializing models, use the boost serialization
+  // API against your model class
+  virtual void save_parameters_pretraining(const std::string& fname) const;
+  virtual void load_parameters_pretraining(const std::string& fname);
+
  protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) = 0;
   RNNPointer cur;
+  float dropout_rate;  
  private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
   std::vector<RNNPointer> head; // head[i] returns the head position
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & cur;
+    ar & head;
+    ar & sm;
+  } 
 };
 
 struct SimpleRNNBuilder : public RNNBuilder {
@@ -118,9 +141,12 @@ struct SimpleRNNBuilder : public RNNBuilder {
 
   unsigned num_h0_components() const override { return layers; }
 
+  void save_parameters_pretraining(const std::string& fname) const override;
+  void load_parameters_pretraining(const std::string& fname) override;
+
  private:
   // first index is layer, then x2h h2h hb
-  std::vector<std::vector<Parameters*>> params;
+  std::vector<std::vector<Parameter>> params;
 
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Expression>> param_vars;
@@ -134,8 +160,30 @@ struct SimpleRNNBuilder : public RNNBuilder {
 
   unsigned layers;
   bool lagging;
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & boost::serialization::base_object<RNNBuilder>(*this);
+    ar & params;
+    ar & layers;
+    ar & lagging;
+  }
 };
 
 } // namespace cnn
 
+
+namespace boost {
+  namespace serialization {
+    template<class Archive>
+    void serialize(Archive& ar, cnn::RNNPointer& p, const unsigned int version)
+    {
+        ar & p.t;
+    }
+  } // namespace serialization
+} // namespace boost
+
+BOOST_CLASS_EXPORT_KEY(cnn::RNNBuilder)
+BOOST_CLASS_EXPORT_KEY(cnn::SimpleRNNBuilder)
 #endif

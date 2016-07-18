@@ -4,6 +4,8 @@ import sys
 from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
 import numpy as np
+import cPickle as pickle
+import os.path
 # TODO:
 #  - set random seed (in CNN)
 #  - better input / output support
@@ -76,31 +78,32 @@ cdef c_tensor_as_np(CTensor &t):
 
 # {{{ Model / Parameters 
 cdef class Parameters:
-    cdef CParameters *thisptr
+    cdef CParameters thisptr # TODO -- no longer pointer
     def __cinit__(self):
-        self.thisptr = NULL
+        #self.thisptr = p
+        pass
     @staticmethod
-    cdef wrap_ptr(CParameters* ptr):
+    cdef wrap_ptr(CParameters ptr):
         self = Parameters()
         self.thisptr = ptr
         return self
 
     cpdef shape(self):
-        if self.thisptr.dim.ndims() == 1: return (self.thisptr.dim.rows())
-        return (self.thisptr.dim.rows(), self.thisptr.dim.cols())
+        if self.thisptr.get().dim.ndims() == 1: return (self.thisptr.get().dim.rows())
+        return (self.thisptr.get().dim.rows(), self.thisptr.get().dim.cols())
 
     cpdef as_array(self):
         """
         Return as a numpy array.
         """
         cdef CTensor t
-        return c_tensor_as_np(self.thisptr.values)
+        return c_tensor_as_np(self.thisptr.get().values)
 
     # TODO: make more efficient
     cpdef load_array(self, arr):
         cdef CTensor t
         cdef float* vals
-        t = self.thisptr.values
+        t = self.thisptr.get().values
         shape = arr.shape
         if len(shape) == 1:
             assert(t.d.ndims() == 1)
@@ -112,30 +115,33 @@ cdef class Parameters:
         for i in xrange(arr.size):
             vals[i] = arr[i]
 
+    cpdef zero(self): self.thisptr.zero()
+
+
 
 cdef class LookupParameters:
-    cdef CLookupParameters *thisptr
+    cdef CLookupParameters thisptr # TODO -- no longer pointer
     def __cinit__(self):
-        self.thisptr = NULL
+        pass
     @staticmethod
-    cdef wrap_ptr(CLookupParameters* ptr):
+    cdef wrap_ptr(CLookupParameters ptr):
         self = LookupParameters()
         self.thisptr = ptr
         return self
 
     cpdef init_from_array(self, arr):
-        if len(arr) > self.thisptr.values.size():
+        if len(arr) > self.thisptr.get().values.size():
             raise Exception("too many rows")
-        if arr.shape[1] != self.thisptr.values[0].d.rows():
+        if arr.shape[1] != self.thisptr.get().values[0].d.rows():
             raise Exception("dim mismatch")
         cdef vector[float] r
         for i,row in enumerate(arr):
             self.init_row(i, row)
 
     cpdef shape(self):
-        if self.thisptr.dim.cols() != 1:
-            return (self.thisptr.values.size(), self.thisptr.dim.rows(), self.thisptr.dim.cols())
-        return (self.thisptr.values.size(), self.thisptr.dim.rows())
+        if self.thisptr.get().dim.cols() != 1:
+            return (self.thisptr.get().values.size(), self.thisptr.get().dim.rows(), self.thisptr.get().dim.cols())
+        return (self.thisptr.get().values.size(), self.thisptr.get().dim.rows())
 
     def __getitem__(self, int i):
         return lookup(self, i)
@@ -144,67 +150,173 @@ cdef class LookupParameters:
         return lookup_batch(self, i)
 
     cpdef init_row(self, unsigned i, vector[float] row):
-        self.thisptr.Initialize(i, row)
+        self.thisptr.initialize(i, row)
 
     cpdef as_array(self):
         """
         Return as a numpy array.
         """
         cdef vector[CTensor] vals
-        vals = self.thisptr.values
+        vals = self.thisptr.get().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
+    cpdef zero(self): self.thisptr.zero()
 
-cdef class Model:
+# TODO document this
+class Saveable(object):
+    def __init__(self):
+        pass
+
+    def __getstate__(self):
+        odict = self.__dict__.copy() # copy the dict since we change it
+        params = self.get_components()
+        for k,v in odict.items(): # remove unpicklable things which we save otherwise
+            if v in params:
+                del odict[k]
+        return odict
+
+    def get_components(self):
+        """
+        List of parameter-containing components that are
+        members of this object and are created by it.
+        """
+        return NotImplemented
+
+    def restore_components(self, components):
+        return NotImplemented
+
+cdef class Model: # {{{
     cdef CModel *thisptr
-    cdef object named_params
-    cdef object lookups
-    cdef object regular
     def __cinit__(self):
         self.thisptr = new CModel()
     def __init__(self):
-        self.named_params = {}
-        self.lookups = []
-        self.regular = []
+        pass
 
     def __dealloc__(self): del self.thisptr
 
-    def add_parameters(self, name, dim, scale=0):
-        cdef CParameters* p
-        assert(name not in self.named_params), "name already registered"
-        p = self.thisptr.add_parameters(Dim(dim))
+    @staticmethod
+    def from_file(fname):
+        model = Model()
+        res = model.load(fname)
+        return model, res
+
+    # TODO: for debug, remove
+    cpdef pl(self): return self.thisptr.parameters_list().size()
+
+    cpdef add_parameters(self, dim, scale=0):
+        assert(isinstance(dim,(tuple,int)))
+        cdef CParameters p = self.thisptr.add_parameters(Dim(dim))
         cdef Parameters pp = Parameters.wrap_ptr(p)
-        self.named_params[name] = pp
-        self.regular.append(name)
+        #self.regular.append(pp) # TODO do we even need regular?
         return pp
 
-    def add_lookup_parameters(self, name, dim):
+    cpdef add_lookup_parameters(self, dim):
         assert(isinstance(dim, tuple))
-        assert(name not in self.named_params), "name already registered"
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
-        cdef CLookupParameters* p
-        p = self.thisptr.add_lookup_parameters(nids, Dim(rest))
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest))
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
-        self.named_params[name] = pp
-        self.lookups.append(name)
         return pp
 
-    def __getitem__(self, name):
-        return self.named_params[name]
-
-    def __contains__(self, name):
-        return name in self.named_params
-
-    #def parameters(self): return self.named_params.keys()
-    #def lookup_parameters(self): return list(self.lookups)
-    #def regular_parameters(self): return list(self.regular)
-
-    def save(self, string fname):
+    def save_all(self, string fname):
         save_cnn_model(fname, self.thisptr)
 
-    def load(self, string fname):
+    cdef load_all(self, string fname):
         load_cnn_model(fname, self.thisptr)
+
+    cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
+        # would be nicer to have polymorphism/dispatch-by-type
+        # but we cannot because we need to bind to the c-type.
+        c = component
+        if isinstance(c, Parameters):
+            fh.write("param ")
+            saver.add_parameter((<Parameters>c).thisptr)
+        elif isinstance(c, LookupParameters):
+            fh.write("lookup ")
+            saver.add_lookup_parameter((<LookupParameters>c).thisptr)
+        elif isinstance(c, LSTMBuilder):
+            fh.write("lstm_builder ")
+            saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
+        elif isinstance(c, SimpleRNNBuilder):
+            saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
+            fh.write("srnn_builder ")
+        elif isinstance(c, Saveable):
+            cs = c.get_components()
+            fh.write("user~%s " % len(cs))
+            pickle.dump(c,pfh)
+            for subc in cs:
+                self._save_one(subc,saver,fh,pfh)
+        else:
+            raise TypeError("Cannot save model component of type %s" % type(c))
+
+    def save(self, string fname, components=None):
+        if not components:
+            self.save_all(fname)
+            return
+        fh = file(fname+".pym","w")
+        pfh = file(fname+".pyk","w")
+        cdef CModelSaver *saver = new CModelSaver(fname, self.thisptr)
+        for c in components:
+            self._save_one(c,saver,fh,pfh)
+        saver.done()
+        fh.close()
+        pfh.close()
+        del saver
+
+    cdef _load_one(self, itypes, CModelLoader *loader, pfh):
+        cdef CParameters p
+        cdef CLookupParameters lp
+        cdef LSTMBuilder lb_
+        cdef SimpleRNNBuilder sb_
+        tp = itypes.next()
+        if tp == "param":
+            loader.fill_parameter(p)
+            param = Parameters.wrap_ptr(p)
+            return param
+        elif tp == "lookup":
+            loader.fill_lookup_parameter(lp)
+            param = LookupParameters.wrap_ptr(lp)
+            return param
+        elif tp == "lstm_builder":
+            lb_ = LSTMBuilder(0,0,0,self) # empty builder
+            loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
+            return lb_
+        elif tp == "srnn_builder":
+            sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
+            loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
+            return sb_
+        elif tp.startswith("user~"):
+            # user defiend type
+            tp,num = tp.split("~",1)
+            saveable = pickle.load(pfh)
+            num = int(num)
+            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
+            saveable.restore_components(items)
+            return saveable
+        else:
+            print "Huh?"
+            assert False,"unsupported type " + tp
+
+    cpdef load(self, string fname):
+        if not os.path.isfile(fname+".pym"):
+            self.load_all(fname)
+            return
+        with file(fname+".pym","r") as fh:
+            types = fh.read().strip().split()
+
+        cdef CModelLoader *loader = new CModelLoader(fname, self.thisptr)
+        with file(fname+".pyk","r") as pfh:
+            params = []
+            itypes = iter(types)
+            while True: # until iterator is done
+                try:
+                    param = self._load_one(itypes,loader,pfh)
+                except StopIteration: break
+                params.append(param)
+        loader.done()
+        del loader
+        return params
+    #}}}
 
 # }}}
 
@@ -261,6 +373,8 @@ cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
 def cg_version(): return _cg._cg_version
 def renew_cg(): return _cg.renew()
+def cg_checkpoint(): _cg.checkpoint()
+def cg_revert():     _cg.revert()
 
 cpdef ComputationGraph cg():
     global _cg
@@ -320,6 +434,12 @@ cdef class ComputationGraph:
 
     cpdef PrintGraphviz(self):
         self.thisptr.PrintGraphviz()
+
+    cpdef void checkpoint(self):
+        self.thisptr.checkpoint()
+
+    cpdef void revert(self):
+        self.thisptr.revert()
 
     # CNN handles changing inputs keeping pointers to memoty locations.
     # Because of python's memory management, objects that wrap such pointers
@@ -634,6 +754,7 @@ cpdef Expression l1_distance(Expression x, Expression y): ensure_freshness(y); r
 cpdef Expression binary_log_loss(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_binary_log_loss(x.c(), y.c()))
 cpdef Expression conv1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_narrow(x.c(), y.c()))
 cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_wide(x.c(), y.c()))
+cpdef Expression filter1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_filter1d_narrow(x.c(), y.c()))
 
 # unary-exp
 cpdef Expression tanh(Expression x): return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
@@ -754,6 +875,9 @@ cdef class _RNNBuilder: # {{{
     def __dealloc__(self):
         del self.thisptr
 
+    cpdef set_dropout(self, float f): self.thisptr.set_dropout(f)
+    cpdef disable_dropout(self): self.thisptr.disable_dropout()
+
     cdef new_graph(self):
         self.thisptr.new_graph(_cg.thisptr[0])
         self.cg_version = _cg.version()
@@ -850,7 +974,10 @@ cdef class _RNNBuilder: # {{{
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        if layers > 0:
+            self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        else:
+            self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
 
     def whoami(self): return "SimpleRNNBuilder"
@@ -858,7 +985,10 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     
 cdef class LSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        if layers > 0:
+            self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        else:
+            self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
 
     def whoami(self): return "LSTMBuilder"
@@ -1098,8 +1228,8 @@ cdef class StackedRNNState:
 # {{{ Training 
 cdef class SimpleSGDTrainer:
     cdef CSimpleSGDTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.1):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr, lam, e0)
+    def __cinit__(self, Model m, float e0 = 0.1):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1111,8 +1241,8 @@ cdef class SimpleSGDTrainer:
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.01, float mom = 0.9):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr, lam, e0, mom)
+    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1124,8 +1254,8 @@ cdef class MomentumSGDTrainer:
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float e0 = 0.1, float eps = 1e-20):
-        self.thisptr = new CAdagradTrainer(m.thisptr, lam, e0, eps)
+    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20):
+        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1137,8 +1267,8 @@ cdef class AdagradTrainer:
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float eps = 1e-6, float rho = 0.95):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr, lam, eps, rho)
+    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1150,8 +1280,8 @@ cdef class AdadeltaTrainer:
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
-    def __cinit__(self, Model m, float lam = 1e-6, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8 ):
-        self.thisptr = new CAdamTrainer(m.thisptr, lam, alpha, beta_1, beta_2, eps)
+    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8 ):
+        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):

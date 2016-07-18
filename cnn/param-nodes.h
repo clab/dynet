@@ -3,6 +3,7 @@
 
 #include "cnn/cnn.h"
 #include "cnn/model.h"
+#include "cnn/nodes-macros.h"
 
 namespace cnn {
 
@@ -12,95 +13,73 @@ struct ParameterNodeBase : public Node {
 
 // represents optimizable parameters
 struct ParameterNode : public ParameterNodeBase {
-  explicit ParameterNode(Parameters* p) : dim(p->dim), params(p) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  explicit ParameterNode(Parameter p) : dim(p.get()->dim), params(p) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
   void accumulate_grad(const Tensor& g) override;
   Dim dim;
-  Parameters* params;
+  Parameter params;
 };
 
 // represents optimizable parameters that are being held constant
 struct ConstParameterNode : public Node {
-  explicit ConstParameterNode(Parameters* p) : dim(p->dim), params(p) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  explicit ConstParameterNode(Parameter p) : dim(p.get()->dim), params(p) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
   Dim dim;
-  Parameters* params;
+  Parameter params;
 };
 
 // represents specified (not learned) inputs to the network
 struct InputNode : public Node {
   explicit InputNode(const Dim& d, const std::vector<float>& dat) : dim(d), data(dat), pdata(&data) {}
   explicit InputNode(const Dim& d, const std::vector<float>* pdat) : dim(d), data(), pdata(pdat) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
   Dim dim;
   const std::vector<float> data;
   const std::vector<float>* pdata;
+};
+
+// Represents specified (not learned) inputs to the network in sparse array format,
+// with an optional default value. Note that indexes refer to where the memory is actually
+// indexed in column-major format. When multiple batches are used they will also be
+// consecutive in memory. This doesn't support pointer input, because this would require
+// dynamic changing of the size of auxiliary memory on GPUs, although this could possibly
+// be fixed in the future.
+struct SparseInputNode : public Node {
+  explicit SparseInputNode(const Dim& d, const std::vector<unsigned int>& id, const std::vector<float>& dat, float defdat = 0.f) : dim(d), ids(id), data(dat), defdata(defdat) {}
+  CNN_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  size_t aux_storage_size() const override;
+  Dim dim;
+  const std::vector<unsigned int> ids;
+  const std::vector<float> data;
+  float defdata;
 };
 
 // represents specified (not learned) scalar inputs to the network
 struct ScalarInputNode : public Node {
   explicit ScalarInputNode(real s) : data(s), pdata(&data) {}
   explicit ScalarInputNode(const real* ps) : data(), pdata(ps) {}
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
+  CNN_NODE_DEFINE_DEV_IMPL()
   const cnn::real data;
   const cnn::real* pdata;
 };
 
 // represents a matrix/vector embedding of an item of a discrete set (1-hot coding)
 struct LookupNode : public ParameterNodeBase {
-  LookupNode(LookupParameters* p, unsigned ind) : dim(p->dim), index(ind), pindex(&index), indices(), pindices(), params(p) {}
-  LookupNode(LookupParameters* p, const unsigned* pind) : dim(p->dim), index(), pindex(pind), indices(), pindices(), params(p) {}
-  LookupNode(LookupParameters* p, const std::vector<unsigned>& indices) : dim(p->dim), index(), pindex(), indices(indices), pindices(&this->indices), params(p) {
-    dim.bd = pindices->size();
-  }
-  LookupNode(LookupParameters* p, const std::vector<unsigned>* pindices) : dim(p->dim), index(), pindex(), indices(), pindices(pindices), params(p) {
-    dim.bd = pindices->size();
-  }
-  std::string as_string(const std::vector<std::string>& arg_names) const override;
-  Dim dim_forward(const std::vector<Dim>& xs) const override;
+  LookupNode(LookupParameter p, unsigned ind) : dim(p.get()->dim), index(ind), pindex(&index), indices(), pindices(), params(p) {}
+  LookupNode(LookupParameter p, const unsigned* pind) : dim(p.get()->dim), index(), pindex(pind), indices(), pindices(), params(p) {}
+  LookupNode(LookupParameter p, const std::vector<unsigned>& indices) : dim(p.get()->dim), index(), pindex(), indices(indices), pindices(&this->indices), params(p) { dim.bd = pindices->size(); }
+  LookupNode(LookupParameter p, const std::vector<unsigned>* pindices) : dim(p.get()->dim), index(), pindex(), indices(), pindices(pindices), params(p) { dim.bd = pindices->size(); }
+  CNN_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }  
-  void forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const override;
-  void backward_impl(const std::vector<const Tensor*>& xs,
-                  const Tensor& fx,
-                  const Tensor& dEdf,
-                  unsigned i,
-                  Tensor& dEdxi) const override;
   void accumulate_grad(const Tensor& g) override;
   Dim dim;
   unsigned index;
   const unsigned* pindex;
   std::vector<unsigned> indices;
   const std::vector<unsigned>* pindices;
-  LookupParameters* params;
+  LookupParameter params;
 };
 
 } // namespace cnn

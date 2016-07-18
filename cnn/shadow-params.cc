@@ -8,16 +8,25 @@ using namespace std;
 
 namespace cnn {
 
-ShadowParameters::ShadowParameters(const Parameters& p) : h(p.values) {
+ShadowParameters::ShadowParameters(const ParameterStorage& p) : h(p.values) {
   h.v = (float*)default_device->mem->malloc(h.d.size() * sizeof(float));
   TensorTools::Zero(h);
 }
 
-ShadowLookupParameters::ShadowLookupParameters(const LookupParameters& lp) : h(lp.values) {
+ShadowParameters::~ShadowParameters() {
+  default_device->mem->free(h.v);
+}
+
+ShadowLookupParameters::ShadowLookupParameters(const LookupParameterStorage& lp) : h(lp.values) {
   for (auto& t : h) {
     t.v = (float*)default_device->mem->malloc(t.d.size() * sizeof(float));
     TensorTools::Zero(t);
   }
+}
+
+ShadowLookupParameters::~ShadowLookupParameters() {
+  for (auto& t : h)
+    default_device->mem->free(t.v);
 }
 
 vector<ShadowParameters> AllocateShadowParameters(const Model& m) {

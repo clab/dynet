@@ -33,44 +33,41 @@ cdef extern from "cnn/tensor.h" namespace "cnn":
     vector[float] c_as_vector "cnn::as_vector" (CTensor& t)
 
 cdef extern from "cnn/model.h" namespace "cnn":
-    cdef cppclass CParameters "cnn::Parameters":
-        CParameters()
+    cdef cppclass CParameterStorage "cnn::ParameterStorage":
+        CParameterStorage()
         CTensor values
-        #void scale_parameters(float a) # override;
-        #void squared_l2norm(float* sqnorm) const # override;
-        #void g_squared_l2norm(float* sqnorm) const # override;
-        #size_t size() const # override;
-        #void accumulate_grad(const Tensor& g)
-        #void clear()
         CDim dim
-        pass
 
-    cdef cppclass CLookupParameters "cnn::LookupParameters":
-        CLookupParameters()
+    cdef cppclass CLookupParameterStorage "cnn::LookupParameterStorage":
+        CLookupParameterStorage()
         vector[CTensor] values
-        #void scale_parameters(float a) # override;
-        #void squared_l2norm(float* sqnorm) const # override;
-        #void g_squared_l2norm(float* sqnorm) const # override;
-        #size_t size() const # override;
-        #void accumulate_grad(const Tensor& g)
-        #void clear()
         CDim dim
-        void Initialize(unsigned index, const vector[float]& val)
-        pass
+
+    cdef cppclass CParameters "cnn::Parameter":
+        CParameters()
+        CParameterStorage *get()
+        void zero()
+
+    cdef cppclass CLookupParameters "cnn::LookupParameter":
+        CLookupParameters()
+        CLookupParameterStorage *get()
+        CDim dim
+        void initialize(unsigned index, const vector[float]& val)
+        void zero()
 
     cdef cppclass CModel "cnn::Model":
         CModel()
         #float gradient_l2_norm() const
-        CParameters* add_parameters(CDim& d, float scale = 0.0)
-        CLookupParameters* add_lookup_parameters(unsigned n, const CDim& d)
-        #void save(string fname)
-        #void load(string fname)
+        CParameters add_parameters(CDim& d, float scale = 0.0)
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
+        vector[CParameterStorage] parameters_list()
 
     void load_cnn_model "cnn::load_cnn_model" (string filename, CModel *model)
     void save_cnn_model "cnn::save_cnn_model" (string filename, CModel *model)
 
 cdef extern from "cnn/cnn.h" namespace "cnn":
     ctypedef unsigned VariableIndex
+
     cdef cppclass CComputationGraph "cnn::ComputationGraph":
         CComputationGraph() except +
         # Inputs
@@ -92,35 +89,43 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
         void backward()
         void backward(VariableIndex i)
 
+        # checkpointing
+        void checkpoint()
+        void revert()
+
         void PrintGraphviz() const
 
 cdef extern from "cnn/training.h" namespace "cnn":
     cdef cppclass CSimpleSGDTrainer "cnn::SimpleSGDTrainer":
-        CSimpleSGDTrainer(CModel* m, float lam, float e0)
+        #CSimpleSGDTrainer(CModel* m, float lam, float e0)
+        CSimpleSGDTrainer(CModel* m, float e0) # TODO removed lam, update docs.
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CMomentumSGDTrainer "cnn::MomentumSGDTrainer":
-        CMomentumSGDTrainer(CModel* m, float lam, float e0, float mom)
+        CMomentumSGDTrainer(CModel* m, float e0, float mom) # TODO removed lam, update docs
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdagradTrainer "cnn::AdagradTrainer":
-        CAdagradTrainer(CModel* m, float lam, float e0, float eps)
+        CAdagradTrainer(CModel* m, float e0, float eps) # TODO removed lam, update docs
+
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdadeltaTrainer "cnn::AdadeltaTrainer":
-        CAdadeltaTrainer(CModel* m, float lam, float eps, float rho)
+        CAdadeltaTrainer(CModel* m, float eps, float rho) # TODO removed lam, update docs
+
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdamTrainer "cnn::AdamTrainer":
-        CAdamTrainer(CModel* m, float lam, float alpha, float beta_1, float beta_2, float eps)
+        CAdamTrainer(CModel* m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
+
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -135,13 +140,13 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
     #CExpression c_input "cnn::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "cnn::expr::input" (CComputationGraph& g, float *ps) #
     CExpression c_input "cnn::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata)
-    CExpression c_parameter "cnn::expr::parameter" (CComputationGraph& g, CParameters* p) #
+    CExpression c_parameter "cnn::expr::parameter" (CComputationGraph& g, CParameters p) #
     #CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
-    CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned* pindex) #
-    CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters* p, vector[unsigned]* pindices) #
+    CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
+    CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
     #CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
-    CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned* pindex) #
-    CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, vector[unsigned]* pindices) #
+    CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
+    CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
 
     # identity function, but derivative is not propagated through it
     CExpression c_nobackprop "cnn::expr::nobackprop" (CExpression& x) #
@@ -197,6 +202,7 @@ cdef extern from "cnn/expr.h" namespace "cnn::expr":
 
     CExpression c_conv1d_narrow "cnn::expr::conv1d_narrow" (CExpression& x, CExpression& f) #
     CExpression c_conv1d_wide "cnn::expr::conv1d_wide" (CExpression& x, CExpression& f) #
+    CExpression c_filter1d_narrow "cnn::expr::filter1d_narrow" (CExpression& x, CExpression& f) #
     CExpression c_kmax_pooling "cnn::expr::kmax_pooling" (CExpression& x, unsigned k) #
     CExpression c_fold_rows "cnn::expr::fold_rows" (CExpression& x, unsigned nrows) #
     CExpression c_sum_cols "cnn::expr::sum_cols" (CExpression& x)               #
@@ -241,11 +247,14 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         vector[CExpression] get_h(CRNNPointer i)
         vector[CExpression] get_s(CRNNPointer i)
         CRNNPointer state()
+        void set_dropout(float f)
+        void disable_dropout()
 
 # TODO unify with LSTMBuilder using inheritance
 cdef extern from "cnn/rnn.h" namespace "cnn":
     #cdef cppclass RNNBuilder "cnn::RNNBuilder":
     cdef cppclass CSimpleRNNBuilder  "cnn::SimpleRNNBuilder" (CRNNBuilder):
+        CSimpleRNNBuilder()
         CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
@@ -261,6 +270,7 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
 
 cdef extern from "cnn/lstm.h" namespace "cnn":
     cdef cppclass CLSTMBuilder "cnn::LSTMBuilder" (CRNNBuilder):
+        CLSTMBuilder()
         CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
@@ -289,3 +299,19 @@ cdef extern from "cnn/fast-lstm.h" namespace "cnn":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
+cdef extern from "pybridge.h" namespace "pycnn":
+    cdef cppclass CModelSaver "pycnn::ModelSaver":
+        CModelSaver(string filename, CModel *model)
+        CModelSaver add_parameter(CParameters p)
+        CModelSaver add_lookup_parameter(CLookupParameters lp)
+        CModelSaver add_lstm_builder(CLSTMBuilder b)
+        CModelSaver add_srnn_builder(CSimpleRNNBuilder b)
+        void done()
+
+    cdef cppclass CModelLoader "pycnn::ModelLoader":
+        CModelLoader(string filename, CModel *model)
+        CModelSaver fill_parameter(CParameters p)
+        CModelSaver fill_lookup_parameter(CLookupParameters lp)
+        CModelSaver fill_lstm_builder(CLSTMBuilder lp)
+        CModelSaver fill_srnn_builder(CSimpleRNNBuilder lp)
+        void done()

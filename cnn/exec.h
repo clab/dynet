@@ -9,6 +9,7 @@ class ExecutionEngine {
  public:
   virtual ~ExecutionEngine();
   virtual void invalidate() = 0;
+  virtual void invalidate(unsigned) = 0;
   virtual const Tensor& forward() = 0;
   virtual const Tensor& forward(VariableIndex i) = 0;
   virtual const Tensor& incremental_forward() = 0;  // if you want to add nodes and evaluate just the new parts
@@ -25,6 +26,7 @@ class SimpleExecutionEngine : public ExecutionEngine {
  public:
   explicit SimpleExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) {}
   void invalidate() override;
+  void invalidate(unsigned i) override;
   const Tensor& forward() override;
   const Tensor& forward(VariableIndex i) override;
   const Tensor& incremental_forward() override;  // if you want to add nodes and evaluate just the new parts

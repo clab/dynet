@@ -13,8 +13,8 @@ namespace cnn {
 
 bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
   // Clear the parameters first
-  const vector<Parameters*>& params = m.parameters_list();
-  const vector<LookupParameters*>& lookup_params = m.lookup_parameters_list();
+  const vector<ParameterStorage*>& params = m.parameters_list();
+  const vector<LookupParameterStorage*>& lookup_params = m.lookup_parameters_list();
   for (auto pp : params)
     pp->clear();
   for (auto pp : lookup_params)
@@ -30,7 +30,7 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
   for (auto pp : params) {
     if(verbosity > 1)
       cerr << endl << "PARAMETERS " << pp << endl;
-    Parameters& p = *pp;
+    ParameterStorage& p = *pp;
     size_t ts = p.dim.size();
     for (size_t i = 0; i < ts; ++i) {
       float old = TensorTools::AccessElement(p.values, i);
@@ -43,8 +43,8 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
       float g_act = TensorTools::AccessElement(p.g, i);
       float f = fabs(g - g_act);
       float m = max(fabs(g), fabs(g_act));
-      if (f > 0.1 && m > 0.f) f /= m;
-      if (f > 0.1 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
+      if (f > 0.01 && m > 0.f) f /= m;
+      if (f > 0.01 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
       if(verbosity + (curr_flag ? 1 : 0) > 1) {
         cerr << g_act << ' ' << g << endl;
         curr_flag = false;
@@ -55,7 +55,7 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
   for (auto pp : lookup_params) {
     if(verbosity > 1)
       cerr << endl << "LOOKUP PARAMETERS " << pp << endl;
-    LookupParameters& p = *pp;
+    LookupParameterStorage& p = *pp;
     size_t ts = p.dim.size();
     for (unsigned j : p.non_zero_grads) {
       if(verbosity > 1)
@@ -73,8 +73,8 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
         float g_act = TensorTools::AccessElement(ag, i);
         float f = fabs(g - g_act);
         float m = max(fabs(g), fabs(g_act));
-        if (f > 0.1 && m > 0.f) f /= m;
-        if (f > 0.1 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
+        if (f > 0.01 && m > 0.f) f /= m;
+        if (f > 0.01 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
         if(verbosity + (curr_flag ? 1 : 0) > 1) {
           cerr << g_act << ' ' << g << endl;
           curr_flag = false;

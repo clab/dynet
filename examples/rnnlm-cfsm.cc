@@ -30,7 +30,7 @@ int kEOS;
 
 template <class Builder>
 struct RNNLanguageModel {
-  LookupParameters* p_c;
+  LookupParameter p_c;
   Builder builder;
   ClassFactoredSoftmaxBuilder& cfsm;
   explicit RNNLanguageModel(Model& model, ClassFactoredSoftmaxBuilder& h) :

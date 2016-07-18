@@ -31,17 +31,20 @@ int kEOS;
 
 template <class Builder>
 struct EncoderDecoder {
-  LookupParameters* p_c;
-  LookupParameters* p_ec;  // map input to embedding (used in fwd and rev models)
-  Parameters* p_ie2h;
-  Parameters* p_bie;
-  Parameters* p_h2oe;
-  Parameters* p_boe;
-  Parameters* p_R;
-  Parameters* p_bias;
+  LookupParameter p_c;
+  LookupParameter p_ec;  // map input to embedding (used in fwd and rev models)
+  Parameter p_ie2h;
+  Parameter p_bie;
+  Parameter p_h2oe;
+  Parameter p_boe;
+  Parameter p_R;
+  Parameter p_bias;
   Builder dec_builder;
   Builder rev_enc_builder;
   Builder fwd_enc_builder;
+
+  EncoderDecoder() {}
+
   explicit EncoderDecoder(Model& model) :
       dec_builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
       rev_enc_builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
@@ -117,6 +120,15 @@ struct EncoderDecoder {
     Expression i_nerr = sum(errs);
     return -i_nerr;
   }
+
+private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & p_c & p_ec;
+    ar & p_ie2h & p_bie & p_h2oe & p_boe & p_R & p_bias;
+    ar & dec_builder & rev_enc_builder & fwd_enc_builder;
+  }
 };
 
 int main(int argc, char** argv) {
@@ -189,12 +201,15 @@ int main(int argc, char** argv) {
   
   //RNNBuilder rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
   //EncoderDecoder<SimpleRNNBuilder> lm(model);
-  EncoderDecoder<LSTMBuilder> lm(model);
+  EncoderDecoder<LSTMBuilder> lm;
   if (argc == 4) {
     string fname = argv[3];
     ifstream in(fname);
     boost::archive::text_iarchive ia(in);
     ia >> model;
+  }
+  else {
+    lm = EncoderDecoder<LSTMBuilder>(model);
   }
   
   unsigned report_every_i = 50;
@@ -251,7 +266,7 @@ int main(int argc, char** argv) {
 	best = dloss;
 	ofstream out(fname);
 	boost::archive::text_oarchive oa(out);
-	oa << model;
+	oa << model << lm;
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }

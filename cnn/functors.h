@@ -33,14 +33,14 @@ struct FHuberForward {
   const float c;
 };
 
-template <typename T> int sgn(T val) {
-  return (T(0) < val) - (val < T(0));
-}
+// template <typename T> int sgn(T val) {
+//   return ((T(0) < val) - (val < T(0)));
+// }
 
 struct FL1Backward {
   FL1Backward(float d) : d(d) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {
-    return sgn(x) * d;
+    return ((0.f < x) - (x < 0.f)) * d;
   }
   const float d;
 };
@@ -49,7 +49,7 @@ struct FHuberBackward {
   FHuberBackward(float c, float dEdf) : c(c), d(dEdf) {}
   CNN_DEVICE_FUNC inline float operator()(float x) const {
     const float a = fabs(x);
-    return (2 * d) * ((a < c) ? x : c * sgn(x));
+    return (2 * d) * ((a < c) ? x : c * ((0.f < x) - (x < 0.f)));
   }
   const float c;
   const float d;
@@ -181,16 +181,11 @@ struct FSoftmaxBackward {
   float off_diag_sum;
 };
 
-struct FLogGammaBackward {
-  CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
-#ifndef HAVE_CUDA
-    return boost::math::digamma(x) * d;
-#else
-    assert(false); // Not supported on GPUs?
-    return 0;
-#endif
-  }
-};
+// struct FLogGammaBackward {
+//   CNN_DEVICE_FUNC inline float operator()(float x, float d) const {
+//     return boost::math::digamma(x) * d;
+//   }
+// };
 
 struct FNegLogSoftmaxBackward {
   FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}

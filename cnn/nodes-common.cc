@@ -4,17 +4,24 @@
 #include <cmath>
 #include <sstream>
 
+#include "cnn/nodes-macros.h"
+
 using namespace std;
 
 namespace cnn {
 
-inline bool LooksLikeVector(const Dim& d) {
-  if (d.ndims() == 1) return true;
-  if (d.ndims() > 1) {
-    for (unsigned i = 1; i < d.ndims(); ++i)
-      if (d[i] != 1) return false;
+string AddVectorToAllColumns::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "fold_rows(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return os.str();
+}
+
+Dim AddVectorToAllColumns::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || xs[0].rows() != xs[1].rows() || xs[0].ndims() != 2 || (xs[1].ndims() != 1 && (xs[1].ndims() != 2 || xs[1].cols() != 1))) {
+    cerr << "Bad input dimensions in AddVectorToAllColumns: " << xs << endl;
+    throw std::invalid_argument("bad input dimensions in AddVectorToAllColumns");
   }
-  return true;
+  return xs[0];
 }
 
 string SparsemaxLoss::as_string(const vector<string>& arg_names) const {
@@ -67,23 +74,6 @@ string LogDet::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "logdet(" << arg_names[0] << ")";
   return s.str();
-}
-
-string AddMv::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "addmv(" << arg_names[0] << ", " << arg_names[1] << ")";
-  return s.str();
-}
-
-Dim AddMv::dim_forward(const vector<Dim>& xs) const {
-  if (xs.size() != 2 ||
-      xs[0].ndims() > 2 ||
-      xs[0].rows() != xs[1].rows() ||
-      xs[1].ndims() != 1) {
-    cerr << "Bad arguments in AddMv: " << xs << endl;
-    throw std::invalid_argument("invalid arguments to AddMv");
-  }
-  return xs[0];
 }
 
 string SelectRows::as_string(const vector<string>& arg_names) const {
@@ -212,22 +202,16 @@ string Reshape::as_string(const vector<string>& arg_names) const {
 
 Dim Reshape::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  assert(xs[0].size() == to.size());
-  return to;
-}
-
-string SumColumns::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "sum_cols(matrix=" << arg_names[0];
-  if (arg_names.size() == 2) s << ", col_weighting=" << arg_names[1];
-  s << ')';
-  return s.str();
-}
-
-Dim SumColumns::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1 || xs.size() == 2);
-  int bd = (xs.size() == 1 ? xs[0].bd : max(xs[0].bd, xs[1].bd));
-  return Dim({xs[0].rows()}, bd);
+  if(to.size() == xs[0].size()) {
+    return to;
+  } else if(to.batch_elems() == 1 && to.batch_size() == xs[0].batch_size()) {
+    Dim ret(to);
+    ret.bd = xs[0].batch_elems();
+    return ret;
+  } else {
+    cerr << "Bad arguments to Reshape: " << to << ", " << xs[0] << endl;
+    throw std::invalid_argument("Bad arguments to Reshape");
+  }
 }
 
 string KMHNGram::as_string(const vector<string>& arg_names) const {
@@ -244,57 +228,6 @@ Dim KMHNGram::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument(s.str());
   }
   return Dim({xs[0][0], new_cols});
-}
-
-string InnerProduct3D_1D::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "dot(" << arg_names[0] << "," << arg_names[1] << ')';
-  if (arg_names.size() == 3) s << " + " << arg_names[2];
-  return s.str();
-}
-
-Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
-  if (xs.size() != 2 && xs.size() != 3)
-    throw std::invalid_argument("Expected two or three arguments in InnerProduct3D_1D");
-  if (xs[0].ndims() != 3 ||
-      xs[1].ndims() != 1 ||
-      xs[0].size(2) != xs[1].size(0)) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  Dim d({xs[0].size(0), xs[0].size(1)}, max(xs[0].bd, xs[1].bd));
-  if(xs.size() == 3) d.bd = max(d.bd, xs[2].bd);
-  if (xs.size() == 3 && xs[2] != d) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  return d;
-}
-
-string InnerProduct3D_1D_1D::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "dotdot(" << arg_names[0] << "," << arg_names[1] << "," << arg_names[2] << ')';
-  if (arg_names.size() == 4) s << " + " << arg_names[3];
-  return s.str();
-}
-
-Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
-  if (xs.size() != 3 && xs.size() != 4)
-    throw std::invalid_argument("Expected three or four arguments in InnerProduct3D_1D");
-  if (xs[0].ndims() != 3 ||
-      xs[1].ndims() != 1 ||
-      xs[2].ndims() != 1) {
-    // TODO fix add check
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  Dim d({xs[0].size(0)}, max(max(xs[0].bd, xs[1].bd), xs[2].bd));
-  if(xs.size() == 4) d.bd = max(d.bd, xs[3].bd);
-  if (xs.size() == 4 && xs[3] != d) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  return d;
 }
 
 string GaussianNoise::as_string(const vector<string>& arg_names) const {
@@ -701,7 +634,19 @@ Dim RestrictedLogSoftmax::dim_forward(const vector<Dim>& xs) const {
 
 string PickElement::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "pick(" << arg_names[0] << ',' << *pval << ')';
+  s << "pick(" << arg_names[0] << ',';
+  if(pval) { 
+    s << *pval << ')';
+  } else {
+    assert(pvals);
+    s << '[';
+    if(pvals->size()) {
+      s << (*pvals)[0];
+      for(size_t i = 1; i < pvals->size(); ++i)
+        s << ',' << (*pvals)[i];
+    }
+    s << "])";
+  }
   return s.str();
 }
 
@@ -944,6 +889,16 @@ Dim BinaryLogLoss::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument(s.str());
   }
   return Dim({1}, max(xs[0].bd, xs[1].bd));
+}
+
+string Zeroes::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "zeroes(" << dim << ')';
+  return s.str();
+}
+
+Dim Zeroes::dim_forward(const vector<Dim>& xs) const {
+  return dim;
 }
 
 } // namespace cnn

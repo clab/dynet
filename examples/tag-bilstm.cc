@@ -36,13 +36,13 @@ int kEOS;
 
 template <class Builder>
 struct RNNLanguageModel {
-  LookupParameters* p_w;
-  Parameters* p_l2th;
-  Parameters* p_r2th;
-  Parameters* p_thbias;
+  LookupParameter p_w;
+  Parameter p_l2th;
+  Parameter p_r2th;
+  Parameter p_thbias;
 
-  Parameters* p_th2t;
-  Parameters* p_tbias;
+  Parameter p_th2t;
+  Parameter p_tbias;
   Builder l2rbuilder;
   Builder r2lbuilder;
   explicit RNNLanguageModel(Model& model) :
