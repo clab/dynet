@@ -14,35 +14,37 @@ namespace Eigen {
 namespace cnn {
 
 enum class DeviceType {CPU, GPU};
+enum class DeviceMempool {FXS = 0, DEDFS = 1, PS = 2, NONE = 3};
 
 struct ComputationGraph; // TODO is there a nicer way to resolve this cyclic dependency?
 struct DeviceMemCheckpoint;
+struct Tensor;
 
 class Device {
  protected:
-  Device(DeviceType t, MemAllocator* m) : type(t), mem(m) {}
+  Device(int i, DeviceType t, MemAllocator* m) : device_id(i), type(t), mem(m), pools(3, nullptr) {}
   Device(const Device&) = delete;
   Device& operator=(const Device&) = delete;
   virtual ~Device();
  public:
+  int device_id;
   DeviceType type;
   MemAllocator* mem;
-  AlignedMemoryPool* fxs;
-  AlignedMemoryPool* dEdfs;
-  AlignedMemoryPool* ps;
   float* kSCALAR_MINUSONE;
   float* kSCALAR_ONE;
   float* kSCALAR_ZERO;
   std::string name;
   virtual DeviceMemCheckpoint mark(ComputationGraph *cg);
   virtual void revert(DeviceMemCheckpoint cp);
+  void allocate_tensor(DeviceMempool mem_pool, Tensor & tensor);
+  std::vector<AlignedMemoryPool*> pools;
 };
 
 #if HAVE_CUDA
 class Device_GPU : public Device {
  public:
   typedef Eigen::CudaStreamDevice EigenDevice;
-  explicit Device_GPU(int mb, int device_id);
+  explicit Device_GPU(int my_id, int mb, int device_id);
   ~Device_GPU();
   int cuda_device_id;
   cublasHandle_t cublas_handle;
@@ -55,7 +57,7 @@ class Device_GPU : public Device {
 class Device_CPU : public Device {
  public:
   typedef Eigen::DefaultDevice EigenDevice;
-  explicit Device_CPU(int mb, bool shared);
+  explicit Device_CPU(int my_id, int mb, bool shared);
   ~Device_CPU();
   CPUAllocator cpu_mem;
   Eigen::DefaultDevice* edevice;
