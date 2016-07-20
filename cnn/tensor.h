@@ -152,13 +152,14 @@ struct Tensor {
   template<class Archive>
   void save(Archive& ar, const unsigned int ver) const {
     ar & d;
-    ar & ((device == default_device) ? (int)-1 : device->device_id);
+    int dev_id = ((device == default_device) ? (int)-1 : device->device_id);
+    ar & dev_id;
     ar & mem_pool;
 #ifdef HAVE_CUDA
     if(device->type == DeviceType::GPU) {
       float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
       CUDA_CHECK(cudaMemcpyAsync(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
-      ar & boost::serialization::make_array(vc, mem.size());
+      ar & boost::serialization::make_array(vc, d.size());
       free(vc);
     } else {
       ar & boost::serialization::make_array(v, d.size());
