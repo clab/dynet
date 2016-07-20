@@ -53,7 +53,7 @@ ParameterStorageBase::~ParameterStorageBase() {}
 
 ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
-  values.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
+  values.v = static_cast<float*>(default_device->pools[(int)DeviceMempool::PS]->allocate(d.size() * sizeof(float)));
   values.device = g.device = default_device;
   if (scale) {
     TensorTools::Randomize(values, scale);
@@ -61,7 +61,7 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   else {
     TensorTools::Randomize(values);
   }
-  g.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
+  g.v = static_cast<float*>(default_device->pools[(int)DeviceMempool::PS]->allocate(d.size() * sizeof(float)));
   TensorTools::Zero(g);
 }
 
@@ -85,13 +85,13 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
   for (unsigned i = 0; i < n; ++i) {
     auto& v = values[i];
     v.d = d;
-    v.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
+    v.v = static_cast<float*>(default_device->pools[(int)DeviceMempool::PS]->allocate(d.size() * sizeof(float)));
     v.device = default_device;
     TensorTools::Randomize(v);
 
     auto& g = grads[i];
     g.d = d;
-    g.v = static_cast<float*>(default_device->ps->allocate(d.size() * sizeof(float)));
+    g.v = static_cast<float*>(default_device->pools[(int)DeviceMempool::PS]->allocate(d.size() * sizeof(float)));
     g.device = default_device;
     TensorTools::Zero(g);
   }
@@ -235,7 +235,7 @@ void load_cnn_model(std::string filename, Model* model) {
 // Take the squared norm
 template <class MyDevice>
 void ParameterStorage::squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
-  Tensor sqnorm_t({1}, sqnorm, &dev);
+  Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
   sqnorm_t.t<0>().device(*dev.edevice) = values.tvec().square().sum();
 }
 CNN_PARAMNORM_INST_DEV_IMPL(ParameterStorage, squared_l2norm, squared_l2norm_dev)
@@ -243,7 +243,7 @@ CNN_PARAMNORM_INST_DEV_IMPL(ParameterStorage, squared_l2norm, squared_l2norm_dev
 // Take the squared norm of the gradient
 template <class MyDevice>
 void ParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
-  Tensor sqnorm_t({1}, sqnorm, &dev);
+  Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
   sqnorm_t.t<0>().device(*dev.edevice) = g.tvec().square().sum();
 }
 CNN_PARAMNORM_INST_DEV_IMPL(ParameterStorage, g_squared_l2norm, g_squared_l2norm_dev)
@@ -321,7 +321,7 @@ void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, cons
 
 template <class MyDevice>
 void LookupParameterStorage::squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
-  Tensor sqnorm_t({1}, sqnorm, &dev);
+  Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
   sqnorm_t.t<0>().device(*dev.edevice) = values[0].tvec().square().sum();
   for (unsigned i = 1; i < values.size(); ++i)
     sqnorm_t.t<0>().device(*dev.edevice) += values[i].tvec().square().sum();
@@ -330,7 +330,7 @@ CNN_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, squared_l2norm, squared_l2no
 
 template <class MyDevice>
 void LookupParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
-  Tensor sqnorm_t({1}, sqnorm, &dev);
+  Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
   auto it = non_zero_grads.begin();
   assert(it != non_zero_grads.end());
   sqnorm_t.t<0>().device(*dev.edevice) = grads[*(it++)].tvec().square().sum();
@@ -392,8 +392,8 @@ float Model::gradient_l2_norm_dev(MyDevice & dev) const {
   size_t pi;
   for(pi = 0; pi < all_params.size(); ++pi)
     all_params[pi]->g_squared_l2norm(&gradient_norm_scratch[pi]);
-  Tensor scratch_t({(unsigned int)all_params.size()}, gradient_norm_scratch, &dev);
-  Tensor sum_t({1}, gradient_norm_scratch+pi, &dev);
+  Tensor scratch_t({(unsigned int)all_params.size()}, gradient_norm_scratch, &dev, DeviceMempool::NONE);
+  Tensor sum_t({1}, gradient_norm_scratch+pi, &dev, DeviceMempool::NONE);
   sum_t.t<0>().device(*dev.edevice) = scratch_t.t<1>().sum().sqrt();
 #ifdef __CUDACC__
   float res = 0;

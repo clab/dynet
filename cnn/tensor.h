@@ -15,6 +15,7 @@
 #include "cnn/cuda.h"
 #endif
 #include <boost/serialization/array.hpp>
+#include <boost/serialization/version.hpp>
 
 // Following line is commented out because it causes errors with large nets (Antonis)
 //#define EIGEN_NO_MALLOC
@@ -30,7 +31,7 @@ typedef float real;
 
 struct Tensor {
   Tensor() = default;
-  Tensor(const Dim& d, float* v, Device* dev) : d(d), v(v), device(dev) {}
+  Tensor(const Dim& d, float* v, Device* dev, DeviceMempool mem) : d(d), v(v), device(dev), mem_pool(mem) {}
   // Get the data as a matrix
   const Eigen::Map<Eigen::MatrixXf> operator*() const {
     assert(d.batch_elems() == 1);
@@ -120,7 +121,7 @@ struct Tensor {
       assert(b < d.batch_elems());
       const unsigned bsize = d.batch_size();
       Dim new_d(d); new_d.bd = 1;
-      Tensor ret(new_d, v + bsize * b, device);
+      Tensor ret(new_d, v + bsize * b, device, mem_pool);
       // std::cerr << "Getting tensor for batch " << (b % d.batch_elems()) << " bsize: " << bsize << ", ptr=" << (long)ret.v << std::endl;
       return ret;
     }
@@ -135,7 +136,7 @@ struct Tensor {
       unsigned bsize = d.batch_size();
       Dim new_d = d; new_d.bd = 1;
       for(unsigned b = 0; b < d.batch_elems(); ++b)
-        bs[b] = Tensor(new_d, v + bsize * b, device);
+        bs[b] = Tensor(new_d, v + bsize * b, device, mem_pool);
       return bs;
     }
   }
@@ -144,34 +145,54 @@ struct Tensor {
   float* v;  // pointer to memory
   std::vector<Tensor> bs;
   Device* device;
+  DeviceMempool mem_pool;
 
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive& ar, const unsigned int) const {
+  void save(Archive& ar, const unsigned int ver) const {
     ar & d;
-    // TODO(mem) save device
-#if HAVE_CUDA
-    float* vc = (float*)malloc(d.size() * sizeof(float));
-    CUDA_CHECK(cudaMemcpy(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    ar & boost::serialization::make_array(vc, d.size());
-    free(vc);
+    ar & ((device == default_device) ? (int)-1 : device->device_id);
+    ar & mem_pool;
+#ifdef HAVE_CUDA
+    if(device->type == DeviceType::GPU) {
+      float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
+      CUDA_CHECK(cudaMemcpyAsync(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
+      ar & boost::serialization::make_array(vc, mem.size());
+      free(vc);
+    } else {
+      ar & boost::serialization::make_array(v, d.size());
+    }
 #else
     ar & boost::serialization::make_array(v, d.size());
 #endif
   }
   template<class Archive>
-  void load(Archive& ar, const unsigned int) {
+  void load(Archive& ar, const unsigned int ver) {
     ar & d;
-    // TODO(mem) - load device and use it to create memory allocator
-    // Devices should probably know how to load and save data to disk
-#if HAVE_CUDA
-    CUDA_CHECK(cudaMalloc(&v, d.size() * sizeof(float)));
-    float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
-    ar & boost::serialization::make_array(vc, d.size());
-    CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
+    int dev_id = -1;
+    mem_pool = DeviceMempool::PS;
+    if(ver > 0) {
+      ar & dev_id;
+      ar & mem_pool;
+    }
+    if(dev_id == -1) {
+      device = default_device;
+    } else {
+      assert(dev_id > 0 && dev_id < (int)devices.size());
+      device = devices[dev_id];
+    }
+    device->allocate_tensor(mem_pool, *this);
+#ifdef HAVE_CUDA
+    if(device->type == DeviceType::GPU) {
+      float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
+      ar & boost::serialization::make_array(vc, d.size());
+      CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
+      free(vc);
+    } else {
+      ar & boost::serialization::make_array(v, d.size());
+    }
 #else
-    v = static_cast<float*>(_mm_malloc(d.size() * sizeof(float), 32));
     ar & boost::serialization::make_array(v, d.size());
 #endif
   }
@@ -312,5 +333,7 @@ int rand0n(int n);
 real rand_normal();
 
 } // namespace cnn
+
+BOOST_CLASS_VERSION(cnn::Tensor, 1)
 
 #endif

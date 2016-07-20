@@ -676,7 +676,7 @@ CNN_NODE_INST_DEV_IMPL(DotProduct)
 
 template<class MyDevice>
 void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Tensor m(dim, (float*)aux_mem, fx.device);
+  Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() * m.tvec();
 }
@@ -688,7 +688,7 @@ void Dropout::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  Tensor m(dim, (float*)aux_mem, fx.device);
+  Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * m.tvec();
 }
 CNN_NODE_INST_DEV_IMPL(Dropout)
@@ -727,7 +727,7 @@ CNN_NODE_INST_DEV_IMPL(Exp)
 
 template<class MyDevice>
 void GaussianNoise::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Tensor m(dim, (float*)aux_mem, fx.device);
+  Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   TensorTools::RandomizeNormal(0, stddev, m);
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() + m.tvec();
 }
@@ -746,7 +746,7 @@ CNN_NODE_INST_DEV_IMPL(GaussianNoise)
 template<class MyDevice>
 void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
+  Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   // TODO: Can we do this on device?
   if(pelement != nullptr) {
     const real mlystar = margin - TensorTools::AccessElement(*xs[0], *pelement);
@@ -776,7 +776,7 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
   if(pelement != nullptr) {
     if(as_scalar(fx)) { // there was some loss
       const float d = as_scalar(dEdf);
-      Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
+      Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
       // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
       dEdxi.tvec().device(*dev.edevice) += (eloss.tvec() > 0.f).cast<float>() * d;
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
@@ -788,7 +788,7 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
     assert(pelements != nullptr); 
     vector<float> fx_vec = as_vector(fx);
     vector<float> d_vec = as_vector(dEdf);
-    Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device);
+    Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
     for(size_t b = 0; b < fx.d.bd; b++) {
       if(fx_vec[b]) { // there was some loss
         // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
@@ -972,8 +972,8 @@ void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   assert(xs.size() == 1);
   if (xs[0]->d.cols() != 1)
     throw std::runtime_error("LogSoftmax::forward not yet implemented for multiple columns");
-  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
-  Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device);
+  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device, DeviceMempool::FXS);
   logsumexp(dev, *xs[0], m, z);
   if(fx.d.bd == 1) {
     fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - as_scalar(z);
@@ -992,7 +992,7 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   if (xs[0]->d.cols() != 1) 
     throw std::runtime_error("LogSoftmax::backward not yet implemented for multiple columns");
-  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
+  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   if(fx.d.bd == 1) {
     z.t<0>().device(*dev.edevice) = fx.t<1>().binaryExpr(dEdf.t<1>(), FWeightedError()).sum();
     Eigen::array<int, 1> bcast; bcast[0] = fx.d.rows();
@@ -1012,8 +1012,8 @@ void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
   if (num_args == 1) {
     fx.v = xs[0]->v;
   } else {
-    Tensor v(Dim({(unsigned int)xs.size()}), static_cast<float*>(aux_mem), fx.device);
-    Tensor m(Dim({1}), static_cast<float*>(aux_mem) + xs.size(), fx.device);
+    Tensor v(Dim({(unsigned int)xs.size()}), static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
+    Tensor m(Dim({1}), static_cast<float*>(aux_mem) + xs.size(), fx.device, DeviceMempool::FXS);
     for (unsigned i = 0; i < xs.size(); ++i)
       TensorTools::CopyElement(*xs[i], 0, v, i);
     logsumexp(dev, v, m, fx);
@@ -1161,7 +1161,7 @@ CNN_NODE_INST_DEV_IMPL(MatrixMultiply)
 
 template<class MyDevice>
 void Max::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device);
+  Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   t.tvec().device(*dev.edevice) = (xs[0]->tvec() > xs[1]->tvec()).cast<float>();
   fx.tvec().device(*dev.edevice) = xs[0]->tvec().cwiseMax(xs[1]->tvec());
 }
@@ -1174,7 +1174,7 @@ void Max::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i < 2);
-  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem), fx.device);
+  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   if (i == 0) {
     dEdxi.tvec().device(*dev.edevice) += t.tvec() * dEdf.tvec();
   } else {
@@ -1254,7 +1254,7 @@ CNN_NODE_INST_DEV_IMPL(MaxPooling1D)
 
 template<class MyDevice>
 void Min::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device);
+  Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   t.tvec().device(*dev.edevice) = (xs[0]->tvec() < xs[1]->tvec()).cast<float>();
   fx.tvec().device(*dev.edevice) = xs[0]->tvec().cwiseMin(xs[1]->tvec());
 }
@@ -1267,7 +1267,7 @@ void Min::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i < 2);
-  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem), fx.device);
+  const Tensor t(dEdxi.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   if (i == 0) {
     dEdxi.tvec().device(*dev.edevice) += t.tvec() * dEdf.tvec();
   } else {
@@ -1370,8 +1370,8 @@ CNN_NODE_INST_DEV_IMPL(PickElement)
 template<class MyDevice>
 void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
-    Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
-    Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device);
+    Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+    Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device, DeviceMempool::FXS);
     logsumexp(dev, *xs[0], m, z);
     if(pval) {
       fx.t<0>().device(*dev.edevice) = z.t<0>() - xs[0]->t<1>().chip<0>(*pval);
@@ -1396,7 +1396,7 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
                             unsigned i,
                             Tensor& dEdxi) const {
   if (xs[0]->d.cols() == 1) {
-    Tensor z(Dim({1},fx.d.batch_elems()), (float*)aux_mem, fx.device);
+    Tensor z(Dim({1},fx.d.batch_elems()), (float*)aux_mem, fx.device, DeviceMempool::FXS);
     if(pval) {
       const float err_val = as_scalar(dEdf);
       const float logz_val = as_scalar(z);
@@ -1526,7 +1526,7 @@ void Reshape::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device);
+  const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device, dEdf.mem_pool);
   dEdxi.tvec().device(*dev.edevice) += reshaped.tvec();
 }
 CNN_NODE_INST_DEV_IMPL(Reshape)
@@ -1620,8 +1620,8 @@ template<class MyDevice>
 void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() != 1)
     throw std::runtime_error("Softmax not yet implemented for multiple columns");
-  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
-  Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device);
+  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device, DeviceMempool::FXS);
   logsumexp(dev, *xs[0], m, z);
   if(fx.d.bd == 1) {
     fx.t<1>().device(*dev.edevice) = (xs[0]->t<1>() - as_scalar(z)).exp();
@@ -1638,7 +1638,7 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device);
+  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   if(fx.d.bd == 1) {
     // TODO: This requires no transfer between host/device, but is not working?
     //  z.t<0>().device(*dev.edevice) = (fx.t<1>() * dEdf.t<1>()).sum();
@@ -1759,7 +1759,7 @@ void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Te
       maxsum = sum;
     }
     float tau = (maxsum - 1) / k;
-    Tensor tsm(xs[0]->d, (float*)aux_mem, xs[0]->device);
+    Tensor tsm(xs[0]->d, (float*)aux_mem, xs[0]->device, DeviceMempool::FXS);
     tsm.t<1>() = (xs[0]->t<1>() - tau).cwiseMax(0.f);
     fx.t<0>() = ( (tsm.t<1>() != 0.f).cast<float>() * (xs[0]->t<1>().square() - (tau * tau)) ).sum();
     fx.t<0>() = ( fx.t<0>() + qprop * qprop * qsupport_size ) / 2.f;
@@ -1785,7 +1785,7 @@ void SparsemaxLoss::backward_dev_impl(const MyDevice & dev,
   const float d = dEdf.v[0];
   float* psm = static_cast<float*>(aux_mem);
   float dqprop = d / pq->size();
-  Tensor tsm(xs[0]->d, psm, xs[0]->device);
+  Tensor tsm(xs[0]->d, psm, xs[0]->device, DeviceMempool::FXS);
   auto sm = *tsm;  // sparsemax(z)
   *dEdxi += sm * d;
   for (unsigned i = 0; i < pq->size(); ++i)

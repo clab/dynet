@@ -148,7 +148,7 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
   cerr << "[cnn] Device(s) selected:";
   for (int i = 0; i < requested_gpus; ++i) {
     cerr << ' ' << gpus[i];
-    Device* d = new Device_GPU(num_mb, gpus[i]);
+    Device* d = new Device_GPU(gpudevices.size(), num_mb, gpus[i]);
     gpudevices.push_back(d);
   }
   cerr << endl;

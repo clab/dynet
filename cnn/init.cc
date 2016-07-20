@@ -84,7 +84,7 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
   rndeng = new mt19937(random_seed);
 
   cerr << "[cnn] allocating memory: " << num_mb << "MB\n";
-  devices.push_back(new Device_CPU(num_mb, shared_parameters));
+  devices.push_back(new Device_CPU(devices.size(), num_mb, shared_parameters));
   int default_index = 0;
   if (gpudevices.size() > 0) {
     for (auto gpu : gpudevices)
