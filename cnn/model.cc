@@ -53,15 +53,15 @@ ParameterStorageBase::~ParameterStorageBase() {}
 
 ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
-  values.v = static_cast<float*>(default_device->pools[(int)DeviceMempool::PS]->allocate(d.size() * sizeof(float)));
   values.device = g.device = default_device;
+  default_device->allocate_tensor(DeviceMempool::PS, values);
   if (scale) {
     TensorTools::Randomize(values, scale);
   }
   else {
     TensorTools::Randomize(values);
   }
-  g.v = static_cast<float*>(default_device->pools[(int)DeviceMempool::PS]->allocate(d.size() * sizeof(float)));
+  default_device->allocate_tensor(DeviceMempool::PS, g);
   TensorTools::Zero(g);
 }
 
@@ -85,14 +85,14 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
   for (unsigned i = 0; i < n; ++i) {
     auto& v = values[i];
     v.d = d;
-    v.v = static_cast<float*>(default_device->pools[(int)DeviceMempool::PS]->allocate(d.size() * sizeof(float)));
     v.device = default_device;
+    default_device->allocate_tensor(DeviceMempool::PS, v);
     TensorTools::Randomize(v);
 
     auto& g = grads[i];
     g.d = d;
-    g.v = static_cast<float*>(default_device->pools[(int)DeviceMempool::PS]->allocate(d.size() * sizeof(float)));
     g.device = default_device;
+    default_device->allocate_tensor(DeviceMempool::PS, g);
     TensorTools::Zero(g);
   }
 }

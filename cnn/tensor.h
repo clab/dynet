@@ -30,7 +30,7 @@ namespace cnn {
 typedef float real;
 
 struct Tensor {
-  Tensor() = default;
+  Tensor() : d(Dim()), v(nullptr), device(nullptr), mem_pool(DeviceMempool::NONE) { }
   Tensor(const Dim& d, float* v, Device* dev, DeviceMempool mem) : d(d), v(v), device(dev), mem_pool(mem) {}
   // Get the data as a matrix
   const Eigen::Map<Eigen::MatrixXf> operator*() const {
