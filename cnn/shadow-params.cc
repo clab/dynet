@@ -9,7 +9,7 @@ using namespace std;
 namespace cnn {
 
 ShadowParameters::ShadowParameters(const ParameterStorage& p) : h(p.values) {
-  h.v = (float*)default_device->mem->malloc(h.d.size() * sizeof(float));
+  default_device->allocate_tensor(DeviceMempool::PS, h);
   TensorTools::Zero(h);
 }
 
@@ -19,7 +19,7 @@ ShadowParameters::~ShadowParameters() {
 
 ShadowLookupParameters::ShadowLookupParameters(const LookupParameterStorage& lp) : h(lp.values) {
   for (auto& t : h) {
-    t.v = (float*)default_device->mem->malloc(t.d.size() * sizeof(float));
+    default_device->allocate_tensor(DeviceMempool::PS, t);
     TensorTools::Zero(t);
   }
 }
