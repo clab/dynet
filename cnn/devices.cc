@@ -31,7 +31,7 @@ void Device::revert(DeviceMemCheckpoint cp) {
 void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
   assert(mp != DeviceMempool::NONE);
   assert(pools[(int)mp] != nullptr);
-  tens.v = (float*)pools[(int)mp]->allocate(tens.d.size());
+  tens.v = (float*)pools[(int)mp]->allocate(tens.d.size() * sizeof(float));
   tens.mem_pool = mp;
 }
 
