@@ -75,7 +75,8 @@ void ParameterStorage::copy(const ParameterStorage & param) {
 }
 
 void ParameterStorage::clear() {
-  TensorTools::Zero(g);
+  if(g.v != nullptr)
+    TensorTools::Zero(g);
 }
 
 LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d), values(n), grads(n) {
