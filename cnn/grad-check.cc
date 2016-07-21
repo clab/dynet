@@ -31,6 +31,7 @@ bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
     if(verbosity > 1)
       cerr << endl << "PARAMETERS " << pp << endl;
     ParameterStorage& p = *pp;
+    if(p.g.v == nullptr) continue;
     size_t ts = p.dim.size();
     for (size_t i = 0; i < ts; ++i) {
       float old = TensorTools::AccessElement(p.values, i);
