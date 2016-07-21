@@ -1,5 +1,6 @@
 #include "cnn/devices.h"
 
+#include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <unsupported/Eigen/CXX11/Tensor>
 
@@ -10,22 +11,51 @@ using namespace std;
 
 namespace cnn {
 
-Device::~Device() {}
-
-DeviceMemCheckpoint Device::mark(ComputationGraph *cg) {
-  cg->incremental_forward(); // needed so that we actually allocate the needed memory
-                             // for all existing nodes.
-  DeviceMemCheckpoint cp;
-  for(size_t i = 0; i < 3; ++i)
-    cp.used[i] = pools[i]->used;
-  return cp;
+DeviceMempoolSizes::DeviceMempoolSizes(size_t total_size) {
+  used[0] = total_size/3;
+  used[1] = total_size/3;
+  used[2] = total_size/3;
 }
 
-void Device::revert(DeviceMemCheckpoint cp) {
-  for(size_t i = 0; i < 3; ++i) {
-    assert(cp.used[i] <= pools[i]->used);
-    pools[i]->used = cp.used[i];
+DeviceMempoolSizes::DeviceMempoolSizes(size_t fx_s, size_t dEdfs_s, size_t ps_s) {
+  used[0] = fx_s;
+  used[1] = dEdfs_s;
+  used[2] = ps_s;
+}
+
+DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
+  vector<string> strs;
+  boost::algorithm::split(strs, descriptor, boost::is_any_of(","));
+  if(strs.size() == 1) {
+    size_t total_size = stoi(strs[0]);
+    used[0] = total_size/3;
+    used[1] = total_size/3;
+    used[2] = total_size/3;
+  } else if(strs.size() == 3) {
+    used[0] = stoi(strs[0]);
+    used[1] = stoi(strs[1]);
+    used[2] = stoi(strs[2]);
   }
+  cerr << "used[0] == " << used[0] << endl;
+  cerr << "used[1] == " << used[1] << endl;
+  cerr << "used[2] == " << used[2] << endl;
+}
+
+Device::~Device() {}
+
+DeviceMempoolSizes Device::mark(ComputationGraph *cg) {
+  cg->incremental_forward(); // needed so that we actually allocate the needed memory
+                             // for all existing nodes.
+  return DeviceMempoolSizes(pools[0]->used, pools[1]->used, pools[2]->used);
+}
+
+void Device::revert(const DeviceMempoolSizes & cp) {
+  assert(cp.used[0] <= pools[0]->used);
+  pools[0]->used = cp.used[0];
+  assert(cp.used[1] <= pools[1]->used);
+  pools[1]->used = cp.used[1];
+  assert(cp.used[2] <= pools[2]->used);
+  pools[2]->used = cp.used[2];
 }
 
 void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
@@ -36,7 +66,7 @@ void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
 }
 
 #if HAVE_CUDA
-Device_GPU::Device_GPU(int my_id, int mb, int device_id) :
+Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id) :
     Device(my_id, DeviceType::GPU, &gpu_mem), cuda_device_id(device_id), gpu_mem(device_id) {
   CUDA_CHECK(cudaSetDevice(device_id));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
@@ -55,21 +85,15 @@ Device_GPU::Device_GPU(int my_id, int mb, int device_id) :
   estream = new Eigen::CudaStreamDevice(device_id);
   edevice = new Eigen::GpuDevice(estream);
 
-  // this is the big memory allocation. Do it in stages to make sure things are aligned.
-  size_t byte_count = (size_t)((mb << 10)/3) << 10;
+  // this is the big memory allocation.
   for(size_t i = 0; i < 3; ++i)
-    pools[i] = new AlignedMemoryPool(byte_count, mem);
+    pools[i] = new AlignedMemoryPool((mbs.used[i] << 20), &gpu_mem);
 }
 
 Device_GPU::~Device_GPU() {}
 #endif
 
-// TODO we should be able to configure this carefully with a configuration
-// script
-// CPU -- 0 params
-//     -- 50mb fxs
-//     -- 50mb dEdfx
-Device_CPU::Device_CPU(int my_id, int mb, bool shared) :
+Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
     Device(my_id, DeviceType::CPU, &cpu_mem), shmem(mem) {
   if (shared) shmem = new SharedAllocator();
   kSCALAR_MINUSONE = (float*) mem->malloc(sizeof(float));
@@ -82,10 +106,9 @@ Device_CPU::Device_CPU(int my_id, int mb, bool shared) :
   // Initialize the Eigen device
   edevice = new Eigen::DefaultDevice;
 
-  // this is the big memory allocation. Do it in stages to make sure things are aligned.
-  size_t byte_count = (size_t)((mb << 10)/3) << 10;
+  // this is the big memory allocation.
   for(size_t i = 0; i < 3; ++i)
-    pools[i] = new AlignedMemoryPool(byte_count, mem);
+    pools[i] = new AlignedMemoryPool((mbs.used[i] << 20), &cpu_mem);
 }
 
 Device_CPU::~Device_CPU() {}
