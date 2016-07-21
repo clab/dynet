@@ -36,9 +36,6 @@ DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
     used[1] = stoi(strs[1]);
     used[2] = stoi(strs[2]);
   }
-  cerr << "used[0] == " << used[0] << endl;
-  cerr << "used[1] == " << used[1] << endl;
-  cerr << "used[2] == " << used[2] << endl;
 }
 
 Device::~Device() {}
