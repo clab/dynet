@@ -16,13 +16,11 @@ struct LookupParameterStorage;
 
 struct ShadowParameters {
   explicit ShadowParameters(const ParameterStorage& p);
-  ~ShadowParameters();
   Tensor h;
 };
 
 struct ShadowLookupParameters {
   explicit ShadowLookupParameters(const LookupParameterStorage& lp);
-  ~ShadowLookupParameters();
   std::vector<Tensor> h;
 };
 

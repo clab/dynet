@@ -17,8 +17,14 @@ enum class DeviceType {CPU, GPU};
 enum class DeviceMempool {FXS = 0, DEDFS = 1, PS = 2, NONE = 3};
 
 struct ComputationGraph; // TODO is there a nicer way to resolve this cyclic dependency?
-struct DeviceMemCheckpoint;
 struct Tensor;
+
+struct DeviceMemCheckpoint {
+  std::vector<size_t> used;
+  // The three devices are those defined in DeviceMempool
+  DeviceMemCheckpoint() : used(3) { }
+};
+
 
 class Device {
  protected:

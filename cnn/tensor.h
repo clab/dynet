@@ -172,6 +172,8 @@ struct Tensor {
   void load(Archive& ar, const unsigned int ver) {
     ar & d;
     int dev_id = -1;
+    // This default value is for backward compatibility with models that were
+    // saved without information about what mempool a tensor belongs to.
     mem_pool = DeviceMempool::PS;
     if(ver > 0) {
       ar & dev_id;
