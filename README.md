@@ -74,8 +74,11 @@ very beginning of the command line, before other options.
 
 * `--cnn-mem NUMBER`: cnn runs by default with 512MB of memory each for the forward and
   backward steps, as well as parameter storage. You will often want to increase this amount.
-  By setting NUMBER here, cnn will allocate more memory. Note that it will allocate 3 times
-  more memory than the number specified here, so if you want to use 3GB, specify "1024".
+  By setting NUMBER here, cnn will allocate more memory. Note that you can also individually
+  set the amount of memory for forward calculation, backward calculation, and parameters
+  by using comma separated variables `--cnn-mem FOR,BACK,PARAM`. This is useful if, for
+  example, you are performing testing and don't need to allocate any memory for backward
+  calculation.
 * `--cnn-l2 NUMBER`: Specifies the level of l2 regularization to use (default 1e-6).
 * `--cnn-gpus NUMBER`: Specify how many GPUs you want to use, if cnn is compiled with CUDA.
   Currently, only one GPU is supported.
