@@ -31,7 +31,7 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
   int requested_gpus = -1;
   vector<int> gpu_mask(MAX_GPUS,0);
   int argi = 1;
-  int num_mb = 512;
+  string mem_descriptor = "512";
   bool ngpus_requested = false;
   bool ids_requested = false;
   for( ;argi < argc; ++argi) {
@@ -41,8 +41,7 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
         cerr << "[cnn] --cnn-mem expects an argument (the memory, in megabytes, to reserve)\n";
         abort();
       } else {
-        string a2 = argv[argi+1];
-        istringstream c(a2); c >> num_mb;
+        mem_descriptor = argv[argi+1];
         RemoveArgs(argc, argv, argi, 2);
       }
     } else if (arg == "--cnn_gpus" || arg == "--cnn-gpus") {
@@ -148,7 +147,7 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
   cerr << "[cnn] Device(s) selected:";
   for (int i = 0; i < requested_gpus; ++i) {
     cerr << ' ' << gpus[i];
-    Device* d = new Device_GPU(gpudevices.size(), num_mb, gpus[i]);
+    Device* d = new Device_GPU(gpudevices.size(), mem_descriptor, gpus[i]);
     gpudevices.push_back(d);
   }
   cerr << endl;

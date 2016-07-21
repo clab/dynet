@@ -51,7 +51,7 @@ BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
 struct CGCheckpoint {
   int node_idx;
   int par_node_idx;
-  DeviceMemCheckpoint device_mem_checkpoint;
+  DeviceMempoolSizes device_mem_checkpoint;
 };
 
 inline void swap(VariableIndex& i1, VariableIndex& i2) {

@@ -33,9 +33,9 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
   cerr << "[cnn] initializing CUDA\n";
   gpudevices = Initialize_GPU(argc, argv);
 #endif
-  unsigned long num_mb = 512UL;
   unsigned random_seed = 0;
   int argi = 1;
+  string mem_descriptor = "512";
   while(argi < argc) {
     string arg = argv[argi];
     if (arg == "--cnn-mem" || arg == "--cnn_mem") {
@@ -43,8 +43,7 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
         cerr << "[cnn] --cnn-mem expects an argument (the memory, in megabytes, to reserve)\n";
         abort();
       } else {
-        string a2 = argv[argi+1];
-        istringstream c(a2); c >> num_mb;
+        mem_descriptor = argv[argi+1];
         RemoveArgs(argc, argv, argi, 2);
       }
     } else if (arg == "--cnn-l2" || arg == "--cnn_l2") {
@@ -83,8 +82,8 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
   cerr << "[cnn] random seed: " << random_seed << endl;
   rndeng = new mt19937(random_seed);
 
-  cerr << "[cnn] allocating memory: " << num_mb << "MB\n";
-  devices.push_back(new Device_CPU(devices.size(), num_mb, shared_parameters));
+  cerr << "[cnn] allocating memory: " << mem_descriptor << "MB\n";
+  devices.push_back(new Device_CPU(devices.size(), mem_descriptor, shared_parameters));
   int default_index = 0;
   if (gpudevices.size() > 0) {
     for (auto gpu : gpudevices)

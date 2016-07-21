@@ -19,10 +19,12 @@ enum class DeviceMempool {FXS = 0, DEDFS = 1, PS = 2, NONE = 3};
 struct ComputationGraph; // TODO is there a nicer way to resolve this cyclic dependency?
 struct Tensor;
 
-struct DeviceMemCheckpoint {
-  std::vector<size_t> used;
-  // The three devices are those defined in DeviceMempool
-  DeviceMemCheckpoint() : used(3) { }
+struct DeviceMempoolSizes {
+  size_t used[3];
+  DeviceMempoolSizes() = default;
+  DeviceMempoolSizes(size_t total_s);
+  DeviceMempoolSizes(size_t fxs_s, size_t dEdfs_s, size_t ps_s);
+  DeviceMempoolSizes(const std::string & descriptor);
 };
 
 
@@ -40,8 +42,8 @@ class Device {
   float* kSCALAR_ONE;
   float* kSCALAR_ZERO;
   std::string name;
-  virtual DeviceMemCheckpoint mark(ComputationGraph *cg);
-  virtual void revert(DeviceMemCheckpoint cp);
+  virtual DeviceMempoolSizes mark(ComputationGraph *cg);
+  virtual void revert(const DeviceMempoolSizes & cp);
   void allocate_tensor(DeviceMempool mem_pool, Tensor & tensor);
   std::vector<AlignedMemoryPool*> pools;
 };
@@ -50,7 +52,7 @@ class Device {
 class Device_GPU : public Device {
  public:
   typedef Eigen::CudaStreamDevice EigenDevice;
-  explicit Device_GPU(int my_id, int mb, int device_id);
+  explicit Device_GPU(int my_id, const DeviceMempoolSizes & mb, int device_id);
   ~Device_GPU();
   int cuda_device_id;
   cublasHandle_t cublas_handle;
@@ -63,7 +65,7 @@ class Device_GPU : public Device {
 class Device_CPU : public Device {
  public:
   typedef Eigen::DefaultDevice EigenDevice;
-  explicit Device_CPU(int my_id, int mb, bool shared);
+  explicit Device_CPU(int my_id, const DeviceMempoolSizes & mb, bool shared);
   ~Device_CPU();
   CPUAllocator cpu_mem;
   Eigen::DefaultDevice* edevice;

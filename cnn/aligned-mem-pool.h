@@ -16,7 +16,7 @@ class AlignedMemoryPool {
   void* allocate(size_t n) {
     auto rounded_n = a->round_up_align(n);
     if (rounded_n + used > capacity) {
-      std::cerr << "cnn is out of memory, try increasing with --cnn-mem\n";
+      std::cerr << "cnn is out of memory, try increasing with --cnn-mem (current capacity: " << capacity << ")\n";
       abort();
     }
     void* res = static_cast<char*>(mem) + used;
