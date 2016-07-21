@@ -57,12 +57,9 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   default_device->allocate_tensor(DeviceMempool::PS, values);
   if (scale) {
     TensorTools::Randomize(values, scale);
-  }
-  else {
+  } else {
     TensorTools::Randomize(values);
   }
-  default_device->allocate_tensor(DeviceMempool::PS, g);
-  TensorTools::Zero(g);
 }
 
 size_t ParameterStorage::size() const { return dim.size(); }
@@ -92,8 +89,6 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
     auto& g = grads[i];
     g.d = d;
     g.device = default_device;
-    default_device->allocate_tensor(DeviceMempool::PS, g);
-    TensorTools::Zero(g);
   }
 }
 
@@ -246,6 +241,7 @@ CNN_PARAMNORM_INST_DEV_IMPL(ParameterStorage, squared_l2norm, squared_l2norm_dev
 // Take the squared norm of the gradient
 template <class MyDevice>
 void ParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
+  assert(g.v != nullptr);
   Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
   sqnorm_t.t<0>().device(*dev.edevice) = g.tvec().square().sum();
 }
@@ -253,6 +249,10 @@ CNN_PARAMNORM_INST_DEV_IMPL(ParameterStorage, g_squared_l2norm, g_squared_l2norm
 
 template <class MyDevice>
 void ParameterStorage::accumulate_grad_dev(MyDevice & dev, const Tensor& d) {
+  if(g.v == nullptr) {
+    default_device->allocate_tensor(DeviceMempool::PS, g);
+    TensorTools::Zero(g);
+  }
   g.tvec().device(*dev.edevice) += d.tvec();
 }
 #ifdef __CUDACC__
@@ -344,6 +344,10 @@ CNN_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, g_squared_l2norm, g_squared_
 
 template <class MyDevice>
 void LookupParameterStorage::accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& d) {
+  if(grads[index].v == nullptr) {
+    default_device->allocate_tensor(DeviceMempool::PS, grads[index]);
+    TensorTools::Zero(grads[index]);
+  }
   non_zero_grads.insert(index);
   grads[index].tvec().device(*dev.edevice) += d.tvec();
 }
