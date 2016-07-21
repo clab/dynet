@@ -48,11 +48,6 @@ namespace expr { struct Expression; }
 
 BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
 
-struct DeviceMemCheckpoint {
-  std::vector<size_t> used;
-  DeviceMemCheckpoint() : used(3) { }
-};
-
 struct CGCheckpoint {
   int node_idx;
   int par_node_idx;

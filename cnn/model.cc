@@ -232,6 +232,9 @@ void load_cnn_model(std::string filename, Model* model) {
 //       function, but it's not clear how to handle heterogeneous functions w/
 //       macros
 
+// Note: Using DeviceMempool::NONE here because these tensors are not persistent
+// and won't be saved so it doesn't matter which mempool they belong to.
+
 // Take the squared norm
 template <class MyDevice>
 void ParameterStorage::squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
