@@ -1,11 +1,11 @@
 # cnn
 C++ neural network library
 
-### Important: Eigen version requirement
-
-You need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. **If you use any of the released versions, you may get assertion failures or compile errors.**
+cnn is a neural network library that is written in C++ (with bindings in Python). It is designed to be efficient when run on either CPU or GPU, and works well with networks that have dynamic structures that change for every training instance. Read the instructions below to get started, and feel free to contact the [cnn-users group](https://groups.google.com/forum/#!forum/cnn-users) group or [github page](http://github.com/clab/cnn) with any questions, issues, or contributions.
 
 ### Building
+
+Before compiling cnn, you need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. **If you use any of the released versions, you may get assertion failures or compile errors.**
 
 First you need to fetch the dependent libraries
 
