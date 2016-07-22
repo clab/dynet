@@ -79,34 +79,25 @@ void ParameterStorage::clear() {
     TensorTools::Zero(g);
 }
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d), values(n), grads(n) {
-  for (unsigned i = 0; i < n; ++i) {
-    auto& v = values[i];
-    v.d = d;
-    v.device = default_device;
-    default_device->allocate_tensor(DeviceMempool::PS, v);
-    TensorTools::Randomize(v);
-
-    auto& g = grads[i];
-    g.d = d;
-    g.device = default_device;
-  }
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d) {
+  all_dim = dim; all_dim.d[all_dim.nd++] = n;
+  all_grads.d = all_values.d = all_dim;
+  all_grads.device = all_values.device = default_device;
+  default_device->allocate_tensor(DeviceMempool::PS, all_values);
+  initialize_lookups();
 }
 
 void LookupParameterStorage::zero() {
-  for (auto& p : values)
-    TensorTools::Zero(p);
-  clear();
+  TensorTools::Zero(all_values);
 }
 
 size_t LookupParameterStorage::size() const {
-  return values.size() * dim.size();
+  return all_dim.size();
 }
 
 void LookupParameterStorage::copy(const LookupParameterStorage& param) {
-  assert(dim == param.dim);
-  for(size_t i = 0; i < param.values.size(); ++i)
-    TensorTools::CopyElements(values[i], param.values[i]);
+  assert(all_dim == param.all_dim);
+  TensorTools::CopyElements(all_values, param.all_values);
 }
 
 void LookupParameterStorage::clear() {
@@ -326,9 +317,7 @@ void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, cons
 template <class MyDevice>
 void LookupParameterStorage::squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
   Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
-  sqnorm_t.t<0>().device(*dev.edevice) = values[0].tvec().square().sum();
-  for (unsigned i = 1; i < values.size(); ++i)
-    sqnorm_t.t<0>().device(*dev.edevice) += values[i].tvec().square().sum();
+  sqnorm_t.t<0>().device(*dev.edevice) = all_values.tvec().square().sum();
 }
 CNN_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, squared_l2norm, squared_l2norm_dev)
 
@@ -343,11 +332,28 @@ void LookupParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm)
 }
 CNN_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, g_squared_l2norm, g_squared_l2norm_dev)
 
+void LookupParameterStorage::initialize_lookups() {
+  int num = all_dim[all_dim.nd-1];
+  dim = all_dim; dim.nd--;
+  int dim_size = dim.size();
+  if(values.size() == 0) {
+    values.resize(num);
+    for(int i = 0; i < num; ++i)
+      values[i] = Tensor(dim, all_values.v + i*dim_size, all_values.device, all_values.mem_pool);
+  }
+  if(grads.size() == 0 && all_grads.v != nullptr) {
+    grads.resize(num);
+    for(int i = 0; i < num; ++i)
+      grads[i] = Tensor(dim, all_grads.v + i*dim_size, all_grads.device, all_grads.mem_pool);
+  }
+}
+
 template <class MyDevice>
 void LookupParameterStorage::accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& d) {
-  if(grads[index].v == nullptr) {
-    default_device->allocate_tensor(DeviceMempool::PS, grads[index]);
-    TensorTools::Zero(grads[index]);
+  if(all_grads.v == nullptr) {
+    default_device->allocate_tensor(DeviceMempool::PS, all_grads);
+    TensorTools::Zero(all_grads);
+    initialize_lookups();
   }
   non_zero_grads.insert(index);
   grads[index].tvec().device(*dev.edevice) += d.tvec();
@@ -372,8 +378,7 @@ void LookupParameterStorage::accumulate_grad_dev(MyDevice & dev, unsigned index,
 
 template <class MyDevice>
 void LookupParameterStorage::scale_parameters_dev(MyDevice & dev, float a) {
-  for (auto& p : values)
-    p.tvec().device(*dev.edevice) = p.tvec() * a;
+  all_values.tvec().device(*dev.edevice) = all_values.tvec() * a;
 }
 #ifdef __CUDACC__
   template void LookupParameterStorage::scale_parameters_dev<Device_GPU>(Device_GPU & dev, float a);

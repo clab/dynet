@@ -9,6 +9,7 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/access.hpp>
+#include <boost/serialization/split_member.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
@@ -98,6 +99,14 @@ struct LookupParameterStorage : public ParameterStorageBase {
   void accumulate_grad(unsigned index, const Tensor& g);
   void clear();
 
+  // Initialize each individual lookup from the overall tensors
+  void initialize_lookups();
+
+  // Tensors for all dimensions at once
+  Dim all_dim;
+  Tensor all_values;
+  Tensor all_grads;
+  // Tensors for each individual lookup
   Dim dim;
   std::vector<Tensor> values;
   std::vector<Tensor> grads;
@@ -108,12 +117,21 @@ struct LookupParameterStorage : public ParameterStorageBase {
   LookupParameterStorage(unsigned n, const Dim& d);
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    boost::serialization::base_object<ParameterStorageBase>(*this);
-    ar & dim;
-    ar & values;
-    ar & grads;
+  void save(Archive& ar, const unsigned int) const {
+    ar << boost::serialization::base_object<ParameterStorageBase>(*this);
+    ar << all_dim;
+    ar << all_values;
+    ar << all_grads;
   }
+  template<class Archive>
+  void load(Archive& ar, const unsigned int) {
+    ar >> boost::serialization::base_object<ParameterStorageBase>(*this);
+    ar >> all_dim;
+    ar >> all_values;
+    ar >> all_grads;
+    initialize_lookups();
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 class Model;
