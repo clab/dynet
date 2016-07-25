@@ -43,10 +43,10 @@ cdef init(random_seed=None):
         c_argv[idx] = s
 
     if random_seed is None:
-        pycnn.Initialize(argc,c_argv, 0)
+        pycnn.initialize(argc,c_argv, 0)
     else:
         if random_seed == 0: random_seed = 1
-        pycnn.Initialize(argc,c_argv, random_seed)
+        pycnn.initialize(argc,c_argv, random_seed)
     free(c_argv)
 
 init() # TODO: allow different random seeds
@@ -432,8 +432,8 @@ cdef class ComputationGraph:
     cpdef backward(self):
         self.thisptr.backward()
 
-    cpdef PrintGraphviz(self):
-        self.thisptr.PrintGraphviz()
+    cpdef print_graphviz(self):
+        self.thisptr.print_graphviz()
 
     cpdef void checkpoint(self):
         self.thisptr.checkpoint()

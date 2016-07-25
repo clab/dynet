@@ -4,7 +4,7 @@ from libcpp.string cimport string
 ctypedef float real
 
 cdef extern from "cnn/init.h" namespace "cnn":
-    cdef void Initialize(int& argc, char **& argv, unsigned random_seed)
+    cdef void initialize(int& argc, char **& argv, unsigned random_seed)
 
 cdef extern from "cnn/dim.h" namespace "cnn":
     cdef cppclass CDim "cnn::Dim":
@@ -93,7 +93,7 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
         void checkpoint()
         void revert()
 
-        void PrintGraphviz() const
+        void print_graphviz() const
 
 cdef extern from "cnn/training.h" namespace "cnn":
     cdef cppclass CSimpleSGDTrainer "cnn::SimpleSGDTrainer":

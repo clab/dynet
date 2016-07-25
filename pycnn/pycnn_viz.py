@@ -938,7 +938,7 @@ def collapse_birnn_states(nodes, compact):
       new_nodes.append(GVNode(name, input_dim, label, output_dim, new_children, features, node_type, expr_name))
   return (new_nodes, rnn_groups)
 
-def PrintGraphviz(compact=False, show_dims=True, expression_names=None, lookup_names=None, collapse_birnns=False):
+def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_names=None, collapse_birnns=False):
   original_nodes = make_network_graph(compact, expression_names, lookup_names)
   nodes = original_nodes
   collapse_to = dict()
