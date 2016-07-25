@@ -124,7 +124,7 @@ struct ComputationGraph {
   void backward(VariableIndex i);
 
   // debugging
-  void PrintGraphviz() const;
+  void print_graphviz() const;
 
   // data
   std::vector<Node*> nodes;       // **stored in topological order**

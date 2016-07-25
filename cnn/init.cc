@@ -16,14 +16,14 @@ using namespace std;
 
 namespace cnn {
 
-static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
+static void remove_args(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
   argc -= n;
   assert(argc >= 0);
 }
 
-void Initialize(int& argc, char**& argv, bool shared_parameters) {
+void initialize(int& argc, char**& argv, bool shared_parameters) {
   if(default_device != nullptr) {
     cerr << "WARNING: Attempting to initialize cnn twice. Ignoring duplicate initialization." << endl;
     return;
@@ -31,7 +31,7 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
   vector<Device*> gpudevices;
 #if HAVE_CUDA
   cerr << "[cnn] initializing CUDA\n";
-  gpudevices = Initialize_GPU(argc, argv);
+  gpudevices = initialize_gpu(argc, argv);
 #endif
   unsigned random_seed = 0;
   int argi = 1;
@@ -44,7 +44,7 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
         abort();
       } else {
         mem_descriptor = argv[argi+1];
-        RemoveArgs(argc, argv, argi, 2);
+        remove_args(argc, argv, argi, 2);
       }
     } else if (arg == "--cnn-l2" || arg == "--cnn_l2") {
       if ((argi + 1) > argc) {
@@ -54,7 +54,7 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
         string a2 = argv[argi+1];
         float decay = 0;
         istringstream d(a2); d >> decay;
-        RemoveArgs(argc, argv, argi, 2);
+        remove_args(argc, argv, argi, 2);
         if (decay < 0 || decay >= 1) {
           cerr << "[cnn] weight decay parameter must be between 0 and 1 (probably very small like 1e-6)\n";
           abort();
@@ -68,7 +68,7 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
       } else {
         string a2 = argv[argi+1];
         istringstream c(a2); c >> random_seed;
-        RemoveArgs(argc, argv, argi, 2);
+        remove_args(argc, argv, argi, 2);
       }
     } else if (arg.find("--cnn") == 0) {
       cerr << "[cnn] Bad command line argument: " << arg << endl;
@@ -99,7 +99,7 @@ void Initialize(int& argc, char**& argv, bool shared_parameters) {
   cerr << "[cnn] memory allocation done.\n";
 }
 
-void Cleanup() {
+void cleanup() {
   delete rndeng;
   // TODO: Devices cannot be deleted at the moment
   // for(Device* device : devices) delete device;

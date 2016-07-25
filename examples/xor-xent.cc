@@ -14,7 +14,7 @@ using namespace cnn;
 using namespace cnn::expr;
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   Expression y_pred = logistic(V*h + a);
   Expression loss = binary_log_loss(y_pred, y);
 
-  cg.PrintGraphviz();
+  cg.print_graphviz();
 
   // train the parameters
   for (unsigned iter = 0; iter < 2000; ++iter) {

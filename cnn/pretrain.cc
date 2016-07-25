@@ -12,7 +12,7 @@ using namespace std;
 
 namespace cnn {
 
-void SavePretrainedEmbeddings(const std::string& fname,
+void save_pretrained_embeddings(const std::string& fname,
     const Dict& d,
     const LookupParameter& lp) {
   cerr << "Writing word vectors to " << fname << " ...\n";
@@ -20,15 +20,15 @@ void SavePretrainedEmbeddings(const std::string& fname,
   assert(out);
   auto& m = *lp.get();
   for (unsigned i = 0; i < d.size(); ++i) {
-    out << d.Convert(i) << ' ' << (*m.values[i]).transpose() << endl;
+    out << d.convert(i) << ' ' << (*m.values[i]).transpose() << endl;
   }
 }
 
-void ReadPretrainedEmbeddings(const std::string& fname,
+void read_pretrained_embeddings(const std::string& fname,
     Dict* d,
     std::unordered_map<int, std::vector<float>>* vectors) {
   int unk = -1;
-  if (d->is_frozen()) unk = d->GetUnkId();
+  if (d->is_frozen()) unk = d->get_unk_id();
   cerr << "Loading word vectors from " << fname << " ...\n";
   ifstream in(fname);
   assert(in);
@@ -45,12 +45,12 @@ void ReadPretrainedEmbeddings(const std::string& fname,
     v.push_back(x);
   }
   unsigned vec_size = v.size();
-  int wid = d->Convert(word);
+  int wid = d->convert(word);
   if (wid != unk) (*vectors)[wid] = v;
   while(getline(in, line)) {
     istringstream lin(line);
     lin >> word;
-    int w = d->Convert(word);
+    int w = d->convert(word);
     if (w != unk) {
       for (unsigned i = 0; i < vec_size; ++i) lin >> v[i];
       (*vectors)[w] = v;

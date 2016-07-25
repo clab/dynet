@@ -25,9 +25,9 @@ struct ShadowLookupParameters {
 };
 
 // one per element in model.parameters_list
-std::vector<ShadowParameters> AllocateShadowParameters(const Model& model);
+std::vector<ShadowParameters> allocate_shadow_parameters(const Model& model);
 // one per element in model.lookup_parameters_list
-std::vector<ShadowLookupParameters> AllocateShadowLookupParameters(const Model& model);
+std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Model& model);
 
 } // namespace cnn
 

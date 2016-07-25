@@ -112,7 +112,7 @@ Expression y_pred = logistic(W*x);
 // to minimize the value of the final function in the computation graph.
 Expression l = binary_log_loss(y_pred, y);
 // We are now done setting up the graph, and we can print out its structure:
-cg.PrintGraphviz();
+cg.print_graphviz();
 
 // *** Now, we perform a parameter update for a single example.
 // Set the input/output to the values specified by the training data:

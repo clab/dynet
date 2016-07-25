@@ -253,7 +253,7 @@ void ComputationGraph::invalidate() { ee->invalidate(); }
 void ComputationGraph::backward() { ee->backward(); }
 void ComputationGraph::backward(VariableIndex i) { ee->backward(i); }
 
-void ComputationGraph::PrintGraphviz() const {
+void ComputationGraph::print_graphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";
   unsigned nc = 0;
   for (auto node : nodes) {

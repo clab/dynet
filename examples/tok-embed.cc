@@ -216,7 +216,7 @@ struct BiCharLSTM {
 };
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
@@ -225,8 +225,8 @@ int main(int argc, char** argv) {
   Trainer* sgd = nullptr;
   sgd = new SimpleSGDTrainer(&model);
   vector<pair<string,vector<unsigned>>> training;
-  kSOW = d.Convert("<w>");
-  kEOW = d.Convert("</w>");
+  kSOW = d.convert("<w>");
+  kEOW = d.convert("</w>");
   PrefixCode pc;
   {
     cerr << "Reading training data from " << argv[1] << " ...\n";
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
       chars.clear();
       while(cur < line.size()) {
         size_t len = UTF8Len(line[cur]);
-        chars.push_back(d.Convert(line.substr(cur, len)));
+        chars.push_back(d.convert(line.substr(cur, len)));
         cur += len;
       }
       training.push_back(make_pair(code, chars));

@@ -74,20 +74,20 @@ struct RNNLanguageModel {
       // y_t = RNN(x_t)
       Expression i_y_t = builder.add_input(i_x_t);
       cur = cfsm.sample(i_y_t);
-      cerr << (len == 1 ? "" : " ") << d.Convert(cur);
+      cerr << (len == 1 ? "" : " ") << d.convert(cur);
     }
     cerr << endl;
   }
 };
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   if (argc != 4 && argc != 5) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt clusters.txt [model.params]\n";
     return 1;
   }
-  kSOS = d.Convert("<s>");
-  kEOS = d.Convert("</s>");
+  kSOS = d.convert("<s>");
+  kEOS = d.convert("</s>");
   Model model;
   ClassFactoredSoftmaxBuilder cfsm(HIDDEN_DIM, argv[3], &d, &model);
   vector<vector<int>> training, dev;
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++tlc;
-      training.push_back(ReadSentence(line, &d));
+      training.push_back(read_sentence(line, &d));
       ttoks += training.back().size();
       if (training.back().front() != kSOS && training.back().back() != kEOS) {
         cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
-  d.Freeze(); // no new word types allowed
+  d.freeze(); // no new word types allowed
   VOCAB_SIZE = d.size();
 
   int dlc = 0;
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++dlc;
-      dev.push_back(ReadSentence(line, &d));
+      dev.push_back(read_sentence(line, &d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
         cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";

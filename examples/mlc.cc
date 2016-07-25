@@ -107,7 +107,7 @@ struct MLCBuilder {
 };
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
 
   if (argc != 5) {
     cerr << "Usage: " << argv[0] << " x.train.txt y.train.txt x.dev.txt y.dev.txt\n";

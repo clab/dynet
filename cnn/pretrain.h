@@ -9,11 +9,11 @@
 
 namespace cnn {
 
-void SavePretrainedEmbeddings(const std::string& fname,
+void save_pretrained_embeddings(const std::string& fname,
     const Dict& d,
     const LookupParameter& lp);
 
-void ReadPretrainedEmbeddings(const std::string& fname,
+void read_pretrained_embeddings(const std::string& fname,
     Dict* d,
     std::unordered_map<int, std::vector<float>>* vectors);
 

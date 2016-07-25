@@ -67,7 +67,7 @@ namespace cnn {
 
     /// XXX: We never delete these objects
     template <class T>
-    T* GetSharedMemory() {
+    T* get_shared_memory() {
       /*std::cerr << "Creating shared memory named " << shared_memory_name << std::endl;
       auto shm = new boost::interprocess::shared_memory_object(boost::interprocess::create_only, shared_memory_name.c_str(), boost::interprocess::read_write);
       shm->truncate(sizeof(T));
@@ -82,41 +82,41 @@ namespace cnn {
     // These are used to send data from child processes
     // to the parent process or vice/versa.
     template <class T>
-    T Read(int pipe) {
+    T read_data(int pipe) {
       T v;
-      int err = read(pipe, &v, sizeof(T));
+      int err = read(pipe, (void*)&v, sizeof(T));
       assert (err != -1);
       return v;
     }
 
     template <class T>
-    void Write(int pipe, const T& v) {
-      int err = write(pipe, &v, sizeof(T));
+    void write_data(int pipe, const T& v) {
+      int err = write(pipe, (void*)&v, sizeof(T));
       assert (err != -1);
     }
 
-    std::string GenerateQueueName();
-    std::string GenerateSharedMemoryName();
+    std::string generate_queue_name();
+    std::string generate_shared_memory_name();
 
-    cnn::real SumValues(const std::vector<cnn::real>& values);
-    cnn::real Mean(const std::vector<cnn::real>& values);
+    cnn::real sum_values(const std::vector<cnn::real>& values);
+    cnn::real mean(const std::vector<cnn::real>& values);
 
-    std::string ElapsedTimeString(const timespec& start, const timespec& end);
+    std::string elapsed_time_string(const timespec& start, const timespec& end);
 
-    unsigned SpawnChildren(std::vector<Workload>& workloads);
-    std::vector<Workload> CreateWorkloads(unsigned num_children);
+    unsigned spawn_children(std::vector<Workload>& workloads);
+    std::vector<Workload> create_workloads(unsigned num_children);
 
     // Called by the parent to process a chunk of data
     template <class S>
-    S RunDataSet(std::vector<unsigned>::iterator begin, std::vector<unsigned>::iterator end, const std::vector<Workload>& workloads,
+    S run_data_set(std::vector<unsigned>::iterator begin, std::vector<unsigned>::iterator end, const std::vector<Workload>& workloads,
         boost::interprocess::message_queue& mq, const WorkloadHeader& header) {
       const unsigned num_children = workloads.size();
 
       // Tell all the children to start up
       for (unsigned cid = 0; cid < num_children; ++cid) {
         bool cont = true;
-        Write(workloads[cid].p2c[1], cont);
-        Write(workloads[cid].p2c[1], header);
+        write_data(workloads[cid].p2c[1], cont);
+        write_data(workloads[cid].p2c[1], header);
       }
 
       // Write all the indices to the queue for the children to process
@@ -137,7 +137,7 @@ namespace cnn {
       // Wait for each child to finish training its load
       std::vector<S> losses(num_children);
       for(unsigned cid = 0; cid < num_children; ++cid) {
-        losses[cid] = Read<S>(workloads[cid].c2p[0]);
+        losses[cid] = read_data<S>(workloads[cid].c2p[0]);
       }
 
       S total_loss = S();
@@ -148,7 +148,7 @@ namespace cnn {
     }
 
     template<class D, class S>
-    void RunParent(const std::vector<D>& train_data, const std::vector<D>& dev_data, ILearner<D, S>* learner,
+    void run_parent(const std::vector<D>& train_data, const std::vector<D>& dev_data, ILearner<D, S>* learner,
        std::vector<Workload>& workloads, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
       const unsigned num_children = workloads.size();
       boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
@@ -174,7 +174,7 @@ namespace cnn {
             end = train_indices.end();
           }
           double fractional_iter = iter + 1.0 * distance(train_indices.begin(), end) / train_indices.size();
-          S batch_loss = RunDataSet<S>(begin, end, workloads, mq, {false, end == train_indices.end(), report_frequency});
+          S batch_loss = run_data_set<S>(begin, end, workloads, mq, {false, end == train_indices.end(), report_frequency});
           train_loss += batch_loss;
           std::cerr << fractional_iter << "\t" << "loss = " << batch_loss << std::endl;
 
@@ -182,7 +182,7 @@ namespace cnn {
             break;
           }
 
-          S dev_loss = RunDataSet<S>(dev_indices.begin(), dev_indices.end(), workloads, mq, {true, false, report_frequency});
+          S dev_loss = run_data_set<S>(dev_indices.begin(), dev_indices.end(), workloads, mq, {true, false, report_frequency});
           bool new_best = (first_dev_run || dev_loss < best_dev_loss);
           first_dev_run = false;
           std::cerr << fractional_iter << "\t" << "dev loss = " << dev_loss << (new_best ? " (New best!)" : "") << std::endl;
@@ -201,13 +201,13 @@ namespace cnn {
       // Kill all children one by one and wait for them to exit
       for (unsigned cid = 0; cid < num_children; ++cid) {
         bool cont = false;
-        Write(workloads[cid].p2c[1], cont);
+        write_data(workloads[cid].p2c[1], cont);
         wait(NULL);
       }
     }
 
     template <class D, class S>
-    int RunChild(unsigned cid, ILearner<D, S>* learner, Trainer* trainer,
+    int run_child(unsigned cid, ILearner<D, S>* learner, Trainer* trainer,
         std::vector<Workload>& workloads, const std::vector<D>& train_data,
         const std::vector<D>& dev_data) {
       const unsigned num_children = workloads.size();
@@ -218,13 +218,13 @@ namespace cnn {
       boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
       while (true) {
         // Check if the parent wants us to exit
-        bool cont = Read<bool>(workloads[cid].p2c[0]);
+        bool cont = read_data<bool>(workloads[cid].p2c[0]);
         if (cont == 0) {
           break;
         }
 
         // Check if we're running on the training data or the dev data 
-        WorkloadHeader header = Read<WorkloadHeader>(workloads[cid].p2c[0]);
+        WorkloadHeader header = read_data<WorkloadHeader>(workloads[cid].p2c[0]);
 
         // Run the actual training loop
         S total_loss = S();
@@ -269,32 +269,32 @@ namespace cnn {
         }
 
         // Let the parent know that we're done and return the loss value
-        Write(workloads[cid].c2p[1], total_loss);
+        write_data(workloads[cid].c2p[1], total_loss);
       }
       return 0;
     }
 
     template<class D, class S>
-    void RunMultiProcess(unsigned num_children, ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
+    void run_multi_process(unsigned num_children, ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
         const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
       //assert (cnn::ps->is_shared());
-      queue_name = GenerateQueueName();
+      queue_name = generate_queue_name();
       boost::interprocess::message_queue::remove(queue_name.c_str());
       boost::interprocess::message_queue::remove(queue_name.c_str());
-      shared_memory_name = GenerateSharedMemoryName();
-      shared_object = GetSharedMemory<SharedObject>();
-      std::vector<Workload> workloads = CreateWorkloads(num_children);
-      unsigned cid = SpawnChildren(workloads);
+      shared_memory_name = generate_shared_memory_name();
+      shared_object = get_shared_memory<SharedObject>();
+      std::vector<Workload> workloads = create_workloads(num_children);
+      unsigned cid = spawn_children(workloads);
       if (cid < num_children) {
-        RunChild(cid, learner, trainer, workloads, train_data, dev_data);
+        run_child(cid, learner, trainer, workloads, train_data, dev_data);
       }
       else {
-        RunParent(train_data, dev_data, learner, workloads, num_iterations, dev_frequency, report_frequency);
+        run_parent(train_data, dev_data, learner, workloads, num_iterations, dev_frequency, report_frequency);
       }
     }
 
     template<class D, class S>
-    void RunSingleProcess(ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
+    void run_single_process(ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
         const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
       std::vector<unsigned> train_indices(train_data.size());
       std::iota(train_indices.begin(), train_indices.end(), 0);

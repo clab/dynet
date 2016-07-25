@@ -14,7 +14,7 @@ using namespace cnn;
 using namespace cnn::expr;
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
 
   unsigned CONTEXT = 3;
   unsigned DIM = 100;
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
   Expression o2 = bias + R * nl;
   Expression ydist = log_softmax(o2);
   Expression nerr = -pick(ydist, &ytrue);
-  cg.PrintGraphviz();
+  cg.print_graphviz();
 
   // load some training data
   if (argc != 2) {

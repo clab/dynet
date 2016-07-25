@@ -10,7 +10,7 @@ struct ConfigureCNNTest {
     }
     char **argv = &av[0];
     int argc = av.size();
-    cnn::Initialize(argc, argv);
+    cnn::initialize(argc, argv);
   }
   ~ConfigureCNNTest() {
     for (auto x : av) free(x);

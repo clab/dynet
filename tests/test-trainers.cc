@@ -12,14 +12,14 @@ using namespace std;
 
 struct TrainerTest {
   TrainerTest() {
-    // Initialize if necessary
+    // initialize if necessary
     if(default_device == nullptr) {
       for (auto x : {"TrainerTest", "--cnn-mem", "10"}) {
         av.push_back(strdup(x));
       }
       char **argv = &av[0];
       int argc = av.size();
-      cnn::Initialize(argc, argv);
+      cnn::initialize(argc, argv);
     }
     ones_vals = {1.f,1.f,1.f};
     param_vals = {1.1f,-2.2f,3.3f};

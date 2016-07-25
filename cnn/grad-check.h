@@ -7,7 +7,7 @@ class Model;
 struct ComputationGraph;
 
 // verbosity is zero for silence, one for only printing errors, two for everything
-bool CheckGrad(Model& m, ComputationGraph& g, int verbosity = 1);
+bool check_grad(Model& m, ComputationGraph& g, int verbosity = 1);
 
 } // namespace cnn
 

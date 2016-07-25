@@ -83,7 +83,7 @@ class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
   expr::Expression full_log_distribution(const expr::Expression& rep);
 
  private:
-  Cluster* ReadClusterFile(const std::string& cluster_file, Dict* word_dict);
+  Cluster* read_cluster_file(const std::string& cluster_file, Dict* word_dict);
   std::vector<Cluster*> widx2path; // will be NULL if not found
   Dict path_symbols;
 

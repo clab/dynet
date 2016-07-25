@@ -146,7 +146,7 @@ struct RNNLanguageModel {
       }
       if (cur == kEOS) break;
       ++len;
-      cerr << (len == 1 ? "" : " ") << d.Convert(cur);
+      cerr << (len == 1 ? "" : " ") << d.convert(cur);
       Expression x_t = lookup(cg, p_c, cur);
       h_t = builder.add_input(x_t);
     }
@@ -158,11 +158,11 @@ int main(int argc, char** argv) {
   cerr << "COMMAND LINE:"; 
   for (unsigned i = 0; i < static_cast<unsigned>(argc); ++i) cerr << ' ' << argv[i];
   cerr << endl;
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   po::variables_map conf;
   InitCommandLine(argc, argv, &conf);
-  kSOS = d.Convert("<s>");
-  kEOS = d.Convert("</s>");
+  kSOS = d.convert("<s>");
+  kEOS = d.convert("</s>");
   LAYERS = conf["layers"].as<unsigned>();
   INPUT_DIM = conf["input_dim"].as<unsigned>();
   HIDDEN_DIM = conf["hidden_dim"].as<unsigned>();
@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++tlc;
-      training.push_back(ReadSentence(line, &d));
+      training.push_back(read_sentence(line, &d));
       ttoks += training.back().size();
       if (training.back().front() == kSOS || training.back().back() == kEOS) {
         cerr << "Training sentence in " << argv[1] << ":" << tlc << " started with <s> or ended with </s>\n";
@@ -200,8 +200,8 @@ int main(int argc, char** argv) {
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
-  d.Freeze(); // no new word types allowed
-  d.SetUnk("<unk>");
+  d.freeze(); // no new word types allowed
+  d.set_unk("<unk>");
   VOCAB_SIZE = d.size();
   if (!cfsm)
     cfsm = new StandardSoftmaxBuilder(HIDDEN_DIM, VOCAB_SIZE, &model);
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
     ifstream in(testf);
     assert(in);
     while(getline(in, line)) {
-      test.push_back(ReadSentence(line, &d));
+      test.push_back(read_sentence(line, &d));
       if (test.back().front() == kSOS || test.back().back() == kEOS) {
         cerr << "Test sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
         abort();
@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
       assert(in);
       while(getline(in, line)) {
         ++dlc;
-        dev.push_back(ReadSentence(line, &d));
+        dev.push_back(read_sentence(line, &d));
         dtoks += dev.back().size();
         if (dev.back().front() == kSOS || dev.back().back() == kEOS) {
           cerr << "Dev sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
@@ -382,7 +382,7 @@ int main(int argc, char** argv) {
       }
       // Score hypothesis
       ComputationGraph cg;
-      lm.BuildLMGraph(ReadSentence(fields[HYP_FIELD], &d), cg, false);
+      lm.BuildLMGraph(read_sentence(fields[HYP_FIELD], &d), cg, false);
       double loss = as_scalar(cg.forward());
       // Add score
       ostringstream os;

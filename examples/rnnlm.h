@@ -25,8 +25,8 @@ struct RNNLanguageModel {
   Parameter p_bias;
   Builder builder;
   explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
-    kSOS = d.Convert("<s>");
-    kEOS = d.Convert("</s>");
+    kSOS = d.convert("<s>");
+    kEOS = d.convert("</s>");
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
@@ -86,7 +86,7 @@ struct RNNLanguageModel {
         }
         if (w == dist.size()) w = kEOS;
       }
-      cerr << (len == 1 ? "" : " ") << d.Convert(w);
+      cerr << (len == 1 ? "" : " ") << d.convert(w);
       cur = w;
     }
     cerr << endl;

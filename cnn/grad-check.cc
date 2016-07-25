@@ -11,7 +11,7 @@ using namespace std;
 
 namespace cnn {
 
-bool CheckGrad(Model& m, ComputationGraph& g, int verbosity) {
+bool check_grad(Model& m, ComputationGraph& g, int verbosity) {
   // Clear the parameters first
   const vector<ParameterStorage*>& params = m.parameters_list();
   const vector<LookupParameterStorage*>& lookup_params = m.lookup_parameters_list();

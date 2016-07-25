@@ -9,7 +9,7 @@ using namespace std;
 
 namespace cnn {
 
-static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
+static void remove_args(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
   argc -= n;
@@ -18,7 +18,7 @@ static void RemoveArgs(int& argc, char**& argv, int& argi, int n) {
 
 #define MAX_GPUS 256
 
-vector<Device*> Initialize_GPU(int& argc, char**& argv) {
+vector<Device*> initialize_gpu(int& argc, char**& argv) {
   int nDevices;
   CUDA_CHECK(cudaGetDeviceCount(&nDevices));
   if (nDevices < 1) {
@@ -42,7 +42,7 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
         abort();
       } else {
         mem_descriptor = argv[argi+1];
-        RemoveArgs(argc, argv, argi, 2);
+        remove_args(argc, argv, argi, 2);
       }
     } else if (arg == "--cnn_gpus" || arg == "--cnn-gpus") {
       if ((argi + 1) > argc) {
@@ -55,7 +55,7 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
         ngpus_requested = true;
         string a2 = argv[argi+1];
         istringstream c(a2); c >> requested_gpus;
-        RemoveArgs(argc, argv, argi, 2);
+        remove_args(argc, argv, argi, 2);
       }
     } else if (arg == "--cnn_gpu_ids" || arg == "--cnn-gpu-ids") {
       if ((argi + 1) > argc) {
@@ -89,7 +89,7 @@ vector<Device*> Initialize_GPU(int& argc, char**& argv) {
             }
           }
         }
-        RemoveArgs(argc, argv, argi, 2);
+        remove_args(argc, argv, argi, 2);
       }
     }
   }

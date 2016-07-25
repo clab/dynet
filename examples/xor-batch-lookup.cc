@@ -14,7 +14,7 @@ using namespace cnn;
 using namespace cnn::expr;
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
   Expression loss = squared_distance(y_pred, y);
   Expression sum_loss = sum_batches(loss);
 
-  cg.PrintGraphviz();
+  cg.print_graphviz();
 
   // train the parameters
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {

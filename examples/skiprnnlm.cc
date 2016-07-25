@@ -99,19 +99,19 @@ int main(int argc, char** argv) {
     defaultConf.set(el::Level::Info, el::ConfigurationType::Format, "%datetime{%h:%m:%s} %level %msg");
     el::Loggers::reconfigureLogger("default", defaultConf);
 
-    cnn::Initialize(argc, argv);
+    cnn::initialize(argc, argv);
     if (argc != 3 && argc != 4) {
         LOG(INFO) << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
         return 1;
     }
-    kSOS = d.Convert("<s>");
-    kEOS = d.Convert("</s>");
+    kSOS = d.convert("<s>");
+    kEOS = d.convert("</s>");
 
     // load the corpora
     Corpus training, dev;
     LOG(INFO) << "Reading training data from " << argv[1] << "...\n";
     read_documents(argv[1], training);
-    d.Freeze(); // no new word types allowed
+    d.freeze(); // no new word types allowed
     VOCAB_SIZE = d.size();
     LOG(INFO) << "Reading dev data from " << argv[2] << "...\n";
     read_documents(argv[2], dev);
@@ -213,7 +213,7 @@ void read_documents(const std::string &filename, Corpus &corpus) {
     Document doc;
     while(std::getline(in, line)) {
         ++lno;
-        auto sentence = ReadSentence(line, &d);
+        auto sentence = read_sentence(line, &d);
         if (sentence.empty()) {
             // empty lines separate documents
             corpus.push_back(doc);

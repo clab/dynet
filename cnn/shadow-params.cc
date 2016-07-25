@@ -20,7 +20,7 @@ ShadowLookupParameters::ShadowLookupParameters(const LookupParameterStorage& lp)
   }
 }
 
-vector<ShadowParameters> AllocateShadowParameters(const Model& m) {
+vector<ShadowParameters> allocate_shadow_parameters(const Model& m) {
   vector<ShadowParameters> v;
   v.reserve(m.parameters_list().size());
   for (auto& p : m.parameters_list())
@@ -28,7 +28,7 @@ vector<ShadowParameters> AllocateShadowParameters(const Model& m) {
   return v;
 }
 
-vector<ShadowLookupParameters> AllocateShadowLookupParameters(const Model& m) {
+vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Model& m) {
   vector<ShadowLookupParameters> v;
   v.reserve(m.lookup_parameters_list().size());
   for (auto& p : m.lookup_parameters_list())
