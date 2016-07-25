@@ -64,13 +64,13 @@ struct RNNLengthPredictor {
 };
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
   }
-  kSOS = d.Convert("<s>");
-  kEOS = d.Convert("</s>");
+  kSOS = d.convert("<s>");
+  kEOS = d.convert("</s>");
   vector<pair<vector<int>,unsigned>> training, dev;
   string line;
   int tlc = 0;
@@ -83,9 +83,9 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++tlc;
       vector<int> x, ty;
-      ReadSentencePair(line, &x, &d, &ty, &td);
+      read_sentence_pair(line, &x, &d, &ty, &td);
       assert(ty.size() == 1);
-      const string& v = td.Convert(ty[0]);
+      const string& v = td.convert(ty[0]);
       for(auto c : v) { assert(c >= '0' && c <= '9'); }
       unsigned y = atoi(v.c_str());
       training.push_back(make_pair(x,y));
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
-  d.Freeze(); // no new word types allowed
+  d.freeze(); // no new word types allowed
   VOCAB_SIZE = d.size();
 
   int dlc = 0;
@@ -110,9 +110,9 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++dlc;
       vector<int> x, ty;
-      ReadSentencePair(line, &x, &d, &ty, &td);
+      read_sentence_pair(line, &x, &d, &ty, &td);
       assert(ty.size() == 1);
-      const string& v = td.Convert(ty[0]);
+      const string& v = td.convert(ty[0]);
       for(auto c : v) { assert(c >= '0' && c <= '9'); }
       unsigned y = atoi(v.c_str());
       dev.push_back(make_pair(x,y));

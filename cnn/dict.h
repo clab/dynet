@@ -26,14 +26,14 @@ public:
 
   inline unsigned size() const { return words_.size(); }
 
-  inline bool Contains(const std::string& words) {
+  inline bool contains(const std::string& words) {
     return !(d_.find(words) == d_.end());
   }
 
-  void Freeze() { frozen = true; }
+  void freeze() { frozen = true; }
   bool is_frozen() { return frozen; }
 
-  inline int Convert(const std::string& word) {
+  inline int convert(const std::string& word) {
     auto i = d_.find(word);
     if (i == d_.end()) {
       if (frozen) {
@@ -53,27 +53,27 @@ public:
     }
   }
   
-  inline const std::string& Convert(const int& id) const {
+  inline const std::string& convert(const int& id) const {
     assert(id < (int)words_.size());
     return words_[id];
   }
   
-  void SetUnk(const std::string& word) {
+  void set_unk(const std::string& word) {
     if (!frozen)
-      throw std::runtime_error("Please call SetUnk() only after dictionary is frozen");
+      throw std::runtime_error("Please call set_unk() only after dictionary is frozen");
     if (map_unk)
       throw std::runtime_error("Set UNK more than one time");
   
     // temporarily unfrozen the dictionary to allow the add of the UNK
     frozen = false;
-    unk_id = Convert(word);
+    unk_id = convert(word);
     frozen = true;
   
     map_unk = true;
   }
 
-  int GetUnkId() const { return unk_id; }
-  const std::vector<std::string> & GetWords() const { return words_; }
+  int get_unk_id() const { return unk_id; }
+  const std::vector<std::string> & get_words() const { return words_; }
   
   void clear() { words_.clear(); d_.clear(); }
 
@@ -100,8 +100,8 @@ private:
 #endif
 };
 
-std::vector<int> ReadSentence(const std::string& line, Dict* sd);
-void ReadSentencePair(const std::string& line, std::vector<int>* s, Dict* sd, std::vector<int>* t, Dict* td);
+std::vector<int> read_sentence(const std::string& line, Dict* sd);
+void read_sentence_pair(const std::string& line, std::vector<int>* s, Dict* sd, std::vector<int>* t, Dict* td);
 
 } // namespace cnn
 

@@ -160,7 +160,7 @@ void LookupParameter::initialize(unsigned index, const std::vector<float>& val) 
 }
 
 Model::Model() : gradient_norm_scratch(nullptr) {
-  weight_decay.SetLambda(weight_decay_lambda);
+  weight_decay.set_lambda(weight_decay_lambda);
 }
 
 Model::~Model() {
@@ -170,7 +170,7 @@ Model::~Model() {
 }
 
 void Model::set_weight_decay_lambda(float lambda) {
-  weight_decay.SetLambda(lambda);
+  weight_decay.set_lambda(lambda);
 }
 
 void Model::project_weights(float radius) {

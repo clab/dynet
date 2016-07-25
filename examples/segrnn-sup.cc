@@ -87,9 +87,9 @@ struct SymbolEmbedding {
         for (int ind = 1; ind < fields.size(); ++ind){
           p_embeding.push_back(std::stod(fields[ind]));
         }
-        if (d.Contains(word)){
+        if (d.contains(word)){
           // cout << "init" << endl;
-          p_labels.initialize(d.Convert(word), p_embeding);
+          p_labels.initialize(d.convert(word), p_embeding);
         }
       }
   }
@@ -427,7 +427,7 @@ struct SegmentalRNN {
       unsigned j = cur + dur;
       assert(j <= len);
       is_ref[cur][j][y] = true;
-      // cerr << "Span[" << cur << "," << j << ")=" << td.Convert(y) << endl;
+      // cerr << "Span[" << cur << "," << j << ")=" << td.convert(y) << endl;
       cur = j;
     }
     assert(cur == len);
@@ -719,7 +719,7 @@ pair<vector<int>,vector<pair<int,int>>> ParseTrainingInstance(const std::string&
       if (word == sep) break;
       if (!in) break;
     }
-    x.push_back(d.Convert(word));
+    x.push_back(d.convert(word));
   }
   if(!test_only){
     while(1) {
@@ -730,7 +730,7 @@ pair<vector<int>,vector<pair<int,int>>> ParseTrainingInstance(const std::string&
         cerr << "mal-formed label: " << word << endl;
         abort();
       }
-      int y = td.Convert(word.substr(0, p));
+      int y = td.convert(word.substr(0, p));
       int z = atoi(word.substr(p+1).c_str());
       if (z > DATA_MAX_SEG_LEN){
         DATA_MAX_SEG_LEN = z;
@@ -766,7 +766,7 @@ double evaluate(vector<vector<pair<int,int>>>& yz_preds,
   int r_total = 0;
   int p_w_t_total = 0;
   int r_w_t_total = 0;
-  int tag_o = ner_tagging ? td.Convert("O") : -1;
+  int tag_o = ner_tagging ? td.convert("O") : -1;
   for (unsigned int i = 0; i < yz_preds.size(); i++){
     // for sentence i
     std::set<pair<int,int>> gold;
@@ -848,11 +848,11 @@ void test_only(SegmentalRNN<LSTMBuilder>& segrnn,
     unsigned int i;
     for(i = 0; i < yz_pred.size()-1; ++i){
       auto pred = yz_pred[i];
-      cout << segrnn.td.Convert(pred.first) << ":" << pred.second << " ";
+      cout << segrnn.td.convert(pred.first) << ":" << pred.second << " ";
     }
     if(i >= 0 && (i == yz_pred.size()-1)){
       auto pred = yz_pred[i];
-      cout << segrnn.td.Convert(pred.first) << ":" << pred.second;
+      cout << segrnn.td.convert(pred.first) << ":" << pred.second;
     }
     cout << endl;
   }
@@ -965,12 +965,12 @@ double evaluate_partial(vector<vector<pair<int,int>>>& yz_preds,
     vector<pair<int,int>>& yz_gold = yz_golds[i];
     std::string pred_s = "";
     for (auto e : yz_pred){
-      pred_s.append(td.Convert(e.first));
+      pred_s.append(td.convert(e.first));
       total_length_pred++;
     } 
     std::string gold_s = "";
     for (auto e : yz_gold){
-      gold_s.append(td.Convert(e.first));
+      gold_s.append(td.convert(e.first));
       total_length_gold++;
     }
     auto dis = edit_distance(pred_s, gold_s);
@@ -1010,7 +1010,7 @@ double predict_and_evaluate(SegmentalRNN<LSTMBuilder>& segrnn,
 
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   int test_max_seg_len;
   int max_consider_sentence_len;
   unsigned dev_every_i_reports;
@@ -1068,9 +1068,9 @@ int main(int argc, char** argv) {
     vector<pair<vector<int>,vector<pair<int,int>>>> training, dev, test;
     read_file(vm["train_file"].as<string>(), d, td, training);
 
-    d.Freeze();  // no new word types allowed
-    td.Freeze(); // no new tag types allowed
-    d.SetUnk("<UNK>"); // set UNK to allow the unseen character in the dev and test set
+    d.freeze();  // no new word types allowed
+    td.freeze(); // no new tag types allowed
+    d.set_unk("<UNK>"); // set UNK to allow the unseen character in the dev and test set
 
     read_file(vm["dev_file"].as<string>(), d, td, dev);
     if (vm["evaluate_test"].as<bool>()){

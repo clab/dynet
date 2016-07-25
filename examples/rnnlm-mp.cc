@@ -31,7 +31,7 @@ vector<Datum> ReadData(string filename) {
   }
   string line;
   while (getline(fs, line)) {
-    data.push_back(ReadSentence(line, &d));
+    data.push_back(read_sentence(line, &d));
   }
   return data;
 }
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
   unsigned dev_frequency = 5000;
   unsigned report_frequency = 10;
 
-  cnn::Initialize(argc, argv, true);
+  cnn::initialize(argc, argv, true);
 
   Model model;
   SimpleSGDTrainer sgd(&model, 0.2);
@@ -82,5 +82,5 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> rnnlm(model);
 
   Learner<LSTMBuilder, Datum> learner(rnnlm, data.size());
-  RunMultiProcess<Datum>(num_children, &learner, &sgd, data, dev_data, num_iterations, dev_frequency, report_frequency);
+  run_multi_process<Datum>(num_children, &learner, &sgd, data, dev_data, num_iterations, dev_frequency, report_frequency);
 }

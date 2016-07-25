@@ -73,7 +73,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
 
  private:
   ClassFactoredSoftmaxBuilder();
-  void ReadClusterFile(const std::string& cluster_file, Dict* word_dict);
+  void read_cluster_file(const std::string& cluster_file, Dict* word_dict);
 
   Dict cdict;
   std::vector<int> widx2cidx; // will be -1 if not present

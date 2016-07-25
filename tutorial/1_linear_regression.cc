@@ -10,7 +10,7 @@ using namespace cnn;
 using namespace cnn::expr;
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
 
   default_random_engine rng;
   normal_distribution<float> normal(0.0f, 1.0f);

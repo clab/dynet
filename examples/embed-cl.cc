@@ -75,17 +75,17 @@ struct Encoder {
 };
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
   }
   vector<pair<vector<int>, vector<int>>> training, dev;
   string line;
-  kSRC_SOS = sd.Convert("<s>");
-  kSRC_EOS = sd.Convert("</s>");
-  kTRG_SOS = td.Convert("<s>");
-  kTRG_EOS = td.Convert("</s>");
+  kSRC_SOS = sd.convert("<s>");
+  kSRC_EOS = sd.convert("</s>");
+  kTRG_SOS = td.convert("<s>");
+  kTRG_EOS = td.convert("</s>");
   int tlc = 0;
   int ttoks = 0;
   cerr << "Reading training data from " << argv[1] << "...\n";
@@ -95,13 +95,13 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++tlc;
       vector<int> src, trg;
-      ReadSentencePair(line, &src, &sd, &trg, &td);
+      read_sentence_pair(line, &src, &sd, &trg, &td);
       training.push_back(make_pair(src, trg));
     }
     cerr << tlc << " lines, " << sd.size() << " source types, " << td.size() << " target types\n";
   }
-  sd.Freeze(); // no new word types allowed
-  td.Freeze(); // no new word types allowed
+  sd.freeze(); // no new word types allowed
+  td.freeze(); // no new word types allowed
   INPUT_VOCAB_SIZE = sd.size();
   OUTPUT_VOCAB_SIZE = td.size();
 #if 0
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++dlc;
-      dev.push_back(ReadSentence(line, &d));
+      dev.push_back(read_sentence(line, &d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
         cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";

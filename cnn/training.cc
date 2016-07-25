@@ -47,10 +47,10 @@ bool is_valid(const Eigen::MatrixBase<Derived>& x) {
 Trainer::~Trainer() {}
 
 void Trainer::rescale_and_reset_weight_decay() {
-  const float weight_decay = model->weight_decay.CurrentWeightDecay();
+  const float weight_decay = model->weight_decay.current_weight_decay();
   for (auto p : model->parameters_list())
     p->scale_parameters(weight_decay);
-  model->weight_decay.ResetWeightDecay();
+  model->weight_decay.reset_weight_decay();
 }
 
 float Trainer::clip_gradients() {
@@ -92,8 +92,8 @@ void Trainer::update(real scale) {
   }
   ++updates;
 
-  model->weight_decay.UpdateWeightDecay(); // update global weight scale
-  if (model->weight_decay.ParametersNeedRescaled())
+  model->weight_decay.update_weight_decay(); // update global weight scale
+  if (model->weight_decay.parameters_need_rescaled())
     rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
 }
 
@@ -104,7 +104,7 @@ void Trainer::update(real scale) {
 // Perform update of ts[0]=parameters, ts[1]=gradients
 template <class MyDevice>
 void SimpleSGDTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
-  ts[0]->tvec().device(*dev.edevice) -= ts[1]->tvec() * (eta * scale * gscale / model->weight_decay.CurrentWeightDecay());
+  ts[0]->tvec().device(*dev.edevice) -= ts[1]->tvec() * (eta * scale * gscale / model->weight_decay.current_weight_decay());
 }
 CNN_TRAINER_INST_DEV_IMPL(SimpleSGDTrainer)
 
@@ -125,7 +125,7 @@ void SimpleSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx,
 template <class MyDevice>
 void MomentumSGDTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * momentum - ts[1]->tvec() * (eta * scale * gscale);
-  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / model->weight_decay.CurrentWeightDecay();
+  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / model->weight_decay.current_weight_decay();
 }
 CNN_TRAINER_INST_DEV_IMPL(MomentumSGDTrainer)
 
@@ -139,8 +139,8 @@ void MomentumSGDTrainer::update_lookup_params(real scale, real gscale, size_t id
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]});
 }
 void MomentumSGDTrainer::alloc_impl() {
-  vp = AllocateShadowParameters(*model);
-  vlp = AllocateShadowLookupParameters(*model);
+  vp = allocate_shadow_parameters(*model);
+  vlp = allocate_shadow_lookup_parameters(*model);
 }
 #endif
 
@@ -151,7 +151,7 @@ template <class MyDevice>
 void AdagradTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
   ts[2]->tvec().device(*dev.edevice) += ts[1]->tvec().square();
-  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / (ts[2]->tvec() + epsilon).sqrt() * (-eta / model->weight_decay.CurrentWeightDecay());
+  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / (ts[2]->tvec() + epsilon).sqrt() * (-eta / model->weight_decay.current_weight_decay());
 }
 CNN_TRAINER_INST_DEV_IMPL(AdagradTrainer)
 
@@ -165,8 +165,8 @@ void AdagradTrainer::update_lookup_params(real scale, real gscale, size_t idx, s
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]});
 }
 void AdagradTrainer::alloc_impl() {
-  vp = AllocateShadowParameters(*model);
-  vlp = AllocateShadowLookupParameters(*model);
+  vp = allocate_shadow_parameters(*model);
+  vlp = allocate_shadow_lookup_parameters(*model);
 }
 #endif
 
@@ -179,7 +179,7 @@ void AdadeltaTrainer::update_rule_dev(const MyDevice & dev, real scale, real gsc
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho);
   ts[1]->tvec().device(*dev.edevice) = - ts[1]->tvec() * (ts[3]->tvec() + epsilon).sqrt() / (ts[2]->tvec() + epsilon).sqrt();
   ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho);
-  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / model->weight_decay.CurrentWeightDecay();
+  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / model->weight_decay.current_weight_decay();
 }
 CNN_TRAINER_INST_DEV_IMPL(AdadeltaTrainer)
 
@@ -193,10 +193,10 @@ void AdadeltaTrainer::update_lookup_params(real scale, real gscale, size_t idx, 
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlg[idx].h[lidx], &hld[idx].h[lidx]});
 }
 void AdadeltaTrainer::alloc_impl() {
-  hg = AllocateShadowParameters(*model);
-  hlg = AllocateShadowLookupParameters(*model);
-  hd = AllocateShadowParameters(*model);
-  hld = AllocateShadowLookupParameters(*model);
+  hg = allocate_shadow_parameters(*model);
+  hlg = allocate_shadow_lookup_parameters(*model);
+  hd = allocate_shadow_parameters(*model);
+  hld = allocate_shadow_lookup_parameters(*model);
 }
 #endif
 
@@ -211,7 +211,7 @@ void RmsPropTrainer::update_rule_dev(const MyDevice & dev, real scale, real gsca
   // real& d2 = hg[pi++];
   // real g2 = p->g.vec().squaredNorm();
   // d2 = rho * d2 + (1.f - rho) * g2;
-  // p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec()) / model->weight_decay.CurrentWeightDecay();
+  // p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec()) / model->weight_decay.current_weight_decay();
 }
 CNN_TRAINER_INST_DEV_IMPL(RmsPropTrainer)
 
@@ -247,7 +247,7 @@ void AdamTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale,
   ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * beta_2 + ts[1]->tvec().square() * (1.f - beta_2);
   float s1 = 1 - pow(beta_1, updates+1);
   float s2 = 1 - pow(beta_2, updates+1);
-  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / model->weight_decay.CurrentWeightDecay());
+  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / model->weight_decay.current_weight_decay());
 }
 CNN_TRAINER_INST_DEV_IMPL(AdamTrainer)
 
@@ -261,10 +261,10 @@ void AdamTrainer::update_lookup_params(real scale, real gscale, size_t idx, size
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx]});
 }
 void AdamTrainer::alloc_impl() {
-  m = AllocateShadowParameters(*model);
-  lm = AllocateShadowLookupParameters(*model);
-  v = AllocateShadowParameters(*model);
-  lv = AllocateShadowLookupParameters(*model);
+  m = allocate_shadow_parameters(*model);
+  lm = allocate_shadow_lookup_parameters(*model);
+  v = allocate_shadow_parameters(*model);
+  lv = allocate_shadow_lookup_parameters(*model);
 }
 #endif
 

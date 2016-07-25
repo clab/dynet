@@ -11,29 +11,29 @@ namespace cnn {
     bool stop_requested = false;
     SharedObject* shared_object = nullptr;
 
-    std::string GenerateQueueName() {
+    std::string generate_queue_name() {
       std::ostringstream ss;
       ss << "cnn_mp_work_queue";
       ss << rand();
       return ss.str();
     }
 
-    std::string GenerateSharedMemoryName() {
+    std::string generate_shared_memory_name() {
       std::ostringstream ss;
       ss << "cnn_mp_shared_memory";
       ss << rand();
       return ss.str();
     }
 
-    cnn::real SumValues(const std::vector<cnn::real>& values) {
+    cnn::real sum_values(const std::vector<cnn::real>& values) {
       return accumulate(values.begin(), values.end(), 0.0);
     }
 
-    cnn::real Mean(const std::vector<cnn::real>& values) {
-      return SumValues(values) / values.size();
+    cnn::real mean(const std::vector<cnn::real>& values) {
+      return sum_values(values) / values.size();
     }
 
-    std::string ElapsedTimeString(const timespec& start, const timespec& end) {
+    std::string elapsed_time_string(const timespec& start, const timespec& end) {
       std::ostringstream ss;
       time_t secs = end.tv_sec - start.tv_sec;
       long nsec = end.tv_nsec - start.tv_nsec;
@@ -41,7 +41,7 @@ namespace cnn {
       return ss.str();
     }
 
-    unsigned SpawnChildren(std::vector<Workload>& workloads) {
+    unsigned spawn_children(std::vector<Workload>& workloads) {
       const unsigned num_children = workloads.size();
       assert (workloads.size() == num_children);
       pid_t pid;
@@ -61,7 +61,7 @@ namespace cnn {
       return cid;
     }
 
-    std::vector<Workload> CreateWorkloads(unsigned num_children) {
+    std::vector<Workload> create_workloads(unsigned num_children) {
       int err;
       std::vector<Workload> workloads(num_children);
       for (unsigned cid = 0; cid < num_children; cid++) { 

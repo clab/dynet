@@ -7,7 +7,7 @@ using namespace std;
 
 namespace cnn {
 
-void GraphOptimize(ComputationGraph* cg) {
+void graph_optimize(ComputationGraph* cg) {
   // topo sort
   vector<Node*>& nodes = cg->nodes;
   vector<int> longest_paths(nodes.size());

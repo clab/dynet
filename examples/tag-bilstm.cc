@@ -113,14 +113,14 @@ struct RNNLanguageModel {
 };
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
   }
-  kNONE = td.Convert("*");
-  kSOS = d.Convert("<s>");
-  kEOS = d.Convert("</s>");
+  kNONE = td.convert("*");
+  kSOS = d.convert("<s>");
+  kEOS = d.convert("</s>");
   vector<pair<vector<int>,vector<int>>> training, dev;
   string line;
   int tlc = 0;
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
       ++tlc;
       int nc = 0;
       vector<int> x,y;
-      ReadSentencePair(line, &x, &d, &y, &td);
+      read_sentence_pair(line, &x, &d, &y, &td);
       assert(x.size() == y.size());
       if (x.size() == 0) { cerr << line << endl; abort(); }
       training.push_back(make_pair(x,y));
@@ -149,8 +149,8 @@ int main(int argc, char** argv) {
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
     cerr << "Tags: " << td.size() << endl;
   }
-  d.Freeze(); // no new word types allowed
-  td.Freeze(); // no new tag types allowed
+  d.freeze(); // no new word types allowed
+  td.freeze(); // no new tag types allowed
   VOCAB_SIZE = d.size();
   TAG_SIZE = td.size();
 
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++dlc;
       vector<int> x,y;
-      ReadSentencePair(line, &x, &d, &y, &td);
+      read_sentence_pair(line, &x, &d, &y, &td);
       assert(x.size() == y.size());
       dev.push_back(make_pair(x,y));
       dtoks += x.size();

@@ -10,7 +10,7 @@ using namespace std;
 
 namespace cnn {
 
-void OrthonormalRandom(unsigned dd, float g, Tensor& x) {
+void orthonormal_random(unsigned dd, float g, Tensor& x) {
   Tensor t;
   t.d = Dim({dd, dd});
   t.v = new float[dd * dd];

@@ -102,7 +102,7 @@ struct RNNLanguageModel {
         }
         if (w == dist.size()) w = kEOS;
       }
-      cerr << (len == 1 ? "" : " ") << d.Convert(w);
+      cerr << (len == 1 ? "" : " ") << d.convert(w);
       cur = w;
     }
     cerr << endl;
@@ -117,13 +117,13 @@ struct CompareLen {
 };
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
   }
-  kSOS = d.Convert("<s>");
-  kEOS = d.Convert("</s>");
+  kSOS = d.convert("<s>");
+  kEOS = d.convert("</s>");
   vector<vector<int>> training, dev;
   string line;
   int tlc = 0;
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++tlc;
-      training.push_back(ReadSentence(line, &d));
+      training.push_back(read_sentence(line, &d));
       ttoks += training.back().size();
       if (training.back().front() != kSOS && training.back().back() != kEOS) {
         cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
-  d.Freeze(); // no new word types allowed
+  d.freeze(); // no new word types allowed
   VOCAB_SIZE = d.size();
 
   // Sort the training sentences in descending order of length
@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++dlc;
-      dev.push_back(ReadSentence(line, &d));
+      dev.push_back(read_sentence(line, &d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
         cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";

@@ -3,7 +3,7 @@
 
 namespace cnn {
 struct ComputationGraph;
-void GraphOptimize(ComputationGraph* cg);
+void graph_optimize(ComputationGraph* cg);
 } // namespace cnn
 
 #endif

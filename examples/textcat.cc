@@ -175,13 +175,13 @@ Expression HingeLoss(const Expression& y_pred, int y_true) {
 }
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
   }
-  kSOS = d.Convert("<s>");
-  kEOS = d.Convert("</s>");
+  kSOS = d.convert("<s>");
+  kEOS = d.convert("</s>");
   vector<pair<vector<int>,int>> training, dev;
   string line;
   int tlc = 0;
@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++tlc;
       vector<int> x,y;
-      ReadSentencePair(line, &x, &d, &y, &ld);
+      read_sentence_pair(line, &x, &d, &y, &ld);
       if (x.size() == 0 || y.size() != 1) { cerr << line << endl; abort(); }
       training.push_back(make_pair(x,y[0]));
       ttoks += x.size();
@@ -202,8 +202,8 @@ int main(int argc, char** argv) {
     cerr << "Labels: " << ld.size() << endl;
   }
   LABEL_SIZE = ld.size();
-  //d.Freeze(); // no new word types allowed
-  ld.Freeze(); // no new tag types allowed
+  //d.freeze(); // no new word types allowed
+  ld.freeze(); // no new tag types allowed
 
   int dlc = 0;
   int dtoks = 0;
@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++dlc;
       vector<int> x,y;
-      ReadSentencePair(line, &x, &d, &y, &ld);
+      read_sentence_pair(line, &x, &d, &y, &ld);
       assert(y.size() == 1);
       dev.push_back(make_pair(x,y[0]));
       dtoks += x.size();

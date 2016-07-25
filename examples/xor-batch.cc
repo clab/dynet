@@ -14,7 +14,7 @@ using namespace cnn;
 using namespace cnn::expr;
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;

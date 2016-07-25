@@ -14,7 +14,7 @@ using namespace cnn;
 using namespace cnn::expr;
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
 
   // parameters
   const unsigned ITERATIONS = 30;
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
   Expression loss = squared_distance(y_pred, y);
 
   // Show the computation graph, just for fun.
-  cg.PrintGraphviz();
+  cg.print_graphviz();
 
   // train the parameters
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {

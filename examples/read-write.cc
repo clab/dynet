@@ -128,7 +128,7 @@ void ReadFromFile(string& filename, XORModel& model, Model& cnn_model) {
 
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  cnn::initialize(argc, argv);
 
   const unsigned HIDDEN = 8;
   const unsigned ITERATIONS = 20;
