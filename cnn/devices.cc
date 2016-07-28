@@ -104,8 +104,9 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
   edevice = new Eigen::DefaultDevice;
 
   // this is the big memory allocation.
-  for(size_t i = 0; i < 3; ++i)
+  for(size_t i = 0; i < 2; ++i)
     pools[i] = new AlignedMemoryPool((mbs.used[i] << 20), &cpu_mem);
+  pools[2] = new AlignedMemoryPool((mbs.used[2] << 20), shmem);
 }
 
 Device_CPU::~Device_CPU() {}
