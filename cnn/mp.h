@@ -295,7 +295,7 @@ namespace cnn {
 
     template<class D, class S>
     void run_single_process(ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
-        const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
+        const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency, unsigned batch_size) {
       std::vector<unsigned> train_indices(train_data.size());
       std::iota(train_indices.begin(), train_indices.end(), 0);
 
@@ -305,6 +305,7 @@ namespace cnn {
       S best_dev_loss = S();
       bool first_dev_run = true;
       std::mt19937 rndeng(42);
+      unsigned batch_counter = 0;
       for (unsigned iter = 0; iter < num_iterations && !stop_requested; ++iter) {
         // Shuffle the training data indices
         std::shuffle(train_indices.begin(), train_indices.end(), rndeng);
@@ -327,7 +328,10 @@ namespace cnn {
             S datum_loss = learner->LearnFromDatum(datum, true);
             batch_loss += datum_loss;
             train_loss += datum_loss;
-            trainer->update();
+            if (++batch_counter == batch_size) {
+              trainer->update(1.0 / batch_size);
+              batch_counter = 0;
+            }
             data_processed++;
 
             if (--data_until_report == 0) {
