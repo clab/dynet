@@ -471,6 +471,16 @@ class SimpleRNNBuilder(_RNNBuilder):
     self._init_state = None
     self.builder_version = new_builder_num()
   def whoami(self): return "SimpleRNNBuilder"
+class GRUBuilder(_RNNBuilder):
+  def __init__(self, layers, input_dim, hidden_dim, model): 
+    self.cg_version = -1
+    self.layers = layers
+    self.input_dim = input_dim
+    self.hidden_dim = hidden_dim
+    self.model = model
+    self._init_state = None
+    self.builder_version = new_builder_num()
+  def whoami(self): return "GRUBuilder"
 class LSTMBuilder(_RNNBuilder):
   def __init__(self, layers, input_dim, hidden_dim, model): 
     self.cg_version = -1
@@ -965,7 +975,6 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
   for n in nodes:
     label = n.label
     if show_dims:
-      label = n.label
       if n.expr_name is not None:
         label = '%s\\n%s' % (n.expr_name, label)
       label = '%s\\n%s' % (shape_str(n.output_dim), label)
