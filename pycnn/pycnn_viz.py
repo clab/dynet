@@ -127,6 +127,7 @@ class Expression(object): #{{{
   def forward(self, recalculate=False): return None
   def set(self, x): pass
   def batch(self, i): return lookup_batch(self, i)
+  def zero(self): return self
 
   def backward(self): pass
 
