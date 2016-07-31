@@ -777,10 +777,13 @@ def make_network_graph(compact, expression_names, lookup_names):
       [_dim] = p.args
       if vidx in var_name_dict:
         name = var_name_dict[vidx]
-        item_name = ('\\"%s\\"' % (lookup_names[name][idx],)) if (lookup_names and (name in lookup_names)) else None
       else:
         name = None
-        item_name = None
+      item_name = None
+      if lookup_names and p in expression_names:
+        param_name = expression_names[p]
+        if param_name in lookup_names:
+          item_name = '\\"%s\\"' % (lookup_names[param_name][idx],)
       if compact:
         if item_name is not None:
           f_name = item_name
