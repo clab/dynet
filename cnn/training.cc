@@ -29,6 +29,14 @@
     else { abort(); } \
   }
 #endif
+#ifndef __CUDACC__
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::SimpleSGDTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::MomentumSGDTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdagradTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdadeltaTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::RmsPropTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdamTrainer)
+#endif
 
 namespace cnn {
 
