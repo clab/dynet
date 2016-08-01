@@ -102,6 +102,10 @@ struct ModelLoader {
         ia >> p; return this;
     }
 
+    ModelLoader* fill_gru_builder(cnn::GRUBuilder &p) {
+        ia >> p; return this;
+    }
+
     ModelLoader* fill_hsm_builder(cnn::HierarchicalSoftmaxBuilder &p) {
         ia >> p; return this;
     }
