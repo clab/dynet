@@ -127,6 +127,7 @@ class Expression(object): #{{{
   def forward(self, recalculate=False): return None
   def set(self, x): pass
   def batch(self, i): return lookup_batch(self, i)
+  def zero(self): return self
 
   def backward(self): pass
 
@@ -471,6 +472,16 @@ class SimpleRNNBuilder(_RNNBuilder):
     self._init_state = None
     self.builder_version = new_builder_num()
   def whoami(self): return "SimpleRNNBuilder"
+class GRUBuilder(_RNNBuilder):
+  def __init__(self, layers, input_dim, hidden_dim, model): 
+    self.cg_version = -1
+    self.layers = layers
+    self.input_dim = input_dim
+    self.hidden_dim = hidden_dim
+    self.model = model
+    self._init_state = None
+    self.builder_version = new_builder_num()
+  def whoami(self): return "GRUBuilder"
 class LSTMBuilder(_RNNBuilder):
   def __init__(self, layers, input_dim, hidden_dim, model): 
     self.cg_version = -1
@@ -766,10 +777,13 @@ def make_network_graph(compact, expression_names, lookup_names):
       [_dim] = p.args
       if vidx in var_name_dict:
         name = var_name_dict[vidx]
-        item_name = ('\\"%s\\"' % (lookup_names[name][idx],)) if (lookup_names and (name in lookup_names)) else None
       else:
         name = None
-        item_name = None
+      item_name = None
+      if lookup_names and p in expression_names:
+        param_name = expression_names[p]
+        if param_name in lookup_names:
+          item_name = '\\"%s\\"' % (lookup_names[param_name][idx],)
       if compact:
         if item_name is not None:
           f_name = item_name
@@ -965,7 +979,6 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
   for n in nodes:
     label = n.label
     if show_dims:
-      label = n.label
       if n.expr_name is not None:
         label = '%s\\n%s' % (n.expr_name, label)
       label = '%s\\n%s' % (shape_str(n.output_dim), label)
