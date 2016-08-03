@@ -38,7 +38,7 @@ Parameters::Parameters(const Dim& d, float scale) : dim(d) {
 size_t Parameters::size() const { return dim.size(); }
 
 void Parameters::scale_parameters(float a) {
-  (*g) *= a;
+  (*values) *= a;
 }
 
 void Parameters::squared_l2norm(float* sqnorm) const {
