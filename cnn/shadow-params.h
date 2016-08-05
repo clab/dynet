@@ -15,10 +15,10 @@ struct ParameterStorage;
 struct LookupParameterStorage;
 
 struct ShadowParameters {
+  ShadowParameters() {}
   explicit ShadowParameters(const ParameterStorage& p);
   Tensor h;
  private:
-  ShadowParameters() {}
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int) {
@@ -27,10 +27,10 @@ struct ShadowParameters {
 };
 
 struct ShadowLookupParameters {
+  ShadowLookupParameters() {}
   explicit ShadowLookupParameters(const LookupParameterStorage& lp);
   std::vector<Tensor> h;
  private:
-  ShadowLookupParameters() {}
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int) {
