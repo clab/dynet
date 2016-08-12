@@ -1,5 +1,4 @@
 # on numpy arrays, see: https://github.com/cython/cython/wiki/tutorials-NumpyPointerToC
-
 import sys
 from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
@@ -31,11 +30,14 @@ import numpy as np
 from pycnn cimport *
 cimport pycnn
 
+IF PY_MAJOR_VERSION == 3:
+    xrange = range
+
 
 cdef init(random_seed=None):
     cdef int argc = len(sys.argv)
     cdef char** c_argv
-    args = [bytes(x) for x in sys.argv]
+    args = [bytes(x, "utf-8") for x in sys.argv]
     c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
     for idx, s in enumerate(args):
         c_argv[idx] = s
@@ -401,11 +403,15 @@ cdef class Expression: #{{{
     def __str__(self):
         return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
 
-    def __getitem__(self, int i):
-        return pick(self, i)
+    def __getitem__(self, object index):
+        if isinstance(index, int):
+            return pick(self, index)            
+        
+        return pickrange(self, index[0], index[1])
 
-    def __getslice__(self, int i, int j):
-        return pickrange(self, i, j)
+    IF PY_MAJOR_VERSION < 3:
+        def __getslice__(self, int i, int j):
+            return pickrange(self, i, j)
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")

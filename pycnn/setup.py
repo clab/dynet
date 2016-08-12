@@ -1,7 +1,9 @@
 from setuptools import setup
-from setuptools.extension import Extension
+#from setuptools.extension import Extension
+from Cython.Distutils.extension import Extension
 from Cython.Distutils import build_ext
 
+import sys
 
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 import distutils.sysconfig
@@ -20,6 +22,7 @@ ext = Extension(
         #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
         extra_compile_args=["-std=c++11"],
         runtime_library_dirs=["$ORIGIN/./"],
+        cython_compile_time_env={'PY_MAJOR_VERSION': sys.version_info[0]},
         )
 
 setup(ext_modules = [ext],
