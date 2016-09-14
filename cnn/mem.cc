@@ -3,10 +3,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#if !_WINDOWS
 #include <sys/shm.h>
 #include <sys/mman.h>
+#endif
+
 #include <fcntl.h>
-#include <mm_malloc.h>
+#if !_WINDOWS
+	#include <mm_malloc.h>
+#endif
 #include "cnn/except.h"
 #if HAVE_CUDA
 #include "cnn/cuda.h"
@@ -38,12 +43,17 @@ void CPUAllocator::zero(void* p, size_t n) {
 }
 
 void* SharedAllocator::malloc(size_t n) {
+#if _WINDOWS
+	cerr << "Shared memory not supported in Windows" << endl;
+	throw cnn::out_of_memory("Shared memory allocation failed");
+#else
   void* ptr = mmap(NULL, n, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
   if (!ptr) {
     cerr << "Shared memory allocation failed n=" << n << endl;
     throw cnn::out_of_memory("Shared memory allocation failed");
   }
   return ptr;
+#endif
 }
 
 void SharedAllocator::free(void* mem) {

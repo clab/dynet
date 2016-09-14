@@ -14,6 +14,9 @@
 #include <fstream>
 #include <regex>
 #include <sstream>
+#if _WINDOWS  
+	#include <process.h>		// Just for getpid()
+#endif
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>

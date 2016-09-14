@@ -10,7 +10,8 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 #   3. try compiler options like -march=native or other architecture
 #      flags (the compiler does not always make the best configuration
 #      decisions without help)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -Wall -std=c++11 -Ofast -g -DEIGEN_FAST_MATH -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 -std=c++11 -DEIGEN_FAST_MATH -DNOMINMAX -DEIGEN_HAS_C99_MATH /MP")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${BOOST_LIBRARYDIR}")
 
 enable_testing()
 

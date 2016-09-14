@@ -1,4 +1,5 @@
 #pragma once
+#if !_WINDOWS
 #include "cnn/globals.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
@@ -372,3 +373,4 @@ namespace cnn {
     }
   }
 }
+#endif // !_WINDOWS
