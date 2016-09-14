@@ -11,6 +11,9 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#if _WINDOWS  
+	#include <process.h>		// Just for getpid()
+#endif
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
