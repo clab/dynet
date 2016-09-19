@@ -27,9 +27,15 @@ Device_GPU::Device_GPU(int mb, int device_id) :
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 
   // this is the big memory allocation
-  fxs = new AlignedMemoryPool(mb << 20, mem); // memory for node values
-  dEdfs = new AlignedMemoryPool(mb << 20, mem); // memory for node gradients
-  ps = new AlignedMemoryPool(mb << 20, mem); // memory for parameters
+        
+  size_t byte_count = (size_t)mb << 20;
+  fxs = new AlignedMemoryPool(byte_count, mem); // memory for node values
+  dEdfs = new AlignedMemoryPool(byte_count, mem); // memory for node gradients
+  ps = new AlignedMemoryPool(byte_count, mem); // memory for parameters
+
+  //fxs = new AlignedMemoryPool(mb << 20, mem); // memory for node values
+  //dEdfs = new AlignedMemoryPool(mb << 20, mem); // memory for node gradients
+  //ps = new AlignedMemoryPool(mb << 20, mem); // memory for parameters
 }
 
 Device_GPU::~Device_GPU() {}
@@ -51,9 +57,14 @@ Device_CPU::Device_CPU(int mb, bool shared) :
   *kSCALAR_ZERO = 0;
 
   // this is the big memory allocation: the pools
-  fxs = new AlignedMemoryPool(mb << 20, mem); // memory for node values
-  dEdfs = new AlignedMemoryPool(mb << 20, mem); // memory for node gradients
-  ps = new AlignedMemoryPool(mb << 20, shmem); // memory for parameters
+        
+  size_t byte_count = (size_t)mb << 20;
+  fxs = new AlignedMemoryPool(byte_count, mem); // memory for node values
+  dEdfs = new AlignedMemoryPool(byte_count, mem); // memory for node gradients
+  ps = new AlignedMemoryPool(byte_count, mem); // memory for parameters
+  //fxs = new AlignedMemoryPool(mb << 20, mem); // memory for node values
+  //dEdfs = new AlignedMemoryPool(mb << 20, mem); // memory for node gradients
+  //ps = new AlignedMemoryPool(mb << 20, shmem); // memory for parameters
 }
 
 Device_CPU::~Device_CPU() {}
