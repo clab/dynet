@@ -33,9 +33,6 @@ Device_GPU::Device_GPU(int mb, int device_id) :
   dEdfs = new AlignedMemoryPool(byte_count, mem); // memory for node gradients
   ps = new AlignedMemoryPool(byte_count, mem); // memory for parameters
 
-  //fxs = new AlignedMemoryPool(mb << 20, mem); // memory for node values
-  //dEdfs = new AlignedMemoryPool(mb << 20, mem); // memory for node gradients
-  //ps = new AlignedMemoryPool(mb << 20, mem); // memory for parameters
 }
 
 Device_GPU::~Device_GPU() {}
@@ -62,9 +59,7 @@ Device_CPU::Device_CPU(int mb, bool shared) :
   fxs = new AlignedMemoryPool(byte_count, mem); // memory for node values
   dEdfs = new AlignedMemoryPool(byte_count, mem); // memory for node gradients
   ps = new AlignedMemoryPool(byte_count, mem); // memory for parameters
-  //fxs = new AlignedMemoryPool(mb << 20, mem); // memory for node values
-  //dEdfs = new AlignedMemoryPool(mb << 20, mem); // memory for node gradients
-  //ps = new AlignedMemoryPool(mb << 20, shmem); // memory for parameters
+
 }
 
 Device_CPU::~Device_CPU() {}
