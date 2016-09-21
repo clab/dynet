@@ -75,7 +75,7 @@ To generate the MSVC solution and project files, run [cmake](http://www.cmake.or
     cd build
     cmake .. -DEIGEN3_INCLUDE_DIR=c:\libs\Eigen -DBOOST_ROOT=c:\libs\boost_1_61_0 -DBOOST_LIBRARYDIR=c:\libs\boost_1_61_0\lib64-msvc-14.0 -DBoost_NO_BOOST_CMAKE=ON -G"Visual Studio 14 2015 Win64"
 
-This will generate cnn.sln and a variety of *.vcxproj files (one for the CNN library, and one per example). You should be able to just open cnn.sln and build all.
+This will generate cnn.sln and a bunch of \*.vcxproj files (one for the CNN library, and one per example). You should be able to just open cnn.sln and build all. **Note: multi-process functionality is currently not supported in Windows, so you will not be able to build rnnlm-mp. Go to build->Configuration Manager and uncheck the box next to this project**
 
 #### Debugging build problems
 
