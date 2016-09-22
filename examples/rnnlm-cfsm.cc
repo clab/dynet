@@ -8,13 +8,11 @@
 #include "cnn/dict.h"
 #include "cnn/expr.h"
 #include "cnn/cfsm-builder.h"
+#include "getpid.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#if _WINDOWS  
-	#include <process.h>		// Just for getpid()
-#endif
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
