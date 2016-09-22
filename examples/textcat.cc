@@ -7,12 +7,10 @@
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
+#include "getpid.h"
 
 #include <iostream>
 #include <fstream>
-#if _WINDOWS  
-	#include <process.h>		// Just for getpid()
-#endif
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
