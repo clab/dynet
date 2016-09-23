@@ -10,7 +10,21 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 #   3. try compiler options like -march=native or other architecture
 #      flags (the compiler does not always make the best configuration
 #      decisions without help)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -Wall -std=c++11 -Ofast -g -DEIGEN_FAST_MATH -march=native")
+
+# Cross-compiler, cross-platform options
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
+
+# Platform-specific options
+if(WIN32)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX")   # Disable min/max macros in windef.h
+endif()
+
+# Compiler-specific options
+if(MSVC)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 -DEIGEN_HAS_C99_MATH /MP")   # -Wall produces 20k warnings
+else()
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -Wall -std=c++11 -Ofast -g -march=native")
+endif()
 
 enable_testing()
 
@@ -44,7 +58,13 @@ endif()
 set(Boost_REALPATH ON)
 find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
-set(LIBS ${LIBS} ${Boost_LIBRARIES})
+if(MSVC)
+	# Boost does auto-linking when using a compiler like Microsoft Visual C++, we just need to help it find the libraries
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
+else()
+	set(LIBS ${LIBS} ${Boost_LIBRARIES})
+endif()
 # trouble shooting:
 # if boost library cannot be found, in addition to install boost library
 # check if environment variables are set

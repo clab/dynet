@@ -9,6 +9,7 @@
 #include "cnn/expr.h"
 #include "cnn/cfsm-builder.h"
 #include "cnn/hsm-builder.h"
+#include "../examples/getpid.h"
 
 #include <iostream>
 #include <fstream>

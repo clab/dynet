@@ -61,6 +61,22 @@ the following to your cmake options:
 Note that you will also have to set your `LD_LIBRARY_PATH` to point to the `boost/lib`
 directory.
 
+#### Building for Windows
+
+CNN has been tested to build in Windows using Microsoft Visual Studio 2015. You may be able to build with MSVC 2013 by slightly modifying the instructions below.
+
+First, install Eigen following the above instructions.
+
+Second, install [Boost](http://www.boost.org/) for your compiler and platform. Follow the instructions for compiling Boost or just download the already-compiled binaries.
+
+To generate the MSVC solution and project files, run [cmake](http://www.cmake.org), pointing it to the location you installed Eigen and Boost (for example, at c:\libs\Eigen and c:\libs\boost_1_61_0):
+
+    mkdir build
+    cd build
+    cmake .. -DEIGEN3_INCLUDE_DIR=c:\libs\Eigen -DBOOST_ROOT=c:\libs\boost_1_61_0 -DBOOST_LIBRARYDIR=c:\libs\boost_1_61_0\lib64-msvc-14.0 -DBoost_NO_BOOST_CMAKE=ON -G"Visual Studio 14 2015 Win64"
+
+This will generate cnn.sln and a bunch of \*.vcxproj files (one for the CNN library, and one per example). You should be able to just open cnn.sln and build all. **Note: multi-process functionality is currently not supported in Windows, so you will not be able to build rnnlm-mp. Go to build->Configuration Manager and uncheck the box next to this project**
+
 #### Debugging build problems
 
 If you want to see the compile commands that are used, you can run
