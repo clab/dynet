@@ -8,6 +8,7 @@
 #include "cnn/dict.h"
 #include "cnn/expr.h"
 #include "cnn/cfsm-builder.h"
+#include "getpid.h"
 
 #include <iostream>
 #include <fstream>
