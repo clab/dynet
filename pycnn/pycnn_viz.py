@@ -531,6 +531,15 @@ class BiRNNBuilder(object):
 
     def whoami(self): return "BiRNNBuilder"
 
+    def set_dropout(self, p):
+      for (fb,bb) in self.builder_layers:
+        fb.set_dropout(p)
+        bb.set_dropout(p)
+    def disable_dropout(self):
+      for (fb,bb) in self.builder_layers:
+        fb.disable_dropout()
+        bb.disable_dropout()
+
     def add_inputs(self, es):
         """
         returns the list of state pairs (stateF, stateB) obtained by adding 
@@ -797,7 +806,7 @@ def make_network_graph(compact, expression_names, lookup_names):
         if item_name is not None:
           arg_strs.append(item_name)
         vocab_size = _dim[0]
-        arg_strs.extend(['%s' % (vocab_size), 'update' if update else 'fixed'])
+        arg_strs.extend(['%s' % (idx), '%s' % (vocab_size), 'update' if update else 'fixed'])
       #children.add(vidx2str(p.vindex))
       #node_type = '1_param'
     elif f_name == 'RNNState':
@@ -941,7 +950,7 @@ def collapse_birnn_states(nodes, compact):
       children_forwards[out_e] = new_rnn_group_state.name
       nodes.add(new_rnn_group_state)
       nodes_to_delete.add(out_e)
-  # TODO: WHEN WE DELETE A CAT NODE, MAKE SURE WE FORWARD TO THE **NEW GROPU STATE NODE**
+  # TODO: WHEN WE DELETE A CAT NODE, MAKE SURE WE FORWARD TO THE **NEW GROUP STATE NODE**
   for (name, input_dim, label, output_dim, children, features, node_type, expr_name) in nodes:
     if name not in nodes_to_delete:
       new_children = []
