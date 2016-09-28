@@ -1048,6 +1048,15 @@ class BiRNNBuilder(object):
 
     def whoami(self): return "BiRNNBuilder"
 
+    def set_dropout(self, p):
+      for (fb,bb) in self.builder_layers:
+        fb.set_dropout(p)
+        bb.set_dropout(p)
+    def disable_dropout(self):
+      for (fb,bb) in self.builder_layers:
+        fb.disable_dropout()
+        bb.disable_dropout()
+
     def add_inputs(self, es):
         """
         returns the list of state pairs (stateF, stateB) obtained by adding 
