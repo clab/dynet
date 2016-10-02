@@ -36,3 +36,11 @@ cnn/examples/rnnlm.cc
   * add real program options to do something nontrivial
   * give elegant example of beam search implementation
 
+cnn/mp.h
+  * Multi-process is currently disabled for Windows because it uses sys/wait.h and sys/shm.h. Fix this to use boost instead. 
+
+cnn/mem.cc
+  * SharedAllocator is disabled for Windows (depends on mm_malloc.h). Fix this to use boost instead. 
+
+
+

@@ -136,11 +136,17 @@ vector<Device*> initialize_gpu(int& argc, char**& argv) {
       abort();
     }
     CUDA_CHECK(cudaSetDevice(i));
-    CUDA_CHECK(cudaMemGetInfo( &free_bytes, &total_bytes ));
+    try {
+      CUDA_CHECK(cudaMemGetInfo( &free_bytes, &total_bytes ));
+      cerr << "[cnn]   Memory Free (GB): " << free_bytes/1.0e9 << "/" << total_bytes/1.0e9 << endl;
+      cerr << "[cnn]" << endl;
+      gpu_free_mem[i] = free_bytes;
+    } catch(cnn::cuda_exception e) {
+      cerr << "[cnn]   FAILED to get free memory" << endl;
+      gpu_free_mem[i] = 0;
+      cudaGetLastError();
+    }
     CUDA_CHECK(cudaDeviceReset());
-    cerr << "[cnn]   Memory Free (GB): " << free_bytes/1.0e9 << "/" << total_bytes/1.0e9 << endl;
-    cerr << "[cnn]" << endl;
-    gpu_free_mem[i] = free_bytes;
   }
   stable_sort(gpus.begin(), gpus.end(), [&](int a, int b) -> bool { return gpu_free_mem[a] > gpu_free_mem[b]; });
   gpus.resize(requested_gpus);

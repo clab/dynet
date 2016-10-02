@@ -4,7 +4,7 @@ from libcpp.string cimport string
 ctypedef float real
 
 cdef extern from "cnn/init.h" namespace "cnn":
-    cdef void Initialize(int& argc, char **& argv, unsigned random_seed)
+    cdef void initialize(int& argc, char **& argv, unsigned random_seed)
 
 cdef extern from "cnn/dim.h" namespace "cnn":
     cdef cppclass CDim "cnn::Dim":
@@ -93,7 +93,7 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
         void checkpoint()
         void revert()
 
-        void PrintGraphviz() const
+        void print_graphviz() const
 
 cdef extern from "cnn/training.h" namespace "cnn":
     cdef cppclass CSimpleSGDTrainer "cnn::SimpleSGDTrainer":
@@ -268,6 +268,22 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
+cdef extern from "cnn/gru.h" namespace "cnn":
+    cdef cppclass CGRUBuilder "cnn::GRUBuilder" (CRNNBuilder):
+        CGRUBuilder()
+        CGRUBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        #void new_graph(CComputationGraph &cg)
+        #void start_new_sequence(vector[CExpression] ces)
+        #CExpression add_input(CExpression &x)
+        #CExpression add_input(CRNNPointer prev, CExpression &x)
+        #void rewind_one_step()
+        #CExpression back()
+        #vector[CExpression] final_h()
+        #vector[CExpression] final_s()
+        #vector[CExpression] get_h(CRNNPointer i)
+        #vector[CExpression] get_s(CRNNPointer i)
+        #CRNNPointer state()
+
 cdef extern from "cnn/lstm.h" namespace "cnn":
     cdef cppclass CLSTMBuilder "cnn::LSTMBuilder" (CRNNBuilder):
         CLSTMBuilder()
@@ -304,6 +320,7 @@ cdef extern from "pybridge.h" namespace "pycnn":
         CModelSaver(string filename, CModel *model)
         CModelSaver add_parameter(CParameters p)
         CModelSaver add_lookup_parameter(CLookupParameters lp)
+        CModelSaver add_gru_builder(CGRUBuilder b)
         CModelSaver add_lstm_builder(CLSTMBuilder b)
         CModelSaver add_srnn_builder(CSimpleRNNBuilder b)
         void done()
@@ -312,6 +329,7 @@ cdef extern from "pybridge.h" namespace "pycnn":
         CModelLoader(string filename, CModel *model)
         CModelSaver fill_parameter(CParameters p)
         CModelSaver fill_lookup_parameter(CLookupParameters lp)
+        CModelSaver fill_gru_builder(CGRUBuilder lp)
         CModelSaver fill_lstm_builder(CLSTMBuilder lp)
         CModelSaver fill_srnn_builder(CSimpleRNNBuilder lp)
         void done()

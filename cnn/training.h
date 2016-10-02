@@ -57,16 +57,34 @@ struct Trainer {
   Model* model;  // parameters and gradients live here
 
  protected:
+  Trainer() {}
   virtual void alloc_impl() { }
   virtual void update_rule(real scale, real gscale, const std::vector<Tensor*> & values) = 0;
   virtual void update_params(real scale, real gscale, size_t idx) = 0;
   virtual void update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) = 0;
+
+ private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & eta0 & eta & eta_decay & epoch;
+    ar & clipping_enabled & clip_threshold & clips & updates;
+    ar & aux_allocated;
+    ar & model;
+  }
 };
 
 struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model* m, real e0 = 0.1) : Trainer(m, e0) {}
  protected:
   CNN_TRAINER_DEFINE_DEV_IMPL()
+ private:
+  SimpleSGDTrainer() {}
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & boost::serialization::base_object<Trainer>(*this);
+  }
 };
 
 struct MomentumSGDTrainer : public Trainer {
@@ -84,6 +102,15 @@ struct MomentumSGDTrainer : public Trainer {
   std::vector<ShadowLookupParameters> vlp;
   //std::unordered_map<ParameterStorage*, Tensor> vp;
   //std::unordered_map<LookupParameterStorage*, std::unordered_map<unsigned, Tensor>> vl;
+ private:
+  MomentumSGDTrainer() {}
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & boost::serialization::base_object<Trainer>(*this);
+    ar & momentum;
+    ar & vp & vlp;
+  }
 };
 
 struct AdagradTrainer : public Trainer {
@@ -96,6 +123,15 @@ struct AdagradTrainer : public Trainer {
   real epsilon;
   std::vector<ShadowParameters> vp;
   std::vector<ShadowLookupParameters> vlp;
+ private:
+  AdagradTrainer() {}
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & boost::serialization::base_object<Trainer>(*this);
+    ar & epsilon;
+    ar & vp & vlp;
+  }
 };
 
 struct AdadeltaTrainer : public Trainer {
@@ -111,6 +147,15 @@ struct AdadeltaTrainer : public Trainer {
   std::vector<ShadowLookupParameters> hlg;
   std::vector<ShadowParameters> hd; // History of deltas
   std::vector<ShadowLookupParameters> hld;
+ private:
+  AdadeltaTrainer() {}
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & boost::serialization::base_object<Trainer>(*this);
+    ar & epsilon & rho;
+    ar & hg & hlg & hd & hld;
+  }
 };
 
 struct RmsPropTrainer : public Trainer {
@@ -124,6 +169,15 @@ struct RmsPropTrainer : public Trainer {
   real rho;
   std::vector<real> hg; // History of gradients
   std::vector<std::vector<real> > hlg;
+ private:
+  RmsPropTrainer() {}
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & boost::serialization::base_object<Trainer>(*this);
+    ar & epsilon & rho;
+    ar & hg & hlg;
+  }
 };
 
 struct AdamTrainer : public Trainer {
@@ -141,8 +195,22 @@ struct AdamTrainer : public Trainer {
   std::vector<ShadowLookupParameters> lm;
   std::vector<ShadowParameters> v; // History of deltas
   std::vector<ShadowLookupParameters> lv;
+ private:
+  AdamTrainer() {}
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar & boost::serialization::base_object<Trainer>(*this);
+    ar & beta_1 & beta_2 & epsilon;
+    ar & m & lm & v & lv;
+  }
 };
 
 } // namespace cnn
-
+BOOST_CLASS_EXPORT_KEY(cnn::SimpleSGDTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::MomentumSGDTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::AdagradTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::AdadeltaTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::RmsPropTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::AdamTrainer)
 #endif

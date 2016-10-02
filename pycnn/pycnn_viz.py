@@ -127,6 +127,7 @@ class Expression(object): #{{{
   def forward(self, recalculate=False): return None
   def set(self, x): pass
   def batch(self, i): return lookup_batch(self, i)
+  def zero(self): return self
 
   def backward(self): pass
 
@@ -471,6 +472,16 @@ class SimpleRNNBuilder(_RNNBuilder):
     self._init_state = None
     self.builder_version = new_builder_num()
   def whoami(self): return "SimpleRNNBuilder"
+class GRUBuilder(_RNNBuilder):
+  def __init__(self, layers, input_dim, hidden_dim, model): 
+    self.cg_version = -1
+    self.layers = layers
+    self.input_dim = input_dim
+    self.hidden_dim = hidden_dim
+    self.model = model
+    self._init_state = None
+    self.builder_version = new_builder_num()
+  def whoami(self): return "GRUBuilder"
 class LSTMBuilder(_RNNBuilder):
   def __init__(self, layers, input_dim, hidden_dim, model): 
     self.cg_version = -1
@@ -519,6 +530,15 @@ class BiRNNBuilder(object):
             self.builder_layers.append((f,b))
 
     def whoami(self): return "BiRNNBuilder"
+
+    def set_dropout(self, p):
+      for (fb,bb) in self.builder_layers:
+        fb.set_dropout(p)
+        bb.set_dropout(p)
+    def disable_dropout(self):
+      for (fb,bb) in self.builder_layers:
+        fb.disable_dropout()
+        bb.disable_dropout()
 
     def add_inputs(self, es):
         """
@@ -766,10 +786,13 @@ def make_network_graph(compact, expression_names, lookup_names):
       [_dim] = p.args
       if vidx in var_name_dict:
         name = var_name_dict[vidx]
-        item_name = ('\\"%s\\"' % (lookup_names[name][idx],)) if (lookup_names and (name in lookup_names)) else None
       else:
         name = None
-        item_name = None
+      item_name = None
+      if lookup_names and p in expression_names:
+        param_name = expression_names[p]
+        if param_name in lookup_names:
+          item_name = '\\"%s\\"' % (lookup_names[param_name][idx],)
       if compact:
         if item_name is not None:
           f_name = item_name
@@ -783,7 +806,7 @@ def make_network_graph(compact, expression_names, lookup_names):
         if item_name is not None:
           arg_strs.append(item_name)
         vocab_size = _dim[0]
-        arg_strs.extend(['%s' % (vocab_size), 'update' if update else 'fixed'])
+        arg_strs.extend(['%s' % (idx), '%s' % (vocab_size), 'update' if update else 'fixed'])
       #children.add(vidx2str(p.vindex))
       #node_type = '1_param'
     elif f_name == 'RNNState':
@@ -927,7 +950,7 @@ def collapse_birnn_states(nodes, compact):
       children_forwards[out_e] = new_rnn_group_state.name
       nodes.add(new_rnn_group_state)
       nodes_to_delete.add(out_e)
-  # TODO: WHEN WE DELETE A CAT NODE, MAKE SURE WE FORWARD TO THE **NEW GROPU STATE NODE**
+  # TODO: WHEN WE DELETE A CAT NODE, MAKE SURE WE FORWARD TO THE **NEW GROUP STATE NODE**
   for (name, input_dim, label, output_dim, children, features, node_type, expr_name) in nodes:
     if name not in nodes_to_delete:
       new_children = []
@@ -938,7 +961,7 @@ def collapse_birnn_states(nodes, compact):
       new_nodes.append(GVNode(name, input_dim, label, output_dim, new_children, features, node_type, expr_name))
   return (new_nodes, rnn_groups)
 
-def PrintGraphviz(compact=False, show_dims=True, expression_names=None, lookup_names=None, collapse_birnns=False):
+def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_names=None, collapse_birnns=False):
   original_nodes = make_network_graph(compact, expression_names, lookup_names)
   nodes = original_nodes
   collapse_to = dict()
@@ -965,7 +988,6 @@ def PrintGraphviz(compact=False, show_dims=True, expression_names=None, lookup_n
   for n in nodes:
     label = n.label
     if show_dims:
-      label = n.label
       if n.expr_name is not None:
         label = '%s\\n%s' % (n.expr_name, label)
       label = '%s\\n%s' % (shape_str(n.output_dim), label)
