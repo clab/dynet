@@ -1,3 +1,4 @@
+#if !_WINDOWS
 #include "mp.h"
 using namespace std;
 using namespace boost::interprocess;
@@ -75,3 +76,4 @@ namespace cnn {
 
   }
 }
+#endif

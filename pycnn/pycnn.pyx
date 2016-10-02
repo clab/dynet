@@ -17,7 +17,6 @@ import os.path
 # TODO:
 #  c2w.h   (build a word-from-letters encoder)
 #  dict.h  -- do we even need it?
-#  gru.h   -- it is not the same as lstm/rnn for some reason. but should be trivial to add
 
 # Examples:
 #  V xor  
@@ -43,10 +42,10 @@ cdef init(random_seed=None):
         c_argv[idx] = s
 
     if random_seed is None:
-        pycnn.Initialize(argc,c_argv, 0)
+        pycnn.initialize(argc,c_argv, 0)
     else:
         if random_seed == 0: random_seed = 1
-        pycnn.Initialize(argc,c_argv, random_seed)
+        pycnn.initialize(argc,c_argv, random_seed)
     free(c_argv)
 
 init() # TODO: allow different random seeds
@@ -234,6 +233,9 @@ cdef class Model: # {{{
         elif isinstance(c, LookupParameters):
             fh.write("lookup ")
             saver.add_lookup_parameter((<LookupParameters>c).thisptr)
+        elif isinstance(c, GRUBuilder):
+            fh.write("gru_builder ")
+            saver.add_gru_builder((<CGRUBuilder*>(<GRUBuilder>c).thisptr)[0])
         elif isinstance(c, LSTMBuilder):
             fh.write("lstm_builder ")
             saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
@@ -266,6 +268,7 @@ cdef class Model: # {{{
     cdef _load_one(self, itypes, CModelLoader *loader, pfh):
         cdef CParameters p
         cdef CLookupParameters lp
+        cdef GRUBuilder gb_
         cdef LSTMBuilder lb_
         cdef SimpleRNNBuilder sb_
         tp = itypes.next()
@@ -277,6 +280,10 @@ cdef class Model: # {{{
             loader.fill_lookup_parameter(lp)
             param = LookupParameters.wrap_ptr(lp)
             return param
+        elif tp == "gru_builder":
+            gb_ = GRUBuilder(0,0,0,self) # empty builder
+            loader.fill_gru_builder((<CGRUBuilder *>gb_.thisptr)[0])
+            return gb_
         elif tp == "lstm_builder":
             lb_ = LSTMBuilder(0,0,0,self) # empty builder
             loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
@@ -432,8 +439,8 @@ cdef class ComputationGraph:
     cpdef backward(self):
         self.thisptr.backward()
 
-    cpdef PrintGraphviz(self):
-        self.thisptr.PrintGraphviz()
+    cpdef print_graphviz(self):
+        self.thisptr.print_graphviz()
 
     cpdef void checkpoint(self):
         self.thisptr.checkpoint()
@@ -983,6 +990,17 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     def whoami(self): return "SimpleRNNBuilder"
 #}}}
     
+cdef class GRUBuilder(_RNNBuilder): # {{{
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        if layers > 0:
+            self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        else:
+            self.thisptr = new CGRUBuilder()
+        self.cg_version = -1
+
+    def whoami(self): return "GRUBuilder"
+# }}}
+
 cdef class LSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
@@ -1029,6 +1047,15 @@ class BiRNNBuilder(object):
             self.builder_layers.append((f,b))
 
     def whoami(self): return "BiRNNBuilder"
+
+    def set_dropout(self, p):
+      for (fb,bb) in self.builder_layers:
+        fb.set_dropout(p)
+        bb.set_dropout(p)
+    def disable_dropout(self):
+      for (fb,bb) in self.builder_layers:
+        fb.disable_dropout()
+        bb.disable_dropout()
 
     def add_inputs(self, es):
         """

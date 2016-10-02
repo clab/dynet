@@ -7,6 +7,7 @@
 #include "cnn/lstm.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
+#include "getpid.h"
 
 #include <iostream>
 #include <fstream>
