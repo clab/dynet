@@ -36,8 +36,6 @@ PATH_TO_CNN=$HOME/cnn/cnn/
 PATH_TO_EIGEN=$HOME/cnn/eigen/
 ```
 
-Note that we currently require the paths to cnn and eigen to be absolute, and not relative.
-
 Compile CNN.
 (modify the code below to point to the correct boost location. Note the addition of the -DPYTHON flag.)
 
