@@ -5,3 +5,5 @@ else:
     def print_graphviz(**kwarge):
         print "Run with --pycnn-viz to get the visualization behavior."
     from _pycnn import *
+
+__version__ = 2.0

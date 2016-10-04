@@ -5,6 +5,8 @@ cnn is a neural network library that is written in C++ (with bindings in Python)
 
 ### Building
 
+(for building the python bindings (pycnn), see `PYINSTALL.md`)
+
 Before compiling cnn, you need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. **If you use any of the released versions, you may get assertion failures or compile errors.**
 
 First you need to fetch the dependent libraries
