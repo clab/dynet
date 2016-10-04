@@ -8,6 +8,7 @@ First, get CNN:
 
 ```bash
 cd $HOME
+mkdir cnn
 git clone https://github.com/clab/cnn.git
 cd cnn
 git submodule init # To be consistent with CNN's installation instructions.
@@ -31,9 +32,11 @@ pip install cython
 To simplify the following steps, we can set a bash variable to hold where we have saved the main directories of `cnn` and `eigen`. In case you have gotten `ccn` and `eigen` differently from the instructions above and saved them in different location(s), these variables will be helpful:
 
 ```bash
-PATH_TO_CNN=$HOME/cnn/
+PATH_TO_CNN=$HOME/cnn/cnn/
 PATH_TO_EIGEN=$HOME/cnn/eigen/
 ```
+
+Note that we currently require the paths to cnn and eigen to be absolute, and not relative.
 
 Compile CNN.
 (modify the code below to point to the correct boost location. Note the addition of the -DPYTHON flag.)
