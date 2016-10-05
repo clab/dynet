@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
       //Expression loss_expr = CrossEntropyLoss(y_pred, y);
       Expression loss_expr = HingeLoss(y_pred, y);
       loss += as_scalar(cg.forward(loss_expr));
-      cg.backward();
+      cg.backward(loss_expr);
       sgd->update(2.0);
       ++lines;
       ++ttags;

@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
       ++si;
       Expression loss_expr = lm.BuildLMGraph(sent.first, sent.second, cg);
       loss += as_scalar(cg.forward(loss_expr));
-      cg.backward();
+      cg.backward(loss_expr);
       sgd->update();
       ++lines;
       ++chars;

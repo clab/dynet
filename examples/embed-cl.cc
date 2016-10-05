@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
       assert(iloss >= 0);
       if (iloss > 0) {
         loss += iloss;
-        cg.backward();
+        cg.backward(l);
         sgd->update();
       }
       ++lines;

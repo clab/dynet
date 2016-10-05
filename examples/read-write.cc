@@ -60,7 +60,7 @@ public:
     Expression loss = squared_distance(y_pred, y);
 
     float return_loss = as_scalar(cg.forward(loss));
-    cg.backward();
+    cg.backward(loss);
     sgd->update(1.0);
     return return_loss;
   }

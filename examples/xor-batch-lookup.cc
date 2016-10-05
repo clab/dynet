@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
   // train the parameters
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
     vector<float> losses = as_vector(cg.forward(sum_loss));
-    cg.backward();
+    cg.backward(sum_loss);
     sgd.update(0.25);
     sgd.update_epoch();
     float loss = 0;

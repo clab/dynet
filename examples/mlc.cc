@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
       }
       Expression loss_expr = sparsemax_loss(u, &xy.labels);
       loss += as_scalar(cg.forward(loss_expr));
-      cg.backward();
+      cg.backward(loss_expr);
       sgd.update(1.0);
     }
     cerr << "[epoch=" << (ti / train.size()) << "] E=" << (loss / instances) << ' ';

@@ -250,7 +250,7 @@ const Tensor& ComputationGraph::forward(const expr::Expression& last) { return e
 const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_value(i); }
 const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return this->get_value(e.i); }
 void ComputationGraph::invalidate() { ee->invalidate(); }
-void ComputationGraph::backward() { ee->backward(); }
+void ComputationGraph::backward(const expr::Expression& last) { ee->backward(last.i); }
 void ComputationGraph::backward(VariableIndex i) { ee->backward(i); }
 
 void ComputationGraph::print_graphviz() const {

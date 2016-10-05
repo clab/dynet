@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
             //LOG(INFO) << "sent length " << sent.size();
             Expression loss_expr = lm.BuildLMGraph(doc, cg);
             loss += as_scalar(cg.forward(loss_expr));
-            cg.backward();
+            cg.backward(loss_expr);
             sgd->update();
             ++lines;
         }

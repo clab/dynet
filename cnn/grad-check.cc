@@ -25,7 +25,7 @@ bool check_grad(Model& m, expr::Expression& expr, int verbosity) {
   // Perform forward and backward steps
   float alpha = 5e-4;
   g.forward(expr);
-  g.backward();
+  g.backward(expr);
 
   // Check
   bool flag = false, curr_flag = false;
