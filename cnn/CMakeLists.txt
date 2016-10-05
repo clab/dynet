@@ -74,11 +74,6 @@ set(cnn_library_HDRS
     weight-decay.h
 )
 
-if(WITH_CUDA_BACKEND)
-  list(APPEND cnn_library_SRCS
-       cuda.cc)
-endif(WITH_CUDA_BACKEND)
-
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 
 #foreach(test_src ${TEST_SRCS})
@@ -101,24 +96,28 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 #     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests.bin/${testName} )
 #endforeach(test_src)
 
-# actual target:
+# Build cpu library
+add_library(cnn SHARED ${cnn_library_SRCS} ${cnn_library_HDRS})
+target_link_libraries(cnn ${LIBS})
 if(WITH_CUDA_BACKEND)
+  # Build main gpu library
+  list(APPEND cnn_library_SRCS cuda.cc)
 	add_library(gcnn SHARED ${cnn_library_SRCS} ${cnn_library_HDRS})
 	target_link_libraries(gcnn ${LIBS})
-else()
-	add_library(cnn SHARED ${cnn_library_SRCS} ${cnn_library_HDRS})
-	target_link_libraries(cnn ${LIBS})
-endif(WITH_CUDA_BACKEND)
-#add_library(cnn ${cnn_library_SRCS} ${cnn_library_HDRS} ${LIBS})
-if(WITH_CUDA_BACKEND)
+  set_target_properties(gcnn PROPERTIES
+                        COMPILE_DEFINITIONS HAVE_CUDA)
+  # Build nvcc-compiled gpu library
   set(CUDA_SEPARABLE_COMPILATION ON)
-  list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-O2;-DVERBOSE;-DEIGEN_USE_GPU")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-O2;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA")
   SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-  cuda_add_library(cnncuda SHARED gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu)
+  cuda_add_library(cnncuda SHARED gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
 endif(WITH_CUDA_BACKEND)
 
 install(FILES ${cnn_library_HDRS} DESTINATION include/cnn)
 install(TARGETS cnn DESTINATION lib)
+if(WITH_CUDA_BACKEND)
+  install(TARGETS gcnn DESTINATION lib)
+endif(WITH_CUDA_BACKEND)
 
 # target_compile_features(cnn PRIVATE cxx_range_for)
 
