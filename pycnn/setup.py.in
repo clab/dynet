@@ -24,7 +24,7 @@ ext = Extension(
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
         libraries=['cnn'],             # ditto
-        library_dirs=["."],
+        library_dirs=[".","${PROJECT_BINARY_DIR}/cnn/"],
         #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
         extra_compile_args=COMPILER_ARGS,
         runtime_library_dirs=["${PROJECT_BINARY_DIR}/cnn/"],
