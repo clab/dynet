@@ -57,7 +57,7 @@ struct RNNLengthPredictor {
     }
     Expression pred = affine_transform({bias, R, builder.back()});
     if (flag) {
-      unsigned x = exp(as_scalar(cg.incremental_forward()));
+      unsigned x = exp(as_scalar(cg.incremental_forward(pred)));
       cerr << "PRED=" << x << " TRUE=" << len << "\t(DIFF=" << ((int)x - (int)len) << ")" << endl;
     }
     return poisson_loss(pred, len);
@@ -171,8 +171,8 @@ int main(int argc, char** argv) {
       ComputationGraph cg;
       auto& sent = training[order[si]];
       ++si;
-      lm.BuildLMGraph(sent.first, sent.second, cg);
-      loss += as_scalar(cg.forward());
+      Expression loss_expr = lm.BuildLMGraph(sent.first, sent.second, cg);
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd->update();
       ++lines;
@@ -188,8 +188,8 @@ int main(int argc, char** argv) {
       int dchars = 0;
       for (auto& sent : dev) {
         ComputationGraph cg;
-        lm.BuildLMGraph(sent.first, sent.second, cg, true);
-        dloss += as_scalar(cg.forward());
+        Expression loss_expr = lm.BuildLMGraph(sent.first, sent.second, cg, true);
+        dloss += as_scalar(cg.forward(loss_expr));
         dchars++;
       }
       if (dloss < best) {

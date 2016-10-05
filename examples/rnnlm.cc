@@ -100,7 +100,7 @@ struct RNNLanguageModel {
       
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
-        auto dist = as_vector(cg.incremental_forward());
+        auto dist = as_vector(cg.incremental_forward(ydist));
         double p = rand01();
         for (; w < dist.size(); ++w) {
           p -= dist[w];
@@ -214,8 +214,8 @@ int main(int argc, char** argv) {
       auto& sent = training[order[si]];
       chars += sent.size() - 1;
       ++si;
-      lm.BuildLMGraph(sent, cg);
-      loss += as_scalar(cg.forward());
+      Expression loss_expr = lm.BuildLMGraph(sent, cg);
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd->update();
       ++lines;
@@ -231,8 +231,8 @@ int main(int argc, char** argv) {
       int dchars = 0;
       for (auto& sent : dev) {
         ComputationGraph cg;
-        lm.BuildLMGraph(sent, cg);
-        dloss += as_scalar(cg.forward());
+        Expression loss_expr = lm.BuildLMGraph(sent, cg);
+        dloss += as_scalar(cg.forward(loss_expr));
         dchars += sent.size() - 1;
       }
       if (dloss < best) {

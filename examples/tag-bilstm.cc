@@ -95,7 +95,7 @@ struct RNNLanguageModel {
         //if (!eval) { i_th = dropout(i_th, pdrop); }
         Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
         if (cor) {
-          vector<float> dist = as_vector(cg.incremental_forward());
+          vector<float> dist = as_vector(cg.incremental_forward(i_t));
           double best = -9e99;
           int besti = -1;
           for (int i = 0; i < dist.size(); ++i) {
@@ -223,8 +223,8 @@ int main(int argc, char** argv) {
       ComputationGraph cg;
       auto& sent = training[order[si]];
       ++si;
-      lm.BuildTaggingGraph(sent.first, sent.second, cg, &correct, &ttags);
-      loss += as_scalar(cg.forward());
+      Expression loss_expr = lm.BuildTaggingGraph(sent.first, sent.second, cg, &correct, &ttags);
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd->update(1.0);
       ++lines;
@@ -242,8 +242,8 @@ int main(int argc, char** argv) {
       //lm.p_th2t->scale_parameters(pdrop);
       for (auto& sent : dev) {
         ComputationGraph cg;
-        lm.BuildTaggingGraph(sent.first, sent.second, cg, &dcorr, &dtags);
-        dloss += as_scalar(cg.forward());
+        Expression loss_expr = lm.BuildTaggingGraph(sent.first, sent.second, cg, &dcorr, &dtags);
+        dloss += as_scalar(cg.forward(loss_expr));
       }
       //lm.p_th2t->scale_parameters(1/pdrop);
       eval = false;

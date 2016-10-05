@@ -78,7 +78,7 @@ struct RNNLanguageModel {
 
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
-        auto dist = as_vector(cg.incremental_forward());
+        auto dist = as_vector(cg.incremental_forward(ydist));
         double p = rand01();
         for (; w < dist.size(); ++w) {
           p -= dist[w];

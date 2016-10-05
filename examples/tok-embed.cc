@@ -283,9 +283,9 @@ int main(int argc, char** argv) {
       auto& sent = training[order[si]];
       ++si;
       Expression w = bclm.embed(cg, sent.second);
-      d.loss(cg, w, sent.first);
+      Expression loss_expr = d.loss(cg, w, sent.first);
       ttags += 1;
-      loss += as_scalar(cg.forward());
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd->update(1.0);
       ++lines;

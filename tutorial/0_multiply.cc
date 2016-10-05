@@ -19,9 +19,9 @@ int main(int argc, char** argv) {
 
   ia = 1;
   ib = 2;
-  cout << as_scalar(cg.forward()) << endl; // 2
+  cout << as_scalar(cg.forward(y)) << endl; // 2
 
   ia = 3;
   ib = 3;
-  cout << as_scalar(cg.forward()) << endl; // 9
+  cout << as_scalar(cg.forward(y)) << endl; // 9
 }

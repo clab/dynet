@@ -88,7 +88,7 @@ struct EncoderDecoder {
     Expression i_ie2h = parameter(cg, p_ie2h);
     Expression i_bie = parameter(cg, p_bie);
     Expression i_t = i_bie + i_ie2h * i_combined;
-    cg.incremental_forward();
+    cg.incremental_forward(i_t);
     Expression i_h = rectify(i_t);
     Expression i_h2oe = parameter(cg,p_h2oe);
     Expression i_boe = parameter(cg,p_boe);
@@ -238,9 +238,9 @@ int main(int argc, char** argv) {
         auto& sent = training[order[si]];
         chars += sent.size() - 1;
         ++si;
-        lm.BuildGraph(sent, sent, cg);
+        Expression loss_expr = lm.BuildGraph(sent, sent, cg);
         //cg.print_graphviz();
-        loss += as_scalar(cg.forward());
+        loss += as_scalar(cg.forward(loss_expr));
         cg.backward();
         sgd->update();
         ++lines;
@@ -259,8 +259,8 @@ int main(int argc, char** argv) {
       int dchars = 0;
       for (auto& sent : dev) {
 	ComputationGraph cg;
-	lm.BuildGraph(sent, sent, cg);
-	dloss += as_scalar(cg.forward());
+	Expression loss_expr = lm.BuildGraph(sent, sent, cg);
+	dloss += as_scalar(cg.forward(loss_expr));
 	dchars += sent.size() - 1;
       }
       if (dloss < best) {

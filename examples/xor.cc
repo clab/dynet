@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   //Expression h = tanh(affine_transform({b, W, x}));
   //Expression h = softsign(W*x + b);
   Expression y_pred = V*h + a;
-  Expression loss = squared_distance(y_pred, y);
+  Expression loss_expr = squared_distance(y_pred, y);
 
   // Show the computation graph, just for fun.
   cg.print_graphviz();
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
       x_values[0] = x1 ? 1 : -1;
       x_values[1] = x2 ? 1 : -1;
       y_value = (x1 != x2) ? 1 : -1;
-      loss += as_scalar(cg.forward());
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd.update(1.0);
     }

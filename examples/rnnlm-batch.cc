@@ -95,7 +95,7 @@ struct RNNLanguageModel {
       
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
-        auto dist = as_vector(cg.incremental_forward());
+        auto dist = as_vector(cg.incremental_forward(ydist));
         double p = rand01();
         for (; w < dist.size(); ++w) {
           p -= dist[w];
@@ -221,8 +221,8 @@ int main(int argc, char** argv) {
       // build graph for this instance
       ComputationGraph cg;
       unsigned bsize = std::min((unsigned)training.size()-order[si], BATCH_SIZE); // Batch size
-      lm.BuildLMGraphs(training, order[si], bsize, chars, cg);
-      loss += as_scalar(cg.forward());
+      Expression loss_expr = lm.BuildLMGraphs(training, order[si], bsize, chars, cg);
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd->update();
       lines += bsize;
@@ -238,8 +238,8 @@ int main(int argc, char** argv) {
       unsigned dchars = 0;
       for (unsigned i = 0; i < dev.size(); ++i) {
         ComputationGraph cg;
-        lm.BuildLMGraphs(dev, i, 1, dchars, cg);
-        dloss += as_scalar(cg.forward());
+        Expression loss_expr = lm.BuildLMGraphs(dev, i, 1, dchars, cg);
+        dloss += as_scalar(cg.forward(loss_expr));
       }
       if (dloss < best) {
         best = dloss;
