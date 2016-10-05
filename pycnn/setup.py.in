@@ -16,7 +16,8 @@ import platform
 if platform.system() == 'Darwin':
     COMPILER_ARGS.extend(["-stdlib=libc++","-mmacosx-version-min=10.7"])
 
-ext = Extension(
+
+ext_cpu = Extension(
         "_pycnn",                 # name of extension
         ["pycnn.pyx"],           # filename of our Pyrex/Cython source
         language="c++",              # this causes Pyrex/Cython to create C++ source
@@ -30,7 +31,26 @@ ext = Extension(
         runtime_library_dirs=["${PROJECT_BINARY_DIR}/cnn/"],
         )
 
-setup(ext_modules = [ext],
+ext_gpu = Extension(
+        "_gpycnn",                 # name of extension
+        ["gpycnn.pyx"],           # filename of our Pyrex/Cython source
+        language="c++",              # this causes Pyrex/Cython to create C++ source
+        include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main cnn directory.
+                      "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
+                      "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
+        libraries=['gcnn','cnncuda','cublas'],             # ditto
+        library_dirs=[".","${PROJECT_BINARY_DIR}/cnn/","${CUDA_CUBLAS_LIB}"],
+        #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
+        extra_compile_args=COMPILER_ARGS,
+        runtime_library_dirs=["${PROJECT_BINARY_DIR}/cnn/"],
+        )
+
+TARGET = [ext_cpu]
+
+if "${WITH_CUDA_BACKEND}"=="1": # if cuda requested
+    TARGET.append(ext_gpu)
+
+setup(ext_modules = TARGET,
         cmdclass = {'build_ext': build_ext},
         name="pyCNN",
         py_modules = ['pycnn','pycnn_viz'],
