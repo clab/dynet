@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
         Expression loss_expr = lm.BuildGraph(sent, sent, cg);
         //cg.print_graphviz();
         loss += as_scalar(cg.forward(loss_expr));
-        cg.backward();
+        cg.backward(loss_expr);
         sgd->update();
         ++lines;
     }

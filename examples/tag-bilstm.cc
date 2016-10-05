@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
       ++si;
       Expression loss_expr = lm.BuildTaggingGraph(sent.first, sent.second, cg, &correct, &ttags);
       loss += as_scalar(cg.forward(loss_expr));
-      cg.backward();
+      cg.backward(loss_expr);
       sgd->update(1.0);
       ++lines;
     }

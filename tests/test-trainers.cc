@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE( simple_sgd_direction ) {
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
   float before = as_scalar(cg.forward(z));
-  cg.backward();
+  cg.backward(z);
   trainer.update(0.1);
   float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE( momentum_sgd_direction ) {
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
   float before = as_scalar(cg.forward(z));
-  cg.backward();
+  cg.backward(z);
   trainer.update(0.1);
   float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE( adagrad_direction ) {
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
   float before = as_scalar(cg.forward(z));
-  cg.backward();
+  cg.backward(z);
   trainer.update(0.1);
   float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE( adadelta_direction ) {
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
   float before = as_scalar(cg.forward(z));
-  cg.backward();
+  cg.backward(z);
   trainer.update(0.1);
   float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE( adam_direction ) {
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
   float before = as_scalar(cg.forward(z));
-  cg.backward();
+  cg.backward(z);
   trainer.update(0.1);
   float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);

@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
       unsigned bsize = std::min((unsigned)training.size()-order[si], BATCH_SIZE); // Batch size
       Expression loss_expr = lm.BuildLMGraphs(training, order[si], bsize, chars, cg);
       loss += as_scalar(cg.forward(loss_expr));
-      cg.backward();
+      cg.backward(loss_expr);
       sgd->update();
       lines += bsize;
     }

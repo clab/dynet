@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     Expression pred = W * xs[i];
     Expression loss = square(pred - ys[i]);
     cg.forward(loss);
-    cg.backward();
+    cg.backward(loss);
     trainer.update();
   }
 

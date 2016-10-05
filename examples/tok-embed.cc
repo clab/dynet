@@ -286,7 +286,7 @@ int main(int argc, char** argv) {
       Expression loss_expr = d.loss(cg, w, sent.first);
       ttags += 1;
       loss += as_scalar(cg.forward(loss_expr));
-      cg.backward();
+      cg.backward(loss_expr);
       sgd->update(1.0);
       ++lines;
     }
