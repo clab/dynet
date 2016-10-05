@@ -1,11 +1,6 @@
 project(cnn)
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-get_filename_component(EIGEN3_INCLUDE_DIR "${EIGEN3_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
-get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
-message("Eigen dir is " ${EIGEN3_INCLUDE_DIR})
-message("Boost dir is " ${Boost_INCLUDE_DIR})
-
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # CNN uses Eigen which exploits modern CPU architectures. To get the
@@ -59,8 +54,10 @@ endfunction()
 # look for Boost
 if(DEFINED ENV{BOOST_ROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
+  get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
 endif()
 set(Boost_REALPATH ON)
+message("-- Boost dir is " ${EIGEN3_INCLUDE_DIR})
 find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 if(MSVC)
@@ -111,6 +108,8 @@ endif()
 
 # look for Eigen
 find_package(Eigen3 REQUIRED)
+get_filename_component(EIGEN3_INCLUDE_DIR "${EIGEN3_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+message("-- Eigen dir is " ${EIGEN3_INCLUDE_DIR})
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 FIND_PACKAGE(Threads REQUIRED)
