@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
     p_V = m.add_parameters({1, HIDDEN_SIZE});
     p_a = m.add_parameters({1});
 
-    LookupParameter x_values = m.add_lookup_parameters(4, {2});
-    LookupParameter y_values = m.add_lookup_parameters(4, {1});
+    x_values = m.add_lookup_parameters(4, {2});
+    y_values = m.add_lookup_parameters(4, {1});
     x_values.initialize(0, {1.0, 1.0});
     x_values.initialize(1, {-1.0, 1.0});
     x_values.initialize(2, {1.0, -1.0});
