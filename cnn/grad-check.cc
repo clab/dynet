@@ -6,12 +6,14 @@
 #include "cnn/model.h"
 #include "cnn/cnn.h"
 #include "cnn/tensor.h"
+#include "cnn/expr.h"
 
 using namespace std;
 
 namespace cnn {
 
-bool check_grad(Model& m, ComputationGraph& g, int verbosity) {
+bool check_grad(Model& m, expr::Expression& expr, int verbosity) {
+  ComputationGraph& g = *expr.pg;
   // Clear the parameters first
   const vector<ParameterStorage*>& params = m.parameters_list();
   const vector<LookupParameterStorage*>& lookup_params = m.lookup_parameters_list();
@@ -22,7 +24,7 @@ bool check_grad(Model& m, ComputationGraph& g, int verbosity) {
 
   // Perform forward and backward steps
   float alpha = 5e-4;
-  g.forward();
+  g.forward(expr);
   g.backward();
 
   // Check
@@ -36,9 +38,9 @@ bool check_grad(Model& m, ComputationGraph& g, int verbosity) {
     for (size_t i = 0; i < ts; ++i) {
       float old = TensorTools::AccessElement(p.values, i);
       TensorTools::SetElement(p.values, i, old - alpha);
-      float E_left = as_scalar(g.forward());
+      float E_left = as_scalar(g.forward(expr));
       TensorTools::SetElement(p.values, i, old + alpha);
-      float E_right = as_scalar(g.forward());
+      float E_right = as_scalar(g.forward(expr));
       TensorTools::SetElement(p.values, i, old);
       float g = (E_right - E_left) / (2 * alpha);
       float g_act = TensorTools::AccessElement(p.g, i);
@@ -66,9 +68,9 @@ bool check_grad(Model& m, ComputationGraph& g, int verbosity) {
       for (size_t i = 0; i < ts; ++i) {
         float old = TensorTools::AccessElement(v, i);
         TensorTools::SetElement(v, i, old - alpha);
-        float E_left = as_scalar(g.forward());
+        float E_left = as_scalar(g.forward(expr));
         TensorTools::SetElement(v, i, old + alpha);
-        float E_right = as_scalar(g.forward());
+        float E_right = as_scalar(g.forward(expr));
         TensorTools::SetElement(v, i, old);
         float g = (E_right - E_left) / (2 * alpha);
         float g_act = TensorTools::AccessElement(ag, i);

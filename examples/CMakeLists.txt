@@ -1,6 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-foreach(TARGET mlc tok-embed segrnn-sup poisson-regression tag-bilstm embed-cl encdec xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat rnnlm-mp read-write)
+# segrnn-sup
+foreach(TARGET mlc tok-embed poisson-regression tag-bilstm embed-cl encdec xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat rnnlm-mp read-write)
   ADD_EXECUTABLE(${TARGET} ${TARGET}.cc)
   target_link_libraries(${TARGET} cnn ${LIBS})
   if(UNIX AND NOT APPLE)

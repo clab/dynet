@@ -127,8 +127,8 @@ unsigned Cluster::sample(expr::Expression h, ComputationGraph& cg) const {
     return 0;
   }
   else if (output_size == 2) {
-    logistic(predict(h, cg));
-    double prob0 = as_scalar(cg.incremental_forward());
+    expr::Expression prob0_expr = logistic(predict(h, cg));
+    double prob0 = as_scalar(cg.incremental_forward(prob0_expr));
     double p = rand01();
     if (p < prob0) {
       return 0;
@@ -138,8 +138,8 @@ unsigned Cluster::sample(expr::Expression h, ComputationGraph& cg) const {
     }
   }
   else {
-    softmax(predict(h, cg));
-    vector<float> dist = as_vector(cg.incremental_forward());
+    expr::Expression dist_expr = softmax(predict(h, cg));
+    vector<float> dist = as_vector(cg.incremental_forward(dist_expr));
     unsigned c = 0;
     double p = rand01();
     for (; c < dist.size(); ++c) {

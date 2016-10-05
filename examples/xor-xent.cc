@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 
   Expression h = tanh(W*x + b);
   Expression y_pred = logistic(V*h + a);
-  Expression loss = binary_log_loss(y_pred, y);
+  Expression loss_expr = binary_log_loss(y_pred, y);
 
   cg.print_graphviz();
 
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
       x_values[0] = x1 ? 1 : 0;
       x_values[1] = x2 ? 1 : 0;
       y_value = (x1 != x2) ? 1 : 0;
-      loss += as_scalar(cg.forward());
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd.update(1.0);
     }

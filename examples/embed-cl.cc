@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
         noise[j] = pairwise_rank_loss(sim, sim_n, margin);
       }
       Expression l = sum(noise);
-      auto iloss = as_scalar(cg.forward());
+      auto iloss = as_scalar(cg.forward(l));
       assert(iloss >= 0);
       if (iloss > 0) {
         loss += iloss;

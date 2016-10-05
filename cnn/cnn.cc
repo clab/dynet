@@ -245,8 +245,8 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
   node->dim = node->dim_forward(xds);
 }
 
-const Tensor& ComputationGraph::incremental_forward() { return ee->incremental_forward(); }
-const Tensor& ComputationGraph::forward() { return ee->forward(); }
+const Tensor& ComputationGraph::incremental_forward(const expr::Expression& last) { return ee->incremental_forward(last.i); }
+const Tensor& ComputationGraph::forward(const expr::Expression& last) { return ee->forward(last.i); }
 const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_value(i); }
 const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return this->get_value(e.i); }
 void ComputationGraph::invalidate() { ee->invalidate(); }

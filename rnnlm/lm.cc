@@ -135,8 +135,8 @@ struct RNNLanguageModel {
         cur = cfsm->sample(h_t);
       } else { // regular softmax
         Expression u_t = affine_transform({bias, R, h_t});
-        softmax(u_t);
-        auto dist = as_vector(cg.incremental_forward());
+        Expression dist_expr = softmax(u_t);
+        auto dist = as_vector(cg.incremental_forward(dist_expr));
         double p = rand01();
         cur = 0;
         for (; cur < dist.size(); ++cur) {
@@ -300,8 +300,8 @@ int main(int argc, char** argv) {
         auto& sent = training[order[si]];
         chars += sent.size();
         ++si;
-        lm.BuildLMGraph(sent, cg, DROPOUT > 0.f);
-        loss += as_scalar(cg.forward());
+        Expression loss_expr = lm.BuildLMGraph(sent, cg, DROPOUT > 0.f);
+        loss += as_scalar(cg.forward(loss_expr));
         cg.backward();
         sgd->update();
         ++lines;
@@ -315,8 +315,8 @@ int main(int argc, char** argv) {
         int dchars = 0;
         for (auto& sent : dev) {
           ComputationGraph cg;
-          lm.BuildLMGraph(sent, cg, false);
-          dloss += as_scalar(cg.forward());
+          Expression loss_expr = lm.BuildLMGraph(sent, cg, false);
+          dloss += as_scalar(cg.forward(loss_expr));
           dchars += sent.size();
         }
         if (dloss < best) {
@@ -335,8 +335,8 @@ int main(int argc, char** argv) {
     int tchars = 0;
     for (auto& sent : test) {
       ComputationGraph cg;
-      lm.BuildLMGraph(sent, cg, false);
-      tloss += as_scalar(cg.forward());
+      Expression loss_expr = lm.BuildLMGraph(sent, cg, false);
+      tloss += as_scalar(cg.forward(loss_expr));
       tchars += sent.size();
     }
     cerr << "TEST                -LLH = " << tloss << endl;
@@ -383,8 +383,8 @@ int main(int argc, char** argv) {
       }
       // Score hypothesis
       ComputationGraph cg;
-      lm.BuildLMGraph(read_sentence(fields[HYP_FIELD], &d), cg, false);
-      double loss = as_scalar(cg.forward());
+      Expression loss_expr = lm.BuildLMGraph(read_sentence(fields[HYP_FIELD], &d), cg, false);
+      double loss = as_scalar(cg.forward(loss_expr));
       // Add score
       ostringstream os;
       os << fields[FEAT_FIELD] << " " << FEAT_NAME << sep << loss;

@@ -89,7 +89,7 @@ struct RNNLanguageModel {
       
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
-        auto dist = as_vector(cg.incremental_forward());
+        auto dist = as_vector(cg.incremental_forward(ydist));
         double p = rand01();
         for (; w < dist.size(); ++w) {
           p -= dist[w];
@@ -216,8 +216,8 @@ int main(int argc, char** argv) {
       rows.resize(idx); // in case of duplicates
       chars += sent.size() - 1;
       ++si;
-      lm.BuildLMGraph(rmsent, cg, &rows);
-      loss += as_scalar(cg.forward());
+      Expression loss_expr = lm.BuildLMGraph(rmsent, cg, &rows);
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd->update();
       for (auto w : sent) { w2sl[w] = 0; }

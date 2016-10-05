@@ -154,8 +154,9 @@ struct ConvNet {
   }
 };
 
-bool IsCurrentPredictionCorrection(ComputationGraph& cg, int y_true) {
-  auto v = as_vector(cg.incremental_forward());
+bool IsCurrentPredictionCorrection(Expression y_pred, int y_true) {
+  ComputationGraph& cg = *y_pred.pg;
+  auto v = as_vector(cg.incremental_forward(y_pred));
   assert(v.size() > 1);
   int besti = 0;
   float best = v[0];
@@ -270,9 +271,9 @@ int main(int argc, char** argv) {
       ++si;
       //cerr << "LINE: " << order[si] << endl;
       Expression y_pred = nbow.BuildClassifier(x, cg, true);
-      //CrossEntropyLoss(y_pred, y);
-      HingeLoss(y_pred, y);
-      loss += as_scalar(cg.forward());
+      //Expression loss_expr = CrossEntropyLoss(y_pred, y);
+      Expression loss_expr = HingeLoss(y_pred, y);
+      loss += as_scalar(cg.forward(loss_expr));
       cg.backward();
       sgd->update(2.0);
       ++lines;
@@ -294,11 +295,11 @@ int main(int argc, char** argv) {
         nbow.p_t2o.get()->scale_parameters(pdropout);
         ComputationGraph cg;
         Expression y_pred = nbow.BuildClassifier(x, cg, false);
-        if (IsCurrentPredictionCorrection(cg, y)) dcorr++;
-        //CrossEntropyLoss(y_pred, y);
-        HingeLoss(y_pred, y);
+        if (IsCurrentPredictionCorrection(y_pred, y)) dcorr++;
+        //Expression loss_expr = CrossEntropyLoss(y_pred, y);
+        Expression loss_expr = HingeLoss(y_pred, y);
         //cerr << "DEVLINE: " << dtags << endl;
-        dloss += as_scalar(cg.incremental_forward());
+        dloss += as_scalar(cg.incremental_forward(loss_expr));
         nbow.p_t2o.get()->scale_parameters(1.f/pdropout);
         dtags++;
       }
