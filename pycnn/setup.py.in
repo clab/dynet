@@ -23,7 +23,7 @@ ext = Extension(
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main cnn directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
-        libraries=['cnn_shared'],             # ditto
+        libraries=['cnn'],             # ditto
         library_dirs=["."],
         #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
         extra_compile_args=COMPILER_ARGS,
