@@ -4,8 +4,6 @@
 #include <vector>
 #include <string>
 
-#include <boost/serialization/export.hpp>
-
 #include "cnn/cnn.h"
 #include "cnn/expr.h"
 #include "cnn/dict.h"

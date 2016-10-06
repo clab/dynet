@@ -8,13 +8,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <boost/version.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/string.hpp>
-#if BOOST_VERSION >= 105600
-#include <boost/serialization/split_member.hpp>
-#include <boost/serialization/unordered_map.hpp>
-#endif
+namespace boost { namespace serialization { class access; } }
 
 namespace cnn {
 
@@ -85,19 +79,9 @@ private:
   Map d_;
 
   friend class boost::serialization::access;
-#if BOOST_VERSION >= 105600
-  template<class Archive> void serialize(Archive& ar, const unsigned int) {
-    ar & frozen;
-    ar & map_unk;
-    ar & unk_id;
-    ar & words_;
-    ar & d_;
-  }
-#else
-  template<class Archive> void serialize(Archive& ar, const unsigned int) {
-    throw std::invalid_argument("Serializing dictionaries is only supported on versions of boost 1.56 or higher");
-  }
-#endif
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int);
+
 };
 
 std::vector<int> read_sentence(const std::string& line, Dict* sd);

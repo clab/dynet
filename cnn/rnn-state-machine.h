@@ -1,6 +1,7 @@
 #ifndef CNN_RNN_STATE_MACHINE_H_
 #define CNN_RNN_STATE_MACHINE_H_
-#include <boost/serialization/access.hpp>
+
+namespace boost { namespace serialization { class access; } }
 
 namespace cnn {
 
@@ -40,9 +41,7 @@ class RNNStateMachine {
 
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & q_;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 } // namespace cnn

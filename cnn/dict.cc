@@ -4,6 +4,16 @@
 #include <vector>
 #include <sstream>
 
+#include <boost/version.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/string.hpp>
+#if BOOST_VERSION >= 105600
+#include <boost/serialization/unordered_map.hpp>
+#endif
+
+#include "cnn/io-macros.h"
+
+
 using namespace std;
 
 namespace cnn {
@@ -33,6 +43,19 @@ void read_sentence_pair(const std::string& line, std::vector<int>* s, Dict* sd, 
     v->push_back(d->convert(word));
   }
 }
+
+template<class Archive> void Dict::serialize(Archive& ar, const unsigned int) {
+#if BOOST_VERSION >= 105600
+  ar & frozen;
+  ar & map_unk;
+  ar & unk_id;
+  ar & words_;
+  ar & d_;
+#else
+  throw std::invalid_argument("Serializing dictionaries is only supported on versions of boost 1.56 or higher");
+#endif
+}
+CNN_SERIALIZE_IMPL(Dict)
 
 } // namespace cnn
 
