@@ -5,6 +5,8 @@
 #include <unordered_set>
 #include <string>
 
+#include <boost/serialization/export.hpp>
+
 #include "cnn/tensor.h"
 #include "cnn/weight-decay.h"
 
@@ -195,7 +197,8 @@ void save_cnn_model(std::string filename, Model* model);
 void load_cnn_model(std::string filename, Model* model);
 
 } // namespace cnn
-// BOOST_CLASS_EXPORT_KEY(cnn::ParameterStorage)
-// BOOST_CLASS_EXPORT_KEY(cnn::LookupParameterStorage)
+
+BOOST_CLASS_EXPORT_KEY(cnn::ParameterStorage)
+BOOST_CLASS_EXPORT_KEY(cnn::LookupParameterStorage)
 
 #endif

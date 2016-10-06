@@ -2,6 +2,9 @@
 #define CNN_TRAINING_H_
 
 #include <vector>
+
+#include <boost/serialization/export.hpp>
+
 #include "cnn/model.h"
 #include "cnn/shadow-params.h"
 
@@ -180,5 +183,12 @@ struct AdamTrainer : public Trainer {
 };
 
 } // namespace cnn
+
+BOOST_CLASS_EXPORT_KEY(cnn::SimpleSGDTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::MomentumSGDTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::AdagradTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::AdadeltaTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::RmsPropTrainer)
+BOOST_CLASS_EXPORT_KEY(cnn::AdamTrainer)
 
 #endif

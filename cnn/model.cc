@@ -494,3 +494,6 @@ float Model::gradient_l2_norm_dev(MyDevice & dev) const {
 #endif
 
 } // namespace cnn
+
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ParameterStorage)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameterStorage)
