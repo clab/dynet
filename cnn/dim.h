@@ -78,10 +78,7 @@ struct Dim {
   unsigned int bd;
  private:
   friend class boost::serialization::access;
-  template<class Archive> void serialize(Archive& ar, const unsigned int) {
-    ar & nd;
-    ar & d;
-  }
+  template<class Archive> void serialize(Archive& ar, const unsigned int);
 };
 
 //static_assert(std::is_trivially_copyable<Dim>::value, "Dim must be trivially copyable");

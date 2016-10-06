@@ -1,8 +1,12 @@
 #include "cnn/cnn.h"
+
+#include <boost/serialization/vector.hpp>
+
 #include "cnn/shadow-params.h"
 #include "cnn/tensor.h"
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/model.h"
+#include "cnn/io-macros.h"
 
 using namespace std;
 
@@ -35,6 +39,18 @@ vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Model& m)
     v.emplace_back(*p);
   return v;
 }
+
+template<class Archive>
+void ShadowParameters::serialize(Archive& ar, const unsigned int) {
+  ar & h;
+}
+CNN_SERIALIZE_IMPL(ShadowParameters)
+
+template<class Archive>
+void ShadowLookupParameters::serialize(Archive& ar, const unsigned int) {
+  ar & h;
+}
+CNN_SERIALIZE_IMPL(ShadowLookupParameters)
 
 } // namespace cnn
 

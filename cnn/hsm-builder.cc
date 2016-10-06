@@ -5,7 +5,12 @@
 #include <cassert>
 #include <sstream>
 
-//BOOST_CLASS_EXPORT_IMPLEMENT(cnn::HierarchicalSoftmaxBuilder)
+#include <boost/serialization/vector.hpp>
+#if BOOST_VERSION >= 105600
+#include <boost/serialization/unordered_map.hpp>
+#endif
+
+#include "cnn/io-macros.h"
 
 #undef assert
 #define assert(x) {}
@@ -177,6 +182,20 @@ string Cluster::toString() const {
   }
   return ss.str();
 }
+
+template<class Archive>
+void Cluster::serialize(Archive& ar, const unsigned int) {
+#if BOOST_VERSION >= 105600  
+  ar & rep_dim;
+  ar & children;
+  ar & path;
+  ar & terminals;
+  ar & word2ind;
+#else
+  throw std::invalid_argument("Serializing clusters is only supported on versions of boost 1.56 or higher");
+#endif
+}
+CNN_SERIALIZE_IMPL(Cluster)
 
 HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,

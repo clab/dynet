@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "cnn/io-macros.h"
+
 using namespace std;
 
 namespace cnn {
@@ -22,6 +24,13 @@ ostream& operator<<(ostream& os, const vector<Dim>& ds) {
     os << (i ? " " : "") << ds[i];
   return os << ']';
 }
+
+template<class Archive>
+void Dim::serialize(Archive& ar, const unsigned int) {
+  ar & nd;
+  ar & d;
+}
+CNN_SERIALIZE_IMPL(Dim)
 
 } // namespace cnn
 

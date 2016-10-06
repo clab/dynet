@@ -28,13 +28,7 @@ private:
   expr::Expression predict(expr::Expression h, ComputationGraph& cg) const;
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & rep_dim;
-    ar & children;
-    ar & path;
-    ar & terminals;
-    ar & word2ind;
-  }
+  void serialize(Archive& ar, const unsigned int);
 
 public:
   Cluster();

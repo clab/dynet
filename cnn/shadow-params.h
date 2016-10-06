@@ -21,9 +21,7 @@ struct ShadowParameters {
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & h;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct ShadowLookupParameters {
@@ -33,9 +31,8 @@ struct ShadowLookupParameters {
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & h;
-  }
+  void serialize(Archive& ar, const unsigned int);
+
 };
 
 // one per element in model.parameters_list

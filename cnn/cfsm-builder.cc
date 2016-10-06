@@ -3,12 +3,11 @@
 #include <fstream>
 #include <iostream>
 
+#include <boost/serialization/vector.hpp>
+
 #include "cnn/io-macros.h"
 
 using namespace std;
-
-// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::StandardSoftmaxBuilder)
-// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ClassFactoredSoftmaxBuilder)
 
 namespace cnn {
 
