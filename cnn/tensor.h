@@ -4,6 +4,8 @@
 #include <initializer_list>
 #include <vector>
 
+#include <boost/serialization/split_member.hpp>
+
 #include "cnn/dim.h"
 #include "cnn/globals.h"
 #include "cnn/aligned-mem-pool.h"
@@ -14,8 +16,6 @@
 #include <cuda_runtime.h>
 #include "cnn/cuda.h"
 #endif
-#include <boost/serialization/array.hpp>
-#include <boost/serialization/version.hpp>
 
 // Following line is commented out because it causes errors with large nets (Antonis)
 //#define EIGEN_NO_MALLOC
@@ -150,55 +150,9 @@ struct Tensor {
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive& ar, const unsigned int ver) const {
-    ar & d;
-    int dev_id = ((device == default_device) ? (int)-1 : device->device_id);
-    ar & dev_id;
-    ar & mem_pool;
-#ifdef HAVE_CUDA
-    if(device->type == DeviceType::GPU) {
-      float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
-      CUDA_CHECK(cudaMemcpyAsync(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
-      ar & boost::serialization::make_array(vc, d.size());
-      free(vc);
-    } else {
-      ar & boost::serialization::make_array(v, d.size());
-    }
-#else
-    ar & boost::serialization::make_array(v, d.size());
-#endif
-  }
+  void save(Archive& ar, const unsigned int ver) const;
   template<class Archive>
-  void load(Archive& ar, const unsigned int ver) {
-    ar & d;
-    int dev_id = -1;
-    // This default value is for backward compatibility with models that were
-    // saved without information about what mempool a tensor belongs to.
-    mem_pool = DeviceMempool::PS;
-    if(ver > 0) {
-      ar & dev_id;
-      ar & mem_pool;
-    }
-    if(dev_id == -1) {
-      device = default_device;
-    } else {
-      assert(dev_id > 0 && dev_id < (int)devices.size());
-      device = devices[dev_id];
-    }
-    device->allocate_tensor(mem_pool, *this);
-#ifdef HAVE_CUDA
-    if(device->type == DeviceType::GPU) {
-      float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
-      ar & boost::serialization::make_array(vc, d.size());
-      CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
-      free(vc);
-    } else {
-      ar & boost::serialization::make_array(v, d.size());
-    }
-#else
-    ar & boost::serialization::make_array(v, d.size());
-#endif
-  }
+  void load(Archive& ar, const unsigned int ver);
   BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
@@ -336,7 +290,5 @@ int rand0n(int n);
 real rand_normal();
 
 } // namespace cnn
-
-BOOST_CLASS_VERSION(cnn::Tensor, 1)
 
 #endif

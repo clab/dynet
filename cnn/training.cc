@@ -1,8 +1,11 @@
 #include "cnn/training.h"
 
+#include <boost/serialization/vector.hpp>
+
 // #include "cnn/gpu-ops.h"
 #include "cnn/param-nodes.h"
 #include "cnn/weight-decay.h"
+#include "cnn/io-macros.h"
 
 // Macros for defining parameter update functions
 #ifdef __CUDACC__
@@ -28,14 +31,6 @@
     if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,scale,gscale,values); } \
     else { abort(); } \
   }
-#endif
-#ifndef __CUDACC__
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::SimpleSGDTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::MomentumSGDTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdagradTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdadeltaTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::RmsPropTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdamTrainer)
 #endif
 
 namespace cnn {
@@ -274,6 +269,70 @@ void AdamTrainer::alloc_impl() {
   v = allocate_shadow_parameters(*model);
   lv = allocate_shadow_lookup_parameters(*model);
 }
+#endif
+
+#ifndef __CUDACC__
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::SimpleSGDTrainer)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::MomentumSGDTrainer)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdagradTrainer)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdadeltaTrainer)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::RmsPropTrainer)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdamTrainer)
+
+template<class Archive>
+void Trainer::serialize(Archive& ar, const unsigned int) {
+  ar & eta0 & eta & eta_decay & epoch;
+  ar & clipping_enabled & clip_threshold & clips & updates;
+  ar & aux_allocated;
+  ar & model;
+}
+CNN_SERIALIZE_IMPL(Trainer)
+
+template<class Archive>
+void SimpleSGDTrainer::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<Trainer>(*this);
+}
+CNN_SERIALIZE_IMPL(SimpleSGDTrainer)
+
+template<class Archive>
+void MomentumSGDTrainer::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<Trainer>(*this);
+  ar & momentum;
+  ar & vp & vlp;
+}
+CNN_SERIALIZE_IMPL(MomentumSGDTrainer)
+
+template<class Archive>
+void AdagradTrainer::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<Trainer>(*this);
+  ar & epsilon;
+  ar & vp & vlp;
+}
+CNN_SERIALIZE_IMPL(AdagradTrainer)
+
+template<class Archive>
+void AdadeltaTrainer::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<Trainer>(*this);
+  ar & epsilon & rho;
+  ar & hg & hlg & hd & hld;
+}
+CNN_SERIALIZE_IMPL(AdadeltaTrainer)
+
+template<class Archive>
+void RmsPropTrainer::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<Trainer>(*this);
+  ar & epsilon & rho;
+  ar & hg & hlg;
+}
+CNN_SERIALIZE_IMPL(RmsPropTrainer)
+
+template<class Archive>
+void AdamTrainer::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<Trainer>(*this);
+  ar & beta_1 & beta_2 & epsilon;
+  ar & m & lm & v & lv;
+}
+CNN_SERIALIZE_IMPL(AdamTrainer)
 #endif
 
 } // namespace cnn

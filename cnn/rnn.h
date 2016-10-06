@@ -1,7 +1,6 @@
 #ifndef CNN_RNN_H_
 #define CNN_RNN_H_
 
-#include <boost/serialization/access.hpp>
 #include "cnn/cnn.h"
 #include "cnn/rnn-state-machine.h"
 #include "cnn/expr.h"
@@ -108,11 +107,7 @@ struct RNNBuilder {
 
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & cur;
-    ar & head;
-    ar & sm;
-  } 
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct SimpleRNNBuilder : public RNNBuilder {
@@ -163,12 +158,8 @@ struct SimpleRNNBuilder : public RNNBuilder {
 
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<RNNBuilder>(*this);
-    ar & params;
-    ar & layers;
-    ar & lagging;
-  }
+  void serialize(Archive& ar, const unsigned int);
+
 };
 
 } // namespace cnn
@@ -184,6 +175,6 @@ namespace boost {
   } // namespace serialization
 } // namespace boost
 
-BOOST_CLASS_EXPORT_KEY(cnn::RNNBuilder)
-BOOST_CLASS_EXPORT_KEY(cnn::SimpleRNNBuilder)
+// BOOST_CLASS_EXPORT_KEY(cnn::RNNBuilder)
+// BOOST_CLASS_EXPORT_KEY(cnn::SimpleRNNBuilder)
 #endif

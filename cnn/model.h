@@ -5,14 +5,6 @@
 #include <unordered_set>
 #include <string>
 
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/serialization.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/split_member.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 #include "cnn/tensor.h"
 #include "cnn/weight-decay.h"
 
@@ -67,12 +59,7 @@ struct ParameterStorage : public ParameterStorageBase {
                                  // or Glorot initialization if minmax = 0
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    boost::serialization::base_object<ParameterStorageBase>(*this);
-    ar & dim;
-    ar & values;
-    ar & g;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 // represents a matrix/vector embedding of a discrete set
@@ -117,20 +104,9 @@ struct LookupParameterStorage : public ParameterStorageBase {
   LookupParameterStorage(unsigned n, const Dim& d);
   friend class boost::serialization::access;
   template<class Archive>
-  void save(Archive& ar, const unsigned int) const {
-    ar << boost::serialization::base_object<ParameterStorageBase>(*this);
-    ar << all_dim;
-    ar << all_values;
-    ar << all_grads;
-  }
+  void save(Archive& ar, const unsigned int) const;
   template<class Archive>
-  void load(Archive& ar, const unsigned int) {
-    ar >> boost::serialization::base_object<ParameterStorageBase>(*this);
-    ar >> all_dim;
-    ar >> all_values;
-    ar >> all_grads;
-    initialize_lookups();
-  }
+  void load(Archive& ar, const unsigned int);
   BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
@@ -152,10 +128,7 @@ struct Parameter {
 private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & mp;
-    ar & index;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct LookupParameter {
@@ -176,10 +149,7 @@ struct LookupParameter {
 private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & mp;
-    ar & index;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 // this is a collection of parameters
@@ -213,12 +183,7 @@ class Model {
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & all_params;
-    ar & params;
-    ar & lookup_params;
-    ar & weight_decay;
-  }
+  void serialize(Archive& ar, const unsigned int);
 
   std::vector<ParameterStorageBase*> all_params;
   std::vector<ParameterStorage*> params;
@@ -230,7 +195,7 @@ void save_cnn_model(std::string filename, Model* model);
 void load_cnn_model(std::string filename, Model* model);
 
 } // namespace cnn
-BOOST_CLASS_EXPORT_KEY(cnn::ParameterStorage)
-BOOST_CLASS_EXPORT_KEY(cnn::LookupParameterStorage)
+// BOOST_CLASS_EXPORT_KEY(cnn::ParameterStorage)
+// BOOST_CLASS_EXPORT_KEY(cnn::LookupParameterStorage)
 
 #endif

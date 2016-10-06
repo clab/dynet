@@ -6,8 +6,6 @@
 #include "cnn/expr.h"
 #include "cnn/dict.h"
 #include "cnn/lstm.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>

@@ -1,4 +1,5 @@
 #include "cnn/rnn.h"
+#include "cnn/io-macros.h"
 
 #include <string>
 #include <cassert>
@@ -7,6 +8,9 @@
 #include <iostream>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/vector.hpp>
+
 
 #include "cnn/nodes.h"
 #include "cnn/expr.h"
@@ -15,8 +19,6 @@ using namespace std;
 using namespace cnn::expr;
 using namespace cnn;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::RNNBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::SimpleRNNBuilder)
 namespace cnn {
 
 enum { X2H=0, H2H, HB, L2H };
@@ -32,6 +34,14 @@ void RNNBuilder::load_parameters_pretraining(const string& fname) {
   cerr << "RNNBuilder::load_parameters_pretraining not overridden.\n";
   abort();
 }
+
+template<class Archive>
+void RNNBuilder::serialize(Archive& ar, const unsigned int) {
+  ar & cur;
+  ar & head;
+  ar & sm;
+} 
+CNN_SERIALIZE_IMPL(RNNBuilder)
 
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
@@ -177,5 +187,13 @@ void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
   }
 }
 
+template<class Archive>
+void SimpleRNNBuilder::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<RNNBuilder>(*this);
+  ar & params;
+  ar & layers;
+  ar & lagging;
+}
+CNN_SERIALIZE_IMPL(SimpleRNNBuilder)
 
 } // namespace cnn

@@ -66,12 +66,7 @@ struct Trainer {
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & eta0 & eta & eta_decay & epoch;
-    ar & clipping_enabled & clip_threshold & clips & updates;
-    ar & aux_allocated;
-    ar & model;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct SimpleSGDTrainer : public Trainer {
@@ -82,9 +77,7 @@ struct SimpleSGDTrainer : public Trainer {
   SimpleSGDTrainer() {}
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<Trainer>(*this);
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct MomentumSGDTrainer : public Trainer {
@@ -106,11 +99,7 @@ struct MomentumSGDTrainer : public Trainer {
   MomentumSGDTrainer() {}
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<Trainer>(*this);
-    ar & momentum;
-    ar & vp & vlp;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct AdagradTrainer : public Trainer {
@@ -127,11 +116,7 @@ struct AdagradTrainer : public Trainer {
   AdagradTrainer() {}
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<Trainer>(*this);
-    ar & epsilon;
-    ar & vp & vlp;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct AdadeltaTrainer : public Trainer {
@@ -151,11 +136,7 @@ struct AdadeltaTrainer : public Trainer {
   AdadeltaTrainer() {}
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<Trainer>(*this);
-    ar & epsilon & rho;
-    ar & hg & hlg & hd & hld;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct RmsPropTrainer : public Trainer {
@@ -173,11 +154,7 @@ struct RmsPropTrainer : public Trainer {
   RmsPropTrainer() {}
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<Trainer>(*this);
-    ar & epsilon & rho;
-    ar & hg & hlg;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct AdamTrainer : public Trainer {
@@ -199,18 +176,9 @@ struct AdamTrainer : public Trainer {
   AdamTrainer() {}
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<Trainer>(*this);
-    ar & beta_1 & beta_2 & epsilon;
-    ar & m & lm & v & lv;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 } // namespace cnn
-BOOST_CLASS_EXPORT_KEY(cnn::SimpleSGDTrainer)
-BOOST_CLASS_EXPORT_KEY(cnn::MomentumSGDTrainer)
-BOOST_CLASS_EXPORT_KEY(cnn::AdagradTrainer)
-BOOST_CLASS_EXPORT_KEY(cnn::AdadeltaTrainer)
-BOOST_CLASS_EXPORT_KEY(cnn::RmsPropTrainer)
-BOOST_CLASS_EXPORT_KEY(cnn::AdamTrainer)
+
 #endif

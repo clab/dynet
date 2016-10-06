@@ -6,7 +6,13 @@
 #include <vector>
 #include <iostream>
 
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+
 #include "cnn/nodes.h"
+#include "cnn/io-macros.h"
 
 using namespace std;
 using namespace cnn::expr;
@@ -198,5 +204,14 @@ void LSTMBuilder::load_parameters_pretraining(const string& fname) {
     }
   }
 }
+
+template<class Archive>
+void LSTMBuilder::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<RNNBuilder>(*this);
+  ar & params;
+  ar & layers;
+  ar & dropout_rate;
+}
+CNN_SERIALIZE_IMPL(LSTMBuilder);
 
 } // namespace cnn
