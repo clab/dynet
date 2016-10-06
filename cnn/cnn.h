@@ -6,11 +6,8 @@
 #include <iostream>
 #include <initializer_list>
 #include <utility>
+
 #include <boost/serialization/strong_typedef.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 
 #include "cnn/init.h"
 #include "cnn/aligned-mem-pool.h"

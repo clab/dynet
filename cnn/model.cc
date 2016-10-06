@@ -2,6 +2,7 @@
 #include "cnn/tensor.h"
 #include "cnn/aligned-mem-pool.h"
 #include "cnn/cnn.h"
+#include "cnn/io-macros.h"
 
 #include <unordered_set>
 #include <iostream>
@@ -12,6 +13,11 @@
 #ifndef __CUDACC__
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/split_member.hpp>
 #endif
 
 // Macros for defining functions over parameters
@@ -40,8 +46,8 @@
 using namespace std;
 
 #ifndef __CUDACC__
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ParameterStorage)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameterStorage)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ParameterStorage)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameterStorage)
 #endif
 
 namespace cnn {
@@ -80,6 +86,17 @@ void ParameterStorage::clear() {
   if(g.v != nullptr)
     TensorTools::Zero(g);
 }
+
+#ifndef __CUDACC__
+template<class Archive>
+void ParameterStorage::serialize(Archive& ar, const unsigned int) {
+  boost::serialization::base_object<ParameterStorageBase>(*this);
+  ar & dim;
+  ar & values;
+  ar & g;
+}
+CNN_SERIALIZE_IMPL(ParameterStorage)
+#endif
 
 LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
@@ -125,6 +142,25 @@ void LookupParameterStorage::clear() {
   non_zero_grads.clear();
 }
 
+#ifndef __CUDACC__
+template<class Archive>
+void LookupParameterStorage::save(Archive& ar, const unsigned int) const {
+  ar << boost::serialization::base_object<ParameterStorageBase>(*this);
+  ar << all_dim;
+  ar << all_values;
+  ar << all_grads;
+}
+template<class Archive>
+void LookupParameterStorage::load(Archive& ar, const unsigned int) {
+  ar >> boost::serialization::base_object<ParameterStorageBase>(*this);
+  ar >> all_dim;
+  ar >> all_values;
+  ar >> all_grads;
+  initialize_lookups();
+}
+CNN_SAVELOAD_IMPL(LookupParameterStorage)
+#endif
+
 Parameter::Parameter() {
   mp = nullptr;
   index = 0;
@@ -139,6 +175,15 @@ ParameterStorage* Parameter::get() const {
 void Parameter::zero() {
   return mp->parameters_list()[index]->zero();
 }
+
+#ifndef __CUDACC__
+template<class Archive>
+void Parameter::serialize(Archive& ar, const unsigned int) {
+  ar & mp;
+  ar & index;
+}
+CNN_SERIALIZE_IMPL(Parameter)
+#endif
 
 LookupParameter::LookupParameter() {
   mp = nullptr;
@@ -158,6 +203,15 @@ void LookupParameter::zero() {
 void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
   get()->initialize(index, val);
 }
+
+#ifndef __CUDACC__
+template<class Archive>
+void LookupParameter::serialize(Archive& ar, const unsigned int) {
+  ar & mp;
+  ar & index;
+}
+CNN_SERIALIZE_IMPL(LookupParameter)
+#endif
 
 Model::Model() : gradient_norm_scratch(nullptr) {
   weight_decay.set_lambda(weight_decay_lambda);
@@ -218,6 +272,17 @@ size_t Model::parameter_count() const {
   }
   return r;
 }
+
+#ifndef __CUDACC__
+template<class Archive>
+void Model::serialize(Archive& ar, const unsigned int) {
+  ar & all_params;
+  ar & params;
+  ar & lookup_params;
+  ar & weight_decay;
+}
+CNN_SERIALIZE_IMPL(Model)
+#endif
 
 void save_cnn_model(std::string filename, Model* model) {
     std::ofstream out(filename);

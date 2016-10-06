@@ -63,12 +63,7 @@ struct LSTMBuilder : public RNNBuilder {
 private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-   ar & boost::serialization::base_object<RNNBuilder>(*this);
-    ar & params;
-    ar & layers;
-    ar & dropout_rate;
-  }
+  void serialize(Archive& ar, const unsigned int);
 
 };
 

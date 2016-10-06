@@ -3,10 +3,12 @@
 #include <fstream>
 #include <iostream>
 
+#include "cnn/io-macros.h"
+
 using namespace std;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::StandardSoftmaxBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ClassFactoredSoftmaxBuilder)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::StandardSoftmaxBuilder)
+// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ClassFactoredSoftmaxBuilder)
 
 namespace cnn {
 
@@ -52,6 +54,14 @@ unsigned StandardSoftmaxBuilder::sample(const Expression& rep) {
 Expression StandardSoftmaxBuilder::full_log_distribution(const Expression& rep) {
   return log(softmax(affine_transform({b, w, rep})));
 }
+
+template<class Archive>
+void StandardSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
+  boost::serialization::base_object<SoftmaxBuilder>(*this);
+  ar & p_w;
+  ar & p_b;
+}
+CNN_SERIALIZE_IMPL(StandardSoftmaxBuilder)
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
 
@@ -210,5 +220,20 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
   }
   cerr << "Read " << wc << " words in " << cdict.size() << " clusters (" << scs << " singleton clusters)\n";
 }
+
+template<class Archive>
+void ClassFactoredSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
+  boost::serialization::base_object<SoftmaxBuilder>(*this);
+  ar & cdict;
+  ar & widx2cidx;
+  ar & widx2cwidx;
+  ar & cidx2words;
+  ar & singleton_cluster;
+  ar & p_r2c;
+  ar & p_cbias;
+  ar & p_rc2ws;
+  ar & p_rcwbiases;
+}
+CNN_SERIALIZE_IMPL(ClassFactoredSoftmaxBuilder)
 
 } // namespace cnn

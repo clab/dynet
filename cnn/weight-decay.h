@@ -5,6 +5,8 @@
 #include <cmath>
 #include <iostream>
 
+namespace boost { namespace serialization { class access; } }
+
 namespace cnn {
 
 // I don't bother with learning rates when computing how much the weight
@@ -36,10 +38,7 @@ struct L2WeightDecay {
  private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & weight_decay;
-    ar & lambda;
-  }
+  void serialize(Archive& ar, const unsigned int);
 
   float weight_decay;
   float lambda;
