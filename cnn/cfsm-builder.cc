@@ -237,3 +237,6 @@ void ClassFactoredSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
 CNN_SERIALIZE_IMPL(ClassFactoredSoftmaxBuilder)
 
 } // namespace cnn
+
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::StandardSoftmaxBuilder)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ClassFactoredSoftmaxBuilder)

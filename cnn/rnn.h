@@ -1,6 +1,8 @@
 #ifndef CNN_RNN_H_
 #define CNN_RNN_H_
 
+#include <boost/serialization/export.hpp>
+
 #include "cnn/cnn.h"
 #include "cnn/rnn-state-machine.h"
 #include "cnn/expr.h"
@@ -175,6 +177,7 @@ namespace boost {
   } // namespace serialization
 } // namespace boost
 
-// BOOST_CLASS_EXPORT_KEY(cnn::RNNBuilder)
-// BOOST_CLASS_EXPORT_KEY(cnn::SimpleRNNBuilder)
+BOOST_CLASS_EXPORT_KEY(cnn::RNNBuilder)
+BOOST_CLASS_EXPORT_KEY(cnn::SimpleRNNBuilder)
+
 #endif

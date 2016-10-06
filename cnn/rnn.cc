@@ -197,3 +197,6 @@ void SimpleRNNBuilder::serialize(Archive& ar, const unsigned int) {
 CNN_SERIALIZE_IMPL(SimpleRNNBuilder)
 
 } // namespace cnn
+
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::RNNBuilder)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::SimpleRNNBuilder)

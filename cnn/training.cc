@@ -1,6 +1,7 @@
 #include "cnn/training.h"
 
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/export.hpp>
 
 // #include "cnn/gpu-ops.h"
 #include "cnn/param-nodes.h"
@@ -333,6 +334,14 @@ void AdamTrainer::serialize(Archive& ar, const unsigned int) {
   ar & m & lm & v & lv;
 }
 CNN_SERIALIZE_IMPL(AdamTrainer)
+
 #endif
 
 } // namespace cnn
+
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::SimpleSGDTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::MomentumSGDTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdagradTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdadeltaTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::RmsPropTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(cnn::AdamTrainer)

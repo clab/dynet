@@ -3,6 +3,9 @@
 
 #include <vector>
 #include <string>
+
+#include <boost/serialization/export.hpp>
+
 #include "cnn/cnn.h"
 #include "cnn/expr.h"
 #include "cnn/dict.h"
@@ -107,6 +110,8 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   void serialize(Archive& ar, const unsigned int);
 };
 }  // namespace cnn
-//BOOST_CLASS_EXPORT_KEY(cnn::StandardSoftmaxBuilder)
-//BOOST_CLASS_EXPORT_KEY(cnn::ClassFactoredSoftmaxBuilder)
+
+BOOST_CLASS_EXPORT_KEY(cnn::StandardSoftmaxBuilder)
+BOOST_CLASS_EXPORT_KEY(cnn::ClassFactoredSoftmaxBuilder)
+
 #endif
