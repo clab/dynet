@@ -45,11 +45,6 @@
 
 using namespace std;
 
-#ifndef __CUDACC__
-// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::ParameterStorage)
-// BOOST_CLASS_EXPORT_IMPLEMENT(cnn::LookupParameterStorage)
-#endif
-
 namespace cnn {
 
 // CPU only functions
@@ -469,7 +464,7 @@ float Model::gradient_l2_norm_dev(MyDevice & dev) const {
   sum_t.t<0>().device(*dev.edevice) = scratch_t.t<1>().sum().sqrt();
 #ifdef __CUDACC__
   float res = 0;
-  cudaMemcpy(&res, gradient_norm_scratch, sizeof(float),  cudaMemcpyDeviceToHost);
+  cudaMemcpy(&res, gradient_norm_scratch+pi, sizeof(float),  cudaMemcpyDeviceToHost);
   return res;
 #else
   return gradient_norm_scratch[pi];
