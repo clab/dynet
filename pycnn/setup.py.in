@@ -18,8 +18,8 @@ if platform.system() == 'Darwin':
 
 
 ext_cpu = Extension(
-        "_pycnn",                 # name of extension
-        ["pycnn.pyx"],           # filename of our Pyrex/Cython source
+        "_dynet",                 # name of extension
+        ["dynet.pyx"],           # filename of our Pyrex/Cython source
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main cnn directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
@@ -28,12 +28,12 @@ ext_cpu = Extension(
         library_dirs=[".","${PROJECT_BINARY_DIR}/cnn/"],
         #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
         extra_compile_args=COMPILER_ARGS,
-        runtime_library_dirs=["${PROJECT_BINARY_DIR}/cnn/"],
+        runtime_library_dirs=["${PROJECT_BINARY_DIR}/dynet/"],
         )
 
 ext_gpu = Extension(
-        "_gpycnn",                 # name of extension
-        ["gpycnn.pyx"],           # filename of our Pyrex/Cython source
+        "_gdynet",                 # name of extension
+        ["gdynet.pyx"],           # filename of our Pyrex/Cython source
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main cnn directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
@@ -52,6 +52,6 @@ if "${WITH_CUDA_BACKEND}"=="1": # if cuda requested
 
 setup(ext_modules = TARGET,
         cmdclass = {'build_ext': build_ext},
-        name="pyCNN",
-        py_modules = ['pycnn','pycnn_viz'],
+        name="dyNET",
+        py_modules = ['dynet','dynet_viz'],
 )
