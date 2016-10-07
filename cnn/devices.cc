@@ -6,6 +6,7 @@
 
 #include "cnn/cuda.h"
 #include "cnn/cnn.h"
+#include "cnn/expr.h"
 
 using namespace std;
 
@@ -41,7 +42,7 @@ DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
 Device::~Device() {}
 
 DeviceMempoolSizes Device::mark(ComputationGraph *cg) {
-  cg->incremental_forward(); // needed so that we actually allocate the needed memory
+  cg->incremental_forward({cg, (VariableIndex)(cg->nodes.size() - 1)}); // needed so that we actually allocate the needed memory
                              // for all existing nodes.
   return DeviceMempoolSizes(pools[0]->used, pools[1]->used, pools[2]->used);
 }

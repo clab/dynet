@@ -44,10 +44,10 @@ public:
 
   cnn::real LearnFromDatum(const D& datum, bool learn) {
     ComputationGraph cg;
-    rnnlm.BuildLMGraph(datum, cg);
-    cnn::real loss = as_scalar(cg.forward());
+    Expression loss_expr = rnnlm.BuildLMGraph(datum, cg);
+    cnn::real loss = as_scalar(cg.forward(loss_expr));
     if (learn) {
-      cg.backward();
+      cg.backward(loss_expr);
     }
     return loss;
   }

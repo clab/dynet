@@ -184,9 +184,9 @@ int main(int argc, char** argv) {
       auto& sent = training[order[si]];
       chars += sent.size() - 2;
       ++si;
-      lm.BuildLMGraph(sent, cg);
-      loss += as_scalar(cg.forward());
-      cg.backward();
+      Expression loss_expr = lm.BuildLMGraph(sent, cg);
+      loss += as_scalar(cg.forward(loss_expr));
+      cg.backward(loss_expr);
       sgd->update();
       ++lines;
     }
@@ -202,8 +202,8 @@ int main(int argc, char** argv) {
       int dchars = 0;
       for (auto& sent : dev) {
         ComputationGraph cg;
-        lm.BuildLMGraph(sent, cg);
-        dloss += as_scalar(cg.forward());
+        Expression loss_expr = lm.BuildLMGraph(sent, cg);
+        dloss += as_scalar(cg.forward(loss_expr));
         dchars += sent.size() - 2;
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
