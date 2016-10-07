@@ -82,11 +82,10 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
         VariableIndex add_const_lookup(CLookupParameters* p, const unsigned* pindex)
         VariableIndex add_const_lookup(CLookupParameters* p, unsigned index)
         
-        const CTensor& forward()
-        const CTensor& incremental_forward()
+        const CTensor& forward(VariableIndex index)
+        const CTensor& incremental_forward(VariableIndex index)
         const CTensor& get_value(VariableIndex i)
         void invalidate()
-        void backward()
         void backward(VariableIndex i)
 
         # checkpointing

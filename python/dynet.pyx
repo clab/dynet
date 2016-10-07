@@ -421,23 +421,23 @@ cdef class ComputationGraph:
     #        results[name] = self.lookup(model[name])
     #    return results
 
-    cpdef forward_scalar(self):
-        return c_as_scalar(self.thisptr.forward())
+    cpdef forward_scalar(self, VariableIndex index):
+        return c_as_scalar(self.thisptr.forward(index))
 
-    cpdef inc_forward_scalar(self):
-        return c_as_scalar(self.thisptr.incremental_forward())
+    cpdef inc_forward_scalar(self, VariableIndex index):
+        return c_as_scalar(self.thisptr.incremental_forward(index))
 
-    cpdef forward_vec(self):
-        return c_as_vector(self.thisptr.forward())
+    cpdef forward_vec(self, VariableIndex index):
+        return c_as_vector(self.thisptr.forward(index))
 
-    cpdef inc_forward_vec(self):
-        return c_as_vector(self.thisptr.incremental_forward())
+    cpdef inc_forward_vec(self, VariableIndex index):
+        return c_as_vector(self.thisptr.incremental_forward(index))
 
-    cpdef forward(self): self.thisptr.forward()
-    cpdef inc_forward(self): self.thisptr.incremental_forward()
+    cpdef forward(self, VariableIndex index): self.thisptr.forward(index)
+    cpdef inc_forward(self, VariableIndex index): self.thisptr.incremental_forward(index)
 
-    cpdef backward(self):
-        self.thisptr.backward()
+    cpdef backward(self, VariableIndex index):
+        self.thisptr.backward(index)
 
     cpdef print_graphviz(self):
         self.thisptr.print_graphviz()
@@ -536,19 +536,19 @@ cdef class Expression: #{{{
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg().forward()
+        if recalculate: self.cg().forward(self.vindex) # TODO: make recalculate run on the entire graph, not only up to here?
         return c_as_scalar(self.cgp().get_value(self.vindex))
 
     cpdef vec_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg().forward()
+        if recalculate: self.cg().forward(self.vindex)
         return c_as_vector(self.cgp().get_value(self.vindex))
 
     cpdef npvalue(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
         cdef CDim dim
-        if recalculate: self.cg().forward()
+        if recalculate: self.cg().forward(self.vindex)
         t = self.cgp().get_value(self.vindex)
         dim = t.d
         arr = np.array(c_as_vector(t))
@@ -559,7 +559,7 @@ cdef class Expression: #{{{
     cpdef value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
-        if recalculate: self.cg().forward()
+        if recalculate: self.cg().forward(self.vindex)
         t = self.cgp().get_value(self.vindex)
         if t.d.ndims() == 2:
             return self.npvalue()
@@ -570,8 +570,8 @@ cdef class Expression: #{{{
     # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
     cpdef forward(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg().forward()
-        else: self.cg().inc_forward()
+        if recalculate: self.cg().forward(self.vindex)
+        else: self.cg().inc_forward(self.vindex)
 
     cpdef backward(self):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
