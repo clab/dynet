@@ -1,4 +1,4 @@
-from pycnn import *
+from dynet import *
 
 train_sentence = [('the','D'), ('dog','N'), ('walks','V')]
 

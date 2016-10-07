@@ -1,4 +1,4 @@
-import pycnn as pc
+import dynet as pc
 import random
 
 EOS = "<EOS>"

@@ -1,4 +1,4 @@
-from pycnn import *
+from dynet import *
 
 #xsent = True
 xsent = False
