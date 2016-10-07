@@ -29,8 +29,8 @@ import os.path
 #  - embedcl
 #  - embed/nlm -- negative sampling?
 
-from pycnn cimport *
-cimport pycnn
+from dynet cimport *
+cimport dynet
 
 
 cdef init(random_seed=None):
@@ -42,10 +42,10 @@ cdef init(random_seed=None):
         c_argv[idx] = s
 
     if random_seed is None:
-        pycnn.initialize(argc,c_argv, 0)
+        dynet.initialize(argc,c_argv, 0)
     else:
         if random_seed == 0: random_seed = 1
-        pycnn.initialize(argc,c_argv, random_seed)
+        dynet.initialize(argc,c_argv, random_seed)
     free(c_argv)
 
 init() # TODO: allow different random seeds
@@ -392,7 +392,7 @@ cdef class ComputationGraph:
     cdef list _inputs
     cdef int _cg_version
     def __cinit__(self, int guard=0):
-        if guard != SECRET: raise RuntimeError("Do not instantiate ComputationGraph directly. Use pycnn.cg()")
+        if guard != SECRET: raise RuntimeError("Do not instantiate ComputationGraph directly. Use dynet.renew_cg()")
         self.thisptr = new CComputationGraph()
         self._inputs = []
         self._cg_version = 0
