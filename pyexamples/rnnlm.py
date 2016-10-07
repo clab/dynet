@@ -1,10 +1,10 @@
-from pycnn import *
+from dynet import *
 import time
 import random
 
 LAYERS = 2
-INPUT_DIM = 50  #256
-HIDDEN_DIM = 50  #1024
+INPUT_DIM = 256 #50  #256
+HIDDEN_DIM = 256 # 50  #1024
 VOCAB_SIZE = 0
 
 from collections import defaultdict

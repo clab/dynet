@@ -1,6 +1,6 @@
-import gpycnn as G
+import _gdynet as G
 print 
-import pycnn as C
+import _dynet as C
 
 cm = C.Model()
 gm = G.Model()

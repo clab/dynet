@@ -1,4 +1,4 @@
-from pycnn import *
+from dynet import *
 from collections import Counter
 import random
 

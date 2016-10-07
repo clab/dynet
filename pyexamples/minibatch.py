@@ -1,4 +1,4 @@
-from pycnn import *
+from dynet import *
 import numpy as np
 
 m = Model()

@@ -1,5 +1,5 @@
 # a version rnnlm.py using the transduce() interface.
-from pycnn import *
+from dynet import *
 import time
 import random
 
