@@ -23,7 +23,7 @@ cd cnn
 hg clone https://bitbucket.org/eigen/eigen/
 ```
 
-We also need to make sure the `chython` module is installed.
+We also need to make sure the `cython` module is installed.
 (you can replace `pip` with your favorite package manager, such as `conda`, or install within a virtual environment)
 ```bash
 pip install cython
@@ -96,7 +96,7 @@ model = Model()
 ```
 
 ## Installing with GPU support
-## Currently unsuperted. The GPU support instructions need some revisions.
+## Currently unsupported. The GPU support instructions need some revisions.
 
 For installing on a computer with GPU, first install CUDA.
 Here, we assume CUDA is installed in `/usr/local/cuda-7.5`
