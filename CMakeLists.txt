@@ -1,9 +1,9 @@
-project(cnn)
+project(dynet)
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-# CNN uses Eigen which exploits modern CPU architectures. To get the
+# DYNET uses Eigen which exploits modern CPU architectures. To get the
 # best possible performance, the following are recommended:
 #   1. use very recent versions of gcc or Clang to build
 #   2. use very recent versions of Eigen (ideally the dev version)
@@ -117,7 +117,7 @@ set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_subdirectory(cnn)
+add_subdirectory(dynet)
 add_subdirectory(tests)
 add_subdirectory(examples)
 add_subdirectory(tutorial)

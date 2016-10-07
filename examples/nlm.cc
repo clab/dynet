@@ -1,8 +1,8 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/timing.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/timing.h"
+#include "dynet/expr.h"
 
 #include <iostream>
 #include <fstream>
@@ -10,11 +10,11 @@
 #include <algorithm>
 
 using namespace std;
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
   unsigned CONTEXT = 3;
   unsigned DIM = 100;

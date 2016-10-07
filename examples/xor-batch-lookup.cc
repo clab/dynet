@@ -1,8 +1,8 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/gpu-ops.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/gpu-ops.h"
+#include "dynet/expr.h"
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
@@ -10,11 +10,11 @@
 #include <fstream>
 
 using namespace std;
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;

@@ -1,12 +1,12 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/timing.h"
-#include "cnn/rnn.h"
-#include "cnn/gru.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/timing.h"
+#include "dynet/rnn.h"
+#include "dynet/gru.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 
 #include <algorithm>
 #include <iostream>
@@ -15,7 +15,7 @@
 #include <cstdlib>
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 
 unsigned LAYERS = 1;
 unsigned CODE_DIM = 64;
@@ -30,7 +30,7 @@ unsigned VOCAB_SIZE = 0;
 unsigned DURATION_DIM = 8;
 
 bool eval = false;
-cnn::Dict d;
+dynet::Dict d;
 int kNONE;
 int kSOW;
 int kEOW;
@@ -216,7 +216,7 @@ struct BiCharLSTM {
 };
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;

@@ -1,5 +1,5 @@
 The code that computes the l2 norm of the gradient is going to need
-scratch space on every device that CNN is using that has a parameter.
+scratch space on every device that DYNET is using that has a parameter.
 1) devices should know whether they have parameters/gradients
 
 alignment code is hidden away. it's all hard coded, but it looks like

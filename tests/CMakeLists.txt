@@ -6,25 +6,25 @@ include_directories (${TEST_SOURCE_DIR}/src
 add_definitions (-DBOOST_TEST_DYN_LINK)
 
 # Sources:
-set(test_cnn_SRCS
+set(test_dynet_SRCS
     test-nodes.cc
     test-trainers.cc
 )
 
-add_executable (test-cnn test-cnn.cc ${test_cnn_SRCS})
+add_executable (test-dynet test-dynet.cc ${test_dynet_SRCS})
 
 if (WITH_CUDA_BACKEND)
-  target_link_libraries (test-cnn gcnn ${LIBS}
+  target_link_libraries (test-dynet gdynet ${LIBS}
                          ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
                          )
-  add_dependencies(test-cnn cnncuda)
-  target_link_libraries(test-cnn cnncuda)
-  CUDA_ADD_CUBLAS_TO_TARGET(test-cnn)
+  add_dependencies(test-dynet dynetcuda)
+  target_link_libraries(test-dynet dynetcuda)
+  CUDA_ADD_CUBLAS_TO_TARGET(test-dynet)
 else()
-  target_link_libraries (test-cnn cnn ${LIBS}
+  target_link_libraries (test-dynet dynet ${LIBS}
                          ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
                          )
 endif (WITH_CUDA_BACKEND)
 
-add_test(test-cnn test-cnn)
+add_test(test-dynet test-dynet)
 

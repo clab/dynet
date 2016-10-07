@@ -21,28 +21,28 @@ ext_cpu = Extension(
         "_dynet",                 # name of extension
         ["dynet.pyx"],           # filename of our Pyrex/Cython source
         language="c++",              # this causes Pyrex/Cython to create C++ source
-        include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main cnn directory.
+        include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
-        libraries=['cnn'],             # ditto
-        library_dirs=[".","${PROJECT_BINARY_DIR}/cnn/"],
-        #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
+        libraries=['dynet'],             # ditto
+        library_dirs=[".","${PROJECT_BINARY_DIR}/dynet/"],
+        #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
-        runtime_library_dirs=["${PROJECT_BINARY_DIR}/cnn/"],
+        runtime_library_dirs=["${PROJECT_BINARY_DIR}/dynet/"],
         )
 
 ext_gpu = Extension(
         "_gdynet",                 # name of extension
         ["gdynet.pyx"],           # filename of our Pyrex/Cython source
         language="c++",              # this causes Pyrex/Cython to create C++ source
-        include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main cnn directory.
+        include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
-        libraries=['gcnn','cnncuda','cublas'],             # ditto
-        library_dirs=[".","${PROJECT_BINARY_DIR}/cnn/","${CUDA_CUBLAS_LIB}"],
-        #extra_link_args=["-L/home/yogo/Vork/Research/cnn/cnn/build/cnn"],       # if needed
+        libraries=['gdynet','dynetcuda','cublas'],             # ditto
+        library_dirs=[".","${PROJECT_BINARY_DIR}/dynet/","${CUDA_CUBLAS_LIB}"],
+        #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
-        runtime_library_dirs=["${PROJECT_BINARY_DIR}/cnn/"],
+        runtime_library_dirs=["${PROJECT_BINARY_DIR}/dynet/"],
         )
 
 TARGET = [ext_cpu]

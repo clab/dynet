@@ -7,7 +7,7 @@ import numpy as np
 import cPickle as pickle
 import os.path
 # TODO:
-#  - set random seed (in CNN)
+#  - set random seed (in DYNET)
 #  - better input / output support
 #    WORKS, but need to be unified? for example, why "pick" takes a pointer to int, and "squared_distance" takes an expression?
 #  - load embeddings file
@@ -218,10 +218,10 @@ cdef class Model: # {{{
         return pp
 
     def save_all(self, string fname):
-        save_cnn_model(fname, self.thisptr)
+        save_dynet_model(fname, self.thisptr)
 
     cdef load_all(self, string fname):
-        load_cnn_model(fname, self.thisptr)
+        load_dynet_model(fname, self.thisptr)
 
     cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
         # would be nicer to have polymorphism/dispatch-by-type
@@ -448,7 +448,7 @@ cdef class ComputationGraph:
     cpdef void revert(self):
         self.thisptr.revert()
 
-    # CNN handles changing inputs keeping pointers to memoty locations.
+    # DYNET handles changing inputs keeping pointers to memoty locations.
     # Because of python's memory management, objects that wrap such pointers
     # must be registered in a central location. This location would be the
     # computation graph.
@@ -501,7 +501,7 @@ cdef class Expression: #{{{
     #cdef CComputationGraph* cg
     # cg is a singleton, so there is no need to keep it inside the expression.
     # not keeping cg() in the expression will preserve memory.
-    # if CNN comes to support multiple computation graphs, this will need to change.
+    # if DYNET comes to support multiple computation graphs, this will need to change.
     cdef inline ComputationGraph cg(self):
         return cg()
     cdef inline CComputationGraph* cgp(self):

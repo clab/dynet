@@ -1,12 +1,12 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/timing.h"
-#include "cnn/rnn.h"
-#include "cnn/gru.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/timing.h"
+#include "dynet/rnn.h"
+#include "dynet/gru.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 #include "getpid.h"
 
 #include <iostream>
@@ -18,7 +18,7 @@
 #include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 
 unsigned LAYERS = 2;
 unsigned INPUT_DIM = 8;  //256
@@ -26,7 +26,7 @@ unsigned HIDDEN_DIM = 24;  // 1024
 unsigned BATCH_SIZE = 4;
 unsigned VOCAB_SIZE = 0;
 
-cnn::Dict d;
+dynet::Dict d;
 int kSOS;
 int kEOS;
 
@@ -118,7 +118,7 @@ struct CompareLen {
 };
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;

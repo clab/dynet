@@ -1,12 +1,12 @@
-#include <cnn/cnn.h>
-#include <cnn/expr.h>
-#include <cnn/training.h>
-#include <cnn/grad-check.h>
+#include <dynet/dynet.h>
+#include <dynet/expr.h>
+#include <dynet/training.h>
+#include <dynet/grad-check.h>
 #include <boost/test/unit_test.hpp>
 #include <stdexcept>
 
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 using namespace std;
 
 
@@ -14,12 +14,12 @@ struct TrainerTest {
   TrainerTest() {
     // initialize if necessary
     if(default_device == nullptr) {
-      for (auto x : {"TrainerTest", "--cnn-mem", "10"}) {
+      for (auto x : {"TrainerTest", "--dynet-mem", "10"}) {
         av.push_back(strdup(x));
       }
       char **argv = &av[0];
       int argc = av.size();
-      cnn::initialize(argc, argv);
+      dynet::initialize(argc, argv);
     }
     ones_vals = {1.f,1.f,1.f};
     param_vals = {1.1f,-2.2f,3.3f};
@@ -45,11 +45,11 @@ struct TrainerTest {
 BOOST_FIXTURE_TEST_SUITE(trainer_test, TrainerTest);
 
 BOOST_AUTO_TEST_CASE( simple_sgd_direction ) {
-  cnn::Model mod;
-  cnn::Parameter param = mod.add_parameters({3});
+  dynet::Model mod;
+  dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
   SimpleSGDTrainer trainer(&mod); 
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
@@ -61,11 +61,11 @@ BOOST_AUTO_TEST_CASE( simple_sgd_direction ) {
 }
 
 BOOST_AUTO_TEST_CASE( momentum_sgd_direction ) {
-  cnn::Model mod;
-  cnn::Parameter param = mod.add_parameters({3});
+  dynet::Model mod;
+  dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
   MomentumSGDTrainer trainer(&mod); 
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
@@ -77,11 +77,11 @@ BOOST_AUTO_TEST_CASE( momentum_sgd_direction ) {
 }
 
 BOOST_AUTO_TEST_CASE( adagrad_direction ) {
-  cnn::Model mod;
-  cnn::Parameter param = mod.add_parameters({3});
+  dynet::Model mod;
+  dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
   AdagradTrainer trainer(&mod); 
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
@@ -93,11 +93,11 @@ BOOST_AUTO_TEST_CASE( adagrad_direction ) {
 }
 
 BOOST_AUTO_TEST_CASE( adadelta_direction ) {
-  cnn::Model mod;
-  cnn::Parameter param = mod.add_parameters({3});
+  dynet::Model mod;
+  dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
   AdadeltaTrainer trainer(&mod); 
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;
@@ -109,11 +109,11 @@ BOOST_AUTO_TEST_CASE( adadelta_direction ) {
 }
 
 BOOST_AUTO_TEST_CASE( adam_direction ) {
-  cnn::Model mod;
-  cnn::Parameter param = mod.add_parameters({3});
+  dynet::Model mod;
+  dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
   AdamTrainer trainer(&mod); 
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
   Expression z = y*x;

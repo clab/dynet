@@ -1,14 +1,14 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/timing.h"
-#include "cnn/rnn.h"
-#include "cnn/gru.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
-#include "cnn/cfsm-builder.h"
-#include "cnn/hsm-builder.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/timing.h"
+#include "dynet/rnn.h"
+#include "dynet/gru.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
+#include "dynet/cfsm-builder.h"
+#include "dynet/hsm-builder.h"
 #include "../examples/getpid.h"
 
 #include <iostream>
@@ -23,7 +23,7 @@
 #include <boost/regex.hpp>
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 
 unsigned LAYERS = 0;
 unsigned INPUT_DIM = 0;
@@ -33,7 +33,7 @@ float DROPOUT = 0;
 bool SAMPLE = false;
 SoftmaxBuilder* cfsm = nullptr;
 
-cnn::Dict d;
+dynet::Dict d;
 int kSOS;
 int kEOS;
 
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
   cerr << "COMMAND LINE:"; 
   for (unsigned i = 0; i < static_cast<unsigned>(argc); ++i) cerr << ' ' << argv[i];
   cerr << endl;
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
   po::variables_map conf;
   InitCommandLine(argc, argv, &conf);
   kSOS = d.convert("<s>");

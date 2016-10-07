@@ -1,8 +1,8 @@
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/expr.h"
-#include "cnn/lstm.h"
-#include "cnn/mp.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/expr.h"
+#include "dynet/lstm.h"
+#include "dynet/mp.h"
 #include "rnnlm.h"
 #include <boost/algorithm/string.hpp>
 
@@ -15,9 +15,9 @@ TODO:
 */
 
 using namespace std;
-using namespace cnn;
-using namespace cnn::expr;
-using namespace cnn::mp;
+using namespace dynet;
+using namespace dynet::expr;
+using namespace dynet::mp;
 using namespace boost::interprocess;
 
 typedef vector<int> Datum;
@@ -37,15 +37,15 @@ vector<Datum> ReadData(string filename) {
 }
 
 template<class T, class D>
-class Learner : public ILearner<D, cnn::real> {
+class Learner : public ILearner<D, dynet::real> {
 public:
   explicit Learner(RNNLanguageModel<T>& rnnlm, unsigned data_size) : rnnlm(rnnlm) {}
   ~Learner() {}
 
-  cnn::real LearnFromDatum(const D& datum, bool learn) {
+  dynet::real LearnFromDatum(const D& datum, bool learn) {
     ComputationGraph cg;
     Expression loss_expr = rnnlm.BuildLMGraph(datum, cg);
-    cnn::real loss = as_scalar(cg.forward(loss_expr));
+    dynet::real loss = as_scalar(cg.forward(loss_expr));
     if (learn) {
       cg.backward(loss_expr);
     }
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
   unsigned dev_frequency = 5000;
   unsigned report_frequency = 10;
 
-  cnn::initialize(argc, argv, true);
+  dynet::initialize(argc, argv, true);
 
   Model model;
   SimpleSGDTrainer sgd(&model, 0.2);

@@ -1,12 +1,12 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/timing.h"
-#include "cnn/rnn.h"
-#include "cnn/gru.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/timing.h"
+#include "dynet/rnn.h"
+#include "dynet/gru.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 
 #include <algorithm>
 #include <iostream>
@@ -23,7 +23,7 @@
 
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 
 namespace po = boost::program_options;
 
@@ -74,7 +74,7 @@ struct SymbolEmbedding {
   SymbolEmbedding(Model& m, unsigned n, unsigned dim) {
     p_labels = m.add_lookup_parameters(n, {dim});
   }
-  void load_embedding(cnn::Dict& d, string pretrain_path){
+  void load_embedding(dynet::Dict& d, string pretrain_path){
     ifstream fin(pretrain_path);  
        string s;
        while( getline(fin,s) )
@@ -304,9 +304,9 @@ struct SegmentalRNN {
   DurationEmbedding* de;
   BiTrans<Builder> bt;
   SegEmbedBi<Builder> seb;
-  cnn::Dict d;
-  cnn::Dict td;
-  explicit SegmentalRNN(Model& model, cnn::Dict& d_, cnn::Dict& td_) :
+  dynet::Dict d;
+  dynet::Dict td;
+  explicit SegmentalRNN(Model& model, dynet::Dict& d_, dynet::Dict& td_) :
       bt(model), seb(model) {
     d = d_;
     td = td_;
@@ -705,7 +705,7 @@ struct SegmentalRNN {
 };
 
 // a a 0 1 a ||| O:1 O:1 N:2 O:1
-pair<vector<int>,vector<pair<int,int>>> ParseTrainingInstance(const std::string& line, cnn::Dict& d, cnn::Dict& td, bool test_only = false) {
+pair<vector<int>,vector<pair<int,int>>> ParseTrainingInstance(const std::string& line, dynet::Dict& d, dynet::Dict& td, bool test_only = false) {
   std::istringstream in(line);
   std::string word;
   std::string sep = "|||";
@@ -755,8 +755,8 @@ bool inline check_max_seg(const vector<pair<int,int>>& yz, int max_seg_len = 0){
 
 double evaluate(vector<vector<pair<int,int>>>& yz_preds,
                 vector<vector<pair<int,int>>>& yz_golds,
-                cnn::Dict& d,
-                cnn::Dict& td){
+                dynet::Dict& d,
+                dynet::Dict& td){
   assert(yz_preds.size() == yz_golds.size());
   int p_correct = 0;
   int r_correct = 0;
@@ -859,8 +859,8 @@ void test_only(SegmentalRNN<LSTMBuilder>& segrnn,
 }
 
 void read_file(string file_path,
-                     cnn::Dict& d,
-                     cnn::Dict& td,
+                     dynet::Dict& d,
+                     dynet::Dict& td,
                      vector<pair<vector<int>,vector<pair<int,int>>>>& read_set,
                      bool test_only = false)
 {
@@ -878,8 +878,8 @@ void read_file(string file_path,
 }
 
 void save_models(string model_file_prefix,
-                    cnn::Dict& d,
-                    cnn::Dict& td,
+                    dynet::Dict& d,
+                    dynet::Dict& td,
                     Model& model){
   cerr << "saving models..." << endl;
 
@@ -917,8 +917,8 @@ void load_models(string model_file_prefix,
 }
 
 void load_dicts(string model_file_prefix,
-                 cnn::Dict& d,
-                 cnn::Dict& td)
+                 dynet::Dict& d,
+                 dynet::Dict& td)
 {
   cerr << "loading dicts..." << endl;
   string f_d_name = model_file_prefix + ".dict";
@@ -951,8 +951,8 @@ unsigned int edit_distance(const std::string& s1, const std::string& s2)
 
 double evaluate_partial(vector<vector<pair<int,int>>>& yz_preds,
                        vector<vector<pair<int,int>>>& yz_golds,
-                       cnn::Dict& d,
-                       cnn::Dict& td){
+                       dynet::Dict& d,
+                       dynet::Dict& td){
   assert(yz_preds.size() == yz_golds.size());
 
   int total_length_gold = 0;
@@ -1010,7 +1010,7 @@ double predict_and_evaluate(SegmentalRNN<LSTMBuilder>& segrnn,
 
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
   int test_max_seg_len;
   int max_consider_sentence_len;
   unsigned dev_every_i_reports;
@@ -1063,8 +1063,8 @@ int main(int argc, char** argv) {
     }
 
     // create two dictionaries
-    cnn::Dict d;
-    cnn::Dict td;
+    dynet::Dict d;
+    dynet::Dict td;
     vector<pair<vector<int>,vector<pair<int,int>>>> training, dev, test;
     read_file(vm["train_file"].as<string>(), d, td, training);
 
@@ -1165,8 +1165,8 @@ int main(int argc, char** argv) {
     use_pretrained_embeding = false;
     use_dropout = false;
     Model model;
-    cnn::Dict d;
-    cnn::Dict td;
+    dynet::Dict d;
+    dynet::Dict td;
     load_dicts(vm["model_file_prefix"].as<string>(), d, td);
     SegmentalRNN<LSTMBuilder> segrnn(model, d, td);
     load_models(vm["model_file_prefix"].as<string>(), model);

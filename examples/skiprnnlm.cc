@@ -1,12 +1,12 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/timing.h"
-#include "cnn/rnn.h"
-#include "cnn/gru.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/timing.h"
+#include "dynet/rnn.h"
+#include "dynet/gru.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 
 #include "easylogging++.h"
 
@@ -19,7 +19,7 @@
 #include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -28,7 +28,7 @@ unsigned INPUT_DIM = 8;  //256
 unsigned HIDDEN_DIM = 24;  // 1024
 unsigned VOCAB_SIZE = 0;
 
-cnn::Dict d;
+dynet::Dict d;
 int kSOS;
 int kEOS;
 
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     defaultConf.set(el::Level::Info, el::ConfigurationType::Format, "%datetime{%h:%m:%s} %level %msg");
     el::Loggers::reconfigureLogger("default", defaultConf);
 
-    cnn::initialize(argc, argv);
+    dynet::initialize(argc, argv);
     if (argc != 3 && argc != 4) {
         LOG(INFO) << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
         return 1;

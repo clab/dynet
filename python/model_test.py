@@ -1,7 +1,7 @@
 """
 Tests for model saving and loading, including for user-defined models.
 """
-from pycnn import *
+from pydynet import *
 import numpy
 import os
 
