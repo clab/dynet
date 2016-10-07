@@ -1,9 +1,9 @@
-#include "cnn/timing.h"
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/expr.h"
-#include "cnn/grad-check.h"
+#include "dynet/timing.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/expr.h"
+#include "dynet/grad-check.h"
 
 #include <sstream>
 #include <string>
@@ -12,8 +12,8 @@
 #include <fstream>
 
 using namespace std;
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 
 struct TrainingInstance {
   TrainingInstance() {}
@@ -107,7 +107,7 @@ struct MLCBuilder {
 };
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
   if (argc != 5) {
     cerr << "Usage: " << argv[0] << " x.train.txt y.train.txt x.dev.txt y.dev.txt\n";

@@ -1,25 +1,25 @@
-# Installing the pyCNN module.
+# Installing the Python DyNet module.
 
 (for instructions on installing on a computer with GPU, see below)
 
-pyCNN is currently only supported under python 2.
+Python bindings to DyNet are currently only supported under python 2.
 
-First, get CNN:
+First, get DYNET:
 
 ```bash
 cd $HOME
-mkdir cnn
-git clone https://github.com/clab/cnn.git
-cd cnn
-git submodule init # To be consistent with CNN's installation instructions.
-git submodule update # To be consistent with CNN's installation instructions.
+mkdir dynet
+git clone https://github.com/clab/dynet.git
+cd dynet
+git submodule init # To be consistent with DyNet's installation instructions.
+git submodule update # To be consistent with DyNet's installation instructions.
 ```
 
 Then get Eigen:
 
 ```bash
 cd $HOME
-cd cnn
+cd dynet
 hg clone https://bitbucket.org/eigen/eigen/
 ```
 
@@ -29,18 +29,18 @@ We also need to make sure the `cython` module is installed.
 pip install cython
 ```
 
-To simplify the following steps, we can set a bash variable to hold where we have saved the main directories of `cnn` and `eigen`. In case you have gotten `ccn` and `eigen` differently from the instructions above and saved them in different location(s), these variables will be helpful:
+To simplify the following steps, we can set a bash variable to hold where we have saved the main directories of DyNet and Eigen. In case you have gotten DyNet and Eigen differently from the instructions above and saved them in different location(s), these variables will be helpful:
 
 ```bash
-PATH_TO_CNN=$HOME/cnn/cnn/
-PATH_TO_EIGEN=$HOME/cnn/eigen/
+PATH_TO_DYNET=$HOME/dynet/dynet/
+PATH_TO_EIGEN=$HOME/dynet/eigen/
 ```
 
-Compile CNN.
+Compile DyNet.
 (modify the code below to point to the correct boost location. Note the addition of the -DPYTHON flag.)
 
 ```bash
-cd $PATH_TO_CNN
+cd $PATH_TO_DYNET
 PATH_TO_PYTHON=`which python`
 mkdir build
 cd build
@@ -48,25 +48,25 @@ cmake .. -DEIGEN3_INCLUDE_DIR=$PATH_TO_EIGEN -DBOOST_ROOT=$HOME/.local/boost_1_5
 make -j 2
 ```
 
-Assuming that the `cmake` command found all the needed libraries and didn't fail, the `make` command will take a while, and compile cnn as well as the python bindings.
+Assuming that the `cmake` command found all the needed libraries and didn't fail, the `make` command will take a while, and compile dynet as well as the python bindings.
 
-You now have a working python binding inside of `build/pycnn`.
+You now have a working python binding inside of `build/dynet`.
 To verify this is working:
 
 ```bash
-cd $PATH_TO_CNN/build/pycnn
+cd $PATH_TO_DYNET/build/dynet
 python
 ```
 then, within python:
 ```bash
-import pycnn as pc
+import dynet as pc
 print pc.__version__
 model = pc.Model()
 ```
 
 In order to install the module so that it is accessible from everywhere, run the following:
 ```bash
-cd $PATH_TO_CNN/build/pycnn
+cd $PATH_TO_DYNET/build/dynet
 python setup.py install --user
 ```
 
@@ -74,16 +74,16 @@ python setup.py install --user
  To install the module to the system site-packages (for all users), run `python setup.py install` without this switch)
 
 
-You should now have a working python binding (the pycnn module).
+You should now have a working python binding (the dynet module).
 
-Note however that the installation relies on the compiled cnn library being in `$PATH_TO_CNN/build/cnn`,
+Note however that the installation relies on the compiled dynet library being in `$PATH_TO_DYNET/build/dynet`,
 so make sure not to move it from there.
 
 Now, check that everything works:
 
 ```bash
 # check that it works:
-cd $PATH_TO_CNN
+cd $PATH_TO_DYNET
 cd pyexamples
 python xor.py
 python rnnlm.py rnnlm.py
@@ -91,7 +91,7 @@ python rnnlm.py rnnlm.py
 
 Alternatively, if the following script works for you, then your installation is likely to be working:
 ```
-from pycnn import *
+from dynet import *
 model = Model()
 ```
 
@@ -101,11 +101,11 @@ model = Model()
 For installing on a computer with GPU, first install CUDA.
 Here, we assume CUDA is installed in `/usr/local/cuda-7.5`
 
-There are two modules, `pycnn` which is the regular CPU module, and `gpycnn` which is the GPU
+There are two modules, `dynet` which is the regular CPU module, and `gdynet` which is the GPU
 module. You can import either of them, these are two independent modules. The GPU support
 is incomplete: some operations (i.e. `hubber_distance`) are not available for the GPU.
 
-First step is to build the CNN modules.
+First step is to build the DyNet modules.
 Checkout and go to the `build` directory (same instructions as above). Then:
 
 To build a CPU version on a computer with CUDA:
@@ -122,23 +122,23 @@ make -j 4
 
 Now, build the python modules (as above, we assume cython is installed):
 
-The GPU module (gpycnn):
+The GPU module (gdynet):
 ```bash
-cd ../pycnn
-make gpycnn.so
+cd ../dynet
+make gdynet.so
 make ginstall
 ```
 
-The CPU module (pycnn):
+The CPU module (dynet):
 ```bash
-cd ../pycnn
-make pycnn.so
+cd ../dynet
+make dynet.so
 make install
 ```
 
 Add the following to your env:
-`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PATH_TO_CNN/pycnn`
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PATH_TO_DYNET/dynet`
 
-Once both the `pycnn` and `gpycnn` are installed, run `python ../pyexamples/cpu_vs_gpu.py` for a small timing example.
+Once both the `dynet` and `gdynet` are installed, run `python ../pyexamples/cpu_vs_gpu.py` for a small timing example.
 
 

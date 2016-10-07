@@ -1,11 +1,11 @@
-# pycnn API changes for v2
+# pydynet API changes for v2
 
 * Model no longer holds named parameters
 * checkpoint / revert mechanism for computation graph (useful for beam search etc)
 
 ## Model no longer holds named parameters
 
-The major API change in v2 of pycnn is in the `Model` class.
+The major API change in v2 of pydynet is in the `Model` class.
 This change breaks backward compatibility, but is easy to adapt to.
 
 The `Model` class no longer holds named parameters. This is done in order
@@ -53,7 +53,7 @@ For example:
 ```python
 
 # saving:
-from pycnn import *
+from pydynet import *
 m = Model()
 W = m.add_parameters((100,100))
 lb = LSTMBuilder(1, 100, 100, m) # this also adds parameters to the model
@@ -79,7 +79,7 @@ Notice however that there is no need to specify the sizes etc, as this is handle
 
 ```python
 # saving:
-from pycnn import *
+from pydynet import *
 m = Model()
 W = m.add_parameters((100,100))
 lb = LSTMBuilder(1, 100, 100, m) # this also adds parameters to the model
@@ -97,7 +97,7 @@ In order to make use of "the new way", the items that are being passed in the li
 
 * be of type `Parameters` or `LookupParameters` (the return types of `add_parameters` or `add_lookup_parameters`).
 * be of a built-in "complex" builders such as `LSTMBuilder` or `GRUBuilder` that add parameters to the model.
-* user defied classes that extend to the new `pycnn.Saveable` class and implement the required interface.
+* user defied classes that extend to the new `pydynet.Saveable` class and implement the required interface.
 
 
 The `Saveable` class is used for easy creation of user-defined "sub networks" that can be saved and loaded as part of the model saving mechanism.

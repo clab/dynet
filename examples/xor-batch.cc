@@ -1,8 +1,8 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/gpu-ops.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/gpu-ops.h"
+#include "dynet/expr.h"
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
@@ -10,11 +10,11 @@
 #include <fstream>
 
 using namespace std;
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
@@ -49,10 +49,10 @@ int main(int argc, char** argv) {
   // set x_values to change the inputs to the network
   Dim x_dim({2}, 4), y_dim({1}, 4);
   cerr << "x_dim=" << x_dim << ", y_dim=" << y_dim << endl;
-  vector<cnn::real> x_values = {1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0};
+  vector<dynet::real> x_values = {1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0};
   Expression x = input(cg, x_dim, &x_values);
   // set y_values expressing the output
-  vector<cnn::real> y_values = {-1.0, 1.0, 1.0, -1.0};
+  vector<dynet::real> y_values = {-1.0, 1.0, 1.0, -1.0};
   Expression y = input(cg, y_dim, &y_values);
 
   Expression h = tanh(W*x + b);

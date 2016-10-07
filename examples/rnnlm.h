@@ -1,20 +1,20 @@
-#include "cnn/cnn.h"
-#include "cnn/expr.h"
-#include "cnn/dict.h"
-#include "cnn/lstm.h"
+#include "dynet/dynet.h"
+#include "dynet/expr.h"
+#include "dynet/dict.h"
+#include "dynet/lstm.h"
 
 #include <vector>
 
 using namespace std;
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 
 unsigned LAYERS = 2;
 unsigned INPUT_DIM = 8;  //256
 unsigned HIDDEN_DIM = 24;  // 1024
 unsigned VOCAB_SIZE = 5500;
 
-cnn::Dict d;
+dynet::Dict d;
 int kSOS;
 int kEOS;
 

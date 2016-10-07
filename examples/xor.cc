@@ -1,8 +1,8 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/gpu-ops.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/gpu-ops.h"
+#include "dynet/expr.h"
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
@@ -10,11 +10,11 @@
 #include <fstream>
 
 using namespace std;
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
   // parameters
   const unsigned ITERATIONS = 30;
@@ -45,9 +45,9 @@ int main(int argc, char** argv) {
   Expression V = parameter(cg, p_V);
   Expression a = parameter(cg, p_a);
 
-  vector<cnn::real> x_values(2);  // set x_values to change the inputs to the network
+  vector<dynet::real> x_values(2);  // set x_values to change the inputs to the network
   Expression x = input(cg, {2}, &x_values);
-  cnn::real y_value;  // set y_value to change the target output
+  dynet::real y_value;  // set y_value to change the target output
   Expression y = input(cg, &y_value);
 
   Expression h = tanh(W*x + b);

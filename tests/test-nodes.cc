@@ -1,11 +1,11 @@
-#include <cnn/cnn.h>
-#include <cnn/expr.h>
-#include <cnn/grad-check.h>
+#include <dynet/dynet.h>
+#include <dynet/expr.h>
+#include <dynet/grad-check.h>
 #include <boost/test/unit_test.hpp>
 #include <stdexcept>
 
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 using namespace std;
 
 
@@ -13,12 +13,12 @@ struct NodeTest {
   NodeTest() {
     // initialize if necessary
     if(default_device == nullptr) {
-      for (auto x : {"NodeTest", "--cnn-mem", "10"}) {
+      for (auto x : {"NodeTest", "--dynet-mem", "10"}) {
         av.push_back(strdup(x));
       }
       char **argv = &av[0];
       int argc = av.size();
-      cnn::initialize(argc, argv);
+      dynet::initialize(argc, argv);
     }
 
     ones3_vals = {1.f,1.f,1.f};
@@ -75,8 +75,8 @@ struct NodeTest {
 
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
-  cnn::Model mod;
-  cnn::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1;
+  dynet::Model mod;
+  dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1;
 };
 
 // define the test suite
@@ -85,7 +85,7 @@ BOOST_FIXTURE_TEST_SUITE(node_test, NodeTest);
 
 // Expression operator-(const Expression& x);
 BOOST_AUTO_TEST_CASE( negate_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = -x1;
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE( negate_gradient ) {
 
 // Expression operator+(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( add_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = x1+x2;
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE( add_gradient ) {
 
 // Expression logsumexp(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( logsumexp_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param_scalar1);
   Expression x2 = parameter(cg, param_scalar2);
   Expression z = logsumexp({x1, x2});
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE( logsumexp_gradient ) {
 
 // Expression operator+(const Expression& x, real y);
 BOOST_AUTO_TEST_CASE( addscalar_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = x1+2.0;
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE( addscalar_gradient ) {
 
 // Expression operator+(real x, const Expression& y);
 BOOST_AUTO_TEST_CASE( scalaradd_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = 2.0+x1;
   Expression z =input(cg, {1,3}, ones3_vals) * y;
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE( scalaradd_gradient ) {
 
 // Expression operator-(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( subtract_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = x1+x2;
@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE( subtract_gradient ) {
 
 // Expression operator-(real x, const Expression& y);
 BOOST_AUTO_TEST_CASE( scalarsubtract_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = 2.0-x1;
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE( scalarsubtract_gradient ) {
 
 // Expression operator-(const Expression& x, real y);
 BOOST_AUTO_TEST_CASE( subtractscalar_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = x1-2.0;
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE( subtractscalar_gradient ) {
 
 // Expression operator*(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( multiply_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = x1*transpose(x2);
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE( multiply_gradient ) {
 
 // Expression operator*(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( multiply_batch_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression y = x1*transpose(x2);
@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE( multiply_batch_gradient ) {
 
 // Expression operator*(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( affine_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression scalar = parameter(cg, param_scalar1);
   Expression x2 = parameter(cg, param2);
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE( affine_gradient ) {
 
 // Expression operator*(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( affine_batch_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression scalar = parameter(cg, param_scalar1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE( affine_batch_gradient ) {
 
 // Expression operator*(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( affine_batch_col_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression scalar = parameter(cg, param_scalar1);
   Expression x2 = input(cg, Dim({1,3},2), batch_vals);
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE( affine_batch_col_gradient ) {
 
 // Expression operator*(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( affine_batch2_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = input(cg, Dim({1,3},2), batch_vals);
   Expression scalar = parameter(cg, param_scalar1);
   Expression x2 = parameter(cg, param2);
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE( affine_batch2_gradient ) {
 
 // Expression operator*(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( affine_batch3_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param_square1);
   Expression inp = input(cg, Dim({3},2), batch_vals);
@@ -241,7 +241,7 @@ BOOST_AUTO_TEST_CASE( affine_batch3_gradient ) {
 
 // Expression operator*(const Expression& x, float y);
 BOOST_AUTO_TEST_CASE( multiplyscalar_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = x1*2.0;
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -250,7 +250,7 @@ BOOST_AUTO_TEST_CASE( multiplyscalar_gradient ) {
 
 // inline Expression operator*(float y, const Expression& x) { return x * y; }
 BOOST_AUTO_TEST_CASE( scalarmultiply_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = 2.0*x1;
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE( scalarmultiply_gradient ) {
 
 // inline Expression operator/(const Expression& x, float y) { return x * (1.f / y); }
 BOOST_AUTO_TEST_CASE( dividescalar_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = x1/2.0;
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE( dividescalar_gradient ) {
 
 // Expression cdiv(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( cdiv_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = cdiv(x1, x2);
@@ -278,7 +278,7 @@ BOOST_AUTO_TEST_CASE( cdiv_gradient ) {
 
 // Expression cdiv(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( cdiv_batch_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression y = cdiv(x1, x2) + cdiv(x2, x1);
@@ -288,7 +288,7 @@ BOOST_AUTO_TEST_CASE( cdiv_batch_gradient ) {
 
 // Expression colwise_add(const Expression& x, const Expression& bias);
 BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = colwise_add(x1 * transpose(x2), x2);
@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
 
 // Expression concatenate_cols(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = concatenate_cols({x1, x2, x1});
@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
 
 // Expression concatenate(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( concatenate_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = transpose(parameter(cg, param1));
   Expression x2 = transpose(parameter(cg, param2));
   Expression y = concatenate({x1, x2, x1});
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE( concatenate_gradient ) {
 
 // Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 BOOST_AUTO_TEST_CASE( contract3d_1d_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression square1 = parameter(cg, param_square1);
   Expression cube1 = parameter(cg, param_cube1);
@@ -333,7 +333,7 @@ BOOST_AUTO_TEST_CASE( contract3d_1d_gradient ) {
 
 // Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
 BOOST_AUTO_TEST_CASE( contract3d_1d_1d_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression x3 = parameter(cg, param3);
@@ -346,7 +346,7 @@ BOOST_AUTO_TEST_CASE( contract3d_1d_1d_gradient ) {
 
 // Expression sqrt(const Expression& x);
 BOOST_AUTO_TEST_CASE( sqrt_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x3 = parameter(cg, param3);
   Expression y = sqrt(x3);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE( sqrt_gradient ) {
 
 // Expression erf(const Expression& x);
 BOOST_AUTO_TEST_CASE( erf_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = erf(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -364,7 +364,7 @@ BOOST_AUTO_TEST_CASE( erf_gradient ) {
 
 // Expression tanh(const Expression& x);
 BOOST_AUTO_TEST_CASE( tanh_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = tanh(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -373,7 +373,7 @@ BOOST_AUTO_TEST_CASE( tanh_gradient ) {
 
 // Expression exp(const Expression& x);
 BOOST_AUTO_TEST_CASE( exp_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = exp(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -382,7 +382,7 @@ BOOST_AUTO_TEST_CASE( exp_gradient ) {
 
 // Expression square(const Expression& x);
 BOOST_AUTO_TEST_CASE( square_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = square(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -391,7 +391,7 @@ BOOST_AUTO_TEST_CASE( square_gradient ) {
 
 // Expression cube(const Expression& x);
 BOOST_AUTO_TEST_CASE( cube_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = cube(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -400,7 +400,7 @@ BOOST_AUTO_TEST_CASE( cube_gradient ) {
 
 // Expression lgamma(const Expression& x);
 BOOST_AUTO_TEST_CASE( lgamma_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x2 = parameter(cg, param2);
   Expression y = lgamma(x2);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -409,7 +409,7 @@ BOOST_AUTO_TEST_CASE( lgamma_gradient ) {
 
 // Expression log(const Expression& x);
 BOOST_AUTO_TEST_CASE( log_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x3 = parameter(cg, param3);
   Expression y = log(x3);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE( log_gradient ) {
 
 // Expression logistic(const Expression& x);
 BOOST_AUTO_TEST_CASE( logistic_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = logistic(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE( logistic_gradient ) {
 
 // Expression rectify(const Expression& x);
 BOOST_AUTO_TEST_CASE( rectify_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = rectify(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -437,7 +437,7 @@ BOOST_AUTO_TEST_CASE( rectify_gradient ) {
 // Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 BOOST_AUTO_TEST_CASE( hinge_gradient ) {
   unsigned index = 0;
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression z = hinge(x1, index, 0.5);
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -446,7 +446,7 @@ BOOST_AUTO_TEST_CASE( hinge_gradient ) {
 // Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 BOOST_AUTO_TEST_CASE( hinge_batch_gradient ) {
   std::vector<unsigned> idx = {1,2};
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression z = sum_batches(hinge(x1+x2, idx, 2.f));
@@ -456,7 +456,7 @@ BOOST_AUTO_TEST_CASE( hinge_batch_gradient ) {
 // Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
 BOOST_AUTO_TEST_CASE( hingeptr_gradient ) {
   unsigned index = 0;
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression z = hinge(x1, &index, 0.5);
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -464,7 +464,7 @@ BOOST_AUTO_TEST_CASE( hingeptr_gradient ) {
 
 // Expression log_softmax(const Expression& x);
 BOOST_AUTO_TEST_CASE( log_softmax_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = log_softmax(x1);
   Expression z = input(cg, {1,3}, first_one_vals) * y;
@@ -473,7 +473,7 @@ BOOST_AUTO_TEST_CASE( log_softmax_gradient ) {
 
 // Expression log_softmax(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( log_softmax_batch_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression y = log_softmax(x1+x2);
@@ -484,7 +484,7 @@ BOOST_AUTO_TEST_CASE( log_softmax_batch_gradient ) {
 // Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 BOOST_AUTO_TEST_CASE( restricted_log_softmax_gradient ) {
   vector<unsigned> restriction = {0,1};
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x3 = parameter(cg, param3);
   Expression y = exp( log_softmax(x3, restriction) );
   Expression z = input(cg, {1,3}, first_one_vals) * y;
@@ -493,7 +493,7 @@ BOOST_AUTO_TEST_CASE( restricted_log_softmax_gradient ) {
 
 // Expression softmax(const Expression& x);
 BOOST_AUTO_TEST_CASE( softmax_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = log(softmax(x1));
   Expression z = input(cg, {1,3}, first_one_vals) * y;
@@ -502,7 +502,7 @@ BOOST_AUTO_TEST_CASE( softmax_gradient ) {
 
 // Expression softmax(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( softmax_batch_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression y = log(softmax(x1+x2));
@@ -512,7 +512,7 @@ BOOST_AUTO_TEST_CASE( softmax_batch_gradient ) {
 
 // Expression sparsemax(const Expression& x);
 BOOST_AUTO_TEST_CASE( sparsemax_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = sparsemax(x1);
   Expression z = input(cg, {1,3}, first_one_vals) * y;
@@ -522,7 +522,7 @@ BOOST_AUTO_TEST_CASE( sparsemax_gradient ) {
 // Expression sparsemax_loss(const Expression& x);
 BOOST_AUTO_TEST_CASE( sparsemax_loss_gradient ) {
   std::vector<unsigned> idxs(2); idxs[0] = 1; idxs[1] = 2;
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression z = sparsemax_loss(x1, idxs);
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -530,7 +530,7 @@ BOOST_AUTO_TEST_CASE( sparsemax_loss_gradient ) {
 
 // Expression softsign(const Expression& x);
 BOOST_AUTO_TEST_CASE( softsign_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = softsign(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -539,7 +539,7 @@ BOOST_AUTO_TEST_CASE( softsign_gradient ) {
 
 // Expression pow(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( pow_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x3 = parameter(cg, param3);
   Expression x_scalar1 = parameter(cg, param_scalar1);
   Expression y = pow(x3, x_scalar1);
@@ -549,7 +549,7 @@ BOOST_AUTO_TEST_CASE( pow_gradient ) {
 
 // Expression min(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( min_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = min(x1, x2);
@@ -559,7 +559,7 @@ BOOST_AUTO_TEST_CASE( min_gradient ) {
 
 // Expression max(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( max_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = max(x1, x2);
@@ -570,7 +570,7 @@ BOOST_AUTO_TEST_CASE( max_gradient ) {
 // TODO: Noise is random, so it cannot be tested simply?
 // // Expression noise(const Expression& x, real stddev);
 // BOOST_AUTO_TEST_CASE( noise_gradient ) {
-//   cnn::ComputationGraph cg;
+//   dynet::ComputationGraph cg;
 //   Expression x1 = parameter(cg, param1);
 //   Expression y = noise(x1, 0.5);
 //   input(cg, {1,3}, ones3_vals) * y;
@@ -580,7 +580,7 @@ BOOST_AUTO_TEST_CASE( max_gradient ) {
 // TODO: Dropout scales the gradients at training time, so they don't match.
 // // Expression dropout(const Expression& x, real p);
 // BOOST_AUTO_TEST_CASE( dropout_gradient ) {
-//   cnn::ComputationGraph cg;
+//   dynet::ComputationGraph cg;
 //   Expression x1 = parameter(cg, param1);
 //   Expression y = dropout(x1, 0.5);
 //   input(cg, {1,3}, ones3_vals) * y;
@@ -592,7 +592,7 @@ BOOST_AUTO_TEST_CASE( max_gradient ) {
 
 // Expression reshape(const Expression& x, const Dim& d);
 BOOST_AUTO_TEST_CASE( reshape_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = reshape(x1, {1,3});
   Expression z = y * input(cg, {3}, ones3_vals);
@@ -601,7 +601,7 @@ BOOST_AUTO_TEST_CASE( reshape_gradient ) {
 
 // Expression transpose(const Expression& x);
 BOOST_AUTO_TEST_CASE( transpose_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = softsign(x1);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -610,7 +610,7 @@ BOOST_AUTO_TEST_CASE( transpose_gradient ) {
 
 // Expression trace_of_product(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( inverse_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x = parameter(cg, param_square1);
   Expression y = inverse(x);
   Expression z = input(cg, {1,3}, ones3_vals) * y * input(cg, {3,1}, ones3_vals);
@@ -619,7 +619,7 @@ BOOST_AUTO_TEST_CASE( inverse_gradient ) {
 
 // Expression trace_of_product(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( trace_of_product_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression z = trace_of_product(x1, x2);
@@ -628,7 +628,7 @@ BOOST_AUTO_TEST_CASE( trace_of_product_gradient ) {
 
 // Expression cwise_multiply(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( cwise_multiply_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression y = cwise_multiply(x1, x2);
@@ -638,7 +638,7 @@ BOOST_AUTO_TEST_CASE( cwise_multiply_gradient ) {
 
 // Expression cwise_multiply(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( cwise_multiply_batch_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression y = cwise_multiply(x1, x2) + cwise_multiply(x2, x1);
@@ -648,7 +648,7 @@ BOOST_AUTO_TEST_CASE( cwise_multiply_batch_gradient ) {
 
 // Expression dot_product(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( dot_product_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression z = dot_product(x1, x2);
@@ -657,7 +657,7 @@ BOOST_AUTO_TEST_CASE( dot_product_gradient ) {
 
 // Expression dot_product(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( dot_product_batch_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression z = sum_batches(dot_product(x1, x2) + dot_product(x2, x1) * 2);
@@ -666,7 +666,7 @@ BOOST_AUTO_TEST_CASE( dot_product_batch_gradient ) {
 
 // Expression squared_distance(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( squared_distance_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression z = squared_distance(x1, x2);
@@ -675,7 +675,7 @@ BOOST_AUTO_TEST_CASE( squared_distance_gradient ) {
 
 // Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
 BOOST_AUTO_TEST_CASE( huber_distance_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression z = huber_distance(x1, x2);
@@ -684,7 +684,7 @@ BOOST_AUTO_TEST_CASE( huber_distance_gradient ) {
 
 // Expression l1_distance(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( l1_distance_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
   Expression z = l1_distance(x1, x2);
@@ -693,7 +693,7 @@ BOOST_AUTO_TEST_CASE( l1_distance_gradient ) {
 
 // Expression binary_log_loss(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( binary_log_loss_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = logistic( parameter(cg, param1) );
   Expression x2 = input(cg, {3}, ones3_vals);
   Expression z = binary_log_loss(x1, x2);
@@ -702,7 +702,7 @@ BOOST_AUTO_TEST_CASE( binary_log_loss_gradient ) {
 
 // Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
 BOOST_AUTO_TEST_CASE( pairwise_rank_loss_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x_scalar1 = parameter(cg, param_scalar1);
   Expression x_scalar2 = parameter(cg, param_scalar2);
   Expression z = pairwise_rank_loss(x_scalar1, x_scalar2);
@@ -711,7 +711,7 @@ BOOST_AUTO_TEST_CASE( pairwise_rank_loss_gradient ) {
 
 // Expression poisson_loss(const Expression& x, unsigned y);
 BOOST_AUTO_TEST_CASE( possion_loss_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression scalar = parameter(cg, param_scalar1);
   Expression z = poisson_loss(scalar, 3);
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -719,7 +719,7 @@ BOOST_AUTO_TEST_CASE( possion_loss_gradient ) {
 
 // Expression conv1d_narrow(const Expression& x, const Expression& f);
 BOOST_AUTO_TEST_CASE( conv1d_narrow_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression xsquare = parameter(cg, param_square1);
   Expression xkernel = parameter(cg, param_kernel1);
   Expression y = conv1d_narrow(xsquare, xkernel);
@@ -729,7 +729,7 @@ BOOST_AUTO_TEST_CASE( conv1d_narrow_gradient ) {
 
 // Expression conv1d_wide(const Expression& x, const Expression& f);
 BOOST_AUTO_TEST_CASE( conv1d_wide_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression xkernel = parameter(cg, param_kernel1);
   Expression y = conv1d_wide(xkernel, xkernel);
   Expression z = input(cg, {1,3}, ones3_vals) * y * input(cg, {3,1}, ones3_vals);
@@ -738,7 +738,7 @@ BOOST_AUTO_TEST_CASE( conv1d_wide_gradient ) {
 
 // Expression filter1d_narrow(const Expression& x, const Expression& f);
 BOOST_AUTO_TEST_CASE( filter1d_narrow_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression xsquare = parameter(cg, param_square1);
   Expression xfilter = parameter(cg, param_filter1);
   Expression y = filter1d_narrow(xsquare, xfilter);
@@ -748,7 +748,7 @@ BOOST_AUTO_TEST_CASE( filter1d_narrow_gradient ) {
 
 // Expression kmax_pooling(const Expression& x, unsigned k);
 BOOST_AUTO_TEST_CASE( kmax_pooling_keq1_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression xsquare = parameter(cg, param_square1);
   Expression y = tanh(kmax_pooling(xsquare, 1));
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -757,7 +757,7 @@ BOOST_AUTO_TEST_CASE( kmax_pooling_keq1_gradient ) {
 
 // Expression kmax_pooling(const Expression& x, unsigned k);
 BOOST_AUTO_TEST_CASE( kmax_pooling_keq2_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression xsquare = parameter(cg, param_square1);
   Expression y = tanh(kmax_pooling(xsquare, 2));
   Expression z = input(cg, {1,3}, ones3_vals) * y * input(cg, {2,1}, ones2_vals);
@@ -766,7 +766,7 @@ BOOST_AUTO_TEST_CASE( kmax_pooling_keq2_gradient ) {
 
 // Expression fold_rows(const Expression& x, unsigned nrows=2);
 BOOST_AUTO_TEST_CASE( fold_rows_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x4 = parameter(cg, param4);
   Expression y = fold_rows(x4, 2);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -775,7 +775,7 @@ BOOST_AUTO_TEST_CASE( fold_rows_gradient ) {
 
 // Expression average_cols(const Expression& x);
 BOOST_AUTO_TEST_CASE( average_cols_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression xsquare = parameter(cg, param_square1);
   Expression y = tanh(average_cols(xsquare));
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -784,7 +784,7 @@ BOOST_AUTO_TEST_CASE( average_cols_gradient ) {
 
 // Expression sum_cols(const Expression& x);
 BOOST_AUTO_TEST_CASE( sum_cols_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression xsquare = parameter(cg, param_square1);
   Expression y = tanh(sum_cols(xsquare));
   Expression z = input(cg, {1,3}, ones3_vals) * y;
@@ -798,7 +798,7 @@ BOOST_AUTO_TEST_CASE( sum_cols_gradient ) {
 // Expression pick(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( pick_gradient ) {
   unsigned idx = 1;
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression z = pick(x1, idx);
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -807,7 +807,7 @@ BOOST_AUTO_TEST_CASE( pick_gradient ) {
 // Expression pick(const Expression& x, unsigned* pv);
 BOOST_AUTO_TEST_CASE( pickptr_gradient ) {
   unsigned idx = 1;
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression z = pick(x1, &idx);
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -816,7 +816,7 @@ BOOST_AUTO_TEST_CASE( pickptr_gradient ) {
 // Expression pick(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
   std::vector<unsigned> idx = {1,2};
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression z = sum_batches(pick(x1+x2, idx));
@@ -825,7 +825,7 @@ BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
 
 // Expression pickrange(const Expression& x, unsigned v, unsigned u);
 BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = pickrange(x1, 0, 2);
   Expression z = input(cg, {1,2}, ones2_vals) * y;
@@ -835,7 +835,7 @@ BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
 // Expression pickneglogsoftmax(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( pickneglogsoftmax_gradient ) {
   unsigned idx = 1;
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression z = pickneglogsoftmax(x1, idx);
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -844,7 +844,7 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_gradient ) {
 // Expression pickneglogsoftmax(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( pickneglogsoftmax_batch_gradient ) {
   std::vector<unsigned> idx = {1,2};
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
   Expression z = sum_batches(pickneglogsoftmax(x1+x2, idx));
@@ -853,7 +853,7 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_batch_gradient ) {
 
 // Expression sparse_input(vector<unsigned int>& ids, vector<float>& src, float def);
 BOOST_AUTO_TEST_CASE( sparse_input_test ) {
-  cnn::ComputationGraph cg;
+  dynet::ComputationGraph cg;
   std::vector<unsigned int> ids = {0, 4};
   Expression z = input(cg, Dim({3},2), ids, ones2_vals, 0.5);
   std::vector<float> exp = {1.0f, 0.5f, 0.5f, 0.5f, 1.0f, 0.5f};

@@ -1,16 +1,16 @@
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/expr.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/expr.h"
 
 #include <iostream>
 #include <random>
 
 using namespace std;
-using namespace cnn;
-using namespace cnn::expr;
+using namespace dynet;
+using namespace dynet::expr;
 
 int main(int argc, char** argv) {
-  cnn::initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
   default_random_engine rng;
   normal_distribution<float> normal(0.0f, 1.0f);

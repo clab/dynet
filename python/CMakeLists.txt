@@ -47,9 +47,9 @@ endif()
 
   add_custom_target(target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/timestamp)
   add_dependencies(target copy)
-  add_dependencies(copy cnn)
+  add_dependencies(copy dynet)
   if (WITH_CUDA_BACKEND)
-  add_dependencies(copy gcnn)
+  add_dependencies(copy gdynet)
   endif()
 
   install(CODE "execute_process(COMMAND ${PYTHON} ${SETUP_PY})")

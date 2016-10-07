@@ -3,11 +3,11 @@ from libcpp.string cimport string
 
 ctypedef float real
 
-cdef extern from "cnn/init.h" namespace "cnn":
+cdef extern from "dynet/init.h" namespace "dynet":
     cdef void initialize(int& argc, char **& argv, unsigned random_seed)
 
-cdef extern from "cnn/dim.h" namespace "cnn":
-    cdef cppclass CDim "cnn::Dim":
+cdef extern from "dynet/dim.h" namespace "dynet":
+    cdef cppclass CDim "dynet::Dim":
         CDim() except +
         #CDim(int m) except +
         #CDim(int m, int n) except +
@@ -24,51 +24,51 @@ cdef extern from "cnn/dim.h" namespace "cnn":
         int size(unsigned i)
         CDim transpose()
 
-cdef extern from "cnn/tensor.h" namespace "cnn":
-    cdef cppclass CTensor "cnn::Tensor": 
+cdef extern from "dynet/tensor.h" namespace "dynet":
+    cdef cppclass CTensor "dynet::Tensor": 
         CDim d
         float* v
         pass
-    float c_as_scalar "cnn::as_scalar" (CTensor& t)
-    vector[float] c_as_vector "cnn::as_vector" (CTensor& t)
+    float c_as_scalar "dynet::as_scalar" (CTensor& t)
+    vector[float] c_as_vector "dynet::as_vector" (CTensor& t)
 
-cdef extern from "cnn/model.h" namespace "cnn":
-    cdef cppclass CParameterStorage "cnn::ParameterStorage":
+cdef extern from "dynet/model.h" namespace "dynet":
+    cdef cppclass CParameterStorage "dynet::ParameterStorage":
         CParameterStorage()
         CTensor values
         CDim dim
 
-    cdef cppclass CLookupParameterStorage "cnn::LookupParameterStorage":
+    cdef cppclass CLookupParameterStorage "dynet::LookupParameterStorage":
         CLookupParameterStorage()
         vector[CTensor] values
         CDim dim
 
-    cdef cppclass CParameters "cnn::Parameter":
+    cdef cppclass CParameters "dynet::Parameter":
         CParameters()
         CParameterStorage *get()
         void zero()
 
-    cdef cppclass CLookupParameters "cnn::LookupParameter":
+    cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
         CLookupParameterStorage *get()
         CDim dim
         void initialize(unsigned index, const vector[float]& val)
         void zero()
 
-    cdef cppclass CModel "cnn::Model":
+    cdef cppclass CModel "dynet::Model":
         CModel()
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d, float scale = 0.0)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
         vector[CParameterStorage] parameters_list()
 
-    void load_cnn_model "cnn::load_cnn_model" (string filename, CModel *model)
-    void save_cnn_model "cnn::save_cnn_model" (string filename, CModel *model)
+    void load_dynet_model "dynet::load_dynet_model" (string filename, CModel *model)
+    void save_dynet_model "dynet::save_dynet_model" (string filename, CModel *model)
 
-cdef extern from "cnn/cnn.h" namespace "cnn":
+cdef extern from "dynet/dynet.h" namespace "dynet":
     ctypedef unsigned VariableIndex
 
-    cdef cppclass CComputationGraph "cnn::ComputationGraph":
+    cdef cppclass CComputationGraph "dynet::ComputationGraph":
         CComputationGraph() except +
         # Inputs
         VariableIndex add_input(real s)
@@ -94,35 +94,35 @@ cdef extern from "cnn/cnn.h" namespace "cnn":
 
         void print_graphviz() const
 
-cdef extern from "cnn/training.h" namespace "cnn":
-    cdef cppclass CSimpleSGDTrainer "cnn::SimpleSGDTrainer":
+cdef extern from "dynet/training.h" namespace "dynet":
+    cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer":
         #CSimpleSGDTrainer(CModel* m, float lam, float e0)
         CSimpleSGDTrainer(CModel* m, float e0) # TODO removed lam, update docs.
         void update(float s)
         void update_epoch(float r)
         void status()
 
-    cdef cppclass CMomentumSGDTrainer "cnn::MomentumSGDTrainer":
+    cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer":
         CMomentumSGDTrainer(CModel* m, float e0, float mom) # TODO removed lam, update docs
         void update(float s)
         void update_epoch(float r)
         void status()
 
-    cdef cppclass CAdagradTrainer "cnn::AdagradTrainer":
+    cdef cppclass CAdagradTrainer "dynet::AdagradTrainer":
         CAdagradTrainer(CModel* m, float e0, float eps) # TODO removed lam, update docs
 
         void update(float s)
         void update_epoch(float r)
         void status()
 
-    cdef cppclass CAdadeltaTrainer "cnn::AdadeltaTrainer":
+    cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer":
         CAdadeltaTrainer(CModel* m, float eps, float rho) # TODO removed lam, update docs
 
         void update(float s)
         void update_epoch(float r)
         void status()
 
-    cdef cppclass CAdamTrainer "cnn::AdamTrainer":
+    cdef cppclass CAdamTrainer "dynet::AdamTrainer":
         CAdamTrainer(CModel* m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
 
         void update(float s)
@@ -130,111 +130,111 @@ cdef extern from "cnn/training.h" namespace "cnn":
         void status()
 
 
-cdef extern from "cnn/expr.h" namespace "cnn::expr":
-    cdef cppclass CExpression "cnn::expr::Expression":
+cdef extern from "dynet/expr.h" namespace "dynet::expr":
+    cdef cppclass CExpression "dynet::expr::Expression":
         CExpression()
         CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
         long i
-    #CExpression c_input "cnn::expr::input" (CComputationGraph& g, float s)   #
-    CExpression c_input "cnn::expr::input" (CComputationGraph& g, float *ps) #
-    CExpression c_input "cnn::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata)
-    CExpression c_parameter "cnn::expr::parameter" (CComputationGraph& g, CParameters p) #
-    #CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
-    CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
-    CExpression c_lookup "cnn::expr::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
-    #CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
-    CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
-    CExpression c_const_lookup "cnn::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
+    #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
+    CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) #
+    CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata)
+    CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CParameters p) #
+    #CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
+    CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
+    CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
+    #CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
+    CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
+    CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
 
     # identity function, but derivative is not propagated through it
-    CExpression c_nobackprop "cnn::expr::nobackprop" (CExpression& x) #
+    CExpression c_nobackprop "dynet::expr::nobackprop" (CExpression& x) #
 
-    CExpression c_op_neg "cnn::expr::operator-" (CExpression& x) #
-    CExpression c_op_add "cnn::expr::operator+" (CExpression& x, CExpression& y) #
-    CExpression c_op_scalar_add "cnn::expr::operator+" (CExpression& x, float y) #
-    CExpression c_op_mul "cnn::expr::operator*" (CExpression& x, CExpression& y) #
-    CExpression c_op_scalar_mul "cnn::expr::operator*" (CExpression& x, float y) #
-    CExpression c_op_scalar_div "cnn::expr::operator/" (CExpression& x, float y) #
-    CExpression c_op_scalar_sub "cnn::expr::operator-" (float y, CExpression& x) #
+    CExpression c_op_neg "dynet::expr::operator-" (CExpression& x) #
+    CExpression c_op_add "dynet::expr::operator+" (CExpression& x, CExpression& y) #
+    CExpression c_op_scalar_add "dynet::expr::operator+" (CExpression& x, float y) #
+    CExpression c_op_mul "dynet::expr::operator*" (CExpression& x, CExpression& y) #
+    CExpression c_op_scalar_mul "dynet::expr::operator*" (CExpression& x, float y) #
+    CExpression c_op_scalar_div "dynet::expr::operator/" (CExpression& x, float y) #
+    CExpression c_op_scalar_sub "dynet::expr::operator-" (float y, CExpression& x) #
 
-    CExpression c_bmax "cnn::expr::max" (CExpression& x, CExpression& y) #
-    CExpression c_bmin "cnn::expr::min" (CExpression& x, CExpression& y) #
+    CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) #
+    CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) #
 
-    CExpression c_cdiv "cnn::expr::cdiv" (CExpression& x, CExpression& y) #
-    CExpression c_colwise_add "cnn::expr::colwise_add" (CExpression& x, CExpression& bias) #
+    CExpression c_cdiv "dynet::expr::cdiv" (CExpression& x, CExpression& y) #
+    CExpression c_colwise_add "dynet::expr::colwise_add" (CExpression& x, CExpression& bias) #
 
-    CExpression c_tanh "cnn::expr::tanh" (CExpression& x) #
-    CExpression c_exp "cnn::expr::exp" (CExpression& x) #
-    CExpression c_square "cnn::expr::square" (CExpression& x) #
-    CExpression c_cube "cnn::expr::cube" (CExpression& x) #
-    CExpression c_log "cnn::expr::log" (CExpression& x) #
-    CExpression c_logistic "cnn::expr::logistic" (CExpression& x) #
-    CExpression c_rectify "cnn::expr::rectify" (CExpression& x) #
-    #CExpression c_hinge "cnn::expr::hinge" (CExpression& x, unsigned index, float m=?) #
-    CExpression c_hinge "cnn::expr::hinge" (CExpression& x, unsigned* pindex, float m) #
-    CExpression c_log_softmax "cnn::expr::log_softmax" (CExpression& x) #
-    CExpression c_log_softmax "cnn::expr::log_softmax" (CExpression& x, vector[unsigned]& restriction) #?
-    CExpression c_softmax "cnn::expr::softmax" (CExpression& x) #
-    CExpression c_softsign "cnn::expr::softsign" (CExpression& x) #
-    CExpression c_bmin "cnn::expr::min" (CExpression& x, CExpression& y) #
-    CExpression c_bmax "cnn::expr::max" (CExpression& x, CExpression& y) #
-    CExpression c_noise "cnn::expr::noise" (CExpression& x, float stddev) #
-    CExpression c_dropout "cnn::expr::dropout" (CExpression& x, float p) #
-    CExpression c_block_dropout "cnn::expr::block_dropout" (CExpression& x, float p) #
+    CExpression c_tanh "dynet::expr::tanh" (CExpression& x) #
+    CExpression c_exp "dynet::expr::exp" (CExpression& x) #
+    CExpression c_square "dynet::expr::square" (CExpression& x) #
+    CExpression c_cube "dynet::expr::cube" (CExpression& x) #
+    CExpression c_log "dynet::expr::log" (CExpression& x) #
+    CExpression c_logistic "dynet::expr::logistic" (CExpression& x) #
+    CExpression c_rectify "dynet::expr::rectify" (CExpression& x) #
+    #CExpression c_hinge "dynet::expr::hinge" (CExpression& x, unsigned index, float m=?) #
+    CExpression c_hinge "dynet::expr::hinge" (CExpression& x, unsigned* pindex, float m) #
+    CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x) #
+    CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x, vector[unsigned]& restriction) #?
+    CExpression c_softmax "dynet::expr::softmax" (CExpression& x) #
+    CExpression c_softsign "dynet::expr::softsign" (CExpression& x) #
+    CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) #
+    CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) #
+    CExpression c_noise "dynet::expr::noise" (CExpression& x, float stddev) #
+    CExpression c_dropout "dynet::expr::dropout" (CExpression& x, float p) #
+    CExpression c_block_dropout "dynet::expr::block_dropout" (CExpression& x, float p) #
 
-    CExpression c_reshape "cnn::expr::reshape" (CExpression& x, CDim& d) #?
-    CExpression c_transpose "cnn::expr::transpose" (CExpression& x) #
+    CExpression c_reshape "dynet::expr::reshape" (CExpression& x, CDim& d) #?
+    CExpression c_transpose "dynet::expr::transpose" (CExpression& x) #
 
-    CExpression c_affine_transform "cnn::expr::affine_transform" (const vector[CExpression]& xs)
+    CExpression c_affine_transform "dynet::expr::affine_transform" (const vector[CExpression]& xs)
 
-    CExpression c_trace_of_product "cnn::expr::trace_of_product" (CExpression& x, CExpression& y);
-    CExpression c_cwise_multiply "cnn::expr::cwise_multiply" (CExpression& x, CExpression& y) #
+    CExpression c_trace_of_product "dynet::expr::trace_of_product" (CExpression& x, CExpression& y);
+    CExpression c_cwise_multiply "dynet::expr::cwise_multiply" (CExpression& x, CExpression& y) #
 
-    CExpression c_dot_product "cnn::expr::dot_product" (CExpression& x, CExpression& y) #
-    CExpression c_squared_distance "cnn::expr::squared_distance" (CExpression& x, CExpression& y) #
-    CExpression c_huber_distance "cnn::expr::huber_distance" (CExpression& x, CExpression& y, float c) #
-    CExpression c_l1_distance "cnn::expr::l1_distance" (CExpression& x, CExpression& y) #
-    CExpression c_binary_log_loss "cnn::expr::binary_log_loss" (CExpression& x, CExpression& y) #
-    CExpression c_pairwise_rank_loss "cnn::expr::pairwise_rank_loss" (CExpression& x, CExpression& y, float m) #
-    CExpression c_poisson_loss "cnn::expr::poisson_loss" (CExpression& x, unsigned y)
+    CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) #
+    CExpression c_squared_distance "dynet::expr::squared_distance" (CExpression& x, CExpression& y) #
+    CExpression c_huber_distance "dynet::expr::huber_distance" (CExpression& x, CExpression& y, float c) #
+    CExpression c_l1_distance "dynet::expr::l1_distance" (CExpression& x, CExpression& y) #
+    CExpression c_binary_log_loss "dynet::expr::binary_log_loss" (CExpression& x, CExpression& y) #
+    CExpression c_pairwise_rank_loss "dynet::expr::pairwise_rank_loss" (CExpression& x, CExpression& y, float m) #
+    CExpression c_poisson_loss "dynet::expr::poisson_loss" (CExpression& x, unsigned y)
 
-    CExpression c_conv1d_narrow "cnn::expr::conv1d_narrow" (CExpression& x, CExpression& f) #
-    CExpression c_conv1d_wide "cnn::expr::conv1d_wide" (CExpression& x, CExpression& f) #
-    CExpression c_filter1d_narrow "cnn::expr::filter1d_narrow" (CExpression& x, CExpression& f) #
-    CExpression c_kmax_pooling "cnn::expr::kmax_pooling" (CExpression& x, unsigned k) #
-    CExpression c_fold_rows "cnn::expr::fold_rows" (CExpression& x, unsigned nrows) #
-    CExpression c_sum_cols "cnn::expr::sum_cols" (CExpression& x)               #
-    CExpression c_kmh_ngram "cnn::expr::kmh_ngram" (CExpression& x, unsigned n) #
+    CExpression c_conv1d_narrow "dynet::expr::conv1d_narrow" (CExpression& x, CExpression& f) #
+    CExpression c_conv1d_wide "dynet::expr::conv1d_wide" (CExpression& x, CExpression& f) #
+    CExpression c_filter1d_narrow "dynet::expr::filter1d_narrow" (CExpression& x, CExpression& f) #
+    CExpression c_kmax_pooling "dynet::expr::kmax_pooling" (CExpression& x, unsigned k) #
+    CExpression c_fold_rows "dynet::expr::fold_rows" (CExpression& x, unsigned nrows) #
+    CExpression c_sum_cols "dynet::expr::sum_cols" (CExpression& x)               #
+    CExpression c_kmh_ngram "dynet::expr::kmh_ngram" (CExpression& x, unsigned n) #
 
-    CExpression c_sum_batches "cnn::expr::sum_batches" (CExpression& x)
+    CExpression c_sum_batches "dynet::expr::sum_batches" (CExpression& x)
 
-    #CExpression c_pick "cnn::expr::pick" (CExpression& x, unsigned v)   #
-    CExpression c_pick "cnn::expr::pick" (CExpression& x, unsigned* pv) #
-    CExpression c_pick "cnn::expr::pick" (CExpression& x, vector[unsigned]* pv) #
-    CExpression c_pickrange "cnn::expr::pickrange" (CExpression& x, unsigned v, unsigned u) #
+    #CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned v)   #
+    CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv) #
+    CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv) #
+    CExpression c_pickrange "dynet::expr::pickrange" (CExpression& x, unsigned v, unsigned u) #
 
-    CExpression c_pickneglogsoftmax "cnn::expr::pickneglogsoftmax" (CExpression& x, unsigned v) #
-    CExpression c_pickneglogsoftmax "cnn::expr::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) #
+    CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, unsigned v) #
+    CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) #
 
     # expecting a vector of CExpression
-    CExpression c_average     "cnn::expr::average" (vector[CExpression]& xs)
-    CExpression c_concat_cols "cnn::expr::concatenate_cols" (vector[CExpression]& xs)
-    CExpression c_concat      "cnn::expr::concatenate" (vector[CExpression]& xs)
+    CExpression c_average     "dynet::expr::average" (vector[CExpression]& xs)
+    CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs)
+    CExpression c_concat      "dynet::expr::concatenate" (vector[CExpression]& xs)
 
-    CExpression c_sum      "cnn::expr::sum" (vector[CExpression]& xs)
-    CExpression c_max      "cnn::expr::vmax" (vector[CExpression]& xs)
+    CExpression c_sum      "dynet::expr::sum" (vector[CExpression]& xs)
+    CExpression c_max      "dynet::expr::vmax" (vector[CExpression]& xs)
 
 
-#cdef extern from "cnn/model.h" namespace "cnn":
+#cdef extern from "dynet/model.h" namespace "dynet":
 #    cdef cppclass Model:
 
-cdef extern from "cnn/rnn.h" namespace "cnn":
-    cdef cppclass CRNNPointer "cnn::RNNPointer":
+cdef extern from "dynet/rnn.h" namespace "dynet":
+    cdef cppclass CRNNPointer "dynet::RNNPointer":
         CRNNPointer()
         CRNNPointer(int i)
 
-    cdef cppclass CRNNBuilder "cnn::RNNBuilder":
+    cdef cppclass CRNNBuilder "dynet::RNNBuilder":
         void new_graph(CComputationGraph &cg)
         void start_new_sequence(vector[CExpression] ces)
         CExpression add_input(CExpression &x)
@@ -250,9 +250,9 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         void disable_dropout()
 
 # TODO unify with LSTMBuilder using inheritance
-cdef extern from "cnn/rnn.h" namespace "cnn":
-    #cdef cppclass RNNBuilder "cnn::RNNBuilder":
-    cdef cppclass CSimpleRNNBuilder  "cnn::SimpleRNNBuilder" (CRNNBuilder):
+cdef extern from "dynet/rnn.h" namespace "dynet":
+    #cdef cppclass RNNBuilder "dynet::RNNBuilder":
+    cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):
         CSimpleRNNBuilder()
         CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
         #void new_graph(CComputationGraph &cg)
@@ -267,8 +267,8 @@ cdef extern from "cnn/rnn.h" namespace "cnn":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
-cdef extern from "cnn/gru.h" namespace "cnn":
-    cdef cppclass CGRUBuilder "cnn::GRUBuilder" (CRNNBuilder):
+cdef extern from "dynet/gru.h" namespace "dynet":
+    cdef cppclass CGRUBuilder "dynet::GRUBuilder" (CRNNBuilder):
         CGRUBuilder()
         CGRUBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
         #void new_graph(CComputationGraph &cg)
@@ -283,8 +283,8 @@ cdef extern from "cnn/gru.h" namespace "cnn":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
-cdef extern from "cnn/lstm.h" namespace "cnn":
-    cdef cppclass CLSTMBuilder "cnn::LSTMBuilder" (CRNNBuilder):
+cdef extern from "dynet/lstm.h" namespace "dynet":
+    cdef cppclass CLSTMBuilder "dynet::LSTMBuilder" (CRNNBuilder):
         CLSTMBuilder()
         CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
         #void new_graph(CComputationGraph &cg)
@@ -299,8 +299,8 @@ cdef extern from "cnn/lstm.h" namespace "cnn":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
-cdef extern from "cnn/fast-lstm.h" namespace "cnn":
-    cdef cppclass CFastLSTMBuilder "cnn::FastLSTMBuilder" (CRNNBuilder):
+cdef extern from "dynet/fast-lstm.h" namespace "dynet":
+    cdef cppclass CFastLSTMBuilder "dynet::FastLSTMBuilder" (CRNNBuilder):
         CFastLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
@@ -314,8 +314,8 @@ cdef extern from "cnn/fast-lstm.h" namespace "cnn":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
-cdef extern from "pybridge.h" namespace "pycnn":
-    cdef cppclass CModelSaver "pycnn::ModelSaver":
+cdef extern from "pybridge.h" namespace "pydynet":
+    cdef cppclass CModelSaver "pydynet::ModelSaver":
         CModelSaver(string filename, CModel *model)
         CModelSaver add_parameter(CParameters p)
         CModelSaver add_lookup_parameter(CLookupParameters lp)
@@ -324,7 +324,7 @@ cdef extern from "pybridge.h" namespace "pycnn":
         CModelSaver add_srnn_builder(CSimpleRNNBuilder b)
         void done()
 
-    cdef cppclass CModelLoader "pycnn::ModelLoader":
+    cdef cppclass CModelLoader "pydynet::ModelLoader":
         CModelLoader(string filename, CModel *model)
         CModelSaver fill_parameter(CParameters p)
         CModelSaver fill_lookup_parameter(CLookupParameters lp)

@@ -194,7 +194,7 @@ def cg():
 
 class ComputationGraph(object):
     def __init__(self, guard=0):
-        if guard != SECRET: raise RuntimeError("Do not instantiate ComputationGraph directly. Use pycnn.cg()")
+        if guard != SECRET: raise RuntimeError("Do not instantiate ComputationGraph directly. Use pydynet.cg()")
         self._cg_version = 0
 
     def renew(self):
