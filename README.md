@@ -5,14 +5,9 @@ cnn is a neural network library that is written in C++ (with bindings in Python)
 
 ### Building
 
-(for building the python bindings (pycnn), see `PYINSTALL.md`)
+(for how to use the python bindings, see `PYINSTALL.md`)
 
 Before compiling cnn, you need the [development version of the Eigen library](https://bitbucket.org/eigen/eigen) for this software to function. **If you use any of the released versions, you may get assertion failures or compile errors.**
-
-First you need to fetch the dependent libraries
-
-    git submodule init
-    git submodule update
 
 In `src`, you need to first use [`cmake`](http://www.cmake.org/) to generate the makefiles
 
@@ -20,7 +15,7 @@ In `src`, you need to first use [`cmake`](http://www.cmake.org/) to generate the
     cd build
     cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen
 
-Then to compile, run
+Then compile, where "2" can be replaced by the number of cores on your machine
 
     make -j 2
 
@@ -49,7 +44,12 @@ both `Eigen` and `cnn`. Eigen does not have to be compiled, so “installing” 
 ##### GPU (CUDA) support
 
 `cnn` supports running programs on GPUs with CUDA. If you have CUDA installed, you
-can build cnn to be run on GPUs by adding `-DBACKEND=cuda` to your cmake options.
+can build cnn with GPU support by adding `-DBACKEND=cuda` to your cmake options.
+This will result in two libraries named "libcnn" and "libgcnn" being created. When
+you want to run a program on CPU, you can link to the "libcnn" library, and when
+you want to run a program on GPU, you can link to the "libgcnn" library. (Eventually
+you will be able to use a single library to run on either CPU or GPU, but this is
+not fully implemented yet.)
 
 ##### Non-standard Boost location
 
