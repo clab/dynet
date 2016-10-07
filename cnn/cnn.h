@@ -106,11 +106,13 @@ struct ComputationGraph {
 
   // perform computations
 
-  // run complete forward pass from first node to last existing one, ignoring all precomputed values.
+  // run complete forward pass from first node to given one, ignoring all precomputed values.
   const Tensor& forward(const expr::Expression& last);
-  // run forward pass from the last computed node to last existing.
+  const Tensor& forward(VariableIndex i);
+  // run forward pass from the last computed node to given one.
   // useful if you want to add nodes and evaluate just the new parts.
   const Tensor& incremental_forward(const expr::Expression& last);
+  const Tensor& incremental_forward(VariableIndex i);
   // get forward value for node at index i. used cached values if available,
   // performs forward evaluation if note available (may compute more than strictly
   // what is needed).
