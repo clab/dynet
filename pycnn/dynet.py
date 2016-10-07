@@ -1,13 +1,13 @@
 import sys
-if '--pycnn-viz' in sys.argv:
-    from pycnn_viz import *
-elif '--pycnn-gpu' in sys.argv:
+if '--dynet-viz' in sys.argv:
+    from dynet_viz import *
+elif '--dynet-gpu' in sys.argv:
     def print_graphviz(**kwarge):
-        print "Run with --pycnn-viz to get the visualization behavior."
-    from _gpycnn import *
+        print "Run with --dynet-viz to get the visualization behavior."
+    from _gdynet import *
 else:
     def print_graphviz(**kwarge):
-        print "Run with --pycnn-viz to get the visualization behavior."
-    from _pycnn import *
+        print "Run with --dynet-viz to get the visualization behavior."
+    from _dynet import *
 
 __version__ = 2.0
