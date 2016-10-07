@@ -52,11 +52,11 @@ BOOST_AUTO_TEST_CASE( simple_sgd_direction ) {
   cnn::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
-  y*x;
-  float before = as_scalar(cg.forward());
-  cg.backward();
+  Expression z = y*x;
+  float before = as_scalar(cg.forward(z));
+  cg.backward(z);
   trainer.update(0.1);
-  float after = as_scalar(cg.forward());
+  float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
 }
 
@@ -68,11 +68,11 @@ BOOST_AUTO_TEST_CASE( momentum_sgd_direction ) {
   cnn::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
-  y*x;
-  float before = as_scalar(cg.forward());
-  cg.backward();
+  Expression z = y*x;
+  float before = as_scalar(cg.forward(z));
+  cg.backward(z);
   trainer.update(0.1);
-  float after = as_scalar(cg.forward());
+  float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
 }
 
@@ -84,11 +84,11 @@ BOOST_AUTO_TEST_CASE( adagrad_direction ) {
   cnn::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
-  y*x;
-  float before = as_scalar(cg.forward());
-  cg.backward();
+  Expression z = y*x;
+  float before = as_scalar(cg.forward(z));
+  cg.backward(z);
   trainer.update(0.1);
-  float after = as_scalar(cg.forward());
+  float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
 }
 
@@ -100,11 +100,11 @@ BOOST_AUTO_TEST_CASE( adadelta_direction ) {
   cnn::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
-  y*x;
-  float before = as_scalar(cg.forward());
-  cg.backward();
+  Expression z = y*x;
+  float before = as_scalar(cg.forward(z));
+  cg.backward(z);
   trainer.update(0.1);
-  float after = as_scalar(cg.forward());
+  float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
 }
 
@@ -116,11 +116,11 @@ BOOST_AUTO_TEST_CASE( adam_direction ) {
   cnn::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
-  y*x;
-  float before = as_scalar(cg.forward());
-  cg.backward();
+  Expression z = y*x;
+  float before = as_scalar(cg.forward(z));
+  cg.backward(z);
   trainer.update(0.1);
-  float after = as_scalar(cg.forward());
+  float after = as_scalar(cg.forward(z));
   BOOST_CHECK_LT(after, before);
 }
 

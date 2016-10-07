@@ -103,11 +103,13 @@ struct ComputationGraph {
 
   // perform computations
 
-  // run complete forward pass from first node to last existing one, ignoring all precomputed values.
-  const Tensor& forward();
-  // run forward pass from the last computed node to last existing.
+  // run complete forward pass from first node to given one, ignoring all precomputed values.
+  const Tensor& forward(const expr::Expression& last);
+  const Tensor& forward(VariableIndex i);
+  // run forward pass from the last computed node to given one.
   // useful if you want to add nodes and evaluate just the new parts.
-  const Tensor& incremental_forward();
+  const Tensor& incremental_forward(const expr::Expression& last);
+  const Tensor& incremental_forward(VariableIndex i);
   // get forward value for node at index i. used cached values if available,
   // performs forward evaluation if note available (may compute more than strictly
   // what is needed).
@@ -116,7 +118,7 @@ struct ComputationGraph {
   // clears forward caches (for get_value etc).
   void invalidate();
   // computes backward gradients from the front-most evaluated node.
-  void backward();
+  void backward(const expr::Expression& last);
   // computes backward gradients from node i (assuming it already been evaluated).
   void backward(VariableIndex i);
 

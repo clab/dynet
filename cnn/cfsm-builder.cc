@@ -36,8 +36,8 @@ Expression StandardSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsign
 }
 
 unsigned StandardSoftmaxBuilder::sample(const Expression& rep) {
-  softmax(affine_transform({b, w, rep}));
-  vector<float> dist = as_vector(pcg->incremental_forward());
+  Expression dist_expr = softmax(affine_transform({b, w, rep}));
+  vector<float> dist = as_vector(pcg->incremental_forward(dist_expr));
   unsigned c = 0;
   double p = rand01();
   for (; c < dist.size(); ++c) {
@@ -117,8 +117,8 @@ Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, u
 unsigned ClassFactoredSoftmaxBuilder::sample(const Expression& rep) {
   // TODO assert that new_graph has been called
   Expression cscores = affine_transform({cbias, r2c, rep});
-  softmax(cscores);
-  auto cdist = as_vector(pcg->incremental_forward());
+  Expression cdist_expr = softmax(cscores);
+  auto cdist = as_vector(pcg->incremental_forward(cdist_expr));
   unsigned c = 0;
   double p = rand01();
   for (; c < cdist.size(); ++c) {
@@ -131,8 +131,8 @@ unsigned ClassFactoredSoftmaxBuilder::sample(const Expression& rep) {
     Expression& cwbias = get_rc2wbias(c);
     Expression& r2cw = get_rc2w(c);
     Expression wscores = affine_transform({cwbias, r2cw, rep});
-    softmax(wscores);
-    auto wdist = as_vector(pcg->incremental_forward());
+    Expression wdist_expr = softmax(wscores);
+    auto wdist = as_vector(pcg->incremental_forward(wdist_expr));
     p = rand01();
     for (; w < wdist.size(); ++w) {
       p -= wdist[w];

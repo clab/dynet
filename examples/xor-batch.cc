@@ -64,8 +64,8 @@ int main(int argc, char** argv) {
 
   // train the parameters
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
-    float my_loss = as_scalar(cg.forward()) / 4;
-    cg.backward();
+    float my_loss = as_scalar(cg.forward(sum_loss)) / 4;
+    cg.backward(sum_loss);
     sgd.update(0.25);
     sgd.update_epoch();
     cerr << "E = " << my_loss << endl;

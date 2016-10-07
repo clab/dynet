@@ -59,8 +59,8 @@ public:
     Expression y_pred = V*h + a;
     Expression loss = squared_distance(y_pred, y);
 
-    float return_loss = as_scalar(cg.forward());
-    cg.backward();
+    float return_loss = as_scalar(cg.forward(loss));
+    cg.backward(loss);
     sgd->update(1.0);
     return return_loss;
   }
@@ -72,7 +72,7 @@ public:
     Expression x = cnn::expr::input(cg, {(unsigned int)input.size()}, &input);
     Expression h = tanh(W*x + b);
     Expression y_pred = V*h + a;
-    return as_scalar(cg.forward());
+    return as_scalar(cg.forward(y_pred));
   }
 
   // This function should save all those variables in the archive, which

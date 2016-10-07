@@ -169,9 +169,9 @@ int main(int argc, char** argv) {
                 chars += sent.size() - 1;
             ++si;
             //LOG(INFO) << "sent length " << sent.size();
-            lm.BuildLMGraph(doc, cg);
-            loss += as_scalar(cg.forward());
-            cg.backward();
+            Expression loss_expr = lm.BuildLMGraph(doc, cg);
+            loss += as_scalar(cg.forward(loss_expr));
+            cg.backward(loss_expr);
             sgd->update();
             ++lines;
         }
@@ -188,8 +188,8 @@ int main(int argc, char** argv) {
             for (int i = 0; i < dev.size(); ++i) {
                 const auto& doc = dev[i];
                 ComputationGraph cg;
-                lm.BuildLMGraph(doc, cg);
-                dloss += as_scalar(cg.forward());
+                Expression loss_expr = lm.BuildLMGraph(doc, cg);
+                dloss += as_scalar(cg.forward(loss_expr));
                 for (auto &sent: doc)
                     dchars += sent.size() - 1;
             }

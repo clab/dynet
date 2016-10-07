@@ -73,8 +73,8 @@ int main(int argc, char** argv) {
     for (auto& ci : corpus) {
       copy(ci.begin(), ci.begin()+CONTEXT, in_c.begin());
       ytrue  = ci.back();
-      loss += as_scalar(cg.forward());
-      cg.backward();
+      loss += as_scalar(cg.forward(nerr));
+      cg.backward(nerr);
       ++n;
       sgd.update(1.0);
       if (n == 2500) break;

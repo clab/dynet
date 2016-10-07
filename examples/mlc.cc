@@ -159,8 +159,8 @@ int main(int argc, char** argv) {
       Expression u = mlc.BuildPredictionScores(cg, xy.feats);
 
       if (rand01() < 0.004) {
-        sparsemax(u * 1.5);  // this increases sparsity at test time, which Andre found the be useful
-        vector<float> p = as_vector(cg.incremental_forward());
+        Expression p_expr = sparsemax(u * 1.5);  // this increases sparsity at test time, which Andre found the be useful
+        vector<float> p = as_vector(cg.incremental_forward(p_expr));
         for (unsigned j = 0; j < p.size(); ++j)
           if (p[j] > 0) cerr << j << ' ';
         cerr << " |||";
@@ -168,9 +168,9 @@ int main(int argc, char** argv) {
           cerr << ' ' << y;
         cerr << endl;
       }
-      sparsemax_loss(u, &xy.labels);
-      loss += as_scalar(cg.forward());
-      cg.backward();
+      Expression loss_expr = sparsemax_loss(u, &xy.labels);
+      loss += as_scalar(cg.forward(loss_expr));
+      cg.backward(loss_expr);
       sgd.update(1.0);
     }
     cerr << "[epoch=" << (ti / train.size()) << "] E=" << (loss / instances) << ' ';

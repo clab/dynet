@@ -400,8 +400,7 @@ template <class MyDevice>
 void LookupParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
   Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
   auto it = non_zero_grads.begin();
-  assert(it != non_zero_grads.end());
-  sqnorm_t.t<0>().device(*dev.edevice) = grads[*(it++)].tvec().square().sum();
+  TensorTools::Zero(sqnorm_t);
   while(it != non_zero_grads.end())
     sqnorm_t.t<0>().device(*dev.edevice) += grads[*(it++)].tvec().square().sum();
 }
