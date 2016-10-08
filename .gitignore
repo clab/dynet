@@ -9,9 +9,9 @@ Makefile
 CMakeCache.txt
 CMakeFiles
 cmake_install.cmake
-pydynet/pydynet.cpp
-pydynet/dist/
-pydynet/pyCNN.egg-info/
+python/dynet.cpp
+python/dist/
+python/dyNET.egg-info/
 
 # binaries
 examples/embed-cl
