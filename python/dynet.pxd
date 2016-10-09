@@ -49,7 +49,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CParameterStorage *get()
         void zero()
         void set_update(bool b)
-        bool is_updateable()
+        bool is_updatable()
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
@@ -58,7 +58,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void initialize(unsigned index, const vector[float]& val)
         void zero()
         void set_update(bool b)
-        bool is_updateable()
+        bool is_updatable()
 
     cdef cppclass CModel "dynet::Model":
         CModel()

@@ -116,7 +116,7 @@ cdef class Parameters:
 
     cpdef zero(self): self.thisptr.zero()
 
-    cpdef bool is_updateable(self): return self.thisptr.is_updateable()
+    cpdef bool is_updatable(self): return self.thisptr.is_updatable()
     cpdef set_update(self, bool b): self.thisptr.set_update(b)
 
 
@@ -164,7 +164,7 @@ cdef class LookupParameters:
 
     cpdef zero(self): self.thisptr.zero()
 
-    cpdef bool is_updateable(self): return self.thisptr.is_updateable()
+    cpdef bool is_updatable(self): return self.thisptr.is_updatable()
     cpdef set_update(self, bool b): self.thisptr.set_update(b)
 
 # TODO document this
