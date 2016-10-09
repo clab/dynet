@@ -161,7 +161,7 @@ Parameter::Parameter() {
   index = 0;
 }
 
-Parameter::Parameter(const Model* mp, unsigned long index) : mp(mp), index(index) {}
+Parameter::Parameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
 
 ParameterStorage* Parameter::get() const {
   return mp->parameters_list()[index];
@@ -170,6 +170,15 @@ ParameterStorage* Parameter::get() const {
 void Parameter::zero() {
   return mp->parameters_list()[index]->zero();
 }
+
+void Parameter::set_update(bool b) {
+  mp->set_updateable_param(this, b);
+}
+
+bool Parameter::is_updateable() {
+  return mp->is_updateable_param(this);
+}
+
 
 #ifndef __CUDACC__
 template<class Archive>
@@ -185,7 +194,7 @@ LookupParameter::LookupParameter() {
   index = 0;
 }
 
-LookupParameter::LookupParameter(const Model* mp, unsigned long index) : mp(mp), index(index) {}
+LookupParameter::LookupParameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
 
 LookupParameterStorage* LookupParameter::get() const {
   return mp->lookup_parameters_list()[index];
@@ -197,6 +206,13 @@ void LookupParameter::zero() {
 
 void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
   get()->initialize(index, val);
+}
+
+void LookupParameter::set_update(bool b) {
+  mp->set_updateable_lookup_param(this, b);
+}
+bool LookupParameter::is_updateable() {
+  return mp->is_updateable_lookup_param(this);
 }
 
 #ifndef __CUDACC__
@@ -243,6 +259,7 @@ Parameter Model::add_parameters(const Dim& d, float scale) {
   //cerr << "Adding parameters with dim " << d << endl;
   all_params.push_back(p);
   params.push_back(p);
+  updateable_params.push_back(r.index);
   return r;
 }
 
@@ -252,7 +269,42 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
   //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);
   lookup_params.push_back(p);
+  updateable_lookup_params.push_back(r.index);
   return r;
+}
+
+void Model::set_updateable_param(const Parameter *p, bool status) {
+  unsigned idx = p->index;
+  assert(idx < params.size());
+
+  std::vector<unsigned>::iterator position = std::find(updateable_params.begin(), updateable_params.end(), idx);
+  if (position == updateable_params.end()) {
+    if (status) updateable_params.push_back(idx);
+  } else {
+    if (!status) updateable_params.erase(position);
+  }
+}
+
+void Model::set_updateable_lookup_param(const LookupParameter *p, bool status) {
+  unsigned idx = p->index;
+  assert(idx < lookup_params.size());
+
+  std::vector<unsigned>::iterator position = std::find(updateable_lookup_params.begin(), updateable_lookup_params.end(), idx);
+  if (position == updateable_lookup_params.end()) {
+    if (status) updateable_lookup_params.push_back(idx);
+  } else {
+    if (!status) updateable_lookup_params.erase(position);
+  }
+}
+
+bool Model::is_updateable_param(const Parameter* p) {
+  std::vector<unsigned>::iterator position = std::find(updateable_params.begin(), updateable_params.end(), p->index);
+  return position != updateable_params.end();
+}
+
+bool Model::is_updateable_lookup_param(const LookupParameter* p) {
+  std::vector<unsigned>::iterator position = std::find(updateable_lookup_params.begin(), updateable_lookup_params.end(), p->index);
+  return position != updateable_lookup_params.end();
 }
 
 void Model::reset_gradient() {
@@ -264,6 +316,17 @@ size_t Model::parameter_count() const {
   size_t r = 0;
   for (const ParameterStorageBase* param : all_params) {
     r += param->size();
+  }
+  return r;
+}
+
+size_t Model::updateable_parameter_count() const {
+  size_t r = 0;
+  for (const unsigned idx : updateable_params) {
+    r += params[idx]->size();
+  }
+  for (const unsigned idx : updateable_lookup_params) {
+    r += lookup_params[idx]->size();
   }
   return r;
 }

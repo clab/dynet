@@ -52,14 +52,16 @@ Trainer::~Trainer() {}
 
 void Trainer::rescale_and_reset_weight_decay() {
   const float weight_decay = model->weight_decay.current_weight_decay();
-  for (auto p : model->parameters_list())
-    p->scale_parameters(weight_decay);
+  const auto params = model->parameters_list();
+  for (auto p : model->updateable_parameters_list())
+    params[p]->scale_parameters(weight_decay);
   model->weight_decay.reset_weight_decay();
 }
 
 float Trainer::clip_gradients() {
   float gscale = 1;
   if (clipping_enabled) {
+    // TODO should I handle updatebale differently?
     float gg = model->gradient_l2_norm();
     if (isnan(gg) || isinf(gg)) {
       cerr << "Magnitude of gradient is bad: " << gg << endl;
@@ -84,12 +86,14 @@ void Trainer::update(real scale) {
   // Perform gradient clipping and cycle through parameters
   const float gscale = clip_gradients();
   const auto & params = model->parameters_list();
-  for(size_t i = 0; i < params.size(); ++i) {
+  const auto & upd_params = model->updateable_parameters_list();
+  for(auto i : upd_params) {
     update_params(scale, gscale, i);
     params[i]->clear();
   }
   const auto & lookup_params = model->lookup_parameters_list();
-  for(size_t i = 0; i < lookup_params.size(); ++i) {
+  const auto & upd_lookup_params = model->updateable_lookup_parameters_list();
+  for(auto i : upd_lookup_params) {
     for (auto j : lookup_params[i]->non_zero_grads)
       update_lookup_params(scale, gscale, i, j);
     lookup_params[i]->clear();

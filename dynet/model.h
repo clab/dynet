@@ -115,17 +115,20 @@ struct LookupParameterStorage : public ParameterStorageBase {
 class Model;
 struct Parameter {
   Parameter();
-  Parameter(const Model* mp, unsigned long index);
+  Parameter(Model* mp, unsigned long index);
   ParameterStorage* get() const;
 
   // Zero the parameters
   void zero();
 
-  const Model* mp;
+  Model* mp;
   unsigned long index;
 
   Dim dim() { return get()->dim; }
   Tensor* values() { return &(get()->values); } 
+
+  void set_update(bool b);
+  bool is_updateable();
 
 private:
   friend class boost::serialization::access;
@@ -135,18 +138,21 @@ private:
 
 struct LookupParameter {
   LookupParameter();
-  LookupParameter(const Model* mp, unsigned long index);
+  LookupParameter(Model* mp, unsigned long index);
   LookupParameterStorage* get() const;
   void initialize(unsigned index, const std::vector<float>& val) const;
 
   // Zero the parameters
   void zero();
 
-  const Model* mp;
+  Model* mp;
   unsigned long index;
 
   Dim dim() { return get()->dim; }
   std::vector<Tensor>* values() { return &(get()->values); } 
+
+  void set_update(bool b);
+  bool is_updateable();
 
 private:
   friend class boost::serialization::access;
@@ -173,13 +179,23 @@ class Model {
   void project_weights(float radius = 1.0f);
   void set_weight_decay_lambda(float lambda);
 
-  const std::vector<ParameterStorageBase*>& all_parameters_list() const { return all_params; }
+  //const std::vector<ParameterStorageBase*>& all_parameters_list() const { return all_params; }
   const std::vector<ParameterStorage*>& parameters_list() const { return params; }
   const std::vector<LookupParameterStorage*>& lookup_parameters_list() const { return lookup_params; }
+
+  // indexes into params and lookup_params
+  const std::vector<unsigned>& updateable_parameters_list() const { return updateable_params; }
+  const std::vector<unsigned>& updateable_lookup_parameters_list() const { return updateable_lookup_params; }
 
   // Returns the total number of tunable parameters (i. e. scalars) contained within this model.
   // That is to say, a 2x2 matrix counts as four parameters.
   size_t parameter_count() const;
+  size_t updateable_parameter_count() const;
+
+  void set_updateable_param(const Parameter *p, bool status);
+  void set_updateable_lookup_param(const LookupParameter *p, bool status);
+  bool is_updateable_param(const Parameter *p);
+  bool is_updateable_lookup_param(const LookupParameter *p);
 
   L2WeightDecay weight_decay;
  private:
@@ -190,6 +206,12 @@ class Model {
   std::vector<ParameterStorageBase*> all_params;
   std::vector<ParameterStorage*> params;
   std::vector<LookupParameterStorage*> lookup_params;
+
+  // these are a subset of the parameters that are used when model is updated.
+  // kept as indices into params and lookup_params.
+  std::vector<unsigned> updateable_params;
+  std::vector<unsigned> updateable_lookup_params;
+
   mutable float* gradient_norm_scratch;
 };
 
