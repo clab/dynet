@@ -271,11 +271,10 @@ std::vector<real> as_vector(const Tensor& v);
 struct TensorTools {
   static void Constant(Tensor& d, float c);
   static void Zero(Tensor& d);
-  static void Randomize(Tensor& val, real scale);
-  static void Randomize(Tensor& d);
   // sample some bernoulli random variables and scale them by scale
-  static void RandomBernoulli(Tensor& val, real p, real scale = 1.0);
-  static void RandomizeNormal(real mean, real stddev, Tensor& val);
+  static void RandomBernoulli(Tensor& val, real p, real scale = 1.0f);
+  static void RandomizeNormal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
+  static void RandomizeUniform(Tensor& val, real left = 0.0f, real right = 0.0f);
   // AccessElement and SetElement are very, very slow (potentially) - use appropriately
   static float AccessElement(const Tensor& v, int index);
   static float AccessElement(const Tensor& v, const Dim& index);

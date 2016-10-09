@@ -121,23 +121,6 @@ void TensorTools::Zero(Tensor& d) {
   Constant(d, 0);
 }
 
-void TensorTools::Randomize(Tensor& val, real scale) {
-  uniform_real_distribution<real> distribution(-scale,scale);
-  auto b = [&] {return distribution(*rndeng);};
-#if HAVE_CUDA
-  float* t = new float[val.d.size()];
-  generate(t, t + val.d.size(), b);
-  CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-  delete[] t;
-#else
-  generate(val.v, val.v + val.d.size(), b);
-#endif
-}
-
-void TensorTools::Randomize(Tensor& d) {
-  Randomize(d, sqrt(6) / sqrt(d.d.sum_dims()));
-}
-
 void TensorTools::RandomBernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
   auto b = [&] {return distribution(*rndeng) * scale;};
@@ -151,7 +134,7 @@ void TensorTools::RandomBernoulli(Tensor& val, real p, real scale) {
 #endif
 }
 
-void TensorTools::RandomizeNormal(real mean, real stddev, Tensor& val) {
+void TensorTools::RandomizeNormal(Tensor& val, real mean, real stddev) {
   normal_distribution<real> distribution(mean, stddev);
   auto b = [&] {return distribution(*rndeng);};
 #if HAVE_CUDA
@@ -163,6 +146,23 @@ void TensorTools::RandomizeNormal(real mean, real stddev, Tensor& val) {
   generate(val.v, val.v + val.d.size(), b);
 #endif
 }
+
+void TensorTools::RandomizeUniform(Tensor& val, real left, real right) {
+  uniform_real_distribution<real> distribution(left, right);
+  auto b = [&] {return distribution(*rndeng);};
+#if HAVE_CUDA
+  float* t = new float[val.d.size()];
+  generate(t, t + val.d.size(), b);
+  CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+  delete[] t;
+#else
+  generate(val.v, val.v + val.d.size(), b);
+#endif
+}
+
+// void TensorTools::Randomize(Tensor& d) {
+//   Randomize(d, sqrt(6) / sqrt(d.d.sum_dims()));
+// }
 
 template<class Archive>
 void Tensor::save(Archive& ar, const unsigned int ver) const {

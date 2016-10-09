@@ -728,7 +728,7 @@ DYNET_NODE_INST_DEV_IMPL(Exp)
 template<class MyDevice>
 void GaussianNoise::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  TensorTools::RandomizeNormal(0, stddev, m);
+  TensorTools::RandomizeNormal(m, 0, stddev);
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() + m.tvec();
 }
 
