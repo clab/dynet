@@ -62,7 +62,7 @@ struct ParameterStorage : public ParameterStorageBase {
   ParameterStorage() {}
   explicit ParameterStorage(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
                                                          // or Glorot initialization if minmax = 0
-  explicit ParameterStorage(const Dim& d, ParameterInit & init); // initialize with custom initializer
+  explicit ParameterStorage(const Dim& d, const ParameterInit & init); // initialize with custom initializer
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int);
@@ -108,7 +108,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
  private:
   LookupParameterStorage() {}
   LookupParameterStorage(unsigned n, const Dim& d);
-  LookupParameterStorage(unsigned n, const Dim& d, ParameterInit & init);
+  LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init);
   friend class boost::serialization::access;
   template<class Archive>
   void save(Archive& ar, const unsigned int) const;
@@ -162,28 +162,42 @@ private:
 // Initilizers for parameters
 struct ParameterInit {
   ParameterInit() {}
-  virtual void initialize_params(Tensor & values) = 0;
+  virtual void initialize_params(Tensor & values) const = 0;
 };
 
 struct ParameterInitNormal : public ParameterInit {
   ParameterInitNormal(float m = 0.0f, float v = 1.0f) : mean(m), var(v) {}
-  virtual void initialize_params(Tensor & values) override;
+  virtual void initialize_params(Tensor & values) const override;
 private:
   float mean, var;
 };
 
 struct ParameterInitUniform : public ParameterInit {
-  ParameterInitUniform(float mean, float scale = 0.0f) :
-    left(scale==0.0f?0.0f:-scale), right(scale) {}
-  ParameterInitUniform(float mean, float l, float r) : left(l), right(r) {}
-  virtual void initialize_params(Tensor & values) override;
+  ParameterInitUniform(float scale) :
+    left(-scale), right(scale) { assert(scale != 0.0f); }
+  ParameterInitUniform(float l, float r) : left(l), right(r) { assert(l != r); }
+  virtual void initialize_params(Tensor & values) const override;
 private:
   float left, right;
 };
 
 struct ParameterInitConst : public ParameterInit {
   ParameterInitConst(float c) : cnst(c) {}
-  virtual void initialize_params(Tensor & values) override;
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  float cnst;
+};
+
+struct ParameterInitGlorot : public ParameterInit {
+  ParameterInitGlorot() {}
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  float cnst;
+};
+
+struct ParameterInitSaxe : public ParameterInit {
+  ParameterInitSaxe() {}
+  virtual void initialize_params(Tensor & values) const override;
 private:
   float cnst;
 };
@@ -204,7 +218,7 @@ class Model {
   Parameter add_parameters(const Dim& d, float scale = 0.0f);
   Parameter add_parameters(const Dim& d, ParameterInit & init);
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, ParameterInit & init);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
   // project weights so their L2 norm = radius
   void project_weights(float radius = 1.0f);
   void set_weight_decay_lambda(float lambda);
