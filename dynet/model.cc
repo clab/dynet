@@ -259,7 +259,7 @@ Parameter Model::add_parameters(const Dim& d, float scale) {
   //cerr << "Adding parameters with dim " << d << endl;
   all_params.push_back(p);
   params.push_back(p);
-  updated_params.insert(r.index);
+  updated_params.push_back(r.index);
   return r;
 }
 
@@ -269,7 +269,7 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
   //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);
   lookup_params.push_back(p);
-  updated_lookup_params.insert(r.index);
+  updated_lookup_params.push_back(r.index);
   return r;
 }
 
@@ -279,7 +279,7 @@ void Model::set_updated_param(const Parameter *p, bool status) {
 
   auto position = std::find(updated_params.begin(), updated_params.end(), idx);
   if (position == updated_params.end()) {
-    if (status) updated_params.insert(idx);
+    if (status) updated_params.push_back(idx);
   } else {
     if (!status) updated_params.erase(position);
   }
@@ -291,7 +291,7 @@ void Model::set_updated_lookup_param(const LookupParameter *p, bool status) {
 
   auto position = std::find(updated_lookup_params.begin(), updated_lookup_params.end(), idx);
   if (position == updated_lookup_params.end()) {
-    if (status) updated_lookup_params.insert(idx);
+    if (status) updated_lookup_params.push_back(idx);
   } else {
     if (!status) updated_lookup_params.erase(position);
   }
@@ -338,6 +338,9 @@ void Model::serialize(Archive& ar, const unsigned int) {
   ar & params;
   ar & lookup_params;
   ar & weight_decay;
+  // TODO do we want to save these or not?
+  ar & updated_params;
+  ar & updated_lookup_params;
 }
 DYNET_SERIALIZE_IMPL(Model)
 #endif
