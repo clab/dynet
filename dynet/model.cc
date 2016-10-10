@@ -171,12 +171,12 @@ void Parameter::zero() {
   return mp->parameters_list()[index]->zero();
 }
 
-void Parameter::set_update(bool b) {
-  mp->set_updatable_param(this, b);
+void Parameter::set_updated(bool b) {
+  mp->set_updated_param(this, b);
 }
 
-bool Parameter::is_updatable() {
-  return mp->is_updatable_param(this);
+bool Parameter::is_updated() {
+  return mp->is_updated_param(this);
 }
 
 
@@ -208,11 +208,11 @@ void LookupParameter::initialize(unsigned index, const std::vector<float>& val) 
   get()->initialize(index, val);
 }
 
-void LookupParameter::set_update(bool b) {
-  mp->set_updatable_lookup_param(this, b);
+void LookupParameter::set_updated(bool b) {
+  mp->set_updated_lookup_param(this, b);
 }
-bool LookupParameter::is_updatable() {
-  return mp->is_updatable_lookup_param(this);
+bool LookupParameter::is_updated() {
+  return mp->is_updated_lookup_param(this);
 }
 
 #ifndef __CUDACC__
@@ -259,7 +259,7 @@ Parameter Model::add_parameters(const Dim& d, float scale) {
   //cerr << "Adding parameters with dim " << d << endl;
   all_params.push_back(p);
   params.push_back(p);
-  updatable_params.push_back(r.index);
+  updated_params.insert(r.index);
   return r;
 }
 
@@ -269,42 +269,42 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
   //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);
   lookup_params.push_back(p);
-  updatable_lookup_params.push_back(r.index);
+  updated_lookup_params.insert(r.index);
   return r;
 }
 
-void Model::set_updatable_param(const Parameter *p, bool status) {
+void Model::set_updated_param(const Parameter *p, bool status) {
   unsigned idx = p->index;
   assert(idx < params.size());
 
-  std::vector<unsigned>::iterator position = std::find(updatable_params.begin(), updatable_params.end(), idx);
-  if (position == updatable_params.end()) {
-    if (status) updatable_params.push_back(idx);
+  auto position = std::find(updated_params.begin(), updated_params.end(), idx);
+  if (position == updated_params.end()) {
+    if (status) updated_params.insert(idx);
   } else {
-    if (!status) updatable_params.erase(position);
+    if (!status) updated_params.erase(position);
   }
 }
 
-void Model::set_updatable_lookup_param(const LookupParameter *p, bool status) {
+void Model::set_updated_lookup_param(const LookupParameter *p, bool status) {
   unsigned idx = p->index;
   assert(idx < lookup_params.size());
 
-  std::vector<unsigned>::iterator position = std::find(updatable_lookup_params.begin(), updatable_lookup_params.end(), idx);
-  if (position == updatable_lookup_params.end()) {
-    if (status) updatable_lookup_params.push_back(idx);
+  auto position = std::find(updated_lookup_params.begin(), updated_lookup_params.end(), idx);
+  if (position == updated_lookup_params.end()) {
+    if (status) updated_lookup_params.insert(idx);
   } else {
-    if (!status) updatable_lookup_params.erase(position);
+    if (!status) updated_lookup_params.erase(position);
   }
 }
 
-bool Model::is_updatable_param(const Parameter* p) {
-  std::vector<unsigned>::iterator position = std::find(updatable_params.begin(), updatable_params.end(), p->index);
-  return position != updatable_params.end();
+bool Model::is_updated_param(const Parameter* p) {
+  auto position = std::find(updated_params.begin(), updated_params.end(), p->index);
+  return position != updated_params.end();
 }
 
-bool Model::is_updatable_lookup_param(const LookupParameter* p) {
-  std::vector<unsigned>::iterator position = std::find(updatable_lookup_params.begin(), updatable_lookup_params.end(), p->index);
-  return position != updatable_lookup_params.end();
+bool Model::is_updated_lookup_param(const LookupParameter* p) {
+  auto position = std::find(updated_lookup_params.begin(), updated_lookup_params.end(), p->index);
+  return position != updated_lookup_params.end();
 }
 
 void Model::reset_gradient() {
@@ -320,12 +320,12 @@ size_t Model::parameter_count() const {
   return r;
 }
 
-size_t Model::updatable_parameter_count() const {
+size_t Model::updated_parameter_count() const {
   size_t r = 0;
-  for (const unsigned idx : updatable_params) {
+  for (const unsigned idx : updated_params) {
     r += params[idx]->size();
   }
-  for (const unsigned idx : updatable_lookup_params) {
+  for (const unsigned idx : updated_lookup_params) {
     r += lookup_params[idx]->size();
   }
   return r;

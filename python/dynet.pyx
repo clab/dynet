@@ -116,8 +116,8 @@ cdef class Parameters:
 
     cpdef zero(self): self.thisptr.zero()
 
-    cpdef bool is_updatable(self): return self.thisptr.is_updatable()
-    cpdef set_update(self, bool b): self.thisptr.set_update(b)
+    cpdef bool is_updated(self): return self.thisptr.is_updated()
+    cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
 
 
 
@@ -164,8 +164,8 @@ cdef class LookupParameters:
 
     cpdef zero(self): self.thisptr.zero()
 
-    cpdef bool is_updatable(self): return self.thisptr.is_updatable()
-    cpdef set_update(self, bool b): self.thisptr.set_update(b)
+    cpdef bool is_updated(self): return self.thisptr.is_updated()
+    cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
 
 # TODO document this
 class Saveable(object):

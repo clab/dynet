@@ -53,7 +53,7 @@ Trainer::~Trainer() {}
 void Trainer::rescale_and_reset_weight_decay() {
   const float weight_decay = model->weight_decay.current_weight_decay();
   const auto params = model->parameters_list();
-  for (auto p : model->updatable_parameters_list())
+  for (auto p : model->updated_parameters_list())
     params[p]->scale_parameters(weight_decay);
   model->weight_decay.reset_weight_decay();
 }
@@ -86,13 +86,13 @@ void Trainer::update(real scale) {
   // Perform gradient clipping and cycle through parameters
   const float gscale = clip_gradients();
   const auto & params = model->parameters_list();
-  const auto & upd_params = model->updatable_parameters_list();
+  const auto & upd_params = model->updated_parameters_list();
   for(auto i : upd_params) {
     update_params(scale, gscale, i);
     params[i]->clear();
   }
   const auto & lookup_params = model->lookup_parameters_list();
-  const auto & upd_lookup_params = model->updatable_lookup_parameters_list();
+  const auto & upd_lookup_params = model->updated_lookup_parameters_list();
   for(auto i : upd_lookup_params) {
     for (auto j : lookup_params[i]->non_zero_grads)
       update_lookup_params(scale, gscale, i, j);
