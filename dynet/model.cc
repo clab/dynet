@@ -58,11 +58,16 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   default_device->allocate_tensor(DeviceMempool::PS, values);
   default_device->allocate_tensor(DeviceMempool::PS, g);
   TensorTools::Zero(g);
-  ParameterInitUniform init(scale);
-  init.initialize_params(values);
+  if(scale == 0.0f) {
+    ParameterInitGlorot init;
+    init.initialize_params(values);
+  } else {
+    ParameterInitUniform init(scale);
+    init.initialize_params(values);
+  }
 }
 
-ParameterStorage::ParameterStorage(const Dim& d, ParameterInit & init) : dim(d) {
+ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init) : dim(d) {
   values.d = g.d = d;
   values.device = g.device = default_device;
   default_device->allocate_tensor(DeviceMempool::PS, values);
@@ -109,7 +114,7 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
   initialize_lookups();
 }
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, ParameterInit & init) : dim(d) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init) : dim(d) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
   all_grads.device = all_values.device = default_device;
@@ -173,21 +178,21 @@ void LookupParameterStorage::load(Archive& ar, const unsigned int) {
 DYNET_SAVELOAD_IMPL(LookupParameterStorage)
 #endif
 
-void ParameterInitNormal::initialize_params(Tensor & values) {
+void ParameterInitNormal::initialize_params(Tensor & values) const {
   TensorTools::RandomizeNormal(values, mean, sqrt(var));
 }
 
-void ParameterInitUniform::initialize_params(Tensor & values) {
-  if(left == right) {
-    float my_scale = sqrt(6) / sqrt(values.d.sum_dims());
-    TensorTools::RandomizeUniform(values, -my_scale, my_scale);
-  } else {
-    TensorTools::RandomizeUniform(values, left, right);
-  }
+void ParameterInitUniform::initialize_params(Tensor & values) const {
+  TensorTools::RandomizeUniform(values, left, right);
 }
 
-void ParameterInitConst::initialize_params(Tensor & values) {
+void ParameterInitConst::initialize_params(Tensor & values) const {
   TensorTools::Constant(values, cnst);
+}
+
+void ParameterInitGlorot::initialize_params(Tensor & values) const {
+  float my_scale = sqrt(6) / sqrt(values.d.sum_dims());
+  TensorTools::RandomizeUniform(values, -my_scale, my_scale);
 }
 
 Parameter::Parameter() {
