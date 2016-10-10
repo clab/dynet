@@ -2,6 +2,7 @@
 #define DYNET_PARAMS_H_
 
 #include <vector>
+#include <set>
 #include <unordered_set>
 #include <string>
 
@@ -127,8 +128,8 @@ struct Parameter {
   Dim dim() { return get()->dim; }
   Tensor* values() { return &(get()->values); } 
 
-  void set_update(bool b);
-  bool is_updatable();
+  void set_updated(bool b);
+  bool is_updated();
 
 private:
   friend class boost::serialization::access;
@@ -151,8 +152,8 @@ struct LookupParameter {
   Dim dim() { return get()->dim; }
   std::vector<Tensor>* values() { return &(get()->values); } 
 
-  void set_update(bool b);
-  bool is_updatable();
+  void set_updated(bool b);
+  bool is_updated();
 
 private:
   friend class boost::serialization::access;
@@ -184,18 +185,18 @@ class Model {
   const std::vector<LookupParameterStorage*>& lookup_parameters_list() const { return lookup_params; }
 
   // indexes into params and lookup_params
-  const std::vector<unsigned>& updatable_parameters_list() const { return updatable_params; }
-  const std::vector<unsigned>& updatable_lookup_parameters_list() const { return updatable_lookup_params; }
+  const std::set<unsigned>& updated_parameters_list() const { return updated_params; }
+  const std::set<unsigned>& updated_lookup_parameters_list() const { return updated_lookup_params; }
 
   // Returns the total number of tunable parameters (i. e. scalars) contained within this model.
   // That is to say, a 2x2 matrix counts as four parameters.
   size_t parameter_count() const;
-  size_t updatable_parameter_count() const;
+  size_t updated_parameter_count() const;
 
-  void set_updatable_param(const Parameter *p, bool status);
-  void set_updatable_lookup_param(const LookupParameter *p, bool status);
-  bool is_updatable_param(const Parameter *p);
-  bool is_updatable_lookup_param(const LookupParameter *p);
+  void set_updated_param(const Parameter *p, bool status);
+  void set_updated_lookup_param(const LookupParameter *p, bool status);
+  bool is_updated_param(const Parameter *p);
+  bool is_updated_lookup_param(const LookupParameter *p);
 
   L2WeightDecay weight_decay;
  private:
@@ -209,8 +210,8 @@ class Model {
 
   // these are a subset of the parameters that are used when model is updated.
   // kept as indices into params and lookup_params.
-  std::vector<unsigned> updatable_params;
-  std::vector<unsigned> updatable_lookup_params;
+  std::set<unsigned> updated_params;
+  std::set<unsigned> updated_lookup_params;
 
   mutable float* gradient_norm_scratch;
 };
