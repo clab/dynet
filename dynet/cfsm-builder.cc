@@ -56,7 +56,7 @@ Expression StandardSoftmaxBuilder::full_log_distribution(const Expression& rep) 
 
 template<class Archive>
 void StandardSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
-  boost::serialization::base_object<SoftmaxBuilder>(*this);
+  ar & boost::serialization::base_object<SoftmaxBuilder>(*this);
   ar & p_w;
   ar & p_b;
 }
@@ -222,7 +222,7 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
 
 template<class Archive>
 void ClassFactoredSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
-  boost::serialization::base_object<SoftmaxBuilder>(*this);
+  ar & boost::serialization::base_object<SoftmaxBuilder>(*this);
   ar & cdict;
   ar & widx2cidx;
   ar & widx2cwidx;

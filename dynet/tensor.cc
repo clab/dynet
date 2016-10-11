@@ -15,8 +15,6 @@
 
 using namespace std;
 
-BOOST_CLASS_VERSION(dynet::Tensor, 1)
-
 namespace dynet {
 
 ostream& operator<<(ostream& os, const Tensor& t) {
