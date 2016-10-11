@@ -24,8 +24,9 @@ To get and build DyNet, clone the repository
 
     git clone https://github.com/clab/dynet.git
 
-then use [`cmake`](http://www.cmake.org/) to generate the makefiles
+then enter the directory and use [`cmake`](http://www.cmake.org/) to generate the makefiles
 
+    cd dynet
     mkdir build
     cd build
     cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen
