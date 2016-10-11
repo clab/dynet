@@ -118,6 +118,7 @@ install(FILES ${dynet_library_HDRS} DESTINATION include/dynet)
 install(TARGETS dynet DESTINATION lib)
 if(WITH_CUDA_BACKEND)
   install(TARGETS gdynet DESTINATION lib)
+  install(TARGETS dynetcuda DESTINATION lib)
 endif(WITH_CUDA_BACKEND)
 
 # target_compile_features(dynet PRIVATE cxx_range_for)
