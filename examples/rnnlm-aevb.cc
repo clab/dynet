@@ -177,11 +177,11 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   Model model;
-  bool use_momentum = false;
   Trainer* sgd = nullptr;
-  //if (use_momentum)
-  //  sgd = new MomentumSGDTrainer(&model);
-  //else
+  // bool use_momentum = false;
+  // if (use_momentum)
+  //   sgd = new MomentumSGDTrainer(&model);
+  // else
   sgd = new SimpleSGDTrainer(&model);
 
   RNNLanguageModel<GRUBuilder> lm(model);

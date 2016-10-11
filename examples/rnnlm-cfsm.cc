@@ -140,18 +140,16 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  bool use_momentum = false;
   Trainer* sgd = nullptr;
-  //if (use_momentum)
-  //  sgd = new MomentumSGDTrainer(&model);
-  //else
+  // bool use_momentum = false;
+  // if (use_momentum)
+  //   sgd = new MomentumSGDTrainer(&model);
+  // else
   sgd = new SimpleSGDTrainer(&model);
 
   RNNLanguageModel<LSTMBuilder> lm(model, cfsm);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model, cfsm);
-  bool has_loaded_model = false;
   if (argc == 5) {
-    has_loaded_model = true;
     string fname = argv[4];
     ifstream in(fname);
     boost::archive::text_iarchive ia(in);
