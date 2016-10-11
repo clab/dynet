@@ -36,9 +36,9 @@ struct NodeTest {
     std::vector<float> param_filter1_vals = {1.1f,2.2f,-1.0f,1.2f,-3.4f,-0.2f,
                                              11.1f,12.2f,13.3f,11.2f,12.2f,13.2f};
     std::vector<float> param_square1_vals = {1.1f,2.2f,3.4f,1.2f,2.5f,3.2f,5.3f,2.3f,3.3f};
-    std::vector<float> param_cube1_vals = {1.1f,2.2f,3.3f,1.2f,2.2f,3.2f,1.3f,2.3f,3.3f,
-                                           11.1f,12.2f,13.3f,11.2f,12.2f,13.2f,11.3f,12.3f,13.3f,
-                                           21.1f,22.2f,23.3f,21.2f,22.2f,23.2f,21.3f,22.3f,23.3f};
+    std::vector<float> param_cube1_vals = {.011f,.022f,.033f,.012f,.022f,.032f,.013f,.023f,.033f,
+                                           .111f,-.122f,-.033f,-.112f,-.022f,-.132f,-.113f,-.123f,-.133f,
+                                           .211f,.222f,.233f,.212f,.222f,.232f,.213f,.223f,.233f};
     param1 = mod.add_parameters({3});
     TensorTools::SetElements(param1.get()->values,param1_vals);
     param2 = mod.add_parameters({3});
