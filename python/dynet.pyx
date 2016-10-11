@@ -116,6 +116,9 @@ cdef class Parameters:
 
     cpdef zero(self): self.thisptr.zero()
 
+    cpdef bool is_updated(self): return self.thisptr.is_updated()
+    cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
+
 
 
 cdef class LookupParameters:
@@ -160,6 +163,9 @@ cdef class LookupParameters:
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
     cpdef zero(self): self.thisptr.zero()
+
+    cpdef bool is_updated(self): return self.thisptr.is_updated()
+    cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
 
 # TODO document this
 class Saveable(object):
