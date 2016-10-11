@@ -3,11 +3,11 @@ Dynamic neural network library
 
 DyNet (formerly known as [cnn](http://github.com/clab/cnn-v1)) is a neural network library that is written in C++ with bindings in Python. It is designed to be efficient when run on either CPU or GPU, and works well with networks that have dynamic structures that change for every training instance. Read the instructions below to get started, and feel free to contact the [dynet-users group](https://groups.google.com/forum/#!forum/dynet-users) group or [github page](http://github.com/clab/dynet) with any questions, issues, or contributions.
 
-### Building
+## Building
 
 (for how to use the python bindings, perform the following build process, then see `PYINSTALL.md`)
 
-#### Prerequisites
+### Prerequisites
 
 DyNet relies on a number of external libraries including Boost, cmake, Eigen, and mercurial (to install Eigen).
 Boost, cmake, and mercurial can be installed from standard repositories, for example on Ubuntu linux:
@@ -18,7 +18,7 @@ To compile DyNet you also need the [development version of the Eigen library](ht
 
     hg clone https://bitbucket.org/eigen/eigen/
 
-#### Building
+### Building
 
 To get and build DyNet, clone the repository
 
@@ -41,7 +41,7 @@ To see that things have built properly, you can run
 
 which will train a multilayer perceptron to predict the xor function.
 
-#### Compiling/linking External Programs
+### Compiling/linking External Programs
 
 When you want to use DyNet in an external program, you will need to add the `dynet`
 directory to the compile path:
@@ -52,7 +52,7 @@ and link with the dynet library:
 
     -L/path/to/dynet/build/dynet -ldynet
 
-#### Debugging build problems
+### Debugging build problems
 
 If you have a build problem and want to debug, please run 
 
@@ -63,9 +63,9 @@ then examine the commands in the `make.log` file to see if anything looks fishy.
 you would like help, send this `make.log` file via the "Issues" tab on github, or to
 the dynet-users mailing list.
 
-#### Build options
+### Build options
 
-##### GPU (CUDA) support
+#### GPU (CUDA) support
 
 `dynet` supports running programs on GPUs with CUDA. If you have CUDA installed, you
 can build DyNet with GPU support by adding `-DBACKEND=cuda` to your cmake options.
@@ -79,7 +79,7 @@ shown above. When you want to run a program on GPU, you can link to the "libgdyn
 (Eventually you will be able to use a single library to run on either CPU or GPU, but this is
 not fully implemented yet.)
 
-##### Non-standard Boost location
+#### Non-standard Boost location
 
 `dynet` supports boost, and will find it if it is in the standard location. If boost is
 in a non-standard location, say `$HOME/boost`, you can specify the location by adding
@@ -91,7 +91,7 @@ the following to your cmake options:
 Note that you will also have to set your `LD_LIBRARY_PATH` to point to the `boost/lib`
 directory.
 
-##### Building for Windows
+#### Building for Windows
 
 DYNET has been tested to build in Windows using Microsoft Visual Studio 2015. You may be able to build with MSVC 2013 by slightly modifying the instructions below.
 
@@ -107,7 +107,7 @@ To generate the MSVC solution and project files, run [cmake](http://www.cmake.or
 
 This will generate dynet.sln and a bunch of \*.vcxproj files (one for the DYNET library, and one per example). You should be able to just open dynet.sln and build all. **Note: multi-process functionality is currently not supported in Windows, so you will not be able to build rnnlm-mp. Go to build->Configuration Manager and uncheck the box next to this project**
 
-### Command line options
+## Command line options
 
 All programs using DyNet have a few command line options. These must be specified at the
 very beginning of the command line, before other options.
@@ -125,7 +125,7 @@ very beginning of the command line, before other options.
 * `--dynet-gpu-ids X,Y,Z`: Specify the GPUs that you want to use by device ID. Currently only
   one GPU is supported, but if you use this command you can select which one to use.
 
-### Creating your own models
+## Creating your own models
 
 An illustration of how models are trained (for a simple logistic regression model) is below:
 
