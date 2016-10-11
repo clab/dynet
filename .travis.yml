@@ -13,8 +13,9 @@ addons:
     - g++-4.8
 
 before_script:
+  - sudo add-apt-repository -y ppa:boost-latest/ppa
   - sudo apt-get update -qq
-  - sudo apt-get install libboost-filesystem-dev libboost-program-options-dev libboost-serialization-dev libboost-test-dev libboost-regex-dev
+  - sudo apt-get install libboost-filesystem1.55-dev libboost-program-options1.55-dev libboost-serialization1.55-dev libboost-test1.55-dev libboost-regex1.55-dev
   - hg clone https://bitbucket.org/eigen/eigen
   - mkdir build
   - cd build

@@ -138,10 +138,10 @@ x_values = {0.5, 0.3, 0.7};
 y_value = 1.0;
 // "forward" propagates values forward through the computation graph, and returns
 // the loss.
-dynet::real loss = as_scalar(cg.forward());
+dynet::real loss = as_scalar(cg.forward(l));
 // "backward" performs back-propagation, and accumulates the gradients of the
 // parameters within the "Model" data structure.
-cg.backward();
+cg.backward(l);
 // "sgd.update" updates parameters of the model that was passed to its constructor.
 // Here 1.0 is the scaling factor that allows us to control the size of the update.
 sgd.update(1.0);
