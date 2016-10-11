@@ -201,7 +201,7 @@ Parameter::Parameter() {
   index = 0;
 }
 
-Parameter::Parameter(const Model* mp, unsigned long index) : mp(mp), index(index) {}
+Parameter::Parameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
 
 ParameterStorage* Parameter::get() const {
   return mp->parameters_list()[index];
@@ -210,6 +210,15 @@ ParameterStorage* Parameter::get() const {
 void Parameter::zero() {
   return mp->parameters_list()[index]->zero();
 }
+
+void Parameter::set_updated(bool b) {
+  mp->set_updated_param(this, b);
+}
+
+bool Parameter::is_updated() {
+  return mp->is_updated_param(this);
+}
+
 
 #ifndef __CUDACC__
 template<class Archive>
@@ -225,7 +234,7 @@ LookupParameter::LookupParameter() {
   index = 0;
 }
 
-LookupParameter::LookupParameter(const Model* mp, unsigned long index) : mp(mp), index(index) {}
+LookupParameter::LookupParameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
 
 LookupParameterStorage* LookupParameter::get() const {
   return mp->lookup_parameters_list()[index];
@@ -237,6 +246,13 @@ void LookupParameter::zero() {
 
 void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
   get()->initialize(index, val);
+}
+
+void LookupParameter::set_updated(bool b) {
+  mp->set_updated_lookup_param(this, b);
+}
+bool LookupParameter::is_updated() {
+  return mp->is_updated_lookup_param(this);
 }
 
 #ifndef __CUDACC__
@@ -283,6 +299,7 @@ Parameter Model::add_parameters(const Dim& d, float scale) {
   //cerr << "Adding parameters with dim " << d << endl;
   all_params.push_back(p);
   params.push_back(p);
+  updated_params.push_back(r.index);
   return r;
 }
 
@@ -292,7 +309,42 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
   //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);
   lookup_params.push_back(p);
+  updated_lookup_params.push_back(r.index);
   return r;
+}
+
+void Model::set_updated_param(const Parameter *p, bool status) {
+  unsigned idx = p->index;
+  assert(idx < params.size());
+
+  auto position = std::find(updated_params.begin(), updated_params.end(), idx);
+  if (position == updated_params.end()) {
+    if (status) updated_params.push_back(idx);
+  } else {
+    if (!status) updated_params.erase(position);
+  }
+}
+
+void Model::set_updated_lookup_param(const LookupParameter *p, bool status) {
+  unsigned idx = p->index;
+  assert(idx < lookup_params.size());
+
+  auto position = std::find(updated_lookup_params.begin(), updated_lookup_params.end(), idx);
+  if (position == updated_lookup_params.end()) {
+    if (status) updated_lookup_params.push_back(idx);
+  } else {
+    if (!status) updated_lookup_params.erase(position);
+  }
+}
+
+bool Model::is_updated_param(const Parameter* p) {
+  auto position = std::find(updated_params.begin(), updated_params.end(), p->index);
+  return position != updated_params.end();
+}
+
+bool Model::is_updated_lookup_param(const LookupParameter* p) {
+  auto position = std::find(updated_lookup_params.begin(), updated_lookup_params.end(), p->index);
+  return position != updated_lookup_params.end();
 }
 
 void Model::reset_gradient() {
@@ -308,6 +360,17 @@ size_t Model::parameter_count() const {
   return r;
 }
 
+size_t Model::updated_parameter_count() const {
+  size_t r = 0;
+  for (const unsigned idx : updated_params) {
+    r += params[idx]->size();
+  }
+  for (const unsigned idx : updated_lookup_params) {
+    r += lookup_params[idx]->size();
+  }
+  return r;
+}
+
 #ifndef __CUDACC__
 template<class Archive>
 void Model::serialize(Archive& ar, const unsigned int) {
@@ -315,6 +378,9 @@ void Model::serialize(Archive& ar, const unsigned int) {
   ar & params;
   ar & lookup_params;
   ar & weight_decay;
+  // TODO do we want to save these or not?
+  ar & updated_params;
+  ar & updated_lookup_params;
 }
 DYNET_SERIALIZE_IMPL(Model)
 #endif
