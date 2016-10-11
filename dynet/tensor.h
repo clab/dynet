@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <boost/serialization/split_member.hpp>
+#include <boost/serialization/version.hpp>
 
 #include "dynet/dim.h"
 #include "dynet/globals.h"
@@ -290,4 +291,5 @@ real rand_normal();
 
 } // namespace dynet
 
+BOOST_CLASS_VERSION(dynet::Tensor, 1)
 #endif

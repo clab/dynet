@@ -51,6 +51,7 @@ namespace dynet {
 #ifndef __CUDACC__
 
 ParameterStorageBase::~ParameterStorageBase() {}
+DYNET_SERIALIZE_IMPL(ParameterStorageBase)
 
 ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   values.d = g.d = d;
@@ -96,7 +97,7 @@ void ParameterStorage::clear() {
 #ifndef __CUDACC__
 template<class Archive>
 void ParameterStorage::serialize(Archive& ar, const unsigned int) {
-  boost::serialization::base_object<ParameterStorageBase>(*this);
+  ar & boost::serialization::base_object<ParameterStorageBase>(*this);
   ar & dim;
   ar & values;
   ar & g;
