@@ -89,7 +89,6 @@ int main(int argc, char** argv) {
   kTRG_SOS = td.convert("<s>");
   kTRG_EOS = td.convert("</s>");
   int tlc = 0;
-  int ttoks = 0;
   cerr << "Reading training data from " << argv[1] << "...\n";
   {
     ifstream in(argv[1]);
@@ -155,12 +154,12 @@ int main(int argc, char** argv) {
     sgd = new SimpleSGDTrainer(&model);
 
   unsigned report_every_i = 100;
-  unsigned dev_every_i_reports = 10;
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
   bool first = true;
-  int report = 0;
+  // int report = 0;
+  // unsigned dev_every_i_reports = 10;
   unsigned lines = 0;
   while(1) {
     Timer iteration("completed in");

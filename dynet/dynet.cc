@@ -89,12 +89,12 @@ CGCheckpoint ComputationGraph::_get_checkpoint() {
 void ComputationGraph::_revert(CGCheckpoint p) {
     default_device->revert(p.device_mem_checkpoint);
     // clear all nodes at position >= p.node_idx
-    if (nodes.size() > p.node_idx) {
+    if ((int)nodes.size() > p.node_idx) {
         nodes.resize(p.node_idx); // TODO verify deletion of nodes.
         ee->invalidate(p.node_idx-1); // clear precomputed forward values
     }
     // clear all parameter nodes at position >= p.par_node_idx
-    if (parameter_nodes.size() > p.par_node_idx) {
+    if ((int)parameter_nodes.size() > p.par_node_idx) {
         parameter_nodes.resize(p.par_node_idx);
     }
 }

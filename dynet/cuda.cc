@@ -120,8 +120,7 @@ vector<Device*> initialize_gpu(int& argc, char**& argv) {
   vector<size_t> gpu_free_mem(MAX_GPUS, 0);
   vector<int> gpus(MAX_GPUS, 0);
   for (int i = 0; i < MAX_GPUS; ++i) gpus[i] = i;
-  size_t free_bytes, total_bytes, max_free = 0;
-  int selected = 0;
+  size_t free_bytes, total_bytes;
   for (int i = 0; i < nDevices; i++) {
     if (!gpu_mask[i]) continue;
     cudaDeviceProp prop;

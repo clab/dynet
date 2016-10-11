@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 
   vector<unsigned> in_c(CONTEXT); // set these to set the context words
   vector<Expression> c(CONTEXT);
-  for (int i=0; i<CONTEXT; ++i)
+  for (unsigned i=0; i<CONTEXT; ++i)
     c[i] = lookup(cg, p_c, &in_c[i]);
 
   Expression C = parameter(cg, model.add_parameters({DIM, DIM*CONTEXT}));

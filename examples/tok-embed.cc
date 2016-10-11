@@ -261,7 +261,7 @@ int main(int argc, char** argv) {
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
   bool first = true;
-  int report = 0;
+  // int report = 0;
   unsigned lines = 0;
   unsigned report_every_i = 50;
   unsigned si = training.size();

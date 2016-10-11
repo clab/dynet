@@ -95,8 +95,8 @@ struct ConvLayer {
     vector<Expression> r(out_nfmaps);
 
     vector<Expression> tmp(in_nfmaps);
-    for (int fj = 0; fj < out_nfmaps; ++fj) {
-      for (int fi = 0; fi < in_nfmaps; ++fi) {
+    for (unsigned fj = 0; fj < out_nfmaps; ++fj) {
+      for (unsigned fi = 0; fi < in_nfmaps; ++fi) {
         Expression t = conv1d_wide(inlayer[fi], parameter(cg, p_filts[fi][fj]));
         t = colwise_add(t, parameter(cg, p_fbias[fi][fj]));
         tmp[fi] = t;

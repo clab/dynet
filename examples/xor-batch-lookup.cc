@@ -34,7 +34,6 @@ int main(int argc, char** argv) {
   }
   else {
     // Otherwise, just create a new model.
-    const unsigned HIDDEN_SIZE = 8;
     p_W = m.add_parameters({HIDDEN_SIZE, 2});
     p_b = m.add_parameters({HIDDEN_SIZE});
     p_V = m.add_parameters({1, HIDDEN_SIZE});
