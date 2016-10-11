@@ -111,7 +111,8 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
   all_grads.device = all_values.device = default_device;
   default_device->allocate_tensor(DeviceMempool::PS, all_values);
   default_device->allocate_tensor(DeviceMempool::PS, all_grads);
-  TensorTools::Zero(all_values);
+  ParameterInitGlorot init(true);
+  init.initialize_params(all_values);
   initialize_lookups();
 }
 
@@ -192,7 +193,9 @@ void ParameterInitConst::initialize_params(Tensor & values) const {
 }
 
 void ParameterInitGlorot::initialize_params(Tensor & values) const {
-  float my_scale = sqrt(6) / sqrt(values.d.sum_dims());
+  int dims = 0, dim_len = values.d.nd-(lookup?1:0);
+  for(int i = 0; i < dim_len; ++i) dims += values.d[i];
+  float my_scale = sqrt(6) / sqrt(dims);
   TensorTools::RandomizeUniform(values, -my_scale, my_scale);
 }
 
