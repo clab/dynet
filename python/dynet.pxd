@@ -13,8 +13,10 @@ cdef extern from "dynet/dim.h" namespace "dynet":
         #CDim(int m) except +
         #CDim(int m, int n) except +
         CDim(vector[long]& ds) except +
+        CDim(vector[long]& ds, unsigned int bs) except +
         #CDim(std::initializer_list[long] x) except +
         int size()
+        unsigned int batch_elems()
         int sum_dims()
         CDim truncate()
         void resize(unsigned i)
