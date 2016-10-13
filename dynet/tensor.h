@@ -21,7 +21,7 @@
 // Following line is commented out because it causes errors with large nets (Antonis)
 //#define EIGEN_NO_MALLOC
 
-#ifndef __NVCC__
+#ifndef __CUDACC__
 #include <Eigen/Eigen>
 #endif
 
