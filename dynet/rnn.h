@@ -43,6 +43,14 @@ struct RNNBuilder {
     start_new_sequence_impl(h_0);
   }
 
+  // explicitly set the output state of a node
+  Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new={}) {
+    sm.transition(RNNOp::add_input);
+    head.push_back(prev);
+    cur = head.size() - 1;
+    return set_h_impl(prev, h_new);
+  }
+
   // add another timestep by reading in the variable x
   // return the hidden representation of the deepest layer
   Expression add_input(const Expression& x) {
@@ -100,6 +108,7 @@ struct RNNBuilder {
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) = 0;
+  virtual Expression set_h_impl(int prev, const std::vector<Expression>& h_new) = 0;
   RNNPointer cur;
   float dropout_rate;  
  private:
@@ -124,6 +133,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h_0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
+  Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
 
  public:
   Expression add_auxiliary_input(const Expression& x, const Expression &aux);

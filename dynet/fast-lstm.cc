@@ -93,6 +93,18 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   }
 }
 
+// TO DO - Make this correct
+Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
+  if (h_new.size()) { assert(h_new.size() == layers); }
+  const unsigned t = h.size();
+  h.push_back(vector<Expression>(layers));
+  for (unsigned i = 0; i < layers; ++i) {
+    Expression y = h_new[i];
+    h[t][i] = y;
+  }
+  return h[t].back();
+}
+
 Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
