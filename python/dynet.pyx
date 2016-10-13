@@ -50,24 +50,22 @@ cdef init(random_seed=None):
 
 init() # TODO: allow different random seeds
 
-cdef CDim Dim(dim):
+cdef CDim Dim(dim, unsigned int batch_size=1):
     """
     dim: either a tuple or an int
     """
     cdef vector[long] cvec
     if isinstance(dim, tuple):
         for d in dim: cvec.push_back(d)
-        #if len(dim) == 1: return CDim(dim[0])
-        #elif len(dim) == 2: return CDim(dim[0],dim[1])
-        #else:
-        #    raise "Unsupported dimension",dim
-        return CDim(cvec)
-    # hope it's a number. TODO: error checking / exception
-    if isinstance(dim, (int, float)):
+    elif isinstance(dim, (int, float)):
         cvec.push_back(dim)
-        #return CDim(dim)
+    else:
+        raise "Unsupported dimension",dim
+
+    if batch_size > 1:
+        return CDim(cvec, batch_size)
+    else:
         return CDim(cvec)
-    raise "Unsupported dimension",dim
 
 cdef c_tensor_as_np(CTensor &t):
     # TODO: make more efficient, with less copy
@@ -558,6 +556,14 @@ cdef class Expression: #{{{
         t = self.cgp().get_value(self.vindex)
         dim = t.d
         arr = np.array(c_as_vector(t))
+        if dim.batch_elems() > 1:
+            if dim.ndims() == 1:
+                arr = arr.reshape(dim.rows(), dim.batch_elems(),order='F')
+            elif dim.ndims() == 2:
+                arr = arr.reshape(dim.rows(), dim.cols(), dim.batch_elems(),order='F')
+            else:
+                assert(False)
+            return arr
         if dim.ndims() == 2:
             arr = arr.reshape(dim.rows(), dim.cols(),order='F')
         return arr
@@ -812,7 +818,7 @@ cpdef Expression noise(Expression x, float stddev): return Expression.from_cexpr
 cpdef Expression dropout(Expression x, float p): return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
 cpdef Expression block_dropout(Expression x, float p): return Expression.from_cexpr(x.cg_version, c_block_dropout(x.c(), p))
 #expr-dim
-cpdef Expression reshape(Expression x, tuple d): return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d)))
+cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1): return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d, batch_size)))
 
 cpdef Expression esum(list xs):
     assert xs, 'List is empty, nothing to esum.'
