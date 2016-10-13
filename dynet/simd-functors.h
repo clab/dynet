@@ -1,7 +1,7 @@
 #ifndef DYNET_XFUNCTORS_H
 #define DYNET_XFUNCTORS_H
 
-#ifndef __NVCC__
+#ifndef __CUDACC__
 #include <Eigen/Eigen>
 #endif
 
