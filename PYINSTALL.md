@@ -54,7 +54,7 @@ You now have a working python binding inside of `build/dynet`.
 To verify this is working:
 
 ```bash
-cd $PATH_TO_DYNET/build/dynet
+cd $PATH_TO_DYNET/build/python
 python
 ```
 then, within python:
@@ -66,7 +66,7 @@ model = pc.Model()
 
 In order to install the module so that it is accessible from everywhere, run the following:
 ```bash
-cd $PATH_TO_DYNET/build/dynet
+cd $PATH_TO_DYNET/build/python
 python setup.py install --user
 ```
 
