@@ -15,10 +15,10 @@ function(find_mkl)
   set(MKL_ARCH intel64)
   find_path(MKL_INCLUDE_DIR mkl.h
             PATHS ${MKL_ROOT} ${MKL_ROOT}/include)
-  find_library(MKL_CORE_LIB NAMES mkl_intel_lp64.lib mkl_intel_thread.lib mkl_core.lib
+  find_library(MKL_CORE_LIB NAMES mkl_intel_lp64 mkl_intel_thread mkl_core
                PATHS ${MKL_ROOT} ${MKL_ROOT}/lib/${MKL_ARCH}
                DOC "MKL core library path")
-  find_library(MKL_COMPILER_LIB NAMES libiomp5md.lib
+  find_library(MKL_COMPILER_LIB NAMES libiomp5md
                PATHS ${MKL_ROOT} ${MKL_ROOT}/../compiler/lib/${MKL_ARCH}
                DOC "MKL compiler lib (for threaded MKL)")
   if(MKL_INCLUDE_DIR AND MKL_CORE_LIB AND MKL_COMPILER_LIB)
