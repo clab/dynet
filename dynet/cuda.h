@@ -37,9 +37,14 @@ class Device;
 inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   assert(n);
   int logn;
+#ifdef _WIN32
+  // TODO: Write assembly for MSVC, remove the following line:
+  logn = log2(n);
+#else
   asm("\tbsr %1, %0\n"
       : "=r"(logn)
       : "r" (n-1));
+#endif
   logn = logn > 9 ? 9 : (logn < 4 ? 4 : logn);
   ++logn;
   int threads = 1 << logn;

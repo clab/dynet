@@ -110,6 +110,14 @@ if(WITH_CUDA_BACKEND)
   # Build nvcc-compiled gpu library
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-O2;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA")
+  if(MSVC)
+    # If MSVC, we need the C99 math flag as in other compilations, and we need the boost flag because nvcc doesn't
+    #  properly parse part of the boost template definitions
+    list(APPEND CUDA_NVCC_FLAGS "-DEIGEN_HAS_C99_MATH;-DBOOST_NO_CXX11_ALLOCATOR")
+	list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
+    list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
+  endif()
+  
   SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
   cuda_add_library(dynetcuda SHARED gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
 endif(WITH_CUDA_BACKEND)
