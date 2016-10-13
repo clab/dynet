@@ -2,7 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 foreach(TARGET lm)
   ADD_EXECUTABLE(${TARGET} ${TARGET}.cc)
-  target_link_libraries(${TARGET} dynet ${LIBS})
+  target_link_libraries(${TARGET} ${MKL_LIBS} dynet ${LIBS})
   if(UNIX AND NOT APPLE)
     target_link_libraries(${TARGET} rt)
   endif()
