@@ -76,6 +76,9 @@ set(dynet_library_HDRS
 )
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
+if (NOT MSVC)
+  set(BUILD_SHARED_LIBS ON)
+endif()
 
 #foreach(test_src ${TEST_SRCS})
   #Extract the filename without an extension (NAME_WE)
@@ -98,12 +101,12 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 #endforeach(test_src)
 
 # Build cpu library
-add_library(dynet SHARED ${dynet_library_SRCS} ${dynet_library_HDRS})
+add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
 target_link_libraries(dynet ${LIBS})
 if(WITH_CUDA_BACKEND)
   # Build main gpu library
   list(APPEND dynet_library_SRCS cuda.cc)
-	add_library(gdynet SHARED ${dynet_library_SRCS} ${dynet_library_HDRS})
+	add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS})
 	target_link_libraries(gdynet ${LIBS})
   set_target_properties(gdynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
@@ -116,10 +119,12 @@ if(WITH_CUDA_BACKEND)
     list(APPEND CUDA_NVCC_FLAGS "-DEIGEN_HAS_C99_MATH;-DBOOST_NO_CXX11_ALLOCATOR")
 	list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
+  else()
+    list(APPEND CUDA_NVCC_FLAGS "--compiler-optons \"-fPIC\"")
   endif()
   
   SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-  cuda_add_library(dynetcuda SHARED gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
+  cuda_add_library(dynetcuda gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu)
 endif(WITH_CUDA_BACKEND)
 
 install(FILES ${dynet_library_HDRS} DESTINATION include/dynet)
