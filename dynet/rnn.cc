@@ -89,6 +89,17 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   if (h0.size()) { assert(h0.size() == layers); }
 }
 
+Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
+  if (h_new.size()) { assert(h_new.size() == layers); }
+  const unsigned t = h.size();
+  h.push_back(vector<Expression>(layers));
+  for (unsigned i = 0; i < layers; ++i) {
+    Expression y = h_new[i];
+    h[t][i] = y;
+  }
+  return h[t].back();
+}
+
 Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
   if(dropout_rate != 0.f)
     throw std::runtime_error("SimpleRNNBuilder doesn't support dropout yet");

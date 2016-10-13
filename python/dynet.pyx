@@ -921,6 +921,16 @@ cdef class _RNNBuilder: # {{{
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         return Expression.from_cexpr(self.cg_version, self.thisptr.add_input(prev, e.c()))
 
+    cdef set_h(self, CRNNPointer prev, es=None):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        cdef vector[CExpression] ces = vector[CExpression]()
+        cdef Expression e
+        if es:
+            for e in es:
+                ensure_freshness(e)
+                ces.push_back(e.c())
+        return Expression.from_cexpr(self.cg_version, self.thisptr.set_h(prev, ces))
+
     cdef rewind_one_step(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         self.thisptr.rewind_one_step()
@@ -1142,6 +1152,11 @@ cdef class RNNState: # {{{
         self.state_idx=state_idx
         self._prev = prev_state
         self._out = out
+
+    cpdef RNNState set_h(self, es=None):
+        cdef Expression res = self.builder.set_h(CRNNPointer(self.state_idx), es)
+        cdef int state_idx = <int>self.builder.thisptr.state()
+        return RNNState(self.builder, state_idx, self, res)
 
     cpdef RNNState add_input(self, Expression x):
         cdef Expression res = self.builder.add_input_to_prev(CRNNPointer(self.state_idx), x)
