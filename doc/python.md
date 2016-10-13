@@ -150,4 +150,4 @@ As before, `cd build/python` followed by `python setup.py install --user` will i
 In order to use the GPU support, you can either:
 
 * Use `import _gdynet as dy` instead of `import dynet as dy`
-* Or use the commandline switch `--dynet-gpu` or the GPU switches detailed [here](commandline.md) when invoking the program.
+* Or, (preferred), `import dynet` as usual, but use the commandline switch `--dynet-gpu` or the GPU switches detailed [here](commandline.md) when invoking the program. This option lets the same code work with either the GPU or the CPU version depending on how it is invoked.
