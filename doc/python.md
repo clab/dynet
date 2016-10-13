@@ -55,6 +55,7 @@ To verify this is working:
 
 ```bash
 cd $PATH_TO_DYNET/build/python
+python
 ```
 then, within python:
 ```bash
