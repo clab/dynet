@@ -21,7 +21,10 @@
 // Following line is commented out because it causes errors with large nets (Antonis)
 //#define EIGEN_NO_MALLOC
 
+#ifndef __NVCC__
 #include <Eigen/Eigen>
+#endif
+
 #include <unsupported/Eigen/CXX11/Tensor>
 
 namespace dynet {
