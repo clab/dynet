@@ -11,19 +11,46 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 #      flags (the compiler does not always make the best configuration
 #      decisions without help)
 
-# Cross-compiler, cross-platform options
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
+function(find_mkl)
+  set(MKL_ARCH intel64)
+  find_path(MKL_INCLUDE_DIR mkl.h
+            PATHS ${MKL_ROOT} ${MKL_ROOT}/include)
+  find_library(MKL_CORE_LIB NAMES mkl_intel_lp64 mkl_intel_thread mkl_core
+               PATHS ${MKL_ROOT} ${MKL_ROOT}/lib/${MKL_ARCH}
+               DOC "MKL core library path")
+  find_library(MKL_COMPILER_LIB NAMES libiomp5md
+               PATHS ${MKL_ROOT} ${MKL_ROOT}/../compiler/lib/${MKL_ARCH}
+               DOC "MKL compiler lib (for threaded MKL)")
+  if(MKL_INCLUDE_DIR AND MKL_CORE_LIB AND MKL_COMPILER_LIB)
+    get_filename_component(MKL_CORE_LIB_DIR ${MKL_CORE_LIB} DIRECTORY)
+    get_filename_component(MKL_COMPILER_LIB_DIR ${MKL_COMPILER_LIB} DIRECTORY)
+    message(STATUS "Found MKL\n   * include: ${MKL_INCLUDE_DIR},\n   * core library dir: ${MKL_CORE_LIB_DIR},\n   * compiler library dir: ${MKL_COMPILER_LIB_DIR}")
+    set(MKL_LIBS mkl_intel_lp64.lib mkl_intel_thread.lib mkl_core.lib libiomp5md.lib PARENT_SCOPE)
+    include_directories(${MKL_INCLUDE_DIR})
+    link_directories(${MKL_CORE_LIB_DIR} ${MKL_COMPILER_LIB_DIR})
+  else()
+    message(FATAL_ERROR "Failed to find MKL in path: ${MKL_ROOT} (Did you set MKL_ROOT properly?)")
+  endif()
+endfunction()
 
-# Platform-specific options
-if(WIN32)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX")   # Disable min/max macros in windef.h
+######## Cross-compiler, cross-platform options
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
+if (MKL OR MKL_ROOT)
+  find_mkl()  # sets include/lib directories and sets ${MKL_LIBS} needed for linking
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
 endif()
 
-# Compiler-specific options
+
+######## Platform-specific options
+if(WIN32)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX")   # Disable min/max macros in windef.h
+endif()
+
+######## Compiler-specific options
 if(MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 -DEIGEN_HAS_C99_MATH /MP")   # -Wall produces 20k warnings
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 -DEIGEN_HAS_C99_MATH /MP")   # -Wall produces 20k warnings
 else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -Wall -std=c++11 -Ofast -g -march=native")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -Wall -std=c++11 -Ofast -g -march=native")
 endif()
 
 enable_testing()
@@ -61,11 +88,11 @@ message("-- Boost dir is " ${EIGEN3_INCLUDE_DIR})
 find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 if(MSVC)
-	# Boost does auto-linking when using a compiler like Microsoft Visual C++, we just need to help it find the libraries
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
+  # Boost does auto-linking when using a compiler like Microsoft Visual C++, we just need to help it find the libraries
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
 else()
-	set(LIBS ${LIBS} ${Boost_LIBRARIES})
+  set(LIBS ${LIBS} ${Boost_LIBRARIES})
 endif()
 # trouble shooting:
 # if boost library cannot be found, in addition to install boost library

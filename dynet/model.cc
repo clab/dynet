@@ -598,5 +598,7 @@ float Model::gradient_l2_norm_dev(MyDevice & dev) const {
 
 } // namespace dynet
 
+#ifndef __CUDACC__
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::ParameterStorage)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::LookupParameterStorage)
+#endif

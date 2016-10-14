@@ -4,6 +4,7 @@
 #include <limits>
 #include <cmath>
 #include <stdexcept>
+#include <array>
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"

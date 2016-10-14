@@ -76,6 +76,9 @@ set(dynet_library_HDRS
 )
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
+if (NOT MSVC)
+  set(BUILD_SHARED_LIBS ON)
+endif()
 
 #foreach(test_src ${TEST_SRCS})
   #Extract the filename without an extension (NAME_WE)
@@ -98,20 +101,30 @@ file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 #endforeach(test_src)
 
 # Build cpu library
-add_library(dynet SHARED ${dynet_library_SRCS} ${dynet_library_HDRS})
+add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
 target_link_libraries(dynet ${LIBS})
 if(WITH_CUDA_BACKEND)
   # Build main gpu library
   list(APPEND dynet_library_SRCS cuda.cc)
-	add_library(gdynet SHARED ${dynet_library_SRCS} ${dynet_library_HDRS})
+	add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS})
 	target_link_libraries(gdynet ${LIBS})
   set_target_properties(gdynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
   # Build nvcc-compiled gpu library
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-O2;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA")
+  if(MSVC)
+    # If MSVC, we need the C99 math flag as in other compilations, and we need the boost flag because nvcc doesn't
+    #  properly parse part of the boost template definitions
+    list(APPEND CUDA_NVCC_FLAGS "-DEIGEN_HAS_C99_MATH;-DBOOST_NO_CXX11_ALLOCATOR")
+	list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
+    list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
+  else()
+    list(APPEND CUDA_NVCC_FLAGS "--compiler-optons \"-fPIC\"")
+  endif()
+  
   SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-  cuda_add_library(dynetcuda SHARED gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
+  cuda_add_library(dynetcuda gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu)
 endif(WITH_CUDA_BACKEND)
 
 install(FILES ${dynet_library_HDRS} DESTINATION include/dynet)

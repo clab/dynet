@@ -343,9 +343,11 @@ DYNET_SERIALIZE_IMPL(AdamTrainer)
 
 } // namespace dynet
 
+#ifndef __CUDACC__
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::SimpleSGDTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::MomentumSGDTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdagradTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdadeltaTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::RmsPropTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdamTrainer)
+#endif
