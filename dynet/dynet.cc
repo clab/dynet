@@ -26,12 +26,21 @@ void Node::forward(const std::vector<const Tensor*>& xs,
   if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
     forward_impl(xs, fx);
   } else {
-    for(unsigned b = 0; b < fx.d.batch_elems(); ++b) {
-      std::vector<Tensor>  xs_elems;
-      std::vector<const Tensor*> xs_ptrs;
-      for(size_t i = 0; i < xs.size(); ++i) xs_elems.push_back(xs[i]->batch_elem(b));
-      for(size_t i = 0; i < xs.size(); ++i) xs_ptrs.push_back(&xs_elems[i]);
-      Tensor fx_elem(fx.batch_elem(b));
+    size_t i;
+    std::vector<Tensor> xs_elems(xs.size());
+    std::vector<const Tensor*> xs_ptrs(xs.size());
+    std::vector<size_t> xs_sizes(xs.size());
+    for(i = 0; i < xs.size(); ++i) {
+      xs_elems[i] = xs[i]->batch_elem(0);
+      xs_ptrs[i] = &xs_elems[i];
+      xs_sizes[i] = xs_elems[i].d.size();
+    }
+    Tensor fx_elem(fx.batch_elem(0));
+    size_t fx_size = fx_elem.d.size();
+    forward_impl(xs_ptrs, fx_elem);
+    for(unsigned b = 1; b < fx.d.batch_elems(); ++b) {
+      for(i = 0; i < xs.size(); ++i) xs_elems[i].v += xs_sizes[i];
+      fx_elem.v += fx_size;
       forward_impl(xs_ptrs, fx_elem);
     }
   }
@@ -39,20 +48,33 @@ void Node::forward(const std::vector<const Tensor*>& xs,
 void Node::backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
-                    unsigned i,
+                    unsigned xs_i,
                     Tensor& dEdxi) const {
   if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
-    backward_impl(xs, fx, dEdf, i, dEdxi);
+    backward_impl(xs, fx, dEdf, xs_i, dEdxi);
   } else {
-    for(unsigned b = 0; b < fx.d.batch_elems(); ++b) {
-      std::vector<Tensor>  xs_elems;
-      std::vector<const Tensor*> xs_ptrs;
-      for(size_t i = 0; i < xs.size(); ++i) xs_elems.push_back(xs[i]->batch_elem(b));
-      for(size_t i = 0; i < xs.size(); ++i) xs_ptrs.push_back(&xs_elems[i]);
-      Tensor fx_elem(fx.batch_elem(b));
-      Tensor dEdf_elem(dEdf.batch_elem(b));
-      Tensor dEdxi_elem(dEdxi.batch_elem(b));
-      backward_impl(xs_ptrs, fx_elem, dEdf_elem, i, dEdxi_elem);
+    size_t i;
+    std::vector<Tensor> xs_elems(xs.size());
+    std::vector<const Tensor*> xs_ptrs(xs.size());
+    std::vector<size_t> xs_sizes(xs.size());
+    for(i = 0; i < xs.size(); ++i) {
+      xs_elems[i] = xs[i]->batch_elem(0);
+      xs_ptrs[i] = &xs_elems[i];
+      xs_sizes[i] = xs_elems[i].d.size();
+    }
+    Tensor fx_elem(fx.batch_elem(0));
+    size_t fx_size = fx_elem.d.size();
+    Tensor dEdf_elem(dEdf.batch_elem(0));
+    size_t dEdf_size = dEdf_elem.d.size();
+    Tensor dEdxi_elem(dEdxi.batch_elem(0));
+    size_t dEdxi_size = dEdxi_elem.d.size();
+    backward_impl(xs_ptrs, fx_elem, dEdf_elem, xs_i, dEdxi_elem);
+    for(unsigned b = 1; b < fx.d.batch_elems(); ++b) {
+      for(i = 0; i < xs.size(); ++i) xs_elems[i].v += xs_sizes[i];
+      fx_elem.v += fx_size;
+      dEdf_elem.v += dEdf_size;
+      dEdxi_elem.v += dEdxi_size;
+      backward_impl(xs_ptrs, fx_elem, dEdf_elem, xs_i, dEdxi_elem);
     }
   }
 }
