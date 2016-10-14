@@ -117,14 +117,15 @@ if(WITH_CUDA_BACKEND)
     # If MSVC, we need the C99 math flag as in other compilations, and we need the boost flag because nvcc doesn't
     #  properly parse part of the boost template definitions
     list(APPEND CUDA_NVCC_FLAGS "-DEIGEN_HAS_C99_MATH;-DBOOST_NO_CXX11_ALLOCATOR")
-	list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
+    list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
+    SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
+    cuda_add_library(dynetcuda gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu)
   else()
-    list(APPEND CUDA_NVCC_FLAGS "--compiler-optons \"-fPIC\"")
+    SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
+    cuda_add_library(dynetcuda gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
   endif()
-  
-  SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-  cuda_add_library(dynetcuda gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu)
+
 endif(WITH_CUDA_BACKEND)
 
 install(FILES ${dynet_library_HDRS} DESTINATION include/dynet)
