@@ -1,7 +1,9 @@
 #ifndef DYNET_XFUNCTORS_H
 #define DYNET_XFUNCTORS_H
 
+#ifndef __CUDACC__
 #include <Eigen/Eigen>
+#endif
 
 #include "dynet/functors.h"
 
