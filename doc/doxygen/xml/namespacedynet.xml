@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.9.1">
+  <compounddef id="namespacedynet" kind="namespace" language="C++">
+    <compoundname>dynet</compoundname>
+    <innerclass refid="structdynet_1_1AdadeltaTrainer" prot="public">dynet::AdadeltaTrainer</innerclass>
+    <innerclass refid="structdynet_1_1AdagradTrainer" prot="public">dynet::AdagradTrainer</innerclass>
+    <innerclass refid="structdynet_1_1AdamTrainer" prot="public">dynet::AdamTrainer</innerclass>
+    <innerclass refid="structdynet_1_1MomentumSGDTrainer" prot="public">dynet::MomentumSGDTrainer</innerclass>
+    <innerclass refid="structdynet_1_1RmsPropTrainer" prot="public">dynet::RmsPropTrainer</innerclass>
+    <innerclass refid="structdynet_1_1SimpleSGDTrainer" prot="public">dynet::SimpleSGDTrainer</innerclass>
+    <innerclass refid="structdynet_1_1Trainer" prot="public">dynet::Trainer</innerclass>
+    <innernamespace refid="namespacedynet_1_1expr">dynet::expr</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/paul/dev/dynet/dynet/expr.h" line="8" column="1"/>
+  </compounddef>
+</doxygen>

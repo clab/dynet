@@ -1,0 +1,55 @@
+
+Dynet documentation
+*******************
+
+You can find information about how to install/use DyNet in general
+below:
+
+* Building/Installing
+
+  * Prerequisites
+
+  * Building
+
+  * Compiling/linking External Programs
+
+  * Debugging build problems
+
+  * Build options
+
+* Installing the Python DyNet module.
+
+  * TL;DR
+
+  * Detailed Instructions:
+
+  * Installing with GPU support
+
+* Using the GPU:
+
+* DyNet Command Line Options
+
+* DyNet Tutorial
+
+The following can be referenced when implementing your models in
+DyNet:
+
+* DyNet Operations
+
+* DyNet Builders
+
+* DyNet Optimizers
+
+* Mini-batching in DyNet
+
+* Multi-processing in DyNet
+
+
+Indices and tables
+******************
+
+* *Index*
+
+* *Module Index*
+
+* *Search Page*

@@ -1,0 +1,2379 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.9.1">
+  <compounddef id="namespacedynet_1_1expr" kind="namespace" language="C++">
+    <compoundname>dynet::expr</compoundname>
+    <innerclass refid="structdynet_1_1expr_1_1Expression" prot="public">dynet::expr::Expression</innerclass>
+    <innernamespace refid="namespacedynet_1_1expr_1_1detail">dynet::expr::detail</innernamespace>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ae5f6620ddb99a831c67c5ec8c59b1c89" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::input</definition>
+        <argsstring>(ComputationGraph &amp;g, real s)</argsstring>
+        <name>input</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="20" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a13bfdadcabc4e60999c4ea3477a7634f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::input</definition>
+        <argsstring>(ComputationGraph &amp;g, const real *ps)</argsstring>
+        <name>input</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>const real *</type>
+          <declname>ps</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="21" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a2ffae26632caa4c5936a5b076988e2fe" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::input</definition>
+        <argsstring>(ComputationGraph &amp;g, const Dim &amp;d, const std::vector&lt; float &gt; &amp;data)</argsstring>
+        <name>input</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>const Dim &amp;</type>
+          <declname>d</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; float &gt; &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="22" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a3a5993adbc2c51a401be68c4a38e5834" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::input</definition>
+        <argsstring>(ComputationGraph &amp;g, const Dim &amp;d, const std::vector&lt; float &gt; *pdata)</argsstring>
+        <name>input</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>const Dim &amp;</type>
+          <declname>d</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; float &gt; *</type>
+          <declname>pdata</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="23" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ac22769f2d9c55305a3478651f330e846" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::input</definition>
+        <argsstring>(ComputationGraph &amp;g, const Dim &amp;d, const std::vector&lt; unsigned int &gt; &amp;ids, const std::vector&lt; float &gt; &amp;data, float defdata=0.f)</argsstring>
+        <name>input</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>const Dim &amp;</type>
+          <declname>d</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned int &gt; &amp;</type>
+          <declname>ids</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; float &gt; &amp;</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type>float</type>
+          <declname>defdata</declname>
+          <defval>0.f</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="24" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a75503308f30bad8ccabdecbb82498845" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::parameter</definition>
+        <argsstring>(ComputationGraph &amp;g, Parameter p)</argsstring>
+        <name>parameter</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>Parameter</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="25" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a709f44bbe801825d1df8392d7b8db391" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::const_parameter</definition>
+        <argsstring>(ComputationGraph &amp;g, Parameter p)</argsstring>
+        <name>const_parameter</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>Parameter</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="26" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a60f00ce00d2ff48ebc7f0c17999747a7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::lookup</definition>
+        <argsstring>(ComputationGraph &amp;g, LookupParameter p, unsigned index)</argsstring>
+        <name>lookup</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>LookupParameter</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="27" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a84954ace5c16821bfd1040a2e0e8c626" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::lookup</definition>
+        <argsstring>(ComputationGraph &amp;g, LookupParameter p, const unsigned *pindex)</argsstring>
+        <name>lookup</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>LookupParameter</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>const unsigned *</type>
+          <declname>pindex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="28" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a3f5f241c5a3a3521da2b95e273b69bbb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::const_lookup</definition>
+        <argsstring>(ComputationGraph &amp;g, LookupParameter p, unsigned index)</argsstring>
+        <name>const_lookup</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>LookupParameter</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="29" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a8ce8c62b64a0127fe55e61e676dce6ee" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::const_lookup</definition>
+        <argsstring>(ComputationGraph &amp;g, LookupParameter p, const unsigned *pindex)</argsstring>
+        <name>const_lookup</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>LookupParameter</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>const unsigned *</type>
+          <declname>pindex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="30" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aa8937537fb700554052a528d7402441d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::lookup</definition>
+        <argsstring>(ComputationGraph &amp;g, LookupParameter p, const std::vector&lt; unsigned &gt; &amp;indices)</argsstring>
+        <name>lookup</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>LookupParameter</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>indices</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="32" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a8cb1f077ba10915e2255983fe3007738" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::lookup</definition>
+        <argsstring>(ComputationGraph &amp;g, LookupParameter p, const std::vector&lt; unsigned &gt; *pindices)</argsstring>
+        <name>lookup</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>LookupParameter</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; *</type>
+          <declname>pindices</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="33" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a48a4de63420710692cb95f3c2422697d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::const_lookup</definition>
+        <argsstring>(ComputationGraph &amp;g, LookupParameter p, const std::vector&lt; unsigned &gt; &amp;indices)</argsstring>
+        <name>const_lookup</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>LookupParameter</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>indices</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="34" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a22cb60e01737d68d92f6b610cb2504b6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::const_lookup</definition>
+        <argsstring>(ComputationGraph &amp;g, LookupParameter p, const std::vector&lt; unsigned &gt; *pindices)</argsstring>
+        <name>const_lookup</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>LookupParameter</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; *</type>
+          <declname>pindices</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="35" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a659ef238d6688372b41eea677b3e4485" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::zeroes</definition>
+        <argsstring>(ComputationGraph &amp;g, const Dim &amp;d)</argsstring>
+        <name>zeroes</name>
+        <param>
+          <type>ComputationGraph &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>const Dim &amp;</type>
+          <declname>d</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="36" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a9ae348b9f125c9a528eb2585a4222fb7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::nobackprop</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>nobackprop</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="39" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1abb4a1d2f731fb7bde692bc78b2a6746d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator-</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>operator-</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="42" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a1c9802a372b32e7b1bd1b22035c79dc4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator+</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>operator+</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="43" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ab3697fdf7016e077d23d2e7fe817e04d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator+</definition>
+        <argsstring>(const Expression &amp;x, real y)</argsstring>
+        <name>operator+</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="44" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a9f8f126d36b79269878659f32f6c7178" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator+</definition>
+        <argsstring>(real x, const Expression &amp;y)</argsstring>
+        <name>operator+</name>
+        <param>
+          <type>real</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="45" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a1f9e7478b21dcf23b7b032b9df7a46a6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator-</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>operator-</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="46" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ac25406a5a87f717bb730233b53c91063" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator-</definition>
+        <argsstring>(real x, const Expression &amp;y)</argsstring>
+        <name>operator-</name>
+        <param>
+          <type>real</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="47" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a0548c6e4448f48f9c4484e92bf3f2502" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator-</definition>
+        <argsstring>(const Expression &amp;x, real y)</argsstring>
+        <name>operator-</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="48" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a1001cb58adfb8eb1b07598fb1309d6c8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator*</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>operator*</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="49" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a1e59f5371e6f6a22996d833cdb7e21ff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator*</definition>
+        <argsstring>(const Expression &amp;x, float y)</argsstring>
+        <name>operator*</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>float</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="50" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a100c040f3cc8a57e7c1e003da42d703b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator*</definition>
+        <argsstring>(float y, const Expression &amp;x)</argsstring>
+        <name>operator*</name>
+        <param>
+          <type>float</type>
+          <declname>y</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="51" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="51" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a88387ce31078771cee2392c4f9c2df58" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::operator/</definition>
+        <argsstring>(const Expression &amp;x, float y)</argsstring>
+        <name>operator/</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>float</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="52" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="52" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1af89e91d60e5750210a4d94b84c41d4ba" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::addmv</definition>
+        <argsstring>(const Expression &amp;M, const Expression &amp;v)</argsstring>
+        <name>addmv</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>M</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="54" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1afa0a8463d347a9421981e500b3093479" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::cdiv</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>cdiv</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="56" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a6887663284bcfba0678bbb81d88d641c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::colwise_add</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;bias)</argsstring>
+        <name>colwise_add</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>bias</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="57" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1abad85c61bd74c06704cb1e5204bbff4d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::contract3d_1d</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>contract3d_1d</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="59" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a92d38840029ed33566339f305a5cbb64" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::contract3d_1d_1d</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y, const Expression &amp;z)</argsstring>
+        <name>contract3d_1d_1d</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>z</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="61" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aca8fc55f40d24a94445e2eeed4ab7098" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::contract3d_1d_1d</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y, const Expression &amp;z, const Expression &amp;b)</argsstring>
+        <name>contract3d_1d_1d</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>z</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="62" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a779e4a28c2e7672f45a3af869b460577" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::contract3d_1d</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y, const Expression &amp;b)</argsstring>
+        <name>contract3d_1d</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="64" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a1a9ee2ddb02f73c2fd41d541fbdff7c3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::sqrt</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>sqrt</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="66" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a1a24f03bd1a5f953aff3165cafd924cf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::erf</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>erf</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="67" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1afa57ace7587a5220035d161325453feb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::tanh</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>tanh</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="68" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a13b911e1a5443cf708e39f700442d8ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::exp</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>exp</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="69" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aca4e5335431747c1ae8609377c1ce897" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::square</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>square</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="70" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ac88dfe0edcd839a768100438da203f01" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::cube</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>cube</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="71" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a2a59e0f2343b5d260baeb5dc67677606" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::lgamma</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>lgamma</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="72" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ab4bfd37e88166914d856ee539f02703d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::log</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>log</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="73" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a209b469ee60b329a11fceda0b0a79c65" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::logistic</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>logistic</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="74" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a2e51e9e5efb75243706d6dd8bf927fe5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::rectify</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>rectify</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="75" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1afaa76789d6eb1cd443e3e1b7fa9a00df" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::hinge</definition>
+        <argsstring>(const Expression &amp;x, unsigned index, float m=1.0)</argsstring>
+        <name>hinge</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>index</declname>
+        </param>
+        <param>
+          <type>float</type>
+          <declname>m</declname>
+          <defval>1.0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="76" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aacee2c87597c524b09f73bb88736f235" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::hinge</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; &amp;indices, float m=1.0)</argsstring>
+        <name>hinge</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>indices</declname>
+        </param>
+        <param>
+          <type>float</type>
+          <declname>m</declname>
+          <defval>1.0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="77" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a5a69856899fab631a7d9646bf41466a7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::hinge</definition>
+        <argsstring>(const Expression &amp;x, const unsigned *pindex, float m=1.0)</argsstring>
+        <name>hinge</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const unsigned *</type>
+          <declname>pindex</declname>
+        </param>
+        <param>
+          <type>float</type>
+          <declname>m</declname>
+          <defval>1.0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="78" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a39f3142a61e6e2c26df082ea7997c31d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::hinge</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; *pindices, float m=1.0)</argsstring>
+        <name>hinge</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; *</type>
+          <declname>pindices</declname>
+        </param>
+        <param>
+          <type>float</type>
+          <declname>m</declname>
+          <defval>1.0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="79" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ab2814b6448fe63319bf5cec164e8d888" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::log_softmax</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>log_softmax</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="80" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a466ef51789832d35bb78588cf65b979c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::sparsemax</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>sparsemax</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="81" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ac8e56c086bf2cad67780de2c9ad2660e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::log_softmax</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; &amp;restriction)</argsstring>
+        <name>log_softmax</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>restriction</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="82" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a502497f88b9783bd7f62785095b2f74b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::sparsemax_loss</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; &amp;target_support)</argsstring>
+        <name>sparsemax_loss</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>target_support</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="84" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a98a86ad9ad40de11231e211902369f84" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::sparsemax_loss</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; *ptarget_support)</argsstring>
+        <name>sparsemax_loss</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; *</type>
+          <declname>ptarget_support</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="85" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aa4b24bf00287ed8ae17ea692c32bca71" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::softmax</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>softmax</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="86" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a72117e864c6d8943f102ea23b0632a14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::softsign</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>softsign</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="87" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a4ab881d044ce63b73e291fa0b0de40d5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pow</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>pow</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="88" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1abbe61cff5672e509e17fc31361d82e71" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::min</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>min</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="89" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a3bab7d9013942885c08915022c81b825" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::max</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>max</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="90" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a57f691035ae6260c80b22bf34bca0571" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::noise</definition>
+        <argsstring>(const Expression &amp;x, real stddev)</argsstring>
+        <name>noise</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>stddev</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="91" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a8957a834d23950feddcc2889484c4f51" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::dropout</definition>
+        <argsstring>(const Expression &amp;x, real p)</argsstring>
+        <name>dropout</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="92" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aad5aacc546fa0e52d0e2a90b6d83ec45" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::block_dropout</definition>
+        <argsstring>(const Expression &amp;x, real p)</argsstring>
+        <name>block_dropout</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="93" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a352a496b9e3847be87d76555626776eb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::reshape</definition>
+        <argsstring>(const Expression &amp;x, const Dim &amp;d)</argsstring>
+        <name>reshape</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const Dim &amp;</type>
+          <declname>d</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="96" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a70f95259680f8615fcf9e096c84f14c8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::transpose</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>transpose</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="98" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ab28e529d328ba6c6886b9b5cc0fce498" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::select_rows</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; &amp;rows)</argsstring>
+        <name>select_rows</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>rows</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="99" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a61d2d39e94260e4faf13cc574dd36568" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::select_rows</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; *prows)</argsstring>
+        <name>select_rows</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; *</type>
+          <declname>prows</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="100" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a739494452a871c5b9ceb94de36c53900" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::select_cols</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; &amp;cols)</argsstring>
+        <name>select_cols</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>cols</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="102" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a4156d9c7dcf8002c6a880a7f306da62d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::select_cols</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; *pcols)</argsstring>
+        <name>select_cols</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; *</type>
+          <declname>pcols</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="103" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a25258bfc8ff820bbdc209b5e3d8b6e6d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::inverse</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>inverse</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="105" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a1856e25e3eeaf940e880a6e2a58b652c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::logdet</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>logdet</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="106" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a32a66201c7a1cbd4f66e0fe3b214cd71" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::trace_of_product</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>trace_of_product</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="108" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ab8915e9bf3941153417c1e73c1e8b8a7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::cwise_multiply</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>cwise_multiply</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="109" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aa32f6a5a36b8e919cdbecb8b48741e49" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::squared_norm</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>squared_norm</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="111" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1acc382468450a91311d60c3a40dc691ab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::dot_product</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>dot_product</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="112" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a55af88e4cc07988db357cda6eb3fd1f0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::squared_distance</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>squared_distance</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="113" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ab482048f14c62357eb2ddb028380a5db" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::huber_distance</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y, float c=1.345f)</argsstring>
+        <name>huber_distance</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <param>
+          <type>float</type>
+          <declname>c</declname>
+          <defval>1.345f</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="114" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a0d66e729c3febf6c1a8fdb3f60da821e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::l1_distance</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>l1_distance</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="115" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ae751182edb407a59784fc3fd335cefe9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::binary_log_loss</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y)</argsstring>
+        <name>binary_log_loss</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="116" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aea9a4da73826136ba3b4793c2509d2b8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pairwise_rank_loss</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;y, real m=1.0)</argsstring>
+        <name>pairwise_rank_loss</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>y</declname>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>m</declname>
+          <defval>1.0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="117" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a91f05dc5703cf7a5b085de9a6f021c89" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::poisson_loss</definition>
+        <argsstring>(const Expression &amp;x, unsigned y)</argsstring>
+        <name>poisson_loss</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="118" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a4ffc006fa6b89c802ae677685225076b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::poisson_loss</definition>
+        <argsstring>(const Expression &amp;x, const unsigned *py)</argsstring>
+        <name>poisson_loss</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const unsigned *</type>
+          <declname>py</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="119" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ab6f5a27a629013e706435bde00b357a5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::conv1d_narrow</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;f)</argsstring>
+        <name>conv1d_narrow</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="122" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a92e950d6ad04167c6c3de2a2304294eb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::conv1d_wide</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;f)</argsstring>
+        <name>conv1d_wide</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="123" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a9f61c927f10df599348d3243b41e8bde" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::filter1d_narrow</definition>
+        <argsstring>(const Expression &amp;x, const Expression &amp;f)</argsstring>
+        <name>filter1d_narrow</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="124" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a012598dfa11832a63d96555359203c6e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::kmax_pooling</definition>
+        <argsstring>(const Expression &amp;x, unsigned k)</argsstring>
+        <name>kmax_pooling</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="125" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a4c75782d640c29dc258642ef1cfa69d3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::fold_rows</definition>
+        <argsstring>(const Expression &amp;x, unsigned nrows=2)</argsstring>
+        <name>fold_rows</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>nrows</declname>
+          <defval>2</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="126" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ad4b4c6a7d64842af8c44093c248be260" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::sum_cols</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>sum_cols</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="127" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aca21f21c405cc16a69a1a78d94ff2011" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::average_cols</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>average_cols</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="128" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a4beca2508eae5158567901b767340aad" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::kmh_ngram</definition>
+        <argsstring>(const Expression &amp;x, unsigned n)</argsstring>
+        <name>kmh_ngram</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="129" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a966640ae06470767594fc38fe02b2a12" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::sum_batches</definition>
+        <argsstring>(const Expression &amp;x)</argsstring>
+        <name>sum_batches</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="132" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a1821a0260c1db638adebd2ae7bc54d0f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pick</definition>
+        <argsstring>(const Expression &amp;x, unsigned v)</argsstring>
+        <name>pick</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="135" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aef5f3cd352c33a255912ad38b0a93d1b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pick</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; &amp;v)</argsstring>
+        <name>pick</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="136" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a8f7a86a299cb26ef50184e3ba6715143" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pick</definition>
+        <argsstring>(const Expression &amp;x, unsigned *pv)</argsstring>
+        <name>pick</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned *</type>
+          <declname>pv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="137" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a63f3a78962e6de488b7c269dc0789707" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pick</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; *pv)</argsstring>
+        <name>pick</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; *</type>
+          <declname>pv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="138" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a84d84bfbb2b68074bd2ed8e8abc82d15" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pickrange</definition>
+        <argsstring>(const Expression &amp;x, unsigned v, unsigned u)</argsstring>
+        <name>pickrange</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>v</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>u</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="139" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1add079d1e331119bd0839936d780415bb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pickneglogsoftmax</definition>
+        <argsstring>(const Expression &amp;x, unsigned v)</argsstring>
+        <name>pickneglogsoftmax</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="140" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a6f42a8b1a9215e1033b5a09265b7fcf8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pickneglogsoftmax</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; &amp;v)</argsstring>
+        <name>pickneglogsoftmax</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="141" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a93ab7882e95d2c7f7c1dfbb0410cf83d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pickneglogsoftmax</definition>
+        <argsstring>(const Expression &amp;x, unsigned *pv)</argsstring>
+        <name>pickneglogsoftmax</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>unsigned *</type>
+          <declname>pv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="142" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a837c5b36c1152dda2742405ce8a4355c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::pickneglogsoftmax</definition>
+        <argsstring>(const Expression &amp;x, const std::vector&lt; unsigned &gt; *pv)</argsstring>
+        <name>pickneglogsoftmax</name>
+        <param>
+          <type>const <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; unsigned &gt; *</type>
+          <declname>pv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="143" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a7e6fc0594f7266e00663e55cc21f475a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::logsumexp</definition>
+        <argsstring>(const T &amp;xs)</argsstring>
+        <name>logsumexp</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="157" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="157" bodyend="157"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1af34d08d47b6004cf1e7ea9ec1e0dcf79" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::logsumexp</definition>
+        <argsstring>(const std::initializer_list&lt; Expression &gt; &amp;xs)</argsstring>
+        <name>logsumexp</name>
+        <param>
+          <type>const std::initializer_list&lt; <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &gt; &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="158" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="158" bodyend="158"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aec7c80baa3883892c94c65728c2a7609" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::sum</definition>
+        <argsstring>(const T &amp;xs)</argsstring>
+        <name>sum</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="161" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="161" bodyend="161"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a2668d1710ac7f43d7863585834dc64c6" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::sum</definition>
+        <argsstring>(const std::initializer_list&lt; Expression &gt; &amp;xs)</argsstring>
+        <name>sum</name>
+        <param>
+          <type>const std::initializer_list&lt; <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &gt; &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="162" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="162" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1ad69a30c0255690496731429041ab37e4" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::max</definition>
+        <argsstring>(const T &amp;xs)</argsstring>
+        <name>max</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="165" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="165" bodyend="165"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a244546d64765e2792ae6590556d2f472" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::max</definition>
+        <argsstring>(const std::initializer_list&lt; Expression &gt; &amp;xs)</argsstring>
+        <name>max</name>
+        <param>
+          <type>const std::initializer_list&lt; <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &gt; &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="166" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="166" bodyend="166"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a65a66ae7b9e571df1031816d015642ad" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::average</definition>
+        <argsstring>(const T &amp;xs)</argsstring>
+        <name>average</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="169" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="169" bodyend="169"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aef718bc49d26af2271efbb2883737f43" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::average</definition>
+        <argsstring>(const std::initializer_list&lt; Expression &gt; &amp;xs)</argsstring>
+        <name>average</name>
+        <param>
+          <type>const std::initializer_list&lt; <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &gt; &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="170" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="170" bodyend="170"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a266dfe11c8ae731544bbe487405ddd57" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::concatenate_cols</definition>
+        <argsstring>(const T &amp;xs)</argsstring>
+        <name>concatenate_cols</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="173" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="173" bodyend="173"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a06af82baa9b50038ff96d7bde523af83" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::concatenate_cols</definition>
+        <argsstring>(const std::initializer_list&lt; Expression &gt; &amp;xs)</argsstring>
+        <name>concatenate_cols</name>
+        <param>
+          <type>const std::initializer_list&lt; <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &gt; &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="174" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="174" bodyend="174"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1afbb798b60695ce9ca990a249f2123be2" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::concatenate</definition>
+        <argsstring>(const T &amp;xs)</argsstring>
+        <name>concatenate</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="177" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="177" bodyend="177"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1aa8bdca551ae2180cacf15bf61f6bcdae" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::concatenate</definition>
+        <argsstring>(const std::initializer_list&lt; Expression &gt; &amp;xs)</argsstring>
+        <name>concatenate</name>
+        <param>
+          <type>const std::initializer_list&lt; <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &gt; &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="178" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="178" bodyend="178"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1af012fa6d24acc3cea306df38238b1213" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::affine_transform</definition>
+        <argsstring>(const T &amp;xs)</argsstring>
+        <name>affine_transform</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="181" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="181" bodyend="181"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacedynet_1_1expr_1a6ba09e3050eb9ae388962486f5eee04d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref></type>
+        <definition>Expression dynet::expr::affine_transform</definition>
+        <argsstring>(const std::initializer_list&lt; Expression &gt; &amp;xs)</argsstring>
+        <name>affine_transform</name>
+        <param>
+          <type>const std::initializer_list&lt; <ref refid="structdynet_1_1expr_1_1Expression" kindref="compound">Expression</ref> &gt; &amp;</type>
+          <declname>xs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="182" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="182" bodyend="182"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/paul/dev/dynet/dynet/expr.h" line="8" column="1"/>
+  </compounddef>
+</doxygen>

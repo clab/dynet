@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.9.1">
+  <compounddef id="structdynet_1_1expr_1_1Expression" kind="struct" language="C++" prot="public">
+    <compoundname>dynet::expr::Expression</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structdynet_1_1expr_1_1Expression_1a59221401f07f495340c5f6a5a29dadf5" prot="public" static="no" mutable="no">
+        <type>ComputationGraph *</type>
+        <definition>ComputationGraph* dynet::expr::Expression::pg</definition>
+        <argsstring></argsstring>
+        <name>pg</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="11" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structdynet_1_1expr_1_1Expression_1a3d108e0edb73b2d38789a3a6a2dd5434" prot="public" static="no" mutable="no">
+        <type>VariableIndex</type>
+        <definition>VariableIndex dynet::expr::Expression::i</definition>
+        <argsstring></argsstring>
+        <name>i</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="12" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="12" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structdynet_1_1expr_1_1Expression_1af7f3da31b23b34070f25bd1a2996a91e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>dynet::expr::Expression::Expression</definition>
+        <argsstring>()</argsstring>
+        <name>Expression</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="14" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="14" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="structdynet_1_1expr_1_1Expression_1a2bf2dd30fa0fdf2956090cd39f5b52dc" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>dynet::expr::Expression::Expression</definition>
+        <argsstring>(ComputationGraph *pg, VariableIndex i)</argsstring>
+        <name>Expression</name>
+        <param>
+          <type>ComputationGraph *</type>
+          <declname>pg</declname>
+        </param>
+        <param>
+          <type>VariableIndex</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="15" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="15" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="structdynet_1_1expr_1_1Expression_1a34dfa51f88f52de548e219a458e81731" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const Tensor &amp;</type>
+        <definition>const Tensor&amp; dynet::expr::Expression::value</definition>
+        <argsstring>() const </argsstring>
+        <name>value</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/expr.h" line="16" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="16" bodyend="16"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/paul/dev/dynet/dynet/expr.h" line="10" column="1" bodyfile="/home/paul/dev/dynet/dynet/expr.h" bodystart="10" bodyend="17"/>
+    <listofallmembers>
+      <member refid="structdynet_1_1expr_1_1Expression_1af7f3da31b23b34070f25bd1a2996a91e" prot="public" virt="non-virtual"><scope>dynet::expr::Expression</scope><name>Expression</name></member>
+      <member refid="structdynet_1_1expr_1_1Expression_1a2bf2dd30fa0fdf2956090cd39f5b52dc" prot="public" virt="non-virtual"><scope>dynet::expr::Expression</scope><name>Expression</name></member>
+      <member refid="structdynet_1_1expr_1_1Expression_1a3d108e0edb73b2d38789a3a6a2dd5434" prot="public" virt="non-virtual"><scope>dynet::expr::Expression</scope><name>i</name></member>
+      <member refid="structdynet_1_1expr_1_1Expression_1a59221401f07f495340c5f6a5a29dadf5" prot="public" virt="non-virtual"><scope>dynet::expr::Expression</scope><name>pg</name></member>
+      <member refid="structdynet_1_1expr_1_1Expression_1a34dfa51f88f52de548e219a458e81731" prot="public" virt="non-virtual"><scope>dynet::expr::Expression</scope><name>value</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
