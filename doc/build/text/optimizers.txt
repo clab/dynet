@@ -1,0 +1,13 @@
+
+DyNet Optimizers
+****************
+
+The various optimizers that you can use to tune your parameters
+
+class struct dynet::SimpleSGDTrainer
+
+   Inherits from dynet::Trainer
+
+class struct dynet::MomentumSGDTrainer
+
+   Inherits from dynet::Trainer

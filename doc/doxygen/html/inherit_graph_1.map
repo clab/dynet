@@ -1,0 +1,9 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structdynet_1_1Trainer.html" title="dynet::Trainer" alt="" coords="5,132,108,159"/>
+<area shape="rect" id="node2" href="$structdynet_1_1AdadeltaTrainer.html" title="dynet::AdadeltaTrainer" alt="" coords="177,5,331,32"/>
+<area shape="rect" id="node3" href="$structdynet_1_1AdagradTrainer.html" title="dynet::AdagradTrainer" alt="" coords="179,56,329,83"/>
+<area shape="rect" id="node4" href="$structdynet_1_1AdamTrainer.html" title="dynet::AdamTrainer" alt="" coords="186,107,322,133"/>
+<area shape="rect" id="node5" href="$structdynet_1_1MomentumSGDTrainer.html" title="dynet::MomentumSGDTrainer" alt="" coords="156,157,352,184"/>
+<area shape="rect" id="node6" href="$structdynet_1_1RmsPropTrainer.html" title="dynet::RmsPropTrainer" alt="" coords="175,208,333,235"/>
+<area shape="rect" id="node7" href="$structdynet_1_1SimpleSGDTrainer.html" title="dynet::SimpleSGDTrainer" alt="" coords="169,259,339,285"/>
+</map>

@@ -1,0 +1,209 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.9.1">
+  <compounddef id="structdynet_1_1MomentumSGDTrainer" kind="struct" language="C++" prot="public">
+    <compoundname>dynet::MomentumSGDTrainer</compoundname>
+    <basecompoundref refid="structdynet_1_1Trainer" prot="public" virt="non-virtual">dynet::Trainer</basecompoundref>
+      <sectiondef kind="protected-attrib">
+      <memberdef kind="variable" id="structdynet_1_1MomentumSGDTrainer_1a61b272617d6a7a80f13f4c8d03215a7b" prot="protected" static="no" mutable="no">
+        <type>real</type>
+        <definition>real dynet::MomentumSGDTrainer::momentum</definition>
+        <argsstring></argsstring>
+        <name>momentum</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/training.h" line="94" column="1" bodyfile="/home/paul/dev/dynet/dynet/training.h" bodystart="94" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structdynet_1_1MomentumSGDTrainer_1af6d25b4fbf842543c8de00470bfa0cbc" prot="protected" static="no" mutable="no">
+        <type>std::vector&lt; ShadowParameters &gt;</type>
+        <definition>std::vector&lt;ShadowParameters&gt; dynet::MomentumSGDTrainer::vp</definition>
+        <argsstring></argsstring>
+        <name>vp</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/training.h" line="97" column="1" bodyfile="/home/paul/dev/dynet/dynet/training.h" bodystart="97" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structdynet_1_1MomentumSGDTrainer_1aea8235a50ab0e66768bd453e01cb406a" prot="protected" static="no" mutable="no">
+        <type>std::vector&lt; ShadowLookupParameters &gt;</type>
+        <definition>std::vector&lt;ShadowLookupParameters&gt; dynet::MomentumSGDTrainer::vlp</definition>
+        <argsstring></argsstring>
+        <name>vlp</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/training.h" line="98" column="1" bodyfile="/home/paul/dev/dynet/dynet/training.h" bodystart="98" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="friend">
+      <memberdef kind="friend" id="structdynet_1_1MomentumSGDTrainer_1ac98d07dd8f7b70e16ccb9a01abf56b9c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>friend class</type>
+        <definition>friend class boost::serialization::access</definition>
+        <argsstring></argsstring>
+        <name>boost::serialization::access</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/training.h" line="103" column="1" bodyfile="/home/paul/dev/dynet/dynet/training.h" bodystart="103" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structdynet_1_1MomentumSGDTrainer_1a29ba25e1ad153bc552edc178a69c67c7" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>dynet::MomentumSGDTrainer::MomentumSGDTrainer</definition>
+        <argsstring>(Model *m, real e0=0.01, real mom=0.9)</argsstring>
+        <name>MomentumSGDTrainer</name>
+        <param>
+          <type>Model *</type>
+          <declname>m</declname>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>e0</declname>
+          <defval>0.01</defval>
+        </param>
+        <param>
+          <type>real</type>
+          <declname>mom</declname>
+          <defval>0.9</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/training.h" line="87" column="1" bodyfile="/home/paul/dev/dynet/dynet/training.h" bodystart="87" bodyend="88"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="protected-func">
+      <memberdef kind="function" id="structdynet_1_1MomentumSGDTrainer_1a904d0442ffa5d18463ca529ee07a1af2" prot="protected" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>virtual void dynet::MomentumSGDTrainer::alloc_impl</definition>
+        <argsstring>() override</argsstring>
+        <name>alloc_impl</name>
+        <reimplements refid="structdynet_1_1Trainer_1aa4d8c114bd3f4319d0591dbcaa93e97e">alloc_impl</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/training.h" line="92" column="1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-func">
+      <memberdef kind="function" id="structdynet_1_1MomentumSGDTrainer_1a6030f1521b2025dd7b633d8161480abe" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>dynet::MomentumSGDTrainer::MomentumSGDTrainer</definition>
+        <argsstring>()</argsstring>
+        <name>MomentumSGDTrainer</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/training.h" line="102" column="1" bodyfile="/home/paul/dev/dynet/dynet/training.h" bodystart="102" bodyend="102"/>
+      </memberdef>
+      <memberdef kind="function" id="structdynet_1_1MomentumSGDTrainer_1a47eecfd91fbae44939024770a0796bfe" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Archive</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void dynet::MomentumSGDTrainer::serialize</definition>
+        <argsstring>(Archive &amp;ar, const unsigned int)</argsstring>
+        <name>serialize</name>
+        <param>
+          <type>Archive &amp;</type>
+          <declname>ar</declname>
+        </param>
+        <param>
+          <type>const unsigned</type>
+          <declname>int</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/paul/dev/dynet/dynet/training.h" line="105" column="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="48">
+        <label>dynet::MomentumSGDTrainer</label>
+        <link refid="structdynet_1_1MomentumSGDTrainer"/>
+        <childnode refid="49" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="49">
+        <label>dynet::Trainer</label>
+        <link refid="structdynet_1_1Trainer"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="50">
+        <label>dynet::MomentumSGDTrainer</label>
+        <link refid="structdynet_1_1MomentumSGDTrainer"/>
+        <childnode refid="51" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="51">
+        <label>dynet::Trainer</label>
+        <link refid="structdynet_1_1Trainer"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/paul/dev/dynet/dynet/training.h" line="86" column="1" bodyfile="/home/paul/dev/dynet/dynet/training.h" bodystart="86" bodyend="106"/>
+    <listofallmembers>
+      <member refid="structdynet_1_1MomentumSGDTrainer_1a904d0442ffa5d18463ca529ee07a1af2" prot="protected" virt="virtual"><scope>dynet::MomentumSGDTrainer</scope><name>alloc_impl</name></member>
+      <member refid="structdynet_1_1Trainer_1adad83d38d539a33e3ab0cbb4ed5e1b76" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>aux_allocated</name></member>
+      <member refid="structdynet_1_1MomentumSGDTrainer_1ac98d07dd8f7b70e16ccb9a01abf56b9c" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>boost::serialization::access</name></member>
+      <member refid="structdynet_1_1Trainer_1aded3359afcae9dcea200fc41efe4de05" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>clip_gradients</name></member>
+      <member refid="structdynet_1_1Trainer_1a5dceed90a464ad6e637da8778aa83fd0" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>clip_threshold</name></member>
+      <member refid="structdynet_1_1Trainer_1ab34bfbb2aaa719d9d7829c5b679a141b" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>clipping_enabled</name></member>
+      <member refid="structdynet_1_1Trainer_1a31b81c4d55252f8193472fbc94ec7828" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>clips</name></member>
+      <member refid="structdynet_1_1Trainer_1a34f348c0027687a2ab74d32b489c47df" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>epoch</name></member>
+      <member refid="structdynet_1_1Trainer_1ad4d96038e7fdd4bbf92e977482185183" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>eta</name></member>
+      <member refid="structdynet_1_1Trainer_1a6b3c3ffe009d23b2ffc38eef19081c33" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>eta0</name></member>
+      <member refid="structdynet_1_1Trainer_1a87fb458762795170c09689aa8f9e7d35" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>eta_decay</name></member>
+      <member refid="structdynet_1_1Trainer_1af14019d4b77bf42cdb3992d199e21251" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>model</name></member>
+      <member refid="structdynet_1_1MomentumSGDTrainer_1a61b272617d6a7a80f13f4c8d03215a7b" prot="protected" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>momentum</name></member>
+      <member refid="structdynet_1_1MomentumSGDTrainer_1a29ba25e1ad153bc552edc178a69c67c7" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>MomentumSGDTrainer</name></member>
+      <member refid="structdynet_1_1MomentumSGDTrainer_1a6030f1521b2025dd7b633d8161480abe" prot="private" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>MomentumSGDTrainer</name></member>
+      <member refid="structdynet_1_1Trainer_1a1cf3844683089def105240184f1c4fbc" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>rescale_and_reset_weight_decay</name></member>
+      <member refid="structdynet_1_1MomentumSGDTrainer_1a47eecfd91fbae44939024770a0796bfe" prot="private" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>serialize</name></member>
+      <member refid="structdynet_1_1Trainer_1a705582c0d3e884e1f4b35704ec03bb08" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>status</name></member>
+      <member refid="structdynet_1_1Trainer_1aebf069a0e0f27965d3e2c83ee2634fac" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>Trainer</name></member>
+      <member refid="structdynet_1_1Trainer_1add60f75d25dbb861468dc9c6d20a8e70" prot="protected" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>Trainer</name></member>
+      <member refid="structdynet_1_1Trainer_1aeef0722fc13d630e11bb0eb87c1c0022" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>update</name></member>
+      <member refid="structdynet_1_1Trainer_1a2e3ea5a9d5b7ef3b5e6d369b3c5e27b9" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>update_epoch</name></member>
+      <member refid="structdynet_1_1Trainer_1ab8a4f50d1d3bcf8178984c040338972a" prot="protected" virt="pure-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>update_lookup_params</name></member>
+      <member refid="structdynet_1_1Trainer_1a43093c84d5faab07d9e906af61f13bdb" prot="protected" virt="pure-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>update_params</name></member>
+      <member refid="structdynet_1_1Trainer_1a85e86d4970c50985f6cc79f5901c576e" prot="protected" virt="pure-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>update_rule</name></member>
+      <member refid="structdynet_1_1Trainer_1acf64ef63bce7eccd90c16ae549e9853c" prot="public" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>updates</name></member>
+      <member refid="structdynet_1_1MomentumSGDTrainer_1aea8235a50ab0e66768bd453e01cb406a" prot="protected" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>vlp</name></member>
+      <member refid="structdynet_1_1MomentumSGDTrainer_1af6d25b4fbf842543c8de00470bfa0cbc" prot="protected" virt="non-virtual"><scope>dynet::MomentumSGDTrainer</scope><name>vp</name></member>
+      <member refid="structdynet_1_1Trainer_1ae82f55a9b865b316ba976a0e4f76f3a6" prot="public" virt="virtual"><scope>dynet::MomentumSGDTrainer</scope><name>~Trainer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

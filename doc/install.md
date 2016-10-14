@@ -99,26 +99,4 @@ To generate the MSVC solution and project files, run [cmake](http://www.cmake.or
     cd build
     cmake .. -DEIGEN3_INCLUDE_DIR=c:\libs\Eigen -DBOOST_ROOT=c:\libs\boost_1_61_0 -DBOOST_LIBRARYDIR=c:\libs\boost_1_61_0\lib64-msvc-14.0 -DBoost_NO_BOOST_CMAKE=ON -G"Visual Studio 14 2015 Win64"
 
-This will generate dynet.sln and a bunch of \*.vcxproj files (one for the DYNET library, and one per example). You should be able to just open dynet.sln and build all. **Note: multi-process functionality is currently not supported in Windows, so you will not be able to build rnnlm-mp. Go to build->Configuration Manager and uncheck the box next to this project**. 
-
-The Windows build also supports CUDA. The latest (development) version of Eigen has some code that causes problems with the CUDA compiler. These issue change as Eigen is developed. Currently, the following three changes are needed in Eigen when compiling with CUDA support:
-
-- block.h: add `#ifndef __CUDACC__` / `#endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(Block)`
-- ref.h: add `#ifndef __CUDACC__ / #endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(RefBase)`
-- TensorRandom.h: Change `uint` to `unsigned int` and `SYSTEMTIME st` to immediately above `GetSystemTime(&st)`
-- TensorDeviceCuda.h: Change `sleep(1)` to `Sleep(1000)`
-
-### MKL support
-
-DyNet can leverage Intel's MKL library to speed up computation on the CPU. As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option: 
-
-    -DMKL
-
-If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
-
-    -DMKL_ROOT="/path/to/MKL"
-
-If either MKL or MKL_ROOT are set, CMake will look for MKL. Note, MKL has only been tested in Windows.
-
-
-
+This will generate dynet.sln and a bunch of \*.vcxproj files (one for the DYNET library, and one per example). You should be able to just open dynet.sln and build all. **Note: multi-process functionality is currently not supported in Windows, so you will not be able to build rnnlm-mp. Go to build->Configuration Manager and uncheck the box next to this project**
