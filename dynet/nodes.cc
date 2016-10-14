@@ -782,8 +782,7 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
       throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-      auto&& hinge_sum = (eloss.tvec() > 0.f).cast<float>().sum() * d;
-      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= hinge_sum;
+      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
     }
   } else {
     assert(pelements != nullptr); 
@@ -795,10 +794,9 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
         // TODO: The > comparison should not be calculated twice. Keep it in auxiliary memory?
         dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>() * d_vec[b];
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
-    throw std::runtime_error("CUDA memory allocation in hinge");
+        throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-		auto&& hinge_sum = (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>().sum() * d_vec[b];
-		dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= hinge_sum;
+        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>().sum() * d_vec[b];
       }
     }
   }
