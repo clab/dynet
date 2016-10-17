@@ -72,6 +72,8 @@ set(dynet_library_HDRS
     tensor.h
     timing.h
     training.h
+    except.h
+    nodes-macros.h
     weight-decay.h
 )
 
