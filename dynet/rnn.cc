@@ -41,6 +41,12 @@ void RNNBuilder::serialize(Archive& ar, const unsigned int) {
   ar & head;
   ar & sm;
 } 
+
+void RNNBuilder::init_parameters(int layer,int index, const std::vector<float>& vec) {
+  cerr << "RNNBuilder::init_parameters not overridden.\n";
+  abort();
+}
+
 DYNET_SERIALIZE_IMPL(RNNBuilder)
 
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
