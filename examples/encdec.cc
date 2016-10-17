@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
       dev.push_back(read_sentence(line, &devd));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
-	cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+	cerr << "Dev sentence in " << argv[2] << ":" << dlc << " didn't start or end with <s>, </s>\n";
 	abort();
       }
     }
