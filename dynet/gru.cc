@@ -145,4 +145,9 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
         params[i][j] = rnn_gru.params[i][j];
 }
 
+  void GRUBuilder::init_parameters(int layer,int index, const std::vector<float>& vec) {
+	  TensorTools::SetElements(params[layer][index].get()->values,vec);
+
+  }
+
 } // namespace dynet

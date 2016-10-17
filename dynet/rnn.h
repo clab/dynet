@@ -104,6 +104,10 @@ struct RNNBuilder {
   virtual void save_parameters_pretraining(const std::string& fname) const;
   virtual void load_parameters_pretraining(const std::string& fname);
 
+
+  //init parameters from float array
+  virtual void init_parameters(int layer,int index, const std::vector<float>& vec);
+
  protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
