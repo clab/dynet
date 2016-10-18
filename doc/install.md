@@ -112,7 +112,7 @@ The Windows build also supports CUDA. The latest (development) version of Eigen 
 
 DyNet can leverage Intel's MKL library to speed up computation on the CPU. As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option: 
 
-    -DMKL
+    -DMKL=TRUE
 
 If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
 
