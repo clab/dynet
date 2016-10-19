@@ -237,8 +237,9 @@ void ClassFactoredSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
 
 void ClassFactoredSoftmaxBuilder::initialize_expressions() {
   for (unsigned c = 0; c < p_rc2ws.size(); ++c) {
-    Expression temp = get_rc2w(c);
-    Expression temp2 = get_rc2wbias(c);
+    //get_rc2w(_bias) creates the expression at c if the expression does not already exist.
+    get_rc2w(c);
+    get_rc2wbias(c);
   }
 }
 
