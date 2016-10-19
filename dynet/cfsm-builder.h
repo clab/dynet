@@ -67,6 +67,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
   expr::Expression full_log_distribution(const expr::Expression& rep);
+  void initialize_expressions();
 
  private:
   ClassFactoredSoftmaxBuilder();
