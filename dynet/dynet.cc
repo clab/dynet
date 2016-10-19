@@ -39,12 +39,15 @@ void Node::forward(const std::vector<const Tensor*>& xs,
     size_t fx_size = fx_elem.d.size();
     forward_impl(xs_ptrs, fx_elem);
     for(unsigned b = 1; b < fx.d.batch_elems(); ++b) {
-      for(i = 0; i < xs.size(); ++i) xs_elems[i].v += xs_sizes[i];
+      for(i = 0; i < xs.size(); ++i)
+        if(xs[i]->d.bd > 1)
+          xs_elems[i].v += xs_sizes[i];
       fx_elem.v += fx_size;
       forward_impl(xs_ptrs, fx_elem);
     }
   }
 }
+
 void Node::backward(const std::vector<const Tensor*>& xs,
                     const Tensor& fx,
                     const Tensor& dEdf,
@@ -70,10 +73,13 @@ void Node::backward(const std::vector<const Tensor*>& xs,
     size_t dEdxi_size = dEdxi_elem.d.size();
     backward_impl(xs_ptrs, fx_elem, dEdf_elem, xs_i, dEdxi_elem);
     for(unsigned b = 1; b < fx.d.batch_elems(); ++b) {
-      for(i = 0; i < xs.size(); ++i) xs_elems[i].v += xs_sizes[i];
+      for(i = 0; i < xs.size(); ++i)
+        if(xs[i]->d.bd > 1)
+          xs_elems[i].v += xs_sizes[i];
       fx_elem.v += fx_size;
       dEdf_elem.v += dEdf_size;
-      dEdxi_elem.v += dEdxi_size;
+      if(dEdxi.d.bd > 1)
+        dEdxi_elem.v += dEdxi_size;
       backward_impl(xs_ptrs, fx_elem, dEdf_elem, xs_i, dEdxi_elem);
     }
   }

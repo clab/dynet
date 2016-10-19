@@ -88,7 +88,7 @@ struct EncoderDecoder {
     Expression i_ie2h = parameter(cg, p_ie2h);
     Expression i_bie = parameter(cg, p_bie);
     Expression i_t = i_bie + i_ie2h * i_combined;
-    cg.incremental_forward(i_t);
+
     Expression i_h = rectify(i_t);
     Expression i_h2oe = parameter(cg,p_h2oe);
     Expression i_boe = parameter(cg,p_boe);
@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
       dev.push_back(read_sentence(line, &devd));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
-	cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+	cerr << "Dev sentence in " << argv[2] << ":" << dlc << " didn't start or end with <s>, </s>\n";
 	abort();
       }
     }
