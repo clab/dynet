@@ -199,6 +199,18 @@ void ParameterInitGlorot::initialize_params(Tensor & values) const {
   TensorTools::RandomizeUniform(values, -my_scale, my_scale);
 }
 
+void ParameterInitFromVector::initialize_params(Tensor & values) const {
+  TensorTools::SetElements(values, vec);
+}
+
+void ParameterInitFromFile::initialize_params(Tensor & values) const {
+  ifstream is(filename);
+  istream_iterator<float> start(is), end;
+  vector<float> param_vector(start, end);
+  TensorTools::SetElements(values, param_vector);
+}
+
+
 Parameter::Parameter() {
   mp = nullptr;
   index = 0;
@@ -305,6 +317,17 @@ Parameter Model::add_parameters(const Dim& d, float scale) {
   updated_params.push_back(r.index);
   return r;
 }
+
+Parameter Model::add_parameters(const Dim& d, ParameterInit & init) {
+  ParameterStorage* p = new ParameterStorage(d, init);
+  Parameter r(this, params.size());
+  //cerr << "Adding parameters with dim " << d << endl;
+  all_params.push_back(p);
+  params.push_back(p);
+  updated_params.push_back(r.index);
+  return r;
+}
+
 
 LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
   LookupParameterStorage* p = new LookupParameterStorage(n,d);

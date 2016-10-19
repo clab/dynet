@@ -599,6 +599,17 @@ BOOST_AUTO_TEST_CASE( reshape_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression reshape(const Expression& x, const Dim& d);
+BOOST_AUTO_TEST_CASE( reshape_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3},2), batch_vals);
+  Expression y1 = x1*transpose(x2);
+  Expression y2 = reshape(y1, Dim({3,3}, 2));
+  Expression z = sum_batches(input(cg, {1,3}, ones3_vals) * y2 * input(cg, {3,1}, ones3_vals));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression transpose(const Expression& x);
 BOOST_AUTO_TEST_CASE( transpose_gradient ) {
   dynet::ComputationGraph cg;

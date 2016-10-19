@@ -783,7 +783,10 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
       throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
+	  // nvcc with MSVC can't this all as one expression, so it's intentionally split into multiple lines
+      auto&& elossVec = eloss.tvec();
+      auto&& hinge_sum = (elossVec > 0.f).cast<float>().sum() * d;
+      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= hinge_sum;
     }
   } else {
     assert(pelements != nullptr); 
@@ -797,8 +800,11 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
         throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>().sum() * d_vec[b];
-      }
+        auto&& elossVec = eloss.tb<1>();
+        auto&& elossChip = elossVec.chip<1>(b);
+        auto&& hinge_sum = (elossChip > 0.f).cast<float>().sum() * d_vec[b];
+        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= hinge_sum;
+	  }
     }
   }
 }
