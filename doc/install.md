@@ -105,7 +105,6 @@ The Windows build also supports CUDA. The latest (development) version of Eigen 
 
 - block.h: add `#ifndef __CUDACC__` / `#endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(Block)`
 - ref.h: add `#ifndef __CUDACC__ / #endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(RefBase)`
-- TensorRandom.h: Change `uint` to `unsigned int` and `SYSTEMTIME st` to immediately above `GetSystemTime(&st)`
 - TensorDeviceCuda.h: Change `sleep(1)` to `Sleep(1000)`
 
 ### MKL support
@@ -118,6 +117,6 @@ If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
 
     -DMKL_ROOT="/path/to/MKL"
 
-If either MKL or MKL_ROOT are set, CMake will look for MKL. Note, MKL has only been tested in Windows.
+If either MKL or MKL_ROOT are set, CMake will look for MKL. 
 
 
