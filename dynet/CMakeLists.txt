@@ -75,6 +75,7 @@ set(dynet_library_HDRS
     except.h
     nodes-macros.h
     weight-decay.h
+    io-macros.h
 )
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
