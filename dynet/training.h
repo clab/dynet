@@ -1,3 +1,14 @@
+/**
+ * \file training.h
+ * \defgroup optimizers
+ * \brief Training procedures
+ * 
+ * The various trainers are defined here. 
+ * All trainers are structures inheriting from the `Trainer` struct.
+ * 
+ * 
+ */
+
 #ifndef DYNET_TRAINING_H_
 #define DYNET_TRAINING_H_
 
@@ -17,7 +28,20 @@
 
 namespace dynet {
 
+/**
+ * \ingroup optimizers
+ * 
+ * \struct Trainer
+ * \brief General trainer struct
+ * 
+ */
 struct Trainer {
+  /**
+   * \brief General constructor for a Trainer
+   * 
+   * \param m Pointer to the model to be trained
+   * \param e0 Starting learning rate
+   */
   explicit Trainer(Model* m, real e0) :
     eta0(e0), eta(e0), eta_decay(), epoch(), clipping_enabled(true), clip_threshold(5), clips(), updates(), aux_allocated(false), model(m) {}
   virtual ~Trainer();
@@ -72,7 +96,20 @@ struct Trainer {
   void serialize(Archive& ar, const unsigned int);
 };
 
+/**
+ * \ingroup optimizers
+ * 
+ * \brief Stochastic gradient descent trainer
+ * \details This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks. [reference needed]
+ *  
+ */
 struct SimpleSGDTrainer : public Trainer {
+  /**
+   * \brief Constructor
+   * 
+   * \param m Pointer to the model to be trained
+   * \param e0 Starting learning rate
+   */
   explicit SimpleSGDTrainer(Model* m, real e0 = 0.1) : Trainer(m, e0) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -83,7 +120,22 @@ struct SimpleSGDTrainer : public Trainer {
   void serialize(Archive& ar, const unsigned int);
 };
 
+/**
+ * \ingroup optimizers
+ * 
+ * \brief Stochastic gradient descent with momentum
+ * \details This is a modified version of the SGD algorithm with momentum to stablize the gradient trajectory. 
+ * The modified gradient is \f$\hat\nabla_{t+1}=\mu\hat\nabla_{t}+\nabla_{t+1}\f$ where \f$\mu\f$ is the momentum. [reference needed]
+ *  
+ */
 struct MomentumSGDTrainer : public Trainer {
+  /**
+   * \brief Constructor
+   * 
+   * \param m Pointer to the model to be trained
+   * \param e0 Starting learning rate
+   * \param mom Momentum
+   */
   explicit MomentumSGDTrainer(Model* m, real e0 = 0.01, real mom = 0.9) :
     Trainer(m, e0), momentum(mom) {}
 
