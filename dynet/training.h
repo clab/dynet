@@ -42,8 +42,8 @@ struct Trainer {
    * \param m Pointer to the model to be trained
    * \param e0 Starting learning rate
    */
-  explicit Trainer(Model* m, real e0) :
-    eta0(e0), eta(e0), eta_decay(), epoch(), clipping_enabled(true), clip_threshold(5), clips(), updates(), aux_allocated(false), model(m) {}
+  explicit Trainer(Model* m, real e0, real edecay = 0.0) :
+    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), clips(), updates(), aux_allocated(false), model(m) {}
   virtual ~Trainer();
 
   void update(real scale = 1.0);
@@ -100,7 +100,9 @@ struct Trainer {
  * \ingroup optimizers
  * 
  * \brief Stochastic gradient descent trainer
- * \details This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks. [reference needed]
+ * \details This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks.
+ * In the standard setting, the learning rate at epoch \f$t\f$ is \f$\eta_t=\frac{\eta_0}{1+\eta_{\mathrm{decay}}t}\f$
+ * [reference needed]
  *  
  */
 struct SimpleSGDTrainer : public Trainer {
@@ -109,8 +111,9 @@ struct SimpleSGDTrainer : public Trainer {
    * 
    * \param m Pointer to the model to be trained
    * \param e0 Starting learning rate
+   * \param edecay Learning rate decay parameter.
    */
-  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1) : Trainer(m, e0) {}
+  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay = 0.0) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
  private:
@@ -135,9 +138,10 @@ struct MomentumSGDTrainer : public Trainer {
    * \param m Pointer to the model to be trained
    * \param e0 Starting learning rate
    * \param mom Momentum
+   * \param edecay Learning rate decay parameter.
    */
-  explicit MomentumSGDTrainer(Model* m, real e0 = 0.01, real mom = 0.9) :
-    Trainer(m, e0), momentum(mom) {}
+  explicit MomentumSGDTrainer(Model* m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
+    Trainer(m, e0, edecay), momentum(mom) {}
 
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -158,8 +162,8 @@ struct MomentumSGDTrainer : public Trainer {
 };
 
 struct AdagradTrainer : public Trainer {
-  explicit AdagradTrainer(Model* m, real e0 = 0.1, real eps = 1e-20) :
-    Trainer(m, e0), epsilon(eps) {}
+  explicit AdagradTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
+    Trainer(m, e0, edecay), epsilon(eps) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -175,7 +179,7 @@ struct AdagradTrainer : public Trainer {
 };
 
 struct AdadeltaTrainer : public Trainer {
-  explicit AdadeltaTrainer(Model* m, real eps = 1e-6, real rho = 0.95) :
+  explicit AdadeltaTrainer(Model* m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, 1.0), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -195,8 +199,8 @@ struct AdadeltaTrainer : public Trainer {
 };
 
 struct RmsPropTrainer : public Trainer {
-  explicit RmsPropTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95) :
-    Trainer(m, e0), epsilon(eps), rho(rho) {}
+  explicit RmsPropTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
+    Trainer(m, e0, edecay), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -213,7 +217,7 @@ struct RmsPropTrainer : public Trainer {
 };
 
 struct AdamTrainer : public Trainer {
-  explicit AdamTrainer(Model* m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
+  explicit AdamTrainer(Model* m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
     Trainer(m, alpha), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
  protected:
