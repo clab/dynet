@@ -40,7 +40,7 @@ struct Trainer {
    * \brief General constructor for a Trainer
    * 
    * \param m Pointer to the model to be trained
-   * \param e0 Starting learning rate
+   * \param e0 Initial learning rate
    */
   explicit Trainer(Model* m, real e0, real edecay = 0.0) :
     eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), clips(), updates(), aux_allocated(false), model(m) {}
@@ -102,7 +102,8 @@ struct Trainer {
  * \brief Stochastic gradient descent trainer
  * \details This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks.
  * In the standard setting, the learning rate at epoch \f$t\f$ is \f$\eta_t=\frac{\eta_0}{1+\eta_{\mathrm{decay}}t}\f$
- * [reference needed]
+ * 
+ * Reference : [reference needed](ref.need.ed)
  *  
  */
 struct SimpleSGDTrainer : public Trainer {
@@ -110,7 +111,7 @@ struct SimpleSGDTrainer : public Trainer {
    * \brief Constructor
    * 
    * \param m Pointer to the model to be trained
-   * \param e0 Starting learning rate
+   * \param e0 Initial learning rate
    * \param edecay Learning rate decay parameter.
    */
   explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay = 0.0) {}
@@ -128,17 +129,19 @@ struct SimpleSGDTrainer : public Trainer {
  * 
  * \brief Stochastic gradient descent with momentum
  * \details This is a modified version of the SGD algorithm with momentum to stablize the gradient trajectory. 
- * The modified gradient is \f$\hat\nabla_{t+1}=\mu\hat\nabla_{t}+\nabla_{t+1}\f$ where \f$\mu\f$ is the momentum. [reference needed]
- *  
+ * The modified gradient is \f$\theta_{t+1}=\mu\theta_{t}+\nabla_{t+1}\f$ where \f$\mu\f$ is the momentum.
+ * 
+ * Reference : [reference needed](ref.need.ed)
+ * 
  */
 struct MomentumSGDTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
    * \param m Pointer to the model to be trained
-   * \param e0 Starting learning rate
+   * \param e0 Initial learning rate
    * \param mom Momentum
-   * \param edecay Learning rate decay parameter.
+   * \param edecay Learning rate decay parameter
    */
   explicit MomentumSGDTrainer(Model* m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
     Trainer(m, e0, edecay), momentum(mom) {}
@@ -161,7 +164,25 @@ struct MomentumSGDTrainer : public Trainer {
   void serialize(Archive& ar, const unsigned int);
 };
 
+/**
+ * \ingroup optimizers
+ * 
+ * \brief Adagrad optimizer
+ * \details The adagrad algorithm assigns a different learning rate to each parameter according to the following formula :
+ * \f$\delta_\theta^{(t)}=-\frac{\eta_0}{\epsilon+\sum_{i=0}^{t-1}(\nabla_\theta^{(i)})^2}\nabla_\theta^{(t)}\f$
+ * 
+ * Reference : [Duchi et al., 2011](http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf)
+ *  
+ */
 struct AdagradTrainer : public Trainer {
+  /**
+   * \brief Constructor
+   * 
+   * \param m Pointer to the model to be trained
+   * \param e0 Initial learning rate
+   * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
+   * \param edecay Learning rate decay parameter
+   */
   explicit AdagradTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps) {}
  protected:
@@ -178,7 +199,27 @@ struct AdagradTrainer : public Trainer {
   void serialize(Archive& ar, const unsigned int);
 };
 
+/**
+ * \ingroup optimizers
+ * 
+ * \brief AdaDelta optimizer
+ * \details The AdaDelta optimizer is a variant of Adagrad where
+ * \f$\frac{\eta_0}{\sqrt{\epsilon+\sum_{i=0}^{t-1}(\nabla_\theta^{(i)})^2}}\f$ is replaced by 
+ * \f$\frac{\sqrt{\epsilon+\sum_{i=0}^{t-1}\rho^{t-i-1}(1-\rho)(\delta_\theta^{(i)})^2}}{\sqrt{\epsilon+\sum_{i=0}^{t-1}(\nabla_\theta^{(i)})^2}}\f$,
+ * hence eliminating the need for an initial learning rate.
+ * 
+ * Reference : [ADADELTA: An Adaptive Learning Rate Method](https://arxiv.org/pdf/1212.5701v1)
+ *  
+ */
 struct AdadeltaTrainer : public Trainer {
+  /**
+   * \brief Constructor
+   * 
+   * \param m Pointer to the model to be trained
+   * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
+   * \param rho Update parameter for the moving average of updates in the numerator
+   * \param edecay Learning rate decay parameter
+   */
   explicit AdadeltaTrainer(Model* m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, 1.0), epsilon(eps), rho(rho) {}
  protected:
@@ -198,7 +239,25 @@ struct AdadeltaTrainer : public Trainer {
   void serialize(Archive& ar, const unsigned int);
 };
 
+/**
+ * \ingroup optimizers
+ * 
+ * \brief RMSProp optimizer
+ * \details The RMSProp optimizer is a variant of Adagrad where the squared sum of previous gradients is replaced with a moving average with parameter \f$\rho\f$.
+ * 
+ * Reference : [reference needed](ref.need.ed)
+ *  
+ */
 struct RmsPropTrainer : public Trainer {
+  /**
+   * \brief Constructor
+   * 
+   * \param m Pointer to the model to be trained
+   * \param e0 Initial learning rate
+   * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
+   * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
+   * \param edecay Learning rate decay parameter
+   */
   explicit RmsPropTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps), rho(rho) {}
  protected:
@@ -216,9 +275,29 @@ struct RmsPropTrainer : public Trainer {
   void serialize(Archive& ar, const unsigned int);
 };
 
+/**
+ * \ingroup optimizers
+ * 
+ * \brief Adam optimizer
+ * \details The Adam optimizer is similar to RMSProp but uses unbiased estimates
+ * of the first and second moments of the gradient
+ * 
+ * Reference : [Adam: A Method for Stochastic Optimization](https://arxiv.org/pdf/1412.6980v8)
+ *  
+ */
 struct AdamTrainer : public Trainer {
-  explicit AdamTrainer(Model* m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
-    Trainer(m, alpha), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+  /**
+   * \brief Constructor
+   * 
+   * \param m Pointer to the model to be trained
+   * \param e0 Initial learning rate
+   * \param beta_1 Moving average parameter for the mean
+   * \param beta_2 Moving average parameter for the variance
+   * \param eps Bias parameter \f$\epsilon\f$
+   * \param edecay Learning rate decay parameter
+   */
+  explicit AdamTrainer(Model* m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
+    Trainer(m, e0), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
