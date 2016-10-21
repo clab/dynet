@@ -140,7 +140,7 @@ the already-compiled binaries.
 
 To generate the MSVC solution and project files, run
 `cmake <http://www.cmake.org>`__, pointing it to the location you
-installed Eigen and Boost (for example, at c:and c:\_1\_61\_0):
+installed Eigen and Boost (for example, at c:\libs\Eigen and c:\libs\boost_1_61_0):
 
 ::
 
@@ -154,3 +154,26 @@ dynet.sln and build all. **Note: multi-process functionality is
 currently not supported in Windows, so you will not be able to build
 rnnlm-mp. Go to build->Configuration Manager and uncheck the box next to
 this project**
+
+The Windows build also supports CUDA. The latest (development) version of Eigen has some code that causes problems with the CUDA compiler. These issue change as Eigen is developed. Currently, the following three changes are needed in Eigen when compiling with CUDA support:
+
+- block.h: add `#ifndef __CUDACC__` / `#endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(Block)`
+- ref.h: add `#ifndef __CUDACC__ / #endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(RefBase)`
+- TensorDeviceCuda.h: Change `sleep(1)` to `Sleep(1000)`
+
+MKL support
+~~~~~~~~~~~
+
+DyNet can leverage Intel's MKL library to speed up computation on the CPU. As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option: 
+
+::
+    -DMKL=TRUE
+
+If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
+
+::
+    -DMKL_ROOT="/path/to/MKL"
+
+If either MKL or MKL_ROOT are set, CMake will look for MKL.
+
+
