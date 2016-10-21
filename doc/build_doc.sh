@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Run Doxygen
-doxygen doxygen/config
+cd doxygen
+doxygen
+cd ..
 
 # Run sphinx to generate text and html doc
-make html text
+make html
