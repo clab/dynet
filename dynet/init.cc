@@ -28,6 +28,11 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 
   int argi = 1;
 
+#if HAVE_CUDA
+  params.gpu_mask = std::vector<int>(MAX_GPUS, 0);
+#endif
+
+
   while (argi < argc) {
     string arg = argv[argi];
 
@@ -161,7 +166,7 @@ void initialize(DynetParams params) {
   weight_decay_lambda = params.weight_decay;
 
   // Allocate memory
-  cerr << "[dynet] allocating memory: " << params.mem_descriptor<< "MB\n";
+  cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
   devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
   int default_index = 0;
   if (gpudevices.size() > 0) {
