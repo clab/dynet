@@ -140,7 +140,7 @@ the already-compiled binaries.
 
 To generate the MSVC solution and project files, run
 `cmake <http://www.cmake.org>`__, pointing it to the location you
-installed Eigen and Boost (for example, at c:\libs\Eigen and c:\libs\boost_1_61_0):
+installed Eigen and Boost (for example, at c:\\libs\\Eigen and c:\\libs\\boost_1_61_0):
 
 ::
 
