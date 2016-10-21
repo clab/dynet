@@ -1282,8 +1282,8 @@ cdef class StackedRNNState:
 # {{{ Training 
 cdef class SimpleSGDTrainer:
     cdef CSimpleSGDTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.1):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0)
+    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1295,8 +1295,8 @@ cdef class SimpleSGDTrainer:
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom)
+    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1308,8 +1308,8 @@ cdef class MomentumSGDTrainer:
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20):
-        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps)
+    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
+        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1321,8 +1321,8 @@ cdef class AdagradTrainer:
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
-    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho)
+    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1334,8 +1334,8 @@ cdef class AdadeltaTrainer:
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
-    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8 ):
-        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps)
+    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
+        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
