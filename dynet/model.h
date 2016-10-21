@@ -209,6 +209,22 @@ private:
   float cnst;
 };
 
+struct ParameterInitFromFile : public ParameterInit {
+  ParameterInitFromFile(std::string f) : filename(f) {}
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  std::string filename;
+};
+
+struct ParameterInitFromVector : public ParameterInit {
+  ParameterInitFromVector(std::vector<float> v) : vec(v) {}
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  std::vector<float> vec;
+};
+
+
+
 // this is a collection of parameters
 // if you need a matrix of parameters, or a lookup table - ask an instance of this class
 // this knows how to serialize itself
