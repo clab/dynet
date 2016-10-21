@@ -12,12 +12,15 @@
 
 #include "dynet/except.h"
 
+
+#define MAX_GPUS 256
+
 #define CUDA_CHECK(stmt) do {                              \
     cudaError_t err = stmt;                                \
     if (err != cudaSuccess) {                              \
       std::cerr << "CUDA failure in " << #stmt << std::endl\
                 << cudaGetErrorString(err) << std::endl;   \
-      throw dynet::cuda_exception(#stmt);                    \
+      throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
   } while(0)
 
@@ -26,15 +29,20 @@
     if (stat != CUBLAS_STATUS_SUCCESS) {                   \
       std::cerr << "CUBLAS failure in " << #stmt           \
                 << std::endl << stat << std::endl;         \
-      throw dynet::cuda_exception(#stmt);                    \
+      throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
   } while(0)
 
+
+
 namespace dynet {
+
+struct DynetParams;
+
 
 class Device;
 
-inline std::pair<int,int> SizeToBlockThreadPair(int n) {
+inline std::pair<int, int> SizeToBlockThreadPair(int n) {
   assert(n);
   int logn;
 #ifdef _WIN32
@@ -53,6 +61,7 @@ inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   return std::make_pair(blocks, threads);
 }
 
+std::vector<Device*> initialize_gpu(dynet::DynetParams params);
 std::vector<Device*> initialize_gpu(int& argc, char**& argv);
 
 } // namespace dynet
