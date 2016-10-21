@@ -167,11 +167,13 @@ MKL support
 DyNet can leverage Intel's MKL library to speed up computation on the CPU. As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option: 
 
 ::
+
     -DMKL=TRUE
 
 If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
 
 ::
+
     -DMKL_ROOT="/path/to/MKL"
 
 If either MKL or MKL_ROOT are set, CMake will look for MKL.
