@@ -15,6 +15,7 @@ You can find information about how to install/use DyNet in general below:
    python
    commandline
    tutorial
+   contributing
 
 The following can be referenced when implementing your models in DyNet:
 
