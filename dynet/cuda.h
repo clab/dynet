@@ -11,13 +11,14 @@
 #include <cublas_v2.h>
 
 #include "dynet/except.h"
+#include "dynet/init.h"
 
 #define CUDA_CHECK(stmt) do {                              \
     cudaError_t err = stmt;                                \
     if (err != cudaSuccess) {                              \
       std::cerr << "CUDA failure in " << #stmt << std::endl\
                 << cudaGetErrorString(err) << std::endl;   \
-      throw dynet::cuda_exception(#stmt);                    \
+      throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
   } while(0)
 
@@ -26,11 +27,13 @@
     if (stat != CUBLAS_STATUS_SUCCESS) {                   \
       std::cerr << "CUBLAS failure in " << #stmt           \
                 << std::endl << stat << std::endl;         \
-      throw dynet::cuda_exception(#stmt);                    \
+      throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
   } while(0)
 
 namespace dynet {
+  
+#define MAX_GPUS 256
 
 class Device;
 
@@ -53,6 +56,7 @@ inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   return std::make_pair(blocks, threads);
 }
 
+std::vector<Device*> initialize_gpu(DynetParams params);
 std::vector<Device*> initialize_gpu(int& argc, char**& argv);
 
 } // namespace dynet
