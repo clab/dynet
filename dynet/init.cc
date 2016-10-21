@@ -48,7 +48,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     }
 
     // Weight decay
-    if (arg == "--dynet-l2" || arg == "--dynet_l2") {
+    else if (arg == "--dynet-l2" || arg == "--dynet_l2") {
       if ((argi + 1) > argc) {
         cerr << "[dynet] --dynet-l2 requires an argument (the weight decay per update)\n";
         abort();
@@ -60,7 +60,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     }
 
     // Random seed
-    if (arg == "--dynet-seed" || arg == "--dynet_seed") {
+    else if (arg == "--dynet-seed" || arg == "--dynet_seed") {
       if ((argi + 1) > argc) {
         cerr << "[dynet] --dynet-seed expects an argument (the random number seed)\n";
         abort();
@@ -73,7 +73,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 
 #if HAVE_CUDA
     // Number of GPUs
-    if (arg == "--dynet_gpus" || arg == "--dynet-gpus") {
+    else if (arg == "--dynet_gpus" || arg == "--dynet-gpus") {
       if ((argi + 1) > argc) {
         cerr << "[dynet] --dynet-gpus expects an argument (number of GPUs to use)\n";
         abort();
@@ -89,7 +89,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     }
 
     // GPU ids
-    if (arg == "--dynet_gpu_ids" || arg == "--dynet-gpu-ids") {
+    else if (arg == "--dynet_gpu_ids" || arg == "--dynet-gpu-ids") {
       if ((argi + 1) > argc) {
         cerr << "[dynet] --dynet-gpu-ids expects an argument (comma separated list of physical GPU ids to use)\n";
         abort();
@@ -121,8 +121,12 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
       }
     }
 #endif
+
     // Go to next argument
-    argi++;
+    else {
+      argi++;
+    }
+
 
   }
 
