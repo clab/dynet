@@ -152,3 +152,10 @@ In order to use the GPU support, you can either:
 
 * Use `import _gdynet as dy` instead of `import dynet as dy`
 * Or, (preferred), `import dynet` as usual, but use the commandline switch `--dynet-gpu` or the GPU switches detailed [here](commandline.md) when invoking the program. This option lets the same code work with either the GPU or the CPU version depending on how it is invoked.
+
+## MKL 
+
+If you've built dynet to use MKL (using -DMKL or -DMKL_ROOT), python sometimes has difficulty finding the MKL shared libraries. You can try setting LD_LIBRARY_PATH to point to your MKL library directory. If that doesn't work, try setting the following environment variable (supposing, for example, your MKL libraries are located at /opt/intel/mkl/lib/intel64):
+
+`export LD_PRELOAD=/opt/intel/mkl/lib/intel64/libmkl_def.so:/opt/intel/mkl/lib/intel64/libmkl_avx2.so:/opt/intel/mkl/lib/intel64/libmkl_core.so:/opt/intel/mkl/lib/intel64/libmkl_intel_lp64.so:/opt/intel/mkl/lib/intel64/libmkl_intel_thread.so:/opt/intel/lib/intel64_lin/libiomp5.so`
+
