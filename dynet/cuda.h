@@ -11,7 +11,9 @@
 #include <cublas_v2.h>
 
 #include "dynet/except.h"
-#include "dynet/init.h"
+
+
+#define MAX_GPUS 256
 
 #define CUDA_CHECK(stmt) do {                              \
     cudaError_t err = stmt;                                \
@@ -31,13 +33,16 @@
     }                                                      \
   } while(0)
 
+
+
 namespace dynet {
-  
-#define MAX_GPUS 256
+
+struct DynetParams;
+
 
 class Device;
 
-inline std::pair<int,int> SizeToBlockThreadPair(int n) {
+inline std::pair<int, int> SizeToBlockThreadPair(int n) {
   assert(n);
   int logn;
 #ifdef _WIN32
@@ -56,7 +61,7 @@ inline std::pair<int,int> SizeToBlockThreadPair(int n) {
   return std::make_pair(blocks, threads);
 }
 
-std::vector<Device*> initialize_gpu(DynetParams params);
+std::vector<Device*> initialize_gpu(dynet::DynetParams params);
 std::vector<Device*> initialize_gpu(int& argc, char**& argv);
 
 } // namespace dynet

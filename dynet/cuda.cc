@@ -4,19 +4,9 @@
 
 #include "dynet/dynet.h"
 #include "dynet/cuda.h"
-#include "init.h"
-
 using namespace std;
 
 namespace dynet {
-
-static void remove_args(int& argc, char**& argv, int& argi, int n) {
-  for (int i = argi + n; i < argc; ++i)
-    argv[i - n] = argv[i];
-  argc -= n;
-  assert(argc >= 0);
-}
-
 
 vector<Device*> initialize_gpu(DynetParams params) {
   // Get GPU devices count
@@ -28,7 +18,7 @@ vector<Device*> initialize_gpu(DynetParams params) {
   }
 
   // Check gpu_mask
-  for (unsigned gpu_id = nDevices; gpu_id < MAX_GPUS; ++gpu_ids) {
+  for (unsigned gpu_id = nDevices; gpu_id < MAX_GPUS; ++gpu_id) {
     if (params.gpu_mask[gpu_id] != 0) {
       cerr << "You requested GPU id " << gpu_id << " but system only reports up to " << nDevices << endl;
       abort();

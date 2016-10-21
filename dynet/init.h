@@ -2,9 +2,7 @@
 #define DYNET_EIGEN_INIT_H
 
 #include <string>
-#if HAVE_CUDA
-#include "dynet/cuda.h"
-#endif
+#include <vector>
 
 namespace dynet {
 
@@ -24,7 +22,7 @@ struct DynetParams {
   bool ngpus_requested = false; /**< GPUs requested by number */
   bool ids_requested = false; /**< GPUs requested by ids */
   int requested_gpus = -1; /**< Number of requested GPUs */
-  vector<int> gpu_mask(MAX_GPUS, 0); /**< List of required GPUs by ids */
+  std::vector<int> gpu_mask; /**< List of required GPUs by ids */
 #endif
 
 };
