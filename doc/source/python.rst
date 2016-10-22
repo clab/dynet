@@ -176,8 +176,8 @@ After running ``make -j 2``, you should have the files ``_dynet.so`` and
 As before, ``cd build/python`` followed by
 ``python setup.py install --user`` will install the module.
 
-Using the GPU:
-==============
+Using the GPU
+-------------
 
 In order to use the GPU support, you can either:
 
@@ -189,8 +189,8 @@ In order to use the GPU support, you can either:
    on how it is invoked.
 
 
-MKL 
-===
+Using MKL 
+---------
 
 If you've built dynet to use MKL (using -DMKL or -DMKL_ROOT), python sometimes has difficulty finding the MKL shared libraries. You can try setting LD_LIBRARY_PATH to point to your MKL library directory. If that doesn't work, try setting the following environment variable (supposing, for example, your MKL libraries are located at /opt/intel/mkl/lib/intel64):
 
