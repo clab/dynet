@@ -58,7 +58,7 @@ To see that things have built properly, you can run
 
 which will train a multilayer perceptron to predict the xor function.
 
-Compiling/linking External Programs
+Compiling/linking external programs
 -----------------------------------
 
 When you want to use DyNet in an external program, you will need to add
@@ -88,11 +88,12 @@ then examine the commands in the ``make.log`` file to see if anything
 looks fishy. If you would like help, send this ``make.log`` file via the
 "Issues" tab on github, or to the dynet-users mailing list.
 
-Build options
--------------
+
+GPU/MKL support and build options
+---------------------------------
 
 GPU (CUDA) support
-~~~~~~~~~~~~~~~~~~
+------------------
 
 ``dynet`` supports running programs on GPUs with CUDA. If you have CUDA
 installed, you can build DyNet with GPU support by adding
@@ -108,6 +109,24 @@ GPU, you can link to the "libgdynet" and "libdynetcuda" libraries.
 
 (Eventually you will be able to use a single library to run on either
 CPU or GPU, but this is not fully implemented yet.)
+
+
+MKL support
+-----------
+
+DyNet can leverage Intel's MKL library to speed up computation on the CPU. As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option: 
+
+::
+
+    -DMKL=TRUE
+
+If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
+
+::
+
+    -DMKL_ROOT="/path/to/MKL"
+
+If either MKL or MKL_ROOT are set, CMake will look for MKL.
 
 Non-standard Boost location
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -160,22 +179,4 @@ The Windows build also supports CUDA. The latest (development) version of Eigen 
 - block.h: add `#ifndef __CUDACC__` / `#endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(Block)`
 - ref.h: add `#ifndef __CUDACC__ / #endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(RefBase)`
 - TensorDeviceCuda.h: Change `sleep(1)` to `Sleep(1000)`
-
-MKL support
-~~~~~~~~~~~
-
-DyNet can leverage Intel's MKL library to speed up computation on the CPU. As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option: 
-
-::
-
-    -DMKL=TRUE
-
-If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
-
-::
-
-    -DMKL_ROOT="/path/to/MKL"
-
-If either MKL or MKL_ROOT are set, CMake will look for MKL.
-
 
