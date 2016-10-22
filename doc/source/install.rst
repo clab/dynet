@@ -93,7 +93,7 @@ GPU/MKL support and build options
 ---------------------------------
 
 GPU (CUDA) support
-------------------
+~~~~~~~~~~~~~~~~~~
 
 ``dynet`` supports running programs on GPUs with CUDA. If you have CUDA
 installed, you can build DyNet with GPU support by adding
@@ -112,7 +112,7 @@ CPU or GPU, but this is not fully implemented yet.)
 
 
 MKL support
------------
+~~~~~~~~~~~
 
 DyNet can leverage Intel's MKL library to speed up computation on the CPU. As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option: 
 
