@@ -32,8 +32,8 @@ TL;DR
     cd python
     python setup.py install  # or `python setup.py install --user` for a user-local install.
 
-Detailed Instructions:
-----------------------
+Detailed Instructions
+---------------------
 
 First, get DyNet:
 
@@ -151,8 +151,11 @@ installation is likely to be working:
     from dynet import *
     model = Model()
 
-Installing with GPU support
----------------------------
+GPU/MKL Support
+---------------
+
+Installing/running on GPU
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For installing on a computer with GPU, first install CUDA. The following
 instructions assume CUDA is installed.
@@ -176,9 +179,6 @@ After running ``make -j 2``, you should have the files ``_dynet.so`` and
 As before, ``cd build/python`` followed by
 ``python setup.py install --user`` will install the module.
 
-Using the GPU
--------------
-
 In order to use the GPU support, you can either:
 
 -  Use ``import _gdynet as dy`` instead of ``import dynet as dy``
@@ -189,8 +189,8 @@ In order to use the GPU support, you can either:
    on how it is invoked.
 
 
-Using MKL 
----------
+Running with MKL
+~~~~~~~~~~~~~~~~
 
 If you've built dynet to use MKL (using -DMKL or -DMKL_ROOT), python sometimes has difficulty finding the MKL shared libraries. You can try setting LD_LIBRARY_PATH to point to your MKL library directory. If that doesn't work, try setting the following environment variable (supposing, for example, your MKL libraries are located at /opt/intel/mkl/lib/intel64):
 
