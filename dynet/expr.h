@@ -1,3 +1,11 @@
+/**
+ * \file expr.h
+ * \defgroup operations
+ * \brief The various operations that you can use in building a DyNet graph
+ * 
+ * TODO: Create documentation and explain expressions, etc...
+ */
+
 #ifndef DYNET_EXPR_H
 #define DYNET_EXPR_H
 
@@ -6,17 +14,37 @@
 #include "dynet/nodes-contract.h"
 
 namespace dynet { namespace expr {
-
+/**
+ * \ingroup operations
+ * \brief Expressions are the building block of a Dynet computation graph 
+ * \details [long description]
+ */
 struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
 
   Expression() : pg(nullptr) { }
+  /**
+   * \brief Base expression constructor
+   * \details [long description]
+   * 
+   * \param pg [description]
+   * \param i [description]
+   */
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
   const Tensor& value() const { return pg->get_value(i); }
 };
 
-
+/**
+ * \ingroup operations
+ * \brief Input node
+ * \details [long description]
+ * 
+ * \param g Computation graph
+ * \param s Real number
+ * 
+ * \return The new expression
+ */
 Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);

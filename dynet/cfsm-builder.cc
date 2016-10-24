@@ -233,6 +233,16 @@ void ClassFactoredSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
   ar & p_rc2ws;
   ar & p_rcwbiases;
 }
+
+
+void ClassFactoredSoftmaxBuilder::initialize_expressions() {
+  for (unsigned c = 0; c < p_rc2ws.size(); ++c) {
+    //get_rc2w(_bias) creates the expression at c if the expression does not already exist.
+    get_rc2w(c);
+    get_rc2wbias(c);
+  }
+}
+
 DYNET_SERIALIZE_IMPL(ClassFactoredSoftmaxBuilder)
 
 } // namespace dynet
