@@ -22,7 +22,6 @@ struct GRUBuilder : public RNNBuilder {
   unsigned num_h0_components() const override { return layers; }
   void copy(const RNNBuilder & params) override;
 
-  void init_parameters(int layer,int index, const std::vector<float>& vec);
 
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
