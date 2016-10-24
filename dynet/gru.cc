@@ -87,8 +87,8 @@ Expression GRUBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
 }
 
 Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
-  if(dropout_rate != 0.f)
-    throw std::runtime_error("GRUBuilder doesn't support dropout yet");
+	//if(dropout_rate != 0.f)
+	//throw std::runtime_error("GRUBuilder doesn't support dropout yet");
   const bool has_initial_state = (h0.size() > 0);
   h.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -101,6 +101,7 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
     if (prev >= 0 || has_initial_state) {
       h_tprev = (prev < 0) ? h0[i] : h[prev][i];
     } else { prev_zero = true; }
+    if (dropout_rate) in = dropout(in, dropout_rate);
     // update gate
     Expression zt;
     if (prev_zero)
@@ -134,7 +135,8 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
       in = ht[i] = crt + nwt;
     }
   }
-  return ht.back();
+  if (dropout_rate) return dropout(ht.back(), dropout_rate);
+  else return ht.back();
 }
 
 void GRUBuilder::copy(const RNNBuilder & rnn) {
