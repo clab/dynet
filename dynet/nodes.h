@@ -120,6 +120,7 @@ struct Transpose : public Node {
 struct Reshape : public Node {
   explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& to) : Node(a), to(to) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   Dim to;
 };
 

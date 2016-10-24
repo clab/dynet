@@ -376,7 +376,7 @@ void Concatenate::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   unsigned curr_row = 0;
   src_row_indices.resize(xs.size());
   Eigen::DSizes<ptrdiff_t, 3> indices(0,0,0);
-  Eigen::DSizes<ptrdiff_t, 3> sizes(0,fx.d.cols(),fx.d.bd);
+  Eigen::DSizes<ptrdiff_t, 3> sizes(0,static_cast<ptrdiff_t>(fx.d.cols()),static_cast<ptrdiff_t>(fx.d.bd));
   for (unsigned i = 0; i < xs.size(); ++i) {
     indices[0] = src_row_indices[i] = curr_row;
     const unsigned row_size = xs[i]->d.rows();
@@ -399,8 +399,9 @@ void Concatenate::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i < src_row_indices.size());
-  Eigen::DSizes<ptrdiff_t, 3> indices(src_row_indices[i],0,0);
-  Eigen::DSizes<ptrdiff_t, 3> sizes(dEdxi.d.rows(),fx.d.cols(),fx.d.bd);
+  Eigen::DSizes<ptrdiff_t, 3> indices(static_cast<ptrdiff_t>(src_row_indices[i]),0,0);
+  Eigen::DSizes<ptrdiff_t, 3> sizes(static_cast<ptrdiff_t>(dEdxi.d.rows()), static_cast<ptrdiff_t>(fx.d.cols()),
+                                    static_cast<ptrdiff_t>(fx.d.bd));
   if(dEdxi.d.bd == dEdf.d.bd) {
     dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().slice(indices, sizes);
   } else {
@@ -782,7 +783,10 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
       throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).cast<float>().sum() * d;
+	  // nvcc with MSVC can't this all as one expression, so it's intentionally split into multiple lines
+      auto&& elossVec = eloss.tvec();
+      auto&& hinge_sum = (elossVec > 0.f).cast<float>().sum() * d;
+      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= hinge_sum;
     }
   } else {
     assert(pelements != nullptr); 
@@ -796,8 +800,11 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
         throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).cast<float>().sum() * d_vec[b];
-      }
+        auto&& elossVec = eloss.tb<1>();
+        auto&& elossChip = elossVec.chip<1>(b);
+        auto&& hinge_sum = (elossChip > 0.f).cast<float>().sum() * d_vec[b];
+        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= hinge_sum;
+	  }
     }
   }
 }
@@ -1428,8 +1435,9 @@ DYNET_NODE_INST_DEV_IMPL(PickNegLogSoftmax)
 // slice of matrix from index start (inclusive) to index end (exclusive)
 template<class MyDevice>
 void PickRange::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Eigen::DSizes<ptrdiff_t, 3> indices(start,0,0);
-  Eigen::DSizes<ptrdiff_t, 3> sizes(end-start,fx.d.cols(),fx.d.bd);
+  Eigen::DSizes<ptrdiff_t, 3> indices(static_cast<ptrdiff_t>(start),0,0);
+  Eigen::DSizes<ptrdiff_t, 3> sizes(static_cast<ptrdiff_t>(end)- static_cast<ptrdiff_t>(start), 
+                                    static_cast<ptrdiff_t>(fx.d.cols()), static_cast<ptrdiff_t>(fx.d.bd));
   fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().slice(indices, sizes);
 }
 
@@ -1441,8 +1449,9 @@ void PickRange::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  Eigen::DSizes<ptrdiff_t, 3> indices(start,0,0);
-  Eigen::DSizes<ptrdiff_t, 3> sizes(end-start,fx.d.cols(),fx.d.bd);
+  Eigen::DSizes<ptrdiff_t, 3> indices(static_cast<ptrdiff_t>(start),0,0);
+  Eigen::DSizes<ptrdiff_t, 3> sizes(static_cast<ptrdiff_t>(end) - static_cast<ptrdiff_t>(start), 
+                                    static_cast<ptrdiff_t>(fx.d.cols()) ,static_cast<ptrdiff_t>(fx.d.bd));
   dEdxi.tb<2>().slice(indices, sizes).device(*dev.edevice) += dEdf.tb<2>();
 }
 DYNET_NODE_INST_DEV_IMPL(PickRange)
