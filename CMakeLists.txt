@@ -93,6 +93,7 @@ endfunction()
 
 # look for Boost
 if(DEFINED ENV{BOOST_ROOT})
+else()
   set(Boost_NO_SYSTEM_PATHS ON)
   get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
 endif()
