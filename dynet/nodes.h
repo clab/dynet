@@ -524,6 +524,13 @@ struct Zeroes : public Node {
   Dim dim;
 };
 
+// draw random noise from Normal(0, 1)
+struct RandomNormal : public Node {
+  explicit RandomNormal(const Dim& d) : dim(d) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  Dim dim;
+};
+
 } // namespace dynet
 
 #endif
