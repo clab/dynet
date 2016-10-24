@@ -9,7 +9,16 @@ cfg_vars = distutils.sysconfig.get_config_vars()
 if "CFLAGS" in cfg_vars:
        cfg_vars["CFLAGS"] = cfg_vars["CFLAGS"].replace("-Wstrict-prototypes", "")
 
-COMPILER_ARGS=["-std=c++11"]
+if ${MSVC}:
+    COMPILER_ARGS=["-DNOMINMAX", "/EHsc"]
+    DYNET_LIB_DIR="${PROJECT_BINARY_DIR}/dynet/Release/"
+    RUNTIME_LIB_DIRS=[]
+else:
+    COMPILER_ARGS=["-std=c++11"]
+    DYNET_LIB_DIR="${PROJECT_BINARY_DIR}/dynet/"
+    RUNTIME_LIB_DIRS=[DYNET_LIB_DIR]
+
+
 import platform
 
 # in some OSX systems, the following extra flags are needed:
@@ -25,10 +34,10 @@ ext_cpu = Extension(
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
         libraries=['dynet'],             # ditto
-        library_dirs=[".","${PROJECT_BINARY_DIR}/dynet/"],
+        library_dirs=[".",DYNET_LIB_DIR, "${Boost_LIBRARY_DIRS}"],
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
-        runtime_library_dirs=["${PROJECT_BINARY_DIR}/dynet/"],
+        runtime_library_dirs=RUNTIME_LIB_DIRS,
         )
 
 ext_gpu = Extension(
@@ -39,10 +48,10 @@ ext_gpu = Extension(
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
         libraries=['gdynet','dynetcuda','cublas'],             # ditto
-        library_dirs=[".","${PROJECT_BINARY_DIR}/dynet/","${CUDA_CUBLAS_LIB}"],
+        library_dirs=[".",DYNET_LIB_DIR,"${Boost_LIBRARY_DIRS}","${CUDA_CUBLAS_LIB}"],
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
-        runtime_library_dirs=["${PROJECT_BINARY_DIR}/dynet/"],
+        #runtime_library_dirs=RUNTIME_LIB_DIRS,
         )
 
 TARGET = [ext_cpu]
