@@ -105,6 +105,18 @@ Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new
   return h[t].back();
 }
 
+Expression FastLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
+  if (s_new.size()) { assert(s_new.size() == layers); }
+  const unsigned t = h.size();
+  h.push_back(vector<Expression>(layers));
+  for (unsigned i = 0; i < layers; ++i) {
+    Expression y = s_new[i];
+    h[t][i + layers] = y;
+  }
+  return h[t].back();
+}
+
+
 Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
