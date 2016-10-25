@@ -931,6 +931,16 @@ cdef class _RNNBuilder: # {{{
                 ces.push_back(e.c())
         return Expression.from_cexpr(self.cg_version, self.thisptr.set_h(prev, ces))
 
+    cdef set_s(self, CRNNPointer prev, es=None):
+        if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
+        cdef vector[CExpression] ces = vector[CExpression]()
+        cdef Expression e
+        if es:
+            for e in es:
+                ensure_freshness(e)
+                ces.push_back(e.c())
+        return Expression.from_cexpr(self.cg_version, self.thisptr.set_s(prev, ces))
+
     cdef rewind_one_step(self):
         if self.cg_version != _cg.version(): raise ValueError("Using stale builder. Create .new_graph() after computation graph is renewed.")
         self.thisptr.rewind_one_step()
@@ -1155,6 +1165,11 @@ cdef class RNNState: # {{{
 
     cpdef RNNState set_h(self, es=None):
         cdef Expression res = self.builder.set_h(CRNNPointer(self.state_idx), es)
+        cdef int state_idx = <int>self.builder.thisptr.state()
+        return RNNState(self.builder, state_idx, self, res)
+
+    cpdef RNNState set_s(self, es=None):
+        cdef Expression res = self.builder.set_s(CRNNPointer(self.state_idx), es)
         cdef int state_idx = <int>self.builder.thisptr.state()
         return RNNState(self.builder, state_idx, self, res)
 
