@@ -24,6 +24,9 @@ examples/nlm
 #data
 rnnlm/ptb-mikolov/
 
+# Python temporary files
+*.pyc
+
 # Compiled Object files
 *.slo
 *.lo
