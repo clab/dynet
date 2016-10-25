@@ -36,7 +36,7 @@ struct RNNBuilder {
   // call this before add_input and after new_graph,
   // when starting a new sequence on the same hypergraph.
   // h_0 is used to initialize hidden layers at timestep 0 to given values
-  void start_new_sequence(const std::vector<Expression>& h_0={}) {
+  void start_new_sequence(const std::vector<Expression>& h_0 = {}) {
     sm.transition(RNNOp::start_new_sequence);
     cur = RNNPointer(-1);
     head.clear();
@@ -44,11 +44,19 @@ struct RNNBuilder {
   }
 
   // explicitly set the output state of a node
-  Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new={}) {
+  Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new = {}) {
     sm.transition(RNNOp::add_input);
     head.push_back(prev);
     cur = head.size() - 1;
     return set_h_impl(prev, h_new);
+  }
+
+  // Set the internal state of a node (for lstms/grus)
+  Expression set_s(const RNNPointer& prev, const std::vector<Expression>& s_new = {}) {
+    sm.transition(RNNOp::add_input);
+    head.push_back(prev);
+    cur = head.size() - 1;
+    return set_s_impl(prev, s_new);
   }
 
   // add another timestep by reading in the variable x
@@ -104,14 +112,16 @@ struct RNNBuilder {
   virtual void save_parameters_pretraining(const std::string& fname) const;
   virtual void load_parameters_pretraining(const std::string& fname);
 
- protected:
+
+protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) = 0;
   virtual Expression set_h_impl(int prev, const std::vector<Expression>& h_new) = 0;
+  virtual Expression set_s_impl(int prev, const std::vector<Expression>& c_new) = 0;
   RNNPointer cur;
-  float dropout_rate;  
- private:
+  float dropout_rate;
+private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
   std::vector<RNNPointer> head; // head[i] returns the head position
@@ -127,15 +137,16 @@ struct SimpleRNNBuilder : public RNNBuilder {
                             unsigned input_dim,
                             unsigned hidden_dim,
                             Model* model,
-                            bool support_lags=false);
+                            bool support_lags = false);
 
- protected:
+protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h_0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
+  Expression set_s_impl(int prev, const std::vector<Expression>& s_new) {return set_h_impl(prev, s_new);}
 
- public:
+public:
   Expression add_auxiliary_input(const Expression& x, const Expression &aux);
 
   Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
@@ -151,7 +162,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
 
- private:
+private:
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameter>> params;
 
@@ -178,13 +189,13 @@ struct SimpleRNNBuilder : public RNNBuilder {
 
 
 namespace boost {
-  namespace serialization {
-    template<class Archive>
-    void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int version)
-    {
-        ar & p.t;
-    }
-  } // namespace serialization
+namespace serialization {
+template<class Archive>
+void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int version)
+{
+  ar & p.t;
+}
+} // namespace serialization
 } // namespace boost
 
 BOOST_CLASS_EXPORT_KEY(dynet::RNNBuilder)
