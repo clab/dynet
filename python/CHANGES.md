@@ -1,7 +1,8 @@
-# pydynet API changes for v2
+# python dynet API changes for v2
 
 * Model no longer holds named parameters
 * checkpoint / revert mechanism for computation graph (useful for beam search etc)
+* parameter initalization API
 
 ## Model no longer holds named parameters
 
@@ -187,6 +188,42 @@ cg_revert()
 # they are not part of the computation graph anymore and the c-level memory
 # for them is freed.
 
+```
+
+## Parameter Initialization
+
+As before, parameters are created with:
+```python
+import dynet as dy
+m = dy.Model()
+dim = (10,10) # either a 2-dim tuple or a scaler.
+p = m.add_parameters(dim)
+```
+
+This will initialize the parameters according to Glorot Initialization.
+
+Other initializations can be specified by passing an initializer object:
+
+```python
+import dynet as dy
+m = dy.Model()
+dim = (10,10)
+p = m.add_parameters(dim,init=GlorotInitializer()) 
+```
+
+Possible initializers are:
+```python
+init1 = dy.NormalInitializer(mean = 0, var = 1) # normal with mean and variance.
+init2 = dy.UniformInitializer(scale)  # uniform between -scale and scale.
+init3 = dy.ConstInitializer(c)  # all values are c
+init4 = dy.GlorotInitializer()
+```
+
+Parameters can also be initialized from arbitraty numpy arrays:
+
+```python
+p1 = m.parameters_from_numpy(np.eye(10))
+p2 = m.parameters_from_numpy(np.array([[1,2,3],[4,5,6]]))
 ```
 
 

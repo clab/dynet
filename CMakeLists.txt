@@ -18,14 +18,27 @@ function(find_mkl)
   find_library(MKL_CORE_LIB NAMES mkl_intel_lp64 mkl_intel_thread mkl_core
                PATHS ${MKL_ROOT} ${MKL_ROOT}/lib/${MKL_ARCH}
                DOC "MKL core library path")
-  find_library(MKL_COMPILER_LIB NAMES libiomp5md
-               PATHS ${MKL_ROOT} ${MKL_ROOT}/../compiler/lib/${MKL_ARCH}
+
+  find_library(MKL_COMPILER_LIB NAMES iomp5 libiomp5md
+               PATHS ${MKL_ROOT} ${MKL_ROOT}/../compiler/lib/${MKL_ARCH}              #Windows
+                     ${MKL_ROOT}/../compilers_and_libraries/linux/lib/${MKL_ARCH}_lin #Linux
                DOC "MKL compiler lib (for threaded MKL)")
+
   if(MKL_INCLUDE_DIR AND MKL_CORE_LIB AND MKL_COMPILER_LIB)
     get_filename_component(MKL_CORE_LIB_DIR ${MKL_CORE_LIB} DIRECTORY)
     get_filename_component(MKL_COMPILER_LIB_DIR ${MKL_COMPILER_LIB} DIRECTORY)
-    message(STATUS "Found MKL\n   * include: ${MKL_INCLUDE_DIR},\n   * core library dir: ${MKL_CORE_LIB_DIR},\n   * compiler library dir: ${MKL_COMPILER_LIB_DIR}")
-    set(MKL_LIBS mkl_intel_lp64.lib mkl_intel_thread.lib mkl_core.lib libiomp5md.lib PARENT_SCOPE)
+    get_filename_component(MKL_COMPILER_LIB_FILE ${MKL_COMPILER_LIB} NAME)
+    message(STATUS "Found MKL\n   * include: ${MKL_INCLUDE_DIR},\n   * core library dir: ${MKL_CORE_LIB_DIR},\n   * compiler library: ${MKL_COMPILER_LIB}")
+
+    # Due to a conflict with /MT and /MD, MSVC needs mkl_intel_lp64 linked last, or we can change individual
+    # projects to use /MT (mkl_intel_lp64 linked with /MT, default MSVC projects use /MD), or we can instead
+    # link to the DLL versions. For now I'm opting for this solution which seems to work with projects still
+    # at their default /MD. Linux build requires the mkl_intel_lp64 to be linked first. So...:
+    if(MSVC)
+      set(LIBS ${LIBS} mkl_intel_thread mkl_core mkl_intel_lp64 ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
+    else()
+      set(LIBS ${LIBS} mkl_intel_lp64 mkl_intel_thread mkl_core ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
+    endif()
     include_directories(${MKL_INCLUDE_DIR})
     link_directories(${MKL_CORE_LIB_DIR} ${MKL_COMPILER_LIB_DIR})
   else()
@@ -36,7 +49,7 @@ endfunction()
 ######## Cross-compiler, cross-platform options
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
 if (MKL OR MKL_ROOT)
-  find_mkl()  # sets include/lib directories and sets ${MKL_LIBS} needed for linking
+  find_mkl()  # sets include/lib directories and sets ${LIBS} needed for linking
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
 endif()
 
@@ -84,7 +97,7 @@ if(DEFINED ENV{BOOST_ROOT})
   get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
 endif()
 set(Boost_REALPATH ON)
-message("-- Boost dir is " ${EIGEN3_INCLUDE_DIR})
+message("-- Boost dir is " ${Boost_INCLUDE_DIR})
 find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 if(MSVC)
@@ -97,7 +110,7 @@ endif()
 # trouble shooting:
 # if boost library cannot be found, in addition to install boost library
 # check if environment variables are set
-# 
+#
 # to set boost root and its library root in environment variable, use
 # for example
 # echo "export BOOST_LIBRARYDIR=/usr/local/lib" >> ~/.bashrc
