@@ -9,7 +9,7 @@ cfg_vars = distutils.sysconfig.get_config_vars()
 if "CFLAGS" in cfg_vars:
        cfg_vars["CFLAGS"] = cfg_vars["CFLAGS"].replace("-Wstrict-prototypes", "")
 
-if ${MSVC}:
+if "${MSVC}"=="1":
     COMPILER_ARGS=["-DNOMINMAX", "/EHsc"]
     DYNET_LIB_DIR="${PROJECT_BINARY_DIR}/dynet/Release/"
     RUNTIME_LIB_DIRS=[]
