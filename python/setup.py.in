@@ -2,6 +2,10 @@ from setuptools import setup
 from setuptools.extension import Extension
 from Cython.Distutils import build_ext
 
+def appendCMakeList(list, var): 
+    if var != "": 
+        list.extend(var.split(';'))
+   
 
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 import distutils.sysconfig
@@ -9,15 +13,29 @@ cfg_vars = distutils.sysconfig.get_config_vars()
 if "CFLAGS" in cfg_vars:
        cfg_vars["CFLAGS"] = cfg_vars["CFLAGS"].replace("-Wstrict-prototypes", "")
 
+
+LIBRARIES=['dynet']
+LIBRARY_DIRS=["."]
+
 if "${MSVC}"=="1":
     COMPILER_ARGS=["-DNOMINMAX", "/EHsc"]
     DYNET_LIB_DIR="${PROJECT_BINARY_DIR}/dynet/Release/"
     RUNTIME_LIB_DIRS=[]
+    # For MSVC, we compile dynet as a static lib, so we need to also link in the
+    # other libraries it depends on:
+    appendCMakeList(LIBRARIES, '${LIBS}'.replace('.lib', ''))  # Remove .lib extension from compiler lib
+    appendCMakeList(LIBRARY_DIRS, '${MKL_LINK_DIRS}')    # Add the MKL dirs, if MKL is being used
+    # Boost does auto-linking in MSVC, just point to the right directory:
+    appendCMakeList(LIBRARY_DIRS, '${Boost_LIBRARY_DIRS}')
 else:
     COMPILER_ARGS=["-std=c++11"]
     DYNET_LIB_DIR="${PROJECT_BINARY_DIR}/dynet/"
     RUNTIME_LIB_DIRS=[DYNET_LIB_DIR]
 
+LIBRARY_DIRS.append(DYNET_LIB_DIR)
+GPULIBRARIES=['gdynet','dynetcuda','cublas']
+GPULIBRARY_DIRS=list(LIBRARY_DIRS)              # make a copy
+GPULIBRARY_DIRS.append("${CUDA_CUBLAS_LIB}")
 
 import platform
 
@@ -33,8 +51,8 @@ ext_cpu = Extension(
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
-        libraries=['dynet'],             # ditto
-        library_dirs=[".",DYNET_LIB_DIR, "${Boost_LIBRARY_DIRS}"],
+        libraries=LIBRARIES,             # ditto
+        library_dirs=LIBRARY_DIRS,
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
         runtime_library_dirs=RUNTIME_LIB_DIRS,
@@ -47,8 +65,8 @@ ext_gpu = Extension(
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
-        libraries=['gdynet','dynetcuda','cublas'],             # ditto
-        library_dirs=[".",DYNET_LIB_DIR,"${Boost_LIBRARY_DIRS}","${CUDA_CUBLAS_LIB}"],
+        libraries=GPULIBRARIES,             # ditto
+        library_dirs=GPULIBRARY_DIRS,
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
         #runtime_library_dirs=RUNTIME_LIB_DIRS,
