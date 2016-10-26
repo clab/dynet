@@ -62,10 +62,38 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void set_updated(bool b)
         bool is_updated()
 
+    cdef cppclass CParameterInit "dynet::ParameterInit":
+        pass
+
+    cdef cppclass CParameterInitNormal "dynet::ParameterInitNormal" (CParameterInit):
+        CParameterInitNormal(float m, float v) # m = 0, v=1
+
+    cdef cppclass CParameterInitUniform "dynet::ParameterInitUniform" (CParameterInit):
+        CParameterInitUniform(float scale)
+
+    cdef cppclass CParameterInitConst "dynet::ParameterInitConst" (CParameterInit):
+        CParameterInitConst(float c)
+
+    cdef cppclass CParameterInitGlorot "dynet::ParameterInitGlorot" (CParameterInit):
+        CParameterInitGlorot(bool is_lookup) # is_lookup = False
+
+    cdef cppclass CParameterInitSaxe "dynet::ParameterInitSaxe" (CParameterInit):
+        ParameterInitSaxe()
+
+    cdef cppclass CParameterInitFromFile "dynet::ParameterInitFromFile" (CParameterInit):
+        CParameterInitFromFile(string filename)
+
+    cdef cppclass CParameterInitFromVector "dynet::ParameterInitFromVector" (CParameterInit):
+        CParameterInitFromVector(vector[float] void)
+
     cdef cppclass CModel "dynet::Model":
         CModel()
         #float gradient_l2_norm() const
-        CParameters add_parameters(CDim& d, float scale = 0.0)
+        CParameters add_parameters(CDim& d)
+        CParameters add_parameters(CDim& d, CParameterInit initializer)
+        #CParameters add_parameters(CDim& d, CParameterInitNormal initializer)
+        #CParameters add_parameters(CDim& d, CParameterInitUniform initializer)
+        #CParameters add_parameters(CDim& d, CParameterInitConst initializer)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
         vector[CParameterStorage] parameters_list()
 

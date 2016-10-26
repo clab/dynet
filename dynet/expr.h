@@ -62,6 +62,7 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsi
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 Expression zeroes(ComputationGraph& g, const Dim& d);
+Expression random_normal(ComputationGraph& g, const Dim& d);
 
 // special functions for controlling flow of information in graph
 Expression nobackprop(const Expression& x);
