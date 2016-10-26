@@ -97,7 +97,7 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
 // Copied c from the previous step (otherwise c.size()< h.size())
 // Also is creating a new step something we want? 
 // wouldn't overwriting the current one be better?
-Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
+Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
   if (h_new.size()) { assert(h_new.size() == layers); }
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
@@ -112,7 +112,7 @@ Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
 }
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
-Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
+Expression FastLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
   if (s_new.size()) { assert(s_new.size() == layers || s_new.size() == 2 * layers ); }
   bool only_c = s_new.size() == layers;
   const unsigned t = c.size();
@@ -126,6 +126,7 @@ Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_ne
   }
   return h[t].back();
 }
+
 
 Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   h.push_back(vector<Expression>(layers));
