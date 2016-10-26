@@ -41,6 +41,7 @@ void RNNBuilder::serialize(Archive& ar, const unsigned int) {
   ar & head;
   ar & sm;
 } 
+
 DYNET_SERIALIZE_IMPL(RNNBuilder)
 
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
