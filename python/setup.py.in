@@ -42,7 +42,8 @@ if "${MSVC}"=="1":
     RUNTIME_LIB_DIRS=[]
     # For MSVC, we compile dynet as a static lib, so we need to also link in the
     # other libraries it depends on:
-    appendCMakeLibList(LIBRARIES, '${LIBS}')  # Remove .lib extension from compiler lib
+    appendCMakeLibList(LIBRARIES, '${LIBS}') 
+    appendCMakeLibList(GPULIBRARIES, '${LIBS}') 
     appendCMakeList(LIBRARY_DIRS, '${MKL_LINK_DIRS}')    # Add the MKL dirs, if MKL is being used
     appendCMakeLibList(GPULIBRARIES, '${CUDA_RT_FILES}')  
     appendCMakeList(GPULIBRARY_DIRS, '${CUDA_RT_DIRS}')  
