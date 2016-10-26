@@ -1,11 +1,22 @@
 from setuptools import setup
 from setuptools.extension import Extension
 from Cython.Distutils import build_ext
+import re
 
 def appendCMakeList(list, var): 
     if var != "": 
         list.extend(var.split(';'))
-   
+
+def appendCMakeLibList(list, var):
+    if var != "":
+        list.extend(map(stripLib, var.split(';')))
+
+# Strip library prefixes and suffixes to prevent linker confusion
+def stripLib(filename):
+    filename = re.sub(".lib$", "", filename)
+    filename = re.sub("^lib", "", filename)
+    filename = re.sub(".so$", "", filename)
+    return filename
 
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 import distutils.sysconfig
@@ -16,6 +27,11 @@ if "CFLAGS" in cfg_vars:
 
 LIBRARIES=['dynet']
 LIBRARY_DIRS=["."]
+GPULIBRARIES=['gdynet', 'dynetcuda']
+GPULIBRARY_DIRS=[]
+
+appendCMakeLibList(GPULIBRARIES, '${CUDA_CUBLAS_FILES}')
+appendCMakeList(GPULIBRARY_DIRS, '${CUDA_CUBLAS_DIRS}')
 
 if "${MSVC}"=="1":
     COMPILER_ARGS=["-DNOMINMAX", "/EHsc"]
@@ -23,8 +39,10 @@ if "${MSVC}"=="1":
     RUNTIME_LIB_DIRS=[]
     # For MSVC, we compile dynet as a static lib, so we need to also link in the
     # other libraries it depends on:
-    appendCMakeList(LIBRARIES, '${LIBS}'.replace('.lib', ''))  # Remove .lib extension from compiler lib
+    appendCMakeLibList(LIBRARIES, '${LIBS}')  # Remove .lib extension from compiler lib
     appendCMakeList(LIBRARY_DIRS, '${MKL_LINK_DIRS}')    # Add the MKL dirs, if MKL is being used
+    appendCMakeLibList(GPULIBRARIES, '${CUDA_RT_FILES}')  
+    appendCMakeList(GPULIBRARY_DIRS, '${CUDA_RT_DIRS}')  
     # Boost does auto-linking in MSVC, just point to the right directory:
     appendCMakeList(LIBRARY_DIRS, '${Boost_LIBRARY_DIRS}')
 else:
@@ -33,9 +51,7 @@ else:
     RUNTIME_LIB_DIRS=[DYNET_LIB_DIR]
 
 LIBRARY_DIRS.append(DYNET_LIB_DIR)
-GPULIBRARIES=['gdynet','dynetcuda','cublas']
-GPULIBRARY_DIRS=list(LIBRARY_DIRS)              # make a copy
-GPULIBRARY_DIRS.append("${CUDA_CUBLAS_LIB}")
+GPULIBRARY_DIRS = LIBRARY_DIRS + GPULIBRARY_DIRS
 
 import platform
 
@@ -69,7 +85,7 @@ ext_gpu = Extension(
         library_dirs=GPULIBRARY_DIRS,
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
-        #runtime_library_dirs=RUNTIME_LIB_DIRS,
+        runtime_library_dirs=RUNTIME_LIB_DIRS,
         )
 
 TARGET = [ext_cpu]
