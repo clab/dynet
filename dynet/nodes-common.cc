@@ -901,4 +901,14 @@ Dim Zeroes::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
+string RandomNormal::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "random_normal(" << dim << ')';
+  return s.str();
+}
+
+Dim RandomNormal::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
 } // namespace dynet
