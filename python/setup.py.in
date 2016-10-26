@@ -13,9 +13,12 @@ def appendCMakeLibList(list, var):
 
 # Strip library prefixes and suffixes to prevent linker confusion
 def stripLib(filename):
-    filename = re.sub(".lib$", "", filename)
-    filename = re.sub("^lib", "", filename)
-    filename = re.sub(".so$", "", filename)
+    if filename.endswith(".lib"):
+        filename = re.sub(".lib$", "", filename)
+    elif filename.endswith(".so") or filename.endswith(".a"):
+        filename = re.sub("^lib", "", filename)
+        filename = re.sub(".so$", "", filename)
+        filename = re.sub(".a$", "", filename)
     return filename
 
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
