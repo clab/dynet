@@ -76,8 +76,11 @@ cdef c_tensor_as_np(CTensor &t):
 # {{{ Model / Parameters 
 cdef class Parameters:
     cdef CParameters thisptr # TODO -- no longer pointer
+    cdef int _version
+    cdef Expression _expr
     def __cinit__(self):
         #self.thisptr = p
+        self._version = -1
         pass
     @staticmethod
     cdef wrap_ptr(CParameters ptr):
@@ -117,6 +120,12 @@ cdef class Parameters:
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
+
+    cpdef Expression expr(self):
+        if cg_version() != self._version:
+            self._version = cg_version()
+            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+        return self._expr
 
 
 
@@ -673,10 +682,10 @@ cdef class Expression: #{{{
         else: raise NotImplementedError()
 #}}}
 
-cdef Expression _parameter(ComputationGraph g, Parameters p):
-    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
+#cdef Expression _parameter(ComputationGraph g, Parameters p):
+#    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
-def parameter(Parameters p): return _parameter(_cg, p)
+def parameter(Parameters p): return p.expr()
 
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller
