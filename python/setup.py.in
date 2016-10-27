@@ -1,6 +1,5 @@
 from setuptools import setup
-#from setuptools.extension import Extension
-from Cython.Distutils.extension import Extension
+from setuptools.extension import Extension
 from Cython.Distutils import build_ext
 
 
