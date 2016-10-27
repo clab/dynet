@@ -969,9 +969,9 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
     (nodes, birnn_collapse_to) = collapse_birnn_states(nodes, compact)
     collapse_to.update(birnn_collapse_to)
 
-  print 'digraph G {'
-  print '  rankdir=BT;'
-  if not compact: print '  nodesep=.05;'
+  print('digraph G {')
+  print('  rankdir=BT;')
+  if not compact: print('  nodesep=.05;')
   
   node_types = defaultdict(set)
   for n in nodes:
@@ -982,7 +982,7 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
               '2_regular': '[shape=rect]',
               '3_rnn_state': '[shape=rect, peripheries=2]',
              }[node_type]
-    print '  node %s; ' % (style), ' '.join(node_types[node_type])
+    print('  node %s; ' % (style), ' '.join(node_types[node_type]))
   
 #   all_nodes = set(line.strip().split()[0] for line in node_def_lines)
   for n in nodes:
@@ -995,9 +995,9 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
         label = '%s\\n%s' % (label, shape_str(n.input_dim))
     if n.output_dim.invalid() or (n.input_dim is not None and n.input_dim.invalid()):
       n.features += " [color=red,style=filled,fillcolor=red]"
-    print '  %s [label="%s"] %s;' % (n.name, label, n.features)
+    print('  %s [label="%s"] %s;' % (n.name, label, n.features))
     for c in n.children:
-      print '  %s -> %s;' % (c, n.name)
+      print('  %s -> %s;' % (c, n.name))
     
   rnn_states = [] # (name, rnn_name, state_idx)
   rnn_state_re = re.compile("[^-]+-(.)-(\\d+)")
@@ -1016,6 +1016,6 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
         group_name_n = collapse_to.get(name_n, name_n)
         edges.add((group_name_p, group_name_n))
   for (name_p, name_n) in edges:
-    print '  %s -> %s [style=dotted];' % (name_p, name_n) # ,dir=both
+    print('  %s -> %s [style=dotted];' % (name_p, name_n)) # ,dir=both
 
-  print '}'
+  print('}')
