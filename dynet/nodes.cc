@@ -2051,4 +2051,21 @@ void Zeroes::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(Zeroes)
 
+template<class MyDevice>
+void RandomNormal::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+  TensorTools::RandomizeNormal(fx);
+}
+
+template<class MyDevice>
+void RandomNormal::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  throw std::runtime_error("Called backward() on an arity 0 node");
+}
+DYNET_NODE_INST_DEV_IMPL(RandomNormal)
+
 } // namespace dynet

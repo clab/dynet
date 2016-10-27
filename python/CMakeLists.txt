@@ -1,4 +1,12 @@
 
+function(get_filename_components DEST ITEMS PART)
+  foreach(ITEM ${ITEMS})
+    get_filename_component(ITEMPART "${ITEM}" ${PART})
+    list(APPEND ${DEST} ${ITEMPART})
+  endforeach()
+  list(REMOVE_DUPLICATES ${DEST})
+  set(${DEST} ${${DEST}} PARENT_SCOPE)
+endfunction()
 
 if(!PYTHON)
   find_program(PYTHON "python")
@@ -14,8 +22,12 @@ if(PYTHON)
   )
 
 if (WITH_CUDA_BACKEND)
-  message("--- CUDA:" ${CUDA_CUBLAS_LIBRARIES})
-  get_filename_component(CUDA_CUBLAS_LIB ${CUDA_CUBLAS_LIBRARIES} PATH)
+  message("--- CUDA: CUBLAS: ${CUDA_CUBLAS_LIBRARIES} RT: ${CUDA_LIBRARIES}")
+  # Collect all of the library filenames and paths for setup.py
+  get_filename_components(CUDA_CUBLAS_DIRS "${CUDA_CUBLAS_LIBRARIES}" PATH)
+  get_filename_components(CUDA_CUBLAS_FILES "${CUDA_CUBLAS_LIBRARIES}" NAME)
+  get_filename_components(CUDA_RT_DIRS "${CUDA_LIBRARIES}" PATH)
+  get_filename_components(CUDA_RT_FILES "${CUDA_LIBRARIES}" NAME)
 endif()
 
   add_custom_target(copy)
