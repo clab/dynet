@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
   data[2] = Datum({1, 0}, 1);
   data[3] = Datum({1, 1}, 0);
 
-  Learner learner(xor_model, dynet_model, trainer, true);
+  Learner learner(xor_model, dynet_model, trainer, false);
   if (num_cores == 0) {
     run_single_process<Datum>(&learner, trainer, data, data, ITERATIONS, data.size(), data.size(), data.size());
   }
