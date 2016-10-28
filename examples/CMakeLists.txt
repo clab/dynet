@@ -1,7 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-# segrnn-sup
-foreach(TARGET mlc tok-embed poisson-regression tag-bilstm embed-cl encdec xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat rnnlm-mp read-write)
+foreach(TARGET mlc tok-embed poisson-regression tag-bilstm embed-cl encdec xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat rnnlm-mp read-write xor-mp segrnn-sup)
   ADD_EXECUTABLE(${TARGET} ${TARGET}.cc)
   if (WITH_CUDA_BACKEND)
     target_link_libraries(${TARGET} gdynet ${LIBS})
