@@ -173,9 +173,7 @@ dynet.sln and build all. **Note: multi-process functionality is
 currently not supported in Windows, so the example rnnlm-mp will not be included 
 in the generated solution**
 
-The Windows build also supports CUDA. The latest (development) version of Eigen has some code that causes problems with the CUDA compiler. These issue change as Eigen is developed. Currently, the following three changes are needed in Eigen when compiling with CUDA support:
+The Windows build also supports CUDA with the latest version of Eigen (as of Oct 28, 2016), with the following code change: 
 
-- block.h: add `#ifndef __CUDACC__` / `#endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(Block)`
-- ref.h: add `#ifndef __CUDACC__ / #endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(RefBase)`
 - TensorDeviceCuda.h: Change `sleep(1)` to `Sleep(1000)`
 
