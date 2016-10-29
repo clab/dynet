@@ -911,4 +911,24 @@ Dim RandomNormal::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
+string RandomBernoulli::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "random_bernoulli(" << dim << ", " << p << ')';
+  return s.str();
+}
+
+Dim RandomBernoulli::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
+string RandomUniform::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "random_uniforml(" << dim << ", " << left << ", " << right << ')';
+  return s.str();
+}
+
+Dim RandomUniform::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
 } // namespace dynet

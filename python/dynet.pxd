@@ -275,6 +275,7 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
         CExpression add_input(CExpression &x)
         CExpression add_input(CRNNPointer prev, CExpression &x)
         CExpression set_h(CRNNPointer prev, vector[CExpression] ces)
+        CExpression set_s(CRNNPointer prev, vector[CExpression] ces)
         void rewind_one_step()
         CExpression back()
         vector[CExpression] final_h()
