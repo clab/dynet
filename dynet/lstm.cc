@@ -48,29 +48,29 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
     vector<Parameter> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
     params.push_back(ps);
   }  // layers
-  dropout_rate = 0.f;  
+  dropout_rate = 0.f;
 }
 
-void LSTMBuilder::new_graph_impl(ComputationGraph& cg){
+void LSTMBuilder::new_graph_impl(ComputationGraph& cg) {
   param_vars.clear();
 
-  for (unsigned i = 0; i < layers; ++i){
+  for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
 
     //i
-    Expression i_x2i = parameter(cg,p[X2I]);
-    Expression i_h2i = parameter(cg,p[H2I]);
-    Expression i_c2i = parameter(cg,p[C2I]);
-    Expression i_bi = parameter(cg,p[BI]);
+    Expression i_x2i = parameter(cg, p[X2I]);
+    Expression i_h2i = parameter(cg, p[H2I]);
+    Expression i_c2i = parameter(cg, p[C2I]);
+    Expression i_bi = parameter(cg, p[BI]);
     //o
-    Expression i_x2o = parameter(cg,p[X2O]);
-    Expression i_h2o = parameter(cg,p[H2O]);
-    Expression i_c2o = parameter(cg,p[C2O]);
-    Expression i_bo = parameter(cg,p[BO]);
+    Expression i_x2o = parameter(cg, p[X2O]);
+    Expression i_h2o = parameter(cg, p[H2O]);
+    Expression i_c2o = parameter(cg, p[C2O]);
+    Expression i_bo = parameter(cg, p[BO]);
     //c
-    Expression i_x2c = parameter(cg,p[X2C]);
-    Expression i_h2c = parameter(cg,p[H2C]);
-    Expression i_bc = parameter(cg,p[BC]);
+    Expression i_x2c = parameter(cg, p[X2C]);
+    Expression i_h2c = parameter(cg, p[H2C]);
+    Expression i_bc = parameter(cg, p[BC]);
 
     vector<Expression> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
@@ -83,7 +83,7 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    assert(layers*2 == hinit.size());
+    assert(layers * 2 == hinit.size());
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
@@ -97,13 +97,35 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
 }
 
 // TO DO - Make this correct
+// Copied c from the previous step (otherwise c.size()< h.size())
+// Also is creating a new step something we want? 
+// wouldn't overwriting the current one be better?
 Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
   if (h_new.size()) { assert(h_new.size() == layers); }
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
+  c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression y = h_new[i];
-    h[t][i] = y;
+    Expression h_i = h_new[i];
+    Expression c_i = c[t - 1][i];
+    h[t][i] = h_i;
+    c[t][i] = c_i;
+  }
+  return h[t].back();
+}
+// Current implementation : s_new is either {new_c[0],...,new_c[n]}
+// or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
+Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
+  if (s_new.size()) { assert(s_new.size() == layers || s_new.size() == 2 * layers ); }
+  bool only_c = s_new.size() == layers;
+  const unsigned t = c.size();
+  h.push_back(vector<Expression>(layers));
+  c.push_back(vector<Expression>(layers));
+  for (unsigned i = 0; i < layers; ++i) {
+    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    Expression c_i = s_new[i];
+    h[t][i] = h_i;
+    c[t][i] = c_i;
   }
   return h[t].back();
 }
@@ -149,11 +171,11 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_wt = tanh(i_awt);
     // output
     if (has_prev_state) {
-      Expression i_nwt = cwise_multiply(i_it,i_wt);
-      Expression i_crt = cwise_multiply(i_ft,i_c_tm1);
+      Expression i_nwt = cwise_multiply(i_it, i_wt);
+      Expression i_crt = cwise_multiply(i_ft, i_c_tm1);
       ct[i] = i_crt + i_nwt;
     } else {
-      ct[i] = cwise_multiply(i_it,i_wt);
+      ct[i] = cwise_multiply(i_it, i_wt);
     }
 
     Expression i_aot;
@@ -163,18 +185,18 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
       i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], ct[i]});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
-    in = ht[i] = cwise_multiply(i_ot,ph_t);
+    in = ht[i] = cwise_multiply(i_ot, ph_t);
   }
   if (dropout_rate) return dropout(ht.back(), dropout_rate);
-    else return ht.back();
+  else return ht.back();
 }
 
 void LSTMBuilder::copy(const RNNBuilder & rnn) {
   const LSTMBuilder & rnn_lstm = (const LSTMBuilder&)rnn;
   assert(params.size() == rnn_lstm.params.size());
-  for(size_t i = 0; i < params.size(); ++i)
-      for(size_t j = 0; j < params[i].size(); ++j)
-        params[i][j] = rnn_lstm.params[i][j];
+  for (size_t i = 0; i < params.size(); ++i)
+    for (size_t j = 0; j < params[i].size(); ++j)
+      params[i][j] = rnn_lstm.params[i][j];
 }
 
 void LSTMBuilder::save_parameters_pretraining(const string& fname) const {

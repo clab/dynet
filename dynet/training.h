@@ -114,7 +114,7 @@ struct SimpleSGDTrainer : public Trainer {
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay parameter.
    */
-  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay = 0.0) {}
+  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
  private:
