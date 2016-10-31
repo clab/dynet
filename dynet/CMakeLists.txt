@@ -115,7 +115,18 @@ if(WITH_CUDA_BACKEND)
                         COMPILE_DEFINITIONS HAVE_CUDA)
   # Build nvcc-compiled gpu library
   set(CUDA_SEPARABLE_COMPILATION ON)
-  list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-O2;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA")
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.9)
+      # gcc 4.9 or later versions raise SEGV due to the optimization problem.
+      # Use -O1 instead for now.
+      list(APPEND CUDA_NVCC_FLAGS "-O1")
+    else()
+      list(APPEND CUDA_NVCC_FLAGS "-O2")
+    endif()
+  else()
+    list(APPEND CUDA_NVCC_FLAGS "-O2")
+  endif()
   if(MSVC)
     # If MSVC, we need the C99 math flag as in other compilations, and we need the boost flag because nvcc doesn't
     #  properly parse part of the boost template definitions
