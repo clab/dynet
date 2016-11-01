@@ -18,8 +18,8 @@ if platform.system() == 'Darwin':
 
 
 ext_cpu = Extension(
-        "dynet",                 # name of extension
-        ["dynet.pyx"],           # filename of our Pyrex/Cython source
+        "_dynet",                 # name of extension
+        ["_dynet.pyx"],           # filename of our Pyrex/Cython source
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
@@ -32,8 +32,8 @@ ext_cpu = Extension(
         )
 
 ext_gpu = Extension(
-        "gdynet",                 # name of extension
-        ["gdynet.pyx"],           # filename of our Pyrex/Cython source
+        "_gdynet",                 # name of extension
+        ["_gdynet.pyx"],           # filename of our Pyrex/Cython source
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
