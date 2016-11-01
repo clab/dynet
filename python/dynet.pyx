@@ -42,7 +42,7 @@ cimport dynet
 cdef init(random_seed=None):
     cdef int argc = len(sys.argv)
     cdef char** c_argv
-    args = [bytes(x, encoding="utf-8") for x in sys.argv]
+    args = [bytearray(x, encoding="utf-8") for x in sys.argv]
     c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
     for idx, s in enumerate(args):
         c_argv[idx] = s
