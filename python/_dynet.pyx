@@ -35,8 +35,8 @@ import os.path
 #  - embedcl
 #  - embed/nlm -- negative sampling?
 
-from dynet cimport *
-cimport dynet
+from _dynet cimport *
+cimport _dynet as dynet
 
 
 cdef init(random_seed=None):

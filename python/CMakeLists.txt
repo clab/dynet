@@ -7,8 +7,8 @@ endif()
 if(PYTHON)
   # Things to copy the files
   file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py
-                     ${CMAKE_CURRENT_SOURCE_DIR}/dynet.pyx
-                     ${CMAKE_CURRENT_SOURCE_DIR}/dynet.pxd
+                     ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx
+                     ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pxd
                      ${CMAKE_CURRENT_SOURCE_DIR}/dynet_viz.py
                      ${CMAKE_CURRENT_SOURCE_DIR}/pybridge.h
   )
@@ -29,7 +29,7 @@ endif()
 
   add_custom_command(TARGET copy PRE_BUILD
 		  COMMAND ${CMAKE_COMMAND} -E
-		  copy ${CMAKE_CURRENT_SOURCE_DIR}/dynet.pyx ${CMAKE_CURRENT_BINARY_DIR}/gdynet.pyx)
+		  copy ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx ${CMAKE_CURRENT_BINARY_DIR}/_gdynet.pyx)
 
 
   # Things to perform setup
