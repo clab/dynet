@@ -151,6 +151,25 @@ installation is likely to be working:
     from dynet import *
     model = Model()
 
+Windows Support
+------------------
+You can also use Python on Windows by following similar steps to the above. For simplicity, we recommend 
+using a Python distribution that already has Cython installed. The following has been tested to work:
+
+1) Install WinPython 2.7.10 (comes with Cython already installed).
+2) Run CMake as above with ``-DPYTHON=/path/to/your/python.exe``.
+3) Open a command prompt and set ``VS90COMNTOOLS`` to the path to your Visual Studio "Common7/Tools" directory. One easy way to do this is a command such as:
+
+::
+
+    set VS90COMNTOOLS=%VS140COMNTOOLS%
+
+4) Open dynet.sln from this command prompt and build the "Release" version of the solution.
+5) Follow the rest of the instructions above for testing the build and installing it for other users
+
+Note, currently only the Release version works.
+
+
 GPU/MKL Support
 ---------------
 

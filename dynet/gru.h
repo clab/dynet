@@ -28,6 +28,7 @@ struct GRUBuilder : public RNNBuilder {
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
+  Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;

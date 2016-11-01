@@ -2068,4 +2068,38 @@ void RandomNormal::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(RandomNormal)
 
+template<class MyDevice>
+void RandomBernoulli::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+  TensorTools::RandomBernoulli(fx, p);
+}
+
+template<class MyDevice>
+void RandomBernoulli::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  throw std::runtime_error("Called backward() on an arity 0 node");
+}
+DYNET_NODE_INST_DEV_IMPL(RandomBernoulli)
+
+template<class MyDevice>
+void RandomUniform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+  TensorTools::RandomizeUniform(fx, left, right);
+}
+
+template<class MyDevice>
+void RandomUniform::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  throw std::runtime_error("Called backward() on an arity 0 node");
+}
+DYNET_NODE_INST_DEV_IMPL(RandomUniform)
+
 } // namespace dynet
