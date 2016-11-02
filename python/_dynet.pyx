@@ -327,13 +327,13 @@ cdef class Model: # {{{
         else:
             raise TypeError("Cannot save model component of type %s" % type(c))
 
-    def save(self, string fname, components=None):
+    def save(self, fname, components=None):
         if not components:
-            self.save_all(fname)
+            self.save_all(fname.encode())
             return
         fh = open(fname+".pym","w")
         pfh = open(fname+".pyk","w")
-        cdef CModelSaver *saver = new CModelSaver(fname, self.thisptr)
+        cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
         for c in components:
             self._save_one(c,saver,fh,pfh)
         saver.done()
@@ -347,7 +347,7 @@ cdef class Model: # {{{
         cdef GRUBuilder gb_
         cdef LSTMBuilder lb_
         cdef SimpleRNNBuilder sb_
-        tp = itypes.next()
+        tp = next(itypes)
         if tp == "param":
             loader.fill_parameter(p)
             param = Parameters.wrap_ptr(p)
@@ -380,14 +380,14 @@ cdef class Model: # {{{
             print("Huh?")
             assert False,"unsupported type " + tp
 
-    cpdef load(self, string fname):
+    cpdef load(self, fname):
         if not os.path.isfile(fname+".pym"):
-            self.load_all(fname)
+            self.load_all(fname.encode())
             return
         with open(fname+".pym","r") as fh:
             types = fh.read().strip().split()
 
-        cdef CModelLoader *loader = new CModelLoader(fname, self.thisptr)
+        cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
         with open(fname+".pyk","r") as pfh:
             params = []
             itypes = iter(types)
@@ -604,16 +604,12 @@ cdef class Expression: #{{{
     def __str__(self):
         return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
 
-#    def __getitem__(self, int i):
-#        return pick(self, i)
+    # __getitem__ and __getslice__ in one for python 3 compatibility
     def __getitem__(self, object index):
          if isinstance(index, int):
              return pick(self, index)            
          
          return pickrange(self, index[0], index[1])
-
-#    def __getslice__(self, int i, int j):
-#        return pickrange(self, i, j)
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
