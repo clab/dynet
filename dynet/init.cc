@@ -25,6 +25,7 @@ static void remove_args(int& argc, char**& argv, int& argi, int n) {
 
 DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters) {
   DynetParams params;
+  params.shared_parameters = shared_parameters;
 
   int argi = 1;
 

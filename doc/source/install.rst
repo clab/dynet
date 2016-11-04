@@ -170,13 +170,10 @@ installed Eigen and Boost (for example, at c:\\libs\\Eigen and c:\\libs\\boost_1
 This will generate dynet.sln and a bunch of \*.vcxproj files (one for
 the DYNET library, and one per example). You should be able to just open
 dynet.sln and build all. **Note: multi-process functionality is
-currently not supported in Windows, so you will not be able to build
-rnnlm-mp. Go to build->Configuration Manager and uncheck the box next to
-this project**
+currently not supported in Windows, so the multi-process examples (*-mp) will not be included 
+in the generated solution**
 
-The Windows build also supports CUDA. The latest (development) version of Eigen has some code that causes problems with the CUDA compiler. These issue change as Eigen is developed. Currently, the following three changes are needed in Eigen when compiling with CUDA support:
+The Windows build also supports CUDA with the latest version of Eigen (as of Oct 28, 2016), with the following code change: 
 
-- block.h: add `#ifndef __CUDACC__` / `#endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(Block)`
-- ref.h: add `#ifndef __CUDACC__ / #endif` around `EIGEN_INHERIT_ASSIGNMENT_OPERATORS(RefBase)`
 - TensorDeviceCuda.h: Change `sleep(1)` to `Sleep(1000)`
 
