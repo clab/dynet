@@ -42,6 +42,7 @@ function(find_mkl)
     endif()
     include_directories(${MKL_INCLUDE_DIR})
     link_directories(${MKL_CORE_LIB_DIR} ${MKL_COMPILER_LIB_DIR})
+    set(MKL_LINK_DIRS ${MKL_CORE_LIB_DIR} ${MKL_COMPILER_LIB_DIR} PARENT_SCOPE) # Keeping this for python build
   else()
     message(FATAL_ERROR "Failed to find MKL in path: ${MKL_ROOT} (Did you set MKL_ROOT properly?)")
   endif()

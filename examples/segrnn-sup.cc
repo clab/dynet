@@ -597,7 +597,6 @@ struct SegmentalRNN {
                             int max_seg_len = 0) {
     int len = xins.size();
     unordered_map<PKey, Expression> p_map = ConstructSegmentMap(xins, cg, max_seg_len);
-    cg.forward();
     vector<Expression> tempvec;
     Expression gold_score = SumParts(len, yz, p_map, cg, max_seg_len);
     tempvec.push_back(gold_score);
@@ -688,10 +687,6 @@ struct SegmentalRNN {
     
     int len = xins.size();
     unordered_map<PKey, Expression> p_map = ConstructSegmentMap(xins, cg, max_seg_len);
-
-    // Compute everything at this step and use them later
-    cg.forward();
-
     PureDecode(len, p_map, cg, yz_pred, max_seg_len);
     return;
   }
@@ -1125,23 +1120,24 @@ int main(int argc, char** argv) {
             continue;
           }
           vector<Expression> xins = segrnn.ConstructInput(sent.first, cg);
+          Expression loss_expr;
           if(vm["partial"].as<bool>()){
               if(vm["hinge"].as<bool>()){
                 cerr << "Hingle Loss for partially supervised setting is not avaiable at this moment." << endl;
                 abort();
               }else{
-                segrnn.PartiallySupervisedCRFLoss(xins, sent.second, cg, max_seg_len);
+                loss_expr = segrnn.PartiallySupervisedCRFLoss(xins, sent.second, cg, max_seg_len);
               }
           }else{
             if(vm["hinge"].as<bool>()){
-              segrnn.SupervisedHingeLoss(xins, sent.second, cg, max_seg_len);
+              loss_expr = segrnn.SupervisedHingeLoss(xins, sent.second, cg, max_seg_len);
             }else{
-              segrnn.SupervisedCRFLoss(xins, sent.second, cg, max_seg_len);
+              loss_expr = segrnn.SupervisedCRFLoss(xins, sent.second, cg, max_seg_len);
             }
           }
           ttags += sent.second.size();
-          loss += as_scalar(cg.forward());
-          cg.backward();
+          loss += as_scalar(cg.forward(loss_expr));
+          cg.backward(loss_expr);
           sgd->update(1.0);
         }
         ++lines;

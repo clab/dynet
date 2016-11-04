@@ -3,7 +3,7 @@
  * \defgroup operations
  * \brief The various operations that you can use in building a DyNet graph
  * 
- * TODO: Create documentation and explain expressions, etc...
+ * \details TODO: Create documentation and explain expressions, etc...
  */
 
 #ifndef DYNET_EXPR_H

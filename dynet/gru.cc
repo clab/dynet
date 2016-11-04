@@ -48,19 +48,19 @@ void GRUBuilder::new_graph_impl(ComputationGraph& cg) {
     auto& p = params[i];
 
     // z
-    Expression x2z = parameter(cg,p[X2Z]);
-    Expression h2z = parameter(cg,p[H2Z]);
-    Expression bz = parameter(cg,p[BZ]);
+    Expression x2z = parameter(cg, p[X2Z]);
+    Expression h2z = parameter(cg, p[H2Z]);
+    Expression bz = parameter(cg, p[BZ]);
 
     // r
-    Expression x2r = parameter(cg,p[X2R]);
-    Expression h2r = parameter(cg,p[H2R]);
-    Expression br = parameter(cg,p[BR]);
+    Expression x2r = parameter(cg, p[X2R]);
+    Expression h2r = parameter(cg, p[H2R]);
+    Expression br = parameter(cg, p[BR]);
 
     // h
-    Expression x2h = parameter(cg,p[X2H]);
-    Expression h2h = parameter(cg,p[H2H]);
-    Expression bh = parameter(cg,p[BH]);
+    Expression x2h = parameter(cg, p[X2H]);
+    Expression h2h = parameter(cg, p[H2H]);
+    Expression bh = parameter(cg, p[BH]);
 
     vector<Expression> vars = {x2z, h2z, bz, x2r, h2r, br, x2h, h2h, bh};
     param_vars.push_back(vars);
@@ -75,20 +75,29 @@ void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
   }
 }
 
+// TO DO - Make this correct
+// Copied c from the previous step (otherwise c.size()< h.size())
+// Also is creating a new step something we want?
+// wouldn't overwriting the current one be better?
 Expression GRUBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
   if (h_new.size()) { assert(h_new.size() == layers); }
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression y = h_new[i];
-    h[t][i] = y;
+    Expression h_i = h_new[i];
+    h[t][i] = h_i;
   }
   return h[t].back();
 }
+// Current implementation : s_new is either {new_c[0],...,new_c[n]}
+// or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
+Expression GRUBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
+  return set_h_impl(prev, s_new);
+}
 
 Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
-	//if(dropout_rate != 0.f)
-	//throw std::runtime_error("GRUBuilder doesn't support dropout yet");
+  //if(dropout_rate != 0.f)
+  //throw std::runtime_error("GRUBuilder doesn't support dropout yet");
   const bool has_initial_state = (h0.size() > 0);
   h.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -142,9 +151,9 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
 void GRUBuilder::copy(const RNNBuilder & rnn) {
   const GRUBuilder & rnn_gru = (const GRUBuilder&)rnn;
   assert(params.size() == rnn_gru.params.size());
-  for(size_t i = 0; i < params.size(); ++i)
-      for(size_t j = 0; j < params[i].size(); ++j)
-        params[i][j] = rnn_gru.params[i][j];
+  for (size_t i = 0; i < params.size(); ++i)
+    for (size_t j = 0; j < params[i].size(); ++j)
+      params[i][j] = rnn_gru.params[i][j];
 }
 
 } // namespace dynet
