@@ -1,6 +1,14 @@
 /**
  * \file expr.h
  * \defgroup operations
+ * \defgroup inputoperations
+ * \defgroup arithmeticoperations
+ * \defgroup lossoperations
+ * \defgroup flowoperations
+ * \defgroup noiseoperations
+ * \defgroup convoperations
+ * \defgroup tensoroperations
+ * \defgroup linalgoperations
  * \brief The various operations that you can use in building a DyNet graph
  * 
  * \details TODO: Create documentation and explain expressions, etc...
@@ -34,6 +42,21 @@ struct Expression {
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
   const Tensor& value() const { return pg->get_value(i); }
 };
+
+namespace detail {
+  template <typename F, typename T>
+  Expression f(const T& xs) {
+    ComputationGraph *pg = xs.begin()->pg;
+    std::vector<VariableIndex> xis(xs.size());
+    int i = 0;
+    for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+    return Expression(pg, pg->add_function<F>(xis));
+  }
+}
+
+////////////////////////////////////////////////
+// Input operations                           //
+////////////////////////////////////////////////
 
 /**
  * \ingroup inputoperations
@@ -258,11 +281,34 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vecto
  */
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 
+/**
+ * \ingroup inputoperations
+ * \brief Create an input full of zeros
+ * \details Create an input full of zeros, sized according to dimensions d.
+ * 
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ * 
+ * \return The new expression
+ */
 Expression zeroes(ComputationGraph& g, const Dim& d);
+
+/**
+ * \ingroup inputoperations
+ * \brief Create a random normal vector
+ * \details Create a vector distributed according to normal distribution with mean
+ *          0, variance 1.
+ * 
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ * 
+ * \return The new expression
+ */
 Expression random_normal(ComputationGraph& g, const Dim& d);
 
-// special functions for controlling flow of information in graph
-Expression nobackprop(const Expression& x);
+////////////////////////////////////////////////
+// Arithmetic operations                      //
+////////////////////////////////////////////////
 
 // operators
 Expression operator-(const Expression& x);
@@ -276,18 +322,10 @@ Expression operator*(const Expression& x, const Expression& y);
 Expression operator*(const Expression& x, float y);
 inline Expression operator*(float y, const Expression& x) { return x * y; }
 inline Expression operator/(const Expression& x, float y) { return x * (1.f / y); }
-// colwise addition
-Expression addmv(const Expression& M, const Expression& v);
-// componentwise division
-Expression cdiv(const Expression& x, const Expression& y);
-Expression colwise_add(const Expression& x, const Expression& bias);
-// z_ij = x_ijk * y_k
-Expression contract3d_1d(const Expression& x, const Expression& y);
-// z_i = x_ijk * y_k * z_j (+ b_i)
-Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z);
-Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
-// z_ij = x_ijk * y_k + b_ij
-Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
+
+template <typename T>
+inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
+inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
 
 Expression sqrt(const Expression& x);
 Expression erf(const Expression& x);
@@ -299,6 +337,27 @@ Expression lgamma(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
+
+Expression softmax(const Expression& x);
+Expression softsign(const Expression& x);
+
+Expression pow(const Expression& x, const Expression& y);
+Expression min(const Expression& x, const Expression& y);
+Expression max(const Expression& x, const Expression& y);
+
+Expression dot_product(const Expression& x, const Expression& y);
+
+// colwise addition
+Expression addmv(const Expression& M, const Expression& v);
+// componentwise division
+Expression cwise_multiply(const Expression& x, const Expression& y);
+Expression cdiv(const Expression& x, const Expression& y);
+Expression colwise_add(const Expression& x, const Expression& bias);
+
+////////////////////////////////////////////////
+// Probability/loss operations                //
+////////////////////////////////////////////////
+
 Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m = 1.0);
 Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
@@ -309,33 +368,13 @@ Expression log_softmax(const Expression& x, const std::vector<unsigned>& restric
 Expression sparsemax(const Expression& x);
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptarget_support);
-Expression softmax(const Expression& x);
-Expression softsign(const Expression& x);
-Expression pow(const Expression& x, const Expression& y);
-Expression min(const Expression& x, const Expression& y);
-Expression max(const Expression& x, const Expression& y);
-Expression noise(const Expression& x, real stddev);
-Expression dropout(const Expression& x, real p);
-Expression block_dropout(const Expression& x, real p);
 
-// reshape::forward is O(1), but backward is O(n)
-Expression reshape(const Expression& x, const Dim& d);
-// transpose requires O(n)
-Expression transpose(const Expression& x);
-Expression select_rows(const Expression& x, const std::vector<unsigned>& rows);
-Expression select_rows(const Expression& x, const std::vector<unsigned>* prows);
-// select_cols is more efficient than select_rows since Eigen uses column-major order
-Expression select_cols(const Expression& x, const std::vector<unsigned>& cols);
-Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
-// matrix inverse
-Expression inverse(const Expression& x);
-Expression logdet(const Expression& x);
-
-Expression trace_of_product(const Expression& x, const Expression& y);
-Expression cwise_multiply(const Expression& x, const Expression& y);
+Expression pickneglogsoftmax(const Expression& x, unsigned v);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
+Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
 
 Expression squared_norm(const Expression& x);
-Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
 Expression l1_distance(const Expression& x, const Expression& y);
@@ -343,41 +382,6 @@ Expression binary_log_loss(const Expression& x, const Expression& y);
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
 Expression poisson_loss(const Expression& x, unsigned y);
 Expression poisson_loss(const Expression& x, const unsigned* py);
-
-// various convolutiony things
-Expression conv1d_narrow(const Expression& x, const Expression& f);
-Expression conv1d_wide(const Expression& x, const Expression& f);
-Expression filter1d_narrow(const Expression& x, const Expression& f);
-Expression kmax_pooling(const Expression& x, unsigned k);
-Expression fold_rows(const Expression& x, unsigned nrows=2);
-Expression sum_cols(const Expression& x);
-Expression average_cols(const Expression& x);
-Expression kmh_ngram(const Expression& x, unsigned n);
-
-// Sum the results of multiple batches
-Expression sum_batches(const Expression& x);
-
-// pick parts out of bigger objects
-Expression pick(const Expression& x, unsigned v);
-Expression pick(const Expression& x, const std::vector<unsigned> & v);
-Expression pick(const Expression& x, unsigned * pv);
-Expression pick(const Expression& x, const std::vector<unsigned> * pv);
-Expression pickrange(const Expression& x, unsigned v, unsigned u);
-Expression pickneglogsoftmax(const Expression& x, unsigned v);
-Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
-Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
-Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
-
-namespace detail {
-  template <typename F, typename T>
-  Expression f(const T& xs) {
-    ComputationGraph *pg = xs.begin()->pg;
-    std::vector<VariableIndex> xis(xs.size());
-    int i = 0;
-    for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
-    return Expression(pg, pg->add_function<F>(xis));
-  }
-}
 
 template <typename T>
 inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
@@ -395,6 +399,43 @@ template <typename T>
 inline Expression average(const T& xs) { return detail::f<Average>(xs); }
 inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs); }
 
+////////////////////////////////////////////////
+// Flow operations                            //
+////////////////////////////////////////////////
+
+/**
+ * \ingroup flowoperations
+ * \brief Prevent backprop
+ * \details This node has no effect on the forward pass, but prevents gradients from
+ *          flowing backward during the backward pass. This is useful when there's
+ *          a subgraph for which you don't want loss passed back to the parameters.
+ * 
+ * \param x The input expression
+ * 
+ * \return The new expression
+ */
+Expression nobackprop(const Expression& x);
+
+// reshape::forward is O(1), but backward is O(n)
+Expression reshape(const Expression& x, const Dim& d);
+// transpose requires O(n)
+Expression transpose(const Expression& x);
+Expression select_rows(const Expression& x, const std::vector<unsigned>& rows);
+Expression select_rows(const Expression& x, const std::vector<unsigned>* prows);
+// select_cols is more efficient than select_rows since Eigen uses column-major order
+Expression select_cols(const Expression& x, const std::vector<unsigned>& cols);
+Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
+
+// Sum the results of multiple batches
+Expression sum_batches(const Expression& x);
+
+// pick parts out of bigger objects
+Expression pick(const Expression& x, unsigned v);
+Expression pick(const Expression& x, const std::vector<unsigned> & v);
+Expression pick(const Expression& x, unsigned * pv);
+Expression pick(const Expression& x, const std::vector<unsigned> * pv);
+Expression pickrange(const Expression& x, unsigned v, unsigned u);
+
 template <typename T>
 inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateColumns>(xs); }
 inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateColumns>(xs); }
@@ -403,9 +444,50 @@ template <typename T>
 inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); }
 inline Expression concatenate(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs); }
 
-template <typename T>
-inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
-inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
+////////////////////////////////////////////////
+// Noise operations                           //
+////////////////////////////////////////////////
+
+Expression noise(const Expression& x, real stddev);
+Expression dropout(const Expression& x, real p);
+Expression block_dropout(const Expression& x, real p);
+
+////////////////////////////////////////////////
+// Convolution operations                     //
+////////////////////////////////////////////////
+
+Expression conv1d_narrow(const Expression& x, const Expression& f);
+Expression conv1d_wide(const Expression& x, const Expression& f);
+Expression filter1d_narrow(const Expression& x, const Expression& f);
+Expression kmax_pooling(const Expression& x, unsigned k);
+Expression fold_rows(const Expression& x, unsigned nrows=2);
+Expression sum_cols(const Expression& x);
+Expression average_cols(const Expression& x);
+Expression kmh_ngram(const Expression& x, unsigned n);
+
+////////////////////////////////////////////////
+// Tensor operations                          //
+////////////////////////////////////////////////
+
+// z_ij = x_ijk * y_k
+Expression contract3d_1d(const Expression& x, const Expression& y);
+// z_i = x_ijk * y_k * z_j (+ b_i)
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z);
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
+// z_ij = x_ijk * y_k + b_ij
+Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
+
+
+////////////////////////////////////////////////
+// Linear algebra operations                  //
+////////////////////////////////////////////////
+
+// matrix inverse
+Expression inverse(const Expression& x);
+Expression logdet(const Expression& x);
+
+Expression trace_of_product(const Expression& x, const Expression& y);
+
 
 } }
 
