@@ -36,7 +36,7 @@ struct Expression {
 };
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Scalar input
  * \details Create an expression that represents the scalar value s
  * 
@@ -48,7 +48,7 @@ struct Expression {
 Expression input(ComputationGraph& g, real s);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Modifiable scalar input
  * \details Create an expression that represents the scalar value *ps.
  *          If *ps is changed and the computation graph recalculated, the
@@ -62,7 +62,7 @@ Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Vector/matrix/tensor input
  * \details Create an expression that represents a vector, matrix, or tensor
  *          input. The dimensions of the input are defined by `d`. So for example
@@ -85,7 +85,7 @@ Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Updatable vector/matrix/tensor input
  * \details Similarly to input that takes a vector reference, input a vector, matrix,
  *          or tensor input. Because we pass the pointer, the data can be updated.
@@ -99,7 +99,7 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& da
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Sparse vector input
  * \details This operation takes input as a sparse matrix of index/value pairs. It is
  *          exactly the same as the standard input via vector reference, but sets all
@@ -117,7 +117,7 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Load parameter
  * \details Load parameters into the computation graph.
  * 
@@ -129,7 +129,7 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned i
 Expression parameter(ComputationGraph& g, Parameter p);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Load constant parameters
  * \details Load parameters into the computation graph, but prevent them from being
  *          updated when performing parameter update.
@@ -142,7 +142,7 @@ Expression parameter(ComputationGraph& g, Parameter p);
 Expression const_parameter(ComputationGraph& g, Parameter p);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Look up parameter
  * \details Look up parameters according to an index, and load them into the 
  *          computation graph.
@@ -156,7 +156,7 @@ Expression const_parameter(ComputationGraph& g, Parameter p);
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Look up parameters with modifiable index
  * \details Look up parameters according to the *pindex, and load them into the 
  *          computation graph. When *pindex changes, on the next computation of 
@@ -171,7 +171,7 @@ Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Look up parameter
  * \details Look up parameters according to an index, and load them into the 
  *          computation graph. Do not perform gradient update on the parameters.
@@ -185,7 +185,7 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex
 Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 
 /**
- * \ingroup operations
+ * \ingroup inputoperations
  * \brief Constant lookup parameters with modifiable index
  * \details Look up parameters according to the *pindex, and load them into the 
  *          computation graph. When *pindex changes, on the next computation of 
@@ -201,9 +201,61 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 
 // Batched versions of lookup and const_lookup
+
+/**
+ * \ingroup inputoperations
+ * \brief Look up parameters
+ * \details The mini-batched version of lookup. The resulting expression will be
+ *          a mini-batch of parameters, where the "i"th element of the batch corresponds
+ *          to the parameters at the position specified by the "i"th element of
+ *          "indices"
+ * 
+ * \param g Computation graph
+ * \param p LookupParameter object from which to load
+ * \param indices Index of the parameters at each position in the batch
+ * 
+ * \return The new expression
+ */
 Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
+
+/**
+ * \ingroup inputoperations
+ * \brief Look up parameters
+ * \details The mini-batched version of lookup with modifiable parameter indices.
+ * 
+ * \param g Computation graph
+ * \param p LookupParameter object from which to load
+ * \param indices Pointer to lookup indices
+ * 
+ * \return The new expression
+ */
 Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
+
+/**
+ * \ingroup inputoperations
+ * \brief Look up parameters
+ * \details Mini-batched lookup that will not update the parameters.
+ * 
+ * \param g Computation graph
+ * \param p LookupParameter object from which to load
+ * \param indices Lookup indices
+ * 
+ * \return The new expression
+ */
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
+
+/**
+ * \ingroup inputoperations
+ * \brief Look up parameters
+ * \details Mini-batched lookup that will not update the parameters, with modifiable
+ *          indices.
+ * 
+ * \param g Computation graph
+ * \param p LookupParameter object from which to load
+ * \param pindices Lookup index pointers.
+ * 
+ * \return The new expression
+ */
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 
 Expression zeroes(ComputationGraph& g, const Dim& d);
