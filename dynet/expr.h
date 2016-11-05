@@ -66,7 +66,7 @@ namespace detail {
  * \param g Computation graph
  * \param s Real number
  * 
- * \return The new expression
+ * \return An expression representing s
  */
 Expression input(ComputationGraph& g, real s);
 
@@ -80,7 +80,7 @@ Expression input(ComputationGraph& g, real s);
  * \param g Computation graph
  * \param ps Real number pointer
  * 
- * \return The new expression
+ * \return An expression representing *ps
  */
 Expression input(ComputationGraph& g, const real *ps);
 
@@ -103,7 +103,7 @@ Expression input(ComputationGraph& g, const real *ps);
  * \param d Dimension of the input matrix
  * \param data A vector of data points
  * 
- * \return The new expression
+ * \return An expression representing data
  */
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
 
@@ -115,9 +115,9 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& da
  * 
  * \param g Computation graph
  * \param d Dimension of the input matrix
- * \param data A pointer to an (updatable) vector of data points
+ * \param pdata A pointer to an (updatable) vector of data points
  * 
- * \return The new expression
+ * \return An expression representing *pdata
  */
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
 
@@ -135,7 +135,7 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
  * \param data The data points corresponding to each index
  * \param defdata The default data with which to set the unspecified data points
  * 
- * \return The new expression
+ * \return An expression representing data
  */
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 
@@ -147,7 +147,7 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned i
  * \param g Computation graph
  * \param p Parameter object to load
  * 
- * \return The new expression
+ * \return An expression representing p
  */
 Expression parameter(ComputationGraph& g, Parameter p);
 
@@ -160,7 +160,7 @@ Expression parameter(ComputationGraph& g, Parameter p);
  * \param g Computation graph
  * \param p Parameter object to load
  * 
- * \return The new expression
+ * \return An expression representing the constant p
  */
 Expression const_parameter(ComputationGraph& g, Parameter p);
 
@@ -174,7 +174,7 @@ Expression const_parameter(ComputationGraph& g, Parameter p);
  * \param p LookupParameter object from which to load
  * \param index Index of the parameters within p
  * 
- * \return The new expression
+ * \return An expression representing p[index]
  */
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 
@@ -189,7 +189,7 @@ Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
  * \param p LookupParameter object from which to load
  * \param pindex Pointer index of the parameters within p
  * 
- * \return The new expression
+ * \return An expression representing p[*pindex]
  */
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 
@@ -203,7 +203,7 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex
  * \param p LookupParameter object from which to load
  * \param index Index of the parameters within p
  * 
- * \return The new expression
+ * \return A constant expression representing p[index]
  */
 Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 
@@ -219,7 +219,7 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
  * \param p LookupParameter object from which to load
  * \param pindex Pointer index of the parameters within p
  * 
- * \return The new expression
+ * \return A constant expression representing p[*pindex]
  */
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 
@@ -237,7 +237,7 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* 
  * \param p LookupParameter object from which to load
  * \param indices Index of the parameters at each position in the batch
  * 
- * \return The new expression
+ * \return An expression with the "i"th batch element representing p[indices[i]]
  */
 Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
 
@@ -250,7 +250,7 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsi
  * \param p LookupParameter object from which to load
  * \param indices Pointer to lookup indices
  * 
- * \return The new expression
+ * \return An expression with the "i"th batch element representing p[*pindices[i]]
  */
 Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 
@@ -263,7 +263,7 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsi
  * \param p LookupParameter object from which to load
  * \param indices Lookup indices
  * 
- * \return The new expression
+ * \return A constant expression with the "i"th batch element representing p[indices[i]]
  */
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
 
@@ -277,7 +277,8 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vecto
  * \param p LookupParameter object from which to load
  * \param pindices Lookup index pointers.
  * 
- * \return The new expression
+ * \return A constant expression with the "i"th batch element representing
+ *         p[*pindices[i]]
  */
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 
@@ -289,7 +290,7 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vecto
  * \param g Computation graph
  * \param d The dimensions of the input
  * 
- * \return The new expression
+ * \return A "d" dimensioned zero vector
  */
 Expression zeroes(ComputationGraph& g, const Dim& d);
 
@@ -302,7 +303,7 @@ Expression zeroes(ComputationGraph& g, const Dim& d);
  * \param g Computation graph
  * \param d The dimensions of the input
  * 
- * \return The new expression
+ * \return A "d" dimensioned normally distributed vector
  */
 Expression random_normal(ComputationGraph& g, const Dim& d);
 
@@ -310,17 +311,137 @@ Expression random_normal(ComputationGraph& g, const Dim& d);
 // Arithmetic operations                      //
 ////////////////////////////////////////////////
 
-// operators
+/**
+ * \ingroup arithmeticoperations
+ * \brief Negation
+ * \details Negate the passed argument.
+ * 
+ * \param x An input expression
+ * 
+ * \return The negation of x
+ */
 Expression operator-(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Expression addition
+ * \details Add two expressions of the same dimensions.
+ * 
+ * \param x The first input
+ * \param y The second input
+ * 
+ * \return The sum of x and y
+ */
 Expression operator+(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Scalar addition
+ * \details Add a scalar to an expression
+ * 
+ * \param x The expression
+ * \param y The scalar
+ * 
+ * \return An expression equal to x, with every component increased by y
+ */
 Expression operator+(const Expression& x, real y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Scalar addition
+ * \details Add a scalar to an expression
+ * 
+ * \param x The scalar
+ * \param y The expression
+ * 
+ * \return An expression equal to y, with every component increased by x
+ */
 Expression operator+(real x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Expression subtraction
+ * \details Subtract one expression from another.
+ * 
+ * \param x The expression from which to subtract
+ * \param y The expression to subtract
+ * 
+ * \return An expression for x minus y
+ */
 Expression operator-(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Scalar subtraction
+ * \details Subtract an expression from a scalar
+ * 
+ * \param x The scalar from which to subtract
+ * \param y The expression to subtract
+ * 
+ * \return An expression for x minus y
+ */
 Expression operator-(real x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Scalar subtraction
+ * \details Subtract a scalar from an expression
+ * 
+ * \param x The expression from which to subtract
+ * \param y The scalar to subtract
+ * 
+ * \return An expression for x minus y
+ */
 Expression operator-(const Expression& x, real y);
+
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Matrix multiplication
+ * \details Multiply two matrices together. Like standard matrix multiplication, the
+ *          second dimension of x and the first dimension of y must match.
+ * 
+ * \param x The left-hand matrix
+ * \param y The right-hand matrix
+ * 
+ * \return An expression for x times y
+ */
 Expression operator*(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Matrix-scalar multiplication
+ * \details Multiply an expression component-wise by a scalar.
+ * 
+ * \param x The matrix
+ * \param y The scalar
+ * 
+ * \return An expression for x times y
+ */
 Expression operator*(const Expression& x, float y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Matrix-scalar multiplication
+ * \details Multiply an expression component-wise by a scalar.
+ * 
+ * \param x The scalar
+ * \param y The matrix
+ * 
+ * \return An expression for x times y
+ */
 inline Expression operator*(float y, const Expression& x) { return x * y; }
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Matrix-scalar division
+ * \details Divide an expression component-wise by a scalar.
+ * 
+ * \param x The matrix
+ * \param y The scalar
+ * 
+ * \return An expression for x divided by y
+ */
 inline Expression operator/(const Expression& x, float y) { return x * (1.f / y); }
 
 template <typename T>
