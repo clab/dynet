@@ -32,6 +32,7 @@ set(dynet_library_SRCS
     shadow-params.cc
     tensor.cc
     training.cc
+    treelstm.cc
     weight-decay.cc
 )
 
@@ -72,6 +73,7 @@ set(dynet_library_HDRS
     tensor.h
     timing.h
     training.h
+    treelstm.h
     except.h
     nodes-macros.h
     weight-decay.h
