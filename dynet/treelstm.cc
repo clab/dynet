@@ -271,12 +271,12 @@ void SocherTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
-Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) { assert (false); }
-Expression TreeLSTMBuilder::back() const { assert(false); }
-std::vector<Expression> TreeLSTMBuilder::final_h() const { assert(false); }
-std::vector<Expression> TreeLSTMBuilder::final_s() const { assert(false); }
-unsigned TreeLSTMBuilder::num_h0_components() const { assert (false); }
-void TreeLSTMBuilder::copy(const RNNBuilder&) { assert(false); }
+Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) { throw std::runtime_error("add_input_impl() not a valid function for TreeLSTMBuilder"); }
+Expression TreeLSTMBuilder::back() const { throw std::runtime_error("back() not a valid function for TreeLSTMBuilder"); }
+std::vector<Expression> TreeLSTMBuilder::final_h() const { throw std::runtime_error("final_h() not a valid function for TreeLSTMBuilder"); }
+std::vector<Expression> TreeLSTMBuilder::final_s() const { throw std::runtime_error("final_s() not a valid function for TreeLSTMBuilder"); }
+unsigned TreeLSTMBuilder::num_h0_components() const { throw std::runtime_error("num_h0_components() not a valid function for TreeLSTMBuilder"); }
+void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy() not a valid function for TreeLSTMBuilder"); }
 
 UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
@@ -359,4 +359,4 @@ Expression BidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children,
   return embedding;
 }
 
-Expression BidirectionalTreeLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) { assert (false); }
+Expression BidirectionalTreeLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) { throw std::runtime_error("set_h() not a valid function for BidirectionalTreeLSTMBuilder"); }
