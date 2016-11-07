@@ -14,6 +14,15 @@ be installed from standard repositories, for example on Ubuntu linux:
 
     sudo apt-get install libboost-all-dev cmake mercurial
 
+Or on OS X, first make sure the Apple Command Line Tools are installed, then
+get boost, cmake, and mercurial with either homebrew or macports:
+
+::
+
+    xcode-select --install
+    brew install boost cmake hg
+    sudo port install boost cmake mercurial
+
 To compile DyNet you also need the `development version of the Eigen
 library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
 released versions, you may get assertion failures or compile errors.**
