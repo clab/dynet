@@ -160,7 +160,7 @@ void AverageColumns::forward_dev_impl(const MyDevice & dev, const vector<const T
     fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().chip<1>(i);
   fx.t<1>().device(*dev.edevice) = fx.t<1>() / (float)cols;
 #else
-  const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {{1}};
+  const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
   fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis) / (float)cols;
 #endif
 }
@@ -172,7 +172,7 @@ void AverageColumns::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  const Eigen::array<Eigen::DenseIndex, 2> broadcasts = {{1, xs[0]->d[1]}};
+  const Eigen::array<Eigen::DenseIndex, 2> broadcasts = {1, xs[0]->d[1]};
   dEdxi.t<2>().device(*dev.edevice) += (dEdf.t<2>() / (float)xs[0]->d[1]).broadcast(broadcasts);
 }
 DYNET_NODE_INST_DEV_IMPL(AverageColumns)
@@ -249,7 +249,7 @@ DYNET_NODE_INST_DEV_IMPL(Conv1DWide)
 
 template<class MyDevice>
 void Filter1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  const Eigen::array<Eigen::DenseIndex, 2> dims = {{0, 1}};
+  const Eigen::array<Eigen::DenseIndex, 2> dims = {0, 1};
   if(xs[1]->d.ndims() == 2) {
     fx.t<2>().device(*dev.edevice) = xs[0]->t<2>().convolve(xs[1]->t<2>(), dims);
   } else {
@@ -329,7 +329,7 @@ void FoldRows::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  const Eigen::array<Eigen::DenseIndex, 1> broadcasts = {{nrows}};
+  const Eigen::array<Eigen::DenseIndex, 1> broadcasts = {nrows};
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec().broadcast(broadcasts);
   // unsigned orows = fx.d.rows();
   // for (unsigned i = 0; i < orows; ++i)
@@ -344,7 +344,7 @@ void KMaxPooling::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   if(k == 1) {
     Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex,1>> locs(maxmap, dim.size());
     locs.device(*dev.edevice) = xs[0]->t<2>().argmax(1);
-    const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {{1}};
+    const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
 #ifdef __CUDACC__
     // TODO: The code that works on CPU does not compile on CUDA
     throw std::runtime_error("KMaxPooling::forward_dev_impl not working on CUDA yet");
@@ -417,7 +417,7 @@ void SumColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   for(unsigned i = 1; i < cols; ++i)
     fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().chip<1>(i);
 #else
-  const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {{1}};
+  const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
   fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis);
 #endif
 }
@@ -429,7 +429,7 @@ void SumColumns::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  const Eigen::array<Eigen::DenseIndex, 2> broadcasts = {{1, xs[0]->d[1]}};
+  const Eigen::array<Eigen::DenseIndex, 2> broadcasts = {1, xs[0]->d[1]};
   dEdxi.t<2>().device(*dev.edevice) += dEdf.t<2>().broadcast(broadcasts);
 }
 DYNET_NODE_INST_DEV_IMPL(SumColumns)

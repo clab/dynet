@@ -43,7 +43,7 @@ struct SocherTreeLSTMBuilder : public TreeLSTMBuilder {
                        unsigned hidden_dim,
                        Model* model);
 
-  Expression add_input(int id, std::vector<int> children, const Expression& x);
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
   void copy(const RNNBuilder & params) override;
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
@@ -90,7 +90,7 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
                        unsigned hidden_dim,
                        Model* model);
 
-  Expression add_input(int id, std::vector<int> children, const Expression& x);
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -117,7 +117,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
                        unsigned hidden_dim,
                        Model* model);
 
-  Expression add_input(int id, std::vector<int> children, const Expression& x);
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
