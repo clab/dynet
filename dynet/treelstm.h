@@ -19,9 +19,9 @@ public:
   virtual unsigned num_h0_components() const override;
   virtual void copy(const RNNBuilder & params) override;
   virtual Expression add_input(int id, std::vector<int> children, const Expression& x) = 0;
-  std::vector<Expression> get_h(RNNPointer i) const override { assert (false); }
-  std::vector<Expression> get_s(RNNPointer i) const override { assert (false); }
-  Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override { assert (false); }
+  std::vector<Expression> get_h(RNNPointer i) const override { throw std::runtime_error("get_h() not a valid function for TreeLSTMBuilder"); }
+  std::vector<Expression> get_s(RNNPointer i) const override { throw std::runtime_error("get_s() not a valid function for TreeLSTMBuilder"); }
+  Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override { throw std::runtime_error("set_s_impl() not a valid function for TreeLSTMBuilder"); }
  protected:
   virtual void new_graph_impl(ComputationGraph& cg) override = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h0) override = 0;
