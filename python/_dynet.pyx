@@ -332,7 +332,7 @@ cdef class Model: # {{{
             self.save_all(fname.encode())
             return
         fh = open(fname+".pym","w")
-        pfh = open(fname+".pyk","w")
+        pfh = open(fname+".pyk","wb")
         cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
         for c in components:
             self._save_one(c,saver,fh,pfh)
@@ -388,7 +388,7 @@ cdef class Model: # {{{
             types = fh.read().strip().split()
 
         cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
-        with open(fname+".pyk","r") as pfh:
+        with open(fname+".pyk","rb") as pfh:
             params = []
             itypes = iter(types)
             while True: # until iterator is done
