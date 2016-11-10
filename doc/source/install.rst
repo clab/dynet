@@ -14,6 +14,15 @@ be installed from standard repositories, for example on Ubuntu linux:
 
     sudo apt-get install libboost-all-dev cmake mercurial
 
+Or on OS X, first make sure the Apple Command Line Tools are installed, then
+get boost, cmake, and mercurial with either homebrew or macports:
+
+::
+
+    xcode-select --install
+    brew install boost cmake hg
+    sudo port install boost cmake mercurial
+
 To compile DyNet you also need the `development version of the Eigen
 library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
 released versions, you may get assertion failures or compile errors.**
@@ -127,6 +136,31 @@ If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
     -DMKL_ROOT="/path/to/MKL"
 
 If either MKL or MKL_ROOT are set, CMake will look for MKL.
+
+By default, MKL will use all CPU cores. You can control how many cores MKL uses by setting the environment
+variable `MKL_NUM_THREADS` to the desired number. The following is the total time to process 250 training 
+examples running the example encdec (on a 6 core Intel Xeon E5-1650):
+
+::
+
+    encdec.exe --dynet-seed 1 --dynet-mem 1000 train-hsm.txt dev-hsm.txt
+ 
+::
+
+    +-----------------+------------+---------+
+    | MKL_NUM_THREADS | Cores Used | Time(s) |
+    +-----------------+------------+---------+
+    | <Without MKL>   |     1      |  28.6   |
+    |       1         |     1      |  13.3   |
+    |       2         |     2      |   9.5   |
+    |       3         |     3      |   8.1   |
+    |       4         |     4      |   7.8   |
+    |       6         |     6      |   8.2   |
+    +-----------------+------------+---------+
+
+As you can see, for this particular example, using MKL roughly doubles the speed of computation while 
+still using only one core. Increasing the number of cores to 2 or 3 is quite beneficial, but beyond that
+there are diminishing returns or even slowdown.
 
 Non-standard Boost location
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
