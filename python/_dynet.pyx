@@ -187,11 +187,11 @@ class Saveable(object):
         pass
 
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = dict()
         params = self.get_components()
-        for k,v in odict.items(): # remove unpicklable things which we save otherwise
-            if v in params:
-                del odict[k]
+        for k,v in self.__dict__.items(): # remove unpicklable things which we save otherwise
+            if v not in params:
+                odict[k] = v
         return odict
 
     def get_components(self):
