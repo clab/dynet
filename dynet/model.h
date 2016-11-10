@@ -169,6 +169,7 @@ private:
 // Initilizers for parameters
 struct ParameterInit {
   ParameterInit() {}
+  virtual ~ParameterInit() {}
   virtual void initialize_params(Tensor & values) const = 0;
 };
 
@@ -239,7 +240,7 @@ class Model {
   void reset_gradient();
   // set scale to use custom initialization
   Parameter add_parameters(const Dim& d, float scale = 0.0f);
-  Parameter add_parameters(const Dim& d, ParameterInit & init);
+  Parameter add_parameters(const Dim& d, const ParameterInit & init);
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
   // project weights so their L2 norm = radius
