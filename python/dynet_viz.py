@@ -50,6 +50,7 @@ def make_dim(a, b=None, inferred=False):
     return SimpleConcreteDim(a.nrows, a.ncols, inferred)
   elif isinstance(a, tuple):
     assert b is None
+    assert len(a) == 2, str(a)
     (nrows, ncols) = a
     return SimpleConcreteDim(nrows, ncols, inferred)
   elif b is None:
@@ -683,6 +684,20 @@ class AdadeltaTrainer(Trainer):
 class AdamTrainer(Trainer):
     def __init__(self, m, alpha = 0.001, beta_1 = 0.9, beta_2 = 0.999, eps = 1e-8 ): pass
 
+
+class Initializer(object): pass
+class NormalInitializer(Initializer):
+    def __init__(self, mean=0, var=1): pass
+class UniformInitializer(Initializer):
+    def __init__(self, scale): pass
+class ConstInitializer(Initializer):
+    def __init__(self, c): pass
+class GlorotInitializer(Initializer):
+    def __init__(self, is_lookup=False): pass
+class FromFileInitializer(Initializer):
+    def __init__(self, fname): pass
+class NumpyInitializer(Initializer):
+    def __init__(self, array): pass
 
 
 
