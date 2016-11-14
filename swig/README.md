@@ -34,20 +34,21 @@ Here's a simple way to run the example in the `swig/examples` directory:
 examples$ javac -cp ../../build/swig/dynet_swigJNI.jar XorExample.java
 examples$ java -cp .:../../build/swig/dynet_swigJNI.jar -Djava.library.path=../../build/swig XorExample
 Running XOR example
-[dynet] random seed: 2801594438
+[dynet] random seed: 1650744221
 [dynet] allocating memory: 512MB
 [dynet] memory allocation done.
 Dynet initialized!
-W = edu.cmu.dynet.Expression@2503dbd3
+
+Computation graphviz structure:
 digraph G {
   rankdir=LR;
   nodesep=.05;
-  N0 [label="v0 = parameters({8,2}) @ 0x7fc4d341df20"];
-  N1 [label="v1 = parameters({8}) @ 0x7fc4d341e060"];
-  N2 [label="v2 = parameters({1,8}) @ 0x7fc4d341e180"];
-  N3 [label="v3 = parameters({1}) @ 0x7fc4d341e2f0"];
+  N0 [label="v0 = parameters({8,2}) @ 0x7ff1da8000e0"];
+  N1 [label="v1 = parameters({8}) @ 0x7ff1da800260"];
+  N2 [label="v2 = parameters({1,8}) @ 0x7ff1da800380"];
+  N3 [label="v3 = parameters({1}) @ 0x7ff1da8004f0"];
   N4 [label="v4 = constant({2})"];
-  N5 [label="v5 = scalar_constant(0x7fc4d35304b8)"];
+  N5 [label="v5 = scalar_constant(0x7ff1d8f12ce8)"];
   N6 [label="v6 = v0 * v4"];
   N0 -> N6;
   N4 -> N6;
@@ -66,34 +67,36 @@ digraph G {
   N10 -> N11;
   N5 -> N11;
 }
-iter = 0, loss = 3.0038743
-iter = 1, loss = 0.011609978
-iter = 2, loss = 1.075118E-5
-iter = 3, loss = 9.254038E-9
-iter = 4, loss = 8.060219E-12
-iter = 5, loss = 8.881784E-15
-iter = 6, loss = 3.5527137E-15
-iter = 7, loss = 3.5527137E-15
-iter = 8, loss = 3.5527137E-15
+
+Training...
+iter = 0, loss = 0.6974922
+iter = 1, loss = 1.4101544E-4
+iter = 2, loss = 2.1905963E-8
+iter = 3, loss = 3.2875924E-12
+iter = 4, loss = 2.220446E-15
+iter = 5, loss = 8.881784E-16
+iter = 6, loss = 8.881784E-16
+iter = 7, loss = 8.881784E-16
+iter = 8, loss = 8.881784E-16
 iter = 9, loss = 8.881784E-16
-iter = 10, loss = 0.0
-iter = 11, loss = 0.0
-iter = 12, loss = 0.0
-iter = 13, loss = 0.0
-iter = 14, loss = 0.0
-iter = 15, loss = 0.0
-iter = 16, loss = 0.0
-iter = 17, loss = 0.0
-iter = 18, loss = 0.0
-iter = 19, loss = 0.0
-iter = 20, loss = 0.0
-iter = 21, loss = 0.0
-iter = 22, loss = 0.0
-iter = 23, loss = 0.0
-iter = 24, loss = 0.0
-iter = 25, loss = 0.0
-iter = 26, loss = 0.0
-iter = 27, loss = 0.0
-iter = 28, loss = 0.0
-iter = 29, loss = 0.0
+iter = 10, loss = 8.881784E-16
+iter = 11, loss = 8.881784E-16
+iter = 12, loss = 8.881784E-16
+iter = 13, loss = 8.881784E-16
+iter = 14, loss = 8.881784E-16
+iter = 15, loss = 8.881784E-16
+iter = 16, loss = 8.881784E-16
+iter = 17, loss = 8.881784E-16
+iter = 18, loss = 8.881784E-16
+iter = 19, loss = 8.881784E-16
+iter = 20, loss = 8.881784E-16
+iter = 21, loss = 8.881784E-16
+iter = 22, loss = 8.881784E-16
+iter = 23, loss = 8.881784E-16
+iter = 24, loss = 8.881784E-16
+iter = 25, loss = 8.881784E-16
+iter = 26, loss = 8.881784E-16
+iter = 27, loss = 8.881784E-16
+iter = 28, loss = 8.881784E-16
+iter = 29, loss = 8.881784E-16
 ```

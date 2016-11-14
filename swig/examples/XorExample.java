@@ -34,7 +34,7 @@ public class XorExample {
     Expression W = parameter(cg, p_W);
     Expression b = parameter(cg, p_b);
     Expression V = parameter(cg, p_V);
-    Expression a = parameter(cg, p_a);System.out.println("W = " + W);
+    Expression a = parameter(cg, p_a);
 
     // Clunky way of setting up 2-element input vector
     FloatVector x_values = new FloatVector();
@@ -58,9 +58,13 @@ public class XorExample {
     Expression loss_expr = squared_distance(y_pred, y);
 
     // Print graph structure (can be fed to graphviz)
+    System.out.println();
+    System.out.println("Computation graphviz structure:");
     cg.print_graphviz();
 
     // Train the parameters
+    System.out.println();
+    System.out.println("Training...");
     for (int iter = 0; iter < ITERATIONS; iter++) {
       float loss = 0;
       for (int mi = 0; mi < 4; mi++) {
