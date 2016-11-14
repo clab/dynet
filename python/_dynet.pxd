@@ -211,6 +211,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x) #
     CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x, vector[unsigned]& restriction) #?
     CExpression c_softmax "dynet::expr::softmax" (CExpression& x) #
+    CExpression c_sparsemax "dynet::expr::sparsemax" (CExpression& x) #
     CExpression c_softsign "dynet::expr::softsign" (CExpression& x) #
     CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) #
     CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) #
@@ -351,7 +352,7 @@ cdef extern from "dynet/fast-lstm.h" namespace "dynet":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
-cdef extern from "pybridge.h" namespace "pydynet":
+cdef extern from "python/pybridge.h" namespace "pydynet":
     cdef cppclass CModelSaver "pydynet::ModelSaver":
         CModelSaver(string filename, CModel *model)
         CModelSaver add_parameter(CParameters p)
