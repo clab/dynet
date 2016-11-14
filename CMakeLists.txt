@@ -165,4 +165,11 @@ add_subdirectory(examples)
 add_subdirectory(tutorial)
 add_subdirectory(rnnlm)
 add_subdirectory(python)
+
+option(INCLUDE_SWIG "INCLUDE_SWIG" OFF)
+if(INCLUDE_SWIG)
+  message("-- Including SWIG")
+  add_subdirectory(swig)
+endif()
+
 enable_testing()
