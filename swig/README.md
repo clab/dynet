@@ -28,7 +28,14 @@ and (in MacOS) you should have the library files `build/swig/libdynet_swig.jnili
 
 ## Running the example
 
-Here's a simple way to run the example in the `swig/examples` directory:
+Here's a simple way to run the Scala example in the `swig/examples` directory:
+
+```
+example$ scalac -cp ../../build/swig/dynet_swigJNI.jar XorScala.scala
+example$ scala -cp .:../../build/swig/dynet_swigJNI.jar -Djava.library.path=../../build/swig XorScala
+```
+
+Similarly for the Java example (with output):
 
 ```
 examples$ javac -cp ../../build/swig/dynet_swigJNI.jar XorExample.java
