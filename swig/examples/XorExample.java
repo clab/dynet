@@ -36,10 +36,8 @@ public class XorExample {
     Expression V = parameter(cg, p_V);
     Expression a = parameter(cg, p_a);
 
-    // Clunky way of setting up 2-element input vector
-    FloatVector x_values = new FloatVector();
-    x_values.add(0.0f);
-    x_values.add(0.0f);
+    // 2-element input vector
+    FloatVector x_values = new FloatVector(2);
 
     // Declare as input node in computation graph
     Expression x = input(cg, makeDim(new int[]{2}), x_values);
