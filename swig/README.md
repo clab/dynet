@@ -6,7 +6,7 @@ in other languages, in particular Java.
 ## Building
 
 To include in the DyNet build, add `-DINCLUDE_SWIG=ON` to the `cmake` command, e.g., run this from
-the `build` directory:
+the `build` directory (see [DyNet documentation](http://dynet.readthedocs.io/en/latest/install.html) for general build instructions):
 
 ```
 build$ cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DINCLUDE_SWIG=ON
