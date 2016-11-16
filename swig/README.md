@@ -1,7 +1,7 @@
 # SWIG bindings for DyNet
 
 The code in `dynet_swig.i` provides SWIG instructions to wrap salient parts of DyNet for use
-in other languages, in particular Java.
+in other languages, in particular Java (and Scala).
 
 ## Building
 
