@@ -366,7 +366,7 @@ Expression operator+(real x, const Expression& y);
  * \param x The expression from which to subtract
  * \param y The expression to subtract
  * 
- * \return An expression for x minus y
+ * \return An expression where the ith element is x_i minus y_i
  */
 Expression operator-(const Expression& x, const Expression& y);
 
@@ -378,7 +378,7 @@ Expression operator-(const Expression& x, const Expression& y);
  * \param x The scalar from which to subtract
  * \param y The expression to subtract
  * 
- * \return An expression for x minus y
+ * \return An expression where the ith element is x_i minus y
  */
 Expression operator-(real x, const Expression& y);
 
@@ -390,7 +390,7 @@ Expression operator-(real x, const Expression& y);
  * \param x The expression from which to subtract
  * \param y The scalar to subtract
  * 
- * \return An expression for x minus y
+ * \return An expression where the ith element is x_i minus y
  */
 Expression operator-(const Expression& x, real y);
 
@@ -404,7 +404,7 @@ Expression operator-(const Expression& x, real y);
  * \param x The left-hand matrix
  * \param y The right-hand matrix
  * 
- * \return An expression for x times y
+ * \return An expression x times y
  */
 Expression operator*(const Expression& x, const Expression& y);
 
@@ -416,7 +416,7 @@ Expression operator*(const Expression& x, const Expression& y);
  * \param x The matrix
  * \param y The scalar
  * 
- * \return An expression for x times y
+ * \return An expression where the ith element is x_i times y
  */
 Expression operator*(const Expression& x, float y);
 
@@ -428,7 +428,7 @@ Expression operator*(const Expression& x, float y);
  * \param x The scalar
  * \param y The matrix
  * 
- * \return An expression for x times y
+ * \return An expression where the ith element is x_i times y
  */
 inline Expression operator*(float y, const Expression& x) { return x * y; }
 
@@ -440,39 +440,233 @@ inline Expression operator*(float y, const Expression& x) { return x * y; }
  * \param x The matrix
  * \param y The scalar
  * 
- * \return An expression for x divided by y
+ * \return An expression where the ith element is x_i divided by y
  */
 inline Expression operator/(const Expression& x, float y) { return x * (1.f / y); }
 
+/**
+ * \ingroup arithmeticoperations
+ * \brief Affine transform
+ * \details This performs an affine transform over an arbitrary (odd) number of expressions
+ *          held in the input initializer list x.
+ *          The first expression is the "bias," which is added to the expression as-is.
+ *          The remaining expressions are multiplied together, then added.
+ *          A very common usage case is the calculation of the score for a neural network
+ *          layer (e.g. b + Wz) where b is the bias, W is the weight matrix, and z is the
+ *          input. In this case x[0] = b, x[1] = W, and x[2] = z.
+ * 
+ * \param x An initializer list containing an odd number of expressions
+ * 
+ * \return An expression equal to: x[0] + x[1]*x[2] + x[3]*x[4] + ...
+ */
+inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
 template <typename T>
 inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
-inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
 
+/**
+ * \ingroup arithmeticoperations
+ * \brief Square root
+ * \details Elementwise square root.
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is equal to sqrt(x_i)
+ */
 Expression sqrt(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Gaussian errror function
+ * \details Elementwise calculation of the Gaussian error function
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is equal to erf(x_i)
+ */
 Expression erf(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Hyperbolic tangent
+ * \details Elementwise calculation of the hyperbolic tangent
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is equal to tanh(x_i)
+ */
 Expression tanh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Natural exponent
+ * \details Calculate elementwise y_i = e^{x_i}
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression equal to e^{x_i}
+ */
 Expression exp(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Square
+ * \details Calculate elementwise y_i = x_i^2
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is equal to x_i^2
+ */
 Expression square(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Cube
+ * \details Calculate elementwise y_i = x_i^3
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is equal to x_i^3
+ */
 Expression cube(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Log gamma
+ * \details Calculate elementwise y_i = ln(gamma(x_i))
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is equal to ln(gamma(x_i))
+ */
 Expression lgamma(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Logarithm
+ * \details Calculate the elementwise natural logarithm y_i = ln(x_i)
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is equal to ln(x_i)
+ */
 Expression log(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Logistic sigmoid function
+ * \details Calculate elementwise y_i = 1/(1+e^{x_i})
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression equal to y_i = 1/(1+e^{x_i})
+ */
 Expression logistic(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Rectifier
+ * \details Calculate elementwise the recitifer (RelU) function y_i = max(x_i,0)
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is equal to max(x_i,0)
+ */
 Expression rectify(const Expression& x);
 
-Expression softmax(const Expression& x);
+/**
+ * \ingroup arithmeticoperations
+ * \brief Soft Sign
+ * \details Calculate elementwise the softsign function y_i = x_i/(1+|x_i|)
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression equal to x_i/(1+|x_i|)
+ */
 Expression softsign(const Expression& x);
 
+/**
+ * \ingroup arithmeticoperations
+ * \brief Power function
+ * \details Calculate an output where the ith element is equal to x_i^y_i
+ * 
+ * \param x The input expression
+ * 
+ * \return An expression where the ith element is to x_i^y_i
+ */
 Expression pow(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Minimum
+ * \details Calculate an output where the ith element is min(x_i,y_i)
+ * 
+ * \param x The first input expression
+ * \param y The second input expression
+ * 
+ * \return An expression equal to min(x_i,y_i)
+ */
 Expression min(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Maximum
+ * \details Calculate an output where the ith element is max(x_i,y_i)
+ * 
+ * \param x The first input expression
+ * \param y The second input expression
+ * 
+ * \return An expression where the ith element is equal to max(x_i,y_i)
+ */
 Expression max(const Expression& x, const Expression& y);
 
+/**
+ * \ingroup arithmeticoperations
+ * \brief Dot Product
+ * \details Calculate the dot product sum_i x_i*y_i
+ * 
+ * \param x The input expression
+ * \param y The input expression
+ * 
+ * \return An expression equal to the dot product
+ */
 Expression dot_product(const Expression& x, const Expression& y);
 
-// colwise addition
-Expression addmv(const Expression& M, const Expression& v);
-// componentwise division
-Expression cwise_multiply(const Expression& x, const Expression& y);
+/**
+ * \ingroup arithmeticoperations
+ * \brief Componentwise multiply
+ * \details Do a componentwise multiply where each value is equal to x_i*y_i.
+ *          This function used to be called cwise_multiply.
+ * 
+ * \param x The first input expression
+ * \param y The second input expression
+ * 
+ * \return An expression where the ith element is x_i*y_i 
+ */
+Expression cmult(const Expression& x, const Expression& y);
+
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Componentwise multiply
+ * \details Do a componentwise multiply where each value is equal to x_i/y_i
+ * 
+ * \param x The first input expression
+ * \param y The second input expression
+ * 
+ * \return An expression where the ith element is x_i/y_i 
+ */
 Expression cdiv(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Columnwise addition
+ * \details Add vector "bias" to each column of matrix "x"
+ * 
+ * \param x An MxN matrix
+ * \param bias A length M vector
+ * 
+ * \return An expression bias is added to each column of x
+ */
 Expression colwise_add(const Expression& x, const Expression& bias);
 
 ////////////////////////////////////////////////
@@ -483,6 +677,7 @@ Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m = 1.0);
 Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
 Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, float m = 1.0);
+Expression softmax(const Expression& x);
 Expression log_softmax(const Expression& x);
 Expression sparsemax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
