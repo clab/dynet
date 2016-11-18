@@ -197,6 +197,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) #
 
     CExpression c_cdiv "dynet::expr::cdiv" (CExpression& x, CExpression& y) #
+    CExpression c_cmult "dynet::expr::cmult" (CExpression& x, CExpression& y) #
     CExpression c_colwise_add "dynet::expr::colwise_add" (CExpression& x, CExpression& bias) #
 
     CExpression c_tanh "dynet::expr::tanh" (CExpression& x) #
@@ -225,7 +226,6 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_affine_transform "dynet::expr::affine_transform" (const vector[CExpression]& xs)
 
     CExpression c_trace_of_product "dynet::expr::trace_of_product" (CExpression& x, CExpression& y);
-    CExpression c_cwise_multiply "dynet::expr::cwise_multiply" (CExpression& x, CExpression& y) #
 
     CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) #
     CExpression c_squared_distance "dynet::expr::squared_distance" (CExpression& x, CExpression& y) #

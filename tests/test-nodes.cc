@@ -638,22 +638,22 @@ BOOST_AUTO_TEST_CASE( trace_of_product_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression cwise_multiply(const Expression& x, const Expression& y);
-BOOST_AUTO_TEST_CASE( cwise_multiply_gradient ) {
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cmult_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
-  Expression y = cwise_multiply(x1, x2);
+  Expression y = cmult(x1, x2);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression cwise_multiply(const Expression& x, const Expression& y);
-BOOST_AUTO_TEST_CASE( cwise_multiply_batch_gradient ) {
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cmult_batch_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
-  Expression y = cwise_multiply(x1, x2) + cwise_multiply(x2, x1);
+  Expression y = cmult(x1, x2) + cmult(x2, x1);
   Expression z = sum_batches(input(cg, {1,3}, ones3_vals) * y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
