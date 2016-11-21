@@ -133,33 +133,40 @@ cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer":
         #CSimpleSGDTrainer(CModel* m, float lam, float e0)
         CSimpleSGDTrainer(CModel* m, float e0, float edecay) # TODO removed lam, update docs.
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer":
         CMomentumSGDTrainer(CModel* m, float e0, float mom, float edecay) # TODO removed lam, update docs
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer":
         CAdagradTrainer(CModel* m, float e0, float eps, float edecay) # TODO removed lam, update docs
-
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer":
         CAdadeltaTrainer(CModel* m, float eps, float rho, float edecay) # TODO removed lam, update docs
-
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer":
         CAdamTrainer(CModel* m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
-
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -181,6 +188,10 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     #CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
     CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
     CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
+    CExpression c_zeroes "dynet::expr::zeroes" (CComputationGraph& g, CDim& d) #
+    CExpression c_random_normal "dynet::expr::random_normal" (CComputationGraph& g, CDim& d) #
+    CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p)
+    CExpression c_random_uniform "dynet::expr::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) #
 
     # identity function, but derivative is not propagated through it
     CExpression c_nobackprop "dynet::expr::nobackprop" (CExpression& x) #

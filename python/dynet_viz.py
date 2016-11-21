@@ -686,6 +686,9 @@ class Trainer(object):
   def update(self, s=1.0): pass
   def update_epoch(self, r = 1.0): pass
   def status(self): pass
+  def set_clip_threshold(self, thr): pass
+  def get_clip_threshold(self): pass
+
 class SimpleSGDTrainer(Trainer):
     def __init__(self, m, e0 = 0.1): pass
 class MomentumSGDTrainer(Trainer):
