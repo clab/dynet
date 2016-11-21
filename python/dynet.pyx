@@ -1396,7 +1396,12 @@ cdef class SimpleSGDTrainer:
     cpdef status(self):
         self.thisptr.status()
     cpdef set_clip_threshold(self,float thr):
-        self.thisptr.clip_threshold = thr
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
     cpdef get_clip_threshold(self):
         return self.thisptr.clip_threshold
 
@@ -1413,7 +1418,12 @@ cdef class MomentumSGDTrainer:
     cpdef status(self):
         self.thisptr.status()
     cpdef set_clip_threshold(self,float thr):
-        self.thisptr.clip_threshold = thr
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
     cpdef get_clip_threshold(self):
         return self.thisptr.clip_threshold
 
@@ -1431,7 +1441,12 @@ cdef class AdagradTrainer:
     cpdef status(self):
         self.thisptr.status()
     cpdef set_clip_threshold(self,float thr):
-        self.thisptr.clip_threshold = thr
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
     cpdef get_clip_threshold(self):
         return self.thisptr.clip_threshold
 
@@ -1449,7 +1464,12 @@ cdef class AdadeltaTrainer:
     cpdef status(self):
         self.thisptr.status()
     cpdef set_clip_threshold(self,float thr):
-        self.thisptr.clip_threshold = thr
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
     cpdef get_clip_threshold(self):
         return self.thisptr.clip_threshold
 
@@ -1467,7 +1487,12 @@ cdef class AdamTrainer:
     cpdef status(self):
         self.thisptr.status()
     cpdef set_clip_threshold(self,float thr):
-        self.thisptr.clip_threshold = thr
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
     cpdef get_clip_threshold(self):
         return self.thisptr.clip_threshold
 
