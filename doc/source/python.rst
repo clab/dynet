@@ -19,7 +19,7 @@ TL;DR
     cd dynet-base
     # getting dynet and eigen
     git clone https://github.com/clab/dynet.git
-    hg clone https://bitbucket.org/eigen/eigen
+    hg clone https://bitbucket.org/eigen/eigen -r 346ecdb  # -r NUM specified a known working revision
     cd dynet
     mkdir build
     cd build
@@ -58,7 +58,10 @@ Then get Eigen:
 
     cd $HOME
     cd dynet-base
-    hg clone https://bitbucket.org/eigen/eigen/
+    hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
+    
+(`-r NUM` specifies a known working revision of Eigen. You can remove this in order to get the bleeding
+edge Eigen, with the risk of some compile breaks, and the possible benefit of added optimizations.)
 
 We also need to make sure the ``cython`` module is installed. (you can
 replace ``pip`` with your favorite package manager, such as ``conda``,
