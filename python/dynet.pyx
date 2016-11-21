@@ -1395,6 +1395,10 @@ cdef class SimpleSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
@@ -1408,6 +1412,11 @@ cdef class MomentumSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
@@ -1421,6 +1430,11 @@ cdef class AdagradTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
@@ -1434,6 +1448,11 @@ cdef class AdadeltaTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
@@ -1447,5 +1466,10 @@ cdef class AdamTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 #}}}
 
