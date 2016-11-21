@@ -45,11 +45,19 @@ struct LSTMBuilder : public RNNBuilder {
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
  public:
+  bool gal_dropout;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
+
+  // first index is layer, then ...
+  // masks for Gal dropout
+  std::vector<std::vector<Expression>> masks; 
+                                       //in_a_mask, in_w_mask, in_o_mask,
+                                       //h_a_mask, h_w_mask, h_o_mask,
+                                       //c_a_mask, c_w_mask, c_o_mask;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
@@ -60,11 +68,14 @@ struct LSTMBuilder : public RNNBuilder {
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
+  unsigned input_dim;
+  unsigned hidden_dim;
 
 private:
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int);
+  ComputationGraph  *_cg;
 
 };
 
