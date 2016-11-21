@@ -307,6 +307,33 @@ Expression zeroes(ComputationGraph& g, const Dim& d);
  */
 Expression random_normal(ComputationGraph& g, const Dim& d);
 
+/**
+ * \ingroup inputoperations
+ * \brief Create a random bernoulli vector
+ * \details Create a vector distributed according to bernoulli distribution with parameter p.
+ * 
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ * \param p The bernoulli p parameter
+ * 
+ * \return A "d" dimensioned bernoulli distributed vector
+ */
+Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p);
+
+/**
+ * \ingroup inputoperations
+ * \brief Create a random uniform vector
+ * \details Create a vector distributed according to uniform distribution with boundaries left and right.
+ * 
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ * \param left The left boundary
+ * \param right The right boundary
+ * 
+ * \return A "d" dimensioned uniform distributed vector
+ */
+Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right);
+
 ////////////////////////////////////////////////
 // Arithmetic operations                      //
 ////////////////////////////////////////////////

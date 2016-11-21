@@ -563,6 +563,8 @@ cdef class ComputationGraph:
         r = _pickerBatchExpression(self, e, vs)
         return r
 
+
+
 # }}}
 
 #{{{ Expressions
@@ -802,7 +804,7 @@ def pick(Expression e, unsigned index=0):
 
 cdef class _pickerBatchExpression(Expression):
     cdef UnsignedVectorValue val
-    def __cinit__(self, ComputationGraph g, Expression e, vector[unsigned] indices):
+    def __cinit__(self, ComputationGraph g, Expression e, vector[unsigned] indices):#
         self.val = UnsignedVectorValue(indices)
         self.cg_version = g.version()
         cdef CExpression ce
@@ -834,6 +836,11 @@ def hinge(Expression x, unsigned index, float m=1.0):
     return _hingeExpression(_cg, x, index, m)
 
 # }}}
+
+cpdef Expression zeroes(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
+cpdef Expression random_normal(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
+cpdef Expression random_bernoulli(dim, float p, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p))
+cpdef Expression random_uniform(dim, float left, float right, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
 
 cpdef Expression nobackprop(Expression x): return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
 
@@ -1388,6 +1395,15 @@ cdef class SimpleSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
@@ -1401,6 +1417,16 @@ cdef class MomentumSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
@@ -1414,6 +1440,16 @@ cdef class AdagradTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
@@ -1427,6 +1463,16 @@ cdef class AdadeltaTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
@@ -1440,5 +1486,15 @@ cdef class AdamTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 #}}}
 
