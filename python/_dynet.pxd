@@ -188,6 +188,10 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     #CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
     CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
     CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
+    CExpression c_zeroes "dynet::expr::zeroes" (CComputationGraph& g, CDim& d) #
+    CExpression c_random_normal "dynet::expr::random_normal" (CComputationGraph& g, CDim& d) #
+    CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p)
+    CExpression c_random_uniform "dynet::expr::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) #
 
     # identity function, but derivative is not propagated through it
     CExpression c_nobackprop "dynet::expr::nobackprop" (CExpression& x) #
@@ -204,6 +208,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) #
 
     CExpression c_cdiv "dynet::expr::cdiv" (CExpression& x, CExpression& y) #
+    CExpression c_cmult "dynet::expr::cmult" (CExpression& x, CExpression& y) #
     CExpression c_colwise_add "dynet::expr::colwise_add" (CExpression& x, CExpression& bias) #
 
     CExpression c_tanh "dynet::expr::tanh" (CExpression& x) #
@@ -221,6 +226,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x) #
     CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x, vector[unsigned]& restriction) #?
     CExpression c_softmax "dynet::expr::softmax" (CExpression& x) #
+    CExpression c_sparsemax "dynet::expr::sparsemax" (CExpression& x) #
     CExpression c_softsign "dynet::expr::softsign" (CExpression& x) #
     CExpression c_pow "dynet::expr::pow" (CExpression& x, CExpression& y) #
     CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) #
@@ -235,7 +241,6 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_affine_transform "dynet::expr::affine_transform" (const vector[CExpression]& xs)
 
     CExpression c_trace_of_product "dynet::expr::trace_of_product" (CExpression& x, CExpression& y);
-    CExpression c_cwise_multiply "dynet::expr::cwise_multiply" (CExpression& x, CExpression& y) #
 
     CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) #
     CExpression c_squared_distance "dynet::expr::squared_distance" (CExpression& x, CExpression& y) #
@@ -363,7 +368,7 @@ cdef extern from "dynet/fast-lstm.h" namespace "dynet":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
-cdef extern from "pybridge.h" namespace "pydynet":
+cdef extern from "python/pybridge.h" namespace "pydynet":
     cdef cppclass CModelSaver "pydynet::ModelSaver":
         CModelSaver(string filename, CModel *model)
         CModelSaver add_parameter(CParameters p)

@@ -99,7 +99,7 @@ struct RNNLanguageModel {
     for (unsigned l = 0; l < L; ++l) { // noise samples
       for (auto& x : eps[l]) x = rand_normal();
       Expression ceps = input(cg, {LATENT_DIM}, &eps[l]);
-      Expression z = mu + cwise_multiply(ceps, exp(logsig));
+      Expression z = mu + cmult(ceps, exp(logsig));
       Expression h0 = parameter(cg, p_z2h0) * z + parameter(cg, p_h0b);
       vector<Expression> h0s(LAYERS);
       for (unsigned i = 0; i < LAYERS; ++i) {

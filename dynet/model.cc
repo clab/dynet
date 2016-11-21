@@ -318,7 +318,7 @@ Parameter Model::add_parameters(const Dim& d, float scale) {
   return r;
 }
 
-Parameter Model::add_parameters(const Dim& d, ParameterInit & init) {
+Parameter Model::add_parameters(const Dim& d, const ParameterInit & init) {
   ParameterStorage* p = new ParameterStorage(d, init);
   Parameter r(this, params.size());
   //cerr << "Adding parameters with dim " << d << endl;

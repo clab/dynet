@@ -152,9 +152,9 @@ Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     // input
     Expression i_ait;
     if (has_prev_state) {
-//      i_ait = vars[BI] + vars[X2I] * in + vars[H2I]*i_h_tm1 + cwise_multiply(vars[C2I], i_c_tm1);
+//      i_ait = vars[BI] + vars[X2I] * in + vars[H2I]*i_h_tm1 + cmult(vars[C2I], i_c_tm1);
       i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1}) +
-              cwise_multiply(vars[C2I], i_c_tm1);
+              cmult(vars[C2I], i_c_tm1);
     } else {
 //      i_ait = vars[BI] + vars[X2I] * in;
       i_ait = affine_transform({vars[BI], vars[X2I], in});
@@ -173,18 +173,18 @@ Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_wt = tanh(i_awt);
     // output
     if (has_prev_state) {
-      Expression i_nwt = cwise_multiply(i_it,i_wt);
-      Expression i_crt = cwise_multiply(i_ft,i_c_tm1);
+      Expression i_nwt = cmult(i_it,i_wt);
+      Expression i_crt = cmult(i_ft,i_c_tm1);
       ct[i] = i_crt + i_nwt;
     } else {
-      ct[i] = cwise_multiply(i_it,i_wt);
+      ct[i] = cmult(i_it,i_wt);
     }
 
     Expression i_aot;
     if (has_prev_state) {
-//      i_aot = vars[BO] + vars[X2O] * in + vars[H2O] * i_h_tm1 + cwise_multiply(vars[C2O], ct[i]);
+//      i_aot = vars[BO] + vars[X2O] * in + vars[H2O] * i_h_tm1 + cmult(vars[C2O], ct[i]);
       i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1}) +
-              cwise_multiply(vars[C2O], ct[i]);
+              cmult(vars[C2O], ct[i]);
     }
     else {
 //      i_aot = vars[BO] + vars[X2O] * in;
@@ -192,7 +192,7 @@ Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     }
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
-    in = ht[i] = cwise_multiply(i_ot,ph_t);
+    in = ht[i] = cmult(i_ot,ph_t);
   }
   return ht.back();
 }
