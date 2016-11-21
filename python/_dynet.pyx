@@ -1,10 +1,16 @@
 # on numpy arrays, see: https://github.com/cython/cython/wiki/tutorials-NumpyPointerToC
-
+from __future__ import print_function
 import sys
 from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
 import numpy as np
-import cPickle as pickle
+
+# python3 pickle already uses the c implementaion 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+    
 import os.path
 # TODO:
 #  - set random seed (in DYNET)
@@ -29,14 +35,14 @@ import os.path
 #  - embedcl
 #  - embed/nlm -- negative sampling?
 
-from dynet cimport *
-cimport dynet
+from _dynet cimport *
+cimport _dynet as dynet
 
 
 cdef init(random_seed=None):
     cdef int argc = len(sys.argv)
     cdef char** c_argv
-    args = [bytes(x) for x in sys.argv]
+    args = [bytearray(x, encoding="utf-8") for x in sys.argv]
     c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
     for idx, s in enumerate(args):
         c_argv[idx] = s
@@ -181,11 +187,11 @@ class Saveable(object):
         pass
 
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = dict()
         params = self.get_components()
-        for k,v in odict.items(): # remove unpicklable things which we save otherwise
-            if v in params:
-                del odict[k]
+        for k,v in self.__dict__.items(): # remove unpicklable things which we save otherwise
+            if v not in params:
+                odict[k] = v
         return odict
 
     def get_components(self):
@@ -326,13 +332,13 @@ cdef class Model: # {{{
         else:
             raise TypeError("Cannot save model component of type %s" % type(c))
 
-    def save(self, string fname, components=None):
+    def save(self, fname, components=None):
         if not components:
-            self.save_all(fname)
+            self.save_all(fname.encode())
             return
-        fh = file(fname+".pym","w")
-        pfh = file(fname+".pyk","w")
-        cdef CModelSaver *saver = new CModelSaver(fname, self.thisptr)
+        fh = open(fname+".pym","w")
+        pfh = open(fname+".pyk","wb")
+        cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
         for c in components:
             self._save_one(c,saver,fh,pfh)
         saver.done()
@@ -346,7 +352,7 @@ cdef class Model: # {{{
         cdef GRUBuilder gb_
         cdef LSTMBuilder lb_
         cdef SimpleRNNBuilder sb_
-        tp = itypes.next()
+        tp = next(itypes)
         if tp == "param":
             loader.fill_parameter(p)
             param = Parameters.wrap_ptr(p)
@@ -381,18 +387,18 @@ cdef class Model: # {{{
             saveable.restore_components(items)
             return saveable
         else:
-            print "Huh?"
+            print("Huh?")
             assert False,"unsupported type " + tp
 
-    cpdef load(self, string fname):
+    cpdef load(self, fname):
         if not os.path.isfile(fname+".pym"):
-            self.load_all(fname)
+            self.load_all(fname.encode())
             return
-        with file(fname+".pym","r") as fh:
+        with open(fname+".pym","r") as fh:
             types = fh.read().strip().split()
 
-        cdef CModelLoader *loader = new CModelLoader(fname, self.thisptr)
-        with file(fname+".pyk","r") as pfh:
+        cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
+        with open(fname+".pyk","rb") as pfh:
             params = []
             itypes = iter(types)
             while True: # until iterator is done
@@ -610,11 +616,12 @@ cdef class Expression: #{{{
     def __str__(self):
         return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
 
-    def __getitem__(self, int i):
-        return pick(self, i)
-
-    def __getslice__(self, int i, int j):
-        return pickrange(self, i, j)
+    # __getitem__ and __getslice__ in one for python 3 compatibility
+    def __getitem__(self, object index):
+         if isinstance(index, int):
+             return pick(self, index)            
+         
+         return pickrange(self, index[0], index[1])
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
@@ -912,7 +919,7 @@ cpdef Expression esum(list xs):
     for x in xs:
         ensure_freshness(x)
         cvec.push_back(x.c())
-    #print >> sys.stderr, cvec.size()
+    #print(cvec.size(), file=sys.stderr)
     return Expression.from_cexpr(x.cg_version, c_sum(cvec))
 
 cpdef Expression average(list xs):
