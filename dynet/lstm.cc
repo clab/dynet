@@ -88,21 +88,21 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   // YG init dropout masks for each layer
   masks.clear();
   for (unsigned i = 0; i < layers; ++i) {
-      std::vector<Expression> masks_i;
-      unsigned idim = (i == 0) ? input_dim : hidden_dim;
-      // in
-      masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
-      masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
-      masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
-      // h
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-      // c
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-      masks.push_back(masks_i);
+    std::vector<Expression> masks_i;
+    unsigned idim = (i == 0) ? input_dim : hidden_dim;
+    // in
+    masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
+    masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
+    masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
+    // h
+    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+    // c
+    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+    masks.push_back(masks_i);
   }
   if (hinit.size() > 0) {
     assert(layers * 2 == hinit.size());
@@ -179,30 +179,30 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
     // input
     Expression i_ait;
     if (has_prev_state)
-        if (gal_dropout)
-            i_ait = affine_transform({vars[BI], vars[X2I], cmult(in, masks_i[IA]) , vars[H2I], cmult(i_h_tm1, masks_i[HA]), vars[C2I], cmult(i_c_tm1, masks_i[CA])});
-        else
-            i_ait = affine_transform({vars[BI], vars[X2I], in , vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
+      if (gal_dropout)
+        i_ait = affine_transform({vars[BI], vars[X2I], cmult(in, masks_i[IA]) , vars[H2I], cmult(i_h_tm1, masks_i[HA]), vars[C2I], cmult(i_c_tm1, masks_i[CA])});
+      else
+        i_ait = affine_transform({vars[BI], vars[X2I], in , vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
     else
-        if (gal_dropout)
-            i_ait = affine_transform({vars[BI], vars[X2I], cmult(in, masks_i[IA])});
-        else
-            i_ait = affine_transform({vars[BI], vars[X2I], in});
+      if (gal_dropout)
+        i_ait = affine_transform({vars[BI], vars[X2I], cmult(in, masks_i[IA])});
+      else
+        i_ait = affine_transform({vars[BI], vars[X2I], in});
     Expression i_it = logistic(i_ait);
     // forget
     Expression i_ft = 1.f - i_it;
     // write memory cell
     Expression i_awt;
     if (has_prev_state)
-        if (gal_dropout)
-            i_awt = affine_transform({vars[BC], vars[X2C], cmult(in, masks_i[IW]), vars[H2C], cmult(i_h_tm1, masks_i[HW])});
-        else
-            i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
+      if (gal_dropout)
+        i_awt = affine_transform({vars[BC], vars[X2C], cmult(in, masks_i[IW]), vars[H2C], cmult(i_h_tm1, masks_i[HW])});
+      else
+        i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
     else
-        if (gal_dropout)
-            i_awt = affine_transform({vars[BC], vars[X2C], cmult(in, masks_i[IW])});
-        else
-            i_awt = affine_transform({vars[BC], vars[X2C], in});
+      if (gal_dropout)
+        i_awt = affine_transform({vars[BC], vars[X2C], cmult(in, masks_i[IW])});
+      else
+        i_awt = affine_transform({vars[BC], vars[X2C], in});
     Expression i_wt = tanh(i_awt);
     // output
     if (has_prev_state) {
@@ -215,19 +215,15 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
     Expression i_aot;
     if (has_prev_state)
-        if (gal_dropout)
-            // TODO is masks_i[CO] needed?
-            i_aot = affine_transform({vars[BO], vars[X2O], cmult(in, masks_i[IO]), vars[H2O], cmult(i_h_tm1, masks_i[HO]), vars[C2O], cmult(ct[i], masks_i[CO])});
-            //i_aot = affine_transform({vars[BO], vars[X2O], cmult(in, masks_i[IO]), vars[H2O], cmult(i_h_tm1, masks_i[HO]), vars[C2O], ct[i]});
-        else
-            i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
+      if (gal_dropout)
+        i_aot = affine_transform({vars[BO], vars[X2O], cmult(in, masks_i[IO]), vars[H2O], cmult(i_h_tm1, masks_i[HO]), vars[C2O], cmult(ct[i], masks_i[CO])});
+      else
+        i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
     else
-        if (gal_dropout)
-            // TODO is masks_i[CO] needed?
-            i_aot = affine_transform({vars[BO], vars[X2O], cmult(in, masks_i[IO]), vars[C2O], cmult(ct[i], masks_i[CO])});
-            //i_aot = affine_transform({vars[BO], vars[X2O], cmult(in, masks_i[IO]), vars[C2O], ct[i]});
-        else
-            i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], ct[i]});
+      if (gal_dropout)
+        i_aot = affine_transform({vars[BO], vars[X2O], cmult(in, masks_i[IO]), vars[C2O], cmult(ct[i], masks_i[CO])});
+      else
+        i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], ct[i]});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
     in = ht[i] = cmult(i_ot, ph_t);
