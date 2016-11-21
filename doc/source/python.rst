@@ -19,7 +19,7 @@ TL;DR
     cd dynet-base
     # getting dynet and eigen
     git clone https://github.com/clab/dynet.git
-    hg clone https://bitbucket.org/eigen/eigen
+    hg clone https://bitbucket.org/eigen/eigen -r 346ecdb  # -r NUM specified a known working revision
     cd dynet
     mkdir build
     cd build
@@ -31,6 +31,11 @@ TL;DR
     make -j 2 # replace 2 with the number of available cores
     cd python
     python setup.py install  # or `python setup.py install --user` for a user-local install.
+    
+    # this should suffice, but on some systems you may need to add the following line to your
+    # init files in order for the compiled .so files be accessible to python.
+    # /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
+    export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
 
 Detailed Instructions
 ---------------------
@@ -53,7 +58,10 @@ Then get Eigen:
 
     cd $HOME
     cd dynet-base
-    hg clone https://bitbucket.org/eigen/eigen/
+    hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
+    
+(`-r NUM` specifies a known working revision of Eigen. You can remove this in order to get the bleeding
+edge Eigen, with the risk of some compile breaks, and the possible benefit of added optimizations.)
 
 We also need to make sure the ``cython`` module is installed. (you can
 replace ``pip`` with your favorite package manager, such as ``conda``,
@@ -150,6 +158,15 @@ installation is likely to be working:
 
     from dynet import *
     model = Model()
+
+If it doesn't work and you get an error similar to the following:
+::
+    ImportError: dlopen(/Users/sneharajana/.python-eggs/dyNET-0.0.0-py2.7-macosx-10.11-intel.egg-tmp/_dynet.so, 2): Library not loaded: @rpath/libdynet.dylib
+    Referenced from: /Users/sneharajana/.python-eggs/dyNET-0.0.0-py2.7-macosx-10.11-intel.egg-tmp/_dynet.so
+    Reason: image not found``
+
+then you may need to run the following (add it to your shell init files):
+``export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH``
 
 Windows Support
 ------------------
