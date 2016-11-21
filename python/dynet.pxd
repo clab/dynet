@@ -133,18 +133,21 @@ cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer":
         #CSimpleSGDTrainer(CModel* m, float lam, float e0)
         CSimpleSGDTrainer(CModel* m, float e0, float edecay) # TODO removed lam, update docs.
+        float clip_threshold
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer":
         CMomentumSGDTrainer(CModel* m, float e0, float mom, float edecay) # TODO removed lam, update docs
+        float clip_threshold
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer":
         CAdagradTrainer(CModel* m, float e0, float eps, float edecay) # TODO removed lam, update docs
+        float clip_threshold
 
         void update(float s)
         void update_epoch(float r)
@@ -152,14 +155,14 @@ cdef extern from "dynet/training.h" namespace "dynet":
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer":
         CAdadeltaTrainer(CModel* m, float eps, float rho, float edecay) # TODO removed lam, update docs
-
+        float clip_threshold
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer":
         CAdamTrainer(CModel* m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
-
+        float clip_threshold
         void update(float s)
         void update_epoch(float r)
         void status()
