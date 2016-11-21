@@ -133,14 +133,14 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
     if (prev_zero) {
       ct = affine_transform({vars[BH], vars[X2H], in});
       ct = tanh(ct);
-      Expression nwt = cwise_multiply(zt, ct);
+      Expression nwt = cmult(zt, ct);
       in = ht[i] = nwt;
     } else {
-      Expression ght = cwise_multiply(rt, h_tprev);
+      Expression ght = cmult(rt, h_tprev);
       ct = affine_transform({vars[BH], vars[X2H], in, vars[H2H], ght});
       ct = tanh(ct);
-      Expression nwt = cwise_multiply(zt, ct);
-      Expression crt = cwise_multiply(ft, h_tprev);
+      Expression nwt = cmult(zt, ct);
+      Expression crt = cmult(ft, h_tprev);
       in = ht[i] = crt + nwt;
     }
   }
