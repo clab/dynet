@@ -55,9 +55,6 @@ struct LSTMBuilder : public RNNBuilder {
   // first index is layer, then ...
   // masks for Gal dropout
   std::vector<std::vector<Expression>> masks; 
-                                       //in_a_mask, in_w_mask, in_o_mask,
-                                       //h_a_mask, h_w_mask, h_o_mask,
-                                       //c_a_mask, c_w_mask, c_o_mask;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
