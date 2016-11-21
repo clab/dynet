@@ -1,7 +1,6 @@
 project(dynet)
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-set(CMAKE_MACOSX_RPATH 1)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # DYNET uses Eigen which exploits modern CPU architectures. To get the
@@ -11,6 +10,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 #   3. try compiler options like -march=native or other architecture
 #      flags (the compiler does not always make the best configuration
 #      decisions without help)
+
+# NOTE: This seems to be causing problems with linking before using
+#       make install. It is allegedly preferred, but probably doesn't
+#       suit our model of not installing the library most of the time.
+set(CMAKE_MACOSX_RPATH 0)
 
 function(find_mkl)
   set(MKL_ARCH intel64)
