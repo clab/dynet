@@ -57,7 +57,7 @@ struct Trainer {
 
   // if clipping is enabled and the gradient is too big, return the amount to
   // scale the gradient by (otherwise 1)
-  float clip_gradients();
+  float clip_gradients(real scale);
 
   // TODO: This is unprotected temporarily until there is a better solution
   //       for serializing the weight decay when saving models

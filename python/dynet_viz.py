@@ -297,13 +297,17 @@ def filter1d_narrow(x, y):
 def tanh(x): return GVExpr('tanh', [x], copy_dim(x))
 def exp(x): return GVExpr('exp', [x], copy_dim(x))
 def square(x): return GVExpr('square', [x], copy_dim(x))
+def sqrt(x): return GVExpr('sqrt', [x], copy_dim(x))
+def erf(x): return GVExpr('erf', [x], copy_dim(x))
 def cube(x): return GVExpr('cube', [x], copy_dim(x))
 def log(x): return GVExpr('log', [x], copy_dim(x))
+def lgamma(x): return GVExpr('lgamma', [x], copy_dim(x))
 def logistic(x): return GVExpr('logistic', [x], copy_dim(x))
 def rectify(x): return GVExpr('rectify', [x], copy_dim(x))
 def log_softmax(x, restrict=None): return GVExpr('log_softmax', [x,restrict], copy_dim(x))
 def softmax(x): return GVExpr('softmax', [x], copy_dim(x))
 def softsign(x): return GVExpr('softsign', [x], copy_dim(x))
+def pow(x, y): return GVExpr('pow', [x,y], ensure_same_dim(x,y))
 def bmin(x, y): return GVExpr('bmin', [x,y], ensure_same_dim(x,y))
 def bmax(x, y): return GVExpr('bmax', [x,y], ensure_same_dim(x,y))
 def transpose(x): return GVExpr('transpose', [x], x.dim[::-1] if x.dim.isvalid() else InvalidDim)
@@ -690,6 +694,9 @@ class Trainer(object):
   def get_clip_threshold(self): pass
 
 class SimpleSGDTrainer(Trainer):
+    """
+    This object is very cool!
+    """
     def __init__(self, m, e0 = 0.1): pass
 class MomentumSGDTrainer(Trainer):
     def __init__(self, m, e0 = 0.01, mom = 0.9): pass

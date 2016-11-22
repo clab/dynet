@@ -58,7 +58,7 @@ void Trainer::rescale_and_reset_weight_decay() {
   model->weight_decay.reset_weight_decay();
 }
 
-float Trainer::clip_gradients() {
+float Trainer::clip_gradients(real scale) {
   float gscale = 1;
   if (clipping_enabled) {
     // TODO should I handle updatebale differently?
@@ -67,9 +67,9 @@ float Trainer::clip_gradients() {
       cerr << "Magnitude of gradient is bad: " << gg << endl;
       abort();
     }
-    if (gg > clip_threshold) {
+    if (scale * gg > clip_threshold) {
       ++clips;
-      gscale = clip_threshold / gg;
+      gscale = clip_threshold / (scale * gg);
     }
   }
   return gscale;
@@ -84,7 +84,7 @@ void Trainer::update(real scale) {
   }
 
   // Perform gradient clipping and cycle through parameters
-  const float gscale = clip_gradients();
+  const float gscale = clip_gradients(scale);
   const auto & params = model->parameters_list();
   const auto & upd_params = model->updated_parameters_list();
   for(auto i : upd_params) {
