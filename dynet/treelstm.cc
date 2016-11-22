@@ -223,16 +223,16 @@ Expression SocherTreeLSTMBuilder::add_input(int id, vector<int> children, const 
 
     // compute new cell value
     if (has_prev_state) {
-      Expression i_nwt = cwise_multiply(i_it, i_wt);
+      Expression i_nwt = cmult(i_it, i_wt);
       vector<Expression> i_crts(children.size());
       for (unsigned j = 0; j < children.size(); ++j) {
-        i_crts[j] = cwise_multiply(i_ft[j], i_c_children[j]);
+        i_crts[j] = cmult(i_ft[j], i_c_children[j]);
       }
       Expression i_crt = sum(i_crts);
       ct[i] = i_crt + i_nwt;
     }
     else {
-      ct[i] = cwise_multiply(i_it, i_wt);
+      ct[i] = cmult(i_it, i_wt);
     }
 
     // output
@@ -256,7 +256,7 @@ Expression SocherTreeLSTMBuilder::add_input(int id, vector<int> children, const 
 
     // Compute new h value
     Expression ph_t = tanh(ct[i]);
-    in = ht[i] = cwise_multiply(i_ot, ph_t);
+    in = ht[i] = cmult(i_ot, ph_t);
   }
   return ht.back();
 }

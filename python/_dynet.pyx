@@ -1,10 +1,16 @@
 # on numpy arrays, see: https://github.com/cython/cython/wiki/tutorials-NumpyPointerToC
-
+from __future__ import print_function
 import sys
 from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
 import numpy as np
-import cPickle as pickle
+
+# python3 pickle already uses the c implementaion 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+    
 import os.path
 # TODO:
 #  - set random seed (in DYNET)
@@ -29,14 +35,14 @@ import os.path
 #  - embedcl
 #  - embed/nlm -- negative sampling?
 
-from dynet cimport *
-cimport dynet
+from _dynet cimport *
+cimport _dynet as dynet
 
 
 cdef init(random_seed=None):
     cdef int argc = len(sys.argv)
     cdef char** c_argv
-    args = [bytes(x) for x in sys.argv]
+    args = [bytearray(x, encoding="utf-8") for x in sys.argv]
     c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
     for idx, s in enumerate(args):
         c_argv[idx] = s
@@ -181,11 +187,11 @@ class Saveable(object):
         pass
 
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = dict()
         params = self.get_components()
-        for k,v in odict.items(): # remove unpicklable things which we save otherwise
-            if v in params:
-                del odict[k]
+        for k,v in self.__dict__.items(): # remove unpicklable things which we save otherwise
+            if v not in params:
+                odict[k] = v
         return odict
 
     def get_components(self):
@@ -312,22 +318,27 @@ cdef class Model: # {{{
         elif isinstance(c, SimpleRNNBuilder):
             saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
             fh.write("srnn_builder ")
+        elif isinstance(c, BiRNNBuilder):
+            fh.write("birnn_builder~%d " % (2 * len(c.builder_layers)))
+            for (f,b) in c.builder_layers:
+                self._save_one(f,saver,fh,pfh)
+                self._save_one(b,saver,fh,pfh)
         elif isinstance(c, Saveable):
             cs = c.get_components()
-            fh.write("user~%s " % len(cs))
+            fh.write("user~%d " % len(cs))
             pickle.dump(c,pfh)
             for subc in cs:
                 self._save_one(subc,saver,fh,pfh)
         else:
             raise TypeError("Cannot save model component of type %s" % type(c))
 
-    def save(self, string fname, components=None):
+    def save(self, fname, components=None):
         if not components:
-            self.save_all(fname)
+            self.save_all(fname.encode())
             return
-        fh = file(fname+".pym","w")
-        pfh = file(fname+".pyk","w")
-        cdef CModelSaver *saver = new CModelSaver(fname, self.thisptr)
+        fh = open(fname+".pym","w")
+        pfh = open(fname+".pyk","wb")
+        cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
         for c in components:
             self._save_one(c,saver,fh,pfh)
         saver.done()
@@ -341,7 +352,7 @@ cdef class Model: # {{{
         cdef GRUBuilder gb_
         cdef LSTMBuilder lb_
         cdef SimpleRNNBuilder sb_
-        tp = itypes.next()
+        tp = next(itypes)
         if tp == "param":
             loader.fill_parameter(p)
             param = Parameters.wrap_ptr(p)
@@ -362,6 +373,11 @@ cdef class Model: # {{{
             sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
             loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
             return sb_
+        elif tp.startswith("birnn_builder~"):
+            tp,num = tp.split("~",1)
+            num = int(num)
+            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
+            return BiRNNBuilder(None, None, None, None, None, zip(items[0::2], items[1::2]))
         elif tp.startswith("user~"):
             # user defiend type
             tp,num = tp.split("~",1)
@@ -371,18 +387,18 @@ cdef class Model: # {{{
             saveable.restore_components(items)
             return saveable
         else:
-            print "Huh?"
+            print("Huh?")
             assert False,"unsupported type " + tp
 
-    cpdef load(self, string fname):
+    cpdef load(self, fname):
         if not os.path.isfile(fname+".pym"):
-            self.load_all(fname)
+            self.load_all(fname.encode())
             return
-        with file(fname+".pym","r") as fh:
+        with open(fname+".pym","r") as fh:
             types = fh.read().strip().split()
 
-        cdef CModelLoader *loader = new CModelLoader(fname, self.thisptr)
-        with file(fname+".pyk","r") as pfh:
+        cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
+        with open(fname+".pyk","rb") as pfh:
             params = []
             itypes = iter(types)
             while True: # until iterator is done
@@ -553,6 +569,8 @@ cdef class ComputationGraph:
         r = _pickerBatchExpression(self, e, vs)
         return r
 
+
+
 # }}}
 
 #{{{ Expressions
@@ -598,11 +616,12 @@ cdef class Expression: #{{{
     def __str__(self):
         return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
 
-    def __getitem__(self, int i):
-        return pick(self, i)
-
-    def __getslice__(self, int i, int j):
-        return pickrange(self, i, j)
+    # __getitem__ and __getslice__ in one for python 3 compatibility
+    def __getitem__(self, object index):
+         if isinstance(index, int):
+             return pick(self, index)            
+         
+         return pickrange(self, index[0], index[1])
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
@@ -792,7 +811,7 @@ def pick(Expression e, unsigned index=0):
 
 cdef class _pickerBatchExpression(Expression):
     cdef UnsignedVectorValue val
-    def __cinit__(self, ComputationGraph g, Expression e, vector[unsigned] indices):
+    def __cinit__(self, ComputationGraph g, Expression e, vector[unsigned] indices):#
         self.val = UnsignedVectorValue(indices)
         self.cg_version = g.version()
         cdef CExpression ce
@@ -825,14 +844,19 @@ def hinge(Expression x, unsigned index, float m=1.0):
 
 # }}}
 
+cpdef Expression zeroes(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
+cpdef Expression random_normal(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
+cpdef Expression random_bernoulli(dim, float p, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p))
+cpdef Expression random_uniform(dim, float left, float right, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
+
 cpdef Expression nobackprop(Expression x): return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
 
 # binary-exp
 cpdef Expression cdiv(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cdiv(x.c(), y.c()))
+cpdef Expression cmult(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cmult(x.c(), y.c()))
 cpdef Expression colwise_add(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_colwise_add(x.c(), y.c()))
 
 cpdef Expression trace_of_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_trace_of_product(x.c(), y.c()))
-cpdef Expression cwise_multiply(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cwise_multiply(x.c(), y.c()))
 cpdef Expression dot_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
 cpdef Expression squared_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_squared_distance(x.c(), y.c()))
 cpdef Expression l1_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_l1_distance(x.c(), y.c()))
@@ -855,6 +879,7 @@ cpdef Expression log_softmax(Expression x, list restrict=None):
     cdef vector[unsigned] vec = restrict
     return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c(), vec))
 cpdef Expression softmax(Expression x): return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
+cpdef Expression sparsemax(Expression x): return Expression.from_cexpr(x.cg_version, c_sparsemax(x.c()))
 cpdef Expression softsign(Expression x): return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
 cpdef Expression bmin(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
 cpdef Expression bmax(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
@@ -894,7 +919,7 @@ cpdef Expression esum(list xs):
     for x in xs:
         ensure_freshness(x)
         cvec.push_back(x.c())
-    #print >> sys.stderr, cvec.size()
+    #print(cvec.size(), file=sys.stderr)
     return Expression.from_cexpr(x.cg_version, c_sum(cvec))
 
 cpdef Expression average(list xs):
@@ -1125,24 +1150,28 @@ class BiRNNBuilder(object):
         builder = BiRNNBuilder(1, 128, 100, model, LSTMBuilder)
         [o1,o2,o3] = builder.transduce([i1,i2,i3])
     """
-    def __init__(self, num_layers, input_dim, hidden_dim, model, rnn_builder_factory):
+    def __init__(self, num_layers, input_dim, hidden_dim, model, rnn_builder_factory, builder_layers=None):
         """
         @param num_layers: depth of the BiRNN
         @param input_dim: size of the inputs
         @param hidden_dim: size of the outputs (and intermediate layer representations)
         @param model
         @param rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
+        @param builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
         """
-        assert num_layers > 0
-        assert hidden_dim % 2 == 0
-        self.builder_layers = []
-        f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
-        b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
-        self.builder_layers.append((f,b))
-        for _ in xrange(num_layers-1):
-            f = rnn_builder_factory(1, hidden_dim, hidden_dim/2, model)
-            b = rnn_builder_factory(1, hidden_dim, hidden_dim/2, model)
+        if builder_layers is None:
+            assert num_layers > 0
+            assert hidden_dim % 2 == 0
+            self.builder_layers = []
+            f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
+            b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
             self.builder_layers.append((f,b))
+            for _ in xrange(num_layers-1):
+                f = rnn_builder_factory(1, hidden_dim, hidden_dim/2, model)
+                b = rnn_builder_factory(1, hidden_dim, hidden_dim/2, model)
+                self.builder_layers.append((f,b))
+        else:
+            self.builder_layers = builder_layers
 
     def whoami(self): return "BiRNNBuilder"
 
@@ -1373,6 +1402,15 @@ cdef class SimpleSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
@@ -1386,6 +1424,16 @@ cdef class MomentumSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
@@ -1399,6 +1447,16 @@ cdef class AdagradTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
@@ -1412,6 +1470,16 @@ cdef class AdadeltaTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
@@ -1425,5 +1493,15 @@ cdef class AdamTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 #}}}
 
