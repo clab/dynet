@@ -41,6 +41,7 @@ struct Expression {
    */
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
   const Tensor& value() const { return pg->get_value(i); }
+  const Dim& dim() const { return pg->get_dimension(i); }
 };
 
 namespace detail {
