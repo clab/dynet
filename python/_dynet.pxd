@@ -178,6 +178,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
         long i
+        CDim dim()
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata)
