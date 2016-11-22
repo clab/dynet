@@ -100,6 +100,8 @@ struct ComputationGraph {
   void checkpoint();
   void revert();
 
+  Dim& get_dimension(VariableIndex index) const;
+
 
   // perform computations
 

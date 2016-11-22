@@ -611,6 +611,11 @@ cdef class Expression: #{{{
     cdef CExpression c(self):
         return CExpression(self.cgp(), self.vindex)
 
+    cpdef dim(self):
+        cdef CDim d;
+        d=self.c().dim()
+        return (d.size(), d.rows(), d.cols(), d.batch_elems())
+
     def __repr__(self):
         return str(self)
     def __str__(self):
