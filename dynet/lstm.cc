@@ -25,7 +25,7 @@ enum { IA, IO, IW, HA, HO, HW, CA, CO, CW }; // Gal dropout masks
 LSTMBuilder::LSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model* model) : layers(layers), input_dim(input_dim), hidden_dim(hidden_dim) {
+                         Model* model) : layers(layers), input_dim(input_dim), hidden_dim(hidden_dim), test_mode(false) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
@@ -90,19 +90,35 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   for (unsigned i = 0; i < layers; ++i) {
     std::vector<Expression> masks_i;
     unsigned idim = (i == 0) ? input_dim : hidden_dim;
-    // in
-    masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
-    masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
-    masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
-    // h
-    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-    // c
-    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-    masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
-    masks.push_back(masks_i);
+    if (test_mode) {
+      // in
+      masks_i.push_back(zeroes(*_cg,{ idim}) + dropout_rate);
+      masks_i.push_back(zeroes(*_cg,{ idim}) + dropout_rate);
+      masks_i.push_back(zeroes(*_cg,{ idim}) + dropout_rate);
+      // h
+      masks_i.push_back(zeroes(*_cg,{ hidden_dim}) + dropout_rate);
+      masks_i.push_back(zeroes(*_cg,{ hidden_dim}) + dropout_rate);
+      masks_i.push_back(zeroes(*_cg,{ hidden_dim}) + dropout_rate);
+      // c
+      masks_i.push_back(zeroes(*_cg,{ hidden_dim}) + dropout_rate);
+      masks_i.push_back(zeroes(*_cg,{ hidden_dim}) + dropout_rate);
+      masks_i.push_back(zeroes(*_cg,{ hidden_dim}) + dropout_rate);
+      masks.push_back(masks_i);
+    } else {
+      // in
+      masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
+      masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
+      masks_i.push_back(random_bernoulli(*_cg,{ idim}, dropout_rate));
+      // h
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+      // c
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, dropout_rate));
+      masks.push_back(masks_i);
+    }
   }
   if (hinit.size() > 0) {
     assert(layers * 2 == hinit.size());

@@ -46,6 +46,7 @@ struct LSTMBuilder : public RNNBuilder {
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
  public:
   bool gal_dropout;
+  bool test_mode;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 
