@@ -214,8 +214,11 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_tanh "dynet::expr::tanh" (CExpression& x) #
     CExpression c_exp "dynet::expr::exp" (CExpression& x) #
     CExpression c_square "dynet::expr::square" (CExpression& x) #
+    CExpression c_sqrt "dynet::expr::sqrt" (CExpression& x) #
+    CExpression c_erf "dynet::expr::erf" (CExpression& x) #
     CExpression c_cube "dynet::expr::cube" (CExpression& x) #
     CExpression c_log "dynet::expr::log" (CExpression& x) #
+    CExpression c_lgamma "dynet::expr::lgamma" (CExpression& x) #
     CExpression c_logistic "dynet::expr::logistic" (CExpression& x) #
     CExpression c_rectify "dynet::expr::rectify" (CExpression& x) #
     #CExpression c_hinge "dynet::expr::hinge" (CExpression& x, unsigned index, float m=?) #
@@ -225,6 +228,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_softmax "dynet::expr::softmax" (CExpression& x) #
     CExpression c_sparsemax "dynet::expr::sparsemax" (CExpression& x) #
     CExpression c_softsign "dynet::expr::softsign" (CExpression& x) #
+    CExpression c_pow "dynet::expr::pow" (CExpression& x, CExpression& y) #
     CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) #
     CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) #
     CExpression c_noise "dynet::expr::noise" (CExpression& x, float stddev) #
@@ -240,6 +244,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) #
     CExpression c_squared_distance "dynet::expr::squared_distance" (CExpression& x, CExpression& y) #
+    CExpression c_squared_norm "dynet::expr::squared_norm" (CExpression& x) #
     CExpression c_huber_distance "dynet::expr::huber_distance" (CExpression& x, CExpression& y, float c) #
     CExpression c_l1_distance "dynet::expr::l1_distance" (CExpression& x, CExpression& y) #
     CExpression c_binary_log_loss "dynet::expr::binary_log_loss" (CExpression& x, CExpression& y) #
