@@ -35,13 +35,14 @@ struct L2WeightDecay {
     std::cerr << "RESCALE WEIGHT DECAY FROM " << weight_decay << " to 1.0\n";
     weight_decay = 1.0f;
   }
+
+  float weight_decay;
+  float lambda;
+
  private:
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int);
-
-  float weight_decay;
-  float lambda;
 };
 
 } // namespace dynet

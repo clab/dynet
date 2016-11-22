@@ -8,6 +8,16 @@ using namespace dynet;
 
 class SerializationUtil {
  public:
+  static void AsL2WeightDecayProto(const L2WeightDecay &weight_decay, L2WeightDecayProto *proto) {
+    proto->set_weight_decay(weight_decay.weight_decay);
+    proto->set_lambda(weight_decay.lambda);
+  }
+
+  static void FromL2WeightDecayProto(const L2WeightDecayProto &proto, L2WeightDecay *weight_decay) {
+    weight_decay->weight_decay = proto.weight_decay();
+    weight_decay->lambda = proto.lambda();
+  }
+
   static void AsDimensionsProto(const Dim &dimensions, DimensionsProto *proto) {
     for (unsigned i = 0; i < dimensions.nd; ++i) {
       proto->add_dimension(dimensions.d[i]);
@@ -69,6 +79,7 @@ class SerializationUtil {
     for (LookupParameterStorage *parameter : model.lookup_parameters_list()) {
       AsParameterProto(*parameter, proto->add_lookup_parameter());
     }
+    AsL2WeightDecayProto(model.weight_decay, proto->mutable_weight_decay());
   }
 
   static void FromModelProto(const ModelProto &proto, Model *model) {
@@ -86,6 +97,7 @@ class SerializationUtil {
       assert(dimensions == model->lookup_parameters_list()[i]->dim);
       FromParameterProto(proto.lookup_parameter(i), model->lookup_parameters_list()[i]);
     }
+    FromL2WeightDecayProto(proto.weight_decay(), &model->weight_decay);
   }
 
   static void Save(const std::string &model_file, const Model &model) {

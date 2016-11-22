@@ -8,6 +8,11 @@
 
 using namespace dynet;
 
+void assert_equal(const L2WeightDecay &wd1, const L2WeightDecay &wd2) {
+  assert(wd1.weight_decay == wd2.weight_decay);
+  assert(wd1.lambda == wd2.lambda);
+}
+
 void assert_equal(const Tensor &t1, const Tensor &t2) {
   assert(t1.d == t2.d);
   for (unsigned i = 0; i < t1.d.size(); ++i) {
@@ -37,6 +42,7 @@ void assert_equal(const Model &m1, const Model &m2) {
   for (unsigned i = 0; i < m1.lookup_parameters_list().size(); ++i) {
     assert_equal(*m1.lookup_parameters_list()[i], *m2.lookup_parameters_list()[i]);
   }
+  assert_equal(m1.weight_decay, m2.weight_decay);
 }
 
 void test_dimensions_serialization(const Dim &in_dim) {
@@ -61,13 +67,15 @@ void test_tensor_serialization(const Tensor &in_tensor) {
   _mm_free(values);
 }
 
-void test_model_serialization(const Model &in_model, const Dim &params_dim, const Dim &lookup_params_dim, int num_lookups) {
+void test_model_serialization(const Model &in_model, const Dim &params_dim, const Dim &lookup_params_dim, int num_lookups, const L2WeightDecay weight_decay) {
   ModelProto model_proto;
   SerializationUtil::AsModelProto(in_model, &model_proto);
 
   Model out_model;
   out_model.add_parameters(params_dim);
   out_model.add_lookup_parameters(num_lookups, lookup_params_dim);
+  out_model.weight_decay = weight_decay;
+
   SerializationUtil::FromModelProto(model_proto, &out_model);
   assert_equal(in_model, out_model);
 }
@@ -91,11 +99,13 @@ void do_testing() {
   Dim params_dim({256, 128});
   Dim lookup_params_dim({128, 128});
   int num_lookups = 100;
+  L2WeightDecay weight_decay(0.1);
+  weight_decay.update_weight_decay(10);
 
   Model test_model;
   test_model.add_parameters(params_dim);
   test_model.add_lookup_parameters(num_lookups, lookup_params_dim);
-  test_model_serialization(test_model, params_dim, lookup_params_dim, num_lookups);
+  test_model_serialization(test_model, params_dim, lookup_params_dim, num_lookups, weight_decay);
   std::cerr << "Tested (de)serializing model." << std::endl;
 }
 
@@ -108,8 +118,8 @@ void do_benchmarking() {
   model.add_parameters(params_dim);
   model.add_lookup_parameters(lookup_params_size, lookup_params_dim);
 
-  std::string boost_file = "model.ser";
-  std::string protobuf_file = "model.pb";
+  std::string boost_file = "/tmp/model.ser";
+  std::string protobuf_file = "/tmp/model.pb";
 
   std::chrono::high_resolution_clock::time_point tic, toc;
 
