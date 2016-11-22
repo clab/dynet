@@ -27,12 +27,16 @@ struct ShadowParameters {
 struct ShadowLookupParameters {
   ShadowLookupParameters() {}
   explicit ShadowLookupParameters(const LookupParameterStorage& lp);
+  Tensor all_h;
   std::vector<Tensor> h;
  private:
+  void initialize_lookups();
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
-
+  void save(Archive& ar, const unsigned int) const;
+  template<class Archive>
+  void load(Archive& ar, const unsigned int);
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 // one per element in model.parameters_list

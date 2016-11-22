@@ -11,6 +11,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 #      flags (the compiler does not always make the best configuration
 #      decisions without help)
 
+# NOTE: This seems to be causing problems with linking before using
+#       make install. It is allegedly preferred, but probably doesn't
+#       suit our model of not installing the library most of the time.
+set(CMAKE_MACOSX_RPATH 0)
+
 function(find_mkl)
   set(MKL_ARCH intel64)
   find_path(MKL_INCLUDE_DIR mkl.h
@@ -64,7 +69,7 @@ endif()
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 -DEIGEN_HAS_C99_MATH /MP")   # -Wall produces 20k warnings
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -Wall -std=c++11 -Ofast -g -march=native")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -Wall -Wno-missing-braces -std=c++11 -Ofast -g -march=native")
 endif()
 
 enable_testing()

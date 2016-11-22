@@ -1,5 +1,18 @@
+from __future__ import print_function
+import sys
 import re
 from collections import defaultdict
+
+if sys.version_info.major > 2:
+  # alias dict.items() as dict.iteritems() in python 3+
+  class compat_dict(defaultdict):
+    pass
+
+  compat_dict.iteritems = defaultdict.items
+  defaultdict = compat_dict
+  
+  # add xrange to python 3+
+  xrange = range
 
 graphviz_items = []
 
@@ -50,14 +63,15 @@ def make_dim(a, b=None, inferred=False):
     return SimpleConcreteDim(a.nrows, a.ncols, inferred)
   elif isinstance(a, tuple):
     assert b is None
+    assert len(a) == 2, str(a)
     (nrows, ncols) = a
     return SimpleConcreteDim(nrows, ncols, inferred)
   elif b is None:
-    assert isinstance(a, int)
+    assert isinstance(a, int) or (isinstance(a, float) and int(a) == a)
     return SimpleConcreteDim(a, 1, inferred)
   else:
-    assert isinstance(a, int)
-    assert isinstance(b, int)
+    assert isinstance(a, int) or (isinstance(a, float) and int(a) == a)
+    assert isinstance(b, int) or (isinstance(b, float) and int(b) == b)
     return SimpleConcreteDim(a, b, inferred)
   
 
@@ -672,6 +686,9 @@ class Trainer(object):
   def update(self, s=1.0): pass
   def update_epoch(self, r = 1.0): pass
   def status(self): pass
+  def set_clip_threshold(self, thr): pass
+  def get_clip_threshold(self): pass
+
 class SimpleSGDTrainer(Trainer):
     def __init__(self, m, e0 = 0.1): pass
 class MomentumSGDTrainer(Trainer):
@@ -683,6 +700,20 @@ class AdadeltaTrainer(Trainer):
 class AdamTrainer(Trainer):
     def __init__(self, m, alpha = 0.001, beta_1 = 0.9, beta_2 = 0.999, eps = 1e-8 ): pass
 
+
+class Initializer(object): pass
+class NormalInitializer(Initializer):
+    def __init__(self, mean=0, var=1): pass
+class UniformInitializer(Initializer):
+    def __init__(self, scale): pass
+class ConstInitializer(Initializer):
+    def __init__(self, c): pass
+class GlorotInitializer(Initializer):
+    def __init__(self, is_lookup=False): pass
+class FromFileInitializer(Initializer):
+    def __init__(self, fname): pass
+class NumpyInitializer(Initializer):
+    def __init__(self, array): pass
 
 
 
@@ -727,6 +758,7 @@ class GVNode(object):
   def __iter__(self): return iter([self.name, self.input_dim, self.label, self.output_dim, self.children, self.features, self.node_type, self.expr_name])
   def __repr__(self): return 'GVNode(%s)' % ', '.join(map(str, self))
   def __str__(self): return repr(self)
+  def __lt__(self, other): return id(self) < id(other)
 
 def make_network_graph(compact, expression_names, lookup_names):
   """
@@ -969,9 +1001,9 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
     (nodes, birnn_collapse_to) = collapse_birnn_states(nodes, compact)
     collapse_to.update(birnn_collapse_to)
 
-  print 'digraph G {'
-  print '  rankdir=BT;'
-  if not compact: print '  nodesep=.05;'
+  print('digraph G {')
+  print('  rankdir=BT;')
+  if not compact: print('  nodesep=.05;')
   
   node_types = defaultdict(set)
   for n in nodes:
@@ -982,7 +1014,7 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
               '2_regular': '[shape=rect]',
               '3_rnn_state': '[shape=rect, peripheries=2]',
              }[node_type]
-    print '  node %s; ' % (style), ' '.join(node_types[node_type])
+    print('  node %s; ' % (style), ' '.join(node_types[node_type]))
   
 #   all_nodes = set(line.strip().split()[0] for line in node_def_lines)
   for n in nodes:
@@ -995,9 +1027,9 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
         label = '%s\\n%s' % (label, shape_str(n.input_dim))
     if n.output_dim.invalid() or (n.input_dim is not None and n.input_dim.invalid()):
       n.features += " [color=red,style=filled,fillcolor=red]"
-    print '  %s [label="%s"] %s;' % (n.name, label, n.features)
+    print('  %s [label="%s"] %s;' % (n.name, label, n.features))
     for c in n.children:
-      print '  %s -> %s;' % (c, n.name)
+      print('  %s -> %s;' % (c, n.name))
     
   rnn_states = [] # (name, rnn_name, state_idx)
   rnn_state_re = re.compile("[^-]+-(.)-(\\d+)")
@@ -1016,6 +1048,6 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
         group_name_n = collapse_to.get(name_n, name_n)
         edges.add((group_name_p, group_name_n))
   for (name_p, name_n) in edges:
-    print '  %s -> %s [style=dotted];' % (name_p, name_n) # ,dir=both
+    print('  %s -> %s [style=dotted];' % (name_p, name_n)) # ,dir=both
 
-  print '}'
+  print('}')

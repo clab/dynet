@@ -22,6 +22,7 @@
 #define DYNET_TRAINER_DEFINE_DEV_IMPL() \
   void update_params(real scale, real gscale, size_t idx) override; \
   void update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) override; \
+  void update_lookup_params(real scale, real gscale, size_t idx) override; \
   template <class MyDevice> \
   void update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   void update_rule(real scale, real gscale, const std::vector<Tensor*> & values) override;
@@ -43,7 +44,8 @@ struct Trainer {
    * \param e0 Initial learning rate
    */
   explicit Trainer(Model* m, real e0, real edecay = 0.0) :
-    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), clips(), updates(), aux_allocated(false), model(m) {}
+    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), 
+    clips(), updates(), sparse_updates_enabled(true), aux_allocated(false), model(m) {}
   virtual ~Trainer();
 
   void update(real scale = 1.0);
@@ -69,10 +71,23 @@ struct Trainer {
   real epoch;
 
   // clipping
-  real clipping_enabled;
+  bool clipping_enabled;
   real clip_threshold;
   real clips;
   real updates;
+
+  /**
+   * \brief Whether to perform sparse updates
+   * \details DyNet trainers support two types of updates for lookup parameters,
+   *          sparse and dense. Sparse updates are the default. They have the
+   *          potential to be faster, as they only touch the parameters that have
+   *          non-zero gradients. However, they may not always be faster (particulary
+   *          on GPU with mini-batch training), and are not precisely numerically
+   *          correct for some update rules such as MomentumTrainer and AdamTrainer.
+   *          Thus, if you set this variable to false, the trainer will perform dense
+   *          updates and be precisely correct, and maybe faster sometimes.
+   */
+  bool sparse_updates_enabled;
 
   bool aux_allocated;
 
@@ -86,9 +101,39 @@ struct Trainer {
  protected:
   Trainer() {}
   virtual void alloc_impl() { }
+  /**
+   * \brief The actual rule to update the parameters
+   * 
+   * \param scale Scale of the update (i.e. learning rate)
+   * \param gscale Gradient scale based on clipping
+   * \param values Values specific to the particular update rule being implemented
+   */
   virtual void update_rule(real scale, real gscale, const std::vector<Tensor*> & values) = 0;
+  /**
+   * \brief Parameter update function
+   * 
+   * \param scale Scale of the update (i.e. learning rate)
+   * \param gscale Gradient scale based on clipping
+   * \param idx Index of the parameter
+   */
   virtual void update_params(real scale, real gscale, size_t idx) = 0;
+  /**
+   * \brief Sparse lookup parameter update function
+   * 
+   * \param scale Scale of the update (i.e. learning rate)
+   * \param gscale Gradient scale based on clipping
+   * \param idx Index of the lookup parameter object
+   * \param lidx Index of the specific entry within the lookup parameter object
+   */
   virtual void update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) = 0;
+  /**
+   * \brief Dense lookup parameter update function
+   * 
+   * \param scale Scale of the update (i.e. learning rate)
+   * \param gscale Gradient scale based on clipping
+   * \param idx Index of the lookup parameter object
+   */
+  virtual void update_lookup_params(real scale, real gscale, size_t idx) = 0;
 
  private:
   friend class boost::serialization::access;
