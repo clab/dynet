@@ -34,6 +34,7 @@ Mode advanced topics are below:
 
    minibatch
    multiprocessing
+   unorthodox
 
 And we welcome your contributions!
 
