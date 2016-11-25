@@ -32,7 +32,7 @@ guaranteed to be exactly correct, and potentially faster on GPU.
 Weight Decay
 ------------
 
-As described in the `Command Line Options`_, weight decay is implemented
+As described in the :ref:`command-line-options`, weight decay is implemented
 through the option ``--dynet-weight-decay``. If this value is set to ``wd``,
 each parameter in the model is multiplied by ``(1-wd)`` after every parameter
 update. This weight decay is similar to L2 regularization, and is equivalent in
@@ -46,10 +46,10 @@ parameters and add it to the objective function before performing your update.
 Minibatching Implementation
 ---------------------------
 
-`Minibatching`_ in DyNet is different than how it is implemented in other
+:ref:`minibatching` in DyNet is different than how it is implemented in other
 libraries. In other libraries, you can create minibatches by explicitly adding
 another dimension to each of the variables that you want to process, and
-managing them yourself. Instead, DyNet provides special `Operations`_ that
+managing them yourself. Instead, DyNet provides special :ref:`operations` that
 allow you to perform input, lookup, or loss calculation over mini-batched
 input, then DyNet will handle the rest. The programming paradigm is a bit
 different from other toolkits, and may take a bit of getting used to, but is
