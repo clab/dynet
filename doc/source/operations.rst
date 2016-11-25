@@ -1,5 +1,5 @@
-DyNet Operations
-================
+Operations
+==========
 
 Operation Interface
 -------------------

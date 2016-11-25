@@ -63,11 +63,13 @@ a disconnect between the number of nodes being used in each situation, it is
 important to scale the values of the output to ensure that they match in both
 situations. There are two ways to do this:
 
-* At training time, perform dropout with probability ``p``. At test time,
-  scale the outputs of each node by ``p``.
-* At training time, perform dropout with probability ``p``, *and* scale the
-  outputs by ``1-p``. At test time, use the outputs as-is.
+* **Vanilla Dropout:** At training time, perform dropout with probability
+  ``p``. At test time, scale the outputs of each node by ``p``.
+* **Inverted Dropout:** At training time, perform dropout with probability
+  ``p``, *and* scale the outputs by ``1-p``. At test time, use the outputs
+  as-is.
 
 The first is perhaps more common, but the second is convenient, because we
 only need to think about dropout at training time, and thus DyNet opts to
-use the latter.
+use the latter. See `here <http://cs231n.github.io/neural-networks-2/#reg>`_
+for more details on these two methods.
