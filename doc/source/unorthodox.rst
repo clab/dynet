@@ -19,8 +19,10 @@ the unused values. This can improve efficiency in some cases: e.g. if you have
 embeddings for a vocabulary of 100,000 words and you only use 5 of them in a
 particular update, this will avoid doing updates over all 100,000. However,
 there are two things to be careful of. First, this means that some update rules
-such as ones using momentum (e.g. ``MomentumSGDTrainer`` and ``AdamTrainer``)
-are not strictly correct. Also, on GPUs, because large operations are
+such as ones using momentum such as ``MomentumSGDTrainer`` and ``AdamTrainer``
+are not strictly correct (these could be made correct with some effort, but
+this would complicate the programming interface, which we have opted against).
+Also, on GPUs, because large operations are
 relatively cheap, it can sometimes be faster to just perform a single operation
 over all of the parameters, as opposed to multiple small operations. In this
 case, you can set the ``sparse_updates_enabled`` variable of your ``Trainer``
