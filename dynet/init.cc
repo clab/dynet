@@ -49,9 +49,9 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     }
 
     // Weight decay
-    else if (arg == "--dynet-l2" || arg == "--dynet_l2") {
+    else if (arg == "--dynet-weight-decay" || arg == "--dynet_weight_decay") {
       if ((argi + 1) > argc) {
-        cerr << "[dynet] --dynet-l2 requires an argument (the weight decay per update)\n";
+        cerr << "[dynet] --dynet-weight-decay requires an argument (the weight decay per update)\n";
         abort();
       } else {
         string a2 = argv[argi + 1];
