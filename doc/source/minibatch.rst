@@ -1,4 +1,4 @@
-Mini-batching in DyNet
-======================
+Minibatching
+============
 
 How to perform minibatching to improve efficiency

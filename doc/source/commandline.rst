@@ -1,5 +1,5 @@
-DyNet Command Line Options
-==========================
+Command Line Options
+====================
 
 All programs using DyNet have a few command line options. These must be
 specified at the very beginning of the command line, before other
