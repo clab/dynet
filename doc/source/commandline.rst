@@ -1,3 +1,5 @@
+.. _command-line-options:
+
 Command Line Options
 ====================
 
