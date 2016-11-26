@@ -160,6 +160,16 @@ struct RNNBuilder {
 
   /**
    * 
+   * \brief Return the RNN state that is the parent of `p`
+   * \details - This can be used in implementing complex structures
+   * such as trees, etc.
+   */
+  RNNPointer get_head(const RNNPointer& p) {
+    return head[p];
+  }
+
+  /**
+   * 
    * \brief Set Dropout
    * 
    * \param d Dropout rate
