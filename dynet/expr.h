@@ -89,13 +89,13 @@ Expression input(ComputationGraph& g, const real *ps);
  * \ingroup inputoperations
  * \brief Vector/matrix/tensor input
  * \details Create an expression that represents a vector, matrix, or tensor
- *          input. The dimensions of the input are defined by `d`. So for example
- *          > input(g,{50},data): will result in a 50-length vector
- *          > input(g,{50,30},data): will result in a 50x30 matrix
+ *          input. The dimensions of the input are defined by ``d``. So for example
+ *          > ``input(g,{50},data)``: will result in a 50-length vector
+ *          > ``input(g,{50,30},data)``: will result in a 50x30 matrix
  *          and so on, for an arbitrary number of dimensions.
  *          This function can also be used to import minibatched inputs. For example,
  *          if we have 10 examples in a minibatch, each with size 50x30, then we call
- *          > input(g,Dim({50,30},10),data)
+ *          > ``input(g,Dim({50,30},10),data)``
  *          The data vector "data" will contain the values used to fill the input, in
  *          column-major format. The length must add to the product of all dimensions in
  *          d.
@@ -766,8 +766,8 @@ Expression log_softmax(const Expression& x);
  * \ingroup lossoperations
  * \brief Restricted log softmax
  * \details The log softmax function calculated over only a subset of the vector elements. The
- *          elements to be included are set by the `restriction` variable. All elements not
- *          included in `restriction` are set to negative infinity.
+ *          elements to be included are set by the ``restriction`` variable. All elements not
+ *          included in ``restriction`` are set to negative infinity.
  * 
  * \param x A vector over which to calculate the softmax
  * \param restriction The elements over which to calculate the softmax
@@ -779,15 +779,15 @@ Expression log_softmax(const Expression& x, const std::vector<unsigned>& restric
 /**
  * \ingroup lossoperations
  * \brief Negative softmax log likelihood
- * \details This function takes in a vector of scores `x`, and performs a log softmax, takes
- *          the negative, and selects the likelihood corresponding to the element `v`. This is
+ * \details This function takes in a vector of scores ``x``, and performs a log softmax, takes
+ *          the negative, and selects the likelihood corresponding to the element ``v``. This is
  *          perhaps the most standard loss function for training neural networks to predict
  *          one out of a set of elements.
  * 
  * \param x A vector of scores
  * \param v The element with which to calculate the loss
  * 
- * \return The negative log likelihood of element `v` after taking the softmax
+ * \return The negative log likelihood of element ``v`` after taking the softmax
  */
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
 
@@ -795,16 +795,16 @@ Expression pickneglogsoftmax(const Expression& x, unsigned v);
  * \ingroup lossoperations
  * \brief Modifiable negative softmax log likelihood
  * \details This function calculates the negative log likelihood after the softmax with
- *          with respect to index `*pv`. This computes the same value as the previous function
- *          that passes the index `v` by value, but instead passes by pointer so the value
- *          `*pv` can be modified without re-constructing the computation graph. This can be
+ *          with respect to index ``*pv``. This computes the same value as the previous function
+ *          that passes the index ``v`` by value, but instead passes by pointer so the value
+ *          ``*pv`` can be modified without re-constructing the computation graph. This can be
  *          used in situations where we want to create a computation graph once, then feed it
  *          different data points.
  * 
  * \param x A vector of scores
  * \param pv A pointer to the index of the correct element
  * 
- * \return The negative log likelihood of element `*pv` after taking the softmax
+ * \return The negative log likelihood of element ``*pv`` after taking the softmax
  */
 Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
 
@@ -813,7 +813,7 @@ Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
  * \brief Batched negative softmax log likelihood
  * \details This function is similar to standard pickneglogsoftmax, but calculates loss with
  *          respect to multiple batch elements. The input will be a mini-batch of score vectors
- *          where the number of batch elements is equal to the number of indices in `v`.
+ *          where the number of batch elements is equal to the number of indices in ``v``.
  * 
  * \param x An expression with vectors of scores over N batch elements
  * \param v A size-N vector indicating the index with respect to all the batch elements
@@ -826,7 +826,7 @@ Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & 
  * \ingroup lossoperations
  * \brief Modifiable batched negative softmax log likelihood
  * \details This function is a combination of modifiable pickneglogsoftmax and batched
- *          pickneglogsoftmax: `pv` can be modified without re-creating the computation graph.
+ *          pickneglogsoftmax: ``pv`` can be modified without re-creating the computation graph.
  * 
  * \param x An expression with vectors of scores over N batch elements
  * \param v A size-N vector indicating the index with respect to all the batch elements
@@ -835,11 +835,67 @@ Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & 
  */
 Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
 
+/**
+ * \ingroup lossoperations
+ * \brief Hinge loss
+ * \details This expression calculates the hinge loss, formally expressed as:
+ *          \f$ \text{hinge}(x,index,m) = \sum_{i \ne index} max(0, m-x[index]+x[i]). \f$
+ * 
+ * \param x A vector of scores
+ * \param index The index of the correct candidate
+ * \param m The margin
+ * 
+ * \return The hinge loss of candidate ``index`` with respect to margin ``m``
+ */
 Expression hinge(const Expression& x, unsigned index, float m = 1.0);
-Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable hinge loss
+ * \details This function calculates the hinge loss with
+ *          with respect to index ``*pindex``. This computes the same value as the previous function
+ *          that passes the index ``index`` by value, but instead passes by pointer so the value
+ *          ``*pindex`` can be modified without re-constructing the computation graph. This can be
+ *          used in situations where we want to create a computation graph once, then feed it
+ *          different data points.
+ * 
+ * \param x A vector of scores
+ * \param pindex A pointer to the index of the correct candidate
+ * \param m The margin
+ * 
+ * \return The hinge loss of candidate ``*pindex`` with respect to margin ``m``
+ */
 Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Batched hinge loss
+ * \details The same as hinge loss, but for the case where ``x`` is a mini-batched tensor
+ *          with ``indices.size()`` batch elements, and ``indices`` is a vector indicating
+ *          the index of each of the correct elements for these elements.
+ * 
+ * \param x A mini-batch of vectors with ``indices.size()`` batch elements
+ * \param indices The indices of the correct candidates for each batch element
+ * \param m The margin
+ * 
+ * \return The hinge loss of each mini-batch
+ */
+Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Batched modifiable hinge loss
+ * \details A combination of the previous batched and modifiable hinge loss functions, where
+ *          vector ``*pindices`` can be modified.
+ * 
+ * \param x A mini-batch of vectors with ``indices.size()`` batch elements
+ * \param pindices Pointer to the indices of the correct candidates for each batch element
+ * \param m The margin
+ * 
+ * \return The hinge loss of each mini-batch
+ */
 Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, float m = 1.0);
-Expression sparsemax(const Expression& x);
+
 Expression sparsemax(const Expression& x);
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptarget_support);
