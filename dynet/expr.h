@@ -530,7 +530,7 @@ Expression sqrt(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
- * \brief Gaussian errror function
+ * \brief Gaussian error function
  * \details Elementwise calculation of the Gaussian error function
  * 
  * \param x The input expression
