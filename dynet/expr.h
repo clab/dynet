@@ -795,7 +795,7 @@ Expression pickneglogsoftmax(const Expression& x, unsigned v);
  * \ingroup lossoperations
  * \brief Modifiable negative softmax log likelihood
  * \details This function calculates the negative log likelihood after the softmax with
- *          with respect to index ``*pv``. This computes the same value as the previous function
+ *          respect to index ``*pv``. This computes the same value as the previous function
  *          that passes the index ``v`` by value, but instead passes by pointer so the value
  *          ``*pv`` can be modified without re-constructing the computation graph. This can be
  *          used in situations where we want to create a computation graph once, then feed it
