@@ -6,16 +6,16 @@ How to build DyNet and link it with your programs
 Prerequisites
 -------------
 
-DyNet relies on a number of external libraries including Boost, cmake,
-Eigen, and mercurial (to install Eigen). Boost, cmake, and mercurial can
-be installed from standard repositories, for example on Ubuntu linux:
+DyNet relies on a number of external libraries including Boost, CMake,
+Eigen, and Mercurial (to install Eigen). Boost, CMake, and Mercurial can
+be installed from standard repositories, for example on Ubuntu Linux:
 
 ::
 
     sudo apt-get install libboost-all-dev cmake mercurial
 
-Or on OS X, first make sure the Apple Command Line Tools are installed, then
-get boost, cmake, and mercurial with either homebrew or macports:
+Or on OSX, first make sure the Apple Command Line Tools are installed, then
+get Boost, CMake, and Mercurial with either homebrew or macports:
 
 ::
 
@@ -33,7 +33,8 @@ the following command:
 
     hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
     
-The `-r NUM` specified a revision number that is known to work. Adventerous users can remove it and use the very latest version, at the risk of the code breaking / not compiling.
+The `-r NUM` specified a revision number that is known to work.
+Adventurous users can remove it and use the very latest version, at the risk of the code breaking / not compiling.
 
 Building
 --------
@@ -79,7 +80,7 @@ the ``dynet`` directory to the compile path:
 
     -I/path/to/dynet
 
-and link with the dynet library:
+and link with the DyNet library:
 
 ::
 
@@ -97,7 +98,7 @@ If you have a build problem and want to debug, please run
 
 then examine the commands in the ``make.log`` file to see if anything
 looks fishy. If you would like help, send this ``make.log`` file via the
-"Issues" tab on github, or to the dynet-users mailing list.
+"Issues" tab on GitHub, or to the dynet-users mailing list.
 
 
 GPU/MKL support and build options
@@ -125,19 +126,20 @@ CPU or GPU, but this is not fully implemented yet.)
 MKL support
 ~~~~~~~~~~~
 
-DyNet can leverage Intel's MKL library to speed up computation on the CPU. As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option: 
+DyNet can leverage Intel's MKL library to speed up computation on the CPU.
+As an example, we've seen 3x speedup in seq2seq training when using MKL. To use MKL, include the following cmake option:
 
 ::
 
     -DMKL=TRUE
 
-If cmake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
+If CMake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
 
 ::
 
     -DMKL_ROOT="/path/to/MKL"
 
-If either MKL or MKL_ROOT are set, CMake will look for MKL.
+If either `MKL` or `MKL_ROOT` are set, CMake will look for MKL.
 
 By default, MKL will use all CPU cores. You can control how many cores MKL uses by setting the environment
 variable `MKL_NUM_THREADS` to the desired number. The following is the total time to process 250 training 
@@ -167,9 +169,9 @@ there are diminishing returns or even slowdown.
 Non-standard Boost location
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``dynet`` supports boost, and will find it if it is in the standard
-location. If boost is in a non-standard location, say ``$HOME/boost``,
-you can specify the location by adding the following to your cmake
+``dynet`` requires Boost, and will find it if it is in the standard
+location. If Boost is in a non-standard location, say ``$HOME/boost``,
+you can specify the location by adding the following to your CMake
 options:
 
 ::
@@ -179,11 +181,13 @@ options:
 
 Note that you will also have to set your ``LD_LIBRARY_PATH`` to point to
 the ``boost/lib`` directory.
+Note also that Boost must be compiled with the same compiler version as
+you are using to compile DyNet.
 
 Building for Windows
 ~~~~~~~~~~~~~~~~~~~~
 
-DYNET has been tested to build in Windows using Microsoft Visual Studio
+DyNet has been tested to build in Windows using Microsoft Visual Studio
 2015. You may be able to build with MSVC 2013 by slightly modifying the
 instructions below.
 
@@ -203,10 +207,10 @@ installed Eigen and Boost (for example, at c:\\libs\\Eigen and c:\\libs\\boost_1
     cd build
     cmake .. -DEIGEN3_INCLUDE_DIR=c:\libs\Eigen -DBOOST_ROOT=c:\libs\boost_1_61_0 -DBOOST_LIBRARYDIR=c:\libs\boost_1_61_0\lib64-msvc-14.0 -DBoost_NO_BOOST_CMAKE=ON -G"Visual Studio 14 2015 Win64"
 
-This will generate dynet.sln and a bunch of \*.vcxproj files (one for
-the DYNET library, and one per example). You should be able to just open
-dynet.sln and build all. **Note: multi-process functionality is
-currently not supported in Windows, so the multi-process examples (*-mp) will not be included 
+This will generate `dynet.sln` and a bunch of `*.vcxproj` files (one for
+the DyNet library, and one per example). You should be able to just open
+`dynet.sln` and build all. **Note: multi-process functionality is
+currently not supported in Windows, so the multi-process examples (`*-mp`) will not be included
 in the generated solution**
 
 The Windows build also supports CUDA with the latest version of Eigen (as of Oct 28, 2016), with the following code change: 
