@@ -277,7 +277,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     CExpression c_sum            "dynet::expr::sum" (vector[CExpression]& xs)
     CExpression c_max            "dynet::expr::vmax" (vector[CExpression]& xs)
-    CExpression c_logsumexp      "dynet::expr::sum" (vector[CExpression]& xs)
+    CExpression c_logsumexp      "dynet::expr::logsumexp" (vector[CExpression]& xs)
 
 
 #cdef extern from "dynet/model.h" namespace "dynet":
