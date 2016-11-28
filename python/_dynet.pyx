@@ -619,7 +619,7 @@ cdef class Expression: #{{{
     def __repr__(self):
         return str(self)
     def __str__(self):
-        return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
+        return "expression %s/%s" % (<int>self.vindex, self.cg_version)
 
     # __getitem__ and __getslice__ in one for python 3 compatibility
     def __getitem__(self, object index):
