@@ -933,7 +933,7 @@ cpdef Expression esum(list xs):
     return Expression.from_cexpr(x.cg_version, c_sum(cvec))
 
 cpdef Expression logsumexp(list xs):
-    assert xs, 'List is empty, nothing to esum.'
+    assert xs, 'List is empty, nothing to logsumexp.'
     cdef vector[CExpression] cvec
     cvec = vector[CExpression]()
     cdef Expression x
