@@ -7,3 +7,5 @@ Read the [documentation](http://dynet.readthedocs.io/en/latest/) to get started,
 
 * **Latest Code:** Can be found on the github page master branch.
 * **Latest Release:** [v1.0-rc1](https://github.com/clab/dynet/releases/tag/v1.0-rc1)
+
+[![Build Status](https://travis-ci.org/clab/dynet.svg?branch=master)](https://travis-ci.org/clab/dynet)

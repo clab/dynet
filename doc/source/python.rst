@@ -3,7 +3,7 @@ Installing the Python DyNet module.
 
 (for instructions on installing on a computer with GPU, see below)
 
-Python bindings to DyNet are currently only supported under python 2.
+Python bindings to DyNet are supported for both Python 2.x and 3.x.
 
 TL;DR
 -----
@@ -12,9 +12,9 @@ TL;DR
 
 .. code:: bash
 
-    # Installing python DyNet on a machine with python 2.7:
+    # Installing Python DyNet:
 
-    pip install cython # if you don't have it already.
+    pip install cython  # if you don't have it already.
     mkdir dynet-base
     cd dynet-base
     # getting dynet and eigen
@@ -33,7 +33,7 @@ TL;DR
     python setup.py install  # or `python setup.py install --user` for a user-local install.
     
     # this should suffice, but on some systems you may need to add the following line to your
-    # init files in order for the compiled .so files be accessible to python.
+    # init files in order for the compiled .so files be accessible to Python.
     # /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
 
@@ -85,9 +85,9 @@ Compile DyNet.
 
 This is pretty much the same process as compiling DyNet, with the
 addition of the ``-DPYTHON=`` flag, pointing to the location of your
-python interpreter.
+Python interpreter.
 
-If boost is installed in a non-standard location, you should add the
+If Boost is installed in a non-standard location, you should add the
 corresponding flags to the ``cmake`` commandline, see the `DyNet
 installation instructions page <install.md>`__.
 
@@ -101,12 +101,12 @@ installation instructions page <install.md>`__.
     make -j 2
 
 Assuming that the ``cmake`` command found all the needed libraries and
-didn't fail, the ``make`` command will take a while, and compile dynet
-as well as the python bindings. You can change ``make -j 2`` to a higher
+didn't fail, the ``make`` command will take a while, and compile DyNet
+as well as the Python bindings. You can change ``make -j 2`` to a higher
 number, depending on the available cores you want to use while
 compiling.
 
-You now have a working python binding inside of ``build/dynet``. To
+You now have a working Python binding inside of ``build/dynet``. To
 verify this is working:
 
 .. code:: bash
@@ -114,7 +114,7 @@ verify this is working:
     cd $PATH_TO_DYNET/build/python
     python
 
-then, within python:
+then, within Python:
 
 .. code:: bash
 
@@ -130,10 +130,10 @@ in the system, run the following:
     cd $PATH_TO_DYNET/build/python
     python setup.py install --user
 
-(the ``--user`` switch will install the module in your local
-site-packages, and works without root privilages. To install the module
-to the system site-packages (for all users), run
-``python setup.py install`` without this switch)
+The ``--user`` switch will install the module in your local
+site-packages, and works without root privileges. To install the module
+to the system site-packages (for all users), or to the current `virtualenv`
+(if you are on one), run ``python setup.py install`` without this switch.
 
 You should now have a working python binding (the dynet module).
 
@@ -145,7 +145,6 @@ Now, check that everything works:
 
 .. code:: bash
 
-    # check that it works:
     cd $PATH_TO_DYNET
     cd pyexamples
     python xor.py
@@ -165,8 +164,10 @@ If it doesn't work and you get an error similar to the following:
     Referenced from: /Users/sneharajana/.python-eggs/dyNET-0.0.0-py2.7-macosx-10.11-intel.egg-tmp/_dynet.so
     Reason: image not found``
 
-then you may need to run the following (add it to your shell init files):
-``export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH``
+then you may need to run the following (and add it to your shell init files):
+
+    export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
+
 
 Windows Support
 ------------------
@@ -207,7 +208,7 @@ The installation process is pretty much the same, while adding the
 find it, you can specify also
 ``-DCUDA_TOOLKIT_ROOT_DIR=/path/to/cuda``.)
 
-Now, build the python modules (as above, we assume cython is installed):
+Now, build the Python modules (as above, we assume Cython is installed):
 
 After running ``make -j 2``, you should have the files ``_dynet.so`` and
 ``_gdynet.so`` in the ``build/python`` folder.
@@ -228,7 +229,10 @@ In order to use the GPU support, you can either:
 Running with MKL
 ~~~~~~~~~~~~~~~~
 
-If you've built dynet to use MKL (using -DMKL or -DMKL_ROOT), python sometimes has difficulty finding the MKL shared libraries. You can try setting LD_LIBRARY_PATH to point to your MKL library directory. If that doesn't work, try setting the following environment variable (supposing, for example, your MKL libraries are located at /opt/intel/mkl/lib/intel64):
+If you've built DyNet to use MKL (using ``-DMKL`` or ``-DMKL_ROOT``), Python sometimes has difficulty finding
+the MKL shared libraries. You can try setting ``LD_LIBRARY_PATH`` to point to your MKL library directory.
+If that doesn't work, try setting the following environment variable (supposing, for example,
+your MKL libraries are located at ``/opt/intel/mkl/lib/intel64``):
 
 .. code:: bash
 
