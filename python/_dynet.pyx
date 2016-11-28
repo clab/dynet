@@ -932,6 +932,17 @@ cpdef Expression esum(list xs):
     #print(cvec.size(), file=sys.stderr)
     return Expression.from_cexpr(x.cg_version, c_sum(cvec))
 
+cpdef Expression logsumexp(list xs):
+    assert xs, 'List is empty, nothing to esum.'
+    cdef vector[CExpression] cvec
+    cvec = vector[CExpression]()
+    cdef Expression x
+    for x in xs:
+        ensure_freshness(x)
+        cvec.push_back(x.c())
+    #print(cvec.size(), file=sys.stderr)
+    return Expression.from_cexpr(x.cg_version, c_logsumexp(cvec))
+
 cpdef Expression average(list xs):
     assert xs, 'List is empty, nothing to average.'
     cdef vector[CExpression] cvec
