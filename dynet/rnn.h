@@ -131,8 +131,8 @@ struct RNNBuilder {
    /**
     * 
    * \brief Add another timestep, with arbitrary recurrent connection.
-   * \details This allows to define a recurrent connection to `prev`
-   * rather than to head[cur].
+   * \details This allows you to define a recurrent connection to `prev`
+   * rather than to `head[cur]`.
    * This can be used to construct trees, implement beam search, etc.
    * 
    * \param prev Pointer to the previous state
@@ -152,7 +152,7 @@ struct RNNBuilder {
    * \brief Rewind the last timestep
    * \details - this DOES NOT remove the variables from the computation graph,
    * it just means the next time step will see a different previous state.
-   * You can remind as many times as you want.
+   * You can rewind as many times as you want.
    */
   void rewind_one_step() {
     cur = head[cur];
