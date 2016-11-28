@@ -896,8 +896,49 @@ Expression hinge(const Expression& x, const std::vector<unsigned> & indices, flo
  */
 Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, float m = 1.0);
 
+/**
+ * \ingroup lossoperations
+ * \brief Sparsemax
+ * \details The sparsemax function (Martins et al. 2016), which is similar to softmax,
+ *          but induces sparse solutions where most of the vector elements are zero.
+ *          **Note:** This function is not yet implemented on GPU.
+ * 
+ * \param x A vector of scores
+ * 
+ * \return The sparsemax of the scores
+ */
 Expression sparsemax(const Expression& x);
+
+/**
+ * \ingroup lossoperations
+ * \brief Sparsemax loss
+ * \details The sparsemax loss function (Martins et al. 2016), which is similar to
+ *          softmax loss, but induces sparse solutions where most of the vector
+ *          elements are zero. It has a gradient similar to the sparsemax function
+ *          and thus is useful for optimizing when the sparsemax will be used at
+ *          test time.
+ *          **Note:** This function is not yet implemented on GPU.
+ * 
+ * \param x A vector of scores
+ * \param target_support The target correct labels.
+ * 
+ * \return The sparsemax loss of the labels
+ */
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
+
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable sparsemax loss
+ * \details Similar to the sparsemax loss, but with ptarget_support being a pointer
+ *          to a vector, allowing it to be modified without re-creating the compuation
+ *          graph.
+ *          **Note:** This function is not yet implemented on GPU.
+ * 
+ * \param x A vector of scores
+ * \param ptarget_support A pointer to the target correct labels.
+ * 
+ * \return The sparsemax loss of the labels
+ */
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptarget_support);
 
 Expression squared_norm(const Expression& x);
