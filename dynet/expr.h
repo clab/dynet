@@ -11,7 +11,7 @@
  * \defgroup linalgoperations
  * \brief The various operations that you can use in building a DyNet graph
  * 
- * \details TODO: Create documentation and explain expressions, etc...
+ * \details TODO: **This documentation is incomplete. See expr.h for a full list of expressions.**
  */
 
 #ifndef DYNET_EXPR_H
@@ -778,6 +778,20 @@ Expression log_softmax(const Expression& x, const std::vector<unsigned>& restric
 
 /**
  * \ingroup lossoperations
+ * \brief Log, sum, exp
+ * \details The elementwise "logsumexp" function that calculates
+ *   \f$ln(\sum_i e^{xs_i})\f$, used in adding probabilities in the log domain.
+ * 
+ * \param xs Expressions with respect to which to calculate the logsumexp.
+ * 
+ * \return The result.
+ */
+inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
+template <typename T>
+inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
+
+/**
+ * \ingroup lossoperations
  * \brief Negative softmax log likelihood
  * \details This function takes in a vector of scores ``x``, and performs a log softmax, takes
  *          the negative, and selects the likelihood corresponding to the element ``v``. This is
@@ -941,18 +955,115 @@ Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& targ
  */
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptarget_support);
 
+/**
+ * \ingroup lossoperations
+ * \brief Squared norm
+ * \details The squared norm of the values of x: \f$\sum_i x_i^2\f$.
+ * 
+ * \param x A vector of values
+ * 
+ * \return The squared norm
+ */
 Expression squared_norm(const Expression& x);
-Expression squared_distance(const Expression& x, const Expression& y);
-Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
-Expression l1_distance(const Expression& x, const Expression& y);
-Expression binary_log_loss(const Expression& x, const Expression& y);
-Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
-Expression poisson_loss(const Expression& x, unsigned y);
-Expression poisson_loss(const Expression& x, const unsigned* py);
 
-template <typename T>
-inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
-inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
+/**
+ * \ingroup lossoperations
+ * \brief Squared distance
+ * \details The squared distance between values of ``x`` and ``y``: \f$\sum_i (x_i-y_i)^2\f$.
+ * 
+ * \param x A vector of values
+ * \param y Another vector of values
+ * 
+ * \return The squared distance
+ */
+Expression squared_distance(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup lossoperations
+ * \brief Squared distance
+ * \details The L1 distance between values of ``x`` and ``y``: \f$\sum_i |x_i-y_i|\f$.
+ * 
+ * \param x A vector of values
+ * \param y Another vector of values
+ * 
+ * \return The squared distance
+ */
+Expression l1_distance(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup lossoperations
+ * \brief Huber distance
+ * \details The huber distance between values of ``x`` and ``y`` parameterized
+ *    by ``c,`` \f$\sum_i L_c(x_i, y_i)\f$ where: 
+ *    \f[
+ *      L_c(x, y) = \begin{cases}
+ *        \frac{1}{2}(y - x)^2                   & \textrm{for } |y - f(x)| \le c, \\
+ *        c\, |y - f(x)| - \frac{1}{2}c^2 & \textrm{otherwise.}
+ *      \end{cases}
+ *    \f]
+ *
+ * \param x A vector of values
+ * \param y Another vector of values
+ * \param c The parameter of the huber distance parameterizing the cuttoff
+ * 
+ * \return The huber distance
+ */
+Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
+
+/**
+ * \ingroup lossoperations
+ * \brief Binary log loss
+ * \details The log loss of a binary decision according to the sigmoid
+ *          sigmoid function \f$- \sum_i (y_i * ln(x_i) + (1-y_i) * ln(1-x_i)) \f$
+ * 
+ * \param x A vector of values
+ * \param y A vector of true answers
+ * 
+ * \return The log loss of the sigmoid function
+ */
+Expression binary_log_loss(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup lossoperations
+ * \brief Pairwise rank loss
+ * \details A margin-based loss, where every margin violation for each pair of
+ *          values is penalized: \f$\sum_i max(x_i-y_i+m, 0)\f$
+ * 
+ * \param x A vector of values
+ * \param y A vector of true answers
+ * \param m The margin
+ * 
+ * \return The pairwise rank loss
+ */
+Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Poisson loss
+ * \details The negative log probability of ``y`` according to a Poisson
+ *          distribution with parameter ``x``. Useful in Poisson regression
+ *          where, we try to predict the parameters of a Possion distribution
+ *          to maximize the probability of data ``y``.
+ * 
+ * \param x The parameter of the Poisson distribution.
+ * \param y The target value
+ * 
+ * \return The Poisson loss
+ */
+Expression poisson_loss(const Expression& x, unsigned y);
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable Poisson loss
+ * \details Similar to Poisson loss, but with the target value passed by
+ *          pointer so that it can be modified without re-constructing the
+ *          computation graph.
+ * 
+ * \param x The parameter of the Poisson distribution.
+ * \param py A pointer to the target value
+ * 
+ * \return The Poisson loss
+ */
+Expression poisson_loss(const Expression& x, const unsigned* py);
 
 ////////////////////////////////////////////////
 // Flow operations                            //
