@@ -476,16 +476,16 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
  * \ingroup arithmeticoperations
  * \brief Affine transform
  * \details This performs an affine transform over an arbitrary (odd) number of expressions
- *          held in the input initializer list x.
+ *          held in the input initializer list xs.
  *          The first expression is the "bias," which is added to the expression as-is.
- *          The remaining expressions are multiplied together, then added.
+ *          The remaining expressions are multiplied together in pairs, then added.
  *          A very common usage case is the calculation of the score for a neural network
  *          layer (e.g. b + Wz) where b is the bias, W is the weight matrix, and z is the
- *          input. In this case x[0] = b, x[1] = W, and x[2] = z.
+ *          input. In this case xs[0] = b, xs[1] = W, and xs[2] = z.
  * 
- * \param x An initializer list containing an odd number of expressions
+ * \param xs An initializer list containing an odd number of expressions
  * 
- * \return An expression equal to: x[0] + x[1]*x[2] + x[3]*x[4] + ...
+ * \return An expression equal to: xs[0] + xs[1]*xs[2] + xs[3]*xs[4] + ...
  */
 inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
 template <typename T>
@@ -494,11 +494,11 @@ inline Expression affine_transform(const T& xs) { return detail::f<AffineTransfo
 /**
  * \ingroup arithmeticoperations
  * \brief Sum
- * \details This performs an elementwise sum over all the expressions ins x
+ * \details This performs an elementwise sum over all the expressions in xs
  * 
- * \param x An initializer list containing expressions
+ * \param xs An initializer list containing expressions
  * 
- * \return An expression where the ith element is equal to x[0][i] + x[1][i] + ...
+ * \return An expression where the ith element is equal to xs[0][i] + xs[1][i] + ...
  */
 inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
 template <typename T>
@@ -507,11 +507,11 @@ inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 /**
  * \ingroup arithmeticoperations
  * \brief Average
- * \details This performs an elementwise average over all the expressions ins x
+ * \details This performs an elementwise average over all the expressions in xs
  * 
- * \param x An initializer list containing expressions
+ * \param xs An initializer list containing expressions
  * 
- * \return An expression where the ith element is equal to (x[0][i] + x[1][i] + ...)/|x|
+ * \return An expression where the ith element is equal to (xs[0][i] + xs[1][i] + ...)/|xs|
  */
 inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs); }
 template <typename T>
@@ -530,7 +530,7 @@ Expression sqrt(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
- * \brief Gaussian errror function
+ * \brief Gaussian error function
  * \details Elementwise calculation of the Gaussian error function
  * 
  * \param x The input expression
@@ -557,7 +557,7 @@ Expression tanh(const Expression& x);
  * 
  * \param x The input expression
  * 
- * \return An expression equal to e^{x_i}
+ * \return An expression where the ith element is equal to e^{x_i}
  */
 Expression exp(const Expression& x);
 
@@ -612,14 +612,14 @@ Expression log(const Expression& x);
  * 
  * \param x The input expression
  * 
- * \return An expression equal to y_i = 1/(1+e^{x_i})
+ * \return An expression where the ith element is equal to y_i = 1/(1+e^{x_i})
  */
 Expression logistic(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
  * \brief Rectifier
- * \details Calculate elementwise the recitifer (RelU) function y_i = max(x_i,0)
+ * \details Calculate elementwise the recitifer (ReLU) function y_i = max(x_i,0)
  * 
  * \param x The input expression
  * 
@@ -634,7 +634,7 @@ Expression rectify(const Expression& x);
  * 
  * \param x The input expression
  * 
- * \return An expression equal to x_i/(1+|x_i|)
+ * \return An expression where the ith element is equal to x_i/(1+|x_i|)
  */
 Expression softsign(const Expression& x);
 
@@ -645,7 +645,7 @@ Expression softsign(const Expression& x);
  * 
  * \param x The input expression
  * 
- * \return An expression where the ith element is to x_i^y_i
+ * \return An expression where the ith element is equal to x_i^y_i
  */
 Expression pow(const Expression& x, const Expression& y);
 
@@ -657,7 +657,7 @@ Expression pow(const Expression& x, const Expression& y);
  * \param x The first input expression
  * \param y The second input expression
  * 
- * \return An expression equal to min(x_i,y_i)
+ * \return An expression where the ith element is equal to min(x_i,y_i)
  */
 Expression min(const Expression& x, const Expression& y);
 
@@ -676,11 +676,11 @@ Expression max(const Expression& x, const Expression& y);
 /**
  * \ingroup arithmeticoperations
  * \brief Max
- * \details This performs an elementwise sum over all the expressions in x
+ * \details This performs an elementwise max over all the expressions in xs
  * 
- * \param x An initializer list containing expressions
+ * \param xs An initializer list containing expressions
  * 
- * \return An expression where the ith element is equal to max(x[0][i], x[1][i], ...)
+ * \return An expression where the ith element is equal to max(xs[0][i], xs[1][i], ...)
  */
 inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
 template <typename T>
@@ -707,7 +707,7 @@ Expression dot_product(const Expression& x, const Expression& y);
  * \param x The first input expression
  * \param y The second input expression
  * 
- * \return An expression where the ith element is x_i*y_i 
+ * \return An expression where the ith element is equal to x_i*y_i
  */
 Expression cmult(const Expression& x, const Expression& y);
 
@@ -719,7 +719,7 @@ Expression cmult(const Expression& x, const Expression& y);
  * \param x The first input expression
  * \param y The second input expression
  * 
- * \return An expression where the ith element is x_i/y_i 
+ * \return An expression where the ith element is equal to x_i/y_i
  */
 Expression cdiv(const Expression& x, const Expression& y);
 
@@ -731,7 +731,7 @@ Expression cdiv(const Expression& x, const Expression& y);
  * \param x An MxN matrix
  * \param bias A length M vector
  * 
- * \return An expression bias is added to each column of x
+ * \return An expression where bias is added to each column of x
  */
 Expression colwise_add(const Expression& x, const Expression& bias);
 
@@ -795,7 +795,7 @@ Expression pickneglogsoftmax(const Expression& x, unsigned v);
  * \ingroup lossoperations
  * \brief Modifiable negative softmax log likelihood
  * \details This function calculates the negative log likelihood after the softmax with
- *          with respect to index ``*pv``. This computes the same value as the previous function
+ *          respect to index ``*pv``. This computes the same value as the previous function
  *          that passes the index ``v`` by value, but instead passes by pointer so the value
  *          ``*pv`` can be modified without re-constructing the computation graph. This can be
  *          used in situations where we want to create a computation graph once, then feed it
