@@ -622,11 +622,16 @@ cdef class Expression: #{{{
         return "expression %s/%s" % (<int>self.vindex, self.cg_version)
 
     # __getitem__ and __getslice__ in one for python 3 compatibility
-    def __getitem__(self, object index):
-         if isinstance(index, int):
-             return pick(self, index)            
-         
-         return pickrange(self, index[0], index[1])
+    def __getitem__(self, index):
+        assert isinstance(index, (int, slice))
+        if isinstance(index, int):
+            return pick(self, index)
+        else:
+            if index.start is None or index.stop is None:
+                raise ValueError("Default start and stop indices not yet supported.")
+            if index.step is not None:
+                raise ValueError("Step sizes not yet supported.")
+            return pickrange(self, index.start, index.stop)
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
