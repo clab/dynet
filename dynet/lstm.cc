@@ -94,16 +94,16 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
       float scale = 1.f / retention_rate;
       // in
       masks_i.push_back(random_bernoulli(*_cg,{ idim}, retention_rate) * scale);
-      masks_i.push_back(random_bernoulli(*_cg,{ idim}, retention_rate * scale));
-      masks_i.push_back(random_bernoulli(*_cg,{ idim}, retention_rate * scale));
+      masks_i.push_back(random_bernoulli(*_cg,{ idim}, retention_rate) * scale);
+      masks_i.push_back(random_bernoulli(*_cg,{ idim}, retention_rate) * scale);
       // h
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate * scale));
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate * scale));
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate * scale));
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate) * scale);
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate) * scale);
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate) * scale);
       // c
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate * scale));
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate * scale));
-      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate * scale));
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate) * scale);
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate) * scale);
+      masks_i.push_back(random_bernoulli(*_cg,{ hidden_dim}, retention_rate) * scale);
       masks.push_back(masks_i);
     }
   }
