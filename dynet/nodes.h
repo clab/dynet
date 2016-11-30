@@ -533,10 +533,11 @@ struct RandomNormal : public Node {
 
 // draw from Bernoulli(p)
 struct RandomBernoulli : public Node {
-  explicit RandomBernoulli(const std::initializer_list<VariableIndex>& a, const Dim& d, real p) : dim(d), p(p) { assert (a.size() == 0); }
+  explicit RandomBernoulli(const std::initializer_list<VariableIndex>& a, const Dim& d, real p, real scale = 1.0f) : dim(d), p(p), scale(scale) { assert (a.size() == 0); }
   DYNET_NODE_DEFINE_DEV_IMPL()
   Dim dim;
   real p;
+  real scale;
 };
 
 // draw a random real from Uniform(left, right)

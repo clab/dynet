@@ -405,8 +405,8 @@ void Concatenate::backward_dev_impl(const MyDevice & dev,
   if(dEdxi.d.bd == dEdf.d.bd) {
     dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().slice(indices, sizes);
   } else {
-    for(unsigned b = 0; b < dEdf.d.bd; ++b)
-      dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().chip<2>(b).slice(indices, sizes);
+    Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+    dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().slice(indices, sizes).sum(red_axis);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Concatenate)
@@ -608,9 +608,9 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
   } else {
     Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
     if(xs[0]->d.bd == 1)
-      fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>().broadcast(bcast) * xs[1]->tb<1>();
+      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec();
     else
-      fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() * xs[1]->tb<1>().broadcast(bcast);
+      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec() * xs[1]->tbvec().broadcast(bcast);
   }
 }
 
@@ -626,10 +626,10 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
     dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
   } else if(xs[1-i]->d.bd == 1) {
     Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-    dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>() * xs[1-i]->tb<1>().broadcast(bcast);
+    dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast);
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 1;
-    dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() * xs[1-i]->tb<1>()).sum(red_axis);
+    dEdxi.tvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec()).sum(red_axis);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseMultiply)
@@ -2071,7 +2071,7 @@ DYNET_NODE_INST_DEV_IMPL(RandomNormal)
 template<class MyDevice>
 void RandomBernoulli::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  TensorTools::RandomBernoulli(fx, p);
+  TensorTools::RandomBernoulli(fx, p, scale);
 }
 
 template<class MyDevice>

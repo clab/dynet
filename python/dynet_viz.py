@@ -1,5 +1,18 @@
+from __future__ import print_function
+import sys
 import re
 from collections import defaultdict
+
+if sys.version_info.major > 2:
+  # alias dict.items() as dict.iteritems() in python 3+
+  class compat_dict(defaultdict):
+    pass
+
+  compat_dict.iteritems = defaultdict.items
+  defaultdict = compat_dict
+  
+  # add xrange to python 3+
+  xrange = range
 
 graphviz_items = []
 
@@ -54,11 +67,11 @@ def make_dim(a, b=None, inferred=False):
     (nrows, ncols) = a
     return SimpleConcreteDim(nrows, ncols, inferred)
   elif b is None:
-    assert isinstance(a, int)
+    assert isinstance(a, int) or (isinstance(a, float) and int(a) == a)
     return SimpleConcreteDim(a, 1, inferred)
   else:
-    assert isinstance(a, int)
-    assert isinstance(b, int)
+    assert isinstance(a, int) or (isinstance(a, float) and int(a) == a)
+    assert isinstance(b, int) or (isinstance(b, float) and int(b) == b)
     return SimpleConcreteDim(a, b, inferred)
   
 
@@ -284,13 +297,17 @@ def filter1d_narrow(x, y):
 def tanh(x): return GVExpr('tanh', [x], copy_dim(x))
 def exp(x): return GVExpr('exp', [x], copy_dim(x))
 def square(x): return GVExpr('square', [x], copy_dim(x))
+def sqrt(x): return GVExpr('sqrt', [x], copy_dim(x))
+def erf(x): return GVExpr('erf', [x], copy_dim(x))
 def cube(x): return GVExpr('cube', [x], copy_dim(x))
 def log(x): return GVExpr('log', [x], copy_dim(x))
+def lgamma(x): return GVExpr('lgamma', [x], copy_dim(x))
 def logistic(x): return GVExpr('logistic', [x], copy_dim(x))
 def rectify(x): return GVExpr('rectify', [x], copy_dim(x))
 def log_softmax(x, restrict=None): return GVExpr('log_softmax', [x,restrict], copy_dim(x))
 def softmax(x): return GVExpr('softmax', [x], copy_dim(x))
 def softsign(x): return GVExpr('softsign', [x], copy_dim(x))
+def pow(x, y): return GVExpr('pow', [x,y], ensure_same_dim(x,y))
 def bmin(x, y): return GVExpr('bmin', [x,y], ensure_same_dim(x,y))
 def bmax(x, y): return GVExpr('bmax', [x,y], ensure_same_dim(x,y))
 def transpose(x): return GVExpr('transpose', [x], x.dim[::-1] if x.dim.isvalid() else InvalidDim)
@@ -673,7 +690,13 @@ class Trainer(object):
   def update(self, s=1.0): pass
   def update_epoch(self, r = 1.0): pass
   def status(self): pass
+  def set_clip_threshold(self, thr): pass
+  def get_clip_threshold(self): pass
+
 class SimpleSGDTrainer(Trainer):
+    """
+    This object is very cool!
+    """
     def __init__(self, m, e0 = 0.1): pass
 class MomentumSGDTrainer(Trainer):
     def __init__(self, m, e0 = 0.01, mom = 0.9): pass
@@ -742,6 +765,7 @@ class GVNode(object):
   def __iter__(self): return iter([self.name, self.input_dim, self.label, self.output_dim, self.children, self.features, self.node_type, self.expr_name])
   def __repr__(self): return 'GVNode(%s)' % ', '.join(map(str, self))
   def __str__(self): return repr(self)
+  def __lt__(self, other): return id(self) < id(other)
 
 def make_network_graph(compact, expression_names, lookup_names):
   """
@@ -984,9 +1008,9 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
     (nodes, birnn_collapse_to) = collapse_birnn_states(nodes, compact)
     collapse_to.update(birnn_collapse_to)
 
-  print 'digraph G {'
-  print '  rankdir=BT;'
-  if not compact: print '  nodesep=.05;'
+  print('digraph G {')
+  print('  rankdir=BT;')
+  if not compact: print('  nodesep=.05;')
   
   node_types = defaultdict(set)
   for n in nodes:
@@ -997,7 +1021,7 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
               '2_regular': '[shape=rect]',
               '3_rnn_state': '[shape=rect, peripheries=2]',
              }[node_type]
-    print '  node %s; ' % (style), ' '.join(node_types[node_type])
+    print('  node %s; ' % (style), ' '.join(node_types[node_type]))
   
 #   all_nodes = set(line.strip().split()[0] for line in node_def_lines)
   for n in nodes:
@@ -1010,9 +1034,9 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
         label = '%s\\n%s' % (label, shape_str(n.input_dim))
     if n.output_dim.invalid() or (n.input_dim is not None and n.input_dim.invalid()):
       n.features += " [color=red,style=filled,fillcolor=red]"
-    print '  %s [label="%s"] %s;' % (n.name, label, n.features)
+    print('  %s [label="%s"] %s;' % (n.name, label, n.features))
     for c in n.children:
-      print '  %s -> %s;' % (c, n.name)
+      print('  %s -> %s;' % (c, n.name))
     
   rnn_states = [] # (name, rnn_name, state_idx)
   rnn_state_re = re.compile("[^-]+-(.)-(\\d+)")
@@ -1031,6 +1055,6 @@ def print_graphviz(compact=False, show_dims=True, expression_names=None, lookup_
         group_name_n = collapse_to.get(name_n, name_n)
         edges.add((group_name_p, group_name_n))
   for (name_p, name_n) in edges:
-    print '  %s -> %s [style=dotted];' % (name_p, name_n) # ,dir=both
+    print('  %s -> %s [style=dotted];' % (name_p, name_n)) # ,dir=both
 
-  print '}'
+  print('}')

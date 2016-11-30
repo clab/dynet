@@ -133,33 +133,40 @@ cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer":
         #CSimpleSGDTrainer(CModel* m, float lam, float e0)
         CSimpleSGDTrainer(CModel* m, float e0, float edecay) # TODO removed lam, update docs.
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer":
         CMomentumSGDTrainer(CModel* m, float e0, float mom, float edecay) # TODO removed lam, update docs
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer":
         CAdagradTrainer(CModel* m, float e0, float eps, float edecay) # TODO removed lam, update docs
-
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer":
         CAdadeltaTrainer(CModel* m, float eps, float rho, float edecay) # TODO removed lam, update docs
-
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer":
         CAdamTrainer(CModel* m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
-
+        float clip_threshold
+        bool clipping_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -171,6 +178,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
         long i
+        CDim dim()
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata)
@@ -183,7 +191,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
     CExpression c_zeroes "dynet::expr::zeroes" (CComputationGraph& g, CDim& d) #
     CExpression c_random_normal "dynet::expr::random_normal" (CComputationGraph& g, CDim& d) #
-    CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p)
+    CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale)
     CExpression c_random_uniform "dynet::expr::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) #
 
     # identity function, but derivative is not propagated through it
@@ -207,8 +215,11 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_tanh "dynet::expr::tanh" (CExpression& x) #
     CExpression c_exp "dynet::expr::exp" (CExpression& x) #
     CExpression c_square "dynet::expr::square" (CExpression& x) #
+    CExpression c_sqrt "dynet::expr::sqrt" (CExpression& x) #
+    CExpression c_erf "dynet::expr::erf" (CExpression& x) #
     CExpression c_cube "dynet::expr::cube" (CExpression& x) #
     CExpression c_log "dynet::expr::log" (CExpression& x) #
+    CExpression c_lgamma "dynet::expr::lgamma" (CExpression& x) #
     CExpression c_logistic "dynet::expr::logistic" (CExpression& x) #
     CExpression c_rectify "dynet::expr::rectify" (CExpression& x) #
     #CExpression c_hinge "dynet::expr::hinge" (CExpression& x, unsigned index, float m=?) #
@@ -218,6 +229,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_softmax "dynet::expr::softmax" (CExpression& x) #
     CExpression c_sparsemax "dynet::expr::sparsemax" (CExpression& x) #
     CExpression c_softsign "dynet::expr::softsign" (CExpression& x) #
+    CExpression c_pow "dynet::expr::pow" (CExpression& x, CExpression& y) #
     CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) #
     CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) #
     CExpression c_noise "dynet::expr::noise" (CExpression& x, float stddev) #
@@ -233,6 +245,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) #
     CExpression c_squared_distance "dynet::expr::squared_distance" (CExpression& x, CExpression& y) #
+    CExpression c_squared_norm "dynet::expr::squared_norm" (CExpression& x) #
     CExpression c_huber_distance "dynet::expr::huber_distance" (CExpression& x, CExpression& y, float c) #
     CExpression c_l1_distance "dynet::expr::l1_distance" (CExpression& x, CExpression& y) #
     CExpression c_binary_log_loss "dynet::expr::binary_log_loss" (CExpression& x, CExpression& y) #
@@ -262,8 +275,9 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs)
     CExpression c_concat      "dynet::expr::concatenate" (vector[CExpression]& xs)
 
-    CExpression c_sum      "dynet::expr::sum" (vector[CExpression]& xs)
-    CExpression c_max      "dynet::expr::vmax" (vector[CExpression]& xs)
+    CExpression c_sum            "dynet::expr::sum" (vector[CExpression]& xs)
+    CExpression c_max            "dynet::expr::vmax" (vector[CExpression]& xs)
+    CExpression c_logsumexp      "dynet::expr::logsumexp" (vector[CExpression]& xs)
 
 
 #cdef extern from "dynet/model.h" namespace "dynet":

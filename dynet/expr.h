@@ -11,7 +11,7 @@
  * \defgroup linalgoperations
  * \brief The various operations that you can use in building a DyNet graph
  * 
- * \details TODO: Create documentation and explain expressions, etc...
+ * \details TODO: **This documentation is incomplete. See expr.h for a full list of expressions.**
  */
 
 #ifndef DYNET_EXPR_H
@@ -41,6 +41,7 @@ struct Expression {
    */
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
   const Tensor& value() const { return pg->get_value(i); }
+  const Dim& dim() const { return pg->get_dimension(i); }
 };
 
 namespace detail {
@@ -88,13 +89,13 @@ Expression input(ComputationGraph& g, const real *ps);
  * \ingroup inputoperations
  * \brief Vector/matrix/tensor input
  * \details Create an expression that represents a vector, matrix, or tensor
- *          input. The dimensions of the input are defined by `d`. So for example
- *          > input(g,{50},data): will result in a 50-length vector
- *          > input(g,{50,30},data): will result in a 50x30 matrix
+ *          input. The dimensions of the input are defined by ``d``. So for example
+ *          > ``input(g,{50},data)``: will result in a 50-length vector
+ *          > ``input(g,{50,30},data)``: will result in a 50x30 matrix
  *          and so on, for an arbitrary number of dimensions.
  *          This function can also be used to import minibatched inputs. For example,
  *          if we have 10 examples in a minibatch, each with size 50x30, then we call
- *          > input(g,Dim({50,30},10),data)
+ *          > ``input(g,Dim({50,30},10),data)``
  *          The data vector "data" will contain the values used to fill the input, in
  *          column-major format. The length must add to the product of all dimensions in
  *          d.
@@ -315,10 +316,11 @@ Expression random_normal(ComputationGraph& g, const Dim& d);
  * \param g Computation graph
  * \param d The dimensions of the input
  * \param p The bernoulli p parameter
+ * \param scale A scaling factor for the output ("active" elements will receive this value)
  * 
  * \return A "d" dimensioned bernoulli distributed vector
  */
-Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p);
+Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale = 1.0f);
 
 /**
  * \ingroup inputoperations
@@ -475,20 +477,46 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
  * \ingroup arithmeticoperations
  * \brief Affine transform
  * \details This performs an affine transform over an arbitrary (odd) number of expressions
- *          held in the input initializer list x.
+ *          held in the input initializer list xs.
  *          The first expression is the "bias," which is added to the expression as-is.
- *          The remaining expressions are multiplied together, then added.
+ *          The remaining expressions are multiplied together in pairs, then added.
  *          A very common usage case is the calculation of the score for a neural network
  *          layer (e.g. b + Wz) where b is the bias, W is the weight matrix, and z is the
- *          input. In this case x[0] = b, x[1] = W, and x[2] = z.
+ *          input. In this case xs[0] = b, xs[1] = W, and xs[2] = z.
  * 
- * \param x An initializer list containing an odd number of expressions
+ * \param xs An initializer list containing an odd number of expressions
  * 
- * \return An expression equal to: x[0] + x[1]*x[2] + x[3]*x[4] + ...
+ * \return An expression equal to: xs[0] + xs[1]*xs[2] + xs[3]*xs[4] + ...
  */
 inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
 template <typename T>
 inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Sum
+ * \details This performs an elementwise sum over all the expressions in xs
+ * 
+ * \param xs An initializer list containing expressions
+ * 
+ * \return An expression where the ith element is equal to xs[0][i] + xs[1][i] + ...
+ */
+inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
+template <typename T>
+inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Average
+ * \details This performs an elementwise average over all the expressions in xs
+ * 
+ * \param xs An initializer list containing expressions
+ * 
+ * \return An expression where the ith element is equal to (xs[0][i] + xs[1][i] + ...)/|xs|
+ */
+inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs); }
+template <typename T>
+inline Expression average(const T& xs) { return detail::f<Average>(xs); }
 
 /**
  * \ingroup arithmeticoperations
@@ -503,7 +531,7 @@ Expression sqrt(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
- * \brief Gaussian errror function
+ * \brief Gaussian error function
  * \details Elementwise calculation of the Gaussian error function
  * 
  * \param x The input expression
@@ -530,7 +558,7 @@ Expression tanh(const Expression& x);
  * 
  * \param x The input expression
  * 
- * \return An expression equal to e^{x_i}
+ * \return An expression where the ith element is equal to e^{x_i}
  */
 Expression exp(const Expression& x);
 
@@ -585,14 +613,14 @@ Expression log(const Expression& x);
  * 
  * \param x The input expression
  * 
- * \return An expression equal to y_i = 1/(1+e^{x_i})
+ * \return An expression where the ith element is equal to y_i = 1/(1+e^{x_i})
  */
 Expression logistic(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
  * \brief Rectifier
- * \details Calculate elementwise the recitifer (RelU) function y_i = max(x_i,0)
+ * \details Calculate elementwise the recitifer (ReLU) function y_i = max(x_i,0)
  * 
  * \param x The input expression
  * 
@@ -607,7 +635,7 @@ Expression rectify(const Expression& x);
  * 
  * \param x The input expression
  * 
- * \return An expression equal to x_i/(1+|x_i|)
+ * \return An expression where the ith element is equal to x_i/(1+|x_i|)
  */
 Expression softsign(const Expression& x);
 
@@ -618,7 +646,7 @@ Expression softsign(const Expression& x);
  * 
  * \param x The input expression
  * 
- * \return An expression where the ith element is to x_i^y_i
+ * \return An expression where the ith element is equal to x_i^y_i
  */
 Expression pow(const Expression& x, const Expression& y);
 
@@ -630,7 +658,7 @@ Expression pow(const Expression& x, const Expression& y);
  * \param x The first input expression
  * \param y The second input expression
  * 
- * \return An expression equal to min(x_i,y_i)
+ * \return An expression where the ith element is equal to min(x_i,y_i)
  */
 Expression min(const Expression& x, const Expression& y);
 
@@ -645,6 +673,19 @@ Expression min(const Expression& x, const Expression& y);
  * \return An expression where the ith element is equal to max(x_i,y_i)
  */
 Expression max(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Max
+ * \details This performs an elementwise max over all the expressions in xs
+ * 
+ * \param xs An initializer list containing expressions
+ * 
+ * \return An expression where the ith element is equal to max(xs[0][i], xs[1][i], ...)
+ */
+inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
+template <typename T>
+inline Expression max(const T& xs) { return detail::f<Max>(xs); }
 
 /**
  * \ingroup arithmeticoperations
@@ -667,10 +708,9 @@ Expression dot_product(const Expression& x, const Expression& y);
  * \param x The first input expression
  * \param y The second input expression
  * 
- * \return An expression where the ith element is x_i*y_i 
+ * \return An expression where the ith element is equal to x_i*y_i
  */
 Expression cmult(const Expression& x, const Expression& y);
-
 
 /**
  * \ingroup arithmeticoperations
@@ -680,7 +720,7 @@ Expression cmult(const Expression& x, const Expression& y);
  * \param x The first input expression
  * \param y The second input expression
  * 
- * \return An expression where the ith element is x_i/y_i 
+ * \return An expression where the ith element is equal to x_i/y_i
  */
 Expression cdiv(const Expression& x, const Expression& y);
 
@@ -692,7 +732,7 @@ Expression cdiv(const Expression& x, const Expression& y);
  * \param x An MxN matrix
  * \param bias A length M vector
  * 
- * \return An expression bias is added to each column of x
+ * \return An expression where bias is added to each column of x
  */
 Expression colwise_add(const Expression& x, const Expression& bias);
 
@@ -700,47 +740,331 @@ Expression colwise_add(const Expression& x, const Expression& bias);
 // Probability/loss operations                //
 ////////////////////////////////////////////////
 
-Expression hinge(const Expression& x, unsigned index, float m = 1.0);
-Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m = 1.0);
-Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
-Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, float m = 1.0);
+/**
+ * \ingroup lossoperations
+ * \brief Softmax
+ * \details The softmax function, which sets each element to be e^{x[i]}/{sum_j e^{x[j]}}.
+ * 
+ * \param x A vector
+ * 
+ * \return A vector after calculating the softmax
+ */
 Expression softmax(const Expression& x);
+
+/**
+ * \ingroup lossoperations
+ * \brief Log softmax
+ * \details The log of the softmax function, which sets each element to be 
+ *          log( e^{x[i]}/{sum_j e^{x[j]}} ).
+ * 
+ * \param x A vector
+ * 
+ * \return A vector after calculating the log softmax
+ */
 Expression log_softmax(const Expression& x);
-Expression sparsemax(const Expression& x);
+
+/**
+ * \ingroup lossoperations
+ * \brief Restricted log softmax
+ * \details The log softmax function calculated over only a subset of the vector elements. The
+ *          elements to be included are set by the ``restriction`` variable. All elements not
+ *          included in ``restriction`` are set to negative infinity.
+ * 
+ * \param x A vector over which to calculate the softmax
+ * \param restriction The elements over which to calculate the softmax
+ * 
+ * \return A vector with the log softmax over the specified elements
+ */
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
-Expression sparsemax(const Expression& x);
-Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
-Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptarget_support);
 
-Expression pickneglogsoftmax(const Expression& x, unsigned v);
-Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
-Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
-Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
-
-Expression squared_norm(const Expression& x);
-Expression squared_distance(const Expression& x, const Expression& y);
-Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
-Expression l1_distance(const Expression& x, const Expression& y);
-Expression binary_log_loss(const Expression& x, const Expression& y);
-Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
-Expression poisson_loss(const Expression& x, unsigned y);
-Expression poisson_loss(const Expression& x, const unsigned* py);
-
+/**
+ * \ingroup lossoperations
+ * \brief Log, sum, exp
+ * \details The elementwise "logsumexp" function that calculates
+ *   \f$ln(\sum_i e^{xs_i})\f$, used in adding probabilities in the log domain.
+ * 
+ * \param xs Expressions with respect to which to calculate the logsumexp.
+ * 
+ * \return The result.
+ */
+inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
 template <typename T>
 inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
-inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
 
-template <typename T>
-inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
-inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
+/**
+ * \ingroup lossoperations
+ * \brief Negative softmax log likelihood
+ * \details This function takes in a vector of scores ``x``, and performs a log softmax, takes
+ *          the negative, and selects the likelihood corresponding to the element ``v``. This is
+ *          perhaps the most standard loss function for training neural networks to predict
+ *          one out of a set of elements.
+ * 
+ * \param x A vector of scores
+ * \param v The element with which to calculate the loss
+ * 
+ * \return The negative log likelihood of element ``v`` after taking the softmax
+ */
+Expression pickneglogsoftmax(const Expression& x, unsigned v);
 
-template <typename T>
-inline Expression max(const T& xs) { return detail::f<Max>(xs); }
-inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable negative softmax log likelihood
+ * \details This function calculates the negative log likelihood after the softmax with
+ *          respect to index ``*pv``. This computes the same value as the previous function
+ *          that passes the index ``v`` by value, but instead passes by pointer so the value
+ *          ``*pv`` can be modified without re-constructing the computation graph. This can be
+ *          used in situations where we want to create a computation graph once, then feed it
+ *          different data points.
+ * 
+ * \param x A vector of scores
+ * \param pv A pointer to the index of the correct element
+ * 
+ * \return The negative log likelihood of element ``*pv`` after taking the softmax
+ */
+Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
 
-template <typename T>
-inline Expression average(const T& xs) { return detail::f<Average>(xs); }
-inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs); }
+/**
+ * \ingroup lossoperations
+ * \brief Batched negative softmax log likelihood
+ * \details This function is similar to standard pickneglogsoftmax, but calculates loss with
+ *          respect to multiple batch elements. The input will be a mini-batch of score vectors
+ *          where the number of batch elements is equal to the number of indices in ``v``.
+ * 
+ * \param x An expression with vectors of scores over N batch elements
+ * \param v A size-N vector indicating the index with respect to all the batch elements
+ * 
+ * \return The negative log likelihoods over all the batch elements
+ */
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);
+
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable batched negative softmax log likelihood
+ * \details This function is a combination of modifiable pickneglogsoftmax and batched
+ *          pickneglogsoftmax: ``pv`` can be modified without re-creating the computation graph.
+ * 
+ * \param x An expression with vectors of scores over N batch elements
+ * \param v A size-N vector indicating the index with respect to all the batch elements
+ * 
+ * \return The negative log likelihoods over all the batch elements
+ */
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
+
+/**
+ * \ingroup lossoperations
+ * \brief Hinge loss
+ * \details This expression calculates the hinge loss, formally expressed as:
+ *          \f$ \text{hinge}(x,index,m) = \sum_{i \ne index} max(0, m-x[index]+x[i]). \f$
+ * 
+ * \param x A vector of scores
+ * \param index The index of the correct candidate
+ * \param m The margin
+ * 
+ * \return The hinge loss of candidate ``index`` with respect to margin ``m``
+ */
+Expression hinge(const Expression& x, unsigned index, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable hinge loss
+ * \details This function calculates the hinge loss with
+ *          with respect to index ``*pindex``. This computes the same value as the previous function
+ *          that passes the index ``index`` by value, but instead passes by pointer so the value
+ *          ``*pindex`` can be modified without re-constructing the computation graph. This can be
+ *          used in situations where we want to create a computation graph once, then feed it
+ *          different data points.
+ * 
+ * \param x A vector of scores
+ * \param pindex A pointer to the index of the correct candidate
+ * \param m The margin
+ * 
+ * \return The hinge loss of candidate ``*pindex`` with respect to margin ``m``
+ */
+Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Batched hinge loss
+ * \details The same as hinge loss, but for the case where ``x`` is a mini-batched tensor
+ *          with ``indices.size()`` batch elements, and ``indices`` is a vector indicating
+ *          the index of each of the correct elements for these elements.
+ * 
+ * \param x A mini-batch of vectors with ``indices.size()`` batch elements
+ * \param indices The indices of the correct candidates for each batch element
+ * \param m The margin
+ * 
+ * \return The hinge loss of each mini-batch
+ */
+Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Batched modifiable hinge loss
+ * \details A combination of the previous batched and modifiable hinge loss functions, where
+ *          vector ``*pindices`` can be modified.
+ * 
+ * \param x A mini-batch of vectors with ``indices.size()`` batch elements
+ * \param pindices Pointer to the indices of the correct candidates for each batch element
+ * \param m The margin
+ * 
+ * \return The hinge loss of each mini-batch
+ */
+Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Sparsemax
+ * \details The sparsemax function (Martins et al. 2016), which is similar to softmax,
+ *          but induces sparse solutions where most of the vector elements are zero.
+ *          **Note:** This function is not yet implemented on GPU.
+ * 
+ * \param x A vector of scores
+ * 
+ * \return The sparsemax of the scores
+ */
+Expression sparsemax(const Expression& x);
+
+/**
+ * \ingroup lossoperations
+ * \brief Sparsemax loss
+ * \details The sparsemax loss function (Martins et al. 2016), which is similar to
+ *          softmax loss, but induces sparse solutions where most of the vector
+ *          elements are zero. It has a gradient similar to the sparsemax function
+ *          and thus is useful for optimizing when the sparsemax will be used at
+ *          test time.
+ *          **Note:** This function is not yet implemented on GPU.
+ * 
+ * \param x A vector of scores
+ * \param target_support The target correct labels.
+ * 
+ * \return The sparsemax loss of the labels
+ */
+Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
+
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable sparsemax loss
+ * \details Similar to the sparsemax loss, but with ptarget_support being a pointer
+ *          to a vector, allowing it to be modified without re-creating the compuation
+ *          graph.
+ *          **Note:** This function is not yet implemented on GPU.
+ * 
+ * \param x A vector of scores
+ * \param ptarget_support A pointer to the target correct labels.
+ * 
+ * \return The sparsemax loss of the labels
+ */
+Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptarget_support);
+
+/**
+ * \ingroup lossoperations
+ * \brief Squared norm
+ * \details The squared norm of the values of x: \f$\sum_i x_i^2\f$.
+ * 
+ * \param x A vector of values
+ * 
+ * \return The squared norm
+ */
+Expression squared_norm(const Expression& x);
+
+/**
+ * \ingroup lossoperations
+ * \brief Squared distance
+ * \details The squared distance between values of ``x`` and ``y``: \f$\sum_i (x_i-y_i)^2\f$.
+ * 
+ * \param x A vector of values
+ * \param y Another vector of values
+ * 
+ * \return The squared distance
+ */
+Expression squared_distance(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup lossoperations
+ * \brief Squared distance
+ * \details The L1 distance between values of ``x`` and ``y``: \f$\sum_i |x_i-y_i|\f$.
+ * 
+ * \param x A vector of values
+ * \param y Another vector of values
+ * 
+ * \return The squared distance
+ */
+Expression l1_distance(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup lossoperations
+ * \brief Huber distance
+ * \details The huber distance between values of ``x`` and ``y`` parameterized
+ *    by ``c,`` \f$\sum_i L_c(x_i, y_i)\f$ where: 
+ *    \f[
+ *      L_c(x, y) = \begin{cases}
+ *        \frac{1}{2}(y - x)^2                   & \textrm{for } |y - f(x)| \le c, \\
+ *        c\, |y - f(x)| - \frac{1}{2}c^2 & \textrm{otherwise.}
+ *      \end{cases}
+ *    \f]
+ *
+ * \param x A vector of values
+ * \param y Another vector of values
+ * \param c The parameter of the huber distance parameterizing the cuttoff
+ * 
+ * \return The huber distance
+ */
+Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
+
+/**
+ * \ingroup lossoperations
+ * \brief Binary log loss
+ * \details The log loss of a binary decision according to the sigmoid
+ *          sigmoid function \f$- \sum_i (y_i * ln(x_i) + (1-y_i) * ln(1-x_i)) \f$
+ * 
+ * \param x A vector of values
+ * \param y A vector of true answers
+ * 
+ * \return The log loss of the sigmoid function
+ */
+Expression binary_log_loss(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup lossoperations
+ * \brief Pairwise rank loss
+ * \details A margin-based loss, where every margin violation for each pair of
+ *          values is penalized: \f$\sum_i max(x_i-y_i+m, 0)\f$
+ * 
+ * \param x A vector of values
+ * \param y A vector of true answers
+ * \param m The margin
+ * 
+ * \return The pairwise rank loss
+ */
+Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Poisson loss
+ * \details The negative log probability of ``y`` according to a Poisson
+ *          distribution with parameter ``x``. Useful in Poisson regression
+ *          where, we try to predict the parameters of a Possion distribution
+ *          to maximize the probability of data ``y``.
+ * 
+ * \param x The parameter of the Poisson distribution.
+ * \param y The target value
+ * 
+ * \return The Poisson loss
+ */
+Expression poisson_loss(const Expression& x, unsigned y);
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable Poisson loss
+ * \details Similar to Poisson loss, but with the target value passed by
+ *          pointer so that it can be modified without re-constructing the
+ *          computation graph.
+ * 
+ * \param x The parameter of the Poisson distribution.
+ * \param py A pointer to the target value
+ * 
+ * \return The Poisson loss
+ */
+Expression poisson_loss(const Expression& x, const unsigned* py);
 
 ////////////////////////////////////////////////
 // Flow operations                            //
