@@ -316,10 +316,11 @@ Expression random_normal(ComputationGraph& g, const Dim& d);
  * \param g Computation graph
  * \param d The dimensions of the input
  * \param p The bernoulli p parameter
+ * \param scale A scaling factor for the output ("active" elements will receive this value)
  * 
  * \return A "d" dimensioned bernoulli distributed vector
  */
-Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p);
+Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale = 1.0f);
 
 /**
  * \ingroup inputoperations
