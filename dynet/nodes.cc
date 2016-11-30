@@ -2071,7 +2071,7 @@ DYNET_NODE_INST_DEV_IMPL(RandomNormal)
 template<class MyDevice>
 void RandomBernoulli::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  TensorTools::RandomBernoulli(fx, p);
+  TensorTools::RandomBernoulli(fx, p, scale);
 }
 
 template<class MyDevice>
