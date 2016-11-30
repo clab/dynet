@@ -1,10 +1,16 @@
 # on numpy arrays, see: https://github.com/cython/cython/wiki/tutorials-NumpyPointerToC
-
+from __future__ import print_function
 import sys
 from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
 import numpy as np
-import cPickle as pickle
+
+# python3 pickle already uses the c implementaion 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+    
 import os.path
 # TODO:
 #  - set random seed (in DYNET)
@@ -29,14 +35,14 @@ import os.path
 #  - embedcl
 #  - embed/nlm -- negative sampling?
 
-from dynet cimport *
-cimport dynet
+from _dynet cimport *
+cimport _dynet as dynet
 
 
 cdef init(random_seed=None):
     cdef int argc = len(sys.argv)
     cdef char** c_argv
-    args = [bytes(x) for x in sys.argv]
+    args = [bytearray(x, encoding="utf-8") for x in sys.argv]
     c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
     for idx, s in enumerate(args):
         c_argv[idx] = s
@@ -181,11 +187,11 @@ class Saveable(object):
         pass
 
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = dict()
         params = self.get_components()
-        for k,v in odict.items(): # remove unpicklable things which we save otherwise
-            if v in params:
-                del odict[k]
+        for k,v in self.__dict__.items(): # remove unpicklable things which we save otherwise
+            if v not in params:
+                odict[k] = v
         return odict
 
     def get_components(self):
@@ -326,13 +332,13 @@ cdef class Model: # {{{
         else:
             raise TypeError("Cannot save model component of type %s" % type(c))
 
-    def save(self, string fname, components=None):
+    def save(self, fname, components=None):
         if not components:
-            self.save_all(fname)
+            self.save_all(fname.encode())
             return
-        fh = file(fname+".pym","w")
-        pfh = file(fname+".pyk","w")
-        cdef CModelSaver *saver = new CModelSaver(fname, self.thisptr)
+        fh = open(fname+".pym","w")
+        pfh = open(fname+".pyk","wb")
+        cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
         for c in components:
             self._save_one(c,saver,fh,pfh)
         saver.done()
@@ -346,7 +352,7 @@ cdef class Model: # {{{
         cdef GRUBuilder gb_
         cdef LSTMBuilder lb_
         cdef SimpleRNNBuilder sb_
-        tp = itypes.next()
+        tp = next(itypes)
         if tp == "param":
             loader.fill_parameter(p)
             param = Parameters.wrap_ptr(p)
@@ -381,18 +387,18 @@ cdef class Model: # {{{
             saveable.restore_components(items)
             return saveable
         else:
-            print "Huh?"
+            print("Huh?")
             assert False,"unsupported type " + tp
 
-    cpdef load(self, string fname):
+    cpdef load(self, fname):
         if not os.path.isfile(fname+".pym"):
-            self.load_all(fname)
+            self.load_all(fname.encode())
             return
-        with file(fname+".pym","r") as fh:
+        with open(fname+".pym","r") as fh:
             types = fh.read().strip().split()
 
-        cdef CModelLoader *loader = new CModelLoader(fname, self.thisptr)
-        with file(fname+".pyk","r") as pfh:
+        cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
+        with open(fname+".pyk","rb") as pfh:
             params = []
             itypes = iter(types)
             while True: # until iterator is done
@@ -605,16 +611,22 @@ cdef class Expression: #{{{
     cdef CExpression c(self):
         return CExpression(self.cgp(), self.vindex)
 
+    cpdef dim(self):
+        cdef CDim d;
+        d=self.c().dim()
+        return (d.size(), d.rows(), d.cols(), d.batch_elems())
+
     def __repr__(self):
         return str(self)
     def __str__(self):
-        return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
+        return "expression %s/%s" % (<int>self.vindex, self.cg_version)
 
-    def __getitem__(self, int i):
-        return pick(self, i)
-
-    def __getslice__(self, int i, int j):
-        return pickrange(self, i, j)
+    # __getitem__ and __getslice__ in one for python 3 compatibility
+    def __getitem__(self, object index):
+         if isinstance(index, int):
+             return pick(self, index)            
+         
+         return pickrange(self, index[0], index[1])
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
@@ -839,7 +851,7 @@ def hinge(Expression x, unsigned index, float m=1.0):
 
 cpdef Expression zeroes(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
 cpdef Expression random_normal(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
-cpdef Expression random_bernoulli(dim, float p, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p))
+cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p, scale))
 cpdef Expression random_uniform(dim, float left, float right, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
 
 cpdef Expression nobackprop(Expression x): return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
@@ -851,6 +863,7 @@ cpdef Expression colwise_add(Expression x, Expression y): ensure_freshness(y); r
 
 cpdef Expression trace_of_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_trace_of_product(x.c(), y.c()))
 cpdef Expression dot_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
+cpdef Expression squared_norm(Expression x): return Expression.from_cexpr(x.cg_version, c_squared_norm(x.c()))
 cpdef Expression squared_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_squared_distance(x.c(), y.c()))
 cpdef Expression l1_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_l1_distance(x.c(), y.c()))
 cpdef Expression binary_log_loss(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_binary_log_loss(x.c(), y.c()))
@@ -862,8 +875,11 @@ cpdef Expression filter1d_narrow(Expression x, Expression y): ensure_freshness(y
 cpdef Expression tanh(Expression x): return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
 cpdef Expression exp(Expression x): return Expression.from_cexpr(x.cg_version, c_exp(x.c()))
 cpdef Expression square(Expression x): return Expression.from_cexpr(x.cg_version, c_square(x.c()))
+cpdef Expression sqrt(Expression x): return Expression.from_cexpr(x.cg_version, c_sqrt(x.c()))
+cpdef Expression erf(Expression x): return Expression.from_cexpr(x.cg_version, c_erf(x.c()))
 cpdef Expression cube(Expression x): return Expression.from_cexpr(x.cg_version, c_cube(x.c()))
 cpdef Expression log(Expression x): return Expression.from_cexpr(x.cg_version, c_log(x.c()))
+cpdef Expression lgamma(Expression x): return Expression.from_cexpr(x.cg_version, c_lgamma(x.c()))
 cpdef Expression logistic(Expression x): return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
 cpdef Expression rectify(Expression x): return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
 cpdef Expression log_softmax(Expression x, list restrict=None): 
@@ -874,6 +890,7 @@ cpdef Expression log_softmax(Expression x, list restrict=None):
 cpdef Expression softmax(Expression x): return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
 cpdef Expression sparsemax(Expression x): return Expression.from_cexpr(x.cg_version, c_sparsemax(x.c()))
 cpdef Expression softsign(Expression x): return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
+cpdef Expression pow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_pow(x.c(), y.c()))
 cpdef Expression bmin(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
 cpdef Expression bmax(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
 cpdef Expression transpose(Expression x): return Expression.from_cexpr(x.cg_version, c_transpose(x.c()))
@@ -912,8 +929,19 @@ cpdef Expression esum(list xs):
     for x in xs:
         ensure_freshness(x)
         cvec.push_back(x.c())
-    #print >> sys.stderr, cvec.size()
+    #print(cvec.size(), file=sys.stderr)
     return Expression.from_cexpr(x.cg_version, c_sum(cvec))
+
+cpdef Expression logsumexp(list xs):
+    assert xs, 'List is empty, nothing to logsumexp.'
+    cdef vector[CExpression] cvec
+    cvec = vector[CExpression]()
+    cdef Expression x
+    for x in xs:
+        ensure_freshness(x)
+        cvec.push_back(x.c())
+    #print(cvec.size(), file=sys.stderr)
+    return Expression.from_cexpr(x.cg_version, c_logsumexp(cvec))
 
 cpdef Expression average(list xs):
     assert xs, 'List is empty, nothing to average.'
@@ -1395,6 +1423,15 @@ cdef class SimpleSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
@@ -1408,6 +1445,16 @@ cdef class MomentumSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
@@ -1421,6 +1468,16 @@ cdef class AdagradTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
@@ -1434,6 +1491,16 @@ cdef class AdadeltaTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
@@ -1447,5 +1514,15 @@ cdef class AdamTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_clip_threshold(self,float thr):
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        return self.thisptr.clip_threshold
+
 #}}}
 
