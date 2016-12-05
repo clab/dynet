@@ -6,9 +6,9 @@
 #include "dynet/gru.h"
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
-# include "dynet/expr.h"
+#include "dynet/expr.h"
 #include "dynet/grad-check.h"
-#include "getpid.h"
+#include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
