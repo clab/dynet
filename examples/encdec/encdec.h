@@ -1,8 +1,9 @@
 /**
- * \file expr.h
- * \defgroup seq2seq_builders
- * \ingroup seq2seq_builders
- * \brief An example implementation of a simple sequence to sequence model based on lstm encoder/decoder
+ * \file encdec.h
+ * \defgroup seq2seqbuilders
+ * \brief Sequence to sequence models
+ * 
+ * An example implementation of a simple sequence to sequence model based on lstm encoder/decoder
  *
  */
 
@@ -28,7 +29,6 @@ using namespace std;
 using namespace dynet;
 using namespace dynet::expr;
 
-
 int kSOS;
 int kEOS;
 
@@ -37,7 +37,9 @@ unsigned INPUT_VOCAB_SIZE;
 unsigned OUTPUT_VOCAB_SIZE;
 
 /**
- * \ingroup seq2seq_builders
+ * \ingroup seq2seqbuilders
+ * 
+ * \struct EncoderDecoder
  * \brief This structure is a "vanilla" encoder decoder model
  * \details This sequence to sequence network models the conditional probability
  * \f$p(y_1,\dots,y_m\vert x_1,\dots,x_n)=\prod_{i=1}^m p(y_i\vert \textbf{e},y_1,\dots,y_{i-1})\f$
@@ -46,11 +48,12 @@ unsigned OUTPUT_VOCAB_SIZE;
  *
  * Typically \f$\textbf{e}\f$ is the concatenated cell and output vector of a (multilayer) LSTM.
  *
- * Sequence to sequence models were introduced in \cite cho2014learning .
+ * Sequence to sequence models were introduced in [Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation](https://arxiv.org/pdf/1406.1078v3.pdf) .
  *
- * Our implementation is more akin to the one from \cite sutskever2014sequence .
+ * Our implementation is more akin to the one from [Sequence to sequence learning with neural networks](http://papers.nips.cc/paper/5346-sequence-to-sequence-learning-with-neural-networks.pdf) .
  *
- * \tparam Builder This can theoretically be any RNNbuilder. It's only been tested with an LSTM as of now
+ * \tparam Builder This can theoretically be any RNNbuilder. It's only been tested with an LSTM as
+ * of now
  */
 template <class Builder>
 struct EncoderDecoder {
@@ -383,5 +386,3 @@ private:
         return idx ? idx - 1 : 0;
     }
 };
-
-
