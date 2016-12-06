@@ -1,6 +1,6 @@
 /**
  * \file encdec.h
- * \defgroup seq2seqbuilders
+ * \defgroup seq2seqbuilders seq2seqbuilders
  * \brief Sequence to sequence models
  * 
  * An example implementation of a simple sequence to sequence model based on lstm encoder/decoder

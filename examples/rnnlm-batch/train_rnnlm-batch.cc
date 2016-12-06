@@ -1,114 +1,18 @@
-#include "dynet/nodes.h"
-#include "dynet/dynet.h"
-#include "dynet/training.h"
-#include "dynet/timing.h"
-#include "dynet/rnn.h"
-#include "dynet/gru.h"
-#include "dynet/lstm.h"
-#include "dynet/dict.h"
-#include "dynet/expr.h"
+/**
+ * Train a RNN language model in a batched manner
+ *
+ * This provide an example of usage of the rnnlm-batch.h model
+ */
+#include "rnnlm-batch.h"
 #include "../utils/getpid.h"
+#include "../utils/cl-args.h"
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <algorithm>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
+using namespace dynet::expr;
 
-unsigned LAYERS = 2;
-unsigned INPUT_DIM = 8;  //256
-unsigned HIDDEN_DIM = 24;  // 1024
-unsigned BATCH_SIZE = 4;
-unsigned VOCAB_SIZE = 0;
 
-dynet::Dict d;
-int kSOS;
-int kEOS;
-
-template <class Builder>
-struct RNNLanguageModel {
-  LookupParameter p_c;
-  Parameter p_R;
-  Parameter p_bias;
-  Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
-    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
-    p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
-    p_bias = model.add_parameters({VOCAB_SIZE});
-  }
-
-  // return Expression of total loss
-  Expression BuildLMGraphs(const vector<vector<int> >& sents,
-                           unsigned id,
-                           unsigned bsize,
-                           unsigned & chars,
-                           ComputationGraph& cg) {
-    const unsigned slen = sents[id].size();
-    builder.new_graph(cg);  // reset RNN builder for new graph
-    builder.start_new_sequence();
-    Expression i_R = parameter(cg, p_R); // hidden -> word rep parameter
-    Expression i_bias = parameter(cg, p_bias);  // word bias
-    vector<Expression> errs;
-    vector<unsigned> last_arr(bsize, sents[0][0]), next_arr(bsize);
-    for (unsigned t = 1; t < slen; ++t) {
-      for (unsigned i = 0; i < bsize; ++i) {
-        next_arr[i] = sents[id+i][t];
-        if(next_arr[i] != *sents[id].rbegin()) chars++; // add non-EOS
-      }
-      // y_t = RNN(x_t)
-      Expression i_x_t = lookup(cg, p_c, last_arr);
-      Expression i_y_t = builder.add_input(i_x_t);
-      Expression i_r_t = i_bias + i_R * i_y_t;
-      Expression i_err = pickneglogsoftmax(i_r_t, next_arr);
-      errs.push_back(i_err);
-      last_arr = next_arr;
-    }
-    Expression i_nerr = sum_batches(sum(errs));
-    return i_nerr;
-  }
-
-  // return Expression for total loss
-  void RandomSample(int max_len = 150) {
-    cerr << endl;
-    ComputationGraph cg;
-    builder.new_graph(cg);  // reset RNN builder for new graph
-    builder.start_new_sequence();
-    
-    Expression i_R = parameter(cg, p_R);
-    Expression i_bias = parameter(cg, p_bias);
-    vector<Expression> errs;
-    int len = 0;
-    int cur = kSOS;
-    while(len < max_len && cur != kEOS) {
-      ++len;
-      Expression i_x_t = lookup(cg, p_c, cur);
-      // y_t = RNN(x_t)
-      Expression i_y_t = builder.add_input(i_x_t);
-      Expression i_r_t = i_bias + i_R * i_y_t;
-      
-      Expression ydist = softmax(i_r_t);
-      
-      unsigned w = 0;
-      while (w == 0 || (int)w == kSOS) {
-        auto dist = as_vector(cg.incremental_forward(ydist));
-        double p = rand01();
-        for (; w < dist.size(); ++w) {
-          p -= dist[w];
-          if (p < 0.0) { break; }
-        }
-        if (w == dist.size()) w = kEOS;
-      }
-      cerr << (len == 1 ? "" : " ") << d.convert(w);
-      cur = w;
-    }
-    cerr << endl;
-  }
-};
 
 // Sort in descending order of length
 struct CompareLen {
@@ -118,138 +22,232 @@ struct CompareLen {
 };
 
 int main(int argc, char** argv) {
-  dynet::initialize(argc, argv);
-  if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
-    return 1;
-  }
+  // Fetch dynet params ----------------------------------------------------------------------------
+  auto dyparams = dynet::extract_dynet_params(argc, argv);
+  dynet::initialize(dyparams);
+  // Fetch program specific parameters (see ../utils/cl-args.h) ------------------------------------
+  Params params;
+
+  unsigned VOCAB_SIZE = 0;
+
+  get_args(argc, argv, params, TRAIN);
+
+  // Load datasets ---------------------------------------------------------------------------------
+
+  // Dictionary
+  Dict d;
+
+  // Start and end of sentence tokens
   kSOS = d.convert("<s>");
   kEOS = d.convert("</s>");
+
+  // Datasets
   vector<vector<int>> training, dev;
+
+  // Read training data and fill dictionary
   string line;
   int tlc = 0;
   int ttoks = 0;
-  cerr << "Reading training data from " << argv[1] << "...\n";
+  cerr << "Reading training data from " << params.train_file << "...\n";
   {
-    ifstream in(argv[1]);
+    ifstream in(params.train_file);
     assert(in);
-    while(getline(in, line)) {
+    while (getline(in, line)) {
       ++tlc;
       training.push_back(read_sentence(line, &d));
       ttoks += training.back().size();
       if (training.back().front() != kSOS && training.back().back() != kEOS) {
-        cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+        cerr << "Training sentence in " << params.train_file << ":" << tlc
+             << " didn't start or end with <s>, </s>\n";
         abort();
       }
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
-  d.freeze(); // no new word types allowed
-  VOCAB_SIZE = d.size();
-
   // Sort the training sentences in descending order of length
   CompareLen comp;
   sort(training.begin(), training.end(), comp);
   // Pad the sentences in the same batch with EOS so they are the same length
   // This modifies the training objective a bit by making it necessary to
   // predict EOS multiple times, but it's easy and not so harmful
-  for(size_t i = 0; i < training.size(); i += BATCH_SIZE)
-      for(size_t j = 1; j < BATCH_SIZE; ++j)
-        while(training[i+j].size() < training[i].size())
-            training[i+j].push_back(kEOS);
+  for (size_t i = 0; i < training.size(); i += params.BATCH_SIZE)
+    for (size_t j = 1; j < params.BATCH_SIZE; ++j)
+      while (training[i + j].size() < training[i].size())
+        training[i + j].push_back(kEOS);
+  // Freeze dictionary
+  d.freeze(); // no new word types allowed
+  d.set_unk("UNK");
+  INPUT_VOCAB_SIZE = d.size();
+  OUTPUT_VOCAB_SIZE = d.size();
 
+  // Read validation dataset
   int dlc = 0;
   int dtoks = 0;
-  cerr << "Reading dev data from " << argv[2] << "...\n";
+  cerr << "Reading dev data from " << params.dev_file << "...\n";
   {
-    ifstream in(argv[2]);
+    ifstream in(params.dev_file);
     assert(in);
-    while(getline(in, line)) {
+    while (getline(in, line)) {
       ++dlc;
       dev.push_back(read_sentence(line, &d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
-        cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+        cerr << "Dev sentence in " << params.dev_file << ":" << dlc
+             << " didn't start or end with <s>, </s>\n";
+        cerr << d.convert(dev.back().front())  << ":"
+             << d.convert(dev.back().back()) << " \n";
+        cerr << kSOS << ":" << kEOS << "\n";
         abort();
       }
     }
     cerr << dlc << " lines, " << dtoks << " tokens\n";
   }
+  // Sort the dev sentences in descending order of length (for minibatching)
+  sort(dev.begin(), dev.end(), comp);
+  // Pad the sentences in the same batch with EOS so they are the same length
+  // This modifies the dev objective a bit by making it necessary to
+  // predict EOS multiple times, but it's easy and not so harmful
+  for (size_t i = 0; i < dev.size(); i += params.DEV_BATCH_SIZE)
+    for (size_t j = 1; j < params.DEV_BATCH_SIZE; ++j)
+      while (dev[i + j].size() < dev[i].size())
+        dev[i + j].push_back(kEOS);
 
+  // Model name (for saving) -----------------------------------------------------------------------
   ostringstream os;
-  os << "lm"
-     << '_' << LAYERS
-     << '_' << INPUT_DIM
-     << '_' << HIDDEN_DIM
-     << "-pid" << getpid() << ".params";
+  // Store a bunch of information in the model name
+  os << params.exp_name
+     << "_" << "rnnlm"
+     << '_' << params.LAYERS
+     << '_' << params.INPUT_DIM
+     << '_' << params.HIDDEN_DIM
+     << ".params";
   const string fname = os.str();
   cerr << "Parameters will be written to: " << fname << endl;
-  double best = 9e+99;
 
+  // Initialize model and trainer ------------------------------------------------------------------
   Model model;
-  Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(&model);
-  sgd->clip_threshold *= BATCH_SIZE;
+  // Use Adam optimizer
+  Trainer* adam = new AdamTrainer(&model, 0.001, 0.9, 0.999, 1e-8);
+  adam->clip_threshold *= params.BATCH_SIZE;
 
-  RNNLanguageModel<LSTMBuilder> lm(model);
-  if (argc == 4) {
-    string fname = argv[3];
-    ifstream in(fname);
+  // Create model
+  RNNBatchLanguageModel<LSTMBuilder> lm(model,
+                                   params.LAYERS,
+                                   params.INPUT_DIM,
+                                   params.HIDDEN_DIM,
+                                   INPUT_VOCAB_SIZE);
+
+  // Load preexisting weights (if provided)
+  if (params.model_file != "") {
+    ifstream in(params.model_file);
     boost::archive::text_iarchive ia(in);
-    ia >> model;
+    ia >> model >> lm;
   }
 
-  unsigned report_every_i = 50;
-  unsigned dev_every_i_reports = 500;
-  vector<unsigned> order((training.size()+BATCH_SIZE-1)/BATCH_SIZE);
-  unsigned si = order.size();
-  for (unsigned i = 0; i < order.size(); ++i) order[i] = i*BATCH_SIZE;
+  // Initialize variables for training -------------------------------------------------------------
+  // Best dev score
+  double best = 9e+99;
+
+  // Number of batches in training set
+  unsigned num_batches = training.size()  / params.BATCH_SIZE - 1;
+  // Number of batches in validation set
+  unsigned num_dev_batches = dev.size() / params.DEV_BATCH_SIZE - 1;
+
+  // Number of sentences to sample each epoch (for visualization)
+  unsigned size_samples = 200;
+
+  // Random indexing
+  unsigned si;
+  vector<unsigned> order(num_batches);
+  for (unsigned i = 0; i < num_batches; ++i) order[i] = i;
+
   bool first = true;
-  int report = 0;
-  unsigned lines = 0;
-  while(1) {
-    Timer iteration("completed in");
+  unsigned epoch = 0;
+  // Run for the given number of epochs (or indefinitely if params.NUM_EPOCHS is negative)
+  while (epoch < params.NUM_EPOCHS || params.NUM_EPOCHS < 0) {
+    // Update the optimizer
+    if (first) { first = false; } else { adam->update_epoch(); }
+    // Reshuffle the dataset
+    cerr << "**SHUFFLE\n";
+    random_shuffle(order.begin(), order.end());
+    // Initialize loss and number of chars(/word) (for loss per char/word)
     double loss = 0;
-    unsigned chars = 0;
-    for (unsigned i = 0; i < report_every_i; ++i, ++si) {
-      if (si == order.size()) {
-        si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
-        cerr << "**SHUFFLE\n";
-        shuffle(order.begin(), order.end(), *rndeng);
-      }
+    unsigned tokens = 0;
+    // Start timer
+    Timer* iteration = new Timer("completed in");
+
+    for (si = 0; si < num_batches; ++si) {
       // build graph for this instance
       ComputationGraph cg;
-      unsigned bsize = std::min((unsigned)training.size()-order[si], BATCH_SIZE); // Batch size
-      Expression loss_expr = lm.BuildLMGraphs(training, order[si], bsize, chars, cg);
+      // Compute batch start id and size
+      int id = order[si] * params.BATCH_SIZE;
+      unsigned bsize = std::min((unsigned)training.size() - id, params.BATCH_SIZE);
+      // Get negative log likelihood on batch
+      Expression loss_expr = lm.getNegLogProb(training, id, bsize, tokens, cg);
+      // Get scalar error for monitoring
       loss += as_scalar(cg.forward(loss_expr));
+      // Compute gradient with backward pass
       cg.backward(loss_expr);
-      sgd->update();
-      lines += bsize;
+      // Update parameters
+      adam->update();
+      // Print progress every tenth of the dataset
+      if ((si + 1) % (num_batches / 10) == 0 || si == num_batches - 1) {
+        // Print informations
+        adam->status();
+        cerr << " E = " << (loss / tokens) << " ppl=" << exp(loss / tokens) << ' ';
+        // Reinitialize timer
+        delete iteration;
+        iteration = new Timer("completed in");
+        // Reinitialize loss
+        loss = 0;
+        tokens = 0;
+      }
     }
-    sgd->status();
-    cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
-    lm.RandomSample();
 
-    // show score on dev data?
-    report++;
-    if (report % dev_every_i_reports == 0) {
+
+    // Show score on dev data
+    if (si == num_batches) {
       double dloss = 0;
-      unsigned dchars = 0;
-      for (unsigned i = 0; i < dev.size(); ++i) {
+      unsigned dtokens = 0;
+      for (unsigned i = 0; i < num_dev_batches; ++i) {
+        // build graph for this instance
         ComputationGraph cg;
-        Expression loss_expr = lm.BuildLMGraphs(dev, i, 1, dchars, cg);
+        // Compute batch start id and size
+        unsigned id = i * params.DEV_BATCH_SIZE;
+        unsigned bsize = std::min((unsigned)dev.size() - id, params.DEV_BATCH_SIZE); // Batch size
+        // Get negative log likelihood on batch
+        Expression loss_expr = lm.getNegLogProb(dev, id, bsize, dtokens, cg);
+        // Add loss
         dloss += as_scalar(cg.forward(loss_expr));
       }
+      // If the dev loss is lower than the previous ones, save the ,odel
       if (dloss < best) {
         best = dloss;
         ofstream out(fname);
         boost::archive::text_oarchive oa(out);
-        oa << model;
+        oa << model << lm;
       }
-      cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
+      // Print informations
+      cerr << "\n***DEV [epoch=" << (epoch)
+           << "] E = " << (dloss / dtokens)
+           << " ppl=" << exp(dloss / dtokens) << ' ';
+      // Reinitialize timer
+      delete iteration;
+      iteration = new Timer("completed in");
     }
+
+    // Sample some examples because it's cool (also helps debugging)
+    cout << "---------------------------------------------" << endl;
+    lm.RandomSample(d, size_samples);
+    cout << "---------------------------------------------" << endl;
+
+    // Increment epoch
+    ++epoch;
+
   }
-  delete sgd;
+
+  delete adam;
+
+
 }
 
