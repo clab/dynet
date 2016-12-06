@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 
-enum Task {TRAIN, ANALYSIS};
+enum Task {TRAIN, TEST};
 
 struct Params {
     string exp_name = "encdec";
@@ -19,8 +19,6 @@ struct Params {
     unsigned DEV_BATCH_SIZE = 16;
     int NUM_EPOCHS = -1;
     bool bidirectionnal = false;
-    bool cust_l2 = false;
-    bool dist_penalty = false;
 };
 
 void get_args(int argc,
@@ -120,21 +118,12 @@ void get_args(int argc,
             i++;
         } else  if (arg == "--bidirectionnal" || arg == "-bid") {
             params.bidirectionnal = true;
-        } else  if (arg == "--cust_l2" || arg == "-cl2") {
-            params.cust_l2 = true;
-        } else if (arg == "--dist_penalty" || arg == "-dp") {
-            params.dist_penalty = true;
         }
         i++;
     }
     if (task == TRAIN) {
         if (params.train_file == "" || params.dev_file == "") {
             std::cerr << "Usage: " << argv[0] << " -t train.txt -d dev.txt\n";
-            abort();
-        }
-    } else if (task == ANALYSIS) {
-        if (params.dic_file == "" || params.test_file == "" || params.model_file == "") {
-            std::cerr << "Usage: " << argv[0] << " -dic corpus_dic.txt -ts test.txt -m model.params\n";
             abort();
         }
     }
