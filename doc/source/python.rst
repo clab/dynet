@@ -160,6 +160,7 @@ installation is likely to be working:
 
 If it doesn't work and you get an error similar to the following:
 ::
+
     ImportError: dlopen(/Users/sneharajana/.python-eggs/dyNET-0.0.0-py2.7-macosx-10.11-intel.egg-tmp/_dynet.so, 2): Library not loaded: @rpath/libdynet.dylib
     Referenced from: /Users/sneharajana/.python-eggs/dyNET-0.0.0-py2.7-macosx-10.11-intel.egg-tmp/_dynet.so
     Reason: image not found``
