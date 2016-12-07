@@ -8,19 +8,19 @@ This downloads the data used in this tutorial.
 
 Train an LSTM LM using a class-factor softmax:
 
-    ./rnnlm/lm -x -s -t ../rnnlm/ptb-mikolov/train.txt -d ../rnnlm/ptb-mikolov/valid.txt \
+    ./train_rnnlm -x -s -t ../rnnlm/ptb-mikolov/train.txt -d ../rnnlm/ptb-mikolov/valid.txt \
          -c ../rnnlm/ptb-mikolov/clusters-mkcls.txt -D 0.3 -H 256 --eta_decay_onset_epoch 10 --eta_decay_rate 0.5
 
 Train an LSTM LM with a standard softmax:
 
-    ./rnnlm/lm -x -s -t ../rnnlm/ptb-mikolov/train.txt -d ../rnnlm/ptb-mikolov/valid.txt \
+    ./train_rnnlm -x -s -t ../rnnlm/ptb-mikolov/train.txt -d ../rnnlm/ptb-mikolov/valid.txt \
          -D 0.3 -H 256 --eta_decay_onset_epoch 10 --eta_decay_rate 0.5
 
 ### Evaluation example
 
 Evaluate a trained model:
 
-    ./rnnlm/lm -t ../rnnlm/ptb-mikolov/train.txt -c ../rnnlm/ptb-mikolov/clusters-mkcls.txt \
+    ./train_rnnlm -t ../rnnlm/ptb-mikolov/train.txt -c ../rnnlm/ptb-mikolov/clusters-mkcls.txt \
          -m lm_0.3_2_128_256-pid7865.params -H 256 -p ../rnnlm/ptb-mikolov/test.txt
 
 ### PTB Baselines
