@@ -9,3 +9,4 @@ Read the [documentation](http://dynet.readthedocs.io/en/latest/) to get started,
 * **Latest Release:** [v1.0-rc1](https://github.com/clab/dynet/releases/tag/v1.0-rc1)
 
 [![Build Status](https://travis-ci.org/clab/dynet.svg?branch=master)](https://travis-ci.org/clab/dynet)
+[![Doc build Status](https://readthedocs.org/projects/dynet/badge/?version=latest)](http://dynet.readthedocs.io/en/latest/)
