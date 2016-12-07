@@ -14,12 +14,6 @@ python/dist/
 python/dyNET.egg-info/
 
 # binaries
-examples/embed-cl
-examples/encdec
-examples/xor
-examples/xor-xent
-examples/rnnlm
-examples/nlm
 
 #data
 rnnlm/ptb-mikolov/

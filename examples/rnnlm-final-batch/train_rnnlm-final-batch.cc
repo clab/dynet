@@ -6,13 +6,13 @@
 #include "dynet/gru.h"
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
-# include "dynet/expr.h"
-#include "dynet/grad-check.h"
-#include "getpid.h"
+#include "dynet/expr.h"
+#include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -23,6 +23,7 @@ using namespace dynet;
 unsigned LAYERS = 2;
 unsigned INPUT_DIM = 8;  //256
 unsigned HIDDEN_DIM = 24;  // 1024
+unsigned BATCH_SIZE = 4;
 unsigned VOCAB_SIZE = 0;
 
 dynet::Dict d;
@@ -34,35 +35,49 @@ struct RNNLanguageModel {
   LookupParameter p_c;
   Parameter p_R;
   Parameter p_bias;
+  Parameter p_last;
+  Parameter p_last_bias;
   Builder builder;
   explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
-    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
+    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
+    p_last = model.add_parameters({1, LAYERS * HIDDEN_DIM});
+    p_last_bias = model.add_parameters({1});
   }
 
   // return Expression of total loss
-  Expression BuildLMGraph(const vector<int>& sent, ComputationGraph& cg, const vector<unsigned>* prows) {
-    const unsigned slen = sent.size() - 1;
+  Expression BuildLMGraphs(const vector<vector<int> >& sents,
+                           unsigned id,
+                           unsigned bsize,
+                           unsigned & chars,
+                           ComputationGraph& cg) {
+    const unsigned slen = sents[id].size();
     builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
     Expression i_R = parameter(cg, p_R); // hidden -> word rep parameter
-    i_R = select_rows(i_R, prows);  // FILTER rows for bag (prows)
     Expression i_bias = parameter(cg, p_bias);  // word bias
-    i_bias = select_rows(i_bias, prows);  // FILTER rows for bag
     vector<Expression> errs;
-    for (unsigned t = 0; t < slen; ++t) {
-      // lookup uses prows since sent[t] is the mapped row
-      Expression i_x_t = lookup(cg, p_c, (*prows)[sent[t]]);
+    vector<unsigned> last_arr(bsize, sents[0][0]), next_arr(bsize);
+    for (unsigned t = 1; t < slen; ++t) {
+      for (unsigned i = 0; i < bsize; ++i) {
+        next_arr[i] = sents[id + i][t];
+        if (next_arr[i] != *sents[id].rbegin()) chars++; // add non-EOS
+      }
       // y_t = RNN(x_t)
+      Expression i_x_t = lookup(cg, p_c, last_arr);
       Expression i_y_t = builder.add_input(i_x_t);
-      Expression i_r_t =  i_bias + i_R * i_y_t;
-      
-      Expression lsm = log_softmax(i_r_t);
-      Expression err = -pick(lsm, sent[t+1]);
-      errs.push_back(err);
+      // Expression i_r_t = i_bias + i_R * i_y_t;
+      // Expression i_err = pickneglogsoftmax(i_r_t, next_arr);
+      // errs.push_back(i_err);
+      last_arr = next_arr;
     }
-    Expression i_nerr = sum(errs);
+    Expression i_last = parameter(cg, p_last);
+    Expression i_last_bias = parameter(cg, p_last_bias);
+
+    Expression last_h = builder.final_h();
+    Expression err = i_last_bias + i_last * last_h;
+    Expression i_nerr = sum_batches(err);
     return i_nerr;
   }
 
@@ -72,21 +87,21 @@ struct RNNLanguageModel {
     ComputationGraph cg;
     builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
-    
+
     Expression i_R = parameter(cg, p_R);
     Expression i_bias = parameter(cg, p_bias);
     vector<Expression> errs;
     int len = 0;
     int cur = kSOS;
-    while(len < max_len && cur != kEOS) {
+    while (len < max_len && cur != kEOS) {
       ++len;
       Expression i_x_t = lookup(cg, p_c, cur);
       // y_t = RNN(x_t)
       Expression i_y_t = builder.add_input(i_x_t);
       Expression i_r_t = i_bias + i_R * i_y_t;
-      
+
       Expression ydist = softmax(i_r_t);
-      
+
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
         auto dist = as_vector(cg.incremental_forward(ydist));
@@ -101,6 +116,13 @@ struct RNNLanguageModel {
       cur = w;
     }
     cerr << endl;
+  }
+};
+
+// Sort in descending order of length
+struct CompareLen {
+  bool operator()(const std::vector<int>& first, const std::vector<int>& second) {
+    return first.size() > second.size();
   }
 };
 
@@ -120,7 +142,7 @@ int main(int argc, char** argv) {
   {
     ifstream in(argv[1]);
     assert(in);
-    while(getline(in, line)) {
+    while (getline(in, line)) {
       ++tlc;
       training.push_back(read_sentence(line, &d));
       ttoks += training.back().size();
@@ -134,13 +156,24 @@ int main(int argc, char** argv) {
   d.freeze(); // no new word types allowed
   VOCAB_SIZE = d.size();
 
+  // Sort the training sentences in descending order of length
+  CompareLen comp;
+  sort(training.begin(), training.end(), comp);
+  // Pad the sentences in the same batch with EOS so they are the same length
+  // This modifies the training objective a bit by making it necessary to
+  // predict EOS multiple times, but it's easy and not so harmful
+  for (size_t i = 0; i < training.size(); i += BATCH_SIZE)
+    for (size_t j = 1; j < BATCH_SIZE; ++j)
+      while (training[i + j].size() < training[i].size())
+        training[i + j].push_back(kEOS);
+
   int dlc = 0;
   int dtoks = 0;
   cerr << "Reading dev data from " << argv[2] << "...\n";
   {
     ifstream in(argv[2]);
     assert(in);
-    while(getline(in, line)) {
+    while (getline(in, line)) {
       ++dlc;
       dev.push_back(read_sentence(line, &d));
       dtoks += dev.back().size();
@@ -151,6 +184,7 @@ int main(int argc, char** argv) {
     }
     cerr << dlc << " lines, " << dtoks << " tokens\n";
   }
+
   ostringstream os;
   os << "lm"
      << '_' << LAYERS
@@ -162,14 +196,11 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   Model model;
-  bool use_momentum = false;
   Trainer* sgd = nullptr;
-  //if (use_momentum)
-  //else
-  //sgd = new SimpleSGDTrainer(&model);
-  sgd = new MomentumSGDTrainer(&model);
+  sgd = new SimpleSGDTrainer(&model);
+  sgd->clip_threshold *= BATCH_SIZE;
+
   RNNLanguageModel<LSTMBuilder> lm(model);
-  //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
     string fname = argv[3];
     ifstream in(fname);
@@ -179,65 +210,45 @@ int main(int argc, char** argv) {
 
   unsigned report_every_i = 50;
   unsigned dev_every_i_reports = 500;
-  unsigned si = training.size();
-  vector<unsigned> order(training.size());
-  for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
+  vector<unsigned> order((training.size() + BATCH_SIZE - 1) / BATCH_SIZE);
+  unsigned si = order.size();
+  for (unsigned i = 0; i < order.size(); ++i) order[i] = i * BATCH_SIZE;
   bool first = true;
   int report = 0;
   unsigned lines = 0;
-  vector<unsigned> rows;
-  vector<unsigned> w2sl(VOCAB_SIZE, 0);
-  vector<int> rmsent;
-  while(1) {
+  while (1) {
     Timer iteration("completed in");
     double loss = 0;
     unsigned chars = 0;
-    for (unsigned i = 0; i < report_every_i; ++i) {
-      if (si == training.size()) {
+    for (unsigned i = 0; i < report_every_i; ++i, ++si) {
+      if (si == order.size()) {
         si = 0;
         if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
-
       // build graph for this instance
       ComputationGraph cg;
-      auto& sent = training[order[si]];
-      int oi = 0;
-      int idx = 0;
-      rmsent.resize(sent.size());
-      rows.resize(sent.size());
-      for (auto w : sent) {
-        auto& rmw = w2sl[w];
-        if (rmw == 0) { rows[idx] = w; rmw = idx; idx++; }
-        rmsent[oi] = rmw;
-        oi++;
-      }
-      rows.resize(idx); // in case of duplicates
-      chars += sent.size() - 1;
-      ++si;
-      Expression loss_expr = lm.BuildLMGraph(rmsent, cg, &rows);
+      unsigned bsize = std::min((unsigned)training.size() - order[si], BATCH_SIZE); // Batch size
+      Expression loss_expr = lm.BuildLMGraphs(training, order[si], bsize, chars, cg);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
       sgd->update();
-      for (auto w : sent) { w2sl[w] = 0; }
-      ++lines;
+      lines += bsize;
     }
     sgd->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
-#if 0
     lm.RandomSample();
 
     // show score on dev data?
     report++;
     if (report % dev_every_i_reports == 0) {
       double dloss = 0;
-      int dchars = 0;
-      for (auto& sent : dev) {
+      unsigned dchars = 0;
+      for (unsigned i = 0; i < dev.size(); ++i) {
         ComputationGraph cg;
-        lm.BuildLMGraph(sent, cg);
-        dloss += as_scalar(cg.forward());
-        dchars += sent.size() - 1;
+        Expression loss_expr = lm.BuildLMGraphs(dev, i, 1, dchars, cg);
+        dloss += as_scalar(cg.forward(loss_expr));
       }
       if (dloss < best) {
         best = dloss;
@@ -247,7 +258,6 @@ int main(int argc, char** argv) {
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
-#endif
   }
   delete sgd;
 }
