@@ -1,14 +1,14 @@
 /**
  * \file expr.h
- * \defgroup operations
- * \defgroup inputoperations
- * \defgroup arithmeticoperations
- * \defgroup lossoperations
- * \defgroup flowoperations
- * \defgroup noiseoperations
- * \defgroup convoperations
- * \defgroup tensoroperations
- * \defgroup linalgoperations
+ * \defgroup operations operations
+ * \defgroup inputoperations inputoperations
+ * \defgroup arithmeticoperations arithmeticoperations
+ * \defgroup lossoperations lossoperations
+ * \defgroup flowoperations flowoperations
+ * \defgroup noiseoperations noiseoperations
+ * \defgroup convoperations convoperations
+ * \defgroup tensoroperations tensoroperations
+ * \defgroup linalgoperations linalgoperations
  * \brief The various operations that you can use in building a DyNet graph
  * 
  * \details TODO: **This documentation is incomplete. See expr.h for a full list of expressions.**
@@ -249,7 +249,7 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsi
  * 
  * \param g Computation graph
  * \param p LookupParameter object from which to load
- * \param indices Pointer to lookup indices
+ * \param pindices Pointer to lookup indices
  * 
  * \return An expression with the "i"th batch element representing p[*pindices[i]]
  */
@@ -645,6 +645,7 @@ Expression softsign(const Expression& x);
  * \details Calculate an output where the ith element is equal to x_i^y_i
  * 
  * \param x The input expression
+ * \param y The exponent expression
  * 
  * \return An expression where the ith element is equal to x_i^y_i
  */
@@ -844,7 +845,7 @@ Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & 
  *          pickneglogsoftmax: ``pv`` can be modified without re-creating the computation graph.
  * 
  * \param x An expression with vectors of scores over N batch elements
- * \param v A size-N vector indicating the index with respect to all the batch elements
+ * \param pv A pointer to the indexes
  * 
  * \return The negative log likelihoods over all the batch elements
  */
@@ -854,7 +855,7 @@ Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * 
  * \ingroup lossoperations
  * \brief Hinge loss
  * \details This expression calculates the hinge loss, formally expressed as:
- *          \f$ \text{hinge}(x,index,m) = \sum_{i \ne index} max(0, m-x[index]+x[i]). \f$
+ *          \f$ \text{hinge}(x,index,m) = \sum_{i \ne index} \max(0, m-x[index]+x[i]). \f$
  * 
  * \param x A vector of scores
  * \param index The index of the correct candidate
@@ -995,13 +996,14 @@ Expression l1_distance(const Expression& x, const Expression& y);
  * \ingroup lossoperations
  * \brief Huber distance
  * \details The huber distance between values of ``x`` and ``y`` parameterized
- *    by ``c,`` \f$\sum_i L_c(x_i, y_i)\f$ where: 
- *    \f[
- *      L_c(x, y) = \begin{cases}
+ *    by ``c,`` \f$\sum_i L_c(x_i, y_i)\f$ where:
+ *    
+ *    \f$
+ *      L_c(x, y) = \begin{cases}{lr}
  *        \frac{1}{2}(y - x)^2                   & \textrm{for } |y - f(x)| \le c, \\
  *        c\, |y - f(x)| - \frac{1}{2}c^2 & \textrm{otherwise.}
  *      \end{cases}
- *    \f]
+ *    \f$
  *
  * \param x A vector of values
  * \param y Another vector of values
