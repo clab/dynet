@@ -68,7 +68,7 @@ situations. There are two ways to do this:
 * **Vanilla Dropout:** At training time, perform dropout with probability
   ``p``. At test time, scale the outputs of each node by ``p``.
 * **Inverted Dropout:** At training time, perform dropout with probability
-  ``p``, *and* scale the outputs by ``1-p``. At test time, use the outputs
+  ``p``, *and* scale the outputs by ``1/p``. At test time, use the outputs
   as-is.
 
 The first is perhaps more common, but the second is convenient, because we
