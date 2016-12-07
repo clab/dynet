@@ -42,6 +42,7 @@ struct Trainer {
    * 
    * \param m Pointer to the model to be trained
    * \param e0 Initial learning rate
+   * \param edecay Learning rate decay
    */
   explicit Trainer(Model* m, real e0, real edecay = 0.0) :
     eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), 
