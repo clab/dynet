@@ -88,4 +88,4 @@ Python Tutorials
 
 Guided examples in Python can be found in the jupyter tutorials_.
 
-.. _tutorials: https://github.com/clab/dynet/tree/master/tutorial
+.. _tutorials: https://github.com/clab/dynet/tree/master/examples/tutorials
