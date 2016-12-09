@@ -315,6 +315,9 @@ cdef class Model: # {{{
         elif isinstance(c, LSTMBuilder):
             fh.write("lstm_builder ")
             saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
+        elif isinstance(c, VanillaLSTMBuilder):
+            fh.write("vanilla_lstm_builder ")
+            saver.add_vanilla_lstm_builder((<CVanillaLSTMBuilder*>(<VanillaLSTMBuilder>c).thisptr)[0])
         elif isinstance(c, SimpleRNNBuilder):
             saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
             fh.write("srnn_builder ")
@@ -351,6 +354,7 @@ cdef class Model: # {{{
         cdef CLookupParameters lp
         cdef GRUBuilder gb_
         cdef LSTMBuilder lb_
+        cdef VanillaLSTMBuilder vlb_
         cdef SimpleRNNBuilder sb_
         tp = next(itypes)
         if tp == "param":
@@ -369,6 +373,10 @@ cdef class Model: # {{{
             lb_ = LSTMBuilder(0,0,0,self) # empty builder
             loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
             return lb_
+        elif tp == "vanilla_lstm_builder":
+            vlb_ = VanillaLSTMBuilder(0,0,0,self) # empty builder
+            loader.fill_vanilla_lstm_builder((<CVanillaLSTMBuilder *>vlb_.thisptr)[0])
+            return vlb_
         elif tp == "srnn_builder":
             sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
             loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
@@ -1138,6 +1146,17 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
         self.cg_version = -1
 
     def whoami(self): return "LSTMBuilder"
+# }}}
+
+cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        if layers > 0:
+            self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        else:
+            self.thisptr = new CVanillaLSTMBuilder()
+        self.cg_version = -1
+
+    def whoami(self): return "VanillaLSTMBuilder"
 # }}}
 
 cdef class FastLSTMBuilder(_RNNBuilder): # {{{
