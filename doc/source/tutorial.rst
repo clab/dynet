@@ -82,3 +82,10 @@ initialization, reading/writing models, recurrent/LSTM networks, or
 adding biases to functions. The best way to get an idea of how to use
 DyNet for real is to look in the ``example`` directory, particularly
 starting with the simplest ``xor`` example.
+
+Python Tutorials
+---------------
+
+Guided examples in Python can be found in the jupyter tutorials_.
+
+.. _tutorials: https://github.com/clab/dynet/tree/master/tutorial
