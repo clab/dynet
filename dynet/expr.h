@@ -1085,33 +1085,208 @@ Expression poisson_loss(const Expression& x, const unsigned* py);
  */
 Expression nobackprop(const Expression& x);
 
-// reshape::forward is O(1), but backward is O(n)
+/**
+ * \ingroup flowoperations
+ * \brief Reshape to another size
+ * \details This node reshapes a tensor to another size, without changing the
+ *          underlying layout of the data. The layout of the data in DyNet is
+ *          column-major, so if we have a 3x4 matrix
+ *    
+ *    \f$
+ *      \begin{pmatrix}
+ *        x_{1,1} & x_{1,2} & x_{1,3} & x_{1,4} \\
+ *        x_{2,1} & x_{2,2} & x_{2,3} & x_{2,4} \\
+ *        x_{3,1} & x_{3,2} & x_{3,3} & x_{3,4} \\
+ *      \end{pmatrix}
+ *    \f$
+ *
+ *          and transform it into a 2x6 matrix, it will be rearranged as:
+ *
+ *    \f$
+ *      \begin{pmatrix}
+ *        x_{1,1} & x_{3,1} & x_{2,2} & x_{1,3} & x_{3,3} & x_{2,4} \\
+ *        x_{1,2} & x_{1,2} & x_{3,2} & x_{2,3} & x_{1,4} & x_{3,4} \\
+ *      \end{pmatrix}
+ *    \f$
+ *
+ *         **Note:** This is O(1) for forward, and O(n) for backward.
+ * 
+ * \param x The input expression
+ * \param d The new dimensions
+ * 
+ * \return The reshaped expression
+ */
 Expression reshape(const Expression& x, const Dim& d);
-// transpose requires O(n)
+
+/**
+ * \ingroup flowoperations
+ * \brief Transpose a matrix
+ * \details Get the transpose of the matrix.
+ *          **Note:** This is O(1) if either the row or column dimension is 1,
+ *          and O(n) otherwise.
+ * 
+ * \param x The input expression
+ * 
+ * \return The transposed expression
+ */
 Expression transpose(const Expression& x);
+
+/**
+ * \ingroup flowoperations
+ * \brief Select rows
+ * \details Select a subset of rows of a matrix.
+ * 
+ * \param x The input expression
+ * \param rows The rows to extract
+ * 
+ * \return An expression containing the selected rows
+ */
 Expression select_rows(const Expression& x, const std::vector<unsigned>& rows);
+
+/**
+ * \ingroup flowoperations
+ * \brief Modifiable select rows
+ * \details Select a subset of rows of a matrix, where the elements of prows
+ *          can be modified without re-creating the computation graph.
+ * 
+ * \param x The input expression
+ * \param prows The rows to extract
+ * 
+ * \return An expression containing the selected rows
+ */
 Expression select_rows(const Expression& x, const std::vector<unsigned>* prows);
-// select_cols is more efficient than select_rows since Eigen uses column-major order
+
+/**
+ * \ingroup flowoperations
+ * \brief Select columns
+ * \details Select a subset of columns of a matrix. select_cols is more 
+ *          efficient than select_rows since DyNet uses column-major order.
+ * 
+ * \param x The input expression
+ * \param columns The columns to extract
+ * 
+ * \return An expression containing the selected columns
+ */
 Expression select_cols(const Expression& x, const std::vector<unsigned>& cols);
+
+/**
+ * \ingroup flowoperations
+ * \brief Modifiable select columns
+ * \details Select a subset of columns of a matrix, where the elements of pcols
+ *          can be modified without re-creating the computation graph.
+ * 
+ * \param x The input expression
+ * \param pcolumns The columns to extract
+ * 
+ * \return An expression containing the selected columns
+ */
 Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
 
-// Sum the results of multiple batches
+/**
+ * \ingroup flowoperations
+ * \brief Sum over minibatches
+ * \details Sum an expression that consists of multiple minibatches into one of
+ *          equal dimension but with only a single minibatch. This is useful
+ *          for summing loss functions at the end of minibatch training.
+ * 
+ * \param x The input mini-batched expression
+ * 
+ * \return An expression with a single batch
+ */
 Expression sum_batches(const Expression& x);
 
-// pick parts out of bigger objects
+/**
+ * \ingroup flowoperations
+ * \brief Pick element
+ * \details Pick a single element from an expression.
+ * 
+ * \param x The input expression
+ * \param v The index of the element to select
+ * 
+ * \return The value of x[v]
+ */
 Expression pick(const Expression& x, unsigned v);
+
+/**
+ * \ingroup flowoperations
+ * \brief Pick multiple elements
+ * \details Pick multiple elements from an input expression
+ * 
+ * \param x The input expression
+ * \param v A vector of indicies to choose
+ * 
+ * \return A vector of values {x[v[0]], x[v[1]], ...}
+ */
 Expression pick(const Expression& x, const std::vector<unsigned> & v);
+
+/**
+ * \ingroup flowoperations
+ * \brief Modifiable pick element
+ * \details Pick a single element from an expression, where the index is
+ *          passed by pointer so we do not need to re-create the computation
+ *          graph every time.
+ * 
+ * \param x The input expression
+ * \param pv Pointer to the index of the element to select
+ * 
+ * \return The value of x[*pv]
+ */
 Expression pick(const Expression& x, unsigned * pv);
+
+/**
+ * \ingroup flowoperations
+ * \brief Modifiable pick multiple elements
+ * \details Pick multiple elements from an input expression, where the indices
+ *          are passed by pointer so we do not need to re-create the computation
+ *          graph every time.
+ * 
+ * \param x The input expression
+ * \param pv A pointer to vector of indicies to choose
+ * 
+ * \return A vector of values {x[(*pv)[0]], x[(*pv)[1]], ...}
+ */
 Expression pick(const Expression& x, const std::vector<unsigned> * pv);
+
+/**
+ * \ingroup flowoperations
+ * \brief Pick range of elements
+ * \details Pick a range of elements from an expression.
+ * 
+ * \param x The input expression
+ * \param v The beginning index
+ * \param u The end index
+ * 
+ * \return The value of {x[v],...,x[u]}
+ */
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
+/**
+ * \ingroup flowoperations
+ * \brief Concatenate columns
+ * \details Perform a concatenation of the columns in multiple expressions.
+ *          All expressions must have the same number of rows.
+ * 
+ * \param xs The input expressions
+ * 
+ * \return The expression with the columns concatenated
+ */
+inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateColumns>(xs); }
 template <typename T>
 inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateColumns>(xs); }
-inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateColumns>(xs); }
 
+/**
+ * \ingroup flowoperations
+ * \brief Concatenate rows
+ * \details Perform a concatenation of the rows in multiple expressions.
+ *          All expressions must have the same number of columns.
+ * 
+ * \param xs The input expressions
+ * 
+ * \return The expression with the rows concatenated
+ */
+inline Expression concatenate(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs); }
 template <typename T>
 inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); }
-inline Expression concatenate(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs); }
 
 ////////////////////////////////////////////////
 // Noise operations                           //
