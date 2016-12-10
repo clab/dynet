@@ -1292,8 +1292,51 @@ inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); 
 // Noise operations                           //
 ////////////////////////////////////////////////
 
+/**
+ * \ingroup noiseoperations
+ * \brief Gaussian noise
+ * \details Add gaussian noise to an expression.
+ * 
+ * \param x The input expression
+ * \param stddev The standard deviation of the gaussian
+ * 
+ * \return The noised expression
+ */
 Expression noise(const Expression& x, real stddev);
+
+/**
+ * \ingroup noiseoperations
+ * \brief Dropout
+ * \details
+ *   With a fixed probability, drop out (set to zero) nodes in the input
+ *   expression, and **scale** the remaining nodes by 1/p. Note that there are
+ *   two kinds of dropout:
+ *   - *Regular dropout:* where we perform dropout at training time and then\n
+ *     scale outputs by p at test time.
+ *   - *Inverted dropout:* where we perform dropout and scaling at training\n
+ *     time, and do not need to do anything at test time.
+ *   DyNet implements the latter, so you only need to apply dropout at training
+ *   time, and do not need to perform scaling and test time.
+ * 
+ * \param x The input expression
+ * \param p The dropout probability
+ * 
+ * \return The dropped out expression
+ */
 Expression dropout(const Expression& x, real p);
+
+/**
+ * \ingroup noiseoperations
+ * \brief Block dropout
+ * \details Identical to the dropout operation, but either drops out *all*
+ *          or *no* values in the expression, as opposed to making a decision
+ *          about each value individually.
+ * 
+ * \param x The input expression
+ * \param p The block dropout probability
+ * 
+ * \return The block dropout expression
+ */
 Expression block_dropout(const Expression& x, real p);
 
 ////////////////////////////////////////////////
