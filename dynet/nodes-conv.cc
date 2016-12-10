@@ -344,11 +344,11 @@ void KMaxPooling::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   if(k == 1) {
     Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex,1>> locs(maxmap, dim.size());
     locs.device(*dev.edevice) = xs[0]->t<2>().argmax(1);
-    const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
 #ifdef __CUDACC__
     // TODO: The code that works on CPU does not compile on CUDA
     throw std::runtime_error("KMaxPooling::forward_dev_impl not working on CUDA yet");
 #else
+    const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
     fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().maximum(reduction_axis);
 #endif
   } else {
