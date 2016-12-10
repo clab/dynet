@@ -55,6 +55,9 @@ void Trainer::rescale_and_reset_weight_decay() {
   const auto params = model->parameters_list();
   for (auto p : model->updated_parameters_list())
     params[p]->scale_parameters(weight_decay);
+  const auto lookup_params = model->parameters_list();
+  for (auto p : model->updated_lookup_parameters_list())
+    lookup_params[p]->scale_parameters(weight_decay);
   model->weight_decay.reset_weight_decay();
 }
 
