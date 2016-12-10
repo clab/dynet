@@ -1,5 +1,5 @@
-Multi-processing in DyNet
-=========================
+Multi-processing
+================
 
 How to perform processing on multiple threads
 
