@@ -172,12 +172,14 @@ void initialize(DynetParams params) {
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
-  devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
+  // TODO: Once multi-device support is added, we will potentially allocate both CPU
+  //       and GPU, not either-or
   int default_index = 0;
   if (gpudevices.size() > 0) {
     for (auto gpu : gpudevices)
       devices.push_back(gpu);
-    default_index++;
+  } else {
+    devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
   }
   default_device = devices[default_index];
 
