@@ -41,7 +41,7 @@ struct SocherTreeLSTMBuilder : public TreeLSTMBuilder {
                        unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model);
+                       Model& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
   void copy(const RNNBuilder & params) override;
@@ -88,7 +88,7 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   explicit UnidirectionalTreeLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model);
+                       Model& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
  protected:
@@ -115,7 +115,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   explicit BidirectionalTreeLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model);
+                       Model& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
  protected:

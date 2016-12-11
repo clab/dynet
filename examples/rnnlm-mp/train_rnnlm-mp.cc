@@ -31,7 +31,7 @@ vector<Datum> ReadData(string filename) {
   }
   string line;
   while (getline(fs, line)) {
-    data.push_back(read_sentence(line, &d));
+    data.push_back(read_sentence(line, d));
   }
   return data;
 }
@@ -75,9 +75,9 @@ int main(int argc, char** argv) {
   dynet::initialize(argc, argv, true);
 
   Model model;
-  SimpleSGDTrainer sgd(&model, 0.2);
-  //AdagradTrainer sgd(&model, 0.0);
-  //AdamTrainer sgd(&model, 0.0);
+  SimpleSGDTrainer sgd(model, 0.2);
+  //AdagradTrainer sgd(model, 0.0);
+  //AdamTrainer sgd(model, 0.0);
 
   RNNLanguageModel<LSTMBuilder> rnnlm(model);
 

@@ -65,7 +65,7 @@ struct ConvLayer {
   // filter_width = length of filter (columns)
   // in_nfmaps = number of feature maps in input
   // out_nfmaps = number of feature maps in output
-  ConvLayer(Model&m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
+  ConvLayer(Model& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
       p_filts(in_nfmaps),
       p_fbias(in_nfmaps),
       k_fold_rows(k_fold_rows) {
@@ -123,7 +123,7 @@ struct ConvNet {
 
   explicit ConvNet(Model& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
-  //ConvLayer(Model&m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
+  //ConvLayer(Model& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
       cl1(m, INPUT_DIM, 2,  10, 1, 6),
       cl2(m, INPUT_DIM/2, 2, 6, 6, 14),
       p_t2o(m.add_parameters({LABEL_SIZE, 14 * (INPUT_DIM / 4) * 5})),
@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++tlc;
       vector<int> x,y;
-      read_sentence_pair(line, &x, &d, &y, &ld);
+      read_sentence_pair(line, x, d, y, ld);
       if (x.size() == 0 || y.size() != 1) { cerr << line << endl; abort(); }
       training.push_back(make_pair(x,y[0]));
       ttoks += x.size();
@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++dlc;
       vector<int> x,y;
-      read_sentence_pair(line, &x, &d, &y, &ld);
+      read_sentence_pair(line, x, d, y, ld);
       assert(y.size() == 1);
       dev.push_back(make_pair(x,y[0]));
       dtoks += x.size();
@@ -235,9 +235,9 @@ int main(int argc, char** argv) {
 
   Model model;
   Trainer* sgd = nullptr;
-  //sgd = new MomentumSGDTrainer(&model);
-  sgd = new AdagradTrainer(&model);
-  //sgd = new SimpleSGDTrainer(&model);
+  //sgd = new MomentumSGDTrainer(model);
+  sgd = new AdagradTrainer(model);
+  //sgd = new SimpleSGDTrainer(model);
 
   //NeuralBagOfWords nbow(model);
   ConvNet nbow(model);

@@ -17,23 +17,23 @@ enum { X2Z, H2Z, BZ, X2R, H2R, BR, X2H, H2H, BH };
 GRUBuilder::GRUBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model) : hidden_dim(hidden_dim), layers(layers) {
+                       Model& model) : hidden_dim(hidden_dim), layers(layers) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // z
-    Parameter p_x2z = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2z = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bz = model->add_parameters({hidden_dim});
+    Parameter p_x2z = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2z = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bz = model.add_parameters({hidden_dim});
 
     // r
-    Parameter p_x2r = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2r = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_br = model->add_parameters({hidden_dim});
+    Parameter p_x2r = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2r = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_br = model.add_parameters({hidden_dim});
 
     // h
-    Parameter p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bh = model->add_parameters({hidden_dim});
+    Parameter p_x2h = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bh = model.add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};

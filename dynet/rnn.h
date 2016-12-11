@@ -310,7 +310,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
-                            Model* model,
+                            Model& model,
                             bool support_lags = false);
 
 protected:

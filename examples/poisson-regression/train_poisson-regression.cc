@@ -36,7 +36,7 @@ struct RNNLengthPredictor {
   Parameter p_R;
   Parameter p_bias;
   Builder builder;
-  explicit RNNLengthPredictor(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+  explicit RNNLengthPredictor(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
     p_R = model.add_parameters({1, HIDDEN_DIM});
     p_bias = model.add_parameters({1});
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++tlc;
       vector<int> x, ty;
-      read_sentence_pair(line, &x, &d, &ty, &td);
+      read_sentence_pair(line, x, d, ty, td);
       assert(ty.size() == 1);
       const string& v = td.convert(ty[0]);
       for(auto c : v) { assert(c >= '0' && c <= '9'); }
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++dlc;
       vector<int> x, ty;
-      read_sentence_pair(line, &x, &d, &ty, &td);
+      read_sentence_pair(line, x, d, ty, td);
       assert(ty.size() == 1);
       const string& v = td.convert(ty[0]);
       for(auto c : v) { assert(c >= '0' && c <= '9'); }
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
 
   Model model;
   Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(&model);
+  sgd = new SimpleSGDTrainer(model);
 
   RNNLengthPredictor<LSTMBuilder> lm(model);
   if (argc == 4) {

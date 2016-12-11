@@ -47,8 +47,8 @@ struct RNNLanguageModel {
   Builder l2rbuilder;
   Builder r2lbuilder;
   explicit RNNLanguageModel(Model& model) :
-      l2rbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
-      r2lbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+      l2rbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
+      r2lbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_w = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
     p_l2th = model.add_parameters({TAG_HIDDEN_DIM, HIDDEN_DIM});
     p_r2th = model.add_parameters({TAG_HIDDEN_DIM, HIDDEN_DIM});
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
       ++tlc;
       int nc = 0;
       vector<int> x,y;
-      read_sentence_pair(line, &x, &d, &y, &td);
+      read_sentence_pair(line, x, d, y, td);
       assert(x.size() == y.size());
       if (x.size() == 0) { cerr << line << endl; abort(); }
       training.push_back(make_pair(x,y));
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++dlc;
       vector<int> x,y;
-      read_sentence_pair(line, &x, &d, &y, &td);
+      read_sentence_pair(line, x, d, y, td);
       assert(x.size() == y.size());
       dev.push_back(make_pair(x,y));
       dtoks += x.size();
@@ -185,9 +185,9 @@ int main(int argc, char** argv) {
   bool use_momentum = true;
   Trainer* sgd = nullptr;
   if (use_momentum)
-    sgd = new MomentumSGDTrainer(&model);
+    sgd = new MomentumSGDTrainer(model);
   else
-    sgd = new SimpleSGDTrainer(&model);
+    sgd = new SimpleSGDTrainer(model);
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);

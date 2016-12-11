@@ -16,7 +16,7 @@ struct DeepLSTMBuilder : public RNNBuilder {
   explicit DeepLSTMBuilder(unsigned layers,
                            unsigned input_dim,
                            unsigned hidden_dim,
-                           Model* model);
+                           Model& model);
 
   Expression back() const override { return h.back().back(); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
