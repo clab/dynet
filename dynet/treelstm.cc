@@ -281,7 +281,7 @@ void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy()
 UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) : cg(nullptr) {
+                         Model& model) {
   node_builder = LSTMBuilder(layers, input_dim, hidden_dim, model);
 }
 
@@ -314,7 +314,7 @@ Expression UnidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children
 BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) : cg(nullptr) {
+                         Model& model) {
   assert (hidden_dim % 2 == 0);
   fwd_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);
   rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);

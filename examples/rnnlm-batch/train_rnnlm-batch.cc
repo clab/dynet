@@ -28,8 +28,6 @@ int main(int argc, char** argv) {
   // Fetch program specific parameters (see ../utils/cl-args.h) ------------------------------------
   Params params;
 
-  unsigned VOCAB_SIZE = 0;
-
   get_args(argc, argv, params, TRAIN);
 
   // Load datasets ---------------------------------------------------------------------------------
