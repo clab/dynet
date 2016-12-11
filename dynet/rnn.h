@@ -303,7 +303,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
    * 
    * \param layers Number of layers
    * \param input_dim Dimension of the input
-   * \param hidden_dim Hiddent layer (and output) size
+   * \param hidden_dim Hidden layer (and output) size
    * \param model Model holding the parameters
    * \param support_lags Allow for auxiliary output?
    */

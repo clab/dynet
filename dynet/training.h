@@ -40,12 +40,12 @@ struct Trainer {
   /**
    * \brief General constructor for a Trainer
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay
    */
   explicit Trainer(Model& m, real e0, real edecay = 0.0) :
-    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), 
+    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5),
     clips(), updates(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
   virtual ~Trainer();
 
@@ -156,7 +156,7 @@ struct SimpleSGDTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay parameter.
    */
@@ -184,7 +184,7 @@ struct MomentumSGDTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param mom Momentum
    * \param edecay Learning rate decay parameter
@@ -224,7 +224,7 @@ struct AdagradTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param edecay Learning rate decay parameter
@@ -261,7 +261,7 @@ struct AdadeltaTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average of updates in the numerator
    * \param edecay Learning rate decay parameter
@@ -298,7 +298,7 @@ struct RmsPropTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
@@ -335,7 +335,7 @@ struct AdamTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param beta_1 Moving average parameter for the mean
    * \param beta_2 Moving average parameter for the variance
