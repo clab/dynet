@@ -99,11 +99,11 @@ public:
                             unsigned hidden_dim,
                             bool bwd = false) :
         LAYERS(num_layers), INPUT_DIM(input_dim), HIDDEN_DIM(hidden_dim), bidirectional(bwd),
-        dec_builder(num_layers, input_dim, hidden_dim, &model),
-        fwd_enc_builder(num_layers, input_dim, hidden_dim, &model) {
+        dec_builder(num_layers, input_dim, hidden_dim, model),
+        fwd_enc_builder(num_layers, input_dim, hidden_dim, model) {
         
         if (bidirectional) {
-            rev_enc_builder = Builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model);
+            rev_enc_builder = Builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model);
             p_ie2oe = model.add_parameters({unsigned(HIDDEN_DIM * LAYERS * 2),
                                             unsigned(HIDDEN_DIM * LAYERS * 4)
                                            });

@@ -44,9 +44,9 @@ struct Trainer {
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay
    */
-  explicit Trainer(Model* m, real e0, real edecay = 0.0) :
+  explicit Trainer(Model& m, real e0, real edecay = 0.0) :
     eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), 
-    clips(), updates(), sparse_updates_enabled(true), aux_allocated(false), model(m) {}
+    clips(), updates(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
   virtual ~Trainer();
 
   void update(real scale = 1.0);
@@ -160,7 +160,7 @@ struct SimpleSGDTrainer : public Trainer {
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay parameter.
    */
-  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
+  explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
  private:
@@ -189,7 +189,7 @@ struct MomentumSGDTrainer : public Trainer {
    * \param mom Momentum
    * \param edecay Learning rate decay parameter
    */
-  explicit MomentumSGDTrainer(Model* m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
+  explicit MomentumSGDTrainer(Model& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
     Trainer(m, e0, edecay), momentum(mom) {}
 
  protected:
@@ -229,7 +229,7 @@ struct AdagradTrainer : public Trainer {
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param edecay Learning rate decay parameter
    */
-  explicit AdagradTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
+  explicit AdagradTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -266,7 +266,7 @@ struct AdadeltaTrainer : public Trainer {
    * \param rho Update parameter for the moving average of updates in the numerator
    * \param edecay Learning rate decay parameter
    */
-  explicit AdadeltaTrainer(Model* m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
+  explicit AdadeltaTrainer(Model& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, 1.0), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -304,7 +304,7 @@ struct RmsPropTrainer : public Trainer {
    * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
    * \param edecay Learning rate decay parameter
    */
-  explicit RmsPropTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
+  explicit RmsPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -342,7 +342,7 @@ struct AdamTrainer : public Trainer {
    * \param eps Bias parameter \f$\epsilon\f$
    * \param edecay Learning rate decay parameter
    */
-  explicit AdamTrainer(Model* m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
+  explicit AdamTrainer(Model& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
     Trainer(m, e0), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
  protected:

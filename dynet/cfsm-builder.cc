@@ -20,9 +20,9 @@ SoftmaxBuilder::~SoftmaxBuilder() {}
 
 StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
 
-StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model* model) {
-  p_w = model->add_parameters({vocab_size, rep_dim});
-  p_b = model->add_parameters({vocab_size});
+StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model& model) {
+  p_w = model.add_parameters({vocab_size, rep_dim});
+  p_b = model.add_parameters({vocab_size});
 }
 
 void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg) {
@@ -66,12 +66,12 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
-                             Dict* word_dict,
-                             Model* model) {
+                             Dict& word_dict,
+                             Model& model) {
   read_cluster_file(cluster_file, word_dict);
   const unsigned num_clusters = cdict.size();
-  p_r2c = model->add_parameters({num_clusters, rep_dim});
-  p_cbias = model->add_parameters({num_clusters});
+  p_r2c = model.add_parameters({num_clusters, rep_dim});
+  p_cbias = model.add_parameters({num_clusters});
   p_rc2ws.resize(num_clusters);
   p_rcwbiases.resize(num_clusters);
   for (unsigned i = 0; i < num_clusters; ++i) {
@@ -80,8 +80,8 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
     if (num_words_in_cluster > 1) {
       // for singleton clusters, we don't need these parameters, so
       // we don't create them
-      p_rc2ws[i] = model->add_parameters({num_words_in_cluster, rep_dim});
-      p_rcwbiases[i] = model->add_parameters({num_words_in_cluster});
+      p_rc2ws[i] = model.add_parameters({num_words_in_cluster, rep_dim});
+      p_rcwbiases[i] = model.add_parameters({num_words_in_cluster});
     }
   }
 }
@@ -178,7 +178,7 @@ Expression ClassFactoredSoftmaxBuilder::full_log_distribution(const Expression& 
   return log(softmax(concatenate(full_dist)));
 }
 
-void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_file, Dict* word_dict) {
+void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_file, Dict& word_dict) {
   cerr << "Reading clusters from " << cluster_file << " ...\n";
   ifstream in(cluster_file);
   assert(in);
@@ -199,7 +199,7 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
     assert(startw > endc);
     assert(endw > startw);
     unsigned c = cdict.convert(line.substr(startc, endc - startc));
-    unsigned word = word_dict->convert(line.substr(startw, endw - startw));
+    unsigned word = word_dict.convert(line.substr(startw, endw - startw));
     if (word >= widx2cidx.size()) {
       widx2cidx.resize(word + 1, -1);
       widx2cwidx.resize(word + 1);
