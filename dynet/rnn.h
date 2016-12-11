@@ -377,7 +377,7 @@ private:
 namespace boost {
 namespace serialization {
 template<class Archive>
-void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int version)
+void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int)
 {
   ar & p.t;
 }
