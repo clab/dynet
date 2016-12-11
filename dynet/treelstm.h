@@ -100,8 +100,6 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   std::vector<Expression> h;
 
 private:
-  ComputationGraph* cg;
-
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int) {
@@ -129,8 +127,6 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   std::vector<Expression> h;
 
 private:
-  ComputationGraph* cg;
-
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int) {

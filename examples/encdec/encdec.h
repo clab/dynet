@@ -62,6 +62,7 @@ private:
     unsigned LAYERS;
     unsigned INPUT_DIM;
     unsigned HIDDEN_DIM;
+    bool bidirectional;
 
     LookupParameter p_c;
     LookupParameter p_ec;  // map input to embedding (used in fwd and rev models)
@@ -70,9 +71,8 @@ private:
     Parameter p_R;
     Parameter p_bias;
     Builder dec_builder;
-    Builder rev_enc_builder;
     Builder fwd_enc_builder;
-    bool bidirectional;
+    Builder rev_enc_builder;
 
 public:
     /**
