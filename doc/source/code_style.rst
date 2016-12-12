@@ -1,4 +1,4 @@
-Coding style
+Coding Style
 ============
 
 DyNet (the main version in C++) has certain coding style standards:
@@ -14,6 +14,7 @@ computation graph construction.
 
 **Pointer vs. Reference:** When writing functions, use the following guidelines
 (quoted from `here <http://stackoverflow.com/questions/114180/pointer-vs-reference/114351#114351>`_):
+
 * Only pass a value by pointer if the value 0/NULL is a valid input in the
   current context.
 * If a function argument is an out-value, then pass it by reference.
