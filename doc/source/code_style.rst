@@ -21,3 +21,8 @@ computation graph construction.
   POD (`Plain Old Datastructure <http://stackoverflow.com/questions/146452/what-are-pod-types-in-c>`_)
   or small enough (memory-wise) or in other ways cheap enough (time-wise) to
   copy.
+
+**Throwing Exceptions:** When the user does something illegal, throw an
+exception. "assert" should never be used for something that might be triggered
+by a user. (As `noted <https://github.com/clab/dynet/issues/139>`_, there are
+still many places that don't follow this standard as of Dec. 13, 2016.)
