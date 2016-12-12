@@ -24,31 +24,31 @@ SocherTreeLSTMBuilder::SocherTreeLSTMBuilder(unsigned N,
                          unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model* model) : layers(layers), N(N), cg(nullptr) {
+                         Model& model) : layers(layers), N(N), cg(nullptr) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model->add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2i = model->add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2i = model->add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bi = model->add_parameters({hidden_dim});
+    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2i = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2i = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bi = model.add_parameters({hidden_dim});
 
     // f
-    Parameter p_x2f = model->add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2f = model->add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2f = model->add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
-    Parameter p_bf = model->add_parameters({hidden_dim});
+    Parameter p_x2f = model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2f = model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2f = model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
+    Parameter p_bf = model.add_parameters({hidden_dim});
 
     // o
-    Parameter p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2o = model->add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2o = model->add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bo = model->add_parameters({hidden_dim});
+    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2o = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2o = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bo = model.add_parameters({hidden_dim});
 
     // c (a.k.a. u)
-    Parameter p_x2c = model->add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2c = model->add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bc = model->add_parameters({hidden_dim});
+    Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2c = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bc = model.add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_bi, p_x2f, p_bf, p_x2o, p_bo, p_x2c, p_bc};
@@ -281,7 +281,7 @@ void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy()
 UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model* model) : cg(nullptr) {
+                         Model& model) {
   node_builder = LSTMBuilder(layers, input_dim, hidden_dim, model);
 }
 
@@ -314,7 +314,7 @@ Expression UnidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children
 BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model* model) : cg(nullptr) {
+                         Model& model) {
   assert (hidden_dim % 2 == 0);
   fwd_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);
   rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);

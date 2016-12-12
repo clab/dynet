@@ -79,7 +79,7 @@ struct RNNLanguageModel {
   Parameter p_R;
   Parameter p_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
@@ -172,9 +172,9 @@ int main(int argc, char** argv) {
     DROPOUT = conf["dropout"].as<float>();
   Model model;
   if (conf.count("clusters"))
-    cfsm = new ClassFactoredSoftmaxBuilder(HIDDEN_DIM, conf["clusters"].as<string>(), &d, &model);
+    cfsm = new ClassFactoredSoftmaxBuilder(HIDDEN_DIM, conf["clusters"].as<string>(), d, model);
   else if (conf.count("paths"))
-    cfsm = new HierarchicalSoftmaxBuilder(HIDDEN_DIM, conf["paths"].as<string>(), &d, &model);
+    cfsm = new HierarchicalSoftmaxBuilder(HIDDEN_DIM, conf["paths"].as<string>(), d, model);
   float eta_decay_rate = 1;
   unsigned eta_decay_onset_epoch = 0;
   if (conf.count("eta_decay_onset_epoch"))
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++tlc;
-      training.push_back(read_sentence(line, &d));
+      training.push_back(read_sentence(line, d));
       ttoks += training.back().size();
       if (training.back().front() == kSOS || training.back().back() == kEOS) {
         cerr << "Training sentence in " << argv[1] << ":" << tlc << " started with <s> or ended with </s>\n";
@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
   d.set_unk("<unk>");
   VOCAB_SIZE = d.size();
   if (!cfsm)
-    cfsm = new StandardSoftmaxBuilder(HIDDEN_DIM, VOCAB_SIZE, &model);
+    cfsm = new StandardSoftmaxBuilder(HIDDEN_DIM, VOCAB_SIZE, model);
 
   if (conf.count("test")) {
     string testf = conf["test"].as<string>();
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
     ifstream in(testf);
     assert(in);
     while(getline(in, line)) {
-      test.push_back(read_sentence(line, &d));
+      test.push_back(read_sentence(line, d));
       if (test.back().front() == kSOS || test.back().back() == kEOS) {
         cerr << "Test sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
         abort();
@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  Trainer* sgd = new SimpleSGDTrainer(&model);
+  Trainer* sgd = new SimpleSGDTrainer(model);
   sgd->eta0 = sgd->eta = conf["eta0"].as<float>();
   RNNLanguageModel<LSTMBuilder> lm(model);
 
@@ -250,7 +250,7 @@ int main(int argc, char** argv) {
       assert(in);
       while(getline(in, line)) {
         ++dlc;
-        dev.push_back(read_sentence(line, &d));
+        dev.push_back(read_sentence(line, d));
         dtoks += dev.back().size();
         if (dev.back().front() == kSOS || dev.back().back() == kEOS) {
           cerr << "Dev sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
       }
       // Score hypothesis
       ComputationGraph cg;
-      Expression loss_expr = lm.BuildLMGraph(read_sentence(fields[HYP_FIELD], &d), cg, false);
+      Expression loss_expr = lm.BuildLMGraph(read_sentence(fields[HYP_FIELD], d), cg, false);
       double loss = as_scalar(cg.forward(loss_expr));
       // Add score
       ostringstream os;

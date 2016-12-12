@@ -11,7 +11,7 @@ Create a model, and an SGD trainer to update its parameters.
 .. code:: cpp
 
     Model mod;
-    SimpleSGDTrainer sgd(&mod);
+    SimpleSGDTrainer sgd(mod);
 
 Create a "computation graph," which will define the flow of information.
 

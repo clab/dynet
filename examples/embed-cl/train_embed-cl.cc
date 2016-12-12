@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
     while(getline(in, line)) {
       ++tlc;
       vector<int> src, trg;
-      read_sentence_pair(line, &src, &sd, &trg, &td);
+      read_sentence_pair(line, src, sd, trg, td);
       training.push_back(make_pair(src, trg));
     }
     cerr << tlc << " lines, " << sd.size() << " source types, " << td.size() << " target types\n";
@@ -149,9 +149,9 @@ int main(int argc, char** argv) {
   bool use_momentum = false;
   Trainer* sgd = nullptr;
   if (use_momentum)
-    sgd = new MomentumSGDTrainer(&model);
+    sgd = new MomentumSGDTrainer(model);
   else
-    sgd = new SimpleSGDTrainer(&model);
+    sgd = new SimpleSGDTrainer(model);
 
   unsigned report_every_i = 100;
   unsigned si = training.size();

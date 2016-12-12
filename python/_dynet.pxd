@@ -131,8 +131,8 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer":
-        #CSimpleSGDTrainer(CModel* m, float lam, float e0)
-        CSimpleSGDTrainer(CModel* m, float e0, float edecay) # TODO removed lam, update docs.
+        #CSimpleSGDTrainer(CModel& m, float lam, float e0)
+        CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
         void update(float s)
@@ -140,7 +140,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void status()
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer":
-        CMomentumSGDTrainer(CModel* m, float e0, float mom, float edecay) # TODO removed lam, update docs
+        CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
         void update(float s)
@@ -148,7 +148,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void status()
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer":
-        CAdagradTrainer(CModel* m, float e0, float eps, float edecay) # TODO removed lam, update docs
+        CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
         void update(float s)
@@ -156,7 +156,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void status()
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer":
-        CAdadeltaTrainer(CModel* m, float eps, float rho, float edecay) # TODO removed lam, update docs
+        CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
         void update(float s)
@@ -164,7 +164,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void status()
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer":
-        CAdamTrainer(CModel* m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
+        CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
         void update(float s)
@@ -310,7 +310,7 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
     #cdef cppclass RNNBuilder "dynet::RNNBuilder":
     cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):
         CSimpleRNNBuilder()
-        CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -326,7 +326,7 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
 cdef extern from "dynet/gru.h" namespace "dynet":
     cdef cppclass CGRUBuilder "dynet::GRUBuilder" (CRNNBuilder):
         CGRUBuilder()
-        CGRUBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        CGRUBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -342,7 +342,7 @@ cdef extern from "dynet/gru.h" namespace "dynet":
 cdef extern from "dynet/lstm.h" namespace "dynet":
     cdef cppclass CLSTMBuilder "dynet::LSTMBuilder" (CRNNBuilder):
         CLSTMBuilder()
-        CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -357,7 +357,7 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
 cdef extern from "dynet/fast-lstm.h" namespace "dynet":
     cdef cppclass CFastLSTMBuilder "dynet::FastLSTMBuilder" (CRNNBuilder):
-        CFastLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        CFastLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)

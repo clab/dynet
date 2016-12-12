@@ -31,7 +31,7 @@ struct ParameterStorageBase {
   virtual ~ParameterStorageBase();
   friend class boost::serialization::access;
   template<class Archive> 
-  void serialize(Archive& ar, const unsigned int) {}
+  void serialize(Archive& /* ar */, const unsigned int) {}
 };
 
 // represents parameters (e.g., a weight matrix) that will be optimized

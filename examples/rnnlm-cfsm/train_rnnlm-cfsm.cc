@@ -36,7 +36,7 @@ struct RNNLanguageModel {
   ClassFactoredSoftmaxBuilder& cfsm;
   explicit RNNLanguageModel(Model& model, ClassFactoredSoftmaxBuilder& h) :
       p_c(model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
-      builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
+      builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
       cfsm(h) {}
 
   // return Expression of total loss
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
   kSOS = d.convert("<s>");
   kEOS = d.convert("</s>");
   Model model;
-  ClassFactoredSoftmaxBuilder cfsm(HIDDEN_DIM, argv[3], &d, &model);
+  ClassFactoredSoftmaxBuilder cfsm(HIDDEN_DIM, argv[3], d, model);
   vector<vector<int>> training, dev;
   string line;
   int tlc = 0;
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++tlc;
-      training.push_back(read_sentence(line, &d));
+      training.push_back(read_sentence(line, d));
       ttoks += training.back().size();
       if (training.back().front() != kSOS && training.back().back() != kEOS) {
         cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++dlc;
-      dev.push_back(read_sentence(line, &d));
+      dev.push_back(read_sentence(line, d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
         cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
@@ -143,9 +143,9 @@ int main(int argc, char** argv) {
   Trainer* sgd = nullptr;
   // bool use_momentum = false;
   // if (use_momentum)
-  //   sgd = new MomentumSGDTrainer(&model);
+  //   sgd = new MomentumSGDTrainer(model);
   // else
-  sgd = new SimpleSGDTrainer(&model);
+  sgd = new SimpleSGDTrainer(model);
 
   RNNLanguageModel<LSTMBuilder> lm(model, cfsm);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model, cfsm);

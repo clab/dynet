@@ -128,8 +128,8 @@ int main(int argc, char** argv) {
   Model m;
   MLCBuilder mlc(m, max_xi, max_yi);
 
-  //AdadeltaTrainer sgd(&m);
-  SimpleSGDTrainer sgd(&m);
+  //AdadeltaTrainer sgd(m);
+  SimpleSGDTrainer sgd(m);
   sgd.eta0 = 0.001;
   sgd.eta = 0.001;
 

@@ -47,16 +47,16 @@ DYNET_SERIALIZE_IMPL(RNNBuilder)
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model,
+                       Model& model,
                        bool support_lags) : layers(layers), lagging(support_lags) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    Parameter p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_hb = model->add_parameters({hidden_dim});
+    Parameter p_x2h = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_hb = model.add_parameters({hidden_dim});
     vector<Parameter> ps = {p_x2h, p_h2h, p_hb};
     if (lagging)
-        ps.push_back(model->add_parameters({hidden_dim, hidden_dim}));
+        ps.push_back(model.add_parameters({hidden_dim, hidden_dim}));
     params.push_back(ps);
     layer_input_dim = hidden_dim;
   }

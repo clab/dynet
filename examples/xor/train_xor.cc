@@ -19,8 +19,8 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned ITERATIONS = 30;
   Model m;
-  SimpleSGDTrainer sgd(&m);
-  //MomentumSGDTrainer sgd(&m);
+  SimpleSGDTrainer sgd(m);
+  //MomentumSGDTrainer sgd(m);
 
   ComputationGraph cg;
   Parameter p_W, p_b, p_V, p_a;

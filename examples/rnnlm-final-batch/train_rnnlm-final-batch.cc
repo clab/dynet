@@ -38,7 +38,7 @@ struct RNNLanguageModel {
   Parameter p_last;
   Parameter p_last_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
 
   Model model;
   Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(&model);
+  sgd = new SimpleSGDTrainer(model);
   sgd->clip_threshold *= BATCH_SIZE;
 
   RNNLanguageModel<LSTMBuilder> lm(model);

@@ -132,7 +132,7 @@ struct PrefixCodeDecoder {
   PrefixCode* pfc;
   Parameter p_start;
   explicit PrefixCodeDecoder(Model& model, PrefixCode* pc) :
-      decoder(LAYERS, CHAR_DIM, EMBED_DIM, &model), pfc(pc) {
+      decoder(LAYERS, CHAR_DIM, EMBED_DIM, model), pfc(pc) {
     p_start = model.add_parameters({EMBED_DIM});
   }
   Expression loss(ComputationGraph& cg, const Expression& v, const string& code) {
@@ -176,8 +176,8 @@ struct BiCharLSTM {
   SymbolEmbedding sym;
 
   explicit BiCharLSTM(Model& model) :
-      l2rbuilder(LAYERS, CHAR_DIM, EMBED_DIM, &model),
-      r2lbuilder(LAYERS, CHAR_DIM, EMBED_DIM, &model),
+      l2rbuilder(LAYERS, CHAR_DIM, EMBED_DIM, model),
+      r2lbuilder(LAYERS, CHAR_DIM, EMBED_DIM, model),
       sym(model, d.size(), CHAR_DIM) {
     p_f2c = model.add_parameters({EMBED_DIM, CHAR_DIM});
     p_r2c = model.add_parameters({EMBED_DIM, CHAR_DIM});
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
   }
   Model model;
   Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(&model);
+  sgd = new SimpleSGDTrainer(model);
   vector<pair<string,vector<unsigned>>> training;
   kSOW = d.convert("<w>");
   kEOW = d.convert("</w>");

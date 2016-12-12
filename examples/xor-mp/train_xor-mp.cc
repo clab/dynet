@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
     // Otherwise, just create a new model.
     const unsigned HIDDEN_SIZE = 8;
     xor_model = new XorModel(HIDDEN_SIZE, dynet_model);
-    trainer = new SimpleSGDTrainer(&dynet_model);
+    trainer = new SimpleSGDTrainer(dynet_model);
   }
 
   vector<Datum> data(4);

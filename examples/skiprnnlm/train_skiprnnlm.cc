@@ -45,7 +45,7 @@ struct RNNSkipLM {
     Parameter p_R;
     Parameter p_bias;
     SimpleRNNBuilder builder;
-    explicit RNNSkipLM(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model, true) {
+    explicit RNNSkipLM(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model, true) {
         p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
         p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
         p_bias = model.add_parameters({VOCAB_SIZE});
@@ -130,9 +130,9 @@ int main(int argc, char** argv) {
     bool use_momentum = false;
     Trainer* sgd = nullptr;
     if (use_momentum)
-        sgd = new MomentumSGDTrainer(&model);
+        sgd = new MomentumSGDTrainer(model);
     else
-        sgd = new SimpleSGDTrainer(&model);
+        sgd = new SimpleSGDTrainer(model);
 
     RNNSkipLM lm(model);
     if (argc == 4) {
