@@ -127,13 +127,13 @@ void TensorTools::Identity(Tensor& val) {
   float* t = new float[val.d.size()];
   for(size_t i = 0; i < val.d[0]; ++i)
     for(size_t j = 0; j < val.d[1]; ++j)
-      t[pos++] == (i==j?1:0);
+      t[pos++] = (i==j?1:0);
   CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
   delete[] t;
 #else
   for(size_t i = 0; i < val.d[0]; ++i)
     for(size_t j = 0; j < val.d[1]; ++j)
-      val.v[pos++] == (i==j?1:0);
+      val.v[pos++] = (i==j?1:0);
 #endif
 }
 
