@@ -339,6 +339,16 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
   return r;
 }
 
+LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init) {
+  LookupParameterStorage* p = new LookupParameterStorage(n,d,init);
+  LookupParameter r(this, lookup_params.size());
+  //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
+  all_params.push_back(p);
+  lookup_params.push_back(p);
+  updated_lookup_params.push_back(r.index);
+  return r;
+}
+
 void Model::set_updated_param(const Parameter *p, bool status) {
   unsigned idx = p->index;
   assert(idx < params.size());
