@@ -192,6 +192,10 @@ void ParameterInitConst::initialize_params(Tensor & values) const {
   TensorTools::Constant(values, cnst);
 }
 
+void ParameterInitIdentity::initialize_params(Tensor & values) const {
+  TensorTools::Identity(values);
+}
+
 void ParameterInitGlorot::initialize_params(Tensor & values) const {
   int dims = 0, dim_len = values.d.nd-(lookup?1:0);
   for(int i = 0; i < dim_len; ++i) dims += values.d[i];
