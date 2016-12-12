@@ -678,7 +678,7 @@ DYNET_NODE_INST_DEV_IMPL(DotProduct)
 template<class MyDevice>
 void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
+  TensorTools::RandomizeBernoulli(m, (1.f-p), 1.f / (1.f-p));
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() * m.tvec();
 }
 
@@ -2071,7 +2071,7 @@ DYNET_NODE_INST_DEV_IMPL(RandomNormal)
 template<class MyDevice>
 void RandomBernoulli::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  TensorTools::RandomBernoulli(fx, p, scale);
+  TensorTools::RandomizeBernoulli(fx, p, scale);
 }
 
 template<class MyDevice>

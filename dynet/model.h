@@ -196,6 +196,11 @@ private:
   float cnst;
 };
 
+struct ParameterInitIdentity : public ParameterInit {
+  ParameterInitIdentity() {}
+  virtual void initialize_params(Tensor & values) const override;
+};
+
 struct ParameterInitGlorot : public ParameterInit {
   ParameterInitGlorot(bool is_lookup = false) : lookup(is_lookup) {}
   virtual void initialize_params(Tensor & values) const override;
