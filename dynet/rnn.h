@@ -303,14 +303,14 @@ struct SimpleRNNBuilder : public RNNBuilder {
    * 
    * \param layers Number of layers
    * \param input_dim Dimension of the input
-   * \param hidden_dim Hiddent layer (and output) size
+   * \param hidden_dim Hidden layer (and output) size
    * \param model Model holding the parameters
    * \param support_lags Allow for auxiliary output?
    */
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
-                            Model* model,
+                            Model& model,
                             bool support_lags = false);
 
 protected:
@@ -377,7 +377,7 @@ private:
 namespace boost {
 namespace serialization {
 template<class Archive>
-void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int version)
+void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int)
 {
   ar & p.t;
 }

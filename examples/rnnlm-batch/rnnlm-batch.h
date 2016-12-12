@@ -95,7 +95,7 @@ public:
                                  unsigned VOCAB_SIZE) :
     LAYERS(LAYERS), INPUT_DIM(INPUT_DIM),
     HIDDEN_DIM(HIDDEN_DIM), VOCAB_SIZE(VOCAB_SIZE),
-    rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, &model)  {
+    rnn(LAYERS, INPUT_DIM, HIDDEN_DIM, model)  {
     // Add embedding parameters to the model
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});

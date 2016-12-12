@@ -51,8 +51,8 @@ struct RNNLanguageModel {
   Parameter p_h0b;
 
   explicit RNNLanguageModel(Model& model) :
-      ebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model),
-      dbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
+      ebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
+      dbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_H = model.add_parameters({HIDDEN_DIM2, HIDDEN_DIM});
     p_hb = model.add_parameters({HIDDEN_DIM2});
     p_h2m = model.add_parameters({LATENT_DIM, HIDDEN_DIM2});
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++tlc;
-      training.push_back(read_sentence(line, &d));
+      training.push_back(read_sentence(line, d));
       ttoks += training.back().size();
       if (training.back().front() != kSOS && training.back().back() != kEOS) {
         cerr << "Training sentence in " << argv[1] << ":" << tlc << " didn't start or end with <s>, </s>\n";
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
     assert(in);
     while(getline(in, line)) {
       ++dlc;
-      dev.push_back(read_sentence(line, &d));
+      dev.push_back(read_sentence(line, d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
         cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
@@ -180,9 +180,9 @@ int main(int argc, char** argv) {
   Trainer* sgd = nullptr;
   // bool use_momentum = false;
   // if (use_momentum)
-  //   sgd = new MomentumSGDTrainer(&model);
+  //   sgd = new MomentumSGDTrainer(model);
   // else
-  sgd = new SimpleSGDTrainer(&model);
+  sgd = new SimpleSGDTrainer(model);
 
   RNNLanguageModel<GRUBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);

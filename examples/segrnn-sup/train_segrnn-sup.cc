@@ -176,8 +176,8 @@ struct BiTrans {
   Parameter p_cb;
 
   explicit BiTrans(Model& model) :
-      l2rbuilder(LAYERS, INPUT_DIM, XCRIBE_DIM, &model),
-      r2lbuilder(LAYERS, INPUT_DIM, XCRIBE_DIM, &model) {
+      l2rbuilder(LAYERS, INPUT_DIM, XCRIBE_DIM, model),
+      r2lbuilder(LAYERS, INPUT_DIM, XCRIBE_DIM, model) {
     p_f2c = model.add_parameters({XCRIBE_DIM, XCRIBE_DIM});
     p_r2c = model.add_parameters({XCRIBE_DIM, XCRIBE_DIM});
     p_cb = model.add_parameters({XCRIBE_DIM});
@@ -223,7 +223,7 @@ struct SegEmbedUni {
   Builder builder;
   vector<vector<Expression>> h;  // h[i][length of segment - 1]
   explicit SegEmbedUni(Model& m) :
-      builder(LAYERS, XCRIBE_DIM, SEG_DIM, &m) {
+      builder(LAYERS, XCRIBE_DIM, SEG_DIM, m) {
     p_h0 = m.add_parameters({XCRIBE_DIM});
   }
   void construct_chart(ComputationGraph& cg, const vector<Expression>& c, int max_seg_len = 0) {
@@ -1073,8 +1073,8 @@ int main(int argc, char** argv) {
     }
 
     Model model;
-    // auto sgd = new SimpleSGDTrainer(&model);
-    auto sgd = new AdamTrainer(&model, 0.0005, 0.01, 0.9999, 1e-8);
+    // auto sgd = new SimpleSGDTrainer(model);
+    auto sgd = new AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8);
     int max_seg_len = DATA_MAX_SEG_LEN + 1;
     if(vm.count("train_max_seg_len")){
       max_seg_len = vm["train_max_seg_len"].as<int>();

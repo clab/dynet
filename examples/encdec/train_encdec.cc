@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     assert(in);
     while (getline(in, line)) {
       ++tlc;
-      training.push_back(read_sentence(line, &d));
+      training.push_back(read_sentence(line, d));
       ttoks += training.back().size();
       if (training.back().front() != kSOS && training.back().back() != kEOS) {
         cerr << "Training sentence in " << params.train_file << ":" << tlc
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
     assert(in);
     while (getline(in, line)) {
       ++dlc;
-      dev.push_back(read_sentence(line, &d));
+      dev.push_back(read_sentence(line, d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
         cerr << "Dev sentence in " << params.dev_file << ":"
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
   Model model;
   // Use Adam optimizer
   Trainer* adam = nullptr;
-  adam = new AdamTrainer(&model, 0.001, 0.9, 0.999, 1e-8);
+  adam = new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8);
   adam->clip_threshold *= params.BATCH_SIZE;
 
   // Create model
