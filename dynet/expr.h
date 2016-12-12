@@ -1310,7 +1310,7 @@ Expression noise(const Expression& x, real stddev);
  * \details
  *   With a fixed probability, drop out (set to zero) nodes in the input
  *   expression, and **scale** the remaining nodes by 1/p. Note that there are
- *   two kinds of dropout:
+ *   [two kinds of dropout](http://cs231n.github.io/neural-networks-2/#reg):
  *   - *Regular dropout:* where we perform dropout at training time and then\n
  *     scale outputs by p at test time.
  *   - *Inverted dropout:* where we perform dropout and scaling at training\n
