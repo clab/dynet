@@ -267,7 +267,7 @@ struct AdadeltaTrainer : public Trainer {
    * \param edecay Learning rate decay parameter
    */
   explicit AdadeltaTrainer(Model* m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
-    Trainer(m, 1.0), epsilon(eps), rho(rho) {}
+    Trainer(m, 1.0, edecay), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -343,7 +343,7 @@ struct AdamTrainer : public Trainer {
    * \param edecay Learning rate decay parameter
    */
   explicit AdamTrainer(Model* m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
-    Trainer(m, e0), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+    Trainer(m, e0, edecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
