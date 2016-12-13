@@ -74,6 +74,9 @@ cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterInitConst "dynet::ParameterInitConst" (CParameterInit):
         CParameterInitConst(float c)
 
+    cdef cppclass CParameterInitIdentity "dynet::ParameterInitIdentity" (CParameterInit):
+        CParameterInitIdentity()
+
     cdef cppclass CParameterInitGlorot "dynet::ParameterInitGlorot" (CParameterInit):
         CParameterInitGlorot(bool is_lookup) # is_lookup = False
 
@@ -95,6 +98,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         #CParameters add_parameters(CDim& d, CParameterInitUniform initializer)
         #CParameters add_parameters(CDim& d, CParameterInitConst initializer)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer)
         vector[CParameterStorage] parameters_list()
 
     void load_dynet_model "dynet::load_dynet_model" (string filename, CModel *model)
