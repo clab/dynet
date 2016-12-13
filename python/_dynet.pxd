@@ -139,6 +139,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -147,6 +148,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -155,6 +157,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -163,6 +166,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -171,6 +175,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
