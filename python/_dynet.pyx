@@ -1462,6 +1462,8 @@ cdef class SimpleSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1484,6 +1486,8 @@ cdef class MomentumSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1507,6 +1511,8 @@ cdef class AdagradTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1530,6 +1536,8 @@ cdef class AdadeltaTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1553,6 +1561,8 @@ cdef class AdamTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
