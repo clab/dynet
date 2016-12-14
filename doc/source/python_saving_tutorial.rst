@@ -1,15 +1,8 @@
 .. role:: python(code)
    :language: python
 
-Python Tutorial
-===============
-
-Guided examples in Python can be found in the jupyter tutorials_.
-
-.. _tutorials: https://github.com/clab/dynet/tree/master/examples/tutorials
-
 Saving Models
--------------
+~~~~~~~~~~~~~
 
 In order to save model parameters, the user instead tells the model, at save time, which are the components it is
 interested in saving. They then need to specify the same components, in the same order, at load time.
