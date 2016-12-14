@@ -19,7 +19,7 @@ DyNet can be installed according to the instructions below:
 And get the basic information to create programs and use models:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    tutorial
    commandline
