@@ -22,6 +22,7 @@ And get the basic information to create programs and use models:
    :maxdepth: 2
 
    tutorial
+   python_tutorial
    commandline
    operations
    builders
