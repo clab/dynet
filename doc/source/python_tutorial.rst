@@ -41,11 +41,11 @@ The :python:`Saveable` class is used for easy creation of user-defined "sub netw
 .. code:: python
 
   class OneLayerMLP(Saveable):
-      def __init__(self, model, num_input, num_hidde, num_out, act=tanh):
-          self.W1 = model.add_parameters("W1", (num_hidden, num_input))
-          self.W2 = model.add_parameters("W2", (num_out, num_hidden))
-          self.b1 = model.add_parameters("b1", (num_hidden))
-          self.b2 = model.add_parameters("b2", (num_out))
+      def __init__(self, model, num_input, num_hidden, num_out, act=tanh):
+          self.W1 = model.add_parameters((num_hidden, num_input))
+          self.W2 = model.add_parameters((num_out, num_hidden))
+          self.b1 = model.add_parameters((num_hidden))
+          self.b2 = model.add_parameters((num_out))
           self.act = act
           self.shape = (num_input, num_out)
 
