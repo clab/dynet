@@ -24,3 +24,8 @@ Guided examples in Python can be found below :
    tutorials_notebooks/API.ipynb
    tutorials_notebooks/RNNs.ipynb
    python_saving_tutorial
+
+A more comprehensive tutorial can be found here_ (EMNLP 2016 tutorial).
+
+
+.. _here: https://github.com/clab/dynet_tutorial_examples
