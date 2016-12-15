@@ -89,7 +89,7 @@ Python interpreter.
 
 If Boost is installed in a non-standard location, you should add the
 corresponding flags to the ``cmake`` commandline, see the `DyNet
-installation instructions page <install.md>`__.
+installation instructions page <install.rst>`__.
 
 .. code:: bash
 
@@ -222,7 +222,7 @@ In order to use the GPU support, you can either:
 -  Use ``import _gdynet as dy`` instead of ``import dynet as dy``
 -  Or, (preferred), ``import dynet`` as usual, but use the commandline
    switch ``--dynet-gpu`` or the GPU switches detailed
-   `here <commandline.md>`__ when invoking the program. This option lets
+   `here <commandline.rst>`__ when invoking the program. This option lets
    the same code work with either the GPU or the CPU version depending
    on how it is invoked.
 
