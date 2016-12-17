@@ -17,6 +17,8 @@
 #include "dynet.h"
 #include "training.h"
 #include "expr.h"
+#include "rnn.h"
+#include "lstm.h"
 %}
 
 // Extra C++ code added
@@ -37,6 +39,9 @@ static void myInitialize()  {
 %include "std_string.i"
 %include "std_pair.i"
 
+
+struct dynet::expr::Expression;
+
 // Declare explicit types for needed instantiations of generic types
 namespace std {
   %template(IntVector)        vector<int>;
@@ -44,6 +49,7 @@ namespace std {
   %template(FloatVector)      vector<float>;
   %template(LongVector)       vector<long>;
   %template(StringVector)     vector<std::string>;
+  %template(ExpressionVector) vector<dynet::expr::Expression>;
 }
 
 //
@@ -55,15 +61,16 @@ namespace dynet {
 // Some declarations etc to keep swig happy
 typedef float real;
 
+struct RNNPointer;
 struct VariableIndex;
 /*{
   unsigned t;
   explicit VariableIndex(const unsigned t_): t(t_) {};
 };*/
-struct LookupParameter;
 struct Tensor;
 struct Node;
 struct ParameterStorage;
+struct LookupParameterStorage;
 
 struct Dim {
   Dim() : nd(0), bd(1) {}
@@ -87,6 +94,41 @@ struct Parameter {
 
 };
 
+struct LookupParameter {
+  LookupParameter();
+  LookupParameter(Model* mp, unsigned long index);
+  LookupParameterStorage* get() const;
+  void initialize(unsigned index, const std::vector<float>& val) const;
+  void zero();
+  Model* mp;
+  unsigned long index;
+  Dim dim() { return get()->dim; }
+  std::vector<Tensor>* values() { return &(get()->values); }
+  void set_updated(bool b);
+  bool is_updated();
+};
+
+/*
+struct LookupParameterStorage : public ParameterStorageBase {
+  void scale_parameters(float a) override;
+  void zero() override;
+  void squared_l2norm(float* sqnorm) const override;
+  void g_squared_l2norm(float* sqnorm) const override;
+  size_t size() const override;
+  void initialize(unsigned index, const std::vector<float>& val);
+  void accumulate_grad(unsigned index, const Tensor& g);
+  void clear();
+  void initialize_lookups();
+  Dim all_dim;
+  Tensor all_values;
+  Tensor all_grads;
+  Dim dim;
+  std::vector<Tensor> values;
+  std::vector<Tensor> grads;
+  std::unordered_set<unsigned> non_zero_grads;
+};
+*/
+
 class Model {
  public:
   Model();
@@ -96,6 +138,9 @@ class Model {
 
   Parameter add_parameters(const Dim& d, float scale = 0.0f);
   // Parameter add_parameters(const Dim& d, const ParameterInit & init);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
+  // LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
+
 };
 
 struct ComputationGraph;
@@ -116,6 +161,8 @@ struct Expression {
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
   //const Tensor& value() const { return pg->get_value(i); }
 };
+
+// %template(ExpressionVector)     ::std::vector<Expression>;
 
 Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
@@ -155,6 +202,22 @@ Expression operator/(const Expression& x, float y); // { return x * (1.f / y); }
 Expression tanh(const Expression& x);
 Expression squared_distance(const Expression& x, const Expression& y);
 
+Expression noise(const Expression& x, real stddev);
+Expression dropout(const Expression& x, real p);
+Expression block_dropout(const Expression& x, real p);
+
+template <typename T>
+Expression affine_transform(const T& xs);
+%template(affine_transform_VE) affine_transform<std::vector<Expression>>;
+
+/*
+template <typename T>
+inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
+inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
+void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+*/
+
+
 } // namespace expr
 
 
@@ -170,16 +233,14 @@ struct ComputationGraph {
 
   VariableIndex add_parameters(Parameter p);
   VariableIndex add_const_parameters(Parameter p);
-  /*
   VariableIndex add_lookup(LookupParameter p, const unsigned* pindex);
   VariableIndex add_lookup(LookupParameter p, unsigned index);
   VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
-  VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>& indices);
+  // VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>& indices);
   VariableIndex add_const_lookup(LookupParameter p, const unsigned* pindex);
   VariableIndex add_const_lookup(LookupParameter p, unsigned index);
   VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
-  VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>& indices);
-  */
+  // VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>& indices);
 
   void clear();
   void checkpoint();
@@ -222,6 +283,26 @@ struct Trainer {
 
 struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
+};
+
+
+%nodefaultctor RNNBuilder;
+struct RNNBuilder {
+  RNNPointer state() const;
+  void new_graph(ComputationGraph& cg);
+  void start_new_sequence(const std::vector<Expression>& h_0 = {});
+  Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new = {});
+  Expression set_s(const RNNPointer& prev, const std::vector<Expression>& s_new = {});
+  Expression add_input(const Expression& x);
+  Expression add_input(const RNNPointer& prev, const Expression& x);
+};
+
+struct LSTMBuilder : public RNNBuilder {
+  //LSTMBuilder() = default;
+  explicit LSTMBuilder(unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       Model* model);
 };
 
 
