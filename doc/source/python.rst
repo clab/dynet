@@ -170,8 +170,23 @@ then you may need to run the following (and add it to your shell init files):
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
 
 
+Anaconda Support
+----------------
+
+`Anaconda 
+<https://www.continuum.io/downloads>`_ is a popular package management system for Python. DyNet can be used from within an Anaconda environment, but be sure to activate the environment
+
+     source activate my_environment_name
+
+then install some necessary packages as follows:
+
+     conda install gcc cmake boost
+
+After this, the build process should be the same as normal.
+
 Windows Support
-------------------
+---------------
+
 You can also use Python on Windows by following similar steps to the above. For simplicity, we recommend 
 using a Python distribution that already has Cython installed. The following has been tested to work:
 
@@ -187,7 +202,6 @@ using a Python distribution that already has Cython installed. The following has
 5) Follow the rest of the instructions above for testing the build and installing it for other users
 
 Note, currently only the Release version works.
-
 
 GPU/MKL Support
 ---------------
