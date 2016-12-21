@@ -180,7 +180,7 @@ Anaconda Support
 
 then install some necessary packages as follows:
 
-     conda install gcc cmake boost
+     conda install gcc cmake boost cython
 
 After this, the build process should be the same as normal.
 
