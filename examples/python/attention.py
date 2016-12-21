@@ -147,14 +147,14 @@ def get_loss(input_sentence, output_sentence, enc_fwd_lstm, enc_bwd_lstm, dec_ls
 
 def train(model, sentence):
     trainer = pc.SimpleSGDTrainer(model)
-    for i in xrange(600):
+    for i in range(600):
         loss = get_loss(sentence, sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm)
         loss_value = loss.value()
         loss.backward()
         trainer.update()
         if i % 20 == 0:
-            print loss_value
-            print generate(sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm)
+            print(loss_value)
+            print(generate(sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm))
 
 
 train(model, "it is working")

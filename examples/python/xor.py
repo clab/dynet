@@ -34,9 +34,9 @@ else:
     F = -1
 
 
-for iter in xrange(ITERATIONS):
+for iter in range(ITERATIONS):
     mloss = 0.0
-    for mi in xrange(4):
+    for mi in range(4):
         x1 = mi % 2
         x2 = (mi / 2) % 2
         x.set([T if x1 else F, T if x2 else F])
@@ -46,11 +46,11 @@ for iter in xrange(ITERATIONS):
         sgd.update(1.0)
     sgd.update_epoch();
     mloss /= 4.
-    print "loss: %0.9f" % mloss
+    print("loss: %0.9f" % mloss)
 
 x.set([F,T])
 z = -(-y_pred)
-print z.scalar_value()
+print(z.scalar_value())
 
 renew_cg()
 W = parameter(pW)
@@ -66,11 +66,11 @@ if xsent:
 else:
     y_pred = (V*h) + a
 x.set([T,F])
-print "TF",y_pred.scalar_value()
+print("TF",y_pred.scalar_value())
 x.set([F,F])
-print "FF",y_pred.scalar_value()
+print("FF",y_pred.scalar_value())
 x.set([T,T])
-print "TT",y_pred.scalar_value()
+print("TT",y_pred.scalar_value())
 x.set([F,T])
-print "FT",y_pred.scalar_value()
+print("FT",y_pred.scalar_value())
 

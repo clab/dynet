@@ -80,16 +80,16 @@ if __name__ == '__main__':
     train = list(train)
 
     chars = loss = 0.0
-    for ITER in xrange(100):
+    for ITER in range(100):
         random.shuffle(train)
         for i,sent in enumerate(train):
             _start = time.time()
             if i % 50 == 0:
                 sgd.status()
-                if chars > 0: print loss / chars,
-                for _ in xrange(1):
+                if chars > 0: print(loss / chars,)
+                for _ in range(1):
                     samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["\n"])
-                    print "".join([vocab.i2w[c] for c in samp]).strip()
+                    print("".join([vocab.i2w[c] for c in samp]).strip())
                 loss = 0.0
                 chars = 0.0
                 
@@ -100,6 +100,6 @@ if __name__ == '__main__':
             errs.backward()
             sgd.update(1.0)
             #print "TM:",(time.time() - _start)/len(sent)
-        print "ITER",ITER,loss
+        print("ITER",ITER,loss)
         sgd.status()
         sgd.update_epoch(1.0)
