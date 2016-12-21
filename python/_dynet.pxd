@@ -272,6 +272,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_sum_batches "dynet::expr::sum_batches" (CExpression& x)
 
     #CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned v)   #
+    CExpression c_select_rows "dynet::expr::select_rows" (CExpression& x, vector[unsigned] rs)
+    CExpression c_select_cols "dynet::expr::select_cols" (CExpression& x, vector[unsigned] cs)
     CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv) #
     CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv) #
     CExpression c_pickrange "dynet::expr::pickrange" (CExpression& x, unsigned v, unsigned u) #
