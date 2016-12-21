@@ -473,6 +473,7 @@ cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
 def cg_version(): return _cg._cg_version
 def renew_cg(): return _cg.renew()
+def print_text_graphviz(): return _cg.print_graphviz()
 def cg_checkpoint(): _cg.checkpoint()
 def cg_revert():     _cg.revert()
 
