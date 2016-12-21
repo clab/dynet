@@ -237,8 +237,17 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
       fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     } else {
       assert(xs[0]->d.bd == 1 && fx.d.bd != 1);
+#ifdef __CUDACC__
       Eigen::array<int, 3> bcast; bcast[0] = bcast[1] = 1; bcast[2] = fx.d.bd;
       fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcast);
+#else
+      size_t batch_size = fx.d.batch_size();
+      float *curr_ptr = fx.v, *end_ptr = curr_ptr + batch_size * fx.d.bd, *in_ptr = xs[0]->v;
+      do {
+        memcpy(curr_ptr, in_ptr, sizeof(float)*batch_size);
+        curr_ptr += batch_size;
+      } while(curr_ptr != end_ptr);
+#endif
     }
 
     // Perform multiplication
@@ -276,8 +285,13 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
       dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
     } else {
       assert(dEdxi.d.bd == 1 && dEdf.d.bd != 1);
+#ifdef __CUDACC__
       Eigen::array<int, 1> red_axis; red_axis[0] = 2;
       dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+#else
+      for(unsigned b = 0; b < dEdf.d.bd; ++b)
+        (*dEdxi).noalias() += dEdf.batch_matrix(b);
+#endif
     }
 
   // Left argument of matrix multiply
