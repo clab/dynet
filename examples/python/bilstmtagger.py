@@ -115,12 +115,12 @@ def tag_sent(sent, builders):
 
 
 tagged = loss = 0
-for ITER in xrange(50):
+for ITER in range(50):
     random.shuffle(train)
     for i,s in enumerate(train,1):
         if i % 5000 == 0:
             sgd.status()
-            print loss / tagged
+            print(loss / tagged)
             loss = 0
             tagged = 0
         if i % 10000 == 0:
@@ -131,7 +131,7 @@ for ITER in xrange(50):
                 for go,gu in zip(golds,tags):
                     if go == gu: good +=1 
                     else: bad+=1
-            print good/(good+bad)
+            print(good/(good+bad))
         ws = [vw.w2i.get(w, UNK) for w,p in s]
         ps = [vt.w2i[p] for w,p in s]
         sum_errs = build_tagging_graph(ws,ps,builders)
