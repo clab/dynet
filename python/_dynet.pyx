@@ -384,7 +384,7 @@ cdef class Model: # {{{
             tp,num = tp.split("~",1)
             num = int(num)
             items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
-            return BiRNNBuilder(None, None, None, None, None, zip(items[0::2], items[1::2]))
+            return BiRNNBuilder(None, None, None, None, None, list(zip(items[0::2], items[1::2])))
         elif tp.startswith("user~"):
             # user defiend type
             tp,num = tp.split("~",1)
