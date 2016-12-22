@@ -294,7 +294,7 @@ cdef class Model: # {{{
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
         if init is None:
-            init = GlorotInitializer()
+            init = GlorotInitializer(True)
         initializer = init.initializer
         cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
