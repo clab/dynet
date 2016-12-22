@@ -822,7 +822,7 @@ Expression pickneglogsoftmax(const Expression& x, unsigned v);
  * 
  * \return The negative log likelihood of element ``*pv`` after taking the softmax
  */
-Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
+Expression pickneglogsoftmax(const Expression& x, const unsigned * pv);
 
 /**
  * \ingroup lossoperations
@@ -1231,7 +1231,7 @@ Expression pick(const Expression& x, const std::vector<unsigned> & v);
  * 
  * \return The value of x[*pv]
  */
-Expression pick(const Expression& x, unsigned * pv);
+Expression pick(const Expression& x, const unsigned * pv);
 
 /**
  * \ingroup flowoperations
