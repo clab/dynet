@@ -609,11 +609,11 @@ Expression log(const Expression& x);
 /**
  * \ingroup arithmeticoperations
  * \brief Logistic sigmoid function
- * \details Calculate elementwise y_i = 1/(1+e^{x_i})
+ * \details Calculate elementwise y_i = 1/(1+e^{-x_i})
  * 
  * \param x The input expression
  * 
- * \return An expression where the ith element is equal to y_i = 1/(1+e^{x_i})
+ * \return An expression where the ith element is equal to y_i = 1/(1+e^{-x_i})
  */
 Expression logistic(const Expression& x);
 
