@@ -1015,12 +1015,12 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
     throw std::runtime_error("LogSoftmax::backward not yet implemented for multiple columns");
   Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   if(fx.d.bd == 1) {
-    z.t<0>().device(*dev.edevice) = fx.t<1>().binaryExpr(dEdf.t<1>(), FWeightedError()).sum();
+    z.t<0>().device(*dev.edevice) = dEdf.t<1>().sum();
     Eigen::array<int, 1> bcast; bcast[0] = fx.d.rows();
     dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().exp() * -z.t<1>().broadcast(bcast) + dEdf.t<1>();
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 0;
-    z.tb<0>().device(*dev.edevice) = (fx.tb<1>().binaryExpr(dEdf.tb<1>(), FWeightedError())).sum(red_axis);
+    z.tb<0>().device(*dev.edevice) = dEdf.tb<1>().sum(red_axis);
     Eigen::array<int, 2> bcast; bcast[0] = fx.d.rows(); bcast[1] = 1;
     dEdxi.tb<1>().device(*dev.edevice) += fx.tb<1>().exp() * -z.tb<1>().broadcast(bcast) + dEdf.tb<1>();
   }
