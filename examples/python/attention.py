@@ -1,4 +1,4 @@
-import dynet as pc
+import dynet as dy
 import random
 
 EOS = "<EOS>"
@@ -15,12 +15,12 @@ EMBEDDINGS_SIZE = 32
 STATE_SIZE = 32
 ATTENTION_SIZE = 32
 
-model = pc.Model()
+model = dy.Model()
 
-enc_fwd_lstm = pc.LSTMBuilder(LSTM_NUM_OF_LAYERS, EMBEDDINGS_SIZE, STATE_SIZE, model)
-enc_bwd_lstm = pc.LSTMBuilder(LSTM_NUM_OF_LAYERS, EMBEDDINGS_SIZE, STATE_SIZE, model)
+enc_fwd_lstm = dy.LSTMBuilder(LSTM_NUM_OF_LAYERS, EMBEDDINGS_SIZE, STATE_SIZE, model)
+enc_bwd_lstm = dy.LSTMBuilder(LSTM_NUM_OF_LAYERS, EMBEDDINGS_SIZE, STATE_SIZE, model)
 
-dec_lstm = pc.LSTMBuilder(LSTM_NUM_OF_LAYERS, STATE_SIZE*2+EMBEDDINGS_SIZE, STATE_SIZE, model)
+dec_lstm = dy.LSTMBuilder(LSTM_NUM_OF_LAYERS, STATE_SIZE*2+EMBEDDINGS_SIZE, STATE_SIZE, model)
 
 input_lookup = model.add_lookup_parameters((VOCAB_SIZE, EMBEDDINGS_SIZE))
 attention_w1 = model.add_parameters( (ATTENTION_SIZE, STATE_SIZE*2))
@@ -57,7 +57,7 @@ def encode_sentence(enc_fwd_lstm, enc_bwd_lstm, sentence):
     fwd_vectors = run_lstm(enc_fwd_lstm.initial_state(), sentence)
     bwd_vectors = run_lstm(enc_bwd_lstm.initial_state(), sentence_rev)
     bwd_vectors = list(reversed(bwd_vectors))
-    vectors = [pc.concatenate(list(p)) for p in zip(fwd_vectors, bwd_vectors)]
+    vectors = [dy.concatenate(list(p)) for p in zip(fwd_vectors, bwd_vectors)]
 
     return vectors
 
@@ -66,17 +66,17 @@ def attend(input_vectors, state):
     global attention_w1
     global attention_w2
     global attention_v
-    w1 = pc.parameter(attention_w1)
-    w2 = pc.parameter(attention_w2)
-    v = pc.parameter(attention_v)
+    w1 = dy.parameter(attention_w1)
+    w2 = dy.parameter(attention_w2)
+    v = dy.parameter(attention_v)
     attention_weights = []
 
-    w2dt = w2*pc.concatenate(list(state.s()))
+    w2dt = w2*dy.concatenate(list(state.s()))
     for input_vector in input_vectors:
-        attention_weight = v*pc.tanh(w1*input_vector + w2dt)
+        attention_weight = v*dy.tanh(w1*input_vector + w2dt)
         attention_weights.append(attention_weight)
-    attention_weights = pc.softmax(pc.concatenate(attention_weights))
-    output_vectors = pc.esum([vector*attention_weight for vector, attention_weight in zip(input_vectors, attention_weights)])
+    attention_weights = dy.softmax(dy.concatenate(attention_weights))
+    output_vectors = dy.esum([vector*attention_weight for vector, attention_weight in zip(input_vectors, attention_weights)])
     return output_vectors
 
 
@@ -84,21 +84,21 @@ def decode(dec_lstm, vectors, output):
     output = [EOS] + list(output) + [EOS]
     output = [char2int[c] for c in output]
 
-    w = pc.parameter(decoder_w)
-    b = pc.parameter(decoder_b)
+    w = dy.parameter(decoder_w)
+    b = dy.parameter(decoder_b)
 
     last_output_embeddings = output_lookup[char2int[EOS]]
-    s = dec_lstm.initial_state().add_input(pc.concatenate([pc.vecInput(STATE_SIZE*2), last_output_embeddings]))
+    s = dec_lstm.initial_state().add_input(dy.concatenate([dy.vecInput(STATE_SIZE*2), last_output_embeddings]))
     loss = []
     for char in output:
-        vector = pc.concatenate([attend(vectors, s), last_output_embeddings])
+        vector = dy.concatenate([attend(vectors, s), last_output_embeddings])
 
         s = s.add_input(vector)
         out_vector = w * s.output() + b
-        probs = pc.softmax(out_vector)
+        probs = dy.softmax(out_vector)
         last_output_embeddings = output_lookup[char]
-        loss.append(-pc.log(pc.pick(probs, char)))
-    loss = pc.esum(loss)
+        loss.append(-dy.log(dy.pick(probs, char)))
+    loss = dy.esum(loss)
     return loss
 
 
@@ -113,20 +113,20 @@ def generate(input, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
     embedded = embed_sentence(input)
     encoded = encode_sentence(enc_fwd_lstm, enc_bwd_lstm, embedded)
 
-    w = pc.parameter(decoder_w)
-    b = pc.parameter(decoder_b)
+    w = dy.parameter(decoder_w)
+    b = dy.parameter(decoder_b)
 
     last_output_embeddings = output_lookup[char2int[EOS]]
-    s = dec_lstm.initial_state().add_input(pc.concatenate([pc.vecInput(STATE_SIZE * 2), last_output_embeddings]))
+    s = dec_lstm.initial_state().add_input(dy.concatenate([dy.vecInput(STATE_SIZE * 2), last_output_embeddings]))
     out = ''
     count_EOS = 0
     for i in range(len(input)*2):
         if count_EOS == 2: break
-        vector = pc.concatenate([attend(encoded, s), last_output_embeddings])
+        vector = dy.concatenate([attend(encoded, s), last_output_embeddings])
 
         s = s.add_input(vector)
         out_vector = w * s.output() + b
-        probs = pc.softmax(out_vector)
+        probs = dy.softmax(out_vector)
         probs = probs.vec_value()
         next_char = sample(probs)
         last_output_embeddings = output_lookup[next_char]
@@ -139,14 +139,14 @@ def generate(input, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
 
 
 def get_loss(input_sentence, output_sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
-    pc.renew_cg()
+    dy.renew_cg()
     embedded = embed_sentence(input_sentence)
     encoded = encode_sentence(enc_fwd_lstm, enc_bwd_lstm, embedded)
     return decode(dec_lstm, encoded, output_sentence)
 
 
 def train(model, sentence):
-    trainer = pc.SimpleSGDTrainer(model)
+    trainer = dy.SimpleSGDTrainer(model)
     for i in range(600):
         loss = get_loss(sentence, sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm)
         loss_value = loss.value()
@@ -158,4 +158,3 @@ def train(model, sentence):
 
 
 train(model, "it is working")
-
