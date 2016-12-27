@@ -656,10 +656,10 @@ cdef class Expression: #{{{
                     i += rows
             if index.stop is not None:
                 j = index.stop
-                if j > rows - 1:
-                    raise IndexError("Stop index too large: %d > %d" % (j, rows - 1))
-                if j < -rows:
-                    raise IndexError("Stop index too small: %d < %d" % (j, -rows))
+                if j > rows:
+                    raise IndexError("Stop index too large: %d > %d" % (j, rows))
+                if j < -rows + 1:
+                    raise IndexError("Stop index too small: %d < %d" % (j, -rows + 1))
                 if j < 0:
                     j += rows
             if i >= j:
