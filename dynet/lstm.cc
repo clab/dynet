@@ -260,38 +260,18 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2i = model->add_parameters({hidden_dim, hidden_dim});
+    Parameter p_x2i = model->add_parameters({hidden_dim*4, layer_input_dim});
+    Parameter p_h2i = model->add_parameters({hidden_dim*4, hidden_dim});
     //Parameter p_c2i = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model->add_parameters({hidden_dim});
-
-    // f
-    Parameter p_x2f = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2f = model->add_parameters({hidden_dim, hidden_dim});
-    //Parameter p_c2f = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bf = model->add_parameters({hidden_dim});
-
-    // o
-    Parameter p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2o = model->add_parameters({hidden_dim, hidden_dim});
-    //Parameter p_c2o = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bo = model->add_parameters({hidden_dim});
-
-    // c (g)
-    Parameter p_x2g = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2g = model->add_parameters({hidden_dim, hidden_dim});
-    //Parameter p_c2g = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bg = model->add_parameters({hidden_dim});
+    Parameter p_bi = model->add_parameters({hidden_dim*4});
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
-    vector<Parameter> ps = {p_x2i, p_h2i, /*p_c2i,*/ p_bi, 
-                            p_x2f, p_h2f, /*p_c2f,*/ p_bf,   
-                            p_x2o, p_h2o, /*p_c2o,*/ p_bo,
-                            p_x2g, p_h2g, /*p_c2g,*/ p_bg};
+    vector<Parameter> ps = {p_x2i, p_h2i, /*p_c2i,*/ p_bi};
     params.push_back(ps);
   }  // layers
   dropout_rate = 0.f;
+  hid = hidden_dim;
 }
 
 void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -409,21 +389,22 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     // apply dropout according to http://arxiv.org/pdf/1409.2329v5.pdf
     if (dropout_rate) in = dropout(in, dropout_rate);
     // input
+    Expression tmp;
     Expression i_ait;
     Expression i_aft;
     Expression i_aot;
     Expression i_agt;
     if (has_prev_state) { // TODO: make these batched?
-      i_ait = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
-      i_aft = affine_transform({vars[_BF], vars[_X2F], in, vars[_H2F], i_h_tm1});
-      i_aot = affine_transform({vars[_BO], vars[_X2O], in, vars[_H2O], i_h_tm1});
-      i_agt = affine_transform({vars[_BG], vars[_X2G], in, vars[_H2G], i_h_tm1});
+      //tmp = vars[_BI] + (vars[_X2I]*in) + (vars[_H2I]*i_h_tm1);
+      tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
     } else {
-      i_ait = affine_transform({vars[_BI], vars[_X2I], in});
-      i_aft = affine_transform({vars[_BF], vars[_X2F], in});
-      i_aot = affine_transform({vars[_BO], vars[_X2O], in});
-      i_agt = affine_transform({vars[_BG], vars[_X2G], in});
+      //tmp = vars[_BI] + vars[_X2I] * in;
+      tmp = affine_transform({vars[_BI], vars[_X2I], in});
     }
+    i_ait = pickrange(tmp,0,hid);
+    i_aft = pickrange(tmp,hid,hid*2);
+    i_aot = pickrange(tmp,hid*2,hid*3);
+    i_agt = pickrange(tmp,hid*3,hid*4);
     Expression i_it = logistic(i_ait);
     Expression i_ft = logistic(i_aft);
     Expression i_ot = logistic(i_aot);

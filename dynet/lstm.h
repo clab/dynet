@@ -117,6 +117,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
+  unsigned hid;
 
 private:
   friend class boost::serialization::access;
