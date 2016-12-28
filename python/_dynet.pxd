@@ -368,7 +368,7 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
     cdef cppclass CVanillaLSTMBuilder "dynet::VanillaLSTMBuilder" (CRNNBuilder):
         CVanillaLSTMBuilder()
-        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel *model)
+        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
 
 cdef extern from "dynet/fast-lstm.h" namespace "dynet":
     cdef cppclass CFastLSTMBuilder "dynet::FastLSTMBuilder" (CRNNBuilder):

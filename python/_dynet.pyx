@@ -1209,7 +1209,7 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
 cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
             self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
