@@ -156,17 +156,19 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 0;
     m.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(red_axis);
-    // TODO: We want to do this in a single command, but this is causing incorrect results.
-    //  Eigen::array<int, 2> bcast({(int)x.d.rows(), 1});
-    //  z.tb<0>().device(*dev.edevice) = (x.tb<1>() - m.tb<1>().broadcast(bcast)).exp().sum();
-    //  z.tb<0>().device(*dev.edevice) = z.tb<0>().log() + m.tb<0>();
-    // Do the following instead
+    // TODO: Currently, the first version is slower on CPU, hence the switch
+#ifdef __CUDACC__
+    Eigen::array<int, 2> bcast({(int)x.d.rows(), 1});
+    // This needs to be split into two lines to prevent memory allocation
+    z.tb<0>().device(*dev.edevice) = (x.tb<1>() - m.tb<1>().broadcast(bcast)).exp().sum(red_axis);
+    z.tb<0>().device(*dev.edevice) = z.tb<0>().log() + m.tb<0>();
+#else
     vector<float> mvals = as_vector(m);
     for(size_t b = 0; b < x.d.bd; b++) {
-      // This needs to be split into two lines to prevent memory allocation
       z.tb<0>().chip<0>(b).device(*dev.edevice) = (x.tb<1>().chip<1>(b) - mvals[b]).exp().sum();
       z.tb<0>().chip<0>(b).device(*dev.edevice) = z.tb<0>().chip<0>(b).log() + mvals[b];
     }
+#endif
   }
 }
 
