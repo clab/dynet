@@ -256,14 +256,14 @@ enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model* model) : layers(layers) {
+                         Model& model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model->add_parameters({hidden_dim*4, layer_input_dim});
-    Parameter p_h2i = model->add_parameters({hidden_dim*4, hidden_dim});
-    //Parameter p_c2i = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model->add_parameters({hidden_dim*4});
+    Parameter p_x2i = model.add_parameters({hidden_dim*4, layer_input_dim});
+    Parameter p_h2i = model.add_parameters({hidden_dim*4, hidden_dim});
+    //Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bi = model.add_parameters({hidden_dim*4});
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
