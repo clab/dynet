@@ -192,6 +192,10 @@ void ParameterInitConst::initialize_params(Tensor & values) const {
   TensorTools::Constant(values, cnst);
 }
 
+void ParameterInitIdentity::initialize_params(Tensor & values) const {
+  TensorTools::Identity(values);
+}
+
 void ParameterInitGlorot::initialize_params(Tensor & values) const {
   int dims = 0, dim_len = values.d.nd-(lookup?1:0);
   for(int i = 0; i < dim_len; ++i) dims += values.d[i];
@@ -331,6 +335,16 @@ Parameter Model::add_parameters(const Dim& d, const ParameterInit & init) {
 
 LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
   LookupParameterStorage* p = new LookupParameterStorage(n,d);
+  LookupParameter r(this, lookup_params.size());
+  //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
+  all_params.push_back(p);
+  lookup_params.push_back(p);
+  updated_lookup_params.push_back(r.index);
+  return r;
+}
+
+LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init) {
+  LookupParameterStorage* p = new LookupParameterStorage(n,d,init);
   LookupParameter r(this, lookup_params.size());
   //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);

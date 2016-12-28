@@ -371,7 +371,7 @@ INLINE_GROUPED_CLASSES = NO
 # Man pages) or section (for LaTeX and RTF).
 # The default value is: NO.
 
-INLINE_SIMPLE_STRUCTS  = NO
+INLINE_SIMPLE_STRUCTS  = YES
 
 # When TYPEDEF_HIDES_STRUCT tag is enabled, a typedef of a struct, union, or
 # enum is documented as struct, union, or enum with the name of the typedef. So
@@ -758,7 +758,7 @@ WARN_LOGFILE           =
 # spaces.
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  =../../dynet/expr.h ../../dynet/training.h ../../dynet/rnn.h
+INPUT                  =../../dynet/expr.h ../../dynet/training.h ../../dynet/rnn.h ../../examples/cpp/encdec/encdec.h ../../examples/cpp/rnnlm-batch/rnnlm-batch.h ../../examples/cpp/mnist/mlp.h
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

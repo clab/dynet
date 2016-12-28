@@ -55,6 +55,9 @@ void Trainer::rescale_and_reset_weight_decay() {
   const auto params = model->parameters_list();
   for (auto p : model->updated_parameters_list())
     params[p]->scale_parameters(weight_decay);
+  const auto lookup_params = model->parameters_list();
+  for (auto p : model->updated_lookup_parameters_list())
+    lookup_params[p]->scale_parameters(weight_decay);
   model->weight_decay.reset_weight_decay();
 }
 
@@ -69,6 +72,7 @@ float Trainer::clip_gradients(real scale) {
     }
     if (scale * gg > clip_threshold) {
       ++clips;
+      ++clips_since_status;
       gscale = clip_threshold / (scale * gg);
     }
   }
@@ -103,6 +107,7 @@ void Trainer::update(real scale) {
     lookup_params[i]->clear();
   }
   ++updates;
+  ++updates_since_status;
 
   model->weight_decay.update_weight_decay(); // update global weight scale
   if (model->weight_decay.parameters_need_rescaled())
@@ -278,9 +283,8 @@ void AdamTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale,
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * beta_1 + ts[1]->tvec() * (1.f - beta_1);
   ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * beta_2 + ts[1]->tvec().square() * (1.f - beta_2);
-  float s1 = 1 - pow(beta_1, updates+1);
-  float s2 = 1 - pow(beta_2, updates+1);
-  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / model->weight_decay.current_weight_decay());
+  float lr_t = eta * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ model->weight_decay.current_weight_decay();
+  ts[0]->tvec().device(*dev.edevice) -= ts[2]->tvec() / (ts[3]->tvec().sqrt() + epsilon) * lr_t;
 }
 DYNET_TRAINER_INST_DEV_IMPL(AdamTrainer)
 

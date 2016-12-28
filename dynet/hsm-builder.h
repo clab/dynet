@@ -35,7 +35,7 @@ public:
   Cluster* add_child(unsigned sym);
   void add_word(unsigned word);
   void initialize(Model& model);
-  void initialize(unsigned rep_dim, Model* model);
+  void initialize(unsigned rep_dim, Model& model);
 
   void new_graph(ComputationGraph& cg);
   unsigned sample(expr::Expression h, ComputationGraph& cg) const;
@@ -59,8 +59,8 @@ class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
  public:
   HierarchicalSoftmaxBuilder(unsigned rep_dim,
                               const std::string& cluster_file,
-                              Dict* word_dict,
-                              Model* model);
+                              Dict& word_dict,
+                              Model& model);
   ~HierarchicalSoftmaxBuilder();
 
   void initialize(Model& model);
@@ -77,7 +77,7 @@ class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
   expr::Expression full_log_distribution(const expr::Expression& rep);
 
  private:
-  Cluster* read_cluster_file(const std::string& cluster_file, Dict* word_dict);
+  Cluster* read_cluster_file(const std::string& cluster_file, Dict& word_dict);
   std::vector<Cluster*> widx2path; // will be NULL if not found
   Dict path_symbols;
 

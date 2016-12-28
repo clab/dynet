@@ -19,13 +19,14 @@ DyNet can be installed according to the instructions below:
 And get the basic information to create programs and use models:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    tutorial
    commandline
    operations
    builders
    optimizers
+   examples
 
 Mode advanced topics are below:
 
@@ -34,6 +35,7 @@ Mode advanced topics are below:
 
    minibatch
    multiprocessing
+   unorthodox
 
 And we welcome your contributions!
 

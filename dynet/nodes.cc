@@ -237,8 +237,17 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
       fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     } else {
       assert(xs[0]->d.bd == 1 && fx.d.bd != 1);
+#ifdef __CUDACC__
       Eigen::array<int, 3> bcast; bcast[0] = bcast[1] = 1; bcast[2] = fx.d.bd;
       fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcast);
+#else
+      size_t batch_size = fx.d.batch_size();
+      float *curr_ptr = fx.v, *end_ptr = curr_ptr + batch_size * fx.d.bd, *in_ptr = xs[0]->v;
+      do {
+        memcpy(curr_ptr, in_ptr, sizeof(float)*batch_size);
+        curr_ptr += batch_size;
+      } while(curr_ptr != end_ptr);
+#endif
     }
 
     // Perform multiplication
@@ -276,8 +285,13 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
       dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
     } else {
       assert(dEdxi.d.bd == 1 && dEdf.d.bd != 1);
+#ifdef __CUDACC__
       Eigen::array<int, 1> red_axis; red_axis[0] = 2;
       dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+#else
+      for(unsigned b = 0; b < dEdf.d.bd; ++b)
+        (*dEdxi).noalias() += dEdf.batch_matrix(b);
+#endif
     }
 
   // Left argument of matrix multiply
@@ -405,8 +419,8 @@ void Concatenate::backward_dev_impl(const MyDevice & dev,
   if(dEdxi.d.bd == dEdf.d.bd) {
     dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().slice(indices, sizes);
   } else {
-    for(unsigned b = 0; b < dEdf.d.bd; ++b)
-      dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().chip<2>(b).slice(indices, sizes);
+    Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+    dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().slice(indices, sizes).sum(red_axis);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Concatenate)
@@ -608,9 +622,9 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
   } else {
     Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
     if(xs[0]->d.bd == 1)
-      fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>().broadcast(bcast) * xs[1]->tb<1>();
+      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec();
     else
-      fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() * xs[1]->tb<1>().broadcast(bcast);
+      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec() * xs[1]->tbvec().broadcast(bcast);
   }
 }
 
@@ -626,10 +640,10 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
     dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
   } else if(xs[1-i]->d.bd == 1) {
     Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-    dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>() * xs[1-i]->tb<1>().broadcast(bcast);
+    dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast);
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 1;
-    dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() * xs[1-i]->tb<1>()).sum(red_axis);
+    dEdxi.tvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec()).sum(red_axis);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseMultiply)
@@ -678,7 +692,7 @@ DYNET_NODE_INST_DEV_IMPL(DotProduct)
 template<class MyDevice>
 void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  TensorTools::RandomBernoulli(m, (1.f-p), 1.f / (1.f-p));
+  TensorTools::RandomizeBernoulli(m, (1.f-p), 1.f / (1.f-p));
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() * m.tvec();
 }
 
@@ -1001,12 +1015,12 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
     throw std::runtime_error("LogSoftmax::backward not yet implemented for multiple columns");
   Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   if(fx.d.bd == 1) {
-    z.t<0>().device(*dev.edevice) = fx.t<1>().binaryExpr(dEdf.t<1>(), FWeightedError()).sum();
+    z.t<0>().device(*dev.edevice) = dEdf.t<1>().sum();
     Eigen::array<int, 1> bcast; bcast[0] = fx.d.rows();
     dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().exp() * -z.t<1>().broadcast(bcast) + dEdf.t<1>();
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 0;
-    z.tb<0>().device(*dev.edevice) = (fx.tb<1>().binaryExpr(dEdf.tb<1>(), FWeightedError())).sum(red_axis);
+    z.tb<0>().device(*dev.edevice) = dEdf.tb<1>().sum(red_axis);
     Eigen::array<int, 2> bcast; bcast[0] = fx.d.rows(); bcast[1] = 1;
     dEdxi.tb<1>().device(*dev.edevice) += fx.tb<1>().exp() * -z.tb<1>().broadcast(bcast) + dEdf.tb<1>();
   }
@@ -2071,7 +2085,7 @@ DYNET_NODE_INST_DEV_IMPL(RandomNormal)
 template<class MyDevice>
 void RandomBernoulli::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  TensorTools::RandomBernoulli(fx, p);
+  TensorTools::RandomizeBernoulli(fx, p, scale);
 }
 
 template<class MyDevice>

@@ -137,6 +137,11 @@ void ComputationGraph::revert() {
     checkpoints.pop_back();
 }
 
+Dim& ComputationGraph::get_dimension(VariableIndex index) const {
+  return nodes[index]->dim; 
+}
+
+
 
 VariableIndex ComputationGraph::add_input(real s) {
   VariableIndex new_node_index(nodes.size());

@@ -40,12 +40,13 @@ struct Trainer {
   /**
    * \brief General constructor for a Trainer
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
+   * \param edecay Learning rate decay
    */
-  explicit Trainer(Model* m, real e0, real edecay = 0.0) :
-    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), 
-    clips(), updates(), sparse_updates_enabled(true), aux_allocated(false), model(m) {}
+  explicit Trainer(Model& m, real e0, real edecay = 0.0) :
+    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5),
+    clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
   virtual ~Trainer();
 
   void update(real scale = 1.0);
@@ -75,6 +76,9 @@ struct Trainer {
   real clip_threshold;
   real clips;
   real updates;
+  // the number of clips and status since the last print
+  real clips_since_status;
+  real updates_since_status;
 
   /**
    * \brief Whether to perform sparse updates
@@ -92,8 +96,8 @@ struct Trainer {
   bool aux_allocated;
 
   void status() {
-    std::cerr << "[epoch=" << epoch << " eta=" << eta << " clips=" << clips << " updates=" << updates << "] ";
-    updates = clips = 0;
+    std::cerr << "[epoch=" << epoch << " eta=" << eta << " clips=" << clips_since_status << " updates=" << updates_since_status << "] ";
+    updates_since_status = clips_since_status = 0;
   }
 
   Model* model;  // parameters and gradients live here
@@ -155,11 +159,11 @@ struct SimpleSGDTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay parameter.
    */
-  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
+  explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
  private:
@@ -183,12 +187,12 @@ struct MomentumSGDTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param mom Momentum
    * \param edecay Learning rate decay parameter
    */
-  explicit MomentumSGDTrainer(Model* m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
+  explicit MomentumSGDTrainer(Model& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
     Trainer(m, e0, edecay), momentum(mom) {}
 
  protected:
@@ -223,12 +227,12 @@ struct AdagradTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param edecay Learning rate decay parameter
    */
-  explicit AdagradTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
+  explicit AdagradTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -260,13 +264,13 @@ struct AdadeltaTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average of updates in the numerator
    * \param edecay Learning rate decay parameter
    */
-  explicit AdadeltaTrainer(Model* m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
-    Trainer(m, 1.0), epsilon(eps), rho(rho) {}
+  explicit AdadeltaTrainer(Model& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
+    Trainer(m, 1.0, edecay), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -297,13 +301,13 @@ struct RmsPropTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
    * \param edecay Learning rate decay parameter
    */
-  explicit RmsPropTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
+  explicit RmsPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -334,15 +338,15 @@ struct AdamTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param beta_1 Moving average parameter for the mean
    * \param beta_2 Moving average parameter for the variance
    * \param eps Bias parameter \f$\epsilon\f$
    * \param edecay Learning rate decay parameter
    */
-  explicit AdamTrainer(Model* m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
-    Trainer(m, e0), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+  explicit AdamTrainer(Model& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
+    Trainer(m, e0, edecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
