@@ -1935,11 +1935,11 @@ template<class MyDevice>
 void SumBatches::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   unsigned num_args = xs[0]->d.bd;
-#if __CUDACC__
-  TensorTools::Zero(fx);
-  for (unsigned i = 0; i < num_args; ++i)
-    CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, fx.d.size(), kSCALAR_ONE, xs[0]->v + i * xs[0]->d.batch_size(), 1, fx.v, 1));
+#ifdef __CUDACC__
+  Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+  fx.t<2>().device(*dev.edevice) = xs[0]->tb<2>().sum(red_axis);
 #else
+  // TODO: Is this CPU version really good? Overhead can probably be reduced.
   auto res = *fx;
   const unsigned remainder = num_args % 4;
   switch (remainder) {
@@ -1962,8 +1962,8 @@ void SumBatches::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   assert(i == 0);
 #if __CUDACC__
-  for (unsigned i = 0; i < dEdxi.d.bd; ++i)
-    CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, fx.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v + i * dEdxi.d.batch_size(), 1));
+  Eigen::array<int, 3> bcast({1, 1, (int)fx.d.bd});
+  dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().broadcast(bcast);
 #else
   for (unsigned i = 0; i < dEdxi.d.bd; ++i)
     dEdxi.batch_matrix(i) += *dEdf;
