@@ -1380,12 +1380,13 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
 #endif
   } else {
     assert(pvals);
-    for(unsigned b = 0; b < pvals->size(); ++b)
+    for(unsigned b = 0; b < pvals->size(); ++b) {
 #ifdef __CUDACC__
       CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, 1, kSCALAR_ONE, dEdf.v + b, 1, dEdxi.batch_ptr(b) + (*pvals)[b], 1));
 #else
       dEdxi.batch_matrix(b)((*pvals)[b]) += dEdf.v[b];
 #endif
+    }
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PickElement)
@@ -1904,22 +1905,22 @@ void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs
     fx.v = xs[0]->v;
     return;
   }
-#if __CUDACC__
   TensorTools::Zero(fx);
-  for (unsigned i = 0; i < num_args; ++i)
-    CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, fx.d.size(), kSCALAR_ONE, xs[i]->v, 1, fx.v, 1));
-#else
-  auto res = fx.vec();
-  const unsigned remainder = num_args % 4;
-  switch (remainder) {
-    case 0: res.setZero(); break;
-    case 1: res = xs[0]->vec(); break;
-    case 2: res = xs[0]->vec() + xs[1]->vec(); break;
-    case 3: res = xs[0]->vec() + xs[1]->vec() + xs[2]->vec(); break;
-  }
-  for (unsigned i = remainder; i < num_args; i += 4)
-    res += xs[i]->vec() + xs[i+1]->vec() + xs[i+2]->vec() + xs[i+3]->vec();
+#if __CUDACC__
+  Eigen::array<int, 3> bcast({1, 1, (int)fx.d.bd});
 #endif
+  for (unsigned i = 0; i < num_args; ++i) {
+    if(xs[i]->d.bd == fx.d.bd) {
+      fx.tvec().device(*dev.edevice) += xs[i]->tvec();
+    } else {
+#if __CUDACC__
+      fx.tb<2>().device(*dev.edevice) += xs[i]->tb<2>().broadcast(bcast);
+#else
+      for(unsigned b = 0; b < fx.d.bd; ++b)
+        fx.tb<2>().chip<2>(b).device(*dev.edevice) += xs[i]->t<2>();
+#endif
+    }
+  }
 }
 
 template<class MyDevice>
@@ -1929,12 +1930,19 @@ void Sum::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-
 #if __CUDACC__
-  CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, fx.d.size(), kSCALAR_ONE, dEdf.v, 1, dEdxi.v, 1));
-#else
-  dEdxi.vec() += dEdf.vec();
+  Eigen::array<int, 3> bcast({1, 1, (int)fx.d.bd});
 #endif
+  if(dEdxi.d.bd == fx.d.bd) {
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+  } else {
+#if __CUDACC__
+    dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().broadcast(bcast);
+#else
+    for(unsigned b = 0; b < dEdxi.d.bd; ++b)
+      dEdxi.tb<2>().chip<2>(b).device(*dev.edevice) += dEdf.t<2>();
+#endif
+  }
 }
 DYNET_NODE_INST_DEV_IMPL(Sum)
 
