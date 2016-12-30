@@ -78,6 +78,10 @@ Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
   return Dim({1});
 }
 
+size_t LookupNode::aux_storage_size() const {
+  return dim.bd * sizeof(unsigned);
+}
+
 string LookupNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "lookup_parameters(|x|=" << params.get()->values.size() << " --> " << dim << ") @ " << params.get();
@@ -234,20 +238,16 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   } else {
     assert (pindices);
     assert (fx.d.batch_elems() == pindices->size());
+#if __CUDACC__
+    CUDA_CHECK(cudaMemcpyAsync((unsigned*)aux_mem, &(*pindices)[0], fx.d.bd * sizeof(unsigned), cudaMemcpyHostToDevice));
+    dynet::gpu::sparse_lookup(fx.d.bd, (unsigned*)aux_mem, fx.d.batch_size(), params.mp->weight_decay.current_weight_decay(), params.get()->all_values.v, fx.v);
+#else
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
       assert (i < params.get()->values.size());
-      float* v = fx.v + fx.d.batch_size() * (b % fx.d.batch_elems());
-#if __CUDACC__
-      cudaMemcpyAsync(v, params.get()->values[i].v, fx.d.batch_size() * sizeof(float), cudaMemcpyDeviceToDevice);
-#else
-      // we should use colwise() instead of memcpy to get rid of the
-      // extra multiply by params.mp->weight_decay.current_weight_decay()
-      memcpy(v, params.get()->values[i].v, fx.d.batch_size() * sizeof(float));
-
-#endif
+      fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get()->values[i].tb<2>() * params.mp->weight_decay.current_weight_decay();
     }
-    fx.tvec().device(*dev.edevice) = fx.tvec() * params.mp->weight_decay.current_weight_decay();
+#endif
   }
 }
 
