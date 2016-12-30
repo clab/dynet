@@ -1397,7 +1397,7 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
     Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device, DeviceMempool::FXS);
     unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 2*fx.d.bd), *ids_host;
 #if __CUDACC__
-    CUDA_CHECK(cudaMallocHost(&ids_host, fx.d.bd * sizeof(unsigned int)));
+    ids_host = (unsigned int*)malloc(fx.d.bd * sizeof(unsigned int));
 #else
     ids_host = ids_dev;
 #endif
@@ -1414,7 +1414,7 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
     CUDA_CHECK(cudaMemcpyAsync(ids_dev, ids_host, fx.d.bd * sizeof(unsigned int), cudaMemcpyHostToDevice));
     logsumexp(dev, *xs[0], m, z);
     dynet::gpu::sparse_to_dense(fx.d.bd, ids_dev, xs[0]->v, fx.v);
-    CUDA_CHECK(cudaFreeHost(ids_host));
+    free(ids_host);
 #else
     logsumexp(dev, *xs[0], m, z);
     for(unsigned b = 0; b < fx.d.bd; ++b)
