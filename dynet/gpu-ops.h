@@ -31,6 +31,7 @@ namespace gpu {
 void sparse_assign(int n, unsigned int* ids, float* src, float* trg);
 void sparse_subtract(int n, unsigned int* ids, float* src, float* trg);
 void sparse_to_dense(int n, unsigned int* ids, float* src, float* trg);
+void sparse_lookup(int n, unsigned *idx, int bsize, float mult, float *src, float *trg);
 void const_init(int n, float val, float* trg);
 
 } // namespace gpu
