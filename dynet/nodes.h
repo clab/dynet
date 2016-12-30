@@ -371,8 +371,7 @@ struct LogDet : public Node {
 struct Sum : public Node {
   template <typename T> explicit Sum(const T& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
-  // TODO: Sum should be be implemented over the entire mini-batch, but this is not
-  //       super-easy in the current implementation
+  virtual bool supports_multibatch() const override { return true; }
 };
 
 // y = \sum_i x_i
