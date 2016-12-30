@@ -8,7 +8,7 @@
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
 
-#ifdef HAVE_CUDA
+#ifdef __CUDACC__
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
 #endif
@@ -109,7 +109,7 @@ size_t LogSoftmax::aux_storage_size() const {
 }
 
 size_t PickNegLogSoftmax::aux_storage_size() const {
-  return 2 * dim.batch_elems() * sizeof(float);
+  return 2 * dim.batch_elems() * sizeof(float) + dim.batch_elems() * sizeof(unsigned int);
 }
 
 // this i need to do something better, but this is a work-around
@@ -1395,17 +1395,32 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
   if (xs[0]->d.cols() == 1) {
     Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
     Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device, DeviceMempool::FXS);
-    logsumexp(dev, *xs[0], m, z);
+    unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 2*fx.d.bd), *ids_host;
+#if __CUDACC__
+    CUDA_CHECK(cudaMallocHost(&ids_host, fx.d.bd * sizeof(unsigned int)));
+#else
+    ids_host = ids_dev;
+#endif
     if(pval) {
-      fx.t<0>().device(*dev.edevice) = z.t<0>() - xs[0]->t<1>().chip<0>(*pval);
+      *ids_host = *pval;
     } else {
       assert(pvals);
-      assert(pvals->size() == fx.d.batch_elems());
-      int batch_size = xs[0]->d.batch_size();
-      for(unsigned b = 0; b < pvals->size(); ++b)
-        TensorTools::CopyElement(*xs[0], batch_size * b + (*pvals)[b], fx, b);
-      fx.tvec().device(*dev.edevice) = z.tvec() - fx.tvec();
+      assert(pvals->size() == fx.d.bd);
+      size_t batch_size = xs[0]->d.batch_size();
+      for(unsigned b = 0; b < fx.d.bd; ++b)
+        ids_host[b] = batch_size * b + (*pvals)[b];
     }
+#if __CUDACC__
+    CUDA_CHECK(cudaMemcpyAsync(ids_dev, ids_host, fx.d.bd * sizeof(unsigned int), cudaMemcpyHostToDevice));
+    logsumexp(dev, *xs[0], m, z);
+    dynet::gpu::sparse_to_dense(fx.d.bd, ids_dev, xs[0]->v, fx.v);
+    CUDA_CHECK(cudaFreeHost(ids_host));
+#else
+    logsumexp(dev, *xs[0], m, z);
+    for(unsigned b = 0; b < fx.d.bd; ++b)
+      fx.v[b] = xs[0]->v[ids_dev[b]];
+#endif
+    fx.tvec().device(*dev.edevice) = z.tvec() - fx.tvec();
   } else {
     throw std::runtime_error("PickNegLogSoftmax::forward not yet implemented for multiple columns");
   }
@@ -1420,26 +1435,18 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
                             Tensor& dEdxi) const {
   if (xs[0]->d.cols() == 1) {
     Tensor z(Dim({1},fx.d.batch_elems()), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-    if(pval) {
-      const float err_val = as_scalar(dEdf);
-      const float logz_val = as_scalar(z);
-      // logz is computed in the forward pass and cached
-      dEdxi.t<1>().device(*dev.edevice) += (xs[0]->t<1>() - logz_val).exp() * err_val;
-      dEdxi.t<1>().chip<0>(*pval).device(*dev.edevice) = dEdxi.t<1>().chip<0>(*pval) - err_val;
-    } else {
-      assert(pvals);
-      assert(pvals->size() == fx.d.batch_elems()); 
-      // TODO: We want to do this, but it's not working
-      //  Eigen::array<int, 2> bcast({(int)fx.d.rows(), 1});
-      //  dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp() * dEdf.tb<1>().broadcast(bcast);
-      // So we do this instead:
-      vector<float> zs = as_vector(z);
-      vector<float> errs = as_vector(dEdf);
-      for(unsigned b = 0; b < pvals->size(); ++b) {
-        dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (xs[0]->tb<1>().chip<1>(b) - zs[b]).exp() * errs[b];
-        dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]).device(*dev.edevice) = dEdxi.tb<1>().chip<1>(b).chip<0>((*pvals)[b]) - errs[b];
-      }
+    unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 2*fx.d.bd);
+#if __CUDACC__ 
+    Eigen::array<int, 2> bcast({(int)fx.d.rows(), 1});
+    dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp() * dEdf.tb<1>().broadcast(bcast);
+    dynet::gpu::sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
+#else
+    // TODO: We want to do broadcasting here too, but it's slow/not working
+    for(unsigned b = 0; b < fx.d.bd; ++b) {
+      dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (xs[0]->tb<1>().chip<1>(b) - z.v[b]).exp() * dEdf.v[b];
+      dEdxi.v[ids_dev[b]] -= dEdf.v[b];
     }
+#endif
   } else {
     throw std::runtime_error("PickNegLogSoftmax::backward not yet implemented for multiple columns");
   }

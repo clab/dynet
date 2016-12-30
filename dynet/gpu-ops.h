@@ -29,6 +29,8 @@ namespace gpu {
 // void sgd_update(int n, const float* g, float* x, float scale, float lambda);
 
 void sparse_assign(int n, unsigned int* ids, float* src, float* trg);
+void sparse_subtract(int n, unsigned int* ids, float* src, float* trg);
+void sparse_to_dense(int n, unsigned int* ids, float* src, float* trg);
 void const_init(int n, float val, float* trg);
 
 } // namespace gpu
