@@ -1438,7 +1438,7 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
     Tensor z(Dim({1},fx.d.batch_elems()), (float*)aux_mem, fx.device, DeviceMempool::FXS);
     unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 2*fx.d.bd);
 #if __CUDACC__ 
-    Eigen::array<int, 2> bcast({(int)fx.d.rows(), 1});
+    Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1});
     dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp() * dEdf.tb<1>().broadcast(bcast);
     dynet::gpu::sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
 #else
@@ -1907,17 +1907,17 @@ void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs
   }
   TensorTools::Zero(fx);
 #if __CUDACC__
-  Eigen::array<int, 3> bcast({1, 1, (int)fx.d.bd});
+  Eigen::array<int, 2> bcast({1, (int)fx.d.bd});
 #endif
   for (unsigned i = 0; i < num_args; ++i) {
     if(xs[i]->d.bd == fx.d.bd) {
       fx.tvec().device(*dev.edevice) += xs[i]->tvec();
     } else {
 #if __CUDACC__
-      fx.tb<2>().device(*dev.edevice) += xs[i]->tb<2>().broadcast(bcast);
+      fx.tbvec().device(*dev.edevice) += xs[i]->tbvec().broadcast(bcast);
 #else
       for(unsigned b = 0; b < fx.d.bd; ++b)
-        fx.tb<2>().chip<2>(b).device(*dev.edevice) += xs[i]->t<2>();
+        fx.tbvec().chip<1>(b).device(*dev.edevice) += xs[i]->tvec();
 #endif
     }
   }
@@ -1930,18 +1930,11 @@ void Sum::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-#if __CUDACC__
-  Eigen::array<int, 3> bcast({1, 1, (int)fx.d.bd});
-#endif
   if(dEdxi.d.bd == fx.d.bd) {
     dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
   } else {
-#if __CUDACC__
-    dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().broadcast(bcast);
-#else
-    for(unsigned b = 0; b < dEdxi.d.bd; ++b)
-      dEdxi.tb<2>().chip<2>(b).device(*dev.edevice) += dEdf.t<2>();
-#endif
+    Eigen::array<int, 1> red_axis({1});
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tbvec().sum(red_axis);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Sum)
