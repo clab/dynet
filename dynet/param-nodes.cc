@@ -92,6 +92,7 @@ Dim LookupNode::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
+// TODO: This should be made more efficient on GPU
 void LookupNode::accumulate_grad(const Tensor& g) {
   if(pindex) {
     params.get()->accumulate_grad(*pindex, g);
@@ -104,6 +105,51 @@ void LookupNode::accumulate_grad(const Tensor& g) {
       params.get()->accumulate_grad(i, gb[b]);
     }
   }
+}
+
+size_t LookupSequenceNode::aux_storage_size() const {
+  return (dim.bd + dim[dim.nd-1]) * sizeof(unsigned);
+}
+
+string LookupSequenceNode::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "lookup_seq_parameters(|x|=" << params.get()->values.size() << " --> " << dim << ") @ " << params.get();
+  return s.str();
+}
+
+void LookupSequenceNode::create_dim() {
+  size_t max_len = 0;
+  if(pindex) {
+    max_len = pindex->size();
+  } else {
+    assert(pindices);
+    for(auto & p : *pindices)
+      max_len = max(max_len, p.size());
+    dim.bd = pindices->size();
+  }
+  dim.resize(dim.nd+1);
+  dim.set(dim.nd-1, max_len);
+  // TODO: we don't want to do this for CPU computation
+  ids_host = (unsigned*)malloc(dim.bd * dim[dim.nd-1] * sizeof(unsigned));
+}
+
+Dim LookupSequenceNode::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
+// TODO: This should be made more efficient on GPU, and also remove the dependency
+//       on host memory so we don't have to keep the memory around.
+void LookupSequenceNode::accumulate_grad(const Tensor& g) {
+  Tensor gb(params.get()->dim, g.v, g.device, g.mem_pool);
+  size_t one_size = gb.d.size(), num_steps = (dim.bd * dim[dim.nd-1]);
+  for(size_t i = 0; i < num_steps; ++i) {
+    params.get()->accumulate_grad(ids_host[i], gb);
+    gb.v += one_size;
+  }
+}
+
+LookupSequenceNode::~LookupSequenceNode() {
+  free(ids_host);
 }
 
 #endif
@@ -262,5 +308,49 @@ void LookupNode::backward_dev_impl(const MyDevice & dev,
   abort();
 }
 DYNET_NODE_INST_DEV_IMPL(LookupNode)
+
+template<class MyDevice>
+void LookupSequenceNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  assert(xs.size() == 0);
+  size_t num_words = dim[dim.nd-1], num_steps = dim.bd * num_words, p_size = params.get()->dim.size();
+  unsigned *ids;
+#if __CUDACC__
+  ids = ids_host;
+#else
+  ids = (unsigned*)aux_mem;
+#endif
+  // Lay out the IDs in memory
+  memset(ids, 0, num_words * sizeof(unsigned));
+  if(pindex) {
+    assert(pindex->size() == num_words);
+    memcpy(ids, &pindex[0], pindex->size() * sizeof(unsigned));
+  } else {
+    assert(pindices->size() == dim.bd);
+    for(size_t b = 0; b < dim.bd; ++b) {
+      assert((*pindices)[b].size() <= num_words);
+      memcpy(ids + num_words, &((*pindices)[b][0]), (*pindices)[b].size() * sizeof(unsigned));
+    }
+  }
+#if __CUDACC__
+  CUDA_CHECK(cudaMemcpyAsync((unsigned*)aux_mem, ids_host, num_steps * sizeof(unsigned), cudaMemcpyHostToDevice));
+  dynet::gpu::sparse_lookup(num_steps, (unsigned*)aux_mem, p_size, params.mp->weight_decay.current_weight_decay(), params.get()->all_values.v, fx.v);
+#else
+  for(size_t i = 0; i < num_steps; ++i)
+    memcpy(fx.v + p_size * i, params.get()->all_values.v + p_size * ids[i], p_size * sizeof(float));
+  fx.tvec().device(*dev.edevice) = fx.tvec() * params.mp->weight_decay.current_weight_decay();
+#endif
+}
+
+template<class MyDevice>
+void LookupSequenceNode::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  cerr << "called backward() on arity 0 node\n";
+  abort();
+}
+DYNET_NODE_INST_DEV_IMPL(LookupSequenceNode)
 
 } // namespace dynet

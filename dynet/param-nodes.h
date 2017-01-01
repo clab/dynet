@@ -83,6 +83,29 @@ struct LookupNode : public ParameterNodeBase {
   LookupParameter params;
 };
 
+// looks up embeddings for a sequence, and line them up along the next dimension of a tensor
+struct LookupSequenceNode : public ParameterNodeBase {
+  LookupSequenceNode(LookupParameter p, std::vector<unsigned>& ind) : dim(p.get()->dim), index(ind), pindex(&index), indices(), pindices(), params(p), ids_host(nullptr) { create_dim(); }
+  LookupSequenceNode(LookupParameter p, const std::vector<unsigned>* pind) : dim(p.get()->dim), index(), pindex(pind), indices(), pindices(), params(p), ids_host(nullptr) { create_dim(); }
+  LookupSequenceNode(LookupParameter p, const std::vector<std::vector<unsigned>>& indices) : dim(p.get()->dim), index(), pindex(), indices(indices), pindices(&this->indices), params(p), ids_host(nullptr) { create_dim(); }
+  LookupSequenceNode(LookupParameter p, const std::vector<std::vector<unsigned>>* pindices) : dim(p.get()->dim), index(), pindex(), indices(), pindices(pindices), params(p), ids_host(nullptr) { create_dim(); }
+  ~LookupSequenceNode();
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }  
+  size_t aux_storage_size() const override;
+  void accumulate_grad(const Tensor& g) override;
+  Dim dim;
+  unsigned max_len;
+  std::vector<unsigned> index;
+  const std::vector<unsigned>* pindex;
+  std::vector<std::vector<unsigned>> indices;
+  const std::vector<std::vector<unsigned>>* pindices;
+  LookupParameter params;
+  unsigned int* ids_host;
+private:
+  void create_dim();
+};
+
 } // namespace dynet
 
 #endif
