@@ -28,12 +28,12 @@ namespace gpu {
 // void pnlsoftmax_backward(int n, int elem_idx, const float* x0, const float* dEdf, const float* logz, float* dEdx);
 // void sgd_update(int n, const float* g, float* x, float scale, float lambda);
 
-void sparse_assign(int n, unsigned int* ids, float* src, float* trg);
-void sparse_subtract(int n, unsigned int* ids, float* src, float* trg);
-void sparse_to_dense(int n, unsigned int* ids, float* src, float* trg);
-void sparse_lookup(int n, unsigned *idx, int bsize, float mult, float *src, float *trg);
-void sparse_add(int n, unsigned int* ids, int bsize, float* src, float* trg);
 void const_init(int n, float val, float* trg);
+void dense_to_sparse_assign(int n, const unsigned int* ids, float* src, float* trg);
+void sparse_to_dense_assign(int n, const unsigned int* ids, float* src, float* trg);
+void dense_to_sparse_subtract(int n, const unsigned int* ids, float* src, float* trg);
+void sparse_to_dense_block_assign_and_multiply(int n, const unsigned *idx, int bsize, float mult, float *src, float *trg);
+void dense_to_sparse_block_add(int n, const unsigned* ids, int bsize, float* src, float* trg);
 
 } // namespace gpu
 } // namespace dynet

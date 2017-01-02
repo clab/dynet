@@ -18,6 +18,8 @@
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/split_member.hpp>
+#else
+#include "dynet/gpu-ops.h"
 #endif
 
 // Macros for defining functions over parameters
@@ -580,7 +582,7 @@ void LookupParameterStorage::accumulate_grads_dev(MyDevice & dev, unsigned n, co
 #ifdef __CUDACC__
   for(unsigned i = 0; i < n; ++i)
     non_zero_grads.insert(ids_host[i]);
-  dynet::gpu::sparse_add(n, ids_dev, dim.size(), g, all_grads.v);
+  dynet::gpu::dense_to_sparse_block_add(n, ids_dev, dim.size(), g, all_grads.v);
 #else
   size_t gsize = dim.size();
   Tensor gt(dim, g, all_grads.device, all_grads.mem_pool);
@@ -596,7 +598,7 @@ void LookupParameterStorage::accumulate_grads_dev(MyDevice & dev, unsigned n, co
 #elif defined(HAVE_CUDA)
   extern template void LookupParameterStorage::accumulate_grads_dev<Device_GPU>(Device_GPU & dev, unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
   template void LookupParameterStorage::accumulate_grads_dev<Device_CPU>(Device_CPU & dev, unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
-  void LookupParameterStorage::accumulate_grads(unsigned index, const Tensor& d) {
+  void LookupParameterStorage::accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g) {
     if(all_values.device->type == DeviceType::CPU) { accumulate_grads_dev(*(Device_CPU*)all_values.device,n,ids_host,ids_dev,g); }
     else if(all_values.device->type == DeviceType::GPU) { accumulate_grads_dev(*(Device_GPU*)all_values.device,n,ids_host,ids_dev,g); }
     else { abort(); }

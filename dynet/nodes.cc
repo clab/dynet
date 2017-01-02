@@ -256,7 +256,7 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
       fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     } else {
 #ifdef __CUDACC__
-      Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = fx.d[1]/xs[0]->d[1]; bcast[2] = fx.d.bd/xs[0]->bd;
+      Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = fx.d[1]/xs[0]->d[1]; bcast[2] = fx.d.bd/xs[0]->d.bd;
       fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcast);
 #else
       if(xs[0]->d.bd != 1)
@@ -1439,7 +1439,7 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
 #if __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync(ids_dev, ids_host, fx.d.bd * sizeof(unsigned int), cudaMemcpyHostToDevice));
     logsumexp(dev, *xs[0], m, z);
-    dynet::gpu::sparse_to_dense(fx.d.bd, ids_dev, xs[0]->v, fx.v);
+    dynet::gpu::sparse_to_dense_assign(fx.d.bd, ids_dev, xs[0]->v, fx.v);
     free(ids_host);
 #else
     logsumexp(dev, *xs[0], m, z);
@@ -1465,7 +1465,7 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
 #if __CUDACC__ 
     Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1});
     dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp() * dEdf.tb<1>().broadcast(bcast);
-    dynet::gpu::sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
+    dynet::gpu::dense_to_sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
 #else
     // TODO: We want to do broadcasting here too, but it's slow
     for(unsigned b = 0; b < fx.d.bd; ++b) {
@@ -1515,7 +1515,7 @@ void PickNegLogSoftmaxSequence::forward_dev_impl(const MyDevice & dev, const vec
 #if __CUDACC__
   CUDA_CHECK(cudaMemcpyAsync(mask.v, mask_host, aux_size, cudaMemcpyHostToDevice));
   logsumexp(dev, *xs[0], m, z);
-  dynet::gpu::sparse_to_dense(tot_size, ids_dev, xs[0]->v, fx.v);
+  dynet::gpu::sparse_to_dense_assign(tot_size, ids_dev, xs[0]->v, fx.v);
   free(mask_host);
 #else
   logsumexp(dev, *xs[0], m, z);
@@ -1541,7 +1541,7 @@ void PickNegLogSoftmaxSequence::backward_dev_impl(const MyDevice & dev,
 #if __CUDACC__ 
   Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1,1});
   dEdxi.tb<2>().device(*dev.edevice) += (xs[0]->tb<2>() - z.tb<2>().broadcast(bcast)).exp() * fxm.tb<2>().broadcast(bcast);
-  dynet::gpu::sparse_subtract(tot_size, ids_dev, fxm.v, dEdxi.v);
+  dynet::gpu::dense_to_sparse_subtract(tot_size, ids_dev, fxm.v, dEdxi.v);
 #else
   // TODO: We want to do broadcasting here too, but it's slow
   size_t pos = 0;
