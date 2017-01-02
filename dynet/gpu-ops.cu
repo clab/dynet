@@ -109,5 +109,26 @@ void sparse_lookup(int n, unsigned *idx, int bsize, float mult, float *src, floa
   }
 }
 
+// CUDA kernel. Each thread takes care of one element of c
+__global__ void ker_sparse_lookup(int n, unsigned *idx, int bsize, float* src, float *trg) {
+  // Get our global thread ID
+  int id = blockIdx.x*blockDim.x+threadIdx.x;
+ 
+  // Make sure we do not go out of bounds
+  if (id < n*bsize)
+    trg[id] += src[idx[id/bsize]*bsize+id%bsize];
+
+  __syncthreads();
+}
+
+void sparse_add(int n, unsigned *idx, int bsize, float *src, float *trg) {
+  if(n > 0) {
+    auto tb = SizeToBlockThreadPair(n*bsize);
+    int total_size = tb.first*tb.second;
+    for(int curr_pos = 0; curr_pos < n; curr_pos += total_size/bsize)
+      ker_sparse_lookup<<<tb.first, tb.second>>>(min(total_size/bsize, n-curr_pos), idx+curr_pos, bsize, src, trg+curr_pos*bsize);
+  }
+}
+
 } // namespace gpu
 } // namespace dynet

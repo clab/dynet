@@ -98,12 +98,13 @@ void LookupNode::accumulate_grad(const Tensor& g) {
     params.get()->accumulate_grad(*pindex, g);
   } else {
     assert (pindices);
-    const vector<Tensor>& gb = g.batch_elems();
-    for (unsigned b = 0; b < pindices->size(); ++b) {
-      unsigned i = pindices->at(b);
-      assert (i < params.get()->values.size());
-      params.get()->accumulate_grad(i, gb[b]);
-    }
+    params.get()->accumulate_grads(pindices->size(), &(*pindices)[0], (unsigned*)aux_mem, g.v);
+    // const vector<Tensor>& gb = g.batch_elems();
+    // for (unsigned b = 0; b < pindices->size(); ++b) {
+    //   unsigned i = pindices->at(b);
+    //   assert (i < params.get()->values.size());
+    //   params.get()->accumulate_grad(i, gb[b]);
+    // }
   }
 }
 
@@ -140,12 +141,13 @@ Dim LookupSequenceNode::dim_forward(const vector<Dim>& xs) const {
 // TODO: This should be made more efficient on GPU, and also remove the dependency
 //       on host memory so we don't have to keep the memory around.
 void LookupSequenceNode::accumulate_grad(const Tensor& g) {
-  Tensor gb(params.get()->dim, g.v, g.device, g.mem_pool);
-  size_t one_size = gb.d.size(), num_steps = (dim.bd * dim[dim.nd-1]);
-  for(size_t i = 0; i < num_steps; ++i) {
-    params.get()->accumulate_grad(ids_host[i], gb);
-    gb.v += one_size;
-  }
+  size_t num_steps = (dim.bd * dim[dim.nd-1]);
+  params.get()->accumulate_grads(num_steps, ids_host, (unsigned*)aux_mem, g.v);
+  // Tensor gb(params.get()->dim, g.v, g.device, g.mem_pool);
+  // for(size_t i = 0; i < num_steps; ++i) {
+  //   params.get()->accumulate_grad(ids_host[i], gb);
+  //   gb.v += one_size;
+  // }
 }
 
 LookupSequenceNode::~LookupSequenceNode() {
