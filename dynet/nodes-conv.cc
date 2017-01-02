@@ -41,8 +41,8 @@ string FoldRows::as_string(const vector<string>& arg_names) const {
 Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
   unsigned orows = xs[0].rows() / nrows;
   if ((orows * nrows != xs[0].rows()) || xs.size() != 1 || xs[0].ndims() > 2) {
-    cerr << "Bad input dimensions in FoldRows: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in FoldRows");
+    ostringstream s; s << "Bad input dimensions in FoldRows: " << xs;
+    throw std::invalid_argument(s.str());
   }
   return Dim({orows, xs[0].cols()});
 }
@@ -55,15 +55,15 @@ string Conv1DNarrow::as_string(const vector<string>& arg_names) const {
 
 Dim Conv1DNarrow::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2) {
-    cerr << "Conv1DNarrow requires two inputs: " << xs << endl;
-    throw std::invalid_argument("Conv1DNarrow requires 2 dimensions");
+    ostringstream s; s << "Conv1DNarrow requires two inputs: " << xs;
+    throw std::invalid_argument(s.str());
   }
   int ocols = xs[0].cols() - xs[1].cols() + 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() != 2 ||
       xs[0].rows() != xs[1].rows() ||
       ocols < 1) {
-    cerr << "Bad input dimensions in Conv1DNarrow: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in Conv1DNarrow");
+    ostringstream s; s << "Bad input dimensions in Conv1DNarrow: " << xs;
+    throw std::invalid_argument(s.str());
   }
   return Dim({xs[0].rows(), (unsigned)ocols});
 }
@@ -76,14 +76,14 @@ string Conv1DWide::as_string(const vector<string>& arg_names) const {
 
 Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2) {
-    cerr << "Conv1DWide requires two inputs: " << xs << endl;
-    throw std::invalid_argument("Conv1DWide requires two inputs");
+    ostringstream s; s << "Conv1DWide requires two inputs: " << xs;
+    throw std::invalid_argument(s.str());
   }
   unsigned ocols = xs[0].cols() + xs[1].cols() - 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() != 2 ||
       xs[0].rows() != xs[1].rows()) {
-    cerr << "Bad input dimensions in Conv1DWide: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in Conv1DWide");
+    ostringstream s; s << "Bad input dimensions in Conv1DWide: " << xs;
+    throw std::invalid_argument(s.str());
   }
   return Dim({xs[0].rows(), ocols});
 }
@@ -96,15 +96,15 @@ string Filter1DNarrow::as_string(const vector<string>& arg_names) const {
 
 Dim Filter1DNarrow::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2) {
-    cerr << "Filter1DNarrow requires two inputs: " << xs << endl;
-    throw std::invalid_argument("Filter1DNarrow requires 2 dimensions");
+    ostringstream s; s << "Filter1DNarrow requires two inputs: " << xs;
+    throw std::invalid_argument(s.str());
   }
   int ocols = xs[0].cols() - xs[1].cols() + 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() < 2 ||
       xs[0].rows() != xs[1].rows() ||
       ocols < 1) {
-    cerr << "Bad input dimensions in Filter1DNarrow: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in Filter1DNarrow");
+    ostringstream s; s << "Bad input dimensions in Filter1DNarrow: " << xs;
+    throw std::invalid_argument(s.str());
   }
   const unsigned fids = (xs[1].ndims() > 2 ? xs[1][2] : 1);
   return Dim({fids, (unsigned)ocols});
@@ -118,12 +118,12 @@ string KMaxPooling::as_string(const vector<string>& arg_names) const {
 
 Dim KMaxPooling::dim_forward(const vector<Dim>& xs) const {
   if (k < 1) {
-    cerr << "Bad bad k in KMaxPooling: " << k << endl;
-    throw std::invalid_argument("bad k in KMaxPooling");
+    ostringstream s; s << "Bad bad k in KMaxPooling: " << k;
+    throw std::invalid_argument(s.str());
   }
   if (xs[0].ndims() != 2 || (xs[0].cols() < k)) {
-    cerr << "Bad input dimensions in KMaxPooling: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in KMaxPooling");
+    ostringstream s; s << "Bad input dimensions in KMaxPooling: " << xs;
+    throw std::invalid_argument(s.str());
   }
   return Dim({xs[0].rows(), k});
 }

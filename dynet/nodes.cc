@@ -15,7 +15,7 @@
 
 using namespace std;
 
-string print_vec(const std::vector<float> & vec) {
+inline string print_vec(const std::vector<float> & vec) {
   string sep = "[";
   ostringstream oss;
   for(auto f : vec) {
@@ -173,8 +173,9 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
     // TODO: Currently, the first version is slower on CPU, hence the switch
 #ifdef __CUDACC__
     Eigen::array<int, 2> bcast({(int)x.d.rows(), 1, 1});
+    Eigen::array<int, 3> morph({1, (int)m.d[0], (int)m.d.bd});
     // This needs to be split into two lines to prevent memory allocation
-    z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().broadcast(bcast)).exp().sum(red_axis);
+    z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().reshape(morph).broadcast(bcast)).exp().sum(red_axis);
     z.tb<1>().device(*dev.edevice) = z.tb<1>().log() + m.tb<1>();
 #else
     auto miter = m.v;
@@ -1539,8 +1540,9 @@ void PickNegLogSoftmaxSequence::backward_dev_impl(const MyDevice & dev,
   unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 3*tot_size);
   fxm.tvec().device(*dev.edevice) = dEdf.tvec() * mask.tvec();
 #if __CUDACC__ 
-  Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1,1});
-  dEdxi.tb<2>().device(*dev.edevice) += (xs[0]->tb<2>() - z.tb<2>().broadcast(bcast)).exp() * fxm.tb<2>().broadcast(bcast);
+  Eigen::array<int, 3> bcast({(int)xs[0]->d[0],1,1});
+  Eigen::array<int, 3> morph({1, (int)fx.d[0], (int)fx.d.bd});
+  dEdxi.tb<2>().device(*dev.edevice) += (xs[0]->tb<2>() - z.tvec().reshape(morph).broadcast(bcast)).exp() * fxm.tvec().reshape(morph).broadcast(bcast);
   dynet::gpu::dense_to_sparse_subtract(tot_size, ids_dev, fxm.v, dEdxi.v);
 #else
   // TODO: We want to do broadcasting here too, but it's slow
@@ -1879,10 +1881,8 @@ void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Te
     throw std::runtime_error("SparsemaxLoss not implemented for CUDA");
 #else
     const int rows = xs[0]->d.rows();
-    if (rows > MAX_SPARSEMAX_LOSS_ROWS) {
-      cerr << "MAX_SPARSEMAX_LOSS_ROWS is not sufficient. Recompile with larger value.\n";
-      abort();
-    }
+    if (rows > MAX_SPARSEMAX_LOSS_ROWS)
+      throw std::runtime_error("MAX_SPARSEMAX_LOSS_ROWS is not sufficient. Recompile with larger value.");
     const unsigned qsupport_size = pq->size();
     const float qprop = 1.f / qsupport_size;
 
