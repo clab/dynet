@@ -177,8 +177,7 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
     z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().broadcast(bcast)).exp().sum(red_axis);
     z.tb<1>().device(*dev.edevice) = z.tb<1>().log() + m.tb<1>();
 #else
-    vector<float> mvals = as_vector(m);
-    auto miter = mvals.begin();
+    auto miter = m.v;
     for(size_t b = 0; b < x.d.bd; ++b) {
       for(size_t i = 0; i < x.d[1]; ++i, ++miter) {
         z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = (x.tb<2>().chip<2>(b).chip<1>(i) - *miter).exp().sum();
@@ -1482,7 +1481,7 @@ DYNET_NODE_INST_DEV_IMPL(PickNegLogSoftmax)
 
 template<class MyDevice>
 void PickNegLogSoftmaxSequence::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  size_t tot_size = fx.d.size(), num_words = fx.d[0], aux_size = tot_size * (sizeof(float)+sizeof(unsigned int));
+  size_t tot_size = fx.d.size(), num_vocab = xs[0]->d[0], aux_size = tot_size * (sizeof(float)+sizeof(unsigned int));
   Tensor z(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Tensor m(dim, (float*)aux_mem + tot_size, fx.device, DeviceMempool::FXS);
   Tensor mask(dim, (float*)aux_mem + 2*tot_size, fx.device, DeviceMempool::FXS);
@@ -1507,10 +1506,10 @@ void PickNegLogSoftmaxSequence::forward_dev_impl(const MyDevice & dev, const vec
     for(unsigned b = 0; b < dim.bd; ++b) {
       if((*pvals)[b].size() == 0) continue;
       assert((*pvals)[b].size() <= xs[0]->d[1]);
-      pos = b * fx.d[1];
+      pos = b * xs[0]->d[1];
       fill(mask_host + pos, mask_host + pos + (*pvals)[b].size(), 1.f);
-      for(unsigned i = 0; i < xs[0]->d[1]; ++i, ++pos)
-        ids_host[pos] = num_words * pos + (*pvals)[b][i];
+      for(unsigned i = 0; i < (*pvals)[b].size(); ++i, ++pos)
+        ids_host[pos] = num_vocab * pos + (*pvals)[b][i];
     }
   }
 #if __CUDACC__

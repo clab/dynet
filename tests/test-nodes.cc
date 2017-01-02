@@ -920,6 +920,35 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_seq_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression pickneglogsoftmax_seq(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pickneglogsoftmax_seq_batch_equiv ) {
+  // Do sequential lookup
+  std::vector<std::vector<unsigned>> idx(3);
+  idx[0] = {0,2};
+  idx[1] = {2,0,1};
+  dynet::ComputationGraph cg;
+  Expression x1 = reshape(parameter(cg, param_cube1), Dim({3,3},3));
+  Expression l1 = pickneglogsoftmax_seq(x1, idx);
+  vector<float> v1 = as_vector(l1.value());
+  // Do regular lookup
+  idx[0] = {0,2,0};
+  idx[1] = {2,0,0};
+  idx[2] = {0,1,0};
+  std::vector<std::vector<float>> mask(3);
+  mask[0] = {1.f,1.f,0.f};
+  mask[1] = {1.f,1.f,0.f};
+  mask[2] = {0.f,1.f,0.f};
+  vector<Expression> losses;
+  for(size_t i = 0; i < 3; ++i) {
+    Expression my_mask = input(cg, Dim({1},3), mask[i]);
+    Expression my_loss = pickneglogsoftmax( pick(x1, i, 1), idx[i] );
+    losses.push_back( cmult(my_mask, my_loss) );
+  }
+  Expression l2 = concatenate_cols(losses);
+  vector<float> v2 = as_vector(l2.value());
+  BOOST_CHECK_EQUAL_COLLECTIONS(v1.begin(), v1.end(), v2.begin(), v2.end());
+}
+
 // Expression sparse_input(vector<unsigned int>& ids, vector<float>& src, float def);
 BOOST_AUTO_TEST_CASE( sparse_input_test ) {
   dynet::ComputationGraph cg;
