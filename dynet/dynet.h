@@ -78,15 +78,20 @@ struct ComputationGraph {
   VariableIndex add_const_parameters(Parameter p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
-  VariableIndex add_lookup(LookupParameter p, const unsigned* pindex);
   VariableIndex add_lookup(LookupParameter p, unsigned index);
-  VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  VariableIndex add_lookup(LookupParameter p, const unsigned* pindex);
   VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>& indices);
+  VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  // Lookup for a whole sequence
+  VariableIndex add_lookup_seq(LookupParameter p, const std::vector<unsigned>& index);
+  VariableIndex add_lookup_seq(LookupParameter p, const std::vector<unsigned>* pindex);
+  VariableIndex add_lookup_seq(LookupParameter p, const std::vector<std::vector<unsigned>>& indices);
+  VariableIndex add_lookup_seq(LookupParameter p, const std::vector<std::vector<unsigned>>* pindices);
   // just like add_lookup, but don't optimize the lookup parameters
-  VariableIndex add_const_lookup(LookupParameter p, const unsigned* pindex);
   VariableIndex add_const_lookup(LookupParameter p, unsigned index);
-  VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  VariableIndex add_const_lookup(LookupParameter p, const unsigned* pindex);
   VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>& indices);
+  VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
 
   // COMPUTATIONS
   template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);

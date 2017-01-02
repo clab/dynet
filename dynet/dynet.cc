@@ -231,6 +231,42 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, const std::vector<
   return new_node_index;
 }
 
+VariableIndex ComputationGraph::add_lookup_seq(LookupParameter p, const std::vector<unsigned>& index) {
+  VariableIndex new_node_index(nodes.size());
+  LookupSequenceNode* new_node = new LookupSequenceNode(p, index);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_lookup_seq(LookupParameter p, const std::vector<unsigned>* pindex) {
+  VariableIndex new_node_index(nodes.size());
+  LookupSequenceNode* new_node = new LookupSequenceNode(p, pindex);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_lookup_seq(LookupParameter p, const std::vector<std::vector<unsigned>>& indices) {
+  VariableIndex new_node_index(nodes.size());
+  LookupSequenceNode* new_node = new LookupSequenceNode(p, indices);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_lookup_seq(LookupParameter p, const std::vector<std::vector<unsigned>>* indices) {
+  VariableIndex new_node_index(nodes.size());
+  LookupSequenceNode* new_node = new LookupSequenceNode(p, indices);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
 
 VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const unsigned* pindex) {
   VariableIndex new_node_index(nodes.size());

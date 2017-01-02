@@ -194,6 +194,12 @@ Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
  */
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 
+// TODO: doc
+Expression lookup_seq(ComputationGraph& g, LookupParameter p, const std::vector<unsigned> & index);
+
+// TODO: doc
+Expression lookup_seq(ComputationGraph& g, LookupParameter p, const std::vector<unsigned> * pindex);
+
 /**
  * \ingroup inputoperations
  * \brief Look up parameter
@@ -254,6 +260,12 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsi
  * \return An expression with the "i"th batch element representing p[*pindices[i]]
  */
 Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
+
+// TODO: doc
+Expression lookup_seq(ComputationGraph& g, LookupParameter p, const std::vector<std::vector<unsigned> >& indices);
+
+// TODO: doc
+Expression lookup_seq(ComputationGraph& g, LookupParameter p, const std::vector<std::vector<unsigned> >* pindices);
 
 /**
  * \ingroup inputoperations

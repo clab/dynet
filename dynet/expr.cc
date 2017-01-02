@@ -20,6 +20,10 @@ Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index) { retu
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex) { return Expression(&g, g.add_lookup(p, pindex)); }
 Expression lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }
 Expression lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>* pindices) { return Expression(&g, g.add_lookup(p, pindices)); }
+Expression lookup_seq(ComputationGraph& g, LookupParameter p, const vector<unsigned>& index) { return Expression(&g, g.add_lookup_seq(p, index)); }
+Expression lookup_seq(ComputationGraph& g, LookupParameter p, const vector<unsigned>* pindex) { return Expression(&g, g.add_lookup_seq(p, pindex)); }
+Expression lookup_seq(ComputationGraph& g, LookupParameter p, const vector<vector<unsigned>>& indices) { return Expression(&g, g.add_lookup_seq(p, indices)); }
+Expression lookup_seq(ComputationGraph& g, LookupParameter p, const vector<vector<unsigned>>* pindices) { return Expression(&g, g.add_lookup_seq(p, pindices)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index) { return Expression(&g, g.add_const_lookup(p, index)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }

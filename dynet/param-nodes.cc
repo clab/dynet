@@ -313,30 +313,25 @@ template<class MyDevice>
 void LookupSequenceNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
   size_t num_words = dim[dim.nd-1], num_steps = dim.bd * num_words, p_size = params.get()->dim.size();
-  unsigned *ids;
-#if __CUDACC__
-  ids = ids_host;
-#else
-  ids = (unsigned*)aux_mem;
-#endif
   // Lay out the IDs in memory
-  memset(ids, 0, num_words * sizeof(unsigned));
+  memset(ids_host, 0, num_steps * sizeof(unsigned));
   if(pindex) {
     assert(pindex->size() == num_words);
-    memcpy(ids, &pindex[0], pindex->size() * sizeof(unsigned));
+    memcpy(ids_host, &(*pindex)[0], pindex->size() * sizeof(unsigned));
   } else {
     assert(pindices->size() == dim.bd);
     for(size_t b = 0; b < dim.bd; ++b) {
       assert((*pindices)[b].size() <= num_words);
-      memcpy(ids + num_words, &((*pindices)[b][0]), (*pindices)[b].size() * sizeof(unsigned));
+      memcpy(ids_host + num_words, &((*pindices)[b][0]), (*pindices)[b].size() * sizeof(unsigned));
     }
   }
 #if __CUDACC__
   CUDA_CHECK(cudaMemcpyAsync((unsigned*)aux_mem, ids_host, num_steps * sizeof(unsigned), cudaMemcpyHostToDevice));
   dynet::gpu::sparse_lookup(num_steps, (unsigned*)aux_mem, p_size, params.mp->weight_decay.current_weight_decay(), params.get()->all_values.v, fx.v);
 #else
-  for(size_t i = 0; i < num_steps; ++i)
-    memcpy(fx.v + p_size * i, params.get()->all_values.v + p_size * ids[i], p_size * sizeof(float));
+  float* p_ptr = params.get()->all_values.v;
+  for(size_t i = 0; i < num_steps; ++i) 
+    memcpy(fx.v + p_size * i, p_ptr + p_size * ids_host[i], p_size * sizeof(float));
   fx.tvec().device(*dev.edevice) = fx.tvec() * params.mp->weight_decay.current_weight_decay();
 #endif
 }

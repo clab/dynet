@@ -59,6 +59,8 @@ struct NodeTest {
     TensorTools::SetElements(param_square1.get()->values,param_square1_vals);
     param_cube1 = mod.add_parameters({3,3,3});
     TensorTools::SetElements(param_cube1.get()->values,param_cube1_vals);
+    lookup1 = mod.add_lookup_parameters(3, {3});
+    TensorTools::SetElements(lookup1.get()->all_values,param_square1_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);
@@ -77,6 +79,7 @@ struct NodeTest {
   std::vector<char*> av;
   dynet::Model mod;
   dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1;
+  dynet::LookupParameter lookup1;
 };
 
 // define the test suite
@@ -907,6 +910,37 @@ BOOST_AUTO_TEST_CASE( sparse_input_test ) {
   assert(exp.size() == act.size());
   for(size_t i = 0; i < exp.size(); ++i)
     BOOST_CHECK_CLOSE(exp[i], act[i], 0.001);
+}
+
+// Expression lookup();
+BOOST_AUTO_TEST_CASE( lookup_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = lookup(cg, lookup1, (unsigned)0);
+  Expression x2 = lookup(cg, lookup1, (unsigned)2);
+  Expression y = x1+x2;
+  Expression z = input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression lookup_seq()
+BOOST_AUTO_TEST_CASE( lookup_seq_test ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> ids({0, 0, 2});
+  Expression x = lookup_seq(cg, lookup1, ids);
+  Expression z = input(cg, {1,3}, ones3_vals) * x * input(cg, {3}, ones3_vals);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression lookup_seq()
+BOOST_AUTO_TEST_CASE( lookup_seq_batch_test ) {
+  dynet::ComputationGraph cg;
+  vector<vector<unsigned>> ids(2);
+  ids[0] = {0, 2, 0};
+  ids[0] = {1, 0, 2};
+  Expression x1 = lookup_seq(cg, lookup1, ids);
+  Expression x2 = parameter(cg, param1);
+  Expression z = sum_batches( transpose(x2) * x1 * x2 );
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
