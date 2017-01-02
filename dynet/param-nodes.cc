@@ -291,7 +291,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
       assert (i < params.get()->values.size());
-      fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get()->values[i].tb<2>() * params.mp->weight_decay.current_weight_decay();
+      fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get()->values[i].t<2>() * params.mp->weight_decay.current_weight_decay();
     }
 #endif
   }
