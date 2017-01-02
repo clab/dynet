@@ -863,6 +863,12 @@ Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & 
  */
 Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> * pv);
 
+// TODO: doc
+Expression pickneglogsoftmax_seq(const Expression& x, const std::vector<unsigned>& v);
+Expression pickneglogsoftmax_seq(const Expression& x, const std::vector<unsigned>* pv);
+Expression pickneglogsoftmax_seq(const Expression& x, const std::vector<std::vector<unsigned>>& v);
+Expression pickneglogsoftmax_seq(const Expression& x, const std::vector<std::vector<unsigned>>* pv);
+
 /**
  * \ingroup lossoperations
  * \brief Hinge loss
@@ -1367,7 +1373,9 @@ Expression conv1d_wide(const Expression& x, const Expression& f);
 Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
+Expression sum_dim(const Expression& x, unsigned d);
 Expression sum_cols(const Expression& x);
+Expression sum_rows(const Expression& x);
 Expression average_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 

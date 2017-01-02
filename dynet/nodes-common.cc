@@ -602,6 +602,34 @@ Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
   return Dim({1}, xs[0].bd);
 }
 
+string PickNegLogSoftmaxSequence::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  if(pval) {
+    s << "log_softmax(" << arg_names[0] << ")_{";
+    string sep = "";
+    for(auto v : *pval) { s << sep << v; sep = ","; }
+    s << '}';
+  } else {
+    s << "log_softmax(" << arg_names[0] << ")_{";
+    string sep2 = "[";
+    for(auto & pv : *pvals) {
+      s << sep2; sep2 = "],[";
+      string sep = "";
+      for(auto v : pv) { s << sep << v; sep = ","; }
+    }
+    s << "]}";
+  }
+  return s.str();
+}
+
+Dim PickNegLogSoftmaxSequence::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 1 || xs[0].nd != 2) {
+    ostringstream s; s << "Bad input dimensions in PickNegLogSoftmaxSequence, must be a 2-dimensional matrix: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  return Dim({xs[0][1]},xs[0].bd);
+}
+
 string LogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "log_softmax(" << arg_names[0] << ')';

@@ -120,9 +120,15 @@ Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expressio
 Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 Expression pickneglogsoftmax(const Expression& x, const unsigned* pv) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, pv)); }
 Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> * pv) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, pv)); }
+Expression pickneglogsoftmax_seq(const Expression& x, const vector<unsigned>& v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmaxSequence>({x.i}, v)); }
+Expression pickneglogsoftmax_seq(const Expression& x, const vector<unsigned>* pv) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmaxSequence>({x.i}, pv)); }
+Expression pickneglogsoftmax_seq(const Expression& x, const vector<vector<unsigned>>* pv) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmaxSequence>({x.i}, pv)); }
+Expression pickneglogsoftmax_seq(const Expression& x, const vector<vector<unsigned>>& v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmaxSequence>({x.i}, v)); }
 
 Expression average_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<AverageColumns>({x.i})); }
-Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumColumns>({x.i})); }
+Expression sum_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, d)); }
+Expression sum_rows(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 0)); }
+Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 1)); }
 
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
 

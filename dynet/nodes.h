@@ -479,6 +479,22 @@ struct PickNegLogSoftmax : public Node {
   const std::vector<unsigned>* pvals;
 };
 
+// z = \sum_j \exp (x_i)_j
+// y = (x_1)_element - \log z
+struct PickNegLogSoftmaxSequence : public Node {
+  explicit PickNegLogSoftmaxSequence(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v) : Node(a), val(v), pval(&val), vals(), pvals() {}
+  explicit PickNegLogSoftmaxSequence(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv) : Node(a), val(), pval(pv), vals(), pvals() {}
+  explicit PickNegLogSoftmaxSequence(const std::initializer_list<VariableIndex>& a, const std::vector<std::vector<unsigned>>& v) : Node(a), val(), pval(), vals(v), pvals(&vals) {}
+  explicit PickNegLogSoftmaxSequence(const std::initializer_list<VariableIndex>& a, const std::vector<std::vector<unsigned>>* pv) : Node(a), val(), pval(), vals(), pvals(pv) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  size_t aux_storage_size() const override;
+  std::vector<unsigned> val;
+  const std::vector<unsigned>* pval;
+  std::vector<std::vector<unsigned>> vals;
+  const std::vector<std::vector<unsigned>>* pvals;
+};
+
 // z = \sum_{j \in denom} \exp (x_i)_j
 // y_i = (x_1)_i - \log z
 struct RestrictedLogSoftmax : public Node {

@@ -15,6 +15,16 @@
 
 using namespace std;
 
+string print_vec(const std::vector<float> & vec) {
+  string sep = "[";
+  ostringstream oss;
+  for(auto f : vec) {
+    oss << sep << f; sep = ",";
+  }
+  oss << "]";
+  return oss.str();
+}
+
 // notes on implementing differentiable components
 // 1) fx can be understood as a pointer to the (preallocated) location for the result
 //    of forward to be stored
@@ -112,6 +122,11 @@ size_t PickNegLogSoftmax::aux_storage_size() const {
   return 2 * dim.batch_elems() * sizeof(float) + dim.batch_elems() * sizeof(unsigned int);
 }
 
+size_t PickNegLogSoftmaxSequence::aux_storage_size() const {
+  size_t total_size = dim.size();
+  return 3 * total_size * sizeof(float) + total_size * sizeof(unsigned int);
+}
+
 // this i need to do something better, but this is a work-around
 // if this is too small, just make it bigger
 size_t LogSumExp::aux_storage_size() const {
@@ -146,8 +161,7 @@ size_t SparsemaxLoss::aux_storage_size() const {
 
 template <class MyDevice>
 EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor & m, Tensor& z) {
-
-  if(x.d.bd == 1) {
+  if(x.d.bd == 1 && x.d[1] == 1) {
     m.t<0>().device(*dev.edevice) = x.t<1>().maximum();
     float mval = as_scalar(m);
     // This needs to be split into two lines to prevent memory allocation
@@ -155,18 +169,21 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
     z.t<0>().device(*dev.edevice) = z.t<0>().log() + mval;
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 0;
-    m.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(red_axis);
+    m.tb<1>().device(*dev.edevice) = x.tb<2>().maximum(red_axis);
     // TODO: Currently, the first version is slower on CPU, hence the switch
 #ifdef __CUDACC__
-    Eigen::array<int, 2> bcast({(int)x.d.rows(), 1});
+    Eigen::array<int, 2> bcast({(int)x.d.rows(), 1, 1});
     // This needs to be split into two lines to prevent memory allocation
-    z.tb<0>().device(*dev.edevice) = (x.tb<1>() - m.tb<1>().broadcast(bcast)).exp().sum(red_axis);
-    z.tb<0>().device(*dev.edevice) = z.tb<0>().log() + m.tb<0>();
+    z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().broadcast(bcast)).exp().sum(red_axis);
+    z.tb<1>().device(*dev.edevice) = z.tb<1>().log() + m.tb<1>();
 #else
     vector<float> mvals = as_vector(m);
-    for(size_t b = 0; b < x.d.bd; b++) {
-      z.tb<0>().chip<0>(b).device(*dev.edevice) = (x.tb<1>().chip<1>(b) - mvals[b]).exp().sum();
-      z.tb<0>().chip<0>(b).device(*dev.edevice) = z.tb<0>().chip<0>(b).log() + mvals[b];
+    auto miter = mvals.begin();
+    for(size_t b = 0; b < x.d.bd; ++b) {
+      for(size_t i = 0; i < x.d[1]; ++i, ++miter) {
+        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = (x.tb<2>().chip<2>(b).chip<1>(i) - *miter).exp().sum();
+        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = z.tb<1>().chip<1>(b).chip<0>(i).log() + *miter;
+      }
     }
 #endif
   }
@@ -1451,7 +1468,7 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
     dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp() * dEdf.tb<1>().broadcast(bcast);
     dynet::gpu::sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
 #else
-    // TODO: We want to do broadcasting here too, but it's slow/not working
+    // TODO: We want to do broadcasting here too, but it's slow
     for(unsigned b = 0; b < fx.d.bd; ++b) {
       dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (xs[0]->tb<1>().chip<1>(b) - z.v[b]).exp() * dEdf.v[b];
       dEdxi.v[ids_dev[b]] -= dEdf.v[b];
@@ -1462,6 +1479,86 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PickNegLogSoftmax)
+
+template<class MyDevice>
+void PickNegLogSoftmaxSequence::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  size_t tot_size = fx.d.size(), num_words = fx.d[0], aux_size = tot_size * (sizeof(float)+sizeof(unsigned int));
+  Tensor z(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor m(dim, (float*)aux_mem + tot_size, fx.device, DeviceMempool::FXS);
+  Tensor mask(dim, (float*)aux_mem + 2*tot_size, fx.device, DeviceMempool::FXS);
+  float* mask_host;
+  unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 3*tot_size), *ids_host;
+#if __CUDACC__
+  mask_host = (float*)malloc(aux_size);
+  ids_host = (unsigned int*)(mask_host + tot_size);
+#else
+  mask_host = mask.v;
+  ids_host = ids_dev;
+#endif
+  // Lay out the IDs and masks in memory
+  memset(mask_host, 0, aux_size);
+  if(pval) {
+    assert(pval->size() == tot_size);
+    memcpy(ids_host, &(*pval)[0], pval->size() * sizeof(unsigned int));
+    fill(mask_host, mask_host+tot_size, 1.f);
+  } else {
+    assert(pvals->size() == dim.bd);
+    size_t pos = 0;
+    for(unsigned b = 0; b < dim.bd; ++b) {
+      if((*pvals)[b].size() == 0) continue;
+      assert((*pvals)[b].size() <= xs[0]->d[1]);
+      pos = b * fx.d[1];
+      fill(mask_host + pos, mask_host + pos + (*pvals)[b].size(), 1.f);
+      for(unsigned i = 0; i < xs[0]->d[1]; ++i, ++pos)
+        ids_host[pos] = num_words * pos + (*pvals)[b][i];
+    }
+  }
+#if __CUDACC__
+  CUDA_CHECK(cudaMemcpyAsync(mask.v, mask_host, aux_size, cudaMemcpyHostToDevice));
+  logsumexp(dev, *xs[0], m, z);
+  dynet::gpu::sparse_to_dense(tot_size, ids_dev, xs[0]->v, fx.v);
+  free(mask_host);
+#else
+  logsumexp(dev, *xs[0], m, z);
+  for(unsigned b = 0; b < tot_size; ++b)
+    fx.v[b] = xs[0]->v[ids_dev[b]];
+#endif
+  fx.tvec().device(*dev.edevice) = (z.tvec() - fx.tvec()) * mask.tvec();
+}
+
+template<class MyDevice>
+void PickNegLogSoftmaxSequence::backward_dev_impl(const MyDevice & dev,
+                            const vector<const Tensor*>& xs,
+                            const Tensor& fx,
+                            const Tensor& dEdf,
+                            unsigned i,
+                            Tensor& dEdxi) const {
+  size_t tot_size = fx.d.size();
+  Tensor z(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor fxm(dim, (float*)aux_mem + tot_size, fx.device, DeviceMempool::FXS);
+  Tensor mask(dim, (float*)aux_mem + 2*tot_size, fx.device, DeviceMempool::FXS);
+  unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 3*tot_size);
+  fxm.tvec().device(*dev.edevice) = dEdf.tvec() * mask.tvec();
+#if __CUDACC__ 
+  Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1,1});
+  dEdxi.tb<2>().device(*dev.edevice) += (xs[0]->tb<2>() - z.tb<2>().broadcast(bcast)).exp() * fxm.tb<2>().broadcast(bcast);
+  dynet::gpu::sparse_subtract(tot_size, ids_dev, fxm.v, dEdxi.v);
+#else
+  // TODO: We want to do broadcasting here too, but it's slow
+  size_t pos = 0;
+  for(size_t b = 0; b < dEdxi.d.bd; ++b) {
+    for(size_t i = 0; i < dEdxi.d[1]; ++i, ++pos) {
+      dEdxi.tb<2>().chip<2>(b).chip<1>(i).device(*dev.edevice) += (xs[0]->tb<2>().chip<2>(b).chip<1>(i) - z.v[pos]).exp() * fxm.v[pos];
+      dEdxi.v[ids_dev[pos]] -= fxm.v[pos];
+    }
+  }
+  // for(unsigned b = 0; b < fx.d.bd; ++b) {
+  //   dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (xs[0]->tb<1>().chip<1>(b) - z.v[b]).exp() * dEdf.v[b];
+  //   dEdxi.v[ids_dev[b]] -= dEdf.v[b];
+  // }
+#endif
+}
+DYNET_NODE_INST_DEV_IMPL(PickNegLogSoftmaxSequence)
 
 // x_1 is a matrix
 // y = (x_1)[start:end]

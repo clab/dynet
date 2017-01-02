@@ -133,18 +133,17 @@ size_t KMaxPooling::aux_storage_size() const {
   return sizeof(Eigen::DenseIndex) * dim.size();
 }
 
-string SumColumns::as_string(const vector<string>& arg_names) const {
+string SumDimension::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "sum_cols(matrix=" << arg_names[0];
-  if (arg_names.size() == 2) s << ", col_weighting=" << arg_names[1];
-  s << ')';
+  s << "sum_dim(matrix=" << arg_names[0] << ',' << dimension << '}';
   return s.str();
 }
 
-Dim SumColumns::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1 || xs.size() == 2);
-  int bd = (xs.size() == 1 ? xs[0].bd : max(xs[0].bd, xs[1].bd));
-  return Dim({xs[0].rows()}, bd);
+Dim SumDimension::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  Dim ret(xs[0]);
+  ret.delete_dim(dimension);
+  return ret;
 }
 
 #endif
@@ -408,30 +407,24 @@ void KMaxPooling::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(KMaxPooling)
 
 template<class MyDevice>
-void SumColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+void SumDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-#ifdef __CUDACC__
-  // The reduction used on CPU is better, but not implemented in GPU
-  unsigned cols = xs[0]->d.cols();
-  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().chip<1>(0);
-  for(unsigned i = 1; i < cols; ++i)
-    fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().chip<1>(i);
-#else
-  const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
+  Eigen::array<int, 1> reduction_axis({(int)dimension});
   fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis);
-#endif
 }
 
 template<class MyDevice>
-void SumColumns::backward_dev_impl(const MyDevice & dev,
+void SumDimension::backward_dev_impl(const MyDevice & dev,
                              const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  const Eigen::array<Eigen::DenseIndex, 2> broadcasts = {1, xs[0]->d[1]};
-  dEdxi.t<2>().device(*dev.edevice) += dEdf.t<2>().broadcast(broadcasts);
+  // TODO: limit to 3-dimensional tensor is arbitrary
+  Eigen::array<int, 4> bcast({1,1,1,1}); bcast[dimension] = dEdxi.d[dimension];
+  Eigen::array<int, 4> morph({(int)dEdxi.d[0],(int)dEdxi.d[1],(int)dEdxi.d[2],(int)dEdxi.d.bd}); morph[dimension] = 1;
+  dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>().reshape(morph).broadcast(bcast);
 }
-DYNET_NODE_INST_DEV_IMPL(SumColumns)
+DYNET_NODE_INST_DEV_IMPL(SumDimension)
 
 } // namespace dynet

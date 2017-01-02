@@ -900,6 +900,26 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression pickneglogsoftmax_seq(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pickneglogsoftmax_seq_gradient ) {
+  std::vector<unsigned> idx = {1,2,0};
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param_square1);
+  Expression z = sum_rows(pickneglogsoftmax_seq(x, idx));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression pickneglogsoftmax_seq(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pickneglogsoftmax_seq_batch_gradient ) {
+  std::vector<std::vector<unsigned>> idx(3);
+  idx[0] = {0,2};
+  idx[1] = {2,0,1};
+  dynet::ComputationGraph cg;
+  Expression x = reshape(parameter(cg, param_cube1), Dim({3,3},3));
+  Expression z = sum_batches(sum_rows(pickneglogsoftmax_seq(x, idx)));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression sparse_input(vector<unsigned int>& ids, vector<float>& src, float def);
 BOOST_AUTO_TEST_CASE( sparse_input_test ) {
   dynet::ComputationGraph cg;
