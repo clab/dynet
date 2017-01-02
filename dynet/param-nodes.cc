@@ -322,7 +322,7 @@ void LookupSequenceNode::forward_dev_impl(const MyDevice & dev, const vector<con
     assert(pindices->size() == dim.bd);
     for(size_t b = 0; b < dim.bd; ++b) {
       assert((*pindices)[b].size() <= num_words);
-      memcpy(ids_host + num_words, &((*pindices)[b][0]), (*pindices)[b].size() * sizeof(unsigned));
+      memcpy(ids_host + num_words * b, &((*pindices)[b][0]), (*pindices)[b].size() * sizeof(unsigned));
     }
   }
 #if __CUDACC__

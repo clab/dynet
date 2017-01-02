@@ -932,11 +932,22 @@ BOOST_AUTO_TEST_CASE( lookup_seq_test ) {
 }
 
 // Expression lookup_seq()
+BOOST_AUTO_TEST_CASE( lookup_seq_equiv ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> ids({1, 0, 2});
+  Expression x1 = lookup(cg, lookup1, ids);
+  Expression x2 = lookup_seq(cg, lookup1, ids);
+  vector<float> v1 = as_vector(cg.forward(x1));
+  vector<float> v2 = as_vector(cg.forward(x2));
+  BOOST_CHECK_EQUAL_COLLECTIONS(v1.begin(), v1.end(), v2.begin(), v2.end());
+}
+
+// Expression lookup_seq()
 BOOST_AUTO_TEST_CASE( lookup_seq_batch_test ) {
   dynet::ComputationGraph cg;
   vector<vector<unsigned>> ids(2);
   ids[0] = {0, 2, 0};
-  ids[0] = {1, 0, 2};
+  ids[1] = {1, 1};
   Expression x1 = lookup_seq(cg, lookup1, ids);
   Expression x2 = parameter(cg, param1);
   Expression z = sum_batches( transpose(x2) * x1 * x2 );
