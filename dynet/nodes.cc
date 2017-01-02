@@ -235,19 +235,20 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
     return;
   } else {
     // Add the first matrix
-    if(fx.d.bd == xs[0]->d.bd) {
+    size_t b_size = xs[0]->d.size(), fx_size = fx.d.size();
+    if(fx_size == b_size) {
       fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     } else {
-      assert(xs[0]->d.bd == 1 && fx.d.bd != 1);
 #ifdef __CUDACC__
-      Eigen::array<int, 3> bcast; bcast[0] = bcast[1] = 1; bcast[2] = fx.d.bd;
+      Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = fx.d[1]/xs[0]->d[1]; bcast[2] = fx.d.bd/xs[0]->bd;
       fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcast);
 #else
-      size_t batch_size = fx.d.batch_size();
-      float *curr_ptr = fx.v, *end_ptr = curr_ptr + batch_size * fx.d.bd, *in_ptr = xs[0]->v;
+      if(xs[0]->d.bd != 1)
+        throw std::invalid_argument("In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
+      float *curr_ptr = fx.v, *end_ptr = curr_ptr + fx.d.size(), *in_ptr = xs[0]->v;
       do {
-        memcpy(curr_ptr, in_ptr, sizeof(float)*batch_size);
-        curr_ptr += batch_size;
+        memcpy(curr_ptr, in_ptr, sizeof(float)*b_size);
+        curr_ptr += b_size;
       } while(curr_ptr != end_ptr);
 #endif
     }
@@ -283,16 +284,32 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
   assert(i < xs.size());
   // Bias term
   if (i == 0) { // bias term
-    if(dEdxi.d.bd == dEdf.d.bd) {
+    size_t dx_size = dEdxi.d.size(), df_size = dEdf.d.size();
+    if(dx_size == df_size) {
       dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
     } else {
-      assert(dEdxi.d.bd == 1 && dEdf.d.bd != 1);
+      if(dEdxi.d.bd != 1)
+        throw std::invalid_argument("In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
 #ifdef __CUDACC__
-      Eigen::array<int, 1> red_axis; red_axis[0] = 2;
-      dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+      if(dEdxi.d[1] == dEdf.d[1]) {
+        Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+        dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+      } else {
+        Eigen::array<int, 2> red_axis; red_axis[0] = 1; red_axis[1] = 2;
+        dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+      }
 #else
-      for(unsigned b = 0; b < dEdf.d.bd; ++b)
-        (*dEdxi).noalias() += dEdf.batch_matrix(b);
+      if(dEdxi.d[1] == dEdf.d[1]) {
+        for(unsigned b = 0; b < dEdf.d.bd; ++b)
+          (*dEdxi).noalias() += dEdf.batch_matrix(b);
+      } else {
+        Tensor mychip(dEdxi.d, dEdf.v, dEdf.device, dEdf.mem_pool);
+        size_t len = dEdf.d.bd * dEdf.d[1];
+        for(unsigned b = 0; b < len; ++b) {
+          (*dEdxi).noalias() += *mychip;
+          mychip.v += dx_size;
+        }
+      }
 #endif
     }
 

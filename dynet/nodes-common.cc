@@ -761,11 +761,17 @@ Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
     ostringstream s; s << "Bad number of inputs in AffineTransform: " << xs;
     throw std::invalid_argument(s.str());
   }
-  Dim d = xs[0];
-  for (unsigned i = 1; i < xs.size(); i += 2) {
+  if(xs.size() == 1) return xs[0];
+  if (xs[0].rows() != xs[1].rows() ||
+      xs[1].cols() != xs[2].rows()) {
+    ostringstream s; s << "Bad dimensions for AffineTransform: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  Dim d({xs[0].rows(), xs[2].cols()}, max(max(xs[0].bd, xs[1].bd), xs[2].bd));
+  for (unsigned i = 3; i < xs.size(); i += 2) {
     if (xs[i].cols() != xs[i+1].rows() ||
-        xs[0].rows() != xs[i].rows() ||
-        xs[0].cols() != xs[i+1].cols()) {
+        d.rows() != xs[i].rows() ||
+        d.cols() != xs[i+1].cols()) {
       ostringstream s; s << "Bad dimensions for AffineTransform: " << xs;
       throw std::invalid_argument(s.str());
     }

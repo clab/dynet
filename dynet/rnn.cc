@@ -25,14 +25,22 @@ enum { X2H=0, H2H, HB, L2H };
 
 RNNBuilder::~RNNBuilder() {}
 
+Expression RNNBuilder::transduce_seq(const Expression& x) {
+  if(x.dim().nd != 2)
+    throw std::invalid_argument("Currently transduce_seq only supports inputs with dimensions size 2");
+  size_t len = x.dim()[1];
+  vector<Expression> exps;
+  for(size_t i = 0; i < len; ++i)
+    exps.push_back(add_input(pick(x, i, 1)));
+  return concatenate_cols(exps);
+}
+
 void RNNBuilder::save_parameters_pretraining(const string& fname) const {
-  cerr << "RNNBuilder::save_parameters_pretraining not overridden.\n";
-  abort();
+  throw std::runtime_error("RNNBuilder::save_parameters_pretraining not overridden.");
 }
 
 void RNNBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "RNNBuilder::load_parameters_pretraining not overridden.\n";
-  abort();
+  throw std::runtime_error("RNNBuilder::load_parameters_pretraining not overridden.");
 }
 
 template<class Archive>

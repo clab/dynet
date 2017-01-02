@@ -160,6 +160,18 @@ struct RNNBuilder {
 
   /**
    * 
+   * \brief Transduce a matrix
+   * \details This will read a matrix, one column at a time, and convert
+   *          it into another matrix consisting of the deepest layer.
+   * 
+   * \param x Input matrix
+   * 
+   * \return The matrix
+   */
+  virtual Expression transduce_seq(const Expression& x);
+
+  /**
+   * 
    * \brief Return the RNN state that is the parent of `p`
    * \details - This can be used in implementing complex structures
    * such as trees, etc.
