@@ -1342,23 +1342,24 @@ DYNET_NODE_INST_DEV_IMPL(PairwiseRankLoss)
 template<class MyDevice>
 void PickElement::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if(pval) {
-    if (*pval >= xs[0]->d.rows()) {
-      cerr << "PickElement::forward_impl requested element " << *pval
-           << " from a vector of length " << xs[0]->d.rows() << endl;
-      abort();
+    if (*pval >= xs[0]->d[dimension]) {
+      ostringstream s; s << "PickElement::forward_impl requested element " << *pval
+                         << " from a dimension of length " << xs[0]->d[dimension] << endl;
+      throw std::invalid_argument(s.str());
     }
-    TensorTools::CopyElement(*xs[0], *pval, fx, 0);
+    // TODO: This limit of up to 3 is somewhat arbitrary. We need to decide how to handle
+    //       things with "maximum tensor size".
+    fx.tb<2>().device(*dev.edevice) = xs[0]->tb<3>().chip(*pval, dimension); 
   } else {
     assert(pvals);
     assert(pvals->size() == fx.d.batch_elems());
-    int batch_size = xs[0]->d.batch_size();
     for(unsigned b = 0; b < pvals->size(); ++b) {
-      if ((*pvals)[b] >= xs[0]->d.rows()) {
-        cerr << "PickElement::forward_impl requested element " << (*pvals)[b]
-             << " from a vector of length " << xs[0]->d.rows() << endl;
-        abort();
+      if ((*pvals)[b] >= xs[0]->d[dimension]) {
+        ostringstream s; s << "PickElement::forward_impl requested element " << (*pvals)[b]
+                           << " from a dimension of length " << xs[0]->d[dimension] << endl;
+        throw std::invalid_argument(s.str());
       }
-      TensorTools::CopyElement(*xs[0], b*batch_size + (*pvals)[b], fx, b);
+      fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip((*pvals)[b], dimension); 
     }
   }
 }
@@ -1373,20 +1374,11 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   assert(i == 0);
   if(pval) {
-#ifdef __CUDACC__
-    CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, 1, kSCALAR_ONE, dEdf.v, 1, dEdxi.v + *pval, 1));
-#else
-    (*dEdxi)(*pval) += dEdf.v[0];
-#endif
+    dEdxi.tb<3>().chip(*pval, dimension).device(*dev.edevice) += dEdf.tb<2>();
   } else {
     assert(pvals);
-    for(unsigned b = 0; b < pvals->size(); ++b) {
-#ifdef __CUDACC__
-      CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, 1, kSCALAR_ONE, dEdf.v + b, 1, dEdxi.batch_ptr(b) + (*pvals)[b], 1));
-#else
-      dEdxi.batch_matrix(b)((*pvals)[b]) += dEdf.v[b];
-#endif
-    }
+    for(unsigned b = 0; b < pvals->size(); ++b)
+      dEdxi.tb<3>().chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PickElement)

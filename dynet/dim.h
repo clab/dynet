@@ -68,6 +68,16 @@ struct Dim {
   inline void set(unsigned int i, unsigned int s) { assert(i < nd); assert(s > 0); d[i] = s; }
   inline unsigned int operator[](unsigned int i) const { return i < nd ? d[i] : 1; }
   inline unsigned int size(unsigned int i) const { return (*this)[i]; }
+  inline void delete_dim(unsigned int i) {
+    assert(i < nd);
+    if(nd == 1) {
+      d[0] = 1;
+    } else {
+      for(;i+1 < nd; ++i)
+        d[i] = d[i+1];
+      --nd;
+    }
+  }
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
     else if (nd == 2) { return Dim({d[1], d[0]}, bd); }

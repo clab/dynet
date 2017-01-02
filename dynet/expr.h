@@ -1210,26 +1210,31 @@ Expression sum_batches(const Expression& x);
 /**
  * \ingroup flowoperations
  * \brief Pick element
- * \details Pick a single element from an expression.
+ * \details Pick a single element/row/column/sub-tensor from an expression.
+ *          This will result in the dimension of the tensor being reduced
+ *          by 1.
  * 
  * \param x The input expression
  * \param v The index of the element to select
+ * \param d The dimension along which to choose the element
  * 
- * \return The value of x[v]
+ * \return The value of x[v] along dimension d
  */
-Expression pick(const Expression& x, unsigned v);
+Expression pick(const Expression& x, unsigned v, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
- * \brief Pick multiple elements
- * \details Pick multiple elements from an input expression
+ * \brief Batched pick
+ * \details Pick elements from multiple batches.
  * 
  * \param x The input expression
- * \param v A vector of indicies to choose
+ * \param v A vector of indicies to choose, one for each batch in the
+ *          input expression.
+ * \param d The dimension along which to choose the elements
  * 
- * \return A vector of values {x[v[0]], x[v[1]], ...}
+ * \return A mini-batched expression containing the picked elements
  */
-Expression pick(const Expression& x, const std::vector<unsigned> & v);
+Expression pick(const Expression& x, const std::vector<unsigned> & v, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
@@ -1240,24 +1245,26 @@ Expression pick(const Expression& x, const std::vector<unsigned> & v);
  * 
  * \param x The input expression
  * \param pv Pointer to the index of the element to select
+ * \param d The dimension along which to choose the elements
  * 
  * \return The value of x[*pv]
  */
-Expression pick(const Expression& x, const unsigned * pv);
+Expression pick(const Expression& x, const unsigned * pv, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
- * \brief Modifiable pick multiple elements
+ * \brief Modifiable batched pick element
  * \details Pick multiple elements from an input expression, where the indices
  *          are passed by pointer so we do not need to re-create the computation
  *          graph every time.
  * 
  * \param x The input expression
  * \param pv A pointer to vector of indicies to choose
+ * \param d The dimension along which to choose the elements
  * 
- * \return A vector of values {x[(*pv)[0]], x[(*pv)[1]], ...}
+ * \return A mini-batched expression containing the picked elements
  */
-Expression pick(const Expression& x, const std::vector<unsigned> * pv);
+Expression pick(const Expression& x, const std::vector<unsigned> * pv, unsigned d = 0);
 
 /**
  * \ingroup flowoperations

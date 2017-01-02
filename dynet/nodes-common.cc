@@ -636,7 +636,7 @@ string PickElement::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "pick(" << arg_names[0] << ',';
   if(pval) { 
-    s << *pval << ')';
+    s << *pval;
   } else {
     assert(pvals);
     s << '[';
@@ -645,18 +645,23 @@ string PickElement::as_string(const vector<string>& arg_names) const {
       for(size_t i = 1; i < pvals->size(); ++i)
         s << ',' << (*pvals)[i];
     }
-    s << "])";
+    s << "]";
   }
+  s << ", " << dimension << ")";
   return s.str();
 }
 
 Dim PickElement::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  if (!LooksLikeVector(xs[0])) {
-    ostringstream s; s << "Bad input dimensions in PickElement: " << xs;
+  if(dimension >= xs[0].nd) {
+    ostringstream s; s << "Tried to PickElement on dimension " << dimension << " bigger than input " << xs[0];
     throw std::invalid_argument(s.str());
   }
-  return Dim({1}, xs[0].bd);
+  if(xs[0].nd >= 4)
+    throw std::invalid_argument("PickElement not currently supported for tensors of 4 or more dimensions.");
+  Dim ret(xs[0]);
+  ret.delete_dim(dimension);
+  return ret;
 }
 
 // x_1 is a vector
@@ -670,7 +675,7 @@ string PickRange::as_string(const vector<string>& arg_names) const {
 Dim PickRange::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
   if (!LooksLikeVector(xs[0])) {
-    ostringstream s; s << "Bad input dimensions in PickElement: " << xs;
+    ostringstream s; s << "Bad input dimensions in PickRange: " << xs;
     throw std::invalid_argument(s.str());
   }
   assert(end <= xs[0][0]);
