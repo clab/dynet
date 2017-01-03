@@ -158,8 +158,13 @@ void LookupParameterStorage::copy(const LookupParameterStorage& param) {
 }
 
 void LookupParameterStorage::clear() {
-  for (auto i : non_zero_grads)
-    TensorTools::Zero(grads[i]);
+  // TODO: this is hacky, probably need a better heuristic
+  if(all_grads.device->type == DeviceType::GPU) {
+    TensorTools::Zero(all_grads);
+  } else {
+    for (auto i : non_zero_grads)
+      TensorTools::Zero(grads[i]);
+  }
   non_zero_grads.clear();
 }
 

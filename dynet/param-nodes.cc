@@ -109,7 +109,7 @@ void LookupNode::accumulate_grad(const Tensor& g) {
 }
 
 size_t LookupSequenceNode::aux_storage_size() const {
-  return (dim.bd + dim[dim.nd-1]) * sizeof(unsigned);
+  return dim.bd * dim[dim.nd-1] * sizeof(unsigned);
 }
 
 string LookupSequenceNode::as_string(const vector<string>& arg_names) const {
@@ -314,17 +314,17 @@ DYNET_NODE_INST_DEV_IMPL(LookupNode)
 template<class MyDevice>
 void LookupSequenceNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  size_t num_words = dim[dim.nd-1], num_steps = dim.bd * num_words, p_size = params.get()->dim.size();
+  size_t num_cols = dim[dim.nd-1], num_steps = dim.bd * num_cols, p_size = params.get()->dim.size();
   // Lay out the IDs in memory
   memset(ids_host, 0, num_steps * sizeof(unsigned));
   if(pindex) {
-    assert(pindex->size() == num_words);
+    assert(pindex->size() == num_cols);
     memcpy(ids_host, &(*pindex)[0], pindex->size() * sizeof(unsigned));
   } else {
     assert(pindices->size() == dim.bd);
     for(size_t b = 0; b < dim.bd; ++b) {
-      assert((*pindices)[b].size() <= num_words);
-      memcpy(ids_host + num_words * b, &((*pindices)[b][0]), (*pindices)[b].size() * sizeof(unsigned));
+      assert((*pindices)[b].size() <= num_cols);
+      memcpy(ids_host + num_cols * b, &((*pindices)[b][0]), (*pindices)[b].size() * sizeof(unsigned));
     }
   }
 #if __CUDACC__
