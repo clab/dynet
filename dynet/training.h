@@ -62,6 +62,14 @@ struct Trainer {
   // Rescale all the parameters handled by this model
   void rescale_and_reset_weight_decay();
 
+  void enable_clipping(bool enable=true) {
+    clipping_enabled = enable;
+  }
+
+  void set_clip_threshold(real threshold) {
+    clip_threshold = threshold;
+  }
+
   // learning rates
   real eta0;
   real eta;
@@ -69,7 +77,7 @@ struct Trainer {
   real epoch;
 
   // clipping
-  real clipping_enabled;
+  bool clipping_enabled;
   real clip_threshold;
   real clips;
   real updates;
