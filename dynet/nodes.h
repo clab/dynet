@@ -491,18 +491,19 @@ struct RestrictedLogSoftmax : public Node {
 // y = (x_1)_{*pval}
 // this is used to implement cross-entropy training
 struct PickElement : public Node {
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val), vals(), pvals() {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, unsigned v, unsigned d = 0) : Node(a), val(v), pval(&val), vals(), pvals(), dimension(d) {}
   // use this constructor if you want to perform mini-batching
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v) : Node(a), val(), pval(), vals(v), pvals(&vals) {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v, unsigned d = 0) : Node(a), val(), pval(), vals(v), pvals(&vals), dimension(d) {}
   // use these constructors if you want to change the value after the graph is constructed
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv), vals(), pvals() {}
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv) : Node(a), val(), pval(), vals(), pvals(pv) {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const unsigned* pv, unsigned d = 0) : Node(a), val(), pval(pv), vals(), pvals(), dimension(d) {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv, unsigned d = 0) : Node(a), val(), pval(), vals(), pvals(pv), dimension(d) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   unsigned val;
   const unsigned* pval;
   std::vector<unsigned> vals;
   const std::vector<unsigned>* pvals;
+  unsigned dimension;
 };
 
 // x_1 is a vector

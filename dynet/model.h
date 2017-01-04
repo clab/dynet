@@ -91,6 +91,9 @@ struct LookupParameterStorage : public ParameterStorageBase {
   template <class MyDevice>
   void accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& g);
   void accumulate_grad(unsigned index, const Tensor& g);
+  template <class MyDevice>
+  void accumulate_grads_dev(MyDevice & dev, unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
+  void accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
   void clear();
 
   // Initialize each individual lookup from the overall tensors

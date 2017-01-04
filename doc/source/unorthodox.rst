@@ -55,6 +55,17 @@ input, then DyNet will handle the rest. The programming paradigm is a bit
 different from other toolkits, and may take a bit of getting used to, but is
 often more convenient once you're used to it.
 
+LSTM Implementation
+-------------------
+
+The implementation of LSTMs in ``LSTMBuilder`` is not the canonical
+implementation, but an implementation using coupled input and forget gates, as
+described in "LSTM: A Search Space Odyssey" (https://arxiv.org/abs/1503.04069).
+In other words, if the value of the input gate is `i`, the forget gate is `1-i`.
+This reduces the number of parameters in the model and speeds training a little,
+and in many cases the accuracy is the same or better. If you want to try the
+standard version of the LSTM, use the ``VanillaLSTMBuilder`` class.
+
 Dropout Scaling
 ---------------
 
