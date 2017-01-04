@@ -45,6 +45,7 @@ struct dynet::expr::Expression;
 // Declare explicit types for needed instantiations of generic types
 namespace std {
   %template(IntVector)        vector<int>;
+  //  %template(UnsignedVector)   vector<unsigned>;
   %template(DoubleVector)     vector<double>;
   %template(FloatVector)      vector<float>;
   %template(LongVector)       vector<long>;
@@ -61,7 +62,7 @@ namespace dynet {
 // Some declarations etc to keep swig happy
 typedef float real;
 
-struct RNNPointer;
+typedef int RNNPointer;
 struct VariableIndex;
 /*{
   unsigned t;
@@ -76,6 +77,8 @@ struct Dim {
   Dim() : nd(0), bd(1) {}
   Dim(const std::vector<long> & x);
   Dim(const std::vector<long> & x, unsigned int b);
+
+  unsigned int size();
 };
 
 class Model;
@@ -200,11 +203,22 @@ Expression operator*(float y, const Expression& x); // { return x * y; }
 Expression operator/(const Expression& x, float y); // { return x * (1.f / y); }
 
 Expression tanh(const Expression& x);
+Expression exp(const Expression& x);
+Expression log(const Expression& x);
 Expression squared_distance(const Expression& x, const Expression& y);
+
+Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
+Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
+Expression pick(const Expression& x, unsigned v);
+Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
 Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
 Expression block_dropout(const Expression& x, real p);
+
+Expression softmax(const Expression& x);
+Expression log_softmax(const Expression& x);
+Expression pickneglogsoftmax(const Expression& x, unsigned v);
 
 template <typename T>
 Expression affine_transform(const T& xs);
@@ -285,16 +299,17 @@ struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
 };
 
-
 %nodefaultctor RNNBuilder;
 struct RNNBuilder {
   RNNPointer state() const;
   void new_graph(ComputationGraph& cg);
-  void start_new_sequence(const std::vector<Expression>& h_0 = {});
-  Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new = {});
-  Expression set_s(const RNNPointer& prev, const std::vector<Expression>& s_new = {});
-  Expression add_input(const Expression& x);
-  Expression add_input(const RNNPointer& prev, const Expression& x);
+  void start_new_sequence(const std::vector<expr::Expression>& h_0 = {});
+  expr::Expression set_h(const RNNPointer& prev, const std::vector<expr::Expression>& h_new = {});
+  expr::Expression set_s(const RNNPointer& prev, const std::vector<expr::Expression>& s_new = {});
+  expr::Expression add_input(const expr::Expression& x);
+  expr::Expression add_input(const RNNPointer& prev, const expr::Expression& x);
+  std::vector<expr::Expression> final_s() const;
+  std::vector<expr::Expression> final_h() const;
 };
 
 struct LSTMBuilder : public RNNBuilder {
@@ -304,7 +319,6 @@ struct LSTMBuilder : public RNNBuilder {
                        unsigned hidden_dim,
                        Model* model);
 };
-
 
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
 
