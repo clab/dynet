@@ -41,8 +41,8 @@ string FoldRows::as_string(const vector<string>& arg_names) const {
 Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
   unsigned orows = xs[0].rows() / nrows;
   if ((orows * nrows != xs[0].rows()) || xs.size() != 1 || xs[0].ndims() > 2) {
-    cerr << "Bad input dimensions in FoldRows: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in FoldRows");
+    ostringstream s; s << "Bad input dimensions in FoldRows: " << xs;
+    throw std::invalid_argument(s.str());
   }
   return Dim({orows, xs[0].cols()});
 }
@@ -55,15 +55,15 @@ string Conv1DNarrow::as_string(const vector<string>& arg_names) const {
 
 Dim Conv1DNarrow::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2) {
-    cerr << "Conv1DNarrow requires two inputs: " << xs << endl;
-    throw std::invalid_argument("Conv1DNarrow requires 2 dimensions");
+    ostringstream s; s << "Conv1DNarrow requires two inputs: " << xs;
+    throw std::invalid_argument(s.str());
   }
   int ocols = xs[0].cols() - xs[1].cols() + 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() != 2 ||
       xs[0].rows() != xs[1].rows() ||
       ocols < 1) {
-    cerr << "Bad input dimensions in Conv1DNarrow: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in Conv1DNarrow");
+    ostringstream s; s << "Bad input dimensions in Conv1DNarrow: " << xs;
+    throw std::invalid_argument(s.str());
   }
   return Dim({xs[0].rows(), (unsigned)ocols});
 }
@@ -76,14 +76,14 @@ string Conv1DWide::as_string(const vector<string>& arg_names) const {
 
 Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2) {
-    cerr << "Conv1DWide requires two inputs: " << xs << endl;
-    throw std::invalid_argument("Conv1DWide requires two inputs");
+    ostringstream s; s << "Conv1DWide requires two inputs: " << xs;
+    throw std::invalid_argument(s.str());
   }
   unsigned ocols = xs[0].cols() + xs[1].cols() - 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() != 2 ||
       xs[0].rows() != xs[1].rows()) {
-    cerr << "Bad input dimensions in Conv1DWide: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in Conv1DWide");
+    ostringstream s; s << "Bad input dimensions in Conv1DWide: " << xs;
+    throw std::invalid_argument(s.str());
   }
   return Dim({xs[0].rows(), ocols});
 }
@@ -96,15 +96,15 @@ string Filter1DNarrow::as_string(const vector<string>& arg_names) const {
 
 Dim Filter1DNarrow::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() != 2) {
-    cerr << "Filter1DNarrow requires two inputs: " << xs << endl;
-    throw std::invalid_argument("Filter1DNarrow requires 2 dimensions");
+    ostringstream s; s << "Filter1DNarrow requires two inputs: " << xs;
+    throw std::invalid_argument(s.str());
   }
   int ocols = xs[0].cols() - xs[1].cols() + 1;
   if (xs[0].ndims() != 2 || xs[1].ndims() < 2 ||
       xs[0].rows() != xs[1].rows() ||
       ocols < 1) {
-    cerr << "Bad input dimensions in Filter1DNarrow: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in Filter1DNarrow");
+    ostringstream s; s << "Bad input dimensions in Filter1DNarrow: " << xs;
+    throw std::invalid_argument(s.str());
   }
   const unsigned fids = (xs[1].ndims() > 2 ? xs[1][2] : 1);
   return Dim({fids, (unsigned)ocols});
@@ -118,12 +118,12 @@ string KMaxPooling::as_string(const vector<string>& arg_names) const {
 
 Dim KMaxPooling::dim_forward(const vector<Dim>& xs) const {
   if (k < 1) {
-    cerr << "Bad bad k in KMaxPooling: " << k << endl;
-    throw std::invalid_argument("bad k in KMaxPooling");
+    ostringstream s; s << "Bad bad k in KMaxPooling: " << k;
+    throw std::invalid_argument(s.str());
   }
   if (xs[0].ndims() != 2 || (xs[0].cols() < k)) {
-    cerr << "Bad input dimensions in KMaxPooling: " << xs << endl;
-    throw std::invalid_argument("bad input dimensions in KMaxPooling");
+    ostringstream s; s << "Bad input dimensions in KMaxPooling: " << xs;
+    throw std::invalid_argument(s.str());
   }
   return Dim({xs[0].rows(), k});
 }
@@ -133,18 +133,17 @@ size_t KMaxPooling::aux_storage_size() const {
   return sizeof(Eigen::DenseIndex) * dim.size();
 }
 
-string SumColumns::as_string(const vector<string>& arg_names) const {
+string SumDimension::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "sum_cols(matrix=" << arg_names[0];
-  if (arg_names.size() == 2) s << ", col_weighting=" << arg_names[1];
-  s << ')';
+  s << "sum_dim(matrix=" << arg_names[0] << ',' << dimension << '}';
   return s.str();
 }
 
-Dim SumColumns::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1 || xs.size() == 2);
-  int bd = (xs.size() == 1 ? xs[0].bd : max(xs[0].bd, xs[1].bd));
-  return Dim({xs[0].rows()}, bd);
+Dim SumDimension::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  Dim ret(xs[0]);
+  ret.delete_dim(dimension);
+  return ret;
 }
 
 #endif
@@ -408,30 +407,24 @@ void KMaxPooling::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(KMaxPooling)
 
 template<class MyDevice>
-void SumColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+void SumDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-#ifdef __CUDACC__
-  // The reduction used on CPU is better, but not implemented in GPU
-  unsigned cols = xs[0]->d.cols();
-  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().chip<1>(0);
-  for(unsigned i = 1; i < cols; ++i)
-    fx.t<1>().device(*dev.edevice) += xs[0]->t<2>().chip<1>(i);
-#else
-  const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
+  Eigen::array<int, 1> reduction_axis({(int)dimension});
   fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis);
-#endif
 }
 
 template<class MyDevice>
-void SumColumns::backward_dev_impl(const MyDevice & dev,
+void SumDimension::backward_dev_impl(const MyDevice & dev,
                              const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  const Eigen::array<Eigen::DenseIndex, 2> broadcasts = {1, xs[0]->d[1]};
-  dEdxi.t<2>().device(*dev.edevice) += dEdf.t<2>().broadcast(broadcasts);
+  // TODO: limit to 3-dimensional tensor is arbitrary
+  Eigen::array<int, 4> bcast({1,1,1,1}); bcast[dimension] = dEdxi.d[dimension];
+  Eigen::array<int, 4> morph({(int)dEdxi.d[0],(int)dEdxi.d[1],(int)dEdxi.d[2],(int)dEdxi.d.bd}); morph[dimension] = 1;
+  dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>().reshape(morph).broadcast(bcast);
 }
-DYNET_NODE_INST_DEV_IMPL(SumColumns)
+DYNET_NODE_INST_DEV_IMPL(SumDimension)
 
 } // namespace dynet

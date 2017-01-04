@@ -26,13 +26,11 @@ enum { X2H=0, H2H, HB, L2H };
 RNNBuilder::~RNNBuilder() {}
 
 void RNNBuilder::save_parameters_pretraining(const string& fname) const {
-  cerr << "RNNBuilder::save_parameters_pretraining not overridden.\n";
-  abort();
+  throw std::runtime_error("RNNBuilder::save_parameters_pretraining not overridden.");
 }
 
 void RNNBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "RNNBuilder::load_parameters_pretraining not overridden.\n";
-  abort();
+  throw std::runtime_error("RNNBuilder::load_parameters_pretraining not overridden.");
 }
 
 template<class Archive>

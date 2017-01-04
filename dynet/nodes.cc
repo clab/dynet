@@ -15,6 +15,16 @@
 
 using namespace std;
 
+inline string print_vec(const std::vector<float> & vec) {
+  string sep = "[";
+  ostringstream oss;
+  for(auto f : vec) {
+    oss << sep << f; sep = ",";
+  }
+  oss << "]";
+  return oss.str();
+}
+
 // notes on implementing differentiable components
 // 1) fx can be understood as a pointer to the (preallocated) location for the result
 //    of forward to be stored
@@ -146,8 +156,7 @@ size_t SparsemaxLoss::aux_storage_size() const {
 
 template <class MyDevice>
 EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor & m, Tensor& z) {
-
-  if(x.d.bd == 1) {
+  if(x.d.bd == 1 && x.d[1] == 1) {
     m.t<0>().device(*dev.edevice) = x.t<1>().maximum();
     float mval = as_scalar(m);
     // This needs to be split into two lines to prevent memory allocation
@@ -155,18 +164,21 @@ EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor
     z.t<0>().device(*dev.edevice) = z.t<0>().log() + mval;
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 0;
-    m.tb<0>().device(*dev.edevice) = x.tb<1>().maximum(red_axis);
+    m.tb<1>().device(*dev.edevice) = x.tb<2>().maximum(red_axis);
     // TODO: Currently, the first version is slower on CPU, hence the switch
 #ifdef __CUDACC__
-    Eigen::array<int, 2> bcast({(int)x.d.rows(), 1});
+    Eigen::array<int, 2> bcast({(int)x.d.rows(), 1, 1});
+    Eigen::array<int, 3> morph({1, (int)m.d[0], (int)m.d.bd});
     // This needs to be split into two lines to prevent memory allocation
-    z.tb<0>().device(*dev.edevice) = (x.tb<1>() - m.tb<1>().broadcast(bcast)).exp().sum(red_axis);
-    z.tb<0>().device(*dev.edevice) = z.tb<0>().log() + m.tb<0>();
+    z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().reshape(morph).broadcast(bcast)).exp().sum(red_axis);
+    z.tb<1>().device(*dev.edevice) = z.tb<1>().log() + m.tb<1>();
 #else
-    vector<float> mvals = as_vector(m);
-    for(size_t b = 0; b < x.d.bd; b++) {
-      z.tb<0>().chip<0>(b).device(*dev.edevice) = (x.tb<1>().chip<1>(b) - mvals[b]).exp().sum();
-      z.tb<0>().chip<0>(b).device(*dev.edevice) = z.tb<0>().chip<0>(b).log() + mvals[b];
+    auto miter = m.v;
+    for(size_t b = 0; b < x.d.bd; ++b) {
+      for(size_t i = 0; i < x.d[1]; ++i, ++miter) {
+        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = (x.tb<2>().chip<2>(b).chip<1>(i) - *miter).exp().sum();
+        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = z.tb<1>().chip<1>(b).chip<0>(i).log() + *miter;
+      }
     }
 #endif
   }
@@ -235,19 +247,20 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
     return;
   } else {
     // Add the first matrix
-    if(fx.d.bd == xs[0]->d.bd) {
+    size_t b_size = xs[0]->d.size(), fx_size = fx.d.size();
+    if(fx_size == b_size) {
       fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     } else {
-      assert(xs[0]->d.bd == 1 && fx.d.bd != 1);
 #ifdef __CUDACC__
-      Eigen::array<int, 3> bcast; bcast[0] = bcast[1] = 1; bcast[2] = fx.d.bd;
+      Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = fx.d[1]/xs[0]->d[1]; bcast[2] = fx.d.bd/xs[0]->d.bd;
       fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcast);
 #else
-      size_t batch_size = fx.d.batch_size();
-      float *curr_ptr = fx.v, *end_ptr = curr_ptr + batch_size * fx.d.bd, *in_ptr = xs[0]->v;
+      if(xs[0]->d.bd != 1)
+        throw std::invalid_argument("In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
+      float *curr_ptr = fx.v, *end_ptr = curr_ptr + fx.d.size(), *in_ptr = xs[0]->v;
       do {
-        memcpy(curr_ptr, in_ptr, sizeof(float)*batch_size);
-        curr_ptr += batch_size;
+        memcpy(curr_ptr, in_ptr, sizeof(float)*b_size);
+        curr_ptr += b_size;
       } while(curr_ptr != end_ptr);
 #endif
     }
@@ -283,16 +296,32 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
   assert(i < xs.size());
   // Bias term
   if (i == 0) { // bias term
-    if(dEdxi.d.bd == dEdf.d.bd) {
+    size_t dx_size = dEdxi.d.size(), df_size = dEdf.d.size();
+    if(dx_size == df_size) {
       dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
     } else {
-      assert(dEdxi.d.bd == 1 && dEdf.d.bd != 1);
+      if(dEdxi.d.bd != 1)
+        throw std::invalid_argument("In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
 #ifdef __CUDACC__
-      Eigen::array<int, 1> red_axis; red_axis[0] = 2;
-      dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+      if(dEdxi.d[1] == dEdf.d[1]) {
+        Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+        dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+      } else {
+        Eigen::array<int, 2> red_axis; red_axis[0] = 1; red_axis[1] = 2;
+        dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+      }
 #else
-      for(unsigned b = 0; b < dEdf.d.bd; ++b)
-        (*dEdxi).noalias() += dEdf.batch_matrix(b);
+      if(dEdxi.d[1] == dEdf.d[1]) {
+        for(unsigned b = 0; b < dEdf.d.bd; ++b)
+          (*dEdxi).noalias() += dEdf.batch_matrix(b);
+      } else {
+        Tensor mychip(dEdxi.d, dEdf.v, dEdf.device, dEdf.mem_pool);
+        size_t len = dEdf.d.bd * dEdf.d[1];
+        for(unsigned b = 0; b < len; ++b) {
+          (*dEdxi).noalias() += *mychip;
+          mychip.v += dx_size;
+        }
+      }
 #endif
     }
 
@@ -1342,23 +1371,24 @@ DYNET_NODE_INST_DEV_IMPL(PairwiseRankLoss)
 template<class MyDevice>
 void PickElement::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if(pval) {
-    if (*pval >= xs[0]->d.rows()) {
-      cerr << "PickElement::forward_impl requested element " << *pval
-           << " from a vector of length " << xs[0]->d.rows() << endl;
-      abort();
+    if (*pval >= xs[0]->d[dimension]) {
+      ostringstream s; s << "PickElement::forward_impl requested element " << *pval
+                         << " from a dimension of length " << xs[0]->d[dimension] << endl;
+      throw std::invalid_argument(s.str());
     }
-    TensorTools::CopyElement(*xs[0], *pval, fx, 0);
+    // TODO: This limit of up to 3 is somewhat arbitrary. We need to decide how to handle
+    //       things with "maximum tensor size".
+    fx.tb<2>().device(*dev.edevice) = xs[0]->tb<3>().chip(*pval, dimension); 
   } else {
     assert(pvals);
     assert(pvals->size() == fx.d.batch_elems());
-    int batch_size = xs[0]->d.batch_size();
     for(unsigned b = 0; b < pvals->size(); ++b) {
-      if ((*pvals)[b] >= xs[0]->d.rows()) {
-        cerr << "PickElement::forward_impl requested element " << (*pvals)[b]
-             << " from a vector of length " << xs[0]->d.rows() << endl;
-        abort();
+      if ((*pvals)[b] >= xs[0]->d[dimension]) {
+        ostringstream s; s << "PickElement::forward_impl requested element " << (*pvals)[b]
+                           << " from a dimension of length " << xs[0]->d[dimension] << endl;
+        throw std::invalid_argument(s.str());
       }
-      TensorTools::CopyElement(*xs[0], b*batch_size + (*pvals)[b], fx, b);
+      fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip((*pvals)[b], dimension); 
     }
   }
 }
@@ -1373,20 +1403,11 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   assert(i == 0);
   if(pval) {
-#ifdef __CUDACC__
-    CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, 1, kSCALAR_ONE, dEdf.v, 1, dEdxi.v + *pval, 1));
-#else
-    (*dEdxi)(*pval) += dEdf.v[0];
-#endif
+    dEdxi.tb<3>().chip(*pval, dimension).device(*dev.edevice) += dEdf.tb<2>();
   } else {
     assert(pvals);
-    for(unsigned b = 0; b < pvals->size(); ++b) {
-#ifdef __CUDACC__
-      CUBLAS_CHECK(cublasSaxpy(dev.cublas_handle, 1, kSCALAR_ONE, dEdf.v + b, 1, dEdxi.batch_ptr(b) + (*pvals)[b], 1));
-#else
-      dEdxi.batch_matrix(b)((*pvals)[b]) += dEdf.v[b];
-#endif
-    }
+    for(unsigned b = 0; b < pvals->size(); ++b)
+      dEdxi.tb<3>().chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PickElement)
@@ -1414,7 +1435,7 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
 #if __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync(ids_dev, ids_host, fx.d.bd * sizeof(unsigned int), cudaMemcpyHostToDevice));
     logsumexp(dev, *xs[0], m, z);
-    dynet::gpu::sparse_to_dense(fx.d.bd, ids_dev, xs[0]->v, fx.v);
+    dynet::gpu::sparse_to_dense_assign(fx.d.bd, ids_dev, xs[0]->v, fx.v);
     free(ids_host);
 #else
     logsumexp(dev, *xs[0], m, z);
@@ -1440,9 +1461,9 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
 #if __CUDACC__ 
     Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1});
     dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp() * dEdf.tb<1>().broadcast(bcast);
-    dynet::gpu::sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
+    dynet::gpu::dense_to_sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
 #else
-    // TODO: We want to do broadcasting here too, but it's slow/not working
+    // TODO: We want to do broadcasting here too, but it's slow
     for(unsigned b = 0; b < fx.d.bd; ++b) {
       dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (xs[0]->tb<1>().chip<1>(b) - z.v[b]).exp() * dEdf.v[b];
       dEdxi.v[ids_dev[b]] -= dEdf.v[b];
@@ -1774,10 +1795,8 @@ void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Te
     throw std::runtime_error("SparsemaxLoss not implemented for CUDA");
 #else
     const int rows = xs[0]->d.rows();
-    if (rows > MAX_SPARSEMAX_LOSS_ROWS) {
-      cerr << "MAX_SPARSEMAX_LOSS_ROWS is not sufficient. Recompile with larger value.\n";
-      abort();
-    }
+    if (rows > MAX_SPARSEMAX_LOSS_ROWS)
+      throw std::runtime_error("MAX_SPARSEMAX_LOSS_ROWS is not sufficient. Recompile with larger value.");
     const unsigned qsupport_size = pq->size();
     const float qprop = 1.f / qsupport_size;
 
