@@ -98,7 +98,7 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
 
 // TO DO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
-// Also is creating a new step something we want? 
+// Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
 Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
   if (h_new.size()) { assert(h_new.size() == layers); }
@@ -279,32 +279,6 @@ void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
-//
-//    //i
-//    Expression i_x2i = parameter(cg, p[_X2I]);
-//    Expression i_h2i = parameter(cg, p[_H2I]);
-//    Expression i_c2i = parameter(cg, p[_C2I]);
-//    Expression i_bi = parameter(cg, p[_BI]);
-//    //o
-//    Expression i_x2o = parameter(cg, p[_X2O]);
-//    Expression i_h2o = parameter(cg, p[_H2O]);
-//    Expression i_c2o = parameter(cg, p[_C2O]);
-//    Expression i_bo = parameter(cg, p[_BO]);
-//    //f 
-//    Expression i_x2f = parameter(cg, p[_X2F]);
-//    Expression i_h2f = parameter(cg, p[_H2F]);
-//    Expression i_c2o = parameter(cg, p[_C2F]);
-//    Expression i_bf = parameter(cg, p[_BF]);
-//    // g
-//    Expression i_x2g = parameter(cg, p[_X2G]);
-//    Expression i_h2g = parameter(cg, p[_H2G]);
-//    Expression i_c2g = parameter(cg, p[_C2G]);
-//    Expression i_bg = parameter(cg, p[_BG]);
-//
-//    vector<Expression> vars = {i_x2i, i_h2i, i_c2i, i_bi, 
-//                               i_x2f, i_h2f, i_c2f, i_bf,   
-//                               i_x2o, i_h2o, i_c2o, i_bo,
-//                               i_x2g, i_h2g, i_c2g, i_bg};
     vector<Expression> vars;
     for (int j=0; j < p.size(); ++j) { vars.push_back(parameter(cg, p[j])); }
     param_vars.push_back(vars);
@@ -330,9 +304,9 @@ void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit
   }
 }
 
-// TO DO - Make this correct
+// TODO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
-// Also is creating a new step something we want? 
+// Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
 Expression VanillaLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
   if (h_new.size()) { assert(h_new.size() == layers); }
@@ -365,7 +339,6 @@ Expression VanillaLSTMBuilder::set_s_impl(int prev, const std::vector<Expression
 }
 
 Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
-    // TODO
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -394,13 +367,10 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_aft;
     Expression i_aot;
     Expression i_agt;
-    if (has_prev_state) { // TODO: make these batched?
-      //tmp = vars[_BI] + (vars[_X2I]*in) + (vars[_H2I]*i_h_tm1);
+    if (has_prev_state)
       tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
-    } else {
-      //tmp = vars[_BI] + vars[_X2I] * in;
+    else
       tmp = affine_transform({vars[_BI], vars[_X2I], in});
-    }
     i_ait = pickrange(tmp,0,hid);
     i_aft = pickrange(tmp,hid,hid*2);
     i_aot = pickrange(tmp,hid*2,hid*3);
@@ -441,7 +411,7 @@ void VanillaLSTMBuilder::save_parameters_pretraining(const string& fname) const 
 }
 
 void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "Loading LVanillaSTM parameters from " << fname << endl;
+  cerr << "Loading VanillaLSTM parameters from " << fname << endl;
   ifstream of(fname);
   assert(of);
   boost::archive::binary_iarchive ia(of);

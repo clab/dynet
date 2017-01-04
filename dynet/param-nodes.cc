@@ -92,19 +92,12 @@ Dim LookupNode::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
-// TODO: This should be made more efficient on GPU
 void LookupNode::accumulate_grad(const Tensor& g) {
   if(pindex) {
     params.get()->accumulate_grad(*pindex, g);
   } else {
     assert (pindices);
     params.get()->accumulate_grads(pindices->size(), &(*pindices)[0], (unsigned*)aux_mem, g.v);
-    // const vector<Tensor>& gb = g.batch_elems();
-    // for (unsigned b = 0; b < pindices->size(); ++b) {
-    //   unsigned i = pindices->at(b);
-    //   assert (i < params.get()->values.size());
-    //   params.get()->accumulate_grad(i, gb[b]);
-    // }
   }
 }
 
