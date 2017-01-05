@@ -26,13 +26,11 @@ enum { X2H=0, H2H, HB, L2H };
 RNNBuilder::~RNNBuilder() {}
 
 void RNNBuilder::save_parameters_pretraining(const string& fname) const {
-  cerr << "RNNBuilder::save_parameters_pretraining not overridden.\n";
-  abort();
+  throw std::runtime_error("RNNBuilder::save_parameters_pretraining not overridden.");
 }
 
 void RNNBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "RNNBuilder::load_parameters_pretraining not overridden.\n";
-  abort();
+  throw std::runtime_error("RNNBuilder::load_parameters_pretraining not overridden.");
 }
 
 template<class Archive>
@@ -112,17 +110,15 @@ Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
 
-    // y <--- f(x)
-    Expression y = affine_transform({vars[2], vars[0], x});
-
     // y <--- g(y_prev)
-    if (prev == -1 && h0.size() > 0)
-      y = affine_transform({y, vars[1], h0[i]});
-    else if (prev >= 0)
-      y = affine_transform({y, vars[1], h[prev][i]});
+    if(prev >= 0) {
+      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h[prev][i]}) );
+    } else if(h0.size() > 0) {
+      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h0[i]}) );
+    } else {
+      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x}) );
+    }
 
-    // x <--- tanh(y)
-    x = h[t][i] = tanh(y);
   }
   return h[t].back();
 }
@@ -137,14 +133,14 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
     const vector<Expression>& vars = param_vars[i];
     assert(vars.size() >= L2H + 1);
 
-    Expression y = affine_transform({vars[HB], vars[X2H], x, vars[L2H], aux});
+    if(t > 0) {
+      x = h[t][i] = tanh( affine_transform({vars[HB], vars[X2H], x, vars[L2H], aux, vars[H2H], h[t-1][i]}) );
+    } else if(h0.size() > 0) {
+      x = h[t][i] = tanh( affine_transform({vars[HB], vars[X2H], x, vars[L2H], aux, vars[H2H], h0[i]}) );
+    } else {
+      x = h[t][i] = tanh( affine_transform({vars[HB], vars[X2H], x, vars[L2H], aux}) );
+    }
 
-    if (t == 0 && h0.size() > 0)
-      y = affine_transform({y, vars[H2H], h0[i]});
-    else if (t >= 1)
-      y = affine_transform({y, vars[H2H], h[t-1][i]});
-
-    x = h[t][i] = tanh(y);
   }
   return h[t].back();
 }

@@ -294,7 +294,7 @@ cdef class Model: # {{{
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
         if init is None:
-            init = GlorotInitializer()
+            init = GlorotInitializer(True)
         initializer = init.initializer
         cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
@@ -322,6 +322,9 @@ cdef class Model: # {{{
         elif isinstance(c, LSTMBuilder):
             fh.write("lstm_builder ")
             saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
+        elif isinstance(c, VanillaLSTMBuilder):
+            fh.write("vanilla_lstm_builder ")
+            saver.add_vanilla_lstm_builder((<CVanillaLSTMBuilder*>(<VanillaLSTMBuilder>c).thisptr)[0])
         elif isinstance(c, SimpleRNNBuilder):
             saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
             fh.write("srnn_builder ")
@@ -358,6 +361,7 @@ cdef class Model: # {{{
         cdef CLookupParameters lp
         cdef GRUBuilder gb_
         cdef LSTMBuilder lb_
+        cdef VanillaLSTMBuilder vlb_
         cdef SimpleRNNBuilder sb_
         tp = next(itypes)
         if tp == "param":
@@ -376,6 +380,10 @@ cdef class Model: # {{{
             lb_ = LSTMBuilder(0,0,0,self) # empty builder
             loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
             return lb_
+        elif tp == "vanilla_lstm_builder":
+            vlb_ = VanillaLSTMBuilder(0,0,0,self) # empty builder
+            loader.fill_vanilla_lstm_builder((<CVanillaLSTMBuilder *>vlb_.thisptr)[0])
+            return vlb_
         elif tp == "srnn_builder":
             sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
             loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
@@ -384,7 +392,7 @@ cdef class Model: # {{{
             tp,num = tp.split("~",1)
             num = int(num)
             items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
-            return BiRNNBuilder(None, None, None, None, None, zip(items[0::2], items[1::2]))
+            return BiRNNBuilder(None, None, None, None, None, list(zip(items[0::2], items[1::2])))
         elif tp.startswith("user~"):
             # user defiend type
             tp,num = tp.split("~",1)
@@ -473,6 +481,7 @@ cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
 def cg_version(): return _cg._cg_version
 def renew_cg(): return _cg.renew()
+def print_text_graphviz(): return _cg.print_graphviz()
 def cg_checkpoint(): _cg.checkpoint()
 def cg_revert():     _cg.revert()
 
@@ -655,10 +664,10 @@ cdef class Expression: #{{{
                     i += rows
             if index.stop is not None:
                 j = index.stop
-                if j > rows - 1:
-                    raise IndexError("Stop index too large: %d > %d" % (j, rows - 1))
-                if j < -rows:
-                    raise IndexError("Stop index too small: %d < %d" % (j, -rows))
+                if j > rows:
+                    raise IndexError("Stop index too large: %d > %d" % (j, rows))
+                if j < -rows + 1:
+                    raise IndexError("Stop index too small: %d < %d" % (j, -rows + 1))
                 if j < 0:
                     j += rows
             if i >= j:
@@ -933,6 +942,8 @@ cpdef Expression pow(Expression x, Expression y): ensure_freshness(y); return Ex
 cpdef Expression bmin(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
 cpdef Expression bmax(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
 cpdef Expression transpose(Expression x): return Expression.from_cexpr(x.cg_version, c_transpose(x.c()))
+cpdef Expression select_rows(Expression x, vector[unsigned] rs): return Expression.from_cexpr(x.cg_version, c_select_rows(x.c(), rs))
+cpdef Expression select_cols(Expression x, vector[unsigned] rs): return Expression.from_cexpr(x.cg_version, c_select_cols(x.c(), rs))
 cpdef Expression sum_cols(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_cols(x.c()))
 
 cpdef Expression sum_batches(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
@@ -1193,6 +1204,17 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
         self.cg_version = -1
 
     def whoami(self): return "LSTMBuilder"
+# }}}
+
+cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        if layers > 0:
+            self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+        else:
+            self.thisptr = new CVanillaLSTMBuilder()
+        self.cg_version = -1
+
+    def whoami(self): return "VanillaLSTMBuilder"
 # }}}
 
 cdef class FastLSTMBuilder(_RNNBuilder): # {{{

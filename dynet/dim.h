@@ -29,7 +29,7 @@ namespace dynet {
  */
 struct Dim {
   /**
-   * @brief Default constructor
+   * \brief Default constructor
    */
   Dim() : nd(0), bd(1) {}
   // explicit Dim(unsigned int m) : nd(1), bd(1) { d[0] = m; }
@@ -37,51 +37,51 @@ struct Dim {
   //       can this be fixed in some way?
   // Dim(unsigned int m, unsigned int n) : nd(2), bd(1) { d[0] = m; d[1] = n; }
   /**
-   * @brief Initialize from a list of dimensions
-   * @details The batch dimension is 1 in this case (non-batched expression)
+   * \brief Initialize from a list of dimensions
+   * \details The batch dimension is 1 in this case (non-batched expression)
    *
-   * @param x List of dimentions
+   * \param x List of dimentions
    */
   Dim(std::initializer_list<unsigned int> x) : nd(0), bd(1) {
     for (auto v : x) d[nd++] = v;
   }
   /**
-   * @brief Initialize from a list of dimensions and a batch size
+   * \brief Initialize from a list of dimensions and a batch size
    *
-   * @param x  List of dimentions
-   * @param b Batch size
+   * \param x  List of dimentions
+   * \param b Batch size
    */
   Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(0), bd(b) {
     for (auto v : x) d[nd++] = v;
   }
   /**
-   * @brief Initialize from a vector of dimensions
-   * @details The batch dimension is 1 in this case (non-batched expression)
+   * \brief Initialize from a vector of dimensions
+   * \details The batch dimension is 1 in this case (non-batched expression)
    *
-   * @param x Array of dimentions
+   * \param x Array of dimentions
    */
   Dim(const std::vector<long> & x) : nd(0), bd(1) {
     for (auto v : x) d[nd++] = v;
   }
   /**
-     * @brief Initialize from a vector of dimensions and a batch size
+     * \brief Initialize from a vector of dimensions and a batch size
      *
-     * @param x Vector of dimentions
-     * @param b Batch size
+     * \param x Vector of dimentions
+     * \param b Batch size
      */
   Dim(const std::vector<long> & x, unsigned int b) : nd(0), bd(b) {
     for (auto v : x) d[nd++] = v;
   }
   /**
-   * @brief Total size of a batch
-   * @return Batch size * size of a batch
+   * \brief Total size of a batch
+   * \return Batch size * size of a batch
    */
   inline unsigned int size() const {
     return batch_size() * bd;
   }
   /**
-   * @brief Size of a batch (product of all dimensions)
-   * @return Size of a batch
+   * \brief Size of a batch (product of all dimensions)
+   * \return Size of a batch
    */
   inline unsigned int batch_size() const {
     unsigned int p = 1;
@@ -89,8 +89,8 @@ struct Dim {
     return p;
   }
   /**
-   * @brief Sum of all dimensions within a batch
-   * @return Sum of the dimensions within a batch
+   * \brief Sum of all dimensions within a batch
+   * \return Sum of the dimensions within a batch
    */
   inline unsigned int sum_dims() const {
     unsigned int p = 0;
@@ -98,9 +98,9 @@ struct Dim {
     return p;
   }
   /**
-   * @brief [TODO]
-   * @details [long description]
-   * @return [description]
+   * \brief [TODO]
+   * \details [long description]
+   * \return [description]
    */
   inline Dim truncate() const {
     Dim r = *this;
@@ -112,8 +112,8 @@ struct Dim {
     return r;
   }
   /**
-   * @brief Set the batch dimension to 1
-   * @return 1-batch version of this instance
+   * \brief Set the batch dimension to 1
+   * \return 1-batch version of this instance
    */
   inline Dim single_batch() const {
     Dim r = *this;
@@ -121,58 +121,72 @@ struct Dim {
     return r;
   }
   /**
-   * @brief Change the number of dimensions
+   * \brief Change the number of dimensions
    *
-   * @param int New number of dimensions
+   * \param int New number of dimensions
    */
   inline void resize(unsigned int i) { nd = i; }
   /**
-   * @brief Get number of dimensions
-   * @return Number of dimensions
+   * \brief Get number of dimensions
+   * \return Number of dimensions
    */
   inline unsigned int ndims() const { return nd; }
   /**
-   * @brief Size of the first dimension
-   * @return Size of the first dimension
+   * \brief Size of the first dimension
+   * \return Size of the first dimension
    */
   inline unsigned int rows() const { return d[0]; }
   /**
-   * @brief Size of the second dimension (or 1 if only one dimension)
-   * @return Size of the second dimension (or 1 if only one dimension)
+   * \brief Size of the second dimension (or 1 if only one dimension)
+   * \return Size of the second dimension (or 1 if only one dimension)
    */
   inline unsigned int cols() const { return nd > 1 ? d[1] : 1; }
   /**
-   * @brief Batch dimension
-   * @return Batch dimension
+   * \brief Batch dimension
+   * \return Batch dimension
    */
   inline unsigned int batch_elems() const { return bd; }
   /**
-   * @brief Set specific dimension
-   * @details Set the value of a specific dimension to an arbitrary value
-   * 
-   * @param i Dimension index
-   * @param s Dimension size
+   * \brief Set specific dimension
+   * \details Set the value of a specific dimension to an arbitrary value
+   *
+   * \param i Dimension index
+   * \param s Dimension size
    */
   inline void set(unsigned int i, unsigned int s) { assert(i < nd); assert(s > 0); d[i] = s; }
   /**
-   * @brief Access a specific dimension as you would access an array element
-   * 
-   * @param i Dimension index
-   * @return Size of dimension i
+   * \brief Access a specific dimension as you would access an array element
+   *
+   * \param i Dimension index
+   * \return Size of dimension i
    */
   inline unsigned int operator[](unsigned int i) const { return i < nd ? d[i] : 1; }
   /**
-   * @brief Size of dimension i
-   * 
-   * @param i Dimension index
-   * @return Size of dimension i
+   * \brief Size of dimension i
+   *
+   * \param i Dimension index
+   * \return Size of dimension i
    */
   inline unsigned int size(unsigned int i) const { return (*this)[i]; }
   /**
-   * @brief Transpose a vector or a matrix
-   * @details This raises an invalid_argument exception on tensors with more than 2 dimensions
-   * @return The transposed Dim structure
+   * \brief Remove one of the dimensions
+   * \param i index of the dimension to be removed
    */
+  inline void delete_dim(unsigned int i) {
+    assert(i < nd);
+    if (nd == 1) {
+      d[0] = 1;
+    } else {
+      for (; i + 1 < nd; ++i)
+        d[i] = d[i + 1];
+      --nd;
+    }
+  }
+  /**
+  * \brief Transpose a vector or a matrix
+  * \details This raises an invalid_argument exception on tensors with more than 2 dimensions
+  * \return The transposed Dim structure
+  */
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
     else if (nd == 2) { return Dim({d[1], d[0]}, bd); }
@@ -189,14 +203,48 @@ private:
 
 //static_assert(std::is_trivially_copyable<Dim>::value, "Dim must be trivially copyable");
 
+/**
+ * \ingroup batch
+ * \brief Check for equality between two Dim
+ * \details Two Dim struct are considered equal if their dimensions and batch size are equal
+ * 
+ * \param a First Dim
+ * \param b Second Dim
+ * 
+ * \return a==b
+ */
 inline bool operator==(const Dim& a, const Dim& b) {
   if (a.nd != b.nd || a.bd != b.bd) return false;
   return std::memcmp(a.d, b.d, a.nd) == 0;
 }
 
+/**
+ * \ingroup batch
+ * \brief Check for inequality of two Dim structs
+ * \details See equality
+ * 
+ * \param a First Dim
+ * \param b Second Dim
+ * 
+ * \return a!=b
+ */
 inline bool operator!=(const Dim& a, const Dim& b) { return !(a == b); }
 
+/**
+ * \ingroup batch
+ * \brief Print Dim to output stream
+ * 
+ * \param os Output stream
+ * \param d Dim
+ */
 std::ostream& operator<<(std::ostream& os, const Dim& d);
+/**
+ * \ingroup batch
+ * \brief Print vector of Dims to output stream
+ * 
+ * \param os Output stream
+ * \param ds vector of Dims
+ */
 std::ostream& operator<<(std::ostream& os, const std::vector<Dim>& ds);
 
 } // namespace dynet
