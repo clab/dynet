@@ -1,7 +1,7 @@
 /**
- * \file dim.h
  * \defgroup batch batch
  * \ingroup batch
+ * \file dim.h
  * \brief Dynet's way of implementing minibatching
  */
 
@@ -16,6 +16,10 @@
 #include <cstring>
 #include <vector>
 
+/**
+ * \ingroup batch
+ * Maximum number of dimensions supported by dynet : 7
+ */
 #define DYNET_MAX_TENSOR_DIM 7
 
 namespace boost { namespace serialization { class access; } }
@@ -23,6 +27,7 @@ namespace boost { namespace serialization { class access; } }
 namespace dynet {
 
 /**
+ * \ingroup batch
  * \struct Dim
  * \brief The Dim struct stores information about the dimensionality of expressions.
  * \details Batch dimension is treated separately from standard dimension.
@@ -204,7 +209,6 @@ private:
 //static_assert(std::is_trivially_copyable<Dim>::value, "Dim must be trivially copyable");
 
 /**
- * \ingroup batch
  * \brief Check for equality between two Dim
  * \details Two Dim struct are considered equal if their dimensions and batch size are equal
  * 
@@ -219,7 +223,6 @@ inline bool operator==(const Dim& a, const Dim& b) {
 }
 
 /**
- * \ingroup batch
  * \brief Check for inequality of two Dim structs
  * \details See equality
  * 
@@ -231,7 +234,6 @@ inline bool operator==(const Dim& a, const Dim& b) {
 inline bool operator!=(const Dim& a, const Dim& b) { return !(a == b); }
 
 /**
- * \ingroup batch
  * \brief Print Dim to output stream
  * 
  * \param os Output stream
@@ -239,7 +241,6 @@ inline bool operator!=(const Dim& a, const Dim& b) { return !(a == b); }
  */
 std::ostream& operator<<(std::ostream& os, const Dim& d);
 /**
- * \ingroup batch
  * \brief Print vector of Dims to output stream
  * 
  * \param os Output stream
