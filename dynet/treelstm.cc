@@ -11,16 +11,16 @@ using namespace dynet;
 using namespace dynet::expr;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(TreeLSTMBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(SocherTreeLSTMBuilder)
+BOOST_CLASS_EXPORT_IMPLEMENT(NaryTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_IMPLEMENT(UnidirectionalTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_IMPLEMENT(BidirectionalTreeLSTMBuilder)
 
 enum { X2I, BI, X2F, BF, X2O, BO, X2C, BC };
 enum { H2I, H2F, H2O, H2C, C2I, C2F, C2O };
 // See "Improved Semantic Representations From Tree-Structured Long Short-Term Memory Networks"
-// by Tai, Socher, and Manning (2015), section 3.2, for details on this model.
+// by Tai, Nary, and Manning (2015), section 3.2, for details on this model.
 // http://arxiv.org/pdf/1503.00075v3.pdf
-SocherTreeLSTMBuilder::SocherTreeLSTMBuilder(unsigned N,
+NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
                          unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
@@ -58,7 +58,7 @@ SocherTreeLSTMBuilder::SocherTreeLSTMBuilder(unsigned N,
   }  // layers
 }
 
-void SocherTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
   this->cg = &cg;
   param_vars.clear();
   lparam_vars.clear();
@@ -100,7 +100,7 @@ void SocherTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
   }
 }
 
-Expression SocherTreeLSTMBuilder::Lookup(unsigned layer, unsigned p_type, unsigned value) {
+Expression NaryTreeLSTMBuilder::Lookup(unsigned layer, unsigned p_type, unsigned value) {
   if (lparam_vars[layer][p_type][value].i == 0) {
     LookupParameter p = lparams[layer][p_type];
     lparam_vars[layer][p_type][value] = lookup(*cg, p, value);
@@ -110,7 +110,7 @@ Expression SocherTreeLSTMBuilder::Lookup(unsigned layer, unsigned p_type, unsign
 
 // layout: 0..layers = c
 //         layers+1..2*layers = h
-void SocherTreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
+void NaryTreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
@@ -127,7 +127,7 @@ void SocherTreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hi
   }
 }
 
-Expression SocherTreeLSTMBuilder::add_input(int id, vector<int> children, const Expression& x) {
+Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Expression& x) {
   assert (id >= 0 && h.size() == (unsigned)id);
   assert (id >= 0 && c.size() == (unsigned)id);
   h.push_back(vector<Expression>(layers));
@@ -261,8 +261,8 @@ Expression SocherTreeLSTMBuilder::add_input(int id, vector<int> children, const 
   return ht.back();
 }
 
-void SocherTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
-  const SocherTreeLSTMBuilder & rnn_treelstm = (const SocherTreeLSTMBuilder&)rnn;
+void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
+  const NaryTreeLSTMBuilder & rnn_treelstm = (const NaryTreeLSTMBuilder&)rnn;
   assert(params.size() == rnn_treelstm.params.size());
   for(size_t i = 0; i < params.size(); ++i) {
     for(size_t j = 0; j < params[i].size(); ++j) {

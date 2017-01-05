@@ -46,7 +46,7 @@ struct Trainer {
    */
   explicit Trainer(Model& m, real e0, real edecay = 0.0) :
     eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5),
-    clips(), updates(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
+    clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
   virtual ~Trainer();
 
   void update(real scale = 1.0);
@@ -76,6 +76,9 @@ struct Trainer {
   real clip_threshold;
   real clips;
   real updates;
+  // the number of clips and status since the last print
+  real clips_since_status;
+  real updates_since_status;
 
   /**
    * \brief Whether to perform sparse updates
@@ -93,8 +96,8 @@ struct Trainer {
   bool aux_allocated;
 
   void status() {
-    std::cerr << "[epoch=" << epoch << " eta=" << eta << " clips=" << clips << " updates=" << updates << "] ";
-    updates = clips = 0;
+    std::cerr << "[epoch=" << epoch << " eta=" << eta << " clips=" << clips_since_status << " updates=" << updates_since_status << "] ";
+    updates_since_status = clips_since_status = 0;
   }
 
   Model* model;  // parameters and gradients live here

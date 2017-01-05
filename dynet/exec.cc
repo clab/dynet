@@ -67,18 +67,14 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       nfxs[num_nodes_evaluated].device = node->device;
       // Get the memory
       nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(node->dim.size() * sizeof(float)));
-      if (nfxs[num_nodes_evaluated].v == nullptr) {
-        cerr << "out of memory\n";
-        abort();
-      }
+      if (nfxs[num_nodes_evaluated].v == nullptr)
+        throw std::runtime_error("out of memory");
       void* aux_mem = nullptr;
       size_t aux_size = node->aux_storage_size();
       if (aux_size) {
         aux_mem = nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(aux_size);
-        if (!aux_mem) {
-          cerr << "aux out of memory\n";
-          abort();
-        }
+        if (!aux_mem)
+          throw std::runtime_error("aux out of memory");
       }
       node->aux_mem = aux_mem;
 
