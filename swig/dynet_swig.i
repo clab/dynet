@@ -303,13 +303,13 @@ struct SimpleSGDTrainer : public Trainer {
 struct RNNBuilder {
   RNNPointer state() const;
   void new_graph(ComputationGraph& cg);
-  void start_new_sequence(const std::vector<expr::Expression>& h_0 = {});
-  expr::Expression set_h(const RNNPointer& prev, const std::vector<expr::Expression>& h_new = {});
-  expr::Expression set_s(const RNNPointer& prev, const std::vector<expr::Expression>& s_new = {});
-  expr::Expression add_input(const expr::Expression& x);
-  expr::Expression add_input(const RNNPointer& prev, const expr::Expression& x);
-  std::vector<expr::Expression> final_s() const;
-  std::vector<expr::Expression> final_h() const;
+  void start_new_sequence(const std::vector<dynet::expr::Expression>& h_0 = {});
+  dynet::expr::Expression set_h(const RNNPointer& prev, const std::vector<dynet::expr::Expression>& h_new = {});
+  dynet::expr::Expression set_s(const RNNPointer& prev, const std::vector<dynet::expr::Expression>& s_new = {});
+  dynet::expr::Expression add_input(const dynet::expr::Expression& x);
+  dynet::expr::Expression add_input(const RNNPointer& prev, const dynet::expr::Expression& x);
+  std::vector<dynet::expr::Expression> final_s() const;
+  std::vector<dynet::expr::Expression> final_h() const;
 };
 
 struct LSTMBuilder : public RNNBuilder {
