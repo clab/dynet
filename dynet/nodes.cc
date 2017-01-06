@@ -1804,6 +1804,98 @@ void SparsemaxLoss::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(SparsemaxLoss)
 
 template<class MyDevice>
+void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // TODO: read u.
+  if (xs[0]->d.cols() == 1) {
+#ifdef __CUDACC__
+    throw std::runtime_error("Constrained softmax not implemented for CUDA");
+#else
+    // Total allocated memory is rows*sizeof(float) + rows*sizeof(int).
+    float max;
+    const unsigned rows = xs[0]->d.rows();
+    for (unsigned k = 0; k < rows; ++k) {
+      if (k == 0 || xs[0]->v[k] > max) max =  xs[0]->v[k];
+    }
+    float *q = static_cast<float*>(aux_mem);
+    for (unsigned k = 0; k < rows; ++k) {
+      q[k] = exp(xs[0]->v[k] - max);
+    }
+    float mass = 0.0;
+    int *indices = static_cast<int*>(aux_mem + rows*sizeof(float));
+    for (unsigned k = 0; k < rows; ++k) {
+      indices[k] = k;
+    }
+    int num_active = rows;
+    auto p = *fx;
+    fx.tvec() = xs[0]->tvec(); // Initialize the vector with the right size.
+    bool found = true;
+    while (found) {
+      float sum = 0.0;
+      for (unsigned k = 0; k < num_active; ++k) {
+        sum += q[indices[k]];
+      }
+      for (unsigned k = 0; k < num_active; ++k) {
+        int i = indices[k];
+        p[i] = q[i] * (1.0 - mass) / sum;
+      }
+      bool found = false;
+      unsigned j = 0;
+      for (unsigned k = 0; k < num_active; ++k) {
+        int i = indices[k];
+        if (p[i] > u[i]) {
+          p[i] = u[i];
+          mass += u[i];
+          found = true;
+        } else {
+          indices[j] = i;
+          ++j;
+        }
+      }
+      num_active = j;
+    }
+    int c = 1;
+    int *cc = static_cast<int*>(aux_mem);
+    for (unsigned k = 0; k < num_active; ++k)
+      cc[c++] = indices[k];
+    cc[0] = num_active;
+    float *m = static_cast<float*>(aux_mem + (num_active+1)*sizeof(int));
+    *m = mass;
+#endif
+  } else {
+    throw std::runtime_error("Constrained softmax not yet implemented for multiple columns");
+  }
+}
+
+template<class MyDevice>
+void ConstrainedSoftmax::backward_dev_impl(const MyDevice & dev,
+                                           const vector<const Tensor*>& xs,
+                                           const Tensor& fx,
+                                           const Tensor& dEdf,
+                                           unsigned i,
+                                           Tensor& dEdxi) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("Constrained softmax not implemented for CUDA");
+#else
+  const int num_active = static_cast<int*>(aux_mem)[0];
+  int *indices = static_cast<int*>(aux_mem) + 1;
+  float mass =  static_cast<float*>(aux_mem + (num_active+1)*sizeof(int))[0];
+  float dhat = 0;
+  auto& d = *dEdf;
+  auto& p = *fx;
+  for (int k = 0; k < num_active; ++k) {
+    dhat += p(indices[k], 0) * d(indices[k], 0);
+  }
+  dhat /= (1 - mass);
+  for (int k = 0; k < num_active; ++k) {
+    (*dEdxi)(indices[k], 0) +=  p(indices[k], 0) * (d(indices[k], 0) - dhat);
+  }
+  // TODO: gradient wrt u.
+#endif
+}
+DYNET_NODE_INST_DEV_IMPL(ConstrainedSoftmax)
+
+
+template<class MyDevice>
 void Square::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   fx.tvec().device(*dev.edevice) = xs[0]->tvec().square();
 }
