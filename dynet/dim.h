@@ -1,6 +1,6 @@
 /**
- * \defgroup batch batch
- * \ingroup batch
+ * \defgroup dim dim
+ * \ingroup dim
  * \file dim.h
  * \brief Dynet's way of implementing minibatching
  */
@@ -17,7 +17,7 @@
 #include <vector>
 
 /**
- * \ingroup batch
+ * \ingroup dim
  * Maximum number of dimensions supported by dynet : 7
  */
 #define DYNET_MAX_TENSOR_DIM 7
@@ -27,7 +27,7 @@ namespace boost { namespace serialization { class access; } }
 namespace dynet {
 
 /**
- * \ingroup batch
+ * \ingroup dim
  * \struct Dim
  * \brief The Dim struct stores information about the dimensionality of expressions.
  * \details Batch dimension is treated separately from standard dimension.
