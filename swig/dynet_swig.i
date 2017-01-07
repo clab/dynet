@@ -206,6 +206,7 @@ Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression log(const Expression& x);
 Expression squared_distance(const Expression& x, const Expression& y);
+Expression square(const Expression& x);
 
 Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
 Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
