@@ -15,7 +15,10 @@ object DynetScalaHelpers {
   implicit class RichExpression(e: Expression) {
     def +(e2: Expression): Expression = exprPlus(e, e2)
     def *(e2: Expression): Expression = exprTimes(e, e2)
-  }
+    def -(e2: Expression): Expression = exprMinus(e, e2)
+    def +(r: Float): Expression = exprPlus(e, r)
+    def *(r: Float): Expression = exprTimes(e, r)
+    def -(r: Float): Expression = exprMinus(e, r)  }
 }
 
 object XorScala {
