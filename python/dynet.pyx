@@ -857,6 +857,7 @@ cpdef Expression log_softmax(Expression x, list restrict=None):
 cpdef Expression softmax(Expression x): return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
 cpdef Expression sparsemax(Expression x): return Expression.from_cexpr(x.cg_version, c_sparsemax(x.c()))
 cpdef Expression softsign(Expression x): return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
+cpdef Expression constrained_softmax(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_constrained_softmax(x.c(), y.c()))
 cpdef Expression bmin(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
 cpdef Expression bmax(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
 cpdef Expression transpose(Expression x): return Expression.from_cexpr(x.cg_version, c_transpose(x.c()))

@@ -140,6 +140,14 @@ size_t SparsemaxLoss::aux_storage_size() const {
   return rows * sizeof(float);
 }
 
+size_t ConstrainedSoftmax::aux_storage_size() const {
+  // Need some extra allocation for the forward step.
+  const unsigned rows = dim.size();
+  return rows * sizeof(float) + rows * sizeof(int);
+}
+
+
+
 #endif // Finish CPU only functions
 
 // ===== Auxiliary functions for both CPU and GPU
@@ -1805,8 +1813,9 @@ DYNET_NODE_INST_DEV_IMPL(SparsemaxLoss)
 
 template<class MyDevice>
 void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  // TODO: read u.
-  if (xs[0]->d.cols() == 1) {
+  // The first input contains the log-potentials z.
+  // The second input contains the upper bound constraints u.
+  if (xs[0]->d.cols() == 1 && xs[1]->d.cols() == 1) {
 #ifdef __CUDACC__
     throw std::runtime_error("Constrained softmax not implemented for CUDA");
 #else
@@ -1820,12 +1829,14 @@ void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev, const vector<con
     for (unsigned k = 0; k < rows; ++k) {
       q[k] = exp(xs[0]->v[k] - max);
     }
+    float *u = xs[1]->v;
     float mass = 0.0;
-    int *indices = static_cast<int*>(aux_mem + rows*sizeof(float));
+    int *indices = reinterpret_cast<int*>(static_cast<char*>(aux_mem) +
+                                          rows*sizeof(float));
     for (unsigned k = 0; k < rows; ++k) {
       indices[k] = k;
     }
-    int num_active = rows;
+    unsigned num_active = rows;
     auto p = *fx;
     fx.tvec() = xs[0]->tvec(); // Initialize the vector with the right size.
     bool found = true;
@@ -1836,14 +1847,14 @@ void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev, const vector<con
       }
       for (unsigned k = 0; k < num_active; ++k) {
         int i = indices[k];
-        p[i] = q[i] * (1.0 - mass) / sum;
+        p(i, 0) = q[i] * (1.0 - mass) / sum;
       }
-      bool found = false;
+      found = false;
       unsigned j = 0;
       for (unsigned k = 0; k < num_active; ++k) {
         int i = indices[k];
-        if (p[i] > u[i]) {
-          p[i] = u[i];
+        if (p(i, 0) > u[i]) {
+          p(i, 0) = u[i];
           mass += u[i];
           found = true;
         } else {
@@ -1853,12 +1864,16 @@ void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev, const vector<con
       }
       num_active = j;
     }
-    int c = 1;
+    // Write a 0/1 at each position to indicate if the variable is active.
     int *cc = static_cast<int*>(aux_mem);
-    for (unsigned k = 0; k < num_active; ++k)
-      cc[c++] = indices[k];
-    cc[0] = num_active;
-    float *m = static_cast<float*>(aux_mem + (num_active+1)*sizeof(int));
+    for (unsigned k = 0; k < rows; ++k) {
+      cc[k] = 0;
+    }
+    for (unsigned k = 0; k < num_active; ++k) {
+      cc[indices[k]] = 1;
+    }
+    float *m = reinterpret_cast<float*>(static_cast<char*>(aux_mem) +
+                                        rows*sizeof(int));
     *m = mass;
 #endif
   } else {
@@ -1873,23 +1888,34 @@ void ConstrainedSoftmax::backward_dev_impl(const MyDevice & dev,
                                            const Tensor& dEdf,
                                            unsigned i,
                                            Tensor& dEdxi) const {
+  assert(i < xs.size());
 #ifdef __CUDACC__
   throw std::runtime_error("Constrained softmax not implemented for CUDA");
 #else
-  const int num_active = static_cast<int*>(aux_mem)[0];
-  int *indices = static_cast<int*>(aux_mem) + 1;
-  float mass =  static_cast<float*>(aux_mem + (num_active+1)*sizeof(int))[0];
+  const unsigned rows = xs[0]->d.rows();
+  int *active = static_cast<int*>(aux_mem);
+  float mass =  reinterpret_cast<float*>(static_cast<char*>(aux_mem) +
+                                         rows*sizeof(int))[0];
   float dhat = 0;
   auto& d = *dEdf;
   auto& p = *fx;
-  for (int k = 0; k < num_active; ++k) {
-    dhat += p(indices[k], 0) * d(indices[k], 0);
+  for (unsigned k = 0; k < rows; ++k) {
+    if (active[k]) dhat += p(k, 0) * d(k, 0);
   }
   dhat /= (1 - mass);
-  for (int k = 0; k < num_active; ++k) {
-    (*dEdxi)(indices[k], 0) +=  p(indices[k], 0) * (d(indices[k], 0) - dhat);
+  for (unsigned k = 0; k < rows; ++k) {
+    if (active[k]) {
+      if (i == 0) {
+        // Gradient wrt log-potentials z.
+        (*dEdxi)(k, 0) +=  p(k, 0) * (d(k, 0) - dhat);
+      }
+    } else {
+      if (i == 1) {
+        // Gradient wrt upper bound constraints u.
+        (*dEdxi)(k, 0) +=  d(k, 0) - dhat;
+      }
+    }
   }
-  // TODO: gradient wrt u.
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(ConstrainedSoftmax)

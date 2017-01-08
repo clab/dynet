@@ -52,6 +52,21 @@ Dim Sparsemax::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string ConstrainedSoftmax::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "constrained_softmax(" << arg_names[0] << ")";
+  return s.str();
+}
+
+Dim ConstrainedSoftmax::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 2 || !LooksLikeVector(xs[0]) || !LooksLikeVector(xs[1])) {
+    ostringstream s;
+    s << "Bad input dimensions in ConstrainedSoftmax: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  return xs[0];
+}
+
 string MatrixInverse::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "inverse(" << arg_names[0] << ")";

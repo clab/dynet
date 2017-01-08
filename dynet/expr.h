@@ -484,11 +484,11 @@ Expression hinge(const Expression& x, const std::vector<unsigned> & indices, flo
 Expression hinge(const Expression& x, const unsigned* pindex, float m = 1.0);
 Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, float m = 1.0);
 Expression log_softmax(const Expression& x);
-Expression sparsemax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 Expression sparsemax(const Expression& x);
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptarget_support);
+Expression constrained_softmax(const Expression& x, const Expression& y);
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
 Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned> & v);

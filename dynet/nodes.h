@@ -36,6 +36,14 @@ struct Sparsemax : public Node {
   size_t aux_storage_size() const override;
 };
 
+// y = constrained_softmax(x, u)
+// y = arg min_{y<=u} KL(y || x)
+struct ConstrainedSoftmax : public Node {
+  explicit ConstrainedSoftmax(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
+};
+
 // y = inv(x)
 // x = an invertible matrix
 struct MatrixInverse : public Node {
