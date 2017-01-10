@@ -1,26 +1,6 @@
 import edu.cmu.dynet._
 import edu.cmu.dynet.dynet_swig._
 
-import scala.language.implicitConversions
-
-// This will go in an associated shared library
-object DynetScalaHelpers {
-
-  implicit def makeDim(dims: Seq[Int]): Dim = {
-    val dimInts = new LongVector
-    dims.map(dimInts.add)
-    new Dim(dimInts)
-  }
-
-  implicit class RichExpression(e: Expression) {
-    def +(e2: Expression): Expression = exprPlus(e, e2)
-    def *(e2: Expression): Expression = exprTimes(e, e2)
-    def -(e2: Expression): Expression = exprMinus(e, e2)
-    def +(r: Float): Expression = exprPlus(e, r)
-    def *(r: Float): Expression = exprTimes(e, r)
-    def -(r: Float): Expression = exprMinus(e, r)  }
-}
-
 object XorScala {
   val HIDDEN_SIZE = 8
   val ITERATIONS = 30
@@ -35,10 +15,10 @@ object XorScala {
     val sgd = new SimpleSGDTrainer(m)
     val cg = new ComputationGraph
 
-    val p_W = m.add_parameters(Seq(HIDDEN_SIZE, 2))
-    val p_b = m.add_parameters(Seq(HIDDEN_SIZE))
-    val p_V = m.add_parameters(Seq(1, HIDDEN_SIZE))
-    val p_a = m.add_parameters(Seq(1))
+    val p_W = m.add_parameters(dim(HIDDEN_SIZE, 2))
+    val p_b = m.add_parameters(dim(HIDDEN_SIZE))
+    val p_V = m.add_parameters(dim(1, HIDDEN_SIZE))
+    val p_a = m.add_parameters(dim(1))
 
     val W = parameter(cg, p_W)
     val b = parameter(cg, p_b)
@@ -46,7 +26,7 @@ object XorScala {
     val a = parameter(cg, p_a)
 
     val x_values = new FloatVector(2)
-    val x = input(cg, Seq(2), x_values)
+    val x = input(cg, dim(2), x_values)
     var y_value = 0f
     val y = input(cg, y_value)
 
