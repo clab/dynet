@@ -3,6 +3,11 @@
 The code in `dynet_swig.i` provides SWIG instructions to wrap salient parts of DyNet for use
 in other languages, in particular Java (and Scala).
 
+## Scala Helpers
+
+The code in `DynetScalaHelpers.scala` provides helper functions and implicit conversions that 
+facilitate using DyNet from Scala.
+
 ## Building
 
 To include in the DyNet build, add `-DINCLUDE_SWIG=ON` to the `cmake` command, e.g., run this from
@@ -13,14 +18,24 @@ build$ cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DINCLUDE_SWIG=ON
 build$ make
 ```
 
+By default, this will create one jar for the Dynet bindings and a second jar
+for the Scala helpers. If you don't want the Scala helpers (and, in particular, if you
+don't have the `scalac` compiler) then when you run `cmake` include the additional flag
+
+```
+-DINCLUDE_SCALA_HELPERS=OFF
+```
+
 If successful, the end of the build should look something like:
 
 ```
-[ 96%] Built target dynet_swig
-[ 97%] Building Java objects for dynet_swigJNI.jar
-[ 98%] Generating CMakeFiles/dynet_swigJNI.dir/java_class_filelist
-[100%] Creating Java archive dynet_swigJNI.jar
-[100%] Built target dynet_swigJNI
+[ 93%] Building Java objects for dynet_swigJNI.jar
+[ 94%] Generating CMakeFiles/dynet_swigJNI.dir/java_class_filelist
+[ 95%] Creating Java archive dynet_swigJNI.jar
+[ 95%] Built target dynet_swigJNI
+[ 96%] Building scala
+[ 96%] Built target scala_helper
+[100%] Built target dynet_swig
 ```
 
 and (in MacOS) you should have the library files `build/swig/libdynet_swig.jnilib` and
@@ -28,11 +43,12 @@ and (in MacOS) you should have the library files `build/swig/libdynet_swig.jnili
 
 ## Running the example
 
-Here's a simple way to run the Scala example in the `swig/examples` directory:
+After running `make`, you can run the Scala examples in the `swig/examples` directory like:
 
 ```
-example$ scalac -cp ../../build/swig/dynet_swigJNI.jar XorScala.scala
-example$ scala -cp .:../../build/swig/dynet_swigJNI.jar -Djava.library.path=../../build/swig XorScala
+example$ export DYNETJARS=../../build/swig/dynet_swigJNI.jar:../../build/swig/dynet_scala_helpers.jar
+example$ scalac -cp $DYNETJARS XorScala.scala
+example$ scala -cp .:$DYNETJARS -Djava.library.path=../../build/swig XorScala
 ```
 
 Similarly for the Java example (with output):

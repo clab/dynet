@@ -23,10 +23,10 @@ object LinearRegression {
     val trainer = new SimpleSGDTrainer(model, 0.01f)
     val cg = new ComputationGraph
 
-    val p_W = model.add_parameters(Seq(1))
+    val p_W = model.add_parameters(dim(1))
     val W = parameter(cg, p_W)
 
-    val p_b = model.add_parameters(Seq(1))
+    val p_b = model.add_parameters(dim(1))
     val b = parameter(cg, p_b)
 
     for (iter <- 1 to 20) {
@@ -41,8 +41,8 @@ object LinearRegression {
       }
 
       // print the current parameter values
-      val W_ = as_scalar(p_W.values)
-      val b_ = as_scalar(p_b.values)
+      val W_ = p_W.values.toFloat
+      val b_ = p_b.values.toFloat
       println(s"(iter $iter) y = $W_ x + $b_ (error: $iterLoss)")
     }
   }
