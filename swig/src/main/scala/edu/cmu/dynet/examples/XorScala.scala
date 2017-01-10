@@ -1,5 +1,8 @@
+package edu.cmu.dynet.examples
+
 import edu.cmu.dynet._
 import edu.cmu.dynet.dynet_swig._
+import src.main.scala.edu.cmu.dynet.DynetScalaHelpers
 
 object XorScala {
   val HIDDEN_SIZE = 8
