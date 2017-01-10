@@ -1952,7 +1952,7 @@ void Sum::backward_dev_impl(const MyDevice & dev,
   if(dEdxi.d.bd == fx.d.bd) {
     dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
   } else {
-    Eigen::array<int, 1> red_axis({1});
+    Eigen::array<int, 1> red_axis = {1};
     dEdxi.tvec().device(*dev.edevice) += dEdf.tbvec().sum(red_axis);
   }
 }
