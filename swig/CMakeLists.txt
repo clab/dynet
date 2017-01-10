@@ -67,7 +67,7 @@ if(INCLUDE_SCALA_HELPERS)
     DEPENDS dynet_swigJNI
     COMMAND scalac -classpath ${CMAKE_CURRENT_BINARY_DIR}/dynet_swigJNI.jar
                    -d         ${CMAKE_CURRENT_BINARY_DIR}/dynet_scala_helpers.jar
-                              ${CMAKE_CURRENT_LIST_DIR}/DynetScalaHelpers.scala
+                              ${CMAKE_CURRENT_LIST_DIR}/src/main/scala/edu/cmu/dynet/DynetScalaHelpers.scala
   )
 
   add_custom_target(scala_helper ALL DEPENDS scala_helper_compiled)

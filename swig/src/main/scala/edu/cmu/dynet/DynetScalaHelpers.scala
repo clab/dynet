@@ -1,5 +1,6 @@
-package edu.cmu.dynet
+package src.main.scala.edu.cmu.dynet
 
+import edu.cmu.dynet._
 import edu.cmu.dynet.dynet_swig._
 
 import scala.language.implicitConversions
