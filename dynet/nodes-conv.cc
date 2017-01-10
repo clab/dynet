@@ -409,7 +409,7 @@ DYNET_NODE_INST_DEV_IMPL(KMaxPooling)
 template<class MyDevice>
 void SumDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  Eigen::array<int, 1> reduction_axis({(int)dimension});
+  Eigen::array<int, 1> reduction_axis = {(int)dimension};
   fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis);
 }
 
@@ -421,8 +421,8 @@ void SumDimension::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   // TODO: limit to 3-dimensional tensor is arbitrary
-  Eigen::array<int, 4> bcast({1,1,1,1}); bcast[dimension] = dEdxi.d[dimension];
-  Eigen::array<int, 4> morph({(int)dEdxi.d[0],(int)dEdxi.d[1],(int)dEdxi.d[2],(int)dEdxi.d.bd}); morph[dimension] = 1;
+  Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dimension] = dEdxi.d[dimension];
+  Eigen::array<int, 4> morph = {(int)dEdxi.d[0],(int)dEdxi.d[1],(int)dEdxi.d[2],(int)dEdxi.d.bd}; morph[dimension] = 1;
   dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>().reshape(morph).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(SumDimension)
