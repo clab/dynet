@@ -19,8 +19,8 @@ build$ make dynet_swig && make
 ```
 
 In MacOS, this will create the library files `dynet_swigJNI.jar` and `libdynet_swig.jnilib` in the `build/swig` directory. 
-It will then run `sbt assembly` in the `swig` directory to produce
-an "uberjar" containing both the Dynet bindings and the scala helpers under `swig/target`.
+It will then run `sbt assembly` to produce an "uberjar" containing 
+both the Dynet bindings and the scala helpers, also in `build/swig`.
 
 If you don't want the Scala helpers (and, in particular, if you
 don't have `sbt`) then when you run `cmake` include the additional flag
