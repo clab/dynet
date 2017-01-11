@@ -69,7 +69,7 @@ if(INCLUDE_SCALA_HELPERS)
     COMMENT "Running sbt"
     OUTPUT scala_helper_uberjar
     DEPENDS dynet_swigJNI
-    COMMAND ${SBT} assembly
+    COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
   )
 

@@ -50,8 +50,8 @@ If successful, the end of the build should look something like:
 After running `make`, you can run the Scala examples under the `swig` directory with `sbt`:
 
 ```
-swig$ sbt "runMain edu.cmu.dynet.examples.XorScala"
-swig$ sbt "runMain edu.cmu.dynet.examples.LinearRegression"
+swig$ sbt "runMain edu.cmu.dynet.examples.XorScala" -Dbuildpath=../build/swig
+swig$ sbt "runMain edu.cmu.dynet.examples.LinearRegression" -Dbuildpath=../build/swig
 ```
 
 The Java example takes a couple more steps:

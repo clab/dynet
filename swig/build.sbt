@@ -4,7 +4,10 @@ name := "dynet_scala_helpers"
 scalaVersion := "2.11.8"
 
 // This is where `make` does all its work, and it's where we'll do all our work as well.
-val buildPath = "../build/swig"
+val buildPath = sys.props.get("buildpath") match {
+  case Some(p) => p
+  case None => throw new IllegalArgumentException("must specify -Dbuildpath=")
+}
 
 // Look for the dynet_swig jar file there.
 unmanagedBase := file( buildPath ).getAbsoluteFile
