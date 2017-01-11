@@ -60,17 +60,27 @@ add_jar(
 # TODO(joelgrus): This is probably not defensive or robust enough.
 option(INCLUDE_SCALA_HELPERS "INCLUDE_SCALA_HELPERS" ON)
 if(INCLUDE_SCALA_HELPERS)
-  # Compile the scala helpers
+
+  # Make sure the lib directory exists
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib)
+
+  # Copy the dynet_swig jar over there
+  file(COPY ${CMAKE_CURRENT_BINARY_DIR}/dynet_swigJNI.jar
+       DESTINATION ${CMAKE_CURRENT_LIST_DIR}/lib)
+
+  # Find sbt
+  find_program(SBT sbt)
+
+  # Run sbt assembly
   add_custom_command(
-    COMMENT "Building scala helpers"
-    OUTPUT scala_helper_compiled
+    COMMENT "Running sbt"
+    OUTPUT scala_helper_uberjar
     DEPENDS dynet_swigJNI
-    COMMAND scalac -classpath ${CMAKE_CURRENT_BINARY_DIR}/dynet_swigJNI.jar
-                   -d         ${CMAKE_CURRENT_BINARY_DIR}/dynet_scala_helpers.jar
-                              ${CMAKE_CURRENT_LIST_DIR}/src/main/scala/edu/cmu/dynet/DynetScalaHelpers.scala
+    COMMAND ${SBT} assembly
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
   )
 
-  add_custom_target(scala_helper ALL DEPENDS scala_helper_compiled)
+  add_custom_target(scala_helper ALL DEPENDS scala_helper_uberjar)
 
 endif()
 
