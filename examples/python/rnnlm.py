@@ -1,15 +1,14 @@
-# a version rnnlm.py using the transduce() interface.
 from dynet import *
 import time
 import random
 
 LAYERS = 2
-INPUT_DIM = 50  #256
-HIDDEN_DIM = 50  #1024
+INPUT_DIM = 256 #50  #256
+HIDDEN_DIM = 256 # 50  #1024
 VOCAB_SIZE = 0
 
 from collections import defaultdict
-from itertools import count, izip
+from itertools import count
 import sys
 import util
 
@@ -30,17 +29,18 @@ class RNNLanguageModel:
         errs = [] # will hold expressions
         es=[]
         state = init_state
-        lookup = self.lookup
-        inputs = [lookup[int(cw)] for cw in sent[:-1]]
-        expected_outputs = [int(nw) for nw in sent[1:]]
-        outputs = state.transduce(inputs)
-        r_ts = ((bias + (R * y_t)) for y_t in outputs)
-        errs = [pickneglogsoftmax(r_t, eo) for r_t, eo in izip(r_ts, expected_outputs)]
+        for (cw,nw) in zip(sent,sent[1:]):
+            # assume word is already a word-id
+            x_t = lookup(self.lookup, int(cw))
+            state = state.add_input(x_t)
+            y_t = state.output()
+            r_t = bias + (R * y_t)
+            err = pickneglogsoftmax(r_t, int(nw))
+            errs.append(err)
         nerr = esum(errs)
         return nerr
 
     def sample(self, first=1, nchars=0, stop=-1):
-        # sampling must use the regular incremental interface.
         res = [first]
         renew_cg()
         state = self.builder.initial_state()
@@ -80,16 +80,16 @@ if __name__ == '__main__':
     train = list(train)
 
     chars = loss = 0.0
-    for ITER in xrange(100):
+    for ITER in range(100):
         random.shuffle(train)
         for i,sent in enumerate(train):
             _start = time.time()
             if i % 50 == 0:
                 sgd.status()
-                if chars > 0: print loss / chars,
-                for _ in xrange(1):
+                if chars > 0: print(loss / chars,)
+                for _ in range(1):
                     samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["\n"])
-                    print "".join([vocab.i2w[c] for c in samp]).strip()
+                    print("".join([vocab.i2w[c] for c in samp]).strip())
                 loss = 0.0
                 chars = 0.0
                 
@@ -100,6 +100,6 @@ if __name__ == '__main__':
             errs.backward()
             sgd.update(1.0)
             #print "TM:",(time.time() - _start)/len(sent)
-        print "ITER",ITER,loss
+        print("ITER",ITER,loss)
         sgd.status()
         sgd.update_epoch(1.0)

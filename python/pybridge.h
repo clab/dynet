@@ -37,6 +37,10 @@ struct ModelSaver {
         oa << p; return this;
     }
 
+    ModelSaver* add_vanilla_lstm_builder(dynet::VanillaLSTMBuilder &p) {
+        oa << p; return this;
+    }
+
     ModelSaver* add_srnn_builder(dynet::SimpleRNNBuilder &p) {
         oa << p; return this;
     }
@@ -95,6 +99,10 @@ struct ModelLoader {
     }
 
     ModelLoader* fill_lstm_builder(dynet::LSTMBuilder &p) {
+        ia >> p; return this;
+    }
+
+    ModelLoader* fill_vanilla_lstm_builder(dynet::VanillaLSTMBuilder &p) {
         ia >> p; return this;
     }
 
