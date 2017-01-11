@@ -1,3 +1,5 @@
+package edu.cmu.dynet.examples;
+
 import edu.cmu.dynet.*;
 import static edu.cmu.dynet.dynet_swig.*;
 

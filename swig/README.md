@@ -43,19 +43,19 @@ and (in MacOS) you should have the library files `build/swig/libdynet_swig.jnili
 
 ## Running the example
 
-After running `make`, you can run the Scala examples in the `swig/examples` directory like:
+After running `make`, you can run the Scala examples under the `swig` directory like:
 
 ```
-example$ export DYNETJARS=../../build/swig/dynet_swigJNI.jar:../../build/swig/dynet_scala_helpers.jar
-example$ scalac -cp $DYNETJARS XorScala.scala
-example$ scala -cp .:$DYNETJARS -Djava.library.path=../../build/swig XorScala
+swig$ export DYNETJARS=../build/swig/dynet_swigJNI.jar:../build/swig/dynet_scala_helpers.jar
+swig$ scalac -cp $DYNETJARS src/main/scala/edu/cmu/dynet/examples/XorScala.scala
+swig$ scala -cp .:edu/cmu/dynet/examples:$DYNETJARS -Djava.library.path=../build/swig edu.cmu.dynet.examples.XorScala
 ```
 
 Similarly for the Java example (with output):
 
 ```
-examples$ javac -cp ../../build/swig/dynet_swigJNI.jar XorExample.java
-examples$ java -cp .:../../build/swig/dynet_swigJNI.jar -Djava.library.path=../../build/swig XorExample
+swig$ javac -d . -cp ../build/swig/dynet_swigJNI.jar src/main/java/edu/cmu/dynet/examples/XorExample.java
+swig$ java -cp .:../build/swig/dynet_swigJNI.jar -Djava.library.path=../build/swig edu.cmu.dynet.examples.XorExample
 Running XOR example
 [dynet] random seed: 1650744221
 [dynet] allocating memory: 512MB
