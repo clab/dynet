@@ -35,9 +35,9 @@ private:
   }
 };
 
-struct SocherTreeLSTMBuilder : public TreeLSTMBuilder {
-  SocherTreeLSTMBuilder() = default;
-  explicit SocherTreeLSTMBuilder(unsigned N, //Max branching factor
+struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
+  NaryTreeLSTMBuilder() = default;
+  explicit NaryTreeLSTMBuilder(unsigned N, //Max branching factor
                        unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
@@ -138,7 +138,7 @@ private:
 } // namespace dynet
 
 BOOST_CLASS_EXPORT_KEY(dynet::TreeLSTMBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::SocherTreeLSTMBuilder)
+BOOST_CLASS_EXPORT_KEY(dynet::NaryTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::UnidirectionalTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::BidirectionalTreeLSTMBuilder)
 

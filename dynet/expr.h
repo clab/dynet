@@ -609,11 +609,11 @@ Expression log(const Expression& x);
 /**
  * \ingroup arithmeticoperations
  * \brief Logistic sigmoid function
- * \details Calculate elementwise y_i = 1/(1+e^{x_i})
+ * \details Calculate elementwise y_i = 1/(1+e^{-x_i})
  * 
  * \param x The input expression
  * 
- * \return An expression where the ith element is equal to y_i = 1/(1+e^{x_i})
+ * \return An expression where the ith element is equal to y_i = 1/(1+e^{-x_i})
  */
 Expression logistic(const Expression& x);
 
@@ -822,7 +822,7 @@ Expression pickneglogsoftmax(const Expression& x, unsigned v);
  * 
  * \return The negative log likelihood of element ``*pv`` after taking the softmax
  */
-Expression pickneglogsoftmax(const Expression& x, unsigned * pv);
+Expression pickneglogsoftmax(const Expression& x, const unsigned * pv);
 
 /**
  * \ingroup lossoperations
@@ -1198,26 +1198,31 @@ Expression sum_batches(const Expression& x);
 /**
  * \ingroup flowoperations
  * \brief Pick element
- * \details Pick a single element from an expression.
+ * \details Pick a single element/row/column/sub-tensor from an expression.
+ *          This will result in the dimension of the tensor being reduced
+ *          by 1.
  * 
  * \param x The input expression
  * \param v The index of the element to select
+ * \param d The dimension along which to choose the element
  * 
- * \return The value of x[v]
+ * \return The value of x[v] along dimension d
  */
-Expression pick(const Expression& x, unsigned v);
+Expression pick(const Expression& x, unsigned v, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
- * \brief Pick multiple elements
- * \details Pick multiple elements from an input expression
+ * \brief Batched pick
+ * \details Pick elements from multiple batches.
  * 
  * \param x The input expression
- * \param v A vector of indicies to choose
+ * \param v A vector of indicies to choose, one for each batch in the
+ *          input expression.
+ * \param d The dimension along which to choose the elements
  * 
- * \return A vector of values {x[v[0]], x[v[1]], ...}
+ * \return A mini-batched expression containing the picked elements
  */
-Expression pick(const Expression& x, const std::vector<unsigned> & v);
+Expression pick(const Expression& x, const std::vector<unsigned> & v, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
@@ -1228,24 +1233,26 @@ Expression pick(const Expression& x, const std::vector<unsigned> & v);
  * 
  * \param x The input expression
  * \param pv Pointer to the index of the element to select
+ * \param d The dimension along which to choose the elements
  * 
  * \return The value of x[*pv]
  */
-Expression pick(const Expression& x, unsigned * pv);
+Expression pick(const Expression& x, const unsigned * pv, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
- * \brief Modifiable pick multiple elements
+ * \brief Modifiable batched pick element
  * \details Pick multiple elements from an input expression, where the indices
  *          are passed by pointer so we do not need to re-create the computation
  *          graph every time.
  * 
  * \param x The input expression
  * \param pv A pointer to vector of indicies to choose
+ * \param d The dimension along which to choose the elements
  * 
- * \return A vector of values {x[(*pv)[0]], x[(*pv)[1]], ...}
+ * \return A mini-batched expression containing the picked elements
  */
-Expression pick(const Expression& x, const std::vector<unsigned> * pv);
+Expression pick(const Expression& x, const std::vector<unsigned> * pv, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
@@ -1348,7 +1355,9 @@ Expression conv1d_wide(const Expression& x, const Expression& f);
 Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
+Expression sum_dim(const Expression& x, unsigned d);
 Expression sum_cols(const Expression& x);
+Expression sum_rows(const Expression& x);
 Expression average_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 

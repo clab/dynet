@@ -21,7 +21,7 @@ import subprocess
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 # sys.path.insert(0, os.path.abspath('../../examples/tutorials'))
 if not os.path.islink('tutorials_notebooks'):
-    os.symlink('../../examples/tutorials', 'tutorials_notebooks')
+    os.symlink('../../examples/python/tutorials', 'tutorials_notebooks')
 # Run doxygen if on Readthedocs :
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
