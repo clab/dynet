@@ -61,13 +61,6 @@ add_jar(
 option(INCLUDE_SCALA_HELPERS "INCLUDE_SCALA_HELPERS" ON)
 if(INCLUDE_SCALA_HELPERS)
 
-  # Make sure the lib directory exists
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib)
-
-  # Copy the dynet_swig jar over there
-  file(COPY ${CMAKE_CURRENT_BINARY_DIR}/dynet_swigJNI.jar
-       DESTINATION ${CMAKE_CURRENT_LIST_DIR}/lib)
-
   # Find sbt
   find_program(SBT sbt)
 

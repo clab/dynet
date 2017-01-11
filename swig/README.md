@@ -19,7 +19,7 @@ build$ make dynet_swig && make
 ```
 
 In MacOS, this will create the library files `dynet_swigJNI.jar` and `libdynet_swig.jnilib` in the `build/swig` directory. 
-By default, it will also copy the jar file into `swig/lib` and run `sbt assembly` in the `swig` directory to produce
+It will then run `sbt assembly` in the `swig` directory to produce
 an "uberjar" containing both the Dynet bindings and the scala helpers under `swig/target`.
 
 If you don't want the Scala helpers (and, in particular, if you
