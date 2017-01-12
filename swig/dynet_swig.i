@@ -205,11 +205,15 @@ Expression operator/(const Expression& x, float y); // { return x * (1.f / y); }
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression log(const Expression& x);
+Expression min(const Expression& x, const Expression& y);
+Expression max(const Expression& x, const Expression& y);
+Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression square(const Expression& x);
 
 Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
 Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
+Expression reshape(const Expression& x, const Dim& d);
 Expression pick(const Expression& x, unsigned v);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
@@ -224,6 +228,14 @@ Expression pickneglogsoftmax(const Expression& x, unsigned v);
 template <typename T>
 Expression affine_transform(const T& xs);
 %template(affine_transform_VE) affine_transform<std::vector<Expression>>;
+
+template <typename T>
+Expression concatenate_cols(const T& xs);
+%template(concatenate_cols_VE) concatenate_cols<std::vector<Expression>>;
+
+template <typename T>
+Expression concatenate(const T& xs);
+%template(concatenate_VE) concatenate<std::vector<Expression>>;
 
 /*
 template <typename T>
