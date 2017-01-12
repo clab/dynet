@@ -130,7 +130,9 @@ Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_ne
   return h[t].back();
 }
 
+
 Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
+
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -254,16 +256,16 @@ DYNET_SERIALIZE_IMPL(LSTMBuilder);
 enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
-                         unsigned input_dim,
-                         unsigned hidden_dim,
-                         Model& model) : layers(layers) {
+                                       unsigned input_dim,
+                                       unsigned hidden_dim,
+                                       Model& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model.add_parameters({hidden_dim*4, layer_input_dim});
-    Parameter p_h2i = model.add_parameters({hidden_dim*4, hidden_dim});
+    Parameter p_x2i = model.add_parameters({hidden_dim * 4, layer_input_dim});
+    Parameter p_h2i = model.add_parameters({hidden_dim * 4, hidden_dim});
     //Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model.add_parameters({hidden_dim*4});
+    Parameter p_bi = model.add_parameters({hidden_dim * 4});
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
@@ -271,6 +273,7 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
     params.push_back(ps);
   }  // layers
   dropout_rate = 0.f;
+  dropout_active = false;
   hid = hidden_dim;
 }
 
@@ -280,9 +283,11 @@ void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
     vector<Expression> vars;
-    for (int j=0; j < p.size(); ++j) { vars.push_back(parameter(cg, p[j])); }
+    for (unsigned j = 0; j < p.size(); ++j) { vars.push_back(parameter(cg, p[j])); }
     param_vars.push_back(vars);
   }
+
+  _cg = &cg;
 }
 
 // layout: 0..layers = c
@@ -290,6 +295,7 @@ void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
+
   if (hinit.size() > 0) {
     assert(layers * 2 == hinit.size());
     h0.resize(layers);
@@ -302,7 +308,28 @@ void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit
   } else {
     has_initial_state = false;
   }
+
+  // Init droupout masks
+  set_dropout_masks();
 }
+
+void VanillaLSTMBuilder::set_dropout_masks() {
+  masks.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    std::vector<Expression> masks_i;
+    unsigned idim = (i == 0) ? input_dim : hid;
+    if (dropout_rate > 0.f) {
+      float retention_rate = 1.f - dropout_rate;
+      //float scale = 1.f / retention_rate;
+      // in
+      masks_i.push_back(random_bernoulli(*_cg, { idim}, retention_rate, 1.0));
+      // h
+      masks_i.push_back(random_bernoulli(*_cg, { hid}, retention_rate, 1.0));
+      masks.push_back(masks_i);
+    }
+  }
+}
+
 
 // TODO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
@@ -359,8 +386,17 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
       i_h_tm1 = h[prev][i];
       i_c_tm1 = c[prev][i];
     }
-    // apply dropout according to http://arxiv.org/pdf/1409.2329v5.pdf
-    if (dropout_rate) in = dropout(in, dropout_rate);
+    // apply dropout according to https://arxiv.org/abs/1512.05287 (tied weights)
+    if (dropout_active) {
+      in = cmult(in, masks[i][0]);
+      if (has_prev_state)
+        i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
+    }
+    else if (dropout_rate > 0) {
+      in = in * (1.f - dropout_rate);
+      if (has_prev_state)
+        i_h_tm1 = i_h_tm1 * (1.f - dropout_rate);
+    }
     // input
     Expression tmp;
     Expression i_ait;
@@ -371,10 +407,10 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
       tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
     else
       tmp = affine_transform({vars[_BI], vars[_X2I], in});
-    i_ait = pickrange(tmp,0,hid);
-    i_aft = pickrange(tmp,hid,hid*2);
-    i_aot = pickrange(tmp,hid*2,hid*3);
-    i_agt = pickrange(tmp,hid*3,hid*4);
+    i_ait = pickrange(tmp, 0, hid);
+    i_aft = pickrange(tmp, hid, hid * 2);
+    i_aot = pickrange(tmp, hid * 2, hid * 3);
+    i_agt = pickrange(tmp, hid * 3, hid * 4);
     Expression i_it = logistic(i_ait);
     Expression i_ft = logistic(i_aft);
     Expression i_ot = logistic(i_aot);
@@ -383,8 +419,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     ct[i] = has_prev_state ? (cmult(i_ft, i_c_tm1) + cmult(i_it, i_gt)) :  cmult(i_it, i_gt);
     in = ht[i] = cmult(i_ot, tanh(ct[i]));
   }
-  if (dropout_rate) return dropout(ht.back(), dropout_rate);
-  else return ht.back();
+  return ht.back();
 }
 
 void VanillaLSTMBuilder::copy(const RNNBuilder & rnn) {
@@ -433,6 +468,17 @@ void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
       ia >> p.get()->values;
     }
   }
+}
+
+void VanillaLSTMBuilder::set_dropout(float d) {
+  if (d < 0.f || d > 1.f)
+    throw std::invalid_argument("Dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_active = (dropout_rate > 0.f);
+}
+
+void VanillaLSTMBuilder::disable_dropout() {
+  dropout_active = false;
 }
 
 template<class Archive>
