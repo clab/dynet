@@ -20,5 +20,10 @@ assemblyOutputPath in assembly := file(s"${buildPath}/dynet_swigJNI_scala.jar").
 
 fork in run := true
 
+// Don't include Scala libraries in the jar
+// see https://github.com/sbt/sbt-assembly/issues/3
+// and http://stackoverflow.com/questions/15856739/assembling-a-jar-containing-only-the-provided-dependencies
+assembleArtifact in packageScala := false
+
 // And look there for java libraries when running.
 javaOptions in run += s"-Djava.library.path=${buildPath}"
