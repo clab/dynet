@@ -56,3 +56,25 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/Tensor.java"
     "${CMAKE_SWIG_OUTDIR}/Trainer.java"
 )
+
+# TODO(joelgrus): This is probably not defensive or robust enough.
+option(INCLUDE_SCALA_HELPERS "INCLUDE_SCALA_HELPERS" ON)
+if(INCLUDE_SCALA_HELPERS)
+
+  # Find sbt
+  find_program(SBT sbt)
+
+  # Run sbt assembly
+  add_custom_command(
+    COMMENT "Running sbt"
+    OUTPUT scala_helper_uberjar
+    DEPENDS dynet_swigJNI
+    COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+  )
+
+  add_custom_target(scala_helper ALL DEPENDS scala_helper_uberjar)
+
+endif()
+
+

@@ -3,6 +3,11 @@
 The code in `dynet_swig.i` provides SWIG instructions to wrap salient parts of DyNet for use
 in other languages, in particular Java (and Scala).
 
+## Scala Helpers
+
+The code in `src/main/scala` provides helper functions and implicit conversions that 
+facilitate using DyNet from Scala.
+
 ## Building
 
 To include in the DyNet build, add `-DINCLUDE_SWIG=ON` to the `cmake` command, e.g., run this from
@@ -10,36 +15,50 @@ the `build` directory (see [DyNet documentation](http://dynet.readthedocs.io/en/
 
 ```
 build$ cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DINCLUDE_SWIG=ON
-build$ make
+build$ make dynet_swig && make
+```
+
+In MacOS, this will create the library files `dynet_swigJNI.jar` and `libdynet_swig.jnilib` in the `build/swig` directory. 
+It will then run `sbt assembly` to produce an "uberjar" containing 
+both the Dynet bindings and the scala helpers, also in `build/swig`.
+
+If you don't want the Scala helpers (and, in particular, if you
+don't have `sbt`) then when you run `cmake` include the additional flag
+
+```
+-DINCLUDE_SCALA_HELPERS=OFF
 ```
 
 If successful, the end of the build should look something like:
 
 ```
-[ 96%] Built target dynet_swig
-[ 97%] Building Java objects for dynet_swigJNI.jar
-[ 98%] Generating CMakeFiles/dynet_swigJNI.dir/java_class_filelist
-[100%] Creating Java archive dynet_swigJNI.jar
-[100%] Built target dynet_swigJNI
+[ 93%] Building Java objects for dynet_swigJNI.jar
+[ 94%] Generating CMakeFiles/dynet_swigJNI.dir/java_class_filelist
+[ 95%] Creating Java archive dynet_swigJNI.jar
+[ 95%] Built target dynet_swigJNI
+[ 96%] Running sbt
+...
+[info] lots of sbt stuff here
+...
+[success] Total time: 7 s, completed Jan 11, 2017 1:05:58 PM
+[ 96%] Built target scala_helper
+[100%] Built target dynet_swig
 ```
-
-and (in MacOS) you should have the library files `build/swig/libdynet_swig.jnilib` and
-`build/swig/dynet_swigJNI.jar`.
 
 ## Running the example
 
-Here's a simple way to run the Scala example in the `swig/examples` directory:
+After running `make`, you can run the Scala examples under the `swig` directory with `sbt`:
 
 ```
-example$ scalac -cp ../../build/swig/dynet_swigJNI.jar XorScala.scala
-example$ scala -cp .:../../build/swig/dynet_swigJNI.jar -Djava.library.path=../../build/swig XorScala
+swig$ sbt "runMain edu.cmu.dynet.examples.XorScala" -Dbuildpath=../build/swig
+swig$ sbt "runMain edu.cmu.dynet.examples.LinearRegression" -Dbuildpath=../build/swig
 ```
 
-Similarly for the Java example (with output):
+The Java example takes a couple more steps:
 
 ```
-examples$ javac -cp ../../build/swig/dynet_swigJNI.jar XorExample.java
-examples$ java -cp .:../../build/swig/dynet_swigJNI.jar -Djava.library.path=../../build/swig XorExample
+swig$ javac -d . -cp ../build/swig/dynet_swigJNI.jar src/main/java/edu/cmu/dynet/examples/XorExample.java
+swig$ java -cp .:../build/swig/dynet_swigJNI.jar -Djava.library.path=../build/swig edu.cmu.dynet.examples.XorExample
 Running XOR example
 [dynet] random seed: 1650744221
 [dynet] allocating memory: 512MB
