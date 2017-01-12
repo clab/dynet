@@ -61,6 +61,9 @@ add_jar(
 option(INCLUDE_SCALA_HELPERS "INCLUDE_SCALA_HELPERS" ON)
 if(INCLUDE_SCALA_HELPERS)
 
+  # make doesn't know about the dynet_scala jar, so it doesn't clean it unless we tell it about it
+  set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "dynet_swigJNI_scala.jar")
+
   # Find sbt
   find_program(SBT sbt)
 
