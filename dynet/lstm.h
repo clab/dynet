@@ -51,6 +51,10 @@ public:
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
 
+  // first index is layer, then ...
+  // masks for Gal dropout
+  std::vector<std::vector<Expression>> masks; 
+
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
 
@@ -60,11 +64,14 @@ public:
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
+  unsigned input_dim;
+  unsigned hidden_dim;
 
 private:
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int);
+  ComputationGraph  *_cg;
 
 };
 
