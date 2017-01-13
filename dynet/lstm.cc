@@ -328,7 +328,6 @@ void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 
   _cg = &cg;
 }
-
 // layout: 0..layers = c
 //         layers+1..2*layers = h
 void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
@@ -352,7 +351,7 @@ void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit
   set_dropout_masks();
 }
 
-void VanillaLSTMBuilder::set_dropout_masks() {
+void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   masks.clear();
   for (unsigned i = 0; i < layers; ++i) {
     std::vector<Expression> masks_i;
@@ -361,9 +360,9 @@ void VanillaLSTMBuilder::set_dropout_masks() {
       float retention_rate = 1.f - dropout_rate;
       //float scale = 1.f / retention_rate;
       // in
-      masks_i.push_back(random_bernoulli(*_cg, { idim}, retention_rate, 1.0));
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ idim}, batch_size), retention_rate, 1.0));
       // h
-      masks_i.push_back(random_bernoulli(*_cg, { hid}, retention_rate, 1.0));
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate, 1.0));
       masks.push_back(masks_i);
     }
   }
