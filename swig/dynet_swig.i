@@ -97,6 +97,9 @@ struct Parameter {
 
 };
 
+void save_dynet_model(std::string filename, Model* model);
+void load_dynet_model(std::string filename, Model* model);
+
 struct LookupParameter {
   LookupParameter();
   LookupParameter(Model* mp, unsigned long index);
@@ -144,6 +147,7 @@ class Model {
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
   // LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
 
+  size_t parameter_count() const;
 };
 
 struct ComputationGraph;

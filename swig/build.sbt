@@ -3,10 +3,22 @@ name := "dynet_scala_helpers"
 
 scalaVersion := "2.11.8"
 
+val DEFAULT_BUILD_PATH = "../build/swig"
+
 // This is where `make` does all its work, and it's where we'll do all our work as well.
-val buildPath = sys.props.get("buildpath") match {
-  case Some(p) => p
-  case None => throw new IllegalArgumentException("must specify -Dbuildpath=")
+val buildPath = {
+  val bp = sys.props.get("buildpath") match {
+    case Some(p) => p
+    case None => {
+      println(s"using default buildpath ${DEFAULT_BUILD_PATH}")
+      DEFAULT_BUILD_PATH
+    }
+  }
+  if (new File(bp).exists) {
+    bp
+  } else {
+    throw new IllegalArgumentException(s"buildpath ${bp} does not exist!")
+  }
 }
 
 // Look for the dynet_swig jar file there.
@@ -18,7 +30,7 @@ target := file(s"${buildPath}/target/")
 // Put the uberjar there.
 assemblyOutputPath in assembly := file(s"${buildPath}/dynet_swigJNI_scala.jar").getAbsoluteFile
 
-fork in run := true
+fork := true
 
 // Don't include Scala libraries in the jar
 // see https://github.com/sbt/sbt-assembly/issues/3
@@ -26,4 +38,6 @@ fork in run := true
 assembleArtifact in packageScala := false
 
 // And look there for java libraries when running.
-javaOptions in run += s"-Djava.library.path=${buildPath}"
+javaOptions += s"-Djava.library.path=${buildPath}"
+
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
