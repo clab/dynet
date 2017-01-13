@@ -53,7 +53,7 @@ public:
 
   // first index is layer, then ...
   // masks for Gal dropout
-  std::vector<std::vector<Expression>> masks; 
+  std::vector<std::vector<Expression>> masks;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
@@ -105,7 +105,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void set_dropout(float d);
   void disable_dropout();
-  void set_dropout_masks();
+  void set_dropout_masks(unsigned batch_size = 1);
 protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
