@@ -80,29 +80,50 @@ def attend(input_vectors, state):
     return output_vectors
 
 
-def decode(dec_lstm, vectors, output):
-    output = [EOS] + list(output) + [EOS]
-    output = [char2int[c] for c in output]
+def make_decoder(input_sequence):
+    global decoder_w
+    global decoder_w
+    global enc_fwd_lstm
+    global enc_bwd_lstm
+    global dec_lstm
 
     w = dy.parameter(decoder_w)
     b = dy.parameter(decoder_b)
 
-    last_output_embeddings = output_lookup[char2int[EOS]]
-    s = dec_lstm.initial_state().add_input(dy.concatenate([dy.vecInput(STATE_SIZE*2), last_output_embeddings]))
-    loss = []
-    for char in output:
-        vector = dy.concatenate([attend(vectors, s), last_output_embeddings])
+    embedded = embed_sentence(input_sequence)
+    encoded = encode_sentence(enc_fwd_lstm, enc_bwd_lstm, embedded)
 
+    last_output_embeddings = output_lookup[char2int[EOS]]
+    s = dec_lstm.initial_state().add_input(dy.concatenate([dy.vecInput(STATE_SIZE * 2), last_output_embeddings]))
+    while True:
+        vector = dy.concatenate([attend(encoded, s), last_output_embeddings])
         s = s.add_input(vector)
         out_vector = w * s.output() + b
         probs = dy.softmax(out_vector)
-        last_output_embeddings = output_lookup[char]
+        yield probs
+        prev_char = yield
+        last_output_embeddings = output_lookup[prev_char]
+
+
+def train_decode(input_sequence, output_sequence):
+    output_sequence = [EOS] + list(output_sequence) + [EOS]
+    output_sequence = [char2int[c] for c in output_sequence]
+
+    loss = []
+    current = 0
+    decoder = make_decoder(input_sequence)
+    probs = next(decoder)
+    while len(loss) < len(output_sequence):
+        char = output_sequence[current]
         loss.append(-dy.log(dy.pick(probs, char)))
+        current += 1
+        next(decoder)
+        probs = decoder.send(char)
     loss = dy.esum(loss)
     return loss
 
 
-def generate(input, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
+def generate(input_sequence):
     def sample(probs):
         rnd = random.random()
         for i, p in enumerate(probs):
@@ -110,51 +131,34 @@ def generate(input, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
             if rnd <= 0: break
         return i
 
-    embedded = embed_sentence(input)
-    encoded = encode_sentence(enc_fwd_lstm, enc_bwd_lstm, embedded)
-
-    w = dy.parameter(decoder_w)
-    b = dy.parameter(decoder_b)
-
-    last_output_embeddings = output_lookup[char2int[EOS]]
-    s = dec_lstm.initial_state().add_input(dy.concatenate([dy.vecInput(STATE_SIZE * 2), last_output_embeddings]))
     out = ''
     count_EOS = 0
-    for i in range(len(input)*2):
+    decoder = make_decoder(input_sequence)
+    probs = next(decoder)
+    for i in range(len(input_sequence)*2):
         if count_EOS == 2: break
-        vector = dy.concatenate([attend(encoded, s), last_output_embeddings])
-
-        s = s.add_input(vector)
-        out_vector = w * s.output() + b
-        probs = dy.softmax(out_vector)
-        probs = probs.vec_value()
-        next_char = sample(probs)
-        last_output_embeddings = output_lookup[next_char]
-        if int2char[next_char] == EOS:
+        char = sample(probs.vec_value())
+        next(decoder)
+        probs = decoder.send(char)
+        if int2char[char] == EOS:
             count_EOS += 1
             continue
 
-        out += int2char[next_char]
+        out += int2char[char]
     return out
-
-
-def get_loss(input_sentence, output_sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
-    dy.renew_cg()
-    embedded = embed_sentence(input_sentence)
-    encoded = encode_sentence(enc_fwd_lstm, enc_bwd_lstm, embedded)
-    return decode(dec_lstm, encoded, output_sentence)
 
 
 def train(model, sentence):
     trainer = dy.SimpleSGDTrainer(model)
     for i in range(600):
-        loss = get_loss(sentence, sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm)
+        dy.renew_cg()
+        loss = train_decode(sentence, sentence)
         loss_value = loss.value()
         loss.backward()
         trainer.update()
         if i % 20 == 0:
             print(loss_value)
-            print(generate(sentence, enc_fwd_lstm, enc_bwd_lstm, dec_lstm))
+            print(generate(sentence))
 
 
 train(model, "it is working")
