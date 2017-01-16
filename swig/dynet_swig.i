@@ -61,7 +61,6 @@ namespace dynet {
 
 // Some declarations etc to keep swig happy
 typedef float real;
-
 typedef int RNNPointer;
 struct VariableIndex;
 /*{
@@ -73,6 +72,8 @@ struct Node;
 struct ParameterStorage;
 struct LookupParameterStorage;
 
+// declarations from dynet/dim.h
+
 struct Dim {
   Dim() : nd(0), bd(1) {}
   Dim(const std::vector<long> & x);
@@ -80,6 +81,8 @@ struct Dim {
 
   unsigned int size();
 };
+
+// declarations from dynet/model.h
 
 class Model;
 struct Parameter {
@@ -96,9 +99,6 @@ struct Parameter {
   bool is_updated();
 
 };
-
-void save_dynet_model(std::string filename, Model* model);
-void load_dynet_model(std::string filename, Model* model);
 
 struct LookupParameter {
   LookupParameter();
@@ -150,7 +150,10 @@ class Model {
   size_t parameter_count() const;
 };
 
-struct ComputationGraph;
+void save_dynet_model(std::string filename, Model* model);
+void load_dynet_model(std::string filename, Model* model);
+
+// declarations from dynet/tensor.h
 
 struct Tensor {
   Dim d;
@@ -160,6 +163,10 @@ struct Tensor {
 
 real as_scalar(const Tensor& t);
 std::vector<real> as_vector(const Tensor& v);
+
+// declarations from dynet/expr.h
+
+struct ComputationGraph;
 
 namespace expr {
 struct Expression {
@@ -240,6 +247,8 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
 } // namespace expr
 
 
+// declarations from dynet/dynet.h
+
 struct ComputationGraph {
   ComputationGraph();
   ~ComputationGraph();
@@ -282,6 +291,8 @@ struct ComputationGraph {
 };
 
 
+// declarations from dynet/training.h
+
 // Need to disable constructor as SWIG gets confused otherwise
 %nodefaultctor Trainer;
 struct Trainer {
@@ -304,6 +315,8 @@ struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
 };
 
+// declarations from dynet/rnn.h
+
 %nodefaultctor RNNBuilder;
 struct RNNBuilder {
   RNNPointer state() const;
@@ -317,6 +330,8 @@ struct RNNBuilder {
   std::vector<dynet::expr::Expression> final_h() const;
 };
 
+// declarations from dynet/lstm.h
+
 struct LSTMBuilder : public RNNBuilder {
   //LSTMBuilder() = default;
   explicit LSTMBuilder(unsigned layers,
@@ -325,10 +340,16 @@ struct LSTMBuilder : public RNNBuilder {
                        Model* model);
 };
 
+// declarations from dynet/init.h
+
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
+void cleanup();
+
+
+// additional declarations
 
 static void myInitialize();
-void cleanup();
+
 
 }
 
