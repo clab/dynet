@@ -100,8 +100,8 @@ def make_decoder(input_sequence):
         s = s.add_input(vector)
         out_vector = w * s.output() + b
         probs = dy.softmax(out_vector)
-        yield probs
-        prev_char = yield
+        yield probs  # output decoding probabilities
+        prev_char = yield  # expect feedback char through .send(char) to continue decoding
         last_output_embeddings = output_lookup[prev_char]
 
 
@@ -112,13 +112,13 @@ def train_decode(input_sequence, output_sequence):
     loss = []
     current = 0
     decoder = make_decoder(input_sequence)
-    probs = next(decoder)
+    probs = next(decoder)  # get first decoding probabilities
     while len(loss) < len(output_sequence):
         char = output_sequence[current]
         loss.append(-dy.log(dy.pick(probs, char)))
         current += 1
-        next(decoder)
-        probs = decoder.send(char)
+        next(decoder)  # move decoder to expecting position (prev_char = yield)
+        probs = decoder.send(char)  # provide decoder with actual char to produce next state
     loss = dy.esum(loss)
     return loss
 
@@ -134,12 +134,12 @@ def generate(input_sequence):
     out = ''
     count_EOS = 0
     decoder = make_decoder(input_sequence)
-    probs = next(decoder)
+    probs = next(decoder)  # get first decoding probabilities
     for i in range(len(input_sequence)*2):
         if count_EOS == 2: break
         char = sample(probs.vec_value())
-        next(decoder)
-        probs = decoder.send(char)
+        next(decoder)  # move decoder to expecting position
+        probs = decoder.send(char)  # provide decoder with current sampled char to produce next state
         if int2char[char] == EOS:
             count_EOS += 1
             continue
