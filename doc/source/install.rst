@@ -107,7 +107,7 @@ GPU/MKL support and build options
 GPU (CUDA) support
 ~~~~~~~~~~~~~~~~~~
 
-``dynet`` supports running programs on GPUs with CUDA. If you have CUDA
+DyNet supports running programs on GPUs with CUDA. If you have CUDA
 installed, you can build DyNet with GPU support by adding
 ``-DBACKEND=cuda`` to your cmake options. This will result in three
 libraries named "libdynet," "libgdynet," and "libdynetcuda" being
@@ -169,7 +169,7 @@ there are diminishing returns or even slowdown.
 Non-standard Boost location
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``dynet`` requires Boost, and will find it if it is in the standard
+DyNet requires Boost, and will find it if it is in the standard
 location. If Boost is in a non-standard location, say ``$HOME/boost``,
 you can specify the location by adding the following to your CMake
 options:

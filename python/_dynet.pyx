@@ -804,6 +804,22 @@ def matInput(int d1, int d2):
     return _cg.inputMatrix(d1, d2)
 
 def inputMatrix(vector[float] v, tuple d):
+    """
+
+    inputMatrix(vector[float] v, tuple d)
+
+    Create a matrix literal.
+    First argument is a list of floats (or a flat numpy array).
+    Second argument is a dimension.
+    Returns: an expression.
+    Usage example:
+
+        x = inputMatrix([1,2,3,4,5,6],(2,3))
+        x.npvalue()
+        --> 
+        array([[ 1.,  3.,  5.],
+               [ 2.,  4.,  6.]])
+    """
     return _cg.inputMatrixLiteral(v, d)
 
 cdef class _lookupExpression(Expression):
