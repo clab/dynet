@@ -4,7 +4,7 @@ DyNet Tutorial
 C++ Tutorial
 ------------
 
-See the tutorials for the C++ version of Dynet
+See the tutorials for the C++ version of DyNet
 
 .. toctree::
    :maxdepth: 2
