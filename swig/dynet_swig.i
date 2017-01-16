@@ -12,6 +12,9 @@
 // Required header files for compiling wrapped code
 %{
 #include <vector>
+#include <sstream>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 #include "model.h"
 #include "tensor.h"
 #include "dynet.h"
@@ -38,7 +41,6 @@ static void myInitialize()  {
 %include "std_vector.i"
 %include "std_string.i"
 %include "std_pair.i"
-
 
 struct dynet::expr::Expression;
 
@@ -152,6 +154,33 @@ class Model {
 
 void save_dynet_model(std::string filename, Model* model);
 void load_dynet_model(std::string filename, Model* model);
+
+// extra code to serialize / deserialize strings
+
+%{
+
+namespace dynet {
+
+std::string serialize_to_string(Model* model) {
+    std::ostringstream out;
+    boost::archive::text_oarchive oa(out);
+    oa << (*model);
+    return out.str();
+}
+
+void deserialize_from_string(std::string serialized, Model* model) {
+    std::istringstream in;
+    in.str(serialized);
+    boost::archive::text_iarchive ia(in);
+    ia >> (*model);
+}
+
+}
+%}
+
+std::string serialize_to_string(Model* model);
+void deserialize_from_string(std::string serialized, Model* model);
+
 
 // declarations from dynet/tensor.h
 
