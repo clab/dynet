@@ -697,15 +697,15 @@ class SimpleSGDTrainer(Trainer):
     """
     This object is very cool!
     """
-    def __init__(self, m, e0 = 0.1): pass
+    def __init__(self, m, e0 = 0.1, *args): pass
 class MomentumSGDTrainer(Trainer):
-    def __init__(self, m, e0 = 0.01, mom = 0.9): pass
+    def __init__(self, m, e0 = 0.01, mom = 0.9, *args): pass
 class AdagradTrainer(Trainer):
-    def __init__(self, m, e0 = 0.1, eps = 1e-20): pass
+    def __init__(self, m, e0 = 0.1, eps = 1e-20, *args): pass
 class AdadeltaTrainer(Trainer):
-    def __init__(self, m, eps = 1e-6, rho = 0.95): pass
+    def __init__(self, m, eps = 1e-6, rho = 0.95, *args): pass
 class AdamTrainer(Trainer):
-    def __init__(self, m, alpha = 0.001, beta_1 = 0.9, beta_2 = 0.999, eps = 1e-8 ): pass
+    def __init__(self, m, alpha = 0.001, beta_1 = 0.9, beta_2 = 0.999, eps = 1e-8, *args ): pass
 
 
 class Initializer(object): pass
