@@ -23,7 +23,7 @@ class SerializationSpec extends FlatSpec with Matchers {
 
   "dynet" should "create models with the right number of parameters" in {
     val model = defaultModel()
-    model.parameter_count() shouldBe 11  // == 2 * 3 * 5
+    model.parameter_count() shouldBe 11  // == 2 * 3 + 5
   }
 
   "dynet" should "serialize models to/from disk" in {
