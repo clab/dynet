@@ -312,6 +312,7 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
     params.push_back(ps);
   }  // layers
   dropout_rate = 0.f;
+  dropout_rate_recurrent = 0.f;
   dropout_active = false;
   hid = hidden_dim;
 }
@@ -358,11 +359,12 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
     unsigned idim = (i == 0) ? input_dim : hid;
     if (dropout_rate > 0.f) {
       float retention_rate = 1.f - dropout_rate;
+      float retention_rate_recurrent = 1.f - dropout_rate_recurrent;
       //float scale = 1.f / retention_rate;
       // in
       masks_i.push_back(random_bernoulli(*_cg, Dim({ idim}, batch_size), retention_rate, 1.0));
       // h
-      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate, 1.0));
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_recurrent, 1.0));
       masks.push_back(masks_i);
     }
   }
@@ -430,10 +432,10 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
       if (has_prev_state)
         i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
     }
-    else if (dropout_rate > 0) {
+    else if (dropout_rate > 0 && dropout_rate_recurrent > 0) {
       in = in * (1.f - dropout_rate);
       if (has_prev_state)
-        i_h_tm1 = i_h_tm1 * (1.f - dropout_rate);
+        i_h_tm1 = i_h_tm1 * (1.f - dropout_rate_recurrent);
     }
     // input
     Expression tmp;
@@ -510,9 +512,18 @@ void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
 
 void VanillaLSTMBuilder::set_dropout(float d) {
   if (d < 0.f || d > 1.f)
-    throw std::invalid_argument("Dropout rate must be a probability (>=0 and <=1)");
+    throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
+  dropout_rate_recurrent = d;
   dropout_active = (dropout_rate > 0.f);
+}
+
+void VanillaLSTMBuilder::set_dropout(float d, float d_r) {
+  if (d < 0.f || d > 1.f || d_r < 0.f || d_r > 1.f)
+    throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_rate_recurrent = d_r;
+  dropout_active = (dropout_rate > 0.f) && (dropout_rate_recurrent > 0.f);
 }
 
 void VanillaLSTMBuilder::disable_dropout() {
