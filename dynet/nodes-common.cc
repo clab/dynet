@@ -21,7 +21,7 @@ Dim AddVectorToAllColumns::dim_forward(const vector<Dim>& xs) const {
     cerr << "Bad input dimensions in AddVectorToAllColumns: " << xs << endl;
     throw std::invalid_argument("bad input dimensions in AddVectorToAllColumns");
   }
-  return xs[0];
+  return Dim({xs[0][0], xs[0][1]}, max(xs[0].bd,xs[1].bd));
 }
 
 string SparsemaxLoss::as_string(const vector<string>& arg_names) const {

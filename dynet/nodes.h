@@ -13,6 +13,7 @@ namespace dynet {
 // y = M + v (broadcasting over columns)
 struct AddVectorToAllColumns : public Node {
   explicit AddVectorToAllColumns(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 

@@ -322,6 +322,30 @@ BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression colwise_add(const Expression& x, const Expression& bias);
+BOOST_AUTO_TEST_CASE( colwise_add_batch1_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression x3 = input(cg, Dim({1,3},2), batch_vals);
+  Expression y = colwise_add(x1 * x3, x2);
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  Expression z = sum_batches(ones3 * y * transpose(ones3));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression colwise_add(const Expression& x, const Expression& bias);
+BOOST_AUTO_TEST_CASE( colwise_add_batch2_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression x3 = input(cg, Dim({3,1},2), batch_vals);
+  Expression y = colwise_add(x1 * transpose(x2), cmult(x2, x3));
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  Expression z = sum_batches(ones3 * y * transpose(ones3));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression concatenate_cols(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
   dynet::ComputationGraph cg;
