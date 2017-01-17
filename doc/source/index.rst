@@ -10,6 +10,15 @@ DyNet documentation
 
 Read the documentation below to get started, and feel free to contact the `dynet-users <https://groups.google.com/forum/#!forum/dynet-users>`_ group with any questions (if you want to receive email make sure to select "all email" when you sign up). We greatly appreciate any bug reports and contributions, which can be made by filing an issue or making a pull request through the `github page <http://github.com/clab/dynet>`_.
 
+You can also read more technical details in our `technical report <https://arxiv.org/abs/1701.03980>`_. If you use DyNet for research, please cite this report as follows::
+
+  @article{dynet,
+    title={DyNet: The Dynamic Neural Network Toolkit},
+    author={Graham Neubig and Chris Dyer and Yoav Goldberg and Austin Matthews and Waleed Ammar and Antonios Anastasopoulos and Miguel Ballesteros and David Chiang and Daniel Clothiaux and Trevor Cohn and Kevin Duh and Manaal Faruqui and Cynthia Gan and Dan Garrette and Yangfeng Ji and Lingpeng Kong and Adhiguna Kuncoro and Gaurav Kumar and Chaitanya Malaviya and Paul Michel and Yusuke Oda and Matthew Richardson and Naomi Saphra and Swabha Swayamdipta and Pengcheng Yin},
+    journal={arXiv preprint arXiv:1701.03980},
+    year={2017}
+  }
+
 DyNet can be installed according to the instructions below:
 
 .. toctree::
