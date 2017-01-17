@@ -50,5 +50,12 @@ rnnlm/ptb-mikolov/
 *.out
 *.app
 
+# Editor stuff
+*.swp
+
+# Doc stuff
+doc/doxygen/xml
+doc/source/tutorials_notebooks
+
 .RData
 .RHistory

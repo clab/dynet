@@ -135,9 +135,9 @@ site-packages, and works without root privileges. To install the module
 to the system site-packages (for all users), or to the current `virtualenv`
 (if you are on one), run ``python setup.py install`` without this switch.
 
-You should now have a working python binding (the dynet module).
+You should now have a working python binding (the ``dynet`` module).
 
-Note however that the installation relies on the compiled dynet library
+Note however that the installation relies on the compiled DyNet library
 being in ``$PATH_TO_DYNET/build/dynet``, so make sure not to move it
 from there.
 
