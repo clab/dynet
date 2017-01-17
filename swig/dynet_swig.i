@@ -86,6 +86,33 @@ struct Dim {
 
 // declarations from dynet/model.h
 
+// Model wrapper class needs to implement Serializable. We serialize a Model by converting it
+// to/from a String and using writeObject/readObject on the String.
+%typemap(javainterfaces) dynet::Model "java.io.Serializable"
+
+%typemap(javacode) dynet::Model %{
+ private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+    out.defaultWriteObject();
+    String s = this.serialize_to_string();
+    out.writeObject(s);
+ }
+
+ private void readObject(java.io.ObjectInputStream in)
+     throws java.io.IOException, java.lang.ClassNotFoundException {
+    in.defaultReadObject();
+    String s = (String) in.readObject();
+
+    // Deserialization doesn't call the constructor, so the swigCPtr is 0. This means we need to
+    // do the constructor work ourselves if we don't want a segfault.
+    if (this.swigCPtr == 0) {
+        this.swigCPtr = dynet_swigJNI.new_Model();
+        this.swigCMemOwn = true;
+    }
+
+    this.load_from_string(s);
+ }
+%}
+
 class Model;
 struct Parameter {
   Parameter();
@@ -156,31 +183,21 @@ void save_dynet_model(std::string filename, Model* model);
 void load_dynet_model(std::string filename, Model* model);
 
 // extra code to serialize / deserialize strings
+%extend Model {
+   std::string serialize_to_string() {
+       std::ostringstream out;
+       boost::archive::text_oarchive oa(out);
+       oa << (*($self));
+       return out.str();
+   }
 
-%{
-
-namespace dynet {
-
-std::string serialize_to_string(Model* model) {
-    std::ostringstream out;
-    boost::archive::text_oarchive oa(out);
-    oa << (*model);
-    return out.str();
-}
-
-void deserialize_from_string(std::string serialized, Model* model) {
-    std::istringstream in;
-    in.str(serialized);
-    boost::archive::text_iarchive ia(in);
-    ia >> (*model);
-}
-
-}
-%}
-
-std::string serialize_to_string(Model* model);
-void deserialize_from_string(std::string serialized, Model* model);
-
+   void load_from_string(std::string serialized) {
+       std::istringstream in;
+       in.str(serialized);
+       boost::archive::text_iarchive ia(in);
+       ia >> (*($self));
+   }
+};
 
 // declarations from dynet/tensor.h
 
