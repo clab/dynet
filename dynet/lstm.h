@@ -104,6 +104,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   void load_parameters_pretraining(const std::string& fname) override;
 
   void set_dropout(float d);
+  void set_dropout(float d, float d_r);
   void disable_dropout();
   void set_dropout_masks(unsigned batch_size = 1);
 protected:
@@ -134,6 +135,7 @@ public:
   unsigned layers;
   unsigned input_dim, hid;
   bool dropout_active;
+  bool dropout_rate_recurrent;
 
 
 
