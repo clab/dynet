@@ -20,7 +20,6 @@ using namespace dynet::expr;
 namespace dynet {
 
 enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
-enum { IA, IO, IW, HA, HO, HW, CA, CO, CW }; // Gal dropout masks
 
 LSTMBuilder::LSTMBuilder(unsigned layers,
                          unsigned input_dim,
@@ -53,7 +52,6 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
 }
 
 void LSTMBuilder::new_graph_impl(ComputationGraph& cg) {
-  _cg = &cg;
   param_vars.clear();
 
   for (unsigned i = 0; i < layers; ++i) {
@@ -84,29 +82,6 @@ void LSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
-  // Init Gal Dropout masks for each layer
-  masks.clear();
-  for (unsigned i = 0; i < layers; ++i) {
-    std::vector<Expression> masks_i;
-    unsigned idim = (i == 0) ? input_dim : hidden_dim;
-    if (dropout_rate > 0.f) {
-      float retention_rate = 1.f - dropout_rate;
-      float scale = 1.f / retention_rate;
-      // in
-      masks_i.push_back(random_bernoulli(*_cg, { idim}, retention_rate, scale));
-      masks_i.push_back(random_bernoulli(*_cg, { idim}, retention_rate, scale));
-      masks_i.push_back(random_bernoulli(*_cg, { idim}, retention_rate, scale));
-      // h
-      masks_i.push_back(random_bernoulli(*_cg, { hidden_dim}, retention_rate, scale));
-      masks_i.push_back(random_bernoulli(*_cg, { hidden_dim}, retention_rate, scale));
-      masks_i.push_back(random_bernoulli(*_cg, { hidden_dim}, retention_rate, scale));
-      // c
-      masks_i.push_back(random_bernoulli(*_cg, { hidden_dim}, retention_rate, scale));
-      masks_i.push_back(random_bernoulli(*_cg, { hidden_dim}, retention_rate, scale));
-      masks_i.push_back(random_bernoulli(*_cg, { hidden_dim}, retention_rate, scale));
-      masks.push_back(masks_i);
-    }
-  }
   if (hinit.size() > 0) {
     assert(layers * 2 == hinit.size());
     h0.resize(layers);
@@ -155,9 +130,7 @@ Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_ne
   return h[t].back();
 }
 
-
 Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
-
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -165,7 +138,6 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
   Expression in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
-    const vector<Expression>& masks_i = masks[i];
     Expression i_h_tm1, i_c_tm1;
     bool has_prev_state = (prev >= 0 || has_initial_state);
     if (prev < 0) {
@@ -179,16 +151,12 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
       i_h_tm1 = h[prev][i];
       i_c_tm1 = c[prev][i];
     }
-    // apply dropout according to https://arxiv.org/abs/1512.05287
+    // apply dropout according to http://arxiv.org/pdf/1409.2329v5.pdf
+    if (dropout_rate) in = dropout(in, dropout_rate);
     // input
     Expression i_ait;
     if (has_prev_state)
-      if (dropout_rate > 0.f)
-        i_ait = affine_transform({vars[BI], vars[X2I], cmult(in, masks_i[IA]) , vars[H2I], cmult(i_h_tm1, masks_i[HA]), vars[C2I], cmult(i_c_tm1, masks_i[CA])});
-      else
-        i_ait = affine_transform({vars[BI], vars[X2I], in , vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
-    else if (dropout_rate > 0.f)
-      i_ait = affine_transform({vars[BI], vars[X2I], cmult(in, masks_i[IA])});
+      i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
     else
       i_ait = affine_transform({vars[BI], vars[X2I], in});
     Expression i_it = logistic(i_ait);
@@ -197,12 +165,7 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
     // write memory cell
     Expression i_awt;
     if (has_prev_state)
-      if (dropout_rate > 0.f)
-        i_awt = affine_transform({vars[BC], vars[X2C], cmult(in, masks_i[IW]), vars[H2C], cmult(i_h_tm1, masks_i[HW])});
-      else
-        i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
-    else if (dropout_rate > 0.f)
-      i_awt = affine_transform({vars[BC], vars[X2C], cmult(in, masks_i[IW])});
+      i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
     else
       i_awt = affine_transform({vars[BC], vars[X2C], in});
     Expression i_wt = tanh(i_awt);
@@ -217,19 +180,15 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
     Expression i_aot;
     if (has_prev_state)
-      if (dropout_rate > 0.f)
-        i_aot = affine_transform({vars[BO], vars[X2O], cmult(in, masks_i[IO]), vars[H2O], cmult(i_h_tm1, masks_i[HO]), vars[C2O], cmult(ct[i], masks_i[CO])});
-      else
-        i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
-    else if (dropout_rate > 0.f)
-      i_aot = affine_transform({vars[BO], vars[X2O], cmult(in, masks_i[IO]), vars[C2O], cmult(ct[i], masks_i[CO])});
+      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
     else
       i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], ct[i]});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
     in = ht[i] = tanh(cmult(i_ot, ph_t));
   }
-  return ht.back();
+  if (dropout_rate) return dropout(ht.back(), dropout_rate);
+  else return ht.back();
 }
 
 void LSTMBuilder::copy(const RNNBuilder & rnn) {
