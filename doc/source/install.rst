@@ -139,6 +139,8 @@ If CMake is unable to find MKL automatically, try setting `MKL_ROOT`, such as
 
     -DMKL_ROOT="/path/to/MKL"
 
+One common install location is ``/opt/intel/mkl/``.
+
 If either `MKL` or `MKL_ROOT` are set, CMake will look for MKL.
 
 By default, MKL will use all CPU cores. You can control how many cores MKL uses by setting the environment
