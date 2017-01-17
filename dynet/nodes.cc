@@ -215,8 +215,16 @@ inline void CUDAMatrixMultiply(const Device_GPU & dev, const Tensor& l, const Te
 
 template<class MyDevice>
 void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Eigen::array<int, 2> bcasts; bcasts[0] = 1; bcasts[1] = xs[0]->d[1];
-  fx.t<2>().device(*dev.edevice) = xs[0]->t<2>() + xs[1]->t<2>().broadcast(bcasts);
+  // TODO: Profile on CPU. Broadcasting may be slow.
+  if(xs[0]->d.bd >= xs[1]->d.bd) {
+    Eigen::array<int, 3> bcasts = {1, (int)xs[0]->d[1], (int)(xs[0]->d.bd/xs[1]->d.bd)};
+    fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>() + xs[1]->tb<2>().broadcast(bcasts);
+  } else {
+    assert(xs[0]->d.bd == 1);
+    Eigen::array<int, 3> bcasts0 = {1, 1, (int)xs[1]->d.bd};
+    Eigen::array<int, 3> bcasts1 = {1, (int)xs[0]->d[1], 1};
+    fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcasts0) + xs[1]->tb<2>().broadcast(bcasts1);
+  }
 }
 
 template<class MyDevice>
@@ -227,12 +235,23 @@ void AddVectorToAllColumns::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   assert(i < 2);
+  // TODO: profile on CPU and see whether the chip version is better
   if (i == 0) { // x
-    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+    if(dEdf.d.bd == dEdxi.d.bd) {
+      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+    } else {
+      Eigen::array<int, 1> red_axis = {2};
+      dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+    }
   } else { // bias
-    for(size_t i = 0; i < xs[0]->d[1]; i++)
-      dEdxi.t<1>().device(*dev.edevice) += dEdf.t<2>().chip<1>(i);
-    // TODO: This is not great. Can we use broadcasting similar to SumColumns?
+    if(dEdf.d.bd == dEdxi.d.bd) {
+      Eigen::array<int, 1> red_axis = {1};
+      dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+    } else {
+      assert(dEdxi.d.bd == 1);
+      Eigen::array<int, 2> red_axis = {1,2};
+      dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+    }
   }
 }  
 DYNET_NODE_INST_DEV_IMPL(AddVectorToAllColumns)

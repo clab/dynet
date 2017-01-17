@@ -66,7 +66,7 @@ To see that things have built properly, you can run
 
 ::
 
-    ./examples/xor
+    ./examples/train_xor
 
 which will train a multilayer perceptron to predict the xor function.
 
