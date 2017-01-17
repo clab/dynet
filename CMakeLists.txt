@@ -22,11 +22,13 @@ function(find_mkl)
             PATHS ${MKL_ROOT} ${MKL_ROOT}/include)
   find_library(MKL_CORE_LIB NAMES mkl_intel_lp64 mkl_intel_thread mkl_core
                PATHS ${MKL_ROOT} ${MKL_ROOT}/lib/${MKL_ARCH}
+                     ${MKL_ROOT}/lib #OSX
                DOC "MKL core library path")
 
   find_library(MKL_COMPILER_LIB NAMES iomp5 libiomp5md
                PATHS ${MKL_ROOT} ${MKL_ROOT}/../compiler/lib/${MKL_ARCH}              #Windows
                      ${MKL_ROOT}/../compilers_and_libraries/linux/lib/${MKL_ARCH}_lin #Linux
+                     ${MKL_ROOT}/../compilers_and_libraries/mac/lib                   #OSX
                DOC "MKL compiler lib (for threaded MKL)")
 
   if(MKL_INCLUDE_DIR AND MKL_CORE_LIB AND MKL_COMPILER_LIB)
