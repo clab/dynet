@@ -1,7 +1,6 @@
 project(dynet)
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-set(CMAKE_MACOSX_RPATH 1)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # DYNET uses Eigen which exploits modern CPU architectures. To get the
@@ -12,17 +11,24 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 #      flags (the compiler does not always make the best configuration
 #      decisions without help)
 
+# NOTE: This seems to be causing problems with linking before using
+#       make install. It is allegedly preferred, but probably doesn't
+#       suit our model of not installing the library most of the time.
+set(CMAKE_MACOSX_RPATH 0)
+
 function(find_mkl)
   set(MKL_ARCH intel64)
   find_path(MKL_INCLUDE_DIR mkl.h
             PATHS ${MKL_ROOT} ${MKL_ROOT}/include)
   find_library(MKL_CORE_LIB NAMES mkl_intel_lp64 mkl_intel_thread mkl_core
                PATHS ${MKL_ROOT} ${MKL_ROOT}/lib/${MKL_ARCH}
+                     ${MKL_ROOT}/lib #OSX
                DOC "MKL core library path")
 
   find_library(MKL_COMPILER_LIB NAMES iomp5 libiomp5md
                PATHS ${MKL_ROOT} ${MKL_ROOT}/../compiler/lib/${MKL_ARCH}              #Windows
                      ${MKL_ROOT}/../compilers_and_libraries/linux/lib/${MKL_ARCH}_lin #Linux
+                     ${MKL_ROOT}/../compilers_and_libraries/mac/lib                   #OSX
                DOC "MKL compiler lib (for threaded MKL)")
 
   if(MKL_INCLUDE_DIR AND MKL_CORE_LIB AND MKL_COMPILER_LIB)
@@ -65,7 +71,7 @@ endif()
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 -DEIGEN_HAS_C99_MATH /MP")   # -Wall produces 20k warnings
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -Wall -Wno-missing-braces -std=c++11 -Ofast -g -march=native")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -fno-finite-math-only -Wall -Wno-missing-braces -std=c++11 -Ofast -g -march=native")
 endif()
 
 enable_testing()
@@ -96,11 +102,13 @@ endfunction()
 # look for Boost
 if(DEFINED ENV{BOOST_ROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
-  get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+  if(DEFINED ${Boost_INCLUDE_DIR})
+    get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+  endif()
 endif()
 set(Boost_REALPATH ON)
-message("-- Boost dir is " ${Boost_INCLUDE_DIR})
 find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
+message("-- Boost dir is " ${Boost_INCLUDE_DIR})
 include_directories(${Boost_INCLUDE_DIR})
 if(MSVC)
   # Boost does auto-linking when using a compiler like Microsoft Visual C++, we just need to help it find the libraries
@@ -163,7 +171,6 @@ add_subdirectory(dynet)
 add_subdirectory(tests)
 add_subdirectory(examples)
 add_subdirectory(tutorial)
-add_subdirectory(rnnlm)
 add_subdirectory(python)
 
 option(INCLUDE_SWIG "INCLUDE_SWIG" OFF)
