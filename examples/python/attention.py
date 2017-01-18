@@ -69,15 +69,23 @@ def attend(input_vectors, state):
     w1 = dy.parameter(attention_w1)
     w2 = dy.parameter(attention_w2)
     v = dy.parameter(attention_v)
-    attention_weights = []
 
+    # w2dt: (attdim x attdim)
     w2dt = w2*dy.concatenate(list(state.s()))
-    for input_vector in input_vectors:
-        attention_weight = v*dy.tanh(w1*input_vector + w2dt)
-        attention_weights.append(attention_weight)
-    attention_weights = dy.softmax(dy.concatenate(attention_weights))
-    output_vectors = dy.esum([vector*attention_weight for vector, attention_weight in zip(input_vectors, attention_weights)])
-    return output_vectors
+    # input_mat: (encoder_state x seqlen) => input vecs concatenated as cols
+    input_mat = dy.concatenate_cols(input_vectors)
+    # w1dt: (attdim x seqlen)
+    w1dt = w1 * input_mat
+    # add w1dt to each column of w2dt
+    # merged_states: (attdim x seqlen)
+    merged_states = dy.colwise_add(w1dt, w2dt)
+    # att_weights: (seqlen,) row vector
+    att_weights = dy.transpose(dy.tanh(merged_states)) * dy.transpose(v)
+    # alternatively:
+    # att_weights = dy.reshape(v * dy.tanh(merged_states), (len(input_vectors),))
+    att_weights = dy.softmax(att_weights)
+    context = input_mat * att_weights
+    return context
 
 
 def decode(dec_lstm, vectors, output):
