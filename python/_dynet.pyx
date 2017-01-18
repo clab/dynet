@@ -38,23 +38,64 @@ import os.path
 from _dynet cimport *
 cimport _dynet as dynet
 
+cdef class DynetParams:
+    cdef CDynetParams cparams
 
-cdef init(random_seed=None):
-    cdef int argc = len(sys.argv)
-    cdef char** c_argv
-    args = [bytearray(x, encoding="utf-8") for x in sys.argv]
-    c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
-    for idx, s in enumerate(args):
-        c_argv[idx] = s
+    def __init__(self):
+        pass
 
-    if random_seed is None:
-        dynet.initialize(argc,c_argv, 0)
-    else:
-        if random_seed == 0: random_seed = 1
-        dynet.initialize(argc,c_argv, random_seed)
-    free(c_argv)
+    cdef from_args(self, shared_parameters=None):
+        cdef int argc = len(sys.argv)
+        cdef char** c_argv
+        args = [bytearray(x, encoding="utf-8") for x in sys.argv]
+        c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
+        for idx, s in enumerate(args):
+            c_argv[idx] = s
 
-init() # TODO: allow different random seeds
+        if shared_parameters is None:
+            self.cparams = dynet.extract_dynet_params(argc,c_argv, 0)
+        else:
+            if shared_parameters == 0: shared_parameters = 1
+            self.cparams = dynet.extract_dynet_params(argc,c_argv, shared_parameters)
+        free(c_argv)
+
+    cdef init(self):
+        dynet.initialize(self.cparams)
+
+    cdef set_mem(self, unsigned mem):
+        self.cparams.mem_descriptor = str(mem)
+
+    cdef set_random_seed(self, unsigned random_seed):
+        self.cparams.random_seed = random_seed
+
+    cdef set_weight_decay(self, float weight_decay):
+        self.cparams.weight_decay = weight_decay
+
+    cdef set_shared_parameters(self, bool shared_parameters):
+        self.cparams.shared_parameters = shared_parameters
+
+    cdef set_requested_gpus(self, int requested_gpus):
+        self.cparams.requested_gpus = requested_gpus
+        self.cparams.ngpus_requested = True
+        self.cparams.ids_requested = False
+    
+    cdef set_gpu_mask(self, list gpu_mask):
+        cdef vector[int] cgpu_mask
+        for i in gpu_mask:
+            if(i!=0 and i!=1):
+                raise ValueError('gpu_mask should only contain 0 and 1s')
+            cgpu_mask.push_back(i)
+        self.cparams.gpu_mask = cgpu_mask
+        self.cparams.ngpus_requested = False
+        self.cparams.ids_requested = True
+
+def init(shared_parameters=None):
+    params=DynetParams()
+    params.from_args(shared_parameters)
+    params.init()
+
+def init_from_params(DynetParams params):
+    params.init()
 
 cdef CDim Dim(dim, unsigned int batch_size=1):
     """
