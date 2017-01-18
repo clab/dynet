@@ -49,9 +49,9 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     }
 
     // Weight decay
-    else if (arg == "--dynet-l2" || arg == "--dynet_l2") {
+    else if (arg == "--dynet-weight-decay" || arg == "--dynet_weight_decay") {
       if ((argi + 1) > argc) {
-        cerr << "[dynet] --dynet-l2 requires an argument (the weight decay per update)\n";
+        cerr << "[dynet] --dynet-weight-decay requires an argument (the weight decay per update)\n";
         abort();
       } else {
         string a2 = argv[argi + 1];
@@ -172,12 +172,14 @@ void initialize(DynetParams params) {
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
-  devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
+  // TODO: Once multi-device support is added, we will potentially allocate both CPU
+  //       and GPU, not either-or
   int default_index = 0;
   if (gpudevices.size() > 0) {
     for (auto gpu : gpudevices)
       devices.push_back(gpu);
-    default_index++;
+  } else {
+    devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
   }
   default_device = devices[default_index];
 

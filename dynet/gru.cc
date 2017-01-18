@@ -17,23 +17,23 @@ enum { X2Z, H2Z, BZ, X2R, H2R, BR, X2H, H2H, BH };
 GRUBuilder::GRUBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model) : hidden_dim(hidden_dim), layers(layers) {
+                       Model& model) : hidden_dim(hidden_dim), layers(layers) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // z
-    Parameter p_x2z = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2z = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bz = model->add_parameters({hidden_dim});
+    Parameter p_x2z = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2z = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bz = model.add_parameters({hidden_dim});
 
     // r
-    Parameter p_x2r = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2r = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_br = model->add_parameters({hidden_dim});
+    Parameter p_x2r = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2r = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_br = model.add_parameters({hidden_dim});
 
     // h
-    Parameter p_x2h = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2h = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bh = model->add_parameters({hidden_dim});
+    Parameter p_x2h = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bh = model.add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
@@ -133,14 +133,14 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
     if (prev_zero) {
       ct = affine_transform({vars[BH], vars[X2H], in});
       ct = tanh(ct);
-      Expression nwt = cwise_multiply(zt, ct);
+      Expression nwt = cmult(zt, ct);
       in = ht[i] = nwt;
     } else {
-      Expression ght = cwise_multiply(rt, h_tprev);
+      Expression ght = cmult(rt, h_tprev);
       ct = affine_transform({vars[BH], vars[X2H], in, vars[H2H], ght});
       ct = tanh(ct);
-      Expression nwt = cwise_multiply(zt, ct);
-      Expression crt = cwise_multiply(ft, h_tprev);
+      Expression nwt = cmult(zt, ct);
+      Expression crt = cmult(ft, h_tprev);
       in = ht[i] = crt + nwt;
     }
   }

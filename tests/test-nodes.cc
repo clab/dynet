@@ -59,6 +59,8 @@ struct NodeTest {
     TensorTools::SetElements(param_square1.get()->values,param_square1_vals);
     param_cube1 = mod.add_parameters({3,3,3});
     TensorTools::SetElements(param_cube1.get()->values,param_cube1_vals);
+    lookup1 = mod.add_lookup_parameters(3, {3});
+    TensorTools::SetElements(lookup1.get()->all_values,param_square1_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);
@@ -77,6 +79,7 @@ struct NodeTest {
   std::vector<char*> av;
   dynet::Model mod;
   dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1;
+  dynet::LookupParameter lookup1;
 };
 
 // define the test suite
@@ -99,6 +102,28 @@ BOOST_AUTO_TEST_CASE( add_gradient ) {
   Expression x2 = parameter(cg, param2);
   Expression y = x1+x2;
   Expression z = input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression sum(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( sum_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression y = sum({x2,x1,x2});
+  Expression z = input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression sum(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( sum_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression x3 = input(cg, Dim({3},2), batch_vals);
+  Expression y = sum({x3,x1,cmult(x2,x3)});
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  Expression z = sum_batches(ones3 * y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -297,6 +322,30 @@ BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression colwise_add(const Expression& x, const Expression& bias);
+BOOST_AUTO_TEST_CASE( colwise_add_batch1_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression x3 = input(cg, Dim({1,3},2), batch_vals);
+  Expression y = colwise_add(x1 * x3, x2);
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  Expression z = sum_batches(ones3 * y * transpose(ones3));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression colwise_add(const Expression& x, const Expression& bias);
+BOOST_AUTO_TEST_CASE( colwise_add_batch2_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression x3 = input(cg, Dim({3,1},2), batch_vals);
+  Expression y = colwise_add(x1 * transpose(x2), cmult(x2, x3));
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  Expression z = sum_batches(ones3 * y * transpose(ones3));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression concatenate_cols(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
   dynet::ComputationGraph cg;
@@ -316,6 +365,18 @@ BOOST_AUTO_TEST_CASE( concatenate_gradient ) {
   Expression y = concatenate({x1, x2, x1});
   Expression ones3 = input(cg, {1,3}, ones3_vals);
   Expression z = ones3 * y * transpose(ones3);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression concatenate(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( concatenate_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = transpose(parameter(cg, param1));
+  Expression x2 = transpose(parameter(cg, param2));
+  Expression x3 = input(cg, Dim({1,3},2), batch_vals);
+  Expression y = concatenate({x1, x2, cmult(x2, x3)});
+  Expression ones3 = input(cg, {1,3}, ones3_vals);
+  Expression z = sum_batches(ones3 * y * transpose(ones3));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -638,22 +699,22 @@ BOOST_AUTO_TEST_CASE( trace_of_product_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression cwise_multiply(const Expression& x, const Expression& y);
-BOOST_AUTO_TEST_CASE( cwise_multiply_gradient ) {
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cmult_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = parameter(cg, param2);
-  Expression y = cwise_multiply(x1, x2);
+  Expression y = cmult(x1, x2);
   Expression z = input(cg, {1,3}, ones3_vals) * y;
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression cwise_multiply(const Expression& x, const Expression& y);
-BOOST_AUTO_TEST_CASE( cwise_multiply_batch_gradient ) {
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cmult_batch_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3},2), batch_vals);
-  Expression y = cwise_multiply(x1, x2) + cwise_multiply(x2, x1);
+  Expression y = cmult(x1, x2) + cmult(x2, x1);
   Expression z = sum_batches(input(cg, {1,3}, ones3_vals) * y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -873,6 +934,16 @@ BOOST_AUTO_TEST_CASE( sparse_input_test ) {
   assert(exp.size() == act.size());
   for(size_t i = 0; i < exp.size(); ++i)
     BOOST_CHECK_CLOSE(exp[i], act[i], 0.001);
+}
+
+// Expression lookup();
+BOOST_AUTO_TEST_CASE( lookup_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = lookup(cg, lookup1, (unsigned)0);
+  Expression x2 = lookup(cg, lookup1, (unsigned)2);
+  Expression y = x1+x2;
+  Expression z = input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

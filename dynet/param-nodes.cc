@@ -78,6 +78,10 @@ Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
   return Dim({1});
 }
 
+size_t LookupNode::aux_storage_size() const {
+  return dim.bd * sizeof(unsigned);
+}
+
 string LookupNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "lookup_parameters(|x|=" << params.get()->values.size() << " --> " << dim << ") @ " << params.get();
@@ -93,12 +97,7 @@ void LookupNode::accumulate_grad(const Tensor& g) {
     params.get()->accumulate_grad(*pindex, g);
   } else {
     assert (pindices);
-    const vector<Tensor>& gb = g.batch_elems();
-    for (unsigned b = 0; b < pindices->size(); ++b) {
-      unsigned i = pindices->at(b);
-      assert (i < params.get()->values.size());
-      params.get()->accumulate_grad(i, gb[b]);
-    }
+    params.get()->accumulate_grads(pindices->size(), &(*pindices)[0], (unsigned*)aux_mem, g.v);
   }
 }
 
@@ -183,7 +182,7 @@ void SparseInputNode::forward_dev_impl(const MyDevice & dev, const vector<const 
   float* data_ptr = (float*)(ids_ptr + ids.size());
   cudaMemcpyAsync(ids_ptr, &ids[0], ids.size() * sizeof(unsigned int), cudaMemcpyHostToDevice);
   cudaMemcpyAsync(data_ptr, &data[0], data.size() * sizeof(float), cudaMemcpyHostToDevice);
-  dynet::gpu::sparse_assign(ids.size(), ids_ptr, data_ptr, fx.v);
+  dynet::gpu::dense_to_sparse_assign(ids.size(), ids_ptr, data_ptr, fx.v);
 #else
   for(size_t i = 0; i < ids.size(); ++i)
     fx.v[ids[i]] = data[i];
@@ -234,20 +233,16 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   } else {
     assert (pindices);
     assert (fx.d.batch_elems() == pindices->size());
+#if __CUDACC__
+    CUDA_CHECK(cudaMemcpyAsync((unsigned*)aux_mem, &(*pindices)[0], fx.d.bd * sizeof(unsigned), cudaMemcpyHostToDevice));
+    dynet::gpu::sparse_to_dense_block_assign_and_multiply(fx.d.bd, (unsigned*)aux_mem, fx.d.batch_size(), params.mp->weight_decay.current_weight_decay(), params.get()->all_values.v, fx.v);
+#else
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
       assert (i < params.get()->values.size());
-      float* v = fx.v + fx.d.batch_size() * (b % fx.d.batch_elems());
-#if __CUDACC__
-      cudaMemcpyAsync(v, params.get()->values[i].v, fx.d.batch_size() * sizeof(float), cudaMemcpyDeviceToDevice);
-#else
-      // we should use colwise() instead of memcpy to get rid of the
-      // extra multiply by params.mp->weight_decay.current_weight_decay()
-      memcpy(v, params.get()->values[i].v, fx.d.batch_size() * sizeof(float));
-
-#endif
+      fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get()->values[i].t<2>() * params.mp->weight_decay.current_weight_decay();
     }
-    fx.tvec().device(*dev.edevice) = fx.tvec() * params.mp->weight_decay.current_weight_decay();
+#endif
   }
 }
 

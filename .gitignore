@@ -14,12 +14,6 @@ python/dist/
 python/dyNET.egg-info/
 
 # binaries
-examples/embed-cl
-examples/encdec
-examples/xor
-examples/xor-xent
-examples/rnnlm
-examples/nlm
 
 #data
 rnnlm/ptb-mikolov/
@@ -55,6 +49,13 @@ rnnlm/ptb-mikolov/
 *.exe
 *.out
 *.app
+
+# Editor stuff
+*.swp
+
+# Doc stuff
+doc/doxygen/xml
+doc/source/tutorials_notebooks
 
 .RData
 .RHistory

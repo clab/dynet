@@ -63,6 +63,16 @@ struct Tensor {
   Eigen::TensorMap<Eigen::Tensor<float,1>> tvec() {
     return Eigen::TensorMap<Eigen::Tensor<float,1>>(v, d.size());
   }
+  // this returns the full tensor contents as a two dimensional Eigen tensor
+  // where the first dimension is a flattened representation of each batch
+  // and the second dimension is the batches
+  const Eigen::TensorMap<Eigen::Tensor<float,2>> tbvec() const {
+    return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, d.batch_size(), d.batch_elems());
+  }
+  Eigen::TensorMap<Eigen::Tensor<float,2>> tbvec() {
+    return Eigen::TensorMap<Eigen::Tensor<float,2>>(v, d.batch_size(), d.batch_elems());
+  }
+
   // Get view as a Tensor (see specializations below-- this is to work Eigen's and DYNETs compile-type vs. run-time differences)
   template <int Order> Eigen::TensorMap<Eigen::Tensor<float,Order>> t();
   template <int Order> const Eigen::TensorMap<Eigen::Tensor<float,Order>> t() const;
@@ -275,8 +285,9 @@ std::vector<real> as_vector(const Tensor& v);
 struct TensorTools {
   static void Constant(Tensor& d, float c);
   static void Zero(Tensor& d);
+  static void Identity(Tensor& val);
   // sample some bernoulli random variables and scale them by scale
-  static void RandomBernoulli(Tensor& val, real p, real scale = 1.0f);
+  static void RandomizeBernoulli(Tensor& val, real p, real scale = 1.0f);
   static void RandomizeNormal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
   static void RandomizeUniform(Tensor& val, real left = 0.0f, real right = 0.0f);
   // AccessElement and SetElement are very, very slow (potentially) - use appropriately
