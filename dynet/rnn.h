@@ -131,8 +131,8 @@ struct RNNBuilder {
    /**
     * 
    * \brief Add another timestep, with arbitrary recurrent connection.
-   * \details This allows to define a recurrent connection to `prev`
-   * rather than to head[cur].
+   * \details This allows you to define a recurrent connection to `prev`
+   * rather than to `head[cur]`.
    * This can be used to construct trees, implement beam search, etc.
    * 
    * \param prev Pointer to the previous state
@@ -152,10 +152,20 @@ struct RNNBuilder {
    * \brief Rewind the last timestep
    * \details - this DOES NOT remove the variables from the computation graph,
    * it just means the next time step will see a different previous state.
-   * You can remind as many times as you want.
+   * You can rewind as many times as you want.
    */
   void rewind_one_step() {
     cur = head[cur];
+  }
+
+  /**
+   * 
+   * \brief Return the RNN state that is the parent of `p`
+   * \details - This can be used in implementing complex structures
+   * such as trees, etc.
+   */
+  RNNPointer get_head(const RNNPointer& p) {
+    return head[p];
   }
 
   /**
@@ -293,14 +303,14 @@ struct SimpleRNNBuilder : public RNNBuilder {
    * 
    * \param layers Number of layers
    * \param input_dim Dimension of the input
-   * \param hidden_dim Hiddent layer (and output) size
+   * \param hidden_dim Hidden layer (and output) size
    * \param model Model holding the parameters
    * \param support_lags Allow for auxiliary output?
    */
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
-                            Model* model,
+                            Model& model,
                             bool support_lags = false);
 
 protected:
@@ -367,7 +377,7 @@ private:
 namespace boost {
 namespace serialization {
 template<class Archive>
-void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int version)
+void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int)
 {
   ar & p.t;
 }

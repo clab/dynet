@@ -119,7 +119,26 @@ void TensorTools::Zero(Tensor& d) {
   Constant(d, 0);
 }
 
-void TensorTools::RandomBernoulli(Tensor& val, real p, real scale) {
+void TensorTools::Identity(Tensor& val) {
+  if(val.d.nd != 2 || val.d[0] != val.d[1])
+    throw std::runtime_error("Attempt to set a tensor that is not a square matrix to identity");
+  size_t pos = 0;
+#if HAVE_CUDA
+  float* t = new float[val.d.size()];
+  for(size_t i = 0; i < val.d[0]; ++i)
+    for(size_t j = 0; j < val.d[1]; ++j)
+      t[pos++] = (i==j?1:0);
+  CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+  delete[] t;
+#else
+  for(size_t i = 0; i < val.d[0]; ++i)
+    for(size_t j = 0; j < val.d[1]; ++j)
+      val.v[pos++] = (i==j?1:0);
+#endif
+}
+
+
+void TensorTools::RandomizeBernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
   auto b = [&] {return distribution(*rndeng) * scale;};
 #if HAVE_CUDA
@@ -157,10 +176,6 @@ void TensorTools::RandomizeUniform(Tensor& val, real left, real right) {
   generate(val.v, val.v + val.d.size(), b);
 #endif
 }
-
-// void TensorTools::Randomize(Tensor& d) {
-//   Randomize(d, sqrt(6) / sqrt(d.d.sum_dims()));
-// }
 
 template<class Archive>
 void Tensor::save(Archive& ar, const unsigned int ver) const {

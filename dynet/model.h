@@ -31,7 +31,7 @@ struct ParameterStorageBase {
   virtual ~ParameterStorageBase();
   friend class boost::serialization::access;
   template<class Archive> 
-  void serialize(Archive& ar, const unsigned int) {}
+  void serialize(Archive& /* ar */, const unsigned int) {}
 };
 
 // represents parameters (e.g., a weight matrix) that will be optimized
@@ -91,6 +91,9 @@ struct LookupParameterStorage : public ParameterStorageBase {
   template <class MyDevice>
   void accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& g);
   void accumulate_grad(unsigned index, const Tensor& g);
+  template <class MyDevice>
+  void accumulate_grads_dev(MyDevice & dev, unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
+  void accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
   void clear();
 
   // Initialize each individual lookup from the overall tensors
@@ -194,6 +197,11 @@ struct ParameterInitConst : public ParameterInit {
   virtual void initialize_params(Tensor & values) const override;
 private:
   float cnst;
+};
+
+struct ParameterInitIdentity : public ParameterInit {
+  ParameterInitIdentity() {}
+  virtual void initialize_params(Tensor & values) const override;
 };
 
 struct ParameterInitGlorot : public ParameterInit {

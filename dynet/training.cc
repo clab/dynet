@@ -55,10 +55,13 @@ void Trainer::rescale_and_reset_weight_decay() {
   const auto params = model->parameters_list();
   for (auto p : model->updated_parameters_list())
     params[p]->scale_parameters(weight_decay);
+  const auto lookup_params = model->parameters_list();
+  for (auto p : model->updated_lookup_parameters_list())
+    lookup_params[p]->scale_parameters(weight_decay);
   model->weight_decay.reset_weight_decay();
 }
 
-float Trainer::clip_gradients() {
+float Trainer::clip_gradients(real scale) {
   float gscale = 1;
   if (clipping_enabled) {
     // TODO should I handle updatebale differently?
@@ -67,9 +70,10 @@ float Trainer::clip_gradients() {
       cerr << "Magnitude of gradient is bad: " << gg << endl;
       abort();
     }
-    if (gg > clip_threshold) {
+    if (scale * gg > clip_threshold) {
       ++clips;
-      gscale = clip_threshold / gg;
+      ++clips_since_status;
+      gscale = clip_threshold / (scale * gg);
     }
   }
   return gscale;
@@ -84,7 +88,7 @@ void Trainer::update(real scale) {
   }
 
   // Perform gradient clipping and cycle through parameters
-  const float gscale = clip_gradients();
+  const float gscale = clip_gradients(scale);
   const auto & params = model->parameters_list();
   const auto & upd_params = model->updated_parameters_list();
   for(auto i : upd_params) {
@@ -94,11 +98,16 @@ void Trainer::update(real scale) {
   const auto & lookup_params = model->lookup_parameters_list();
   const auto & upd_lookup_params = model->updated_lookup_parameters_list();
   for(auto i : upd_lookup_params) {
-    for (auto j : lookup_params[i]->non_zero_grads)
-      update_lookup_params(scale, gscale, i, j);
+    if(sparse_updates_enabled) {
+      for (auto j : lookup_params[i]->non_zero_grads)
+        update_lookup_params(scale, gscale, i, j);
+    } else {
+      update_lookup_params(scale, gscale, i);
+    }
     lookup_params[i]->clear();
   }
   ++updates;
+  ++updates_since_status;
 
   model->weight_decay.update_weight_decay(); // update global weight scale
   if (model->weight_decay.parameters_need_rescaled())
@@ -125,6 +134,10 @@ void SimpleSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx,
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx]});
 }
+void SimpleSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_values, &p->all_grads});
+}
 #endif
 
 // --- MomentumSGDTrainer
@@ -145,6 +158,10 @@ void MomentumSGDTrainer::update_params(real scale, real gscale, size_t idx) {
 void MomentumSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]});
+}
+void MomentumSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h});
 }
 void MomentumSGDTrainer::alloc_impl() {
   vp = allocate_shadow_parameters(*model);
@@ -171,6 +188,10 @@ void AdagradTrainer::update_params(real scale, real gscale, size_t idx) {
 void AdagradTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]});
+}
+void AdagradTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h});
 }
 void AdagradTrainer::alloc_impl() {
   vp = allocate_shadow_parameters(*model);
@@ -199,6 +220,10 @@ void AdadeltaTrainer::update_params(real scale, real gscale, size_t idx) {
 void AdadeltaTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlg[idx].h[lidx], &hld[idx].h[lidx]});
+}
+void AdadeltaTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_values, &p->all_grads, &hlg[idx].all_h, &hld[idx].all_h});
 }
 void AdadeltaTrainer::alloc_impl() {
   hg = allocate_shadow_parameters(*model);
@@ -234,6 +259,11 @@ void RmsPropTrainer::update_lookup_params(real scale, real gscale, size_t idx, s
   // auto & p = model->lookup_parameters_list()[idx];
   // update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlg[idx].h[lidx], &hld[idx].h[lidx]});
 }
+void RmsPropTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  throw std::runtime_error("RMSProp optimization not implemented yet.");
+  // auto & p = model->lookup_parameters_list()[idx];
+  // update_rule(scale, gscale, {&p->all_values, &p->all_grads, &hlg[idx].all_h, &hld[idx].all_h});
+}
 void RmsPropTrainer::alloc_impl() {
   throw std::runtime_error("RMSProp optimization not implemented yet.");
   // hg.resize(model->parameters_list().size());
@@ -253,9 +283,8 @@ void AdamTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale,
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * beta_1 + ts[1]->tvec() * (1.f - beta_1);
   ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * beta_2 + ts[1]->tvec().square() * (1.f - beta_2);
-  float s1 = 1 - pow(beta_1, updates+1);
-  float s2 = 1 - pow(beta_2, updates+1);
-  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / ((ts[3]->tvec() / s2).sqrt() + epsilon) * (-eta / s1 / model->weight_decay.current_weight_decay());
+  float lr_t = eta * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ model->weight_decay.current_weight_decay();
+  ts[0]->tvec().device(*dev.edevice) -= ts[2]->tvec() / (ts[3]->tvec().sqrt() + epsilon) * lr_t;
 }
 DYNET_TRAINER_INST_DEV_IMPL(AdamTrainer)
 
@@ -267,6 +296,10 @@ void AdamTrainer::update_params(real scale, real gscale, size_t idx) {
 void AdamTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx]});
+}
+void AdamTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &lv[idx].all_h});
 }
 void AdamTrainer::alloc_impl() {
   m = allocate_shadow_parameters(*model);

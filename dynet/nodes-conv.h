@@ -50,12 +50,11 @@ struct KMaxPooling : public Node {
   unsigned k;
 };
 
-// with a single argument x \in R^{n x m}
-// y_i = \sum_j x_i,j
-// if you want to reweight the columns and then sum them, use MatrixMultiply
-struct SumColumns : public Node {
-  template <typename T> explicit SumColumns(const T& a) : Node(a) {}
+// sum along a single dimension
+struct SumDimension : public Node {
+  template <typename T> explicit SumDimension(const T& a, unsigned d) : Node(a), dimension(d) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  unsigned dimension;
 };
 
 } // namespace dynet
