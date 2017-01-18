@@ -8,20 +8,22 @@ Prerequisites
 
 DyNet relies on a number of external libraries including Boost, CMake,
 Eigen, and Mercurial (to install Eigen). Boost, CMake, and Mercurial can
-be installed from standard repositories, for example on Ubuntu Linux:
+be installed from standard repositories. 
+
+For example on **Ubuntu Linux**:
 
 ::
 
     sudo apt-get install libboost-all-dev cmake mercurial
 
-Or on OSX, first make sure the Apple Command Line Tools are installed, then
+Or on **Mac OSX**, first make sure the Apple Command Line Tools are installed, then
 get Boost, CMake, and Mercurial with either homebrew or macports:
 
 ::
 
     xcode-select --install
-    brew install boost cmake hg
-    sudo port install boost cmake mercurial
+    brew install boost cmake hg  # Using homebrew.
+    sudo port install boost cmake mercurial # Using macports.
 
 To compile DyNet you also need the `development version of the Eigen
 library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
@@ -32,6 +34,11 @@ the following command:
 ::
 
     hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
+    cd eigen
+    mkdir build && cd build
+    cmake ..
+    make install # sudo permissions might be necessary on Linux.
+    cd ../..
     
 The `-r NUM` specified a revision number that is known to work.
 Adventurous users can remove it and use the very latest version, at the risk of the code breaking / not compiling.
@@ -54,6 +61,7 @@ to generate the makefiles
     mkdir build
     cd build
     cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen
+
 
 Then compile, where "2" can be replaced by the number of cores on your
 machine
