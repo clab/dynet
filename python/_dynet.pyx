@@ -44,7 +44,7 @@ cdef class DynetParams:
     def __init__(self):
         pass
 
-    cdef from_args(self, shared_parameters=None):
+    cpdef from_args(self, shared_parameters=None):
         cdef int argc = len(sys.argv)
         cdef char** c_argv
         args = [bytearray(x, encoding="utf-8") for x in sys.argv]
@@ -59,27 +59,27 @@ cdef class DynetParams:
             self.cparams = dynet.extract_dynet_params(argc,c_argv, shared_parameters)
         free(c_argv)
 
-    cdef init(self):
+    cpdef init(self):
         dynet.initialize(self.cparams)
 
-    cdef set_mem(self, unsigned mem):
+    cpdef set_mem(self, unsigned mem):
         self.cparams.mem_descriptor = str(mem)
 
-    cdef set_random_seed(self, unsigned random_seed):
+    cpdef set_random_seed(self, unsigned random_seed):
         self.cparams.random_seed = random_seed
 
-    cdef set_weight_decay(self, float weight_decay):
+    cpdef set_weight_decay(self, float weight_decay):
         self.cparams.weight_decay = weight_decay
 
-    cdef set_shared_parameters(self, bool shared_parameters):
+    cpdef set_shared_parameters(self, bool shared_parameters):
         self.cparams.shared_parameters = shared_parameters
 
-    cdef set_requested_gpus(self, int requested_gpus):
+    cpdef set_requested_gpus(self, int requested_gpus):
         self.cparams.requested_gpus = requested_gpus
         self.cparams.ngpus_requested = True
         self.cparams.ids_requested = False
     
-    cdef set_gpu_mask(self, list gpu_mask):
+    cpdef set_gpu_mask(self, list gpu_mask):
         cdef vector[int] cgpu_mask
         for i in gpu_mask:
             if(i!=0 and i!=1):
