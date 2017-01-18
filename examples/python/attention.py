@@ -103,13 +103,6 @@ def decode(dec_lstm, vectors, output):
 
 
 def generate(input, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
-    def sample(probs):
-        rnd = random.random()
-        for i, p in enumerate(probs):
-            rnd -= p
-            if rnd <= 0: break
-        return i
-
     embedded = embed_sentence(input)
     encoded = encode_sentence(enc_fwd_lstm, enc_bwd_lstm, embedded)
 
@@ -126,9 +119,8 @@ def generate(input, enc_fwd_lstm, enc_bwd_lstm, dec_lstm):
 
         s = s.add_input(vector)
         out_vector = w * s.output() + b
-        probs = dy.softmax(out_vector)
-        probs = probs.vec_value()
-        next_char = sample(probs)
+        probs = dy.softmax(out_vector).vec_value()
+        next_char = probs.index(max(probs))
         last_output_embeddings = output_lookup[next_char]
         if int2char[next_char] == EOS:
             count_EOS += 1
