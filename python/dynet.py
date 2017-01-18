@@ -1,5 +1,5 @@
 import sys
-if '--dynet-viz' in sys.argv:
+if '--dynet-viz' in sys.argv or viz:
     sys.argv.remove('--dynet-viz')
     from dynet_viz import *
 elif '--dynet-gpu' in sys.argv:  # the python gpu switch.
@@ -17,3 +17,5 @@ else:
     from _dynet import *
 
 __version__ = 2.0
+
+init()
