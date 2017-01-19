@@ -29,7 +29,10 @@ object XorScala {
 
     val x_values = new FloatVector(2)
     val x = input(cg, dim(2), x_values)
-    var y_value = 0f
+
+    // Need a pointer representation of scalars so updates are tracked
+    val y_value = new_floatp()
+    floatp_assign(y_value, 0)
     val y = input(cg, y_value)
 
     val h = tanh(W * x + b)
@@ -49,7 +52,9 @@ object XorScala {
         val x2: Boolean = (mi / 2) % 2 > 0
         x_values.set(0, if (x1) 1 else -1)
         x_values.set(1, if (x2) 1 else -1)
-        y_value = if (x1 != x2) 1 else -1
+        floatp_assign(y_value, if (x1 != x2) 1 else -1)
+        // Clear cached computations since we have changed the inputs
+        cg.invalidate()
         loss += as_scalar(cg.forward(loss_expr))
         cg.backward(loss_expr)
         sgd.update(1.0f)
