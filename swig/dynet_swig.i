@@ -41,6 +41,10 @@ static void myInitialize()  {
 %include "std_vector.i"
 %include "std_string.i"
 %include "std_pair.i"
+%include "cpointer.i"
+
+%pointer_functions(int, intp);
+%pointer_functions(float, floatp);
 
 struct dynet::expr::Expression;
 
@@ -218,27 +222,27 @@ namespace expr {
 struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
-  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { }
-  //const Tensor& value() const { return pg->get_value(i); }
+  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { };
+  const Tensor& value();
 };
 
 // %template(ExpressionVector)     ::std::vector<Expression>;
 
 Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
-//Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
+//Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 Expression parameter(ComputationGraph& g, Parameter p);
 Expression const_parameter(ComputationGraph& g, Parameter p);
-Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
-//Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
-Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
-//Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
-Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
-//Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
-Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
-//Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
+//Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
+Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
+//Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
+Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
+//Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
+Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
+//Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
+Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 Expression zeroes(ComputationGraph& g, const Dim& d);
 Expression random_normal(ComputationGraph& g, const Dim& d);
 
