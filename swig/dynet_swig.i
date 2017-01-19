@@ -235,9 +235,9 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 Expression parameter(ComputationGraph& g, Parameter p);
 Expression const_parameter(ComputationGraph& g, Parameter p);
-//Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
+Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
-//Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
+Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 //Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
 Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
