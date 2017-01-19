@@ -272,8 +272,6 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
   }  // layers
   dropout_rate = 0.f;
   dropout_rate_recurrent = 0.f;
-  dropout_active = false;
-  hid = hidden_dim;
 }
 
 void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -319,11 +317,12 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
     if (dropout_rate > 0.f) {
       float retention_rate = 1.f - dropout_rate;
       float retention_rate_recurrent = 1.f - dropout_rate_recurrent;
-      //float scale = 1.f / retention_rate;
+      float scale = 1.f / retention_rate;
+      float scale_recurrent = 1.f / retention_rate_recurrent;
       // in
-      masks_i.push_back(random_bernoulli(*_cg, Dim({ idim}, batch_size), retention_rate, 1.0));
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ idim}, batch_size), retention_rate, scale));
       // h
-      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_recurrent, 1.0));
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_recurrent, scale_recurrent));
       masks.push_back(masks_i);
     }
   }
@@ -386,16 +385,12 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
       i_c_tm1 = c[prev][i];
     }
     // apply dropout according to https://arxiv.org/abs/1512.05287 (tied weights)
-    if (dropout_active) {
+    if (dropout_rate > 0.f) {
       in = cmult(in, masks[i][0]);
-      if (has_prev_state)
-        i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
+
     }
-    else if (dropout_rate > 0 && dropout_rate_recurrent > 0) {
-      in = in * (1.f - dropout_rate);
-      if (has_prev_state)
-        i_h_tm1 = i_h_tm1 * (1.f - dropout_rate_recurrent);
-    }
+    if (has_prev_state && dropout_rate_recurrent > 0.f)
+      i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
     // input
     Expression tmp;
     Expression i_ait;
@@ -474,7 +469,6 @@ void VanillaLSTMBuilder::set_dropout(float d) {
     throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_recurrent = d;
-  dropout_active = (dropout_rate > 0.f);
 }
 
 void VanillaLSTMBuilder::set_dropout(float d, float d_r) {
@@ -482,11 +476,11 @@ void VanillaLSTMBuilder::set_dropout(float d, float d_r) {
     throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_recurrent = d_r;
-  dropout_active = (dropout_rate > 0.f) && (dropout_rate_recurrent > 0.f);
 }
 
 void VanillaLSTMBuilder::disable_dropout() {
-  dropout_active = false;
+  dropout_rate = 0.f;
+  dropout_rate_recurrent = 0.f;
 }
 
 template<class Archive>
@@ -495,6 +489,7 @@ void VanillaLSTMBuilder::serialize(Archive& ar, const unsigned int) {
   ar & params;
   ar & layers;
   ar & dropout_rate;
+  ar & dropout_rate_recurrent;
   ar & hid;
 }
 DYNET_SERIALIZE_IMPL(VanillaLSTMBuilder);

@@ -134,8 +134,7 @@ public:
   std::vector<Expression> c0;
   unsigned layers;
   unsigned input_dim, hid;
-  bool dropout_active;
-  bool dropout_rate_recurrent;
+  float dropout_rate_recurrent;
 
 
 
