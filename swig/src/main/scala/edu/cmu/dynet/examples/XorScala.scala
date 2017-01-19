@@ -53,8 +53,6 @@ object XorScala {
         x_values.set(0, if (x1) 1 else -1)
         x_values.set(1, if (x2) 1 else -1)
         y_value.set(if (x1 != x2) 1 else -1)
-        // Clear cached computations since we have changed the inputs
-        cg.invalidate()
         loss += as_scalar(cg.forward(loss_expr))
         cg.backward(loss_expr)
         sgd.update(1.0f)
