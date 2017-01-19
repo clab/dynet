@@ -22,9 +22,6 @@ swig_add_module(dynet_swig java dynet_swig.i)
 # Link with dynet library
 swig_link_libraries(dynet_swig dynet)
 
-# Add a directory for the java jar
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/javajar)
-
 # Create jar file
 add_jar(
     dynet_swigJNI
@@ -58,14 +55,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_unsigned_int.java"
     "${CMAKE_SWIG_OUTDIR}/Tensor.java"
     "${CMAKE_SWIG_OUTDIR}/Trainer.java"
-    OUTPUT_DIR
-    "${CMAKE_CURRENT_BINARY_DIR}/javajar"
 )
-
-// Since the jar is going in javajar, we need to move the .jnilib file there too.
-file(RENAME
-     "${CMAKE_CURRENT_BINARY_DIR}/libdynet_swig.jnilib"
-     "${CMAKE_CURRENT_BINARY_DIR}/javajar/libdynet_swig.jnilib")
 
 # TODO(joelgrus): This is probably not defensive or robust enough.
 option(INCLUDE_SCALA_HELPERS "INCLUDE_SCALA_HELPERS" ON)
@@ -82,12 +72,11 @@ if(INCLUDE_SCALA_HELPERS)
     COMMENT "Running sbt"
     OUTPUT scala_helper_uberjar
     DEPENDS dynet_swigJNI
-    COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR}/javajar
+    COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
   )
 
   add_custom_target(scala_helper ALL DEPENDS scala_helper_uberjar)
 
 endif()
-
 

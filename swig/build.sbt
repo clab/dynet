@@ -3,7 +3,7 @@ name := "dynet_scala_helpers"
 
 scalaVersion := "2.11.8"
 
-val DEFAULT_BUILD_PATH = "../build/swig/javajar"
+val DEFAULT_BUILD_PATH = "../build/swig"
 
 // This is where `make` does all its work, and it's where we'll do all our work as well.
 val buildPath = {
@@ -21,6 +21,10 @@ val buildPath = {
   }
 }
 
+val uberjarPath = s"${buildPath}/dynet_swigJNI_scala.jar"
+
+excludeFilter in unmanagedJars := "dynet_swigJNI_scala.jar"
+
 // Look for the dynet_swig jar file there.
 unmanagedBase := file( buildPath ).getAbsoluteFile
 
@@ -28,10 +32,31 @@ unmanagedBase := file( buildPath ).getAbsoluteFile
 target := file(s"${buildPath}/target/")
 
 // Put the uberjar there.
-assemblyOutputPath in assembly := file(s"${buildPath}/../scalajar/dynet_swigJNI_scala.jar")
-    .getAbsoluteFile
+assemblyOutputPath in assembly := file(uberjarPath).getAbsoluteFile
 
 fork := true
+
+val removeUberjar = taskKey[Unit]("Remove Uberjar")
+
+removeUberjar := {
+  val uberjar = new java.io.File(uberjarPath)
+  if (uberjar.exists()) {
+    println("removing uberjar")
+    uberjar.delete()
+  } else {
+    println("nothing to remove")
+  }
+}
+
+assembly := {
+  removeUberjar.value
+  assembly.value
+}
+
+clean := {
+  removeUberjar.value
+  clean.value
+}
 
 // Don't include Scala libraries in the jar
 // see https://github.com/sbt/sbt-assembly/issues/3
