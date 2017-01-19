@@ -16,7 +16,7 @@ For example on **Ubuntu Linux**:
 
     sudo apt-get install libboost-all-dev cmake mercurial
 
-Or on **Mac OSX**, first make sure the Apple Command Line Tools are installed, then
+Or on **macOS**, first make sure the Apple Command Line Tools are installed, then
 get Boost, CMake, and Mercurial with either homebrew or macports:
 
 ::
@@ -28,8 +28,14 @@ get Boost, CMake, and Mercurial with either homebrew or macports:
 To compile DyNet you also need the `development version of the Eigen
 library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
 released versions, you may get assertion failures or compile errors.**
-If you don't have Eigen installed already, you can get it easily using
-the following command:
+If you are use Homebrew on macOS, you can install the development version
+as follows:
+
+::
+
+    brew install --HEAD eigen
+
+Otherwise, you can get and install Eigen using the following commands:
 
 ::
 
