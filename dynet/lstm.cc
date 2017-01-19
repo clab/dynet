@@ -495,6 +495,7 @@ void VanillaLSTMBuilder::serialize(Archive& ar, const unsigned int) {
   ar & params;
   ar & layers;
   ar & dropout_rate;
+  ar & hid;
 }
 DYNET_SERIALIZE_IMPL(VanillaLSTMBuilder);
 
