@@ -45,7 +45,8 @@ public class XorExample {
     Expression x = input(cg, makeDim(new int[]{2}), x_values);
 
     // Output value
-    float y_value = 0f;
+    SWIGTYPE_p_float y_value = new_floatp();
+    floatp_assign(y_value, 0f);
     Expression y = input(cg, y_value);
 
     // Hidden perceptron layer
@@ -72,7 +73,7 @@ public class XorExample {
         boolean x2 = (mi / 2) % 2 > 0;
         x_values.set(0, x1 ? 1 : -1);
         x_values.set(1, x2 ? 1 : -1);
-        y_value = (x1 != x2) ? 1 : -1;
+        floatp_assign(y_value, (x1 != x2) ? 1 : -1);
         loss += as_scalar(cg.forward(loss_expr));
         cg.backward(loss_expr);
         sgd.update(1.0f);

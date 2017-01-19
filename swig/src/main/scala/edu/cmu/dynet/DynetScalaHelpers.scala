@@ -6,6 +6,28 @@ import scala.language.implicitConversions
 
 object DynetScalaHelpers {
 
+  // The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with,
+  // these are more Scala-y wrappers that implicitly converts to the SWIG version.
+  class FloatPointer {
+    val floatp = new_floatp
+
+    def set(value: Float) = floatp_assign(floatp, value)
+
+    def value() = floatp_value(floatp)
+  }
+
+  implicit def toFloatp(fp: FloatPointer): SWIGTYPE_p_float = fp.floatp
+
+  class IntPointer {
+    val intp = new_intp
+
+    def set(value: Int) = intp_assign(intp, value)
+
+    def value() = intp_value(intp)
+  }
+
+  implicit def toIntp(ip: IntPointer): SWIGTYPE_p_int = ip.intp
+
   def dim(dims: Int*): Dim = {
     val dimInts = new LongVector
     dims.foreach(dimInts.add)
