@@ -3,7 +3,7 @@ name := "dynet_scala_helpers"
 
 scalaVersion := "2.11.8"
 
-val DEFAULT_BUILD_PATH = "../build/swig"
+val DEFAULT_BUILD_PATH = "../build/swig/javajar"
 
 // This is where `make` does all its work, and it's where we'll do all our work as well.
 val buildPath = {
@@ -28,7 +28,8 @@ unmanagedBase := file( buildPath ).getAbsoluteFile
 target := file(s"${buildPath}/target/")
 
 // Put the uberjar there.
-assemblyOutputPath in assembly := file(s"${buildPath}/dynet_swigJNI_scala.jar").getAbsoluteFile
+assemblyOutputPath in assembly := file(s"${buildPath}/../scalajar/dynet_swigJNI_scala.jar")
+    .getAbsoluteFile
 
 fork := true
 
