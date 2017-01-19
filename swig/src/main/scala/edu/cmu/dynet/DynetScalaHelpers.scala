@@ -6,8 +6,8 @@ import scala.language.implicitConversions
 
 object DynetScalaHelpers {
 
-  // The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with,
-  // these are more Scala-y wrappers that implicitly converts to the SWIG version.
+  // The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with;
+  // these are more Scala-y wrappers that implicitly convert to the SWIG versions.
   class FloatPointer {
     val floatp = new_floatp
 
