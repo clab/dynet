@@ -11,9 +11,9 @@ object DynetScalaHelpers {
   class FloatPointer {
     val floatp = new_floatp
 
-    def set(value: Float) = floatp_assign(floatp, value)
+    def set(value: Float): Unit = floatp_assign(floatp, value)
 
-    def value() = floatp_value(floatp)
+    def value(): Float = floatp_value(floatp)
   }
 
   implicit def toFloatp(fp: FloatPointer): SWIGTYPE_p_float = fp.floatp
@@ -21,9 +21,9 @@ object DynetScalaHelpers {
   class IntPointer {
     val intp = new_intp
 
-    def set(value: Int) = intp_assign(intp, value)
+    def set(value: Int): Unit = intp_assign(intp, value)
 
-    def value() = intp_value(intp)
+    def value(): Int = intp_value(intp)
   }
 
   implicit def toIntp(ip: IntPointer): SWIGTYPE_p_int = ip.intp
