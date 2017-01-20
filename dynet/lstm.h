@@ -4,6 +4,8 @@
 #include "dynet/dynet.h"
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
+#include <boost/serialization/version.hpp>
+
 
 using namespace dynet::expr;
 
@@ -38,12 +40,18 @@ struct LSTMBuilder : public RNNBuilder {
 
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
+  
+  void set_dropout(float d);
+  void set_dropout(float d, float d_h, float d_c);
+  void disable_dropout();
+  void set_dropout_masks(unsigned batch_size = 1);
 protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
+
 public:
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
@@ -64,8 +72,10 @@ public:
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
-  unsigned input_dim;
-  unsigned hidden_dim;
+  unsigned input_dim = 0;
+  unsigned hid = 0;
+
+  float dropout_rate_h = 0.f, dropout_rate_c = 0.f;
 
 private:
   friend class boost::serialization::access;
@@ -74,6 +84,8 @@ private:
   ComputationGraph  *_cg;
 
 };
+
+
 
 struct VanillaLSTMBuilder : public RNNBuilder {
   VanillaLSTMBuilder() = default;
@@ -134,7 +146,7 @@ public:
   std::vector<Expression> c0;
   unsigned layers;
   unsigned input_dim, hid;
-  float dropout_rate_recurrent;
+  float dropout_rate_h;
 
 
 
