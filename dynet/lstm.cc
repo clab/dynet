@@ -231,7 +231,7 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
       i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], dropped_c});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
-    in = ht[i] = tanh(cmult(i_ot, ph_t));
+    in = ht[i] = cmult(i_ot, ph_t);
   }
   return ht.back();
 }
