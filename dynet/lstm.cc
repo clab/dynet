@@ -10,7 +10,6 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-
 #include "dynet/nodes.h"
 #include "dynet/io-macros.h"
 
@@ -24,7 +23,7 @@ enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 LSTMBuilder::LSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) : layers(layers) {
+                         Model& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
@@ -49,6 +48,8 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
     params.push_back(ps);
   }  // layers
   dropout_rate = 0.f;
+  dropout_rate_h = 0.f;
+  dropout_rate_c = 0.f;
 }
 
 void LSTMBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -75,6 +76,7 @@ void LSTMBuilder::new_graph_impl(ComputationGraph& cg) {
     vector<Expression> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
   }
+  _cg = &cg;
 }
 
 // layout: 0..layers = c
@@ -94,8 +96,32 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   } else {
     has_initial_state = false;
   }
+  // Init dropout masks
+  set_dropout_masks();
 }
 
+void LSTMBuilder::set_dropout_masks(unsigned batch_size) {
+  masks.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    std::vector<Expression> masks_i;
+    unsigned idim = (i == 0) ? input_dim : hid;
+    if (dropout_rate > 0.f) {
+      float retention_rate = 1.f - dropout_rate;
+      float retention_rate_h = 1.f - dropout_rate_h;
+      float retention_rate_c = 1.f - dropout_rate_c;
+      float scale = 1.f / retention_rate;
+      float scale_h = 1.f / retention_rate_h;
+      float scale_c = 1.f / retention_rate_c;
+      // in
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ idim}, batch_size), retention_rate, scale));
+      // h
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_h, scale_h));
+      // c
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_c, scale_c));
+      masks.push_back(masks_i);
+    }
+  }
+}
 // TO DO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
 // Also is creating a new step something we want?
@@ -151,12 +177,28 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
       i_h_tm1 = h[prev][i];
       i_c_tm1 = c[prev][i];
     }
-    // apply dropout according to http://arxiv.org/pdf/1409.2329v5.pdf
-    if (dropout_rate) in = dropout(in, dropout_rate);
+
+    // apply dropout according to https://arxiv.org/abs/1512.05287 (tied weights)
+    // x
+    if (dropout_rate > 0.f) {
+      in = cmult(in, masks[i][0]);
+
+    }
+    // h
+    if (has_prev_state && dropout_rate_h > 0.f)
+      i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
+    // For c, create another variable since we still need full i_c_tm1 for the componentwise mult
+    Expression i_dropped_c_tm1;
+    if (has_prev_state) {
+      i_dropped_c_tm1 = i_c_tm1;
+      if (dropout_rate_c > 0.f)
+        i_dropped_c_tm1 = cmult(i_dropped_c_tm1, masks[i][2]);
+    }
+
     // input
     Expression i_ait;
     if (has_prev_state)
-      i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_c_tm1});
+      i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_dropped_c_tm1});
     else
       i_ait = affine_transform({vars[BI], vars[X2I], in});
     Expression i_it = logistic(i_ait);
@@ -179,16 +221,19 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
     }
 
     Expression i_aot;
+    // Drop c. Uses the same mask as c_tm1. is this justified?
+    Expression dropped_c = ct[i];
+    if (dropout_rate_c > 0.f)
+      dropped_c = cmult(dropped_c, masks[i][2]);
     if (has_prev_state)
-      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], ct[i]});
+      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], dropped_c});
     else
-      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], ct[i]});
+      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], dropped_c});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
     in = ht[i] = tanh(cmult(i_ot, ph_t));
   }
-  if (dropout_rate) return dropout(ht.back(), dropout_rate);
-  else return ht.back();
+  return ht.back();
 }
 
 void LSTMBuilder::copy(const RNNBuilder & rnn) {
@@ -239,13 +284,45 @@ void LSTMBuilder::load_parameters_pretraining(const string& fname) {
   }
 }
 
+void LSTMBuilder::set_dropout(float d) {
+  if (d < 0.f || d > 1.f)
+    throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_rate_h = d;
+  dropout_rate_c = d;
+}
+
+void LSTMBuilder::set_dropout(float d, float d_h, float d_c) {
+  if (d < 0.f || d > 1.f || d_h < 0.f || d_h > 1.f || d_c < 0.f || d_c > 1.f)
+    throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_rate_h = d_h;
+  dropout_rate_c = d_c;
+}
+
+void LSTMBuilder::disable_dropout() {
+  dropout_rate = 0.f;
+  dropout_rate_h = 0.f;
+  dropout_rate_c = 0.f;
+}
+
 template<class Archive>
 void LSTMBuilder::serialize(Archive& ar, const unsigned int) {
   ar & boost::serialization::base_object<RNNBuilder>(*this);
   ar & params;
   ar & layers;
   ar & dropout_rate;
+  // FOR COMPATIBILITY
+  if (dropout_rate_h > 0.f)
+    ar & dropout_rate_h;
+  if (dropout_rate_c > 0.f)
+    ar & dropout_rate_c;
+  if (hid > 0)
+    ar & hid;
+  if (input_dim > 0)
+    ar & input_dim;
 }
+
 DYNET_SERIALIZE_IMPL(LSTMBuilder);
 
 // Vanilla LSTM
@@ -271,7 +348,7 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
     params.push_back(ps);
   }  // layers
   dropout_rate = 0.f;
-  dropout_rate_recurrent = 0.f;
+  dropout_rate_h = 0.f;
 }
 
 void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -316,13 +393,13 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
     unsigned idim = (i == 0) ? input_dim : hid;
     if (dropout_rate > 0.f) {
       float retention_rate = 1.f - dropout_rate;
-      float retention_rate_recurrent = 1.f - dropout_rate_recurrent;
+      float retention_rate_h = 1.f - dropout_rate_h;
       float scale = 1.f / retention_rate;
-      float scale_recurrent = 1.f / retention_rate_recurrent;
+      float scale_h = 1.f / retention_rate_h;
       // in
       masks_i.push_back(random_bernoulli(*_cg, Dim({ idim}, batch_size), retention_rate, scale));
       // h
-      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_recurrent, scale_recurrent));
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_h, scale_h));
       masks.push_back(masks_i);
     }
   }
@@ -389,7 +466,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
       in = cmult(in, masks[i][0]);
 
     }
-    if (has_prev_state && dropout_rate_recurrent > 0.f)
+    if (has_prev_state && dropout_rate_h > 0.f)
       i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
     // input
     Expression tmp;
@@ -468,19 +545,19 @@ void VanillaLSTMBuilder::set_dropout(float d) {
   if (d < 0.f || d > 1.f)
     throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
-  dropout_rate_recurrent = d;
+  dropout_rate_h = d;
 }
 
-void VanillaLSTMBuilder::set_dropout(float d, float d_r) {
-  if (d < 0.f || d > 1.f || d_r < 0.f || d_r > 1.f)
+void VanillaLSTMBuilder::set_dropout(float d, float d_h) {
+  if (d < 0.f || d > 1.f || d_h < 0.f || d_h > 1.f)
     throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
-  dropout_rate_recurrent = d_r;
+  dropout_rate_h = d_h;
 }
 
 void VanillaLSTMBuilder::disable_dropout() {
   dropout_rate = 0.f;
-  dropout_rate_recurrent = 0.f;
+  dropout_rate_h = 0.f;
 }
 
 template<class Archive>
@@ -489,8 +566,9 @@ void VanillaLSTMBuilder::serialize(Archive& ar, const unsigned int) {
   ar & params;
   ar & layers;
   ar & dropout_rate;
-  ar & dropout_rate_recurrent;
+  ar & dropout_rate_h;
   ar & hid;
+  ar & input_dim;
 }
 DYNET_SERIALIZE_IMPL(VanillaLSTMBuilder);
 
