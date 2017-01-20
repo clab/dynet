@@ -558,8 +558,8 @@ string Softmax::as_string(const vector<string>& arg_names) const {
 
 Dim Softmax::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  if (!LooksLikeVector(xs[0])) {
-    ostringstream s; s << "Bad input dimensions in Softmax: " << xs;
+  if (xs[0].nd > 2) {
+    ostringstream s; s << "Bad input dimensions in Softmax, must be 2 or fewer: " << xs;
     throw std::invalid_argument(s.str());
   }
   return xs[0];
@@ -610,8 +610,8 @@ string LogSoftmax::as_string(const vector<string>& arg_names) const {
 
 Dim LogSoftmax::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  if (!LooksLikeVector(xs[0])) {
-    ostringstream s; s << "Bad input dimensions in LogSoftmax: " << xs;
+  if (xs[0].nd > 2) {
+    ostringstream s; s << "Bad input dimensions in LogSoftmax, must be 2 or fewer: " << xs;
     throw std::invalid_argument(s.str());
   }
   return xs[0];
