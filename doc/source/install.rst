@@ -28,14 +28,8 @@ get Boost, CMake, and Mercurial with either homebrew or macports:
 To compile DyNet you also need the `development version of the Eigen
 library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
 released versions, you may get assertion failures or compile errors.**
-If you are use Homebrew on macOS, you can install the development version
-as follows:
-
-::
-
-    brew install --HEAD eigen
-
-Otherwise, you can get and install Eigen using the following commands:
+If you don't have Eigen installed already, you can get it easily using
+the following command:
 
 ::
 
@@ -46,8 +40,14 @@ Otherwise, you can get and install Eigen using the following commands:
     make install # sudo permissions might be necessary on Linux.
     cd ../..
     
-The `-r NUM` specified a revision number that is known to work.
-Adventurous users can remove it and use the very latest version, at the risk of the code breaking / not compiling.
+The `-r NUM` specified a revision number that is known to work.  Adventurous
+users can remove it and use the very latest version, at the risk of the code
+breaking / not compiling. On macOS, you can install the latest development
+of Eigen using Homebrew:
+
+::
+
+    brew install --HEAD eigen
 
 Building
 --------
