@@ -16,7 +16,7 @@ For example on **Ubuntu Linux**:
 
     sudo apt-get install libboost-all-dev cmake mercurial
 
-Or on **Mac OSX**, first make sure the Apple Command Line Tools are installed, then
+Or on **macOS**, first make sure the Apple Command Line Tools are installed, then
 get Boost, CMake, and Mercurial with either homebrew or macports:
 
 ::
@@ -40,8 +40,14 @@ the following command:
     make install # sudo permissions might be necessary on Linux.
     cd ../..
     
-The `-r NUM` specified a revision number that is known to work.
-Adventurous users can remove it and use the very latest version, at the risk of the code breaking / not compiling.
+The `-r NUM` specified a revision number that is known to work.  Adventurous
+users can remove it and use the very latest version, at the risk of the code
+breaking / not compiling. On macOS, you can install the latest development
+of Eigen using Homebrew:
+
+::
+
+    brew install --HEAD eigen
 
 Building
 --------
