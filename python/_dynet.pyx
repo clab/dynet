@@ -1301,24 +1301,20 @@ class BiRNNBuilder(object):
              expressions. For many cases, this suffices. 
              transduce is much more memory efficient than add_inputs. 
         """
-        for e in es:
-            ensure_freshness(e)
-        for (fb,bb) in self.builder_layers[:-1]:
-            fs = fb.initial_state().transduce(es)
-            bs = bb.initial_state().transduce(reversed(es))
-            es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
+        es = self.transduce(es, remaining_layer=-1)
         (fb,bb) = self.builder_layers[-1]
         fs = fb.initial_state().add_inputs(es)
         bs = bb.initial_state().add_inputs(reversed(es))
         return [(f,b) for f,b in zip(fs, reversed(bs))]
 
-    def transduce(self, es):
+    def transduce(self, es, remaining_layer=None):
         """
         returns the list of output Expressions obtained by adding the given inputs
         to the current state, one by one, to both the forward and backward RNNs, 
         and concatenating.
-        
+
         @param es: a list of Expression
+        @param remaining_layer: index of first layer to not evaluate (None (default) to evaluate all layers)
 
         see also add_inputs(xs)
 
@@ -1334,11 +1330,29 @@ class BiRNNBuilder(object):
         """
         for e in es:
             ensure_freshness(e)
-        for (fb,bb) in self.builder_layers:
+        for (fb,bb) in self.builder_layers[:remaining_layer]:
             fs = fb.initial_state().transduce(es)
             bs = bb.initial_state().transduce(reversed(es))
             es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
         return es
+    
+    def transduce_final(self, es):
+        """
+        returns the Expression obtained by concatenating of the last hidden states 
+        of both the forward and backward RNNs obtained by adding the given inputs
+        to the initial states, layer by layer.
+        
+        @param es: a list of Expression
+        """
+        es = self.transduce(es, remaining_layer=-1)
+        (fb,bb) = self.builder_layers[-1]
+        f = fb.initial_state()
+        for e in es:
+            f = f.add_input(e)
+        b = bb.initial_state()
+        for e in reversed(es):
+            b = b.add_input(e)
+        return concatenate(f.h()[-1], b.h()[-1])
 
 cdef class RNNState: # {{{
     """
