@@ -38,7 +38,8 @@ DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
     used[1] = stoi(strs[1]);
     used[2] = stoi(strs[2]);
   } else {
-    throw invalid_argument_format("the format of --dynet-mem is invalid");
+    ostringstream s; s<<"the format of --dynet-mem is invalid:"<<descriptor;
+    throw std::invalid_argument(s.str());
   }
 }
 
