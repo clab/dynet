@@ -25,6 +25,11 @@ class cuda_exception : public std::runtime_error {
   cuda_exception(const std::string& what_arg) : runtime_error(what_arg) {}
 };
 
+// this is throw when the initial argument is in an invalid format
+class invalid_argument_format : public std::invalid_argument {
+  public:
+    invalid_argument_format(const std::string& what_arg):invalid_argument(what_arg){}
+};
 } // namespace dynet
 
 #endif
