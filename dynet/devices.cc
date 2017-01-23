@@ -7,6 +7,7 @@
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
+#include "dynet/except.h"
 
 using namespace std;
 
@@ -36,6 +37,9 @@ DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
     used[0] = stoi(strs[0]);
     used[1] = stoi(strs[1]);
     used[2] = stoi(strs[2]);
+  } else {
+    ostringstream s; s<<"the format of --dynet-mem is invalid:"<<descriptor;
+    throw std::invalid_argument(s.str());
   }
 }
 
