@@ -1,3 +1,9 @@
+/**
+ * \file lstm.h
+ * \brief Helper structures to build recurrent units
+ *
+ * \details TODO: Create documentation and explain rnns, etc...
+ */
 #ifndef DYNET_LSTM_H_
 #define DYNET_LSTM_H_
 
@@ -12,9 +18,36 @@ using namespace dynet::expr;
 namespace dynet {
 
 class Model;
-
+/**
+ * \ingroup rnnbuilders
+ * \brief LSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
+ *
+ * \details More specifically, here are the equations for the dynamics of this cell :
+ *
+ * \f$
+ * \begin{split}
+    i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+W_{ic}c_{t-1}+b_i)\\
+    \tilde{c_t} & = \tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\
+    c_t & = c_{t-1}\circ (1-i_t) + \tilde{c_t}\circ i_t\\
+     & = c_{t-1} + (\tilde{c_t}-c_{t-1})\circ i_t\\
+    o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+W_{oc}c_{t}+b_o)\\
+    h_t & = \tanh(c_t)\circ o_t\\
+\end{split}
+\f$
+ */
 struct LSTMBuilder : public RNNBuilder {
+  /**
+   * \brief Default constructor
+   */
   LSTMBuilder() = default;
+  /**
+   * \brief Constructor for the LSTMBuilder
+   *
+   * \param layers Number of layers
+   * \param input_dim Dimention of the input \f$x_t\f$
+   * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
+   * \param model Model holding the parameters
+   */
   explicit LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
@@ -27,6 +60,11 @@ struct LSTMBuilder : public RNNBuilder {
     for (auto my_h : final_h()) ret.push_back(my_h);
     return ret;
   }
+  /**
+   * @brief Number of components in `h_0`
+   * @details For `LSTMBuilder`, this corresponds to `2 * layers` because it includes the initial cell state \f$c_0\f$
+   * @return `2 * layers`
+   */
   unsigned num_h0_components() const override { return 2 * layers; }
 
   std::vector<Expression> get_h(RNNPointer i) const override { return (i == -1 ? h0 : h[i]); }
@@ -40,10 +78,48 @@ struct LSTMBuilder : public RNNBuilder {
 
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
-  
+  /**
+   * \brief Set the dropout rates to a unique value
+   * \details This has the same effect as `set_dropout(d,d_h,d_c)` except that all the dropout rates are set to the same value.
+   * \param d Dropout rate to be applied on all of \f$x,h,c\f$
+   */
   void set_dropout(float d);
+  /**
+   * \brief Set the dropout rates
+   * \details The dropout implemented here is an adaptation of the variational dropout with tied weights introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
+   * More specifically, dropout masks \f$\mathbf{z_x}\sim \mathrm{Bernoulli}(1-d_x)\f$,\f$\mathbf{z_h}\sim \mathrm{Bernoulli}(1-d_h)\f$,\f$\mathbf{z_c}\sim \mathrm{Bernoulli}(1-d_c)\f$ are sampled at the start of each sequence.
+   * The dynamics of the cell are then modified to :
+   *
+   * \f$
+   * \begin{split}
+    i_t & =\sigma(W_{ix}(\frac 1 {1-d_x} {\mathbf{z_x}} \circ x_t)+W_{ih}(\frac 1 {1-d_h} {\mathbf{z_h}} \circ h_{t-1})+W_{ic}(\frac 1 {1-d_c} {\mathbf{z_c}} \circ c_{t-1})+b_i)\\
+    \tilde{c_t} & = \tanh(W_{cx}(\frac 1 {1-d_x} {\mathbf{z_x}} \circ x_t)+W_{ch}(\frac 1 {1-d_h} {\mathbf{z_h}} \circ h_{t-1})+b_c)\\
+    c_t & = c_{t-1}\circ (1-i_t) + \tilde{c_t}\circ i_t\\
+     & = c_{t-1} + (\tilde{c_t}-c_{t-1})\circ i_t\\
+    o_t & = \sigma(W_{ox}(\frac 1 {1-d_x} {\mathbf{z_x}} \circ x_t)+W_{oh}(\frac 1 {1-d_h} {\mathbf{z_h}} \circ h_{t-1})+W_{oc}(\frac 1 {1-d_c} {\mathbf{z_c}} \circ c_{t})+b_o)\\
+    h_t & = \tanh(c_t)\circ o_t\\
+  \end{split}
+  \f$
+   *
+   * For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+   * \param d Dropout rate \f$d_x\f$ for the input \f$x_t\f$
+   * \param d_h Dropout rate \f$d_x\f$ for the output \f$h_t\f$
+   * \param d_c Dropout rate \f$d_x\f$ for the cell \f$c_t\f$
+   */
   void set_dropout(float d, float d_h, float d_c);
+  /**
+   * \brief Set all dropout rates to 0
+   * \details This is equivalent to `set_dropout(0)` or `set_dropout(0,0,0)`
+   *
+   */
   void disable_dropout();
+  /**
+   * \brief Set dropout masks at the beginning of a sequence for a specific bathc size
+   * \details If this function is not called on batched input, the same mask will be applied across
+   * all batch elements. Use this to apply different masks to each batch element
+   *
+   * \param batch_size Batch size
+   */
   void set_dropout_masks(unsigned batch_size = 1);
 protected:
   void new_graph_impl(ComputationGraph& cg) override;
@@ -86,9 +162,35 @@ private:
 };
 
 
-
+/**
+ * \ingroup rnnbuilders
+ * @brief VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
+ * @details This cell runs according to the following dynamics :
+ *
+ * \f$
+ * \begin{split}
+    i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+b_i)\\
+    f_t & = \sigma(W_{fx}x_t+W_{fh}h_{t-1}+b_f)\\
+    o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+b_o)\\
+    \tilde{c_t} & = \tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\
+    c_t & = c_{t-1}\circ f_t + \tilde{c_t}\circ i_t\\
+    h_t & = \tanh(c_t)\circ o_t\\
+   \end{split}
+ * \f$
+ */
 struct VanillaLSTMBuilder : public RNNBuilder {
+  /**
+   * @brief Default Constructor
+   */
   VanillaLSTMBuilder() = default;
+  /**
+   * \brief Constructor for the VanillaLSTMBuilder
+   *
+   * \param layers Number of layers
+   * \param input_dim Dimention of the input \f$x_t\f$
+   * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
+   * \param model Model holding the parameters
+   */
   explicit VanillaLSTMBuilder(unsigned layers,
                               unsigned input_dim,
                               unsigned hidden_dim,
@@ -114,10 +216,47 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
-
+  /**
+   * \brief Set the dropout rates to a unique value
+   * \details This has the same effect as `set_dropout(d,d_h)` except that all the dropout rates are set to the same value.
+   * \param d Dropout rate to be applied on all of \f$x,h\f$
+   */
   void set_dropout(float d);
+  /**
+   * \brief Set the dropout rates
+   * \details The dropout implemented here is the variational dropout with tied weights introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
+   * More specifically, dropout masks \f$\mathbf{z_x}\sim \mathrm{Bernoulli}(1-d_x)\f$,\f$\mathbf{z_h}\sim \mathrm{Bernoulli}(1-d_h)\f$ are sampled at the start of each sequence.
+   * The dynamics of the cell are then modified to :
+   *
+   * \f$
+   * \begin{split}
+    i_t & =\sigma(W_{ix}(\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ih}(\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_i)\\
+    f_t & = \sigma(W_{fx}(\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{fh}(\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_f)\\
+    o_t & = \sigma(W_{ox}(\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{oh}(\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_o)\\
+    \tilde{c_t} & = \tanh(W_{cx}(\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\
+    c_t & = c_{t-1}\circ f_t + \tilde{c_t}\circ i_t\\
+    h_t & = \tanh(c_t)\circ o_t\\
+   \end{split}
+   * \f$
+   *
+   * For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+   * \param d Dropout rate \f$d_x\f$ for the input \f$x_t\f$
+   * \param d_h Dropout rate \f$d_x\f$ for the output \f$h_t\f$
+   */
   void set_dropout(float d, float d_r);
+  /**
+   * \brief Set all dropout rates to 0
+   * \details This is equivalent to `set_dropout(0)` or `set_dropout(0,0,0)`
+   *
+   */
   void disable_dropout();
+  /**
+   * \brief Set dropout masks at the beginning of a sequence for a specific bathc size
+   * \details If this function is not called on batched input, the same mask will be applied across
+   * all batch elements. Use this to apply different masks to each batch element
+   *
+   * \param batch_size Batch size
+   */
   void set_dropout_masks(unsigned batch_size = 1);
 protected:
   void new_graph_impl(ComputationGraph& cg) override;

@@ -1,6 +1,6 @@
 /**
  * \file rnn.h
- * \defgroup rnnbuilders
+ * \defgroup rnnbuilders rnnbuilders
  * \brief Helper structures to build recurrent units
  * 
  * \details TODO: Create documentation and explain rnns, etc...
