@@ -1105,7 +1105,7 @@ Expression nobackprop(const Expression& x);
  *    \f$
  *      \begin{pmatrix}
  *        x_{1,1} & x_{3,1} & x_{2,2} & x_{1,3} & x_{3,3} & x_{2,4} \\
- *        x_{1,2} & x_{1,2} & x_{3,2} & x_{2,3} & x_{1,4} & x_{3,4} \\
+ *        x_{2,1} & x_{1,2} & x_{3,2} & x_{2,3} & x_{1,4} & x_{3,4} \\
  *      \end{pmatrix}
  *    \f$
  *
