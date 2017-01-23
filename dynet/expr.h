@@ -1388,6 +1388,11 @@ Expression logdet(const Expression& x);
 Expression trace_of_product(const Expression& x, const Expression& y);
 
 
-} }
+}
+// Because expressions are now such a fundamental part of DyNet it doesn't
+// make much sense to keep them in separate namespaces, so we import expr
+// to the dynet namespace.
+using namespace expr;
+}
 
 #endif
