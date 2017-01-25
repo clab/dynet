@@ -6,6 +6,27 @@ import scala.language.implicitConversions
 
 object DynetScalaHelpers {
 
+  import scala.collection.JavaConverters._
+  import java.util.Collection
+
+  // The collection constructors for the _Vector types require java.util.Collection[javatype] input,
+  // so here are some implicit conversions from Seq[scalatype] to make them easier to work with
+  implicit def convertFloatsToFloats(values: Seq[Float]): Collection[java.lang.Float] = {
+    values.map(float2Float).asJavaCollection
+  }
+
+  implicit def convertDoublesToFloats(values: Seq[Double]): Collection[java.lang.Float] = {
+    convertFloatsToFloats(values.map(_.toFloat))
+  }
+
+  implicit def convertDoublesToDoubles(values: Seq[Double]): Collection[java.lang.Double] = {
+    values.map(double2Double).asJavaCollection
+  }
+
+  implicit def convertIntsToIntegers(values: Seq[Int]): Collection[java.lang.Integer] = {
+    values.map(int2Integer).asJavaCollection
+  }
+
   // The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with;
   // these are more Scala-y wrappers that implicitly convert to the SWIG versions.
   class FloatPointer {
