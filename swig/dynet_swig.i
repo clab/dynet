@@ -37,6 +37,28 @@ static void myInitialize()  {
 }
 %}
 
+//
+// Macro to generate extra vector constructors that take a java Collection,
+// needs to be declared + used before we include "std_vector.i"
+//
+
+%define VECTORCONSTRUCTOR(ctype, javatype, vectortype)
+%typemap(javacode) std::vector<ctype> %{
+  public vectortype(java.util.Collection<javatype> values) {
+     this(values.size());
+     int i = 0;
+     for (java.util.Iterator<javatype> it = values.iterator(); it.hasNext(); i++) {
+         javatype value = it.next();
+         this.set(i, value);
+     }
+  }
+%}
+%enddef
+
+VECTORCONSTRUCTOR(float, Float, FloatVector)
+VECTORCONSTRUCTOR(double, Double, DoubleVector)
+VECTORCONSTRUCTOR(int, Integer, IntVector)
+
 // Useful SWIG libraries
 %include "std_vector.i"
 %include "std_string.i"
