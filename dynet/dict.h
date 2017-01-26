@@ -58,7 +58,7 @@ public:
     if (map_unk)
       throw std::runtime_error("Set UNK more than one time");
   
-    // temporarily unfrozen the dictionary to allow the add of the UNK
+    // temporarily unfreeze the dictionary to allow the addition of the UNK
     frozen = false;
     unk_id = convert(word);
     frozen = true;

@@ -45,7 +45,7 @@ struct Dim {
    * \brief Initialize from a list of dimensions
    * \details The batch dimension is 1 in this case (non-batched expression)
    *
-   * \param x List of dimentions
+   * \param x List of dimensions
    */
   Dim(std::initializer_list<unsigned int> x) : nd(0), bd(1) {
     for (auto v : x) d[nd++] = v;
@@ -53,7 +53,7 @@ struct Dim {
   /**
    * \brief Initialize from a list of dimensions and a batch size
    *
-   * \param x  List of dimentions
+   * \param x  List of dimensions
    * \param b Batch size
    */
   Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(0), bd(b) {
@@ -63,7 +63,7 @@ struct Dim {
    * \brief Initialize from a vector of dimensions
    * \details The batch dimension is 1 in this case (non-batched expression)
    *
-   * \param x Array of dimentions
+   * \param x Array of dimensions
    */
   Dim(const std::vector<long> & x) : nd(0), bd(1) {
     for (auto v : x) d[nd++] = v;
@@ -71,7 +71,7 @@ struct Dim {
   /**
      * \brief Initialize from a vector of dimensions and a batch size
      *
-     * \param x Vector of dimentions
+     * \param x Vector of dimensions
      * \param b Batch size
      */
   Dim(const std::vector<long> & x, unsigned int b) : nd(0), bd(b) {

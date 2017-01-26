@@ -20,7 +20,7 @@ namespace dynet {
 class Model;
 /**
  * \ingroup rnnbuilders
- * \brief LSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
+ * \brief LSTMBuilder creates an LSTM unit with coupled input and forget gates as well as peephole connections.
  *
  * \details More specifically, here are the equations for the dynamics of this cell :
  *
@@ -44,8 +44,8 @@ struct LSTMBuilder : public RNNBuilder {
    * \brief Constructor for the LSTMBuilder
    *
    * \param layers Number of layers
-   * \param input_dim Dimention of the input \f$x_t\f$
-   * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
+   * \param input_dim Dimension of the input \f$x_t\f$
+   * \param hidden_dim Dimension of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model Model holding the parameters
    */
   explicit LSTMBuilder(unsigned layers,
@@ -129,14 +129,17 @@ protected:
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
 public:
-  // first index is layer, then ...
+  // first index is layer, then each vector contains Parameters for:
+  // x2i, h2i, c2i, bi, x2o, h2o, c2o, bo, x2c, h2c, bc
   std::vector<std::vector<Parameter>> params;
 
-  // first index is layer, then ...
+  // first index is layer, then each vector contains Expressions for:
+  // x2i, h2i, c2i, bi, x2o, h2o, c2o, bo, x2c, h2c, bc
   std::vector<std::vector<Expression>> param_vars;
 
-  // first index is layer, then ...
   // masks for Gal dropout
+  // first index is layer, then each vector contains Expressions for:
+  // input mask, hidden mask, and memory mask.
   std::vector<std::vector<Expression>> masks;
 
   // first index is time, second is layer
@@ -164,7 +167,7 @@ private:
 
 /**
  * \ingroup rnnbuilders
- * @brief VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
+ * @brief VanillaLSTM allows the creation of a "standard" LSTM, ie with decoupled input and forget gates and no peephole connections
  * @details This cell runs according to the following dynamics :
  *
  * \f$
@@ -187,8 +190,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \brief Constructor for the VanillaLSTMBuilder
    *
    * \param layers Number of layers
-   * \param input_dim Dimention of the input \f$x_t\f$
-   * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
+   * \param input_dim Dimension of the input \f$x_t\f$
+   * \param hidden_dim Dimension of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model Model holding the parameters
    */
   explicit VanillaLSTMBuilder(unsigned layers,
