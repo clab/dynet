@@ -75,14 +75,16 @@ struct RNNLanguageModel {
     vector<Expression> fwds(slen);
     vector<Expression> revs(slen);
 
-    // read sequence from left to right
-    l2rbuilder.add_input(lookup(cg, p_w, kSOS));
+    // set words, adding noise during training (non-eval)
     for (unsigned t = 0; t < slen; ++t) {
       i_words[t] = lookup(cg, p_w, sent[t]);
       if (!eval) { i_words[t] = noise(i_words[t], 0.1); }
-      fwds[t] = l2rbuilder.add_input(i_words[t]);
     }
 
+    // read sequence from left to right
+    l2rbuilder.add_input(lookup(cg, p_w, kSOS));
+    for (unsigned t = 0; t < slen; ++t)
+      fwds[t] = l2rbuilder.add_input(i_words[t]);
     // read sequence from right to left
     r2lbuilder.add_input(lookup(cg, p_w, kEOS));
     for (unsigned t = 0; t < slen; ++t)
@@ -96,6 +98,8 @@ struct RNNLanguageModel {
         Expression i_t = affine_transform({i_tbias, i_th2t, i_th});
         if (cor) {
           vector<float> dist = as_vector(cg.incremental_forward(i_t));
+
+          // Find best tag according to the distribution
           double best = -9e99;
           int besti = -1;
           for (int i = 0; i < dist.size(); ++i) {
@@ -103,10 +107,9 @@ struct RNNLanguageModel {
           }
           if (tags[t] == besti) (*cor)++;
         }
-        if (tags[t] != kNONE) {
-          Expression i_err = pickneglogsoftmax(i_t, tags[t]);
-          errs.push_back(i_err);
-        }
+
+        Expression i_err = pickneglogsoftmax(i_t, tags[t]);
+        errs.push_back(i_err);
       }
     }
     return sum(errs);
@@ -224,6 +227,8 @@ int main(int argc, char** argv) {
       auto& sent = training[order[si]];
       ++si;
       Expression loss_expr = lm.BuildTaggingGraph(sent.first, sent.second, cg, &correct, &ttags);
+
+      // Run forward pass, backpropagate, and do an update
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
       sgd->update(1.0);
