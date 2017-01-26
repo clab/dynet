@@ -13,7 +13,6 @@
 
 #include <iostream>
 #include <fstream>
-#include <regex>
 #include <sstream>
 
 #include <boost/algorithm/string/join.hpp>
