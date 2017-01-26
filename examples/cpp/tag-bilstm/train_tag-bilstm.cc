@@ -155,6 +155,7 @@ int main(int argc, char** argv) {
   }
   d.freeze(); // no new word types allowed
   td.freeze(); // no new tag types allowed
+  d.set_unk("UNKNOWN_WORD");
   VOCAB_SIZE = d.size();
   TAG_SIZE = td.size();
 
