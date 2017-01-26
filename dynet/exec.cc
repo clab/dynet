@@ -41,7 +41,9 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
-  assert(i < cg.nodes.size());
+  if (((unsigned)i) >= cg.nodes.size()) {
+    throw std::invalid_argument("variable index is larger than graph size:" + std::to_string(i) +" vs. "+ std::to_string(cg.nodes.size()));
+  }
 
   // free any old memory if this is a new CG
   if (num_nodes_evaluated == 0)
