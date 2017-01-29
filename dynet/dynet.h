@@ -58,7 +58,7 @@ inline void swap(VariableIndex& i1, VariableIndex& i2) {
 }
 
 struct ComputationGraph {
-  ComputationGraph();
+  ComputationGraph(bool=false, bool=false);
   ~ComputationGraph();
 
   // INPUTS
@@ -132,6 +132,8 @@ struct ComputationGraph {
   std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
 
   ExecutionEngine* ee;  // handles the execution
+  bool immediate_compute;
+  bool check_validity;
  private:
   void set_dim_for_new_node(const VariableIndex& i);
 
