@@ -85,8 +85,10 @@ void Node::backward(const std::vector<const Tensor*>& xs,
   }
 }
 
-ComputationGraph::ComputationGraph() :
+ComputationGraph::ComputationGraph(bool ic, bool cv) :
   ee(new SimpleExecutionEngine(*this)) {
+  immediate_compute = ic;
+  check_validity = cv;
   ++n_hgs;
   if (n_hgs > 1) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
@@ -277,6 +279,14 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
     ++ai;
   }
   node->dim = node->dim_forward(xds);
+  if (immediate_compute) {
+    const Tensor& value = incremental_forward(i);
+    if (check_validity)
+    {
+      bool valid = value.is_valid();
+      assert(valid);
+    }
+  }
 }
 
 const Tensor& ComputationGraph::incremental_forward(const expr::Expression& last) { return ee->incremental_forward(last.i); }
