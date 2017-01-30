@@ -102,12 +102,73 @@ struct LookupParameterStorage;
 
 // declarations from dynet/dim.h
 
+%rename(get) Dim::operator[];
+
+%typemap(javacode) Dim %{
+  public Dim(long... values) {
+    this();
+
+    int i = 0;
+    for (long l: values) {
+      this.resize(i + 1);
+      this.set(i, l);
+      i++;
+    }
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    // must be the same class
+    if (obj instanceof $javaclassname) {
+      $javaclassname other = ($javaclassname)obj;
+      // must have the same shapes
+      if (this.ndims() != other.ndims() ||
+          this.batch_elems() != other.batch_elems()) return false;
+
+      // must have the same values for every dim
+      for (int i = 0; i < this.ndims(); i++) {
+        if (this.get(i) != other.get(i)) return false;
+      }
+
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    int hash = 17 * (int)this.ndims() + (int)this.batch_elems();
+    for (int i = 0; i < this.ndims(); i++) {
+      hash = hash * 31 + (int)this.get(i);
+    }
+    return hash;
+  }
+%}
+
 struct Dim {
   Dim() : nd(0), bd(1) {}
   Dim(const std::vector<long> & x);
   Dim(const std::vector<long> & x, unsigned int b);
 
   unsigned int size();
+  unsigned int batch_size();
+  unsigned int sum_dims();
+
+  Dim truncate();
+  Dim single_batch();
+
+  void resize(unsigned int i);
+  unsigned int ndims();
+  unsigned int rows();
+  unsigned int cols();
+  unsigned int batch_elems();
+  void set(unsigned int i, unsigned int s);
+  unsigned int operator[](unsigned int i);
+  unsigned int size(unsigned int i);
+
+  void delete_dim(unsigned int i);
+
+  Dim transpose();
 };
 
 // declarations from dynet/model.h
