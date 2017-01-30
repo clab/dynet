@@ -9,6 +9,7 @@ add_definitions (-DBOOST_TEST_DYN_LINK)
 set(test_dynet_SRCS
     test-nodes.cc
     test-trainers.cc
+    test-io.cc
 )
 
 add_executable (test-dynet test-dynet.cc ${test_dynet_SRCS})
