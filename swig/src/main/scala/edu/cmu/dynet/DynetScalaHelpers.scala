@@ -55,6 +55,10 @@ object DynetScalaHelpers {
     new Dim(dimInts)
   }
 
+  implicit def seqToDim(dims: Seq[Int]): Dim = {
+    new Dim(dims.map(_.toLong):_*)
+  }
+
   implicit class Untensor(t: Tensor) {
     def toFloat: Float = as_scalar(t)
     def toVector: FloatVector = as_vector(t)
