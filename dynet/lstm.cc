@@ -82,6 +82,20 @@ void LSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 // layout: 0..layers = c
 //         layers+1..2*layers = h
 void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
+  // Check input dim and hidden dim
+  if (input_dim != params[0][X2I].dim()[1]) {
+    cerr << "Warning : LSTMBuilder input dimension " << input_dim
+         << " doesn't match with parameter dimension " << params[0][X2I].dim()[1]
+         << ". Setting input_dim to " << params[0][X2I].dim()[1] << endl;
+    input_dim = params[0][X2I].dim()[1];
+  }
+  if (hid != params[0][X2I].dim()[0]) {
+    cerr << "Warning : LSTMBuilder hidden dimension " << hid
+         << " doesn't match with parameter dimension " << params[0][X2I].dim()[0]
+         << ". Setting hid to " << params[0][X2I].dim()[0] << endl;
+    hid = params[0][X2I].dim()[0];
+  }
+
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
@@ -312,15 +326,6 @@ void LSTMBuilder::serialize(Archive& ar, const unsigned int) {
   ar & params;
   ar & layers;
   ar & dropout_rate;
-  // FOR COMPATIBILITY
-  if (dropout_rate_h > 0.f)
-    ar & dropout_rate_h;
-  if (dropout_rate_c > 0.f)
-    ar & dropout_rate_c;
-  if (hid > 0)
-    ar & hid;
-  if (input_dim > 0)
-    ar & input_dim;
 }
 
 DYNET_SERIALIZE_IMPL(LSTMBuilder);
