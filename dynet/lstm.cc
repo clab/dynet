@@ -321,11 +321,18 @@ void LSTMBuilder::disable_dropout() {
 }
 
 template<class Archive>
-void LSTMBuilder::serialize(Archive& ar, const unsigned int) {
+void LSTMBuilder::serialize(Archive& ar, const unsigned int version ) {
   ar & boost::serialization::base_object<RNNBuilder>(*this);
   ar & params;
   ar & layers;
   ar & dropout_rate;
+  // Backward compatibility
+  if (version > 0) {
+    ar & dropout_rate_h;
+    ar & dropout_rate_c;
+    ar & input_dim;
+    ar & hid;
+  }
 }
 
 DYNET_SERIALIZE_IMPL(LSTMBuilder);
@@ -578,3 +585,4 @@ void VanillaLSTMBuilder::serialize(Archive& ar, const unsigned int) {
 DYNET_SERIALIZE_IMPL(VanillaLSTMBuilder);
 
 } // namespace dynet
+
