@@ -299,4 +299,8 @@ private:
 
 } // namespace dynet
 
+
+// Class version
+BOOST_CLASS_VERSION(dynet::LSTMBuilder, 1);
+
 #endif
