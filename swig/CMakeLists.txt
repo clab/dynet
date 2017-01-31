@@ -40,6 +40,15 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/LSTMBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/Model.java"
     "${CMAKE_SWIG_OUTDIR}/Parameter.java"
+    "${CMAKE_SWIG_OUTDIR}/ParameterInit.java"
+    "${CMAKE_SWIG_OUTDIR}/ParameterInitNormal.java"
+    "${CMAKE_SWIG_OUTDIR}/ParameterInitUniform.java"
+    "${CMAKE_SWIG_OUTDIR}/ParameterInitConst.java"
+    "${CMAKE_SWIG_OUTDIR}/ParameterInitIdentity.java"
+    "${CMAKE_SWIG_OUTDIR}/ParameterInitGlorot.java"
+    # "${CMAKE_SWIG_OUTDIR}/ParameterInitSaxe.java" (I AM NOT ACTUALLY IMPLEMENTED IN DYNET)
+    "${CMAKE_SWIG_OUTDIR}/ParameterInitFromFile.java"
+    "${CMAKE_SWIG_OUTDIR}/ParameterInitFromVector.java"
     "${CMAKE_SWIG_OUTDIR}/RNNBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/SimpleSGDTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/StringVector.java"
@@ -54,6 +63,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_unsigned_int_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_unsigned_int.java"
     "${CMAKE_SWIG_OUTDIR}/Tensor.java"
+    "${CMAKE_SWIG_OUTDIR}/TensorTools.java"
     "${CMAKE_SWIG_OUTDIR}/Trainer.java"
 )
 

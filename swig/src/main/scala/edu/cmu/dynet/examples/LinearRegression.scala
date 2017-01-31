@@ -6,7 +6,6 @@ import edu.cmu.dynet.dynet_swig._
 import scala.language.implicitConversions
 
 object LinearRegression {
-  // Right now these are defined in XorScala.scala
   import DynetScalaHelpers._
 
   def main(args: Array[String]) {

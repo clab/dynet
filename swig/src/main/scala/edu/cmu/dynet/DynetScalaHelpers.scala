@@ -62,6 +62,10 @@ object DynetScalaHelpers {
   implicit class Untensor(t: Tensor) {
     def toFloat: Float = as_scalar(t)
     def toVector: FloatVector = as_vector(t)
+    def toSeq: Seq[Float] = {
+      val vector = t.toVector
+      for (i <- 0 until vector.size.toInt) yield vector.get(i)
+    }
   }
 
   implicit class RichExpression(e: Expression) {
