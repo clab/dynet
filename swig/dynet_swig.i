@@ -251,6 +251,71 @@ struct LookupParameterStorage : public ParameterStorageBase {
 };
 */
 
+struct ParameterInit {
+  ParameterInit() {}
+  virtual ~ParameterInit() {}
+  virtual void initialize_params(Tensor & values) const = 0;
+};
+
+struct ParameterInitNormal : public ParameterInit {
+  ParameterInitNormal(float m = 0.0f, float v = 1.0f) : mean(m), var(v) {}
+  virtual void initialize_params(Tensor& values) const override;
+ private:
+  float mean, var;
+};
+
+struct ParameterInitUniform : public ParameterInit {
+  ParameterInitUniform(float scale) :
+    left(-scale), right(scale) { assert(scale != 0.0f); }
+  ParameterInitUniform(float l, float r) : left(l), right(r) { assert(l != r); }
+  virtual void initialize_params(Tensor & values) const override;
+ private:
+  float left, right;
+};
+
+struct ParameterInitConst : public ParameterInit {
+  ParameterInitConst(float c) : cnst(c) {}
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  float cnst;
+};
+
+struct ParameterInitIdentity : public ParameterInit {
+  ParameterInitIdentity() {}
+  virtual void initialize_params(Tensor & values) const override;
+};
+
+struct ParameterInitGlorot : public ParameterInit {
+  ParameterInitGlorot(bool is_lookup = false) : lookup(is_lookup) {}
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  bool lookup;
+};
+
+/* I AM NOT ACTUALLY IMPLEMENTED IN THE DYNET CODE
+struct ParameterInitSaxe : public ParameterInit {
+  ParameterInitSaxe() {}
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  float cnst;
+};
+*/
+
+struct ParameterInitFromFile : public ParameterInit {
+  ParameterInitFromFile(std::string f) : filename(f) {}
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  std::string filename;
+};
+
+struct ParameterInitFromVector : public ParameterInit {
+  ParameterInitFromVector(std::vector<float> v) : vec(v) {}
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  std::vector<float> vec;
+};
+
+
 class Model {
  public:
   Model();
@@ -296,6 +361,10 @@ struct Tensor {
 
 real as_scalar(const Tensor& t);
 std::vector<real> as_vector(const Tensor& v);
+
+struct TensorTools {
+  static float AccessElement(const Tensor& v, const Dim& index);
+};
 
 // declarations from dynet/expr.h
 
