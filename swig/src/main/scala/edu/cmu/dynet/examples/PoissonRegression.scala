@@ -39,7 +39,9 @@ object WordDict {
 
   def read_sentence_pair(line: String, sd: WordDict, td: WordDict): (IntVector, Int) = {
     val Array(before, after) = line.split(""" \|\|\| """)
-    (read_sentence(before, sd), read_sentence(after, td).get(0).toInt)
+    val tokens = read_sentence(before, sd)
+    val count = td.convert(read_sentence(after, td).get(0)).toInt
+    (tokens, count)
   }
 }
 
