@@ -3,12 +3,47 @@ package edu.cmu.dynet.examples
 import edu.cmu.dynet._
 import edu.cmu.dynet.dynet_swig._
 
+import DynetScalaHelpers._
+
 import scala.language.implicitConversions
 
 import java.nio.file.Paths
 
+// Stripped-down replacement for dynet/dict.h
+class WordDict {
+  val mapping = new scala.collection.mutable.HashMap[String, Int]
+  val words = new scala.collection.mutable.ArrayBuffer[String]
+  var frozen = false
+
+  def size(): Int = words.size
+  def freeze(): Unit = frozen = true
+
+  def convert(word: String): Int = mapping.get(word) match {
+    case Some(i) => i
+    case None if frozen => -1
+    case None => {
+      val index = mapping.size
+      mapping.put(word, index)
+      words.append(word)
+      index
+    }
+  }
+
+  def convert(i: Int): String = words(i)
+}
+
+object WordDict {
+  def read_sentence(line: String, sd: WordDict): IntVector = {
+    new IntVector(line.split(" ").map(sd.convert).toSeq)
+  }
+
+  def read_sentence_pair(line: String, sd: WordDict, td: WordDict): (IntVector, Int) = {
+    val Array(before, after) = line.split(""" \|\|\| """)
+    (read_sentence(before, sd), read_sentence(after, td).get(0).toInt)
+  }
+}
+
 object PoissonRegression {
-  import DynetScalaHelpers._
 
   val LAYERS = 2
   val INPUT_DIM = 16
@@ -62,7 +97,7 @@ object PoissonRegression {
     val CORPUS_FILE = Paths.get(userDir, "../examples/cpp/example-data/train-poi.txt").toString
     val DEV_FILE = Paths.get(userDir, "../examples/cpp/example-data/dev-poi.txt").toString
 
-    val d = new Dict()
+    val d = new WordDict()
     val kSOS = d.convert("<s>")
     val kEOS = d.convert("</s>")
 
@@ -73,21 +108,11 @@ object PoissonRegression {
     var ttoks = 0
 
     {
-      val td = new Dict()
+      val td = new WordDict()
       for (line <- scala.io.Source.fromFile(CORPUS_FILE).getLines) {
         tlc += 1
-        val x = new IntVector()
-        val ty = new IntVector()
 
-        read_sentence_pair(line, x, d, ty, td)
-        assert(ty.size == 1)
-        val v = td.convert(ty.get(0))
-
-        for (c <- v.toCharArray) {
-          assert(c >= '0' && c <= '9')
-        }
-
-        val y = v.toInt
+        val (x, y) = WordDict.read_sentence_pair(line, d, td)
 
         training.append((x, y))
 
@@ -101,27 +126,17 @@ object PoissonRegression {
     }
 
     d.freeze()
-    VOCAB_SIZE = d.size.toInt
+    VOCAB_SIZE = d.size
 
     var dlc = 0
     var dtoks = 0
 
     {
-      val td = new Dict
+      val td = new WordDict
       for (line <- scala.io.Source.fromFile(DEV_FILE).getLines) {
         dlc += 1
-        val x = new IntVector()
-        val ty = new IntVector()
 
-        read_sentence_pair(line, x, d, ty, td)
-        assert(ty.size == 1)
-        val v = td.convert(ty.get(0))
-
-        for (c <- v.toCharArray) {
-          assert(c >= '0' && c <= '9')
-        }
-
-        val y = v.toInt
+        val (x, y) = WordDict.read_sentence_pair(line, d, td)
 
         dev.append((x, y))
 
@@ -172,11 +187,11 @@ object PoissonRegression {
         // the cg.clear is IMPORTANT!
         cg.clear()
 
-        val sent = training(order.get(si))
+        val (tokens, count) = training(order.get(si))
 
         si += 1
 
-        val loss_expr = lm.buildLMGraph(sent._1, sent._2, cg)
+        val loss_expr = lm.buildLMGraph(tokens, count, cg)
         loss += cg.forward(loss_expr).toFloat
         cg.backward(loss_expr)
         sgd.update()
@@ -191,8 +206,8 @@ object PoissonRegression {
         var dloss = 0.0f
         var dchars = 0
 
-        for (sent <- dev) {
-          val loss_expr = lm.buildLMGraph(sent._1, sent._2, cg, true)
+        for ((tokens, count) <- dev) {
+          val loss_expr = lm.buildLMGraph(tokens, count, cg, true)
           dloss += cg.forward(loss_expr).toFloat
           dchars += 1
         }
