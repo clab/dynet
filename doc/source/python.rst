@@ -146,7 +146,7 @@ Now, check that everything works:
 .. code:: bash
 
     cd $PATH_TO_DYNET
-    cd pyexamples
+    cd examples/python
     python xor.py
     python rnnlm.py rnnlm.py
 
