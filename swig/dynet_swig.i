@@ -58,6 +58,7 @@ static void myInitialize()  {
 VECTORCONSTRUCTOR(float, Float, FloatVector)
 VECTORCONSTRUCTOR(double, Double, DoubleVector)
 VECTORCONSTRUCTOR(int, Integer, IntVector)
+VECTORCONSTRUCTOR(dynet::expr::Expression, Expression, ExpressionVector)
 
 // Useful SWIG libraries
 %include "std_vector.i"
@@ -436,6 +437,11 @@ Expression block_dropout(const Expression& x, real p);
 
 Expression softmax(const Expression& x);
 Expression log_softmax(const Expression& x);
+
+template <typename T>
+Expression logsumexp(const T& xs);
+%template(logsumexp_VE) logsumexp<std::vector<Expression>>;
+
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
 
 template <typename T>
