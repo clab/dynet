@@ -425,6 +425,9 @@ Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression square(const Expression& x);
 
+Expression poisson_loss(const Expression& x, unsigned y);
+Expression poisson_loss(const Expression& x, const unsigned* py);
+
 Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
 Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
 Expression reshape(const Expression& x, const Dim& d);
@@ -528,6 +531,9 @@ struct Trainer {
   real clips;
   real updates;
   bool aux_allocated;
+
+  void status();
+
   Model* model;
 };
 
@@ -558,6 +564,17 @@ struct LSTMBuilder : public RNNBuilder {
                        unsigned input_dim,
                        unsigned hidden_dim,
                        Model& model);
+};
+
+// LSTMBuilder has a .back() method that returns an Expression struct *by value*
+// It turns out that SWIG has a really hard time dealing with return-by-value. It returns a
+// "pointer" wrapper (SWIGTYPE_p_Expression) that cannot be dereferenced from Java. As a somewhat
+// hacky workaround, we add methods that return the two elements of that struct, and then in
+// DynetScalaHelpers we use implicits to add a `back()` method that behaves like the built-in
+// one should.
+%extend LSTMBuilder {
+  ComputationGraph* back_graph() { return $self->back().pg; }
+  VariableIndex back_index() { return $self->back().i; }
 };
 
 // declarations from dynet/init.h
