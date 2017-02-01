@@ -22,7 +22,6 @@
 #include "expr.h"
 #include "rnn.h"
 #include "lstm.h"
-#include "dict.h"
 %}
 
 // Extra C++ code added
