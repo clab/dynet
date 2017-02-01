@@ -27,6 +27,7 @@ add_jar(
     dynet_swigJNI
     SOURCES
     "${CMAKE_SWIG_OUTDIR}/ComputationGraph.java"
+    "${CMAKE_SWIG_OUTDIR}/Dict.java"
     "${CMAKE_SWIG_OUTDIR}/Dim.java"
     "${CMAKE_SWIG_OUTDIR}/DoubleVector.java"
     "${CMAKE_SWIG_OUTDIR}/dynet_swig.java"

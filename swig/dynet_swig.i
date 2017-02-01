@@ -22,6 +22,7 @@
 #include "expr.h"
 #include "rnn.h"
 #include "lstm.h"
+#include "dict.h"
 %}
 
 // Extra C++ code added
@@ -424,6 +425,9 @@ Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression square(const Expression& x);
 
+Expression poisson_loss(const Expression& x, unsigned y);
+Expression poisson_loss(const Expression& x, const unsigned* py);
+
 Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
 Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
 Expression reshape(const Expression& x, const Dim& d);
@@ -522,6 +526,9 @@ struct Trainer {
   real clips;
   real updates;
   bool aux_allocated;
+
+  void status();
+
   Model* model;
 };
 
@@ -553,6 +560,81 @@ struct LSTMBuilder : public RNNBuilder {
                        unsigned hidden_dim,
                        Model& model);
 };
+
+// LSTMBuilder has a .back() method that returns an Expression struct *by value*
+// It turns out that SWIG has a really hard time dealing with return-by-value. It returns a
+// "pointer" wrapper (SWIGTYPE_p_Expression) that cannot be dereferenced from Java. As a somewhat
+// hacky workaround, we add methods that return the two elements of that struct, and then in
+// DynetScalaHelpers we use implicits to add a `back()` method that behaves like the built-in
+// one should.
+%extend LSTMBuilder {
+  ComputationGraph* back_graph() { return $self->back().pg; }
+  VariableIndex back_index() { return $self->back().i; }
+};
+
+// declarations from dynet/dict.h
+
+class Dict {
+typedef std::unordered_map<std::string, int> Map;
+public:
+  Dict() : frozen(false), map_unk(false), unk_id(-1) {}
+
+  inline unsigned size() const { return words_.size(); }
+
+  inline bool contains(const std::string& words) {
+    return !(d_.find(words) == d_.end());
+  }
+
+  void freeze() { frozen = true; }
+  bool is_frozen() { return frozen; }
+
+  inline int convert(const std::string& word) {
+    auto i = d_.find(word);
+    if (i == d_.end()) {
+      if (frozen) {
+        if (map_unk) {
+          return unk_id;
+        }
+        else {
+         std::cerr << map_unk << std::endl;
+          std::cerr << "Unknown word encountered: " << word << std::endl;
+          throw std::runtime_error("Unknown word encountered in frozen dictionary: " + word);
+        }
+      }
+      words_.push_back(word);
+      return d_[word] = words_.size() - 1;
+    } else {
+      return i->second;
+    }
+  }
+
+  inline const std::string& convert(const int& id) const {
+    assert(id < (int)words_.size());
+    return words_[id];
+  }
+
+  void set_unk(const std::string& word) {
+    if (!frozen)
+      throw std::runtime_error("Please call set_unk() only after dictionary is frozen");
+    if (map_unk)
+      throw std::runtime_error("Set UNK more than one time");
+
+    // temporarily unfrozen the dictionary to allow the add of the UNK
+    frozen = false;
+    unk_id = convert(word);
+    frozen = true;
+
+    map_unk = true;
+  }
+
+  int get_unk_id() const { return unk_id; }
+  const std::vector<std::string> & get_words() const { return words_; }
+
+  void clear() { words_.clear(); d_.clear(); }
+};
+
+std::vector<int> read_sentence(const std::string& line, Dict& sd);
+void read_sentence_pair(const std::string& line, std::vector<int>& s, Dict& sd, std::vector<int>& t, Dict& td);
 
 // declarations from dynet/init.h
 
