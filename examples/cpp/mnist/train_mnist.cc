@@ -11,7 +11,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 int main(int argc, char** argv) {
   // Fetch dynet params ----------------------------------------------------------------------------

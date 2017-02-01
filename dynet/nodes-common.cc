@@ -558,8 +558,8 @@ string Softmax::as_string(const vector<string>& arg_names) const {
 
 Dim Softmax::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  if (!LooksLikeVector(xs[0])) {
-    ostringstream s; s << "Bad input dimensions in Softmax: " << xs;
+  if (xs[0].nd > 2) {
+    ostringstream s; s << "Bad input dimensions in Softmax, must be 2 or fewer: " << xs;
     throw std::invalid_argument(s.str());
   }
   return xs[0];
@@ -610,8 +610,8 @@ string LogSoftmax::as_string(const vector<string>& arg_names) const {
 
 Dim LogSoftmax::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
-  if (!LooksLikeVector(xs[0])) {
-    ostringstream s; s << "Bad input dimensions in LogSoftmax: " << xs;
+  if (xs[0].nd > 2) {
+    ostringstream s; s << "Bad input dimensions in LogSoftmax, must be 2 or fewer: " << xs;
     throw std::invalid_argument(s.str());
   }
   return xs[0];
@@ -810,7 +810,7 @@ string HuberDistance::as_string(const vector<string>& arg_names) const {
 
 Dim HuberDistance::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 2);
-  if (xs[0].single_batch() != xs[1].single_batch()) {
+  if (xs[0].single_batch() != xs[1].single_batch() && !(LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size())) {
     ostringstream s; s << "Mismatched input dimensions in HuberDistance: " << xs;
     throw std::invalid_argument(s.str());
   }
@@ -825,7 +825,7 @@ string L1Distance::as_string(const vector<string>& arg_names) const {
 
 Dim L1Distance::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 2);
-  if (xs[0].single_batch() != xs[1].single_batch()) {
+  if (xs[0].single_batch() != xs[1].single_batch() && !(LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size())) {
     ostringstream s; s << "Mismatched input dimensions in L1Distance: " << xs;
     throw std::invalid_argument(s.str());
   }
@@ -865,7 +865,7 @@ string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) cons
 
 Dim SquaredEuclideanDistance::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 2);
-  if (xs[0].single_batch() != xs[1].single_batch()) {
+  if (xs[0].single_batch() != xs[1].single_batch() && !(LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size())) {
     ostringstream s; s << "Bad input dimensions in SquaredEuclideanDistance: " << xs;
     throw std::invalid_argument(s.str());
   }

@@ -843,11 +843,10 @@ void test_only(SegmentalRNN<LSTMBuilder>& segrnn,
     unsigned int i;
     for(i = 0; i < yz_pred.size()-1; ++i){
       auto pred = yz_pred[i];
-      cout << segrnn.td.convert(pred.first) << ":" << pred.second << " ";
-    }
-    if(i >= 0 && (i == yz_pred.size()-1)){
-      auto pred = yz_pred[i];
       cout << segrnn.td.convert(pred.first) << ":" << pred.second;
+      if (i != yz_pred.size()-1) {
+        cout << " ";
+      }
     }
     cout << endl;
   }

@@ -14,7 +14,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 unsigned REP_DIM = 128;
 unsigned INPUT_VOCAB_SIZE = 0;
