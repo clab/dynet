@@ -74,7 +74,7 @@ struct dynet::expr::Expression;
 // Declare explicit types for needed instantiations of generic types
 namespace std {
   %template(IntVector)        vector<int>;
-  //  %template(UnsignedVector)   vector<unsigned>;
+  %template(UnsignedVector)   vector<unsigned>;
   %template(DoubleVector)     vector<double>;
   %template(FloatVector)      vector<float>;
   %template(LongVector)       vector<long>;
@@ -367,6 +367,14 @@ struct TensorTools {
   static float AccessElement(const Tensor& v, const Dim& index);
 };
 
+// declarations from dynet/nodes.h
+
+struct Sum;
+struct LogSumExp;
+struct AffineTransform;
+struct ConcatenateColumns;
+struct Concatenate;
+
 // declarations from dynet/expr.h
 
 struct ComputationGraph;
@@ -377,9 +385,13 @@ struct Expression {
   VariableIndex i;
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { };
   const Tensor& value();
+  const Dim& dim() const { return pg->get_dimension(i); }
 };
 
-// %template(ExpressionVector)     ::std::vector<Expression>;
+// This template gets used to instantiate operations on vector<Expression>
+namespace detail {
+template <typename F, typename T> Expression f(const T& xs);
+}
 
 Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
@@ -392,8 +404,8 @@ Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
-//Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
-Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
+Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
+//Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 //Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 Expression zeroes(ComputationGraph& g, const Dim& d);
@@ -416,6 +428,8 @@ Expression operator*(const Expression& x, float y);
 Expression operator*(float y, const Expression& x); // { return x * y; }
 Expression operator/(const Expression& x, float y); // { return x * (1.f / y); }
 
+%template(sum) detail::f<Sum, std::vector<Expression>>;
+
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression log(const Expression& x);
@@ -430,6 +444,9 @@ Expression poisson_loss(const Expression& x, const unsigned* py);
 
 Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
 Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
+
+Expression sum_batches(const Expression& x);
+
 Expression reshape(const Expression& x, const Dim& d);
 Expression pick(const Expression& x, unsigned v);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
@@ -441,23 +458,15 @@ Expression block_dropout(const Expression& x, real p);
 Expression softmax(const Expression& x);
 Expression log_softmax(const Expression& x);
 
-template <typename T>
-Expression logsumexp(const T& xs);
-%template(logsumexp_VE) logsumexp<std::vector<Expression>>;
+%template(logsumexp_VE) detail::f<LogSumExp, std::vector<Expression>>;
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned>& v);
 
-template <typename T>
-Expression affine_transform(const T& xs);
-%template(affine_transform_VE) affine_transform<std::vector<Expression>>;
-
-template <typename T>
-Expression concatenate_cols(const T& xs);
-%template(concatenate_cols_VE) concatenate_cols<std::vector<Expression>>;
-
-template <typename T>
-Expression concatenate(const T& xs);
-%template(concatenate_VE) concatenate<std::vector<Expression>>;
+// TODO(joelgrus) rename these without the VE
+%template(affine_transform_VE) detail::f<AffineTransform, std::vector<Expression>>;
+%template(concatenate_cols_VE) detail::f<ConcatenateColumns, std::vector<Expression>>;
+%template(concatenate_VE) detail::f<Concatenate, std::vector<Expression>>;
 
 /*
 template <typename T>
@@ -496,6 +505,8 @@ struct ComputationGraph {
   void clear();
   void checkpoint();
   void revert();
+
+  Dim& get_dimension(VariableIndex index) const;
 
   const Tensor& forward(const expr::Expression& last);
   //const Tensor& forward(VariableIndex i);
@@ -540,6 +551,12 @@ struct Trainer {
 struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
 };
+
+struct AdamTrainer : public Trainer {
+  explicit AdamTrainer(Model& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
+    Trainer(m, e0, edecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+};
+
 
 // declarations from dynet/rnn.h
 

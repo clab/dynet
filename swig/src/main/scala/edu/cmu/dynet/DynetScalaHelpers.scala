@@ -27,6 +27,29 @@ object DynetScalaHelpers {
     values.map(int2Integer).asJavaCollection
   }
 
+  // shuffle indices
+  def shuffle(vs: IntVector): Unit = {
+    val values = for (i <- 0 until vs.size.toInt) yield vs.get(i)
+    scala.util.Random.shuffle(values).zipWithIndex.foreach { case (v, i) => vs.set(i, v) }
+  }
+
+  // Convert vectors to Seqs for easy iteration
+  implicit def floatVectorToSeq(fv: FloatVector): Seq[Float] = {
+    for (i <- 0 until fv.size.toInt) yield fv.get(i)
+  }
+
+  implicit def intVectorToSeq(iv: IntVector): Seq[Int] = {
+    for (i <- 0 until iv.size.toInt) yield iv.get(i)
+  }
+
+  implicit def unsignedVectorToSeq(uv: UnsignedVector): Seq[Long] = {
+    for (i <- 0 until uv.size.toInt) yield uv.get(i)
+  }
+
+  implicit def expressionVectorToSeq(ev: ExpressionVector): Seq[Expression] = {
+    for (i <- 0 until ev.size.toInt) yield ev.get(i)
+  }
+
   // The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with;
   // these are more Scala-y wrappers that implicitly convert to the SWIG versions.
   class FloatPointer {
