@@ -33,6 +33,24 @@ object DynetScalaHelpers {
     scala.util.Random.shuffle(values).zipWithIndex.foreach { case (v, i) => vs.set(i, v) }
   }
 
+
+  // sample from a discrete distribution
+  def sample(v: FloatVector): Int = {
+    // random pick
+    val p = scala.util.Random.nextFloat
+
+    // Seq(0f, p(0), p(0) + p(1), .... )
+    val cumulative = v.scanLeft(0f)(_ + _)
+
+    // Return the largest index where the cumulative probability is <= p.
+    // Since cumulative(0) is 0f, there's always at least one element in the
+    // takeWhile, so it's ok to use .last
+    cumulative.zipWithIndex
+        .takeWhile { case (c, i) => c <= p }
+        .last
+        ._2
+  }
+
   // Convert vectors to Seqs for easy iteration
   implicit def floatVectorToSeq(fv: FloatVector): Seq[Float] = {
     for (i <- 0 until fv.size.toInt) yield fv.get(i)

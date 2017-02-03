@@ -229,18 +229,6 @@ class EncoderDecoder(
 
     osent
   }
-
-  private def sample(v: FloatVector): Int = {
-    val p = scala.util.Random.nextFloat
-    var cumul = 0f
-    var idx = 0
-    while (idx < v.size && p > cumul) {
-      cumul += v.get(idx)
-      idx += 1
-    }
-
-    math.max(idx - 1, 0)
-  }
 }
 
 object EncoderDecoder {
