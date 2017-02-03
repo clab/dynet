@@ -26,6 +26,7 @@ swig_link_libraries(dynet_swig dynet)
 add_jar(
     dynet_swigJNI
     SOURCES
+    "${CMAKE_SWIG_OUTDIR}/AdamTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/ComputationGraph.java"
     "${CMAKE_SWIG_OUTDIR}/Dim.java"
     "${CMAKE_SWIG_OUTDIR}/DoubleVector.java"
@@ -65,6 +66,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/Tensor.java"
     "${CMAKE_SWIG_OUTDIR}/TensorTools.java"
     "${CMAKE_SWIG_OUTDIR}/Trainer.java"
+    "${CMAKE_SWIG_OUTDIR}/UnsignedVector.java"
 )
 
 # TODO(joelgrus): This is probably not defensive or robust enough.

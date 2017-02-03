@@ -9,42 +9,6 @@ import scala.language.implicitConversions
 
 import java.nio.file.Paths
 
-// Stripped-down replacement for dynet/dict.h
-class WordDict {
-  val mapping = new scala.collection.mutable.HashMap[String, Int]
-  val words = new scala.collection.mutable.ArrayBuffer[String]
-  var frozen = false
-
-  def size(): Int = words.size
-  def freeze(): Unit = frozen = true
-
-  def convert(word: String): Int = mapping.get(word) match {
-    case Some(i) => i
-    case None if frozen => -1
-    case None => {
-      val index = mapping.size
-      mapping.put(word, index)
-      words.append(word)
-      index
-    }
-  }
-
-  def convert(i: Int): String = words(i)
-}
-
-object WordDict {
-  def read_sentence(line: String, sd: WordDict): IntVector = {
-    new IntVector(line.split(" ").map(sd.convert).toSeq)
-  }
-
-  def read_sentence_pair(line: String, sd: WordDict, td: WordDict): (IntVector, Int) = {
-    val Array(before, after) = line.split(""" \|\|\| """)
-    val tokens = read_sentence(before, sd)
-    val count = td.convert(read_sentence(after, td).get(0)).toInt
-    (tokens, count)
-  }
-}
-
 object PoissonRegression {
 
   val LAYERS = 2
@@ -83,12 +47,6 @@ object PoissonRegression {
 
       poisson_loss(pred, len)
     }
-  }
-
-  def shuffle(vs: IntVector): Unit = {
-    val values = for (i <- 0 until vs.size.toInt) yield vs.get(i)
-    scala.util.Random.shuffle(values)
-    values.zipWithIndex.foreach { case (v, i) => vs.set(i, v) }
   }
 
   def main(args: Array[String]) {
