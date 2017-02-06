@@ -126,3 +126,92 @@ iter = 27, loss = 8.881784E-16
 iter = 28, loss = 8.881784E-16
 iter = 29, loss = 8.881784E-16
 ```
+
+## Differences between Scala and C++
+
+### Delete Your ComputationGraphs
+
+DyNet does not like it if you try to instantiate more than one 
+ComputationGraph at a time.
+
+It seems to be a common idiom in the C++ examples to do things like
+
+```cpp
+for (int i = 0; i < NUM_TIMES; i++) {
+  ComputationGraph cg;
+  // do some computations
+}
+```
+
+This works because here `cg` gets destructed each time it goes out of scope. The same is not true in Scala
+
+```scala
+// BAD! DO NOT DO THIS!
+for (i <- 0 until NUM_TIMES) {
+  val cg = new ComputationGraph
+  // do some computations
+}
+```
+
+The underlying C++ ComputationGraph gets destructed at some point 
+(presumably whenever the Java GC runs),
+but not immediately. As a result, your program will crash with the dreaded
+
+```
+[error] Memory allocator assumes only a single ComputationGraph at a time.
+```
+
+To avoid this, you need to manually call `.delete()` on each 
+`ComputationGraph` instance when you are done with it 
+(and, in particular, before you create a new one):
+
+```scala
+for (i <- 0 until NUM_TIMES) {
+  val cg = new ComputationGraph
+  // do some computations
+  cg.delete()
+}
+```
+
+### `std::vector`s
+
+SWIG generates Java wrappers for the various `std::vector<>` types,
+`IntVector`, `FloatVector`, `ExpressionVector`, and so on. Each has a 
+no-argument constructor, a `capacity: Int` constructor, and a
+`elems: java.util.Collection[T]` constructor (for the relevant type `T`).
+
+The `DynetScalaHelpers` contain implicit conversions from the corresponding
+`Seq` types, so that you can do things like
+
+```scala
+// Seq[Int] implicitly converted to java.util.Collection[java.lang.Integer]
+val intVector = new IntVector(Seq(1, 2, 3, 4))
+intVector.set(0, 10)
+println(intVector.get(1))
+```
+
+There are implicit conversions in the other direction too:
+
+```scala
+println(intVector.mkString(" "))
+```
+
+But the conversions are o(n) every time:
+
+```scala
+for (i <- 0 until intVector.size) {
+  println(intVector(i))     // BAD, o(n) conversion makes the loop quadratic
+  println(intVector.get(i)) // GOOD, o(1) native array access
+}
+```
+
+### Pointers
+
+For the most part you shouldn't have to worry about pointers; most things
+are references in Java, so where a C++ method might take a 
+`Model*` parameter, the corresponding Java method just takes a `Model`.
+
+The exception is primitives. SWIG produces (for example) a `SWIGTYPE_p_int`
+type wrapper for `int*` and bare functions for working with these. 
+In the Scala helpers we provide wrapper classes `IntPointer` and `FloatPointer`
+that are nicer to work with and that implicitly convert to the SWIG types.
