@@ -70,7 +70,7 @@ class RnnLanguageModelBatch(
   }
 
   def randomSample(d: WordDict, maxLen: Int = 150, temp: Float = 1.0f) = {
-    val cg = new ComputationGraph
+    val cg = ComputationGraph.getNew
     rnn.new_graph(cg)
     rnn.start_new_sequence()
     //
@@ -115,7 +115,6 @@ class RnnLanguageModelBatch(
         cur = w
       }
     }
-    cg.delete()
   }
 }
 
@@ -240,7 +239,7 @@ object RnnLanguageModelBatch {
       val tokens = new IntPointer
 
       for (si <- 0 until numBatches) {
-        val cg = new ComputationGraph
+        val cg = ComputationGraph.getNew
         val id = order.get(si) * BATCH_SIZE
         val bsize = math.min(training.size - id, BATCH_SIZE)
         val loss_expr = lm.getNegLogProb(training, id, bsize, tokens, cg)
@@ -259,13 +258,12 @@ object RnnLanguageModelBatch {
           loss = 0.0
           tokens.set(0)
         }
-        cg.delete()
       }
 
       var dloss = 0.0
       val dtokens = new IntPointer
       for (i <- 0 until numDevBatches) {
-        val cg = new ComputationGraph
+        val cg = ComputationGraph.getNew
 
         val id = i * DEV_BATCH_SIZE
         val bsize = math.min(dev.size - id, DEV_BATCH_SIZE)
@@ -273,8 +271,6 @@ object RnnLanguageModelBatch {
         val loss_expr = lm.getNegLogProb(dev, id, bsize, dtokens, cg)
 
         dloss += cg.forward(loss_expr).toFloat
-
-        cg.delete()
       }
 
       val dt = dloss / dtokens.value

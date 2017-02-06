@@ -32,8 +32,7 @@ object DynetScalaHelpers {
     val values = for (i <- 0 until vs.size.toInt) yield vs.get(i)
     scala.util.Random.shuffle(values).zipWithIndex.foreach { case (v, i) => vs.set(i, v) }
   }
-
-
+  
   // sample from a discrete distribution
   def sample(v: FloatVector): Int = {
     // random pick

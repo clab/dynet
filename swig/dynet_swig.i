@@ -482,6 +482,20 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
 
 // declarations from dynet/dynet.h
 
+%typemap(javacode) ComputationGraph %{
+  // DyNet only allows one ComputationGraph at a time. This means that if you construct them manu
+  private static ComputationGraph singletonInstance = null;
+
+  public static ComputationGraph getNew() {
+    if (singletonInstance != null) {
+      singletonInstance.delete();
+    }
+    singletonInstance = new ComputationGraph();
+    return singletonInstance;
+  }
+%}
+
+// TODO(joelgrus): get rid of default constructor to force singleton use?
 struct ComputationGraph {
   ComputationGraph();
   ~ComputationGraph();
