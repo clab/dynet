@@ -497,7 +497,6 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
   }
 %}
 
-// TODO(joelgrus): get rid of default constructor to force singleton use?
 struct ComputationGraph {
   ComputationGraph();
   ~ComputationGraph();

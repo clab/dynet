@@ -15,7 +15,7 @@ object XorScala {
     println("Dynet initialized!")
     val m = new Model
     val sgd = new SimpleSGDTrainer(m)
-    val cg = new ComputationGraph
+    val cg = ComputationGraph.getNew
 
     val p_W = m.add_parameters(dim(HIDDEN_SIZE, 2))
     val p_b = m.add_parameters(dim(HIDDEN_SIZE))
