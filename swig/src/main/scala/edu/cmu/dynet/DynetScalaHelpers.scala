@@ -27,6 +27,47 @@ object DynetScalaHelpers {
     values.map(int2Integer).asJavaCollection
   }
 
+  // shuffle indices
+  def shuffle(vs: IntVector): Unit = {
+    val values = for (i <- 0 until vs.size.toInt) yield vs.get(i)
+    scala.util.Random.shuffle(values).zipWithIndex.foreach { case (v, i) => vs.set(i, v) }
+  }
+
+
+  // sample from a discrete distribution
+  def sample(v: FloatVector): Int = {
+    // random pick
+    val p = scala.util.Random.nextFloat
+
+    // Seq(0f, p(0), p(0) + p(1), .... )
+    val cumulative = v.scanLeft(0f)(_ + _)
+
+    // Return the largest index where the cumulative probability is <= p.
+    // Since cumulative(0) is 0f, there's always at least one element in the
+    // takeWhile, so it's ok to use .last
+    cumulative.zipWithIndex
+        .takeWhile { case (c, i) => c <= p }
+        .last
+        ._2
+  }
+
+  // Convert vectors to Seqs for easy iteration
+  implicit def floatVectorToSeq(fv: FloatVector): Seq[Float] = {
+    for (i <- 0 until fv.size.toInt) yield fv.get(i)
+  }
+
+  implicit def intVectorToSeq(iv: IntVector): Seq[Int] = {
+    for (i <- 0 until iv.size.toInt) yield iv.get(i)
+  }
+
+  implicit def unsignedVectorToSeq(uv: UnsignedVector): Seq[Long] = {
+    for (i <- 0 until uv.size.toInt) yield uv.get(i)
+  }
+
+  implicit def expressionVectorToSeq(ev: ExpressionVector): Seq[Expression] = {
+    for (i <- 0 until ev.size.toInt) yield ev.get(i)
+  }
+
   // The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with;
   // these are more Scala-y wrappers that implicitly convert to the SWIG versions.
   class FloatPointer {
