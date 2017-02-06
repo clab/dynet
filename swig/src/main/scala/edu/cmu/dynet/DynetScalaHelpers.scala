@@ -51,7 +51,7 @@ object DynetScalaHelpers {
         ._2
   }
 
-  // Convert vectors to Seqs for easy iteration
+  // Convert vectors to Seqs for easy iteration.
   implicit def floatVectorToSeq(fv: FloatVector): Seq[Float] = {
     for (i <- 0 until fv.size.toInt) yield fv.get(i)
   }
@@ -72,6 +72,7 @@ object DynetScalaHelpers {
   // these are more Scala-y wrappers that implicitly convert to the SWIG versions.
   class FloatPointer {
     val floatp = new_floatp
+    set(0f)
 
     def set(value: Float): Unit = floatp_assign(floatp, value)
 
@@ -82,13 +83,24 @@ object DynetScalaHelpers {
 
   class IntPointer {
     val intp = new_intp
+    set(0)
 
     def set(value: Int): Unit = intp_assign(intp, value)
 
     def value(): Int = intp_value(intp)
+
+    def increment(by: Int = 1) = set(value + by)
   }
 
   implicit def toIntp(ip: IntPointer): SWIGTYPE_p_int = ip.intp
+
+  // This is helpful for debugging.
+  def show(dim: Dim, prefix: String=""): Unit = {
+    val dims = for (i <- 0 until dim.ndims().toInt) yield dim.get(i)
+    val dimstring = dims.mkString(",")
+    val bd = if (dim.batch_elems != 1) s"X${dim.batch_elems}" else ""
+    println(s"$prefix{$dimstring$bd}")
+  }
 
   def dim(dims: Int*): Dim = {
     val dimInts = new LongVector
@@ -129,5 +141,6 @@ object DynetScalaHelpers {
     def +(r: Float): Expression = exprPlus(e, r)
     def *(r: Float): Expression = exprTimes(e, r)
     def -(r: Float): Expression = exprMinus(e, r)
+    def /(r: Float): Expression = exprDivide(e, r)
   }
 }

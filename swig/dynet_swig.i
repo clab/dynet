@@ -58,6 +58,7 @@ static void myInitialize()  {
 VECTORCONSTRUCTOR(float, Float, FloatVector)
 VECTORCONSTRUCTOR(double, Double, DoubleVector)
 VECTORCONSTRUCTOR(int, Integer, IntVector)
+VECTORCONSTRUCTOR(unsigned, Integer, UnsignedVector)
 VECTORCONSTRUCTOR(dynet::expr::Expression, Expression, ExpressionVector)
 
 // Useful SWIG libraries
