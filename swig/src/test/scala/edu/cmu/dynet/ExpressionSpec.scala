@@ -32,7 +32,7 @@ class ExpressionSpec extends FlatSpec with Matchers {
   }
 
   "simple expression functions" should "do the right things" in {
-    val cg = new ComputationGraph
+    val cg = ComputationGraph.getNew
 
     val e1 = input(cg, 1)
     val e2 = input(cg, 2)
