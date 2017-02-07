@@ -26,6 +26,8 @@ swig_link_libraries(dynet_swig dynet)
 add_jar(
     dynet_swigJNI
     SOURCES
+    "${CMAKE_SWIG_OUTDIR}/AdadeltaTrainer.java"
+    "${CMAKE_SWIG_OUTDIR}/AdagradTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/AdamTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/ComputationGraph.java"
     "${CMAKE_SWIG_OUTDIR}/Dim.java"
@@ -40,6 +42,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/LookupParameter.java"
     "${CMAKE_SWIG_OUTDIR}/LSTMBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/Model.java"
+    "${CMAKE_SWIG_OUTDIR}/MomentumSGDTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/Parameter.java"
     "${CMAKE_SWIG_OUTDIR}/ParameterInit.java"
     "${CMAKE_SWIG_OUTDIR}/ParameterInitNormal.java"
@@ -50,6 +53,7 @@ add_jar(
     # "${CMAKE_SWIG_OUTDIR}/ParameterInitSaxe.java" (I AM NOT ACTUALLY IMPLEMENTED IN DYNET)
     "${CMAKE_SWIG_OUTDIR}/ParameterInitFromFile.java"
     "${CMAKE_SWIG_OUTDIR}/ParameterInitFromVector.java"
+    "${CMAKE_SWIG_OUTDIR}/RmsPropTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/RNNBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/SimpleRNNBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/SimpleSGDTrainer.java"
