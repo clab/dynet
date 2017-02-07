@@ -662,15 +662,57 @@ struct AdamTrainer : public Trainer {
 
 %nodefaultctor RNNBuilder;
 struct RNNBuilder {
+  using namespace dynet::expr;
+
   RNNPointer state() const;
   void new_graph(ComputationGraph& cg);
-  void start_new_sequence(const std::vector<dynet::expr::Expression>& h_0 = {});
-  dynet::expr::Expression set_h(const RNNPointer& prev, const std::vector<dynet::expr::Expression>& h_new = {});
-  dynet::expr::Expression set_s(const RNNPointer& prev, const std::vector<dynet::expr::Expression>& s_new = {});
-  dynet::expr::Expression add_input(const dynet::expr::Expression& x);
-  dynet::expr::Expression add_input(const RNNPointer& prev, const dynet::expr::Expression& x);
-  std::vector<dynet::expr::Expression> final_s() const;
-  std::vector<dynet::expr::Expression> final_h() const;
+  void start_new_sequence(const std::vector<Expression>& h_0 = {});
+  Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new = {});
+  Expression set_s(const RNNPointer& prev, const std::vector<Expression>& s_new = {});
+  Expression add_input(const Expression& x);
+  Expression add_input(const RNNPointer& prev, const Expression& x);
+  void rewind_one_step();
+  RNNPointer get_head(const RNNPointer& p);
+  void set_dropout(float d);
+  void disable_dropout();
+
+  virtual Expression back() const;
+  virtual std::vector<Expression> final_h() const = 0;
+  virtual std::vector<Expression> get_h(RNNPointer i) const = 0;
+
+  virtual std::vector<Expression> final_s() const = 0;
+  virtual std::vector<Expression> get_s(RNNPointer i) const = 0;
+
+  virtual unsigned num_h0_components() const = 0;
+  virtual void copy(const RNNBuilder& params) = 0;
+  virtual void save_parameters_pretraining(const std::string& fname) const;
+  virtual void load_parameters_pretraining(const std::string& fname);
+};
+
+struct SimpleRNNBuilder : public RNNBuilder {
+  using namespace dynet::expr;
+  SimpleRNNBuilder() = default;
+
+  explicit SimpleRNNBuilder(unsigned layers,
+                            unsigned input_dim,
+                            unsigned hidden_dim,
+                            Model& model,
+                            bool support_lags = false);
+
+  Expression add_auxiliary_input(const Expression& x, const Expression& aux);
+
+  Expression back() const override;
+  std::vector<Expression> final_h() const override;
+  std::vector<Expression> final_s() const override;
+
+  std::vector<Expression> get_h(RNNPointer i) const override;
+  std::vector<Expression> get_s(RNNPointer i) const override;
+  void copy(const RNNBuilder& params) override;
+
+  unsigned num_h0_components() const override;
+
+  void save_parameters_pretraining(const std::string& fname) const override;
+  void load_parameters_pretraining(const std::string& fname) override;
 };
 
 ////////////////////////////////////
@@ -678,22 +720,51 @@ struct RNNBuilder {
 ////////////////////////////////////
 
 struct LSTMBuilder : public RNNBuilder {
-  //LSTMBuilder() = default;
+  using namespace dynet::expr;
+
+  LSTMBuilder() = default;
   explicit LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
                        Model& model);
+  Expression back() const override;
+  std::vector<Expression> final_h() const override;
+  std::vector<Expression> final_s() const override;
+  unsigned num_h0_components() const override;
+
+  std::vector<Expression> get_h(RNNPointer i) const override;
+  std::vector<Expression> get_s(RNNPointer i) const override;
+
+  void copy(const RNNBuilder& params) override;
+
+  void save_parameters_pretraining(const std::string& fname) const override;
+  void load_parameters_pretraining(const std::string& fname) override;
+
+  //void set_dropout(float d);
+  //void set_dropout(float d, float d_h, float d_c);
+  //void disable_dropout();
+  //void set_dropout_masks(unsigned batch_size = 1);
 };
 
-// LSTMBuilder has a .back() method that returns an Expression struct *by value*
-// It turns out that SWIG has a really hard time dealing with return-by-value. It returns a
-// "pointer" wrapper (SWIGTYPE_p_Expression) that cannot be dereferenced from Java. As a somewhat
-// hacky workaround, we add methods that return the two elements of that struct, and then in
-// DynetScalaHelpers we use implicits to add a `back()` method that behaves like the built-in
-// one should.
-%extend LSTMBuilder {
-  ComputationGraph* back_graph() { return $self->back().pg; }
-  VariableIndex back_index() { return $self->back().i; }
+struct VanillaLSTMBuilder : public RNNBuilder {
+  VanillaLSTMBuilder() = default;
+  explicit VanillaLSTMBuilder(unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       Model& model);
+
+  Expression back() const override;
+  std::vector<Expression> final_h() const override;
+  std::vector<Expression> final_s() const override;
+  unsigned num_h0_components() const override;
+
+  std::vector<Expression> get_h(RNNPointer i) const override;
+  std::vector<Expression> get_s(RNNPointer i) const override;
+
+  void copy(const RNNBuilder & params) override;
+
+  void save_parameters_pretraining(const std::string& fname) const override;
+  void load_parameters_pretraining(const std::string& fname) override;
 };
 
 ////////////////////////////////////
