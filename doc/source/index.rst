@@ -33,6 +33,7 @@ And get the basic information to create programs and use models:
    :maxdepth: 3
 
    tutorial
+   core
    commandline
    operations
    builders
