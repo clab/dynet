@@ -136,13 +136,6 @@ object DynetScalaHelpers {
     }
   }
 
-  // In C++, LSTMBuilder has a back() method that returns an Expression struct by value. SWIG
-  // can't deal with that, so instead we expose the two elements of that struct and then use
-  // this implicit class to create a back() function that mimics the C++ functionality.
-  implicit class LSTMBuilderBack(b: LSTMBuilder) {
-    def back(): Expression = new Expression(b.back_graph, b.back_index)
-  }
-
   def affine_transform(es: Seq[Expression]): Expression = {
     val ev = new ExpressionVector
     es.foreach(e => ev.add(e))
