@@ -51,6 +51,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/ParameterInitFromFile.java"
     "${CMAKE_SWIG_OUTDIR}/ParameterInitFromVector.java"
     "${CMAKE_SWIG_OUTDIR}/RNNBuilder.java"
+    "${CMAKE_SWIG_OUTDIR}/SimpleRNNBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/SimpleSGDTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/StringVector.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_dynet__LookupParameterStorage.java"
@@ -67,6 +68,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/TensorTools.java"
     "${CMAKE_SWIG_OUTDIR}/Trainer.java"
     "${CMAKE_SWIG_OUTDIR}/UnsignedVector.java"
+    "${CMAKE_SWIG_OUTDIR}/VanillaLSTMBuilder.java"
 )
 
 # TODO(joelgrus): This is probably not defensive or robust enough.
