@@ -27,6 +27,10 @@ object DynetScalaHelpers {
     values.map(int2Integer).asJavaCollection
   }
 
+  implicit def convertExpressionsToExpressions(values: Seq[Expression]): Collection[Expression] = {
+    values.asJavaCollection
+  }
+
   // shuffle indices
   def shuffle(vs: IntVector): Unit = {
     val values = for (i <- 0 until vs.size.toInt) yield vs.get(i)
@@ -92,6 +96,17 @@ object DynetScalaHelpers {
   }
 
   implicit def toIntp(ip: IntPointer): SWIGTYPE_p_int = ip.intp
+
+  class UnsignedPointer {
+    val uintp = new_uintp()
+    set(0)
+
+    def set(value: Int): Unit = uintp_assign(uintp, value)
+
+    def value(): Int = uintp_value(uintp).toInt
+  }
+
+  implicit def toUnsignedp(up: UnsignedPointer): SWIGTYPE_p_unsigned_int = up.uintp
 
   // This is helpful for debugging.
   def show(dim: Dim, prefix: String=""): Unit = {

@@ -67,6 +67,7 @@ VECTORCONSTRUCTOR(dynet::expr::Expression, Expression, ExpressionVector)
 %include "std_pair.i"
 %include "cpointer.i"
 
+%pointer_functions(unsigned, uintp);
 %pointer_functions(int, intp);
 %pointer_functions(float, floatp);
 
@@ -102,7 +103,9 @@ struct Node;
 struct ParameterStorage;
 struct LookupParameterStorage;
 
-// declarations from dynet/dim.h
+///////////////////////////////////
+// declarations from dynet/dim.h //
+///////////////////////////////////
 
 %rename(get) Dim::operator[];
 
@@ -173,7 +176,9 @@ struct Dim {
   Dim transpose();
 };
 
-// declarations from dynet/model.h
+/////////////////////////////////////
+// declarations from dynet/model.h //
+/////////////////////////////////////
 
 // Model wrapper class needs to implement Serializable. We serialize a Model by converting it
 // to/from a String and using writeObject/readObject on the String.
@@ -353,7 +358,9 @@ void load_dynet_model(std::string filename, Model* model);
    }
 };
 
-// declarations from dynet/tensor.h
+//////////////////////////////////////
+// declarations from dynet/tensor.h //
+//////////////////////////////////////
 
 struct Tensor {
   Dim d;
@@ -368,15 +375,21 @@ struct TensorTools {
   static float AccessElement(const Tensor& v, const Dim& index);
 };
 
-// declarations from dynet/nodes.h
+/////////////////////////////////////
+// declarations from dynet/nodes.h //
+/////////////////////////////////////
 
 struct Sum;
 struct LogSumExp;
 struct AffineTransform;
 struct ConcatenateColumns;
 struct Concatenate;
+struct Average;
 
-// declarations from dynet/expr.h
+////////////////////////////////////
+// declarations from dynet/expr.h //
+////////////////////////////////////
+
 
 struct ComputationGraph;
 
@@ -394,6 +407,8 @@ namespace detail {
 template <typename F, typename T> Expression f(const T& xs);
 }
 
+/* INPUT OPERATIONS */
+
 Expression input(ComputationGraph& g, real s);
 Expression input(ComputationGraph& g, const real *ps);
 //Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
@@ -409,14 +424,20 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsi
 //Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 //Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
+
 Expression zeroes(ComputationGraph& g, const Dim& d);
 Expression random_normal(ComputationGraph& g, const Dim& d);
+Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale = 1.0f);
+Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right);
 
-// Rename operators to valid java function names
+/* ARITHMETIC OPERATIONS */
+
+// Rename operators to valid Java function names
 %rename(exprPlus) operator+;
 %rename(exprTimes) operator*;
 %rename(exprMinus) operator-;
 %rename(exprDivide) operator/;
+
 Expression operator-(const Expression& x);
 Expression operator+(const Expression& x, const Expression& y);
 Expression operator+(const Expression& x, real y);
@@ -429,58 +450,134 @@ Expression operator*(const Expression& x, float y);
 Expression operator*(float y, const Expression& x); // { return x * y; }
 Expression operator/(const Expression& x, float y); // { return x * (1.f / y); }
 
+// TODO(joelgrus) rename these without the VE
+%template(affine_transform_VE) detail::f<AffineTransform, std::vector<Expression>>;
 %template(sum) detail::f<Sum, std::vector<Expression>>;
+%template(average) detail::f<Average, std::vector<Expression>>;
 
+Expression sqrt(const Expression& x);
+Expression erf(const Expression& x);
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
-Expression log(const Expression& x);
-Expression min(const Expression& x, const Expression& y);
-Expression max(const Expression& x, const Expression& y);
-Expression dot_product(const Expression& x, const Expression& y);
-Expression squared_distance(const Expression& x, const Expression& y);
 Expression square(const Expression& x);
+Expression cube(const Expression& x);
+Expression lgamma(const Expression& x);
+Expression log(const Expression& x);
+Expression logistic(const Expression& x);
+Expression rectify(const Expression& x);
+Expression softsign(const Expression& x);
+Expression pow(const Expression& x, const Expression& y);
 
+Expression min(const Expression& x, const Expression& y);
+
+// We need two overloaded versions of `max`, but apparently %template
+// gets unhappy when you use it to overload a function, so we have to define
+// the `ExpressionVector` version of `max` explicitly.
+%{
+namespace dynet { namespace expr {
+Expression max(const std::vector<Expression>& xs) {
+  return detail::f<Max, std::vector<Expression>>(xs);
+};
+} }
+%}
+
+Expression max(const Expression& x, const Expression& y);
+Expression max(const std::vector<Expression>& xs);
+Expression dot_product(const Expression& x, const Expression& y);
+Expression cmult(const Expression& x, const Expression& y);
+Expression cdiv(const Expression& x, const Expression& y);
+Expression colwise_add(const Expression& x, const Expression& bias);
+
+/* PROBABILITY / LOSS OPERATIONS */
+
+Expression softmax(const Expression& x);
+Expression log_softmax(const Expression& x);
+Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
+
+%template(logsumexp) detail::f<LogSumExp, std::vector<Expression>>;
+
+// TODO(joelgrus): delete this once no one is using it
+%template(logsumexp_VE) detail::f<LogSumExp, std::vector<Expression>>;
+
+Expression pickneglogsoftmax(const Expression& x, unsigned v);
+Expression pickneglogsoftmax(const Expression& x, const unsigned* pv);
+Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned>& v);
+
+Expression hinge(const Expression& x, unsigned index, float m = 1.0);
+Expression hinge(const Expression& x, unsigned* pindex, float m = 1.0);
+Expression hinge(const Expression& x, const std::vector<unsigned>& indices, float m = 1.0);
+
+Expression sparsemax(const Expression& x);
+Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
+
+Expression squared_norm(const Expression& x);
+Expression squared_distance(const Expression& x, const Expression& y);
+Expression l1_distance(const Expression& x, const Expression& y);
+Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
+Expression binary_log_loss(const Expression& x, const Expression& y);
+Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m = 1.0);
 Expression poisson_loss(const Expression& x, unsigned y);
 Expression poisson_loss(const Expression& x, const unsigned* py);
 
+/* FLOW / SHAPING OPERATIONS */
+
+Expression nobackprop(const Expression& x);
+Expression reshape(const Expression& x, const Dim& d);
+Expression transpose(const Expression& x);
 Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
 Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
-
 Expression sum_batches(const Expression& x);
 
-Expression reshape(const Expression& x, const Dim& d);
-Expression pick(const Expression& x, unsigned v);
+Expression pick(const Expression& x, unsigned v, unsigned d = 0);
+Expression pick(const Expression& x, const std::vector<unsigned>& v, unsigned d = 0);
+Expression pick(const Expression& x, const unsigned* v, unsigned d = 0);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
+
+%template(concatenate_cols) detail::f<ConcatenateColumns, std::vector<Expression>>;
+%template(concatenate) detail::f<Concatenate, std::vector<Expression>>;
+
+// TODO(joelgrus): delete these once no one is using them
+%template(concatenate_cols_VE) detail::f<ConcatenateColumns, std::vector<Expression>>;
+%template(concatenate_VE) detail::f<Concatenate, std::vector<Expression>>;
+
+/* NOISE OPERATIONS */
 
 Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
 Expression block_dropout(const Expression& x, real p);
 
-Expression softmax(const Expression& x);
-Expression log_softmax(const Expression& x);
+/* CONVOLUTION OPERATIONS */
 
-%template(logsumexp_VE) detail::f<LogSumExp, std::vector<Expression>>;
+Expression conv1d_narrow(const Expression& x, const Expression& f);
+Expression conv1d_wide(const Expression& x, const Expression& f);
+Expression filter1d_narrow(const Expression& x, const Expression& f);
+Expression kmax_pooling(const Expression& x, unsigned k);
+Expression fold_rows(const Expression& x, unsigned nrows=2);
+Expression sum_dim(const Expression& x, unsigned d);
+Expression sum_cols(const Expression& x);
+Expression sum_rows(const Expression& x);
+Expression average_cols(const Expression& x);
+Expression kmh_ngram(const Expression& x, unsigned n);
 
-Expression pickneglogsoftmax(const Expression& x, unsigned v);
-Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned>& v);
+/* TENSOR OPERATIONS */
 
-// TODO(joelgrus) rename these without the VE
-%template(affine_transform_VE) detail::f<AffineTransform, std::vector<Expression>>;
-%template(concatenate_cols_VE) detail::f<ConcatenateColumns, std::vector<Expression>>;
-%template(concatenate_VE) detail::f<Concatenate, std::vector<Expression>>;
+Expression contract3d_1d(const Expression& x, const Expression& y);
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z);
+Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const
+ Expression& b);
+Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
-/*
-template <typename T>
-inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
-inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
-void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-*/
+/* LINEAR ALGEBRA OPERATIONS */
 
+Expression inverse(const Expression& x);
+Expression logdet(const Expression& x);
+Expression trace_of_product(const Expression& x, const Expression& y);
 
 } // namespace expr
 
-
-// declarations from dynet/dynet.h
+/////////////////////////////////////
+// declarations from dynet/dynet.h //
+/////////////////////////////////////
 
 %typemap(javacode) ComputationGraph %{
   // DyNet only allows one ComputationGraph at a time. This means that if you construct them
@@ -540,8 +637,9 @@ struct ComputationGraph {
   std::vector<VariableIndex> parameter_nodes;
 };
 
-
-// declarations from dynet/training.h
+////////////////////////////////////////
+// declarations from dynet/training.h //
+////////////////////////////////////////
 
 // Need to disable constructor as SWIG gets confused otherwise
 %nodefaultctor Trainer;
@@ -573,8 +671,9 @@ struct AdamTrainer : public Trainer {
     Trainer(m, e0, edecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 };
 
-
-// declarations from dynet/rnn.h
+///////////////////////////////////
+// declarations from dynet/rnn.h //
+///////////////////////////////////
 
 %nodefaultctor RNNBuilder;
 struct RNNBuilder {
@@ -589,7 +688,9 @@ struct RNNBuilder {
   std::vector<dynet::expr::Expression> final_h() const;
 };
 
-// declarations from dynet/lstm.h
+////////////////////////////////////
+// declarations from dynet/lstm.h //
+////////////////////////////////////
 
 struct LSTMBuilder : public RNNBuilder {
   //LSTMBuilder() = default;
@@ -610,16 +711,18 @@ struct LSTMBuilder : public RNNBuilder {
   VariableIndex back_index() { return $self->back().i; }
 };
 
-// declarations from dynet/init.h
+////////////////////////////////////
+// declarations from dynet/init.h //
+////////////////////////////////////
 
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
 void cleanup();
 
-
-// additional declarations
+/////////////////////////////
+// additional declarations //
+/////////////////////////////
 
 static void myInitialize();
-
 
 }
 
