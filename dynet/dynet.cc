@@ -85,11 +85,11 @@ void Node::backward(const std::vector<const Tensor*>& xs,
   }
 }
 
-ComputationGraph::ComputationGraph(bool ic, bool cv) :
+ComputationGraph::ComputationGraph():
   ee(new SimpleExecutionEngine(*this)) {
-  immediate_compute = ic;
-  check_validity = cv;
   ++n_hgs;
+  immediate_compute = false;
+  check_validity = false;
   if (n_hgs > 1) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
     throw std::runtime_error("Attempted to create >1 CG");
@@ -297,6 +297,14 @@ const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return th
 void ComputationGraph::invalidate() { ee->invalidate(); }
 void ComputationGraph::backward(const expr::Expression& last) { ee->backward(last.i); }
 void ComputationGraph::backward(VariableIndex i) { ee->backward(i); }
+
+void ComputationGraph::set_immediate_compute(bool ic) {
+  immediate_compute = ic;
+}
+
+void ComputationGraph::set_check_validity(bool cv) {
+  check_validity = cv;
+}
 
 void ComputationGraph::print_graphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";
