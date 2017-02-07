@@ -10,6 +10,10 @@
 #include <fstream>
 #include <sstream>
 
+
+#include <stdexcept>
+
+
 #ifndef __CUDACC__
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
