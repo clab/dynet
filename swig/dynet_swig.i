@@ -646,15 +646,24 @@ struct ComputationGraph {
 struct Trainer {
   void update(real scale = 1.0);
   void update_epoch(real r = 1);
+
+  float clip_gradients(real scale);
   void rescale_and_reset_weight_decay();
+
   real eta0;
   real eta;
   real eta_decay;
   real epoch;
-  real clipping_enabled;
+
+  bool clipping_enabled;
   real clip_threshold;
   real clips;
   real updates;
+
+  real clips_since_status;
+  real updates_since_status;
+
+  bool sparse_updates_enabled;
   bool aux_allocated;
 
   void status();
@@ -663,12 +672,27 @@ struct Trainer {
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
+  explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0);
+};
+
+struct MomentumSGDTrainer : public Trainer {
+  explicit MomentumSGDTrainer(Model& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0);
+};
+
+struct AdagradTrainer : public Trainer {
+  explicit AdagradTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0);
+};
+
+struct AdadeltaTrainer : public Trainer {
+  explicit AdadeltaTrainer(Model& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0);
+};
+
+struct RmsPropTrainer : public Trainer {
+   explicit RmsPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0);
 };
 
 struct AdamTrainer : public Trainer {
-  explicit AdamTrainer(Model& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
-    Trainer(m, e0, edecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+  explicit AdamTrainer(Model& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0);
 };
 
 ///////////////////////////////////
