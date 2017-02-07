@@ -482,6 +482,21 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
 
 // declarations from dynet/dynet.h
 
+%typemap(javacode) ComputationGraph %{
+  // DyNet only allows one ComputationGraph at a time. This means that if you construct them
+  // manually you have to remember to delete each one before you construct a new one, or your
+  // program will crash. `getNew` will handle that deletion for you.
+  private static ComputationGraph singletonInstance = null;
+
+  public static ComputationGraph getNew() {
+    if (singletonInstance != null) {
+      singletonInstance.delete();
+    }
+    singletonInstance = new ComputationGraph();
+    return singletonInstance;
+  }
+%}
+
 struct ComputationGraph {
   ComputationGraph();
   ~ComputationGraph();

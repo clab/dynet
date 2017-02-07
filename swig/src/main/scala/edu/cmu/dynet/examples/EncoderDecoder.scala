@@ -336,7 +336,7 @@ object EncoderDecoder {
     var first = true
     var epoch = 0
 
-    val cg = new ComputationGraph()
+    val cg = ComputationGraph.getNew
 
     // run for the given number of epochs (or forever if NUM_EPOCHS is negaive)
     while (epoch < NUM_EPOCHS || NUM_EPOCHS < 0) {
