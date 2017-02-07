@@ -161,9 +161,19 @@ but not immediately. As a result, your program will crash with the dreaded
 [error] Memory allocator assumes only a single ComputationGraph at a time.
 ```
 
-To avoid this, you need to manually call `.delete()` on each 
-`ComputationGraph` instance when you are done with it 
-(and, in particular, before you create a new one):
+To avoid this, we added a static `getNew` method that remembers the
+last requested ComputationGraph and deletes it every time you request 
+another.
+
+```scala
+for (i <- 0 until NUM_TIMES) {
+  val cg = ComputationGraph.getNew
+  // do some computations
+}
+```
+
+Alternatively, you can manually call `.delete()` on each 
+`ComputationGraph` instance when you are done with it:
 
 ```scala
 for (i <- 0 until NUM_TIMES) {
