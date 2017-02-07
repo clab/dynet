@@ -554,7 +554,7 @@ BOOST_AUTO_TEST_CASE( log_softmax_colbatch_gradient ) {
 // Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 BOOST_AUTO_TEST_CASE( restricted_log_softmax_gradient ) {
   vector<unsigned> restriction = {0,1};
-  dynet::ComputationGraph cg(true, false);
+  dynet::ComputationGraph cg;
   Expression x3 = parameter(cg, param3);
   Expression y = exp( log_softmax(x3, restriction) );
   Expression z = input(cg, {1,3}, first_one_vals) * y;

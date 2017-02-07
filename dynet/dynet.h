@@ -58,7 +58,7 @@ inline void swap(VariableIndex& i1, VariableIndex& i2) {
 }
 
 struct ComputationGraph {
-  ComputationGraph(bool=false, bool=false);
+  ComputationGraph();
   ~ComputationGraph();
 
   // INPUTS
@@ -123,6 +123,10 @@ struct ComputationGraph {
   void backward(const expr::Expression& last);
   // computes backward gradients from node i (assuming it already been evaluated).
   void backward(VariableIndex i);
+  // set immediate_compute variable
+  void set_immediate_compute(bool ic);
+  // set check_validity variable
+  void set_check_validity(bool cv);
 
   // debugging
   void print_graphviz() const;
@@ -132,9 +136,11 @@ struct ComputationGraph {
   std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
 
   ExecutionEngine* ee;  // handles the execution
-  bool immediate_compute;
-  bool check_validity;
  private:
+  // flag of whether to compute immediately for each expression, i.e., an imperative execution style to help debug.
+  bool immediate_compute;
+  // flag of checking Inf/NaN of each layer. Only performing checking when immediate_compute is also set to true.
+  bool check_validity;
   void set_dim_for_new_node(const VariableIndex& i);
 
   std::vector<CGCheckpoint> checkpoints;
