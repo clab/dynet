@@ -22,7 +22,7 @@ object LinearRegression {
 
     val model = new Model
     val trainer = new SimpleSGDTrainer(model, 0.01f)
-    val cg = new ComputationGraph
+    val cg = ComputationGraph.getNew
 
     val p_W = model.add_parameters(dim(1))
     val W = parameter(cg, p_W)

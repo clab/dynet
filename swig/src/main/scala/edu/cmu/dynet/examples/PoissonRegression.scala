@@ -125,7 +125,7 @@ object PoissonRegression {
     var report = 0
     var lines = 0
 
-    val cg = new ComputationGraph()
+    val cg = ComputationGraph.getNew
 
     while (true) {
       var loss = 0.0f
