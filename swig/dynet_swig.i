@@ -75,13 +75,15 @@ struct dynet::expr::Expression;
 
 // Declare explicit types for needed instantiations of generic types
 namespace std {
-  %template(IntVector)        vector<int>;
-  %template(UnsignedVector)   vector<unsigned>;
-  %template(DoubleVector)     vector<double>;
-  %template(FloatVector)      vector<float>;
-  %template(LongVector)       vector<long>;
-  %template(StringVector)     vector<std::string>;
-  %template(ExpressionVector) vector<dynet::expr::Expression>;
+  %template(IntVector)                    vector<int>;
+  %template(UnsignedVector)               vector<unsigned>;
+  %template(DoubleVector)                 vector<double>;
+  %template(FloatVector)                  vector<float>;
+  %template(LongVector)                   vector<long>;
+  %template(StringVector)                 vector<std::string>;
+  %template(ExpressionVector)             vector<dynet::expr::Expression>;
+  %template(ParameterStorageVector)       vector<dynet::ParameterStorage*>;
+  %template(LookupParameterStorageVector) vector<dynet::LookupParameterStorage*>;
 }
 
 //
@@ -237,27 +239,6 @@ struct LookupParameter {
   bool is_updated();
 };
 
-/*
-struct LookupParameterStorage : public ParameterStorageBase {
-  void scale_parameters(float a) override;
-  void zero() override;
-  void squared_l2norm(float* sqnorm) const override;
-  void g_squared_l2norm(float* sqnorm) const override;
-  size_t size() const override;
-  void initialize(unsigned index, const std::vector<float>& val);
-  void accumulate_grad(unsigned index, const Tensor& g);
-  void clear();
-  void initialize_lookups();
-  Dim all_dim;
-  Tensor all_values;
-  Tensor all_grads;
-  Dim dim;
-  std::vector<Tensor> values;
-  std::vector<Tensor> grads;
-  std::unordered_set<unsigned> non_zero_grads;
-};
-*/
-
 struct ParameterInit {
   ParameterInit() {}
   virtual ~ParameterInit() {}
@@ -323,25 +304,51 @@ private:
 };
 
 
-class Model {
- public:
-  Model();
-  ~Model();
-  float gradient_l2_norm() const;
-  void reset_gradient();
-
-  Parameter add_parameters(const Dim& d, float scale = 0.0f);
-  // Parameter add_parameters(const Dim& d, const ParameterInit & init);
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
-  // LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
-
-  size_t parameter_count() const;
+struct ParameterStorageBase {
+  virtual void scale_parameters(float a) = 0;
+  virtual void zero() = 0;
+  virtual void squared_l2norm(float* sqnorm) const = 0;
+  virtual void g_squared_l2norm(float* sqnorm) const = 0;
+  virtual size_t size() const = 0;
+  virtual ~ParameterStorageBase();
 };
 
-void save_dynet_model(std::string filename, Model* model);
-void load_dynet_model(std::string filename, Model* model);
+%nodefaultctor ParameterStorage;
+struct ParameterStorage : public ParameterStorageBase {
+  void scale_parameters(float a) override;
+  void zero() override;
+  void squared_l2norm(float* sqnorm) const override;
+  void g_squared_l2norm(float* sqnorm) const override;
+  size_t size() const override;
 
-// extra code to serialize / deserialize strings
+  void copy(const ParameterStorage & val);
+  void accumulate_grad(const Tensor& g);
+  void clear();
+
+  Dim dim;
+  Tensor values;
+  Tensor g;
+};
+
+%nodefaultctor LookupParameterStorage;
+struct LookupParameterStorage : public ParameterStorageBase {
+  void scale_parameters(float a) override;
+  void zero() override;
+  void squared_l2norm(float* sqnorm) const override;
+  void g_squared_l2norm(float* sqnorm) const override;
+  size_t size() const override;
+  void initialize(unsigned index, const std::vector<float>& val);
+
+  void copy(const LookupParameterStorage & val);
+  void accumulate_grad(unsigned index, const Tensor& g);
+  void accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
+  void clear();
+
+  // Initialize each individual lookup from the overall tensors
+  void initialize_lookups();
+};
+
+// extra code for serialization and parameter lookup
 %extend Model {
    std::string serialize_to_string() {
        std::ostringstream out;
@@ -356,7 +363,53 @@ void load_dynet_model(std::string filename, Model* model);
        boost::archive::text_iarchive ia(in);
        ia >> (*($self));
    }
+
+   // SWIG can't get the types right for `parameters_list`, so here are replacement methods
+   // for which it can. (You might worry that these would cause infinite recursion, but
+   // apparently they don't.
+   std::vector<ParameterStorage*> parameters_list() const {
+     return $self->parameters_list();
+   }
+
+   std::vector<LookupParameterStorage*> lookup_parameters_list() const {
+     return $self->lookup_parameters_list();
+   }
+
+   std::vector<unsigned> updated_parameters_list() const {
+     return $self->updated_parameters_list();
+   }
+
+   std::vector<unsigned> updated_lookup_parameters_list() const {
+     return $self->updated_lookup_parameters_list();
+   }
 };
+
+class Model {
+ public:
+  Model();
+  ~Model();
+  float gradient_l2_norm() const;
+  void reset_gradient();
+
+  Parameter add_parameters(const Dim& d, float scale = 0.0f);
+  Parameter add_parameters(const Dim& d, const ParameterInit & init);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
+
+  void project_weights(float radius = 1.0f);
+  void set_weight_decay_lambda(float lambda);
+
+  size_t parameter_count() const;
+  size_t updated_parameter_count() const;
+
+  void set_updated_param(const Parameter *p, bool status);
+  void set_updated_lookup_param(const LookupParameter *p, bool status);
+  bool is_updated_param(const Parameter *p);
+  bool is_updated_lookup_param(const LookupParameter *p);
+};
+
+void save_dynet_model(std::string filename, Model* model);
+void load_dynet_model(std::string filename, Model* model);
 
 //////////////////////////////////////
 // declarations from dynet/tensor.h //
