@@ -758,7 +758,7 @@ WARN_LOGFILE           =
 # spaces.
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  =../../dynet/model.h ../../dynet/expr.h ../../dynet/training.h ../../dynet/rnn.h ../../dynet/lstm.h ../../dynet/dim.h ../../examples/cpp/encdec/encdec.h ../../examples/cpp/rnnlm-batch/rnnlm-batch.h ../../examples/cpp/mnist/mlp.h
+INPUT                  =../../dynet ../../examples/cpp/encdec/encdec.h ../../examples/cpp/rnnlm-batch/rnnlm-batch.h ../../examples/cpp/mnist/mlp.h
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
