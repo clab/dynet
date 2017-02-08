@@ -1,3 +1,7 @@
+/**
+ * \file dynet.h
+ * \defgroup compgraph compgraph
+ */
 #ifndef DYNET_DYNET_H_
 #define DYNET_DYNET_H_
 
@@ -15,14 +19,6 @@
 #include "dynet/model.h"
 #include "dynet/devices.h"
 
-// Computation graph where nodes represent forward and backward intermediate
-// values, and edges represent functions of multiple values. To represent the
-// fact that a function may have multiple arguments, edges have a single head
-// and 0, 1, 2, or more tails. (Constants, inputs, and parameters are
-// represented as functions of 0 parameters.)
-// Example: given the function z = f(x, y), z, x, and y are nodes, and there
-// is an edge representing f with which points to the z node (i.e., its head),
-// and x and y are the tails of the edge.
 
 namespace dynet {
 
@@ -57,74 +53,284 @@ inline void swap(VariableIndex& i1, VariableIndex& i2) {
   i2 = t;
 }
 
+/**
+ * \ingroup compgraph
+ * @brief Computation graph where nodes represent forward and backward intermediate values, and edges represent functions of multiple values.
+ * @details To represent the fact that a function may have multiple arguments, edges have a single head and 0, 1, 2, or more tails. (Constants, inputs, and parameters are represented as functions of 0 parameters.) 
+ * Example: given the function z = f(x, y), z, x, and y are nodes, and there is an edge representing f with which points to the z node (i.e., its head), and x and y are the tails of the edge.
+ * You shouldn't need to use most methods from the ComputationGraph except for `backward` since most of them are available directly from the Expression class.
+ */
 struct ComputationGraph {
+  /**
+   * @brief Default constructor
+   */
   ComputationGraph();
   ~ComputationGraph();
 
   // INPUTS
-  // the computational network will pull inputs in from the user's data
-  // structures and make them available to the computation
-  VariableIndex add_input(real s);  // add scalar
+  /**
+   * @brief Add scalar input
+   * @details The computational network will pull inputs in from the user's data structures and make them available to the computation
+   * 
+   * @param s Real number
+   * @return The index of the created variable
+   */
+  VariableIndex add_input(real s);  //
+  /**
+   * @brief Add scalar input by pointer
+   * @details The computational network will pull inputs in from the user's data structures and make them available to the computation
+   * 
+   * @param ps Pointer to a real number
+   * @return The index of the created variable
+   */
   VariableIndex add_input(const real* ps);  // add pointer to scalar
+  /**
+   * @brief Add multidimentsional input
+   * @details The computational network will pull inputs in from the user's data structures and make them available to the computation
+   * 
+   * @param d Desired shape of the input
+   * @param d Input data (as a 1 dimensional array)
+   * @return The index of the created variable
+   */
   VariableIndex add_input(const Dim& d, const std::vector<float>& data);
+  /**
+   * @brief Add multidimentsional input by pointer
+   * @details The computational network will pull inputs in from the user's data structures and make them available to the computation
+   * 
+   * @param d Desired shape of the input
+   * @param d Pointer to the input data (as a 1 dimensional array)
+   * @return The index of the created variable
+   */
   VariableIndex add_input(const Dim& d, const std::vector<float>* pdata);
+  /**
+   * @brief Add sparse input
+   * @details The computational network will pull inputs in from the user's data structures and make them available to the computation. Represents specified (not learned) inputs to the network in sparse array format, with an optional default value.
+   * 
+   * @param d Desired shape of the input
+   * @param ids The indexes of the data points to update
+   * @param data  The data points corresponding to each index
+   * @param defdata The default data with which to set the unspecified data points
+   * @return The index of the created variable
+   */
   VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 
   // PARAMETERS
   // parameters are things that are optimized. in contrast to a system like
   // Torch where computational modules may have their own parameters, in DYNET
   // parameters are just parameters
+  /**
+   * @brief Add a parameter to the computation graph
+   * 
+   * @param p Parameter to be added
+   * @return The index of the created variable
+   */
   VariableIndex add_parameters(Parameter p);
+  /**
+   * @brief Add a parameter to the computation graph (but don't update)
+   * 
+   * @param p Parameter to be added
+   * @return The index of the created variable
+   */
   VariableIndex add_const_parameters(Parameter p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
+  /**
+   * @brief Add a lookup parameter to the computation graph
+   * @details Use pindex to point to a memory location where the index will live that the caller owns
+   * 
+   * @param p Lookup parameter from which to pick
+   * @param pindex Pointer to the index to lookup
+   * 
+   * @return The index of the created variable
+   */
   VariableIndex add_lookup(LookupParameter p, const unsigned* pindex);
+  /**
+   * @brief Add a lookup parameter to the computation graph
+   * 
+   * @param p Lookup parameter from which to pick
+   * @param index Index to lookup
+   * 
+   * @return The index of the created variable
+   */
   VariableIndex add_lookup(LookupParameter p, unsigned index);
+  /**
+   * @brief Add lookup parameters to the computation graph
+   * @details Use pindices to point to a memory location where the indices will live that the caller owns
+   * 
+   * @param p Lookup parameter from which to pick
+   * @param pindices Pointer to the indices to lookup
+   * 
+   * @return The index of the created variable
+   */
   VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  /**
+   * @brief Add lookup parameters to the computation graph
+   * 
+   * @param p Lookup parameter from which to pick
+   * @param indices Indices to lookup
+   * 
+   * @return The index of the created variable
+   */
   VariableIndex add_lookup(LookupParameter p, const std::vector<unsigned>& indices);
-  // just like add_lookup, but don't optimize the lookup parameters
+  // 
+  /**
+   * @brief Add a lookup parameter to the computation graph
+   * @details Just like add_lookup, but don't optimize the lookup parameters
+   * 
+   * @param p Lookup parameter from which to pick
+   * @param pindices Pointer to the indices to lookup
+   * 
+   * @return The index of the created variable
+   */
   VariableIndex add_const_lookup(LookupParameter p, const unsigned* pindex);
+  /**
+   * @brief Add a lookup parameter to the computation graph
+   * @details Just like add_lookup, but don't optimize the lookup parameters
+   * 
+   * @param p Lookup parameter from which to pick
+   * @param index Index to lookup
+   * 
+   * @return The index of the created variable
+   */
   VariableIndex add_const_lookup(LookupParameter p, unsigned index);
+  /**
+   * @brief Add lookup parameters to the computation graph
+   * @details Just like add_lookup, but don't optimize the lookup parameters
+   * 
+   * @param p Lookup parameter from which to pick
+   * @param pindices Pointer to the indices to lookup
+   * 
+   * @return The index of the created variable
+   */
   VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>* pindices);
+  /**
+   * @brief Add lookup parameters to the computation graph
+   * @details Just like add_lookup, but don't optimize the lookup parameters
+   * 
+   * @param p Lookup parameter from which to pick
+   * @param indices Indices to lookup
+   * 
+   * @return The index of the created variable
+   */
   VariableIndex add_const_lookup(LookupParameter p, const std::vector<unsigned>& indices);
 
   // COMPUTATIONS
+  /**
+   * @brief Add a function to the computation graph
+   * @details This what is called when creating an expression
+   * 
+   * @param arguments List of the arguments indices
+   * @tparam Function Function to be applied
+   * @return The index of the output variable
+   */
   template <class Function> inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments);
+  /**
+   * @brief Add a function to the computation graph (with side information)
+   * @details This what is called when creating an expression
+   * 
+   * @param arguments List of the arguments indices
+   * @param side_information Side information that is needed to compute the function
+   * @tparam Function Function to be applied
+   * @return The index of the output variable
+   */
   template <class Function, typename... Args>
   inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments,
                                     Args&&... side_information);
   template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
 
   // reset ComputationGraph to a newly created state
+  /**
+   * @brief Reset ComputationGraph to a newly created state
+   * @details [long description]
+   */
   void clear();
+  /**
+   * @brief Set a checkpoint
+   */
   void checkpoint();
+  /**
+   * @brief Revert to last checkpoint
+   */
   void revert();
 
+  /**
+   * @brief Get dimension of a node
+   * 
+   * @param index Variable index of the node
+   * @return Dimension
+   */
   Dim& get_dimension(VariableIndex index) const;
 
 
   // perform computations
 
   // run complete forward pass from first node to given one, ignoring all precomputed values.
+  /**
+   * @brief Run complete forward pass from first node to given one, ignoring all precomputed values.
+   * 
+   * @param last Expression up to which the forward pass must be computed
+   * @return Value of the `last` Expression after execution
+   */
   const Tensor& forward(const expr::Expression& last);
+  /**
+   * @brief Run complete forward pass from first node to given one, ignoring all precomputed values.
+   * 
+   * @param last Variable index of the node up to which the forward pass must be computed
+   * @return Value of the end Node after execution
+   */
   const Tensor& forward(VariableIndex i);
-  // run forward pass from the last computed node to given one.
-  // useful if you want to add nodes and evaluate just the new parts.
+  /**
+   * @brief Run forward pass from the last computed node to given one.
+   * @details Useful if you want to add nodes and evaluate just the new parts.
+   * 
+   * @param last Expression up to which the forward pass must be computed
+   * @return Value of the `last` Expression after execution
+   */
   const Tensor& incremental_forward(const expr::Expression& last);
+  /**
+   * @brief Run forward pass from the last computed node to given one.
+   * @details Useful if you want to add nodes and evaluate just the new parts.
+   * 
+   * @param last Variable index of the node up to which the forward pass must be computed
+   * @return Value of the end Node after execution
+   */
   const Tensor& incremental_forward(VariableIndex i);
-  // get forward value for node at index i. used cached values if available,
-  // performs forward evaluation if note available (may compute more than strictly
-  // what is needed).
+  /**
+   * @brief Get forward value for node at index i.
+   * @details Performs forward evaluation if note available (may compute more than strictly what is needed).
+   * 
+   * @param i Index of the variable from which you want the value
+   * @return Requested value
+   */
   const Tensor& get_value(VariableIndex i);
+  /**
+   * @brief Get forward value for the given expression
+   * @details Performs forward evaluation if note available (may compute more than strictly what is needed).
+   * 
+   * @param e Expression from which you want the value
+   * @return Requested value
+   */
   const Tensor& get_value(const expr::Expression& e);
-  // clears forward caches (for get_value etc).
+  /**
+   * @brief Clears forward caches (for get_value etc).
+   */
   void invalidate();
-  // computes backward gradients from the front-most evaluated node.
+  /**
+   * @brief Computes backward gradients from the front-most evaluated node.
+   * 
+   * @param last Expression from which to compute the gradient
+   */
   void backward(const expr::Expression& last);
-  // computes backward gradients from node i (assuming it already been evaluated).
+  /**
+   * @brief Computes backward gradients from node i (assuming it already been evaluated).
+   * 
+   * @param i Index of the node from which to compute the gradient
+   */
   void backward(VariableIndex i);
 
-  // debugging
+  /**
+   * @brief Used for debugging
+   */
   void print_graphviz() const;
 
   // data
