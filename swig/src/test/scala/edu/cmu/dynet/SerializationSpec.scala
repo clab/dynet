@@ -16,6 +16,8 @@ class SerializationSpec extends FlatSpec with Matchers {
     val parameters1 = m1.parameters_list()
     val parameters2 = m2.parameters_list()
 
+    parameters1.size() shouldBe parameters2.size()
+
     parameters1.zip(parameters2).foreach {
       case (p1, p2) => {
         p1.size shouldBe p2.size
@@ -26,6 +28,8 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     val lookupParameters1 = m1.lookup_parameters_list()
     val lookupParameters2 = m2.lookup_parameters_list()
+
+    lookupParameters1.size() shouldBe lookupParameters2.size()
 
     lookupParameters1.zip(lookupParameters2).foreach {
       case (p1, p2) => {
