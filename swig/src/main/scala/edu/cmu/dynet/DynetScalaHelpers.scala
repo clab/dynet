@@ -132,6 +132,12 @@ object DynetScalaHelpers {
     new Dim(dimInts)
   }
 
+  def dim(xs: Seq[Int], b: Int): Dim = {
+    val lv = new LongVector
+    xs.foreach(lv.add)
+    new Dim(lv, b)
+  }
+
   implicit def seqToDim(dims: Seq[Int]): Dim = {
     new Dim(dims.map(_.toLong):_*)
   }
