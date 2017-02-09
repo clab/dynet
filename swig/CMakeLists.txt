@@ -66,7 +66,6 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Node_p_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Tensor_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__VariableIndex_t.java"
-    "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_unsigned_int_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_unsigned_int.java"
     "${CMAKE_SWIG_OUTDIR}/Tensor.java"
     "${CMAKE_SWIG_OUTDIR}/TensorTools.java"
