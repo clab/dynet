@@ -157,6 +157,7 @@ object DynetScalaHelpers {
     affine_transform_VE(ev)
   }
 
+  // Sugar to turn `Expression` operators into Scala operators.
   implicit class RichExpression(e: Expression) {
     def +(e2: Expression): Expression = exprPlus(e, e2)
     def *(e2: Expression): Expression = exprTimes(e, e2)
@@ -165,5 +166,13 @@ object DynetScalaHelpers {
     def *(r: Float): Expression = exprTimes(e, r)
     def -(r: Float): Expression = exprMinus(e, r)
     def /(r: Float): Expression = exprDivide(e, r)
+    def unary_-(): Expression = exprMinus(e)
+  }
+
+  implicit class RichNumeric[T](x: T)(implicit n: Numeric[T]) {
+    import n._
+    def +(e: Expression): Expression = exprPlus(x.toFloat, e)
+    def *(e: Expression): Expression = exprTimes(x.toFloat, e)
+    def -(e: Expression): Expression = exprMinus(x.toFloat, e)
   }
 }
