@@ -71,6 +71,16 @@ object DynetScalaHelpers {
     for (i <- 0 until ev.size.toInt) yield ev.get(i)
   }
 
+  implicit def parameterVectorToSeq(pv: ParameterStorageVector): Seq[ParameterStorage] = {
+    for (i <- 0 until pv.size.toInt) yield pv.get(i)
+  }
+
+  implicit def lookupParameterVectorToSeq(
+    pv: LookupParameterStorageVector
+  ): Seq[LookupParameterStorage] = {
+    for (i <- 0 until pv.size.toInt) yield pv.get(i)
+  }
+
   // The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with;
   // these are more Scala-y wrappers that implicitly convert to the SWIG versions.
   class FloatPointer {
