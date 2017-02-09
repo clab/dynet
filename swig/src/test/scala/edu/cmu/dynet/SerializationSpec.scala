@@ -88,4 +88,30 @@ class SerializationSpec extends FlatSpec with Matchers {
     val deserialized = ois.readObject.asInstanceOf[Model]
     assertSameModel(original, deserialized)
   }
+
+  "serializer" should "handle arbitrary stuff correctly" in {
+
+    val model1 = defaultModel()
+    val model2 = defaultModel()
+    model2.add_parameters(dim(8, 9))
+    val model3 = defaultModel()
+    model3.add_parameters(dim(3))
+    model3.add_parameters(dim(5, 2, 4))
+
+    val serializer = new Serializer()
+    serializer.write_model(model1)
+    serializer.write_model(model2)
+    serializer.write_model(model3)
+
+    val serialized = serializer.finish
+
+    val deserializer = new Deserializer(serialized)
+    val model1a = deserializer.read_model()
+    val model2a = deserializer.read_model()
+    val model3a = deserializer.read_model()
+
+    assertSameModel(model1, model1a)
+    assertSameModel(model2, model2a)
+    assertSameModel(model3, model3a)
+  }
 }

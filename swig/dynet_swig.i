@@ -13,6 +13,7 @@
 %{
 #include <vector>
 #include <sstream>
+#include <stdexcept>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include "model.h"
@@ -865,9 +866,83 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
 void cleanup();
 
+/////////////////////////
+// serialization logic //
+/////////////////////////
+
+
+%{
+namespace dynet {
+
+struct Serializer {
+  bool closed;
+
+  std::ostringstream* out;
+  boost::archive::text_oarchive* oa;
+
+  Serializer() : closed(false) {
+    out = new std::ostringstream();
+    oa = new boost::archive::text_oarchive(*out);
+  }
+
+  ~Serializer() {}
+
+  void write_model(const Model& model) {
+    if (!closed) {
+      (*oa) << model;
+    } else {
+      // error "cannot write to closed serializer";
+    }
+  }
+
+  std::string finish() {
+    closed = true;
+    std::string output = out->str();
+    delete oa;
+    return output;
+  }
+};
+
+struct Deserializer {
+
+  std::istringstream* in;
+  boost::archive::text_iarchive* ia;
+
+  Deserializer(const std::string& s) {
+    in = new std::istringstream();
+    in->str(s);
+    ia = new boost::archive::text_iarchive(*in);
+  }
+
+  ~Deserializer() { delete ia; }
+
+  Model* read_model() {
+    Model* m = new Model();
+    (*ia) >> (*m);
+    return m;
+  }
+};
+
+}
+%}
+
+
 /////////////////////////////
 // additional declarations //
 /////////////////////////////
+
+struct Serializer {
+  Serializer();
+  ~Serializer();
+  void write_model(const Model& model);
+  std::string finish();
+};
+
+struct Deserializer {
+  Deserializer(const std::string& s);
+  ~Deserializer();
+  Model* read_model();
+};
 
 static void myInitialize();
 
