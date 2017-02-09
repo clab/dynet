@@ -39,17 +39,17 @@ class ExpressionSpec extends FlatSpec with Matchers {
     val e3 = input(cg, 3)
 
     // arithmetic
-    exprMinus(e1) shouldHaveValue -1f
-    exprPlus(e1, e2) shouldHaveValue 3f
-    exprPlus(e1, 10) shouldHaveValue 11f
-    exprPlus(10, e1) shouldHaveValue 11f
-    exprMinus(e2, e1) shouldHaveValue 1f
-    exprMinus(e2, 10) shouldHaveValue -8f
-    exprMinus(10, e2) shouldHaveValue 8f
-    exprTimes(e1, e2) shouldHaveValue 2f
-    exprTimes(10, e2) shouldHaveValue 20f
-    exprTimes(e2, 10) shouldHaveValue 20f
-    exprDivide(e2, 10) shouldHaveValue 0.2f
+    -e1 shouldHaveValue -1f
+    e1 + e2 shouldHaveValue 3f
+    e1 + 10 shouldHaveValue 11f
+    10 + e1 shouldHaveValue 11f
+    e2 - e1 shouldHaveValue 1f
+    e2 - 10 shouldHaveValue -8f
+    10 - e2 shouldHaveValue 8f
+    e1 * e2 shouldHaveValue 2f
+    10 * e2 shouldHaveValue 20f
+    e2 * 10 shouldHaveValue 20f
+    e2 / 10 shouldHaveValue 0.2f
 
     // affine transform
     affine_transform(Seq(e1, e2, e3)) shouldHaveValue 7 // 1 + 2 * 3
@@ -68,6 +68,7 @@ class ExpressionSpec extends FlatSpec with Matchers {
 
     min(e1, e3) shouldHaveValue 1
     max(e1, e3) shouldHaveValue 3
+
 
     // TODO(joelgrus): write more tests
   }
