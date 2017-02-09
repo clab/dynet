@@ -328,6 +328,10 @@ struct ComputationGraph {
    * \param i Index of the node from which to compute the gradient
    */
   void backward(VariableIndex i);
+  // set immediate_compute variable
+  void set_immediate_compute(bool ic);
+  // set check_validity variable
+  void set_check_validity(bool cv);
 
   /**
    * \brief Used for debugging
@@ -340,6 +344,10 @@ struct ComputationGraph {
 
   ExecutionEngine* ee;  // handles the execution
  private:
+  // flag of whether to compute immediately for each expression, i.e., an imperative execution style to help debug.
+  bool immediate_compute;
+  // flag of checking Inf/NaN of each layer. Only performing checking when immediate_compute is also set to true.
+  bool check_validity;
   void set_dim_for_new_node(const VariableIndex& i);
 
   std::vector<CGCheckpoint> checkpoints;
