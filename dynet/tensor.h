@@ -209,8 +209,8 @@ struct Tensor {
     if (d.batch_elems() == 1) {
       return *this;
     } else {
-      if (b < d.batch_elems()) {
-        stringstream ss;
+      if (b >= d.batch_elems()) {
+        std::stringstream ss;
         ss << "Requested batch id " << b << " is greater than the number of batch " << d.batch_elems();
         throw std::runtime_error(ss.str());
       }

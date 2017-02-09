@@ -40,3 +40,24 @@ To deal with sparse updates, there are two parameter classes:
     :members:
     :content-only:
 
+Tensor
+------
+
+Tensor objects provide a bridge between C++ data structures and Eigen Tensors for multidimensional data.
+
+Concretely, as an end user you will obtain a tensor object after calling ``.value()`` on an expression. You can then use functions described below to convert these tensors to ``float`` s, arrays of ``float`` s, to save and load the values, etc...
+
+Conversely, when implementing low level nodes (e.g. for new operations), you will need to retrieve Eigen tensors from dynet tensors in order to perform efficient computation.
+
+.. doxygengroup:: tensor
+    :members:
+    :content-only:
+
+Dimensions
+----------
+
+The Dim class holds information on the shape of a tensor. As explained in :doc:`unorthodox`, in DyNet the dimensions are represented as the standard dimension + the batch dimension, which makes batched computation transparent.
+
+.. doxygengroup:: dim
+    :members:
+    :content-only:
