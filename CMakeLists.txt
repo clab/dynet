@@ -156,9 +156,9 @@ if (WITH_CUDA_BACKEND)
 endif()
 
 # look for Eigen
-find_package(Eigen3 REQUIRED)
 get_filename_component(EIGEN3_INCLUDE_DIR "${EIGEN3_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
 message("-- Eigen dir is " ${EIGEN3_INCLUDE_DIR})
+find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 FIND_PACKAGE(Threads REQUIRED)
