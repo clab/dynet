@@ -281,10 +281,11 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
   node->dim = node->dim_forward(xds);
   if (immediate_compute) {
     const Tensor& value = incremental_forward(i);
-    if (check_validity) {
-      bool valid = value.is_valid();
-      assert(valid);
-    }
+    if (check_validity) 
+      if (!value.is_valid()) {
+        cerr << "NaN or Inf detected\n";
+        throw std::runtime_error("NaN or Inf detected");
+      }
   }
 }
 
