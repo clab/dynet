@@ -36,23 +36,23 @@ class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
   def run(x: Expression, cg: ComputationGraph): Expression = {
     // expression for the current hidden state
     var h_cur = x
-    for (l <- 0 until layers.size) {
+    for ((layer, layerParams) <- layers.zip(params)) {
       // initialize parameters in computation graph
-      val W = parameter(cg, params(l).w)
-      val b = parameter(cg, params(l).b)
+      val W = parameter(cg, layerParams.w)
+      val b = parameter(cg, layerParams.b)
       // apply affine transform
       val a = affine_transform(Seq(b, W, h_cur))
       // apply activation function
-      val h = activate(a, layers(l).activation)
+      val h = activate(a, layer.activation)
       // take care of dropout
-      val h_dropped = if (layers(l).dropoutRate > 0) {
+      val h_dropped = if (layer.dropoutRate > 0) {
         if (dropoutActive) {
           // during training, drop random units
-          val mask = random_bernoulli(cg, dim(layers(l).outputDim), 1 - layers(l).dropoutRate)
+          val mask = random_bernoulli(cg, dim(layer.outputDim), 1 - layer.dropoutRate)
           cmult(h, mask)
         } else {
           // at test time, multiply by the retention rate to scale
-          h * (1 - layers(l).dropoutRate)
+          h * (1 - layer.dropoutRate)
         }
       } else {
         // no dropout, don't do anything
