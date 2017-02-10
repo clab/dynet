@@ -78,10 +78,10 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CParameterInitIdentity()
 
     cdef cppclass CParameterInitGlorot "dynet::ParameterInitGlorot" (CParameterInit):
-        CParameterInitGlorot(bool is_lookup) # is_lookup = False
+        CParameterInitGlorot(bool is_lookup, float gain) # is_lookup = False
 
     cdef cppclass CParameterInitSaxe "dynet::ParameterInitSaxe" (CParameterInit):
-        ParameterInitSaxe()
+        CParameterInitSaxe(float scale)
 
     cdef cppclass CParameterInitFromFile "dynet::ParameterInitFromFile" (CParameterInit):
         CParameterInitFromFile(string filename)
