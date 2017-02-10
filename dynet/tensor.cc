@@ -29,7 +29,7 @@ ostream& operator<<(ostream& os, const Tensor& t) {
 }
 
 real as_scalar(const Tensor& t) {
-  assert(t.d.size() == 1);
+  if(t.d.size() != 1) throw std::runtime_error("Input tensor has more than one element, cannot convert to scalar.");
 #if HAVE_CUDA
   float res;
   CUDA_CHECK(cudaMemcpy(&res, t.v, sizeof(float), cudaMemcpyDeviceToHost));
@@ -235,7 +235,7 @@ real rand01() {
 }
 
 int rand0n(int n) {
-  assert(n > 0);
+  if(n <= 0) throw std::runtime_error("Integer upper bound is non-positive");
   int x = rand01() * n;
   while(n == x) { x = rand01() * n; }
   return x;
