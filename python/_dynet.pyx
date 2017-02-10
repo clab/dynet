@@ -1495,10 +1495,6 @@ cdef class SimpleSGDTrainer:
         self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
     def __dealloc__(self):
         del self.thisptr
-    cpdef enable_clipping(self, bool enable):
-        self.thisptr.enable_clipping(enable)
-    cpdef set_clip_threshold(self, float threshold):
-        self.thisptr.set_clip_threshold(threshold)
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
@@ -1523,10 +1519,6 @@ cdef class MomentumSGDTrainer:
         self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
     def __dealloc__(self):
         del self.thisptr
-    cpdef enable_clipping(self, bool enable):
-        self.thisptr.enable_clipping(enable)
-    cpdef set_clip_threshold(self, float threshold):
-        self.thisptr.set_clip_threshold(threshold)
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
@@ -1552,10 +1544,6 @@ cdef class AdagradTrainer:
         self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
-    cpdef enable_clipping(self, bool enable):
-        self.thisptr.enable_clipping(enable)
-    cpdef set_clip_threshold(self, float threshold):
-        self.thisptr.set_clip_threshold(threshold)
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
@@ -1581,10 +1569,6 @@ cdef class AdadeltaTrainer:
         self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
     def __dealloc__(self):
         del self.thisptr
-    cpdef enable_clipping(self, bool enable):
-        self.thisptr.enable_clipping(enable)
-    cpdef set_clip_threshold(self, float threshold):
-        self.thisptr.set_clip_threshold(threshold)
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
@@ -1610,10 +1594,6 @@ cdef class AdamTrainer:
         self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
-    cpdef enable_clipping(self, bool enable):
-        self.thisptr.enable_clipping(enable)
-    cpdef set_clip_threshold(self, float threshold):
-        self.thisptr.set_clip_threshold(threshold)
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
     cpdef update_epoch(self, float r = 1.0):
