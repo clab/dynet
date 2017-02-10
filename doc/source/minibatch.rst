@@ -31,7 +31,7 @@ Finally, we calculate the loss given the true label ``out_label``.
   # out_label is an output label
   word_1 = E[in_words[0]]
   word_2 = E[in_words[1]]
-  scores_sym = dy.softmax(W*dy.concatenate([word_1, word_2])+b)
+  scores_sym = W*dy.concatenate([word_1, word_2])+b
   loss_sym = dy.pickneglogsoftmax(scores_sym, out_label)
 
 Next, let's take a look at the mini-batched version:
@@ -42,7 +42,7 @@ Next, let's take a look at the mini-batched version:
   # out_labels is a list of output labels [label_1, label_2, ...]
   word_1_batch = dy.lookup_batch(E, [x[0] for x in in_words])
   word_2_batch = dy.lookup_batch(E, [x[1] for x in in_words])
-  scores_sym = dy.softmax(W*dy.concatenate([word_1_batch, word_2_batch])+b)
+  scores_sym = W*dy.concatenate([word_1_batch, word_2_batch])+b
   loss_sym = dy.sum_batches( dy.pickneglogsoftmax_batch(scores_sym, out_labels) )
 
 We can see there are only 4 major changes: the word IDs need to be transformed into lists of IDs instead of a single ID, we need to call ``lookup_batch`` instead of the standard lookup, we need to call ``pickneglogsoftmax_batch`` instead of the unbatched version, and we need to call ``sum_batches`` at the end to sum the loss from all the batches.
