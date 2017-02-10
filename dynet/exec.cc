@@ -17,7 +17,7 @@ void SimpleExecutionEngine::invalidate(unsigned i) {
   num_nodes_evaluated = i;
 }
 
-const Tensor& SimpleExecutionEngine::forward() { 
+const Tensor& SimpleExecutionEngine::forward() {
   const VariableIndex node_max_index = (VariableIndex)(cg.nodes.size() - 1);
   return forward(node_max_index);
 }
@@ -67,18 +67,14 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       nfxs[num_nodes_evaluated].device = node->device;
       // Get the memory
       nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(node->dim.size() * sizeof(float)));
-      if (nfxs[num_nodes_evaluated].v == nullptr) {
-        cerr << "out of memory\n";
-        abort();
-      }
+      if (nfxs[num_nodes_evaluated].v == nullptr)
+        throw std::runtime_error("out of memory");
       void* aux_mem = nullptr;
       size_t aux_size = node->aux_storage_size();
       if (aux_size) {
         aux_mem = nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(aux_size);
-        if (!aux_mem) {
-          cerr << "aux out of memory\n";
-          abort();
-        }
+        if (!aux_mem)
+          throw std::runtime_error("aux out of memory");
       }
       node->aux_mem = aux_mem;
 
@@ -95,11 +91,11 @@ void SimpleExecutionEngine::backward() {
 
 // TODO what is happening with parameter nodes if from_where > param_node_id ?
 void SimpleExecutionEngine::backward(VariableIndex from_where) {
-  assert(from_where+1 <= nfxs.size());
-  assert(from_where+1 <= cg.nodes.size());
+  if(!(from_where < nfxs.size()))
+    incremental_forward(from_where);
   if (nfxs[from_where].d.size() != 1) {
-    cerr << "backward() called on non-scalar node.\n";
-    abort();
+    ostringstream oss; oss << "backward() can only be called on scalar nodes, but node " << from_where << " has dimension: " << nfxs[from_where].d;
+    throw std::runtime_error(oss.str());
   }
 
   const unsigned num_nodes = from_where+1;

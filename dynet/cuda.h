@@ -61,7 +61,7 @@ inline std::pair<int, int> SizeToBlockThreadPair(int n) {
   return std::make_pair(blocks, threads);
 }
 
-std::vector<Device*> initialize_gpu(dynet::DynetParams params);
+std::vector<Device*> initialize_gpu(dynet::DynetParams& params);
 std::vector<Device*> initialize_gpu(int& argc, char**& argv);
 
 } // namespace dynet

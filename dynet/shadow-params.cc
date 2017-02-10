@@ -17,10 +17,20 @@ ShadowParameters::ShadowParameters(const ParameterStorage& p) : h(p.values) {
   TensorTools::Zero(h);
 }
 
-ShadowLookupParameters::ShadowLookupParameters(const LookupParameterStorage& lp) : h(lp.values) {
-  for (auto& t : h) {
-    default_device->allocate_tensor(DeviceMempool::PS, t);
-    TensorTools::Zero(t);
+ShadowLookupParameters::ShadowLookupParameters(const LookupParameterStorage& lp) : all_h(lp.all_values) {
+  default_device->allocate_tensor(DeviceMempool::PS, all_h);
+  TensorTools::Zero(all_h);
+  initialize_lookups();
+}
+
+void ShadowLookupParameters::initialize_lookups() {
+  int num = all_h.d[all_h.d.nd-1];
+  Dim dim = all_h.d; dim.nd--;
+  int dim_size = dim.size();
+  if(h.size() == 0) {
+    h.resize(num);
+    for(int i = 0; i < num; ++i)
+      h[i] = Tensor(dim, all_h.v + i*dim_size, all_h.device, all_h.mem_pool);
   }
 }
 
@@ -47,10 +57,15 @@ void ShadowParameters::serialize(Archive& ar, const unsigned int) {
 DYNET_SERIALIZE_IMPL(ShadowParameters)
 
 template<class Archive>
-void ShadowLookupParameters::serialize(Archive& ar, const unsigned int) {
-  ar & h;
+void ShadowLookupParameters::save(Archive& ar, const unsigned int) const {
+  ar << h;
 }
-DYNET_SERIALIZE_IMPL(ShadowLookupParameters)
+template<class Archive>
+void ShadowLookupParameters::load(Archive& ar, const unsigned int) {
+  ar >> h;
+  initialize_lookups();
+}
+DYNET_SAVELOAD_IMPL(ShadowLookupParameters)
 
 } // namespace dynet
 

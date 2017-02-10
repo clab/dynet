@@ -4,11 +4,13 @@
 
 #include "dynet/dynet.h"
 #include "dynet/cuda.h"
+#include "dynet/init.h"
+
 using namespace std;
 
 namespace dynet {
 
-vector<Device*> initialize_gpu(DynetParams params) {
+vector<Device*> initialize_gpu(DynetParams& params) {
   // Get GPU devices count
   int nDevices;
   CUDA_CHECK(cudaGetDeviceCount(&nDevices));

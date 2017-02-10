@@ -22,6 +22,7 @@
 #define DYNET_TRAINER_DEFINE_DEV_IMPL() \
   void update_params(real scale, real gscale, size_t idx) override; \
   void update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) override; \
+  void update_lookup_params(real scale, real gscale, size_t idx) override; \
   template <class MyDevice> \
   void update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   void update_rule(real scale, real gscale, const std::vector<Tensor*> & values) override;
@@ -39,11 +40,13 @@ struct Trainer {
   /**
    * \brief General constructor for a Trainer
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
+   * \param edecay Learning rate decay
    */
-  explicit Trainer(Model* m, real e0, real edecay = 0.0) :
-    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5), clips(), updates(), aux_allocated(false), model(m) {}
+  explicit Trainer(Model& m, real e0, real edecay = 0.0) :
+    eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5),
+    clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
   virtual ~Trainer();
 
   void update(real scale = 1.0);
@@ -55,7 +58,7 @@ struct Trainer {
 
   // if clipping is enabled and the gradient is too big, return the amount to
   // scale the gradient by (otherwise 1)
-  float clip_gradients();
+  float clip_gradients(real scale);
 
   // TODO: This is unprotected temporarily until there is a better solution
   //       for serializing the weight decay when saving models
@@ -81,12 +84,28 @@ struct Trainer {
   real clip_threshold;
   real clips;
   real updates;
+  // the number of clips and status since the last print
+  real clips_since_status;
+  real updates_since_status;
+
+  /**
+   * \brief Whether to perform sparse updates
+   * \details DyNet trainers support two types of updates for lookup parameters,
+   *          sparse and dense. Sparse updates are the default. They have the
+   *          potential to be faster, as they only touch the parameters that have
+   *          non-zero gradients. However, they may not always be faster (particulary
+   *          on GPU with mini-batch training), and are not precisely numerically
+   *          correct for some update rules such as MomentumTrainer and AdamTrainer.
+   *          Thus, if you set this variable to false, the trainer will perform dense
+   *          updates and be precisely correct, and maybe faster sometimes.
+   */
+  bool sparse_updates_enabled;
 
   bool aux_allocated;
 
   void status() {
-    std::cerr << "[epoch=" << epoch << " eta=" << eta << " clips=" << clips << " updates=" << updates << "] ";
-    updates = clips = 0;
+    std::cerr << "[epoch=" << epoch << " eta=" << eta << " clips=" << clips_since_status << " updates=" << updates_since_status << "] ";
+    updates_since_status = clips_since_status = 0;
   }
 
   Model* model;  // parameters and gradients live here
@@ -94,9 +113,39 @@ struct Trainer {
  protected:
   Trainer() {}
   virtual void alloc_impl() { }
+  /**
+   * \brief The actual rule to update the parameters
+   * 
+   * \param scale Scale of the update (i.e. learning rate)
+   * \param gscale Gradient scale based on clipping
+   * \param values Values specific to the particular update rule being implemented
+   */
   virtual void update_rule(real scale, real gscale, const std::vector<Tensor*> & values) = 0;
+  /**
+   * \brief Parameter update function
+   * 
+   * \param scale Scale of the update (i.e. learning rate)
+   * \param gscale Gradient scale based on clipping
+   * \param idx Index of the parameter
+   */
   virtual void update_params(real scale, real gscale, size_t idx) = 0;
+  /**
+   * \brief Sparse lookup parameter update function
+   * 
+   * \param scale Scale of the update (i.e. learning rate)
+   * \param gscale Gradient scale based on clipping
+   * \param idx Index of the lookup parameter object
+   * \param lidx Index of the specific entry within the lookup parameter object
+   */
   virtual void update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) = 0;
+  /**
+   * \brief Dense lookup parameter update function
+   * 
+   * \param scale Scale of the update (i.e. learning rate)
+   * \param gscale Gradient scale based on clipping
+   * \param idx Index of the lookup parameter object
+   */
+  virtual void update_lookup_params(real scale, real gscale, size_t idx) = 0;
 
  private:
   friend class boost::serialization::access;
@@ -118,11 +167,11 @@ struct SimpleSGDTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay parameter.
    */
-  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
+  explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
  private:
@@ -146,12 +195,12 @@ struct MomentumSGDTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param mom Momentum
    * \param edecay Learning rate decay parameter
    */
-  explicit MomentumSGDTrainer(Model* m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
+  explicit MomentumSGDTrainer(Model& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
     Trainer(m, e0, edecay), momentum(mom) {}
 
  protected:
@@ -186,12 +235,12 @@ struct AdagradTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param edecay Learning rate decay parameter
    */
-  explicit AdagradTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
+  explicit AdagradTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -223,13 +272,13 @@ struct AdadeltaTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average of updates in the numerator
    * \param edecay Learning rate decay parameter
    */
-  explicit AdadeltaTrainer(Model* m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
-    Trainer(m, 1.0), epsilon(eps), rho(rho) {}
+  explicit AdadeltaTrainer(Model& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
+    Trainer(m, 1.0, edecay), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -260,13 +309,13 @@ struct RmsPropTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
    * \param edecay Learning rate decay parameter
    */
-  explicit RmsPropTrainer(Model* m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
+  explicit RmsPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -297,15 +346,15 @@ struct AdamTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
-   * \param m Pointer to the model to be trained
+   * \param m Model to be trained
    * \param e0 Initial learning rate
    * \param beta_1 Moving average parameter for the mean
    * \param beta_2 Moving average parameter for the variance
    * \param eps Bias parameter \f$\epsilon\f$
    * \param edecay Learning rate decay parameter
    */
-  explicit AdamTrainer(Model* m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
-    Trainer(m, e0), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+  explicit AdamTrainer(Model& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
+    Trainer(m, e0, edecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
