@@ -962,7 +962,7 @@ Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptar
 
 /**
  * \ingroup lossoperations
- * \brief Constrained softmax loss
+ * \brief Constrained softmax
  * \details The constrained softmax function.
  *          **Note:** This function is not yet implemented on GPU.
  * 
