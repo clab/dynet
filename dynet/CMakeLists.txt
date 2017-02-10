@@ -131,9 +131,8 @@ if(WITH_CUDA_BACKEND)
     list(APPEND CUDA_NVCC_FLAGS "-O2")
   endif()
   if(MSVC)
-    # If MSVC, we need the C99 math flag as in other compilations, and we need the boost flag because nvcc doesn't
-    #  properly parse part of the boost template definitions
-    list(APPEND CUDA_NVCC_FLAGS "-DEIGEN_HAS_C99_MATH;-DBOOST_NO_CXX11_ALLOCATOR")
+    # If MSVC, we need the boost flag because nvcc doesn't properly parse part of the boost template definitions
+    list(APPEND CUDA_NVCC_FLAGS "-DBOOST_NO_CXX11_ALLOCATOR")
     list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
