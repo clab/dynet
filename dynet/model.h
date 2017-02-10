@@ -305,8 +305,7 @@ struct ParameterInitIdentity : public ParameterInit {
  * \ingroup params
  * \brief Initialize with the methods described in [Glorot, 2010](http://www.jmlr.org/proceedings/papers/v9/glorot10a/glorot10a.pdf?hc_location=ufi)
  * \details In order to preserve the variance of the forward and backward flow across layers, the parameters \f$\theta\f$ are initialized such that \f$\mathrm{Var}(\theta)=\frac 2 {n_1+n_2}\f$ where \f$n_1,n_2\f$ are the input and output dim.
- * Important note : For now the Glorot Initializer is only correct for tanh activated layers (or more specifically activation functions such that \f$f'(0)=1\f$).
- * Other important note : The underlying distribution is uniform (not gaussian)
+ * Important note : The underlying distribution is uniform (not gaussian)
  *
  */
 struct ParameterInitGlorot : public ParameterInit {
@@ -314,7 +313,7 @@ struct ParameterInitGlorot : public ParameterInit {
    * \brief Constructor
    *
    * \param is_lookup Boolean value identifying the parameter as a LookupParameter
-   * \param gain Value of the derivative of the activation function in 0
+   * \param gain Scaling parameter. In order for the Glorot initialization to be correct, you should ût this equal to \f$\frac 1 {f'(0)}\f$ where \f$f\f$ is your activation function
    */
   ParameterInitGlorot(bool is_lookup = false, float gain = 1.f) : lookup(is_lookup), gain(gain) {}
   virtual void initialize_params(Tensor & values) const override;
@@ -322,7 +321,6 @@ private:
   bool lookup;
   float gain;
 };
-
 /**
  * \ingroup params
  * \brief Initializes according to [Saxe et al., 2014](https://arxiv.org/abs/1312.6120)
