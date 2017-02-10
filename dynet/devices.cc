@@ -88,8 +88,9 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   edevice = new Eigen::GpuDevice(estream);
 
   // this is the big memory allocation.
-  for(size_t i = 0; i < 3; ++i)
-    pools[i] = new AlignedMemoryPool((mbs.used[i] << 20), &gpu_mem);
+  pools[0] = new AlignedMemoryPool("GPU forward memory", (mbs.used[0] << 20), &gpu_mem);
+  pools[1] = new AlignedMemoryPool("GPU backward memory", (mbs.used[1] << 20), &gpu_mem);
+  pools[2] = new AlignedMemoryPool("GPU parameter memory", (mbs.used[2] << 20), &gpu_mem);
 }
 
 Device_GPU::~Device_GPU() {}
@@ -109,9 +110,9 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
   edevice = new Eigen::DefaultDevice;
 
   // this is the big memory allocation.
-  for(size_t i = 0; i < 2; ++i)
-    pools[i] = new AlignedMemoryPool((mbs.used[i] << 20), &cpu_mem);
-  pools[2] = new AlignedMemoryPool((mbs.used[2] << 20), shmem);
+  pools[0] = new AlignedMemoryPool("CPU forward memory", (mbs.used[0] << 20), &cpu_mem);
+  pools[1] = new AlignedMemoryPool("CPU backward memory", (mbs.used[1] << 20), &cpu_mem);
+  pools[2] = new AlignedMemoryPool("CPU parameter memory", (mbs.used[2] << 20), shmem);
 }
 
 Device_CPU::~Device_CPU() {}

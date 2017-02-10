@@ -1,6 +1,7 @@
 # ########## dynet library ##########
 # Sources:
 set(dynet_library_SRCS
+    aligned-mem-pool.cc
     cfsm-builder.cc
     dynet.cc
     deep-lstm.cc
