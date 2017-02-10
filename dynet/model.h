@@ -1,7 +1,7 @@
 /**
  * \file model.h
  * \defgroup params params
- * 
+ *
  */
 
 #ifndef DYNET_PARAMS_H_
@@ -130,7 +130,7 @@ private:
 class Model;
 /**
  * \brief Object representing a trainable parameter
- * 
+ *
  */
 struct Parameter {
   Parameter();
@@ -147,14 +147,14 @@ struct Parameter {
 
   /**
    * \brief Shape of the parameter
-   * 
+   *
    * \return Shape as a `Dim` object
    */
   Dim dim() { return get()->dim; }
 
   /**
    * \brief Values of the parameter
-   * 
+   *
    * \return Values as a `Tensor` object
    */
   Tensor* values() { return &(get()->values); }
@@ -171,7 +171,7 @@ private:
 /**
  * \ingroup params
  * \brief Object representing a trainable lookup parameter
- * 
+ *
  */
 struct LookupParameter {
   LookupParameter();
@@ -189,13 +189,13 @@ struct LookupParameter {
 
   /**
    * \brief Shape of the lookup parameter
-   * 
+   *
    * \return Shape as a `Dim` object
    */
   Dim dim() { return get()->dim; }
   /**
    * \brief Values of the lookup parameter
-   * 
+   *
    * \return Values as a `Tensor` object
    */
   std::vector<Tensor>* values() { return &(get()->values); }
@@ -314,11 +314,13 @@ struct ParameterInitGlorot : public ParameterInit {
    * \brief Constructor
    *
    * \param is_lookup Boolean value identifying the parameter as a LookupParameter
+   * \param gain Value of the derivative of the activation function in 0
    */
-  ParameterInitGlorot(bool is_lookup = false) : lookup(is_lookup) {}
+  ParameterInitGlorot(bool is_lookup = false, float gain = 1.f) : lookup(is_lookup), gain(gain) {}
   virtual void initialize_params(Tensor & values) const override;
 private:
   bool lookup;
+  float gain;
 };
 
 /**
@@ -330,17 +332,17 @@ struct ParameterInitSaxe : public ParameterInit {
   /**
    * \brief Constructor
    */
-  ParameterInitSaxe() {}
+  ParameterInitSaxe(float gain=1.0) : gain(gain) {}
   virtual void initialize_params(Tensor & values) const override;
 private:
-  float cnst;
+  float gain;
 };
 
 /**
  * \ingroup params
  * \brief Initializes from a file
  * \details Useful for reusing weights, etc...
- * 
+ *
  */
 struct ParameterInitFromFile : public ParameterInit {
   /**
@@ -360,7 +362,7 @@ private:
 struct ParameterInitFromVector : public ParameterInit {
   /**
    * \brief Constructor
-   * 
+   *
    * \param v Vector of values to be used
    */
   ParameterInitFromVector(std::vector<float> v) : vec(v) {}
@@ -440,7 +442,7 @@ public:
    * \return LookupParameter object to be used in the computation graph
    */
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
-  // 
+  //
   /**
    * \brief project weights so their L2 norm = radius
    * \details NOTE (Paul) : I am not sure this is doing anything currently. The argument doesn't seem to be used anywhere... If you need this raise an issue on github
@@ -472,13 +474,13 @@ public:
   // indexes into params and lookup_params
   /**
    * \brief Returns list of indices of updated params
-   * 
+   *
    * \return list of indices of updated params
    */
   const std::vector<unsigned>& updated_parameters_list() const { return updated_params; }
   /**
    * \brief Returns list of indices of updated lookup params
-   * 
+   *
    * \return list of indices of updated lookup params
    */
   const std::vector<unsigned>& updated_lookup_parameters_list() const { return updated_lookup_params; }
@@ -493,7 +495,7 @@ public:
   size_t parameter_count() const;
   /**
    * \brief Returns total number of (scalar) parameters updated
-   * 
+   *
    * \return number of updated parameters
    */
   size_t updated_parameter_count() const;

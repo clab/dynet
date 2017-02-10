@@ -444,6 +444,14 @@ struct TensorTools {
    */
   static void RandomizeUniform(Tensor& val, real left = 0.0f, real right = 0.0f);
   /**
+   * \brief Takes a square matrix tensor and sets it as a random orthogonal matrix
+   * \details More specifically this samples a random matrix with RandomizeUniform and then performs SVD and returns the left orthogonal matrix in the decomposition, scaled by `scale`
+   *
+   * \param val Input tensor
+   * \param scale Value to which the resulting orthogonal matrix will be scaled
+   */
+  static void RandomizeOrthogonal(Tensor& val, real scale = 1.0f);
+  /**
    * \brief Access element of the tensor by index in the values array
    * \details AccessElement and SetElement are very, very slow (potentially) - use appropriately
    *
