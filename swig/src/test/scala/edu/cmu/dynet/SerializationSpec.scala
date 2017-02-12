@@ -89,29 +89,70 @@ class SerializationSpec extends FlatSpec with Matchers {
     assertSameModel(original, deserialized)
   }
 
-  "serializer" should "handle arbitrary stuff correctly" in {
+  "model saver and model loader" should "handle simplernnbuilder correctly" in {
 
-    val model1 = defaultModel()
-    val model2 = defaultModel()
-    model2.add_parameters(dim(8, 9))
-    val model3 = defaultModel()
-    model3.add_parameters(dim(3))
-    model3.add_parameters(dim(5, 2, 4))
+    // this is the simple_rnn_io test case from the C++ tests
+    val mod1 = new Model()
+    val rnn1 = new SimpleRNNBuilder(1, 10, 10, mod1)
 
-    val serializer = new Serializer()
-    serializer.write_model(model1)
-    serializer.write_model(model2)
-    serializer.write_model(model3)
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_model(mod1)
+    saver.add_srnn_builder(rnn1)
+    saver.done()
 
-    val serialized = serializer.finish
+    println(path)
 
-    val deserializer = new Deserializer(serialized)
-    val model1a = deserializer.read_model()
-    val model2a = deserializer.read_model()
-    val model3a = deserializer.read_model()
+    val loader = new ModelLoader(path)
+    val mod2 = loader.load_model()
+    val rnn2 = loader.load_srnn_builder()
+    loader.done()
 
-    assertSameModel(model1, model1a)
-    assertSameModel(model2, model2a)
-    assertSameModel(model3, model3a)
+    assertSameModel(mod1, mod2)
+  }
+
+  "model saver and model loader" should "handle vanillalstmbuilder correctly" in {
+
+    // this is the vanilla_lstm_io test case from the C++ tests
+    val mod1 = new Model()
+    val rnn1 = new VanillaLSTMBuilder(1, 10, 10, mod1)
+
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_model(mod1)
+    saver.add_vanilla_lstm_builder(rnn1)
+    saver.done()
+
+    println(path)
+
+    val loader = new ModelLoader(path)
+    val mod2 = loader.load_model()
+    val rnn2 = loader.load_vanilla_lstm_builder()
+    loader.done()
+
+    assertSameModel(mod1, mod2)
+  }
+
+
+  "model saver and model loader" should "handle lstmbuilder correctly" in {
+
+    // this is the lstm_io test case from the C++ tests
+    val mod1 = new Model()
+    val rnn1 = new LSTMBuilder(1, 10, 10, mod1)
+
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_model(mod1)
+    saver.add_lstm_builder(rnn1)
+    saver.done()
+
+    println(path)
+
+    val loader = new ModelLoader(path)
+    val mod2 = loader.load_model()
+    val rnn2 = loader.load_lstm_builder()
+    loader.done()
+
+    assertSameModel(mod1, mod2)
   }
 }
