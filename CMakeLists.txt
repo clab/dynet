@@ -175,8 +175,11 @@ add_subdirectory(python)
 
 option(INCLUDE_SWIG "INCLUDE_SWIG" OFF)
 if(INCLUDE_SWIG)
+  if (WITH_CUDA_BACKEND)
+    set(CMAKE_SWIG_FLAGS "-DSWIG_USE_CUDA")    
+  endif(WITH_CUDA_BACKEND)
   message("-- Including SWIG")
   add_subdirectory(swig)
-endif()
+endif(INCLUDE_SWIG)
 
 enable_testing()

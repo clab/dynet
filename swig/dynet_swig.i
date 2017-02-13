@@ -24,19 +24,6 @@
 #include "lstm.h"
 %}
 
-// Extra C++ code added
-%{
-namespace dynet {
-
-// Convenience function for testing
-static void myInitialize()  {
-  char** argv = {NULL};
-  int argc = 0;
-  initialize(argc, argv);
-};
-}
-%}
-
 //
 // Macro to generate extra vector constructors that take a java Collection,
 // needs to be declared + used before we include "std_vector.i"
@@ -862,18 +849,26 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 // declarations from dynet/init.h //
 ////////////////////////////////////
 
+struct DynetParams {
+  unsigned random_seed = 0; /**< The seed for random number generation */
+  std::string mem_descriptor = "512"; /**< Total memory to be allocated for Dynet */
+  float weight_decay = 0; /**< Weight decay rate for L2 regularization */
+  bool shared_parameters = false; /**< TO DOCUMENT */
+
+#if SWIG_USE_CUDA
+  bool ngpus_requested = false; /**< GPUs requested by number */
+  bool ids_requested = false; /**< GPUs requested by ids */
+  int requested_gpus = -1; /**< Number of requested GPUs */
+  std::vector<int> gpu_mask; /**< List of required GPUs by ids */
+#endif
+};
+
+
+void initialize(DynetParams params);
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
 void cleanup();
 
-/////////////////////////////
-// additional declarations //
-/////////////////////////////
-
-static void myInitialize();
-
 }
-
-
 
 
 
