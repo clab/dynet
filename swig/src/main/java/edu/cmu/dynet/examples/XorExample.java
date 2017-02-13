@@ -20,7 +20,7 @@ public class XorExample {
 
   public static void main(String[] args) {
     System.out.println("Running XOR example");
-    myInitialize();
+    initialize(new DynetParams());
     System.out.println("Dynet initialized!");
     Model m = new Model();
     SimpleSGDTrainer sgd = new SimpleSGDTrainer(m);
