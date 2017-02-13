@@ -101,8 +101,6 @@ class SerializationSpec extends FlatSpec with Matchers {
     saver.add_srnn_builder(rnn1)
     saver.done()
 
-    println(path)
-
     val loader = new ModelLoader(path)
     val mod2 = loader.load_model()
     val rnn2 = loader.load_srnn_builder()
@@ -122,8 +120,6 @@ class SerializationSpec extends FlatSpec with Matchers {
     saver.add_model(mod1)
     saver.add_vanilla_lstm_builder(rnn1)
     saver.done()
-
-    println(path)
 
     val loader = new ModelLoader(path)
     val mod2 = loader.load_model()
@@ -145,8 +141,6 @@ class SerializationSpec extends FlatSpec with Matchers {
     saver.add_model(mod1)
     saver.add_lstm_builder(rnn1)
     saver.done()
-
-    println(path)
 
     val loader = new ModelLoader(path)
     val mod2 = loader.load_model()
