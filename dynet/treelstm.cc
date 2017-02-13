@@ -198,7 +198,7 @@ Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Ex
         i_aft = affine_transform(xs);
       }
       else
-        i_ait = affine_transform({vars[BF], vars[X2F], in});
+        i_aft = affine_transform({vars[BF], vars[X2F], in});
       i_ft.push_back(logistic(i_aft));
     }
 
