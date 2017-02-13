@@ -13,6 +13,9 @@
 %{
 #include <vector>
 #include <sstream>
+#include <iostream>
+#include <fstream>
+#include <stdexcept>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include "model.h"
@@ -867,6 +870,193 @@ struct DynetParams {
 void initialize(DynetParams params);
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
 void cleanup();
+
+
+//////////////////////////////////////////////////
+// serialization logic (from python/pybridge.h) //
+//////////////////////////////////////////////////
+
+%{
+
+namespace dynet {
+
+struct ModelSaver {
+    ModelSaver(std::string filename) : ofs(filename), oa(ofs) {}
+
+    void add_model(Model& model)
+    {
+        oa << model;
+    }
+
+    void add_parameter(Parameter &p) {
+        oa << p;
+    }
+
+    void add_lookup_parameter(LookupParameter &p) {
+        oa << p;
+    }
+
+    void add_rnn_builder(RNNBuilder &p) {
+        oa << p;
+    }
+
+    void add_lstm_builder(LSTMBuilder &p) {
+        oa << p;
+    }
+
+    void add_vanilla_lstm_builder(VanillaLSTMBuilder &p) {
+        oa << p;
+    }
+
+    void add_srnn_builder(SimpleRNNBuilder &p) {
+        oa << p;
+    }
+
+    //void add_gru_builder(GRUBuilder &p) {
+    //    oa << p;
+    //}
+
+    //void add_hsm_builder(HierarchicalSoftmaxBuilder &p) {
+    //    oa << p;
+    //}
+
+
+    //void add_fast_lstm_builder(FastLSTMBuilder &p) {
+    //    oa << p;
+    //}
+
+    // TODO what is this?
+    //void add_deep_lstm_builder(DeepLSTMBuilder &p) {
+    //    oa << p;
+    //}
+
+    //void add_cfsm_builder(ClassFactoredSoftmaxBuilder &p) {
+    //    oa << p;
+    //}
+
+    //void add_sm_builder(StandardSoftmaxBuilder &p) {
+    //    oa << p;
+    //}
+
+    void done() { ofs.close(); }
+
+
+    private:
+        std::ofstream ofs;
+        boost::archive::text_oarchive oa;
+
+};
+
+struct ModelLoader {
+    ModelLoader(std::string filename) : ifs(filename), ia(ifs) {}
+
+    Model* load_model() {
+      Model* model = new Model(); ia >> *model; return model;
+    }
+
+    Parameter* load_parameter() {
+      Parameter* p = new Parameter(); ia >> *p; return p;
+    }
+
+    LookupParameter* load_lookup_parameter() {
+      LookupParameter* p = new LookupParameter(); ia >> *p; return p;
+    }
+
+    LSTMBuilder* load_lstm_builder() {
+      LSTMBuilder* p = new LSTMBuilder();
+      ia >> *p;
+      return p;
+    }
+
+    VanillaLSTMBuilder* load_vanilla_lstm_builder() {
+      VanillaLSTMBuilder* p = new VanillaLSTMBuilder() ; ia >> *p; return p;
+    }
+
+    SimpleRNNBuilder* load_srnn_builder() {
+      SimpleRNNBuilder* p = new SimpleRNNBuilder();
+      ia >> *p;
+      return p;
+    }
+
+    //GRUBuilder* load_gru_builder() {
+    //  GRUBuilder* p = new GRUBuilder(); ia >> *p; return p;
+    //}
+
+    //HierarchicalSoftmaxBuilder* load_hsm_builder() {
+    //  HierarchicalSoftmaxBuilder* p = new HierarchicalSoftmaxBuilder(); ia >> *p; return p;
+    //}
+
+    //FastLSTMBuilder* load_fast_lstm_builder() {
+    //  FastLSTMBuilder* p = new FastLSTMBuilder(); ia >> *p; return p;
+    //}
+
+    // TODO what is this?
+    //DeepLSTMBuilder* load_deep_lstm_builder() {
+    //  DeepLSTMBuilder* p = new DeepLSTMBuilder(); ia >> *p; return p;
+    //}
+
+    //ClassFactoredSoftmaxBuilder* load_cfsm_builder() {
+    //  ClassFactoredSoftmaxBuilder* p = new ClassFactoredSoftmaxBuilder(); ia >> *p; return p;
+    //}
+
+    //StandardSoftmaxBuilder* load_sm_builder() {
+    //  StandardSoftmaxBuilder*p = new StandardSoftmaxBuilder(); ia >> *p; return p;
+    //}
+
+    void done() { ifs.close(); }
+
+    private:
+        std::ifstream ifs;
+        boost::archive::text_iarchive ia;
+
+};
+
+}
+%}
+
+%nodefaultctor ModelSaver;
+struct ModelSaver {
+    ModelSaver(std::string filename);
+    void add_model(Model& model);
+    void add_parameter(Parameter &p);
+    void add_lookup_parameter(LookupParameter &p);
+    void add_lstm_builder(LSTMBuilder &p);
+    void add_vanilla_lstm_builder(VanillaLSTMBuilder &p);
+    void add_srnn_builder(SimpleRNNBuilder &p);
+    //void add_gru_builder(GRUBuilder &p);
+    //void add_hsm_builder(HierarchicalSoftmaxBuilder &p);
+    //void add_fast_lstm_builder(FastLSTMBuilder &p);
+    //void add_deep_lstm_builder(DeepLSTMBuilder &p);
+    //void add_cfsm_builder(ClassFactoredSoftmaxBuilder &p);
+    //void add_sm_builder(StandardSoftmaxBuilder &p);
+    void done();
+};
+
+%newobject ModelLoader::load_model();
+%newobject ModelLoader::load_parameter();
+%newobject ModelLoader::load_lookup_parameter();
+%newobject ModelLoader::load_rnn_builder();
+%newobject ModelLoader::load_lstm_builder();
+%newobject ModelLoader::load_vanilla_lstm_builder();
+%newobject ModelLoader::load_srnn_builder();
+
+%nodefaultctor ModelLoader;
+struct ModelLoader {
+    ModelLoader(std::string filename);
+    Model* load_model();
+    Parameter* load_parameter();
+    LookupParameter* load_lookup_parameter();
+    LSTMBuilder* load_lstm_builder();
+    VanillaLSTMBuilder* load_vanilla_lstm_builder();
+    SimpleRNNBuilder* load_srnn_builder();
+    //GRUBuilder* load_gru_builder();
+    //HierarchicalSoftmaxBuilder* load_hsm_builder();
+    //FastLSTMBuilder* load_fast_lstm_builder();
+    //DeepLSTMBuilder* load_deep_lstm_builder();
+    //ClassFactoredSoftmaxBuilder* load_cfsm_builder();
+    //StandardSoftmaxBuilder* load_sm_builder();
+    void done();
+};
 
 }
 
