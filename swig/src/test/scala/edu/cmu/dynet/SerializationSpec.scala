@@ -88,4 +88,65 @@ class SerializationSpec extends FlatSpec with Matchers {
     val deserialized = ois.readObject.asInstanceOf[Model]
     assertSameModel(original, deserialized)
   }
+
+  "model saver and model loader" should "handle simplernnbuilder correctly" in {
+
+    // this is the simple_rnn_io test case from the C++ tests
+    val mod1 = new Model()
+    val rnn1 = new SimpleRNNBuilder(1, 10, 10, mod1)
+
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_model(mod1)
+    saver.add_srnn_builder(rnn1)
+    saver.done()
+
+    val loader = new ModelLoader(path)
+    val mod2 = loader.load_model()
+    val rnn2 = loader.load_srnn_builder()
+    loader.done()
+
+    assertSameModel(mod1, mod2)
+  }
+
+  "model saver and model loader" should "handle vanillalstmbuilder correctly" in {
+
+    // this is the vanilla_lstm_io test case from the C++ tests
+    val mod1 = new Model()
+    val rnn1 = new VanillaLSTMBuilder(1, 10, 10, mod1)
+
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_model(mod1)
+    saver.add_vanilla_lstm_builder(rnn1)
+    saver.done()
+
+    val loader = new ModelLoader(path)
+    val mod2 = loader.load_model()
+    val rnn2 = loader.load_vanilla_lstm_builder()
+    loader.done()
+
+    assertSameModel(mod1, mod2)
+  }
+
+
+  "model saver and model loader" should "handle lstmbuilder correctly" in {
+
+    // this is the lstm_io test case from the C++ tests
+    val mod1 = new Model()
+    val rnn1 = new LSTMBuilder(1, 10, 10, mod1)
+
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_model(mod1)
+    saver.add_lstm_builder(rnn1)
+    saver.done()
+
+    val loader = new ModelLoader(path)
+    val mod2 = loader.load_model()
+    val rnn2 = loader.load_lstm_builder()
+    loader.done()
+
+    assertSameModel(mod1, mod2)
+  }
 }
