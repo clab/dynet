@@ -6,6 +6,17 @@ import scala.language.implicitConversions
 
 object DynetScalaHelpers {
 
+  var initialized = false
+
+  def myInitialize(): Unit = {
+    if (initialized) {
+      println("already initialized")
+    } else {
+      initialized = true
+      initialize(new DynetParams())
+    }
+  }
+
   import scala.collection.JavaConverters._
   import java.util.Collection
 

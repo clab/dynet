@@ -34,6 +34,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/DoubleVector.java"
     "${CMAKE_SWIG_OUTDIR}/dynet_swig.java"
     "${CMAKE_SWIG_OUTDIR}/dynet_swigJNI.java"
+    "${CMAKE_SWIG_OUTDIR}/DynetParams.java"
     "${CMAKE_SWIG_OUTDIR}/Expression.java"
     "${CMAKE_SWIG_OUTDIR}/ExpressionVector.java"
     "${CMAKE_SWIG_OUTDIR}/FloatVector.java"
