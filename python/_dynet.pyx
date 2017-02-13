@@ -230,12 +230,12 @@ cdef class IdentityInitializer(PyInitializer):
         self.initializer = new CParameterInitIdentity()
 
 cdef class GlorotInitializer(PyInitializer):
-    def __init__(self, bool is_lookup=False):
-        self.initializer = new CParameterInitGlorot(is_lookup)
+    def __init__(self, bool is_lookup=False,float gain=1.0):
+        self.initializer = new CParameterInitGlorot(is_lookup,gain)
 
-#cdef class SaxeInitializer(PyInitializer):
-#    def __init__(self):
-#        self.initializer = new CParameterInitSaxe()
+cdef class SaxeInitializer(PyInitializer):
+   def __init__(self,scale=1.0):
+       self.initializer = new CParameterInitSaxe(scale)
 
 cdef class FromFileInitializer(PyInitializer):
     def __init__(self, string fname):
