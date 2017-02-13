@@ -45,6 +45,8 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/LookupParameterStorageVector.java"
     "${CMAKE_SWIG_OUTDIR}/LSTMBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/Model.java"
+    "${CMAKE_SWIG_OUTDIR}/ModelSaver.java"
+    "${CMAKE_SWIG_OUTDIR}/ModelLoader.java"
     "${CMAKE_SWIG_OUTDIR}/MomentumSGDTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/Parameter.java"
     "${CMAKE_SWIG_OUTDIR}/ParameterInit.java"
