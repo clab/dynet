@@ -129,6 +129,7 @@ private:
 
 class Model;
 /**
+ * \ingroup params
  * \brief Object representing a trainable parameter
  *
  */
