@@ -25,6 +25,8 @@
 #include "expr.h"
 #include "rnn.h"
 #include "lstm.h"
+#include "gru.h"
+#include "fast-lstm.h"
 %}
 
 //
@@ -50,6 +52,10 @@ VECTORCONSTRUCTOR(double, Double, DoubleVector)
 VECTORCONSTRUCTOR(int, Integer, IntVector)
 VECTORCONSTRUCTOR(unsigned, Integer, UnsignedVector)
 VECTORCONSTRUCTOR(dynet::expr::Expression, Expression, ExpressionVector)
+VECTORCONSTRUCTOR(dynet::Parameter, Parameter, ParameterVector)
+VECTORCONSTRUCTOR(std::vector<dynet::expr::Expression>, ExpressionVector, ExpressionVectorVector)
+VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVectorVector)
+
 
 // Useful SWIG libraries
 %include "std_vector.i"
@@ -74,6 +80,9 @@ namespace std {
   %template(ExpressionVector)             vector<dynet::expr::Expression>;
   %template(ParameterStorageVector)       vector<dynet::ParameterStorage*>;
   %template(LookupParameterStorageVector) vector<dynet::LookupParameterStorage*>;
+  %template(ExpressionVectorVector)       vector<vector<dynet::expr::Expression>>;
+  %template(ParameterVector)              vector<dynet::Parameter>;
+  %template(ParameterVectorVector)        vector<vector<dynet::Parameter>>;
 }
 
 //
@@ -821,10 +830,21 @@ struct LSTMBuilder : public RNNBuilder {
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
 
-  //void set_dropout(float d);
-  //void set_dropout(float d, float d_h, float d_c);
-  //void disable_dropout();
-  //void set_dropout_masks(unsigned batch_size = 1);
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> params;
+
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> param_vars;
+
+  // first index is time, second is layer
+  std::vector<std::vector<Expression>> h, c;
+
+  // initial values of h and c at each layer
+  // - both default to zero matrix input
+  bool has_initial_state; // if this is false, treat h0 and c0 as 0
+  std::vector<Expression> h0;
+  std::vector<Expression> c0;
+  unsigned layers;
 };
 
 struct VanillaLSTMBuilder : public RNNBuilder {
@@ -846,6 +866,75 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
+
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> params;
+
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> param_vars;
+
+  // first index is time, second is layer
+  std::vector<std::vector<Expression>> h, c;
+
+  // initial values of h and c at each layer
+  // - both default to zero matrix input
+  bool has_initial_state; // if this is false, treat h0 and c0 as 0
+  std::vector<Expression> h0;
+  std::vector<Expression> c0;
+  unsigned layers;
+  unsigned hid;
+};
+
+///////////////////////////////////
+// declarations from dynet/gru.h //
+///////////////////////////////////
+
+struct GRUBuilder : public RNNBuilder {
+  GRUBuilder() = default;
+  explicit GRUBuilder(unsigned layers,
+                      unsigned input_dim,
+                      unsigned hidden_dim,
+                      Model& model);
+  Expression back() const override;
+  std::vector<Expression> final_h() const override;
+  std::vector<Expression> final_s() const override;
+  std::vector<Expression> get_h(RNNPointer i) const override;
+  std::vector<Expression> get_s(RNNPointer i) const override;
+  unsigned num_h0_components() const override;
+  void copy(const RNNBuilder & params) override;
+};
+
+
+/////////////////////////////////////////
+// declarations from dynet/fast-lstm.h //
+/////////////////////////////////////////
+
+struct FastLSTMBuilder : public RNNBuilder {
+  FastLSTMBuilder() = default;
+  explicit FastLSTMBuilder(unsigned layers,
+                           unsigned input_dim,
+                           unsigned hidden_dim,
+                           Model& model);
+
+  Expression back() const override;
+  std::vector<Expression> final_h() const override;
+  std::vector<Expression> final_s() const override;
+  unsigned num_h0_components() const override;
+
+  std::vector<Expression> get_h(RNNPointer i) const override;
+  std::vector<Expression> get_s(RNNPointer i) const override;
+
+  void copy(const RNNBuilder & params) override;
+
+  std::vector<std::vector<Parameter>> params;
+  std::vector<std::vector<Expression>> param_vars;
+
+  std::vector<std::vector<Expression>> h, c;
+
+  bool has_initial_state; // if this is false, treat h0 and c0 as 0
+  std::vector<Expression> h0;
+  std::vector<Expression> c0;
+  unsigned layers;
 };
 
 ////////////////////////////////////
@@ -883,63 +972,17 @@ namespace dynet {
 struct ModelSaver {
     ModelSaver(std::string filename) : ofs(filename), oa(ofs) {}
 
-    void add_model(Model& model)
-    {
-        oa << model;
-    }
-
-    void add_parameter(Parameter &p) {
-        oa << p;
-    }
-
-    void add_lookup_parameter(LookupParameter &p) {
-        oa << p;
-    }
-
-    void add_rnn_builder(RNNBuilder &p) {
-        oa << p;
-    }
-
-    void add_lstm_builder(LSTMBuilder &p) {
-        oa << p;
-    }
-
-    void add_vanilla_lstm_builder(VanillaLSTMBuilder &p) {
-        oa << p;
-    }
-
-    void add_srnn_builder(SimpleRNNBuilder &p) {
-        oa << p;
-    }
-
-    //void add_gru_builder(GRUBuilder &p) {
-    //    oa << p;
-    //}
-
-    //void add_hsm_builder(HierarchicalSoftmaxBuilder &p) {
-    //    oa << p;
-    //}
-
-
-    //void add_fast_lstm_builder(FastLSTMBuilder &p) {
-    //    oa << p;
-    //}
-
-    // TODO what is this?
-    //void add_deep_lstm_builder(DeepLSTMBuilder &p) {
-    //    oa << p;
-    //}
-
-    //void add_cfsm_builder(ClassFactoredSoftmaxBuilder &p) {
-    //    oa << p;
-    //}
-
-    //void add_sm_builder(StandardSoftmaxBuilder &p) {
-    //    oa << p;
-    //}
+    void add_model(Model& model) { oa << model; }
+    void add_parameter(Parameter &p) { oa << p; }
+    void add_lookup_parameter(LookupParameter &p) { oa << p; }
+    void add_rnn_builder(RNNBuilder &p) { oa << p; }
+    void add_lstm_builder(LSTMBuilder &p) { oa << p; }
+    void add_vanilla_lstm_builder(VanillaLSTMBuilder &p) { oa << p; }
+    void add_srnn_builder(SimpleRNNBuilder &p) { oa << p; }
+    void add_gru_builder(GRUBuilder &p) { oa << p; }
+    void add_fast_lstm_builder(FastLSTMBuilder &p) { oa << p; }
 
     void done() { ofs.close(); }
-
 
     private:
         std::ofstream ofs;
@@ -963,9 +1006,7 @@ struct ModelLoader {
     }
 
     LSTMBuilder* load_lstm_builder() {
-      LSTMBuilder* p = new LSTMBuilder();
-      ia >> *p;
-      return p;
+      LSTMBuilder* p = new LSTMBuilder(); ia >> *p; return p;
     }
 
     VanillaLSTMBuilder* load_vanilla_lstm_builder() {
@@ -973,35 +1014,16 @@ struct ModelLoader {
     }
 
     SimpleRNNBuilder* load_srnn_builder() {
-      SimpleRNNBuilder* p = new SimpleRNNBuilder();
-      ia >> *p;
-      return p;
+      SimpleRNNBuilder* p = new SimpleRNNBuilder(); ia >> *p; return p;
     }
 
-    //GRUBuilder* load_gru_builder() {
-    //  GRUBuilder* p = new GRUBuilder(); ia >> *p; return p;
-    //}
+    GRUBuilder* load_gru_builder() {
+      GRUBuilder* p = new GRUBuilder(); ia >> *p; return p;
+    }
 
-    //HierarchicalSoftmaxBuilder* load_hsm_builder() {
-    //  HierarchicalSoftmaxBuilder* p = new HierarchicalSoftmaxBuilder(); ia >> *p; return p;
-    //}
-
-    //FastLSTMBuilder* load_fast_lstm_builder() {
-    //  FastLSTMBuilder* p = new FastLSTMBuilder(); ia >> *p; return p;
-    //}
-
-    // TODO what is this?
-    //DeepLSTMBuilder* load_deep_lstm_builder() {
-    //  DeepLSTMBuilder* p = new DeepLSTMBuilder(); ia >> *p; return p;
-    //}
-
-    //ClassFactoredSoftmaxBuilder* load_cfsm_builder() {
-    //  ClassFactoredSoftmaxBuilder* p = new ClassFactoredSoftmaxBuilder(); ia >> *p; return p;
-    //}
-
-    //StandardSoftmaxBuilder* load_sm_builder() {
-    //  StandardSoftmaxBuilder*p = new StandardSoftmaxBuilder(); ia >> *p; return p;
-    //}
+    FastLSTMBuilder* load_fast_lstm_builder() {
+      FastLSTMBuilder* p = new FastLSTMBuilder(); ia >> *p; return p;
+    }
 
     void done() { ifs.close(); }
 
@@ -1014,6 +1036,7 @@ struct ModelLoader {
 }
 %}
 
+
 %nodefaultctor ModelSaver;
 struct ModelSaver {
     ModelSaver(std::string filename);
@@ -1023,12 +1046,8 @@ struct ModelSaver {
     void add_lstm_builder(LSTMBuilder &p);
     void add_vanilla_lstm_builder(VanillaLSTMBuilder &p);
     void add_srnn_builder(SimpleRNNBuilder &p);
-    //void add_gru_builder(GRUBuilder &p);
-    //void add_hsm_builder(HierarchicalSoftmaxBuilder &p);
-    //void add_fast_lstm_builder(FastLSTMBuilder &p);
-    //void add_deep_lstm_builder(DeepLSTMBuilder &p);
-    //void add_cfsm_builder(ClassFactoredSoftmaxBuilder &p);
-    //void add_sm_builder(StandardSoftmaxBuilder &p);
+    void add_gru_builder(GRUBuilder &p);
+    void add_fast_lstm_builder(FastLSTMBuilder &p);
     void done();
 };
 
@@ -1039,6 +1058,9 @@ struct ModelSaver {
 %newobject ModelLoader::load_lstm_builder();
 %newobject ModelLoader::load_vanilla_lstm_builder();
 %newobject ModelLoader::load_srnn_builder();
+%newobject ModelLoader::load_gru_builder();
+%newobject ModelLoader::load_fast_lstm_builder();
+
 
 %nodefaultctor ModelLoader;
 struct ModelLoader {
@@ -1049,12 +1071,8 @@ struct ModelLoader {
     LSTMBuilder* load_lstm_builder();
     VanillaLSTMBuilder* load_vanilla_lstm_builder();
     SimpleRNNBuilder* load_srnn_builder();
-    //GRUBuilder* load_gru_builder();
-    //HierarchicalSoftmaxBuilder* load_hsm_builder();
-    //FastLSTMBuilder* load_fast_lstm_builder();
-    //DeepLSTMBuilder* load_deep_lstm_builder();
-    //ClassFactoredSoftmaxBuilder* load_cfsm_builder();
-    //StandardSoftmaxBuilder* load_sm_builder();
+    GRUBuilder* load_gru_builder();
+    FastLSTMBuilder* load_fast_lstm_builder();
     void done();
 };
 
