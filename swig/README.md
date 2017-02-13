@@ -281,3 +281,30 @@ The exception is primitives. SWIG produces (for example) a `SWIGTYPE_p_int`
 type wrapper for `int*` and bare functions for working with these. 
 In the Scala helpers we provide wrapper classes `IntPointer` and `FloatPointer`
 that are nicer to work with and that implicitly convert to the SWIG types.
+
+### Serialization
+
+DyNet uses `boost::serialization` to correctly serialize/deserialize an 
+object graph of `Model`s, `Builder`s, and so on. On the Java side we expose
+`ModelLoader` and `ModelSaver` classes that wrap this functionality and 
+allow complex serialization from Scala code:
+
+```scala
+    val mod1 = new Model()
+    val rnn1 = new SimpleRNNBuilder(1, 10, 10, mod1)
+
+    val path = "/path/to/save/model/files"
+    val saver = new ModelSaver(path)
+    saver.add_model(mod1)
+    saver.add_srnn_builder(rnn1)
+    saver.done()
+
+    val loader = new ModelLoader(path)
+    val mod2 = loader.load_model()
+    val rnn2 = loader.load_srnn_builder()
+    loader.done()
+```
+
+The `ModelSaver` doesn't do any tracking of what it saves (or in what order),
+so it's on you to track that and/or make sure you deserialize things in the
+same order they were serialized.
