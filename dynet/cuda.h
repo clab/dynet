@@ -43,11 +43,14 @@ struct DynetParams;
 class Device;
 
 inline std::pair<int, int> SizeToBlockThreadPair(int n) {
-  assert(n);
+  assert(n > 0);
   int logn;
-#ifdef _WIN32
-  // TODO: Write assembly for MSVC, remove the following line:
-  logn = log2(n);
+#if defined(_MSC_VER)
+  n--;
+  logn = 0;
+  if (n > 1)
+    while (n >>= 1)
+      logn++;
 #else
   asm("\tbsr %1, %0\n"
       : "=r"(logn)
