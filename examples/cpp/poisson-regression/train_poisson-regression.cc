@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
       dev.push_back(make_pair(x,y));
       dtoks += dev.back().first.size();
       if (dev.back().first.front() != kSOS && dev.back().first.back() != kEOS) {
-        cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+        cerr << "Dev sentence in " << argv[2] << ":" << dlc << " didn't start or end with <s>, </s>\n";
         abort();
       }
     }

@@ -964,4 +964,13 @@ BOOST_AUTO_TEST_CASE( lookup_test ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+BOOST_AUTO_TEST_CASE( backward_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = lookup(cg, lookup1, (unsigned)0);
+  Expression x2 = lookup(cg, lookup1, (unsigned)2);
+  Expression y = x1+x2;
+  Expression z = input(cg, {1,3}, ones3_vals) * y;
+  cg.backward(z);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -69,7 +69,7 @@ endif()
 
 ######## Compiler-specific options
 if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 -DEIGEN_HAS_C99_MATH /MP")   # -Wall produces 20k warnings
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 /MP")   # -Wall produces 20k warnings. Enable parallel compilation
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -fno-finite-math-only -Wall -Wno-missing-braces -std=c++11 -Ofast -g -march=native")
 endif()
@@ -156,9 +156,9 @@ if (WITH_CUDA_BACKEND)
 endif()
 
 # look for Eigen
-find_package(Eigen3 REQUIRED)
 get_filename_component(EIGEN3_INCLUDE_DIR "${EIGEN3_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
 message("-- Eigen dir is " ${EIGEN3_INCLUDE_DIR})
+find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 FIND_PACKAGE(Threads REQUIRED)

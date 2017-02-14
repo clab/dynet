@@ -1,7 +1,7 @@
 /**
  * \file model.h
  * \defgroup params params
- * 
+ *
  */
 
 #ifndef DYNET_PARAMS_H_
@@ -129,8 +129,9 @@ private:
 
 class Model;
 /**
+ * \ingroup params
  * \brief Object representing a trainable parameter
- * 
+ *
  */
 struct Parameter {
   Parameter();
@@ -147,14 +148,14 @@ struct Parameter {
 
   /**
    * \brief Shape of the parameter
-   * 
+   *
    * \return Shape as a `Dim` object
    */
   Dim dim() { return get()->dim; }
 
   /**
    * \brief Values of the parameter
-   * 
+   *
    * \return Values as a `Tensor` object
    */
   Tensor* values() { return &(get()->values); }
@@ -171,7 +172,7 @@ private:
 /**
  * \ingroup params
  * \brief Object representing a trainable lookup parameter
- * 
+ *
  */
 struct LookupParameter {
   LookupParameter();
@@ -189,13 +190,13 @@ struct LookupParameter {
 
   /**
    * \brief Shape of the lookup parameter
-   * 
+   *
    * \return Shape as a `Dim` object
    */
   Dim dim() { return get()->dim; }
   /**
    * \brief Values of the lookup parameter
-   * 
+   *
    * \return Values as a `Tensor` object
    */
   std::vector<Tensor>* values() { return &(get()->values); }
@@ -305,8 +306,7 @@ struct ParameterInitIdentity : public ParameterInit {
  * \ingroup params
  * \brief Initialize with the methods described in [Glorot, 2010](http://www.jmlr.org/proceedings/papers/v9/glorot10a/glorot10a.pdf?hc_location=ufi)
  * \details In order to preserve the variance of the forward and backward flow across layers, the parameters \f$\theta\f$ are initialized such that \f$\mathrm{Var}(\theta)=\frac 2 {n_1+n_2}\f$ where \f$n_1,n_2\f$ are the input and output dim.
- * Important note : For now the Glorot Initializer is only correct for tanh activated layers (or more specifically activation functions such that \f$f'(0)=1\f$).
- * Other important note : The underlying distribution is uniform (not gaussian)
+ * Important note : The underlying distribution is uniform (not gaussian)
  *
  */
 struct ParameterInitGlorot : public ParameterInit {
@@ -314,13 +314,14 @@ struct ParameterInitGlorot : public ParameterInit {
    * \brief Constructor
    *
    * \param is_lookup Boolean value identifying the parameter as a LookupParameter
+   * \param gain Scaling parameter. In order for the Glorot initialization to be correct, you should ût this equal to \f$\frac 1 {f'(0)}\f$ where \f$f\f$ is your activation function
    */
-  ParameterInitGlorot(bool is_lookup = false) : lookup(is_lookup) {}
+  ParameterInitGlorot(bool is_lookup = false, float gain = 1.f) : lookup(is_lookup), gain(gain) {}
   virtual void initialize_params(Tensor & values) const override;
 private:
   bool lookup;
+  float gain;
 };
-
 /**
  * \ingroup params
  * \brief Initializes according to [Saxe et al., 2014](https://arxiv.org/abs/1312.6120)
@@ -330,17 +331,17 @@ struct ParameterInitSaxe : public ParameterInit {
   /**
    * \brief Constructor
    */
-  ParameterInitSaxe() {}
+  ParameterInitSaxe(float gain=1.0) : gain(gain) {}
   virtual void initialize_params(Tensor & values) const override;
 private:
-  float cnst;
+  float gain;
 };
 
 /**
  * \ingroup params
  * \brief Initializes from a file
  * \details Useful for reusing weights, etc...
- * 
+ *
  */
 struct ParameterInitFromFile : public ParameterInit {
   /**
@@ -360,7 +361,7 @@ private:
 struct ParameterInitFromVector : public ParameterInit {
   /**
    * \brief Constructor
-   * 
+   *
    * \param v Vector of values to be used
    */
   ParameterInitFromVector(std::vector<float> v) : vec(v) {}
@@ -440,7 +441,7 @@ public:
    * \return LookupParameter object to be used in the computation graph
    */
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
-  // 
+  //
   /**
    * \brief project weights so their L2 norm = radius
    * \details NOTE (Paul) : I am not sure this is doing anything currently. The argument doesn't seem to be used anywhere... If you need this raise an issue on github
@@ -472,13 +473,13 @@ public:
   // indexes into params and lookup_params
   /**
    * \brief Returns list of indices of updated params
-   * 
+   *
    * \return list of indices of updated params
    */
   const std::vector<unsigned>& updated_parameters_list() const { return updated_params; }
   /**
    * \brief Returns list of indices of updated lookup params
-   * 
+   *
    * \return list of indices of updated lookup params
    */
   const std::vector<unsigned>& updated_lookup_parameters_list() const { return updated_lookup_params; }
@@ -493,7 +494,7 @@ public:
   size_t parameter_count() const;
   /**
    * \brief Returns total number of (scalar) parameters updated
-   * 
+   *
    * \return number of updated parameters
    */
   size_t updated_parameter_count() const;
