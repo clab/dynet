@@ -19,6 +19,9 @@ def stripLib(filename):
         filename = re.sub("^lib", "", filename)
         filename = re.sub(".so$", "", filename)
         filename = re.sub(".a$", "", filename)
+    elif filename.endswith(".dylib"):
+        filename = re.sub(".dylib", "", filename)
+        filename = re.sub("^lib", "", filename)
     return filename
 
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
