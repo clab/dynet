@@ -25,7 +25,7 @@ struct ParamsTest {
             dynet::initialize(argc, argv);
         }
         gain = 2.0;
-        epsilon = 1e-9; 
+        epsilon = 1e-6; 
         d = dynet::Dim({10, 10});
     }
     ~ParamsTest() {
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE( init_saxe ) {
     dynet::Expression diff_expr_left = dynet::squared_norm(dynet::transpose(saxe) * saxe - (gain * gain) * identity);
     dynet::Expression diff_expr_right = dynet::squared_norm(saxe * dynet::transpose(saxe) - (gain * gain) * identity);
     float diff = dynet::as_scalar(cg.forward((diff_expr_left + diff_expr_right) / 2.0));
-    // Leave a margin of error of epsilon=10^9, ie each element on average is <= 10 ^ -6
+    // Leave a margin of error of epsilon=10^-6
     BOOST_CHECK_LT(diff, epsilon);
 }
 

@@ -158,10 +158,19 @@ template <class MyDevice>
 EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor & m, Tensor& z) {
   if(x.d.bd == 1 && x.d[1] == 1) {
     m.t<0>().device(*dev.edevice) = x.t<1>().maximum();
+#ifdef __CUDACC__
+    Eigen::array<int, 1> bcast;
+    bcast[0] = x.d[0];
+    // This needs to be split into two lines to prevent memory allocation
+    // TODO? Here and in logsoftmax: Is there a better way to subtract a scalar that is already on the GPU without using broadcasting (and without copying the scalar back to the host first)
+    z.t<0>().device(*dev.edevice) = (x.t<1>() - m.t<1>().broadcast(bcast)).exp().sum();
+    z.t<0>().device(*dev.edevice) = z.t<0>().log() + m.t<0>();
+#else
     float mval = as_scalar(m);
     // This needs to be split into two lines to prevent memory allocation
     z.t<0>().device(*dev.edevice) = (x.t<1>() - mval).exp().sum();
     z.t<0>().device(*dev.edevice) = z.t<0>().log() + mval;
+#endif
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 0;
     m.tb<1>().device(*dev.edevice) = x.tb<2>().maximum(red_axis);
@@ -847,8 +856,8 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
       throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-	  dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).template cast<float>().sum() * d;
-	}
+      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).template cast<float>().sum() * d;
+    }
   } else {
     assert(pelements != nullptr); 
     vector<float> fx_vec = as_vector(fx);
@@ -861,8 +870,8 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
         throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-		dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).template cast<float>().sum() * d_vec[b];
-	  }
+        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).template cast<float>().sum() * d_vec[b];
+      }
     }
   }
 }
@@ -1039,7 +1048,13 @@ void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
   logsumexp(dev, *xs[0], m, z);
   if(fx.d.size() == fx.d.rows()) {
+#ifdef __CUDACC__
+    Eigen::array<int, 1> bcast;
+    bcast[0] = xs[0]->d[0];
+    fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - z.t<1>().broadcast(bcast);
+#else
     fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - as_scalar(z);
+#endif
   } else {
     // TODO? Is this broadcast efficient on CPU?
     Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
