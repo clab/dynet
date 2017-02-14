@@ -38,6 +38,7 @@ And get the basic information to create programs and use models:
    operations
    builders
    optimizers
+   debugging
    examples
 
 Mode advanced topics are below:
