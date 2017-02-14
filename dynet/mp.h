@@ -432,6 +432,29 @@ namespace dynet {
         return return_value;
       }
     }
+    
+    template<class D, class S>
+    S run_mp_minibatch_trainer(unsigned num_children, ILearner<D, S>* learner, Trainer* inputTrainer, const std::vector<D>& data) {
+      queue_name = generate_queue_name();
+      boost::interprocess::message_queue::remove(queue_name.c_str());
+      boost::interprocess::message_queue::remove(queue_name.c_str());
+      shared_memory_name = generate_shared_memory_name();
+      shared_object = get_shared_memory<SharedObject>();
+      std::vector<Workload> workloads = create_workloads(num_children);
+      std::vector<D> dev_data;
+      Trainer* trainer = inputTrainer;
+      unsigned cid = spawn_children(workloads);
+      if (cid < num_children) {
+        run_child(cid, learner, trainer, workloads, data, dev_data);
+        exit(0);
+      }
+      else {
+        S return_value = run_simple_parent(data, learner, workloads);
+        cleanup(workloads);
+        return return_value;
+      }
+    }
+
   }
 }
 #endif // !_WINDOWS
