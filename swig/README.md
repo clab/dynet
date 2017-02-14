@@ -14,7 +14,7 @@ To include in the DyNet build, add `-DINCLUDE_SWIG=ON` to the `cmake` command, e
 the `build` directory (see [DyNet documentation](http://dynet.readthedocs.io/en/latest/install.html) for general build instructions):
 
 ```
-build$ cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DINCLUDE_SWIG=ON
+build$ cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DINCLUDE_SWIG=ON
 build$ make dynet_swig && make
 ```
 
