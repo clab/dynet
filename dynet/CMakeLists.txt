@@ -1,6 +1,7 @@
 # ########## dynet library ##########
 # Sources:
 set(dynet_library_SRCS
+    aligned-mem-pool.cc
     cfsm-builder.cc
     dynet.cc
     deep-lstm.cc
@@ -112,7 +113,8 @@ if(WITH_CUDA_BACKEND)
   # Build main gpu library
   list(APPEND dynet_library_SRCS cuda.cc)
 	add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS})
-	target_link_libraries(gdynet ${LIBS})
+	target_link_libraries(gdynet ${LIBS} dynet dynetcuda)
+	cuda_add_cublas_to_target(gdynet)
   set_target_properties(gdynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
   # Build nvcc-compiled gpu library
@@ -130,16 +132,19 @@ if(WITH_CUDA_BACKEND)
     list(APPEND CUDA_NVCC_FLAGS "-O2")
   endif()
   if(MSVC)
-    # If MSVC, we need the C99 math flag as in other compilations, and we need the boost flag because nvcc doesn't
-    #  properly parse part of the boost template definitions
-    list(APPEND CUDA_NVCC_FLAGS "-DEIGEN_HAS_C99_MATH;-DBOOST_NO_CXX11_ALLOCATOR")
+    # If MSVC, we need the boost flag because nvcc doesn't properly parse part of the boost template definitions
+    list(APPEND CUDA_NVCC_FLAGS "-DBOOST_NO_CXX11_ALLOCATOR")
     list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
     cuda_add_library(dynetcuda gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu)
+    target_link_libraries(dynetcuda ${LIBS} dynet)
+    cuda_add_cublas_to_target(dynetcuda)
   else()
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
     cuda_add_library(dynetcuda gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
+    target_link_libraries(dynetcuda ${LIBS} dynet)
+    cuda_add_cublas_to_target(dynetcuda)
   endif()
 
 endif(WITH_CUDA_BACKEND)

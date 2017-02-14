@@ -171,6 +171,8 @@ class Expression(object): #{{{
           return _neg(_scalarsub(other, self))
       else: raise NotImplementedError()
   def init_row(self, i, row): pass
+  def init_from_array(self, *args, **kwargs): pass
+  def set_updated(self, *args, **kwargs): pass
 
 
 def GVExpr(name, args, dim): 
@@ -180,12 +182,12 @@ def GVExpr(name, args, dim):
 
 
 class Model(object):
-    def add_parameters(self, dim, scale=0):
+    def add_parameters(self, dim, scale=0, *args, **kwargs):
         assert(isinstance(dim,(tuple,int)))
         pp = Expression('parameters', [dim], make_dim(dim))
         return pp
 
-    def add_lookup_parameters(self, dim):
+    def add_lookup_parameters(self, dim, *args, **kwargs):
         assert(isinstance(dim, tuple))
         pp = Expression('lookup_parameters', [dim], make_dim(dim[1]))
         return pp
