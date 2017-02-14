@@ -177,12 +177,16 @@ void TensorTools::RandomizeUniform(Tensor& val, real left, real right) {
 #endif
 }
 
-void TensorTools::RandomizeOrthogonal(Tensor& val, real scale) {
+void TensorTools::RandomizeOrthonormal(Tensor& val, real scale) {
+#ifdef HAVE_CUDA
+  throw std::runtime_error("Orthonormal initialization not implemented in CUDA (we welcome pull requests)");
+#else
   if (val.d.nd != 2 || val.d[0] != val.d[1])
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to an orthogonal matrix");
   RandomizeUniform(val, -1.0, 1.0);
   Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
   *val = scale * svd.matrixU();
+#endif
 }
 
 template<class Archive>

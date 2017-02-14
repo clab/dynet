@@ -27,12 +27,40 @@ namespace dynet {
 
 struct ParameterInit;
 
+/**
+ * \ingroup params
+ * @brief This is the base class for ParameterStorage and LookupParameterStorage, the objects handling the actual parameters.
+ * @details You can access the storage from any Parameter (resp. LookupParameter) class, use it only to do low level manipulations.
+ *
+ */
 struct ParameterStorageBase {
   friend class Model;
+  /**
+   * @brief Scale the parameters
+   *
+   * @param a scale factor
+   */
   virtual void scale_parameters(float a) = 0;
+  /**
+   * @brief Set the parameters to 0
+   */
   virtual void zero() = 0;
+  /**
+   * @brief Get the parameter squared l2 norm
+   *
+   * @param sqnorm Pointer to the float holding the result
+   */
   virtual void squared_l2norm(float* sqnorm) const = 0;
+  /**
+   * @brief Get the squared l2 norm of the gradient w.r.t. these parameters
+   *
+   * @param sqnorm Pointer to the float holding the result
+   */
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
+  /**
+   * @brief Get the size (number of scalar parameters)
+   * @return Number of scalar parameters
+   */
   virtual size_t size() const = 0;
   virtual ~ParameterStorageBase();
   friend class boost::serialization::access;
@@ -41,6 +69,10 @@ struct ParameterStorageBase {
 };
 
 // represents parameters (e.g., a weight matrix) that will be optimized
+/**
+ * \ingroup params
+ * \brief Storage class for Parameters
+ */
 struct ParameterStorage : public ParameterStorageBase {
   friend class Model;
   template <class MyDevice>
@@ -54,16 +86,29 @@ struct ParameterStorage : public ParameterStorageBase {
   void g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
   void g_squared_l2norm(float* sqnorm) const override;
   size_t size() const override;
-
+  /**
+   * @brief Copy from another ParameterStorage
+   *
+   * @param val ParameterStorage to copy from
+   */
   void copy(const ParameterStorage & val);
   template <class MyDevice>
   void accumulate_grad_dev(MyDevice & dev, const Tensor& g);
+  /**
+   * @brief Add a tensor to the gradient
+   * @details After this method gets called, g <- g + d
+   *
+   * @param g Tensor to add
+   */
   void accumulate_grad(const Tensor& g);
+  /**
+   * @brief Clear the gradient (set it to 0)
+   */
   void clear();
 
-  Dim dim;
-  Tensor values;
-  Tensor g;
+  Dim dim; /**< Dimensions of the parameter tensor*/
+  Tensor values;/**< Values of the parameter */
+  Tensor g;/*< Values of the gradient w.r.t. this parameter */
 
 private:
   ParameterStorage() {}
@@ -76,6 +121,11 @@ private:
 };
 
 // represents a matrix/vector embedding of a discrete set
+/**
+ * \ingroup params
+ * \brief Storage class for LookupParameters
+ * 
+ */
 struct LookupParameterStorage : public ParameterStorageBase {
   friend class Model;
   template <class MyDevice>
@@ -91,14 +141,41 @@ struct LookupParameterStorage : public ParameterStorageBase {
   size_t size() const override;
   template <class MyDevice>
   void initialize_dev(MyDevice & dev, unsigned index, const std::vector<float>& val);
+  /**
+   * @brief Initialize one particular lookup
+   * 
+   * @param index Index of the lookput to initialize
+   * @param val Values
+   */
   void initialize(unsigned index, const std::vector<float>& val);
 
+  /**
+   * @brief Copy from another LookupParameterStorage
+   * 
+   * @param val Other LookupParameterStorage to copy from
+   */
   void copy(const LookupParameterStorage & val);
   template <class MyDevice>
   void accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& g);
+  /**
+   * @brief Add a Tensor to the gradient f one of the lookups
+   * @details after this `grads[index]<-grads[index] + g`
+   * 
+   * @param index [description]
+   * @param g [description]
+   */
   void accumulate_grad(unsigned index, const Tensor& g);
   template <class MyDevice>
   void accumulate_grads_dev(MyDevice & dev, unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
+  /**
+   * @brief Add tensors to muliple lookups
+   * @details After this method gets called, `grads[ids_host[i]] <- grads[ids_host[i]] + g[i*dim.size():(i+1)*dim.size()]`
+   *
+   * @param n size of `ids_host`
+   * @param ids_host Indices of the gradients to update
+   * @param ids_dev [To be documented] (only for GPU)
+   * @param g Values
+   */
   void accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
   void clear();
 
@@ -106,15 +183,15 @@ struct LookupParameterStorage : public ParameterStorageBase {
   void initialize_lookups();
 
   // Tensors for all dimensions at once
-  Dim all_dim;
-  Tensor all_values;
-  Tensor all_grads;
+  Dim all_dim; /**< Total dimension */
+  Tensor all_values; /**< Values for all dimensions at once */
+  Tensor all_grads; /**< Gradient values for all dimensions at once */
   // Tensors for each individual lookup
-  Dim dim;
-  std::vector<Tensor> values;
-  std::vector<Tensor> grads;
+  Dim dim; /**< Dimension for one lookup */
+  std::vector<Tensor> values; /**< List of values for each lookup */
+  std::vector<Tensor> grads; /**< List of gradient values for each lookup */
   // gradients are sparse, so track which components are nonzero
-  std::unordered_set<unsigned> non_zero_grads;
+  std::unordered_set<unsigned> non_zero_grads; /**< Gradients are sparse, so track which components are nonzero */
 private:
   LookupParameterStorage() {}
   LookupParameterStorage(unsigned n, const Dim& d);
@@ -129,12 +206,28 @@ private:
 
 class Model;
 /**
+ * \ingroup params
  * \brief Object representing a trainable parameter
+ * \details This objects acts as a high level component linking the actual parameter values (ParameterStorage) and the Model. As long as you don't want to do low level hacks at the ParameterStorage level, this is what you will use.
  *
  */
 struct Parameter {
+  /**
+   * @brief Default constructor
+   */
   Parameter();
+  /**
+   * @brief Constructor
+   * @details This is called by the model, you shouldn't need to use it
+   *
+   * @param mp Pointer to th model
+   * @param index Id of the parameter
+   */
   Parameter(Model* mp, unsigned long index);
+  /**
+   * @brief Get underlying ParameterStorage object
+   * @return ParameterStorage holding the parameter values
+   */
   ParameterStorage* get() const;
 
   /**
@@ -142,8 +235,8 @@ struct Parameter {
    */
   void zero();
 
-  Model* mp;
-  unsigned long index;
+  Model* mp;/**< Pointer to the Model holding this parameter */
+  unsigned long index;/**< Index of this parameter in its Model*/
 
   /**
    * \brief Shape of the parameter
@@ -159,7 +252,16 @@ struct Parameter {
    */
   Tensor* values() { return &(get()->values); }
 
+  /**
+   * @brief Set the parameter as updated
+   *
+   * @param b Update status
+   */
   void set_updated(bool b);
+  /**
+   * @brief Check the update status
+   * @return Update status
+   */
   bool is_updated();
 
 private:
@@ -176,7 +278,17 @@ private:
 struct LookupParameter {
   LookupParameter();
   LookupParameter(Model* mp, unsigned long index);
+  /**
+   * @brief Get underlying LookupParameterStorage object
+   * @return LookupParameterStorage holding the parameter values
+   */
   LookupParameterStorage* get() const;
+  /**
+   * @brief Initialize one particular column
+   *
+   * @param index Index of the column to be initialized
+   * @param val [description]
+   */
   void initialize(unsigned index, const std::vector<float>& val) const;
 
   /**
@@ -184,8 +296,8 @@ struct LookupParameter {
    */
   void zero();
 
-  Model* mp;
-  unsigned long index;
+  Model* mp;/**< Pointer to the Model holding this parameter */
+  unsigned long index;/**< Index of this parameter in its Model*/
 
   /**
    * \brief Shape of the lookup parameter
@@ -200,7 +312,16 @@ struct LookupParameter {
    */
   std::vector<Tensor>* values() { return &(get()->values); }
 
+  /**
+  * @brief Set the parameter as updated
+  *
+  * @param b Update status
+  */
   void set_updated(bool b);
+  /**
+   * @brief Check the update status
+   * @return Update status
+   */
   bool is_updated();
 
 private:
@@ -324,13 +445,13 @@ private:
 /**
  * \ingroup params
  * \brief Initializes according to [Saxe et al., 2014](https://arxiv.org/abs/1312.6120)
- * \details Initializes as a random orthogonal matrix (unimplemented)
+ * \details Initializes as a random orthogonal matrix (unimplemented for GPU)
  */
 struct ParameterInitSaxe : public ParameterInit {
   /**
    * \brief Constructor
    */
-  ParameterInitSaxe(float gain=1.0) : gain(gain) {}
+  ParameterInitSaxe(float gain = 1.0) : gain(gain) {}
   virtual void initialize_params(Tensor & values) const override;
 private:
   float gain;
