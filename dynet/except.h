@@ -24,7 +24,6 @@ class cuda_exception : public std::runtime_error {
  public:
   cuda_exception(const std::string& what_arg) : runtime_error(what_arg) {}
 };
-
 } // namespace dynet
 
 #endif

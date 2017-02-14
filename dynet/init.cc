@@ -16,6 +16,21 @@ using namespace std;
 
 namespace dynet {
 
+DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0),
+  shared_parameters(false)
+#if HAVE_CUDA
+  , ngpus_requested(false), ids_requested(false), requested_gpus(-1)
+#endif
+{
+#if HAVE_CUDA
+  gpu_mask = std::vector<int>(MAX_GPUS, 0);
+#endif
+}
+
+DynetParams::~DynetParams()
+{
+}
+
 static void remove_args(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
@@ -142,7 +157,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
   return params;
 }
 
-void initialize(DynetParams params) {
+void initialize(DynetParams& params) {
   if (default_device != nullptr) {
     cerr << "WARNING: Attempting to initialize dynet twice. Ignoring duplicate initialization." << endl;
     return;

@@ -744,23 +744,26 @@ Expression colwise_add(const Expression& x, const Expression& bias);
 /**
  * \ingroup lossoperations
  * \brief Softmax
- * \details The softmax function, which sets each element to be e^{x[i]}/{sum_j e^{x[j]}}.
+ * \details The softmax function normalizes each column to ensure that all
+ *          values are between 0 and 1 and add to one by applying the
+ *          e^{x[i]}/{sum_j e^{x[j]}}.
  * 
- * \param x A vector
+ * \param x A vector or matrix
  * 
- * \return A vector after calculating the softmax
+ * \return A vector or matrix after calculating the softmax
  */
 Expression softmax(const Expression& x);
 
 /**
  * \ingroup lossoperations
  * \brief Log softmax
- * \details The log of the softmax function, which sets each element to be 
- *          log( e^{x[i]}/{sum_j e^{x[j]}} ).
+ * \details The log softmax function normalizes each column to ensure that all
+ *          values are between 0 and 1 and add to one by applying the
+ *          e^{x[i]}/{sum_j e^{x[j]}}, then takes the log
  * 
- * \param x A vector
+ * \param x A vector or matrix
  * 
- * \return A vector after calculating the log softmax
+ * \return A vector or matrix after calculating the log softmax
  */
 Expression log_softmax(const Expression& x);
 
@@ -1105,7 +1108,7 @@ Expression nobackprop(const Expression& x);
  *    \f$
  *      \begin{pmatrix}
  *        x_{1,1} & x_{3,1} & x_{2,2} & x_{1,3} & x_{3,3} & x_{2,4} \\
- *        x_{1,2} & x_{1,2} & x_{3,2} & x_{2,3} & x_{1,4} & x_{3,4} \\
+ *        x_{2,1} & x_{1,2} & x_{3,2} & x_{2,3} & x_{1,4} & x_{3,4} \\
  *      \end{pmatrix}
  *    \f$
  *
@@ -1385,6 +1388,11 @@ Expression logdet(const Expression& x);
 Expression trace_of_product(const Expression& x, const Expression& y);
 
 
-} }
+}
+// Because expressions are now such a fundamental part of DyNet it doesn't
+// make much sense to keep them in separate namespaces, so we import expr
+// to the dynet namespace.
+using namespace expr;
+}
 
 #endif

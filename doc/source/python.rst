@@ -146,7 +146,7 @@ Now, check that everything works:
 .. code:: bash
 
     cd $PATH_TO_DYNET
-    cd pyexamples
+    cd examples/python
     python xor.py
     python rnnlm.py rnnlm.py
 
@@ -183,6 +183,8 @@ then install some necessary packages as follows:
      conda install gcc cmake boost cython
 
 After this, the build process should be the same as normal.
+
+Note that on some conda environments, people have reported build errors related to the interaction between the ``icu`` and ``boost`` packages. If you encounter this, try the solution in `this comment <https://github.com/clab/dynet/issues/268#issuecomment-278806398>`_.
 
 Windows Support
 ---------------
