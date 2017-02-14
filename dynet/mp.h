@@ -282,7 +282,7 @@ namespace dynet {
     template<class D, class S>
     void run_multi_process(unsigned num_children, ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
         const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
-      //assert (dynet::ps->is_shared());
+      assert (dynet::ps->is_shared());
       queue_name = generate_queue_name();
       boost::interprocess::message_queue::remove(queue_name.c_str());
       boost::interprocess::message_queue::remove(queue_name.c_str());
@@ -292,6 +292,7 @@ namespace dynet {
       unsigned cid = spawn_children(workloads);
       if (cid < num_children) {
         run_child(cid, learner, trainer, workloads, train_data, dev_data);
+        exit(0);
       }
       else {
         run_parent(train_data, dev_data, learner, workloads, num_iterations, dev_frequency, report_frequency);
