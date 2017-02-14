@@ -184,6 +184,8 @@ then install some necessary packages as follows:
 
 After this, the build process should be the same as normal.
 
+Note that on some conda environments, people have reported build errors related to the interaction between the ``icu`` and ``boost`` packages. If you encounter this, try the solution in `this comment <https://github.com/clab/dynet/issues/268#issuecomment-278806398>`_.
+
 Windows Support
 ---------------
 
