@@ -970,10 +970,11 @@ void cleanup();
   import java.io.ByteArrayOutputStream;
   import java.io.ObjectOutputStream;
   import java.io.IOException;
+  import java.io.Serializable;
 %}
  
 %typemap(javacode) ModelSaver %{
-  public void add_object(Object o) {
+  public void add_object(Serializable o) {
     try {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       ObjectOutputStream objOut = new ObjectOutputStream(out);
@@ -998,10 +999,10 @@ void cleanup();
 %}
 
 %typemap(javacode) ModelLoader %{
-  public Object load_object() {
+  public <T> T load_object(Class<T> clazz) {
     long size = load_size();
     byte[] bytes = new byte[(int) size];
-    load_bytes(bytes);
+    load_byte_array(bytes);
 
     Object obj = null;
     try {
@@ -1012,9 +1013,11 @@ void cleanup();
     } catch (IOException e) {
       // This shouldn't ever happen.
       throw new RuntimeException(e);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
     }
 
-    return obj;
+    return clazz.cast(obj);
   }
 %}
 

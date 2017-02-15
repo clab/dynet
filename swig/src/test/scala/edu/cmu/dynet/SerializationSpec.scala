@@ -166,18 +166,11 @@ class SerializationSpec extends FlatSpec with Matchers {
     val s2 = Array.ofDim[Byte](length.asInstanceOf[Int])
     loader.load_byte_array(s2)
     loader.done()
-    
-    System.out.println(Arrays.toString(s))
-    System.out.println(Arrays.toString(s2))
 
     Arrays.equals(s, s2) shouldBe true
   }
 
-  /*
-  "model saver and model loader" should "handle java objects correctly" in {
-    
-    case class Foo(a: String, b: Int) extends Serializable 
-
+  "model saver and model loader" should "handle objects correctly" in {
     val s = new Foo("abcd", 78)
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
@@ -186,10 +179,11 @@ class SerializationSpec extends FlatSpec with Matchers {
     saver.done()
 
     val loader = new ModelLoader(path)
-    val s2 = loader.load_string()
+    val s2 = loader.load_object(classOf[Foo])
     loader.done()
 
     s2 shouldBe s
   }
-*/
 }
+
+case class Foo(a: String, b: Int) extends Serializable
