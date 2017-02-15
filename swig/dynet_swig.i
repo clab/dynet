@@ -59,7 +59,6 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 
 // Useful SWIG libraries
 %include "std_vector.i"
-%include "various.i"
 %include "std_string.i"
 %include "std_pair.i"
 %include "cpointer.i"
@@ -981,7 +980,10 @@ void cleanup();
       objOut.writeObject(o);
       objOut.close();
 
-      add_byte_array(out.toByteArray());
+      byte[] bytes = out.toByteArray();
+
+      add_size(bytes.length);
+      add_byte_array(bytes);
     } catch (IOException e) {
       // This shouldn't ever happen.
       throw new RuntimeException(e);
@@ -1074,13 +1076,10 @@ struct ModelLoader {
 }
 %}
 
-// %apply unsigned char *NIOBUFFER { unsigned char *buf };
+// Convert methods whose arguments are (char *str, size_t len)
+// to byte[] in Java. Note that the *argument names must match*,
+// not just the types.
 %apply(char *STRING, size_t LENGTH) { (char *str, size_t len) }
-
-%typemap(jstype) char *load_byte_array() "byte[]";
-%typemap(javaout) char *load_byte_array() {
-  return $jnicall.getBytes();
-}
 
 %nodefaultctor ModelSaver;
 struct ModelSaver {
@@ -1107,9 +1106,6 @@ struct ModelSaver {
 %newobject ModelLoader::load_srnn_builder();
 %newobject ModelLoader::load_gru_builder();
 %newobject ModelLoader::load_fast_lstm_builder();
-
-// Do we need to declare this?
-// %newobject ModelLoader::load_string();
 
 
 %nodefaultctor ModelLoader;
