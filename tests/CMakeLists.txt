@@ -19,8 +19,6 @@ if (WITH_CUDA_BACKEND)
   target_link_libraries (test-dynet gdynet ${LIBS}
                          ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
                          )
-  add_dependencies(test-dynet dynetcuda)
-  target_link_libraries(test-dynet dynetcuda)
   CUDA_ADD_CUBLAS_TO_TARGET(test-dynet)
 else()
   target_link_libraries (test-dynet dynet ${LIBS}
