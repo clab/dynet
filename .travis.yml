@@ -1,27 +1,44 @@
 language: cpp
-compiler:
-  - gcc
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      env: CXX=g++-4.8 CC=gcc-4.8
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - boost-latest
+          packages:
+            - gcc-4.8
+            - g++-4.8
+            - libboost-filesystem1.55-dev
+            - libboost-program-options1.55-dev
+            - libboost-serialization1.55-dev
+            - libboost-test1.55-dev
+            - libboost-regex1.55-dev
+    - os: osx
+      compiler: clang
 
 install:
-- if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    packages:
-    - gcc-4.8
-    - g++-4.8
+  - hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
+  - cd eigen
+  - mkdir build && cd build
+  - cmake ..
+  - sudo make install
 
 before_script:
-  - sudo add-apt-repository -y ppa:boost-latest/ppa
-  - sudo apt-get update -qq
-  - sudo apt-get install libboost-filesystem1.55-dev libboost-program-options1.55-dev libboost-serialization1.55-dev libboost-test1.55-dev libboost-regex1.55-dev
-  - hg clone https://bitbucket.org/eigen/eigen
+  - cd $TRAVIS_BUILD_DIR
   - mkdir build
   - cd build
-  - cmake .. -DEIGEN3_INCLUDE_DIR=eigen
+  - cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3
+
+after_failure:
+  - cat $TRAVIS_BUILD_DIR/build/CMakeFiles/CMakeError.log
 
 script:
-  - make
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then make -j$(nproc); fi
+  - if [[ $TRAVIS_OS_NAME == "osx" ]]; then make -j$(sysctl -n hw.ncpu); fi
   - make test
-

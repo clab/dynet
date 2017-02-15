@@ -11,8 +11,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
-
 
 // This is a sample class which implements the xor model from xor.cc
 // Everything in this class is just as you would do the usual except for
@@ -52,8 +50,8 @@ public:
     ComputationGraph cg;
     NewGraph(cg);
 
-    Expression x = dynet::expr::input(cg, {(unsigned int)input.size()}, &input);
-    Expression y = dynet::expr::input(cg, &gold_output);
+    Expression x = dynet::input(cg, {(unsigned int)input.size()}, &input);
+    Expression y = dynet::input(cg, &gold_output);
 
     Expression h = tanh(W*x + b);
     Expression y_pred = V*h + a;
@@ -69,7 +67,7 @@ public:
     ComputationGraph cg;
     NewGraph(cg);
 
-    Expression x = dynet::expr::input(cg, {(unsigned int)input.size()}, &input);
+    Expression x = dynet::input(cg, {(unsigned int)input.size()}, &input);
     Expression h = tanh(W*x + b);
     Expression y_pred = V*h + a;
     return as_scalar(cg.forward(y_pred));

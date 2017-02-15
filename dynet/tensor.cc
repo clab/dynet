@@ -29,7 +29,7 @@ ostream& operator<<(ostream& os, const Tensor& t) {
 }
 
 real as_scalar(const Tensor& t) {
-  assert(t.d.size() == 1);
+  if (t.d.size() != 1) throw std::runtime_error("Input tensor has more than one element, cannot convert to scalar.");
 #if HAVE_CUDA
   float res;
   CUDA_CHECK(cudaMemcpy(&res, t.v, sizeof(float), cudaMemcpyDeviceToHost));
@@ -120,20 +120,20 @@ void TensorTools::Zero(Tensor& d) {
 }
 
 void TensorTools::Identity(Tensor& val) {
-  if(val.d.nd != 2 || val.d[0] != val.d[1])
+  if (val.d.nd != 2 || val.d[0] != val.d[1])
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to identity");
   size_t pos = 0;
 #if HAVE_CUDA
   float* t = new float[val.d.size()];
-  for(size_t i = 0; i < val.d[0]; ++i)
-    for(size_t j = 0; j < val.d[1]; ++j)
-      t[pos++] = (i==j?1:0);
+  for (size_t i = 0; i < val.d[0]; ++i)
+    for (size_t j = 0; j < val.d[1]; ++j)
+      t[pos++] = (i == j ? 1 : 0);
   CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
   delete[] t;
 #else
-  for(size_t i = 0; i < val.d[0]; ++i)
-    for(size_t j = 0; j < val.d[1]; ++j)
-      val.v[pos++] = (i==j?1:0);
+  for (size_t i = 0; i < val.d[0]; ++i)
+    for (size_t j = 0; j < val.d[1]; ++j)
+      val.v[pos++] = (i == j ? 1 : 0);
 #endif
 }
 
@@ -177,14 +177,22 @@ void TensorTools::RandomizeUniform(Tensor& val, real left, real right) {
 #endif
 }
 
+void TensorTools::RandomizeOrthogonal(Tensor& val, real scale) {
+  if (val.d.nd != 2 || val.d[0] != val.d[1])
+    throw std::runtime_error("Attempt to set a tensor that is not a square matrix to an orthogonal matrix");
+  RandomizeUniform(val, -1.0, 1.0);
+  Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
+  *val = scale * svd.matrixU();
+}
+
 template<class Archive>
 void Tensor::save(Archive& ar, const unsigned int ver) const {
   ar & d;
-  int dev_id = ((device == default_device) ? (int)-1 : device->device_id);
+  int dev_id = ((device == default_device) ? (int) - 1 : device->device_id);
   ar & dev_id;
   ar & mem_pool;
 #ifdef HAVE_CUDA
-  if(device->type == DeviceType::GPU) {
+  if (device->type == DeviceType::GPU) {
     float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
     CUDA_CHECK(cudaMemcpyAsync(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
     ar & boost::serialization::make_array(vc, d.size());
@@ -203,11 +211,11 @@ void Tensor::load(Archive& ar, const unsigned int ver) {
   // This default value is for backward compatibility with models that were
   // saved without information about what mempool a tensor belongs to.
   mem_pool = DeviceMempool::PS;
-  if(ver > 0) {
+  if (ver > 0) {
     ar & dev_id;
     ar & mem_pool;
   }
-  if(dev_id == -1) {
+  if (dev_id == -1) {
     device = default_device;
   } else {
     assert(dev_id > 0 && dev_id < (int)devices.size());
@@ -215,7 +223,7 @@ void Tensor::load(Archive& ar, const unsigned int ver) {
   }
   device->allocate_tensor(mem_pool, *this);
 #ifdef HAVE_CUDA
-  if(device->type == DeviceType::GPU) {
+  if (device->type == DeviceType::GPU) {
     float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
     ar & boost::serialization::make_array(vc, d.size());
     CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
@@ -235,9 +243,9 @@ real rand01() {
 }
 
 int rand0n(int n) {
-  assert(n > 0);
+  if (n <= 0) throw std::runtime_error("Integer upper bound is non-positive");
   int x = rand01() * n;
-  while(n == x) { x = rand01() * n; }
+  while (n == x) { x = rand01() * n; }
   return x;
 }
 

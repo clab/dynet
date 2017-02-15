@@ -17,7 +17,7 @@ void SimpleExecutionEngine::invalidate(unsigned i) {
   num_nodes_evaluated = i;
 }
 
-const Tensor& SimpleExecutionEngine::forward() { 
+const Tensor& SimpleExecutionEngine::forward() {
   const VariableIndex node_max_index = (VariableIndex)(cg.nodes.size() - 1);
   return forward(node_max_index);
 }
@@ -91,11 +91,11 @@ void SimpleExecutionEngine::backward() {
 
 // TODO what is happening with parameter nodes if from_where > param_node_id ?
 void SimpleExecutionEngine::backward(VariableIndex from_where) {
-  assert(from_where+1 <= nfxs.size());
-  assert(from_where+1 <= cg.nodes.size());
+  if(!(from_where < nfxs.size()))
+    incremental_forward(from_where);
   if (nfxs[from_where].d.size() != 1) {
-    cerr << "backward() called on non-scalar node.\n";
-    abort();
+    ostringstream oss; oss << "backward() can only be called on scalar nodes, but node " << from_where << " has dimension: " << nfxs[from_where].d;
+    throw std::runtime_error(oss.str());
   }
 
   const unsigned num_nodes = from_where+1;

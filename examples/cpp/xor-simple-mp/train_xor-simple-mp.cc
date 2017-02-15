@@ -173,10 +173,9 @@ int main(int argc, char** argv) {
   data[3] = Datum({1, 1}, 0);
 
   Learner learner(xor_model, dynet_model, trainer, false);
-  if (num_cores == 0) {
-    run_single_process<Datum>(&learner, trainer, data, data, ITERATIONS, data.size(), data.size(), data.size());
-  }
-  else {
-    run_multi_process<Datum>(num_cores, &learner, trainer, data, data, ITERATIONS, data.size(), data.size());
+  for (unsigned i = 0; i < ITERATIONS; ++i) {
+    SufficientStats ss = run_mp_minibatch<Datum>(num_cores, &learner, data);
+    trainer->update(1.0 / data.size());
+    cout << ss << endl;
   }
 }

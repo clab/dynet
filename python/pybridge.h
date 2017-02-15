@@ -87,7 +87,7 @@ struct ModelLoader {
     {
         printf("loading model\n");
         ia >> *model;
-        printf("done %d\n", model->parameters_list().size());
+        printf("done %zu\n", model->parameters_list().size());
     };
 
     ModelLoader* fill_parameter(dynet::Parameter &p) {
