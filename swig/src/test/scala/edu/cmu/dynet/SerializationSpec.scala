@@ -1,6 +1,7 @@
 package edu.cmu.dynet
 
 import org.scalatest._
+import Matchers._
 import edu.cmu.dynet._
 import edu.cmu.dynet.dynet_swig._
 
@@ -8,6 +9,11 @@ class SerializationSpec extends FlatSpec with Matchers {
   import DynetScalaHelpers._
 
   myInitialize()
+
+  def assertSameSeq(s1: Seq[Float], s2: Seq[Float], eps: Float = 1e-5f): Unit = {
+    s1.size shouldBe s2.size
+    s1.zip(s2).foreach { case (v1, v2) => v1 shouldBe v2 +- eps }
+  }
 
   def assertSameModel(m1: Model, m2: Model): Unit = {
     // TODO(joelgrus): add more logic here as we add more methods to the Java API
@@ -22,7 +28,7 @@ class SerializationSpec extends FlatSpec with Matchers {
       case (p1, p2) => {
         p1.size shouldBe p2.size
         p1.getDim shouldBe p2.getDim
-        p1.getValues.toSeq shouldBe p2.getValues.toSeq
+        assertSameSeq(p1.getValues.toSeq, p2.getValues.toSeq)
       }
     }
 
