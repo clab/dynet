@@ -63,7 +63,6 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 %include "std_pair.i"
 %include "cpointer.i"
 
-
 %pointer_functions(unsigned, uintp);
 %pointer_functions(int, intp);
 %pointer_functions(float, floatp);
@@ -966,6 +965,7 @@ void cleanup();
 // serialization logic (from python/pybridge.h) //
 //////////////////////////////////////////////////
 
+// Add Java method to ModelSaver for serializing java objects.
 %typemap(javaimports) ModelSaver %{
   import java.io.ByteArrayOutputStream;
   import java.io.ObjectOutputStream;
@@ -992,6 +992,7 @@ void cleanup();
   }
 %}
 
+// Add Java method to ModelLoader for loading java objects. 
 %typemap(javaimports) ModelLoader %{
   import java.io.ByteArrayInputStream;
   import java.io.ObjectInputStream;
@@ -1014,6 +1015,7 @@ void cleanup();
       // This shouldn't ever happen.
       throw new RuntimeException(e);
     } catch (ClassNotFoundException e) {
+      // This also shouldn't happen (because the class is an argument).
       throw new RuntimeException(e);
     }
 
@@ -1156,7 +1158,6 @@ struct ModelLoader {
 };
 
 }
-
 
 
 
