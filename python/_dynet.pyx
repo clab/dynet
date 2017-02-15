@@ -629,6 +629,7 @@ cdef class Expression: #{{{
 
     cpdef dim(self):
         cdef CDim d;
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         d=self.c().dim()
         return (d.size(), d.rows(), d.cols(), d.batch_elems())
 
