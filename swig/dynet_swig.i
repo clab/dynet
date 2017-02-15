@@ -970,11 +970,10 @@ void cleanup();
   import java.io.ByteArrayOutputStream;
   import java.io.ObjectOutputStream;
   import java.io.IOException;
-  import java.io.Serializable;
 %}
  
 %typemap(javacode) ModelSaver %{
-  public void add_object(Serializable o) {
+  public void add_object(Object o) {
     try {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       ObjectOutputStream objOut = new ObjectOutputStream(out);
