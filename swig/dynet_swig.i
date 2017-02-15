@@ -1005,8 +1005,8 @@ struct ModelSaver {
     void add_srnn_builder(SimpleRNNBuilder &p) { oa << p; }
     void add_gru_builder(GRUBuilder &p) { oa << p; }
     void add_fast_lstm_builder(FastLSTMBuilder &p) { oa << p; }
+    void add_size(size_t len) { oa << len; }
     void add_byte_array(char *str, size_t len) {
-      oa << len;
       oa << boost::serialization::make_array(str, len);
     }
 
@@ -1053,14 +1053,14 @@ struct ModelLoader {
       FastLSTMBuilder* p = new FastLSTMBuilder(); ia >> *p; return p;
     }
 
-    char* load_byte_array() {
+    size_t load_size() {
       size_t len;
       ia >> len;
+      return len;
+    }
 
-      char* buf = new char[len];
-      ia >> boost::serialization::make_array(buf, len);
-
-      return buf;
+    void load_byte_array(char *str, size_t len) {
+      ia >> boost::serialization::make_array(str, len);
     }
 
     void done() { ifs.close(); }
@@ -1093,6 +1093,7 @@ struct ModelSaver {
     void add_srnn_builder(SimpleRNNBuilder &p);
     void add_gru_builder(GRUBuilder &p);
     void add_fast_lstm_builder(FastLSTMBuilder &p);
+    void add_size(size_t len) { oa << len; }
     void add_byte_array(char *str, size_t len);
     void done();
 };
@@ -1122,7 +1123,8 @@ struct ModelLoader {
     SimpleRNNBuilder* load_srnn_builder();
     GRUBuilder* load_gru_builder();
     FastLSTMBuilder* load_fast_lstm_builder();
-    char* load_byte_array();
+    size_t load_size();
+    void load_byte_array(char *str, size_t len);
     void done();
 };
 
