@@ -33,7 +33,7 @@ if "CFLAGS" in cfg_vars:
 
 LIBRARIES=['dynet']
 LIBRARY_DIRS=["."]
-GPULIBRARIES=['gdynet', 'dynetcuda']
+GPULIBRARIES=['gdynet']
 GPULIBRARY_DIRS=[]
 
 appendCMakeLibList(GPULIBRARIES, '${CUDA_CUBLAS_FILES}')
