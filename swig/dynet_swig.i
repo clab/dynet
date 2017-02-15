@@ -59,9 +59,11 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 
 // Useful SWIG libraries
 %include "std_vector.i"
+%include "various.i"
 %include "std_string.i"
 %include "std_pair.i"
 %include "cpointer.i"
+
 
 %pointer_functions(unsigned, uintp);
 %pointer_functions(int, intp);
@@ -965,8 +967,30 @@ void cleanup();
 // serialization logic (from python/pybridge.h) //
 //////////////////////////////////////////////////
 
-%{
+%typemap(javaimports) ModelSaver %{
+  import java.io.ByteArrayOutputStream;
+  import java.io.ObjectOutputStream;
+  import java.io.IOException;
+%}
+ 
+%typemap(javacode) ModelSaver %{
+  public void add_object(Object o) {
+    try {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      ObjectOutputStream objOut = new ObjectOutputStream(out);
+      objOut.writeObject(o);
+      objOut.close();
 
+      add_byte_array(out.toByteArray());
+    } catch (IOException e) {
+      // This shouldn't ever happen.
+      throw new RuntimeException(e);
+    }
+  }
+%}
+
+%{
+  
 namespace dynet {
 
 struct ModelSaver {
@@ -981,6 +1005,10 @@ struct ModelSaver {
     void add_srnn_builder(SimpleRNNBuilder &p) { oa << p; }
     void add_gru_builder(GRUBuilder &p) { oa << p; }
     void add_fast_lstm_builder(FastLSTMBuilder &p) { oa << p; }
+    void add_byte_array(char *str, size_t len) {
+      oa << len;
+      oa << boost::serialization::make_array(str, len);
+    }
 
     void done() { ofs.close(); }
 
@@ -1025,6 +1053,16 @@ struct ModelLoader {
       FastLSTMBuilder* p = new FastLSTMBuilder(); ia >> *p; return p;
     }
 
+    char* load_byte_array() {
+      size_t len;
+      ia >> len;
+
+      char* buf = new char[len];
+      ia >> boost::serialization::make_array(buf, len);
+
+      return buf;
+    }
+
     void done() { ifs.close(); }
 
     private:
@@ -1036,6 +1074,13 @@ struct ModelLoader {
 }
 %}
 
+// %apply unsigned char *NIOBUFFER { unsigned char *buf };
+%apply(char *STRING, size_t LENGTH) { (char *str, size_t len) }
+
+%typemap(jstype) char *load_byte_array() "byte[]";
+%typemap(javaout) char *load_byte_array() {
+  return $jnicall.getBytes();
+}
 
 %nodefaultctor ModelSaver;
 struct ModelSaver {
@@ -1048,6 +1093,7 @@ struct ModelSaver {
     void add_srnn_builder(SimpleRNNBuilder &p);
     void add_gru_builder(GRUBuilder &p);
     void add_fast_lstm_builder(FastLSTMBuilder &p);
+    void add_byte_array(char *str, size_t len);
     void done();
 };
 
@@ -1061,6 +1107,9 @@ struct ModelSaver {
 %newobject ModelLoader::load_gru_builder();
 %newobject ModelLoader::load_fast_lstm_builder();
 
+// Do we need to declare this?
+// %newobject ModelLoader::load_string();
+
 
 %nodefaultctor ModelLoader;
 struct ModelLoader {
@@ -1073,10 +1122,12 @@ struct ModelLoader {
     SimpleRNNBuilder* load_srnn_builder();
     GRUBuilder* load_gru_builder();
     FastLSTMBuilder* load_fast_lstm_builder();
+    char* load_byte_array();
     void done();
 };
 
 }
+
 
 
 
