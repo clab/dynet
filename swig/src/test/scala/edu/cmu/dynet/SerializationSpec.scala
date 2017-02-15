@@ -153,15 +153,18 @@ class SerializationSpec extends FlatSpec with Matchers {
   
   "model saver and model loader" should "handle byte[] correctly" in {
 
-    val s = Array[Byte](3, 7, 127, 2, 5, 8, 0, -1, -2)
+    val s = Array[Byte](3, 7, 127, 2, 5, 8, 0, -1, -2, 100, 10, -2, 0)
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
+    saver.add_size(s.length)
     saver.add_byte_array(s)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val s2 = loader.load_byte_array()
+    val length = loader.load_size()
+    val s2 = Array.ofDim[Byte](length.asInstanceOf[Int])
+    loader.load_byte_array(s2)
     loader.done()
     
     System.out.println(Arrays.toString(s))
