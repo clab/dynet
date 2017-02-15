@@ -115,7 +115,7 @@ size_t Hinge::aux_storage_size() const {
 }
 
 size_t LogSoftmax::aux_storage_size() const {
-  return 2 * dim.batch_elems() * sizeof(float);
+  return 2 * dim.size() / dim.rows() * sizeof(float);
 }
 
 size_t PickNegLogSoftmax::aux_storage_size() const {
@@ -137,7 +137,7 @@ size_t Min::aux_storage_size() const {
 }
 
 size_t Softmax::aux_storage_size() const {
-  return 2 * dim.batch_elems() * sizeof(float);
+  return 2 * dim.size() / dim.rows() * sizeof(float);
 }
 
 size_t Sparsemax::aux_storage_size() const {
@@ -847,11 +847,8 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
       throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-	  // nvcc with MSVC can't this all as one expression, so it's intentionally split into multiple lines
-      auto&& elossVec = eloss.tvec();
-      auto&& hinge_sum = (elossVec > 0.f).cast<float>().sum() * d;
-      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= hinge_sum;
-    }
+	  dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).template cast<float>().sum() * d;
+	}
   } else {
     assert(pelements != nullptr); 
     vector<float> fx_vec = as_vector(fx);
@@ -864,10 +861,7 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
         throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-        auto&& elossVec = eloss.tb<1>();
-        auto&& elossChip = elossVec.chip<1>(b);
-        auto&& hinge_sum = (elossChip > 0.f).cast<float>().sum() * d_vec[b];
-        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= hinge_sum;
+		dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).template cast<float>().sum() * d_vec[b];
 	  }
     }
   }
@@ -1041,16 +1035,16 @@ DYNET_NODE_INST_DEV_IMPL(LogisticSigmoid)
 template<class MyDevice>
 void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
-  if (xs[0]->d.cols() != 1)
-    throw std::runtime_error("LogSoftmax::forward not yet implemented for multiple columns");
-  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device, DeviceMempool::FXS);
+  Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
   logsumexp(dev, *xs[0], m, z);
-  if(fx.d.bd == 1) {
+  if(fx.d.size() == fx.d.rows()) {
     fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - as_scalar(z);
   } else {
-    Eigen::array<int, 2> bcasts; bcasts[0] = xs[0]->d.rows(); bcasts[1] = 1;
-    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() - z.tb<1>().broadcast(bcasts);
+    // TODO? Is this broadcast efficient on CPU?
+    Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
+    Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
+    fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>() - z.tvec().reshape(morph).broadcast(bcasts);
   }
 }
 
@@ -1061,19 +1055,13 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  if (xs[0]->d.cols() != 1) 
-    throw std::runtime_error("LogSoftmax::backward not yet implemented for multiple columns");
-  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  if(fx.d.bd == 1) {
-    z.t<0>().device(*dev.edevice) = dEdf.t<1>().sum();
-    Eigen::array<int, 1> bcast; bcast[0] = fx.d.rows();
-    dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().exp() * -z.t<1>().broadcast(bcast) + dEdf.t<1>();
-  } else {
-    Eigen::array<int, 1> red_axis; red_axis[0] = 0;
-    z.tb<0>().device(*dev.edevice) = dEdf.tb<1>().sum(red_axis);
-    Eigen::array<int, 2> bcast; bcast[0] = fx.d.rows(); bcast[1] = 1;
-    dEdxi.tb<1>().device(*dev.edevice) += fx.tb<1>().exp() * -z.tb<1>().broadcast(bcast) + dEdf.tb<1>();
-  }
+  Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  // TODO? Is this broadcast efficient on CPU?
+  Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+  z.tb<1>().device(*dev.edevice) = dEdf.tb<2>().sum(red_axis);
+  Eigen::array<int, 3> bcast = {(int)fx.d.rows(), 1, 1};
+  Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
+  dEdxi.tb<2>().device(*dev.edevice) += fx.tb<2>().exp() * -z.tvec().reshape(morph).broadcast(bcast) + dEdf.tb<2>();
 }
 DYNET_NODE_INST_DEV_IMPL(LogSoftmax)
 
@@ -1691,17 +1679,14 @@ DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
 template<class MyDevice>
 void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  if (xs[0]->d.cols() != 1)
-    throw std::runtime_error("Softmax not yet implemented for multiple columns");
-  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device, DeviceMempool::FXS);
+  assert(xs.size() == 1);
+  Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
   logsumexp(dev, *xs[0], m, z);
-  if(fx.d.bd == 1) {
-    fx.t<1>().device(*dev.edevice) = (xs[0]->t<1>() - as_scalar(z)).exp();
-  } else {
-    Eigen::array<int, 2> bcast; bcast[0] = xs[0]->d.rows(); bcast[1] = 1;
-    fx.tb<1>().device(*dev.edevice) = (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp();
-  }
+  // TODO? Is this broadcast efficient on CPU?
+  Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
+  Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
+  fx.tb<2>().device(*dev.edevice) = (xs[0]->tb<2>() - z.tvec().reshape(morph).broadcast(bcasts)).exp();
 }
 
 template<class MyDevice>
@@ -1711,28 +1696,13 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  if(fx.d.bd == 1) {
-    // TODO: This requires no transfer between host/device, but is not working?
-    //  z.t<0>().device(*dev.edevice) = (fx.t<1>() * dEdf.t<1>()).sum();
-    //  Eigen::array<int, 1> bcast({(int)fx.d.rows()});
-    //  dEdxi.t<1>().device(*dev.edevice) += (fx.t<1>() - z.t<1>().broadcast(bcast)) * dEdf.t<1>();
-    // So we use this instead.
-    z.t<0>().device(*dev.edevice) = (fx.t<1>() * dEdf.t<1>()).sum();
-    float off_diag_sum = -TensorTools::AccessElement(z, 0);
-    dEdxi.t<1>().device(*dev.edevice) += fx.t<1>().binaryExpr(dEdf.t<1>(), FSoftmaxBackward(off_diag_sum));
-  } else {
-    // TODO: This requires no transfer between host/device, but is not working?
-    //  Eigen::array<int, 1> red_axis({0});
-    //  z.tb<0>().device(*dev.edevice) = (fx.tb<1>() * dEdf.tb<1>()).sum(red_axis);
-    //  Eigen::array<int, 2> bcast({(int)fx.d.rows(), 1});
-    //  dEdxi.tb<1>().device(*dev.edevice) += (fx.tb<1>() - z.tb<1>().broadcast(bcast)) * dEdf.tb<1>();
-    for(size_t b = 0; b < fx.d.bd; b++) {
-      z.tb<0>().chip<0>(b).device(*dev.edevice) = (fx.tb<1>().chip<1>(b) * dEdf.tb<1>().chip<1>(b)).sum();
-      float off_diag_sum = - TensorTools::AccessElement(z, b);
-      dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += fx.tb<1>().chip<1>(b).binaryExpr(dEdf.tb<1>().chip<1>(b), FSoftmaxBackward(off_diag_sum));
-    }
-  }
+  Tensor z(Dim({fx.d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  // TODO? Is this broadcast efficient on CPU?
+  Eigen::array<int, 1> red_axis = {0};
+  z.tb<1>().device(*dev.edevice) = (fx.tb<2>() * dEdf.tb<2>()).sum(red_axis);
+  Eigen::array<int, 3> bcast = {(int)xs[0]->d.rows(), 1, 1};
+  Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
+  dEdxi.tb<2>().device(*dev.edevice) += (dEdf.tb<2>() - z.tvec().reshape(morph).broadcast(bcast)) * fx.tb<2>();
 }
 DYNET_NODE_INST_DEV_IMPL(Softmax)
 

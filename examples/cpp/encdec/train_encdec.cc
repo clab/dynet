@@ -10,9 +10,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
-
-
 
 // Sort sentences in descending order of length
 struct CompareLen {
