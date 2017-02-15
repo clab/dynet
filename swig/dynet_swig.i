@@ -991,6 +991,34 @@ void cleanup();
   }
 %}
 
+%typemap(javaimports) ModelLoader %{
+  import java.io.ByteArrayInputStream;
+  import java.io.ObjectInputStream;
+  import java.io.IOException;
+%}
+
+%typemap(javacode) ModelLoader %{
+  public Object load_object() {
+    long size = load_size();
+    byte[] bytes = new byte[(int) size];
+    load_bytes(bytes);
+
+    Object obj = null;
+    try {
+      ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+      ObjectInputStream objIn = new ObjectInputStream(in);
+      obj = objIn.readObject();
+      objIn.close();
+    } catch (IOException e) {
+      // This shouldn't ever happen.
+      throw new RuntimeException(e);
+    }
+
+    return obj;
+  }
+%}
+
+
 %{
   
 namespace dynet {
