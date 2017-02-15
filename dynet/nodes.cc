@@ -1932,10 +1932,10 @@ void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs
 
       const unsigned remainder = (num_args - 4 ) % 4;
       switch (remainder) {
-      case 0: break;
-      case 1: fx.tvec().device(*dev.edevice) += xs[4]->tvec(); break;
-      case 2: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec(); break;
-      case 3: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec() + xs[6]->tvec(); break;
+        case 0: break;
+        case 1: fx.tvec().device(*dev.edevice) += xs[4]->tvec(); break;
+        case 2: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec(); break;
+        case 3: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec() + xs[6]->tvec(); break;
       }
       for (unsigned i = 4 + remainder; i < num_args; i += 4)
         fx.tvec().device(*dev.edevice) += xs[i]->tvec() + xs[i + 1]->tvec() + xs[i + 2]->tvec() + xs[i + 3]->tvec();
