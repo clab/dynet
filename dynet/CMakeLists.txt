@@ -134,11 +134,11 @@ if(WITH_CUDA_BACKEND)
   else()
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
     cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
-    cuda_add_cublas_to_target(gdynet)
   endif()
   set_target_properties(gdynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
   cuda_add_cublas_to_target(gdynet)
+  target_link_libraries(gdynet ${LIBS})
 
 endif(WITH_CUDA_BACKEND)
 
