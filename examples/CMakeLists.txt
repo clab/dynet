@@ -9,8 +9,6 @@ foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl
   ADD_EXECUTABLE(${TARGET} cpp/${FOLDER}/${TARGET}.cc)
   if (WITH_CUDA_BACKEND)
     target_link_libraries(${TARGET} gdynet ${LIBS})
-    add_dependencies(${TARGET} dynetcuda)
-    target_link_libraries(${TARGET} dynetcuda)
     CUDA_ADD_CUBLAS_TO_TARGET(${TARGET})
   else()
     target_link_libraries(${TARGET} dynet ${LIBS})
