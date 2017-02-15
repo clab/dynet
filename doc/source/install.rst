@@ -124,14 +124,14 @@ GPU (CUDA) support
 DyNet supports running programs on GPUs with CUDA. If you have CUDA
 installed, you can build DyNet with GPU support by adding
 ``-DBACKEND=cuda`` to your cmake options. This will result in three
-libraries named "libdynet," "libgdynet," and "libdynetcuda" being
+libraries named "libdynet" and "libgdynet" being
 created. When you want to run a program on CPU, you can link to the
 "libdynet" library as shown above. When you want to run a program on
-GPU, you can link to the "libgdynet" and "libdynetcuda" libraries.
+GPU, you can link to the "libgdynet" library.
 
 ::
 
-    -L/path/to/dynet/build/dynet -lgdynet -ldynetcuda
+    -L/path/to/dynet/build/dynet -lgdynet
 
 (Eventually you will be able to use a single library to run on either
 CPU or GPU, but this is not fully implemented yet.)
