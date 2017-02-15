@@ -46,11 +46,12 @@ inline std::pair<int, int> SizeToBlockThreadPair(int n) {
   assert(n > 0);
   int logn;
 #if defined(_MSC_VER)
-  n--;
   logn = 0;
-  if (n > 1)
-    while (n >>= 1)
+  if (n > 2) {
+    int localN = n - 1;
+    while (localN >>= 1) 
       logn++;
+  }
 #else
   asm("\tbsr %1, %0\n"
       : "=r"(logn)
