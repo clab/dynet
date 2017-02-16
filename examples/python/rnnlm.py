@@ -56,8 +56,8 @@ class RNNLanguageModel:
             # assume word is already a word-id
             x_t = lookup(self.lookup, int(cw))
             state = state.add_input(x_t)
-            y_t = state.output()
-            r_t = bias + (R * y_t)
+        y_t = state.output()
+        r_t = bias + (R * y_t)
         prob = softmax(r_t)
         return prob
     
