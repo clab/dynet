@@ -5,7 +5,18 @@ from libcpp cimport bool
 ctypedef float real
 
 cdef extern from "dynet/init.h" namespace "dynet":
-    cdef void initialize(int& argc, char **& argv, unsigned random_seed)
+    cdef struct CDynetParams "dynet::DynetParams":
+        unsigned random_seed
+        string mem_descriptor
+        float weight_decay
+        bool shared_parameters
+        bool ngpus_requested
+        bool ids_requested
+        int requested_gpus
+        vector[int] gpu_mask
+    cdef CDynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters)
+    cdef void initialize(CDynetParams params)
+    cdef void initialize(int& argc, char **& argv, bool shared_parameters)
 
 cdef extern from "dynet/dim.h" namespace "dynet":
     cdef cppclass CDim "dynet::Dim":
