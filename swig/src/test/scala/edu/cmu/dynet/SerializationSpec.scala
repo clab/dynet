@@ -184,6 +184,31 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     s2 shouldBe s
   }
+
+  "model saver and model loader" should "handle primitives correctly" in {
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_int(0)
+    saver.add_int(-123)
+    saver.add_int(256)
+    saver.add_long(-23L)
+    saver.add_float(256.123f)
+    saver.add_double(-12.54)
+    saver.add_boolean(true)
+    saver.add_boolean(false)
+    saver.done()
+
+    val loader = new ModelLoader(path)
+    loader.load_int() shouldBe 0
+    loader.load_int() shouldBe -123
+    loader.load_int() shouldBe 256
+    loader.load_long() shouldBe -23L
+    loader.load_float() shouldBe 256.123f
+    loader.load_double() shouldBe -12.54
+    loader.load_boolean() shouldBe true
+    loader.load_boolean() shouldBe false
+    loader.done()
+  }
 }
 
 case class Foo(a: String, b: Int) extends Serializable
