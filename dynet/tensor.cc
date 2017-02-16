@@ -61,7 +61,7 @@ float TensorTools::AccessElement(const Tensor& v, int index) {
 
 float TensorTools::AccessElement(const Tensor& v, const Dim& index) {
 #if HAVE_CUDA
-  abort();
+  throw std::runtime_error("TensorTools::AccessElement(Tensor,Dim) not implemented for CUDA");
 #else
   return (*v)(index[0], index[1]);
 #endif
