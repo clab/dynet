@@ -151,7 +151,7 @@ struct Parameter {
    *
    * \return Shape as a `Dim` object
    */
-  Dim dim() { return get()->dim; }
+  Dim dim() const { return get()->dim; }
 
   /**
    * \brief Values of the parameter
@@ -193,7 +193,7 @@ struct LookupParameter {
    *
    * \return Shape as a `Dim` object
    */
-  Dim dim() { return get()->dim; }
+  Dim dim() const { return get()->dim; }
   /**
    * \brief Values of the lookup parameter
    *
