@@ -19,8 +19,19 @@ set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet)
 set_source_files_properties(dynet_swig.i PROPERTIES CPLUSPLUS ON)
 swig_add_module(dynet_swig java dynet_swig.i)
 
+if(WITH_CUDA_BACKEND)
+  set_target_properties(dynet_swig PROPERTIES
+                        COMPILE_DEFINITIONS HAVE_CUDA)
+endif(WITH_CUDA_BACKEND)
+
 # Link with dynet library
-swig_link_libraries(dynet_swig dynet)
+if(WITH_CUDA_BACKEND)
+  message("using CUDA backend for SWIG")
+  swig_link_libraries(dynet_swig gdynet dynetcuda)
+else(WITH_CUDA_BACKEND)
+  message("not using CUDA backend for SWIG")
+  swig_link_libraries(dynet_swig dynet)
+endif(WITH_CUDA_BACKEND)
 
 # Create jar file
 add_jar(
