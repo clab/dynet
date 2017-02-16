@@ -965,8 +965,66 @@ void cleanup();
 // serialization logic (from python/pybridge.h) //
 //////////////////////////////////////////////////
 
-%{
+// Add Java method to ModelSaver for serializing java objects.
+%typemap(javaimports) ModelSaver %{
+  import java.io.ByteArrayOutputStream;
+  import java.io.ObjectOutputStream;
+  import java.io.IOException;
+%}
+ 
+%typemap(javacode) ModelSaver %{
+  public void add_object(Object o) {
+    try {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      ObjectOutputStream objOut = new ObjectOutputStream(out);
+      objOut.writeObject(o);
+      objOut.close();
 
+      byte[] bytes = out.toByteArray();
+
+      add_size(bytes.length);
+      add_byte_array(bytes);
+    } catch (IOException e) {
+      // This shouldn't ever happen.
+      throw new RuntimeException(e);
+    }
+  }
+%}
+
+// Add Java method to ModelLoader for loading java objects. 
+%typemap(javaimports) ModelLoader %{
+  import java.io.ByteArrayInputStream;
+  import java.io.ObjectInputStream;
+  import java.io.IOException;
+%}
+
+%typemap(javacode) ModelLoader %{
+  public <T> T load_object(Class<T> clazz) {
+    long size = load_size();
+    byte[] bytes = new byte[(int) size];
+    load_byte_array(bytes);
+
+    Object obj = null;
+    try {
+      ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+      ObjectInputStream objIn = new ObjectInputStream(in);
+      obj = objIn.readObject();
+      objIn.close();
+    } catch (IOException e) {
+      // This shouldn't ever happen.
+      throw new RuntimeException(e);
+    } catch (ClassNotFoundException e) {
+      // This also shouldn't happen (because the class is an argument).
+      throw new RuntimeException(e);
+    }
+
+    return clazz.cast(obj);
+  }
+%}
+
+
+%{
+  
 namespace dynet {
 
 struct ModelSaver {
@@ -981,6 +1039,10 @@ struct ModelSaver {
     void add_srnn_builder(SimpleRNNBuilder &p) { oa << p; }
     void add_gru_builder(GRUBuilder &p) { oa << p; }
     void add_fast_lstm_builder(FastLSTMBuilder &p) { oa << p; }
+    void add_size(size_t len) { oa << len; }
+    void add_byte_array(char *str, size_t len) {
+      oa << boost::serialization::make_array(str, len);
+    }
 
     void done() { ofs.close(); }
 
@@ -1025,6 +1087,16 @@ struct ModelLoader {
       FastLSTMBuilder* p = new FastLSTMBuilder(); ia >> *p; return p;
     }
 
+    size_t load_size() {
+      size_t len;
+      ia >> len;
+      return len;
+    }
+
+    void load_byte_array(char *str, size_t len) {
+      ia >> boost::serialization::make_array(str, len);
+    }
+
     void done() { ifs.close(); }
 
     private:
@@ -1036,6 +1108,10 @@ struct ModelLoader {
 }
 %}
 
+// Convert methods whose arguments are (char *str, size_t len)
+// to byte[] in Java. Note that the *argument names must match*,
+// not just the types.
+%apply(char *STRING, size_t LENGTH) { (char *str, size_t len) }
 
 %nodefaultctor ModelSaver;
 struct ModelSaver {
@@ -1048,6 +1124,8 @@ struct ModelSaver {
     void add_srnn_builder(SimpleRNNBuilder &p);
     void add_gru_builder(GRUBuilder &p);
     void add_fast_lstm_builder(FastLSTMBuilder &p);
+    void add_size(size_t len) { oa << len; }
+    void add_byte_array(char *str, size_t len);
     void done();
 };
 
@@ -1073,6 +1151,8 @@ struct ModelLoader {
     SimpleRNNBuilder* load_srnn_builder();
     GRUBuilder* load_gru_builder();
     FastLSTMBuilder* load_fast_lstm_builder();
+    size_t load_size();
+    void load_byte_array(char *str, size_t len);
     void done();
 };
 
