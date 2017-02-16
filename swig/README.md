@@ -45,6 +45,13 @@ If successful, the end of the build should look something like:
 [100%] Built target dynet_swig
 ```
 
+### Building for GPU
+
+To build the GPU version, (make sure you have CUDA installed and then)
+simply add `-DBACKEND=cuda` as a `cmake` option. The generated `.jar` and dynamic library
+will use the GPU for computations. (Currently there's no way to build a version that can do both CPU and GPU, you
+would have to build two separate versions if you wanted that.)
+
 ## Running the example
 
 After running `make`, you can run the Scala examples under the `swig` directory with `sbt`:
@@ -127,12 +134,20 @@ iter = 28, loss = 8.881784E-16
 iter = 29, loss = 8.881784E-16
 ```
 
+## Differences between CPU and GPU Usage
+
+From Scala, both versions should work basically identically. (Let us know if they don't!)
+The one prominent difference is that the
+`DynetParams` struct (and corresponding wrapper class) has extra fields in the GPU version.
+
+This probably won't affect you unless you have GPU code that uses those fields and you want to run 
+it also on CPU. If you just use the Scala `myInitialize()` helper you should be fine.
+
 ## Differences between Scala and C++
 
 ### Delete Your ComputationGraphs
 
-DyNet does not like it if you try to instantiate more than one 
-ComputationGraph at a time.
+DyNet does not like it if you try to instantiate more than one ComputationGraph at a time.
 
 It seems to be a common idiom in the C++ examples to do things like
 
