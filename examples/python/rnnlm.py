@@ -20,13 +20,13 @@ class RNNLanguageModel:
         self.R = model.add_parameters((VOCAB_SIZE, HIDDEN_DIM))
         self.bias = model.add_parameters((VOCAB_SIZE))
 
-    def save2disk(self, filename):
+    def save_to_disk(self, filename):
         model.save(filename, [self.builder, self.lookup, self.R, self.bias])
 
     def load_from_disk(self, filename):
         (self.builder, self.lookup, self.R, self.bias) = model.load(filename)
         
-    def BuildLMGraph(self, sent):
+    def build_lm_graph(self, sent):
         renew_cg()
         init_state = self.builder.initial_state()
 
@@ -46,7 +46,7 @@ class RNNLanguageModel:
         nerr = esum(errs)
         return nerr
     
-    def predictNextWord(self, sentence):
+    def predict_next_word(self, sentence):
         renew_cg()
         init_state = self.builder.initial_state()
         R = parameter(self.R)
@@ -58,8 +58,8 @@ class RNNLanguageModel:
             state = state.add_input(x_t)
             y_t = state.output()
             r_t = bias + (R * y_t)
-            err = softmax(r_t)
-        return err
+        prob = softmax(r_t)
+        return prob
     
     def sample(self, first=1, nchars=0, stop=-1):
         res = [first]
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                 
             chars += len(sent)-1
             isent = [vocab.w2i[w] for w in sent]
-            errs = lm.BuildLMGraph(isent)
+            errs = lm.build_lm_graph(isent)
             loss += errs.scalar_value()
             errs.backward()
             sgd.update(1.0)
