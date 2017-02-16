@@ -4,6 +4,7 @@ import org.scalatest._
 import Matchers._
 import edu.cmu.dynet._
 import edu.cmu.dynet.dynet_swig._
+import java.util.Arrays
 
 class SerializationSpec extends FlatSpec with Matchers {
   import DynetScalaHelpers._
@@ -155,4 +156,40 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     assertSameModel(mod1, mod2)
   }
+  
+  "model saver and model loader" should "handle byte[] correctly" in {
+
+    val s = Array[Byte](3, 7, 127, 2, 5, 8, 0, -1, -2, 100, 10, -2, 0)
+
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_size(s.length)
+    saver.add_byte_array(s)
+    saver.done()
+
+    val loader = new ModelLoader(path)
+    val length = loader.load_size()
+    val s2 = Array.ofDim[Byte](length.asInstanceOf[Int])
+    loader.load_byte_array(s2)
+    loader.done()
+
+    Arrays.equals(s, s2) shouldBe true
+  }
+
+  "model saver and model loader" should "handle objects correctly" in {
+    val s = new Foo("abcd", 78)
+
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val saver = new ModelSaver(path)
+    saver.add_object(s)
+    saver.done()
+
+    val loader = new ModelLoader(path)
+    val s2 = loader.load_object(classOf[Foo])
+    loader.done()
+
+    s2 shouldBe s
+  }
 }
+
+case class Foo(a: String, b: Int) extends Serializable

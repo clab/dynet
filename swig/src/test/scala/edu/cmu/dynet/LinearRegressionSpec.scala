@@ -20,16 +20,18 @@ class LinearRegressionSpec extends FlatSpec with Matchers {
 
     val model = new Model
     val trainer = new SimpleSGDTrainer(model, 0.01f)
-    val cg = ComputationGraph.getNew
 
     val p_W = model.add_parameters(dim(1))
-    val W = parameter(cg, p_W)
-
     val p_b = model.add_parameters(dim(1))
-    val b = parameter(cg, p_b)
 
+    val examples = xs.zip(ys)
+    
     for (iter <- 1 to numIterations) {
-      for ((x, y) <- xs.zip(ys)) {
+      for ((x, y) <- examples) {
+        val cg = ComputationGraph.getNew
+        val W = parameter(cg, p_W)
+        val b = parameter(cg, p_b)
+
         val prediction = W * x + b
         val loss = square(prediction - y)
         cg.forward(loss)
