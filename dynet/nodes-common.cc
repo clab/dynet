@@ -315,13 +315,15 @@ string Sum::as_string(const vector<string>& arg_names) const {
 
 Dim Sum::dim_forward(const vector<Dim>& xs) const {
   Dim d = xs[0].truncate();
+  unsigned int batch = d.bd;
   for (unsigned i = 1; i < xs.size(); ++i) {
     if (d.single_batch() != xs[i].truncate().single_batch()) {
       ostringstream s; s << "Mismatched input dimensions in Sum: " << xs;
       throw std::invalid_argument(s.str());
     }
-    d.bd = max(xs[i].bd, d.bd);
+    batch = max(xs[i].bd, batch);
   }
+  d = xs[0]; d.bd = batch;
   return d;
 }
 
