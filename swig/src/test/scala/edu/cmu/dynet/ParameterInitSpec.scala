@@ -68,14 +68,16 @@ class ParameterInitSpec extends FlatSpec with Matchers {
     val p_W = model.add_parameters(dim(100, 100))
 
     val init = new ParameterInitIdentity()
+
     init.initialize_params(p_W.values)
+    val values = p_W.values.toSeq
 
     for {
       i <- 0 until 100
       j <- 0 until 100
       z = if (i == j) 1f else 0f
     } {
-      TensorTools.AccessElement(p_W.values, dim(i, j)) shouldBe z
+      values(i * 100 + j) shouldBe z
     }
   }
 

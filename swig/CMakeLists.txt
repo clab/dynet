@@ -11,16 +11,34 @@ include_directories(${JNI_INCLUDE_DIRS})
 # Include dynet C++ sources
 include_directories("../dynet")
 
-# Set java package
+# Set java output dir
 set(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/edu/cmu/dynet")
-set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet)
+
+# Set java package (+cuda flag, if appropriate)
+if(WITH_CUDA_BACKEND)
+  set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet -DSWIG_USE_CUDA)
+else(WITH_CUDA_BACKEND)
+  set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet)
+endif(WITH_CUDA_BACKEND)
 
 # Run swig
 set_source_files_properties(dynet_swig.i PROPERTIES CPLUSPLUS ON)
 swig_add_module(dynet_swig java dynet_swig.i)
 
+# add C++ compiler flags
+if(WITH_CUDA_BACKEND)
+  set_target_properties(dynet_swig PROPERTIES
+                        COMPILE_DEFINITIONS HAVE_CUDA)
+endif(WITH_CUDA_BACKEND)
+
 # Link with dynet library
-swig_link_libraries(dynet_swig dynet)
+if(WITH_CUDA_BACKEND)
+  # link with GPU libraries
+  swig_link_libraries(dynet_swig gdynet dynetcuda)
+else(WITH_CUDA_BACKEND)
+  # link with CPU library
+  swig_link_libraries(dynet_swig dynet)
+endif(WITH_CUDA_BACKEND)
 
 # Create jar file
 add_jar(
