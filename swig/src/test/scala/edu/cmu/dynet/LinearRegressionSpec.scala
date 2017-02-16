@@ -14,7 +14,7 @@ class LinearRegressionSpec extends FlatSpec with Matchers {
 
   myInitialize()
 
-  def regress(xs: Seq[Float], ys: Seq[Float], numIterations: Int = 100): RegressionLine = {
+  def regress(xs: Seq[Float], ys: Seq[Float], numIterations: Int = 20): RegressionLine = {
     assert(xs.size > 0)
     assert(xs.size == ys.size)
 
@@ -52,10 +52,10 @@ class LinearRegressionSpec extends FlatSpec with Matchers {
       x <- xs
     } yield (-5.0 + 2.0 * x).toFloat
 
-    val result = regress(xs, ys, 100)
+    val result = regress(xs, ys, 20)
 
-    // These are very weak bounds, 100 iterations should always get this close.
-    result.slope shouldBe 2f +- 0.1f
-    result.intercept shouldBe -5f +- 0.1f
+    // These are very weak bounds, 20 iterations should always get this close.
+    result.slope shouldBe 2f +- 1f
+    result.intercept shouldBe -5f +- 1f
   }
 }
