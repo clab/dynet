@@ -280,16 +280,12 @@ void LSTMBuilder::load_parameters_pretraining(const string& fname) {
   boost::archive::binary_iarchive ia(of);
   std::string id;
   ia >> id;
-  if (id != "LSTMBuilder:params") {
-    cerr << "Bad id read\n";
-    abort();
-  }
+  if (id != "LSTMBuilder:params")
+    throw std::invalid_argument("Bad id read in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
   unsigned l = 0;
   ia >> l;
-  if (l != layers) {
-    cerr << "Bad number of layers\n";
-    abort();
-  }
+  if (l != layers)
+    throw std::invalid_argument("Bad number of layers in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
   // TODO check other dimensions
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
@@ -535,16 +531,12 @@ void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
   boost::archive::binary_iarchive ia(of);
   std::string id;
   ia >> id;
-  if (id != "VanillaLSTMBuilder:params") {
-    cerr << "Bad id read\n";
-    abort();
-  }
+  if (id != "VanillaLSTMBuilder:params")
+    throw std::invalid_argument("Bad id read in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
   unsigned l = 0;
   ia >> l;
-  if (l != layers) {
-    cerr << "Bad number of layers\n";
-    abort();
-  }
+  if (l != layers)
+    throw std::invalid_argument("Bad number of layers in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
   // TODO check other dimensions
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {

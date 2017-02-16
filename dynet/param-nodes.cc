@@ -116,8 +116,8 @@ void ConstParameterNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 node: i = " << i << endl;
-  abort();
+  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
+  throw std::invalid_argument(oss.str());
 }
 DYNET_NODE_INST_DEV_IMPL(ConstParameterNode)
 
@@ -139,8 +139,8 @@ void ParameterNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 node: i = " << i << endl;
-  abort();
+  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
+  throw std::invalid_argument(oss.str());
 }
 DYNET_NODE_INST_DEV_IMPL(ParameterNode)
 
@@ -168,8 +168,8 @@ void InputNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 node\n";
-  abort();
+  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
+  throw std::invalid_argument(oss.str());
 }
 DYNET_NODE_INST_DEV_IMPL(InputNode)
 
@@ -196,8 +196,8 @@ void SparseInputNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 node\n";
-  abort();
+  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
+  throw std::invalid_argument(oss.str());
 }
 DYNET_NODE_INST_DEV_IMPL(SparseInputNode)
 
@@ -218,8 +218,8 @@ void ScalarInputNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 node\n";
-  abort();
+  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
+  throw std::invalid_argument(oss.str());
 }
 DYNET_NODE_INST_DEV_IMPL(ScalarInputNode)
 
@@ -253,8 +253,8 @@ void LookupNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  cerr << "called backward() on arity 0 node\n";
-  abort();
+  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
+  throw std::invalid_argument(oss.str());
 }
 DYNET_NODE_INST_DEV_IMPL(LookupNode)
 

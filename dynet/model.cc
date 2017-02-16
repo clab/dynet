@@ -38,14 +38,14 @@
   void MyParam::regular_func(float *sqnorm) const { \
     if(default_device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)default_device,sqnorm); } \
     else if(default_device->type == DeviceType::GPU) { dev_func(*(Device_GPU*)default_device,sqnorm); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
 #else
 #define DYNET_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
   template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \
   void MyParam::regular_func(float *sqnorm) const { \
     if(default_device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)default_device,sqnorm); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
 #endif
 
@@ -492,13 +492,13 @@ template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev
 void ParameterStorage::accumulate_grad(const Tensor& d) {
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
   else if (values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values.device, d); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
 void ParameterStorage::accumulate_grad(const Tensor& d) {
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -514,13 +514,13 @@ template void ParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & de
 void ParameterStorage::scale_parameters(float a) {
   if (values.device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values.device, a); }
   else if (values.device->type == DeviceType::GPU) { scale_parameters_dev(*(Device_GPU*)values.device, a); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void ParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
 void ParameterStorage::scale_parameters(float a) {
   if (values.device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values.device, a); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -541,13 +541,13 @@ template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & de
 void LookupParameterStorage::initialize(unsigned index, const vector<float>& val) {
   if (values[index].device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values[index].device, index, val); }
   else if (values[index].device->type == DeviceType::GPU) { initialize_dev(*(Device_GPU*)values[index].device, index, val); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val);
 void LookupParameterStorage::initialize(unsigned index, const vector<float>& val) {
   if (values[index].device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values[index].device, index, val); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -581,13 +581,13 @@ template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU
 void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
   if (values[index].device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values[index].device, index, d); }
   else if (values[index].device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values[index].device, index, d); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, unsigned index, const Tensor& d);
 void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
   if (values[index].device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values[index].device, index, d); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -615,13 +615,13 @@ template void LookupParameterStorage::accumulate_grads_dev<Device_CPU>(Device_CP
 void LookupParameterStorage::accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g) {
   if (all_values.device->type == DeviceType::CPU) { accumulate_grads_dev(*(Device_CPU*)all_values.device, n, ids_host, ids_dev, g); }
   else if (all_values.device->type == DeviceType::GPU) { accumulate_grads_dev(*(Device_GPU*)all_values.device, n, ids_host, ids_dev, g); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::accumulate_grads_dev<Device_CPU>(Device_CPU & dev, unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
 void LookupParameterStorage::accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g) {
   if (all_values.device->type == DeviceType::CPU) { accumulate_grads_dev(*(Device_CPU*)all_values.device, n, ids_host, ids_dev, g); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -637,13 +637,13 @@ template void LookupParameterStorage::scale_parameters_dev<Device_CPU>(Device_CP
 void LookupParameterStorage::scale_parameters(float a) {
   if (values[0].device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values[0].device, a); }
   else if (values[0].device->type == DeviceType::GPU) { scale_parameters_dev(*(Device_GPU*)values[0].device, a); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
 void LookupParameterStorage::scale_parameters(float a) {
   if (values[0].device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values[0].device, a); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -673,13 +673,13 @@ template float Model::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float Model::gradient_l2_norm() const {
   if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
   else if (default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_GPU*)default_device); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template float Model::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float Model::gradient_l2_norm() const {
   if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
-  else { abort(); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 

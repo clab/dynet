@@ -16,21 +16,21 @@
 // This is correct, but dying when models are read and written.
 // if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,scale,gscale,values); } 
 // else if(values[0]->device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)values[0]->device,scale,gscale,values); } 
-// else { abort(); }
+// else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); }
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
   extern template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   void MyTrainer::update_rule(real scale, real gscale, const std::vector<Tensor*> & values) { \
     if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,scale,gscale,values); } \
     else if(default_device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)default_device,scale,gscale,values); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #else
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   void MyTrainer::update_rule(real scale, real gscale, const std::vector<Tensor*> & values) { \
     if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,scale,gscale,values); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #endif
 
@@ -67,8 +67,8 @@ float Trainer::clip_gradients(real scale) {
     // TODO should I handle updatebale differently?
     float gg = model->gradient_l2_norm();
     if (isnan(gg) || isinf(gg)) {
-      cerr << "Magnitude of gradient is bad: " << gg << endl;
-      abort();
+      ostringstream oss; oss << "Magnitude of gradient is bad: " << gg;
+      throw std::runtime_error(oss.str());
     }
     if (scale * gg > clip_threshold) {
       ++clips;
