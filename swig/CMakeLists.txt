@@ -11,10 +11,10 @@ include_directories(${JNI_INCLUDE_DIRS})
 # Include dynet C++ sources
 include_directories("../dynet")
 
-# Set java package
+# Set java output dir
 set(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/edu/cmu/dynet")
 
-# Set swig options
+# Set java package (+cuda flag, if appropriate)
 if(WITH_CUDA_BACKEND)
   set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet -DSWIG_USE_CUDA)
 else(WITH_CUDA_BACKEND)
