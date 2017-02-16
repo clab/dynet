@@ -1044,6 +1044,13 @@ struct ModelSaver {
       oa << boost::serialization::make_array(str, len);
     }
 
+    // primitive types
+    void add_int(int x) { oa << x; }
+    void add_long(jlong x) { oa << x; }
+    void add_float(float x) { oa << x; }
+    void add_double(double x) { oa << x; }
+    void add_boolean(jboolean x) { oa << x; }
+
     void done() { ofs.close(); }
 
     private:
@@ -1097,6 +1104,12 @@ struct ModelLoader {
       ia >> boost::serialization::make_array(str, len);
     }
 
+    int load_int() { int x; ia >> x; return x; }
+    jlong load_long() { long x; ia >> x; return x; }
+    float load_float() { float x; ia >> x; return x; }
+    double load_double() { double x; ia >> x; return x; }
+    jboolean load_boolean() { bool x; ia >> x; return x; }
+
     void done() { ifs.close(); }
 
     private:
@@ -1126,6 +1139,13 @@ struct ModelSaver {
     void add_fast_lstm_builder(FastLSTMBuilder &p);
     void add_size(size_t len) { oa << len; }
     void add_byte_array(char *str, size_t len);
+
+    void add_int(int x);
+    void add_long(jlong x);
+    void add_float(float x);
+    void add_double(double x);
+    void add_boolean(jboolean x);
+
     void done();
 };
 
@@ -1153,6 +1173,13 @@ struct ModelLoader {
     FastLSTMBuilder* load_fast_lstm_builder();
     size_t load_size();
     void load_byte_array(char *str, size_t len);
+
+    int load_int();
+    jlong load_long();
+    float load_float();
+    double load_double();
+    jboolean load_boolean();
+
     void done();
 };
 
