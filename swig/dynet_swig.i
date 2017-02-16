@@ -947,7 +947,7 @@ struct DynetParams {
   float weight_decay = 0; /**< Weight decay rate for L2 regularization */
   bool shared_parameters = false; /**< TO DOCUMENT */
 
-#if SWIG_USE_CUDA
+#ifdef SWIG_USE_CUDA
   bool ngpus_requested = false; /**< GPUs requested by number */
   bool ids_requested = false; /**< GPUs requested by ids */
   int requested_gpus = -1; /**< Number of requested GPUs */
