@@ -323,3 +323,19 @@ allow complex serialization from Scala code:
 The `ModelSaver` doesn't do any tracking of what it saves (or in what order),
 so it's on you to track that and/or make sure you deserialize things in the
 same order they were serialized.
+
+In addition to the methods for Dynet objects, there are a variety of methods 
+for Scala primitives (e.g. `saver.add_int`), and support for serializing any
+object that implements `java.io.Serializable`:
+
+```scala
+  val s = "strings are serializable"
+  saver.add_object(s)
+  
+  // other stuff
+  
+  val s2 = loader.load_object(classOf[String])  
+```
+
+In fact, the `DynetScalaHelpers` implicitly add `add_string` and `load_string`
+methods that are simply wrappers around `add_object` and `load_object`.
