@@ -168,6 +168,53 @@ object DynetScalaHelpers {
     affine_transform_VE(ev)
   }
 
+  type NamedParameters = Map[String, Parameter]
+  type NamedLookupParameters = Map[String, LookupParameter]
+
+  implicit class ExtraSavers(saver: ModelSaver) {
+
+    def add_string(s: String): Unit = saver.add_object(s)
+
+    def add_named_parameters(np: NamedParameters): Unit = {
+      saver.add_int(np.size)
+      for ((name, parameter) <- np) {
+        saver.add_string(name)
+        saver.add_parameter(parameter)
+      }
+    }
+
+    def add_named_lookup_parameters(np: NamedLookupParameters): Unit = {
+      saver.add_int(np.size)
+      for ((name, parameter) <- np) {
+        saver.add_string(name)
+        saver.add_lookup_parameter(parameter)
+      }
+    }
+  }
+
+  implicit class ExtraLoaders(loader: ModelLoader) {
+
+    def load_string(): String = loader.load_object(classOf[String])
+
+    def load_named_parameters(): NamedParameters = {
+      val numParams = loader.load_int()
+      (for {
+        i <- 1 to numParams
+        name = loader.load_string()
+        parameter = loader.load_parameter()
+      } yield (name, parameter)).toMap
+    }
+
+    def load_named_lookup_parameters(): NamedLookupParameters = {
+      val numParams = loader.load_int()
+      (for {
+        i <- 1 to numParams
+        name = loader.load_string()
+        parameter = loader.load_lookup_parameter()
+      } yield (name, parameter)).toMap
+    }
+  }
+
   // Sugar to turn `Expression` operators into Scala operators.
   implicit class RichExpression(e: Expression) {
     def +(e2: Expression): Expression = exprPlus(e, e2)

@@ -57,45 +57,6 @@ class SerializationSpec extends FlatSpec with Matchers {
     model.parameter_count() shouldBe 11  // == 2 * 3 + 5
   }
 
-  "dynet" should "serialize models to/from disk" in {
-    val original = defaultModel()
-
-    // Save to a temp file
-    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
-    save_dynet_model(path, original)
-
-    // Deserialize
-    val deserialized = new Model()
-    load_dynet_model(path, deserialized)
-
-    assertSameModel(original, deserialized)
-  }
-
-  "dynet" should "serialize models to/from string when called explicitly" in {
-
-    val original = defaultModel()
-
-    val s = original.serialize_to_string()
-
-    val deserialized = new Model
-    deserialized.load_from_string(s)
-    assertSameModel(original, deserialized)
-  }
-
-  "dynet" should "correctly implement java serialization" in {
-
-    val original = defaultModel()
-
-    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
-    val oos = new java.io.ObjectOutputStream(new java.io.FileOutputStream(path))
-    oos.writeObject(original)
-    oos.close()
-
-    val ois = new java.io.ObjectInputStream(new java.io.FileInputStream(path))
-    val deserialized = ois.readObject.asInstanceOf[Model]
-    assertSameModel(original, deserialized)
-  }
-
   "model saver and model loader" should "handle simplernnbuilder correctly" in {
 
     // this is the simple_rnn_io test case from the C++ tests
@@ -214,6 +175,35 @@ class SerializationSpec extends FlatSpec with Matchers {
     loader.load_boolean() shouldBe true
     loader.load_boolean() shouldBe false
     loader.done()
+  }
+
+  "model saver and model loader" should "have implicit methods that work" in {
+    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    val model = new Model
+    val saver = new ModelSaver(path)
+
+    val namedParams = Map(
+      "w" -> model.add_parameters(dim(2, 3)),
+      "b" -> model.add_parameters(dim(5))
+    )
+
+    saver.add_model(model)
+    saver.add_string("test")
+    saver.add_named_parameters(namedParams)
+    saver.done()
+
+    val loader = new ModelLoader(path)
+    val model2 = loader.load_model()
+    val s = loader.load_string()
+    val np = loader.load_named_parameters()
+
+    assertSameModel(model, model2)
+
+    s shouldBe "test"
+
+    np.size shouldBe 2
+    np("w").dim shouldBe dim(2, 3)
+    np("b").dim shouldBe dim(5)
   }
 }
 
