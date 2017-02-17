@@ -181,33 +181,6 @@ struct Dim {
 // declarations from dynet/model.h //
 /////////////////////////////////////
 
-// Model wrapper class needs to implement Serializable. We serialize a Model by converting it
-// to/from a String and using writeObject/readObject on the String.
-%typemap(javainterfaces) dynet::Model "java.io.Serializable"
-
-%typemap(javacode) dynet::Model %{
- private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
-    out.defaultWriteObject();
-    String s = this.serialize_to_string();
-    out.writeObject(s);
- }
-
- private void readObject(java.io.ObjectInputStream in)
-     throws java.io.IOException, java.lang.ClassNotFoundException {
-    in.defaultReadObject();
-    String s = (String) in.readObject();
-
-    // Deserialization doesn't call the constructor, so the swigCPtr is 0. This means we need to
-    // do the constructor work ourselves if we don't want a segfault.
-    if (this.swigCPtr == 0) {
-        this.swigCPtr = dynet_swigJNI.new_Model();
-        this.swigCMemOwn = true;
-    }
-
-    this.load_from_string(s);
- }
-%}
-
 class Model;
 struct Parameter {
   Parameter();
@@ -347,22 +320,8 @@ struct LookupParameterStorage : public ParameterStorageBase {
   void initialize_lookups();
 };
 
-// extra code for serialization and parameter lookup
+// extra code for parameter lookup
 %extend Model {
-   std::string serialize_to_string() {
-       std::ostringstream out;
-       boost::archive::text_oarchive oa(out);
-       oa << (*($self));
-       return out.str();
-   }
-
-   void load_from_string(std::string serialized) {
-       std::istringstream in;
-       in.str(serialized);
-       boost::archive::text_iarchive ia(in);
-       ia >> (*($self));
-   }
-
    // SWIG can't get the types right for `parameters_list`, so here are replacement methods
    // for which it can. (You might worry that these would cause infinite recursion, but
    // apparently they don't.
@@ -406,9 +365,6 @@ class Model {
   bool is_updated_param(const Parameter *p);
   bool is_updated_lookup_param(const LookupParameter *p);
 };
-
-void save_dynet_model(std::string filename, Model* model);
-void load_dynet_model(std::string filename, Model* model);
 
 //////////////////////////////////////
 // declarations from dynet/tensor.h //
