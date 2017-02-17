@@ -5,7 +5,7 @@ from libcpp cimport bool
 ctypedef float real
 
 cdef extern from "dynet/init.h" namespace "dynet":
-    cdef struct CDynetParams "dynet::DynetParams":
+    cdef cppclass CDynetParams "dynet::DynetParams":
         unsigned random_seed
         string mem_descriptor
         float weight_decay
