@@ -71,6 +71,30 @@ struct functor_traits<dynet::const_minus_op<Scalar> > {
 } }
 
 namespace dynet {
+template<typename Scalar> struct scalar_negative_op {
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_negative_op)
+  DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
+    return -x;
+  }
+  template <typename Packet>
+  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
+    using namespace Eigen::internal;
+    return pnegate(x);
+  }
+};
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<dynet::scalar_negative_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::MulCost * 2,
+    PacketAccess = packet_traits<Scalar>::HasNegate
+  };
+};
+} }
+
+namespace dynet {
 template<typename Scalar> struct scalar_logistic_sigmoid_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_logistic_sigmoid_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
