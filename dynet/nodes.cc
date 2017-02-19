@@ -1287,7 +1287,7 @@ void FlipGradient::backward_dev_impl(const MyDevice & dev,
                                    unsigned i,
                                    Tensor& dEdxi) const {
   // takes negative on backprop
-  dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec()
+  dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec();
 }
 DYNET_NODE_INST_DEV_IMPL(FlipGradient)  
   
