@@ -1092,7 +1092,7 @@ Expression nobackprop(const Expression& x);
  * \ingroup flowoperations
  * \brief Negative backprop 
  * \details This node has no effect on the forward pass, but takes negative on backprop process. 
- *          This is useful when you want to create a domain adaption network
+ *          This operation is widely used in adversarial networks.
  *          
  * \param x The input expression
  * 
