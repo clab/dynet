@@ -216,7 +216,9 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     # identity function, but derivative is not propagated through it
     CExpression c_nobackprop "dynet::expr::nobackprop" (CExpression& x) #
-
+    # identity function, but derivative takes negative as propagated through it
+    CExpression c_flip_gradient "dynet::expr::flip_gradient" (CExpression& x) #
+    
     CExpression c_op_neg "dynet::expr::operator-" (CExpression& x) #
     CExpression c_op_add "dynet::expr::operator+" (CExpression& x, CExpression& y) #
     CExpression c_op_scalar_add "dynet::expr::operator+" (CExpression& x, float y) #
