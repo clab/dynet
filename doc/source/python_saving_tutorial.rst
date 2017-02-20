@@ -11,7 +11,7 @@ Notice however that there is no need to specify the sizes etc, as this is handle
 .. code:: python
 
   # saving:
-  from pydynet import *
+  from dynet import *
   m = Model()
   W = m.add_parameters((100,100))
   lb = LSTMBuilder(1, 100, 100, m) # this also adds parameters to the model
@@ -26,7 +26,7 @@ The items that are being passed in the list must adhere to at least one of the f
 
 * be of type :python:`Parameters` or :python:`LookupParameters` (the return types of :python:`add_parameters` or :python:`add_lookup_parameters`).
 * be of a built-in "complex" builders such as :python:`LSTMBuilder` or :python:`GRUBuilder` that add parameters to the model.
-* user defined classes that extend to the new :python:`pydynet.Saveable` class and implement the required interface.
+* user defined classes that extend to the new :python:`dynet.Saveable` class and implement the required interface.
 
 
 The :python:`Saveable` class is used for easy creation of user-defined "sub networks" that can be saved and loaded as part of the model saving mechanism.
