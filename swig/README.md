@@ -18,7 +18,11 @@ build$ cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DINCLUDE_SWIG=ON
 build$ make dynet_swig && make
 ```
 
-In MacOS, this will create the library files `dynet_swigJNI.jar` and `libdynet_swig.jnilib` in the `build/swig` directory. 
+This will create `dynet_swigJNI.jar` in the `build/swig` directory.
+(It also produces a dynamic library file, but the `make` process puts
+ that file into the jar as a resource, and the code to load that library
+ looks for it in the jar, so you don't need to worry about it.)
+
 It will then run `sbt assembly` to produce an "uberjar" containing 
 both the Dynet bindings and the scala helpers, also in `build/swig`.
 
@@ -65,7 +69,7 @@ The Java example takes a couple more steps:
 
 ```
 swig$ javac -d . -cp ../build/swig/dynet_swigJNI.jar src/main/java/edu/cmu/dynet/examples/XorExample.java
-swig$ java -cp .:../build/swig/dynet_swigJNI.jar -Djava.library.path=../build/swig edu.cmu.dynet.examples.XorExample
+swig$ java -cp .:../build/swig/dynet_swigJNI.jar edu.cmu.dynet.examples.XorExample
 Running XOR example
 [dynet] random seed: 1650744221
 [dynet] allocating memory: 512MB
