@@ -5,6 +5,7 @@
 
 #include "dynet/nodes.h"
 #include "dynet/treelstm.h"
+#include "dynet/io-macros.h"
 
 using namespace std;
 using namespace dynet;
@@ -17,6 +18,21 @@ BOOST_CLASS_EXPORT_IMPLEMENT(BidirectionalTreeLSTMBuilder)
 
 enum { X2I, BI, X2F, BF, X2O, BO, X2C, BC };
 enum { H2I, H2F, H2O, H2C, C2I, C2F, C2O };
+
+Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) { throw std::runtime_error("add_input_impl() not a valid function for TreeLSTMBuilder"); }
+Expression TreeLSTMBuilder::back() const { throw std::runtime_error("back() not a valid function for TreeLSTMBuilder"); }
+std::vector<Expression> TreeLSTMBuilder::final_h() const { throw std::runtime_error("final_h() not a valid function for TreeLSTMBuilder"); }
+std::vector<Expression> TreeLSTMBuilder::final_s() const { throw std::runtime_error("final_s() not a valid function for TreeLSTMBuilder"); }
+unsigned TreeLSTMBuilder::num_h0_components() const { throw std::runtime_error("num_h0_components() not a valid function for TreeLSTMBuilder"); }
+void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy() not a valid function for TreeLSTMBuilder"); }
+
+template<class Archive>
+void TreeLSTMBuilder::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<RNNBuilder>(*this);
+}
+
+DYNET_SERIALIZE_IMPL(TreeLSTMBuilder);
+
 // See "Improved Semantic Representations From Tree-Structured Long Short-Term Memory Networks"
 // by Tai, Nary, and Manning (2015), section 3.2, for details on this model.
 // http://arxiv.org/pdf/1503.00075v3.pdf
@@ -271,12 +287,16 @@ void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
-Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) { throw std::runtime_error("add_input_impl() not a valid function for TreeLSTMBuilder"); }
-Expression TreeLSTMBuilder::back() const { throw std::runtime_error("back() not a valid function for TreeLSTMBuilder"); }
-std::vector<Expression> TreeLSTMBuilder::final_h() const { throw std::runtime_error("final_h() not a valid function for TreeLSTMBuilder"); }
-std::vector<Expression> TreeLSTMBuilder::final_s() const { throw std::runtime_error("final_s() not a valid function for TreeLSTMBuilder"); }
-unsigned TreeLSTMBuilder::num_h0_components() const { throw std::runtime_error("num_h0_components() not a valid function for TreeLSTMBuilder"); }
-void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy() not a valid function for TreeLSTMBuilder"); }
+template<class Archive>
+void NaryTreeLSTMBuilder::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
+  ar & params;
+  ar & lparams;
+  ar & layers;
+  ar & N;
+}
+
+DYNET_SERIALIZE_IMPL(NaryTreeLSTMBuilder);
 
 UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
@@ -310,6 +330,14 @@ Expression UnidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children
   h.push_back(embedding);
   return embedding;
 }
+
+template<class Archive>
+void UnidirectionalTreeLSTMBuilder::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
+  ar & node_builder;
+}
+
+DYNET_SERIALIZE_IMPL(UnidirectionalTreeLSTMBuilder);
 
 BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
@@ -360,3 +388,12 @@ Expression BidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children,
 }
 
 Expression BidirectionalTreeLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) { throw std::runtime_error("set_h() not a valid function for BidirectionalTreeLSTMBuilder"); }
+
+template<class Archive>
+void BidirectionalTreeLSTMBuilder::serialize(Archive& ar, const unsigned int) {
+  ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
+  ar & fwd_node_builder;
+  ar & rev_node_builder;
+}
+
+DYNET_SERIALIZE_IMPL(BidirectionalTreeLSTMBuilder);
