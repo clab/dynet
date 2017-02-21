@@ -215,7 +215,10 @@ void ParameterInitGlorot::initialize_params(Tensor & values) const {
 }
 
 void ParameterInitSaxe::initialize_params(Tensor & values) const {
-  TensorTools::RandomizeOrthogonal(values, gain);
+  if (values.device->type == DeviceType::GPU)
+    throw std::runtime_error("Saxe initialization not implemented for CUDA (we welcome pull requests)");
+  else
+    TensorTools::RandomizeOrthonormal(values, gain);
 }
 
 

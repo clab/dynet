@@ -252,6 +252,7 @@ def pick_batch(a, indices): return GVExpr('pick_batch', [a, indices], make_dim(l
 def hinge(x, index, m=1.0): return GVExpr('hinge', [x, index, m], copy_dim(x))
 
 def nobackprop(x): return GVExpr('nobackprop', [x], copy_dim(x))
+def flip_gradient(x): return GVExpr('flip_gradient', [x], copy_dim(x))
 
 # binary-exp
 def cdiv(x, y): return GVExpr('cdiv', [x,y], ensure_same_dim(x,y))
