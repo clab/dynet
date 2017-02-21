@@ -284,6 +284,13 @@ struct NoBackprop : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+// y = x_1, dy/dx is set to negative. 
+struct FlipGradient : public Node {
+  explicit FlipGradient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};  
+  
 // y = x_1
 struct Identity : public Node {
   explicit Identity(const std::initializer_list<VariableIndex>& a) : Node(a) {}

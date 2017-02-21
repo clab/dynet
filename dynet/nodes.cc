@@ -1275,6 +1275,23 @@ void NoBackprop::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(NoBackprop)
 
 template<class MyDevice>
+void FlipGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.v = xs[0]->v;
+}
+
+template<class MyDevice>
+void FlipGradient::backward_dev_impl(const MyDevice & dev,
+                                   const vector<const Tensor*>& xs,
+                                   const Tensor& fx,
+                                   const Tensor& dEdf,
+                                   unsigned i,
+                                   Tensor& dEdxi) const {
+  // takes negative on backprop
+  dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec();
+}
+DYNET_NODE_INST_DEV_IMPL(FlipGradient)  
+  
+template<class MyDevice>
 void MaxPooling1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   throw std::runtime_error("MaxPooling1D::forward_dev_impl not implemented yet");
 #if 0
