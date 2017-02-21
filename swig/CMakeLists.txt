@@ -107,7 +107,6 @@ add_jar(
 # Add dynamic library files into the Jar
 add_custom_target(
     dylib_into_jar
-    # COMMAND zip -j ${CMAKE_CURRENT_BINARY_DIR}/dynet_swigJNI.jar ${CMAKE_CURRENT_BINARY_DIR}/libdynet_swig.*
     COMMAND zip -j ${CMAKE_CURRENT_BINARY_DIR}/dynet_swigJNI_dylib.jar ${CMAKE_CURRENT_BINARY_DIR}/libdynet_swig.*
 )
 add_dependencies(dylib_into_jar dynet_swigJNI)
