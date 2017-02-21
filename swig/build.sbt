@@ -1,7 +1,10 @@
-
-name := "dynet_scala_helpers"
-
-scalaVersion := "2.11.8"
+lazy val root = (project in file("."))
+    .settings(
+      name         := "dynet_scala_helpers",
+      organization := "edu.cmu.dynet",
+      scalaVersion := "2.11.8",
+      version      := "0.0.1-SNAPSHOT"
+    )
 
 val DEFAULT_BUILD_PATH = "../build/swig"
 
@@ -26,7 +29,7 @@ val uberjarPath = s"${buildPath}/dynet_swigJNI_scala.jar"
 excludeFilter in unmanagedJars := "dynet_swigJNI_scala.jar"
 
 // Look for the dynet_swig jar file there.
-unmanagedBase := file( buildPath ).getAbsoluteFile
+//unmanagedBase := file( buildPath ).getAbsoluteFile
 
 // Put all of the sbt generated classes there.
 target := file(s"${buildPath}/target/")
@@ -58,12 +61,18 @@ clean := {
   clean.value
 }
 
+assemblyMergeStrategy in assembly := {
+  case "libdynet_swig.jnilib" => MergeStrategy.discard
+  case "libdynet_swig.so"     => MergeStrategy.discard
+  case example if example.contains("/examples/") => MergeStrategy.discard
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
+
 // Don't include Scala libraries in the jar
 // see https://github.com/sbt/sbt-assembly/issues/3
 // and http://stackoverflow.com/questions/15856739/assembling-a-jar-containing-only-the-provided-dependencies
 assembleArtifact in packageScala := false
-
-// And look there for java libraries when running.
-javaOptions += s"-Djava.library.path=${buildPath}"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
