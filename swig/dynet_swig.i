@@ -2,10 +2,45 @@
 
 // This module provides java bindings for the dynet C++ code
 
-// Automatically load the library code
+%pragma(java) jniclassimports=%{
+  import java.io.*;
+%}
+
+// Automatically load the library code. It's included as a resource in the jar file, so we need to
+// extract the resource, write it to a temp file, then call System.load() on the temp file.
 %pragma(java) jniclasscode=%{
     static {
-        System.loadLibrary("dynet_swig");
+        try {
+            File tempFile = File.createTempFile("dynet", "");
+            String libname = System.mapLibraryName("dynet_swig");
+
+            if (libname.endsWith("dylib")) {
+              libname = libname.replace(".dylib", ".jnilib");
+            }
+
+            // Load the dylib from the JAR-ed resource file, and write it to the temp file.
+            InputStream is = dynet_swigJNI.class.getClassLoader().getResourceAsStream(libname);
+            OutputStream os = new FileOutputStream(tempFile);
+
+            byte buf[] = new byte[8192];
+            int len;
+            while ((len = is.read(buf)) > 0) {
+                os.write(buf, 0, len);
+            }
+
+            os.flush();
+            InputStream lock = new FileInputStream(tempFile);
+            os.close();
+
+            // Load the library from the tempfile.
+            System.load(tempFile.getPath());
+            lock.close();
+
+            // And delete the tempfile.
+            tempFile.delete();
+        } catch (IOException io) {
+            System.out.println(io);
+        }
     }
 %}
 
