@@ -27,9 +27,10 @@ val buildPath = {
 val uberjarPath = s"${buildPath}/dynet_swigJNI_scala.jar"
 
 excludeFilter in unmanagedJars := "dynet_swigJNI_scala.jar"
+excludeFilter in unmanagedSources := HiddenFileFilter || "*.dylib" || "*.so"
 
 // Look for the dynet_swig jar file there.
-//unmanagedBase := file( buildPath ).getAbsoluteFile
+unmanagedBase  := file( buildPath ).getAbsoluteFile
 
 // Put all of the sbt generated classes there.
 target := file(s"${buildPath}/target/")
