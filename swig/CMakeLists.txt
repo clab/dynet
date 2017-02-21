@@ -104,6 +104,13 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/VanillaLSTMBuilder.java"
 )
 
+# Add dynamic library files into the Jar
+add_custom_target(
+    dylib_into_jar
+    COMMAND zip -j ${CMAKE_CURRENT_BINARY_DIR}/dynet_swigJNI_dylib.jar ${CMAKE_CURRENT_BINARY_DIR}/libdynet_swig.*
+)
+add_dependencies(dylib_into_jar dynet_swigJNI)
+
 # TODO(joelgrus): This is probably not defensive or robust enough.
 option(INCLUDE_SCALA_HELPERS "INCLUDE_SCALA_HELPERS" ON)
 if(INCLUDE_SCALA_HELPERS)
@@ -118,7 +125,7 @@ if(INCLUDE_SCALA_HELPERS)
   add_custom_command(
     COMMENT "Running sbt"
     OUTPUT scala_helper_uberjar
-    DEPENDS dynet_swigJNI
+    DEPENDS dylib_into_jar
     COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
   )
