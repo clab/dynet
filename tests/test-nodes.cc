@@ -1,3 +1,5 @@
+#define BOOST_TEST_MODULE TEST_NODES
+
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/grad-check.h>
