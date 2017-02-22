@@ -552,6 +552,17 @@ Dim NoBackprop::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string FlipGradient::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "flip_gradient(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim FlipGradient::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}  
+  
 string Softmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "softmax(" << arg_names[0] << ')';
