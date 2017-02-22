@@ -47,7 +47,42 @@ Next, let's take a look at the mini-batched version:
 
 We can see there are only 4 major changes: the word IDs need to be transformed into lists of IDs instead of a single ID, we need to call ``lookup_batch`` instead of the standard lookup, we need to call ``pickneglogsoftmax_batch`` instead of the unbatched version, and we need to call ``sum_batches`` at the end to sum the loss from all the batches.
 
-Comparison of Standard and Minibatched Functions
-------------------------------------------------
+A full example of mini-batching in action for a recurrent neural language model can be found here for `C++ <https://github.com/neulab/dynet-benchmark/blob/master/dynet-cpp/rnnlm-batch.cc>`_ and `Python <https://github.com/neulab/dynet-benchmark/blob/master/dynet-py/rnnlm-batch.py>`_.
 
-(TODO: This documentation is not yet finished. We need a comparison of standard and mini-batched functions in the C++ and Python APIs.)
+The Mini-batch Dimension
+------------------------
+
+The way DyNet handles this is by using a special privileged "mini-batch element" dimension, which indicates the number of training examples in the mini-batch. To give an example from the C++ API, we can declare a ``Dim`` object in C++
+
+.. code-block:: c++
+
+  Dim d({2,4,8}, 16)
+
+or Python
+
+.. code-block:: python
+
+  d = Dim([2,4,8], 16)
+
+Here, ``2,4,8`` are the dimensions of the data in the tensor for each example, while ``16`` is the number of examples in the mini-batch. When we print out the dimensions (for example when calling the ``print_graphviz()`` functionality for debugging, this will be print as ``{2,4,8x16}``.
+
+Mini-batched Functions
+----------------------
+
+For the great majority of standard operations, things should work seamlessly for minibatched elements. The one condition is that all inputs must have either one mini-batch element only, or the same number of mini-batch elements. So a binary function ``f(x,y)`` could take inputs where the number of minibatch elements in ``x/y`` are ``1/1``, ``4/1``, ``1/4``, or ``4/4`` respectively. However, it is not possible to have different non-one numbers of minibatch elements, such as ``x/y`` having minibatch sizes of ``2/4``.
+
+There are some operations where we need to explicitly think about batching, mostly on the input and output sides of the graph. These include input operations:
+
+* ``lookup()`` (C++) and ``lookup_batch()`` (Python): Performs lookup over a vector of input IDs, where each input ID is an element of the mini-batch.
+* ``input()``: C++ input can specify a ``Dim`` object that is mini-batched. In Python, directly adding batched input is not supported yet, but there is a _`workaround <https://github.com/clab/dynet/issues/175>` using ``reshape()``.
+
+Loss calculation operations:
+
+* ``pickneglogsoftmax()`` (C++) and ``pickneglogsoftmax_batch()`` (Python): Calculates the negative log softmax loss over multiple batch elements.
+* ``hinge()`` (C++): Similarly, calculate hinge loss over multiple elements.
+
+Manipulation operations:
+
+* ``reshape()``: Can be used to reshape into tensors with a batch element of more than one.
+* ``pick()`` (C++) and ``pick_batch()`` (Python): Picks an element for each of the mini-batch elements.
+* ``sum_batches()``: Will sum together all of the values in the batch. This is often used to sum together the loss function befor performing the backward step.
