@@ -110,6 +110,7 @@ add_custom_target(
     COMMAND zip -j ${CMAKE_CURRENT_BINARY_DIR}/dynet_swigJNI_dylib.jar ${CMAKE_CURRENT_BINARY_DIR}/libdynet_swig.*
 )
 add_dependencies(dylib_into_jar dynet_swigJNI)
+add_dependencies(dynet_swigJNI dynet_swig)
 
 # TODO(joelgrus): This is probably not defensive or robust enough.
 option(INCLUDE_SCALA_HELPERS "INCLUDE_SCALA_HELPERS" ON)
