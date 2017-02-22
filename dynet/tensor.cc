@@ -52,7 +52,7 @@ vector<real> as_vector(const Tensor& v) {
 float TensorTools::AccessElement(const Tensor& v, int index) {
 #if HAVE_CUDA
   float ret;
-  cudaMemcpyAsync(&ret, &v.v[index], sizeof(real), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&ret, &v.v[index], sizeof(real), cudaMemcpyDeviceToHost);
   return ret;
 #else
   return v.v[index];
@@ -198,7 +198,7 @@ void Tensor::save(Archive& ar, const unsigned int ver) const {
 #ifdef HAVE_CUDA
   if (device->type == DeviceType::GPU) {
     float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
-    CUDA_CHECK(cudaMemcpyAsync(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
     ar & boost::serialization::make_array(vc, d.size());
     free(vc);
   } else {
