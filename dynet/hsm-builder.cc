@@ -5,13 +5,6 @@
 #include <cassert>
 #include <sstream>
 
-#include <boost/serialization/vector.hpp>
-#if BOOST_VERSION >= 105600
-#include <boost/serialization/unordered_map.hpp>
-#endif
-
-#include "dynet/io-macros.h"
-
 #undef assert
 #define assert(x) {}
 
@@ -183,18 +176,14 @@ string Cluster::toString() const {
   return ss.str();
 }
 
-template<class Archive>
-void Cluster::serialize(Archive& ar, const unsigned int) {
-#if BOOST_VERSION >= 105600  
-  ar & rep_dim;
-  ar & children;
-  ar & path;
-  ar & terminals;
-  ar & word2ind;
+#if BOOST_VERSION >= 105600
+  DYNET_SERIALIZE_COMMIT(Cluster, DYNET_SERIALIZE_DEFINE(rep_dim, children, path, terminals, word2ind))
 #else
-  throw std::invalid_argument("Serializing clusters is only supported on versions of boost 1.56 or higher");
+  template<class Archive>
+  void Cluster::serialize(Archive& ar, const unsigned int) {
+    throw std::invalid_argument("Serializing clusters is only supported on versions of boost 1.56 or higher");
+  }
 #endif
-}
 DYNET_SERIALIZE_IMPL(Cluster)
 
 HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,

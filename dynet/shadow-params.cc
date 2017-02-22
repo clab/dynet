@@ -1,12 +1,11 @@
 #include "dynet/dynet.h"
 
-#include <boost/serialization/vector.hpp>
-
 #include "dynet/shadow-params.h"
 #include "dynet/tensor.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/model.h"
-#include "dynet/io-macros.h"
+
+#define LOAD_INIT_FUNC() initialize_lookups()
 
 using namespace std;
 
@@ -50,21 +49,11 @@ vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Model& m)
   return v;
 }
 
-template<class Archive>
-void ShadowParameters::serialize(Archive& ar, const unsigned int) {
-  ar & h;
-}
+DYNET_SERIALIZE_COMMIT(ShadowParameters, DYNET_SERIALIZE_DEFINE(h))
 DYNET_SERIALIZE_IMPL(ShadowParameters)
 
-template<class Archive>
-void ShadowLookupParameters::save(Archive& ar, const unsigned int) const {
-  ar << h;
-}
-template<class Archive>
-void ShadowLookupParameters::load(Archive& ar, const unsigned int) {
-  ar >> h;
-  initialize_lookups();
-}
+DYNET_SERIALIZE_SAVE_COMMIT(ShadowLookupParameters, DYNET_SERIALIZE_DEFINE(h))
+DYNET_SERIALIZE_LOAD_COMMIT(ShadowLookupParameters, LOAD_INIT_FUNC(), DYNET_SERIALIZE_DEFINE(h))
 DYNET_SAVELOAD_IMPL(ShadowLookupParameters)
 
 } // namespace dynet

@@ -6,12 +6,7 @@
 #include <vector>
 #include <iostream>
 
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include "dynet/nodes.h"
-#include "dynet/io-macros.h"
 
 using namespace std;
 using namespace dynet::expr;
@@ -316,20 +311,9 @@ void LSTMBuilder::disable_dropout() {
   dropout_rate_c = 0.f;
 }
 
-template<class Archive>
-void LSTMBuilder::serialize(Archive& ar, const unsigned int version ) {
-  ar & boost::serialization::base_object<RNNBuilder>(*this);
-  ar & params;
-  ar & layers;
-  ar & dropout_rate;
-  // Backward compatibility
-  if (version > 0) {
-    ar & dropout_rate_h;
-    ar & dropout_rate_c;
-    ar & input_dim;
-    ar & hid;
-  }
-}
+DYNET_SERIALIZE_COMMIT(LSTMBuilder,
+		       DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, dropout_rate),
+		       DYNET_VERSION_SERIALIZE_DEFINE(1, MAX_SERIALIZE_VERSION, dropout_rate_h, dropout_rate_c, input_dim, hid))
 
 DYNET_SERIALIZE_IMPL(LSTMBuilder);
 
@@ -564,16 +548,7 @@ void VanillaLSTMBuilder::disable_dropout() {
   dropout_rate_h = 0.f;
 }
 
-template<class Archive>
-void VanillaLSTMBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<RNNBuilder>(*this);
-  ar & params;
-  ar & layers;
-  ar & dropout_rate;
-  ar & dropout_rate_h;
-  ar & hid;
-  ar & input_dim;
-}
+DYNET_SERIALIZE_COMMIT(VanillaLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, dropout_rate, dropout_rate_h, hid, input_dim))
 DYNET_SERIALIZE_IMPL(VanillaLSTMBuilder);
 
 } // namespace dynet
