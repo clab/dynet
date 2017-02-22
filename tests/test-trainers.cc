@@ -1,3 +1,5 @@
+#define BOOST_TEST_MODULE TEST_TRAINERS
+
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/training.h>
