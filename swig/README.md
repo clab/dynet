@@ -15,7 +15,7 @@ the `build` directory (see [DyNet documentation](http://dynet.readthedocs.io/en/
 
 ```
 build$ cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DINCLUDE_SWIG=ON
-build$ make dynet_swig && make
+build$ make
 ```
 
 This will create `dynet_swigJNI.jar` in the `build/swig` directory.
