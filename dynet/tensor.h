@@ -181,18 +181,22 @@ struct Tensor {
   }
   /**
    * \brief Check for NaNs and infinite values
-   * \details This is very slow: use sparingly (it's linear in the number of elements). This raises a `std::runtime_error` exception if dynet was compiled with HAVE_CUDA because it's not implemented yet
+   * \details This is very slow: use sparingly (it's linear in the number of elements). This raises a `std::runtime_error` exception if the Tensor is on GPU because it's not implemented yet
    * \return Whether the tensor contains any invalid value
    */
   inline bool is_valid() const {
 #if HAVE_CUDA
     // TODO : replace this with a custom exception
-    throw std::runtime_error("is_valid() not implemented with HAVE_CUDA");
-#else
-    const size_t s = d.size();
-    for (unsigned i = 0; i < s; ++i)
-      if (std::isnan(v[i]) || std::isinf(v[i])) return false;
-    return true;
+    if (device->type == DeviceType::GPU) {
+      throw std::runtime_error("is_valid() not implemented on GPU");
+    } else {
+#endif
+      const size_t s = d.size();
+      for (unsigned i = 0; i < s; ++i)
+        if (std::isnan(v[i]) || std::isinf(v[i])) return false;
+      return true;
+#if HAVE_CUDA
+    }
 #endif
   }
 
