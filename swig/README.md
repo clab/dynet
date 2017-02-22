@@ -149,7 +149,7 @@ it also on CPU. If you just use the Scala `myInitialize()` helper you should be 
 
 ## Differences between Scala and C++
 
-### Delete Your ComputationGraphs
+### `ComputationGraph.getNew`
 
 DyNet does not like it if you try to instantiate more than one ComputationGraph at a time.
 
@@ -162,27 +162,26 @@ for (int i = 0; i < NUM_TIMES; i++) {
 }
 ```
 
-This works because here `cg` gets destructed each time it goes out of scope. The same is not true in Scala
+This works because here `cg` gets destructed each time it goes out of scope. The same is not true in Scala. If you were to try something like
 
 ```scala
-// BAD! DO NOT DO THIS!
+// THIS CODE WILL NOT RUN
 for (i <- 0 until NUM_TIMES) {
   val cg = new ComputationGraph
   // do some computations
 }
 ```
 
-The underlying C++ ComputationGraph gets destructed at some point 
+the underlying C++ ComputationGraph would get destructed at some point 
 (presumably whenever the Java GC runs),
-but not immediately. As a result, your program will crash with the dreaded
+but not immediately. As a result, your program would crash with the dreaded
 
 ```
 [error] Memory allocator assumes only a single ComputationGraph at a time.
 ```
 
-To avoid this, we added a static `getNew` method that remembers the
-last requested ComputationGraph and deletes it every time you request 
-another.
+To prevent this, the Scala bindings are designed so that 
+you can only get new `ComputationGraph`s using the static `getNew` method:
 
 ```scala
 for (i <- 0 until NUM_TIMES) {
@@ -191,16 +190,7 @@ for (i <- 0 until NUM_TIMES) {
 }
 ```
 
-Alternatively, you can manually call `.delete()` on each 
-`ComputationGraph` instance when you are done with it:
-
-```scala
-for (i <- 0 until NUM_TIMES) {
-  val cg = new ComputationGraph
-  // do some computations
-  cg.delete()
-}
-```
+which keeps track of the previously allocated `ComputationGraph` and deletes it for you.
 
 ### `std::vector`s
 
