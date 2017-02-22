@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <boost/serialization/export.hpp>
 
+#include "dynet/io-macros.h"
 #include "dynet/tensor.h"
 #include "dynet/weight-decay.h"
 
@@ -63,9 +64,7 @@ struct ParameterStorageBase {
    */
   virtual size_t size() const = 0;
   virtual ~ParameterStorageBase();
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& /* ar */, const unsigned int) {}
+  DYNET_SERIALIZE_COMMIT_EMPTY()
 };
 
 // represents parameters (e.g., a weight matrix) that will be optimized
@@ -115,9 +114,7 @@ private:
   explicit ParameterStorage(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
   // or Glorot initialization if minmax = 0
   explicit ParameterStorage(const Dim& d, const ParameterInit & init); // initialize with custom initializer
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 // represents a matrix/vector embedding of a discrete set
@@ -196,12 +193,7 @@ private:
   LookupParameterStorage() {}
   LookupParameterStorage(unsigned n, const Dim& d);
   LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init);
-  friend class boost::serialization::access;
-  template<class Archive>
-  void save(Archive& ar, const unsigned int) const;
-  template<class Archive>
-  void load(Archive& ar, const unsigned int);
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
+  DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
 class Model;
@@ -265,9 +257,7 @@ struct Parameter {
   bool is_updated();
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -325,9 +315,7 @@ struct LookupParameter {
   bool is_updated();
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -654,10 +642,7 @@ public:
 
   L2WeightDecay weight_decay;
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
-
+  DYNET_SERIALIZE_DECLARE()
   std::vector<ParameterStorageBase*> all_params;
   std::vector<ParameterStorage*> params;
   std::vector<LookupParameterStorage*> lookup_params;
@@ -668,7 +653,7 @@ private:
   std::vector<unsigned> updated_lookup_params;
 
   mutable float* gradient_norm_scratch;
-};
+}; // class Model
 
 void save_dynet_model(std::string filename, Model* model);
 void load_dynet_model(std::string filename, Model* model);

@@ -7,6 +7,7 @@
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
 #include "dynet/lstm.h"
+#include "dynet/io-macros.h"
 
 using namespace dynet::expr;
 
@@ -29,9 +30,7 @@ public:
   virtual Expression add_input_impl(int prev, const Expression& x) override;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -70,10 +69,8 @@ struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
   unsigned N; // Max branching factor
 private:
   ComputationGraph* cg;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  
+  DYNET_SERIALIZE_DECLARE()
 };
 
 struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -93,9 +90,7 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   std::vector<Expression> h;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -117,9 +112,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   std::vector<Expression> h;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 } // namespace dynet
 
