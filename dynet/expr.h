@@ -1090,6 +1090,18 @@ Expression nobackprop(const Expression& x);
 
 /**
  * \ingroup flowoperations
+ * \brief Negative backprop 
+ * \details This node has no effect on the forward pass, but takes negative on backprop process. 
+ *          This operation is widely used in adversarial networks.
+ *          
+ * \param x The input expression
+ * 
+ * \return An output expression containing the same as input (only effects on backprop process)
+ */ 
+Expression flip_gradient(const Expression& x);  
+  
+/**
+ * \ingroup flowoperations
  * \brief Reshape to another size
  * \details This node reshapes a tensor to another size, without changing the
  *          underlying layout of the data. The layout of the data in DyNet is

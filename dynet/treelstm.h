@@ -2,6 +2,7 @@
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/base_object.hpp>
+#include <boost/serialization/vector.hpp>
 #include "dynet/dynet.h"
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
@@ -30,9 +31,7 @@ public:
 private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<RNNBuilder>(*this);
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -74,13 +73,7 @@ private:
 
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-    ar & params;
-    ar & lparams;
-    ar & layers;
-    ar & N;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -102,10 +95,7 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
 private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-    ar & node_builder;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 
 struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -129,11 +119,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
 private:
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-    ar & fwd_node_builder;
-    ar & rev_node_builder;
-  }
+  void serialize(Archive& ar, const unsigned int);
 };
 } // namespace dynet
 
@@ -141,4 +127,3 @@ BOOST_CLASS_EXPORT_KEY(dynet::TreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::NaryTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::UnidirectionalTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::BidirectionalTreeLSTMBuilder)
-
