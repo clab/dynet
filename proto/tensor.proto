@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+message L2WeightDecayProto {
+  optional float weight_decay = 1;
+  optional float lambda = 2;
+}
+
+message DimensionsProto {
+  repeated uint32 dimension = 1;
+}
+
+message TensorProto {
+  optional DimensionsProto dimensions = 1;
+  repeated float value = 2 [packed=true];
+}
+
+message ParameterProto {
+  optional DimensionsProto dimensions = 1;
+  repeated TensorProto value = 2;
+}
+
+message ModelProto {
+  repeated ParameterProto parameter = 1;
+  repeated ParameterProto lookup_parameter = 2;
+  optional L2WeightDecayProto weight_decay = 3;
+}
