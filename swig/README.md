@@ -20,11 +20,11 @@ build$ make
 
 This will create `dynet_swigJNI.jar` in the `build/swig` directory.
 (It also produces a dynamic library file, but the `make` process puts
- that file into the jar as a resource, and the code to load that library
- looks for it in the jar, so you don't need to worry about it.)
-
-It will then run `sbt assembly` to produce an "uberjar" containing 
-both the Dynet bindings and the scala helpers, also in `build/swig`.
+that file into the jar as a resource, and the code to load that
+library looks for it in the jar, so you don't need to worry about it.)
+It will then run `sbt assembly` to produce an "uberjar" containing
+both the Dynet bindings and the scala helpers,
+`build/swig/dynet_swigJNI_scala.jar`.
 
 If you don't want the Scala helpers (and, in particular, if you
 don't have `sbt`) then when you run `cmake` include the additional flag
@@ -47,6 +47,14 @@ If successful, the end of the build should look something like:
 [success] Total time: 7 s, completed Jan 11, 2017 1:05:58 PM
 [ 96%] Built target scala_helper
 [100%] Built target dynet_swig
+```
+
+At this point, you can include DyNet in your Scala project by adding
+both `dynet_swigJNI_scala.jar` and `libdynet_swig.xxx` to your library
+path:
+
+```
+scala -
 ```
 
 ### Building for GPU
