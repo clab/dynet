@@ -7,7 +7,7 @@ import edu.cmu.dynet.dynet_swig._
 class ParameterInitSpec extends FlatSpec with Matchers {
 
   import DynetScalaHelpers._
-  myInitialize()
+  initialize(new DynetParams)
 
   "ParameterInitConst" should "set constant values" in {
     val model = new Model

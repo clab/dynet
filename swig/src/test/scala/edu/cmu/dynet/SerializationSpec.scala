@@ -9,7 +9,7 @@ import java.util.Arrays
 class SerializationSpec extends FlatSpec with Matchers {
   import DynetScalaHelpers._
 
-  myInitialize()
+  initialize(new DynetParams)
 
   def assertSameSeq(s1: Seq[Float], s2: Seq[Float], eps: Float = 1e-5f): Unit = {
     s1.size shouldBe s2.size

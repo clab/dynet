@@ -11,7 +11,7 @@ object XorScala {
 
   def main(args: Array[String]) {
     println("Running XOR example")
-    myInitialize()
+    initialize(new DynetParams)
     println("Dynet initialized!")
     val m = new Model
     val sgd = new SimpleSGDTrainer(m)

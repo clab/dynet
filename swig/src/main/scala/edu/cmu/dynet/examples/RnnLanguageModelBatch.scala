@@ -139,7 +139,7 @@ object RnnLanguageModelBatch {
 
   def main(args: Array[String]) {
 
-    myInitialize()
+    initialize(new DynetParams)
 
     val d = new WordDict
     kSOS = d.convert("<s>")

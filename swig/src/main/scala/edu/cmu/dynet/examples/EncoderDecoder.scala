@@ -252,7 +252,7 @@ object EncoderDecoder {
   val DEV_FILE = Paths.get(userDir, "../examples/cpp/example-data/dev-hsm.txt").toString
 
   def main(args: Array[String]) {
-    myInitialize()
+    initialize(new DynetParams)
 
     val training = new scala.collection.mutable.ArrayBuffer[IntVector]
     val dev = new scala.collection.mutable.ArrayBuffer[IntVector]
