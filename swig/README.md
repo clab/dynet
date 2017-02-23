@@ -162,25 +162,20 @@ for (int i = 0; i < NUM_TIMES; i++) {
 }
 ```
 
-This works because here `cg` gets destructed each time it goes out of scope. The same is not true in Scala. If you were to try something like
+This works because here `cg` gets destructed each time it goes out of scope. 
 
-```scala
-// THIS CODE WILL NOT RUN
-for (i <- 0 until NUM_TIMES) {
-  val cg = new ComputationGraph
-  // do some computations
-}
-```
-
+If you were to write the analogous code in Scala 
+(generating a new ComputationGraph each iteration)
 the underlying C++ ComputationGraph would get destructed at some point 
 (presumably whenever the Java GC runs),
-but not immediately. As a result, your program would crash with the dreaded
+but not at the end of each loop.
+As a result, your program would crash with the dreaded
 
 ```
 [error] Memory allocator assumes only a single ComputationGraph at a time.
 ```
 
-To prevent this, the Scala bindings are designed so that 
+To prevent this, in Scala 
 you can only get new `ComputationGraph`s using the static `getNew` method:
 
 ```scala
@@ -190,7 +185,8 @@ for (i <- 0 until NUM_TIMES) {
 }
 ```
 
-which keeps track of the previously allocated `ComputationGraph` and deletes it for you.
+which keeps track of the previously allocated `ComputationGraph` and deletes it
+whenever you request a new one.
 
 ### `std::vector`s
 
