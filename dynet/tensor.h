@@ -12,13 +12,11 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <boost/serialization/split_member.hpp>
-#include <boost/serialization/version.hpp>
-
 #include "dynet/dim.h"
 #include "dynet/globals.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/devices.h"
+#include "dynet/io-macros.h"
 
 #if HAVE_CUDA
 #include <cuda.h>
@@ -251,12 +249,7 @@ struct Tensor {
   DeviceMempool mem_pool;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void save(Archive& ar, const unsigned int ver) const;
-  template<class Archive>
-  void load(Archive& ar, const unsigned int ver);
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
+  DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
 template<> inline Eigen::TensorMap<Eigen::Tensor<float, 0>> Tensor::t<0>() {

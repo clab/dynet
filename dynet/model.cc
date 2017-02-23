@@ -2,7 +2,6 @@
 #include "dynet/tensor.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet.h"
-#include "dynet/io-macros.h"
 
 #include <unordered_set>
 #include <iostream>
@@ -13,16 +12,9 @@
 
 #include <stdexcept>
 
+#define LOAD_INIT_FUNC() initialize_lookups()
 
-#ifndef __CUDACC__
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/serialization.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/split_member.hpp>
-#else
+#ifdef __CUDACC__
 #include "dynet/gpu-ops.h"
 #endif
 
@@ -101,13 +93,8 @@ void ParameterStorage::clear() {
 }
 
 #ifndef __CUDACC__
-template<class Archive>
-void ParameterStorage::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<ParameterStorageBase>(*this);
-  ar & dim;
-  ar & values;
-  ar & g;
-}
+DYNET_SERIALIZE_COMMIT(ParameterStorage,
+                       DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, dim, values, g))
 DYNET_SERIALIZE_IMPL(ParameterStorage)
 #endif
 
@@ -173,21 +160,10 @@ void LookupParameterStorage::clear() {
 }
 
 #ifndef __CUDACC__
-template<class Archive>
-void LookupParameterStorage::save(Archive& ar, const unsigned int) const {
-  ar << boost::serialization::base_object<ParameterStorageBase>(*this);
-  ar << all_dim;
-  ar << all_values;
-  ar << all_grads;
-}
-template<class Archive>
-void LookupParameterStorage::load(Archive& ar, const unsigned int) {
-  ar >> boost::serialization::base_object<ParameterStorageBase>(*this);
-  ar >> all_dim;
-  ar >> all_values;
-  ar >> all_grads;
-  initialize_lookups();
-}
+DYNET_SERIALIZE_SAVE_COMMIT(LookupParameterStorage,
+		            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
+DYNET_SERIALIZE_LOAD_COMMIT(LookupParameterStorage, LOAD_INIT_FUNC(),
+		            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
 DYNET_SAVELOAD_IMPL(LookupParameterStorage)
 #endif
 
@@ -259,11 +235,7 @@ bool Parameter::is_updated() {
 
 
 #ifndef __CUDACC__
-template<class Archive>
-void Parameter::serialize(Archive& ar, const unsigned int) {
-  ar & mp;
-  ar & index;
-}
+DYNET_SERIALIZE_COMMIT(Parameter, DYNET_SERIALIZE_DEFINE(mp, index))
 DYNET_SERIALIZE_IMPL(Parameter)
 #endif
 
@@ -294,11 +266,7 @@ bool LookupParameter::is_updated() {
 }
 
 #ifndef __CUDACC__
-template<class Archive>
-void LookupParameter::serialize(Archive& ar, const unsigned int) {
-  ar & mp;
-  ar & index;
-}
+DYNET_SERIALIZE_COMMIT(LookupParameter, DYNET_SERIALIZE_DEFINE(mp, index))
 DYNET_SERIALIZE_IMPL(LookupParameter)
 #endif
 
@@ -431,16 +399,10 @@ size_t Model::updated_parameter_count() const {
 }
 
 #ifndef __CUDACC__
-template<class Archive>
-void Model::serialize(Archive& ar, const unsigned int) {
-  ar & all_params;
-  ar & params;
-  ar & lookup_params;
-  ar & weight_decay;
-  // TODO do we want to save these or not?
-  ar & updated_params;
-  ar & updated_lookup_params;
-}
+DYNET_SERIALIZE_COMMIT(Model,
+                       DYNET_SERIALIZE_DEFINE(all_params, params,
+                                              lookup_params, weight_decay,
+                                              updated_params, updated_lookup_params))
 DYNET_SERIALIZE_IMPL(Model)
 #endif
 

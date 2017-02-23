@@ -4,8 +4,7 @@
 #include <stdexcept>
 #include <cmath>
 #include <iostream>
-
-namespace boost { namespace serialization { class access; } }
+#include "dynet/io-macros.h"
 
 namespace dynet {
 
@@ -36,9 +35,7 @@ struct L2WeightDecay {
     weight_decay = 1.0f;
   }
  private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 
   float weight_decay;
   float lambda;

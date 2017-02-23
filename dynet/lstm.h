@@ -154,9 +154,7 @@ public:
   float dropout_rate_h = 0.f, dropout_rate_c = 0.f;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
   ComputationGraph  *_cg;
 
 };
@@ -290,9 +288,7 @@ public:
 
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
   ComputationGraph* _cg; // Pointer to current cg
 
 };
