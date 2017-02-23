@@ -24,7 +24,7 @@ public class XorExample {
     System.out.println("Dynet initialized!");
     Model m = new Model();
     SimpleSGDTrainer sgd = new SimpleSGDTrainer(m);
-    ComputationGraph cg = new ComputationGraph();
+    ComputationGraph cg = ComputationGraph.getNew();
 
     // Declare parameters
     Parameter p_W = m.add_parameters(makeDim(new int[]{HIDDEN_SIZE, 2}));

@@ -631,10 +631,13 @@ Expression trace_of_product(const Expression& x, const Expression& y);
     if (singletonInstance != null) {
       singletonInstance.delete();
     }
+
     singletonInstance = new ComputationGraph();
     return singletonInstance;
   }
 %}
+
+%javamethodmodifiers ComputationGraph::ComputationGraph() "private";
 
 struct ComputationGraph {
   ComputationGraph();
