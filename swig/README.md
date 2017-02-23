@@ -1,4 +1,4 @@
-# SWIG bindings for DyNet
+# SWIG bindings for DyNet in Scala/Java
 
 The code in `dynet_swig.i` provides SWIG instructions to wrap salient
 parts of DyNet for use in other languages, in particular Scala (and
@@ -34,7 +34,7 @@ If successful, the end of the build will look like:
 [100%] Built target dynet_swig
 ```
 
-This command will run SWIG to generate a dynamic library file and JNI
+This command runs SWIG to generate a dynamic library file and JNI
 bindings, then runs `sbt assembly` to produce an "uberjar" containing
 both the Dynet bindings and the Scala helpers. It outputs three
 artifacts in the `build/swig` directory: `dynet_swigJNI.jar`,
@@ -328,8 +328,8 @@ DyNet uses `boost::serialization` to correctly serialize/deserialize
 an object graph of `Model`s, `Builder`s, and so on. On the Java side
 we expose `ModelLoader` and `ModelSaver` classes that wrap this
 functionality and allow complex serialization from Scala code. We also
-extendeded these classes to also serialize primitives and Java/Scala
-objects that implement `Serializable`:
+extended these classes to serialize primitives and Java/Scala objects
+that implement `Serializable`:
 
 ```scala
     val mod1 = new Model()
