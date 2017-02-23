@@ -11,7 +11,6 @@
 #include "dynet/gpu-ops.h"
 #include "dynet/cuda.h"
 #endif
-#include "dynet/io-macros.h"
 
 using namespace std;
 

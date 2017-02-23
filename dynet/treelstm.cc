@@ -5,7 +5,6 @@
 
 #include "dynet/nodes.h"
 #include "dynet/treelstm.h"
-#include "dynet/io-macros.h"
 
 using namespace std;
 using namespace dynet;
@@ -26,11 +25,7 @@ std::vector<Expression> TreeLSTMBuilder::final_s() const { throw std::runtime_er
 unsigned TreeLSTMBuilder::num_h0_components() const { throw std::runtime_error("num_h0_components() not a valid function for TreeLSTMBuilder"); }
 void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy() not a valid function for TreeLSTMBuilder"); }
 
-template<class Archive>
-void TreeLSTMBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<RNNBuilder>(*this);
-}
-
+DYNET_SERIALIZE_COMMIT(TreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_EQ_DEFINE(RNNBuilder))
 DYNET_SERIALIZE_IMPL(TreeLSTMBuilder);
 
 // See "Improved Semantic Representations From Tree-Structured Long Short-Term Memory Networks"
@@ -287,15 +282,7 @@ void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
-template<class Archive>
-void NaryTreeLSTMBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-  ar & params;
-  ar & lparams;
-  ar & layers;
-  ar & N;
-}
-
+DYNET_SERIALIZE_COMMIT(NaryTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, params, lparams, layers, N))
 DYNET_SERIALIZE_IMPL(NaryTreeLSTMBuilder);
 
 UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
@@ -331,12 +318,7 @@ Expression UnidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children
   return embedding;
 }
 
-template<class Archive>
-void UnidirectionalTreeLSTMBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-  ar & node_builder;
-}
-
+DYNET_SERIALIZE_COMMIT(UnidirectionalTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, node_builder))
 DYNET_SERIALIZE_IMPL(UnidirectionalTreeLSTMBuilder);
 
 BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
@@ -389,11 +371,5 @@ Expression BidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children,
 
 Expression BidirectionalTreeLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) { throw std::runtime_error("set_h() not a valid function for BidirectionalTreeLSTMBuilder"); }
 
-template<class Archive>
-void BidirectionalTreeLSTMBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-  ar & fwd_node_builder;
-  ar & rev_node_builder;
-}
-
+DYNET_SERIALIZE_COMMIT(BidirectionalTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, fwd_node_builder, rev_node_builder))
 DYNET_SERIALIZE_IMPL(BidirectionalTreeLSTMBuilder);

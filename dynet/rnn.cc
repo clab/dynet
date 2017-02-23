@@ -1,16 +1,10 @@
 #include "dynet/rnn.h"
-#include "dynet/io-macros.h"
 
 #include <string>
 #include <cassert>
 #include <vector>
 #include <fstream>
 #include <iostream>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/vector.hpp>
-
 
 #include "dynet/nodes.h"
 #include "dynet/expr.h"
@@ -33,13 +27,7 @@ void RNNBuilder::load_parameters_pretraining(const string& fname) {
   throw std::runtime_error("RNNBuilder::load_parameters_pretraining not overridden.");
 }
 
-template<class Archive>
-void RNNBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & cur;
-  ar & head;
-  ar & sm;
-} 
-
+DYNET_SERIALIZE_COMMIT(RNNBuilder, DYNET_SERIALIZE_DEFINE(cur, head, sm))
 DYNET_SERIALIZE_IMPL(RNNBuilder)
 
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
@@ -191,13 +179,7 @@ void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
   }
 }
 
-template<class Archive>
-void SimpleRNNBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<RNNBuilder>(*this);
-  ar & params;
-  ar & layers;
-  ar & lagging;
-}
+DYNET_SERIALIZE_COMMIT(SimpleRNNBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, lagging))
 DYNET_SERIALIZE_IMPL(SimpleRNNBuilder)
 
 } // namespace dynet
