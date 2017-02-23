@@ -9,7 +9,7 @@ object LinearRegression {
   import DynetScalaHelpers._
 
   def main(args: Array[String]) {
-    myInitialize()
+    initialize(new DynetParams)
 
     // x from 0.0 to 10.0
     val xs = (0 until 100).map(_.toFloat / 10)
