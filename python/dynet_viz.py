@@ -202,7 +202,7 @@ SECRET = 923148
 #_cg = ComputationGraph(SECRET)
 
 def cg_version(): return _cg._cg_version
-def renew_cg(): return _cg.renew()
+def renew_cg(immediate_compute=False, check_validity=False): return _cg.renew(immediate_compute, check_validity)
 
 def cg():
     global _cg
@@ -213,7 +213,7 @@ class ComputationGraph(object):
         if guard != SECRET: raise RuntimeError("Do not instantiate ComputationGraph directly. Use pydynet.cg()")
         self._cg_version = 0
 
-    def renew(self):
+    def renew(self, immediate_compute=False, check_validity=False):
       vindex_count = -1
       del graphviz_items[:]
       return self

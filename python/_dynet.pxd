@@ -142,6 +142,10 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         void checkpoint()
         void revert()
 
+        # immediate computation
+        void set_immediate_compute(bool ic)
+        void set_check_validity(bool cv)
+
         void print_graphviz() const
 
 cdef extern from "dynet/training.h" namespace "dynet":
