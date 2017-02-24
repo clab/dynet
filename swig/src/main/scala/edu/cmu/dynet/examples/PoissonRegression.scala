@@ -50,7 +50,7 @@ object PoissonRegression {
   }
 
   def main(args: Array[String]) {
-    myInitialize()
+    initialize(new DynetParams)
 
     val userDir = System.getProperty("user.dir")
 
