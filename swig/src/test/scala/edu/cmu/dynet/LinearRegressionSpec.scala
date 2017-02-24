@@ -12,7 +12,7 @@ class LinearRegressionSpec extends FlatSpec with Matchers {
 
   import DynetScalaHelpers._
 
-  myInitialize()
+  initialize(new DynetParams)
 
   def regress(xs: Seq[Float], ys: Seq[Float], numIterations: Int = 20): RegressionLine = {
     assert(xs.size > 0)
