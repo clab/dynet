@@ -1,39 +1,24 @@
-# SWIG bindings for DyNet
+# SWIG bindings for DyNet in Scala/Java
 
-The code in `dynet_swig.i` provides SWIG instructions to wrap salient parts of DyNet for use
-in other languages, in particular Java (and Scala).
-
-## Scala Helpers
-
-The code in `src/main/scala` provides helper functions and implicit conversions that 
-facilitate using DyNet from Scala.
+The code in `dynet_swig.i` provides SWIG instructions to wrap salient
+parts of DyNet for use in other languages, in particular Scala (and
+Java). The code in `src/main/scala` provides helper functions and
+implicit conversions that facilitate using DyNet from Scala.
 
 ## Building
 
-To include in the DyNet build, add `-DINCLUDE_SWIG=ON` to the `cmake` command, e.g., run this from
-the `build` directory (see [DyNet documentation](http://dynet.readthedocs.io/en/latest/install.html) for general build instructions):
+To include in the DyNet build, simply add `-DINCLUDE_SWIG=ON` to the
+`cmake` command. (See the [DyNet
+documentation](http://dynet.readthedocs.io/en/latest/install.html) for
+general build instructions). For example, run this from the `build`
+directory:
 
 ```
 build$ cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DINCLUDE_SWIG=ON
 build$ make
 ```
 
-This will create `dynet_swigJNI.jar` in the `build/swig` directory.
-(It also produces a dynamic library file, but the `make` process puts
- that file into the jar as a resource, and the code to load that library
- looks for it in the jar, so you don't need to worry about it.)
-
-It will then run `sbt assembly` to produce an "uberjar" containing 
-both the Dynet bindings and the scala helpers, also in `build/swig`.
-
-If you don't want the Scala helpers (and, in particular, if you
-don't have `sbt`) then when you run `cmake` include the additional flag
-
-```
--DINCLUDE_SCALA_HELPERS=OFF
-```
-
-If successful, the end of the build should look something like:
+If successful, the end of the build will look like:
 
 ```
 [ 93%] Building Java objects for dynet_swigJNI.jar
@@ -49,27 +34,64 @@ If successful, the end of the build should look something like:
 [100%] Built target dynet_swig
 ```
 
+This command runs SWIG to generate a dynamic library file and JNI
+bindings, then runs `sbt assembly` to produce an "uberjar" containing
+both the Dynet bindings and the Scala helpers. It outputs three
+artifacts in the `build/swig` directory: `dynet_swigJNI.jar`,
+`dynet_swigJNI_dylib.jar` and `dynet_swigJNI_scala.jar`. Note that
+`dynet_swigJNI_dylib.jar` contains a native library that is not
+portable across systems.
+
+To include DyNet in a Scala project, add both
+`dynet_swigJNI_dylib.jar` and `dynet_swigJNI_scala.jar` to your
+classpath. If you're using `sbt`, you can put these in a `lib/`
+directory under the project root directory. To include DyNet in a Java
+project, add both `dynet_swigJNI_dylib.jar` and `dynet_swigJNI.jar` to
+your classpath.
+
+### Disabling Scala Helpers
+
+If you don't want the Scala helpers (and, in particular, if you
+don't have `sbt`) then when you run `cmake` include the additional flag
+
+```
+-DINCLUDE_SCALA_HELPERS=OFF
+```
+
 ### Building for GPU
 
-To build the GPU version, (make sure you have CUDA installed and then)
-simply add `-DBACKEND=cuda` as a `cmake` option. The generated `.jar` and dynamic library
-will use the GPU for computations. (Currently there's no way to build a version that can do both CPU and GPU, you
+To build the GPU version, make sure you have CUDA installed, then
+simply add `-DBACKEND=cuda` as a `cmake` option. The generated `.jar`
+and dynamic library will use the GPU for computations. (Currently
+there's no way to build a version that can do both CPU and GPU, you
 would have to build two separate versions if you wanted that.)
 
-## Running the example
+The CPU and GPU versions of DyNet behave almost identically. The one
+difference is that the `DynetParams` class has additional fields in
+the GPU version for configuring the GPU. This difference shouldn't
+affect you unless you want to configure these parameters and also run
+the same code on the CPU.
 
-After running `make`, you can run the Scala examples under the `swig` directory with `sbt`:
+## Running the Examples
+
+Several examples using DyNet from Scala and Java are included under
+`src/main/[scala|java]/edu/cmu/dynet/examples/`. After running `make`,
+you can run the Scala examples using `sbt` from the `swig` directory:
 
 ```
 swig$ sbt "runMain edu.cmu.dynet.examples.XorScala"
-swig$ sbt "runMain edu.cmu.dynet.examples.LinearRegression"
 ```
 
 The Java example takes a couple more steps:
 
 ```
 swig$ javac -d . -cp ../build/swig/dynet_swigJNI.jar src/main/java/edu/cmu/dynet/examples/XorExample.java
-swig$ java -cp .:../build/swig/dynet_swigJNI.jar edu.cmu.dynet.examples.XorExample
+swig$ java -cp .:../build/swig/dynet_swigJNI.jar:../build/swig/dynet_swigJNI_dylib.jar edu.cmu.dynet.examples.XorExample
+```
+
+In both cases, you should see output like:
+
+```
 Running XOR example
 [dynet] random seed: 1650744221
 [dynet] allocating memory: 512MB
@@ -138,22 +160,31 @@ iter = 28, loss = 8.881784E-16
 iter = 29, loss = 8.881784E-16
 ```
 
-## Differences between CPU and GPU Usage
+## Usage
 
-From Scala, both versions should work basically identically. (Let us know if they don't!)
-The one prominent difference is that the
-`DynetParams` struct (and corresponding wrapper class) has extra fields in the GPU version.
+The Scala version of DyNet is intended to work mostly like the
+C++. However, there are a few exceptions to watch out for, which are
+documented below.
 
-This probably won't affect you unless you have GPU code that uses those fields and you want to run 
-it also on CPU.
+### Imports
 
-## Differences between Scala and C++
+Import dynet using:
+
+```scala
+// Dynet classes and structs, e.g., Parameter
+import edu.cmu.dynet._
+// Dynet neural network operations, e.g., affine_transform
+import edu.cmu.dynet.dynet_swig._
+// Scala helpers, e.g., implicit type conversions
+import edu.cmu.dynet.DynetScalaHelpers._
+```
 
 ### `ComputationGraph.getNew`
 
-DyNet does not like it if you try to instantiate more than one ComputationGraph at a time.
+DyNet does not like it if you try to instantiate more than one
+ComputationGraph at a time.
 
-It seems to be a common idiom in the C++ examples to do things like
+A common idiom in the C++ is to do things like:
 
 ```cpp
 for (int i = 0; i < NUM_TIMES; i++) {
@@ -164,19 +195,18 @@ for (int i = 0; i < NUM_TIMES; i++) {
 
 This works because here `cg` gets destructed each time it goes out of scope. 
 
-If you were to write the analogous code in Scala 
-(generating a new ComputationGraph each iteration)
-the underlying C++ ComputationGraph would get destructed at some point 
-(presumably whenever the Java GC runs),
-but not at the end of each loop.
-As a result, your program would crash with the dreaded
+If you were to write the analogous code in Scala (generating a new
+ComputationGraph each iteration) the underlying C++ ComputationGraph
+would get destructed at some point (presumably whenever the Java GC
+runs), but not at the end of each loop.  As a result, your program
+would crash with the dreaded 
 
 ```
 [error] Memory allocator assumes only a single ComputationGraph at a time.
 ```
 
-To prevent this, in Scala 
-you can only get new `ComputationGraph`s using the static `getNew` method:
+To prevent this, in Scala you can only get new `ComputationGraph`s
+using the static `getNew` method:
 
 ```scala
 for (i <- 0 until NUM_TIMES) {
@@ -195,7 +225,7 @@ SWIG generates Java wrappers for the various `std::vector<>` types,
 no-argument constructor, a `capacity: Int` constructor, and a
 `elems: java.util.Collection[T]` constructor (for the relevant type `T`).
 
-The `DynetScalaHelpers` contain implicit conversions from the corresponding
+`DynetScalaHelpers` contain implicit conversions from the corresponding
 `Seq` types, so that you can do things like
 
 ```scala
@@ -211,12 +241,12 @@ There are implicit conversions in the other direction too:
 println(intVector.mkString(" "))
 ```
 
-But the conversions are o(n) every time:
+But the conversions are O(n) every time:
 
 ```scala
 for (i <- 0 until intVector.size) {
-  println(intVector(i))     // BAD, o(n) conversion makes the loop quadratic
-  println(intVector.get(i)) // GOOD, o(1) native array access
+  println(intVector(i))     // BAD, O(n) conversion makes the loop quadratic
+  println(intVector.get(i)) // GOOD, O(1) native array access
 }
 ```
 
@@ -289,10 +319,12 @@ that are nicer to work with and that implicitly convert to the SWIG types.
 
 ### Serialization
 
-DyNet uses `boost::serialization` to correctly serialize/deserialize an 
-object graph of `Model`s, `Builder`s, and so on. On the Java side we expose
-`ModelLoader` and `ModelSaver` classes that wrap this functionality and 
-allow complex serialization from Scala code:
+DyNet uses `boost::serialization` to correctly serialize/deserialize
+an object graph of `Model`s, `Builder`s, and so on. On the Java side
+we expose `ModelLoader` and `ModelSaver` classes that wrap this
+functionality and allow complex serialization from Scala code. We also
+extended these classes to serialize primitives and Java/Scala objects
+that implement `Serializable`:
 
 ```scala
     val mod1 = new Model()
@@ -302,11 +334,15 @@ allow complex serialization from Scala code:
     val saver = new ModelSaver(path)
     saver.add_model(mod1)
     saver.add_srnn_builder(rnn1)
+    saver.add_object(new Foo())
+    saver.add_int(3)
     saver.done()
 
     val loader = new ModelLoader(path)
     val mod2 = loader.load_model()
     val rnn2 = loader.load_srnn_builder()
+    val foo = loader.load_object(classOf[Foo])
+    val i = loader.load_int()
     loader.done()
 ```
 
@@ -314,18 +350,3 @@ The `ModelSaver` doesn't do any tracking of what it saves (or in what order),
 so it's on you to track that and/or make sure you deserialize things in the
 same order they were serialized.
 
-In addition to the methods for Dynet objects, there are a variety of methods 
-for Scala primitives (e.g. `saver.add_int`), and support for serializing any
-object that implements `java.io.Serializable`:
-
-```scala
-  val s = "strings are serializable"
-  saver.add_object(s)
-  
-  // other stuff
-  
-  val s2 = loader.load_object(classOf[String])  
-```
-
-In fact, the `DynetScalaHelpers` implicitly add `add_string` and `load_string`
-methods that are simply wrappers around `add_object` and `load_object`.
