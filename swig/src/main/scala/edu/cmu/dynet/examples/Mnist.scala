@@ -55,7 +55,7 @@ object Mnist {
   }
 
   def main(args: Array[String]) {
-    myInitialize()
+    initialize(new DynetParams)
 
     val argList = args.toList
     val params = parseArgs(argList)

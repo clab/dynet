@@ -145,7 +145,7 @@ The one prominent difference is that the
 `DynetParams` struct (and corresponding wrapper class) has extra fields in the GPU version.
 
 This probably won't affect you unless you have GPU code that uses those fields and you want to run 
-it also on CPU. If you just use the Scala `myInitialize()` helper you should be fine.
+it also on CPU.
 
 ## Differences between Scala and C++
 
