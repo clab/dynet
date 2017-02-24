@@ -85,7 +85,7 @@ swig$ sbt "runMain edu.cmu.dynet.examples.XorScala"
 The Java example takes a couple more steps:
 
 ```
-swig$ javac -d . -cp ../build/swig/dynet_swigJNI.jar:../build/swig/dynet_swigJNI_dylib.jar src/main/java/edu/cmu/dynet/examples/XorExample.java
+swig$ javac -d . -cp ../build/swig/dynet_swigJNI.jar src/main/java/edu/cmu/dynet/examples/XorExample.java
 swig$ java -cp .:../build/swig/dynet_swigJNI.jar:../build/swig/dynet_swigJNI_dylib.jar edu.cmu.dynet.examples.XorExample
 ```
 
