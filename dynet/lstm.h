@@ -297,6 +297,6 @@ private:
 
 
 // Class version
-BOOST_CLASS_VERSION(dynet::LSTMBuilder, 1);
+DYNET_VERSION_DEFINE(dynet::LSTMBuilder, 1);
 
 #endif
