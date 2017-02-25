@@ -612,6 +612,13 @@ Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
     ostringstream s; s << "Bad input dimensions in PickNegLogSoftmax: " << xs;
     throw std::invalid_argument(s.str());
   }
+  if (pval && xs[0].bd != 1) {
+    ostringstream s; s << "PickNegLogSoftmax was called with a single ID (" << *pval << "), but the expression under consideration had multiple mini-batch elements (" << xs[0].bd << "). A vector of IDs of size " << xs[0].bd << " must be passed instead.";
+    throw std::invalid_argument(s.str());
+  } else if (pvals && xs[0].bd != pvals->size()) {
+    ostringstream s; s << "The number of IDs passed to PickNegLogSoftmax (" << pvals->size() << "), did not match the number of mini-batch elements in the expression under consideration (" << xs[0].bd << "). These numbers must match.";
+    throw std::invalid_argument(s.str());
+  }
   return Dim({1}, xs[0].bd);
 }
 
