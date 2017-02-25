@@ -521,7 +521,7 @@ cdef int SECRET = 923148
 cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
 def cg_version(): return _cg._cg_version
-def renew_cg(): return _cg.renew()
+def renew_cg(immediate_compute=False, check_validity=False): return _cg.renew(immediate_compute, check_validity)
 def print_text_graphviz(): return _cg.print_graphviz()
 def cg_checkpoint(): _cg.checkpoint()
 def cg_revert():     _cg.revert()
@@ -542,9 +542,11 @@ cdef class ComputationGraph:
     def __dealloc__(self):
         del self.thisptr
 
-    cpdef renew(self):
+    cpdef renew(self, immediate_compute=False, check_validity=False):
         del self.thisptr
         self.thisptr = new CComputationGraph()
+        if immediate_compute: self.thisptr.set_immediate_compute(immediate_compute)
+        if check_validity: self.thisptr.set_check_validity(check_validity)
         self._inputs = []
         self._cg_version += 1
         return self
