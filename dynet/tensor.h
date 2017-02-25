@@ -528,5 +528,5 @@ real rand_normal();
 
 } // namespace dynet
 
-BOOST_CLASS_VERSION(dynet::Tensor, 1)
+DYNET_VERSION_DEFINE(dynet::Tensor, 1)
 #endif
