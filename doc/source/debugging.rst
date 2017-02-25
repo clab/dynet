@@ -26,4 +26,8 @@ Further, dynet can automatically check validity of your model, i.e., detecting I
 
     cg.set_check_validity(true);
 
-These features are still in progress for Python (`contributions are welcome! <https://github.com/clab/dynet/issues/315>`_).
+In Python, these values can be set by using optional arguments to the ``renew_cg()`` function as follows:
+
+.. code:: python
+
+    dy.renew_cg(immediate_compute = True, check_validity = True)
