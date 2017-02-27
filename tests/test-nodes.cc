@@ -925,6 +925,26 @@ BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression select_rows(const Expression& x, vector<unsigned>& rows);
+BOOST_AUTO_TEST_CASE( select_rows_gradient ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> rows = {1};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = select_rows(x1, rows);
+  Expression z = y * input(cg, {3}, ones3_vals);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression select_cols(const Expression& x, vector<unsigned>& rows);
+BOOST_AUTO_TEST_CASE( select_cols_gradient ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> cols = {1};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = select_cols(x1, cols);
+  Expression z = input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression pickneglogsoftmax(const Expression& x, unsigned v);
 BOOST_AUTO_TEST_CASE( pickneglogsoftmax_gradient ) {
   unsigned idx = 1;
