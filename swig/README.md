@@ -7,7 +7,7 @@ implicit conversions that facilitate using DyNet from Scala.
 
 ## Building
 
-You need to have the latest version of SWIG installed (3.0.12 currently),
+You need to have a recent version of SWIG installed (3.0.11 or later),
 which you can download from [swig.org](http://www.swig.org/).
 Note that if you are using Ubuntu, `apt-get` will almost certainly install
 a much older version that won't work here. You also need to make sure that
