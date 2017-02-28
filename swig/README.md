@@ -7,7 +7,13 @@ implicit conversions that facilitate using DyNet from Scala.
 
 ## Building
 
-To include in the DyNet build, simply add `-DINCLUDE_SWIG=ON` to the
+You need to have a recent version of SWIG installed (3.0.11 or later),
+which you can download from [swig.org](http://www.swig.org/).
+Note that if you are using Ubuntu, `apt-get` will almost certainly install
+a much older version that won't work here. You also need to make sure that
+your `$JAVA_HOME` environment variable is set correctly.
+
+Then to build DyNet with the SWIG bindings, simply add `-DINCLUDE_SWIG=ON` to the
 `cmake` command. (See the [DyNet
 documentation](http://dynet.readthedocs.io/en/latest/install.html) for
 general build instructions). For example, run this from the `build`
