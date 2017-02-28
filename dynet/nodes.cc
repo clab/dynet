@@ -1667,8 +1667,13 @@ template<class MyDevice>
 void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto& rm = *pcols;
-  for (unsigned i = 0; i < rm.size(); ++i)
+  for (unsigned i = 0; i < rm.size(); ++i) {
+    if(rm[i] >= xs[0]->d.cols()) {
+      ostringstream oss; oss << "Out-of-bounds index " << rm[i] << " in SelectCols over expression of dimensions " << xs[0]->d;
+      throw std::invalid_argument(oss.str());
+    }
     fx.t<2>().chip<1>(i).device(*dev.edevice) = xs[0]->t<2>().chip<1>(rm[i]);
+  }
 }
 
 template<class MyDevice>
@@ -1689,9 +1694,13 @@ template<class MyDevice>
 void SelectRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto& rm = *prows;
-  for (unsigned i = 0; i < rm.size(); ++i)
-    fx.t<2>().chip<0>(i) = xs[0]->t<2>().chip<0>(rm[i]);
-    // fx.t<2>().device(*dev.edevice).chip<0>(i) = xs[0]->t<2>().chip<0>(rm[i]);
+  for (unsigned i = 0; i < rm.size(); ++i) {
+    if(rm[i] >= xs[0]->d.rows()) {
+      ostringstream oss; oss << "Out-of-bounds index " << rm[i] << " in SelectRows over expression of dimensions " << xs[0]->d;
+      throw std::invalid_argument(oss.str());
+    }
+    fx.t<2>().chip<0>(i).device(*dev.edevice) = xs[0]->t<2>().chip<0>(rm[i]);
+  }
 }
 
 template<class MyDevice>
@@ -1704,8 +1713,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
   assert(xs.size() == 1);
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<0>(rm[i]) = dEdf.t<2>().chip<0>(i);
-    // dEdxi.t<2>().device(*dev.edevice).chip<0>(rm[i]) = dEdf.t<2>().chip<0>(i);
+    dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
