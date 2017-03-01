@@ -42,7 +42,7 @@ class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
       val b = parameter(cg, layerParams.b)
       // apply affine transform
       val ev = new ExpressionVector(Seq(b, W, h_cur))
-      val a = affine_transform_VE(ev)
+      val a = affine_transform(ev)
       // apply activation function
       val h = activate(a, layer.activation)
       // take care of dropout
