@@ -8,6 +8,8 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "dynet/io-macros.h"
+
 namespace boost { namespace serialization { class access; } }
 
 namespace dynet {
@@ -78,10 +80,7 @@ private:
   std::vector<std::string> words_;
   Map d_;
 
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
-
+  DYNET_SERIALIZE_DECLARE()
 };
 
 std::vector<int> read_sentence(const std::string& line, Dict& sd);

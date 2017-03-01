@@ -202,7 +202,7 @@ SECRET = 923148
 #_cg = ComputationGraph(SECRET)
 
 def cg_version(): return _cg._cg_version
-def renew_cg(): return _cg.renew()
+def renew_cg(immediate_compute=False, check_validity=False): return _cg.renew(immediate_compute, check_validity)
 
 def cg():
     global _cg
@@ -213,7 +213,7 @@ class ComputationGraph(object):
         if guard != SECRET: raise RuntimeError("Do not instantiate ComputationGraph directly. Use pydynet.cg()")
         self._cg_version = 0
 
-    def renew(self):
+    def renew(self, immediate_compute=False, check_validity=False):
       vindex_count = -1
       del graphviz_items[:]
       return self
@@ -252,6 +252,7 @@ def pick_batch(a, indices): return GVExpr('pick_batch', [a, indices], make_dim(l
 def hinge(x, index, m=1.0): return GVExpr('hinge', [x, index, m], copy_dim(x))
 
 def nobackprop(x): return GVExpr('nobackprop', [x], copy_dim(x))
+def flip_gradient(x): return GVExpr('flip_gradient', [x], copy_dim(x))
 
 # binary-exp
 def cdiv(x, y): return GVExpr('cdiv', [x,y], ensure_same_dim(x,y))
@@ -265,7 +266,7 @@ def colwise_add(x, y):
   return GVExpr('colwise_add', [x,y], d)
 
 def trace_of_product(x, y): return GVExpr('trace_of_product', [x,y], ensure_same_dim(x,y))
-def cwise_multiply(x, y): return GVExpr('cwise_multiply', [x,y], ensure_same_dim(x,y))
+def cmult(x, y): return GVExpr('cmult', [x,y], ensure_same_dim(x,y))
 def dot_product(x, y): return GVExpr('dot_product', [x,y], ensure_same_dim(x,y))
 def squared_distance(x, y): return GVExpr('squared_distance', [x,y], ensure_same_dim(x,y))
 def l1_distance(x, y): return GVExpr('l1_distance', [x,y], ensure_same_dim(x,y))

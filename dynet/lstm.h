@@ -68,6 +68,13 @@ struct LSTMBuilder : public RNNBuilder {
   unsigned num_h0_components() const override { return 2 * layers; }
 
   std::vector<Expression> get_h(RNNPointer i) const override { return (i == -1 ? h0 : h[i]); }
+
+  /**
+   * @brief Get the final state of the hidden layer
+   * @details For `LSTMBuilder`, this consists of a vector of the memory cell values for each layer (l1, l2, l3),
+   *          followed by the hidden state values
+   * @return {c_{l1}, c_{l1}, ..., h_{l1}, h_{l2}, ...}
+   */
   std::vector<Expression> get_s(RNNPointer i) const override {
     std::vector<Expression> ret = (i == -1 ? c0 : c[i]);
     for (auto my_h : get_h(i)) ret.push_back(my_h);
@@ -154,9 +161,7 @@ public:
   float dropout_rate_h = 0.f, dropout_rate_c = 0.f;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
   ComputationGraph  *_cg;
 
 };
@@ -290,9 +295,7 @@ public:
 
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
   ComputationGraph* _cg; // Pointer to current cg
 
 };
@@ -301,6 +304,6 @@ private:
 
 
 // Class version
-BOOST_CLASS_VERSION(dynet::LSTMBuilder, 1);
+DYNET_VERSION_DEFINE(dynet::LSTMBuilder, 1);
 
 #endif

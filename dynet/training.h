@@ -18,6 +18,7 @@
 
 #include "dynet/model.h"
 #include "dynet/shadow-params.h"
+#include "dynet/io-macros.h"
 
 #define DYNET_TRAINER_DEFINE_DEV_IMPL() \
   void update_params(real scale, real gscale, size_t idx) override; \
@@ -140,9 +141,7 @@ struct Trainer {
   virtual void update_lookup_params(real scale, real gscale, size_t idx) = 0;
 
  private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -168,9 +167,7 @@ struct SimpleSGDTrainer : public Trainer {
   DYNET_TRAINER_DEFINE_DEV_IMPL()
  private:
   SimpleSGDTrainer() {}
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -208,9 +205,7 @@ struct MomentumSGDTrainer : public Trainer {
   //std::unordered_map<LookupParameterStorage*, std::unordered_map<unsigned, Tensor>> vl;
  private:
   MomentumSGDTrainer() {}
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -243,9 +238,7 @@ struct AdagradTrainer : public Trainer {
   std::vector<ShadowLookupParameters> vlp;
  private:
   AdagradTrainer() {}
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -283,9 +276,7 @@ struct AdadeltaTrainer : public Trainer {
   std::vector<ShadowLookupParameters> hld;
  private:
   AdadeltaTrainer() {}
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -319,9 +310,7 @@ struct RmsPropTrainer : public Trainer {
   std::vector<std::vector<real> > hlg;
  private:
   RmsPropTrainer() {}
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -361,9 +350,7 @@ struct AdamTrainer : public Trainer {
   std::vector<ShadowLookupParameters> lv;
  private:
   AdamTrainer() {}
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 } // namespace dynet

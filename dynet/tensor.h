@@ -12,13 +12,11 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <boost/serialization/split_member.hpp>
-#include <boost/serialization/version.hpp>
-
 #include "dynet/dim.h"
 #include "dynet/globals.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/devices.h"
+#include "dynet/io-macros.h"
 
 #if HAVE_CUDA
 #include <cuda.h>
@@ -181,18 +179,22 @@ struct Tensor {
   }
   /**
    * \brief Check for NaNs and infinite values
-   * \details This is very slow: use sparingly (it's linear in the number of elements). This raises a `std::runtime_error` exception if dynet was compiled with HAVE_CUDA because it's not implemented yet
+   * \details This is very slow: use sparingly (it's linear in the number of elements). This raises a `std::runtime_error` exception if the Tensor is on GPU because it's not implemented yet
    * \return Whether the tensor contains any invalid value
    */
   inline bool is_valid() const {
 #if HAVE_CUDA
     // TODO : replace this with a custom exception
-    throw std::runtime_error("is_valid() not implemented with HAVE_CUDA");
-#else
-    const size_t s = d.size();
-    for (unsigned i = 0; i < s; ++i)
-      if (std::isnan(v[i]) || std::isinf(v[i])) return false;
-    return true;
+    if (device->type == DeviceType::GPU) {
+      throw std::runtime_error("is_valid() not implemented on GPU");
+    } else {
+#endif
+      const size_t s = d.size();
+      for (unsigned i = 0; i < s; ++i)
+        if (std::isnan(v[i]) || std::isinf(v[i])) return false;
+      return true;
+#if HAVE_CUDA
+    }
 #endif
   }
 
@@ -247,12 +249,7 @@ struct Tensor {
   DeviceMempool mem_pool;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void save(Archive& ar, const unsigned int ver) const;
-  template<class Archive>
-  void load(Archive& ar, const unsigned int ver);
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
+  DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
 template<> inline Eigen::TensorMap<Eigen::Tensor<float, 0>> Tensor::t<0>() {
@@ -444,13 +441,13 @@ struct TensorTools {
    */
   static void RandomizeUniform(Tensor& val, real left = 0.0f, real right = 0.0f);
   /**
-   * \brief Takes a square matrix tensor and sets it as a random orthogonal matrix
-   * \details More specifically this samples a random matrix with RandomizeUniform and then performs SVD and returns the left orthogonal matrix in the decomposition, scaled by `scale`
+   * \brief Takes a square matrix tensor and sets it as a random orthonormal matrix
+   * \details More specifically this samples a random matrix with RandomizeUniform and then performs SVD and returns the left orthonormal matrix in the decomposition, scaled by `scale`
    *
    * \param val Input tensor
-   * \param scale Value to which the resulting orthogonal matrix will be scaled
+   * \param scale Value to which the resulting orthonormal matrix will be scaled
    */
-  static void RandomizeOrthogonal(Tensor& val, real scale = 1.0f);
+  static void RandomizeOrthonormal(Tensor& val, real scale = 1.0f);
   /**
    * \brief Access element of the tensor by index in the values array
    * \details AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -531,5 +528,5 @@ real rand_normal();
 
 } // namespace dynet
 
-BOOST_CLASS_VERSION(dynet::Tensor, 1)
+DYNET_VERSION_DEFINE(dynet::Tensor, 1)
 #endif
