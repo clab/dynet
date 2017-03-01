@@ -114,6 +114,14 @@ cdef CDim Dim(dim, unsigned int batch_size=1):
     else:
         return CDim(cvec)
 
+cdef tuple c_dim_as_dim(CDim d):
+    """
+    Returns a tuple (dims,batch_dim) where dims is the tuple of dimensions of each batch element
+    """
+    dim = tuple([d[i] for i in range(d.ndims())])
+    dim= (dim,d.batch_elems())
+    return tuple(dim)
+
 cdef tuple c_dim_as_shape(CDim d,bool force_batch=False):
     dim = [d[i] for i in range(d.ndims())]
     if force_batch or d.batch_elems()>1: dim.append(d.batch_elems())
@@ -698,10 +706,13 @@ cdef class Expression: #{{{
         return CExpression(self.cgp(), self.vindex)
 
     cpdef dim(self):
+        """
+        Returns a tuple (dims,batch_dim) where dims is the tuple of dimensions of each batch element
+        """
         cdef CDim d;
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         d=self.c().dim()
-        return c_dim_as_shape(d,force_batch=True)
+        return c_dim_as_dim(d)
         # return (d.size(), d.rows(), d.cols(), d.batch_elems())
 
     def __repr__(self):
