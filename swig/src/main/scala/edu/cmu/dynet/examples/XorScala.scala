@@ -1,7 +1,6 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
+import edu.cmu.dynet.{dynet_swig => dn, _}
 
 object XorScala {
   val HIDDEN_SIZE = 8
@@ -11,7 +10,7 @@ object XorScala {
 
   def main(args: Array[String]) {
     println("Running XOR example")
-    initialize(new DynetParams)
+    dn.initialize(new DynetParams)
     println("Dynet initialized!")
     val m = new Model
     val sgd = new SimpleSGDTrainer(m)
@@ -22,22 +21,22 @@ object XorScala {
     val p_V = m.add_parameters(dim(1, HIDDEN_SIZE))
     val p_a = m.add_parameters(dim(1))
 
-    val W = parameter(cg, p_W)
-    val b = parameter(cg, p_b)
-    val V = parameter(cg, p_V)
-    val a = parameter(cg, p_a)
+    val W = dn.parameter(cg, p_W)
+    val b = dn.parameter(cg, p_b)
+    val V = dn.parameter(cg, p_V)
+    val a = dn.parameter(cg, p_a)
 
     val x_values = new FloatVector(2)
-    val x = input(cg, dim(2), x_values)
+    val x = dn.input(cg, dim(2), x_values)
 
     // Need a pointer representation of scalars so updates are tracked
     val y_value = new FloatPointer
     y_value.set(0)
-    val y = input(cg, y_value)
+    val y = dn.input(cg, y_value)
 
-    val h = tanh(W * x + b)
+    val h = dn.tanh(W * x + b)
     val y_pred = V * h + a
-    val loss_expr = squared_distance(y_pred, y)
+    val loss_expr = dn.squared_distance(y_pred, y)
 
     println()
     println("Computation graphviz structure:")
@@ -53,7 +52,7 @@ object XorScala {
         x_values.set(0, if (x1) 1 else -1)
         x_values.set(1, if (x2) 1 else -1)
         y_value.set(if (x1 != x2) 1 else -1)
-        loss += as_scalar(cg.forward(loss_expr))
+        loss += dn.as_scalar(cg.forward(loss_expr))
         cg.backward(loss_expr)
         sgd.update(1.0f)
       }

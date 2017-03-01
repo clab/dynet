@@ -1,8 +1,6 @@
 package edu.cmu.dynet
 
 import org.scalatest._
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
 
 class VectorSpec extends FlatSpec with Matchers {
 
