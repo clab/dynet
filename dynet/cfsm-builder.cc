@@ -5,8 +5,6 @@
 
 #include <boost/serialization/vector.hpp>
 
-#include "dynet/io-macros.h"
-
 using namespace std;
 
 namespace dynet {
@@ -54,12 +52,7 @@ Expression StandardSoftmaxBuilder::full_log_distribution(const Expression& rep) 
   return log(softmax(affine_transform({b, w, rep})));
 }
 
-template<class Archive>
-void StandardSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<SoftmaxBuilder>(*this);
-  ar & p_w;
-  ar & p_b;
-}
+DYNET_SERIALIZE_COMMIT(StandardSoftmaxBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(SoftmaxBuilder, p_w, p_b))
 DYNET_SERIALIZE_IMPL(StandardSoftmaxBuilder)
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
@@ -220,20 +213,8 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
   cerr << "Read " << wc << " words in " << cdict.size() << " clusters (" << scs << " singleton clusters)\n";
 }
 
-template<class Archive>
-void ClassFactoredSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<SoftmaxBuilder>(*this);
-  ar & cdict;
-  ar & widx2cidx;
-  ar & widx2cwidx;
-  ar & cidx2words;
-  ar & singleton_cluster;
-  ar & p_r2c;
-  ar & p_cbias;
-  ar & p_rc2ws;
-  ar & p_rcwbiases;
-}
-
+DYNET_SERIALIZE_COMMIT(ClassFactoredSoftmaxBuilder,
+		       DYNET_SERIALIZE_DERIVED_DEFINE(SoftmaxBuilder, cdict, widx2cidx, widx2cwidx, cidx2words, singleton_cluster, p_r2c, p_cbias, p_rc2ws, p_rcwbiases))
 
 void ClassFactoredSoftmaxBuilder::initialize_expressions() {
   for (unsigned c = 0; c < p_rc2ws.size(); ++c) {

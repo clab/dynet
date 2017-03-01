@@ -46,7 +46,7 @@ class NoParameters(Saveable):
     def __init__(self, act):
         self.act = act
     def __call__(self, in_expr):
-        return self.act(cwise_multiply(in_expr))
+        return self.act(cmult(in_expr))
     def get_components(self): return []
     def restore_components(self,components):pass
 

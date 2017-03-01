@@ -6,7 +6,6 @@
 // #include "dynet/gpu-ops.h"
 #include "dynet/param-nodes.h"
 #include "dynet/weight-decay.h"
-#include "dynet/io-macros.h"
 
 // Macros for defining parameter update functions
 #ifdef __CUDACC__
@@ -16,21 +15,21 @@
 // This is correct, but dying when models are read and written.
 // if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,scale,gscale,values); } 
 // else if(values[0]->device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)values[0]->device,scale,gscale,values); } 
-// else { abort(); }
+// else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); }
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
   extern template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   void MyTrainer::update_rule(real scale, real gscale, const std::vector<Tensor*> & values) { \
     if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,scale,gscale,values); } \
     else if(default_device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)default_device,scale,gscale,values); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #else
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
   void MyTrainer::update_rule(real scale, real gscale, const std::vector<Tensor*> & values) { \
     if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,scale,gscale,values); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #endif
 
@@ -67,8 +66,8 @@ float Trainer::clip_gradients(real scale) {
     // TODO should I handle updatebale differently?
     float gg = model->gradient_l2_norm();
     if (isnan(gg) || isinf(gg)) {
-      cerr << "Magnitude of gradient is bad: " << gg << endl;
-      abort();
+      ostringstream oss; oss << "Magnitude of gradient is bad: " << gg;
+      throw std::runtime_error(oss.str());
     }
     if (scale * gg > clip_threshold) {
       ++clips;
@@ -317,59 +316,27 @@ void AdamTrainer::alloc_impl() {
 // BOOST_CLASS_EXPORT_IMPLEMENT(dynet::RmsPropTrainer)
 // BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdamTrainer)
 
-template<class Archive>
-void Trainer::serialize(Archive& ar, const unsigned int) {
-  ar & eta0 & eta & eta_decay & epoch;
-  ar & clipping_enabled & clip_threshold & clips & updates;
-  ar & aux_allocated;
-  ar & model;
-}
+DYNET_SERIALIZE_COMMIT(Trainer, DYNET_SERIALIZE_DEFINE(eta0, eta, eta_decay, epoch,
+						       clipping_enabled, clip_threshold, clips, updates,
+						       aux_allocated, model))
 DYNET_SERIALIZE_IMPL(Trainer)
 
-template<class Archive>
-void SimpleSGDTrainer::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<Trainer>(*this);
-}
+DYNET_SERIALIZE_COMMIT(SimpleSGDTrainer, DYNET_SERIALIZE_DERIVED_EQ_DEFINE(Trainer))
 DYNET_SERIALIZE_IMPL(SimpleSGDTrainer)
 
-template<class Archive>
-void MomentumSGDTrainer::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<Trainer>(*this);
-  ar & momentum;
-  ar & vp & vlp;
-}
+DYNET_SERIALIZE_COMMIT(MomentumSGDTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, momentum, vp, vlp))
 DYNET_SERIALIZE_IMPL(MomentumSGDTrainer)
 
-template<class Archive>
-void AdagradTrainer::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<Trainer>(*this);
-  ar & epsilon;
-  ar & vp & vlp;
-}
+DYNET_SERIALIZE_COMMIT(AdagradTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, epsilon, vp, vlp))
 DYNET_SERIALIZE_IMPL(AdagradTrainer)
 
-template<class Archive>
-void AdadeltaTrainer::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<Trainer>(*this);
-  ar & epsilon & rho;
-  ar & hg & hlg & hd & hld;
-}
+DYNET_SERIALIZE_COMMIT(AdadeltaTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, epsilon, rho, hg, hlg, hd, hld))
 DYNET_SERIALIZE_IMPL(AdadeltaTrainer)
 
-template<class Archive>
-void RmsPropTrainer::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<Trainer>(*this);
-  ar & epsilon & rho;
-  ar & hg & hlg;
-}
+DYNET_SERIALIZE_COMMIT(RmsPropTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, epsilon, rho, hg, hlg))
 DYNET_SERIALIZE_IMPL(RmsPropTrainer)
 
-template<class Archive>
-void AdamTrainer::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<Trainer>(*this);
-  ar & beta_1 & beta_2 & epsilon;
-  ar & m & lm & v & lv;
-}
+DYNET_SERIALIZE_COMMIT(AdamTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, beta_1, beta_2, epsilon, m, lm, v, lv))
 DYNET_SERIALIZE_IMPL(AdamTrainer)
 
 #endif

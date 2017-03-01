@@ -110,7 +110,7 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
   } else if (i == 2) {
     dEdxi.t<2>().device(*dev.edevice) += tdEdf;
   } else {
-    cerr << "shouldn't happen\n"; abort();
+    throw std::runtime_error("Illegal configuration in InnerProduct3D");
   }
 #endif
 }
@@ -173,7 +173,7 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
   } else if (i == 3) { // vector bias
     dEdxi.t<1>().device(*dev.edevice) += tdEdf;
   } else {
-    cerr << "shouldn't happen\n"; abort();
+    throw std::runtime_error("Illegal configuration in InnerProduct3D");
   }
 #endif
 }

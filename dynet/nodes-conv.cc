@@ -395,7 +395,7 @@ void KMaxPooling::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
   vector<Eigen::DenseIndex> indices(dim.size());
   const Eigen::DenseIndex* maxmap = &indices[0];
-  CUDA_CHECK(cudaMemcpyAsync((void*)maxmap, aux_mem, sizeof(Eigen::DenseIndex) * dim.size(), cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy((void*)maxmap, aux_mem, sizeof(Eigen::DenseIndex) * dim.size(), cudaMemcpyDeviceToHost));
 #else
   const Eigen::DenseIndex* maxmap = static_cast<const Eigen::DenseIndex*>(aux_mem);
 #endif

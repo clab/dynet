@@ -107,10 +107,8 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
     ndEdfs[i].d = dim;
     ndEdfs[i].device = nfxs[i].device;
     ndEdfs[i].v = static_cast<float*>(ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
-    if (!ndEdfs[i].v) {
-      cerr << "out of memory while attempting to allocate space for derivatives\n";
-      abort();
-    }
+    if (!ndEdfs[i].v)
+      throw std::runtime_error("out of memory while attempting to allocate space for derivatives");
   }
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();

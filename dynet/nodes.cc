@@ -158,16 +158,25 @@ template <class MyDevice>
 EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor & m, Tensor& z) {
   if(x.d.bd == 1 && x.d[1] == 1) {
     m.t<0>().device(*dev.edevice) = x.t<1>().maximum();
+#ifdef __CUDACC__
+    Eigen::array<int, 1> bcast;
+    bcast[0] = x.d[0];
+    // This needs to be split into two lines to prevent memory allocation
+    // TODO? Here and in logsoftmax: Is there a better way to subtract a scalar that is already on the GPU without using broadcasting (and without copying the scalar back to the host first)
+    z.t<0>().device(*dev.edevice) = (x.t<1>() - m.t<1>().broadcast(bcast)).exp().sum();
+    z.t<0>().device(*dev.edevice) = z.t<0>().log() + m.t<0>();
+#else
     float mval = as_scalar(m);
     // This needs to be split into two lines to prevent memory allocation
     z.t<0>().device(*dev.edevice) = (x.t<1>() - mval).exp().sum();
     z.t<0>().device(*dev.edevice) = z.t<0>().log() + mval;
+#endif
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 0;
     m.tb<1>().device(*dev.edevice) = x.tb<2>().maximum(red_axis);
     // TODO: Currently, the first version is slower on CPU, hence the switch
 #ifdef __CUDACC__
-    Eigen::array<int, 2> bcast({(int)x.d.rows(), 1, 1});
+    Eigen::array<int, 3> bcast({(int)x.d.rows(), 1, 1});
     Eigen::array<int, 3> morph({1, (int)m.d[0], (int)m.d.bd});
     // This needs to be split into two lines to prevent memory allocation
     z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().reshape(morph).broadcast(bcast)).exp().sum(red_axis);
@@ -847,8 +856,8 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
       throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-	  dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).template cast<float>().sum() * d;
-	}
+      dEdxi.tvec().chip<0>(*pelement).device(*dev.edevice) -= (eloss.tvec() > 0.f).template cast<float>().sum() * d;
+    }
   } else {
     assert(pelements != nullptr); 
     vector<float> fx_vec = as_vector(fx);
@@ -861,8 +870,8 @@ void Hinge::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
         throw std::runtime_error("CUDA memory allocation in hinge");
 #endif
-		dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).template cast<float>().sum() * d_vec[b];
-	  }
+        dEdxi.tb<1>().chip<1>(b).chip<0>((*pelements)[b]).device(*dev.edevice) -= (eloss.tb<1>().chip<1>(b) > 0.f).template cast<float>().sum() * d_vec[b];
+      }
     }
   }
 }
@@ -1039,7 +1048,13 @@ void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
   logsumexp(dev, *xs[0], m, z);
   if(fx.d.size() == fx.d.rows()) {
+#ifdef __CUDACC__
+    Eigen::array<int, 1> bcast;
+    bcast[0] = xs[0]->d[0];
+    fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - z.t<1>().broadcast(bcast);
+#else
     fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - as_scalar(z);
+#endif
   } else {
     // TODO? Is this broadcast efficient on CPU?
     Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
@@ -1259,6 +1274,23 @@ void NoBackprop::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(NoBackprop)
 
+template<class MyDevice>
+void FlipGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.v = xs[0]->v;
+}
+
+template<class MyDevice>
+void FlipGradient::backward_dev_impl(const MyDevice & dev,
+                                   const vector<const Tensor*>& xs,
+                                   const Tensor& fx,
+                                   const Tensor& dEdf,
+                                   unsigned i,
+                                   Tensor& dEdxi) const {
+  // takes negative on backprop
+  dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec();
+}
+DYNET_NODE_INST_DEV_IMPL(FlipGradient)  
+  
 template<class MyDevice>
 void MaxPooling1D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   throw std::runtime_error("MaxPooling1D::forward_dev_impl not implemented yet");
@@ -1635,8 +1667,13 @@ template<class MyDevice>
 void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto& rm = *pcols;
-  for (unsigned i = 0; i < rm.size(); ++i)
+  for (unsigned i = 0; i < rm.size(); ++i) {
+    if(rm[i] >= xs[0]->d.cols()) {
+      ostringstream oss; oss << "Out-of-bounds index " << rm[i] << " in SelectCols over expression of dimensions " << xs[0]->d;
+      throw std::invalid_argument(oss.str());
+    }
     fx.t<2>().chip<1>(i).device(*dev.edevice) = xs[0]->t<2>().chip<1>(rm[i]);
+  }
 }
 
 template<class MyDevice>
@@ -1657,9 +1694,13 @@ template<class MyDevice>
 void SelectRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 1);
   auto& rm = *prows;
-  for (unsigned i = 0; i < rm.size(); ++i)
-    fx.t<2>().chip<0>(i) = xs[0]->t<2>().chip<0>(rm[i]);
-    // fx.t<2>().device(*dev.edevice).chip<0>(i) = xs[0]->t<2>().chip<0>(rm[i]);
+  for (unsigned i = 0; i < rm.size(); ++i) {
+    if(rm[i] >= xs[0]->d.rows()) {
+      ostringstream oss; oss << "Out-of-bounds index " << rm[i] << " in SelectRows over expression of dimensions " << xs[0]->d;
+      throw std::invalid_argument(oss.str());
+    }
+    fx.t<2>().chip<0>(i).device(*dev.edevice) = xs[0]->t<2>().chip<0>(rm[i]);
+  }
 }
 
 template<class MyDevice>
@@ -1672,8 +1713,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
   assert(xs.size() == 1);
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<0>(rm[i]) = dEdf.t<2>().chip<0>(i);
-    // dEdxi.t<2>().device(*dev.edevice).chip<0>(rm[i]) = dEdf.t<2>().chip<0>(i);
+    dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
@@ -1909,24 +1949,50 @@ DYNET_NODE_INST_DEV_IMPL(Sqrt)
 template<class MyDevice>
 void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
-  if (num_args == 1) {
+  if (num_args == 1) 
     fx.v = xs[0]->v;
-    return;
-  }
-  TensorTools::Zero(fx);
+  else if (num_args == 2 && xs[0]->d.bd == xs[1]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec();
+  else if (num_args == 3 && xs[0]->d.bd == xs[1]->d.bd && xs[1]->d.bd == xs[2]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec();
+  else if (num_args == 4 && xs[0]->d.bd == xs[1]->d.bd && xs[1]->d.bd == xs[2]->d.bd && xs[2]->d.bd == xs[3]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec() + xs[3]->tvec();
+  else {
+    bool allSameBatchSize = std::all_of(xs.begin(), xs.end(), [&](const Tensor* x) { return x->d.bd == xs[0]->d.bd;});
+    if (allSameBatchSize) {
+      // Since they are all the same batch size, we can easily unroll the addition (results in lower GPU latency by merging multiple adds together in one CUDA call):
+      assert(num_args > 4);        // If it was <=4, we would have handled it in the special cases above
+      fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec() + xs[3]->tvec();
+
+      const unsigned remainder = (num_args - 4 ) % 4;
+      switch (remainder) {
+        case 0: break;
+        case 1: fx.tvec().device(*dev.edevice) += xs[4]->tvec(); break;
+        case 2: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec(); break;
+        case 3: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec() + xs[6]->tvec(); break;
+      }
+      for (unsigned i = 4 + remainder; i < num_args; i += 4)
+        fx.tvec().device(*dev.edevice) += xs[i]->tvec() + xs[i + 1]->tvec() + xs[i + 2]->tvec() + xs[i + 3]->tvec();
+    }
+    else {
+      // Not all the same batch size, so need to broadcast in the cases where they differ
+      TensorTools::Zero(fx);
 #if __CUDACC__
-  Eigen::array<int, 2> bcast({1, (int)fx.d.bd});
+      Eigen::array<int, 2> bcast({ 1, (int)fx.d.bd });
 #endif
-  for (unsigned i = 0; i < num_args; ++i) {
-    if(xs[i]->d.bd == fx.d.bd) {
-      fx.tvec().device(*dev.edevice) += xs[i]->tvec();
-    } else {
+      for (unsigned i = 0; i < num_args; ++i) {
+        if (xs[i]->d.bd == fx.d.bd) {
+          fx.tvec().device(*dev.edevice) += xs[i]->tvec();
+        }
+        else {
 #if __CUDACC__
-      fx.tbvec().device(*dev.edevice) += xs[i]->tbvec().broadcast(bcast);
+          fx.tbvec().device(*dev.edevice) += xs[i]->tbvec().broadcast(bcast);
 #else
-      for(unsigned b = 0; b < fx.d.bd; ++b)
-        fx.tbvec().chip<1>(b).device(*dev.edevice) += xs[i]->tvec();
+          for (unsigned b = 0; b < fx.d.bd; ++b)
+            fx.tbvec().chip<1>(b).device(*dev.edevice) += xs[i]->tvec();
 #endif
+        }
+      }
     }
   }
 }

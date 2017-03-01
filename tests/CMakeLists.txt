@@ -1,32 +1,51 @@
-find_package (Boost COMPONENTS system filesystem unit_test_framework REQUIRED)
-include_directories (${TEST_SOURCE_DIR}/src
-                     ${Boost_INCLUDE_DIRS}
-                     )
+include(CTest)
+enable_testing()
 
-add_definitions (-DBOOST_TEST_DYN_LINK)
+find_package(Boost COMPONENTS system filesystem unit_test_framework serialization REQUIRED)
+include_directories(${TEST_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS})
+add_definitions(-DBOOST_TEST_DYN_LINK)
 
-# Sources:
-set(test_dynet_SRCS
-    test-nodes.cc
-    test-trainers.cc
-    test-io.cc
-    test-params.cc
-)
+add_executable(test-dynet test-dynet.cc)
+add_executable(test-io test-io.cc)
+add_executable(test-nodes test-nodes.cc)
+add_executable(test-params test-params.cc)
+add_executable(test-trainers test-trainers.cc)
+add_executable(test-serialize test-serialize.cc)
 
-add_executable (test-dynet test-dynet.cc ${test_dynet_SRCS})
+if (NOT MSVC)
+  target_link_libraries(test-dynet ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+  target_link_libraries(test-io ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+  target_link_libraries(test-nodes ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+  target_link_libraries(test-params ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+  target_link_libraries(test-trainers ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+  target_link_libraries(test-serialize ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+endif()
 
 if (WITH_CUDA_BACKEND)
-  target_link_libraries (test-dynet gdynet ${LIBS}
-                         ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-                         )
-  add_dependencies(test-dynet dynetcuda)
-  target_link_libraries(test-dynet dynetcuda)
+  target_link_libraries(test-dynet gdynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
   CUDA_ADD_CUBLAS_TO_TARGET(test-dynet)
+  target_link_libraries(test-io gdynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  CUDA_ADD_CUBLAS_TO_TARGET(test-io)
+  target_link_libraries(test-nodes gdynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  CUDA_ADD_CUBLAS_TO_TARGET(test-nodes)
+  target_link_libraries(test-params gdynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  CUDA_ADD_CUBLAS_TO_TARGET(test-params)
+  target_link_libraries(test-trainers gdynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  CUDA_ADD_CUBLAS_TO_TARGET(test-trainers)
+  target_link_libraries(test-serialize gdynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  CUDA_ADD_CUBLAS_TO_TARGET(test-serialize)
 else()
-  target_link_libraries (test-dynet dynet ${LIBS}
-                         ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-                         )
-endif (WITH_CUDA_BACKEND)
+  target_link_libraries(test-dynet dynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  target_link_libraries(test-io dynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  target_link_libraries(test-nodes dynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  target_link_libraries(test-params dynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  target_link_libraries(test-trainers dynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+  target_link_libraries(test-serialize dynet ${LIBS} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+endif(WITH_CUDA_BACKEND)
 
-add_test(test-dynet test-dynet)
-
+add_test(NAME test-dynet COMMAND test-dynet)
+add_test(NAME test-io COMMAND test-io)
+add_test(NAME test-nodes COMMAND test-nodes)
+add_test(NAME test-params COMMAND test-params)
+add_test(NAME test-trainers COMMAND test-trainers)
+add_test(NAME test-serialize COMMAND test-serialize)

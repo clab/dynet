@@ -1,3 +1,5 @@
+#define BOOST_TEST_MODULE TEST_NODES
+
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/grad-check.h>
@@ -921,6 +923,44 @@ BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
   Expression y = pickrange(x1, 0, 2);
   Expression z = input(cg, {1,2}, ones2_vals) * y;
   BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression select_rows(const Expression& x, vector<unsigned>& rows);
+BOOST_AUTO_TEST_CASE( select_rows_gradient ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> rows = {1};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = select_rows(x1, rows);
+  Expression z = y * input(cg, {3}, ones3_vals);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression select_rows(const Expression& x, vector<unsigned>& rows);
+BOOST_AUTO_TEST_CASE( select_rows_oob ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> rows = {3};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = select_rows(x1, rows);
+  BOOST_CHECK_THROW(y.value(), std::invalid_argument);
+}
+
+// Expression select_cols(const Expression& x, vector<unsigned>& rows);
+BOOST_AUTO_TEST_CASE( select_cols_gradient ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> cols = {1};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = select_cols(x1, cols);
+  Expression z = input(cg, {1,3}, ones3_vals) * y;
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression select_cols(const Expression& x, vector<unsigned>& rows);
+BOOST_AUTO_TEST_CASE( select_cols_oob ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> cols = {3};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = select_cols(x1, cols);
+  BOOST_CHECK_THROW(y.value(), std::invalid_argument);
 }
 
 // Expression pickneglogsoftmax(const Expression& x, unsigned v);
