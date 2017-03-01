@@ -50,11 +50,13 @@ cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterStorage "dynet::ParameterStorage":
         CParameterStorage()
         CTensor values
+        CTensor g
         CDim dim
 
     cdef cppclass CLookupParameterStorage "dynet::LookupParameterStorage":
         CLookupParameterStorage()
         vector[CTensor] values
+        vector[CTensor] grads
         CDim dim
 
     cdef cppclass CParameters "dynet::Parameter":
