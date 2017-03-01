@@ -43,7 +43,7 @@ class WordDict {
 }
 
 object WordDict {
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
 
   def read_sentence(line: String, sd: WordDict): IntVector = {
     new IntVector(line.split(" ").map(sd.convert).toSeq)

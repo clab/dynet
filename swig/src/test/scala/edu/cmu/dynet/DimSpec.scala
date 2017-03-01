@@ -1,12 +1,10 @@
 package edu.cmu.dynet
 
 import org.scalatest._
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
 
 class DimSpec extends FlatSpec with Matchers {
 
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
 
   "Dims" should "get constructed properly with the varargs constructor" in {
     val dim123 = new Dim(1, 2, 3)

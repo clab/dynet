@@ -1,8 +1,7 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
-import DynetScalaHelpers._
+import edu.cmu.dynet.{dynet_swig => dn, _}
+import DyNetScalaHelpers._
 
 import scala.language.implicitConversions
 
@@ -34,8 +33,8 @@ class RnnLanguageModelBatch(
     //
     rnn.start_new_sequence()
     //
-    val i_R = parameter(cg, p_R)
-    val i_bias = parameter(cg, p_bias)
+    val i_R = dn.parameter(cg, p_R)
+    val i_bias = dn.parameter(cg, p_bias)
     //
     val errs = new ExpressionVector()
     // Set all inputs to the SOS symbol
@@ -53,19 +52,19 @@ class RnnLanguageModelBatch(
         if (next_arr.get(i) != sents(id).last) tokens.increment()
       }
       // embed the current tokens
-      val i_x_t = lookup(cg, p_c, last_arr)
+      val i_x_t = dn.lookup(cg, p_c, last_arr)
       //
       val i_y_t = rnn.add_input(i_x_t)
       //
       val i_r_t = i_bias + i_R * i_y_t
       //
-      val i_err = pickneglogsoftmax(i_r_t, next_arr)
+      val i_err = dn.pickneglogsoftmax(i_r_t, next_arr)
       errs.add(i_err)
       // change input
       last_arr = next_arr
     }
     // add all errors
-    val i_nerr = sum_batches(sum(errs))
+    val i_nerr = dn.sum_batches(dn.sum(errs))
     i_nerr
   }
 
@@ -74,8 +73,8 @@ class RnnLanguageModelBatch(
     rnn.new_graph(cg)
     rnn.start_new_sequence()
     //
-    val i_R = parameter(cg, p_R)
-    val i_bias = parameter(cg, p_bias)
+    val i_R = dn.parameter(cg, p_R)
+    val i_bias = dn.parameter(cg, p_bias)
 
     val kSOS = RnnLanguageModelBatch.kSOS
     val kEOS = RnnLanguageModelBatch.kEOS
@@ -87,13 +86,13 @@ class RnnLanguageModelBatch(
       //println("len", len, "cur", cur)
       len += 1
 
-      val i_x_t = lookup(cg, p_c, cur)
+      val i_x_t = dn.lookup(cg, p_c, cur)
       //show(i_x_t.dim, "i_x_t ")
       val i_y_t = rnn.add_input(i_x_t)
       //show(i_y_t.dim, "i_y_t ")
       val i_r_t = i_bias + i_R * i_y_t
       //show(i_r_t.dim, "i_r_t ")
-      val ydist = softmax(i_r_t / temp)
+      val ydist = dn.softmax(i_r_t / temp)
       //show(ydist.dim, "ydist ")
 
       // sample token
@@ -139,7 +138,7 @@ object RnnLanguageModelBatch {
 
   def main(args: Array[String]) {
 
-    initialize(new DynetParams)
+    dn.initialize(new DynetParams)
 
     val d = new WordDict
     kSOS = d.convert("<s>")
