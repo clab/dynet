@@ -5,7 +5,18 @@ from libcpp cimport bool
 ctypedef float real
 
 cdef extern from "dynet/init.h" namespace "dynet":
-    cdef void initialize(int& argc, char **& argv, unsigned random_seed)
+    cdef cppclass CDynetParams "dynet::DynetParams":
+        unsigned random_seed
+        string mem_descriptor
+        float weight_decay
+        bool shared_parameters
+        bool ngpus_requested
+        bool ids_requested
+        int requested_gpus
+        vector[int] gpu_mask
+    cdef CDynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters)
+    cdef void initialize(CDynetParams params)
+    cdef void initialize(int& argc, char **& argv, bool shared_parameters)
 
 cdef extern from "dynet/dim.h" namespace "dynet":
     cdef cppclass CDim "dynet::Dim":
@@ -131,6 +142,10 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         void checkpoint()
         void revert()
 
+        # immediate computation
+        void set_immediate_compute(bool ic)
+        void set_check_validity(bool cv)
+
         void print_graphviz() const
 
 cdef extern from "dynet/training.h" namespace "dynet":
@@ -205,7 +220,9 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     # identity function, but derivative is not propagated through it
     CExpression c_nobackprop "dynet::expr::nobackprop" (CExpression& x) #
-
+    # identity function, but derivative takes negative as propagated through it
+    CExpression c_flip_gradient "dynet::expr::flip_gradient" (CExpression& x) #
+    
     CExpression c_op_neg "dynet::expr::operator-" (CExpression& x) #
     CExpression c_op_add "dynet::expr::operator+" (CExpression& x, CExpression& y) #
     CExpression c_op_scalar_add "dynet::expr::operator+" (CExpression& x, float y) #

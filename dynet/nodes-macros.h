@@ -74,7 +74,7 @@ inline bool LooksLikeVector(const Dim& d) {
     assert(fx.device); \
     if(fx.device->type == DeviceType::CPU) { forward_dev_impl<dynet::Device_CPU>(*(dynet::Device_CPU*)fx.device,xs,fx); } \
     else if(fx.device->type == DeviceType::GPU) { forward_dev_impl<dynet::Device_GPU>(*(dynet::Device_GPU*)fx.device,xs,fx); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Invalid device in MyNode::forward_impl"); } \
   } \
   void MyNode::backward_impl(const std::vector<const Tensor*>& xs, \
                 const Tensor& fx, \
@@ -84,7 +84,7 @@ inline bool LooksLikeVector(const Dim& d) {
     assert(fx.device); \
     if(fx.device->type == DeviceType::CPU) { backward_dev_impl<dynet::Device_CPU>(*(dynet::Device_CPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
     else if(fx.device->type == DeviceType::GPU) { backward_dev_impl<dynet::Device_GPU>(*(dynet::Device_GPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Invalid device in MyNode::backward_impl"); } \
   }
 #else
 #define DYNET_NODE_INST_DEV_IMPL(MyNode) \
@@ -98,7 +98,7 @@ inline bool LooksLikeVector(const Dim& d) {
   void MyNode::forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const { \
     assert(fx.device); \
     if(fx.device->type == DeviceType::CPU) { forward_dev_impl<dynet::Device_CPU>(*(dynet::Device_CPU*)fx.device,xs,fx); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Invalid device in MyNode::forward_impl"); } \
   } \
   void MyNode::backward_impl(const std::vector<const Tensor*>& xs, \
                 const Tensor& fx, \
@@ -107,7 +107,7 @@ inline bool LooksLikeVector(const Dim& d) {
                 Tensor& dEdxi) const { \
     assert(fx.device); \
     if(fx.device->type == DeviceType::CPU) { backward_dev_impl<dynet::Device_CPU>(*(dynet::Device_CPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
-    else { abort(); } \
+    else { throw std::runtime_error("Invalid device in MyNode::backward_impl"); } \
   }
 #endif
 

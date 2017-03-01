@@ -315,13 +315,15 @@ string Sum::as_string(const vector<string>& arg_names) const {
 
 Dim Sum::dim_forward(const vector<Dim>& xs) const {
   Dim d = xs[0].truncate();
+  unsigned int batch = d.bd;
   for (unsigned i = 1; i < xs.size(); ++i) {
     if (d.single_batch() != xs[i].truncate().single_batch()) {
       ostringstream s; s << "Mismatched input dimensions in Sum: " << xs;
       throw std::invalid_argument(s.str());
     }
-    d.bd = max(xs[i].bd, d.bd);
+    batch = max(xs[i].bd, batch);
   }
+  d = xs[0]; d.bd = batch;
   return d;
 }
 
@@ -550,6 +552,17 @@ Dim NoBackprop::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string FlipGradient::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "flip_gradient(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim FlipGradient::dim_forward(const vector<Dim>& xs) const {
+  assert(xs.size() == 1);
+  return xs[0];
+}  
+  
 string Softmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "softmax(" << arg_names[0] << ')';
@@ -597,6 +610,13 @@ Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
   assert(xs.size() == 1);
   if (!LooksLikeVector(xs[0])) {
     ostringstream s; s << "Bad input dimensions in PickNegLogSoftmax: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  if (pval && xs[0].bd != 1) {
+    ostringstream s; s << "PickNegLogSoftmax was called with a single ID (" << *pval << "), but the expression under consideration had multiple mini-batch elements (" << xs[0].bd << "). A vector of IDs of size " << xs[0].bd << " must be passed instead.";
+    throw std::invalid_argument(s.str());
+  } else if (pvals && xs[0].bd != pvals->size()) {
+    ostringstream s; s << "The number of IDs passed to PickNegLogSoftmax (" << pvals->size() << "), did not match the number of mini-batch elements in the expression under consideration (" << xs[0].bd << "). These numbers must match.";
     throw std::invalid_argument(s.str());
   }
   return Dim({1}, xs[0].bd);

@@ -14,6 +14,7 @@
 #include "dynet/dynet.h"
 #include "dynet/rnn-state-machine.h"
 #include "dynet/expr.h"
+#include "dynet/io-macros.h"
 
 using namespace dynet::expr;
 
@@ -283,9 +284,7 @@ private:
   RNNStateMachine sm;
   std::vector<RNNPointer> head; // head[i] returns the head position
 
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -364,25 +363,13 @@ private:
 
   unsigned layers;
   bool lagging;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
-
+ 
+  DYNET_SERIALIZE_DECLARE()
 };
 
 } // namespace dynet
 
-
-namespace boost {
-namespace serialization {
-template<class Archive>
-void serialize(Archive& ar, dynet::RNNPointer& p, const unsigned int)
-{
-  ar & p.t;
-}
-} // namespace serialization
-} // namespace boost
+DYNET_NINTRUSIVE_SERIALIZE_DEFINE(dynet::RNNPointer & p, p.t)
 
 BOOST_CLASS_EXPORT_KEY(dynet::RNNBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::SimpleRNNBuilder)

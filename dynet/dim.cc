@@ -2,8 +2,6 @@
 
 #include <iostream>
 
-#include "dynet/io-macros.h"
-
 using namespace std;
 
 namespace dynet {
@@ -25,11 +23,7 @@ ostream& operator<<(ostream& os, const vector<Dim>& ds) {
   return os << ']';
 }
 
-template<class Archive>
-void Dim::serialize(Archive& ar, const unsigned int) {
-  ar & nd;
-  ar & d;
-}
+DYNET_SERIALIZE_COMMIT(Dim, DYNET_SERIALIZE_DEFINE(nd, d))
 DYNET_SERIALIZE_IMPL(Dim)
 
 } // namespace dynet

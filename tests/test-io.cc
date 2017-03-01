@@ -1,3 +1,5 @@
+#define BOOST_TEST_MODULE TEST_IO
+
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/rnn.h>

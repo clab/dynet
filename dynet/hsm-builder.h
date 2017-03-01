@@ -8,6 +8,7 @@
 #include "dynet/expr.h"
 #include "dynet/dict.h"
 #include "dynet/cfsm-builder.h"
+#include "dynet/io-macros.h"
 
 namespace dynet {
 
@@ -26,9 +27,7 @@ private:
   unsigned output_size;
 
   expr::Expression predict(expr::Expression h, ComputationGraph& cg) const;
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 
 public:
   Cluster();
