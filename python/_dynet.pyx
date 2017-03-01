@@ -773,7 +773,7 @@ cdef class Expression: #{{{
         cdef CTensor t
         if recalculate: self.cg().forward(self.vindex)
         t = self.cgp().get_value(self.vindex)
-        if t.d.ndims() == 2:
+        if t.d.ndims() >= 2:
             return self.npvalue()
         vec = self.vec_value()
         if len(vec) == 1: return vec[0]
