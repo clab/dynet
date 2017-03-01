@@ -28,7 +28,7 @@ void graph_optimize(ComputationGraph* cg) {
     }
     cerr << "LONGEST PATH: " << longest_paths[i] << "\tx" << i << " = " << nodes[i]->as_string(x) << endl;
   }
-  abort();// DEBUGGING
+  throw std::runtime_error("Failure in graph optimization");// DEBUGGING
 }
 
 } // namespaiice dynet

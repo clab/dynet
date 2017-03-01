@@ -2,10 +2,12 @@
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/base_object.hpp>
+#include <boost/serialization/vector.hpp>
 #include "dynet/dynet.h"
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
 #include "dynet/lstm.h"
+#include "dynet/io-macros.h"
 
 using namespace dynet::expr;
 
@@ -28,11 +30,7 @@ public:
   virtual Expression add_input_impl(int prev, const Expression& x) override;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<RNNBuilder>(*this);
-  }
+  DYNET_SERIALIZE_DECLARE()
 };
 
 struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -71,16 +69,8 @@ struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
   unsigned N; // Max branching factor
 private:
   ComputationGraph* cg;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-    ar & params;
-    ar & lparams;
-    ar & layers;
-    ar & N;
-  }
+  
+  DYNET_SERIALIZE_DECLARE()
 };
 
 struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -100,12 +90,7 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   std::vector<Expression> h;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-    ar & node_builder;
-  }
+  DYNET_SERIALIZE_DECLARE()
 };
 
 struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -127,13 +112,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   std::vector<Expression> h;
 
 private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & boost::serialization::base_object<TreeLSTMBuilder>(*this);
-    ar & fwd_node_builder;
-    ar & rev_node_builder;
-  }
+  DYNET_SERIALIZE_DECLARE()
 };
 } // namespace dynet
 
@@ -141,4 +120,3 @@ BOOST_CLASS_EXPORT_KEY(dynet::TreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::NaryTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::UnidirectionalTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::BidirectionalTreeLSTMBuilder)
-

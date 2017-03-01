@@ -14,8 +14,6 @@ __global__ void ker_const_init(int n, float val, float *trg) {
   // Make sure we do not go out of bounds
   if (id < n)
     trg[id] = val;
-
-  __syncthreads();
 }
 
 void const_init(int n, float val, float *trg) {
@@ -33,8 +31,6 @@ __global__ void ker_dense_to_sparse_assign(int n, const unsigned int *idx, float
   // Make sure we do not go out of bounds
   if (id < n)
     trg[idx[id]] = src[id];
-
-  __syncthreads();
 }
 
 void dense_to_sparse_assign(int n, const unsigned int *idx, float *src, float *trg) {
@@ -54,8 +50,6 @@ __global__ void ker_sparse_to_dense_assign(int n, const unsigned int *idx, float
   // Make sure we do not go out of bounds
   if (id < n)
     trg[id] = src[idx[id]];
-
-  __syncthreads();
 }
 
 void sparse_to_dense_assign(int n, const unsigned int *idx, float *src, float *trg) {
@@ -75,8 +69,6 @@ __global__ void ker_dense_to_sparse_subtract(int n, const unsigned int *idx, flo
   // Make sure we do not go out of bounds
   if (id < n)
     atomicAdd(trg + idx[id], -src[id]);
-
-  __syncthreads();
 }
 
 void dense_to_sparse_subtract(int n, const unsigned int *idx, float *src, float *trg) {
@@ -96,8 +88,6 @@ __global__ void ker_sparse_to_dense_block_assign_and_multiply(int n, const unsig
   // Make sure we do not go out of bounds
   if (id < n*bsize)
     trg[id] = src[idx[id/bsize]*bsize+id%bsize] * mult;
-
-  __syncthreads();
 }
 
 void sparse_to_dense_block_assign_and_multiply(int n, const unsigned *idx, int bsize, float mult, float *src, float *trg) {
@@ -117,8 +107,6 @@ __global__ void ker_dense_to_sparse_block_add(int n, const unsigned *idx, int bs
   // Make sure we do not go out of bounds
   if (id < n*bsize)
     atomicAdd(trg + idx[id/bsize]*bsize+id%bsize, src[id]);
-
-  __syncthreads();
 }
 
 void dense_to_sparse_block_add(int n, const unsigned *idx, int bsize, float *src, float *trg) {

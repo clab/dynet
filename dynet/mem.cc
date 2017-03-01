@@ -10,7 +10,7 @@
 
 #include <fcntl.h>
 #if !_WINDOWS
-	#include <mm_malloc.h>
+#include <mm_malloc.h>
 #endif
 #include "dynet/except.h"
 #if HAVE_CUDA
@@ -44,8 +44,8 @@ void CPUAllocator::zero(void* p, size_t n) {
 
 void* SharedAllocator::malloc(size_t n) {
 #if _WINDOWS
-	cerr << "Shared memory not supported in Windows" << endl;
-	throw dynet::out_of_memory("Shared memory allocation failed");
+  cerr << "Shared memory not supported in Windows" << endl;
+  throw dynet::out_of_memory("Shared memory allocation failed");
 #else
   void* ptr = mmap(NULL, n, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
   if (!ptr) {

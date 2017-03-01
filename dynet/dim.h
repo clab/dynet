@@ -16,6 +16,8 @@
 #include <cstring>
 #include <vector>
 
+#include "dynet/io-macros.h"
+
 /**
  * \ingroup dim
  * Maximum number of dimensions supported by dynet : 7
@@ -202,8 +204,7 @@ struct Dim {
   unsigned int nd; /**< Number of dimensions */
   unsigned int bd; /**< Batch dimension */
 private:
-  friend class boost::serialization::access;
-  template<class Archive> void serialize(Archive& ar, const unsigned int);
+  DYNET_SERIALIZE_DECLARE()
 };
 
 //static_assert(std::is_trivially_copyable<Dim>::value, "Dim must be trivially copyable");

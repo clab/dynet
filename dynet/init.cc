@@ -55,8 +55,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     // Memory
     if (arg == "--dynet-mem" || arg == "--dynet_mem") {
       if ((argi + 1) > argc) {
-        cerr << "[dynet] --dynet-mem expects an argument (the memory, in megabytes, to reserve)\n";
-        abort();
+        throw std::invalid_argument("[dynet] --dynet-mem expects an argument (the memory, in megabytes, to reserve)");
       } else {
         params.mem_descriptor = argv[argi + 1];
         remove_args(argc, argv, argi, 2);
@@ -66,8 +65,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     // Weight decay
     else if (arg == "--dynet-weight-decay" || arg == "--dynet_weight_decay") {
       if ((argi + 1) > argc) {
-        cerr << "[dynet] --dynet-weight-decay requires an argument (the weight decay per update)\n";
-        abort();
+        throw std::invalid_argument("[dynet] --dynet-weight-decay requires an argument (the weight decay per update)");
       } else {
         string a2 = argv[argi + 1];
         istringstream d(a2); d >> params.weight_decay;
@@ -78,8 +76,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     // Random seed
     else if (arg == "--dynet-seed" || arg == "--dynet_seed") {
       if ((argi + 1) > argc) {
-        cerr << "[dynet] --dynet-seed expects an argument (the random number seed)\n";
-        abort();
+        throw std::invalid_argument("[dynet] --dynet-seed expects an argument (the random number seed)");
       } else {
         string a2 = argv[argi + 1];
         istringstream c(a2); c >> params.random_seed;
@@ -91,12 +88,10 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     // Number of GPUs
     else if (arg == "--dynet_gpus" || arg == "--dynet-gpus") {
       if ((argi + 1) > argc) {
-        cerr << "[dynet] --dynet-gpus expects an argument (number of GPUs to use)\n";
-        abort();
+        throw std::invalid_argument("[dynet] --dynet-gpus expects an argument (number of GPUs to use)");
       } else {
-        if (params.ngpus_requested) {
-          cerr << "Multiple instances of --dynet-gpus" << endl; abort();
-        }
+        if (params.ngpus_requested)
+          throw std::invalid_argument("Multiple instances of --dynet-gpus");
         params.ngpus_requested = true;
         string a2 = argv[argi + 1];
         istringstream c(a2); c >> params.requested_gpus;
@@ -107,29 +102,29 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     // GPU ids
     else if (arg == "--dynet_gpu_ids" || arg == "--dynet-gpu-ids") {
       if ((argi + 1) > argc) {
-        cerr << "[dynet] --dynet-gpu-ids expects an argument (comma separated list of physical GPU ids to use)\n";
-        abort();
+        throw std::invalid_argument("[dynet] --dynet-gpu-ids expects an argument (comma separated list of physical GPU ids to use)");
       } else {
         string a2 = argv[argi + 1];
-        if (params.ids_requested) {
-          cerr << "Multiple instances of --dynet-gpu-ids" << endl; abort();
-        }
+        if (params.ids_requested)
+          throw std::invalid_argument("Multiple instances of --dynet-gpu-ids");
         params.ids_requested = true;
         if (a2.size() % 2 != 1) {
-          cerr << "Bad argument to --dynet-gpu-ids: " << a2 << endl; abort();
+          ostringstream oss; oss << "Bad argument to --dynet-gpu-ids: " << a2; throw std::invalid_argument(oss.str());
         }
         for (unsigned i = 0; i < a2.size(); ++i) {
           if ((i % 2 == 0 && (a2[i] < '0' || a2[i] > '9')) ||
               (i % 2 == 1 && a2[i] != ',')) {
-            cerr << "Bad argument to --dynet-gpu-ids: " << a2 << endl; abort();
+            ostringstream oss; oss << "Bad argument to --dynet-gpu-ids: " << a2;
+            throw std::invalid_argument(oss.str());
           }
           if (i % 2 == 0) {
             int gpu_id = a2[i] - '0';
-            if (gpu_id >= MAX_GPUS) { cerr << "Raise MAX_GPUS\n"; abort(); }
+            if (gpu_id >= MAX_GPUS) { throw std::runtime_error("DyNet hard limit on maximum number of GPUs (MAX_GPUS) exceeded. If you need more, modify the code to raise this hard limit."); }
             params.gpu_mask[gpu_id]++;
             params.requested_gpus++;
             if (params.gpu_mask[gpu_id] != 1) {
-              cerr << "Bad argument to --dynet-gpu-ids: " << a2 << endl; abort();
+              ostringstream oss; oss << "Bad argument to --dynet-gpu-ids: " << a2;
+              throw std::invalid_argument(oss.str());
             }
           }
         }
@@ -143,15 +138,12 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
       argi++;
     }
 
-
   }
 
 #if HAVE_CUDA
   // Check for conflict between the two ways of requesting GPUs
-  if (params.ids_requested && params.ngpus_requested) {
-    cerr << "Use only --dynet_gpus or --dynet_gpu_ids, not both\n";
-    abort();
-  }
+  if (params.ids_requested && params.ngpus_requested)
+    throw std::invalid_argument("Use only --dynet_gpus or --dynet_gpu_ids, not both\n");
 #endif
 
   return params;
@@ -179,10 +171,8 @@ void initialize(DynetParams& params) {
   rndeng = new mt19937(params.random_seed);
 
   // Set weight decay rate
-  if (params.weight_decay < 0 || params.weight_decay >= 1) {
-    cerr << "[dynet] weight decay parameter must be between 0 and 1 (probably very small like 1e-6)\n";
-    abort();
-  }
+  if (params.weight_decay < 0 || params.weight_decay >= 1)
+    throw std::invalid_argument("[dynet] weight decay parameter must be between 0 and 1 (probably very small like 1e-6)\n");
   weight_decay_lambda = params.weight_decay;
 
   // Allocate memory
