@@ -52,8 +52,8 @@ class ExpressionSpec extends FlatSpec with Matchers {
     e2 / 10 shouldHaveValue 0.2f
 
     // affine transform
-    affine_transform(Seq(e1, e2, e3)) shouldHaveValue 7 // 1 + 2 * 3
-    affine_transform(Seq(e1, e2, e3, e1, e3)) shouldHaveValue 10 // 1 + 2 * 3 + 1 * 3
+    affine_transform_VE(Seq(e1, e2, e3)) shouldHaveValue 7 // 1 + 2 * 3
+    affine_transform_VE(Seq(e1, e2, e3, e1, e3)) shouldHaveValue 10 // 1 + 2 * 3 + 1 * 3
 
     // sum + average
     sum(Seq(e1, e2, e2, e3, e3, e3)) shouldHaveValue 14

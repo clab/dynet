@@ -94,7 +94,7 @@ class EncoderDecoder(
     }
 
     // Put it as a vector
-    val i_combined = concatenate_VE(to)
+    val i_combined = concatenate(to)
     val i_nc = if (bidirectional) {
       // Perform an affine transformation for rescaling
       val i_ie2oe = parameter(cg, p_ie2oe.get)

@@ -538,9 +538,6 @@ Expression log_softmax(const Expression& x, const std::vector<unsigned>& restric
 
 %template(logsumexp) detail::f<LogSumExp, std::vector<Expression>>;
 
-// TODO(joelgrus): delete this once no one is using it
-%template(logsumexp_VE) detail::f<LogSumExp, std::vector<Expression>>;
-
 Expression pickneglogsoftmax(const Expression& x, unsigned v);
 Expression pickneglogsoftmax(const Expression& x, const unsigned* pv);
 Expression pickneglogsoftmax(const Expression& x, const std::vector<unsigned>& v);
@@ -577,10 +574,6 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
 %template(concatenate_cols) detail::f<ConcatenateColumns, std::vector<Expression>>;
 %template(concatenate) detail::f<Concatenate, std::vector<Expression>>;
-
-// TODO(joelgrus): delete these once no one is using them
-%template(concatenate_cols_VE) detail::f<ConcatenateColumns, std::vector<Expression>>;
-%template(concatenate_VE) detail::f<Concatenate, std::vector<Expression>>;
 
 /* NOISE OPERATIONS */
 
