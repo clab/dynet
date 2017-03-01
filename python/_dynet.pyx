@@ -888,10 +888,15 @@ def inputTensor(arr,bool batched=False):
     """
     Creates a tensor expression based on a numpy array or a list.
     The dimension is inferred from the shape of the input.
-    if batched=True, the last dimension is used as abatch dimension
+    if batched=True, the last dimension is used as a batch dimension
+    if arr is a list of numpy ndarrays, this returns a batched expression where the batch elements are the elements of the list
     """
     if isinstance(arr,list):
-        arr=np.asarray(arr,dtype=float)
+        if all([isinstance(x,np.ndarray) for x in arr]):
+            arr = np.stack(arr,axis=-1)
+            batched=True
+        else:
+            arr=np.asarray(arr,dtype=float)
     if not isinstance(arr,np.ndarray):
         raise TypeError("Input Tensor should be a numpy.ndarray or a valid list pf floats")
     if batched:
