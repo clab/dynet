@@ -1,5 +1,17 @@
-Coding Style
-============
+Coding Tips and Style
+=====================
+
+Coding Tips
+-----------
+
+**Adding New Operations:**
+One of the most common things that one will want to do to modify DyNet is to add a new operation
+to calculate a new function.
+You can find more information on how to do so at the end of the tutorial slides
+`here <http://phontron.com/slides/emnlp2016-dynet-tutorial-part1.pdf>`_.
+
+Coding Conventions
+------------------
 
 DyNet (the main version in C++) has certain coding style standards:
 
@@ -25,5 +37,5 @@ computation graph construction.
 
 **Throwing Exceptions:** When the user does something illegal, throw an
 exception. "assert" should never be used for something that might be triggered
-by a user. (As `noted <https://github.com/clab/dynet/issues/139>`_, there are
-still many places that don't follow this standard as of Dec. 13, 2016.)
+by a user. (As `noted <https://github.com/clab/dynet/issues/139>`_)
+
