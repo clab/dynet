@@ -114,11 +114,25 @@ cdef CDim Dim(dim, unsigned int batch_size=1):
     else:
         return CDim(cvec)
 
+cdef tuple c_dim_as_shape(CDim d,bool force_batch=False):
+    dim = [d[i] for i in range(d.ndims())]
+    if force_batch or d.batch_elems()>1: dim.append(d.batch_elems())
+    return tuple(dim)
+
+cdef CDim shape_as_c_dim(tuple d,bool batched = False):
+    if batched:
+        dim = d[:-1] if len(d) > 1 else (1,)
+        batch_size= d[-1]
+    else:
+        dim = d
+        batch_size = 1
+    return Dim(dim,batch_size=batch_size)
+
 cdef c_tensor_as_np(CTensor &t):
     # TODO: make more efficient, with less copy
     arr = np.array(c_as_vector(t))
-    if t.d.ndims() == 1: return arr
-    else: return arr.reshape(t.d.rows(), t.d.cols(),order='F')
+    dim = c_dim_as_shape(t.d)
+    return arr.reshape(dim,order='F')
 
 # {{{ Model / Parameters 
 cdef class Parameters:
@@ -136,8 +150,7 @@ cdef class Parameters:
         return self
 
     cpdef shape(self):
-        if self.thisptr.get().dim.ndims() == 1: return (self.thisptr.get().dim.rows())
-        return (self.thisptr.get().dim.rows(), self.thisptr.get().dim.cols())
+        return c_dim_as_shape(self.thisptr.get().dim)
 
     cpdef as_array(self):
         """
@@ -203,9 +216,7 @@ cdef class LookupParameters:
             self.init_row(i, row)
 
     cpdef shape(self):
-        if self.thisptr.get().dim.cols() != 1:
-            return (self.thisptr.get().values.size(), self.thisptr.get().dim.rows(), self.thisptr.get().dim.cols())
-        return (self.thisptr.get().values.size(), self.thisptr.get().dim.rows())
+        return c_dim_as_shape(self.thisptr.get().all_dim)
 
     def __getitem__(self, int i):
         return lookup(self, i)
@@ -690,7 +701,8 @@ cdef class Expression: #{{{
         cdef CDim d;
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         d=self.c().dim()
-        return (d.size(), d.rows(), d.cols(), d.batch_elems())
+        return c_dim_as_shape(d,force_batch=True)
+        # return (d.size(), d.rows(), d.cols(), d.batch_elems())
 
     def __repr__(self):
         return str(self)
@@ -753,17 +765,7 @@ cdef class Expression: #{{{
         if recalculate: self.cg().forward(self.vindex)
         t = self.cgp().get_value(self.vindex)
         dim = t.d
-        arr = np.array(c_as_vector(t))
-        if dim.batch_elems() > 1:
-            if dim.ndims() == 1:
-                arr = arr.reshape(dim.rows(), dim.batch_elems(),order='F')
-            elif dim.ndims() == 2:
-                arr = arr.reshape(dim.rows(), dim.cols(), dim.batch_elems(),order='F')
-            else:
-                assert(False)
-            return arr
-        if dim.ndims() == 2:
-            arr = arr.reshape(dim.rows(), dim.cols(),order='F')
+        arr = np.array(c_tensor_as_np(t))
         return arr
 
     cpdef value(self, recalculate=False):
