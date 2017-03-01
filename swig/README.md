@@ -20,24 +20,26 @@ general build instructions). For example, run this from the `build`
 directory:
 
 ```
-build$ cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DINCLUDE_SWIG=ON
+build$ cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DINCLUDE_SWIG=ON
 build$ make
 ```
 
 If successful, the end of the build will look like:
 
 ```
-[ 93%] Building Java objects for dynet_swigJNI.jar
-[ 94%] Generating CMakeFiles/dynet_swigJNI.dir/java_class_filelist
-[ 95%] Creating Java archive dynet_swigJNI.jar
-[ 95%] Built target dynet_swigJNI
-[ 96%] Running sbt
+[ 95%] Built target dynet_swig
+[ 96%] Building Java objects for dynet_swigJNI.jar
+[ 97%] Generating CMakeFiles/dynet_swigJNI.dir/java_class_filelist
+[ 98%] Creating Java archive dynet_swigJNI.jar
+[ 98%] Built target dynet_swigJNI
+updating: libdynet_swig.jnilib (deflated 83%)
+[ 98%] Built target dylib_into_jar
+[100%] Running sbt
 ...
 [info] lots of sbt stuff here
 ...
-[success] Total time: 7 s, completed Jan 11, 2017 1:05:58 PM
-[ 96%] Built target scala_helper
-[100%] Built target dynet_swig
+[success] Total time: 14 s, completed Mar 1, 2017 11:38:54 AM
+[100%] Built target scala_helper
 ```
 
 This command runs SWIG to generate a dynamic library file and JNI
