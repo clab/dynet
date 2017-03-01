@@ -6,7 +6,7 @@ import edu.cmu.dynet.dynet_swig._
 import scala.language.implicitConversions
 
 object LinearRegression {
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
 
   def main(args: Array[String]) {
     initialize(new DynetParams)

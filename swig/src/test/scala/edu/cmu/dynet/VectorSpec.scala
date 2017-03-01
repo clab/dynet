@@ -6,7 +6,7 @@ import edu.cmu.dynet.dynet_swig._
 
 class VectorSpec extends FlatSpec with Matchers {
 
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
 
   "FloatVector" should "construct when given a Seq[Float]" in {
     val fv = new FloatVector(Seq(2.3f, 4.5f))

@@ -7,7 +7,7 @@ object XorScala {
   val HIDDEN_SIZE = 8
   val ITERATIONS = 30
 
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
 
   def main(args: Array[String]) {
     println("Running XOR example")

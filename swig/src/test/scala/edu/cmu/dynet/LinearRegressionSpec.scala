@@ -10,7 +10,7 @@ case class RegressionLine(slope: Float, intercept: Float) {}
 /* An end-to-end example for sanity check purposes. */
 class LinearRegressionSpec extends FlatSpec with Matchers {
 
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
 
   initialize(new DynetParams)
 

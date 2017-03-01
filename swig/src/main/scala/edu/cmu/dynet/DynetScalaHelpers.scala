@@ -4,7 +4,7 @@ import edu.cmu.dynet.dynet_swig._
 
 import scala.language.implicitConversions
 
-object DynetScalaHelpers {
+object DyNetScalaHelpers {
 
   import scala.collection.JavaConverters._
   import java.util.Collection

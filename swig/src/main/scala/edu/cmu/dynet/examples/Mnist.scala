@@ -5,7 +5,7 @@ import edu.cmu.dynet.dynet_swig._
 
 import scala.language.implicitConversions
 
-import DynetScalaHelpers._
+import DyNetScalaHelpers._
 
 object MnistFile {
   // I basically reverse engineered the file formats from java/org/deeplearning4j/datasets/mnist

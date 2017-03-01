@@ -6,7 +6,7 @@ import edu.cmu.dynet.dynet_swig._
 
 class ComputationGraphSpec extends FlatSpec with Matchers {
 
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
 
   "ComputationGraph" should "allow repeated calls to getNew" in {
     for (_ <- 1 to 100) {
