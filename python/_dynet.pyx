@@ -146,6 +146,13 @@ cdef class Parameters:
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().values)
 
+    cpdef grad_as_array(self):
+        """
+        Return gradient as a numpy array.
+        """
+        cdef CTensor t
+        return c_tensor_as_np(self.thisptr.get().g)
+
     # TODO: make more efficient
     cpdef load_array(self, arr):
         assert(False),"This method is depracated. Use instead model.parameters_from_numpy(arr)."
@@ -216,6 +223,15 @@ cdef class LookupParameters:
         cdef vector[CTensor] vals
         vals = self.thisptr.get().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
+
+    cpdef grad_as_array(self):
+        """
+        Return gradients as a numpy array.
+        """
+        cdef vector[CTensor] grads
+        grads = self.thisptr.get().grads
+        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
+
 
     cpdef zero(self): self.thisptr.zero()
 
@@ -615,8 +631,8 @@ cdef class ComputationGraph:
         return _vecInputExpression(self, v)
     cdef inputMatrix(self, int d1, int d2):
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
-    def inputMatrixLiteral(self, vector[float] v, tuple d):
-        return _vecInputExpression(self, v, d)
+    def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1):
+        return _vecInputExpression(self, v, d,batch_size)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -825,13 +841,13 @@ def scalarInput(float s):
 
 cdef class _vecInputExpression(Expression):
     cdef FloatVectorValue val
-    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None):
+    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None,batch_size=1):
         self.val = FloatVectorValue(val)
         if dim is None: dim = self.val.size()
         #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cgp()[0], Dim(dim), self.val.addr())
+        e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, vector[float] data):
@@ -865,6 +881,25 @@ def inputMatrix(vector[float] v, tuple d):
                [ 2.,  4.,  6.]])
     """
     return _cg.inputMatrixLiteral(v, d)
+
+def inputTensor(arr,bool batched=False):
+    """
+    Creates a tensor expression based on a numpy array or a list.
+    The dimension is inferred from the shape of the input.
+    if batched=True, the last dimension is used as abatch dimension
+    """
+    if isinstance(arr,list):
+        arr=np.asarray(arr,dtype=float)
+    if not isinstance(arr,np.ndarray):
+        raise TypeError("Input Tensor should be a numpy.ndarray or a valid list pf floats")
+    if batched:
+        dim = arr.shape[:-1] if len(arr.shape) > 1 else (1,)
+        batch_size= arr.shape[-1]
+    else:
+        dim = arr.shape
+        batch_size= 1
+    arr = arr.flatten(order='F')
+    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
 
 cdef class _lookupExpression(Expression):
     cdef UnsignedValue val
