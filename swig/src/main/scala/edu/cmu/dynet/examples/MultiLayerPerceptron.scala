@@ -4,7 +4,7 @@ import edu.cmu.dynet._
 import edu.cmu.dynet.dynet_swig._
 
 import scala.language.implicitConversions
-import DynetScalaHelpers._
+import DyNetScalaHelpers._
 
 object Activation extends Enumeration {
   type Activation = Value

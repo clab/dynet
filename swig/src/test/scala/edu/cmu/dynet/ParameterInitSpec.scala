@@ -6,7 +6,7 @@ import edu.cmu.dynet.dynet_swig._
 
 class ParameterInitSpec extends FlatSpec with Matchers {
 
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
   initialize(new DynetParams)
 
   "ParameterInitConst" should "set constant values" in {

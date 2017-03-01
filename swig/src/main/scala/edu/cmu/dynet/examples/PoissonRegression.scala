@@ -3,7 +3,7 @@ package edu.cmu.dynet.examples
 import edu.cmu.dynet._
 import edu.cmu.dynet.dynet_swig._
 
-import DynetScalaHelpers._
+import DyNetScalaHelpers._
 
 import scala.language.implicitConversions
 

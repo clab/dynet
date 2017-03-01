@@ -7,7 +7,7 @@ import edu.cmu.dynet.dynet_swig._
 
 class ExpressionSpec extends FlatSpec with Matchers {
 
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
   initialize(new DynetParams)
 
   implicit def expressionV(es: Seq[Expression]): ExpressionVector = {
