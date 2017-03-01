@@ -1,9 +1,8 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
+import edu.cmu.dynet.{dynet_swig => dn, _}
 
-import DynetScalaHelpers._
+import DyNetScalaHelpers._
 
 import scala.language.implicitConversions
 
@@ -30,27 +29,28 @@ object PoissonRegression {
       builder.new_graph(cg)
       builder.start_new_sequence()
 
-      val R = parameter(cg, p_R)
-      val bias = parameter(cg, p_bias)
+      val R = dn.parameter(cg, p_R)
+      val bias = dn.parameter(cg, p_bias)
 
       for (t <- 0 until slen) {
-        val i_x_t = lookup(cg, p_c, sent.get(t))
+        val i_x_t = dn.lookup(cg, p_c, sent.get(t))
         builder.add_input(i_x_t)
       }
 
-      val pred = affine_transform(Seq(bias, R, builder.back))
+      val ev = new ExpressionVector(Seq(bias, R, builder.back))
+      val pred = dn.affine_transform(ev)
 
       if (flag) {
         val x = math.exp(cg.incremental_forward(pred).toFloat)
         println(s"PRED = ${x} TRUE = ${len} DIFF = ${x - len}")
       }
 
-      poisson_loss(pred, len)
+      dn.poisson_loss(pred, len)
     }
   }
 
   def main(args: Array[String]) {
-    initialize(new DynetParams)
+    dn.initialize(new DynetParams)
 
     val userDir = System.getProperty("user.dir")
 

@@ -1,8 +1,7 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
-import DynetScalaHelpers._
+import edu.cmu.dynet.{dynet_swig => dn, _}
+import DyNetScalaHelpers._
 
 import scala.language.implicitConversions
 
@@ -61,7 +60,7 @@ class EncoderDecoder(
       }
 
       // Get embedding
-      val i_x_t = lookup(cg, p_ec, x_t)
+      val i_x_t = dn.lookup(cg, p_ec, x_t)
       // Run a step in the forward encoder
       fwdEncBuilder.add_input(i_x_t)
     }
@@ -78,7 +77,7 @@ class EncoderDecoder(
           x_t.set(i, isents(id+i).get(t))
         }
         // Get embedding
-        val i_x_t = lookup(cg, p_ec, x_t)
+        val i_x_t = dn.lookup(cg, p_ec, x_t)
         // Run a step in the reverse encoder
         revEncBuilder.get.add_input(i_x_t)
       }
@@ -94,11 +93,11 @@ class EncoderDecoder(
     }
 
     // Put it as a vector
-    val i_combined = concatenate_VE(to)
+    val i_combined = dn.concatenate(to)
     val i_nc = if (bidirectional) {
       // Perform an affine transformation for rescaling
-      val i_ie2oe = parameter(cg, p_ie2oe.get)
-      val i_bie = parameter(cg, p_boe.get)
+      val i_ie2oe = dn.parameter(cg, p_ie2oe.get)
+      val i_bie = dn.parameter(cg, p_boe.get)
       i_bie + i_ie2oe * i_combined
     } else {
       i_combined
@@ -126,11 +125,11 @@ class EncoderDecoder(
     val oein = new ExpressionVector
     // Add input cell states
     for (i <- 0 until numLayers) {
-      oein.add(pickrange(i_nc, i * hiddenDim, (i+1) * hiddenDim))
+      oein.add(dn.pickrange(i_nc, i * hiddenDim, (i+1) * hiddenDim))
     }
     // Add input output states
     for (i <- 0 until numLayers) {
-      oein.add(pickrange(i_nc,
+      oein.add(dn.pickrange(i_nc,
         hiddenDim * numLayers + i * hiddenDim,
         hiddenDim * numLayers + (i+1) * hiddenDim))
     }
@@ -142,8 +141,8 @@ class EncoderDecoder(
 
     // Run decoder ------------------
     // Add parameters to the graph
-    val i_R = parameter(cg, p_R)
-    val i_bias = parameter(cg, p_bias)
+    val i_R = dn.parameter(cg, p_R)
+    val i_bias = dn.parameter(cg, p_bias)
     // Initialize errors and input vectors
     val errs = new ExpressionVector
     var x_t = new UnsignedVector(bsize)
@@ -164,19 +163,19 @@ class EncoderDecoder(
         next_x_t.set(i, osents(id + i).get(t))
       }
       // embed token
-      val i_x_t = lookup(cg, p_c, x_t)
+      val i_x_t = dn.lookup(cg, p_c, x_t)
       // run decoder step
       val i_y_t = decBuilder.add_input(i_x_t)
       // project from output dim to dictionary dimension
       val i_r_t = i_bias + i_R * i_y_t
       // Compute softmax and negative log
-      val i_err = pickneglogsoftmax(i_r_t, next_x_t)
+      val i_err = dn.pickneglogsoftmax(i_r_t, next_x_t)
       errs.add(i_err)
       x_t = next_x_t
     }
 
     // Sum loss over batch
-    val i_nerr = sum_batches(sum(errs))
+    val i_nerr = dn.sum_batches(dn.sum(errs))
     i_nerr
   }
 
@@ -197,8 +196,8 @@ class EncoderDecoder(
     val oein = new ExpressionVector()
 
     for (i <- 0 until numLayers) {
-      oein1.add(pickrange(i_nc, i * hiddenDim, (i+1) * hiddenDim))
-      oein2.add(tanh(oein1.get(i)))
+      oein1.add(dn.pickrange(i_nc, i * hiddenDim, (i+1) * hiddenDim))
+      oein2.add(dn.tanh(oein1.get(i)))
     }
 
     for (i <- 0 until numLayers) oein.add(oein1.get(i))
@@ -208,19 +207,19 @@ class EncoderDecoder(
     decBuilder.start_new_sequence(oein)
 
     // decoder
-    val i_R = parameter(cg, p_R)
+    val i_R = dn.parameter(cg, p_R)
 
-    val i_bias = parameter(cg, p_bias)
+    val i_bias = dn.parameter(cg, p_bias)
     val osent = new IntVector()
     osent.add(EncoderDecoder.kSOS)
 
     var t = 0
     var done = false
     while (t < oslen && !done) {
-      val i_x_t = lookup(cg, p_c, osent.get(t))
+      val i_x_t = dn.lookup(cg, p_c, osent.get(t))
       val i_y_t = decBuilder.add_input(i_x_t)
       val i_r_t = i_bias + i_R * i_y_t
-      val i_ydist = softmax(i_r_t)
+      val i_ydist = dn.softmax(i_r_t)
       val s = sample(i_ydist.value.toVector)
       osent.add(s)
       if (s == EncoderDecoder.kEOS) done = true
@@ -252,7 +251,7 @@ object EncoderDecoder {
   val DEV_FILE = Paths.get(userDir, "../examples/cpp/example-data/dev-hsm.txt").toString
 
   def main(args: Array[String]) {
-    initialize(new DynetParams)
+    dn.initialize(new DynetParams)
 
     val training = new scala.collection.mutable.ArrayBuffer[IntVector]
     val dev = new scala.collection.mutable.ArrayBuffer[IntVector]

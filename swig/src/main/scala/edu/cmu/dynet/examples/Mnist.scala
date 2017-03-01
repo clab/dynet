@@ -1,11 +1,10 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
+import edu.cmu.dynet.{dynet_swig => dn, _}
 
 import scala.language.implicitConversions
 
-import DynetScalaHelpers._
+import DyNetScalaHelpers._
 
 object MnistFile {
   // I basically reverse engineered the file formats from java/org/deeplearning4j/datasets/mnist
@@ -55,7 +54,7 @@ object Mnist {
   }
 
   def main(args: Array[String]) {
-    initialize(new DynetParams)
+    dn.initialize(new DynetParams)
 
     val argList = args.toList
     val params = parseArgs(argList)
@@ -114,12 +113,12 @@ object Mnist {
 
         val curBatch = new ExpressionVector(
           for (image <- train.slice(id, id + bsize))
-            yield input(cg, dim(784), image)
+            yield dn.input(cg, dim(784), image)
         )
         val curLabels = new UnsignedVector(trainLabels.slice(id, id + bsize))
 
         // reshape as batch
-        val xBatch = reshape(concatenate_cols(curBatch), dim(Seq(784), bsize))
+        val xBatch = dn.reshape(dn.concatenate_cols(curBatch), dim(Seq(784), bsize))
         // get negative log likelihood on batch
         val lossExpr = nn.get_nll(xBatch, curLabels, cg)
         // get scalar error for monitoring
@@ -147,7 +146,7 @@ object Mnist {
         var dpos = 0.0
         for ((image, label) <- dev.zip(devLabels)) {
           val cg = ComputationGraph.getNew
-          val x = input(cg, dim(784), image)
+          val x = dn.input(cg, dim(784), image)
           val predictedIdx = nn.predict(x, cg)
 
           // increment count of positive classification

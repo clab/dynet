@@ -1,12 +1,10 @@
 package edu.cmu.dynet
 
 import org.scalatest._
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
 
 class SampleSpec extends FlatSpec with Matchers {
 
-  import DynetScalaHelpers._
+  import DyNetScalaHelpers._
 
   "Sample" should "do the right thing" in {
 

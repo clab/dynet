@@ -1,10 +1,9 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
+import edu.cmu.dynet.{dynet_swig => dn, _}
 
 import scala.language.implicitConversions
-import DynetScalaHelpers._
+import DyNetScalaHelpers._
 
 object Activation extends Enumeration {
   type Activation = Value
@@ -38,18 +37,19 @@ class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
     var h_cur = x
     for ((layer, layerParams) <- layers.zip(params)) {
       // initialize parameters in computation graph
-      val W = parameter(cg, layerParams.w)
-      val b = parameter(cg, layerParams.b)
+      val W = dn.parameter(cg, layerParams.w)
+      val b = dn.parameter(cg, layerParams.b)
       // apply affine transform
-      val a = affine_transform(Seq(b, W, h_cur))
+      val ev = new ExpressionVector(Seq(b, W, h_cur))
+      val a = dn.affine_transform(ev)
       // apply activation function
       val h = activate(a, layer.activation)
       // take care of dropout
       val h_dropped = if (layer.dropoutRate > 0) {
         if (dropoutActive) {
           // during training, drop random units
-          val mask = random_bernoulli(cg, dim(layer.outputDim), 1 - layer.dropoutRate)
-          cmult(h, mask)
+          val mask = dn.random_bernoulli(cg, dim(layer.outputDim), 1 - layer.dropoutRate)
+          dn.cmult(h, mask)
         } else {
           // at test time, multiply by the retention rate to scale
           h * (1 - layer.dropoutRate)
@@ -68,9 +68,9 @@ class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
     // compute output
     val y = run(x, cg)
     // do softmax
-    val losses = pickneglogsoftmax(y, labels)
+    val losses = dn.pickneglogsoftmax(y, labels)
     // sum across batches
-    val result = sum_batches(losses)
+    val result = dn.sum_batches(losses)
     result
   }
 
@@ -91,10 +91,10 @@ class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
 
   def activate(h: Expression, f: Activation.Value): Expression = f match {
     case Activation.LINEAR => h
-    case Activation.RELU => rectify(h)
-    case Activation.SIGMOID => logistic(h)
-    case Activation.TANH => tanh(h)
-    case Activation.SOFTMAX => softmax(h)
+    case Activation.RELU => dn.rectify(h)
+    case Activation.SIGMOID => dn.logistic(h)
+    case Activation.TANH => dn.tanh(h)
+    case Activation.SOFTMAX => dn.softmax(h)
     case _ => throw new IllegalArgumentException("unknown activation function")
   }
 }

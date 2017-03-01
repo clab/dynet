@@ -1,13 +1,12 @@
 package edu.cmu.dynet
 
 import org.scalatest._
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
+import edu.cmu.dynet.{dynet_swig => dn}
 
 class ParameterInitSpec extends FlatSpec with Matchers {
 
-  import DynetScalaHelpers._
-  initialize(new DynetParams)
+  import DyNetScalaHelpers._
+  dn.initialize(new DynetParams)
 
   "ParameterInitConst" should "set constant values" in {
     val model = new Model

@@ -169,21 +169,36 @@ iter = 29, loss = 8.881784E-16
 ## Usage
 
 The Scala version of DyNet is intended to work mostly like the
-C++. However, there are a few exceptions to watch out for, which are
+C++. However, there are a few things to watch out for, which are
 documented below.
 
 ### Imports
 
-Import dynet using:
+All of the DyNet classes and structs are in the `edu.cmu.dynet` package.
+DyNet also contains a large number of bare functions, they end up as
+static methods on the `dynet_swig` class. Many of them have common names
+(e.g. `sum`), so you probably don't want to pollute your namespace by 
+importing them all. Our convention is to rename that class `dn`.
+Finally, the additional Scala helpers are contained in the `DyNetScalaHelpers`
+object.
+
+So a typical usage looks like:
 
 ```scala
-// Dynet classes and structs, e.g., Parameter
-import edu.cmu.dynet._
-// Dynet neural network operations, e.g., affine_transform
-import edu.cmu.dynet.dynet_swig._
-// Scala helpers, e.g., implicit type conversions
-import edu.cmu.dynet.DynetScalaHelpers._
+import edu.cmu.dynet.{dynet_swig => dn, _}
+import DyNetScalaHelpers._
 ```
+
+after which you can do things like
+
+```scala
+def main(args: Array[String]) {
+    dn.initialize(new DynetParams)
+    val m = new Model
+    // etc...
+}
+```    
+
 
 ### `ComputationGraph.getNew`
 
@@ -231,8 +246,8 @@ SWIG generates Java wrappers for the various `std::vector<>` types,
 no-argument constructor, a `capacity: Int` constructor, and a
 `elems: java.util.Collection[T]` constructor (for the relevant type `T`).
 
-`DynetScalaHelpers` contain implicit conversions from the corresponding
-`Seq` types, so that you can do things like
+`DyNetScalaHelpers` contains implicit conversions to `Collection[T]` 
+for the corresponding `Seq` types, so that you can do things like
 
 ```scala
 // Seq[Int] implicitly converted to java.util.Collection[java.lang.Integer]
@@ -256,7 +271,7 @@ for (i <- 0 until intVector.size) {
 }
 ```
 
-### `FloatVector` scope
+### `Vector` scope
 
 The `FloatVector` class is a wrapper around a native C++ `vector<float>`. 
 Some of the `input` functions take a `FloatVector` parameter, and behind
