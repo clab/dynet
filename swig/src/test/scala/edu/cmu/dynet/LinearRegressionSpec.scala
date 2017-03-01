@@ -2,8 +2,7 @@ package edu.cmu.dynet
 
 import org.scalatest._
 import Matchers._
-import edu.cmu.dynet._
-import edu.cmu.dynet.dynet_swig._
+import edu.cmu.dynet.{dynet_swig => dn}
 
 case class RegressionLine(slope: Float, intercept: Float) {}
 
@@ -12,7 +11,7 @@ class LinearRegressionSpec extends FlatSpec with Matchers {
 
   import DyNetScalaHelpers._
 
-  initialize(new DynetParams)
+  dn.initialize(new DynetParams)
 
   def regress(xs: Seq[Float], ys: Seq[Float], numIterations: Int = 20): RegressionLine = {
     assert(xs.size > 0)
@@ -29,11 +28,11 @@ class LinearRegressionSpec extends FlatSpec with Matchers {
     for (iter <- 1 to numIterations) {
       for ((x, y) <- examples) {
         val cg = ComputationGraph.getNew
-        val W = parameter(cg, p_W)
-        val b = parameter(cg, p_b)
+        val W = dn.parameter(cg, p_W)
+        val b = dn.parameter(cg, p_b)
 
         val prediction = W * x + b
-        val loss = square(prediction - y)
+        val loss = dn.square(prediction - y)
         cg.forward(loss)
         cg.backward(loss)
         trainer.update()

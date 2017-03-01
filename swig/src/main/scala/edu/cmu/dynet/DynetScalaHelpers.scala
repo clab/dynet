@@ -1,6 +1,6 @@
 package edu.cmu.dynet
 
-import edu.cmu.dynet.dynet_swig._
+import edu.cmu.dynet.{dynet_swig => dn}
 
 import scala.language.implicitConversions
 
@@ -84,23 +84,23 @@ object DyNetScalaHelpers {
   // The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with;
   // these are more Scala-y wrappers that implicitly convert to the SWIG versions.
   class FloatPointer {
-    val floatp = new_floatp
+    val floatp = dn.new_floatp
     set(0f)
 
-    def set(value: Float): Unit = floatp_assign(floatp, value)
+    def set(value: Float): Unit = dn.floatp_assign(floatp, value)
 
-    def value(): Float = floatp_value(floatp)
+    def value(): Float = dn.floatp_value(floatp)
   }
 
   implicit def toFloatp(fp: FloatPointer): SWIGTYPE_p_float = fp.floatp
 
   class IntPointer {
-    val intp = new_intp
+    val intp = dn.new_intp
     set(0)
 
-    def set(value: Int): Unit = intp_assign(intp, value)
+    def set(value: Int): Unit = dn.intp_assign(intp, value)
 
-    def value(): Int = intp_value(intp)
+    def value(): Int = dn.intp_value(intp)
 
     def increment(by: Int = 1) = set(value + by)
   }
@@ -108,12 +108,12 @@ object DyNetScalaHelpers {
   implicit def toIntp(ip: IntPointer): SWIGTYPE_p_int = ip.intp
 
   class UnsignedPointer {
-    val uintp = new_uintp()
+    val uintp = dn.new_uintp()
     set(0)
 
-    def set(value: Int): Unit = uintp_assign(uintp, value)
+    def set(value: Int): Unit = dn.uintp_assign(uintp, value)
 
-    def value(): Int = uintp_value(uintp).toInt
+    def value(): Int = dn.uintp_value(uintp).toInt
   }
 
   implicit def toUnsignedp(up: UnsignedPointer): SWIGTYPE_p_unsigned_int = up.uintp
@@ -143,8 +143,8 @@ object DyNetScalaHelpers {
   }
 
   implicit class Untensor(t: Tensor) {
-    def toFloat: Float = as_scalar(t)
-    def toVector: FloatVector = as_vector(t)
+    def toFloat: Float = dn.as_scalar(t)
+    def toVector: FloatVector = dn.as_vector(t)
     def toSeq: Seq[Float] = {
       val vector = t.toVector
       for (i <- 0 until vector.size.toInt) yield vector.get(i)
@@ -200,20 +200,20 @@ object DyNetScalaHelpers {
 
   // Sugar to turn `Expression` operators into Scala operators.
   implicit class RichExpression(e: Expression) {
-    def +(e2: Expression): Expression = exprPlus(e, e2)
-    def *(e2: Expression): Expression = exprTimes(e, e2)
-    def -(e2: Expression): Expression = exprMinus(e, e2)
-    def +(r: Float): Expression = exprPlus(e, r)
-    def *(r: Float): Expression = exprTimes(e, r)
-    def -(r: Float): Expression = exprMinus(e, r)
-    def /(r: Float): Expression = exprDivide(e, r)
-    def unary_-(): Expression = exprMinus(e)
+    def +(e2: Expression): Expression = dn.exprPlus(e, e2)
+    def *(e2: Expression): Expression = dn.exprTimes(e, e2)
+    def -(e2: Expression): Expression = dn.exprMinus(e, e2)
+    def +(r: Float): Expression = dn.exprPlus(e, r)
+    def *(r: Float): Expression = dn.exprTimes(e, r)
+    def -(r: Float): Expression = dn.exprMinus(e, r)
+    def /(r: Float): Expression = dn.exprDivide(e, r)
+    def unary_-(): Expression = dn.exprMinus(e)
   }
 
   implicit class RichNumeric[T](x: T)(implicit n: Numeric[T]) {
     import n._
-    def +(e: Expression): Expression = exprPlus(x.toFloat, e)
-    def *(e: Expression): Expression = exprTimes(x.toFloat, e)
-    def -(e: Expression): Expression = exprMinus(x.toFloat, e)
+    def +(e: Expression): Expression = dn.exprPlus(x.toFloat, e)
+    def *(e: Expression): Expression = dn.exprTimes(x.toFloat, e)
+    def -(e: Expression): Expression = dn.exprMinus(x.toFloat, e)
   }
 }
