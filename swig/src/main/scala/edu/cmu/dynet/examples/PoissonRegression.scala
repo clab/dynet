@@ -38,7 +38,8 @@ object PoissonRegression {
         builder.add_input(i_x_t)
       }
 
-      val pred = affine_transform(Seq(bias, R, builder.back))
+      val ev = new ExpressionVector(Seq(bias, R, builder.back))
+      val pred = affine_transform_VE(ev)
 
       if (flag) {
         val x = math.exp(cg.incremental_forward(pred).toFloat)

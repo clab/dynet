@@ -151,12 +151,6 @@ object DynetScalaHelpers {
     }
   }
 
-  def affine_transform(es: Seq[Expression]): Expression = {
-    val ev = new ExpressionVector
-    es.foreach(e => ev.add(e))
-    affine_transform_VE(ev)
-  }
-
   type NamedParameters = Map[String, Parameter]
   type NamedLookupParameters = Map[String, LookupParameter]
 
