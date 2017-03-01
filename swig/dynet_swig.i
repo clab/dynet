@@ -492,8 +492,7 @@ Expression operator*(const Expression& x, float y);
 Expression operator*(float y, const Expression& x); // { return x * y; }
 Expression operator/(const Expression& x, float y); // { return x * (1.f / y); }
 
-// TODO(joelgrus) rename these without the VE
-%template(affine_transform_VE) detail::f<AffineTransform, std::vector<Expression>>;
+%template(affine_transform) detail::f<AffineTransform, std::vector<Expression>>;
 %template(sum) detail::f<Sum, std::vector<Expression>>;
 %template(average) detail::f<Average, std::vector<Expression>>;
 

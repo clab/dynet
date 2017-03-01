@@ -39,7 +39,7 @@ object PoissonRegression {
       }
 
       val ev = new ExpressionVector(Seq(bias, R, builder.back))
-      val pred = affine_transform_VE(ev)
+      val pred = affine_transform(ev)
 
       if (flag) {
         val x = math.exp(cg.incremental_forward(pred).toFloat)
