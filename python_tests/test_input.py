@@ -19,6 +19,12 @@ for i in range(4):
     assert (xb.dim() == shapes[i] or (i == 0 and xb.dim() == (1,shapes[0][0]))), "Dimension mismatch with batch size"
     assert (xb.npvalue() == input_tensor).all(), "Batched expression value different from initial value"
     assert dy.sum_batches(dy.squared_norm(xb)).scalar_value() == squared_norm, "Value mismatch"
+    # Batched with list
+    dy.renew_cg()
+    xb = dy.inputTensor([np.asarray(x).transpose() for x in input_tensor.transpose()])
+    assert (xb.dim() == shapes[i] or (i == 0 and xb.dim() == (1,shapes[0][0]))), "Dimension mismatch with batch size"
+    assert (xb.npvalue() == input_tensor).all(), "Batched expression value different from initial value"
+    assert dy.sum_batches(dy.squared_norm(xb)).scalar_value() == squared_norm, "Value mismatch"
 
 caught = False
 try:
