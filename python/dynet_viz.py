@@ -266,7 +266,7 @@ def colwise_add(x, y):
   return GVExpr('colwise_add', [x,y], d)
 
 def trace_of_product(x, y): return GVExpr('trace_of_product', [x,y], ensure_same_dim(x,y))
-def cwise_multiply(x, y): return GVExpr('cwise_multiply', [x,y], ensure_same_dim(x,y))
+def cmult(x, y): return GVExpr('cmult', [x,y], ensure_same_dim(x,y))
 def dot_product(x, y): return GVExpr('dot_product', [x,y], ensure_same_dim(x,y))
 def squared_distance(x, y): return GVExpr('squared_distance', [x,y], ensure_same_dim(x,y))
 def l1_distance(x, y): return GVExpr('l1_distance', [x,y], ensure_same_dim(x,y))
