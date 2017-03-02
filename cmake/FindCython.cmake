@@ -22,7 +22,7 @@
 #=============================================================================
 
 # Set minimal accepted version
-set(CYTHON_REQUIRED_VERSION 0.22)
+set(CYTHON_REQUIRED_VERSION 0.23)
 
 # Use the Cython executable that lives next to the Python executable
 # if it is a local installation.
