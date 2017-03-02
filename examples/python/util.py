@@ -1,5 +1,7 @@
 from collections import defaultdict
 from itertools import count
+import mmap
+
 class Vocab:
     def __init__(self, w2i=None):
         if w2i is None: w2i = defaultdict(count(0).next)
@@ -14,6 +16,20 @@ class Vocab:
 
     def size(self): return len(self.w2i.keys())
 
+class FastCorpusReader:
+    def __init__(self, fname):
+        self.fname = fname
+        self.f = open(fname, 'rb')
+    def __iter__(self):
+        m = mmap.mmap(self.f.fileno(), 0, access=mmap.ACCESS_READ)
+        data = m.readline()
+        while data:
+            line = data
+            data = m.readline()
+            line = line.lower()
+            line = line.strip().split()
+            yield line    
+    
 class CorpusReader:
     def __init__(self, fname):
         self.fname = fname
