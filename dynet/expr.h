@@ -1393,10 +1393,45 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 // Linear algebra operations                  //
 ////////////////////////////////////////////////
 
-// matrix inverse
+/**
+ * \ingroup linalgoperations
+ * \brief Matrix Inverse
+ * \details Takes the inverse of a matrix (not implemented on GPU yet, although
+ *          contributions are welcome: https://github.com/clab/dynet/issues/158).
+ *          Note that back-propagating through an inverted matrix can also be the
+ *          source of stability problems sometimes.
+ * 
+ * \param x A square matrix
+ * 
+ * \return The inverse of the matrix
+ */
 Expression inverse(const Expression& x);
+
+/**
+ * \ingroup linalgoperations
+ * \brief Log determinant
+ * \details Takes the log of the determinant of a matrix.
+ *          (not implemented on GPU yet, although
+ *          contributions are welcome: https://github.com/clab/dynet/issues/158).
+ * 
+ * \param x A square matrix
+ * 
+ * \return The log of its determinant
+ */
 Expression logdet(const Expression& x);
 
+/**
+ * \ingroup linalgoperations
+ * \brief Trace of Matrix Product
+ * \details Takes the trace of the product of matrices.
+ *          (not implemented on GPU yet, although
+ *          contributions are welcome: https://github.com/clab/dynet/issues/158).
+ * 
+ * \param x1 A matrix
+ * \param x2 Another matrix
+ * 
+ * \return trace(x1 * x2)
+ */
 Expression trace_of_product(const Expression& x, const Expression& y);
 
 
