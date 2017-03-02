@@ -691,6 +691,7 @@ cdef class Expression: #{{{
 
     cdef VariableIndex vindex
     cdef int cg_version
+    cdef string name
     def __cinit__(self):
         #self.cg = NULL
         self.vindex = 0
@@ -701,9 +702,10 @@ cdef class Expression: #{{{
         #self.cg = cexpr.pg
         self.vindex = cexpr.i
         self.cg_version = cgv
+        self.name = cexpr.name
         return self
     cdef CExpression c(self):
-        return CExpression(self.cgp(), self.vindex)
+        return CExpression(self.cgp(), self.vindex, self.name)
 
     cpdef dim(self):
         """
