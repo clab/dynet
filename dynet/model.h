@@ -107,7 +107,7 @@ struct ParameterStorage : public ParameterStorageBase {
 
   Dim dim; /**< Dimensions of the parameter tensor*/
   Tensor values;/**< Values of the parameter */
-  Tensor g;/*< Values of the gradient w.r.t. this parameter */
+  Tensor g;/**< Values of the gradient w.r.t. this parameter */
 
 private:
   ParameterStorage() {}

@@ -34,6 +34,7 @@ cdef extern from "dynet/dim.h" namespace "dynet":
         int ndims()
         int rows()
         int cols()
+        unsigned operator[](unsigned i)
         void set(unsigned i, unsigned s)
         int size(unsigned i)
         CDim transpose()
@@ -50,12 +51,15 @@ cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterStorage "dynet::ParameterStorage":
         CParameterStorage()
         CTensor values
+        CTensor g
         CDim dim
 
     cdef cppclass CLookupParameterStorage "dynet::LookupParameterStorage":
         CLookupParameterStorage()
         vector[CTensor] values
+        vector[CTensor] grads
         CDim dim
+        CDim all_dim
 
     cdef cppclass CParameters "dynet::Parameter":
         CParameters()
@@ -267,6 +271,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     CExpression c_affine_transform "dynet::expr::affine_transform" (const vector[CExpression]& xs)
 
+    CExpression c_inverse "dynet::expr::inverse" (CExpression& x) #
+    CExpression c_logdet "dynet::expr::logdet" (CExpression& x) #
     CExpression c_trace_of_product "dynet::expr::trace_of_product" (CExpression& x, CExpression& y);
 
     CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) #
