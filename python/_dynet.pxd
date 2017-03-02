@@ -267,6 +267,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     CExpression c_affine_transform "dynet::expr::affine_transform" (const vector[CExpression]& xs)
 
+    CExpression c_inverse "dynet::expr::inverse" (CExpression& x) #
+    CExpression c_logdet "dynet::expr::logdet" (CExpression& x) #
     CExpression c_trace_of_product "dynet::expr::trace_of_product" (CExpression& x, CExpression& y);
 
     CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) #
