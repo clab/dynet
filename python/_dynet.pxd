@@ -162,6 +162,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -171,6 +172,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -180,6 +182,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -189,6 +192,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -198,6 +202,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
