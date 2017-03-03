@@ -136,9 +136,9 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         VariableIndex add_const_lookup(CLookupParameters* p, const unsigned* pindex)
         VariableIndex add_const_lookup(CLookupParameters* p, unsigned index)
         
-        const CTensor& forward(VariableIndex index)
-        const CTensor& incremental_forward(VariableIndex index)
-        const CTensor& get_value(VariableIndex i)
+        const CTensor& forward(VariableIndex index) except +
+        const CTensor& incremental_forward(VariableIndex index) except +
+        const CTensor& get_value(VariableIndex i) except +
         void invalidate()
         void backward(VariableIndex i)
 
@@ -206,7 +206,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
         long i
-        CDim dim()
+        CDim dim() except +
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata)
