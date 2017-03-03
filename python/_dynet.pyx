@@ -195,7 +195,7 @@ cdef class Parameters:
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
-    cpdef unsigned get_index(): return self.thisptr.index
+    cpdef unsigned get_index(self): return self.thisptr.index
 
     cpdef Expression expr(self):
         if cg_version() != self._version:
@@ -257,7 +257,7 @@ cdef class LookupParameters:
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
-    cpdef unsigned get_index(): return self.thisptr.index
+    cpdef unsigned get_index(self): return self.thisptr.index
 
 # TODO document this
 class Saveable(object):
@@ -1598,7 +1598,7 @@ cdef class SimpleSGDTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
-    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec
@@ -1628,7 +1628,7 @@ cdef class MomentumSGDTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
-    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec
@@ -1659,7 +1659,7 @@ cdef class AdagradTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
-    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec
@@ -1690,7 +1690,7 @@ cdef class AdadeltaTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
-    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec
@@ -1721,7 +1721,7 @@ cdef class AdamTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
-    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec

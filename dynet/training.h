@@ -58,7 +58,10 @@ struct Trainer {
   void update(real scale = 1.0);
 
   /**
-   * \brief Update the parameters according to the appropriate update rule
+   * \brief Update some but not all of the parameters included in the model. The
+   *        parameters to be updated are specified by index, which can be found
+   *        for Parameter and LookupParameter objects through the "index" variable
+   *        (or the get_index() function in the Python bindings).
    * 
    * \param updated_params The parameter indices to be updated
    * \param updated_lookup_params The lookup parameter indices to be updated
