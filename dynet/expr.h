@@ -21,7 +21,6 @@
 #include "dynet/nodes.h"
 #include "dynet/nodes-contract.h"
 #include <stdexcept>
-#include <sstream>
 
 
 namespace dynet {
