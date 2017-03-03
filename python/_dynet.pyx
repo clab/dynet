@@ -1744,4 +1744,3 @@ cdef class AdamTrainer:
         return self.thisptr.clip_threshold
 
 #}}}
-
