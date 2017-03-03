@@ -203,10 +203,9 @@ cdef extern from "dynet/training.h" namespace "dynet":
 cdef extern from "dynet/expr.h" namespace "dynet::expr":
     cdef cppclass CExpression "dynet::expr::Expression":
         CExpression()
-        CExpression(CComputationGraph *pg, VariableIndex i,string name)
+        CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
         long i
-        string name
         CDim dim() except +
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) #

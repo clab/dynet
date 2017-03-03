@@ -35,9 +35,8 @@ struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
   unsigned graph_id;
-  std::string name;
 
-  Expression() : pg(nullptr), i(0), graph_id(0), name("Empty expression") { }
+  Expression() : pg(nullptr), i(0), graph_id(0) { }
   const bool is_stale() const {return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());}
   /**
    * \brief Base expression constructor
@@ -47,7 +46,7 @@ struct Expression {
    * \param i Variable index
    * \param name Name of the expression
    */
-  Expression(ComputationGraph *pg, VariableIndex i, std::string name) : pg(pg), i(i), graph_id(pg->get_id()), name(name) { }
+  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i), graph_id(pg->get_id()) { }
   /**
    * \brief Get value of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
@@ -55,9 +54,7 @@ struct Expression {
    */
   const Tensor& value() const {
     if (this->is_stale()) {
-      std::stringstream error_message;
-      error_message << "Expression " << name << " at index " << i << " is stale, cannot get value";
-      throw std::runtime_error(error_message.str());
+      throw std::runtime_error("Attempt to use a stale expression.");
     }
     return pg->get_value(i);
   }
@@ -68,9 +65,7 @@ struct Expression {
    */
   const Dim& dim() const {
     if (this->is_stale()) {
-      std::stringstream error_message;
-      error_message << "Expression " << name << " at index " << i << " is stale, cannot get dimension";
-      throw std::runtime_error(error_message.str());
+      throw std::runtime_error("Attempt to use a stale expression.");
     }
     return pg->get_dimension(i);
   }
@@ -78,12 +73,12 @@ struct Expression {
 
 namespace detail {
 template <typename F, typename T>
-Expression f(const T& xs, std::string name) {
+Expression f(const T& xs) {
   ComputationGraph *pg = xs.begin()->pg;
   std::vector<VariableIndex> xis(xs.size());
   int i = 0;
   for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
-  return Expression(pg, pg->add_function<F>(xis), name);
+  return Expression(pg, pg->add_function<F>(xis));
 }
 }
 
@@ -520,9 +515,9 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
  *
  * \return An expression equal to: xs[0] + xs[1]*xs[2] + xs[3]*xs[4] + ...
  */
-inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs, "affine_transform(const std::initializer_list<Expression>& xs)"); }
+inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
 template <typename T>
-inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs, "affine_transform(const T& xs)"); }
+inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
 
 /**
  * \ingroup arithmeticoperations
@@ -533,9 +528,9 @@ inline Expression affine_transform(const T& xs) { return detail::f<AffineTransfo
  *
  * \return An expression where the ith element is equal to xs[0][i] + xs[1][i] + ...
  */
-inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs, "sum(const std::initializer_list<Expression>& xs)"); }
+inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
 template <typename T>
-inline Expression sum(const T& xs) { return detail::f<Sum>(xs, "sum(const T& xs)"); }
+inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 
 /**
  * \ingroup arithmeticoperations
@@ -546,9 +541,9 @@ inline Expression sum(const T& xs) { return detail::f<Sum>(xs, "sum(const T& xs)
  *
  * \return An expression where the ith element is equal to (xs[0][i] + xs[1][i] + ...)/|xs|
  */
-inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs, "average(const std::initializer_list<Expression>& xs)"); }
+inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs); }
 template <typename T>
-inline Expression average(const T& xs) { return detail::f<Average>(xs, "average(const T& xs)"); }
+inline Expression average(const T& xs) { return detail::f<Average>(xs); }
 
 /**
  * \ingroup arithmeticoperations
@@ -716,9 +711,9 @@ Expression max(const Expression& x, const Expression& y);
  *
  * \return An expression where the ith element is equal to max(xs[0][i], xs[1][i], ...)
  */
-inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs, "max(const std::initializer_list<Expression>& xs)"); }
+inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
 template <typename T>
-inline Expression max(const T& xs) { return detail::f<Max>(xs, "max(const T& xs)"); }
+inline Expression max(const T& xs) { return detail::f<Max>(xs); }
 
 /**
  * \ingroup arithmeticoperations
@@ -823,9 +818,9 @@ Expression log_softmax(const Expression& x, const std::vector<unsigned>& restric
  *
  * \return The result.
  */
-inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs, "logsumexp(const std::initializer_list<Expression>& xs)"); }
+inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
 template <typename T>
-inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs, "logsumexp(const T& xs)"); }
+inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
 
 /**
  * \ingroup lossoperations
@@ -1324,9 +1319,9 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
  *
  * \return The expression with the columns concatenated
  */
-inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateColumns>(xs, "concatenate_cols(const std::initializer_list<Expression>& xs)"); }
+inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateColumns>(xs); }
 template <typename T>
-inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateColumns>(xs, "concatenate_cols(const T& xs)"); }
+inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateColumns>(xs); }
 
 /**
  * \ingroup flowoperations
@@ -1338,9 +1333,9 @@ inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateCo
  *
  * \return The expression with the rows concatenated
  */
-inline Expression concatenate(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs, "concatenate(const std::initializer_list<Expression>& xs)"); }
+inline Expression concatenate(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs); }
 template <typename T>
-inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs, "concatenate(const T& xs)"); }
+inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); }
 
 ////////////////////////////////////////////////
 // Noise operations                           //
