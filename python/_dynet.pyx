@@ -195,6 +195,7 @@ cdef class Parameters:
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
+    cpdef unsigned get_index(): return self.thisptr.index
 
     cpdef Expression expr(self):
         if cg_version() != self._version:
@@ -256,6 +257,7 @@ cdef class LookupParameters:
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
+    cpdef unsigned get_index(): return self.thisptr.index
 
 # TODO document this
 class Saveable(object):
@@ -1596,6 +1598,12 @@ cdef class SimpleSGDTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1620,6 +1628,12 @@ cdef class MomentumSGDTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1645,6 +1659,12 @@ cdef class AdagradTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1670,6 +1690,12 @@ cdef class AdadeltaTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1695,6 +1721,12 @@ cdef class AdamTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
