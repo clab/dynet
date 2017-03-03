@@ -78,6 +78,44 @@ float Trainer::clip_gradients(real scale) {
   return gscale;
 }
 
+// this calls update on all of the parameters that are supposed to be updated
+void Trainer::update(real scale) {
+  update(model->updated_parameters_list(), model->updated_lookup_parameters_list(), scale);
+}
+
+// this calls the rule-specific updates over all updated parameters
+void Trainer::update(const std::vector<unsigned> & upd_params, const std::vector<unsigned> & upd_lookup_params, real scale) {
+  // Allocate if necessary
+  if(!aux_allocated) {
+    alloc_impl();
+    aux_allocated = true;
+  }
+
+  // Perform gradient clipping and cycle through parameters
+  const float gscale = clip_gradients(scale);
+  const auto & params = model->parameters_list();
+  for(auto i : upd_params) {
+    update_params(scale, gscale, i);
+    params[i]->clear();
+  }
+  const auto & lookup_params = model->lookup_parameters_list();
+  for(auto i : upd_lookup_params) {
+    if(sparse_updates_enabled) {
+      for (auto j : lookup_params[i]->non_zero_grads)
+        update_lookup_params(scale, gscale, i, j);
+    } else {
+      update_lookup_params(scale, gscale, i);
+    }
+    lookup_params[i]->clear();
+  }
+  ++updates;
+  ++updates_since_status;
+
+  model->weight_decay.update_weight_decay(); // update global weight scale
+  if (model->weight_decay.parameters_need_rescaled())
+    rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
+}
+
 // this calls the rule-specific
 void Trainer::update(real scale) {
   // Allocate if necessary

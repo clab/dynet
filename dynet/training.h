@@ -50,7 +50,21 @@ struct Trainer {
     clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
   virtual ~Trainer();
 
+  /**
+   * \brief Update the parameters according to the appropriate update rule
+   * 
+   * \param scale The scaling factor for the gradients
+   */
   void update(real scale = 1.0);
+
+  /**
+   * \brief Update the parameters according to the appropriate update rule
+   * 
+   * \param updated_params The parameter indices to be updated
+   * \param updated_lookup_params The lookup parameter indices to be updated
+   * \param scale The scaling factor for the gradients
+   */
+  void update(const std::vector<unsigned> & updated_params, const std::vector<unsigned> & updated_lookup_params, real scale = 1.0);
 
   void update_epoch(real r = 1) {
     epoch += r;
