@@ -51,14 +51,17 @@ struct Trainer {
   virtual ~Trainer();
 
   /**
-   * \brief Update the parameters according to the appropriate update rule
+   * \brief Update parameters
+   * \details Update the parameters according to the appropriate update rule
    * 
    * \param scale The scaling factor for the gradients
    */
   void update(real scale = 1.0);
 
   /**
-   * \brief Update some but not all of the parameters included in the model. The
+   * \brief Update subset of parameters
+   * \details Update some but not all of the parameters included in the model. This
+   *        is the update_subset() function in the Python bindings. The
    *        parameters to be updated are specified by index, which can be found
    *        for Parameter and LookupParameter objects through the "index" variable
    *        (or the get_index() function in the Python bindings).
@@ -74,8 +77,15 @@ struct Trainer {
     eta = eta0 / (1 + epoch * eta_decay);
   }
 
-  // if clipping is enabled and the gradient is too big, return the amount to
-  // scale the gradient by (otherwise 1)
+  /**
+   * \brief Clip gradient
+   * \details If clipping is enabled and the gradient is too big, return the amount to
+   *          scale the gradient by (otherwise 1)
+   *
+   * 
+   * \param scale The clipping limit
+   * \return The appropriate scaling factor
+   */
   float clip_gradients(real scale);
 
   // TODO: This is unprotected temporarily until there is a better solution
