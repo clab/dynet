@@ -78,8 +78,13 @@ float Trainer::clip_gradients(real scale) {
   return gscale;
 }
 
-// this calls the rule-specific
+// this calls update on all of the parameters that are supposed to be updated
 void Trainer::update(real scale) {
+  update(model->updated_parameters_list(), model->updated_lookup_parameters_list(), scale);
+}
+
+// this calls the rule-specific updates over all updated parameters
+void Trainer::update(const std::vector<unsigned> & upd_params, const std::vector<unsigned> & upd_lookup_params, real scale) {
   // Allocate if necessary
   if(!aux_allocated) {
     alloc_impl();
@@ -89,13 +94,11 @@ void Trainer::update(real scale) {
   // Perform gradient clipping and cycle through parameters
   const float gscale = clip_gradients(scale);
   const auto & params = model->parameters_list();
-  const auto & upd_params = model->updated_parameters_list();
   for(auto i : upd_params) {
     update_params(scale, gscale, i);
     params[i]->clear();
   }
   const auto & lookup_params = model->lookup_parameters_list();
-  const auto & upd_lookup_params = model->updated_lookup_parameters_list();
   for(auto i : upd_lookup_params) {
     if(sparse_updates_enabled) {
       for (auto j : lookup_params[i]->non_zero_grads)
