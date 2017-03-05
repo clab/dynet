@@ -16,12 +16,16 @@ class Vocab:
 
     def size(self): return len(self.w2i.keys())
 
+#This corpus reader can be used when reading large text file into a memory can solve IO bottleneck of training.
+#Use it exactly as the regular CorpusReader from the rnnlm.py
 class FastCorpusReader:
     def __init__(self, fname):
         self.fname = fname
         self.f = open(fname, 'rb')
     def __iter__(self):
-        m = mmap.mmap(self.f.fileno(), 0, access=mmap.ACCESS_READ)
+        #This usage of mmap is for a Linux\OS-X 
+        #For Windows replace prot=mmap.PROT_READ with access=mmap.ACCESS_READ
+        m = mmap.mmap(self.f.fileno(), 0, prot=mmap.PROT_READ)
         data = m.readline()
         while data:
             line = data
