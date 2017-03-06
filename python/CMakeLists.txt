@@ -13,6 +13,9 @@ if(!PYTHON)
 endif()
 
 if(PYTHON)
+  # look for Cython
+  find_package(Cython REQUIRED)
+  
   # Things to copy the files
   file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx

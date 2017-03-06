@@ -13,19 +13,23 @@ struct ParameterNodeBase : public Node {
 
 // represents optimizable parameters
 struct ParameterNode : public ParameterNodeBase {
-  explicit ParameterNode(Parameter p) : dim(p.get()->dim), params(p) {}
+  explicit ParameterNode(const Parameter & p) : dim(p.get()->dim), params(p) {}
+  explicit ParameterNode(const LookupParameter & lp) : dim(lp.get()->all_dim), lparams(lp) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   void accumulate_grad(const Tensor& g) override;
   Dim dim;
   Parameter params;
+  LookupParameter lparams;
 };
 
 // represents optimizable parameters that are being held constant
 struct ConstParameterNode : public Node {
-  explicit ConstParameterNode(Parameter p) : dim(p.get()->dim), params(p) {}
+  explicit ConstParameterNode(const Parameter & p) : dim(p.get()->dim), params(p) {}
+  explicit ConstParameterNode(const LookupParameter & lp) : dim(lp.get()->all_dim), lparams(lp) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   Dim dim;
   Parameter params;
+  LookupParameter lparams;
 };
 
 // represents specified (not learned) inputs to the network

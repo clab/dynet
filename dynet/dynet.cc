@@ -15,6 +15,10 @@ float* kSCALAR_MINUSONE;
 float* kSCALAR_ONE;
 float* kSCALAR_ZERO;
 int n_hgs = 0;
+unsigned n_cumul_hgs = 0;
+
+int get_number_of_active_graphs() {return n_hgs;};
+unsigned get_current_graph_id() {return n_cumul_hgs;};
 
 Node::~Node() {}
 size_t Node::aux_storage_size() const { return 0; }
@@ -23,14 +27,14 @@ size_t Node::aux_storage_size() const { return 0; }
 // TODO: This is a lot of code for something simple. Can it be shortened?
 void Node::forward(const std::vector<const Tensor*>& xs,
                    Tensor& fx) const {
-  if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
+  if (this->supports_multibatch() || fx.d.batch_elems() == 1) {
     forward_impl(xs, fx);
   } else {
     size_t i;
     std::vector<Tensor> xs_elems(xs.size());
     std::vector<const Tensor*> xs_ptrs(xs.size());
     std::vector<size_t> xs_sizes(xs.size());
-    for(i = 0; i < xs.size(); ++i) {
+    for (i = 0; i < xs.size(); ++i) {
       xs_elems[i] = xs[i]->batch_elem(0);
       xs_ptrs[i] = &xs_elems[i];
       xs_sizes[i] = xs_elems[i].d.size();
@@ -38,9 +42,9 @@ void Node::forward(const std::vector<const Tensor*>& xs,
     Tensor fx_elem(fx.batch_elem(0));
     size_t fx_size = fx_elem.d.size();
     forward_impl(xs_ptrs, fx_elem);
-    for(unsigned b = 1; b < fx.d.batch_elems(); ++b) {
-      for(i = 0; i < xs.size(); ++i)
-        if(xs[i]->d.bd > 1)
+    for (unsigned b = 1; b < fx.d.batch_elems(); ++b) {
+      for (i = 0; i < xs.size(); ++i)
+        if (xs[i]->d.bd > 1)
           xs_elems[i].v += xs_sizes[i];
       fx_elem.v += fx_size;
       forward_impl(xs_ptrs, fx_elem);
@@ -53,14 +57,14 @@ void Node::backward(const std::vector<const Tensor*>& xs,
                     const Tensor& dEdf,
                     unsigned xs_i,
                     Tensor& dEdxi) const {
-  if(this->supports_multibatch() || fx.d.batch_elems() == 1) {
+  if (this->supports_multibatch() || fx.d.batch_elems() == 1) {
     backward_impl(xs, fx, dEdf, xs_i, dEdxi);
   } else {
     size_t i;
     std::vector<Tensor> xs_elems(xs.size());
     std::vector<const Tensor*> xs_ptrs(xs.size());
     std::vector<size_t> xs_sizes(xs.size());
-    for(i = 0; i < xs.size(); ++i) {
+    for (i = 0; i < xs.size(); ++i) {
       xs_elems[i] = xs[i]->batch_elem(0);
       xs_ptrs[i] = &xs_elems[i];
       xs_sizes[i] = xs_elems[i].d.size();
@@ -72,13 +76,13 @@ void Node::backward(const std::vector<const Tensor*>& xs,
     Tensor dEdxi_elem(dEdxi.batch_elem(0));
     size_t dEdxi_size = dEdxi_elem.d.size();
     backward_impl(xs_ptrs, fx_elem, dEdf_elem, xs_i, dEdxi_elem);
-    for(unsigned b = 1; b < fx.d.batch_elems(); ++b) {
-      for(i = 0; i < xs.size(); ++i)
-        if(xs[i]->d.bd > 1)
+    for (unsigned b = 1; b < fx.d.batch_elems(); ++b) {
+      for (i = 0; i < xs.size(); ++i)
+        if (xs[i]->d.bd > 1)
           xs_elems[i].v += xs_sizes[i];
       fx_elem.v += fx_size;
       dEdf_elem.v += dEdf_size;
-      if(dEdxi.d.bd > 1)
+      if (dEdxi.d.bd > 1)
         dEdxi_elem.v += dEdxi_size;
       backward_impl(xs_ptrs, fx_elem, dEdf_elem, xs_i, dEdxi_elem);
     }
@@ -87,13 +91,15 @@ void Node::backward(const std::vector<const Tensor*>& xs,
 
 ComputationGraph::ComputationGraph():
   ee(new SimpleExecutionEngine(*this)) {
-  ++n_hgs;
-  immediate_compute = false;
-  check_validity = false;
-  if (n_hgs > 1) {
+  if (n_hgs > 0) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
     throw std::runtime_error("Attempted to create >1 CG");
   }
+  ++n_hgs;
+  immediate_compute = false;
+  check_validity = false;
+  ++n_cumul_hgs;
+  graph_id = n_cumul_hgs;
 }
 
 ComputationGraph::~ComputationGraph() {
@@ -109,38 +115,38 @@ void ComputationGraph::clear() {
 }
 
 CGCheckpoint ComputationGraph::_get_checkpoint() {
-    CGCheckpoint p;
-    p.device_mem_checkpoint = default_device->mark(this);
-    p.node_idx = nodes.size();
-    p.par_node_idx = parameter_nodes.size();
-    return p;
+  CGCheckpoint p;
+  p.device_mem_checkpoint = default_device->mark(this);
+  p.node_idx = nodes.size();
+  p.par_node_idx = parameter_nodes.size();
+  return p;
 }
 
 void ComputationGraph::_revert(CGCheckpoint p) {
-    default_device->revert(p.device_mem_checkpoint);
-    // clear all nodes at position >= p.node_idx
-    if ((int)nodes.size() > p.node_idx) {
-        nodes.resize(p.node_idx); // TODO verify deletion of nodes.
-        ee->invalidate(p.node_idx-1); // clear precomputed forward values
-    }
-    // clear all parameter nodes at position >= p.par_node_idx
-    if ((int)parameter_nodes.size() > p.par_node_idx) {
-        parameter_nodes.resize(p.par_node_idx);
-    }
+  default_device->revert(p.device_mem_checkpoint);
+  // clear all nodes at position >= p.node_idx
+  if ((int)nodes.size() > p.node_idx) {
+    nodes.resize(p.node_idx); // TODO verify deletion of nodes.
+    ee->invalidate(p.node_idx - 1); // clear precomputed forward values
+  }
+  // clear all parameter nodes at position >= p.par_node_idx
+  if ((int)parameter_nodes.size() > p.par_node_idx) {
+    parameter_nodes.resize(p.par_node_idx);
+  }
 }
 
 void ComputationGraph::checkpoint() {
-    checkpoints.push_back(_get_checkpoint());
+  checkpoints.push_back(_get_checkpoint());
 }
 
 void ComputationGraph::revert() {
-    if (checkpoints.size() == 0) return;
-    _revert(checkpoints.back());
-    checkpoints.pop_back();
+  if (checkpoints.size() == 0) return;
+  _revert(checkpoints.back());
+  checkpoints.pop_back();
 }
 
 Dim& ComputationGraph::get_dimension(VariableIndex index) const {
-  return nodes[index]->dim; 
+  return nodes[index]->dim;
 }
 
 
@@ -189,7 +195,24 @@ VariableIndex ComputationGraph::add_parameters(Parameter p) {
   return new_node_index;
 }
 
+VariableIndex ComputationGraph::add_parameters(LookupParameter p) {
+  VariableIndex new_node_index(nodes.size());
+  ParameterNode* new_node = new ParameterNode(p);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
 VariableIndex ComputationGraph::add_const_parameters(Parameter p) {
+  VariableIndex new_node_index(nodes.size());
+  ConstParameterNode* new_node = new ConstParameterNode(p);
+  nodes.push_back(new_node);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_const_parameters(LookupParameter p) {
   VariableIndex new_node_index(nodes.size());
   ConstParameterNode* new_node = new ConstParameterNode(p);
   nodes.push_back(new_node);
@@ -281,7 +304,7 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
   node->dim = node->dim_forward(xds);
   if (immediate_compute) {
     const Tensor& value = incremental_forward(i);
-    if (check_validity) 
+    if (check_validity)
       if (!value.is_valid()) {
         cerr << "NaN or Inf detected\n";
         throw std::runtime_error("NaN or Inf detected");
