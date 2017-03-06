@@ -33,14 +33,14 @@ extern float* kSCALAR_ZERO;
  * \details This is 0 or 1, you can't create more than one graph at once
  * \return Number of active graphs
  */
-const int get_number_of_active_graphs();
+int get_number_of_active_graphs();
 /**
  * \ingroup compgraph
  * \brief Get id of the current active graph
  * \details This can help check whether a graph is stale 
  * \return Id of the current graph
  */
-const unsigned get_current_graph_id();
+unsigned get_current_graph_id();
 
 // devices provide information about GPUs and CPUs
 // these include any API information that is required to make calls

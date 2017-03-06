@@ -17,8 +17,8 @@ float* kSCALAR_ZERO;
 int n_hgs = 0;
 unsigned n_cumul_hgs = 0;
 
-const int get_number_of_active_graphs() {return n_hgs;};
-const unsigned get_current_graph_id() {return n_cumul_hgs;};
+int get_number_of_active_graphs() {return n_hgs;};
+unsigned get_current_graph_id() {return n_cumul_hgs;};
 
 Node::~Node() {}
 size_t Node::aux_storage_size() const { return 0; }
