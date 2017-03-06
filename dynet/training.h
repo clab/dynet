@@ -50,15 +50,42 @@ struct Trainer {
     clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
   virtual ~Trainer();
 
+  /**
+   * \brief Update parameters
+   * \details Update the parameters according to the appropriate update rule
+   * 
+   * \param scale The scaling factor for the gradients
+   */
   void update(real scale = 1.0);
+
+  /**
+   * \brief Update subset of parameters
+   * \details Update some but not all of the parameters included in the model. This
+   *        is the update_subset() function in the Python bindings. The
+   *        parameters to be updated are specified by index, which can be found
+   *        for Parameter and LookupParameter objects through the "index" variable
+   *        (or the get_index() function in the Python bindings).
+   * 
+   * \param updated_params The parameter indices to be updated
+   * \param updated_lookup_params The lookup parameter indices to be updated
+   * \param scale The scaling factor for the gradients
+   */
+  void update(const std::vector<unsigned> & updated_params, const std::vector<unsigned> & updated_lookup_params, real scale = 1.0);
 
   void update_epoch(real r = 1) {
     epoch += r;
     eta = eta0 / (1 + epoch * eta_decay);
   }
 
-  // if clipping is enabled and the gradient is too big, return the amount to
-  // scale the gradient by (otherwise 1)
+  /**
+   * \brief Clip gradient
+   * \details If clipping is enabled and the gradient is too big, return the amount to
+   *          scale the gradient by (otherwise 1)
+   *
+   * 
+   * \param scale The clipping limit
+   * \return The appropriate scaling factor
+   */
   float clip_gradients(real scale);
 
   // TODO: This is unprotected temporarily until there is a better solution

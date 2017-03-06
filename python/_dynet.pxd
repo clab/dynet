@@ -34,6 +34,7 @@ cdef extern from "dynet/dim.h" namespace "dynet":
         int ndims()
         int rows()
         int cols()
+        unsigned operator[](unsigned i)
         void set(unsigned i, unsigned s)
         int size(unsigned i)
         CDim transpose()
@@ -50,12 +51,15 @@ cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterStorage "dynet::ParameterStorage":
         CParameterStorage()
         CTensor values
+        CTensor g
         CDim dim
 
     cdef cppclass CLookupParameterStorage "dynet::LookupParameterStorage":
         CLookupParameterStorage()
         vector[CTensor] values
+        vector[CTensor] grads
         CDim dim
+        CDim all_dim
 
     cdef cppclass CParameters "dynet::Parameter":
         CParameters()
@@ -63,6 +67,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+        unsigned index
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
@@ -72,6 +77,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+        unsigned index
 
     cdef cppclass CParameterInit "dynet::ParameterInit":
         pass
@@ -132,9 +138,9 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         VariableIndex add_const_lookup(CLookupParameters* p, const unsigned* pindex)
         VariableIndex add_const_lookup(CLookupParameters* p, unsigned index)
         
-        const CTensor& forward(VariableIndex index)
-        const CTensor& incremental_forward(VariableIndex index)
-        const CTensor& get_value(VariableIndex i)
+        const CTensor& forward(VariableIndex index) except +
+        const CTensor& incremental_forward(VariableIndex index) except +
+        const CTensor& get_value(VariableIndex i) except +
         void invalidate()
         void backward(VariableIndex i)
 
@@ -156,6 +162,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -165,6 +172,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -174,6 +182,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -183,6 +192,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -192,6 +202,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool clipping_enabled
         bool sparse_updates_enabled
         void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         void update_epoch(float r)
         void status()
 
@@ -202,11 +213,12 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
         long i
-        CDim dim()
+        CDim dim() except +
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata)
     CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CParameters p) #
+    CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CLookupParameters p) #
     #CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index)   #
     CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) #
     CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
@@ -267,6 +279,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     CExpression c_affine_transform "dynet::expr::affine_transform" (const vector[CExpression]& xs)
 
+    CExpression c_inverse "dynet::expr::inverse" (CExpression& x) #
+    CExpression c_logdet "dynet::expr::logdet" (CExpression& x) #
     CExpression c_trace_of_product "dynet::expr::trace_of_product" (CExpression& x, CExpression& y);
 
     CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) #
