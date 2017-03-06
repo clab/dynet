@@ -12,6 +12,7 @@
 #include <unordered_set>
 #include <string>
 #include <stdexcept>
+#include <initializer_list>
 #include <boost/serialization/export.hpp>
 
 #include "dynet/io-macros.h"
@@ -121,7 +122,7 @@ private:
 /**
  * \ingroup params
  * \brief Storage class for LookupParameters
- * 
+ *
  */
 struct LookupParameterStorage : public ParameterStorageBase {
   friend class Model;
@@ -140,7 +141,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
   void initialize_dev(MyDevice & dev, unsigned index, const std::vector<float>& val);
   /**
    * @brief Initialize one particular lookup
-   * 
+   *
    * @param index Index of the lookput to initialize
    * @param val Values
    */
@@ -148,7 +149,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
 
   /**
    * @brief Copy from another LookupParameterStorage
-   * 
+   *
    * @param val Other LookupParameterStorage to copy from
    */
   void copy(const LookupParameterStorage & val);
@@ -157,7 +158,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
   /**
    * @brief Add a Tensor to the gradient f one of the lookups
    * @details after this `grads[index]<-grads[index] + g`
-   * 
+   *
    * @param index [description]
    * @param g [description]
    */
@@ -363,14 +364,14 @@ private:
 struct ParameterInitUniform : public ParameterInit {
   /**
    * \brief Constructor for uniform distribution centered on 0
-   * \details [long description]Samples parameters from \f$mathcal U([-\mathrm{scale},+\mathrm{scale}]\f$
+   * \details Samples parameters from \f$mathcal U([-\mathrm{scale},+\mathrm{scale}])\f$
    * \param scale Scale of the distribution
    */
   ParameterInitUniform(float scale) :
     left(-scale), right(scale) { if (scale == 0.0f) throw std::domain_error("Scale of the uniform distribution cannot be 0 in ParameterInitUniform"); }
   /**
    * \brief Constructor for uniform distribution in a specific interval
-   * \details [long description]
+   * \details Samples parameters from \f$mathcal U([\texttt{l},\texttt{r})\f$
    *
    * \param l Lower bound of the interval
    * \param r Upper bound of the interval
@@ -379,6 +380,36 @@ struct ParameterInitUniform : public ParameterInit {
   virtual void initialize_params(Tensor & values) const override;
 private:
   float left, right;
+};
+
+/**
+ * \ingroup params
+ * \brief Initialize parameters with different intitializers for different columns
+ *
+ */
+struct ParameterInitJoint : public ParameterInit {
+  /**
+   * @brief Constructor
+   * @details takes two vectors \f$\{r_1,r_2,\ldots,r_n\}\f$ and \f$\{\text{init}_1,\text{init}_2,\ldots,\text{init}__n\}\f$. This will intialize the $r_1$ first rows of the parameter with $\text{init}_1$, then the $r_2$ following columns with $\text{init}_2$, etc...
+   *
+   * @param rows List of row widths. The sum of its element must equal the number of rows of the parameter.
+   * @param initializers List of pointers to the initializers to use for each slice.
+   */
+  ParameterInitJoint(std::vector<unsigned> rows, std::vector<ParameterInit*> initializers) {
+    sum = 0;
+    if (rows.size() != initializers.size())
+      throw std::invalid_argument("Number of dimensions and initializers don't match");
+    for (unsigned i = 0; i < rows.size(); ++i) {
+      sum += rows[i];
+      this->rows.push_back(rows[i]);
+      this->inits.push_back(initializers[i]);
+    }
+  }
+  virtual void initialize_params(Tensor & values) const override;
+private:
+  unsigned sum;
+  std::vector<unsigned> rows;
+  std::vector<ParameterInit*> inits;
 };
 
 /**
@@ -422,7 +453,7 @@ struct ParameterInitGlorot : public ParameterInit {
    * \brief Constructor
    *
    * \param is_lookup Boolean value identifying the parameter as a LookupParameter
-   * \param gain Scaling parameter. In order for the Glorot initialization to be correct, you should ût this equal to \f$\frac 1 {f'(0)}\f$ where \f$f\f$ is your activation function
+   * \param gain Scaling parameter. In order for the Glorot initialization to be correct, you should put this equal to \f$\frac 1 {f'(0)}\f$ where \f$f\f$ is your activation function
    */
   ParameterInitGlorot(bool is_lookup = false, float gain = 1.f) : lookup(is_lookup), gain(gain) {}
   virtual void initialize_params(Tensor & values) const override;

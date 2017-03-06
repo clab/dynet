@@ -161,9 +161,9 @@ void LookupParameterStorage::clear() {
 
 #ifndef __CUDACC__
 DYNET_SERIALIZE_SAVE_COMMIT(LookupParameterStorage,
-		            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
+                            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
 DYNET_SERIALIZE_LOAD_COMMIT(LookupParameterStorage, LOAD_INIT_FUNC(),
-		            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
+                            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
 DYNET_SAVELOAD_IMPL(LookupParameterStorage)
 #endif
 
@@ -173,6 +173,26 @@ void ParameterInitNormal::initialize_params(Tensor & values) const {
 
 void ParameterInitUniform::initialize_params(Tensor & values) const {
   TensorTools::RandomizeUniform(values, left, right);
+}
+
+void ParameterInitJoint::initialize_params(Tensor & values) const {
+  // check shape and number of columns :
+  if (values.d.ndims() > 2)
+    throw std::invalid_argument("ParameterInitJoint only supports vectors and matrices");
+  if (values.d.rows() != sum)
+    throw std::invalid_argument("Number of rows and list of dimensions don't match");
+  // Initialize
+  unsigned offset = 0;
+  unsigned ncols = values.d.cols();
+  for (unsigned c = 0; c < ncols; ++c) {
+    for (unsigned i = 0; i < inits.size(); ++i) {
+      Dim d({rows[i], ncols});
+      Tensor t(d, values.v + offset, values.device, values.mem_pool);
+      inits[i]->initialize_params(t);
+      offset += rows[i];
+    }
+  }
+
 }
 
 void ParameterInitConst::initialize_params(Tensor & values) const {
@@ -401,8 +421,8 @@ size_t Model::updated_parameter_count() const {
 #ifndef __CUDACC__
 DYNET_SERIALIZE_COMMIT(Model,
                        DYNET_SERIALIZE_DEFINE(all_params, params,
-                                              lookup_params, weight_decay,
-                                              updated_params, updated_lookup_params))
+                           lookup_params, weight_decay,
+                           updated_params, updated_lookup_params))
 DYNET_SERIALIZE_IMPL(Model)
 #endif
 
