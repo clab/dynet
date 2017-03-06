@@ -148,9 +148,7 @@ cdef class Parameters:
     cdef int _version
     cdef Expression _expr
     def __cinit__(self):
-        #self.thisptr = p
         self._version = -1
-        pass
     @staticmethod
     cdef wrap_ptr(CParameters ptr):
         self = Parameters()
@@ -207,8 +205,10 @@ cdef class Parameters:
 
 cdef class LookupParameters:
     cdef CLookupParameters thisptr # TODO -- no longer pointer
+    cdef int _version
+    cdef Expression _expr
     def __cinit__(self):
-        pass
+        self._version = -1
     @staticmethod
     cdef wrap_ptr(CLookupParameters ptr):
         self = LookupParameters()
@@ -837,8 +837,11 @@ cdef class Expression: #{{{
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
-def parameter(Parameters p): return p.expr()
-def parameter(LookupParameters p): return p.expr()
+def parameter(p):
+    if isinstance(p,Parameters) or isinstance(p,LookupParameters):
+        return p.expr()
+    else:
+        raise NotImplementedError("Cannot call parameter() on anything other than Parameters or LookupParameters")
 
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller
