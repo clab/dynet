@@ -16,7 +16,9 @@ Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data) {
 Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata) { return Expression(&g, g.add_input(d, pdata)); }
 Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata) { return Expression(&g, g.add_input(d, ids, data, defdata)); }
 Expression const_parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_const_parameters(p)); }
+Expression const_parameter(ComputationGraph& g, LookupParameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_parameters(p)); }
+Expression parameter(ComputationGraph& g, LookupParameter p) { return Expression(&g, g.add_parameters(p)); }
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index) { return Expression(&g, g.add_lookup(p, index)); }
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex) { return Expression(&g, g.add_lookup(p, pindex)); }
 Expression lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }

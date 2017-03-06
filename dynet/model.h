@@ -152,10 +152,21 @@ struct LookupParameterStorage : public ParameterStorageBase {
    * @param val Other LookupParameterStorage to copy from
    */
   void copy(const LookupParameterStorage & val);
+
+  template <class MyDevice>
+  void accumulate_grad_dev(MyDevice & dev, const Tensor& g);
+  /**
+   * @brief Add a Tensor to the gradient of the whole lookup matrix
+   * @details after this `grads<-grads + g`
+   * 
+   * @param g [description]
+   */
+  void accumulate_grad(const Tensor& g);
+
   template <class MyDevice>
   void accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& g);
   /**
-   * @brief Add a Tensor to the gradient f one of the lookups
+   * @brief Add a Tensor to the gradient of one of the lookups
    * @details after this `grads[index]<-grads[index] + g`
    * 
    * @param index [description]
@@ -189,8 +200,9 @@ struct LookupParameterStorage : public ParameterStorageBase {
   std::vector<Tensor> grads; /**< List of gradient values for each lookup */
   // gradients are sparse, so track which components are nonzero
   std::unordered_set<unsigned> non_zero_grads; /**< Gradients are sparse, so track which components are nonzero */
+  bool all_updated; /** Whether all of the gradients have been updated. */
 private:
-  LookupParameterStorage() {}
+  LookupParameterStorage() : all_updated(false) {}
   LookupParameterStorage(unsigned n, const Dim& d);
   LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init);
   DYNET_SERIALIZE_SPLIT_DECLARE()

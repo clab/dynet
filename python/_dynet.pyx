@@ -252,6 +252,11 @@ cdef class LookupParameters:
         grads = self.thisptr.get().grads
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
 
+    cpdef Expression expr(self):
+        if cg_version() != self._version:
+            self._version = cg_version()
+            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+        return self._expr
 
     cpdef zero(self): self.thisptr.zero()
 
@@ -833,6 +838,7 @@ cdef class Expression: #{{{
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
 def parameter(Parameters p): return p.expr()
+def parameter(LookupParameters p): return p.expr()
 
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller

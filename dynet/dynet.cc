@@ -195,7 +195,24 @@ VariableIndex ComputationGraph::add_parameters(Parameter p) {
   return new_node_index;
 }
 
+VariableIndex ComputationGraph::add_parameters(LookupParameter p) {
+  VariableIndex new_node_index(nodes.size());
+  ParameterNode* new_node = new ParameterNode(p);
+  nodes.push_back(new_node);
+  parameter_nodes.push_back(new_node_index);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
 VariableIndex ComputationGraph::add_const_parameters(Parameter p) {
+  VariableIndex new_node_index(nodes.size());
+  ConstParameterNode* new_node = new ConstParameterNode(p);
+  nodes.push_back(new_node);
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+VariableIndex ComputationGraph::add_const_parameters(LookupParameter p) {
   VariableIndex new_node_index(nodes.size());
   ConstParameterNode* new_node = new ConstParameterNode(p);
   nodes.push_back(new_node);
