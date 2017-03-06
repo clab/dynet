@@ -100,7 +100,7 @@ void Trainer::update(const std::vector<unsigned> & upd_params, const std::vector
   }
   const auto & lookup_params = model->lookup_parameters_list();
   for(auto i : upd_lookup_params) {
-    if(sparse_updates_enabled) {
+    if(sparse_updates_enabled && !lookup_params[i]->all_updated) {
       for (auto j : lookup_params[i]->non_zero_grads)
         update_lookup_params(scale, gscale, i, j);
     } else {
