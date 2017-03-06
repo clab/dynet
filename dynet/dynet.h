@@ -142,12 +142,26 @@ struct ComputationGraph {
    */
   VariableIndex add_parameters(Parameter p);
   /**
+   * \brief Add a full matrix of lookup parameters to the computation graph
+   *
+   * \param p LookupParameter to be added
+   * \return The index of the created variable
+   */
+  VariableIndex add_parameters(LookupParameter p);
+  /**
    * \brief Add a parameter to the computation graph (but don't update)
    *
    * \param p Parameter to be added
    * \return The index of the created variable
    */
   VariableIndex add_const_parameters(Parameter p);
+  /**
+   * \brief Add a full matrix of lookup parameter to the computation graph (but don't update)
+   *
+   * \param p LookupParameter to be added
+   * \return The index of the created variable
+   */
+  VariableIndex add_const_parameters(LookupParameter p);
   // use pindex to point to a memory location where the index will live
   // that the caller owns
   /**

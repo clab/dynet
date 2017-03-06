@@ -1006,6 +1006,14 @@ BOOST_AUTO_TEST_CASE( lookup_test ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression parameter() with lookup parameter input;
+BOOST_AUTO_TEST_CASE( lookup_matrix_test ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, lookup1);
+  Expression z = input(cg, {1, 3}, ones3_vals) * x * input(cg, {3}, ones3_vals);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 BOOST_AUTO_TEST_CASE( backward_test ) {
   dynet::ComputationGraph cg;
   Expression x1 = lookup(cg, lookup1, (unsigned)0);

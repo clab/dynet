@@ -98,7 +98,7 @@ DYNET_SERIALIZE_COMMIT(ParameterStorage,
 DYNET_SERIALIZE_IMPL(ParameterStorage)
 #endif
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d), all_updated(false) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
   all_grads.device = all_values.device = default_device;
@@ -109,7 +109,7 @@ LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d
   initialize_lookups();
 }
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init) : dim(d) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init) : dim(d), all_updated(false) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
   all_grads.device = all_values.device = default_device;
@@ -149,14 +149,15 @@ void LookupParameterStorage::copy(const LookupParameterStorage& param) {
 }
 
 void LookupParameterStorage::clear() {
-  // TODO: this is hacky, probably need a better heuristic
-  if (all_grads.device->type == DeviceType::GPU) {
+  // TODO: the GPU part is hacky, probably need a better heuristic
+  if (all_grads.device->type == DeviceType::GPU || all_updated) {
     TensorTools::Zero(all_grads);
   } else {
     for (auto i : non_zero_grads)
       TensorTools::Zero(grads[i]);
   }
   non_zero_grads.clear();
+  all_updated = false;
 }
 
 #ifndef __CUDACC__
@@ -526,12 +527,40 @@ DYNET_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, squared_l2norm, squared_l2
 template <class MyDevice>
 void LookupParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
   Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
-  auto it = non_zero_grads.begin();
   TensorTools::Zero(sqnorm_t);
-  while (it != non_zero_grads.end())
-    sqnorm_t.t<0>().device(*dev.edevice) += grads[*(it++)].tvec().square().sum();
+  // TODO: the GPU part is hacky, probably need a better heuristic
+  if (all_grads.device->type == DeviceType::GPU || all_updated) {
+    sqnorm_t.t<0>().device(*dev.edevice) += all_grads.tvec().square().sum();
+  } else {
+    auto it = non_zero_grads.begin();
+    while (it != non_zero_grads.end())
+      sqnorm_t.t<0>().device(*dev.edevice) += grads[*(it++)].tvec().square().sum();
+  }
 }
 DYNET_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, g_squared_l2norm, g_squared_l2norm_dev)
+
+template <class MyDevice>
+void LookupParameterStorage::accumulate_grad_dev(MyDevice & dev, const Tensor& d) {
+  all_updated = true;
+  all_grads.tvec().device(*dev.edevice) += d.tvec();
+}
+#ifdef __CUDACC__
+template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d);
+#elif defined(HAVE_CUDA)
+extern template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d);
+template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
+void LookupParameterStorage::accumulate_grad(const Tensor& d) {
+  if (all_values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)all_values.device, d); }
+  else if (all_values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)all_values.device, d); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
+void LookupParameterStorage::accumulate_grad(const Tensor& d) {
+  if (all_values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)all_values.device, d); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
 
 template <class MyDevice>
 void LookupParameterStorage::accumulate_grad_dev(MyDevice & dev, unsigned index, const Tensor& d) {

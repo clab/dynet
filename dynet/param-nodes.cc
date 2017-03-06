@@ -40,7 +40,12 @@ Dim ParameterNode::dim_forward(const vector<Dim>& xs) const {
 }
 
 void ParameterNode::accumulate_grad(const Tensor& g) {
-  params.get()->accumulate_grad(g);
+  if(params.mp != nullptr)
+    params.get()->accumulate_grad(g);
+  else if(lparams.mp != nullptr)
+    lparams.get()->accumulate_grad(g);
+  else
+    throw std::runtime_error("DyNet internal error: ConstParameterNode has neither Parameter nor LookupParameter");
 }
 
 string InputNode::as_string(const vector<string>& arg_names) const {
@@ -106,7 +111,12 @@ void LookupNode::accumulate_grad(const Tensor& g) {
 template<class MyDevice>
 void ConstParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   assert(xs.size() == 0);
-  fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.current_weight_decay();
+  if(params.mp != nullptr)
+    fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.current_weight_decay();
+  else if(lparams.mp != nullptr)
+    fx.tvec().device(*dev.edevice) = lparams.get()->all_values.tvec() * lparams.mp->weight_decay.current_weight_decay();
+  else
+    throw std::runtime_error("DyNet internal error: ConstParameterNode has neither Parameter nor LookupParameter");
 }
 
 template<class MyDevice>
@@ -129,7 +139,12 @@ void ParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Te
 //    fx.v = params->values.v;
 //    return;
 //  }
-  fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.current_weight_decay();
+  if(params.mp != nullptr)
+    fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.current_weight_decay();
+  else if(lparams.mp != nullptr)
+    fx.tvec().device(*dev.edevice) = lparams.get()->all_values.tvec() * lparams.mp->weight_decay.current_weight_decay();
+  else
+    throw std::runtime_error("DyNet internal error: ParameterNode has neither Parameter nor LookupParameter");
 }
 
 template<class MyDevice>
