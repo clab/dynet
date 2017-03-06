@@ -10,8 +10,21 @@ to calculate a new function.
 You can find more information on how to do so at the end of the tutorial slides
 `here <http://phontron.com/slides/emnlp2016-dynet-tutorial-part1.pdf>`_.
 
-Coding Conventions
-------------------
+Coding Practices
+----------------
+
+**Testing:**
+Before committing any code, tests should be run to make sure that the new code didn't break anything.
+This can be done by using the ``make test`` command.
+It is also highly recommended that you add unit tests for any new functionality.
+Unit tests are implemented in the ``tests`` directory.
+When making a bug fix, you can add a test that broke before the fix but passes afterwards.
+
+That being said, tests are not an absolute requirement, so if you have a contribution but aren't sure
+how to do tests, please don't let this stop you from contributing.
+
+Coding Style Conventions
+------------------------
 
 DyNet (the main version in C++) has certain coding style standards:
 

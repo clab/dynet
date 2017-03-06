@@ -114,11 +114,33 @@ cdef CDim Dim(dim, unsigned int batch_size=1):
     else:
         return CDim(cvec)
 
+cdef tuple c_dim_as_dim(CDim d):
+    """
+    Returns a tuple (dims,batch_dim) where dims is the tuple of dimensions of each batch element
+    """
+    dim = tuple([d[i] for i in range(d.ndims())])
+    dim= (dim,d.batch_elems())
+    return tuple(dim)
+
+cdef tuple c_dim_as_shape(CDim d,bool force_batch=False):
+    dim = [d[i] for i in range(d.ndims())]
+    if force_batch or d.batch_elems()>1: dim.append(d.batch_elems())
+    return tuple(dim)
+
+cdef CDim shape_as_c_dim(tuple d,bool batched = False):
+    if batched:
+        dim = d[:-1] if len(d) > 1 else (1,)
+        batch_size= d[-1]
+    else:
+        dim = d
+        batch_size = 1
+    return Dim(dim,batch_size=batch_size)
+
 cdef c_tensor_as_np(CTensor &t):
     # TODO: make more efficient, with less copy
     arr = np.array(c_as_vector(t))
-    if t.d.ndims() == 1: return arr
-    else: return arr.reshape(t.d.rows(), t.d.cols(),order='F')
+    dim = c_dim_as_shape(t.d)
+    return arr.reshape(dim,order='F')
 
 # {{{ Model / Parameters 
 cdef class Parameters:
@@ -126,9 +148,7 @@ cdef class Parameters:
     cdef int _version
     cdef Expression _expr
     def __cinit__(self):
-        #self.thisptr = p
         self._version = -1
-        pass
     @staticmethod
     cdef wrap_ptr(CParameters ptr):
         self = Parameters()
@@ -136,8 +156,7 @@ cdef class Parameters:
         return self
 
     cpdef shape(self):
-        if self.thisptr.get().dim.ndims() == 1: return (self.thisptr.get().dim.rows())
-        return (self.thisptr.get().dim.rows(), self.thisptr.get().dim.cols())
+        return c_dim_as_shape(self.thisptr.get().dim)
 
     cpdef as_array(self):
         """
@@ -145,6 +164,13 @@ cdef class Parameters:
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().values)
+
+    cpdef grad_as_array(self):
+        """
+        Return gradient as a numpy array.
+        """
+        cdef CTensor t
+        return c_tensor_as_np(self.thisptr.get().g)
 
     # TODO: make more efficient
     cpdef load_array(self, arr):
@@ -167,6 +193,7 @@ cdef class Parameters:
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
+    cpdef unsigned get_index(self): return self.thisptr.index
 
     cpdef Expression expr(self):
         if cg_version() != self._version:
@@ -178,8 +205,10 @@ cdef class Parameters:
 
 cdef class LookupParameters:
     cdef CLookupParameters thisptr # TODO -- no longer pointer
+    cdef int _version
+    cdef Expression _expr
     def __cinit__(self):
-        pass
+        self._version = -1
     @staticmethod
     cdef wrap_ptr(CLookupParameters ptr):
         self = LookupParameters()
@@ -196,9 +225,7 @@ cdef class LookupParameters:
             self.init_row(i, row)
 
     cpdef shape(self):
-        if self.thisptr.get().dim.cols() != 1:
-            return (self.thisptr.get().values.size(), self.thisptr.get().dim.rows(), self.thisptr.get().dim.cols())
-        return (self.thisptr.get().values.size(), self.thisptr.get().dim.rows())
+        return c_dim_as_shape(self.thisptr.get().all_dim)
 
     def __getitem__(self, int i):
         return lookup(self, i)
@@ -217,10 +244,25 @@ cdef class LookupParameters:
         vals = self.thisptr.get().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
+    cpdef grad_as_array(self):
+        """
+        Return gradients as a numpy array.
+        """
+        cdef vector[CTensor] grads
+        grads = self.thisptr.get().grads
+        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
+
+    cpdef Expression expr(self):
+        if cg_version() != self._version:
+            self._version = cg_version()
+            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+        return self._expr
+
     cpdef zero(self): self.thisptr.zero()
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
+    cpdef unsigned get_index(self): return self.thisptr.index
 
 # TODO document this
 class Saveable(object):
@@ -615,8 +657,8 @@ cdef class ComputationGraph:
         return _vecInputExpression(self, v)
     cdef inputMatrix(self, int d1, int d2):
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
-    def inputMatrixLiteral(self, vector[float] v, tuple d):
-        return _vecInputExpression(self, v, d)
+    def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1):
+        return _vecInputExpression(self, v, d,batch_size)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -671,10 +713,14 @@ cdef class Expression: #{{{
         return CExpression(self.cgp(), self.vindex)
 
     cpdef dim(self):
+        """
+        Returns a tuple (dims,batch_dim) where dims is the tuple of dimensions of each batch element
+        """
         cdef CDim d;
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         d=self.c().dim()
-        return (d.size(), d.rows(), d.cols(), d.batch_elems())
+        return c_dim_as_dim(d)
+        # return (d.size(), d.rows(), d.cols(), d.batch_elems())
 
     def __repr__(self):
         return str(self)
@@ -737,17 +783,7 @@ cdef class Expression: #{{{
         if recalculate: self.cg().forward(self.vindex)
         t = self.cgp().get_value(self.vindex)
         dim = t.d
-        arr = np.array(c_as_vector(t))
-        if dim.batch_elems() > 1:
-            if dim.ndims() == 1:
-                arr = arr.reshape(dim.rows(), dim.batch_elems(),order='F')
-            elif dim.ndims() == 2:
-                arr = arr.reshape(dim.rows(), dim.cols(), dim.batch_elems(),order='F')
-            else:
-                assert(False)
-            return arr
-        if dim.ndims() == 2:
-            arr = arr.reshape(dim.rows(), dim.cols(),order='F')
+        arr = np.array(c_tensor_as_np(t))
         return arr
 
     cpdef value(self, recalculate=False):
@@ -755,7 +791,7 @@ cdef class Expression: #{{{
         cdef CTensor t
         if recalculate: self.cg().forward(self.vindex)
         t = self.cgp().get_value(self.vindex)
-        if t.d.ndims() == 2:
+        if t.d.ndims() >= 2:
             return self.npvalue()
         vec = self.vec_value()
         if len(vec) == 1: return vec[0]
@@ -801,7 +837,11 @@ cdef class Expression: #{{{
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
-def parameter(Parameters p): return p.expr()
+def parameter(p):
+    if isinstance(p,Parameters) or isinstance(p,LookupParameters):
+        return p.expr()
+    else:
+        raise NotImplementedError("Cannot call parameter() on anything other than Parameters or LookupParameters")
 
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller
@@ -825,13 +865,13 @@ def scalarInput(float s):
 
 cdef class _vecInputExpression(Expression):
     cdef FloatVectorValue val
-    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None):
+    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None,batch_size=1):
         self.val = FloatVectorValue(val)
         if dim is None: dim = self.val.size()
         #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cgp()[0], Dim(dim), self.val.addr())
+        e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, vector[float] data):
@@ -865,6 +905,30 @@ def inputMatrix(vector[float] v, tuple d):
                [ 2.,  4.,  6.]])
     """
     return _cg.inputMatrixLiteral(v, d)
+
+def inputTensor(arr,bool batched=False):
+    """
+    Creates a tensor expression based on a numpy array or a list.
+    The dimension is inferred from the shape of the input.
+    if batched=True, the last dimension is used as a batch dimension
+    if arr is a list of numpy ndarrays, this returns a batched expression where the batch elements are the elements of the list
+    """
+    if isinstance(arr,list):
+        if all([isinstance(x,np.ndarray) for x in arr]):
+            arr = np.stack(arr,axis=-1)
+            batched=True
+        else:
+            arr=np.asarray(arr,dtype=float)
+    if not isinstance(arr,np.ndarray):
+        raise TypeError("Input Tensor should be a numpy.ndarray or a valid list pf floats")
+    if batched:
+        dim = arr.shape[:-1] if len(arr.shape) > 1 else (1,)
+        batch_size= arr.shape[-1]
+    else:
+        dim = arr.shape
+        batch_size= 1
+    arr = arr.flatten(order='F')
+    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
 
 cdef class _lookupExpression(Expression):
     cdef UnsignedValue val
@@ -970,6 +1034,8 @@ cpdef Expression cdiv(Expression x, Expression y): ensure_freshness(y); return E
 cpdef Expression cmult(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cmult(x.c(), y.c()))
 cpdef Expression colwise_add(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_colwise_add(x.c(), y.c()))
 
+cpdef Expression inverse(Expression x): return Expression.from_cexpr(x.cg_version, c_inverse(x.c()))
+cpdef Expression logdet(Expression x): return Expression.from_cexpr(x.cg_version, c_logdet(x.c()))
 cpdef Expression trace_of_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_trace_of_product(x.c(), y.c()))
 cpdef Expression dot_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
 cpdef Expression squared_norm(Expression x): return Expression.from_cexpr(x.cg_version, c_squared_norm(x.c()))
@@ -1541,6 +1607,12 @@ cdef class SimpleSGDTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1565,6 +1637,12 @@ cdef class MomentumSGDTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1590,6 +1668,12 @@ cdef class AdagradTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1615,6 +1699,12 @@ cdef class AdadeltaTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1640,6 +1730,12 @@ cdef class AdamTrainer:
         del self.thisptr
     cpdef update(self, float s=1.0):
         self.thisptr.update(s)
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -1657,4 +1753,3 @@ cdef class AdamTrainer:
         return self.thisptr.clip_threshold
 
 #}}}
-
