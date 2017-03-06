@@ -180,6 +180,26 @@ Expression parameter(ComputationGraph& g, Parameter p);
 
 /**
  * \ingroup inputoperations
+ * \brief Load lookup parameter
+ * \details Load a full tensor of lookup parameters into the computation graph.
+ *          Normally lookup parameters are accessed by using the lookup() function
+ *          to grab a single element. However, in some cases we'll want to access
+ *          all of the parameters in the entire set of lookup parameters for some
+ *          reason. In this case you can use this function. In this case, the
+ *          first dimensions in the returned tensor will be equivalent to the
+ *          dimensions that we would get if we get calling the lookup() function,
+ *          and the size of the final dimension will be equal to the size of the
+ *          vocabulary.
+ *
+ * \param g Computation graph
+ * \param lp LookupParameter object to load
+ *
+ * \return An expression representing lp
+ */
+Expression parameter(ComputationGraph& g, LookupParameter lp);
+
+/**
+ * \ingroup inputoperations
  * \brief Load constant parameters
  * \details Load parameters into the computation graph, but prevent them from being
  *          updated when performing parameter update.
@@ -190,6 +210,19 @@ Expression parameter(ComputationGraph& g, Parameter p);
  * \return An expression representing the constant p
  */
 Expression const_parameter(ComputationGraph& g, Parameter p);
+
+/**
+ * \ingroup inputoperations
+ * \brief Load constant lookup parameters
+ * \details Load lookup parameters into the computation graph, but prevent them from being
+ *          updated when performing parameter update.
+ *
+ * \param g Computation graph
+ * \param lp LookupParameter object to load
+ *
+ * \return An expression representing the constant lp
+ */
+Expression const_parameter(ComputationGraph& g, LookupParameter lp);
 
 /**
  * \ingroup inputoperations
