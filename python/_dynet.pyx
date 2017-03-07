@@ -39,12 +39,28 @@ from _dynet cimport *
 cimport _dynet as dynet
 
 cdef class DynetParams:
+    """This object holds the global parameters of Dynet
+
+    You should only need to use this after importing dynet as :
+
+        import _dynet / import _gdynet
+
+    See the documentation for more details
+    """
     cdef CDynetParams cparams
 
     def __init__(self):
         pass
 
     cpdef from_args(self, shared_parameters=None):
+        """Gets parameters from the command line arguments
+        
+        You can still modify the parameters after calling this.
+        See the documentation about command line arguments for more details
+        
+        Keyword Arguments:
+            shared_parameters {[type]} -- [description] (default: {None})
+        """
         cdef int argc = len(sys.argv)
         cdef char** c_argv
         args = [bytearray(x, encoding="utf-8") for x in sys.argv]
@@ -60,21 +76,54 @@ cdef class DynetParams:
         free(c_argv)
 
     cpdef init(self):
+        """Initialize dynet with the current dynetparams object.
+        
+        This is one way, you can't uninitialize dynet
+        """
         dynet.initialize(self.cparams)
 
     cpdef set_mem(self, unsigned mem):
+        """Set the memory allocated to dynet
+        
+        The unit is MB
+        
+        Arguments:
+            mem {unsigned int} -- memory size in MB
+        """
         self.cparams.mem_descriptor = str(mem)
 
     cpdef set_random_seed(self, unsigned random_seed):
+        """Set random seed for dynet
+        
+        Arguments:
+            random_seed {unsigned int} -- Random seed
+        """
         self.cparams.random_seed = random_seed
 
     cpdef set_weight_decay(self, float weight_decay):
+        """Set weight decay parameter
+        
+        Arguments:
+            weight_decay {float} -- weight decay parameter
+        """
         self.cparams.weight_decay = weight_decay
 
     cpdef set_shared_parameters(self, bool shared_parameters):
+        """Shared parameters
+        
+        Arguments:
+            shared_parameters {bool} -- shared parameters
+        """
         self.cparams.shared_parameters = shared_parameters
 
     cpdef set_requested_gpus(self, int requested_gpus):
+        """Number of requested gpus
+        
+        Currently only 1 is supported
+        
+        Arguments:
+            requested_gpus {int} -- number of requested gpus
+        """
         self.cparams.requested_gpus = requested_gpus
         self.cparams.ngpus_requested = True
         self.cparams.ids_requested = False
@@ -90,16 +139,45 @@ cdef class DynetParams:
         self.cparams.ids_requested = True
 
 def init(shared_parameters=None):
+    """Initialize dynet
+    
+    Initializes dynet from command line arguments. Do not use after 
+        
+        import dynet
+
+    only after 
+
+        import _dynet / import _gdynet
+    
+    Keyword Arguments:
+        shared_parameters {bool} -- [description] (default: {None})
+    """
     params=DynetParams()
     params.from_args(shared_parameters)
     params.init()
 
 def init_from_params(DynetParams params):
+    """Initialize from DynetParams
+    
+    Same as 
+
+        params.init()
+    
+    Arguments:
+        params {DynetParams} -- dynet parameters
+    """
     params.init()
 
 cdef CDim Dim(dim, unsigned int batch_size=1):
-    """
-    dim: either a tuple or an int
+    """Get dynet Dim from tuple
+    
+
+    Arguments:
+        dim {tuple} -- Dimensions as a tuple
+        batch_size {int} -- Batch size (default: {1})
+    
+    Returns:
+        CDim -- Dynet dimension
     """
     cdef vector[long] cvec
     if isinstance(dim, tuple):
@@ -144,6 +222,10 @@ cdef c_tensor_as_np(CTensor &t):
 
 # {{{ Model / Parameters 
 cdef class Parameters:
+    """Parameters class
+    
+    Parameters are things that are optimized. in contrast to a system like Torch where computational modules may have their own parameters, in DyNet parameters are just parameters.
+    """
     cdef CParameters thisptr # TODO -- no longer pointer
     cdef int _version
     cdef Expression _expr
@@ -156,24 +238,37 @@ cdef class Parameters:
         return self
 
     cpdef shape(self):
+        """[summary]
+        
+        [description]
+        
+        Returns:
+            [type] -- [description]
+        """
         return c_dim_as_shape(self.thisptr.get().dim)
 
     cpdef as_array(self):
-        """
-        Return as a numpy array.
+        """Return as a numpy array.
+        
+        Returns:
+            np.ndarray -- values of the parameter
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().values)
 
     cpdef grad_as_array(self):
-        """
-        Return gradient as a numpy array.
+        """Return gradient as a numpy array.
+        
+        Returns:
+            np.ndarray -- values of the gradient w.r.t. this parameter
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().g)
 
     # TODO: make more efficient
     cpdef load_array(self, arr):
+        """Deprecated
+        """
         assert(False),"This method is depracated. Use instead model.parameters_from_numpy(arr)."
         cdef CTensor t
         cdef float* vals
@@ -189,9 +284,19 @@ cdef class Parameters:
         for i in xrange(arr.size):
             vals[i] = arr[i]
 
-    cpdef zero(self): self.thisptr.zero()
+    cpdef zero(self):
+        """Set the parameter to zero
 
-    cpdef bool is_updated(self): return self.thisptr.is_updated()
+        """
+        self.thisptr.zero()
+
+    cpdef bool is_updated(self):
+        """[summary]
+        
+        Returns:
+            bool -- [description]
+        """
+        return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
     cpdef unsigned get_index(self): return self.thisptr.index
 
