@@ -63,7 +63,7 @@ cdef class DynetParams:
         dynet.initialize(self.cparams)
 
     cpdef set_mem(self, unsigned mem):
-        self.cparams.mem_descriptor = str(mem)
+        self.cparams.mem_descriptor = str(mem).encode()
 
     cpdef set_random_seed(self, unsigned random_seed):
         self.cparams.random_seed = random_seed
