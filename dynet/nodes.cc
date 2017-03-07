@@ -824,19 +824,20 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in Hinge::forward");
   Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   // TODO: Can we do this on device?
-  size_t batch_size = fx.d.batch_size();
   if(pelement != nullptr) {
-    if(batch_size != 1)
-      DYNET_INVALID_ARG("Hinge was passed a single index but the corresponding expression has multiple mini-batch elements (" << batch_size << ")");
+    if(fx.d.bd != 1)
+      DYNET_INVALID_ARG("Hinge was passed a single index but the corresponding expression has multiple mini-batch elements (" << fx.d.bd << ")");
     const real mlystar = margin - TensorTools::AccessElement(*xs[0], *pelement);
     eloss.tvec().device(*dev.edevice) = (xs[0]->tvec() + mlystar).cwiseMax(0.f);
     TensorTools::SetElement(eloss, *pelement, 0.f);
     fx.t<0>().device(*dev.edevice) = eloss.tvec().sum();
   } else {
     DYNET_ASSERT(pelements != nullptr, "Hinge::forward has neither pointer to single element nor vector");
-    if(batch_size != pelements->size())
+    cerr << "Hinge::forward xs[0]->d == " << xs[0]->d << ", fx.d == " << fx.d << endl;
+    if(xs[0]->d.bd != pelements->size())
       DYNET_INVALID_ARG("The list of indexes passed to Hinge has a length (" << pelements->size() <<
-                        ") that doesn't match that of the corresponding expression (" << batch_size << ")");
+                        ") that doesn't match the number of mini-batch elements in the corresponding expression (" << xs[0]->d << ")");
+    size_t batch_size = xs[0]->d.batch_size();
     for(size_t b = 0; b < fx.d.bd; b++) {
       const real mlystar = margin - TensorTools::AccessElement(*xs[0], b*batch_size + (*pelements)[b]);
       eloss.tb<1>().chip<1>(b).device(*dev.edevice) = (xs[0]->tb<1>().chip<1>(b) + mlystar).cwiseMax(0.f);
