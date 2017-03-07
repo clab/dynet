@@ -3,7 +3,6 @@
 #if HAVE_CUDA
 
 #include <vector>
-#include <cassert>
 #include <utility>
 #include <stdexcept>
 #include <cuda.h>
@@ -43,7 +42,7 @@ struct DynetParams;
 class Device;
 
 inline std::pair<int, int> SizeToBlockThreadPair(int n) {
-  assert(n > 0);
+  DYNET_ASSERT(n > 0, "Bad thread size in GPU code " << n);
   int logn;
 #if defined(_MSC_VER)
   logn = 0;

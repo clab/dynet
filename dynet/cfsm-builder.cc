@@ -91,9 +91,10 @@ void ClassFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg) {
 }
 
 Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
-  // TODO assert that new_graph has been called
+  // TODO check that new_graph has been called
   int clusteridx = widx2cidx[wordidx];
-  assert(clusteridx >= 0);  // if this fails, wordid is missing from clusters
+  if(clusteridx < 0)
+    DYNET_INVALID_ARG("Word ID " << wordidx << " missing from clusters in ClassFactoredSoftmaxBuilder::neg_log_softmax");
   Expression cscores = affine_transform({cbias, r2c, rep});
   Expression cnlp = pickneglogsoftmax(cscores, clusteridx);
   if (singleton_cluster[clusteridx]) return cnlp;
@@ -108,7 +109,7 @@ Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, u
 }
 
 unsigned ClassFactoredSoftmaxBuilder::sample(const Expression& rep) {
-  // TODO assert that new_graph has been called
+  // TODO check that new_graph has been called
   Expression cscores = affine_transform({cbias, r2c, rep});
   Expression cdist_expr = softmax(cscores);
   auto cdist = as_vector(pcg->incremental_forward(cdist_expr));
@@ -174,7 +175,8 @@ Expression ClassFactoredSoftmaxBuilder::full_log_distribution(const Expression& 
 void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_file, Dict& word_dict) {
   cerr << "Reading clusters from " << cluster_file << " ...\n";
   ifstream in(cluster_file);
-  assert(in);
+  if(!in)
+    DYNET_INVALID_ARG("Could not find cluster file " << cluster_file << " in ClassFactoredSoftmax");
   int wc = 0;
   string line;
   while(getline(in, line)) {
@@ -188,9 +190,8 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
     while (is_ws(line[startw]) && startw < len) { ++startw; }
     unsigned endw = startw;
     while (not_ws(line[endw]) && endw < len) { ++endw; }
-    assert(endc > startc);
-    assert(startw > endc);
-    assert(endw > startw);
+    if(endc <= startc || startw <= endc || endw <= startw)
+      DYNET_INVALID_ARG("Invalid format in cluster file " << cluster_file << " in ClassFactoredSoftmax");
     unsigned c = cdict.convert(line.substr(startc, endc - startc));
     unsigned word = word_dict.convert(line.substr(startw, endw - startw));
     if (word >= widx2cidx.size()) {
