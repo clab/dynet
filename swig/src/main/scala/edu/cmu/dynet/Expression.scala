@@ -119,7 +119,7 @@ object Expression {
 
   def softmax(e: Expression): Expression = unary(e, dn.softmax)
   def logSoftmax(e: Expression): Expression = unary(e, dn.log_softmax)
-  // def logSoftmax
+  def logSoftmax(e: Expression, restriction: UnsignedVector) = unary(e, e => dn.log_softmax(e, restriction))
 
   def logSumExp(v: ExpressionVector): Expression = vectory(v, dn.logsumexp)
 
@@ -130,10 +130,14 @@ object Expression {
     unary(e, e => dn.pickneglogsoftmax(e, v))
 
   def hinge(e: Expression, index: Long, m: Float = 1.0f): Expression = unary(e, e => dn.hinge(e, index, m))
-  // others
+  def hinge(e: Expression, index: UnsignedPointer, m: Float): Expression =
+    unary(e, e => dn.hinge(e, index, m))
+  def hinge(e: Expression, indices: UnsignedVector, m: Float): Expression =
+    unary(e, e => dn.hinge(e, indices, m))
 
   def sparsemax(e: Expression): Expression = unary(e, dn.sparsemax)
-  // def sparsemaxLoss
+  def sparsemaxLoss(e: Expression, targetSupport: UnsignedVector): Expression =
+    unary(e, e => dn.sparsemax_loss(e, targetSupport))
 
   def squaredNorm(e: Expression): Expression = unary(e, dn.squared_norm)
   def squaredDistance(e1: Expression, e2: Expression): Expression = binary(e1, e2, dn.squared_distance)
@@ -145,19 +149,27 @@ object Expression {
   def pairwiseRankLoss(x: Expression, y: Expression, m: Float = 1.0f) =
     binary(x, y, (x, y) => dn.pairwise_rank_loss(x, y, m))
   def poissonLoss(x: Expression, y: Long): Expression = unary(x, x => dn.poisson_loss(x, y))
-  // others
+  def poissonLoss(x: Expression, y: UnsignedPointer): Expression =
+    unary(x, x => dn.poisson_loss(x, y))
 
   /* FLOW / SHAPING OPERATIONS */
 
   def noBackProp(x: Expression): Expression = unary(x, dn.nobackprop)
   def reshape(x: Expression, d: Dim): Expression = unary(x, x => dn.reshape(x, d))
   def transpose(x: Expression): Expression = unary(x, dn.transpose)
-  //def selectRows()
-  //def selectCols()
+  def selectRows(x: Expression, rows: UnsignedVector): Expression =
+    unary(x, x => dn.select_rows(x, rows))
+  def selectCols(x: Expression, rows: UnsignedVector): Expression =
+    unary(x, x => dn.select_cols(x, rows))
   def sumBatches(x: Expression): Expression = unary(x, dn.sum_batches)
 
-  // def pick
-  def pickrange(x: Expression, v: Long, u: Long) = unary(x, x => dn.pickrange(x, v, u))
+  def pick(x: Expression, v: Long, d: Long = 0l): Expression = unary(x, x => dn.pick(x, v, d))
+  def pick(x: Expression, v: UnsignedVector, d: Long): Expression =
+    unary(x, x => dn.pick(x, v, d))
+  def pick(x: Expression, v: UnsignedPointer, d: Long): Expression =
+    unary(x, x => dn.pick(x, v, d))
+  def pickrange(x: Expression, v: Long, u: Long): Expression =
+    unary(x, x => dn.pickrange(x, v, u))
 
   def concatenateCols(v: ExpressionVector): Expression = vectory(v, dn.concatenate_cols)
   def concatenate(v: ExpressionVector): Expression = vectory(v, dn.concatenate)
@@ -170,8 +182,35 @@ object Expression {
 
   /* CONVOLUTION OPERATIONS */
 
+  def conv1dNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_narrow)
+  def conv1dWide(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_wide)
+  def filter1DNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.filter1d_narrow)
+  def kMaxPooling(x: Expression, k: Long): Expression = unary(x, x => dn.kmax_pooling(x, k))
+  def foldRows(x: Expression, nRows: Long = 2l): Expression = unary(x, x => dn.fold_rows(x, nRows))
+  def sumDim(x: Expression, d: Long): Expression = unary(x, x => dn.sum_dim(x, d))
+  def sumCols(x: Expression): Expression = unary(x, dn.sum_cols)
+  def sumRows(x: Expression): Expression = unary(x, dn.sum_rows)
+  def averageCols(x: Expression): Expression = unary(x, dn.average_cols)
+  def kmhNgram(x: Expression, n: Long): Expression = unary(x, x => dn.kmh_ngram(x, n))
+
   /* TENSOR OPERATIONS */
+  def contract3d1d(x: Expression, y: Expression): Expression = binary(x, y, dn.contract3d_1d)
+  def contract3d1d1d(x: Expression, y: Expression, z: Expression): Expression = {
+    Seq(x, y, z).foreach(_.ensureFresh)
+    new Expression(dn.contract3d_1d_1d(x, y, z))
+  }
+  def contract3d1d1d(x: Expression, y: Expression, z: Expression, b: Expression): Expression = {
+    Seq(x, y, z, b).foreach(_.ensureFresh)
+    new Expression(dn.contract3d_1d_1d(x, y, z, b))
+  }
+  def contract3d1d(x: Expression, y: Expression, b: Expression): Expression = {
+    Seq(x, y, b).foreach(_.ensureFresh)
+    new Expression(dn.contract3d_1d(x, y, b))
+  }
 
   /* LINEAR ALGEBRA OPERATIONS */
+  def inverse(x: Expression): Expression = unary(x, dn.inverse)
+  def logdet(x: Expression): Expression = unary(x, dn.logdet)
+  def traceOfProduct(x: Expression, y: Expression): Expression = binary(x, y, dn.trace_of_product)
 }
 
