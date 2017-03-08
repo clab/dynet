@@ -268,6 +268,7 @@ struct Hinge : public Node {
   explicit Hinge(const std::initializer_list<VariableIndex>& a, const unsigned* pe, real m = 1.0) : Node(a), element(), pelement(pe), margin(m) {}
   explicit Hinge(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& e, real m = 1.0) : Node(a), element(), pelement(), elements(e), pelements(&elements), margin(m) {}
   explicit Hinge(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pe, real m = 1.0) : Node(a), element(), pelement(), elements(), pelements(pe), margin(m) {}
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
   unsigned element;
@@ -541,7 +542,9 @@ struct RandomNormal : public Node {
 
 // draw from Bernoulli(p)
 struct RandomBernoulli : public Node {
-  explicit RandomBernoulli(const std::initializer_list<VariableIndex>& a, const Dim& d, real p, real scale = 1.0f) : dim(d), p(p), scale(scale) { assert (a.size() == 0); }
+  explicit RandomBernoulli(const std::initializer_list<VariableIndex>& a, const Dim& d, real p, real scale = 1.0f) : dim(d), p(p), scale(scale) {
+    DYNET_ASSERT(a.size() == 0, "RandomBernoulli doesn't accept nodes as input");
+  }
   DYNET_NODE_DEFINE_DEV_IMPL()
   Dim dim;
   real p;
@@ -550,7 +553,9 @@ struct RandomBernoulli : public Node {
 
 // draw a random real from Uniform(left, right)
 struct RandomUniform : public Node {
-  explicit RandomUniform(const std::initializer_list<VariableIndex>& a, const Dim& d, real left, real right) : dim(d), left(left), right(right) { assert (a.size() == 0); }
+  explicit RandomUniform(const std::initializer_list<VariableIndex>& a, const Dim& d, real left, real right) : dim(d), left(left), right(right) {
+    DYNET_ASSERT(a.size() == 0, "RandomUniform doesn't accept nodes as input");
+  }
   DYNET_NODE_DEFINE_DEV_IMPL()
   Dim dim;
   real left, right;
