@@ -2,12 +2,11 @@ package edu.cmu.dynet
 
 import org.scalatest._
 import Matchers._
-import edu.cmu.dynet.{dynet_swig => dn}
 
 class ExpressionSpec extends FlatSpec with Matchers {
 
   import DyNetScalaHelpers._
-  dn.initialize(new DynetParams)
+  Initialize.initialize()
 
   implicit def expressionV(es: Seq[Expression]): ExpressionVector = {
     new ExpressionVector(es)
@@ -31,11 +30,11 @@ class ExpressionSpec extends FlatSpec with Matchers {
   }
 
   "simple expression functions" should "do the right things" in {
-    val cg = ComputationGraph.getNew
+    ComputationGraph.renew()
 
-    val e1 = dn.input(cg, 1)
-    val e2 = dn.input(cg, 2)
-    val e3 = dn.input(cg, 3)
+    val e1 = Expression.input(1)
+    val e2 = Expression.input(2)
+    val e3 = Expression.input(3)
 
     // arithmetic
     -e1 shouldHaveValue -1f
@@ -52,23 +51,22 @@ class ExpressionSpec extends FlatSpec with Matchers {
 
 
     // affine transform
-    dn.affine_transform(Seq(e1, e2, e3)) shouldHaveValue 7 // 1 + 2 * 3
-    dn.affine_transform(Seq(e1, e2, e3, e1, e3)) shouldHaveValue 10 // 1 + 2 * 3 + 1 * 3
+    Expression.affineTransform(Seq(e1, e2, e3)) shouldHaveValue 7 // 1 + 2 * 3
+    Expression.affineTransform(Seq(e1, e2, e3, e1, e3)) shouldHaveValue 10 // 1 + 2 * 3 + 1 * 3
 
     // sum + average
-    dn.sum(Seq(e1, e2, e2, e3, e3, e3)) shouldHaveValue 14
-    dn.average(Seq(e1, e2, e2, e3, e3, e3)) shouldHaveValue 14f / 6
+    Expression.sum(Seq(e1, e2, e2, e3, e3, e3)) shouldHaveValue 14
+    Expression.average(Seq(e1, e2, e2, e3, e3, e3)) shouldHaveValue 14f / 6
 
-    val sqrt2 = dn.sqrt(e2)
-    dn.exprTimes(sqrt2, sqrt2) shouldHaveValue 2
+    val sqrt2 = Expression.sqrt(e2)
+    Expression.exprTimes(sqrt2, sqrt2) shouldHaveValue 2
 
-    dn.square(e3) shouldHaveValue 9
-    dn.pow(e2, e3) shouldHaveValue 8
-    dn.pow(e3, e2) shouldHaveValue 9
+    Expression.square(e3) shouldHaveValue 9
+    Expression.pow(e2, e3) shouldHaveValue 8
+    Expression.pow(e3, e2) shouldHaveValue 9
 
-    dn.min(e1, e3) shouldHaveValue 1
-    dn.max(e1, e3) shouldHaveValue 3
-
+    Expression.min(e1, e3) shouldHaveValue 1
+    Expression.max(e1, e3) shouldHaveValue 3
 
     // TODO(joelgrus): write more tests
   }

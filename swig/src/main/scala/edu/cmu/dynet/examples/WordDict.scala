@@ -1,4 +1,6 @@
-package edu.cmu.dynet
+package edu.cmu.dynet.examples
+
+import edu.cmu.dynet.IntVector
 
 // Stripped-down replacement for dynet/dict.h
 class WordDict {
@@ -43,8 +45,6 @@ class WordDict {
 }
 
 object WordDict {
-  import DyNetScalaHelpers._
-
   def read_sentence(line: String, sd: WordDict): IntVector = {
     new IntVector(line.split(" ").map(sd.convert).toSeq)
   }
@@ -52,7 +52,7 @@ object WordDict {
   def read_sentence_pair(line: String, sd: WordDict, td: WordDict): (IntVector, Int) = {
     val Array(before, after) = line.split(""" \|\|\| """)
     val tokens = read_sentence(before, sd)
-    val count = td.convert(read_sentence(after, td).get(0)).toInt
+    val count = td.convert(read_sentence(after, td)(0)).toInt
     (tokens, count)
   }
 }

@@ -1,7 +1,6 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet.{dynet_swig => dn, _}
-
+import edu.cmu.dynet._
 import DyNetScalaHelpers._
 
 import scala.language.implicitConversions
@@ -17,40 +16,39 @@ object PoissonRegression {
 
   class RNNLengthPredictor(model: Model) {
     val builder = new LSTMBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
-    val p_c = model.add_lookup_parameters(VOCAB_SIZE, dim(INPUT_DIM))
-    val p_R = model.add_parameters(dim(1, HIDDEN_DIM))
-    val p_bias = model.add_parameters(dim(1))
+    val p_c = model.addLookupParameters(VOCAB_SIZE, Dim(INPUT_DIM))
+    val p_R = model.addParameters(Dim(1, HIDDEN_DIM))
+    val p_bias = model.addParameters(Dim(1))
 
     def buildLMGraph(sent: IntVector,
                      len: Int,
-                     cg: ComputationGraph,
                      flag: Boolean=false): Expression = {
       val slen = (sent.size - 1).toInt
-      builder.new_graph(cg)
-      builder.start_new_sequence()
+      builder.newGraph()
+      builder.startNewSequence()
 
-      val R = dn.parameter(cg, p_R)
-      val bias = dn.parameter(cg, p_bias)
+      val R = Expression.parameter(p_R)
+      val bias = Expression.parameter(p_bias)
 
       for (t <- 0 until slen) {
-        val i_x_t = dn.lookup(cg, p_c, sent.get(t))
-        builder.add_input(i_x_t)
+        val i_x_t = Expression.lookup(p_c, sent(t))
+        builder.addInput(i_x_t)
       }
 
       val ev = new ExpressionVector(Seq(bias, R, builder.back))
-      val pred = dn.affine_transform(ev)
+      val pred = Expression.affineTransform(ev)
 
       if (flag) {
-        val x = math.exp(cg.incremental_forward(pred).toFloat)
+        val x = math.exp(ComputationGraph.incrementalForward(pred).toFloat)
         println(s"PRED = ${x} TRUE = ${len} DIFF = ${x - len}")
       }
 
-      dn.poisson_loss(pred, len)
+      Expression.poissonLoss(pred, len)
     }
   }
 
   def main(args: Array[String]) {
-    dn.initialize(new DynetParams)
+    Initialize.initialize()
 
     val userDir = System.getProperty("user.dir")
 
@@ -76,9 +74,9 @@ object PoissonRegression {
 
         training.append((x, y))
 
-        ttoks += x.size().toInt
+        ttoks += x.size()
 
-        if (x.get(0) != kSOS && x.get(x.size.toInt - 1) != kEOS) {
+        if (x(0) != kSOS && x.last != kEOS) {
           throw new RuntimeException("bad sentence")
         }
       }
@@ -102,7 +100,7 @@ object PoissonRegression {
 
         dtoks += x.size().toInt
 
-        if (x.get(0) != kSOS && x.get(x.size.toInt - 1) != kEOS) {
+        if (x(0) != kSOS && x.last != kEOS) {
           throw new RuntimeException("bad sentence")
         }
       }
@@ -125,7 +123,7 @@ object PoissonRegression {
     var report = 0
     var lines = 0
 
-    val cg = ComputationGraph.getNew
+    ComputationGraph.renew()
 
     while (true) {
       var loss = 0.0f
@@ -136,7 +134,7 @@ object PoissonRegression {
           if (first) {
             first = false
           } else {
-            sgd.update_epoch()
+            sgd.updateEpoch()
           }
 
           shuffle(order)
@@ -145,15 +143,15 @@ object PoissonRegression {
         // build graph for this instance
 
         // the cg.clear is IMPORTANT!
-        cg.clear()
+        ComputationGraph.clear()
 
-        val (tokens, count) = training(order.get(si))
+        val (tokens, count) = training(order(si))
 
         si += 1
 
-        val loss_expr = lm.buildLMGraph(tokens, count, cg)
-        loss += cg.forward(loss_expr).toFloat
-        cg.backward(loss_expr)
+        val loss_expr = lm.buildLMGraph(tokens, count)
+        loss += ComputationGraph.forward(loss_expr).toFloat
+        ComputationGraph.backward(loss_expr)
         sgd.update()
         lines += 1
         chars += 1
@@ -167,8 +165,8 @@ object PoissonRegression {
         var dchars = 0
 
         for ((tokens, count) <- dev) {
-          val loss_expr = lm.buildLMGraph(tokens, count, cg, true)
-          dloss += cg.forward(loss_expr).toFloat
+          val loss_expr = lm.buildLMGraph(tokens, count, true)
+          dloss += ComputationGraph.forward(loss_expr).toFloat
           dchars += 1
         }
 

@@ -8,7 +8,7 @@ class SampleSpec extends FlatSpec with Matchers {
 
   "Sample" should "do the right thing" in {
 
-    val probs = new FloatVector(Seq(0.1, 0.1, 0.7, 0.1))
+    val probs = new FloatVector(Seq(0.1f, 0.1f, 0.7f, 0.1f))
 
     val samples = for (_ <- 1 to 10000) yield sample(probs)
 

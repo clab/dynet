@@ -1,6 +1,6 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet.{dynet_swig => dn, _}
+import edu.cmu.dynet._
 
 import scala.language.implicitConversions
 import DyNetScalaHelpers._
@@ -28,28 +28,28 @@ class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
   // Add parameters to model
   val params = for {
     layer <- layers
-    w = model.add_parameters(dim(layer.outputDim, layer.inputDim))
-    b = model.add_parameters(dim(layer.outputDim))
+    w = model.addParameters(Dim(layer.outputDim, layer.inputDim))
+    b = model.addParameters(Dim(layer.outputDim))
   } yield LayerParams(w, b)
 
-  def run(x: Expression, cg: ComputationGraph): Expression = {
+  def run(x: Expression): Expression = {
     // expression for the current hidden state
     var h_cur = x
     for ((layer, layerParams) <- layers.zip(params)) {
       // initialize parameters in computation graph
-      val W = dn.parameter(cg, layerParams.w)
-      val b = dn.parameter(cg, layerParams.b)
+      val W = Expression.parameter(layerParams.w)
+      val b = Expression.parameter(layerParams.b)
       // apply affine transform
       val ev = new ExpressionVector(Seq(b, W, h_cur))
-      val a = dn.affine_transform(ev)
+      val a = Expression.affineTransform(ev)
       // apply activation function
       val h = activate(a, layer.activation)
       // take care of dropout
       val h_dropped = if (layer.dropoutRate > 0) {
         if (dropoutActive) {
           // during training, drop random units
-          val mask = dn.random_bernoulli(cg, dim(layer.outputDim), 1 - layer.dropoutRate)
-          dn.cmult(h, mask)
+          val mask = Expression.randomBernoulli(Dim(layer.outputDim), 1 - layer.dropoutRate)
+          Expression.cmult(h, mask)
         } else {
           // at test time, multiply by the retention rate to scale
           h * (1 - layer.dropoutRate)
@@ -64,21 +64,21 @@ class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
     h_cur
   }
 
-  def get_nll(x: Expression, labels: UnsignedVector, cg: ComputationGraph): Expression = {
+  def get_nll(x: Expression, labels: UnsignedVector): Expression = {
     // compute output
-    val y = run(x, cg)
+    val y = run(x)
     // do softmax
-    val losses = dn.pickneglogsoftmax(y, labels)
+    val losses = Expression.pickNegLogSoftmax(y, labels)
     // sum across batches
-    val result = dn.sum_batches(losses)
+    val result = Expression.sumBatches(losses)
     result
   }
 
-  def predict(x: Expression, cg: ComputationGraph): Int = {
+  def predict(x: Expression): Int = {
     // run MLP to get class distribution
-    val y = run(x, cg)
+    val y = run(x)
     // get values
-    val probs = cg.forward(y).toSeq
+    val probs = ComputationGraph.forward(y).toSeq
     // return the argmax
     probs.zipWithIndex.max._2
   }
@@ -91,10 +91,10 @@ class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
 
   def activate(h: Expression, f: Activation.Value): Expression = f match {
     case Activation.LINEAR => h
-    case Activation.RELU => dn.rectify(h)
-    case Activation.SIGMOID => dn.logistic(h)
-    case Activation.TANH => dn.tanh(h)
-    case Activation.SOFTMAX => dn.softmax(h)
+    case Activation.RELU => Expression.rectify(h)
+    case Activation.SIGMOID => Expression.logistic(h)
+    case Activation.TANH => Expression.tanh(h)
+    case Activation.SOFTMAX => Expression.softmax(h)
     case _ => throw new IllegalArgumentException("unknown activation function")
   }
 }
