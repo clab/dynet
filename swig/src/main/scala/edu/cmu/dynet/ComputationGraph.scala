@@ -19,19 +19,21 @@ object ComputationGraph {
   def addParameters(p: Parameter): VariableIndex = new VariableIndex(cg.add_parameters(p))
   def addConstParameters(p: Parameter): VariableIndex = new VariableIndex(cg.add_const_parameters(p))
 
-  def addLookup(p: LookupParameter, pindex: UnsignedPointer) =
+  def addLookup(p: LookupParameter, pindex: UnsignedPointer): VariableIndex =
     new VariableIndex(cg.add_lookup(p, pindex))
-  def addLookup(p: LookupParameter, index: Long) =
+  def addLookup(p: LookupParameter, index: Long): VariableIndex =
     new VariableIndex(cg.add_lookup(p, index))
-  def addLookup(p: LookupParameter, indices: UnsignedVector) =
+  def addLookup(p: LookupParameter, indices: UnsignedVector): VariableIndex =
     new VariableIndex(cg.add_lookup(p, indices))
 
-  def addConstLookup(p: LookupParameter, pindex: UnsignedPointer) =
+  def addConstLookup(p: LookupParameter, pindex: UnsignedPointer): VariableIndex =
     new VariableIndex(cg.add_const_lookup(p, pindex))
-  def addConstLookup(p: LookupParameter, index: Long) =
+  def addConstLookup(p: LookupParameter, index: Long): VariableIndex =
     new VariableIndex(cg.add_const_lookup(p, index))
-  def addConstLookup(p: LookupParameter, indices: UnsignedVector) =
+  def addConstLookup(p: LookupParameter, indices: UnsignedVector): VariableIndex =
     new VariableIndex(cg.add_const_lookup(p, indices))
+
+  def getDimension(index: VariableIndex): Dim = new Dim(cg.get_dimension(index))
 
   def clear(): Unit = cg.clear()
   def checkpoint(): Unit = cg.checkpoint()
