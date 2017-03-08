@@ -1,7 +1,7 @@
 package edu.cmu.dynet.examples;
 
-import edu.cmu.dynet.*;
-import static edu.cmu.dynet.dynet_swig.*;
+import edu.cmu.dynet.internal.*;
+import static edu.cmu.dynet.internal.dynet_swig.*;
 
 // Simple example training an xor classifier for java binding of dynet (following xor.cc example)
 public class XorExample {

@@ -1,8 +1,7 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet.{dynet_swig => dn, _}
+import edu.cmu.dynet._
 import DyNetScalaHelpers._
-
 import scala.language.implicitConversions
 
 import java.nio.file.Paths
@@ -16,25 +15,24 @@ class RnnLanguageModelBatch(
 ) {
   val rnn = new LSTMBuilder(layers, inputDim, hiddenDim, model)
 
-  val p_c = model.add_lookup_parameters(vocabSize, dim(inputDim))
-  val p_R = model.add_parameters(dim(vocabSize, hiddenDim))
-  val p_bias = model.add_parameters(dim(vocabSize))
+  val p_c = model.addLookupParameters(vocabSize, Dim(inputDim))
+  val p_R = model.addParameters(Dim(vocabSize, hiddenDim))
+  val p_bias = model.addParameters(Dim(vocabSize))
 
   def getNegLogProb(
     sents: Seq[IntVector],
     id: Int,
     bsize: Int,
-    tokens: IntPointer,
-    cg: ComputationGraph
+    tokens: IntPointer
   ): Expression = {
     val slen = sents(id).size().toInt
     //
-    rnn.new_graph(cg)
+    rnn.newGraph()
     //
-    rnn.start_new_sequence()
+    rnn.startNewSequence()
     //
-    val i_R = dn.parameter(cg, p_R)
-    val i_bias = dn.parameter(cg, p_bias)
+    val i_R = Expression.parameter(p_R)
+    val i_bias = Expression.parameter(p_bias)
     //
     val errs = new ExpressionVector()
     // Set all inputs to the SOS symbol
@@ -47,34 +45,34 @@ class RnnLanguageModelBatch(
     for (t <- 1 until slen) {
       // fill next_arr
       for (i <- 0 until bsize) {
-        next_arr.set(i, sents(id + i).get(t))
+        next_arr.update(i, sents(id + i)(t))
         // count non-EOS tokens
-        if (next_arr.get(i) != sents(id).last) tokens.increment()
+        if (next_arr(i) != sents(id).last) tokens.increment()
       }
       // embed the current tokens
-      val i_x_t = dn.lookup(cg, p_c, last_arr)
+      val i_x_t = Expression.lookup(p_c, last_arr)
       //
-      val i_y_t = rnn.add_input(i_x_t)
+      val i_y_t = rnn.addInput(i_x_t)
       //
       val i_r_t = i_bias + i_R * i_y_t
       //
-      val i_err = dn.pickneglogsoftmax(i_r_t, next_arr)
+      val i_err = Expression.pickNegLogSoftmax(i_r_t, next_arr)
       errs.add(i_err)
       // change input
       last_arr = next_arr
     }
     // add all errors
-    val i_nerr = dn.sum_batches(dn.sum(errs))
+    val i_nerr = Expression.sumBatches(Expression.sum(errs))
     i_nerr
   }
 
   def randomSample(d: WordDict, maxLen: Int = 150, temp: Float = 1.0f) = {
-    val cg = ComputationGraph.getNew
-    rnn.new_graph(cg)
-    rnn.start_new_sequence()
+    ComputationGraph.renew()
+    rnn.newGraph()
+    rnn.startNewSequence()
     //
-    val i_R = dn.parameter(cg, p_R)
-    val i_bias = dn.parameter(cg, p_bias)
+    val i_R = Expression.parameter(p_R)
+    val i_bias = Expression.parameter(p_bias)
 
     val kSOS = RnnLanguageModelBatch.kSOS
     val kEOS = RnnLanguageModelBatch.kEOS
@@ -86,26 +84,26 @@ class RnnLanguageModelBatch(
       //println("len", len, "cur", cur)
       len += 1
 
-      val i_x_t = dn.lookup(cg, p_c, cur)
+      val i_x_t = Expression.lookup(p_c, cur)
       //show(i_x_t.dim, "i_x_t ")
-      val i_y_t = rnn.add_input(i_x_t)
+      val i_y_t = rnn.addInput(i_x_t)
       //show(i_y_t.dim, "i_y_t ")
       val i_r_t = i_bias + i_R * i_y_t
       //show(i_r_t.dim, "i_r_t ")
-      val ydist = dn.softmax(i_r_t / temp)
+      val ydist = Expression.softmax(i_r_t / temp)
       //show(ydist.dim, "ydist ")
 
       // sample token
       var w = 0
       while (w == 0 || w == kSOS) {
         // The C++ example uses cg.incremental_forward, but that doesn't work here.
-        val dist = cg.forward(ydist)
+        val dist = ComputationGraph.forward(ydist)
         w = sample(dist.toVector)
       }
 
       if (w == kEOS) {
         //
-        rnn.start_new_sequence()
+        rnn.startNewSequence()
         println()
         cur = kSOS
       } else {
@@ -138,7 +136,7 @@ object RnnLanguageModelBatch {
 
   def main(args: Array[String]) {
 
-    dn.initialize(new DynetParams)
+    Initialize.initialize()
 
     val d = new WordDict
     kSOS = d.convert("<s>")
@@ -189,7 +187,7 @@ object RnnLanguageModelBatch {
       dlc += 1
       val row = WordDict.read_sentence(line, d)
       dev.append(row)
-      dtoks += row.size().toInt
+      dtoks += row.size()
     }
     println(s"${dlc} lines, ${dtoks} tokens")
 
@@ -209,7 +207,7 @@ object RnnLanguageModelBatch {
 
     val model = new Model
     val adam = new AdamTrainer(model, 0.001f, 0.9f, 0.999f, 1e-8f)
-    adam.setClip_threshold(adam.getClip_threshold * BATCH_SIZE)
+    //adam.setClip_threshold(adam.getClip_threshold * BATCH_SIZE)
 
     val lm = new RnnLanguageModelBatch(model, LAYERS, INPUT_DIM, HIDDEN_DIM, INPUT_VOCAB_SIZE)
 
@@ -229,7 +227,7 @@ object RnnLanguageModelBatch {
       if (first) {
         first = false
       } else {
-        adam.update_epoch()
+        adam.updateEpoch()
       }
       // reshuffle
       shuffle(order)
@@ -238,14 +236,14 @@ object RnnLanguageModelBatch {
       val tokens = new IntPointer
 
       for (si <- 0 until numBatches) {
-        val cg = ComputationGraph.getNew
-        val id = order.get(si) * BATCH_SIZE
+        ComputationGraph.renew
+        val id = order(si) * BATCH_SIZE
         val bsize = math.min(training.size - id, BATCH_SIZE)
-        val loss_expr = lm.getNegLogProb(training, id, bsize, tokens, cg)
+        val loss_expr = lm.getNegLogProb(training, id, bsize, tokens)
 
-        loss += cg.forward(loss_expr).toFloat
+        loss += ComputationGraph.forward(loss_expr).toFloat
 
-        cg.backward(loss_expr)
+        ComputationGraph.backward(loss_expr)
 
         adam.update()
         //
@@ -262,14 +260,14 @@ object RnnLanguageModelBatch {
       var dloss = 0.0
       val dtokens = new IntPointer
       for (i <- 0 until numDevBatches) {
-        val cg = ComputationGraph.getNew
+        ComputationGraph.renew
 
         val id = i * DEV_BATCH_SIZE
         val bsize = math.min(dev.size - id, DEV_BATCH_SIZE)
 
-        val loss_expr = lm.getNegLogProb(dev, id, bsize, dtokens, cg)
+        val loss_expr = lm.getNegLogProb(dev, id, bsize, dtokens)
 
-        dloss += cg.forward(loss_expr).toFloat
+        dloss += ComputationGraph.forward(loss_expr).toFloat
       }
 
       val dt = dloss / dtokens.value

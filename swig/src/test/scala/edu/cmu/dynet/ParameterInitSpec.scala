@@ -1,19 +1,18 @@
 package edu.cmu.dynet
 
 import org.scalatest._
-import edu.cmu.dynet.{dynet_swig => dn}
+import edu.cmu.dynet.internal.{dynet_swig => dn}
 
 class ParameterInitSpec extends FlatSpec with Matchers {
 
-  import DyNetScalaHelpers._
-  dn.initialize(new DynetParams)
+  Initialize.initialize()
 
   "ParameterInitConst" should "set constant values" in {
     val model = new Model
-    val p_W = model.add_parameters(dim(10))
+    val p_W = model.addParameters(Dim(10))
 
-    val init = new ParameterInitConst(10.0f)
-    init.initialize_params(p_W.values)
+    val init = ParameterInit.const(10.0f)
+    init.initializeParams(p_W.values)
 
     // All values should be initialized to 10.0f
     p_W.values.toSeq.foreach(x => x shouldBe 10.0f)
@@ -21,11 +20,11 @@ class ParameterInitSpec extends FlatSpec with Matchers {
 
   "ParameterInitNormal" should "initialize things normally" in {
     val model = new Model
-    val p_W = model.add_parameters(dim(10000))
+    val p_W = model.addParameters(Dim(10000))
 
     // mean 10, variance 4
-    val init = new ParameterInitNormal(10, 4)
-    init.initialize_params(p_W.values)
+    val init = ParameterInit.normal(10, 4)
+    init.initializeParams(p_W.values)
 
     val values = p_W.values.toSeq
 
@@ -41,11 +40,11 @@ class ParameterInitSpec extends FlatSpec with Matchers {
 
   "ParameterInitUniform" should "initialize things uniformly" in {
     val model = new Model
-    val p_W = model.add_parameters(dim(10000))
+    val p_W = model.addParameters(Dim(10000))
 
     // uniform from 12 to 17
-    val init = new ParameterInitUniform(12f, 17f)
-    init.initialize_params(p_W.values)
+    val init = ParameterInit.uniform(12f, 17f)
+    init.initializeParams(p_W.values)
 
     val values = p_W.values.toSeq
 
@@ -64,11 +63,11 @@ class ParameterInitSpec extends FlatSpec with Matchers {
 
   "ParameterInitIdentity" should "initialize to the identity matrix" in {
     val model = new Model
-    val p_W = model.add_parameters(dim(100, 100))
+    val p_W = model.addParameters(Dim(100, 100))
 
-    val init = new ParameterInitIdentity()
+    val init = ParameterInit.identity()
 
-    init.initialize_params(p_W.values)
+    init.initializeParams(p_W.values)
     val values = p_W.values.toSeq
 
     for {
@@ -82,13 +81,13 @@ class ParameterInitSpec extends FlatSpec with Matchers {
 
   "ParameterInitFromVector" should "initialize from a vector" in {
     val model = new Model
-    val p_W = model.add_parameters(dim(1000))
+    val p_W = model.addParameters(Dim(1000))
 
     val valuesIn = (1 to 1000).map(x => math.sin(x).toFloat)
     val vector = new FloatVector(valuesIn)
-    val init = new ParameterInitFromVector(vector)
+    val init = ParameterInit.fromVector(vector)
 
-    init.initialize_params(p_W.values)
+    init.initializeParams(p_W.values)
 
     val valuesOut = p_W.values.toSeq
 
@@ -99,11 +98,11 @@ class ParameterInitSpec extends FlatSpec with Matchers {
 
   "ParameterInitGlorot" should "initialize using the correct distribution" in {
     val model = new Model
-    val p_W = model.add_parameters(dim(20, 5))
+    val p_W = model.addParameters(Dim(20, 5))
 
-    val init = new ParameterInitGlorot()
+    val init = ParameterInit.glorot()
 
-    init.initialize_params(p_W.values)
+    init.initializeParams(p_W.values)
 
     // should be uniform [-s, s] where s = sqrt(6) / sqrt(25) = sqrt(6) / 5
     val s = math.sqrt(6) / 5 // ~ 0.4899

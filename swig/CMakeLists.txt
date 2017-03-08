@@ -16,9 +16,9 @@ set(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/edu/cmu/dynet")
 
 # Set java package (+cuda flag, if appropriate)
 if(WITH_CUDA_BACKEND)
-  set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet -DSWIG_USE_CUDA)
+  set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet.internal -DSWIG_USE_CUDA)
 else(WITH_CUDA_BACKEND)
-  set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet)
+  set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet.internal)
 endif(WITH_CUDA_BACKEND)
 
 # Run swig

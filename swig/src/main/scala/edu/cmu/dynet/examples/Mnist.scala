@@ -1,6 +1,6 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet.{dynet_swig => dn, _}
+import edu.cmu.dynet._
 
 import scala.language.implicitConversions
 
@@ -54,7 +54,7 @@ object Mnist {
   }
 
   def main(args: Array[String]) {
-    dn.initialize(new DynetParams)
+    Initialize.initialize()
 
     val argList = args.toList
     val params = parseArgs(argList)
@@ -63,7 +63,7 @@ object Mnist {
 
     val model = new Model()
     val adam = new AdamTrainer(model)
-    adam.setClip_threshold(adam.getClip_threshold * batchSize)
+    //adam.setClip_threshold(adam.getClip_threshold * batchSize)
 
     // create model
     val nn = new MultiLayerPerceptron(model, Seq(
@@ -94,7 +94,7 @@ object Mnist {
 
     while (epoch < numEpochs || numEpochs < 0) {
       // update the optimizer
-      if (first) { first = false } else { adam.update_epoch() }
+      if (first) { first = false } else { adam.updateEpoch() }
       //reshuffle
       shuffle(order)
 
@@ -105,7 +105,7 @@ object Mnist {
 
       for (si <- 0 until numBatches) {
         // build graph
-        val cg = ComputationGraph.getNew
+        ComputationGraph.renew()
 
         // get the current batch of images and labels
         val id = order(si) * batchSize
@@ -113,20 +113,20 @@ object Mnist {
 
         val curBatch = new ExpressionVector(
           for (image <- train.slice(id, id + bsize))
-            yield dn.input(cg, dim(784), image)
+            yield Expression.input(Dim(784), image)
         )
-        val curLabels = new UnsignedVector(trainLabels.slice(id, id + bsize))
+        val curLabels = new UnsignedVector(trainLabels.slice(id, id + bsize).map(_.toLong))
 
         // reshape as batch
-        val xBatch = dn.reshape(dn.concatenate_cols(curBatch), dim(Seq(784), bsize))
+        val xBatch = Expression.reshape(Expression.concatenateCols(curBatch), Dim(Seq(784), bsize))
         // get negative log likelihood on batch
-        val lossExpr = nn.get_nll(xBatch, curLabels, cg)
+        val lossExpr = nn.get_nll(xBatch, curLabels)
         // get scalar error for monitoring
-        loss += cg.forward(lossExpr).toFloat
+        loss += ComputationGraph.forward(lossExpr).toFloat
         // increment number of samples processed
         numSamples += bsize
         // compute gradient
-        cg.backward(lossExpr)
+        ComputationGraph.backward(lossExpr)
         // update parameters
         adam.update()
         // print progress every 10th of the dataset
@@ -145,9 +145,9 @@ object Mnist {
       if (true) {
         var dpos = 0.0
         for ((image, label) <- dev.zip(devLabels)) {
-          val cg = ComputationGraph.getNew
-          val x = dn.input(cg, dim(784), image)
-          val predictedIdx = nn.predict(x, cg)
+          ComputationGraph.renew()
+          val x = Expression.input(Dim(784), image)
+          val predictedIdx = nn.predict(x)
 
           // increment count of positive classification
           if (predictedIdx == label) {

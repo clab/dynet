@@ -1,6 +1,6 @@
 package edu.cmu.dynet.examples
 
-import edu.cmu.dynet.{dynet_swig => dn, _}
+import edu.cmu.dynet._
 import DyNetScalaHelpers._
 
 import scala.language.implicitConversions
@@ -23,81 +23,80 @@ class EncoderDecoder(
 
   if (bidirectional) {
     revEncBuilder = Some(new LSTMBuilder(numLayers, inputDim, hiddenDim, model))
-    p_ie2oe = Some(model.add_parameters(dim(hiddenDim * numLayers * 2, hiddenDim * numLayers * 4)))
-    p_boe = Some(model.add_parameters(dim(hiddenDim * numLayers * 2)))
+    p_ie2oe = Some(model.addParameters(Dim(hiddenDim * numLayers * 2, hiddenDim * numLayers * 4)))
+    p_boe = Some(model.addParameters(Dim(hiddenDim * numLayers * 2)))
   }
 
-  val p_c = model.add_lookup_parameters(EncoderDecoder.INPUT_VOCAB_SIZE, dim(inputDim))
-  val p_ec = model.add_lookup_parameters(EncoderDecoder.INPUT_VOCAB_SIZE, dim(inputDim))
-  val p_R = model.add_parameters(dim(EncoderDecoder.OUTPUT_VOCAB_SIZE, hiddenDim))
-  val p_bias = model.add_parameters(dim(EncoderDecoder.OUTPUT_VOCAB_SIZE))
+  val p_c = model.addLookupParameters(EncoderDecoder.INPUT_VOCAB_SIZE, Dim(inputDim))
+  val p_ec = model.addLookupParameters(EncoderDecoder.INPUT_VOCAB_SIZE, Dim(inputDim))
+  val p_R = model.addParameters(Dim(EncoderDecoder.OUTPUT_VOCAB_SIZE, hiddenDim))
+  val p_bias = model.addParameters(Dim(EncoderDecoder.OUTPUT_VOCAB_SIZE))
 
 
   def encode(isents: Seq[IntVector],
              id: Int,
              bsize: Int,
-             chars: IntPointer,
-             cg: ComputationGraph): Expression = {
+             chars: IntPointer): Expression = {
     val islen = isents(id).size.toInt
     val x_t = new UnsignedVector(bsize)
 
     // Forward encoder --------
 
     // Initialize parameters in fwd_enc_builder
-    fwdEncBuilder.new_graph(cg)
+    fwdEncBuilder.newGraph()
     // Initialize the sequence
-    fwdEncBuilder.start_new_sequence()
+    fwdEncBuilder.startNewSequence()
 
     // Run the forward encoder on the batch
     for (t <- 0 until islen) {
       // Fill x_t with the characters at step t in the batch
       for (i <- 0 until bsize) {
-        x_t.set(i, isents(id+i).get(t))
-        if (x_t.get(i) != isents(id).get(islen - 1)) {
+        x_t.update(i, isents(id+i)(t))
+        if (x_t(i) != isents(id)(islen - 1)) {
           // if x_t is non-EOS, count a char
           chars.set(chars.value() + 1)
         }
       }
 
       // Get embedding
-      val i_x_t = dn.lookup(cg, p_ec, x_t)
+      val i_x_t = Expression.lookup(p_ec, x_t)
       // Run a step in the forward encoder
-      fwdEncBuilder.add_input(i_x_t)
+      fwdEncBuilder.addInput(i_x_t)
     }
 
     // Backward encoder --------------
     if (bidirectional) {
       // Initialize parameters in bwd_enc_builder
-      revEncBuilder.get.new_graph(cg)
+      revEncBuilder.get.newGraph()
       // Initialize the sequence
-      revEncBuilder.get.start_new_sequence()
+      revEncBuilder.get.startNewSequence()
       // Fill x_t with the characters at step t in the batch
       for (t <- (0 until islen).reverse) {
         for (i <- 0 until bsize) {
-          x_t.set(i, isents(id+i).get(t))
+          x_t.update(i, isents(id+i)(t))
         }
         // Get embedding
-        val i_x_t = dn.lookup(cg, p_ec, x_t)
+        val i_x_t = Expression.lookup(p_ec, x_t)
         // Run a step in the reverse encoder
-        revEncBuilder.get.add_input(i_x_t)
+        revEncBuilder.get.addInput(i_x_t)
       }
     }
 
     // Collect encodings -------
     val to = new ExpressionVector()
     // Get states from forward encoder
-    fwdEncBuilder.final_s.foreach(to.add)
+    fwdEncBuilder.finalS().foreach(to.add)
     // Get states from backward encoder
     if (bidirectional) {
-      revEncBuilder.get.final_s.foreach(to.add)
+      revEncBuilder.get.finalS.foreach(to.add)
     }
 
     // Put it as a vector
-    val i_combined = dn.concatenate(to)
+    val i_combined = Expression.concatenate(to)
     val i_nc = if (bidirectional) {
       // Perform an affine transformation for rescaling
-      val i_ie2oe = dn.parameter(cg, p_ie2oe.get)
-      val i_bie = dn.parameter(cg, p_boe.get)
+      val i_ie2oe = Expression.parameter(p_ie2oe.get)
+      val i_bie = Expression.parameter(p_boe.get)
       i_bie + i_ie2oe * i_combined
     } else {
       i_combined
@@ -107,49 +106,48 @@ class EncoderDecoder(
   }
 
   // Single sentence version
-  def encode(insent: IntVector, cg: ComputationGraph): Expression = {
+  def encode(insent: IntVector): Expression = {
     val isents = Seq(insent)
     val chars = new IntPointer
     chars.set(0)
-    encode(isents, 0, 1, chars, cg)
+    encode(isents, 0, 1, chars)
   }
 
   // Batched decoding
   def decode(i_nc: Expression,
     osents: Seq[IntVector],
     id: Int,
-    bsize: Int,
-    cg: ComputationGraph): Expression = {
+    bsize: Int): Expression = {
     // Reconstruct input states from encodings ---------
     // List of input states for decoder
     val oein = new ExpressionVector
     // Add input cell states
     for (i <- 0 until numLayers) {
-      oein.add(dn.pickrange(i_nc, i * hiddenDim, (i+1) * hiddenDim))
+      oein.add(Expression.pickrange(i_nc, i * hiddenDim, (i+1) * hiddenDim))
     }
     // Add input output states
     for (i <- 0 until numLayers) {
-      oein.add(dn.pickrange(i_nc,
+      oein.add(Expression.pickrange(i_nc,
         hiddenDim * numLayers + i * hiddenDim,
         hiddenDim * numLayers + (i+1) * hiddenDim))
     }
 
     // Initialize graph for decoder
-    decBuilder.new_graph(cg)
+    decBuilder.newGraph()
     // Initialize new sequence with encoded states
-    decBuilder.start_new_sequence(oein)
+    decBuilder.startNewSequence(oein)
 
     // Run decoder ------------------
     // Add parameters to the graph
-    val i_R = dn.parameter(cg, p_R)
-    val i_bias = dn.parameter(cg, p_bias)
+    val i_R = Expression.parameter(p_R)
+    val i_bias = Expression.parameter(p_bias)
     // Initialize errors and input vectors
     val errs = new ExpressionVector
     var x_t = new UnsignedVector(bsize)
 
     // Set start of sequence
     for (i <- 0 until bsize) {
-      x_t.set(i, osents(id + i).get(0))
+      x_t.update(i, osents(id + i)(0))
     }
     val next_x_t = new UnsignedVector(bsize)
 
@@ -160,66 +158,66 @@ class EncoderDecoder(
       // Retrieve input
       for (i <- 0 until bsize) {
         //println(t, i, oslen, osents(id + i).mkString(" "), next_x_t.mkString(" "))
-        next_x_t.set(i, osents(id + i).get(t))
+        next_x_t.update(i, osents(id + i)(t))
       }
       // embed token
-      val i_x_t = dn.lookup(cg, p_c, x_t)
+      val i_x_t = Expression.lookup(p_c, x_t)
       // run decoder step
-      val i_y_t = decBuilder.add_input(i_x_t)
+      val i_y_t = decBuilder.addInput(i_x_t)
       // project from output dim to dictionary dimension
       val i_r_t = i_bias + i_R * i_y_t
       // Compute softmax and negative log
-      val i_err = dn.pickneglogsoftmax(i_r_t, next_x_t)
+      val i_err = Expression.pickNegLogSoftmax(i_r_t, next_x_t)
       errs.add(i_err)
       x_t = next_x_t
     }
 
     // Sum loss over batch
-    val i_nerr = dn.sum_batches(dn.sum(errs))
+    val i_nerr = Expression.sumBatches(Expression.sum(errs))
     i_nerr
   }
 
   // single sentence version of decode
-  def decode(i_nc: Expression, osent: IntVector, cg: ComputationGraph): Expression = {
+  def decode(i_nc: Expression, osent: IntVector): Expression = {
     val osents = Seq(osent)
-    decode(i_nc, osents, 0, 1, cg)
+    decode(i_nc, osents, 0, 1)
   }
 
-  def generate(insent: IntVector, cg: ComputationGraph): IntVector = {
-    generate(encode(insent, cg), 2 * insent.size.toInt - 1, cg)
+  def generate(insent: IntVector): IntVector = {
+    generate(encode(insent), 2 * insent.size.toInt - 1)
   }
 
   // generate a sentence from an encoding
-  def generate(i_nc: Expression, oslen: Int, cg: ComputationGraph): IntVector = {
+  def generate(i_nc: Expression, oslen: Int): IntVector = {
     val oein1 = new ExpressionVector()
     val oein2 = new ExpressionVector()
     val oein = new ExpressionVector()
 
     for (i <- 0 until numLayers) {
-      oein1.add(dn.pickrange(i_nc, i * hiddenDim, (i+1) * hiddenDim))
-      oein2.add(dn.tanh(oein1.get(i)))
+      oein1.add(Expression.pickrange(i_nc, i * hiddenDim, (i+1) * hiddenDim))
+      oein2.add(Expression.tanh(oein1(i)))
     }
 
-    for (i <- 0 until numLayers) oein.add(oein1.get(i))
-    for (i <- 0 until numLayers) oein.add(oein2.get(i))
+    for (i <- 0 until numLayers) oein.add(oein1(i))
+    for (i <- 0 until numLayers) oein.add(oein2(i))
 
-    decBuilder.new_graph(cg)
-    decBuilder.start_new_sequence(oein)
+    decBuilder.newGraph()
+    decBuilder.startNewSequence(oein)
 
     // decoder
-    val i_R = dn.parameter(cg, p_R)
+    val i_R = Expression.parameter(p_R)
 
-    val i_bias = dn.parameter(cg, p_bias)
+    val i_bias = Expression.parameter(p_bias)
     val osent = new IntVector()
     osent.add(EncoderDecoder.kSOS)
 
     var t = 0
     var done = false
     while (t < oslen && !done) {
-      val i_x_t = dn.lookup(cg, p_c, osent.get(t))
-      val i_y_t = decBuilder.add_input(i_x_t)
+      val i_x_t = Expression.lookup(p_c, osent(t))
+      val i_y_t = decBuilder.addInput(i_x_t)
       val i_r_t = i_bias + i_R * i_y_t
-      val i_ydist = dn.softmax(i_r_t)
+      val i_ydist = Expression.softmax(i_r_t)
       val s = sample(i_ydist.value.toVector)
       osent.add(s)
       if (s == EncoderDecoder.kEOS) done = true
@@ -251,7 +249,7 @@ object EncoderDecoder {
   val DEV_FILE = Paths.get(userDir, "../examples/cpp/example-data/dev-hsm.txt").toString
 
   def main(args: Array[String]) {
-    dn.initialize(new DynetParams)
+    Initialize.initialize()
 
     val training = new scala.collection.mutable.ArrayBuffer[IntVector]
     val dev = new scala.collection.mutable.ArrayBuffer[IntVector]
@@ -318,9 +316,9 @@ object EncoderDecoder {
       }
     }
 
-    val model = new Model
+    val model = new Model()
     val adam = new AdamTrainer(model, 0.001f, 0.9f, 0.999f, 1e-8f)
-    adam.setClip_threshold(adam.getClip_threshold * BATCH_SIZE)
+    //adam.setClip_threshold(adam.getClip_threshold * BATCH_SIZE)
 
     // create model
     val lm = new EncoderDecoder(model, LAYERS, INPUT_DIM, HIDDEN_DIM, BIDIRECTIONAL)
@@ -335,12 +333,12 @@ object EncoderDecoder {
     var first = true
     var epoch = 0
 
-    val cg = ComputationGraph.getNew
+    ComputationGraph.renew()
 
     // run for the given number of epochs (or forever if NUM_EPOCHS is negaive)
     while (epoch < NUM_EPOCHS || NUM_EPOCHS < 0) {
       // update the optimizer
-      if (first) { first = false } else { adam.update_epoch() }
+      if (first) { first = false } else { adam.updateEpoch() }
       // reshuffle the dataset
       shuffle(order)
       // initialize loss and number of chars per word
@@ -350,18 +348,18 @@ object EncoderDecoder {
 
       for (si <- 0 until numBatches) {
         // build graph for this instance
-        cg.clear()
+        ComputationGraph.clear()
         // compute batch start id and size
-        val id = order.get(si) * BATCH_SIZE
+        val id = order(si) * BATCH_SIZE
         val bsize = math.min(training.size - id, BATCH_SIZE)
         // encode the batch
-        val encoding = lm.encode(training, id, bsize, chars, cg)
+        val encoding = lm.encode(training, id, bsize, chars)
         // decode and get error
-        val loss_expr = lm.decode(encoding, training, id, bsize, cg)
+        val loss_expr = lm.decode(encoding, training, id, bsize)
         // get scalar error for monitoring
-        loss += cg.forward(loss_expr).toFloat
+        loss += ComputationGraph.forward(loss_expr).toFloat
         // compute gradient with backward pass
-        cg.backward(loss_expr)
+        ComputationGraph.backward(loss_expr)
         // update parameters
         adam.update()
         // Print progress every tenth of the dataset
@@ -382,17 +380,17 @@ object EncoderDecoder {
 
       for (i <- 0 until (dev.size / DEV_BATCH_SIZE)) {
         // clear graph
-        cg.clear()
+        ComputationGraph.clear()
 
         // compute batch start id and size
         val id = i * DEV_BATCH_SIZE
         val bsize = math.min(dev.size - id, DEV_BATCH_SIZE)
         // Encode
-        val encoding = lm.encode(dev, id, bsize, dchars, cg)
+        val encoding = lm.encode(dev, id, bsize, dchars)
         // Decode and get loss
-        val loss_expr = lm.decode(encoding, dev, id, bsize, cg)
+        val loss_expr = lm.decode(encoding, dev, id, bsize)
         // Count loss
-        dloss += cg.forward(loss_expr).toFloat
+        dloss += ComputationGraph.forward(loss_expr).toFloat
       }
       val dlc = dloss / dchars.value
       println(s"DEV [epoch=${epoch}] E = ${dlc} ppl=${math.exp(dlc)}")
@@ -408,7 +406,7 @@ object EncoderDecoder {
         val originalSentence = sent.map(d.convert).mkString(" ")
         println(s"original sentence $idx: ${originalSentence}")
 
-        val sampled = lm.generate(sent, cg)
+        val sampled = lm.generate(sent)
         val sampledSentence = sampled.map(d.convert).mkString(" ")
         println(s"sampled sentence: ${sampledSentence}")
       }
