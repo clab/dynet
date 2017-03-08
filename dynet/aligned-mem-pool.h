@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include "dynet/mem.h"
+#include "dynet/globals.h"
 
 namespace dynet {
 
@@ -73,6 +74,28 @@ class AlignedMemoryPool {
 
     void zero_allocated_memory() {
       for (auto p : pools) { p->zero_allocated_memory(); }
+    }
+
+    
+    size_t used() {
+      if (current == 0) {
+        return pools[0]->used;
+      }
+      size_t res = 0;
+      for (auto p : pools) { res += p->used; }
+      return res;
+    }
+
+    void set_used(size_t s) {
+      int c = 0;
+      while (s > pools[c]->used) {
+        s -= pools[c]->used;
+        c++;
+        DYNET_ASSERT(c <= current, "attempt to set_used to a larger value than used()."); // TODO is that the way to use the assert?
+      } 
+      // s <= pools[c]->used
+      pools[c]->used = s;
+      current = c;
     }
 
   private:

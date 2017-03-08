@@ -47,19 +47,19 @@ Device::~Device() {}
 DeviceMempoolSizes Device::mark(ComputationGraph *cg) {
   cg->incremental_forward({cg, (VariableIndex)(cg->nodes.size() - 1)}); // needed so that we actually allocate the needed memory
   // for all existing nodes.
-  return DeviceMempoolSizes(pools[0]->used, pools[1]->used, pools[2]->used);
+  return DeviceMempoolSizes(pools[0]->used(), pools[1]->used(), pools[2]->used());
 }
 
 void Device::revert(const DeviceMempoolSizes & cp) {
-  if(cp.used[0] > pools[0]->used)
-    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[0] << " > " << pools[0]->used << ")");
-  pools[0]->used = cp.used[0];
-  if(cp.used[1] > pools[1]->used)
-    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[1] << " > " << pools[1]->used << ")");
-  pools[1]->used = cp.used[1];
-  if(cp.used[2] > pools[2]->used)
-    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[2] << " > " << pools[2]->used << ")");
-  pools[2]->used = cp.used[2];
+  if(cp.used[0] > pools[0]->used())
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[0] << " > " << pools[0]->used() << ")");
+  pools[0]->set_used(cp.used[0]);
+  if(cp.used[1] > pools[1]->used())
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[1] << " > " << pools[1]->used() << ")");
+  pools[1]->set_used(cp.used[1]);
+  if(cp.used[2] > pools[2]->used())
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[2] << " > " << pools[2]->used() << ")");
+  pools[2]->set_used(cp.used[2]);
 }
 
 void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
