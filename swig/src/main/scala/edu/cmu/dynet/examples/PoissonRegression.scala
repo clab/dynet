@@ -23,7 +23,7 @@ object PoissonRegression {
     def buildLMGraph(sent: IntVector,
                      len: Int,
                      flag: Boolean=false): Expression = {
-      val slen = (sent.size - 1).toInt
+      val slen = (sent.size - 1)
       builder.newGraph()
       builder.startNewSequence()
 
@@ -98,7 +98,7 @@ object PoissonRegression {
 
         dev.append((x, y))
 
-        dtoks += x.size().toInt
+        dtoks += x.size()
 
         if (x(0) != kSOS && x.last != kEOS) {
           throw new RuntimeException("bad sentence")
