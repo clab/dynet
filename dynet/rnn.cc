@@ -139,7 +139,7 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
 void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
   const SimpleRNNBuilder & rnn_simple = (const SimpleRNNBuilder&)rnn;
   if(params.size() != rnn_simple.params.size())
-    DYNET_INVALID_ARG("Attempt to copiy between two SimpleRNNBuilders that are not the same size");
+    DYNET_INVALID_ARG("Attempt to copy between two SimpleRNNBuilders that are not the same size");
   for(size_t i = 0; i < rnn_simple.params.size(); ++i) {
       params[i][0] = rnn_simple.params[i][0];
       params[i][1] = rnn_simple.params[i][1];
