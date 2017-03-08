@@ -207,7 +207,7 @@ object RnnLanguageModelBatch {
 
     val model = new Model
     val adam = new AdamTrainer(model, 0.001f, 0.9f, 0.999f, 1e-8f)
-    //adam.setClip_threshold(adam.getClip_threshold * BATCH_SIZE)
+    adam.clipThreshold = adam.clipThreshold * BATCH_SIZE
 
     val lm = new RnnLanguageModelBatch(model, LAYERS, INPUT_DIM, HIDDEN_DIM, INPUT_VOCAB_SIZE)
 

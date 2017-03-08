@@ -63,7 +63,7 @@ object Mnist {
 
     val model = new Model()
     val adam = new AdamTrainer(model)
-    //adam.setClip_threshold(adam.getClip_threshold * batchSize)
+    adam.clipThreshold = adam.clipThreshold * batchSize
 
     // create model
     val nn = new MultiLayerPerceptron(model, Seq(
