@@ -27,7 +27,7 @@ string AverageColumns::as_string(const vector<string>& arg_names) const {
 }
 
 Dim AverageColumns::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1 || xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 1 || xs.size() == 2, "Failed input count check in AverageColumns");
   int bd = (xs.size() == 1 ? xs[0].bd : max(xs[0].bd, xs[1].bd));
   return Dim({xs[0].rows()}, bd);
 }
@@ -140,7 +140,7 @@ string SumDimension::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SumDimension::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumDimension");
   Dim ret(xs[0]);
   ret.delete_dim(dimension);
   return ret;
@@ -150,7 +150,7 @@ Dim SumDimension::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void AverageColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in AverageColumns");
   unsigned cols = xs[0]->d.cols();
 #ifdef __CUDACC__
   // The reduction used on CPU is better, but not implemented in GPU
@@ -197,7 +197,7 @@ void Conv1DNarrow::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  assert(i < 2);
+  DYNET_ASSERT(i < 2, "Failed input count check in Conv1DNarrow");
   const unsigned ycols = dim.cols();
   const unsigned fcols = xs[1]->d.cols();
   // TODO: Can this be done with a kernel and without using chip?
@@ -252,7 +252,7 @@ void Filter1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const T
   if(xs[1]->d.ndims() == 2) {
     fx.t<2>().device(*dev.edevice) = xs[0]->t<2>().convolve(xs[1]->t<2>(), dims);
   } else {
-    assert(xs[1]->d.ndims() > 2);
+    DYNET_ASSERT(xs[1]->d.ndims() > 2, "Input to Filter1DNarrow must have 2 or more dimensions");
     const unsigned fids = xs[1]->d[2];
     const unsigned ycols = dim.cols();
     Eigen::DSizes<ptrdiff_t, 2> indices(0,0);
@@ -274,7 +274,7 @@ void Filter1DNarrow::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  assert(i < 2);
+  DYNET_ASSERT(i < 2, "Failed input count check in Filter1DNarrow");
   const unsigned rows = xs[1]->d.rows();
   const unsigned ycols = dim.cols();
   const unsigned fcols = xs[1]->d.cols();
@@ -358,7 +358,7 @@ void KMaxPooling::forward_dev_impl(const MyDevice & dev, const vector<const Tens
     auto x=**xs[0];
     auto y=*fx;
     float tmp[1024];
-    assert(x.cols() < 1024);
+    DYNET_ASSERT(x.cols() < 1024, "KMaxPooling only works for expressions of size < 1024 at the moment. Got " << x.cols());
     unsigned mi = 0;
     const unsigned rows = x.rows();
     const unsigned xcols = x.cols();
@@ -372,14 +372,13 @@ void KMaxPooling::forward_dev_impl(const MyDevice & dev, const vector<const Tens
         const float xij = x(i,j);
         if (xij >= c) {
           y(i,tt) = xij;
-          //assert(mi < dim.size());
           maxmap[mi++] = j;
           ++tt;
           if (tt == k) break;  // could happen in case of ties
         }
       }
     }
-    assert(mi == dim.size());
+    DYNET_ASSERT(mi == dim.size(), "Programming error in KMaxPooling (mi != dim.size())");
 #endif
   }
 }
@@ -408,7 +407,7 @@ DYNET_NODE_INST_DEV_IMPL(KMaxPooling)
 
 template<class MyDevice>
 void SumDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumDimension");
   Eigen::array<int, 1> reduction_axis = {(int)dimension};
   fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis);
 }

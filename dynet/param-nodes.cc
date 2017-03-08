@@ -24,7 +24,7 @@ string ConstParameterNode::as_string(const vector<string>& arg_names) const {
 }
 
 Dim ConstParameterNode::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 0);
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   return dim;
 }
 
@@ -35,7 +35,7 @@ string ParameterNode::as_string(const vector<string>& arg_names) const {
 }
 
 Dim ParameterNode::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 0);
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   return dim;
 }
 
@@ -45,7 +45,7 @@ void ParameterNode::accumulate_grad(const Tensor& g) {
   else if(lparams.mp != nullptr)
     lparams.get()->accumulate_grad(g);
   else
-    throw std::runtime_error("DyNet internal error: ConstParameterNode has neither Parameter nor LookupParameter");
+    DYNET_RUNTIME_ERR("ConstParameterNode has neither Parameter nor LookupParameter");
 }
 
 string InputNode::as_string(const vector<string>& arg_names) const {
@@ -65,7 +65,8 @@ string SparseInputNode::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SparseInputNode::dim_forward(const vector<Dim>& xs) const {
-  assert(ids.size() == data.size());
+  if(ids.size() != data.size())
+    DYNET_INVALID_ARG("Mismatch between size of ids (" << ids.size() << ") and size of data (" << data.size() << ") in SparseInput");
   return dim;
 }
 
@@ -101,7 +102,7 @@ void LookupNode::accumulate_grad(const Tensor& g) {
   if(pindex) {
     params.get()->accumulate_grad(*pindex, g);
   } else {
-    assert (pindices);
+    DYNET_ASSERT(pindices, "Have neither index nor index vector in LookupNode");
     params.get()->accumulate_grads(pindices->size(), &(*pindices)[0], (unsigned*)aux_mem, g.v);
   }
 }
@@ -110,13 +111,13 @@ void LookupNode::accumulate_grad(const Tensor& g) {
 
 template<class MyDevice>
 void ConstParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 0);
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   if(params.mp != nullptr)
     fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.current_weight_decay();
   else if(lparams.mp != nullptr)
     fx.tvec().device(*dev.edevice) = lparams.get()->all_values.tvec() * lparams.mp->weight_decay.current_weight_decay();
   else
-    throw std::runtime_error("DyNet internal error: ConstParameterNode has neither Parameter nor LookupParameter");
+    DYNET_RUNTIME_ERR("ConstParameterNode has neither Parameter nor LookupParameter");
 }
 
 template<class MyDevice>
@@ -126,14 +127,13 @@ void ConstParameterNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
-  throw std::invalid_argument(oss.str());
+  DYNET_RUNTIME_ERR("called backward() on arity 0 node: i = " << i);
 }
 DYNET_NODE_INST_DEV_IMPL(ConstParameterNode)
 
 template<class MyDevice>
 void ParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 0);
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
 // TODO
 //  if (params->not_regularized) {
 //    fx.v = params->values.v;
@@ -144,7 +144,7 @@ void ParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Te
   else if(lparams.mp != nullptr)
     fx.tvec().device(*dev.edevice) = lparams.get()->all_values.tvec() * lparams.mp->weight_decay.current_weight_decay();
   else
-    throw std::runtime_error("DyNet internal error: ParameterNode has neither Parameter nor LookupParameter");
+    DYNET_RUNTIME_ERR("ParameterNode has neither Parameter nor LookupParameter");
 }
 
 template<class MyDevice>
@@ -154,14 +154,13 @@ void ParameterNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
-  throw std::invalid_argument(oss.str());
+  DYNET_RUNTIME_ERR("called backward() on arity 0 node: i = " << i);
 }
 DYNET_NODE_INST_DEV_IMPL(ParameterNode)
 
 template<class MyDevice>
 void InputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 0);
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
 #if __CUDACC__
   cudaMemcpyAsync(fx.v, &pdata->front(), dim.size() * sizeof(float), cudaMemcpyHostToDevice);
 #else
@@ -183,14 +182,13 @@ void InputNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
-  throw std::invalid_argument(oss.str());
+  DYNET_RUNTIME_ERR("called backward() on arity 0 node: i = " << i);
 }
 DYNET_NODE_INST_DEV_IMPL(InputNode)
 
 template<class MyDevice>
 void SparseInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 0);
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   fx.tvec().device(*dev.edevice) = fx.tvec().constant(defdata);
 #if __CUDACC__
   unsigned int* ids_ptr = (unsigned int*)aux_mem;
@@ -211,14 +209,13 @@ void SparseInputNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
-  throw std::invalid_argument(oss.str());
+  DYNET_RUNTIME_ERR("called backward() on arity 0 node: i = " << i);
 }
 DYNET_NODE_INST_DEV_IMPL(SparseInputNode)
 
 template<class MyDevice>
 void ScalarInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 0);
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
 #if __CUDACC__
   cudaMemcpyAsync(fx.v, pdata, 1 * sizeof(float), cudaMemcpyHostToDevice);
 #else
@@ -233,28 +230,31 @@ void ScalarInputNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
-  throw std::invalid_argument(oss.str());
+  DYNET_RUNTIME_ERR("called backward() on arity 0 node: i = " << i);
 }
 DYNET_NODE_INST_DEV_IMPL(ScalarInputNode)
 
 template<class MyDevice>
 void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  assert(xs.size() == 0);
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   if(pindex) {
-    assert(*pindex < params.get()->values.size());
-    assert (fx.d.batch_elems() == 1);
+    if(*pindex >= params.get()->values.size())
+      DYNET_INVALID_ARG("Out-of-bounds attempt to access index " << *pindex << " for LookupParameter of size " << params.get()->values.size());
+    DYNET_ASSERT(fx.d.batch_elems() == 1, "Batch dimension > 1 for lookup with single index");
     fx.tvec().device(*dev.edevice) = params.get()->values[*pindex].tvec() * params.mp->weight_decay.current_weight_decay();
   } else {
-    assert (pindices);
-    assert (fx.d.batch_elems() == pindices->size());
+    DYNET_ASSERT(pindices, "Have neither index nor index vector in LookupNode");
+    if(fx.d.batch_elems() != pindices->size())
+      DYNET_INVALID_ARG("In LookupNode, in index vector size (" << pindices->size() <<
+                        ") doesn't match batch size in expressions (" << fx.d.batch_elems() << ")");
 #if __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync((unsigned*)aux_mem, &(*pindices)[0], fx.d.bd * sizeof(unsigned), cudaMemcpyHostToDevice));
     dynet::gpu::sparse_to_dense_block_assign_and_multiply(fx.d.bd, (unsigned*)aux_mem, fx.d.batch_size(), params.mp->weight_decay.current_weight_decay(), params.get()->all_values.v, fx.v);
 #else
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
-      assert (i < params.get()->values.size());
+      if(i >= params.get()->values.size())
+        DYNET_INVALID_ARG("Out-of-bounds attempt to access index " << i << " for LookupParameter of size " << params.get()->values.size());
       fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get()->values[i].t<2>() * params.mp->weight_decay.current_weight_decay();
     }
 #endif
@@ -268,8 +268,7 @@ void LookupNode::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  ostringstream oss; oss << "called backward() on arity 0 node: i = " << i;
-  throw std::invalid_argument(oss.str());
+  DYNET_RUNTIME_ERR("called backward() on arity 0 node: i = " << i);
 }
 DYNET_NODE_INST_DEV_IMPL(LookupNode)
 

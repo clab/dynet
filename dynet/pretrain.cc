@@ -17,7 +17,8 @@ void save_pretrained_embeddings(const std::string& fname,
     const LookupParameter& lp) {
   cerr << "Writing word vectors to " << fname << " ...\n";
   ofstream out(fname);
-  assert(out);
+  if(!out)
+    DYNET_INVALID_ARG("Could not save embeddings to " << fname);
   auto& m = *lp.get();
   for (unsigned i = 0; i < d.size(); ++i) {
     out << d.convert(i) << ' ' << (*m.values[i]).transpose() << endl;
@@ -31,7 +32,8 @@ void read_pretrained_embeddings(const std::string& fname,
   if (d.is_frozen()) unk = d.get_unk_id();
   cerr << "Loading word vectors from " << fname << " ...\n";
   ifstream in(fname);
-  assert(in);
+  if(!in)
+    DYNET_INVALID_ARG("Could not load embeddings from " << fname);
   string line;
   string word;
   vector<float> v;

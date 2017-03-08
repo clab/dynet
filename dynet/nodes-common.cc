@@ -178,7 +178,7 @@ string Reshape::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Reshape::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Reshape")
   if(to.size() == xs[0].size()) {
     return to;
   } else if(to.batch_elems() == 1 && to.batch_size() == xs[0].batch_size()) {
@@ -212,7 +212,7 @@ string GaussianNoise::as_string(const vector<string>& arg_names) const {
 }
 
 Dim GaussianNoise::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in GaussianNoise")
   return xs[0];
 }
 
@@ -223,7 +223,7 @@ string Dropout::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Dropout::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Dropout")
   return xs[0];
 }
 
@@ -234,7 +234,7 @@ string BlockDropout::as_string(const vector<string>& arg_names) const {
 }
 
 Dim BlockDropout::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in BlockDropout")
   return xs[0];
 }
 
@@ -245,7 +245,7 @@ string ConstantPlusX::as_string(const vector<string>& arg_names) const {
 }
 
 Dim ConstantPlusX::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in ConstantPlusX")
   return xs[0];
 }
 
@@ -256,7 +256,7 @@ string ConstantMinusX::as_string(const vector<string>& arg_names) const {
 }
 
 Dim ConstantMinusX::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in ConstantMinusX")
   return xs[0];
 }
 
@@ -305,7 +305,7 @@ string SumBatches::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SumBatches::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumBatches")
   return xs[0].single_batch();
 }
 
@@ -335,7 +335,7 @@ string Sqrt::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Sqrt::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Sqrt")
   return xs[0];
 }
 
@@ -346,7 +346,7 @@ string Erf::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Erf::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Erf")
   return xs[0];
 }
 
@@ -357,7 +357,7 @@ string Tanh::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Tanh::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Tanh")
   return xs[0];
 }
 
@@ -368,7 +368,7 @@ string Square::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Square::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Square")
   return xs[0];
 }
 
@@ -379,7 +379,7 @@ string Cube::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Cube::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Cube")
   return xs[0];
 }
 
@@ -390,7 +390,7 @@ string Exp::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Exp::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Exp")
   return xs[0];
 }
 
@@ -401,7 +401,7 @@ string LogGamma::as_string(const vector<string>& arg_names) const {
 }
 
 Dim LogGamma::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in LogGamma")
   return xs[0];
 }
 
@@ -412,7 +412,7 @@ string Log::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Log::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Log")
   return xs[0];
 }
 
@@ -453,7 +453,7 @@ string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
 }
 
 Dim ConcatenateColumns::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() > 0);
+  DYNET_ASSERT(xs.size() > 0, "Failed input count check in ConcatenateColumns")
   unsigned rows = xs[0][0];
   unsigned new_cols = 0;
   unsigned bd = 1;
@@ -498,7 +498,7 @@ string Identity::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Identity::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Identity")
   return xs[0];
 }
 
@@ -509,7 +509,7 @@ string NoBackprop::as_string(const vector<string>& arg_names) const {
 }
 
 Dim NoBackprop::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in NoBackprop")
   return xs[0];
 }
 
@@ -520,7 +520,7 @@ string FlipGradient::as_string(const vector<string>& arg_names) const {
 }
 
 Dim FlipGradient::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in FlipGradient")
   return xs[0];
 }  
   
@@ -531,7 +531,7 @@ string Softmax::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Softmax::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Softmax")
   if (xs[0].nd > 2)
     DYNET_INVALID_ARG("Bad input dimensions in Softmax, must be 2 or fewer: " << xs);
   return xs[0];
@@ -544,7 +544,7 @@ string SoftSign::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SoftSign::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SoftSign")
   if (!LooksLikeVector(xs[0]))
     DYNET_INVALID_ARG("Bad input dimensions in SoftSign: " << xs);
   return xs[0];
@@ -564,7 +564,7 @@ string PickNegLogSoftmax::as_string(const vector<string>& arg_names) const {
 }
 
 Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in PickNegLogSoftmax")
   if (!LooksLikeVector(xs[0]))
     DYNET_INVALID_ARG("Bad input dimensions in PickNegLogSoftmax: " << xs);
   if (pval && xs[0].bd != 1) {
@@ -586,7 +586,7 @@ string LogSoftmax::as_string(const vector<string>& arg_names) const {
 }
 
 Dim LogSoftmax::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in LogSoftmax")
   if (xs[0].nd > 2)
     DYNET_INVALID_ARG("Bad input dimensions in LogSoftmax, must be 2 or fewer: " << xs);
   return xs[0];
@@ -599,7 +599,7 @@ string RestrictedLogSoftmax::as_string(const vector<string>& arg_names) const {
 }
 
 Dim RestrictedLogSoftmax::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in RestrictedLogSoftmax")
   if (!LooksLikeVector(xs[0]))
     DYNET_INVALID_ARG("Bad input dimensions in RestrictedLogSoftmax: " << xs);
   return xs[0];
@@ -611,7 +611,7 @@ string PickElement::as_string(const vector<string>& arg_names) const {
   if(pval) { 
     s << *pval;
   } else {
-    assert(pvals);
+    DYNET_ASSERT(pvals, "Have neither index nor index vector in PickElement");
     s << '[';
     if(pvals->size()) {
       s << (*pvals)[0];
@@ -625,7 +625,7 @@ string PickElement::as_string(const vector<string>& arg_names) const {
 }
 
 Dim PickElement::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in PickElement")
   if(dimension >= xs[0].nd)
     DYNET_INVALID_ARG("Tried to PickElement on dimension " << dimension << " bigger than input " << xs[0]);
   if(xs[0].nd >= 4)
@@ -644,7 +644,7 @@ string PickRange::as_string(const vector<string>& arg_names) const {
 }
 
 Dim PickRange::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in PickRange")
   if (!LooksLikeVector(xs[0]) || end > xs[0][0])
     DYNET_INVALID_ARG("Bad input dimensions or range in PickRange: " << xs << " range(" << start << ", " << end << ")");
   return Dim({end - start}, xs[0].bd);
@@ -657,7 +657,7 @@ string MatrixMultiply::as_string(const vector<string>& arg_names) const {
 }
 
 Dim MatrixMultiply::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 2, "Failed input count check in MatrixMultiply")
   if (xs[0].cols() != xs[1].rows())
     DYNET_INVALID_ARG("Mismatched input dimensions in MatrixMultiply: " << xs);
   if (xs[1].ndims() == 1) return Dim({xs[0].rows()}, max(xs[0].bd, xs[1].bd));
@@ -671,7 +671,7 @@ string CwiseMultiply::as_string(const vector<string>& arg_names) const {
 }
 
 Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 2, "Failed input count check in CwiseMultiply")
   Dim d = xs[0].truncate();
   if (d.single_batch() != xs[1].truncate().single_batch())
     DYNET_INVALID_ARG("Mismatched input dimensions in CwiseMultiply: " << xs);
@@ -686,7 +686,7 @@ string Pow::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Pow::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 2, "Failed input count check in Pow")
   Dim d = xs[0].truncate();
   if (xs[1].truncate().single_batch().size() != 1)
     DYNET_INVALID_ARG("Bad input dimensions in Pow: " << xs);
@@ -700,7 +700,7 @@ string CwiseQuotient::as_string(const vector<string>& arg_names) const {
 }
 
 Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 2, "Failed input count check in CwiseQuotient")
   Dim d = xs[0].truncate();
   if (d.single_batch() != xs[1].truncate().single_batch())
     DYNET_INVALID_ARG("Bad input dimensions in CwiseQuotient: " << xs);
@@ -741,7 +741,7 @@ string Negate::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Negate::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Negate")
   return xs[0];
 }
 
@@ -752,7 +752,7 @@ string Rectify::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Rectify::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in Rectify")
   return xs[0];
 }
 
@@ -763,7 +763,7 @@ string HuberDistance::as_string(const vector<string>& arg_names) const {
 }
 
 Dim HuberDistance::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 2, "Failed input count check in HuberDistance")
   if (xs[0].single_batch() != xs[1].single_batch() && !(LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size()))
     DYNET_INVALID_ARG("Mismatched input dimensions in HuberDistance: " << xs);
   return Dim({1}, max(xs[0].bd, xs[1].bd));
@@ -776,7 +776,7 @@ string L1Distance::as_string(const vector<string>& arg_names) const {
 }
 
 Dim L1Distance::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 2, "Failed input count check in L1Distance")
   if (xs[0].single_batch() != xs[1].single_batch() && !(LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size()))
     DYNET_INVALID_ARG("Mismatched input dimensions in L1Distance: " << xs);
   return Dim({1}, max(xs[0].bd, xs[1].bd));
@@ -801,7 +801,7 @@ string SquaredNorm::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SquaredNorm::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SquaredNorm")
   return Dim({1}, xs[0].bd);
 }
 
@@ -812,7 +812,7 @@ string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) cons
 }
 
 Dim SquaredEuclideanDistance::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 2, "Failed input count check in SquaredEuclideanDistance")
   if (xs[0].single_batch() != xs[1].single_batch() && !(LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size()))
     DYNET_INVALID_ARG("Bad input dimensions in SquaredEuclideanDistance: " << xs);
   return Dim({1}, max(xs[0].bd, xs[1].bd));
@@ -825,7 +825,7 @@ string LogisticSigmoid::as_string(const vector<string>& arg_names) const {
 }
 
 Dim LogisticSigmoid::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 1);
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in LogisticSigmoid")
   return xs[0];
 }
 
@@ -836,7 +836,7 @@ string BinaryLogLoss::as_string(const vector<string>& arg_names) const {
 }
 
 Dim BinaryLogLoss::dim_forward(const vector<Dim>& xs) const {
-  assert(xs.size() == 2);
+  DYNET_ASSERT(xs.size() == 2, "Failed input count check in BinaryLogLoss")
   if (xs[0].rows() != 2 && xs[0].ndims() != 1)
     DYNET_INVALID_ARG("Bad input dimensions in BinaryLogLoss: " << xs);
   if (xs[1].rows() != 2 && xs[1].ndims() != 1)
