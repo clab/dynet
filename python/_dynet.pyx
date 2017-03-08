@@ -291,16 +291,39 @@ cdef class Parameters:
         self.thisptr.zero()
 
     cpdef bool is_updated(self):
-        """[summary]
+        """check whether the parameter is updated or not
         
         Returns:
-            bool -- [description]
+            bool -- Update status
         """
         return self.thisptr.is_updated()
-    cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
-    cpdef unsigned get_index(self): return self.thisptr.index
+
+    cpdef set_updated(self, bool b):
+        """Set parameter as "updated"
+        
+        Arguments:
+            b {bool} -- updated status
+        """
+        self.thisptr.set_updated(b)
+
+    cpdef unsigned get_index(self):
+        """Get parameter index
+        
+        Returns:
+            unsigned -- Index of the parameter
+        """
+        return self.thisptr.index
 
     cpdef Expression expr(self):
+        """Returns the parameter as an expression
+
+        This is the same as calling
+
+            dy.parameter(param)
+        
+        Returns:
+            Expression -- Expression of the parameter
+        """
         if cg_version() != self._version:
             self._version = cg_version()
             self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
