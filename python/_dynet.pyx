@@ -90,7 +90,7 @@ cdef class DynetParams:
         Arguments:
             mem {unsigned int} -- memory size in MB
         """
-        self.cparams.mem_descriptor = str(mem)
+        self.cparams.mem_descriptor = str(mem).encode()
 
     cpdef set_random_seed(self, unsigned random_seed):
         """Set random seed for dynet
