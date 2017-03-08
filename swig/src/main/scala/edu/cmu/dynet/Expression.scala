@@ -30,7 +30,7 @@ object Expression {
   private def makeExpr(f: internal.ComputationGraph => internal.Expression): Expression = {
     val version = ComputationGraph.version
     val expr = f(ComputationGraph.cg)
-    new Expression(version, expr)
+    new Expression(expr)
   }
 
   def input(s: Float): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, s))
