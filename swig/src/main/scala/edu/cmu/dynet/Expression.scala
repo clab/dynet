@@ -24,7 +24,6 @@ class Expression private[dynet](private[dynet] val expr: internal.Expression) {
 
 object Expression {
   import edu.cmu.dynet.internal.{dynet_swig => dn}
-  import ImplicitConversions._
 
   // private helper function for wrapping methods that get expressions from computation graph
   private def makeExpr(f: internal.ComputationGraph => internal.Expression): Expression = {
@@ -34,26 +33,30 @@ object Expression {
   }
 
   def input(s: Float): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, s))
-  def input(fp: FloatPointer): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, fp))
-  def input(d: Dim, pdata: FloatVector): Expression = makeExpr(cg => dn.input(cg, d, pdata))
+  def input(fp: FloatPointer): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp))
+  def input(d: Dim, pdata: FloatVector): Expression =
+    makeExpr(cg => dn.input(cg, d.dim, pdata.vector))
   //def input(d: Dim, )
 
-  def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p))
-  def constParameter(p: Parameter): Expression = makeExpr(cg => dn.const_parameter(cg, p))
+  def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p.parameter))
+  def constParameter(p: Parameter): Expression = makeExpr(cg => dn.const_parameter(cg, p.parameter))
 
-  def lookup(p: LookupParameter, index: Long) = makeExpr(cg => dn.lookup(cg, p, index))
-  def lookup(p: LookupParameter, pindex: UnsignedPointer) = makeExpr(cg => dn.lookup(cg, p, pindex))
-  def constLookup(p: LookupParameter, index: Long) = makeExpr(cg => dn.lookup(cg, p, index))
+  def lookup(p: LookupParameter, index: Long) = makeExpr(cg => dn.lookup(cg, p.lookupParameter, index))
+  def lookup(p: LookupParameter, pindex: UnsignedPointer) =
+    makeExpr(cg => dn.lookup(cg, p.lookupParameter, pindex.uintp))
+  def constLookup(p: LookupParameter, index: Long) =
+    makeExpr(cg => dn.lookup(cg, p.lookupParameter, index))
   // def constLookup
-  def lookup(p: LookupParameter, indices: UnsignedVector) = makeExpr(cg => dn.lookup(cg, p, indices))
+  def lookup(p: LookupParameter, indices: UnsignedVector) =
+    makeExpr(cg => dn.lookup(cg, p.lookupParameter, indices.vector))
 
 
-  def zeroes(d: Dim) = makeExpr(cg => dn.zeroes(cg, d))
-  def randomNormal(d: Dim) = makeExpr(cg => dn.random_normal(cg, d))
+  def zeroes(d: Dim) = makeExpr(cg => dn.zeroes(cg, d.dim))
+  def randomNormal(d: Dim) = makeExpr(cg => dn.random_normal(cg, d.dim))
   def randomBernoulli(d: Dim, p: Float, scale: Float = 1.0f) = makeExpr(
-    cg => dn.random_bernoulli(cg, d, p, scale))
+    cg => dn.random_bernoulli(cg, d.dim, p, scale))
   def randomUniform(d: Dim, left: Float, right: Float) = makeExpr(
-    cg => dn.random_uniform(cg, d, left, right))
+    cg => dn.random_uniform(cg, d.dim, left, right))
 
   /* ARITHMETIC OPERATIONS */
 
@@ -68,7 +71,7 @@ object Expression {
   private type UnaryTransform = internal.Expression => internal.Expression
   private def unary(e: Expression, transformer: UnaryTransform) = {
     e.ensureFresh()
-    new Expression(transformer(e))
+    new Expression(transformer(e.expr))
   }
 
   def exprMinus(e: Expression): Expression = unary(e, dn.exprMinus)
@@ -119,25 +122,26 @@ object Expression {
 
   def softmax(e: Expression): Expression = unary(e, dn.softmax)
   def logSoftmax(e: Expression): Expression = unary(e, dn.log_softmax)
-  def logSoftmax(e: Expression, restriction: UnsignedVector) = unary(e, e => dn.log_softmax(e, restriction))
+  def logSoftmax(e: Expression, restriction: UnsignedVector) =
+    unary(e, e => dn.log_softmax(e, restriction.vector))
 
   def logSumExp(v: ExpressionVector): Expression = vectory(v, dn.logsumexp)
 
   def pickNegLogSoftmax(e: Expression, v: Long): Expression = unary(e, e => dn.pickneglogsoftmax(e, v))
   def pickNegLogSoftmax(e: Expression, v: UnsignedPointer): Expression =
-    unary(e, e => dn.pickneglogsoftmax(e, v))
+    unary(e, e => dn.pickneglogsoftmax(e, v.uintp))
   def pickNegLogSoftmax(e: Expression, v: UnsignedVector): Expression =
-    unary(e, e => dn.pickneglogsoftmax(e, v))
+    unary(e, e => dn.pickneglogsoftmax(e, v.vector))
 
   def hinge(e: Expression, index: Long, m: Float = 1.0f): Expression = unary(e, e => dn.hinge(e, index, m))
   def hinge(e: Expression, index: UnsignedPointer, m: Float): Expression =
-    unary(e, e => dn.hinge(e, index, m))
+    unary(e, e => dn.hinge(e, index.uintp, m))
   def hinge(e: Expression, indices: UnsignedVector, m: Float): Expression =
-    unary(e, e => dn.hinge(e, indices, m))
+    unary(e, e => dn.hinge(e, indices.vector, m))
 
   def sparsemax(e: Expression): Expression = unary(e, dn.sparsemax)
   def sparsemaxLoss(e: Expression, targetSupport: UnsignedVector): Expression =
-    unary(e, e => dn.sparsemax_loss(e, targetSupport))
+    unary(e, e => dn.sparsemax_loss(e, targetSupport.vector))
 
   def squaredNorm(e: Expression): Expression = unary(e, dn.squared_norm)
   def squaredDistance(e1: Expression, e2: Expression): Expression = binary(e1, e2, dn.squared_distance)
@@ -150,24 +154,24 @@ object Expression {
     binary(x, y, (x, y) => dn.pairwise_rank_loss(x, y, m))
   def poissonLoss(x: Expression, y: Long): Expression = unary(x, x => dn.poisson_loss(x, y))
   def poissonLoss(x: Expression, y: UnsignedPointer): Expression =
-    unary(x, x => dn.poisson_loss(x, y))
+    unary(x, x => dn.poisson_loss(x, y.uintp))
 
   /* FLOW / SHAPING OPERATIONS */
 
   def noBackProp(x: Expression): Expression = unary(x, dn.nobackprop)
-  def reshape(x: Expression, d: Dim): Expression = unary(x, x => dn.reshape(x, d))
+  def reshape(x: Expression, d: Dim): Expression = unary(x, x => dn.reshape(x, d.dim))
   def transpose(x: Expression): Expression = unary(x, dn.transpose)
   def selectRows(x: Expression, rows: UnsignedVector): Expression =
-    unary(x, x => dn.select_rows(x, rows))
+    unary(x, x => dn.select_rows(x, rows.vector))
   def selectCols(x: Expression, rows: UnsignedVector): Expression =
-    unary(x, x => dn.select_cols(x, rows))
+    unary(x, x => dn.select_cols(x, rows.vector))
   def sumBatches(x: Expression): Expression = unary(x, dn.sum_batches)
 
   def pick(x: Expression, v: Long, d: Long = 0l): Expression = unary(x, x => dn.pick(x, v, d))
   def pick(x: Expression, v: UnsignedVector, d: Long): Expression =
-    unary(x, x => dn.pick(x, v, d))
+    unary(x, x => dn.pick(x, v.vector, d))
   def pick(x: Expression, v: UnsignedPointer, d: Long): Expression =
-    unary(x, x => dn.pick(x, v, d))
+    unary(x, x => dn.pick(x, v.uintp, d))
   def pickrange(x: Expression, v: Long, u: Long): Expression =
     unary(x, x => dn.pickrange(x, v, u))
 
@@ -197,15 +201,15 @@ object Expression {
   def contract3d1d(x: Expression, y: Expression): Expression = binary(x, y, dn.contract3d_1d)
   def contract3d1d1d(x: Expression, y: Expression, z: Expression): Expression = {
     Seq(x, y, z).foreach(_.ensureFresh)
-    new Expression(dn.contract3d_1d_1d(x, y, z))
+    new Expression(dn.contract3d_1d_1d(x.expr, y.expr, z.expr))
   }
   def contract3d1d1d(x: Expression, y: Expression, z: Expression, b: Expression): Expression = {
     Seq(x, y, z, b).foreach(_.ensureFresh)
-    new Expression(dn.contract3d_1d_1d(x, y, z, b))
+    new Expression(dn.contract3d_1d_1d(x.expr, y.expr, z.expr, b.expr))
   }
   def contract3d1d(x: Expression, y: Expression, b: Expression): Expression = {
     Seq(x, y, b).foreach(_.ensureFresh)
-    new Expression(dn.contract3d_1d(x, y, b))
+    new Expression(dn.contract3d_1d(x.expr, y.expr, b.expr))
   }
 
   /* LINEAR ALGEBRA OPERATIONS */

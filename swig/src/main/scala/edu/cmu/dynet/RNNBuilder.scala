@@ -1,7 +1,5 @@
 package edu.cmu.dynet
 
-import ImplicitConversions._
-
 abstract class RNNBuilder(private[dynet] val _builder: internal.RNNBuilder) {
 
   var version: Long = ComputationGraph.version
@@ -21,12 +19,12 @@ abstract class RNNBuilder(private[dynet] val _builder: internal.RNNBuilder) {
   // and others
 
   def addInput(x: Expression): Expression = {
-    val expr = _builder.add_input(x)
+    val expr = _builder.add_input(x.expr)
     new Expression(expr)
   }
 
   def addInput(prev: Int, x: Expression) = {
-    val expr = _builder.add_input(prev, x)
+    val expr = _builder.add_input(prev, x.expr)
     new Expression(expr)
   }
 
@@ -47,17 +45,17 @@ abstract class RNNBuilder(private[dynet] val _builder: internal.RNNBuilder) {
   // save and load
 }
 
-class SimpleRNNBuilder private[dynet](builder: internal.SimpleRNNBuilder)
+class SimpleRNNBuilder private[dynet](private[dynet] val builder: internal.SimpleRNNBuilder)
     extends RNNBuilder(builder) {
   def this() { this(new internal.SimpleRNNBuilder()) }
 
   def this(layers: Long, inputDim: Long, hiddenDim: Long, model: Model, supportLags: Boolean = false) {
-    this(new internal.SimpleRNNBuilder(layers, inputDim, hiddenDim, model, supportLags))
+    this(new internal.SimpleRNNBuilder(layers, inputDim, hiddenDim, model.model, supportLags))
   }
 
   def addAuxiliaryInput(x: Expression, aux: Expression): Expression = {
     x.ensureFresh()
     aux.ensureFresh()
-    new Expression(builder.add_auxiliary_input(x, aux))
+    new Expression(builder.add_auxiliary_input(x.expr, aux.expr))
   }
 }

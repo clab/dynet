@@ -5,11 +5,10 @@ import Matchers._
 import edu.cmu.dynet.internal.{dynet_swig => dn}
 import java.util.Arrays
 
-/*
 class SerializationSpec extends FlatSpec with Matchers {
   import DyNetScalaHelpers._
 
-  dn.initialize(new DynetParams)
+  Initialize.initialize()
 
   def assertSameSeq(s1: Seq[Float], s2: Seq[Float], eps: Float = 1e-5f): Unit = {
     s1.size shouldBe s2.size
@@ -18,25 +17,25 @@ class SerializationSpec extends FlatSpec with Matchers {
 
   def assertSameModel(m1: Model, m2: Model): Unit = {
     // TODO(joelgrus): add more logic here as we add more methods to the Java API
-    m1.parameter_count() shouldBe m2.parameter_count()
+    m1.parameterCount() shouldBe m2.parameterCount()
 
-    val parameters1 = m1.parameters_list()
-    val parameters2 = m2.parameters_list()
+    val parameters1 = m1.parametersList()
+    val parameters2 = m2.parametersList()
 
-    parameters1.size() shouldBe parameters2.size()
+    parameters1.size shouldBe parameters2.size
 
     parameters1.zip(parameters2).foreach {
       case (p1, p2) => {
         p1.size shouldBe p2.size
-        p1.getDim shouldBe p2.getDim
-        assertSameSeq(p1.getValues.toSeq, p2.getValues.toSeq)
+        p1.dim shouldBe p2.dim
+        assertSameSeq(p1.values.toSeq, p2.values.toSeq)
       }
     }
 
-    val lookupParameters1 = m1.lookup_parameters_list()
-    val lookupParameters2 = m2.lookup_parameters_list()
+    val lookupParameters1 = m1.lookupParametersList()
+    val lookupParameters2 = m2.lookupParametersList()
 
-    lookupParameters1.size() shouldBe lookupParameters2.size()
+    lookupParameters1.size shouldBe lookupParameters2.size
 
     lookupParameters1.zip(lookupParameters2).foreach {
       case (p1, p2) => {
@@ -47,14 +46,14 @@ class SerializationSpec extends FlatSpec with Matchers {
 
   def defaultModel(): Model = {
     val model = new Model()
-    model.add_parameters(dim(2, 3))
-    model.add_parameters(dim(5))
+    model.addParameters(Dim(2, 3))
+    model.addParameters(Dim(5))
     model
   }
 
   "dynet" should "create models with the right number of parameters" in {
     val model = defaultModel()
-    model.parameter_count() shouldBe 11  // == 2 * 3 + 5
+    model.parameterCount() shouldBe 11  // == 2 * 3 + 5
   }
 
   "model saver and model loader" should "handle simplernnbuilder correctly" in {
@@ -65,18 +64,19 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
-    saver.add_model(mod1)
-    saver.add_srnn_builder(rnn1)
+    saver.addModel(mod1)
+    saver.addSRNNBuilder(rnn1)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val mod2 = loader.load_model()
-    val rnn2 = loader.load_srnn_builder()
+    val mod2 = loader.loadModel()
+    val rnn2 = loader.loadSRNNBuilder()
     loader.done()
 
     assertSameModel(mod1, mod2)
   }
 
+  /*
   "model saver and model loader" should "handle vanillalstmbuilder correctly" in {
 
     // this is the vanilla_lstm_io test case from the C++ tests
@@ -96,6 +96,7 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     assertSameModel(mod1, mod2)
   }
+  */
 
 
   "model saver and model loader" should "handle lstmbuilder correctly" in {
@@ -106,13 +107,13 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
-    saver.add_model(mod1)
-    saver.add_lstm_builder(rnn1)
+    saver.addModel(mod1)
+    saver.addLSTMBuilder(rnn1)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val mod2 = loader.load_model()
-    val rnn2 = loader.load_lstm_builder()
+    val mod2 = loader.loadModel()
+    val rnn2 = loader.loadLSTMBuilder()
     loader.done()
 
     assertSameModel(mod1, mod2)
@@ -124,14 +125,14 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
-    saver.add_size(s.length)
-    saver.add_byte_array(s)
+    saver.addSize(s.length)
+    saver.addByteArray(s)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val length = loader.load_size()
+    val length = loader.loadSize()
     val s2 = Array.ofDim[Byte](length.asInstanceOf[Int])
-    loader.load_byte_array(s2)
+    loader.loadByteArray(s2)
     loader.done()
 
     Arrays.equals(s, s2) shouldBe true
@@ -142,11 +143,11 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
-    saver.add_object(s)
+    saver.addObject(s)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val s2 = loader.load_object(classOf[Foo])
+    val s2 = loader.loadObject(classOf[Foo])
     loader.done()
 
     s2 shouldBe s
@@ -155,36 +156,37 @@ class SerializationSpec extends FlatSpec with Matchers {
   "model saver and model loader" should "handle primitives correctly" in {
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
-    saver.add_int(0)
-    saver.add_int(-123)
-    saver.add_int(256)
-    saver.add_long(-23L)
-    saver.add_float(256.123f)
-    saver.add_double(-12.54)
-    saver.add_boolean(true)
-    saver.add_boolean(false)
+    saver.addInt(0)
+    saver.addInt(-123)
+    saver.addInt(256)
+    saver.addLong(-23L)
+    saver.addFloat(256.123f)
+    saver.addDouble(-12.54)
+    saver.addBoolean(true)
+    saver.addBoolean(false)
     saver.done()
 
     val loader = new ModelLoader(path)
-    loader.load_int() shouldBe 0
-    loader.load_int() shouldBe -123
-    loader.load_int() shouldBe 256
-    loader.load_long() shouldBe -23L
-    loader.load_float() shouldBe 256.123f
-    loader.load_double() shouldBe -12.54
-    loader.load_boolean() shouldBe true
-    loader.load_boolean() shouldBe false
+    loader.loadInt() shouldBe 0
+    loader.loadInt() shouldBe -123
+    loader.loadInt() shouldBe 256
+    loader.loadLong() shouldBe -23L
+    loader.loadFloat() shouldBe 256.123f
+    loader.loadDouble() shouldBe -12.54
+    loader.loadBoolean() shouldBe true
+    loader.loadBoolean() shouldBe false
     loader.done()
   }
 
+  /*
   "model saver and model loader" should "have implicit methods that work" in {
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val model = new Model
     val saver = new ModelSaver(path)
 
     val namedParams = Map(
-      "w" -> model.add_parameters(dim(2, 3)),
-      "b" -> model.add_parameters(dim(5))
+      "w" -> model.addParameters(Dim(2, 3)),
+      "b" -> model.addParameters(Dim(5))
     )
 
     saver.add_model(model)
@@ -205,7 +207,8 @@ class SerializationSpec extends FlatSpec with Matchers {
     np("w").dim shouldBe dim(2, 3)
     np("b").dim shouldBe dim(5)
   }
-}
 */
+
+}
 
 case class Foo(a: String, b: Int) extends Serializable

@@ -2,7 +2,6 @@ package edu.cmu.dynet
 
 import scala.language.implicitConversions
 import scala.collection.JavaConverters._
-import ImplicitConversions._
 
 class IntVector private[dynet] (private[dynet] val vector: internal.IntVector)
     extends scala.collection.mutable.IndexedSeq[Int] {
@@ -72,6 +71,6 @@ class ExpressionVector private[dynet] (
   override def length: Int = vector.size.toInt
   override def update(idx: Int, elem: Expression): Unit = {
     elem.ensureFresh()
-    vector.set(idx, elem)
+    vector.set(idx, elem.expr)
   }
 }
