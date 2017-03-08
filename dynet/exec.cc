@@ -28,7 +28,7 @@ const Tensor& SimpleExecutionEngine::forward(VariableIndex i) {
 }
 
 const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
-  assert(i < cg.nodes.size());
+  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in SimpleExecutionEngine::get_value()");
   if (i >= num_nodes_evaluated) {
     incremental_forward();
   }
@@ -41,7 +41,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
-  assert(i < cg.nodes.size());
+  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in SimpleExecutionEngine::incremental_forward()");
 
   // free any old memory if this is a new CG
   if (num_nodes_evaluated == 0)
@@ -63,18 +63,18 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       }
       nfxs[num_nodes_evaluated].d = node->dim;
       // Get the device
-      assert(node->device != nullptr);
+      DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in SimpleExecutionEngine::incremental_forward");
       nfxs[num_nodes_evaluated].device = node->device;
       // Get the memory
       nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(node->dim.size() * sizeof(float)));
       if (nfxs[num_nodes_evaluated].v == nullptr)
-        throw std::runtime_error("out of memory");
+        DYNET_RUNTIME_ERR("Ran out of memory when executing node " << num_nodes_evaluated);
       void* aux_mem = nullptr;
       size_t aux_size = node->aux_storage_size();
       if (aux_size) {
         aux_mem = nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(aux_size);
         if (!aux_mem)
-          throw std::runtime_error("aux out of memory");
+          DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node " << num_nodes_evaluated);
       }
       node->aux_mem = aux_mem;
 
@@ -85,7 +85,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 }
 
 void SimpleExecutionEngine::backward() {
-  assert(nfxs.size() >= cg.nodes.size());
+  DYNET_ASSERT(nfxs.size() >= cg.nodes.size(), "Mismatched array sizes in SimpleExecutionEngine::backward");
   backward((VariableIndex)(cg.nodes.size()-1));
 }
 
@@ -93,10 +93,8 @@ void SimpleExecutionEngine::backward() {
 void SimpleExecutionEngine::backward(VariableIndex from_where) {
   if(!(from_where < nfxs.size()))
     incremental_forward(from_where);
-  if (nfxs[from_where].d.size() != 1) {
-    ostringstream oss; oss << "backward() can only be called on scalar nodes, but node " << from_where << " has dimension: " << nfxs[from_where].d;
-    throw std::runtime_error(oss.str());
-  }
+  if (nfxs[from_where].d.size() != 1)
+    DYNET_INVALID_ARG("backward() can only be called on scalar nodes, but node " << from_where << " has dimension: " << nfxs[from_where].d);
 
   const unsigned num_nodes = from_where+1;
   ndEdfs.resize(num_nodes);
@@ -108,7 +106,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
     ndEdfs[i].device = nfxs[i].device;
     ndEdfs[i].v = static_cast<float*>(ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
     if (!ndEdfs[i].v)
-      throw std::runtime_error("out of memory while attempting to allocate space for derivatives");
+      DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for derivatives of node " << i);
   }
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
