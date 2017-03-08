@@ -1,7 +1,6 @@
 #ifndef DYNET_DICT_H_
 #define DYNET_DICT_H_
 
-#include <cassert>
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -9,6 +8,7 @@
 #include <stdexcept>
 
 #include "dynet/io-macros.h"
+#include "dynet/globals.h"
 
 namespace boost { namespace serialization { class access; } }
 
@@ -33,14 +33,10 @@ public:
     auto i = d_.find(word);
     if (i == d_.end()) {
       if (frozen) {
-        if (map_unk) {
+        if (map_unk)
           return unk_id;
-        }
-        else {
-         std::cerr << map_unk << std::endl;
-          std::cerr << "Unknown word encountered: " << word << std::endl;
-          throw std::runtime_error("Unknown word encountered in frozen dictionary: " + word);
-        }
+        else
+          DYNET_RUNTIME_ERR("Unknown word encountered in frozen dictionary: " << word);
       }
       words_.push_back(word);
       return d_[word] = words_.size() - 1;
@@ -50,15 +46,16 @@ public:
   }
   
   inline const std::string& convert(const int& id) const {
-    assert(id < (int)words_.size());
+    if(id >= (int)words_.size())
+      DYNET_INVALID_ARG("Out-of-bounds error in Dict::convert for word ID " << id << " (dict size: " << words_.size() << ")");
     return words_[id];
   }
   
   void set_unk(const std::string& word) {
     if (!frozen)
-      throw std::runtime_error("Please call set_unk() only after dictionary is frozen");
+      DYNET_RUNTIME_ERR("Please call set_unk() only after dictionary is frozen");
     if (map_unk)
-      throw std::runtime_error("Set UNK more than one time");
+      DYNET_RUNTIME_ERR("Set UNK more than one time");
   
     // temporarily unfrozen the dictionary to allow the add of the UNK
     frozen = false;

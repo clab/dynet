@@ -1,7 +1,6 @@
 #include "dynet/fast-lstm.h"
 
 #include <string>
-#include <cassert>
 #include <vector>
 #include <iostream>
 
@@ -80,7 +79,8 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    assert(layers*2 == hinit.size());
+    if(layers * 2 != hinit.size())
+      DYNET_INVALID_ARG("FastLSTMBuilder must be initialized with 2 times as many expressions as layers (hidden state and cell for each layer). However, for " << layers << " layers, " << hinit.size() << " expressions were passed in");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
@@ -98,7 +98,9 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
 // Also is creating a new step something we want? 
 // wouldn't overwriting the current one be better?
 Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size()) { assert(h_new.size() == layers); }
+  if (h_new.size() && h_new.size() != layers)
+    DYNET_INVALID_ARG("FastLSTMBuilder::set_h expects as many inputs as layers, but got " <<
+                      h_new.size() << " inputs for " << layers << " layers");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
@@ -113,7 +115,9 @@ Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression FastLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
-  if (s_new.size()) { assert(s_new.size() == layers || s_new.size() == 2 * layers ); }
+  if (s_new.size() == layers || s_new.size() == 2 * layers)
+    DYNET_INVALID_ARG("FastLSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " <<
+                      s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
   const unsigned t = c.size();
   h.push_back(vector<Expression>(layers));
@@ -199,7 +203,8 @@ Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
 void FastLSTMBuilder::copy(const RNNBuilder & rnn) {
   const FastLSTMBuilder & rnn_lstm = (const FastLSTMBuilder&)rnn;
-  assert(params.size() == rnn_lstm.params.size());
+  if(params.size() != rnn_lstm.params.size())
+    DYNET_INVALID_ARG("Attempt to copy FastLSTMBuilder with different number of parameters (" << params.size() << " != " << rnn_lstm.params.size() << ")")
   for(size_t i = 0; i < params.size(); ++i)
       for(size_t j = 0; j < params[i].size(); ++j)
         params[i][j] = rnn_lstm.params[i][j];
