@@ -4,18 +4,17 @@
 
 using namespace dynet;
 
-void* AlignedMemoryPool::allocate(size_t n) {
+void* InternalMemoryPool::allocate(size_t n) {
   auto rounded_n = a->round_up_align(n);
   if (rounded_n + used > capacity) {
-    std::ostringstream oss; oss << name << " is out of memory, try increasing with --dynet-mem (current capacity: " << capacity << "). See http://dynet.readthedocs.io/en/latest/commandline.html for details.";
-    throw std::runtime_error(oss.str());
+    return 0;
   }
   void* res = static_cast<char*>(mem) + used;
   used += rounded_n;
   return res;
 }
 
-void AlignedMemoryPool::sys_alloc(size_t cap) {
+void InternalMemoryPool::sys_alloc(size_t cap) {
   capacity = a->round_up_align(cap);
   mem = a->malloc(capacity);
   if (!mem) {
