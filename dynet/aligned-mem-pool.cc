@@ -15,11 +15,14 @@ void* InternalMemoryPool::allocate(size_t n) {
 }
 
 void InternalMemoryPool::sys_alloc(size_t cap) {
+  std::cout << "sys_alloc " << cap << std::endl;
   capacity = a->round_up_align(cap);
   mem = a->malloc(capacity);
-  if (!mem) {
+  std::cout << "mem:" << mem << std::endl;
+  if (mem == NULL) {
     std::ostringstream oss; oss << name << " failed to allocate " << capacity;
     throw std::runtime_error(oss.str());
   }
   used = 0;
+  std::cout << "sys_alloc done" << std::endl;
 }

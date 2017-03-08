@@ -55,6 +55,7 @@ class AlignedMemoryPool {
     void* allocate(size_t n) {
       void *res = pools[current]->allocate(n);
       if (res == 0) {
+        std::cout << "alocating more " << current << std::endl;
         pools.push_back(new InternalMemoryPool(name, cap, a));
         current++;
         res = pools[current]->allocate(n);
@@ -67,6 +68,7 @@ class AlignedMemoryPool {
         for (auto p : pools) { delete p; }
         pools.clear();
         pools.push_back(new InternalMemoryPool(name, cap * (current+1), a));
+        cap = cap * (current + 1);
         current = 0;
       } 
       pools[0]->free();
