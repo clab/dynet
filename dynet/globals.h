@@ -3,27 +3,6 @@
 
 #include <random>
 #include <vector>
-#include <sstream>
-#include <stdexcept>
-
-#define DYNET_INVALID_ARG(msg) do {             \
-    std::ostringstream oss;                     \
-    oss << msg;                                 \
-    throw std::invalid_argument(oss.str()); }   \
-  while (0);
-
-#define DYNET_ASSERT(expr, msg) do {            \
-  if(!(expr)) {                                  \
-    std::ostringstream oss;                     \
-    oss << msg;                                 \
-    throw std::runtime_error(oss.str()); }      \
-  } while (0);
-
-#define DYNET_RUNTIME_ERR(msg) do {             \
-    std::ostringstream oss;                     \
-    oss << msg;                                 \
-    throw std::runtime_error(oss.str()); }      \
-  while (0);
 
 namespace dynet {
 

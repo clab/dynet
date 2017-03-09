@@ -7,6 +7,7 @@
 #include "dynet/simd-functors.h"
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/globals.h"
 
 #ifdef __CUDACC__
 #include "dynet/cuda.h"
