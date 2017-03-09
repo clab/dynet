@@ -1,4 +1,5 @@
 #include "dynet/tensor.h"
+#include "dynet/globals.h"
 
 #include <random>
 #include <vector>

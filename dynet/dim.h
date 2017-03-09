@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "dynet/io-macros.h"
-#include "dynet/globals.h"
+#include "dynet/except.h"
 
 /**
  * \ingroup dim

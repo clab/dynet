@@ -7,6 +7,7 @@
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/globals.h"
 
 #include "easylogging++.h"
 

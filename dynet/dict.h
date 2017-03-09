@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 #include "dynet/io-macros.h"
-#include "dynet/globals.h"
+#include "dynet/except.h"
 
 namespace boost { namespace serialization { class access; } }
 

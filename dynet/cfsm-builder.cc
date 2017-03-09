@@ -1,4 +1,5 @@
 #include "dynet/cfsm-builder.h"
+#include "dynet/except.h"
 
 #include <fstream>
 #include <iostream>

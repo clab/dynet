@@ -13,7 +13,7 @@
 #include <stdexcept>
 
 #include "dynet/dim.h"
-#include "dynet/globals.h"
+#include "dynet/except.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/devices.h"
 #include "dynet/io-macros.h"

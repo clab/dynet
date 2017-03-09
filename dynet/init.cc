@@ -2,6 +2,7 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet.h"
 #include "dynet/weight-decay.h"
+#include "dynet/globals.h"
 
 #include <iostream>
 #include <random>
