@@ -11,7 +11,6 @@
 
 #include "dynet/except.h"
 
-
 #define MAX_GPUS 256
 
 #define CUDA_CHECK(stmt) do {                              \

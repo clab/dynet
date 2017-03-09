@@ -9,6 +9,7 @@
 #include "dynet/expr.h"
 #include "dynet/cfsm-builder.h"
 #include "dynet/hsm-builder.h"
+#include "dynet/globals.h"
 #include "../utils/getpid.h"
 
 #include <iostream>
