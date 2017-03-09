@@ -300,6 +300,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_sum_cols "dynet::expr::sum_cols" (CExpression& x)               #
     CExpression c_kmh_ngram "dynet::expr::kmh_ngram" (CExpression& x, unsigned n) #
 
+    CExpression c_sum_elems "dynet::expr::sum_elems" (CExpression& x)
+
     CExpression c_sum_batches "dynet::expr::sum_batches" (CExpression& x)
 
     #CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned v)   #
