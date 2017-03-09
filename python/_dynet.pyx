@@ -1487,6 +1487,7 @@ cpdef Expression transpose(Expression x): return Expression.from_cexpr(x.cg_vers
 cpdef Expression select_rows(Expression x, vector[unsigned] rs): return Expression.from_cexpr(x.cg_version, c_select_rows(x.c(), rs))
 cpdef Expression select_cols(Expression x, vector[unsigned] rs): return Expression.from_cexpr(x.cg_version, c_select_cols(x.c(), rs))
 cpdef Expression sum_cols(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_cols(x.c()))
+cpdef Expression sum_elems(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_elems(x.c()))
 
 cpdef Expression sum_batches(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
 
