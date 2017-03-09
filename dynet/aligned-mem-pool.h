@@ -4,6 +4,7 @@
 #include <iostream>
 #include "dynet/mem.h"
 #include "dynet/globals.h"
+#include "dynet/except.h"
 
 namespace dynet {
 
