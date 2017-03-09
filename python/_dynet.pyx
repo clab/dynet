@@ -39,12 +39,28 @@ from _dynet cimport *
 cimport _dynet as dynet
 
 cdef class DynetParams:
+    """This object holds the global parameters of Dynet
+
+    You should only need to use this after importing dynet as :
+
+        import _dynet / import _gdynet
+
+    See the documentation for more details
+    """
     cdef CDynetParams cparams
 
     def __init__(self):
         pass
 
     cpdef from_args(self, shared_parameters=None):
+        """Gets parameters from the command line arguments
+        
+        You can still modify the parameters after calling this.
+        See the documentation about command line arguments for more details
+        
+        Keyword Arguments:
+            shared_parameters {[type]} -- [description] (default: {None})
+        """
         cdef int argc = len(sys.argv)
         cdef char** c_argv
         args = [bytearray(x, encoding="utf-8") for x in sys.argv]
@@ -60,21 +76,54 @@ cdef class DynetParams:
         free(c_argv)
 
     cpdef init(self):
+        """Initialize dynet with the current dynetparams object.
+        
+        This is one way, you can't uninitialize dynet
+        """
         dynet.initialize(self.cparams)
 
     cpdef set_mem(self, unsigned mem):
+        """Set the memory allocated to dynet
+        
+        The unit is MB
+        
+        Arguments:
+            mem {number} -- memory size in MB
+        """
         self.cparams.mem_descriptor = str(mem).encode()
 
     cpdef set_random_seed(self, unsigned random_seed):
+        """Set random seed for dynet
+        
+        Arguments:
+            random_seed {number} -- Random seed
+        """
         self.cparams.random_seed = random_seed
 
     cpdef set_weight_decay(self, float weight_decay):
+        """Set weight decay parameter
+        
+        Arguments:
+            weight_decay {float} -- weight decay parameter
+        """
         self.cparams.weight_decay = weight_decay
 
     cpdef set_shared_parameters(self, bool shared_parameters):
+        """Shared parameters
+        
+        Arguments:
+            shared_parameters {bool} -- shared parameters
+        """
         self.cparams.shared_parameters = shared_parameters
 
     cpdef set_requested_gpus(self, int requested_gpus):
+        """Number of requested gpus
+        
+        Currently only 1 is supported
+        
+        Arguments:
+            requested_gpus {number} -- number of requested gpus
+        """
         self.cparams.requested_gpus = requested_gpus
         self.cparams.ngpus_requested = True
         self.cparams.ids_requested = False
@@ -90,16 +139,45 @@ cdef class DynetParams:
         self.cparams.ids_requested = True
 
 def init(shared_parameters=None):
+    """Initialize dynet
+    
+    Initializes dynet from command line arguments. Do not use after 
+        
+        import dynet
+
+    only after 
+
+        import _dynet / import _gdynet
+    
+    Keyword Arguments:
+        shared_parameters {bool} -- [description] (default: {None})
+    """
     params=DynetParams()
     params.from_args(shared_parameters)
     params.init()
 
 def init_from_params(DynetParams params):
+    """Initialize from DynetParams
+    
+    Same as 
+
+        params.init()
+    
+    Arguments:
+        params {DynetParams} -- dynet parameters
+    """
     params.init()
 
 cdef CDim Dim(dim, unsigned int batch_size=1):
-    """
-    dim: either a tuple or an int
+    """Get dynet Dim from tuple
+    
+
+    Arguments:
+        dim {tuple} -- Dimensions as a tuple
+        batch_size {number} -- Batch size (default: {1})
+    
+    Returns:
+        CDim -- Dynet dimension
     """
     cdef vector[long] cvec
     if isinstance(dim, tuple):
@@ -144,6 +222,10 @@ cdef c_tensor_as_np(CTensor &t):
 
 # {{{ Model / Parameters 
 cdef class Parameters:
+    """Parameters class
+    
+    Parameters are things that are optimized. in contrast to a system like Torch where computational modules may have their own parameters, in DyNet parameters are just parameters.
+    """
     cdef CParameters thisptr # TODO -- no longer pointer
     cdef int _version
     cdef Expression _expr
@@ -156,24 +238,37 @@ cdef class Parameters:
         return self
 
     cpdef shape(self):
+        """[summary]
+        
+        [description]
+        
+        Returns:
+            [type] -- [description]
+        """
         return c_dim_as_shape(self.thisptr.get().dim)
 
     cpdef as_array(self):
-        """
-        Return as a numpy array.
+        """Return as a numpy array.
+        
+        Returns:
+            np.ndarray -- values of the parameter
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().values)
 
     cpdef grad_as_array(self):
-        """
-        Return gradient as a numpy array.
+        """Return gradient as a numpy array.
+        
+        Returns:
+            np.ndarray -- values of the gradient w.r.t. this parameter
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().g)
 
     # TODO: make more efficient
     cpdef load_array(self, arr):
+        """Deprecated
+        """
         assert(False),"This method is depracated. Use instead model.parameters_from_numpy(arr)."
         cdef CTensor t
         cdef float* vals
@@ -189,13 +284,46 @@ cdef class Parameters:
         for i in xrange(arr.size):
             vals[i] = arr[i]
 
-    cpdef zero(self): self.thisptr.zero()
+    cpdef zero(self):
+        """Set the parameter to zero
 
-    cpdef bool is_updated(self): return self.thisptr.is_updated()
-    cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
-    cpdef unsigned get_index(self): return self.thisptr.index
+        """
+        self.thisptr.zero()
+
+    cpdef bool is_updated(self):
+        """check whether the parameter is updated or not
+        
+        Returns:
+            bool -- Update status
+        """
+        return self.thisptr.is_updated()
+
+    cpdef set_updated(self, bool b):
+        """Set parameter as "updated"
+        
+        Arguments:
+            b {bool} -- updated status
+        """
+        self.thisptr.set_updated(b)
+
+    cpdef unsigned get_index(self):
+        """Get parameter index
+        
+        Returns:
+            unsigned -- Index of the parameter
+        """
+        return self.thisptr.index
 
     cpdef Expression expr(self):
+        """Returns the parameter as an expression
+
+        This is the same as calling
+
+            dy.parameter(param)
+        
+        Returns:
+            Expression -- Expression of the parameter
+        """
         if cg_version() != self._version:
             self._version = cg_version()
             self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
@@ -687,6 +815,10 @@ cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_
 cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
 
 cdef class Expression: #{{{
+    """Expressions are the building block of a Dynet computation graph.
+    
+    Expressions are the main data types being manipulated in a DyNet program. Each expression represents a sub-computation in a computation graph.
+    """
     #cdef CComputationGraph* cg
     # cg is a singleton, so there is no need to keep it inside the expression.
     # not keeping cg() in the expression will preserve memory.
@@ -712,9 +844,13 @@ cdef class Expression: #{{{
     cdef CExpression c(self):
         return CExpression(self.cgp(), self.vindex)
 
-    cpdef dim(self):
-        """
+    def dim(self):
+        """Dimension of the expression
+
         Returns a tuple (dims,batch_dim) where dims is the tuple of dimensions of each batch element
+        
+        Returns:
+            tuple -- dimension
         """
         cdef CDim d;
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
@@ -725,10 +861,39 @@ cdef class Expression: #{{{
     def __repr__(self):
         return str(self)
     def __str__(self):
+        """Returns a string representation of the expression
+        
+        The format is "expression [expression id]/[computation graph id]"
+        """
         return "expression %s/%s" % (<int>self.vindex, self.cg_version)
 
     # __getitem__ and __getslice__ in one for python 3 compatibility
     def __getitem__(self, index):
+        """Access elements of the expression by rows
+        
+        This supports slices as well.
+        Example usage :
+
+            x = dy.inputTensor(np.arange(9).reshape(3,3))
+            # x = [[1, 2, 3],
+            #      [4, 5, 6],
+            #      [7, 8, 9]] 
+            y = x[1]
+            # y = [4, 5, 6]
+            z = x[0:1] 
+            # z = [[1, 2, 3],
+            #      [4, 5, 6]] 
+        
+        Arguments:
+            index {int,slice} -- Slice or index
+        
+        Returns:
+            Expression -- Slice of the expression
+        
+        Raises:
+            IndexError -- If the indices are too large
+            ValueError -- In case of improper slice or if step is used
+        """
         assert isinstance(index, (int, slice))
         cdef int rows = self.c().dim().rows()
         cdef int i, j
@@ -767,16 +932,46 @@ cdef class Expression: #{{{
             return pickrange(self, i, j)
 
     cpdef scalar_value(self, recalculate=False):
+        """Returns value of an expression as a scalar
+        
+        This only works if the expression is a scalar
+        
+        Keyword Arguments:
+            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        
+        Returns:
+            float -- Scalar value of the expression
+        """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward(self.vindex) # TODO: make recalculate run on the entire graph, not only up to here?
         return c_as_scalar(self.cgp().get_value(self.vindex))
 
     cpdef vec_value(self, recalculate=False):
+        """Returns the value of the expression as a vector
+        
+        In case of a multidimensional expression, the values are flattened according to a column major ordering
+        
+        Keyword Arguments:
+            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        
+        Returns:
+            list -- Array of values
+        """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward(self.vindex)
         return c_as_vector(self.cgp().get_value(self.vindex))
 
     cpdef npvalue(self, recalculate=False):
+        """Returns the value of the expression as a numpy array
+        
+        The last dimension is the batch size (if it's > 1)
+        
+        Keyword Arguments:
+            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        
+        Returns:
+            np.ndarray -- numpy array of values
+        """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
         cdef CDim dim
@@ -787,6 +982,16 @@ cdef class Expression: #{{{
         return arr
 
     cpdef value(self, recalculate=False):
+        """Gets the value of the expression in the msot relevant format
+        
+        this returns the same thing as `scalar_value`, `vec_value`, `npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
+        
+        Keyword Arguments:
+            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        
+        Returns:
+            float, list, np.ndarray -- Value of the expression
+        """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
         if recalculate: self.cg().forward(self.vindex)
@@ -799,11 +1004,23 @@ cdef class Expression: #{{{
 
     # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
     cpdef forward(self, recalculate=False):
+        """This runs incremental forward on the entire graph
+        
+        May not be optimal in terms of efficiency.
+        Prefer `values`
+        
+        Keyword Arguments:
+            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward(self.vindex)
         else: self.cg().inc_forward(self.vindex)
 
     cpdef backward(self):
+        """Run the backward pass based on this expression
+        
+        The expression should be a scalar (objective)
+        """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         self.cgp().backward(self.vindex)
 
@@ -838,6 +1055,19 @@ cdef class Expression: #{{{
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
 def parameter(p):
+    """Load a parameter in the computation graph
+    
+    Get the expression corresponding to a parameter
+    
+    Arguments:
+        p {Parameter,LookupParameter} -- Parameter to load (can be a lookup parameter as well)
+    
+    Returns:
+        Expression -- Parameter expression
+    
+    Raises:
+        NotImplementedError -- Only works with parameters and lookup parameters
+    """
     if isinstance(p,Parameters) or isinstance(p,LookupParameters):
         return p.expr()
     else:
@@ -847,6 +1077,9 @@ def parameter(p):
 #     These depend values that can be set by the caller
 
 cdef class _inputExpression(Expression):
+    """Subclass of Expression corresponding to scalar input expressions
+    
+    """
     cdef FloatValue val
     def __cinit__(self, ComputationGraph g, float s):
         self.val = FloatValue(s)
@@ -857,6 +1090,14 @@ cdef class _inputExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, float s):
+        """Change the value of the expression
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This allows you to use dynet as a static framework.
+        
+        Arguments:
+            s {float} -- New value
+        """
         self.cgp().invalidate()
         self.val.set(s)
 
@@ -864,6 +1105,11 @@ def scalarInput(float s):
     return _cg.inputValue(s)
 
 cdef class _vecInputExpression(Expression):
+    """Subclass of Expression corresponding to any non-scalar input expressions
+    
+    Despite the name, this also represents tensors (in column major format).
+    TODO : change this
+    """
     cdef FloatVectorValue val
     def __cinit__(self, ComputationGraph g, vector[float] val, dim=None,batch_size=1):
         self.val = FloatVectorValue(val)
@@ -875,20 +1121,58 @@ cdef class _vecInputExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, vector[float] data):
+        """Change the value of the expression
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This allows you to use dynet as a static framework.
+        For now this only accepts new values as flattened arrays (column majors). TODO : change this
+
+        Arguments:
+            data {vector[float]} -- New value
+        """
         self.cgp().invalidate()
         self.val.set(data)
 
 def vecInput(int dim):
+    """Input an empty vector
+    
+    Arguments:
+        dim {number} -- Size
+    
+    Returns:
+        _vecInputExpression -- Corresponding expression
+    """
     return _cg.inputVector(dim)
 
 def inputVector(vector[float] v):
+    """Input a vector by values
+    
+    Arguments:
+        v {vector[float]} -- Values
+    
+    Returns:
+        _vecInputExpression -- Corresponding expression
+    """
     return _cg.inputVectorLiteral(v)
 
 def matInput(int d1, int d2):
+    """DEPRECATED : use inputTensor
+    
+    TODO : remove this
+    
+    Arguments:
+        int d1 {[type]} -- [description]
+        int d2 {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
     return _cg.inputMatrix(d1, d2)
 
 def inputMatrix(vector[float] v, tuple d):
-    """
+    """DEPRECATED : use inputTensor
+
+    TODO : remove this
 
     inputMatrix(vector[float] v, tuple d)
 
@@ -906,12 +1190,24 @@ def inputMatrix(vector[float] v, tuple d):
     """
     return _cg.inputMatrixLiteral(v, d)
 
-def inputTensor(arr,bool batched=False):
-    """
-    Creates a tensor expression based on a numpy array or a list.
+def inputTensor(arr,batched=False):
+    """Creates a tensor expression based on a numpy array or a list.
+    
     The dimension is inferred from the shape of the input.
     if batched=True, the last dimension is used as a batch dimension
     if arr is a list of numpy ndarrays, this returns a batched expression where the batch elements are the elements of the list
+    
+    Arguments:
+        arr {list,np.ndarray} -- Values : numpy ndarray OR list of np.ndarray OR multidimensional list of floats
+    
+    Keyword Arguments:
+        batched {bool} -- Whether to use the last dimension as a batch dimension (default: {False})
+    
+    Returns:
+        _vecInputExpression -- Input expression
+    
+    Raises:
+        TypeError -- If the type is not respected
     """
     if isinstance(arr,list):
         if all([isinstance(x,np.ndarray) for x in arr]):
@@ -931,6 +1227,9 @@ def inputTensor(arr,bool batched=False):
     return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
 
 cdef class _lookupExpression(Expression):
+    """Expression corresponding to a lookup from lookup parameter
+    
+    """
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, LookupParameters p, unsigned index=0, update=True):
         self.val = UnsignedValue(index)
@@ -944,10 +1243,21 @@ cdef class _lookupExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set(self,i):
+        """Change the lookup index
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This allows you to use dynet as a static framework.
+        
+        Arguments:
+            i {number} -- New lookup index
+        """
         self.cgp().invalidate()
         self.val.set(i)
 
 cdef class _lookupBatchExpression(Expression):
+    """Expression corresponding to batched lookups from a lookup parameter
+    
+    """
     cdef UnsignedVectorValue val
     def __cinit__(self, ComputationGraph g, LookupParameters p, vector[unsigned] indices, update=True):
         self.val = UnsignedVectorValue(indices)
@@ -960,16 +1270,53 @@ cdef class _lookupBatchExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set(self,i):
+        """Change the lookup index
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This allows you to use dynet as a static framework.
+        
+        Arguments:
+            i {list(int)} -- New indices
+        """
         self.cgp().invalidate()
         self.val.set(i)
 
 def lookup(LookupParameters p, unsigned index=0, update=True):
+    """Pick an embedding from a lookup parameter and returns it as a expression
+    
+    Arguments:
+        p {LookupParameters} -- Lookup parameter to pick from
+    
+    Keyword Arguments:
+        index {number} -- Lookup index (default: {0})
+        update {bool} -- Whether to update the lookup parameter [(default: {True})
+    
+    Returns:
+        _lookupExpression -- Expression for the embedding
+    """
     return _cg.lookup(p, index, update)
 
 def lookup_batch(LookupParameters p, vector[unsigned] indices, update=True):
+    """Look up parameters.
+
+    The mini-batched version of lookup. The resulting expression will be a mini-batch of parameters, where the “i”th element of the batch corresponds to the parameters at the position specified by the “i”th element of “indices”
+    
+    Arguments:
+        p {LookupParameters} -- Lookup parameter to pick from
+        indices {list(int)} -- Indices to look up for each batch element
+    
+    Keyword Arguments:
+        update {bool} -- Whether to update the lookup parameter (default: {True})
+    
+    Returns:
+        _lookupBatchExpression -- Expression for the batched embeddings
+    """
     return _cg.lookup_batch(p, indices, update)
 
 cdef class _pickerExpression(Expression):
+    """Expression corresponding to a row picked from a bigger expression
+    
+    """
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, Expression e, unsigned index=0):
         self.val = UnsignedValue(index)
@@ -980,13 +1327,37 @@ cdef class _pickerExpression(Expression):
         self.vindex = ce.i
         g._inputs.append(self)
     def set_index(self,i):
+        """Change the pick index
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This allows you to use dynet as a static framework.
+        
+        Arguments:
+            i {number} -- New index
+        """
         self.cgp().invalidate()
         self.val.set(i)
 
 def pick(Expression e, unsigned index=0):
+    """Pick element.
+
+    Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.
+    
+    Arguments:
+        e {Expression} -- Expression to pick from
+    
+    Keyword Arguments:
+        index {number} -- Index to pick (default: {0})
+    
+    Returns:
+        _pickerExpression -- Picked expression
+    """
     return _cg.outputPicker(e, index)
 
 cdef class _pickerBatchExpression(Expression):
+    """Batched version of `_pickerExpression`
+    
+    """
     cdef UnsignedVectorValue val
     def __cinit__(self, ComputationGraph g, Expression e, vector[unsigned] indices):#
         self.val = UnsignedVectorValue(indices)
@@ -996,13 +1367,35 @@ cdef class _pickerBatchExpression(Expression):
         self.vindex = ce.i
         g._inputs.append(self)
     def set_index(self,i):
+        """Change the pick indices
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This allows you to use dynet as a static framework.
+        
+        Arguments:
+            i {list} -- New list of indices
+        """
         self.cgp().invalidate()
         self.val.set(i)
 
 def pick_batch(Expression e, vector[unsigned] indices):
+    """Batched pick.
+
+    Pick elements from multiple batches.
+    
+    Arguments:
+        e {Expression} -- Expression to pick from
+        indices {list} -- Indices to pick
+    
+    Returns:
+        _pickerBatchExpression -- Picked expression
+    """
     return _cg.outputBatchPicker(e, indices)
 
 cdef class _hingeExpression(Expression):
+    """Expression representing the output of the hinge operation
+    
+    """
     cdef UnsignedValue val
     def __cinit__(self, ComputationGraph g, Expression x, unsigned index, float m=1.0):
         self.val = UnsignedValue(index)
@@ -1013,10 +1406,32 @@ cdef class _hingeExpression(Expression):
         self.vindex = e.i
         g._inputs.append(self)
     def set_index(self, unsigned i):
+        """Change the correct candidate index
+        
+        This is useful if you want to to change the target and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This allows you to use dynet as a static framework.
+        
+        Arguments:
+            i {number} -- New correct index
+        """
         self.cgp().invalidate()
         self.val.set(i)
 
 def hinge(Expression x, unsigned index, float m=1.0):
+    """Hinge loss.
+
+    This expression calculates the hinge loss, formally expressed as: 
+    
+    Arguments:
+        x {Expression} -- A vector of scores
+        index {number} -- The index of the correct candidate
+    
+    Keyword Arguments:
+        m {number} -- Margin (default: {1.0})
+    
+    Returns:
+        _hingeExpression -- The hinge loss of candidate index with respect to margin m
+    """
     return _hingeExpression(_cg, x, index, m)
 
 # }}}
