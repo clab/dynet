@@ -9,7 +9,7 @@ include(UseSWIG)
 include_directories(${JNI_INCLUDE_DIRS})
 
 # Include dynet C++ sources
-include_directories("../dynet")
+include_directories("../../dynet")
 
 # Set java output dir
 set(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/edu/cmu/dynet")
