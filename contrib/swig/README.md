@@ -312,14 +312,14 @@ that implement `Serializable`:
     val path = "/path/to/save/model/files"
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
-    saver.addSRNNBuilder(rnn1)
+    saver.addSRnnBuilder(rnn1)
     saver.addObject(new Foo())
     saver.addInt(3)
     saver.done()
 
     val loader = new ModelLoader(path)
     val mod2 = loader.loadModel()
-    val rnn2 = loader.loadSRNNBuilder()
+    val rnn2 = loader.loadSRnnBuilder()
     val foo = loader.loadObject(classOf[Foo])
     val i = loader.loadInt()
     loader.done()
