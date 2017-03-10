@@ -1343,6 +1343,33 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
 /**
  * \ingroup flowoperations
+ * \brief Pick a batch from the expression.
+ * \details Pick a batch from the expression.
+ *
+ * \param x The input expression
+ * \param v The beginning index
+ *
+ * \return The expression of picked batch. The picked batch is a tensor
+ *         whose `bd` equals to one.
+ */
+Expression pick_batch(const Expression& x, unsigned v);
+
+/**
+ * \ingroup flowoperations
+ * \brief Batched pick
+ * \details Pick elements from multiple batches.
+ *
+ * \param x The input expression
+ * \param v A vector of indicies to choose, one for each batch in the
+ *          input expression.
+ *
+ * \return The expression of picked batch. The picked batch is a tensor
+ *         whose `bd` equals to the size of vector `v`.
+ */
+Expression pick_batch(const Expression& x, const std::vector<unsigned> & v);
+
+/**
+ * \ingroup flowoperations
  * \brief Concatenate columns
  * \details Perform a concatenation of the columns in multiple expressions.
  *          All expressions must have the same number of rows.

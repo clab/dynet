@@ -1550,6 +1550,42 @@ void PickRange::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(PickRange)
 
 template<class MyDevice>
+void PickBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  if (pval) {
+    fx.tb<3>().device(*dev.edevice) = xs[0]->tb<4>().chip<4>(*pval);
+  } else {
+    DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickBatch::forward");
+    if (pvals->size() != fx.d.batch_elems())
+      DYNET_INVALID_ARG("In PickBatch::forward, number of elements in the passed-in index vector (" << pvals->size() <<
+                        ") did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
+    for (unsigned b = 0; b < pvals->size(); ++b) {
+      if ((*pvals)[b] >= xs[0]->d.nd)
+        DYNET_INVALID_ARG("PickBatch::forward_impl requested element " << (*pvals)[b]
+                          << " from a batch size of " << xs[0]->d.nd);
+      fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>((*pvals)[b]);
+    }
+  }
+}
+
+template<class MyDevice>
+void PickBatch::backward_dev_impl(const MyDevice & dev,
+                                  const vector<const Tensor*>& xs,
+                                  const Tensor& fx,
+                                  const Tensor& dEdf,
+                                  unsigned i,
+                                  Tensor& dEdxi) const {
+  DYNET_ASSERT(i == 0, "Failed dimension check in PickElement::backward");
+  if (pval) {
+    dEdxi.tb<3>().chip<3>(*pval).device(*dev.edevice) += dEdf.tb<2>();
+  } else {
+    DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickElement::forward");
+    for (unsigned b = 0; b < pvals->size(); ++b)
+      dEdxi.tb<3>().chip<3>((*pvals)[b]).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
+  }
+}
+DYNET_NODE_INST_DEV_IMPL(PickBatch)
+
+template<class MyDevice>
 void PoissonRegressionLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const real y = *pty;
   const auto z = std::lgamma(y + 1);

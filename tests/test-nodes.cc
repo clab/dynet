@@ -918,6 +918,15 @@ BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression pick_batch(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pick_batch_gradient1 ) {
+  unsigned idx = 0;
+  dynet::ComputationGraph cg;
+  Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
+  Expression z = sum_rows(pick_batch(x1, idx));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression pickrange(const Expression& x, unsigned v, unsigned u);
 BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
   dynet::ComputationGraph cg;
