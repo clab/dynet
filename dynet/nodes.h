@@ -533,6 +533,19 @@ struct PickRange : public Node {
   unsigned end;
 };
 
+// x_1 is a multibatch vector
+// y = (x_1)_{[*pval]}
+struct PickBatch : public Node {
+  explicit PickBatch(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val), vals(), pvals() {}
+  explicit PickBatch(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v) : Node(a), val(), pval(), vals(v), pvals(&vals) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; /* for the pick_batches, multibatch should be supported.*/ }
+  unsigned val;
+  const unsigned* pval;
+  std::vector<unsigned> vals;
+  const std::vector<unsigned>* pvals;
+};
+
 // represents a simple vector of 0s
 struct Zeroes : public Node {
   explicit Zeroes(const Dim& d) : dim(d) {}

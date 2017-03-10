@@ -661,6 +661,40 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
   return Dim({end - start}, xs[0].bd);
 }
 
+string PickBatch::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "pick_batch(" << arg_names[0] << ',';
+  if (pval) {
+    s << *pval;
+  } else {
+    DYNET_ASSERT(pvals, "Have neither index nor index vector in PickBatch");
+    s << '[';
+    if (pvals->size()) {
+      s << (*pvals)[0];
+      for (size_t i = 1; i < pvals->size(); ++i)
+        s << ',' << (*pvals)[i];
+    }
+    s << "]";
+  }
+  s << ")";
+  return s.str();
+}
+
+Dim PickBatch::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in PickBatch")
+  if (xs[0].nd >= 4)
+    DYNET_INVALID_ARG("PickElement not currently supported for tensors of 4 or more dimensions.");
+  Dim ret(xs[0]);
+  if (pval) {
+    // set batch size to one.
+    ret.bd = 1;
+  } else {
+    DYNET_ASSERT(pvals, "Have neither index nor index vector in PickBatch");
+    ret.bd = pvals->size();
+  }
+  return ret;
+}
+
 string MatrixMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " * " << arg_names[1];
