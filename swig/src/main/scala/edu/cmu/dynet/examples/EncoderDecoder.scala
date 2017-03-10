@@ -1,7 +1,6 @@
 package edu.cmu.dynet.examples
 
 import edu.cmu.dynet._
-import DyNetScalaHelpers._
 
 import scala.language.implicitConversions
 
@@ -37,7 +36,7 @@ class EncoderDecoder(
              id: Int,
              bsize: Int,
              chars: IntPointer): Expression = {
-    val islen = isents(id).size.toInt
+    val islen = isents(id).size
     val x_t = new UnsignedVector(bsize)
 
     // Forward encoder --------
@@ -151,7 +150,7 @@ class EncoderDecoder(
     }
     val next_x_t = new UnsignedVector(bsize)
 
-    val oslen = osents(id).size.toInt
+    val oslen = osents(id).size
 
     // Run on output sentence
     for (t <- 1 until oslen) {
@@ -218,7 +217,7 @@ class EncoderDecoder(
       val i_y_t = decBuilder.addInput(i_x_t)
       val i_r_t = i_bias + i_R * i_y_t
       val i_ydist = Expression.softmax(i_r_t)
-      val s = sample(i_ydist.value.toVector)
+      val s = Utilities.sample(i_ydist.value.toVector)
       osent.add(s)
       if (s == EncoderDecoder.kEOS) done = true
       t += 1
@@ -265,7 +264,7 @@ object EncoderDecoder {
       tlc += 1
       val row = WordDict.read_sentence(line, d)
       training.append(row)
-      ttoks += row.size().toInt
+      ttoks += row.size
     }
     println(s"${tlc} lines, ${ttoks} tokens, ${d.size} types")
 
@@ -298,7 +297,7 @@ object EncoderDecoder {
       dlc += 1
       val row = WordDict.read_sentence(line, d)
       dev.append(row)
-      dtoks += row.size().toInt
+      dtoks += row.size
     }
     println(s"${dlc} lines, ${dtoks} tokens")
 
@@ -340,7 +339,7 @@ object EncoderDecoder {
       // update the optimizer
       if (first) { first = false } else { adam.updateEpoch() }
       // reshuffle the dataset
-      shuffle(order)
+      Utilities.shuffle(order)
       // initialize loss and number of chars per word
       var loss = 0.0
       val chars = new IntPointer

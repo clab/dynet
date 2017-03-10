@@ -1,5 +1,10 @@
 package edu.cmu.dynet
 
+/** Represents a "dimension", which you should think of as the dimension of a tensor. Can only be
+  *  constructed using factory methods in the companion object.
+  *
+  * @param dim
+  */
 class Dim private[dynet] (private[dynet] val dim: internal.Dim) {
 
   def size(): Long = dim.size
@@ -23,6 +28,9 @@ class Dim private[dynet] (private[dynet] val dim: internal.Dim) {
 
   def transpose(): Dim = new Dim(dim.transpose())
 
+  /** We override `equals` so that `Dim` objects should be equal whenever all of their "dimension
+    * numbers" match.
+    */
   override def equals(that: Any) = that match {
     case that: Dim => dim == that.dim
     case _ => false
@@ -30,8 +38,13 @@ class Dim private[dynet] (private[dynet] val dim: internal.Dim) {
   override def hashCode(): Int = dim.hashCode()
 }
 
-// Dim has no public constructors, has to be constructed via factory methods.
+/** Factory for [[edu.cmu.dynet.Dim]] instances. */
 object Dim {
+  /** Creates a Dim object from a `Seq` of dimensions and a batch size
+    *
+    * @param values a `Seq` of dimensions
+    * @param b the batch size (zero by default)
+    */
   def apply(values: Seq[Int], b: Long = 0): Dim = {
     val lv = new internal.LongVector()
     values.foreach(lv.add)
@@ -39,6 +52,10 @@ object Dim {
     new Dim(dim)
   }
 
+  /** Creates a Dim object from a list of the dimensions
+    *
+    * @param values a list of the dimensions
+    */
   def apply(values: Int*): Dim = apply(values)
 }
 

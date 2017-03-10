@@ -1,9 +1,15 @@
 package edu.cmu.dynet
 
+/** The ComputationGraph object contains the singleton DyNet computation graph instance. Any C++
+  * instance method is instead implemented as a static function here.*
+  */
 object ComputationGraph {
   private[dynet] var cg: internal.ComputationGraph = internal.ComputationGraph.getNew
   var version: Long = 0L
 
+  /** Gets rid of the singleton Computation Graph and replaces it with a fresh one. Increments
+    * `version` to make sure we don't use any stale expressions.
+    */
   def renew(): Unit = {
     cg = internal.ComputationGraph.getNew
     version += 1

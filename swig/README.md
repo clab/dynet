@@ -2,10 +2,17 @@
 
 The code in `dynet_swig.i` provides SWIG instructions to wrap salient
 parts of DyNet for use in other languages, in particular Scala (and
-Java). The code in `src/main/scala` provides helper functions and
-implicit conversions that facilitate using DyNet from Scala.
+Java). It produces Java (in `edu.cmu.dynet.internal`) that slavishly
+recreates the C++ API, and that you should strive not to use.
 
-## Building
+Instead you should use the Scala API that lives in `edu.cmu.dynet`.
+It recreates all the functionality of the C++ version, but is designed
+to be idiomatic Scala.
+
+There are many examples in `edu/cmu/dynet/examples` that illustrate
+how to build / train / use models.
+
+## Building the Scala Bindings
 
 You need to have a recent version of SWIG installed (3.0.11 or later),
 which you can download from [swig.org](http://www.swig.org/).
@@ -57,14 +64,16 @@ directory under the project root directory. To include DyNet in a Java
 project, add both `dynet_swigJNI_dylib.jar` and `dynet_swigJNI.jar` to
 your classpath.
 
-### Disabling Scala Helpers
+### Disabling the Scala API
 
-If you don't want the Scala helpers (and, in particular, if you
+If you don't want the Scala API (and, in particular, if you
 don't have `sbt`) then when you run `cmake` include the additional flag
 
 ```
--DINCLUDE_SCALA_HELPERS=OFF
+-DINCLUDE_SCALA=OFF
 ```
+
+But really you want the Scala API.
 
 ### Building for GPU
 
@@ -170,108 +179,50 @@ iter = 29, loss = 8.881784E-16
 
 ## Usage
 
-The Scala version of DyNet is intended to work mostly like the
-C++. However, there are a few things to watch out for, which are
-documented below.
+The current Scala API works mostly like the C++ API, with the following
+differences.
 
-### Imports
+### `ComputationGraph`s
 
-All of the DyNet classes and structs are in the `edu.cmu.dynet` package.
-DyNet also contains a large number of bare functions, they end up as
-static methods on the `dynet_swig` class. Many of them have common names
-(e.g. `sum`), so you probably don't want to pollute your namespace by 
-importing them all. Our convention is to rename that class `dn`.
-Finally, the additional Scala helpers are contained in the `DyNetScalaHelpers`
-object.
+In Scala there is a singleton `ComputationGraph`. Accordingly, any 
+function or method that in C++ would take the computation graph as a 
+parameter, in Scala doesn't. 
 
-So a typical usage looks like:
+When you want to clear the computation graph and get a new one, call the
+static method
 
 ```scala
-import edu.cmu.dynet.{dynet_swig => dn, _}
-import DyNetScalaHelpers._
+ComputationGraph.renew()
 ```
 
-after which you can do things like
+Any `Expression` instances that were associated with previous computation
+graphs will become stale, and you'll get an error if you try to use them.
 
-```scala
-def main(args: Array[String]) {
-    dn.initialize(new DynetParams)
-    val m = new Model
-    // etc...
-}
-```    
+All of the C++ `ComputationGraph` instance methods are in Scala static methods
+on the `ComputationGraph` companion object.
 
+### `Expression` functions
 
-### `ComputationGraph.getNew`
-
-DyNet does not like it if you try to instantiate more than one
-ComputationGraph at a time.
-
-A common idiom in the C++ is to do things like:
-
-```cpp
-for (int i = 0; i < NUM_TIMES; i++) {
-  ComputationGraph cg;
-  // do some computations
-}
-```
-
-This works because here `cg` gets destructed each time it goes out of scope. 
-
-If you were to write the analogous code in Scala (generating a new
-ComputationGraph each iteration) the underlying C++ ComputationGraph
-would get destructed at some point (presumably whenever the Java GC
-runs), but not at the end of each loop.  As a result, your program
-would crash with the dreaded 
-
-```
-[error] Memory allocator assumes only a single ComputationGraph at a time.
-```
-
-To prevent this, in Scala you can only get new `ComputationGraph`s
-using the static `getNew` method:
-
-```scala
-for (i <- 0 until NUM_TIMES) {
-  val cg = ComputationGraph.getNew
-  // do some computations
-}
-```
-
-which keeps track of the previously allocated `ComputationGraph` and deletes it
-whenever you request a new one.
+The C++ API defines a large number of bare functions for creating `Expression`s.
+In Scala these are all static methods on the `Expression` companion object.
 
 ### `std::vector`s
 
-SWIG generates Java wrappers for the various `std::vector<>` types,
-`IntVector`, `FloatVector`, `ExpressionVector`, and so on. Each has a 
-no-argument constructor, a `capacity: Int` constructor, and a
-`elems: java.util.Collection[T]` constructor (for the relevant type `T`).
+DyNet does a lot behind the scenes with C++ `std::vector<>`s. 
+In Scala there are `IntVector`, `FloatVector`, `UnsignedVector`, and
+`ExpressionVector` classes that thinly wrap these C++ vectors. 
+They all implemented `IndexedSeq` so that they're pretty easy to work
+with.
 
-`DyNetScalaHelpers` contains implicit conversions to `Collection[T]` 
-for the corresponding `Seq` types, so that you can do things like
+Each has a `size: Int` constructor and a `values: Seq[_]` constructor.
 
-```scala
-// Seq[Int] implicitly converted to java.util.Collection[java.lang.Integer]
-val intVector = new IntVector(Seq(1, 2, 3, 4))
-intVector.set(0, 10)
-println(intVector.get(1))
-```
+### unsigned ints
 
-There are implicit conversions in the other direction too:
-
-```scala
-println(intVector.mkString(" "))
-```
-
-But the conversions are O(n) every time:
-
-```scala
-for (i <- 0 until intVector.size) {
-  println(intVector(i))     // BAD, O(n) conversion makes the loop quadratic
-  println(intVector.get(i)) // GOOD, O(1) native array access
-}
-```
+SWIG converts C++ `unsigned` variables to Java `Long` variables.
+This results in some minor unpleasantness where (for example)
+any function that takes a `std::vector<unsigned>` on the C++ side
+takes an `UnsignedVector` on the Scala side, but any function that
+takes an `unsigned` on the C++ side takes a `Long` on the C++ side.
 
 ### `Vector` scope
 
@@ -299,15 +250,15 @@ The following is bad:
 ```scala
 // THIS IS BAD
 for (idx <- indexes) {
-  val x = input(cg, dim(100), getImage(idx))
+  val x = Expression.input(Dim(100), getImage(idx))
   // some other computations
-  cg.forward(loss_expr)
-  cg.backward(loss_expr)
+  ComputationGraph.forward(loss_expr)
+  ComputationGraph.backward(loss_expr)
 }
 ```
 
 as the FloatVector that comes back from `getImage` is eligible (and likely)
-to be garbage collected before `cg.forward` (which runs a chain of computations
+to be garbage collected before `forward` (which runs a chain of computations
 that involve a pointer to the deleted vector) ever runs.
 
 Instead, you need to do something like
@@ -316,10 +267,10 @@ Instead, you need to do something like
 // THIS IS FINE
 for (idx <- indexes) {
   val image = getImage(idx)
-  val x = input(cg, dim(100), image)
+  val x = Expression.input(Dim(100), image)
   // some other computations
-  cg.forward(loss_expr)
-  cg.backward(loss_expr)
+  ComputationGraph.forward(loss_expr)
+  ComputationGraph.backward(loss_expr)
 }
 ```
 
@@ -337,7 +288,7 @@ are references in Java, so where a C++ method might take a
 
 The exception is primitives. SWIG produces (for example) a `SWIGTYPE_p_int`
 type wrapper for `int*` and bare functions for working with these. 
-In the Scala helpers we provide wrapper classes `IntPointer` and `FloatPointer`
+The Scala API provides wrapper classes `IntPointer` and `FloatPointer`
 that are nicer to work with and that implicitly convert to the SWIG types.
 
 ### Serialization
@@ -355,17 +306,17 @@ that implement `Serializable`:
 
     val path = "/path/to/save/model/files"
     val saver = new ModelSaver(path)
-    saver.add_model(mod1)
-    saver.add_srnn_builder(rnn1)
-    saver.add_object(new Foo())
-    saver.add_int(3)
+    saver.addModel(mod1)
+    saver.addSRNNBuilder(rnn1)
+    saver.addObject(new Foo())
+    saver.addInt(3)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val mod2 = loader.load_model()
-    val rnn2 = loader.load_srnn_builder()
-    val foo = loader.load_object(classOf[Foo])
-    val i = loader.load_int()
+    val mod2 = loader.loadModel()
+    val rnn2 = loader.loadSRNNBuilder()
+    val foo = loader.loadObject(classOf[Foo])
+    val i = loader.loadInt()
     loader.done()
 ```
 

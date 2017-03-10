@@ -113,8 +113,8 @@ add_dependencies(dylib_into_jar dynet_swigJNI)
 add_dependencies(dynet_swigJNI dynet_swig)
 
 # TODO(joelgrus): This is probably not defensive or robust enough.
-option(INCLUDE_SCALA_HELPERS "INCLUDE_SCALA_HELPERS" ON)
-if(INCLUDE_SCALA_HELPERS)
+option(INCLUDE_SCALA "INCLUDE_SCALA" ON)
+if(INCLUDE_SCALA)
 
   # make doesn't know about the dynet_scala jar, so it doesn't clean it unless we tell it about it
   set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "dynet_swigJNI_scala.jar")

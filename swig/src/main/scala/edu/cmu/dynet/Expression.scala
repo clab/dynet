@@ -1,17 +1,24 @@
 package edu.cmu.dynet
 
+/** Represents an expression on the computation graph. Can only be constructed using the
+  * functions contained in the companion object.
+  */
 class Expression private[dynet](private[dynet] val expr: internal.Expression) {
-  // give it the current version
+  // Give it the current version
   val version = ComputationGraph.version
 
+  /** Get the tensor value of this expression */
   def value(): Tensor = new Tensor(expr.value)
+
+  /** Get the tensor dimension of this expression */
   def dim(): Dim = new Dim(expr.dim)
 
+  /** Make sure that this expression is the latest version */
   private[dynet] def ensureFresh(): Unit = {
     if (version != ComputationGraph.version) throw new RuntimeException("stale expression")
   }
 
-  // Sugar for arithmetic
+  // Sugar for doing expression arithmetic
   def +(e2: Expression): Expression = Expression.exprPlus(this, e2)
   def *(e2: Expression): Expression = Expression.exprTimes(this, e2)
   def -(e2: Expression): Expression = Expression.exprMinus(this, e2)
@@ -22,10 +29,19 @@ class Expression private[dynet](private[dynet] val expr: internal.Expression) {
   def unary_-(): Expression = Expression.exprMinus(this)
 }
 
+/** Contains methods for creating [[edu.cmu.dynet.Expression]]s. There are several ways to create
+  *  expressions:
+  *
+  *  * from explicit values (e.g. `input`)
+  *  * randomly (e.g. `randomNormal`)
+  *  * from [[edu.cmu.dynet.Model]] parameters (e.g. `parameter`)
+  *  * from other expressions (e.g. `softmax` and `pow`)
+  */
 object Expression {
   import edu.cmu.dynet.internal.{dynet_swig => dn}
 
-  // private helper function for wrapping methods that get expressions from computation graph
+  /** Private helper function for wrapping methods that get expressions from the computation
+    * graph */
   private def makeExpr(f: internal.ComputationGraph => internal.Expression): Expression = {
     val version = ComputationGraph.version
     val expr = f(ComputationGraph.cg)
@@ -36,7 +52,8 @@ object Expression {
   def input(fp: FloatPointer): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp))
   def input(d: Dim, pdata: FloatVector): Expression =
     makeExpr(cg => dn.input(cg, d.dim, pdata.vector))
-  //def input(d: Dim, )
+  def input(d: Dim, ids: UnsignedVector, data: FloatVector, defdata: Float = 0f) =
+    makeExpr(cg => dn.input(cg, d.dim, ids.vector, data.vector, defdata))
 
   def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p.parameter))
   def constParameter(p: Parameter): Expression = makeExpr(cg => dn.const_parameter(cg, p.parameter))
@@ -198,6 +215,7 @@ object Expression {
   def kmhNgram(x: Expression, n: Long): Expression = unary(x, x => dn.kmh_ngram(x, n))
 
   /* TENSOR OPERATIONS */
+
   def contract3d1d(x: Expression, y: Expression): Expression = binary(x, y, dn.contract3d_1d)
   def contract3d1d1d(x: Expression, y: Expression, z: Expression): Expression = {
     Seq(x, y, z).foreach(_.ensureFresh)
@@ -213,6 +231,7 @@ object Expression {
   }
 
   /* LINEAR ALGEBRA OPERATIONS */
+
   def inverse(x: Expression): Expression = unary(x, dn.inverse)
   def logdet(x: Expression): Expression = unary(x, dn.logdet)
   def traceOfProduct(x: Expression, y: Expression): Expression = binary(x, y, dn.trace_of_product)

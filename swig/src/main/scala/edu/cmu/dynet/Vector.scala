@@ -1,5 +1,10 @@
 package edu.cmu.dynet
 
+/** Behind the scenes, DyNet frequently operates on C++ `std::vector<>` types. The wrapper
+  * classes implement [[scala.collection.mutable.IndexedSeq]] to make them easy to work with
+  * in Scala code. Each has a `size: Long` constructor and a `values: Seq[_]` constructor.
+  */
+
 import scala.language.implicitConversions
 import scala.collection.JavaConverters._
 
@@ -17,6 +22,7 @@ class IntVector private[dynet] (private[dynet] val vector: internal.IntVector)
   override def update(idx: Int, elem: Int): Unit = vector.set(idx, elem)
 }
 
+/** SWIG converts C++ `unsigned` to Scala `Long` */
 class UnsignedVector private[dynet] (private[dynet] val vector: internal.UnsignedVector)
     extends scala.collection.mutable.IndexedSeq[Long] {
   def this(size: Long) { this(new internal.UnsignedVector(size)) }

@@ -1,7 +1,6 @@
 package edu.cmu.dynet.examples
 
 import edu.cmu.dynet._
-import DyNetScalaHelpers._
 
 import scala.language.implicitConversions
 
@@ -74,7 +73,7 @@ object PoissonRegression {
 
         training.append((x, y))
 
-        ttoks += x.size()
+        ttoks += x.size
 
         if (x(0) != kSOS && x.last != kEOS) {
           throw new RuntimeException("bad sentence")
@@ -98,7 +97,7 @@ object PoissonRegression {
 
         dev.append((x, y))
 
-        dtoks += x.size()
+        dtoks += x.size
 
         if (x(0) != kSOS && x.last != kEOS) {
           throw new RuntimeException("bad sentence")
@@ -137,7 +136,7 @@ object PoissonRegression {
             sgd.updateEpoch()
           }
 
-          shuffle(order)
+          Utilities.shuffle(order)
         }
 
         // build graph for this instance

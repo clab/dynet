@@ -4,7 +4,7 @@ import org.scalatest._
 
 class DimSpec extends FlatSpec with Matchers {
 
-  import DyNetScalaHelpers._
+  import Utilities._
 
   "Dims" should "get constructed properly with the varargs constructor" in {
     val dim123 = Dim(1, 2, 3)

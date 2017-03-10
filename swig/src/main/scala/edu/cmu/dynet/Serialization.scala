@@ -1,6 +1,6 @@
 package edu.cmu.dynet
 
-
+/** Class for persisting models and parameters to disk */
 class ModelSaver private[dynet](saver: internal.ModelSaver) {
   def this(filename: String) { this(new internal.ModelSaver(filename)) }
 
@@ -8,9 +8,9 @@ class ModelSaver private[dynet](saver: internal.ModelSaver) {
   def addParameter(p: Parameter): Unit = saver.add_parameter(p.parameter)
   def addLookupParameter(p: LookupParameter): Unit = saver.add_lookup_parameter(p.lookupParameter)
   def addLSTMBuilder(p: LSTMBuilder): Unit = saver.add_lstm_builder(p.builder)
-  //def addVanillaLSTMBuilder
+  def addVanillaLSTMBuilder(p: VanillaLSTMBuilder): Unit = saver.add_vanilla_lstm_builder(p.builder)
   def addSRNNBuilder(p: SimpleRNNBuilder): Unit = saver.add_srnn_builder(p.builder)
-  // def addGRUBuilder
+  def addGRUBuilder(p: GRUBuilder): Unit = saver.add_gru_builder(p.builder)
   // def addFastLSTMBuilder
 
   def addSize(len: Long): Unit = saver.add_size(len)
@@ -27,6 +27,7 @@ class ModelSaver private[dynet](saver: internal.ModelSaver) {
   def done(): Unit = saver.done()
 }
 
+/** Class for loading persisted models from disk */
 class ModelLoader private[dynet](loader: internal.ModelLoader) {
   def this(filename: String) { this(new internal.ModelLoader(filename)) }
 
@@ -34,10 +35,10 @@ class ModelLoader private[dynet](loader: internal.ModelLoader) {
   def loadParameter(): Parameter = new Parameter(loader.load_parameter())
   def loadLookupParameter(): LookupParameter = new LookupParameter(loader.load_lookup_parameter())
   def loadLSTMBuilder(): LSTMBuilder = new LSTMBuilder(loader.load_lstm_builder())
-  //def loadVanillaLSTMBuilder
+  def loadVanillaLSTMBuilder(): VanillaLSTMBuilder =
+    new VanillaLSTMBuilder(loader.load_vanilla_lstm_builder())
   def loadSRNNBuilder(): SimpleRNNBuilder = new SimpleRNNBuilder(loader.load_srnn_builder())
-  // def loadGRUBuilder
-  // def loadFastLSTMBuilder
+  def loadGRUBuilder(): GRUBuilder = new GRUBuilder(loader.load_gru_builder())
 
   def loadSize(): Long = loader.load_size()
   def loadByteArray(buffer: Array[Byte]): Unit = loader.load_byte_array(buffer)
