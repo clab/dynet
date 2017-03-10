@@ -13,10 +13,11 @@ class LookupParameterStorage private[dynet](private[dynet] val storage: internal
   def size(): Long = storage.size()
 }
 
-/** A (learnable) parameter of a model. You don't construct it directly, but through e.g.
-  * [[edu.cmu.dynet.Model.addParameters()]].
+/** A (learnable) parameter of a model.
   */
 class Parameter private[dynet] (private[dynet] val parameter: internal.Parameter) {
+  def this(model: Model, index: Long) { this(new internal.Parameter(model.model, index)) }
+
   def zero(): Unit = parameter.zero()
 
   def dim(): Dim = new Dim(parameter.dim)
@@ -27,6 +28,9 @@ class Parameter private[dynet] (private[dynet] val parameter: internal.Parameter
 }
 
 class LookupParameter private[dynet] (private[dynet] val lookupParameter: internal.LookupParameter) {
+
+  def this(model: Model, index: Long) { this(new internal.LookupParameter(model.model, index))}
+
   def initialize(index: Long, values: FloatVector) = {
     lookupParameter.initialize(index, values.vector)
   }

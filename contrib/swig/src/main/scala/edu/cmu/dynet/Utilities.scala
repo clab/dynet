@@ -29,7 +29,7 @@ object Utilities {
   }
 
   /** Augment numbers so that they can do arithmetic with expressions. */
-  implicit class RichNumeric[T](x: T)(implicit n: Numeric[T]) {
+  implicit class NumbersAsExpressions[T](x: T)(implicit n: Numeric[T]) {
     import n._
     def +(e: Expression): Expression = Expression.exprPlus(x.toFloat, e)
     def *(e: Expression): Expression = Expression.exprTimes(x.toFloat, e)
