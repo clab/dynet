@@ -176,7 +176,7 @@ add_subdirectory(python)
 option(INCLUDE_SWIG "INCLUDE_SWIG" OFF)
 if(INCLUDE_SWIG)
   message("-- Including SWIG")
-  add_subdirectory(swig)
+  add_subdirectory(contrib/swig)
 endif(INCLUDE_SWIG)
 
 enable_testing()
