@@ -566,6 +566,17 @@ inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Sum all elements
+ * \details Sum all the elements in an expression.
+ *
+ * \param x The input expression
+ *
+ * \return The sum of all of its elements
+ */
+Expression sum_elems(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Average
  * \details This performs an elementwise average over all the expressions in xs
  *
