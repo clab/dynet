@@ -834,7 +834,6 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
     fx.t<0>().device(*dev.edevice) = eloss.tvec().sum();
   } else {
     DYNET_ASSERT(pelements != nullptr, "Hinge::forward has neither pointer to single element nor vector");
-    cerr << "Hinge::forward xs[0]->d == " << xs[0]->d << ", fx.d == " << fx.d << endl;
     if(xs[0]->d.bd != pelements->size())
       DYNET_INVALID_ARG("The list of indexes passed to Hinge has a length (" << pelements->size() <<
                         ") that doesn't match the number of mini-batch elements in the corresponding expression (" << xs[0]->d << ")");
@@ -2019,6 +2018,26 @@ void Sum::backward_dev_impl(const MyDevice & dev,
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Sum)
+
+template<class MyDevice>
+void SumElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SumElements::forward");
+  Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+  fx.tb<0>().device(*dev.edevice) = xs[0]->tbvec().sum(red_axis);
+}
+
+template<class MyDevice>
+void SumElements::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  DYNET_ASSERT(i == 0, "Failed dimension check in SumElements::backward");
+  Eigen::array<int, 2> bcast({(int)xs[0]->d.batch_size(), 1});
+  dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec().broadcast(bcast);
+}
+DYNET_NODE_INST_DEV_IMPL(SumElements)
 
 template<class MyDevice>
 void SumBatches::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
