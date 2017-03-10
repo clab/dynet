@@ -298,6 +298,17 @@ Dim Sum::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string SumElements::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "sum_elems( " << arg_names[0] << " )";
+  return s.str();
+}
+
+Dim SumElements::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumElements")
+  return Dim({1}, xs[0].bd);
+}
+
 string SumBatches::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "sum_batches( " << arg_names[0] << " )";
