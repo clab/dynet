@@ -28,8 +28,8 @@ class Dim private[dynet] (private[dynet] val dim: internal.Dim) {
 
   def transpose(): Dim = new Dim(dim.transpose())
 
-  /** We override `equals` so that `Dim` objects should be equal whenever all of their "dimension
-    * numbers" match.
+  /** We override `equals` so that `Dim` objects should be equal whenever all of their dimension
+    * sizes match.
     */
   override def equals(that: Any) = that match {
     case that: Dim => dim == that.dim

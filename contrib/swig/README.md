@@ -182,6 +182,11 @@ iter = 29, loss = 8.881784E-16
 The current Scala API works mostly like the C++ API, with the following
 differences.
 
+### Naming
+
+Everything has been given Scala-cased names. So `affine_transform`
+becomes `affineTransform` and so on. 
+
 ### `ComputationGraph`s
 
 In Scala there is a singleton `ComputationGraph`. Accordingly, any 
@@ -211,7 +216,7 @@ In Scala these are all static methods on the `Expression` companion object.
 DyNet does a lot behind the scenes with C++ `std::vector<>`s. 
 In Scala there are `IntVector`, `FloatVector`, `UnsignedVector`, and
 `ExpressionVector` classes that thinly wrap these C++ vectors. 
-They all implemented `IndexedSeq` so that they're pretty easy to work
+They all implement `IndexedSeq` so that they're pretty easy to work
 with.
 
 Each has a `size: Int` constructor and a `values: Seq[_]` constructor.
