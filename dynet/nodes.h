@@ -383,6 +383,13 @@ struct Sum : public Node {
   virtual bool supports_multibatch() const override { return true; }
 };
 
+// y = \sum_i,j,... x[i,j,...]
+struct SumElements : public Node {
+  template <typename T> explicit SumElements(const T& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+};
+
 // y = \sum_i x_i
 struct SumBatches : public Node {
   template <typename T> explicit SumBatches(const T& a) : Node(a) {}
