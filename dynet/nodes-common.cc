@@ -689,6 +689,7 @@ Dim PickBatch::dim_forward(const vector<Dim>& xs) const {
     // set batch size to one.
     ret.bd = 1;
   } else {
+    DYNET_ASSERT(pvals, "Have neither index nor index vector in PickBatch");
     ret.bd = pvals->size();
   }
   return ret;

@@ -1551,17 +1551,17 @@ DYNET_NODE_INST_DEV_IMPL(PickRange)
 template<class MyDevice>
 void PickBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (pval) {
-    fx.tb<3>().device(*dev.edevice) = xs[0]->tb<4>().chip<4>(*pval);
+    fx.tvec().device(*dev.edevice) = xs[0]->tbvec().chip<1>(*pval);
   } else {
     DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickBatch::forward");
     if (pvals->size() != fx.d.batch_elems())
       DYNET_INVALID_ARG("In PickBatch::forward, number of elements in the passed-in index vector (" << pvals->size() <<
                         ") did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
     for (unsigned b = 0; b < pvals->size(); ++b) {
-      if ((*pvals)[b] >= xs[0]->d.nd)
+      if ((*pvals)[b] >= xs[0]->d.bd)
         DYNET_INVALID_ARG("PickBatch::forward_impl requested element " << (*pvals)[b]
                           << " from a batch size of " << xs[0]->d.nd);
-      fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>((*pvals)[b]);
+      fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[0]->tbvec().chip<1>((*pvals)[b]);
     }
   }
 }
@@ -1573,13 +1573,13 @@ void PickBatch::backward_dev_impl(const MyDevice & dev,
                                   const Tensor& dEdf,
                                   unsigned i,
                                   Tensor& dEdxi) const {
-  DYNET_ASSERT(i == 0, "Failed dimension check in PickElement::backward");
+  DYNET_ASSERT(i == 0, "Failed dimension check in PickBatch::backward");
   if (pval) {
-    dEdxi.tb<3>().chip<3>(*pval).device(*dev.edevice) += dEdf.tb<2>();
+    dEdxi.tbvec().chip<1>(*pval).device(*dev.edevice) += dEdf.tvec();
   } else {
-    DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickElement::forward");
+    DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickBatch::backward");
     for (unsigned b = 0; b < pvals->size(); ++b)
-      dEdxi.tb<3>().chip<3>((*pvals)[b]).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
+      dEdxi.tbvec().chip<1>((*pvals)[b]).device(*dev.edevice) += dEdf.tbvec().chip<1>(b);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PickBatch)
@@ -2070,7 +2070,7 @@ void SumElements::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i == 0, "Failed dimension check in SumElements::backward");
-  Eigen::array<int, 2> bcast({(int)xs[0]->d.batch_size(), 1});
+  Eigen::array<int, 2> bcast = {(int)xs[0]->d.batch_size(), 1};
   dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec().broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(SumElements)

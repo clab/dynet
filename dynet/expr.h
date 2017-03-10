@@ -1354,11 +1354,35 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
 /**
  * \ingroup flowoperations
- * \brief Pick a batch from the expression.
- * \details Pick a batch from the expression.
+ * \brief Pick batch.
+ * \details Pick a batch from an expression. For a Tensor with 3 batches:
+ *
+ *    \f$
+ *      \begin{pmatrix}
+ *        x_{1,1,1} & x_{1,1,2} \\
+ *        x_{1,2,1} & x_{1,2,2} \\
+ *      \end{pmatrix}
+ *      \begin{pmatrix}
+ *        x_{2,1,1} & x_{2,1,2} \\
+ *        x_{2,2,1} & x_{2,2,2} \\
+ *      \end{pmatrix}
+ *      \begin{pmatrix}
+ *        x_{3,1,1} & x_{3,1,2} \\
+ *        x_{3,2,1} & x_{3,2,2} \\
+ *      \end{pmatrix}
+ *    \f$
+ * 
+ * pick_batch(t, 1) will return a Tensor of
+ * 
+ *    \f$
+ *      \begin{pmatrix}
+ *        x_{2,1,1} & x_{2,1,2} \\ 
+ *        x_{2,2,1} & x_{2,2,2} \\
+ *      \end{pmatrix}
+ *    \f$
  *
  * \param x The input expression
- * \param v The beginning index
+ * \param v The index of the batch to be picked.
  *
  * \return The expression of picked batch. The picked batch is a tensor
  *         whose `bd` equals to one.
@@ -1367,17 +1391,44 @@ Expression pick_batch(const Expression& x, unsigned v);
 
 /**
  * \ingroup flowoperations
- * \brief Batched pick
- * \details Pick elements from multiple batches.
+ * \brief Pick batch.
+ * \details Pick several batches from an expression. For a Tensor with 3 batches:
+ *
+ *    \f$
+ *      \begin{pmatrix}
+ *        x_{1,1,1} & x_{1,1,2} \\
+ *        x_{1,2,1} & x_{1,2,2} \\
+ *      \end{pmatrix}
+ *      \begin{pmatrix}
+ *        x_{2,1,1} & x_{2,1,2} \\
+ *        x_{2,2,1} & x_{2,2,2} \\
+ *      \end{pmatrix}
+ *      \begin{pmatrix}
+ *        x_{3,1,1} & x_{3,1,2} \\
+ *        x_{3,2,1} & x_{3,2,2} \\
+ *      \end{pmatrix}
+ *    \f$
+ * 
+ * pick_batch(t, {2, 3}) will return a Tensor of with 2 batches:
+ * 
+ *    \f$
+ *      \begin{pmatrix}
+ *        x_{2,1,1} & x_{2,1,2} \\ 
+ *        x_{2,2,1} & x_{2,2,2} \\
+ *      \end{pmatrix}
+ *      \begin{pmatrix}
+ *        x_{3,1,1} & x_{3,1,2} \\
+ *        x_{3,2,1} & x_{3,2,2} \\
+ *      \end{pmatrix}
+ *    \f$
  *
  * \param x The input expression
- * \param v A vector of indicies to choose, one for each batch in the
- *          input expression.
+ * \param v A vector of indicies of the batches to be picked.
  *
- * \return The expression of picked batch. The picked batch is a tensor
+ * \return The expression of picked batches. The picked batches is a tensor
  *         whose `bd` equals to the size of vector `v`.
  */
-Expression pick_batch(const Expression& x, const std::vector<unsigned> & v);
+Expression pick_batches(const Expression& x, const std::vector<unsigned> & v);
 
 /**
  * \ingroup flowoperations
