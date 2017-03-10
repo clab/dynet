@@ -116,7 +116,7 @@ Expression pick(const Expression& x, const unsigned* pv, unsigned d) { return Ex
 Expression pick(const Expression& x, const vector<unsigned> * pv, unsigned d) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv, d)); }
 
 Expression pick_batch(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickBatch>({x.i}, v)); }
-Expression pick_batch(const Expression & x, const std::vector<unsigned>& v) { return Expression(x.pg, x.pg->add_function<PickBatch>({x.i}, v)); }
+Expression pick_batches(const Expression & x, const std::vector<unsigned>& v) { return Expression(x.pg, x.pg->add_function<PickBatch>({x.i}, v)); }
 
 Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u)); }
 
