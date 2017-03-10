@@ -902,6 +902,28 @@ BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression pick_batch(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pick_batch_gradient1 ) {
+  unsigned idx = 0;
+  dynet::ComputationGraph cg;
+  Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
+  Expression z = sum_rows(pick_batch(x1, idx));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression pick_batches(const Expression& x, cosnt std::vector<unsigned> & v);
+BOOST_AUTO_TEST_CASE( pick_batches_gradient ) {
+  dynet::ComputationGraph cg;
+  std::vector<unsigned> indices = { 0, 1 };
+  Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
+  Expression picked_x1 = pick_batches(x1, indices);
+  Expression z = sum({
+    sum_rows(pick_batch(picked_x1, 0)),
+    sum_rows(pick_batch(picked_x1, 1))
+  });
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression pickrange(const Expression& x, unsigned v, unsigned u);
 BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
   dynet::ComputationGraph cg;
