@@ -94,7 +94,7 @@ object Expression {
   def exprMinus(e: Expression): Expression = unary(e, dn.exprMinus)
   def exprPlus(e1: Expression, e2: Expression): Expression = binary(e1, e2, dn.exprPlus)
   def exprPlus(e1: Expression, x: Float): Expression = unary(e1, e1 => dn.exprPlus(e1, x))
-  def exprPlus(x: Float, e2: Expression): Expression = exprPlus(e2, x)
+  def exprPlus(x: Float, e2: Expression): Expression = unary(e2, e2 => dn.exprPlus(x, e2))
   def exprMinus(e1: Expression, e2: Expression): Expression = binary(e1, e2, dn.exprMinus)
   def exprMinus(e1: Expression, x: Float): Expression = unary(e1, e1 => dn.exprMinus(e1, x))
   def exprMinus(x: Float, e2: Expression): Expression = unary(e2, e2 => dn.exprMinus(x, e2))

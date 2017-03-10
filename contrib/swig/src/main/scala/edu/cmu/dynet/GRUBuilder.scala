@@ -6,7 +6,7 @@ package edu.cmu.dynet
 class GruBuilder private[dynet](private[dynet] val builder: internal.GRUBuilder)
     extends RnnBuilder(builder) {
 
-  /** Create a new, empty LstmBuilder. */
+  /** Create a new, empty GruBuilder. */
   def this() { this(new internal.GRUBuilder()) }
 
   /** Create a GruBuilder with the specified parameters.
