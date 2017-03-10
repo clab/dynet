@@ -6,8 +6,6 @@ import edu.cmu.dynet.internal.{dynet_swig => dn}
 import java.util.Arrays
 
 class SerializationSpec extends FlatSpec with Matchers {
-  import Utilities._
-
   Initialize.initialize()
 
   def assertSameSeq(s1: Seq[Float], s2: Seq[Float], eps: Float = 1e-5f): Unit = {
@@ -76,7 +74,6 @@ class SerializationSpec extends FlatSpec with Matchers {
     assertSameModel(mod1, mod2)
   }
 
-  /*
   "model saver and model loader" should "handle vanillalstmbuilder correctly" in {
 
     // this is the vanilla_lstm_io test case from the C++ tests
@@ -85,18 +82,17 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
-    saver.add_model(mod1)
-    saver.add_vanilla_lstm_builder(rnn1)
+    saver.addModel(mod1)
+    saver.addVanillaLSTMBuilder(rnn1)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val mod2 = loader.load_model()
-    val rnn2 = loader.load_vanilla_lstm_builder()
+    val mod2 = loader.loadModel()
+    val rnn2 = loader.loadVanillaLSTMBuilder()
     loader.done()
 
     assertSameModel(mod1, mod2)
   }
-  */
 
 
   "model saver and model loader" should "handle lstmbuilder correctly" in {
@@ -177,38 +173,6 @@ class SerializationSpec extends FlatSpec with Matchers {
     loader.loadBoolean() shouldBe false
     loader.done()
   }
-
-  /*
-  "model saver and model loader" should "have implicit methods that work" in {
-    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
-    val model = new Model
-    val saver = new ModelSaver(path)
-
-    val namedParams = Map(
-      "w" -> model.addParameters(Dim(2, 3)),
-      "b" -> model.addParameters(Dim(5))
-    )
-
-    saver.add_model(model)
-    saver.add_string("test")
-    saver.add_named_parameters(namedParams)
-    saver.done()
-
-    val loader = new ModelLoader(path)
-    val model2 = loader.load_model()
-    val s = loader.load_string()
-    val np = loader.load_named_parameters()
-
-    assertSameModel(model, model2)
-
-    s shouldBe "test"
-
-    np.size shouldBe 2
-    np("w").dim shouldBe dim(2, 3)
-    np("b").dim shouldBe dim(5)
-  }
-*/
-
 }
 
 case class Foo(a: String, b: Int) extends Serializable
