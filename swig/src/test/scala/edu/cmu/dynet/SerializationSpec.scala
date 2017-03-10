@@ -6,7 +6,7 @@ import edu.cmu.dynet.internal.{dynet_swig => dn}
 import java.util.Arrays
 
 class SerializationSpec extends FlatSpec with Matchers {
-  import DyNetScalaHelpers._
+  import Utilities._
 
   Initialize.initialize()
 

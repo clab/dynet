@@ -4,8 +4,6 @@ import edu.cmu.dynet._
 
 import scala.language.implicitConversions
 
-import DyNetScalaHelpers._
-
 object MnistFile {
   // I basically reverse engineered the file formats from java/org/deeplearning4j/datasets/mnist
 
@@ -96,7 +94,7 @@ object Mnist {
       // update the optimizer
       if (first) { first = false } else { adam.updateEpoch() }
       //reshuffle
-      shuffle(order)
+      Utilities.shuffle(order)
 
       var loss = 0.0
       var numSamples = 0.0

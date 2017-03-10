@@ -1,5 +1,6 @@
 package edu.cmu.dynet
 
+/** Interface for [[edu.cmu.dynet.Model]] trainers. You want to use a specific subclass. */
 class Trainer private[dynet](_trainer: internal.Trainer) {
   def update(scale: Float = 1.0f): Unit = _trainer.update(scale)
   def updateEpoch(r: Float = 1.0f): Unit = _trainer.update_epoch(r)
@@ -14,9 +15,6 @@ class Trainer private[dynet](_trainer: internal.Trainer) {
 
   def clipThreshold: Float = _trainer.getClip_threshold
   def clipThreshold_=(x: Float): Unit = _trainer.setClip_threshold(x)
-
-
-
 }
 
 class SimpleSGDTrainer private[dynet] (private[dynet] val trainer: internal.SimpleSGDTrainer)

@@ -5,7 +5,7 @@ import Matchers._
 
 class ExpressionSpec extends FlatSpec with Matchers {
 
-  import DyNetScalaHelpers._
+  import Utilities._
   Initialize.initialize()
 
   implicit def expressionV(es: Seq[Expression]): ExpressionVector = {

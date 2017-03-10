@@ -4,7 +4,7 @@ import org.scalatest._
 
 class SampleSpec extends FlatSpec with Matchers {
 
-  import DyNetScalaHelpers._
+  import Utilities._
 
   "Sample" should "do the right thing" in {
 

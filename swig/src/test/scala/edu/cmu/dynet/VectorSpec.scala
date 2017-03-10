@@ -4,7 +4,7 @@ import org.scalatest._
 
 class VectorSpec extends FlatSpec with Matchers {
 
-  import DyNetScalaHelpers._
+  import Utilities._
 
   "FloatVector" should "construct when given a Seq[Float]" in {
     val fv = new FloatVector(Seq(2.3f, 4.5f))

@@ -5,8 +5,6 @@ import edu.cmu.dynet._
 import scala.language.implicitConversions
 
 object LinearRegression {
-  import DyNetScalaHelpers._
-
   def main(args: Array[String]) {
     Initialize.initialize()
 

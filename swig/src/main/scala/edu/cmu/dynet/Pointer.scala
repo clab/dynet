@@ -2,8 +2,10 @@ package edu.cmu.dynet
 
 import internal.{dynet_swig => dn}
 
-// The SWIG wrappers around pointers to C++ primitives are not very Scala-like to work with;
-// these are more Scala-y wrappers that implicitly convert to the SWIG versions.
+/** For the most part, SWIG makes it so you just use Scala classes where you would use C++ pointers
+  * to class instances. The exception is for pointers to primitives. The SWIG wrappers for those are
+  * not Scala-like at all, so here are wrapper that are easier to work with.
+  */
 class FloatPointer {
   val floatp = dn.new_floatp
   set(0f)

@@ -1,7 +1,6 @@
 package edu.cmu.dynet.examples
 
 import edu.cmu.dynet._
-import DyNetScalaHelpers._
 import scala.language.implicitConversions
 
 import java.nio.file.Paths
@@ -25,7 +24,7 @@ class RnnLanguageModelBatch(
     bsize: Int,
     tokens: IntPointer
   ): Expression = {
-    val slen = sents(id).size().toInt
+    val slen = sents(id).size
     //
     rnn.newGraph()
     //
@@ -98,7 +97,7 @@ class RnnLanguageModelBatch(
       while (w == 0 || w == kSOS) {
         // The C++ example uses cg.incremental_forward, but that doesn't work here.
         val dist = ComputationGraph.forward(ydist)
-        w = sample(dist.toVector)
+        w = Utilities.sample(dist.toVector)
       }
 
       if (w == kEOS) {
@@ -154,7 +153,7 @@ object RnnLanguageModelBatch {
       tlc += 1
       val row = WordDict.read_sentence(line, d)
       training.append(row)
-      ttoks += row.size().toInt
+      ttoks += row.size
     }
     println(s"${tlc} lines, ${ttoks} tokens, ${d.size} types")
 
@@ -187,7 +186,7 @@ object RnnLanguageModelBatch {
       dlc += 1
       val row = WordDict.read_sentence(line, d)
       dev.append(row)
-      dtoks += row.size()
+      dtoks += row.size
     }
     println(s"${dlc} lines, ${dtoks} tokens")
 
@@ -230,7 +229,7 @@ object RnnLanguageModelBatch {
         adam.updateEpoch()
       }
       // reshuffle
-      shuffle(order)
+      Utilities.shuffle(order)
 
       var loss = 0.0
       val tokens = new IntPointer
