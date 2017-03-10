@@ -1,6 +1,6 @@
 package edu.cmu.dynet
 
-abstract class RNNBuilder(private[dynet] val _builder: internal.RNNBuilder) {
+abstract class RnnBuilder(private[dynet] val _builder: internal.RNNBuilder) {
 
   var version: Long = ComputationGraph.version
 
@@ -41,12 +41,12 @@ abstract class RNNBuilder(private[dynet] val _builder: internal.RNNBuilder) {
   def getS(i: Int): ExpressionVector = new ExpressionVector(_builder.get_s(i))
 
   def numH0Components(): Long = _builder.num_h0_components()
-  def copy(params: RNNBuilder): Unit = _builder.copy(params._builder)
+  def copy(params: RnnBuilder): Unit = _builder.copy(params._builder)
   // save and load
 }
 
-class SimpleRNNBuilder private[dynet](private[dynet] val builder: internal.SimpleRNNBuilder)
-    extends RNNBuilder(builder) {
+class SimpleRnnBuilder private[dynet](private[dynet] val builder: internal.SimpleRNNBuilder)
+    extends RnnBuilder(builder) {
   def this() { this(new internal.SimpleRNNBuilder()) }
 
   def this(layers: Long, inputDim: Long, hiddenDim: Long, model: Model, supportLags: Boolean = false) {

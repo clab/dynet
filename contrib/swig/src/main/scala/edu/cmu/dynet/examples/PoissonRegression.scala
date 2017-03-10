@@ -14,7 +14,7 @@ object PoissonRegression {
   var VOCAB_SIZE = 0
 
   class RNNLengthPredictor(model: Model) {
-    val builder = new LSTMBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
+    val builder = new LstmBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
     val p_c = model.addLookupParameters(VOCAB_SIZE, Dim(INPUT_DIM))
     val p_R = model.addParameters(Dim(1, HIDDEN_DIM))
     val p_bias = model.addParameters(Dim(1))

@@ -7,10 +7,10 @@ class ModelSaver private[dynet](saver: internal.ModelSaver) {
   def addModel(model: Model): Unit = saver.add_model(model.model)
   def addParameter(p: Parameter): Unit = saver.add_parameter(p.parameter)
   def addLookupParameter(p: LookupParameter): Unit = saver.add_lookup_parameter(p.lookupParameter)
-  def addLSTMBuilder(p: LSTMBuilder): Unit = saver.add_lstm_builder(p.builder)
-  def addVanillaLSTMBuilder(p: VanillaLSTMBuilder): Unit = saver.add_vanilla_lstm_builder(p.builder)
-  def addSRNNBuilder(p: SimpleRNNBuilder): Unit = saver.add_srnn_builder(p.builder)
-  def addGRUBuilder(p: GRUBuilder): Unit = saver.add_gru_builder(p.builder)
+  def addLstmBuilder(p: LstmBuilder): Unit = saver.add_lstm_builder(p.builder)
+  def addVanillaLstmBuilder(p: VanillaLstmBuilder): Unit = saver.add_vanilla_lstm_builder(p.builder)
+  def addSRnnBuilder(p: SimpleRnnBuilder): Unit = saver.add_srnn_builder(p.builder)
+  def addGruBuilder(p: GruBuilder): Unit = saver.add_gru_builder(p.builder)
   // def addFastLSTMBuilder
 
   def addSize(len: Long): Unit = saver.add_size(len)
@@ -34,11 +34,11 @@ class ModelLoader private[dynet](loader: internal.ModelLoader) {
   def loadModel(): Model = new Model(loader.load_model())
   def loadParameter(): Parameter = new Parameter(loader.load_parameter())
   def loadLookupParameter(): LookupParameter = new LookupParameter(loader.load_lookup_parameter())
-  def loadLSTMBuilder(): LSTMBuilder = new LSTMBuilder(loader.load_lstm_builder())
-  def loadVanillaLSTMBuilder(): VanillaLSTMBuilder =
-    new VanillaLSTMBuilder(loader.load_vanilla_lstm_builder())
-  def loadSRNNBuilder(): SimpleRNNBuilder = new SimpleRNNBuilder(loader.load_srnn_builder())
-  def loadGRUBuilder(): GRUBuilder = new GRUBuilder(loader.load_gru_builder())
+  def loadLstmBuilder(): LstmBuilder = new LstmBuilder(loader.load_lstm_builder())
+  def loadVanillaLstmBuilder(): VanillaLstmBuilder =
+    new VanillaLstmBuilder(loader.load_vanilla_lstm_builder())
+  def loadSRnnBuilder(): SimpleRnnBuilder = new SimpleRnnBuilder(loader.load_srnn_builder())
+  def loadGruBuilder(): GruBuilder = new GruBuilder(loader.load_gru_builder())
 
   def loadSize(): Long = loader.load_size()
   def loadByteArray(buffer: Array[Byte]): Unit = loader.load_byte_array(buffer)
