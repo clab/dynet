@@ -235,5 +235,13 @@ object Expression {
   def inverse(x: Expression): Expression = unary(x, dn.inverse)
   def logdet(x: Expression): Expression = unary(x, dn.logdet)
   def traceOfProduct(x: Expression, y: Expression): Expression = binary(x, y, dn.trace_of_product)
+
+  /** Augment numbers so that they can do arithmetic with expressions. */
+  implicit class ImplicitNumerics[T](x: T)(implicit n: Numeric[T]) {
+    import n._
+    def +(e: Expression): Expression = Expression.exprPlus(x.toFloat, e)
+    def *(e: Expression): Expression = Expression.exprTimes(x.toFloat, e)
+    def -(e: Expression): Expression = Expression.exprMinus(x.toFloat, e)
+  }
 }
 
