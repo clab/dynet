@@ -58,17 +58,17 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     // this is the simple_rnn_io test case from the C++ tests
     val mod1 = new Model()
-    val rnn1 = new SimpleRNNBuilder(1, 10, 10, mod1)
+    val rnn1 = new SimpleRnnBuilder(1, 10, 10, mod1)
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
-    saver.addSRNNBuilder(rnn1)
+    saver.addSRnnBuilder(rnn1)
     saver.done()
 
     val loader = new ModelLoader(path)
     val mod2 = loader.loadModel()
-    val rnn2 = loader.loadSRNNBuilder()
+    val rnn2 = loader.loadSRnnBuilder()
     loader.done()
 
     assertSameModel(mod1, mod2)
@@ -78,17 +78,17 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     // this is the vanilla_lstm_io test case from the C++ tests
     val mod1 = new Model()
-    val rnn1 = new VanillaLSTMBuilder(1, 10, 10, mod1)
+    val rnn1 = new VanillaLstmBuilder(1, 10, 10, mod1)
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
-    saver.addVanillaLSTMBuilder(rnn1)
+    saver.addVanillaLstmBuilder(rnn1)
     saver.done()
 
     val loader = new ModelLoader(path)
     val mod2 = loader.loadModel()
-    val rnn2 = loader.loadVanillaLSTMBuilder()
+    val rnn2 = loader.loadVanillaLstmBuilder()
     loader.done()
 
     assertSameModel(mod1, mod2)
@@ -99,17 +99,17 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     // this is the lstm_io test case from the C++ tests
     val mod1 = new Model()
-    val rnn1 = new LSTMBuilder(1, 10, 10, mod1)
+    val rnn1 = new LstmBuilder(1, 10, 10, mod1)
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
-    saver.addLSTMBuilder(rnn1)
+    saver.addLstmBuilder(rnn1)
     saver.done()
 
     val loader = new ModelLoader(path)
     val mod2 = loader.loadModel()
-    val rnn2 = loader.loadLSTMBuilder()
+    val rnn2 = loader.loadLstmBuilder()
     loader.done()
 
     assertSameModel(mod1, mod2)

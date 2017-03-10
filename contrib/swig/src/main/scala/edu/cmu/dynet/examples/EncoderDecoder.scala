@@ -13,15 +13,15 @@ class EncoderDecoder(
   hiddenDim: Int,
   bidirectional: Boolean = false) {
 
-  val decBuilder = new LSTMBuilder(numLayers, inputDim, hiddenDim, model)
-  val fwdEncBuilder = new LSTMBuilder(numLayers, inputDim, hiddenDim, model)
+  val decBuilder = new LstmBuilder(numLayers, inputDim, hiddenDim, model)
+  val fwdEncBuilder = new LstmBuilder(numLayers, inputDim, hiddenDim, model)
 
-  var revEncBuilder: Option[RNNBuilder] = None
+  var revEncBuilder: Option[RnnBuilder] = None
   var p_ie2oe: Option[Parameter] = None
   var p_boe: Option[Parameter] = None
 
   if (bidirectional) {
-    revEncBuilder = Some(new LSTMBuilder(numLayers, inputDim, hiddenDim, model))
+    revEncBuilder = Some(new LstmBuilder(numLayers, inputDim, hiddenDim, model))
     p_ie2oe = Some(model.addParameters(Dim(hiddenDim * numLayers * 2, hiddenDim * numLayers * 4)))
     p_boe = Some(model.addParameters(Dim(hiddenDim * numLayers * 2)))
   }

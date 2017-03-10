@@ -12,7 +12,7 @@ class RnnLanguageModelBatch(
   hiddenDim: Int,
   vocabSize: Int
 ) {
-  val rnn = new LSTMBuilder(layers, inputDim, hiddenDim, model)
+  val rnn = new LstmBuilder(layers, inputDim, hiddenDim, model)
 
   val p_c = model.addLookupParameters(vocabSize, Dim(inputDim))
   val p_R = model.addParameters(Dim(vocabSize, hiddenDim))
