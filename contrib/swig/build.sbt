@@ -6,7 +6,7 @@ lazy val root = (project in file("."))
       version      := "0.0.1-SNAPSHOT"
     )
 
-val DEFAULT_BUILD_PATH = "../build/swig"
+val DEFAULT_BUILD_PATH = "../../build/swig"
 
 // This is where `make` does all its work, and it's where we'll do all our work as well.
 val buildPath = {
