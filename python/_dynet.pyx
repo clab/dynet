@@ -314,7 +314,7 @@ cdef class Parameters:
         """
         return self.thisptr.index
 
-    cpdef Expression expr(self, bool const=False):
+    cpdef Expression expr(self, bool update=False):
         """Returns the parameter as an expression
 
         This is the same as calling
@@ -328,10 +328,10 @@ cdef class Parameters:
         """
         if cg_version() != self._version:
             self._version = cg_version()
-            if const:
-                self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
-            else:
+            if update:
                 self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+            else:
+                self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
         return self._expr
 
 
@@ -385,13 +385,13 @@ cdef class LookupParameters:
         grads = self.thisptr.get().grads
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
 
-    cpdef Expression expr(self,bool const=False):
+    cpdef Expression expr(self,bool update=True):
         if cg_version() != self._version:
             self._version = cg_version()
-            if const:
-                self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
-            else:
+            if update:
                 self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+            else:
+                self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
         return self._expr
 
     cpdef zero(self): self.thisptr.zero()
@@ -1062,7 +1062,7 @@ cdef class Expression: #{{{
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
-def parameter(p, const=True):
+def parameter(p, update=True):
     """Load a parameter in the computation graph
     
     Get the expression corresponding to a parameter
@@ -1078,7 +1078,7 @@ def parameter(p, const=True):
         NotImplementedError -- Only works with parameters and lookup parameters
     """
     if isinstance(p,Parameters) or isinstance(p,LookupParameters):
-        return p.expr(const)
+        return p.expr(update)
     else:
         raise NotImplementedError("Cannot call parameter() on anything other than Parameters or LookupParameters")
 
