@@ -219,6 +219,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
     CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CParameters p) except + #
     CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CLookupParameters p) except + #
+    CExpression c_const_parameter "dynet::expr::const_parameter" (CComputationGraph& g, CParameters p) except + #
+    CExpression c_const_parameter "dynet::expr::const_parameter" (CComputationGraph& g, CLookupParameters p) except + #
     #CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
     CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
     CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #
