@@ -1,4 +1,5 @@
 #include "dynet/tensor.h"
+#include "dynet/globals.h"
 
 #include <random>
 #include <vector>
@@ -278,7 +279,7 @@ void Tensor::load(Archive& ar, const unsigned int ver) {
   if (dev_id == -1) {
     device = default_device;
   } else {
-    assert(dev_id > 0 && dev_id < (int)devices.size());
+    DYNET_ASSERT(dev_id > 0 && dev_id < (int)devices.size(), "Bad device id " << dev_id << " in Tensor::load with " << devices.size() << " total devices");
     device = devices[dev_id];
   }
   device->allocate_tensor(mem_pool, *this);

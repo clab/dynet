@@ -2,6 +2,7 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet.h"
 #include "dynet/weight-decay.h"
+#include "dynet/globals.h"
 
 #include <iostream>
 #include <random>
@@ -35,7 +36,7 @@ static void remove_args(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
   argc -= n;
-  assert(argc >= 0);
+  DYNET_ASSERT(argc >= 0, "remove_args less than 0");
 }
 
 DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters) {

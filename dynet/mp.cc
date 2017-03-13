@@ -1,5 +1,6 @@
 #if !_WINDOWS
 #include "mp.h"
+#include "dynet/except.h"
 using namespace std;
 using namespace boost::interprocess;
 
@@ -44,7 +45,6 @@ namespace dynet {
 
     unsigned spawn_children(std::vector<Workload>& workloads) {
       const unsigned num_children = workloads.size();
-      assert (workloads.size() == num_children);
       pid_t pid;
       unsigned cid;
       for (cid = 0; cid < num_children; ++cid) {
@@ -67,9 +67,9 @@ namespace dynet {
       std::vector<Workload> workloads(num_children);
       for (unsigned cid = 0; cid < num_children; cid++) { 
         err = pipe(workloads[cid].p2c);
-        assert (err == 0);
+        if(err != 0) DYNET_RUNTIME_ERR("Problem writing to p2c pipe " << cid << " in create_workloads");
         err = pipe(workloads[cid].c2p);
-        assert (err == 0);
+        if(err != 0) DYNET_RUNTIME_ERR("Problem writing to c2p pipe " << cid << " in create_workloads");
       }
       return workloads;
     }
