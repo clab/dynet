@@ -8,7 +8,6 @@
 #ifndef DYNET_DIM_H
 #define DYNET_DIM_H
 
-#include <cassert>
 #include <initializer_list>
 #include <type_traits>
 #include <stdexcept>
@@ -17,6 +16,7 @@
 #include <vector>
 
 #include "dynet/io-macros.h"
+#include "dynet/except.h"
 
 /**
  * \ingroup dim
@@ -160,7 +160,13 @@ struct Dim {
    * \param i Dimension index
    * \param s Dimension size
    */
-  inline void set(unsigned int i, unsigned int s) { assert(i < nd); assert(s > 0); d[i] = s; }
+  inline void set(unsigned int i, unsigned int s) {
+    if(i >= nd)
+      DYNET_INVALID_ARG("Out of bounds exception in Dim::set("<<i<<","<<s<<") for node of size " << d);
+    if(s == 0)
+      DYNET_INVALID_ARG("Attempt to set dimension size to zero in Dim::set("<<i<<","<<s<<") for node of size " << d);
+    d[i] = s;
+  }
   /**
    * \brief Access a specific dimension as you would access an array element
    *
@@ -180,7 +186,8 @@ struct Dim {
    * \param i index of the dimension to be removed
    */
   inline void delete_dim(unsigned int i) {
-    assert(i < nd);
+    if(i >= nd)
+      DYNET_INVALID_ARG("Out of bounds exception in Dim::delete_dim("<<i<<") for node of size " << d);
     if (nd == 1) {
       d[0] = 1;
     } else {
@@ -197,7 +204,7 @@ struct Dim {
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
     else if (nd == 2) { return Dim({d[1], d[0]}, bd); }
-    throw std::invalid_argument("Cannot transpose Dim object with more than 2 dimensions");
+    DYNET_INVALID_ARG("Cannot transpose Dim object with more than 2 dimensions");
   }
 
   unsigned int d[DYNET_MAX_TENSOR_DIM]; /**< Array of dimension */
@@ -206,8 +213,6 @@ struct Dim {
 private:
   DYNET_SERIALIZE_DECLARE()
 };
-
-//static_assert(std::is_trivially_copyable<Dim>::value, "Dim must be trivially copyable");
 
 /**
  * \brief Check for equality between two Dim
