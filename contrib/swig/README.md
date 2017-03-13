@@ -2,7 +2,10 @@
 
 The code in `dynet_swig.i` provides SWIG instructions to wrap salient
 parts of DyNet for use in other languages, in particular Scala (and
-Java). It produces Java (in `edu.cmu.dynet.internal`) that slavishly
+Java). These bindings were developed (and are maintained) by
+researchers from the [Allen Institute for Artificial Intelligence](http://allenai.org).
+
+The SWIG bindings produce Java (in `edu.cmu.dynet.internal`) that slavishly
 recreates the C++ API, and that you should strive not to use.
 
 Instead you should use the Scala API that lives in `edu.cmu.dynet`.
@@ -88,6 +91,36 @@ difference is that the `DynetParams` class has additional fields in
 the GPU version for configuring the GPU. This difference shouldn't
 affect you unless you want to configure these parameters and also run
 the same code on the CPU.
+
+## Modifying the Bindings
+
+As more functionality is added to (C++) DyNet, corresponding changes 
+will need to be made to these bindings. Here is how to update the Scala
+bindings for (say) a new class `NewClass`:
+
+### In `dynet_swig.i`
+
+* Make sure that the `.i` file `#include`s the relevant C++ header file
+  (if it doesn't already)
+* Declare the class and whatever methods you want wrappers for in the 
+  `.i` file. (The existing declarations should be a good guide.)
+
+### In `CMakeLists.txt`
+
+* SWIG will generate an intermediate `NewClass.java` file; add it to the
+  `add_jar` directive
+  
+### In Scala
+
+* create a Scala class with a private constructor that wraps the SWIG-generated
+  `internal.NewClass`. Expose Scala-y secondary constructors and/or factory methods
+  for Scala code to use. Hide all `internal.` details:
+
+```
+private[dynet] class NewClass(private[dynet] internal.NewClass) {
+```
+
+* write tests
 
 ## Running the Examples
 
