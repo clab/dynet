@@ -4,6 +4,7 @@
 #include "dynet/training.h"
 #include "dynet/expr.h"
 #include "dynet/grad-check.h"
+#include "dynet/globals.h"
 
 #include <sstream>
 #include <string>

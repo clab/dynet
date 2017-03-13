@@ -38,8 +38,7 @@ DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
     used[1] = stoi(strs[1]);
     used[2] = stoi(strs[2]);
   } else {
-    ostringstream s; s << "the format of --dynet-mem is invalid:" << descriptor;
-    throw std::invalid_argument(s.str());
+    DYNET_INVALID_ARG("the format of --dynet-mem is invalid: " << descriptor);
   }
 }
 
@@ -52,17 +51,20 @@ DeviceMempoolSizes Device::mark(ComputationGraph *cg) {
 }
 
 void Device::revert(const DeviceMempoolSizes & cp) {
-  assert(cp.used[0] <= pools[0]->used);
+  if(cp.used[0] > pools[0]->used)
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[0] << " > " << pools[0]->used << ")");
   pools[0]->used = cp.used[0];
-  assert(cp.used[1] <= pools[1]->used);
+  if(cp.used[1] > pools[1]->used)
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[1] << " > " << pools[1]->used << ")");
   pools[1]->used = cp.used[1];
-  assert(cp.used[2] <= pools[2]->used);
+  if(cp.used[2] > pools[2]->used)
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[2] << " > " << pools[2]->used << ")");
   pools[2]->used = cp.used[2];
 }
 
 void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
-  assert(mp != DeviceMempool::NONE);
-  assert(pools[(int)mp] != nullptr);
+  DYNET_ASSERT(mp != DeviceMempool::NONE, "Attempt to allocate tensor for NONE DeviceMempool");
+  DYNET_ASSERT(pools[(int)mp] != nullptr, "Attempt to allocate tensor for null DeviceMempool");
   tens.v = (float*)pools[(int)mp]->allocate(tens.d.size() * sizeof(float));
   tens.mem_pool = mp;
 }
