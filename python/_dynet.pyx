@@ -229,6 +229,8 @@ cdef class Parameters:
     cdef CParameters thisptr # TODO -- no longer pointer
     cdef int _version
     cdef Expression _expr
+    cdef int _const_version
+    cdef Expression _const_expr
     def __cinit__(self):
         self._version = -1
     @staticmethod
@@ -326,13 +328,16 @@ cdef class Parameters:
         Returns:
             Expression -- Expression of the parameter
         """
-        if cg_version() != self._version:
-            self._version = cg_version()
-            if update:
+        if update:
+            if cg_version() != self._version:
+                self._version = cg_version()
                 self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
-            else:
-                self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
-        return self._expr
+            return self._expr
+        else:
+            if cg_version() != self._const_version:
+                self._const_version = cg_version()
+                self._const_expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
+            return self._const_expr
 
 
 
