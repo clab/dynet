@@ -72,15 +72,13 @@ void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
 void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   h.clear();
   h0 = h_0;
-  if (h0.size() && h0.size() != layers)
-    DYNET_INVALID_ARG("Number of inputs passed to initialize RNNBuilder (" << h0.size() <<
-                      ") is not equal to the number of layers (" << layers << ")");
+  DYNET_INVALID_ARG_CHECK(h0.size() && h0.size() != layers,
+                          "Number of inputs passed to initialize RNNBuilder (" << h0.size() << ") is not equal to the number of layers (" << layers << ")");
 }
 
 Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size() && h_new.size() != layers)
-    DYNET_INVALID_ARG("Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() <<
-                      ") is not equal to the number of layers (" << layers << ")");
+  DYNET_INVALID_ARG_CHECK(h_new.size() && h_new.size() != layers,
+                          "Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() << ") is not equal to the number of layers (" << layers << ")");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
@@ -138,8 +136,8 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
 
 void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
   const SimpleRNNBuilder & rnn_simple = (const SimpleRNNBuilder&)rnn;
-  if(params.size() != rnn_simple.params.size())
-    DYNET_INVALID_ARG("Attempt to copy between two SimpleRNNBuilders that are not the same size");
+  DYNET_INVALID_ARG_CHECK(params.size() != rnn_simple.params.size(),
+                          "Attempt to copy between two SimpleRNNBuilders that are not the same size");
   for(size_t i = 0; i < rnn_simple.params.size(); ++i) {
       params[i][0] = rnn_simple.params[i][0];
       params[i][1] = rnn_simple.params[i][1];
@@ -150,7 +148,7 @@ void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
 void SimpleRNNBuilder::save_parameters_pretraining(const string& fname) const {
   cerr << "Writing parameters to " << fname << endl;
   ofstream of(fname);
-  if(!of)
+  if (!of)
     DYNET_INVALID_ARG("Could not write parameters to " << fname << " in SimpleRNNBuilder");
   boost::archive::binary_oarchive oa(of);
   std::string id = "SimpleRNNBuilder:params";
@@ -166,7 +164,7 @@ void SimpleRNNBuilder::save_parameters_pretraining(const string& fname) const {
 void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
   cerr << "Loading parameters from " << fname << endl;
   ifstream of(fname);
-  if(!of)
+  if (!of)
     DYNET_INVALID_ARG("Could not load parameters from " << fname << " in SimpleRNNBuilder");
   boost::archive::binary_iarchive ia(of);
   std::string id;
