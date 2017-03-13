@@ -2,7 +2,7 @@
 
 The code in `dynet_swig.i` provides SWIG instructions to wrap salient
 parts of DyNet for use in other languages, in particular Scala (and
-Java). These bindings were developed (and are maintained) by
+Java). These bindings were contributed (and are maintained) by
 researchers from the [Allen Institute for Artificial Intelligence](http://allenai.org).
 
 The SWIG bindings produce Java (in `edu.cmu.dynet.internal`) that slavishly
