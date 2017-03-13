@@ -83,7 +83,8 @@ void ParameterStorage::zero() {
 }
 
 void ParameterStorage::copy(const ParameterStorage & param) {
-  assert(dim == param.dim);
+  if(dim != param.dim)
+    DYNET_INVALID_ARG("Attempt to copy between parameters with mismatched dimensions: " << dim << " != " << param.dim);
   TensorTools::CopyElements(values, param.values);
 }
 
@@ -144,7 +145,8 @@ size_t LookupParameterStorage::size() const {
 }
 
 void LookupParameterStorage::copy(const LookupParameterStorage& param) {
-  assert(all_dim == param.all_dim);
+  if(all_dim != param.all_dim)
+    DYNET_INVALID_ARG("Attempt to copy between lookup parameters with mismatched dimensions: " << all_dim << " != " << param.all_dim);
   TensorTools::CopyElements(all_values, param.all_values);
 }
 
@@ -343,7 +345,7 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, const Par
 
 void Model::set_updated_param(const Parameter *p, bool status) {
   unsigned idx = p->index;
-  assert(idx < params.size());
+  DYNET_ASSERT(idx < params.size(), "Parameter ID " << idx << " is less than parameter size " << params.size());
 
   auto position = std::find(updated_params.begin(), updated_params.end(), idx);
   if (position == updated_params.end()) {
@@ -355,7 +357,7 @@ void Model::set_updated_param(const Parameter *p, bool status) {
 
 void Model::set_updated_lookup_param(const LookupParameter *p, bool status) {
   unsigned idx = p->index;
-  assert(idx < lookup_params.size());
+  DYNET_ASSERT(idx < lookup_params.size(), "LookupParameter ID " << idx << " is less than lookup parameter size " << lookup_params.size());
 
   auto position = std::find(updated_lookup_params.begin(), updated_lookup_params.end(), idx);
   if (position == updated_lookup_params.end()) {
@@ -440,7 +442,7 @@ DYNET_PARAMNORM_INST_DEV_IMPL(ParameterStorage, squared_l2norm, squared_l2norm_d
 // Take the squared norm of the gradient
 template <class MyDevice>
 void ParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
-  assert(g.v != nullptr);
+  DYNET_ASSERT(g.v != nullptr, "Cannot take norm of gradient with null parameter");
   Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
   sqnorm_t.t<0>().device(*dev.edevice) = g.tvec().square().sum();
 }
@@ -492,7 +494,8 @@ void ParameterStorage::scale_parameters(float a) {
 
 template <class MyDevice>
 void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, const vector<float>& val) {
-  assert(int(val.size()) == int(dim.size()));
+  if(int(val.size()) != int(dim.size()))
+    DYNET_INVALID_ARG("Attempt to initialize LookupParameters with vector of wrong size (" << val.size() << " != " << dim.size() << ")");
 #ifdef __CUDACC__
   cudaMemcpyAsync(values[index].v, &val[0], val.size() * sizeof(float), cudaMemcpyHostToDevice);
 #else

@@ -1,6 +1,5 @@
 #include "dynet/grad-check.h"
 
-#include <cassert>
 #include <iostream>
 #include <algorithm>
 

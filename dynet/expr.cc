@@ -115,6 +115,9 @@ Expression pick(const Expression& x, const vector<unsigned> & v, unsigned d) { r
 Expression pick(const Expression& x, const unsigned* pv, unsigned d) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv, d)); }
 Expression pick(const Expression& x, const vector<unsigned> * pv, unsigned d) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv, d)); }
 
+Expression pick_batch(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickBatch>({x.i}, v)); }
+Expression pick_batches(const Expression & x, const std::vector<unsigned>& v) { return Expression(x.pg, x.pg->add_function<PickBatch>({x.i}, v)); }
+
 Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u)); }
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
@@ -126,6 +129,7 @@ Expression average_cols(const Expression& x) { return Expression(x.pg, x.pg->add
 Expression sum_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, d)); }
 Expression sum_rows(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 0)); }
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 1)); }
+Expression sum_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumElements>({x.i})); }
 
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
 
