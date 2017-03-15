@@ -177,4 +177,11 @@ add_subdirectory(tests)
 add_subdirectory(examples)
 add_subdirectory(tutorial)
 add_subdirectory(python)
+
+option(INCLUDE_SWIG "INCLUDE_SWIG" OFF)
+if(INCLUDE_SWIG)
+  message("-- Including SWIG")
+  add_subdirectory(contrib/swig)
+endif(INCLUDE_SWIG)
+
 enable_testing()
