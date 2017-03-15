@@ -83,7 +83,7 @@ void ParameterStorage::zero() {
 }
 
 void ParameterStorage::copy(const ParameterStorage & param) {
-  DYNET_INVALID_ARG_CHECK(dim != param.dim,
+  DYNET_INVALID_ARG_CHECK(dim == param.dim,
                           "Attempt to copy between parameters with mismatched dimensions: " << dim << " != " << param.dim);
   TensorTools::CopyElements(values, param.values);
 }
@@ -494,7 +494,7 @@ void ParameterStorage::scale_parameters(float a) {
 
 template <class MyDevice>
 void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, const vector<float>& val) {
-  DYNET_INVALID_ARG_CHECK(int(val.size()) != int(dim.size()),
+  DYNET_INVALID_ARG_CHECK(int(val.size()) == int(dim.size()),
                           "Attempt to initialize LookupParameters with vector of wrong size "
                           "(" << val.size() << " != " << dim.size() << ")");
 #ifdef __CUDACC__
