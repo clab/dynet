@@ -287,8 +287,7 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
       Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = fx.d[1]/xs[0]->d[1]; bcast[2] = fx.d.bd/xs[0]->d.bd;
       fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcast);
 #else
-      DYNET_INVALID_ARG_CHECK(xs[0]->d.bd != 1,
-                              "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
+      DYNET_INVALID_ARG_CHECK(xs[0]->d.bd == 1, "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
       float *curr_ptr = fx.v, *end_ptr = curr_ptr + fx.d.size(), *in_ptr = xs[0]->v;
       do {
         memcpy(curr_ptr, in_ptr, sizeof(float)*b_size);
@@ -332,8 +331,7 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
     if(dx_size == df_size) {
       dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
     } else {
-      DYNET_INVALID_ARG_CHECK(dEdxi.d.bd != 1, 
-                              "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
+      DYNET_INVALID_ARG_CHECK(dEdxi.d.bd == 1, "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
 #ifdef __CUDACC__
       if(dEdxi.d[1] == dEdf.d[1]) {
         Eigen::array<int, 1> red_axis; red_axis[0] = 2;
@@ -826,7 +824,7 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
   Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   // TODO: Can we do this on device?
   if(pelement != nullptr) {
-    DYNET_INVALID_ARG_CHECK(fx.d.bd != 1,
+    DYNET_INVALID_ARG_CHECK(fx.d.bd == 1, 
                             "Hinge was passed a single index but the corresponding expression has multiple mini-batch elements (" << fx.d.bd << ")");
     const real mlystar = margin - TensorTools::AccessElement(*xs[0], *pelement);
     eloss.tvec().device(*dev.edevice) = (xs[0]->tvec() + mlystar).cwiseMax(0.f);
@@ -834,7 +832,7 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
     fx.t<0>().device(*dev.edevice) = eloss.tvec().sum();
   } else {
     DYNET_ASSERT(pelements != nullptr, "Hinge::forward has neither pointer to single element nor vector");
-    DYNET_INVALID_ARG_CHECK(xs[0]->d.bd != pelements->size(),
+    DYNET_INVALID_ARG_CHECK(xs[0]->d.bd == pelements->size(),
                             "The list of indexes passed to Hinge has a length (" << pelements->size() <<
                             ") that doesn't match the number of mini-batch elements in the corresponding expression (" << xs[0]->d << ")");
     size_t batch_size = xs[0]->d.batch_size();
@@ -1418,18 +1416,18 @@ DYNET_NODE_INST_DEV_IMPL(PairwiseRankLoss)
 template<class MyDevice>
 void PickElement::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if(pval) {
-    DYNET_INVALID_ARG_CHECK(*pval >= xs[0]->d[dimension], 
+    DYNET_INVALID_ARG_CHECK(*pval < xs[0]->d[dimension], 
                             "PickElement::forward_impl requested element " << *pval << " from a dimension of length " << xs[0]->d[dimension]);
     // TODO: This limit of up to 4 is somewhat arbitrary. We need to decide how to handle
     //       things with "maximum tensor size".
     fx.tb<3>().device(*dev.edevice) = xs[0]->tb<4>().chip(*pval, dimension); 
   } else {
     DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickElement::forward");
-    DYNET_INVALID_ARG_CHECK(pvals->size() != fx.d.batch_elems(),
+    DYNET_INVALID_ARG_CHECK(pvals->size() == fx.d.batch_elems(),
                             "In PickElement::forward, number of elements in the passed-in index vector (" <<  pvals->size() << ")"
                             " did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
     for(unsigned b = 0; b < pvals->size(); ++b) {
-      DYNET_INVALID_ARG_CHECK((*pvals)[b] >= xs[0]->d[dimension], 
+      DYNET_INVALID_ARG_CHECK((*pvals)[b] < xs[0]->d[dimension], 
                               "PickElement::forward_impl requested element " << (*pvals)[b] << " from a dimension of length " << xs[0]->d[dimension]);
       fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip((*pvals)[b], dimension); 
     }
@@ -1444,7 +1442,7 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ASSERT(i == 0, "Failed dimension check in PickElement::backward");
+  DYNET_INVALID_ARG_CHECK(i == 0, "Failed dimension check in PickElement::backward");
   if(pval) {
     dEdxi.tb<3>().chip(*pval, dimension).device(*dev.edevice) += dEdf.tb<2>();
   } else {
@@ -1470,9 +1468,9 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
       *ids_host = *pval;
     } else {
       DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickNegLogSoftmax::forward");
-      DYNET_INVALID_ARG_CHECK(pvals->size() != fx.d.batch_elems(), 
-                               "In PickNegLogSoftmax::forward, number of elements in the passed-in index vector (" << pvals->size() << ")"
-                               " did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
+      DYNET_INVALID_ARG_CHECK(pvals->size() == fx.d.batch_elems(), 
+                              "In PickNegLogSoftmax::forward, number of elements in the passed-in index vector (" << pvals->size() << ")"
+                              " did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
       size_t batch_size = xs[0]->d.batch_size();
       for(unsigned b = 0; b < fx.d.bd; ++b)
         ids_host[b] = batch_size * b + (*pvals)[b];
@@ -1552,11 +1550,11 @@ void PickBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
     fx.tvec().device(*dev.edevice) = xs[0]->tbvec().chip<1>(*pval);
   } else {
     DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickBatch::forward");
-    DYNET_INVALID_ARG_CHECK(pvals->size() != fx.d.batch_elems(), 
-                            "In PickBatch::forward, number of elements in the passed-in index vector (" << pvals->size() << ")"
-                            " did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
+    DYNET_INVALID_ARG_CHECK(pvals->size() == fx.d.batch_elems(), 
+                            "In PickBatch::forward, number of elements in the passed-in index vector (" << pvals->size() << ") "
+                            "did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
     for (unsigned b = 0; b < pvals->size(); ++b) {
-      DYNET_INVALID_ARG_CHECK((*pvals)[b] >= xs[0]->d.bd,
+      DYNET_INVALID_ARG_CHECK((*pvals)[b] < xs[0]->d.bd,
                               "PickBatch::forward_impl requested element " << (*pvals)[b] << " from a batch size of " << xs[0]->d.nd);
       fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[0]->tbvec().chip<1>((*pvals)[b]);
     }
@@ -1603,7 +1601,7 @@ DYNET_NODE_INST_DEV_IMPL(PoissonRegressionLoss)
 
 template<class MyDevice>
 void Pow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in Pow::forward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 2, "Failed dimension check in Pow::forward");
   fx.tvec().device(*dev.edevice) = xs[0]->tvec().pow(as_scalar(*xs[1]));
 }
 
@@ -1614,7 +1612,7 @@ void Pow::backward_dev_impl(const MyDevice & dev,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
-  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in Pow::backward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 2, "Failed dimension check in Pow::backward");
   real x2 = as_scalar(*xs[1]);
   if (i == 0) {
     dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().pow(x2 - 1) * dEdf.tvec() * x2;
@@ -1631,7 +1629,7 @@ DYNET_NODE_INST_DEV_IMPL(Pow)
 
 template<class MyDevice>
 void Rectify::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in Rectify::forward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in Rectify::forward");
   fx.tvec().device(*dev.edevice) = xs[0]->tvec().cwiseMax(0.f);
 }
 
@@ -1708,10 +1706,10 @@ DYNET_NODE_INST_DEV_IMPL(RestrictedLogSoftmax)
 
 template<class MyDevice>
 void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SelectCols::forward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectCols::forward");
   auto& rm = *pcols;
   for (unsigned i = 0; i < rm.size(); ++i) {
-    DYNET_INVALID_ARG_CHECK(rm[i] >= xs[0]->d.cols(),
+    DYNET_INVALID_ARG_CHECK(rm[i] < xs[0]->d.cols(),
                             "Out-of-bounds index " << rm[i] << " in SelectCols over expression of dimensions " << xs[0]->d);
     fx.t<2>().chip<1>(i).device(*dev.edevice) = xs[0]->t<2>().chip<1>(rm[i]);
   }
@@ -1724,7 +1722,7 @@ void SelectCols::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SelectCols::backward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectCols::backward");
   auto& rm = *pcols;
   for (unsigned i = 0; i < rm.size(); ++i)
     dEdxi.t<2>().chip<1>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<1>(i);
@@ -1733,10 +1731,10 @@ DYNET_NODE_INST_DEV_IMPL(SelectCols)
 
 template<class MyDevice>
 void SelectRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SelectRows::forward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectRows::forward");
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i) {
-    DYNET_INVALID_ARG_CHECK(rm[i] >= xs[0]->d.rows(),
+    DYNET_INVALID_ARG_CHECK(rm[i] < xs[0]->d.rows(),
                             "Out-of-bounds index " << rm[i] << " in SelectRows over expression of dimensions " << xs[0]->d);
     fx.t<2>().chip<0>(i).device(*dev.edevice) = xs[0]->t<2>().chip<0>(rm[i]);
   }
@@ -1749,7 +1747,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SelectRows::backward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectRows::backward");
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
     dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<0>(i);
@@ -1758,7 +1756,7 @@ DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
 template<class MyDevice>
 void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in Softmax::forward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in Softmax::forward");
   Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
   logsumexp(dev, *xs[0], m, z);
@@ -1787,7 +1785,7 @@ DYNET_NODE_INST_DEV_IMPL(Softmax)
 
 template<class MyDevice>
 void SoftSign::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SoftSign::forward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in SoftSign::forward");
   fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FSoftSign());
 }
 
@@ -2054,7 +2052,7 @@ DYNET_NODE_INST_DEV_IMPL(Sum)
 
 template<class MyDevice>
 void SumElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SumElements::forward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in SumElements::forward");
   Eigen::array<int, 1> red_axis; red_axis[0] = 0;
   fx.tb<0>().device(*dev.edevice) = xs[0]->tbvec().sum(red_axis);
 }
@@ -2066,7 +2064,7 @@ void SumElements::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ASSERT(i == 0, "Failed dimension check in SumElements::backward");
+  DYNET_INVALID_ARG_CHECK(i == 0, "Failed dimension check in SumElements::backward");
   Eigen::array<int, 2> bcast = {(int)xs[0]->d.batch_size(), 1};
   dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec().broadcast(bcast);
 }
@@ -2074,7 +2072,7 @@ DYNET_NODE_INST_DEV_IMPL(SumElements)
 
 template<class MyDevice>
 void SumBatches::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SumBatches::forward");
+  DYNET_INVALID_ARG_CHECK(xs.size() == 1, "Failed dimension check in SumBatches::forward");
   unsigned num_args = xs[0]->d.bd;
 #ifdef __CUDACC__
   Eigen::array<int, 1> red_axis; red_axis[0] = 2;
@@ -2101,7 +2099,7 @@ void SumBatches::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ASSERT(i == 0, "Failed dimension check in SumBatches::backward");
+  DYNET_INVALID_ARG_CHECK(i == 0, "Failed dimension check in SumBatches::backward");
 #if __CUDACC__
   Eigen::array<int, 3> bcast({1, 1, (int)fx.d.bd});
   dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().broadcast(bcast);
@@ -2130,7 +2128,7 @@ void TraceOfProduct::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ASSERT(i < 2, "Failed dimension check in TraceOfProduce::backward");
+  DYNET_INVALID_ARG_CHECK(i < 2, "Failed dimension check in TraceOfProduce::backward");
 #ifdef __CUDACC__
   DYNET_RUNTIME_ERR("TraceOfProduct not yet implemented for CUDA");
 #else
