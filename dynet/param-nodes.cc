@@ -65,7 +65,7 @@ string SparseInputNode::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SparseInputNode::dim_forward(const vector<Dim>& xs) const {
-  DYNET_INVALID_ARG_CHECK(ids.size() != data.size(),
+  DYNET_INVALID_ARG_CHECK(ids.size() == data.size(),
                           "Mismatch between size of ids (" << ids.size() << ") and size of data (" << data.size() << ") in SparseInput");
   return dim;
 }
@@ -238,13 +238,13 @@ template<class MyDevice>
 void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   if(pindex) {
-    DYNET_INVALID_ARG_CHECK(*pindex >= params.get()->values.size(),
+    DYNET_INVALID_ARG_CHECK(*pindex < params.get()->values.size(),
                             "Out-of-bounds attempt to access index " << *pindex << " for LookupParameter of size " << params.get()->values.size());
     DYNET_ASSERT(fx.d.batch_elems() == 1, "Batch dimension > 1 for lookup with single index");
     fx.tvec().device(*dev.edevice) = params.get()->values[*pindex].tvec() * params.mp->weight_decay.current_weight_decay();
   } else {
     DYNET_ASSERT(pindices, "Have neither index nor index vector in LookupNode");
-    DYNET_INVALID_ARG_CHECK(fx.d.batch_elems() != pindices->size(),
+    DYNET_INVALID_ARG_CHECK(fx.d.batch_elems() == pindices->size(),
                             "In LookupNode, in index vector size (" << pindices->size() << ") "
                             "doesn't match batch size in expressions (" << fx.d.batch_elems() << ")");
 #if __CUDACC__
@@ -253,7 +253,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
 #else
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
-      DYNET_INVALID_ARG_CHECK(i >= params.get()->values.size(),
+      DYNET_INVALID_ARG_CHECK(i < params.get()->values.size(),
                               "Out-of-bounds attempt to access index " << i << " for LookupParameter of size " << params.get()->values.size());
       fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get()->values[i].t<2>() * params.mp->weight_decay.current_weight_decay();
     }

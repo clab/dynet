@@ -72,12 +72,12 @@ void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
 void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   h.clear();
   h0 = h_0;
-  DYNET_INVALID_ARG_CHECK(h0.size() && h0.size() != layers,
+  DYNET_INVALID_ARG_CHECK(h0.empty() || h0.size() == layers,
                           "Number of inputs passed to initialize RNNBuilder (" << h0.size() << ") is not equal to the number of layers (" << layers << ")");
 }
 
 Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  DYNET_INVALID_ARG_CHECK(h_new.size() && h_new.size() != layers,
+  DYNET_INVALID_ARG_CHECK(h_new.empty() || h_new.size() == layers,
                           "Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() << ") is not equal to the number of layers (" << layers << ")");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
@@ -136,12 +136,12 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
 
 void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
   const SimpleRNNBuilder & rnn_simple = (const SimpleRNNBuilder&)rnn;
-  DYNET_INVALID_ARG_CHECK(params.size() != rnn_simple.params.size(),
+  DYNET_INVALID_ARG_CHECK(params.size() == rnn_simple.params.size(),
                           "Attempt to copy between two SimpleRNNBuilders that are not the same size");
   for(size_t i = 0; i < rnn_simple.params.size(); ++i) {
-      params[i][0] = rnn_simple.params[i][0];
-      params[i][1] = rnn_simple.params[i][1];
-      params[i][2] = rnn_simple.params[i][2];
+    params[i][0] = rnn_simple.params[i][0];
+    params[i][1] = rnn_simple.params[i][1];
+    params[i][2] = rnn_simple.params[i][2];
   }
 }
 
