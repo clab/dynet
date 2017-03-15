@@ -46,7 +46,7 @@ public:
   }
   
   inline const std::string& convert(const int& id) const {
-    DYNET_INVALID_ARG_CHECK(id >= (int)words_.size(), 
+    DYNET_INVALID_ARG_CHECK(id < (int)words_.size(), 
                             "Out-of-bounds error in Dict::convert for word ID " << id <<
                             " (dict size: " << words_.size() << ")");
     return words_[id];
