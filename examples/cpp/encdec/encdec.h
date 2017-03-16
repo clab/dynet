@@ -83,7 +83,7 @@ public:
     /**
      * \brief Creates an EncoderDecoder
      *
-     * \param model Model holding the parameters
+     * \param model ParameterCollection holding the parameters
      * \param num_layers Number of layers (same in the ecoder and decoder)
      * \param input_dim Dimension of the word/char embeddings
      * \param hidden_dim Dimension of the hidden states
@@ -93,7 +93,7 @@ public:
      * of size num_layers * hidden_dim compatible with the decoder
      *
      */
-    explicit EncoderDecoder(Model& model,
+    explicit EncoderDecoder(ParameterCollection& model,
                             unsigned num_layers,
                             unsigned input_dim,
                             unsigned hidden_dim,

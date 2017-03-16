@@ -35,7 +35,7 @@ struct RNNLanguageModel {
   LookupParameter p_c;
   Builder builder;
   ClassFactoredSoftmaxBuilder& cfsm;
-  explicit RNNLanguageModel(Model& model, ClassFactoredSoftmaxBuilder& h) :
+  explicit RNNLanguageModel(ParameterCollection& model, ClassFactoredSoftmaxBuilder& h) :
       p_c(model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
       builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
       cfsm(h) {}
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
   }
   kSOS = d.convert("<s>");
   kEOS = d.convert("</s>");
-  Model model;
+  ParameterCollection model;
   ClassFactoredSoftmaxBuilder cfsm(HIDDEN_DIM, argv[3], d, model);
   vector<vector<int>> training, dev;
   string line;

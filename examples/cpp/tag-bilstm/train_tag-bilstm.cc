@@ -47,7 +47,7 @@ struct RNNLanguageModel {
   Parameter p_tbias;
   Builder l2rbuilder;
   Builder r2lbuilder;
-  explicit RNNLanguageModel(Model& model) :
+  explicit RNNLanguageModel(ParameterCollection& model) :
       l2rbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
       r2lbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_w = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   bool use_momentum = true;
   Trainer* sgd = nullptr;
   if (use_momentum)

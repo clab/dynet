@@ -37,7 +37,7 @@ struct NeuralBagOfWords {
   Parameter p_h2o;
   Parameter p_obias;
 
-  explicit NeuralBagOfWords(Model& m) :
+  explicit NeuralBagOfWords(ParameterCollection& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
       p_c2h(m.add_parameters({OUTPUT_DIM, INPUT_DIM})),
       p_hbias(m.add_parameters({OUTPUT_DIM})),
@@ -66,7 +66,7 @@ struct ConvLayer {
   // filter_width = length of filter (columns)
   // in_nfmaps = number of feature maps in input
   // out_nfmaps = number of feature maps in output
-  ConvLayer(Model& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
+  ConvLayer(ParameterCollection& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
       p_filts(in_nfmaps),
       p_fbias(in_nfmaps),
       k_fold_rows(k_fold_rows) {
@@ -122,9 +122,9 @@ struct ConvNet {
   Parameter p_t2o;
   Parameter p_obias;
 
-  explicit ConvNet(Model& m) :
+  explicit ConvNet(ParameterCollection& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
-  //ConvLayer(Model& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
+  //ConvLayer(ParameterCollection& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
       cl1(m, INPUT_DIM, 2,  10, 1, 6),
       cl2(m, INPUT_DIM/2, 2, 6, 6, 14),
       p_t2o(m.add_parameters({LABEL_SIZE, 14 * (INPUT_DIM / 4) * 5})),
@@ -234,7 +234,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   Trainer* sgd = nullptr;
   //sgd = new MomentumSGDTrainer(model);
   sgd = new AdagradTrainer(model);
@@ -293,7 +293,7 @@ int main(int argc, char** argv) {
       for (auto& sent : dev) {
         const auto& x = sent.first;
         const int y = sent.second;
-        nbow.p_t2o.get()->scale_parameters(pdropout);
+        nbow.p_t2o.get_storage().scale_parameters(pdropout);
         ComputationGraph cg;
         Expression y_pred = nbow.BuildClassifier(x, cg, false);
         if (IsCurrentPredictionCorrection(y_pred, y)) dcorr++;
@@ -301,7 +301,7 @@ int main(int argc, char** argv) {
         Expression loss_expr = HingeLoss(y_pred, y);
         //cerr << "DEVLINE: " << dtags << endl;
         dloss += as_scalar(cg.incremental_forward(loss_expr));
-        nbow.p_t2o.get()->scale_parameters(1.f/pdropout);
+        nbow.p_t2o.get_storage().scale_parameters(1.f/pdropout);
         dtags++;
       }
       if (dloss < best) {

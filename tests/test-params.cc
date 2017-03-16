@@ -44,7 +44,7 @@ struct ParamsTest {
 BOOST_FIXTURE_TEST_SUITE(params_test, ParamsTest);
 
 BOOST_AUTO_TEST_CASE( init_saxe ) {
-    dynet::Model mod;
+    dynet::ParameterCollection mod;
     // Random orthogonal matrix scaled by gain
     dynet::Parameter saxe_p = mod.add_parameters({10, 10}, ParameterInitSaxe(gain));
     // gain^2 * identity matrix

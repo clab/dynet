@@ -6,14 +6,14 @@
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 
 struct GRUBuilder : public RNNBuilder {
   GRUBuilder() = default;
   explicit GRUBuilder(unsigned layers,
                       unsigned input_dim,
                       unsigned hidden_dim,
-                      Model& model);
+                      ParameterCollection& model);
   Expression back() const override { return (cur == -1? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const override { return final_h(); }

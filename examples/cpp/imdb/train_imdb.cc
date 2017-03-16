@@ -62,7 +62,7 @@ struct DocumentModel {
   Parameter p_h2o;
   Parameter p_obias;
 
-  DocumentModel(Model & m) :
+  DocumentModel(ParameterCollection & m) :
     p_w(m.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM })),
     fwd_sent_builder(N_LAYERS, INPUT_DIM, SENTENCE_DIM, m),
     bwd_sent_builder(N_LAYERS, INPUT_DIM, SENTENCE_DIM, m),
@@ -239,7 +239,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   Trainer* sgd = nullptr;
   sgd = new AdamTrainer(model);
 

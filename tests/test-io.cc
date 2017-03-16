@@ -42,14 +42,14 @@ struct IOTest {
 BOOST_FIXTURE_TEST_SUITE(io_test, IOTest);
 
 BOOST_AUTO_TEST_CASE( simple_rnn_io ) {
-    dynet::Model mod1;
+    dynet::ParameterCollection mod1;
     dynet::SimpleRNNBuilder rnn1(1, 10, 10, mod1);
     std::ofstream out(filename);
     boost::archive::text_oarchive oa(out);
     oa << mod1 << rnn1;
     out.close();
 
-    dynet::Model mod2;
+    dynet::ParameterCollection mod2;
     dynet::SimpleRNNBuilder rnn2;
 
     ifstream in(filename);
@@ -59,14 +59,14 @@ BOOST_AUTO_TEST_CASE( simple_rnn_io ) {
 }
 
 BOOST_AUTO_TEST_CASE( vanilla_lstm_io ) {
-    dynet::Model mod1;
+    dynet::ParameterCollection mod1;
     dynet::VanillaLSTMBuilder rnn1(1, 10, 10, mod1);
     std::ofstream out(filename);
     boost::archive::text_oarchive oa(out);
     oa << mod1 << rnn1;
     out.close();
 
-    dynet::Model mod2;
+    dynet::ParameterCollection mod2;
     dynet::VanillaLSTMBuilder rnn2;
 
     BOOST_CHECK(rnn2.input_dim == 0);
@@ -82,14 +82,14 @@ BOOST_AUTO_TEST_CASE( vanilla_lstm_io ) {
 }
 
 BOOST_AUTO_TEST_CASE( lstm_io ) {
-    dynet::Model mod1;
+    dynet::ParameterCollection mod1;
     dynet::LSTMBuilder rnn1(1, 10, 10, mod1);
     std::ofstream out(filename);
     boost::archive::text_oarchive oa(out);
     oa << mod1 << rnn1;
     out.close();
 
-    dynet::Model mod2;
+    dynet::ParameterCollection mod2;
     dynet::LSTMBuilder rnn2;
 
     BOOST_CHECK(rnn2.input_dim == 0);

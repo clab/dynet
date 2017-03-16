@@ -91,7 +91,7 @@ struct PrefixCode {
     return cur;
   }
 
-  void AllocateParameters_rec(Model& m, unsigned dim, PrefixNode* n) {
+  void AllocateParameters_rec(ParameterCollection& m, unsigned dim, PrefixNode* n) {
     if (!n->terminal) {
       if (!n->zero_child || !n->one_child) {
         cerr << "Non-binary production in prefix code\n";
@@ -106,7 +106,7 @@ struct PrefixCode {
     }
   }
 
-  void AllocateParameters(Model& m, unsigned dim) {
+  void AllocateParameters(ParameterCollection& m, unsigned dim) {
     params_allocated = true;
     AllocateParameters_rec(m, dim, &root);
   }
@@ -117,7 +117,7 @@ struct PrefixCode {
 
 // returns embeddings of labels
 struct SymbolEmbedding {
-  SymbolEmbedding(Model& m, unsigned n, unsigned dim) {
+  SymbolEmbedding(ParameterCollection& m, unsigned n, unsigned dim) {
     p_labels = m.add_lookup_parameters(n, {dim});
   }
   void new_graph(ComputationGraph& g) { cg = &g; }
@@ -132,7 +132,7 @@ struct PrefixCodeDecoder {
   LSTMBuilder decoder;
   PrefixCode* pfc;
   Parameter p_start;
-  explicit PrefixCodeDecoder(Model& model, PrefixCode* pc) :
+  explicit PrefixCodeDecoder(ParameterCollection& model, PrefixCode* pc) :
       decoder(LAYERS, CHAR_DIM, EMBED_DIM, model), pfc(pc) {
     p_start = model.add_parameters({EMBED_DIM});
   }
@@ -176,7 +176,7 @@ struct BiCharLSTM {
   Parameter p_xb;
   SymbolEmbedding sym;
 
-  explicit BiCharLSTM(Model& model) :
+  explicit BiCharLSTM(ParameterCollection& model) :
       l2rbuilder(LAYERS, CHAR_DIM, EMBED_DIM, model),
       r2lbuilder(LAYERS, CHAR_DIM, EMBED_DIM, model),
       sym(model, d.size(), CHAR_DIM) {
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
     cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
     return 1;
   }
-  Model model;
+  ParameterCollection model;
   Trainer* sgd = nullptr;
   sgd = new SimpleSGDTrainer(model);
   vector<pair<string,vector<unsigned>>> training;

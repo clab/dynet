@@ -37,7 +37,7 @@ struct RNNLengthPredictor {
   Parameter p_R;
   Parameter p_bias;
   Builder builder;
-  explicit RNNLengthPredictor(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
+  explicit RNNLengthPredictor(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
     p_R = model.add_parameters({1, HIDDEN_DIM});
     p_bias = model.add_parameters({1});
@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   Trainer* sgd = nullptr;
   sgd = new SimpleSGDTrainer(model);
 

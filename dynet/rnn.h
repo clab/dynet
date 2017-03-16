@@ -20,7 +20,7 @@ using namespace dynet::expr;
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 
 BOOST_STRONG_TYPEDEF(int, RNNPointer)
 inline void swap(RNNPointer& i1, RNNPointer& i2) {
@@ -303,13 +303,13 @@ struct SimpleRNNBuilder : public RNNBuilder {
    * \param layers Number of layers
    * \param input_dim Dimension of the input
    * \param hidden_dim Hidden layer (and output) size
-   * \param model Model holding the parameters
+   * \param model ParameterCollection holding the parameters
    * \param support_lags Allow for auxiliary output?
    */
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
-                            Model& model,
+                            ParameterCollection& model,
                             bool support_lags = false);
 
 protected:

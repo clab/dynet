@@ -34,7 +34,7 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
                          unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) : layers(layers), N(N), cg(nullptr) {
+                         ParameterCollection& model) : layers(layers), N(N), cg(nullptr) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
@@ -99,8 +99,8 @@ void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
     vector<vector<Expression>> lvars(lp.size());
     for (unsigned p_type = H2I; p_type <= C2O; p_type++) {
     LookupParameter p = lp[p_type];
-      vector<Expression> vals(p.get()->values.size());
-      for (unsigned k = 0; k < p.get()->values.size(); ++k) {
+      vector<Expression> vals(p.get_storage().values.size());
+      for (unsigned k = 0; k < p.get_storage().values.size(); ++k) {
         //vals[k] = lookup(cg, p, k);
         vals[k].i = 0;
       }
@@ -288,7 +288,7 @@ DYNET_SERIALIZE_IMPL(NaryTreeLSTMBuilder);
 UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) {
+                         ParameterCollection& model) {
   node_builder = LSTMBuilder(layers, input_dim, hidden_dim, model);
 }
 
@@ -324,7 +324,7 @@ DYNET_SERIALIZE_IMPL(UnidirectionalTreeLSTMBuilder);
 BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) {
+                         ParameterCollection& model) {
   DYNET_ASSERT(hidden_dim % 2 == 0, "Failed dimension check in TreeLSTMBuilder");
   fwd_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);
   rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);

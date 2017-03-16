@@ -5,11 +5,11 @@
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 struct ComputationGraph;
 
 // verbosity is zero for silence, one for only printing errors, two for everything
-bool check_grad(Model& m, expr::Expression& expr, int verbosity = 1);
+bool check_grad(ParameterCollection& m, expr::Expression& expr, int verbosity = 1);
 
 } // namespace dynet
 

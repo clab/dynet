@@ -21,7 +21,7 @@ Namely: C2O, C2I.
 FastLSTMBuilder::FastLSTMBuilder(unsigned layers,
                                  unsigned input_dim,
                                  unsigned hidden_dim,
-                                 Model& model) : layers(layers) {
+                                 ParameterCollection& model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i

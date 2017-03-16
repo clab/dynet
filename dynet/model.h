@@ -27,6 +27,7 @@ namespace dynet {
 //   set of discrete objects. These are sparsely updated.
 
 struct ParameterInit;
+class ParameterCollection;
 
 /**
  * \ingroup params
@@ -35,7 +36,7 @@ struct ParameterInit;
  *
  */
 struct ParameterStorageBase {
-  friend class Model;
+  friend class ParameterCollection;
   /**
    * @brief Scale the parameters
    *
@@ -59,6 +60,11 @@ struct ParameterStorageBase {
    */
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
   /**
+   * @brief Check whether corpus is updated
+   *
+   */
+  virtual bool is_updated() const = 0;
+  /**
    * @brief Get the size (number of scalar parameters)
    * @return Number of scalar parameters
    */
@@ -73,7 +79,7 @@ struct ParameterStorageBase {
  * \brief Storage class for Parameters
  */
 struct ParameterStorage : public ParameterStorageBase {
-  friend class Model;
+  friend class ParameterCollection;
   template <class MyDevice>
   void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
@@ -105,14 +111,16 @@ struct ParameterStorage : public ParameterStorageBase {
    */
   void clear();
 
+  bool is_updated() const override { return updated; }
+
   Dim dim; /**< Dimensions of the parameter tensor*/
   Tensor values;/**< Values of the parameter */
   Tensor g;/**< Values of the gradient w.r.t. this parameter */
+  bool updated; /**< Whether this is updated */
+  ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
 
 private:
-  ParameterStorage() {}
-  explicit ParameterStorage(const Dim& d, float minmax); // initialize with ~U(-minmax,+minmax)
-  // or Glorot initialization if minmax = 0
+  ParameterStorage() : updated(true), owner(nullptr) {}
   explicit ParameterStorage(const Dim& d, const ParameterInit & init); // initialize with custom initializer
   DYNET_SERIALIZE_DECLARE()
 };
@@ -124,7 +132,7 @@ private:
  * 
  */
 struct LookupParameterStorage : public ParameterStorageBase {
-  friend class Model;
+  friend class ParameterCollection;
   template <class MyDevice>
   void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
@@ -190,6 +198,8 @@ struct LookupParameterStorage : public ParameterStorageBase {
   // Initialize each individual lookup from the overall tensors
   void initialize_lookups();
 
+  bool is_updated() const override { return updated; }
+
   // Tensors for all dimensions at once
   Dim all_dim; /**< Total dimension */
   Tensor all_values; /**< Values for all dimensions at once */
@@ -200,19 +210,20 @@ struct LookupParameterStorage : public ParameterStorageBase {
   std::vector<Tensor> grads; /**< List of gradient values for each lookup */
   // gradients are sparse, so track which components are nonzero
   std::unordered_set<unsigned> non_zero_grads; /**< Gradients are sparse, so track which components are nonzero */
+  bool updated; /**< Whether this lookup parameter should be updated */
   bool all_updated; /** Whether all of the gradients have been updated. */
+  ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
 private:
-  LookupParameterStorage() : all_updated(false) {}
-  LookupParameterStorage(unsigned n, const Dim& d);
+  LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
   LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init);
   DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
-class Model;
+class ParameterCollection;
 /**
  * \ingroup params
  * \brief Object representing a trainable parameter
- * \details This objects acts as a high level component linking the actual parameter values (ParameterStorage) and the Model. As long as you don't want to do low level hacks at the ParameterStorage level, this is what you will use.
+ * \details This objects acts as a high level component linking the actual parameter values (ParameterStorage) and the ParameterCollection. As long as you don't want to do low level hacks at the ParameterStorage level, this is what you will use.
  *
  */
 struct Parameter {
@@ -224,37 +235,40 @@ struct Parameter {
    * @brief Constructor
    * @details This is called by the model, you shouldn't need to use it
    *
-   * @param mp Pointer to th model
-   * @param index Id of the parameter
+   * @param p Pointer to the parameter storage
    */
-  Parameter(Model* mp, unsigned long index);
+  Parameter(ParameterStorage* p);
   /**
    * @brief Get underlying ParameterStorage object
    * @return ParameterStorage holding the parameter values
    */
-  ParameterStorage* get() const;
+  ParameterStorage& get_storage() const;
 
   /**
    * \brief Zero the parameters
    */
   void zero();
 
-  Model* mp;/**< Pointer to the Model holding this parameter */
-  unsigned long index;/**< Index of this parameter in its Model*/
+  ParameterStorage* p; /**< Pointer to the storage for this Parameter */
 
   /**
    * \brief Shape of the parameter
    *
    * \return Shape as a `Dim` object
    */
-  Dim dim() const { return get()->dim; }
+  Dim dim() const { return get_storage().dim; }
 
   /**
    * \brief Values of the parameter
    *
    * \return Values as a `Tensor` object
    */
-  Tensor* values() { return &(get()->values); }
+  Tensor* values() { return &(get_storage().values); }
+
+  /**
+   * \brief Get the current weight decay for the parameters
+   */
+  float current_weight_decay() const;
 
   /**
    * @brief Set the parameter as updated
@@ -279,12 +293,12 @@ private:
  */
 struct LookupParameter {
   LookupParameter();
-  LookupParameter(Model* mp, unsigned long index);
+  LookupParameter(LookupParameterStorage* p);
   /**
    * @brief Get underlying LookupParameterStorage object
    * @return LookupParameterStorage holding the parameter values
    */
-  LookupParameterStorage* get() const;
+  LookupParameterStorage& get_storage() const;
   /**
    * @brief Initialize one particular column
    *
@@ -298,21 +312,25 @@ struct LookupParameter {
    */
   void zero();
 
-  Model* mp;/**< Pointer to the Model holding this parameter */
-  unsigned long index;/**< Index of this parameter in its Model*/
+  LookupParameterStorage* p; /**< Pointer to the storage for this Parameter */
 
   /**
    * \brief Shape of the lookup parameter
    *
    * \return Shape as a `Dim` object
    */
-  Dim dim() const { return get()->dim; }
+  Dim dim() const { return get_storage().dim; }
   /**
    * \brief Values of the lookup parameter
    *
    * \return Values as a `Tensor` object
    */
-  std::vector<Tensor>* values() { return &(get()->values); }
+  std::vector<Tensor>* values() { return &(get_storage().values); }
+
+  /**
+   * \brief Get the current weight decay for the parameters
+   */
+  float current_weight_decay() const;
 
   /**
   * @brief Set the parameter as updated
@@ -490,7 +508,29 @@ private:
   std::vector<float> vec;
 };
 
+// This is an internal class to store parameters in the collection
+struct ParameterCollectionStorage {
 
+  ParameterCollectionStorage();
+
+  ~ParameterCollectionStorage();
+
+  void project_weights(float radius = 1.0f);
+
+  template <class MyDevice>
+  float gradient_l2_norm_dev(MyDevice & dev) const;
+  float gradient_l2_norm() const;
+
+  std::vector<ParameterStorageBase*> all_params;
+  std::vector<ParameterStorage*> params;
+  std::vector<LookupParameterStorage*> lookup_params;
+
+  mutable float* gradient_norm_scratch;
+  L2WeightDecay weight_decay;
+private:
+  DYNET_SERIALIZE_DECLARE()
+
+};
 
 // this is a collection of parameters
 // if you need a matrix of parameters, or a lookup table - ask an instance of this class
@@ -503,15 +543,16 @@ private:
  * This knows how to serialize itself.
  * Parameters know how to track their gradients, but any extra information (like velocity) will live here
  */
-class Model {
+class ParameterCollection {
 public:
+  friend struct Parameter;
+  friend struct LookupParameter;
+
   /**
    * \brief Constructor
    */
-  Model();
-  ~Model();
-  template <class MyDevice>
-  float gradient_l2_norm_dev(MyDevice & dev) const;
+  ParameterCollection();
+  ~ParameterCollection();
   /**
    * \brief Returns the l2 of your gradient
    * \details Use this to look for gradient vanishing/exploding
@@ -582,27 +623,13 @@ public:
    * \details You shouldn't need to use this
    * \return List of pointers to ParameterSorages
    */
-  const std::vector<ParameterStorage*>& parameters_list() const { return params; }
+  const std::vector<ParameterStorage*>& parameters_list() const { return get_storage().params; }
   /**
    * \brief Returns list of pointers to LookupParameterSorages
    * \details You shouldn't need to use this
    * \return List of pointers to LookupParameterSorages
    */
-  const std::vector<LookupParameterStorage*>& lookup_parameters_list() const { return lookup_params; }
-
-  // indexes into params and lookup_params
-  /**
-   * \brief Returns list of indices of updated params
-   *
-   * \return list of indices of updated params
-   */
-  const std::vector<unsigned>& updated_parameters_list() const { return updated_params; }
-  /**
-   * \brief Returns list of indices of updated lookup params
-   *
-   * \return list of indices of updated lookup params
-   */
-  const std::vector<unsigned>& updated_lookup_parameters_list() const { return updated_lookup_params; }
+  const std::vector<LookupParameterStorage*>& lookup_parameters_list() const { return get_storage().lookup_params; }
 
   //
   //
@@ -651,24 +678,25 @@ public:
    * \return [description]
    */
   bool is_updated_lookup_param(const LookupParameter *p);
+  /**
+   * \brief Get the weight decay object
+   */
+  L2WeightDecay& get_weight_decay() { return get_storage().weight_decay; }
 
-  L2WeightDecay weight_decay;
+protected:
+  ParameterCollectionStorage& get_storage();
+  const ParameterCollectionStorage& get_storage() const;
+  void add_parameters_to_storage(ParameterStorage* p);
+  void add_lookup_parameters_to_storage(LookupParameterStorage* p);
+
 private:
   DYNET_SERIALIZE_DECLARE()
-  std::vector<ParameterStorageBase*> all_params;
-  std::vector<ParameterStorage*> params;
-  std::vector<LookupParameterStorage*> lookup_params;
+  ParameterCollectionStorage * storage;
+  ParameterCollection * parent;
+}; // class ParameterCollection
 
-  // these are a subset of the parameters that are used when model is updated.
-  // kept as indices into params and lookup_params.
-  std::vector<unsigned> updated_params;
-  std::vector<unsigned> updated_lookup_params;
-
-  mutable float* gradient_norm_scratch;
-}; // class Model
-
-void save_dynet_model(std::string filename, Model* model);
-void load_dynet_model(std::string filename, Model* model);
+void save_dynet_model(std::string filename, ParameterCollection* model);
+void load_dynet_model(std::string filename, ParameterCollection* model);
 
 } // namespace dynet
 

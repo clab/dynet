@@ -82,13 +82,13 @@ public:
   /**
    * \brief Constructor for the batched RNN language model
    *
-   * \param model Model to hold all parameters for training
+   * \param model ParameterCollection to hold all parameters for training
    * \param LAYERS Number of layers of the RNN
    * \param INPUT_DIM Embedding dimension for the words
    * \param HIDDEN_DIM Dimension of the hidden states
    * \param VOCAB_SIZE Size of the input vocabulary
    */
-  explicit RNNBatchLanguageModel(Model& model,
+  explicit RNNBatchLanguageModel(ParameterCollection& model,
                                  unsigned LAYERS,
                                  unsigned INPUT_DIM,
                                  unsigned HIDDEN_DIM,

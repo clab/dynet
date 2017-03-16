@@ -33,7 +33,7 @@ struct Encoder {
 
   Encoder() {}
 
-  explicit Encoder(Model& model) {
+  explicit Encoder(ParameterCollection& model) {
     p_s = model.add_lookup_parameters(INPUT_VOCAB_SIZE, {REP_DIM}); 
     p_t = model.add_lookup_parameters(OUTPUT_VOCAB_SIZE, {REP_DIM}); 
   }
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 #endif
-  Model model;
+  ParameterCollection model;
   Encoder emb;
   if (argc == 4) {
     string fname = argv[3];

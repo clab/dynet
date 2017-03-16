@@ -103,17 +103,17 @@ public:
    * \brief Default constructor
    * \details Dont forget to add layers!
    */
-  MLP(Model & model) {
+  MLP(ParameterCollection & model) {
     LAYERS = 0;
   }
   /**
    * \brief Returns a Multilayer perceptron
    * \details Creates a feedforward multilayer perceptron based on a list of layer descriptions
    *
-   * \param model Model to contain parameters
+   * \param model ParameterCollection to contain parameters
    * \param layers Layers description
    */
-  MLP(Model& model,
+  MLP(ParameterCollection& model,
       vector<Layer> layers) {
     // Verify layers compatibility
     for (unsigned l = 0; l < layers.size() - 1; ++l) {
@@ -134,7 +134,7 @@ public:
    * \param model [description]
    * \param layer [description]
    */
-  void append(Model& model, Layer layer) {
+  void append(ParameterCollection& model, Layer layer) {
     // Check compatibility
     if (LAYERS > 0)
       if (layers[LAYERS - 1].output_dim != layer.input_dim)

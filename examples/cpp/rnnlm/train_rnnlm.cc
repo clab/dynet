@@ -79,7 +79,7 @@ struct RNNLanguageModel {
   Parameter p_R;
   Parameter p_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
+  explicit RNNLanguageModel(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
   SAMPLE = conf.count("sample");
   if (conf.count("dropout"))
     DROPOUT = conf["dropout"].as<float>();
-  Model model;
+  ParameterCollection model;
   if (conf.count("clusters"))
     cfsm = new ClassFactoredSoftmaxBuilder(HIDDEN_DIM, conf["clusters"].as<string>(), d, model);
   else if (conf.count("paths"))

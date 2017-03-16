@@ -42,12 +42,12 @@ void Cluster::add_word(unsigned word) {
   terminals.push_back(word);
 }
 
-void Cluster::initialize(unsigned rep_dim, Model& model) {
+void Cluster::initialize(unsigned rep_dim, ParameterCollection& model) {
   this->rep_dim = rep_dim;
   initialize(model);
 }
 
-void Cluster::initialize(Model& model) {
+void Cluster::initialize(ParameterCollection& model) {
   output_size = (children.size() > 0) ? children.size() : terminals.size();
 
   if (output_size == 1) {
@@ -175,7 +175,7 @@ DYNET_SERIALIZE_IMPL(Cluster)
 HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict& word_dict,
-                             Model& model) {
+                             ParameterCollection& model) {
   root = read_cluster_file(cluster_file, word_dict);
   root->initialize(rep_dim, model);
 }
@@ -183,7 +183,7 @@ HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
 HierarchicalSoftmaxBuilder::~HierarchicalSoftmaxBuilder() {
 }
 
-void HierarchicalSoftmaxBuilder::initialize(Model& model) {
+void HierarchicalSoftmaxBuilder::initialize(ParameterCollection& model) {
  root->initialize(model);
 }
 

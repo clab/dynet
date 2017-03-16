@@ -19,9 +19,9 @@ public:
   /**
    * \brief Initializes vocabulary, builders and parameters
    *
-   * \param model Model holding the parameters
+   * \param model ParameterCollection holding the parameters
    */
-  void initialize(Model& model);
+  void initialize(ParameterCollection& model);
 
   /**
    * \brief computes loss for the network for a sample
@@ -36,11 +36,11 @@ public:
   /**
    * \brief executes code to train the network
    *
-   * \param model Model holding the parameters
+   * \param model ParameterCollection holding the parameters
    * \param sentence Input sentences
    * \param trainer Trainer instance
    */
-  void train(Model& model, string sentence, SimpleSGDTrainer& trainer);
+  void train(ParameterCollection& model, string sentence, SimpleSGDTrainer& trainer);
 
   /**
     * \brief generates the learnt sequence

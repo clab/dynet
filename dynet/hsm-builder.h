@@ -33,8 +33,8 @@ public:
   Cluster();
   Cluster* add_child(unsigned sym);
   void add_word(unsigned word);
-  void initialize(Model& model);
-  void initialize(unsigned rep_dim, Model& model);
+  void initialize(ParameterCollection& model);
+  void initialize(unsigned rep_dim, ParameterCollection& model);
 
   void new_graph(ComputationGraph& cg);
   unsigned sample(expr::Expression h, ComputationGraph& cg) const;
@@ -59,10 +59,10 @@ class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
   HierarchicalSoftmaxBuilder(unsigned rep_dim,
                               const std::string& cluster_file,
                               Dict& word_dict,
-                              Model& model);
+                              ParameterCollection& model);
   ~HierarchicalSoftmaxBuilder();
 
-  void initialize(Model& model);
+  void initialize(ParameterCollection& model);
 
   // call this once per ComputationGraph
   void new_graph(ComputationGraph& cg);

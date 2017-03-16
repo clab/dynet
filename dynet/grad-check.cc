@@ -12,7 +12,7 @@ using namespace std;
 
 namespace dynet {
 
-bool check_grad(Model& m, expr::Expression& expr, int verbosity) {
+bool check_grad(ParameterCollection& m, expr::Expression& expr, int verbosity) {
   ComputationGraph& g = *expr.pg;
   // Clear the parameters first
   const vector<ParameterStorage*>& params = m.parameters_list();

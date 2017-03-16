@@ -50,20 +50,19 @@ bool is_valid(const Eigen::MatrixBase<Derived>& x) {
 Trainer::~Trainer() {}
 
 void Trainer::rescale_and_reset_weight_decay() {
-  const float weight_decay = model->weight_decay.current_weight_decay();
-  const auto params = model->parameters_list();
-  for (auto p : model->updated_parameters_list())
-    params[p]->scale_parameters(weight_decay);
-  const auto lookup_params = model->parameters_list();
-  for (auto p : model->updated_lookup_parameters_list())
-    lookup_params[p]->scale_parameters(weight_decay);
-  model->weight_decay.reset_weight_decay();
+  const float weight_decay = model->get_weight_decay().current_weight_decay();
+  for (auto p : model->parameters_list())
+    if (p->is_updated())
+      p->scale_parameters(weight_decay);
+  for (auto p : model->lookup_parameters_list())
+    if (p->is_updated())
+      p->scale_parameters(weight_decay);
+  model->get_weight_decay().reset_weight_decay();
 }
 
 float Trainer::clip_gradients(real scale) {
   float gscale = 1;
   if (clipping_enabled) {
-    // TODO should I handle updatebale differently?
     float gg = model->gradient_l2_norm();
     if (isnan(gg) || isinf(gg)) {
       ostringstream oss; oss << "Magnitude of gradient is bad: " << gg;
@@ -78,13 +77,8 @@ float Trainer::clip_gradients(real scale) {
   return gscale;
 }
 
-// this calls update on all of the parameters that are supposed to be updated
-void Trainer::update(real scale) {
-  update(model->updated_parameters_list(), model->updated_lookup_parameters_list(), scale);
-}
-
 // this calls the rule-specific updates over all updated parameters
-void Trainer::update(const std::vector<unsigned> & upd_params, const std::vector<unsigned> & upd_lookup_params, real scale) {
+void Trainer::update(real scale) {
   // Allocate if necessary
   if(!aux_allocated) {
     alloc_impl();
@@ -94,25 +88,29 @@ void Trainer::update(const std::vector<unsigned> & upd_params, const std::vector
   // Perform gradient clipping and cycle through parameters
   const float gscale = clip_gradients(scale);
   const auto & params = model->parameters_list();
-  for(auto i : upd_params) {
-    update_params(scale, gscale, i);
-    params[i]->clear();
+  for(size_t i = 0; i < params.size(); ++i) {
+    if(params[i]->updated) {
+      update_params(scale, gscale, i);
+      params[i]->clear();
+    }
   }
-  const auto & lookup_params = model->lookup_parameters_list();
-  for(auto i : upd_lookup_params) {
-    if(sparse_updates_enabled && !lookup_params[i]->all_updated) {
-      for (auto j : lookup_params[i]->non_zero_grads)
+  const auto & lparams = model->lookup_parameters_list();
+  for(size_t i = 0; i < lparams.size(); ++i) {
+    auto &p = lparams[i];
+    if(sparse_updates_enabled && p->updated && !p->all_updated) {
+      for (auto j : p->non_zero_grads)
         update_lookup_params(scale, gscale, i, j);
     } else {
       update_lookup_params(scale, gscale, i);
     }
-    lookup_params[i]->clear();
+    p->clear();
   }
   ++updates;
   ++updates_since_status;
 
-  model->weight_decay.update_weight_decay(); // update global weight scale
-  if (model->weight_decay.parameters_need_rescaled())
+  L2WeightDecay & wd = model->get_weight_decay();
+  wd.update_weight_decay(); // update global weight scale
+  if (wd.parameters_need_rescaled())
     rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
 }
 
@@ -123,7 +121,7 @@ void Trainer::update(const std::vector<unsigned> & upd_params, const std::vector
 // Perform update of ts[0]=parameters, ts[1]=gradients
 template <class MyDevice>
 void SimpleSGDTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
-  ts[0]->tvec().device(*dev.edevice) -= ts[1]->tvec() * (eta * scale * gscale / model->weight_decay.current_weight_decay());
+  ts[0]->tvec().device(*dev.edevice) -= ts[1]->tvec() * (eta * scale * gscale / model->get_weight_decay().current_weight_decay());
 }
 DYNET_TRAINER_INST_DEV_IMPL(SimpleSGDTrainer)
 
@@ -148,7 +146,7 @@ void SimpleSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx)
 template <class MyDevice>
 void MomentumSGDTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * momentum - ts[1]->tvec() * (eta * scale * gscale);
-  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / model->weight_decay.current_weight_decay();
+  ts[0]->tvec().device(*dev.edevice) += ts[2]->tvec() / model->get_weight_decay().current_weight_decay();
 }
 DYNET_TRAINER_INST_DEV_IMPL(MomentumSGDTrainer)
 
@@ -178,7 +176,7 @@ template <class MyDevice>
 void AdagradTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
   ts[2]->tvec().device(*dev.edevice) += ts[1]->tvec().square();
-  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / (ts[2]->tvec() + epsilon).sqrt() * (-eta / model->weight_decay.current_weight_decay());
+  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / (ts[2]->tvec() + epsilon).sqrt() * (-eta / model->get_weight_decay().current_weight_decay());
 }
 DYNET_TRAINER_INST_DEV_IMPL(AdagradTrainer)
 
@@ -210,7 +208,7 @@ void AdadeltaTrainer::update_rule_dev(const MyDevice & dev, real scale, real gsc
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho);
   ts[1]->tvec().device(*dev.edevice) = - ts[1]->tvec() * (ts[3]->tvec() + epsilon).sqrt() / (ts[2]->tvec() + epsilon).sqrt();
   ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho);
-  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / model->weight_decay.current_weight_decay();
+  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / model->get_weight_decay().current_weight_decay();
 }
 DYNET_TRAINER_INST_DEV_IMPL(AdadeltaTrainer)
 
@@ -246,7 +244,7 @@ void RmsPropTrainer::update_rule_dev(const MyDevice & dev, real scale, real gsca
   // real& d2 = hg[pi++];
   // real g2 = p->g.vec().squaredNorm();
   // d2 = rho * d2 + (1.f - rho) * g2;
-  // p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec()) / model->weight_decay.current_weight_decay();
+  // p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec()) / model->get_weight_decay().current_weight_decay();
 }
 DYNET_TRAINER_INST_DEV_IMPL(RmsPropTrainer)
 
@@ -285,7 +283,7 @@ void AdamTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale,
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale);
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * beta_1 + ts[1]->tvec() * (1.f - beta_1);
   ts[3]->tvec().device(*dev.edevice) = ts[3]->tvec() * beta_2 + ts[1]->tvec().square() * (1.f - beta_2);
-  float lr_t = eta * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ model->weight_decay.current_weight_decay();
+  float lr_t = eta * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ model->get_weight_decay().current_weight_decay();
   ts[0]->tvec().device(*dev.edevice) -= ts[2]->tvec() / (ts[3]->tvec().sqrt() + epsilon) * lr_t;
 }
 DYNET_TRAINER_INST_DEV_IMPL(AdamTrainer)

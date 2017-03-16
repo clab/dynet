@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
   read_mnist_labels(params.train_labels_file, mnist_train_labels);
   read_mnist_labels(params.dev_labels_file, mnist_dev_labels);
 
-  // Model name (for saving) -----------------------------------------------------------------------
+  // ParameterCollection name (for saving) -----------------------------------------------------------------------
   ostringstream os;
   // Store a bunch of information in the model name
   os << params.exp_name
@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   // Build model -----------------------------------------------------------------------------------
 
-  Model model;
+  ParameterCollection model;
   // Use Adam optimizer
   AdamTrainer adam(model);
   adam.clip_threshold *= params.BATCH_SIZE;

@@ -72,7 +72,7 @@ string pretrained_embeding = "";
 
 // returns embeddings of labels
 struct SymbolEmbedding {
-  SymbolEmbedding(Model& m, unsigned n, unsigned dim) {
+  SymbolEmbedding(ParameterCollection& m, unsigned n, unsigned dim) {
     p_labels = m.add_lookup_parameters(n, {dim});
   }
   void load_embedding(dynet::Dict& d, string pretrain_path){
@@ -111,7 +111,7 @@ struct DurationEmbedding {
 DurationEmbedding::~DurationEmbedding() {}
 
 struct MLPDurationEmbedding : public DurationEmbedding {
-  MLPDurationEmbedding(Model& m, unsigned hidden, unsigned dim) {
+  MLPDurationEmbedding(ParameterCollection& m, unsigned hidden, unsigned dim) {
     p_zero = m.add_parameters({dim});
     p_d2h = m.add_parameters({hidden, 2});
     p_hb = m.add_parameters({hidden});
@@ -152,7 +152,7 @@ struct MLPDurationEmbedding : public DurationEmbedding {
 };
 
 struct BinnedDurationEmbedding : public DurationEmbedding {
-  BinnedDurationEmbedding(Model& m, unsigned dim, unsigned num_bins = 8) : max_bin(num_bins - 1) {
+  BinnedDurationEmbedding(ParameterCollection& m, unsigned dim, unsigned num_bins = 8) : max_bin(num_bins - 1) {
     p_e = m.add_lookup_parameters(num_bins, {dim});
   }
   void new_graph(ComputationGraph& g) override {
@@ -176,7 +176,7 @@ struct BiTrans {
   Parameter p_r2c;
   Parameter p_cb;
 
-  explicit BiTrans(Model& model) :
+  explicit BiTrans(ParameterCollection& model) :
       l2rbuilder(LAYERS, INPUT_DIM, XCRIBE_DIM, model),
       r2lbuilder(LAYERS, INPUT_DIM, XCRIBE_DIM, model) {
     p_f2c = model.add_parameters({XCRIBE_DIM, XCRIBE_DIM});
@@ -223,7 +223,7 @@ struct SegEmbedUni {
   int len;
   Builder builder;
   vector<vector<Expression>> h;  // h[i][length of segment - 1]
-  explicit SegEmbedUni(Model& m) :
+  explicit SegEmbedUni(ParameterCollection& m) :
       builder(LAYERS, XCRIBE_DIM, SEG_DIM, m) {
     p_h0 = m.add_parameters({XCRIBE_DIM});
   }
@@ -267,7 +267,7 @@ struct SegEmbedBi {
   int len;
   vector<vector<pair<Expression, Expression>>> h;
   SegEmbedUni<Builder> fwd, rev;
-  explicit SegEmbedBi(Model& m) : fwd(m), rev(m) {}
+  explicit SegEmbedBi(ParameterCollection& m) : fwd(m), rev(m) {}
   void construct_chart(ComputationGraph& cg, const vector<Expression>& c, int max_seg_len = 0) {
     len = c.size();
     fwd.construct_chart(cg, c, max_seg_len);
@@ -307,7 +307,7 @@ struct SegmentalRNN {
   SegEmbedBi<Builder> seb;
   dynet::Dict d;
   dynet::Dict td;
-  explicit SegmentalRNN(Model& model, dynet::Dict& d_, dynet::Dict& td_) :
+  explicit SegmentalRNN(ParameterCollection& model, dynet::Dict& d_, dynet::Dict& td_) :
       bt(model), seb(model) {
     d = d_;
     td = td_;
@@ -875,7 +875,7 @@ void read_file(string file_path,
 void save_models(string model_file_prefix,
                     dynet::Dict& d,
                     dynet::Dict& td,
-                    Model& model){
+                    ParameterCollection& model){
   cerr << "saving models..." << endl;
 
   const string f_name = model_file_prefix + ".params";
@@ -899,7 +899,7 @@ void save_models(string model_file_prefix,
 }
 
 void load_models(string model_file_prefix,
-                 Model& model){
+                 ParameterCollection& model){
   cerr << "loading models..." << endl;
 
   string fname = model_file_prefix + ".params";
@@ -1072,7 +1072,7 @@ int main(int argc, char** argv) {
       read_file(vm["test_file"].as<string>(), d, td, test);
     }
 
-    Model model;
+    ParameterCollection model;
     // auto sgd = new SimpleSGDTrainer(model);
     auto sgd = new AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8);
     int max_seg_len = DATA_MAX_SEG_LEN + 1;
@@ -1160,7 +1160,7 @@ int main(int argc, char** argv) {
   }else if(vm["test"].as<bool>()){
     use_pretrained_embeding = false;
     use_dropout = false;
-    Model model;
+    ParameterCollection model;
     dynet::Dict d;
     dynet::Dict td;
     load_dicts(vm["model_file_prefix"].as<string>(), d, td);

@@ -24,7 +24,7 @@ struct RNNLanguageModel {
   Parameter p_R;
   Parameter p_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
+  explicit RNNLanguageModel(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     kSOS = d.convert("<s>");
     kEOS = d.convert("</s>");
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});

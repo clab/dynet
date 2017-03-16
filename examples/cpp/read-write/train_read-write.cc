@@ -27,12 +27,12 @@ public:
   // the dynet model which has saved parameters.
   XORModel() {}
 
-  XORModel(unsigned hidden_len, Model& m) {
+  XORModel(unsigned hidden_len, ParameterCollection& m) {
     hidden_size = hidden_len;
     InitParams(m);
   }
 
-  void InitParams(Model& m) {
+  void InitParams(ParameterCollection& m) {
     pW = m.add_parameters({hidden_size, 2});
     pb = m.add_parameters({hidden_size});
     pV = m.add_parameters({1, hidden_size});
@@ -92,7 +92,7 @@ public:
   }
 };
 
-void WriteToFile(string& filename, XORModel& model, Model& dynet_model) {
+void WriteToFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
   ofstream outfile(filename);
   if (!outfile.is_open()) {
     cerr << "File opening failed" << endl;
@@ -110,7 +110,7 @@ void WriteToFile(string& filename, XORModel& model, Model& dynet_model) {
   outfile.close();
 }
 
-void ReadFromFile(string& filename, XORModel& model, Model& dynet_model) {
+void ReadFromFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
   ifstream infile(filename);
   if (!infile.is_open()) {
     cerr << "File opening failed" << endl;
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
 
   const unsigned HIDDEN = 8;
   const unsigned ITERATIONS = 20;
-  Model m;
+  ParameterCollection m;
   SimpleSGDTrainer sgd(m);
   XORModel model(HIDDEN, m);
 
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
   WriteToFile(outfile, model, m);  // Writing objects to file
 
   // New objects in which the written archive will be read
-  Model read_dynet_model;
+  ParameterCollection read_dynet_model;
   XORModel read_model;
 
   cerr << "Reading model from File: " << outfile << endl;

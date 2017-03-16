@@ -24,7 +24,7 @@ struct Datum {
 
 class XorModel {
 public:
-  XorModel(const unsigned hidden_size, Model& dynet_model) : pcg(nullptr) {
+  XorModel(const unsigned hidden_size, ParameterCollection& dynet_model) : pcg(nullptr) {
     p_W = dynet_model.add_parameters({hidden_size, 2});
     p_b = dynet_model.add_parameters({hidden_size});
     p_V = dynet_model.add_parameters({1, hidden_size});
@@ -63,7 +63,7 @@ private:
   }
 };
 
-void serialize(const XorModel* const xor_model, const Model& dynet_model, const Trainer* const trainer) {
+void serialize(const XorModel* const xor_model, const ParameterCollection& dynet_model, const Trainer* const trainer) {
   // Remove existing stdout output
   int r = ftruncate(fileno(stdout), 0);
   if (r != 0) {}
@@ -78,7 +78,7 @@ void serialize(const XorModel* const xor_model, const Model& dynet_model, const 
   oa & trainer;
 }
 
-void deserialize(const string& filename, XorModel* xor_model, Model& dynet_model, Trainer* trainer) {
+void deserialize(const string& filename, XorModel* xor_model, ParameterCollection& dynet_model, Trainer* trainer) {
   ifstream in(filename.c_str());
   boost::archive::text_iarchive ia(in);
   ia & dynet_model;
@@ -118,7 +118,7 @@ public:
 
 class Learner : public ILearner<Datum, SufficientStats> {
 public:
-  Learner(XorModel* xor_model, Model& dynet_model, const Trainer* const trainer, bool quiet) : xor_model(xor_model), dynet_model(dynet_model), trainer(trainer), quiet(quiet) {}
+  Learner(XorModel* xor_model, ParameterCollection& dynet_model, const Trainer* const trainer, bool quiet) : xor_model(xor_model), dynet_model(dynet_model), trainer(trainer), quiet(quiet) {}
   ~Learner() {}
   SufficientStats LearnFromDatum(const Datum& datum, bool learn) {
     ComputationGraph cg;
@@ -140,7 +140,7 @@ public:
 
 private:
   XorModel* xor_model;
-  Model& dynet_model; 
+  ParameterCollection& dynet_model; 
   const Trainer* const trainer;
   bool quiet;
 };
@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned num_cores = 4;
   const unsigned ITERATIONS = 1000;
-  Model dynet_model;
+  ParameterCollection dynet_model;
   XorModel* xor_model = nullptr;
   Trainer* trainer = nullptr;
 

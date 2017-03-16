@@ -17,7 +17,7 @@ enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 LSTMBuilder::LSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
+                         ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
@@ -269,7 +269,7 @@ void LSTMBuilder::save_parameters_pretraining(const string& fname) const {
   oa << layers;
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
-      oa << p.get()->values;
+      oa << p.get_storage().values;
     }
   }
 }
@@ -291,7 +291,7 @@ void LSTMBuilder::load_parameters_pretraining(const string& fname) {
   // TODO check other dimensions
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
-      ia >> p.get()->values;
+      ia >> p.get_storage().values;
     }
   }
 }
@@ -334,7 +334,7 @@ VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned input_dim,
                                        unsigned hidden_dim,
-                                       Model& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
+                                       ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
@@ -519,7 +519,7 @@ void VanillaLSTMBuilder::save_parameters_pretraining(const string& fname) const 
   oa << layers;
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
-      oa << p.get()->values;
+      oa << p.get_storage().values;
     }
   }
 }
@@ -541,7 +541,7 @@ void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
   // TODO check other dimensions
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
-      ia >> p.get()->values;
+      ia >> p.get_storage().values;
     }
   }
 }
