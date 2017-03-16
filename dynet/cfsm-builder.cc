@@ -94,7 +94,7 @@ void ClassFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg) {
 Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
   // TODO check that new_graph has been called
   int clusteridx = widx2cidx[wordidx];
-  DYNET_INVALID_ARG_CHECK(clusteridx >= 0,
+  DYNET_ARG_CHECK(clusteridx >= 0,
                           "Word ID " << wordidx << " missing from clusters in ClassFactoredSoftmaxBuilder::neg_log_softmax");
   Expression cscores = affine_transform({cbias, r2c, rep});
   Expression cnlp = pickneglogsoftmax(cscores, clusteridx);
