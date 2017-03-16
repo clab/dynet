@@ -161,10 +161,8 @@ struct Dim {
    * \param s Dimension size
    */
   inline void set(unsigned int i, unsigned int s) {
-    if(i >= nd)
-      DYNET_INVALID_ARG("Out of bounds exception in Dim::set("<<i<<","<<s<<") for node of size " << d);
-    if(s == 0)
-      DYNET_INVALID_ARG("Attempt to set dimension size to zero in Dim::set("<<i<<","<<s<<") for node of size " << d);
+    DYNET_INVALID_ARG_CHECK(i < nd, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << d);
+    DYNET_INVALID_ARG_CHECK(s != 0, "Attempt to set dimension size to zero in Dim::set(" << i << "," << s << ") for node of size " << d);
     d[i] = s;
   }
   /**
@@ -186,8 +184,7 @@ struct Dim {
    * \param i index of the dimension to be removed
    */
   inline void delete_dim(unsigned int i) {
-    if(i >= nd)
-      DYNET_INVALID_ARG("Out of bounds exception in Dim::delete_dim("<<i<<") for node of size " << d);
+    DYNET_INVALID_ARG_CHECK(i < nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d);
     if (nd == 1) {
       d[0] = 1;
     } else {

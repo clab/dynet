@@ -124,8 +124,9 @@ void NaryTreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hini
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    if(layers*2 != hinit.size())
-      DYNET_INVALID_ARG("Incorrectly sized initialization in TreeLSTM (" << hinit.size() << "). Must be twice the number of layers (which is " << layers<< ")");
+    DYNET_INVALID_ARG_CHECK(layers*2 == hinit.size(),
+                            "Incorrectly sized initialization in TreeLSTM (" << hinit.size() << "). "
+                            "Must be twice the number of layers (which is " << layers<< ")");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
