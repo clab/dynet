@@ -69,13 +69,13 @@ struct Tensor {
    * \return Eigen matrix
    */
   Eigen::Map<Eigen::MatrixXf> operator*() {
-    if(d.batch_elems() != 1 || d.ndims() >= 3)
-      DYNET_INVALID_ARG("Attempted to access Tensor with more than one batch element or more than two dimensions in matrix form: " << d);
+    DYNET_INVALID_ARG_CHECK((d.batch_elems() == 1 && d.ndims() < 3),
+                            "Attempted to access Tensor with more than one batch element or more than two dimensions in matrix form: " << d);
     return Eigen::Map<Eigen::MatrixXf>(v, d.rows(), d.cols());
   }
   const Eigen::Map<Eigen::MatrixXf> operator*() const {
-    if(d.batch_elems() != 1 || d.ndims() >= 3)
-      DYNET_INVALID_ARG("Attempted to access Tensor with more than one batch element or more than two dimensions in matrix form: " << d);
+    DYNET_INVALID_ARG_CHECK((d.batch_elems() == 1 && d.ndims() < 3),
+                            "Attempted to access Tensor with more than one batch element or more than two dimensions in matrix form: " << d);
     return Eigen::Map<Eigen::MatrixXf>(v, d.rows(), d.cols());
   }
   /**
