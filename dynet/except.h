@@ -34,7 +34,7 @@ class cuda_exception : public std::runtime_error {
     throw std::invalid_argument(oss.str()); \
   } while (0);
 
-  #define DYNET_INVALID_ARG_CHECK(cond, msg) do { \
+  #define DYNET_ARG_CHECK(cond, msg) do { \
     if (!(cond)) {                                \
       std::ostringstream oss;                     \
       oss << msg;                                 \
@@ -45,7 +45,7 @@ class cuda_exception : public std::runtime_error {
 
 #elif DYNET_DEBUG_LEVEL == 0
   #define DYNET_INVALID_ARG(msg) 
-  #define DYNET_INVALID_ARG_CHECK(cond, msg)
+  #define DYNET_ARG_CHECK(cond, msg)
   #define DYNET_ASSERT(expr, msg)
 
 #else
@@ -55,7 +55,7 @@ class cuda_exception : public std::runtime_error {
     throw std::invalid_argument(oss.str()); \
   } while (0);
 
-  #define DYNET_INVALID_ARG_CHECK(cond, msg) do { \
+  #define DYNET_ARG_CHECK(cond, msg) do { \
     if (!(cond)) {                                \
       std::ostringstream oss;                     \
       oss << msg;                                 \

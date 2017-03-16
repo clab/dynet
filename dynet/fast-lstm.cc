@@ -79,7 +79,7 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    DYNET_INVALID_ARG_CHECK(layers * 2 == hinit.size(),
+    DYNET_ARG_CHECK(layers * 2 == hinit.size(),
                             "FastLSTMBuilder must be initialized with 2 times as many expressions as layers "
                             "(hidden state and cell for each layer). However, for " << layers << 
                             " layers, " << hinit.size() << " expressions were passed in");
@@ -100,7 +100,7 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
 // Also is creating a new step something we want? 
 // wouldn't overwriting the current one be better?
 Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  DYNET_INVALID_ARG_CHECK(!(h_new.size() && h_new.size() != layers),
+  DYNET_ARG_CHECK(!(h_new.size() && h_new.size() != layers),
                           "FastLSTMBuilder::set_h expects as many inputs as layers, "
                           "but got " << h_new.size() << " inputs for " << layers << " layers");
   const unsigned t = h.size();
@@ -117,7 +117,7 @@ Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression FastLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
-  DYNET_INVALID_ARG_CHECK(!(s_new.size() == layers || s_new.size() == 2 * layers),
+  DYNET_ARG_CHECK(!(s_new.size() == layers || s_new.size() == 2 * layers),
                           "FastLSTMBuilder::set_s expects either as many inputs or twice as many "
                           "inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
@@ -205,7 +205,7 @@ Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
 void FastLSTMBuilder::copy(const RNNBuilder & rnn) {
   const FastLSTMBuilder & rnn_lstm = (const FastLSTMBuilder&)rnn;
-  DYNET_INVALID_ARG_CHECK(params.size() == rnn_lstm.params.size(),
+  DYNET_ARG_CHECK(params.size() == rnn_lstm.params.size(),
                           "Attempt to copy FastLSTMBuilder with different number of parameters "
                           "(" << params.size() << " != " << rnn_lstm.params.size() << ")");
   for(size_t i = 0; i < params.size(); ++i)
