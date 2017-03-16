@@ -11,7 +11,7 @@
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 struct ParameterStorage;
 struct LookupParameterStorage;
 
@@ -34,9 +34,9 @@ struct ShadowLookupParameters {
 };
 
 // one per element in model.parameters_list
-std::vector<ShadowParameters> allocate_shadow_parameters(const Model& model);
+std::vector<ShadowParameters> allocate_shadow_parameters(const ParameterCollection& model);
 // one per element in model.lookup_parameters_list
-std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Model& model);
+std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const ParameterCollection& model);
 
 } // namespace dynet
 

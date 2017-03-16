@@ -22,7 +22,7 @@ struct C2WBuilder {
                       unsigned layers,
                       unsigned input_dim,
                       unsigned hidden_dim,
-                      Model* m) :
+                      ParameterCollection* m) :
       fc2w(layers, input_dim, hidden_dim, m),
       rc2w(layers, input_dim, hidden_dim, m),
       p_lookup(m->add_lookup_parameters(vocab_size, {input_dim})) {

@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
-  Model m;
+  ParameterCollection m;
   SimpleSGDTrainer sgd(m);
   //MomentumSGDTrainer sgd(m);
 

@@ -51,7 +51,7 @@ struct RNNLanguageModel {
   Parameter p_z2h0;
   Parameter p_h0b;
 
-  explicit RNNLanguageModel(Model& model) :
+  explicit RNNLanguageModel(ParameterCollection& model) :
       ebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
       dbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_H = model.add_parameters({HIDDEN_DIM2, HIDDEN_DIM});
@@ -177,7 +177,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   Trainer* sgd = nullptr;
   // bool use_momentum = false;
   // if (use_momentum)

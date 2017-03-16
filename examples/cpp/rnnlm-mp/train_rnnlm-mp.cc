@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 
   dynet::initialize(argc, argv, true);
 
-  Model model;
+  ParameterCollection model;
   SimpleSGDTrainer sgd(model, 0.2);
   //AdagradTrainer sgd(model, 0.0);
   //AdamTrainer sgd(model, 0.0);

@@ -17,7 +17,7 @@ using namespace dynet::expr;
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 /**
  * \ingroup rnnbuilders
  * \brief LSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
@@ -46,12 +46,12 @@ struct LSTMBuilder : public RNNBuilder {
    * \param layers Number of layers
    * \param input_dim Dimention of the input \f$x_t\f$
    * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
-   * \param model Model holding the parameters
+   * \param model ParameterCollection holding the parameters
    */
   explicit LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       ParameterCollection& model);
 
   Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
@@ -194,12 +194,12 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \param layers Number of layers
    * \param input_dim Dimention of the input \f$x_t\f$
    * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
-   * \param model Model holding the parameters
+   * \param model ParameterCollection holding the parameters
    */
   explicit VanillaLSTMBuilder(unsigned layers,
                               unsigned input_dim,
                               unsigned hidden_dim,
-                              Model& model);
+                              ParameterCollection& model);
 
   Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }

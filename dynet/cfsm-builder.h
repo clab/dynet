@@ -33,7 +33,7 @@ public:
 
 class StandardSoftmaxBuilder : public SoftmaxBuilder {
 public:
-  StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model& model);
+  StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, ParameterCollection& model);
   void new_graph(ComputationGraph& cg);
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
@@ -58,7 +58,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                               const std::string& cluster_file,
                               Dict& word_dict,
-                              Model& model);
+                              ParameterCollection& model);
 
   void new_graph(ComputationGraph& cg);
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);

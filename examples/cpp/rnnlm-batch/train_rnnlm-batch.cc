@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
 
   // Initialize model and trainer ------------------------------------------------------------------
-  Model model;
+  ParameterCollection model;
   // Use Adam optimizer
   Trainer* adam = new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8);
   adam->clip_threshold *= params.BATCH_SIZE;

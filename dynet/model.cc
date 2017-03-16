@@ -51,22 +51,7 @@ namespace dynet {
 ParameterStorageBase::~ParameterStorageBase() {}
 DYNET_SERIALIZE_IMPL(ParameterStorageBase)
 
-ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
-  values.d = g.d = d;
-  values.device = g.device = default_device;
-  default_device->allocate_tensor(DeviceMempool::PS, values);
-  default_device->allocate_tensor(DeviceMempool::PS, g);
-  TensorTools::Zero(g);
-  if (scale == 0.0f) {
-    ParameterInitGlorot init;
-    init.initialize_params(values);
-  } else {
-    ParameterInitUniform init(scale);
-    init.initialize_params(values);
-  }
-}
-
-ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init) : dim(d) {
+ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init) : dim(d), updated(true), owner(nullptr) {
   values.d = g.d = d;
   values.device = g.device = default_device;
   default_device->allocate_tensor(DeviceMempool::PS, values);
@@ -99,18 +84,7 @@ DYNET_SERIALIZE_COMMIT(ParameterStorage,
 DYNET_SERIALIZE_IMPL(ParameterStorage)
 #endif
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d) : dim(d), all_updated(false) {
-  all_dim = dim; all_dim.d[all_dim.nd++] = n;
-  all_grads.d = all_values.d = all_dim;
-  all_grads.device = all_values.device = default_device;
-  default_device->allocate_tensor(DeviceMempool::PS, all_values);
-  default_device->allocate_tensor(DeviceMempool::PS, all_grads);
-  ParameterInitGlorot init(true);
-  init.initialize_params(all_values);
-  initialize_lookups();
-}
-
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init) : dim(d), all_updated(false) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init) : dim(d), updated(true), all_updated(false), owner(nullptr) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
   all_grads.device = all_values.device = default_device;
@@ -213,81 +187,81 @@ void ParameterInitFromFile::initialize_params(Tensor & values) const {
 }
 
 
-Parameter::Parameter() {
-  mp = nullptr;
-  index = 0;
-}
+Parameter::Parameter() : p(nullptr) {}
 
-Parameter::Parameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
+Parameter::Parameter(ParameterStorage* p) : p(p) {}
 
-ParameterStorage* Parameter::get() const {
-  return mp->parameters_list()[index];
+ParameterStorage& Parameter::get_storage() const {
+  DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null parameter");
+  return *p;
 }
 
 void Parameter::zero() {
-  return mp->parameters_list()[index]->zero();
+  get_storage().zero();
 }
 
 void Parameter::set_updated(bool b) {
-  mp->set_updated_param(this, b);
+  get_storage().updated = b;
 }
 
 bool Parameter::is_updated() {
-  return mp->is_updated_param(this);
+  return get_storage().updated;
 }
 
+float Parameter::current_weight_decay() const {
+  return get_storage().owner->get_weight_decay().current_weight_decay();
+}
 
 #ifndef __CUDACC__
-DYNET_SERIALIZE_COMMIT(Parameter, DYNET_SERIALIZE_DEFINE(mp, index))
+DYNET_SERIALIZE_COMMIT(Parameter, DYNET_SERIALIZE_DEFINE(p))
 DYNET_SERIALIZE_IMPL(Parameter)
 #endif
 
-LookupParameter::LookupParameter() {
-  mp = nullptr;
-  index = 0;
-}
+LookupParameter::LookupParameter() : p(nullptr) { }
 
-LookupParameter::LookupParameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
+LookupParameter::LookupParameter(LookupParameterStorage* p) : p(p) {}
 
-LookupParameterStorage* LookupParameter::get() const {
-  return mp->lookup_parameters_list()[index];
+LookupParameterStorage& LookupParameter::get_storage() const {
+  DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null LookupParameter");
+  return *p;
 }
 
 void LookupParameter::zero() {
-  return mp->lookup_parameters_list()[index]->zero();
+  get_storage().zero();
 }
 
 void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
-  get()->initialize(index, val);
+  get_storage().initialize(index, val);
 }
 
 void LookupParameter::set_updated(bool b) {
-  mp->set_updated_lookup_param(this, b);
+  get_storage().updated = b;
 }
 bool LookupParameter::is_updated() {
-  return mp->is_updated_lookup_param(this);
+  return get_storage().updated;
 }
 
+float LookupParameter::current_weight_decay() const {
+  return get_storage().owner->get_weight_decay().current_weight_decay();
+}
+
+
 #ifndef __CUDACC__
-DYNET_SERIALIZE_COMMIT(LookupParameter, DYNET_SERIALIZE_DEFINE(mp, index))
+DYNET_SERIALIZE_COMMIT(LookupParameter, DYNET_SERIALIZE_DEFINE(p))
 DYNET_SERIALIZE_IMPL(LookupParameter)
 #endif
 
-Model::Model() : gradient_norm_scratch(nullptr) {
+ParameterCollectionStorage::ParameterCollectionStorage() : gradient_norm_scratch(nullptr) {
   weight_decay.set_lambda(weight_decay_lambda);
 }
 
-Model::~Model() {
+ParameterCollectionStorage::~ParameterCollectionStorage() {
   for (auto p : all_params) delete p;
   if (gradient_norm_scratch)
     default_device->mem->free(gradient_norm_scratch);
 }
 
-void Model::set_weight_decay_lambda(float lambda) {
-  weight_decay.set_lambda(lambda);
-}
-
-void Model::project_weights(float radius) {
+void ParameterCollectionStorage::project_weights(float radius) {
   static float* project_scratch = 0;
   if (!project_scratch)
     project_scratch = (float*)default_device->mem->malloc(all_params.size() * sizeof(float));
@@ -302,120 +276,123 @@ void Model::project_weights(float radius) {
   cerr << "NORM: " << sqrt(gg) << endl;
 }
 
-Parameter Model::add_parameters(const Dim& d, float scale) {
-  ParameterStorage* p = new ParameterStorage(d, scale);
-  Parameter r(this, params.size());
-  //cerr << "Adding parameters with dim " << d << endl;
-  all_params.push_back(p);
-  params.push_back(p);
-  updated_params.push_back(r.index);
-  return r;
+ParameterCollection::ParameterCollection() : storage(new ParameterCollectionStorage), parent(nullptr) { }
+
+ParameterCollection::~ParameterCollection() {
+  if(parent == nullptr && storage != nullptr)
+    delete storage;
 }
 
-Parameter Model::add_parameters(const Dim& d, const ParameterInit & init) {
+void ParameterCollection::set_weight_decay_lambda(float lambda) {
+  get_storage().weight_decay.set_lambda(lambda);
+}
+
+void ParameterCollection::project_weights(float radius) {
+  get_storage().project_weights(radius);
+}
+
+Parameter ParameterCollection::add_parameters(const Dim& d, float scale) {
+  if(scale == 0.0f)
+    return add_parameters(d, ParameterInitGlorot());
+  else
+    return add_parameters(d, ParameterInitUniform(scale));
+}
+
+Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init) {
   ParameterStorage* p = new ParameterStorage(d, init);
-  Parameter r(this, params.size());
-  //cerr << "Adding parameters with dim " << d << endl;
-  all_params.push_back(p);
-  params.push_back(p);
-  updated_params.push_back(r.index);
-  return r;
+  add_parameters_to_storage(p);
+  return Parameter(p);
 }
 
-
-LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
-  LookupParameterStorage* p = new LookupParameterStorage(n, d);
-  LookupParameter r(this, lookup_params.size());
-  //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
-  all_params.push_back(p);
-  lookup_params.push_back(p);
-  updated_lookup_params.push_back(r.index);
-  return r;
+void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
+  if(parent != nullptr)
+    parent->add_parameters_to_storage(p);
+  else
+    p->owner = this;
+  if(storage != nullptr) {
+    storage->all_params.push_back(p);
+    storage->params.push_back(p);
+  }
 }
 
-LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init) {
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d) {
+  return add_lookup_parameters(n, d, ParameterInitGlorot(true));
+}
+
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init) {
   LookupParameterStorage* p = new LookupParameterStorage(n, d, init);
-  LookupParameter r(this, lookup_params.size());
-  //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
-  all_params.push_back(p);
-  lookup_params.push_back(p);
-  updated_lookup_params.push_back(r.index);
-  return r;
+  add_lookup_parameters_to_storage(p);
+  return LookupParameter(p);
 }
 
-void Model::set_updated_param(const Parameter *p, bool status) {
-  unsigned idx = p->index;
-  DYNET_ASSERT(idx < params.size(), "Parameter ID " << idx << " is less than parameter size " << params.size());
-
-  auto position = std::find(updated_params.begin(), updated_params.end(), idx);
-  if (position == updated_params.end()) {
-    if (status) updated_params.push_back(idx);
-  } else {
-    if (!status) updated_params.erase(position);
+void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorage *p) {
+  if(parent != nullptr)
+    parent->add_lookup_parameters_to_storage(p);
+  else
+    p->owner = this;
+  if(storage != nullptr) {
+    storage->all_params.push_back(p);
+    storage->lookup_params.push_back(p);
   }
 }
 
-void Model::set_updated_lookup_param(const LookupParameter *p, bool status) {
-  unsigned idx = p->index;
-  DYNET_ASSERT(idx < lookup_params.size(), "LookupParameter ID " << idx << " is less than lookup parameter size " << lookup_params.size());
-
-  auto position = std::find(updated_lookup_params.begin(), updated_lookup_params.end(), idx);
-  if (position == updated_lookup_params.end()) {
-    if (status) updated_lookup_params.push_back(idx);
-  } else {
-    if (!status) updated_lookup_params.erase(position);
-  }
+void ParameterCollection::reset_gradient() {
+  for (auto p : get_storage().params) { p->clear(); }
+  for (auto p : get_storage().lookup_params) { p->clear(); }
 }
 
-bool Model::is_updated_param(const Parameter* p) {
-  auto position = std::find(updated_params.begin(), updated_params.end(), p->index);
-  return position != updated_params.end();
-}
-
-bool Model::is_updated_lookup_param(const LookupParameter* p) {
-  auto position = std::find(updated_lookup_params.begin(), updated_lookup_params.end(), p->index);
-  return position != updated_lookup_params.end();
-}
-
-void Model::reset_gradient() {
-  for (auto p : params) { p->clear(); }
-  for (auto p : lookup_params) { p->clear(); }
-}
-
-size_t Model::parameter_count() const {
+size_t ParameterCollection::parameter_count() const {
   size_t r = 0;
-  for (const ParameterStorageBase* param : all_params) {
+  for (const ParameterStorageBase* param : get_storage().all_params)
     r += param->size();
-  }
   return r;
 }
 
-size_t Model::updated_parameter_count() const {
+size_t ParameterCollection::updated_parameter_count() const {
   size_t r = 0;
-  for (const unsigned idx : updated_params) {
-    r += params[idx]->size();
-  }
-  for (const unsigned idx : updated_lookup_params) {
-    r += lookup_params[idx]->size();
-  }
+  for (const ParameterStorageBase* param : get_storage().all_params)
+    if(param->is_updated())
+      r += param->size();
   return r;
+}
+
+ParameterCollectionStorage& ParameterCollection::get_storage() {
+  if(storage == nullptr) {
+    if (parent == nullptr)
+      storage = new ParameterCollectionStorage;
+    else
+      DYNET_RUNTIME_ERR("ParameterCollection::get_storage() not implemented yet for subsets");
+  }
+  return *storage;
+}
+
+const ParameterCollectionStorage& ParameterCollection::get_storage() const {
+  if(storage == nullptr) {
+    if (parent == nullptr)
+      const_cast<ParameterCollectionStorage*&>(storage) = new ParameterCollectionStorage;
+    else
+      DYNET_RUNTIME_ERR("ParameterCollection::get_storage() not implemented yet for subsets");
+  }
+  return *storage;
 }
 
 #ifndef __CUDACC__
-DYNET_SERIALIZE_COMMIT(Model,
+DYNET_SERIALIZE_COMMIT(ParameterCollectionStorage,
                        DYNET_SERIALIZE_DEFINE(all_params, params,
-                                              lookup_params, weight_decay,
-                                              updated_params, updated_lookup_params))
-DYNET_SERIALIZE_IMPL(Model)
+                                              lookup_params, weight_decay))
+DYNET_SERIALIZE_IMPL(ParameterCollectionStorage)
+DYNET_SERIALIZE_COMMIT(ParameterCollection,
+                       DYNET_SERIALIZE_DEFINE(storage, parent))
+DYNET_SERIALIZE_IMPL(ParameterCollection)
 #endif
 
-void save_dynet_model(std::string filename, Model* model) {
+void save_dynet_model(std::string filename, ParameterCollection* model) {
   std::ofstream out(filename);
   boost::archive::text_oarchive oa(out);
   oa << (*model);
 };
 
-void load_dynet_model(std::string filename, Model* model) {
+void load_dynet_model(std::string filename, ParameterCollection* model) {
   std::ifstream in(filename);
   boost::archive::text_iarchive ia(in);
   ia >> (*model);
@@ -645,8 +622,8 @@ void LookupParameterStorage::scale_parameters(float a) {
 #endif
 
 template <class MyDevice>
-float Model::gradient_l2_norm_dev(MyDevice & dev) const {
-  if (!gradient_norm_scratch)
+float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice & dev) const {
+  if (gradient_norm_scratch == nullptr)
     gradient_norm_scratch = (float*)default_device->mem->malloc((all_params.size() + 1) * sizeof(float));
   size_t pi;
   for (pi = 0; pi < all_params.size(); ++pi)
@@ -663,20 +640,23 @@ float Model::gradient_l2_norm_dev(MyDevice & dev) const {
 #endif
 }
 #ifdef __CUDACC__
-template float Model::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
+template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
 #elif defined(HAVE_CUDA)
-extern template float Model::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
-template float Model::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
-float Model::gradient_l2_norm() const {
+extern template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
+template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
+float ParameterCollectionStorage::gradient_l2_norm() const {
   if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
   else if (default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_GPU*)default_device); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #else
-template float Model::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
-float Model::gradient_l2_norm() const {
+template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
+float ParameterCollectionStorage::gradient_l2_norm() const {
   if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
   else { throw std::runtime_error("Bad device type"); }
+}
+float ParameterCollection::gradient_l2_norm() const {
+  return get_storage().gradient_l2_norm();
 }
 #endif
 

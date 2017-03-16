@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned HIDDEN_SIZE = 8;
   const unsigned ITERATIONS = 200;
-  Model m;
+  ParameterCollection m;
   SimpleSGDTrainer sgd(m);
 
   ComputationGraph cg;

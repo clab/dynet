@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   unsigned VOCAB_SIZE = 29;
 
   // parameters
-  Model model;
+  ParameterCollection model;
   SimpleSGDTrainer sgd(model);
   LookupParameter p_c = model.add_lookup_parameters(VOCAB_SIZE, {DIM});
 

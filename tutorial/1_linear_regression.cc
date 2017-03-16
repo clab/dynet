@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     ys.push_back(y);
   }
 
-  Model model;
+  ParameterCollection model;
   Parameter pW = model.add_parameters({1});
 
   SimpleSGDTrainer trainer(model, 0.1);

@@ -36,7 +36,7 @@ struct RNNLanguageModel {
   Parameter p_R;
   Parameter p_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
+  explicit RNNLanguageModel(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   bool use_momentum = false;
   Trainer* sgd = nullptr;
   //if (use_momentum)

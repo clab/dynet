@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
       while (dev[i + j].size() < dev[i].size())
         dev[i + j].push_back(kEOS);
 
-  // Model name (for saving) -----------------------------------------------------------------------
+  // ParameterCollection name (for saving) -----------------------------------------------------------------------
   ostringstream os;
   // Store a bunch of information in the model name
   os << params.exp_name
@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
 
   // Initialize model and trainer ------------------------------------------------------------------
-  Model model;
+  ParameterCollection model;
   // Use Adam optimizer
   Trainer* adam = nullptr;
   adam = new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8);

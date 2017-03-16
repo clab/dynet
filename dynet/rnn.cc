@@ -32,7 +32,7 @@ DYNET_SERIALIZE_IMPL(RNNBuilder)
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model,
+                       ParameterCollection& model,
                        bool support_lags) : layers(layers), lagging(support_lags) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
@@ -158,7 +158,7 @@ void SimpleRNNBuilder::save_parameters_pretraining(const string& fname) const {
   oa << layers;
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
-      oa << p.get()->values;
+      oa << p.get_storage().values;
     }
   }
 }
@@ -180,7 +180,7 @@ void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
   // TODO check other dimensions
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
-      ia >> p.get()->values;
+      ia >> p.get_storage().values;
     }
   }
 }
