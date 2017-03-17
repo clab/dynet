@@ -52,7 +52,7 @@ namespace dynet {
 ParameterStorageBase::~ParameterStorageBase() {}
 DYNET_SERIALIZE_IMPL(ParameterStorageBase)
 
-ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init) : dim(d), updated(true), owner(nullptr) {
+ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), owner(nullptr) {
   values.d = g.d = d;
   values.device = g.device = default_device;
   default_device->allocate_tensor(DeviceMempool::PS, values);
@@ -85,7 +85,7 @@ DYNET_SERIALIZE_COMMIT(ParameterStorage,
 DYNET_SERIALIZE_IMPL(ParameterStorage)
 #endif
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init) : dim(d), updated(true), all_updated(false), owner(nullptr) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), all_updated(false), owner(nullptr) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
   all_grads.device = all_values.device = default_device;
@@ -234,7 +234,15 @@ void ParameterCollectionStorage::project_weights(float radius) {
   cerr << "NORM: " << sqrt(gg) << endl;
 }
 
-ParameterCollection::ParameterCollection() : storage(new ParameterCollectionStorage), parent(nullptr) { }
+ParameterCollection::ParameterCollection() : name("/"), storage(new ParameterCollectionStorage), parent(nullptr) { }
+
+ParameterCollection::ParameterCollection(const string & my_name, ParameterCollection* my_parent) :
+    name(my_name), storage(nullptr), parent(my_parent) { }
+
+ParameterCollection ParameterCollection::add_subcollection(const string & sub_name) {
+  ostringstream oss; oss << name << sub_name << "__" << ++collec_name_cntr[sub_name] << "/";
+  return ParameterCollection(oss.str(), this);
+}
 
 ParameterCollection::~ParameterCollection() {
   if(parent == nullptr && storage != nullptr)
@@ -249,15 +257,16 @@ void ParameterCollection::project_weights(float radius) {
   get_storage().project_weights(radius);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim& d, float scale) {
+Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const std::string & p_name) {
   if(scale == 0.0f)
-    return add_parameters(d, ParameterInitGlorot());
+    return add_parameters(d, ParameterInitGlorot(), p_name);
   else
-    return add_parameters(d, ParameterInitUniform(scale));
+    return add_parameters(d, ParameterInitUniform(scale), p_name);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init) {
-  ParameterStorage* p = new ParameterStorage(d, init);
+Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
+  ostringstream oss; oss << name << p_name << "__" << ++name_cntr[p_name];
+  ParameterStorage* p = new ParameterStorage(d, init, oss.str());
   add_parameters_to_storage(p);
   return Parameter(p);
 }
@@ -273,12 +282,13 @@ void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
   }
 }
 
-LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d) {
-  return add_lookup_parameters(n, d, ParameterInitGlorot(true));
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const std::string & p_name) {
+  return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name);
 }
 
-LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init) {
-  LookupParameterStorage* p = new LookupParameterStorage(n, d, init);
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
+  ostringstream oss; oss << name << p_name << "__" << ++name_cntr[p_name];
+  LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
   add_lookup_parameters_to_storage(p);
   return LookupParameter(p);
 }

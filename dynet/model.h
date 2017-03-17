@@ -10,6 +10,7 @@
 #include <vector>
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
 #include <string>
 #include <stdexcept>
 #include <boost/serialization/export.hpp>
@@ -113,6 +114,7 @@ struct ParameterStorage : public ParameterStorageBase {
 
   bool is_updated() const override { return updated; }
 
+  std::string name; /**< Name of this parameter*/
   Dim dim; /**< Dimensions of the parameter tensor*/
   Tensor values;/**< Values of the parameter */
   Tensor g;/**< Values of the gradient w.r.t. this parameter */
@@ -121,7 +123,7 @@ struct ParameterStorage : public ParameterStorageBase {
 
 private:
   ParameterStorage() : updated(true), owner(nullptr) {}
-  explicit ParameterStorage(const Dim& d, const ParameterInit & init); // initialize with custom initializer
+  explicit ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name); // initialize with custom initializer
   DYNET_SERIALIZE_DECLARE()
 };
 
@@ -200,6 +202,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
 
   bool is_updated() const override { return updated; }
 
+  std::string name; /**< Name of this parameter*/
   // Tensors for all dimensions at once
   Dim all_dim; /**< Total dimension */
   Tensor all_values; /**< Values for all dimensions at once */
@@ -215,11 +218,10 @@ struct LookupParameterStorage : public ParameterStorageBase {
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
 private:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
-  LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init);
+  LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name);
   DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
-class ParameterCollection;
 /**
  * \ingroup params
  * \brief Object representing a trainable parameter
@@ -410,38 +412,42 @@ public:
    *
    * \param d Shape of the parameter
    * \param scale If scale is non-zero, initializes according to \f$mathcal U([-\mathrm{scale},+\mathrm{scale}]\f$, otherwise uses Glorot initialization
+   * \param name Name of the parameter
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, float scale = 0.0f);
+  Parameter add_parameters(const Dim& d, float scale = 0.0f, const std::string & name = "");
   /**
    * \brief Add parameters with custom initializer
    *
    * \param d Shape of the parameter
    * \param init Custom initializer
+   * \param name Name of the parameter
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, const ParameterInit & init);
+  Parameter add_parameters(const Dim& d, const ParameterInit & init, const std::string & name = "");
   /**
    * \brief Add lookup parameter to model
    * \details Same as add_parameters. Initializes with Glorot
    *
    * \param n Number of lookup indices
    * \param d Dimension of each embedding
+   * \param name Name of the parameter
    *
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const std::string & name = "");
   /**
    * \brief Add lookup parameter with custom initializer
    *
    * \param n Number of lookup indices
    * \param d Dimension of each embedding
    * \param init Custom initializer
+   * \param name Name of the parameter
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name = "");
   //
   /**
    * \brief project weights so their L2 norm = radius
@@ -519,6 +525,16 @@ public:
    */
   bool is_updated_lookup_param(const LookupParameter *p);
   /**
+   * \brief Add a sub-collection
+   * \details This will allow you to add a ParameterCollection that is a
+   *          (possibly named) subset of the original collection. This is
+   *          useful if you want to save/load/update only part of the
+   *          parameters in the model.
+   * \return The subcollection
+   */
+  ParameterCollection add_subcollection(const std::string& name = "");
+
+  /**
    * \brief Get the weight decay object
    */
   L2WeightDecay& get_weight_decay() { return get_storage().weight_decay; }
@@ -530,7 +546,10 @@ protected:
   void add_lookup_parameters_to_storage(LookupParameterStorage* p);
 
 private:
+  ParameterCollection(const std::string & name, ParameterCollection* parent);
   DYNET_SERIALIZE_DECLARE()
+  std::string name;
+  std::unordered_map<std::string,int> name_cntr, collec_name_cntr;
   ParameterCollectionStorage * storage;
   ParameterCollection * parent;
 }; // class ParameterCollection
