@@ -3,6 +3,7 @@
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/model.h>
+#include <dynet/param-init.h>
 #include <boost/test/unit_test.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>

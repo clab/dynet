@@ -25,6 +25,7 @@ set(dynet_library_SRCS
     nodes-common.cc
     nodes-contract.cc
     nodes-conv.cc
+    param-init.cc
     param-nodes.cc
     pretrain.cc
     rnn.cc
