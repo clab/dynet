@@ -262,62 +262,6 @@ any function that takes a `std::vector<unsigned>` on the C++ side
 takes an `UnsignedVector` on the Scala side, but any function that
 takes an `unsigned` on the C++ side takes a `Long` on the C++ side.
 
-### `Vector` scope
-
-The `FloatVector` class is a wrapper around a native C++ `vector<float>`. 
-Some of the `input` functions take a `FloatVector` parameter, and behind
-the scenes they are copying a _pointer_ to the underlying C++ vector.
-
-Whenever the Scala `FloatVector` gets garbage-collected, it will delete
-the underlying C++ vector. If you still have computations that point to
-it, you will get a segfault.
-
-Therefore, in this situation it is *very important* to keep the 
-`FloatVector`s in scope so that they don't get prematurely garbage-collected.
-
-For example, imagine you have a function:
-
-```scala
-def getImage(index: Int): FloatVector
-```
-
-that reads an image off disk.
-
-The following is bad:
-
-```scala
-// THIS IS BAD
-for (idx <- indexes) {
-  val x = Expression.input(Dim(100), getImage(idx))
-  // some other computations
-  ComputationGraph.forward(loss_expr)
-  ComputationGraph.backward(loss_expr)
-}
-```
-
-as the FloatVector that comes back from `getImage` is eligible (and likely)
-to be garbage collected before `forward` (which runs a chain of computations
-that involve a pointer to the deleted vector) ever runs.
-
-Instead, you need to do something like
-
-```scala
-// THIS IS FINE
-for (idx <- indexes) {
-  val image = getImage(idx)
-  val x = Expression.input(Dim(100), image)
-  // some other computations
-  ComputationGraph.forward(loss_expr)
-  ComputationGraph.backward(loss_expr)
-}
-```
-
-because now `image` can't be garbage collected until after
-its iteration is finished.
-
-(It is possible, even likely, that there are other ways in which this
- phenomenon might manifest, so keep an eye out.)
-
 ### Pointers
 
 For the most part you shouldn't have to worry about pointers; most things
