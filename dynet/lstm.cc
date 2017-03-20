@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <string>
-#include <cassert>
 #include <vector>
 #include <iostream>
 
@@ -94,7 +93,10 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    assert(layers * 2 == hinit.size());
+    DYNET_ARG_CHECK(layers * 2 == hinit.size(),
+                            "LSTMBuilder must be initialized with 2 times as many expressions as layers "
+                            "(hidden state and cell for each layer). However, for " << layers << " layers, "
+                            << hinit.size() << " expressions were passed in");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
@@ -136,7 +138,8 @@ void LSTMBuilder::set_dropout_masks(unsigned batch_size) {
 // Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
 Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size()) { assert(h_new.size() == layers); }
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "LSTMBuilder::set_h expects as many inputs as layers, but got " << h_new.size() << " inputs for " << layers << " layers");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
@@ -151,7 +154,8 @@ Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
-  if (s_new.size()) { assert(s_new.size() == layers || s_new.size() == 2 * layers ); }
+  DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
+                          "LSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
   const unsigned t = c.size();
   h.push_back(vector<Expression>(layers));
@@ -247,7 +251,9 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
 void LSTMBuilder::copy(const RNNBuilder & rnn) {
   const LSTMBuilder & rnn_lstm = (const LSTMBuilder&)rnn;
-  assert(params.size() == rnn_lstm.params.size());
+  DYNET_ARG_CHECK(params.size() == rnn_lstm.params.size(),
+                          "Attempt to copy LSTMBuilder with different number of parameters "
+                          "(" << params.size() << " != " << rnn_lstm.params.size() << ")");
   for (size_t i = 0; i < params.size(); ++i)
     for (size_t j = 0; j < params[i].size(); ++j)
       params[i][j] = rnn_lstm.params[i][j];
@@ -256,7 +262,8 @@ void LSTMBuilder::copy(const RNNBuilder & rnn) {
 void LSTMBuilder::save_parameters_pretraining(const string& fname) const {
   cerr << "Writing LSTM parameters to " << fname << endl;
   ofstream of(fname);
-  assert(of);
+  if (!of)
+    DYNET_INVALID_ARG("Couldn't write LSTM parameters to " << fname);
   boost::archive::binary_oarchive oa(of);
   std::string id = "LSTMBuilder:params";
   oa << id;
@@ -271,16 +278,17 @@ void LSTMBuilder::save_parameters_pretraining(const string& fname) const {
 void LSTMBuilder::load_parameters_pretraining(const string& fname) {
   cerr << "Loading LSTM parameters from " << fname << endl;
   ifstream of(fname);
-  assert(of);
+  if (!of)
+    DYNET_INVALID_ARG("Couldn't read LSTM parameters from " << fname);
   boost::archive::binary_iarchive ia(of);
   std::string id;
   ia >> id;
   if (id != "LSTMBuilder:params")
-    throw std::invalid_argument("Bad id read in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
+    DYNET_INVALID_ARG("Bad id read in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
   unsigned l = 0;
   ia >> l;
   if (l != layers)
-    throw std::invalid_argument("Bad number of layers in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
+    DYNET_INVALID_ARG("Bad number of layers in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
   // TODO check other dimensions
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
@@ -290,16 +298,16 @@ void LSTMBuilder::load_parameters_pretraining(const string& fname) {
 }
 
 void LSTMBuilder::set_dropout(float d) {
-  if (d < 0.f || d > 1.f)
-    throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d;
   dropout_rate_c = d;
 }
 
 void LSTMBuilder::set_dropout(float d, float d_h, float d_c) {
-  if (d < 0.f || d > 1.f || d_h < 0.f || d_h > 1.f || d_c < 0.f || d_c > 1.f)
-    throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f && d_c >= 0.f && d_c <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d_h;
   dropout_rate_c = d_c;
@@ -321,6 +329,8 @@ DYNET_SERIALIZE_IMPL(LSTMBuilder);
 
 //enum { _X2I, _H2I, _C2I, _BI, _X2F, _H2F, _C2F, _BF, _X2O, _H2O, _C2O, _BO, _X2G, _H2G, _C2G, _BG };
 enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
+
+VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0) { }
 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned input_dim,
@@ -362,7 +372,10 @@ void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit
   c.clear();
 
   if (hinit.size() > 0) {
-    assert(layers * 2 == hinit.size());
+    DYNET_ARG_CHECK(layers * 2 == hinit.size(),
+                            "VanillaLSTMBuilder must be initialized with 2 times as many expressions as layers "
+                            "(hidden state, and cell for each layer). However, for " << layers << " layers, " <<
+                            hinit.size() << " expressions were passed in");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
@@ -403,7 +416,9 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
 // Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
 Expression VanillaLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size()) { assert(h_new.size() == layers); }
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "VanillaLSTMBuilder::set_h expects as many inputs as layers, but got " <<
+                          h_new.size() << " inputs for " << layers << " layers");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
@@ -418,7 +433,8 @@ Expression VanillaLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression VanillaLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
-  if (s_new.size()) { assert(s_new.size() == layers || s_new.size() == 2 * layers ); }
+  DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
+                          "VanillaLSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
   const unsigned t = c.size();
   h.push_back(vector<Expression>(layers));
@@ -487,7 +503,9 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
 void VanillaLSTMBuilder::copy(const RNNBuilder & rnn) {
   const LSTMBuilder & rnn_lstm = (const LSTMBuilder&)rnn;
-  assert(params.size() == rnn_lstm.params.size());
+  DYNET_ARG_CHECK(params.size() == rnn_lstm.params.size(),
+                          "Attempt to copy LSTMBuilder with different number of parameters "
+                          "(" << params.size() << " != " << rnn_lstm.params.size() << ")");
   for (size_t i = 0; i < params.size(); ++i)
     for (size_t j = 0; j < params[i].size(); ++j)
       params[i][j] = rnn_lstm.params[i][j];
@@ -496,7 +514,8 @@ void VanillaLSTMBuilder::copy(const RNNBuilder & rnn) {
 void VanillaLSTMBuilder::save_parameters_pretraining(const string& fname) const {
   cerr << "Writing VanillaLSTM parameters to " << fname << endl;
   ofstream of(fname);
-  assert(of);
+  if (!of)
+    DYNET_INVALID_ARG("Couldn't write LSTM parameters to " << fname);
   boost::archive::binary_oarchive oa(of);
   std::string id = "VanillaLSTMBuilder:params";
   oa << id;
@@ -511,16 +530,17 @@ void VanillaLSTMBuilder::save_parameters_pretraining(const string& fname) const 
 void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
   cerr << "Loading VanillaLSTM parameters from " << fname << endl;
   ifstream of(fname);
-  assert(of);
+  if (!of)
+    DYNET_INVALID_ARG("Couldn't read LSTM parameters from " << fname);
   boost::archive::binary_iarchive ia(of);
   std::string id;
   ia >> id;
   if (id != "VanillaLSTMBuilder:params")
-    throw std::invalid_argument("Bad id read in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
+    DYNET_INVALID_ARG("Bad id read in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
   unsigned l = 0;
   ia >> l;
   if (l != layers)
-    throw std::invalid_argument("Bad number of layers in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
+    DYNET_INVALID_ARG("Bad number of layers in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
   // TODO check other dimensions
   for (unsigned i = 0; i < layers; ++i) {
     for (auto p : params[i]) {
@@ -530,15 +550,15 @@ void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
 }
 
 void VanillaLSTMBuilder::set_dropout(float d) {
-  if (d < 0.f || d > 1.f)
-    throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d;
 }
 
 void VanillaLSTMBuilder::set_dropout(float d, float d_h) {
-  if (d < 0.f || d > 1.f || d_h < 0.f || d_h > 1.f)
-    throw std::invalid_argument("dropout rate must be a probability (>=0 and <=1)");
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d_h;
 }

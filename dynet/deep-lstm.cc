@@ -1,7 +1,6 @@
 #include "dynet/deep-lstm.h"
 
 #include <string>
-#include <cassert>
 #include <vector>
 #include <iostream>
 
@@ -75,7 +74,10 @@ void DeepLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    assert(layers*2 == hinit.size());
+    DYNET_ARG_CHECK(layers * 2 == hinit.size(),
+                            "DeepLSTMBuilder must be initialized with 2 times as many expressions as layers "
+                            "(hidden state and cell for each layer). However, for " << layers << " layers, "
+                            << hinit.size() << " expressions were passed in");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {

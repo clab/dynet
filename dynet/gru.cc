@@ -1,7 +1,6 @@
 #include "dynet/gru.h"
 
 #include <string>
-#include <cassert>
 #include <vector>
 #include <iostream>
 
@@ -70,17 +69,15 @@ void GRUBuilder::new_graph_impl(ComputationGraph& cg) {
 void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
   h.clear();
   h0 = h_0;
-  if (!h0.empty()) {
-    assert (h0.size() == layers);
-  }
+  DYNET_ARG_CHECK(h0.empty() || h0.size() == layers,
+                          "Number of inputs passed to initialize GRUBuilder (" << h0.size() << ") "
+                          "is not equal to the number of layers (" << layers << ")");
 }
 
-// TO DO - Make this correct
-// Copied c from the previous step (otherwise c.size()< h.size())
-// Also is creating a new step something we want?
-// wouldn't overwriting the current one be better?
 Expression GRUBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size()) { assert(h_new.size() == layers); }
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() << ") "
+                          "is not equal to the number of layers (" << layers << ")");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
@@ -150,7 +147,8 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
 
 void GRUBuilder::copy(const RNNBuilder & rnn) {
   const GRUBuilder & rnn_gru = (const GRUBuilder&)rnn;
-  assert(params.size() == rnn_gru.params.size());
+  if(params.size() != rnn_gru.params.size())
+    DYNET_INVALID_ARG("Attempt to copy between two GRUBuilders that are not the same size");
   for (size_t i = 0; i < params.size(); ++i)
     for (size_t j = 0; j < params[i].size(); ++j)
       params[i][j] = rnn_gru.params[i][j];
