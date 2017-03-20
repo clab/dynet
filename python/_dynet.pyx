@@ -1460,6 +1460,7 @@ cpdef Expression binary_log_loss(Expression x, Expression y): ensure_freshness(y
 cpdef Expression conv1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_narrow(x.c(), y.c()))
 cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_wide(x.c(), y.c()))
 cpdef Expression filter1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_filter1d_narrow(x.c(), y.c()))
+cpdef Expression conv2d(Expression x, Expression y, vector[unsigned] stride, bool is_valid): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), y.c(), stride, is_valid))
 
 # unary-exp
 cpdef Expression tanh(Expression x): return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))

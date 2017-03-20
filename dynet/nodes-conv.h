@@ -57,6 +57,22 @@ struct SumDimension : public Node {
   unsigned dimension;
 };
 
+// 2D convolution
+// TODO(Hao Zhang): move conv2d to standalone files because the code logic could be very long
+// when cudnn is incorporated.
+// y = x_1 *conv x_2
+// x_1 \in R^{c1 x s1 x s2 x N} (input)
+// x_2 \in R^{c2 x c1 x f1 x f2} (filter)
+struct Conv2D: public Node {
+  explicit Conv2D(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& s,
+    const bool padding_type = true)
+      : Node(a), stride(s), is_valid(padding_type) { }
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  const std::vector<unsigned> stride;
+  const bool is_valid;
+};
+
 } // namespace dynet
 
 #endif

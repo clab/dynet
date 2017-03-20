@@ -299,6 +299,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_fold_rows "dynet::expr::fold_rows" (CExpression& x, unsigned nrows) except + #
     CExpression c_sum_cols "dynet::expr::sum_cols" (CExpression& x) except +               #
     CExpression c_kmh_ngram "dynet::expr::kmh_ngram" (CExpression& x, unsigned n) except + #
+    CExpression c_conv2d "dynet::expr::conv2d" (CExpression& x, CExpression& f, vector[unsigned] stride, bool is_valid) except + #
 
     CExpression c_sum_batches "dynet::expr::sum_batches" (CExpression& x) except +
     CExpression c_sum_elems "dynet::expr::sum_elems" (CExpression& x) except +
