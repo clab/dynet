@@ -9,6 +9,7 @@
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/globals.h"
 #include "../utils/getpid.h"
 
 #include <iostream>

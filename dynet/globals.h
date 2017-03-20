@@ -1,5 +1,5 @@
-#ifndef DYNET_EIGEN_RANDOM_H
-#define DYNET_EIGEN_RANDOM_H
+#ifndef DYNET_GLOBALS_H
+#define DYNET_GLOBALS_H
 
 #include <random>
 #include <vector>

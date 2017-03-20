@@ -5,7 +5,8 @@
 #include "dynet/nodes.h"
 #include "dynet/nodes-conv.h"
 
-namespace dynet { namespace expr {
+namespace dynet {
+namespace expr {
 
 using std::vector;
 
@@ -15,7 +16,9 @@ Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data) {
 Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata) { return Expression(&g, g.add_input(d, pdata)); }
 Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata) { return Expression(&g, g.add_input(d, ids, data, defdata)); }
 Expression const_parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_const_parameters(p)); }
+Expression const_parameter(ComputationGraph& g, LookupParameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_parameters(p)); }
+Expression parameter(ComputationGraph& g, LookupParameter p) { return Expression(&g, g.add_parameters(p)); }
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index) { return Expression(&g, g.add_lookup(p, index)); }
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex) { return Expression(&g, g.add_lookup(p, pindex)); }
 Expression lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>& indices) { return Expression(&g, g.add_lookup(p, indices)); }
@@ -37,10 +40,10 @@ Expression flip_gradient(const Expression& x) { return Expression(x.pg, x.pg->ad
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
 Expression operator+(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i})); }
 Expression operator+(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantPlusX>({y.i}, x)); }
-Expression operator+(const Expression& x, real y) { return y+x; }
-Expression operator-(const Expression& x, const Expression& y) { return x+(-y); }
+Expression operator+(const Expression& x, real y) { return y + x; }
+Expression operator-(const Expression& x, const Expression& y) { return x + (-y); }
 Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantMinusX>({y.i}, x)); }
-Expression operator-(const Expression& x, real y) { return -(y-x); }
+Expression operator-(const Expression& x, real y) { return -(y - x); }
 Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
 Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
 Expression cmult(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));}
@@ -96,7 +99,7 @@ Expression dot_product(const Expression& x, const Expression& y) { return Expres
 Expression squared_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<SquaredEuclideanDistance>({x.i, y.i})); }
 Expression huber_distance(const Expression& x, const Expression& y, real c) { return Expression(x.pg, x.pg->add_function<HuberDistance>({x.i, y.i}, c)); }
 Expression l1_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<L1Distance>({x.i, y.i})); }
-Expression binary_log_loss(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<BinaryLogLoss>({x.i,y.i})); }
+Expression binary_log_loss(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<BinaryLogLoss>({x.i, y.i})); }
 Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m) { return Expression(x.pg, x.pg->add_function<PairwiseRankLoss>({x.i, y.i}, m)); }
 Expression poisson_loss(const Expression& x, unsigned y) { return Expression(x.pg, x.pg->add_function<PoissonRegressionLoss>({x.i}, y)); }
 Expression poisson_loss(const Expression& x, const unsigned* py) { return Expression(x.pg, x.pg->add_function<PoissonRegressionLoss>({x.i}, py)); }
@@ -112,6 +115,9 @@ Expression pick(const Expression& x, const vector<unsigned> & v, unsigned d) { r
 Expression pick(const Expression& x, const unsigned* pv, unsigned d) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv, d)); }
 Expression pick(const Expression& x, const vector<unsigned> * pv, unsigned d) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, pv, d)); }
 
+Expression pick_batch(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickBatch>({x.i}, v)); }
+Expression pick_batches(const Expression & x, const std::vector<unsigned>& v) { return Expression(x.pg, x.pg->add_function<PickBatch>({x.i}, v)); }
+
 Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u)); }
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
@@ -123,10 +129,12 @@ Expression average_cols(const Expression& x) { return Expression(x.pg, x.pg->add
 Expression sum_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, d)); }
 Expression sum_rows(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 0)); }
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 1)); }
+Expression sum_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumElements>({x.i})); }
 
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
 
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 
 
-} }
+}
+}
