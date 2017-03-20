@@ -27,6 +27,10 @@ struct NodeTest {
     first_one_vals = {1.f, 0.f, 0.f};
     ones2_vals = {1.f, 1.f};
     batch_vals = {1.f, 2.f, 3.f, 4.f, 5.f, 6.f};
+    conv2d_batch_vals.resize(2 * 5 * 5 * 2);
+    for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
+      conv2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
+    }
     // Create parameters
     std::vector<float> param1_vals = {1.1f, -2.2f, 3.3f};
     std::vector<float> param2_vals = {2.2f, 3.4f, -1.2f};
@@ -43,6 +47,9 @@ struct NodeTest {
                                            .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
                                            .211f, .222f, .233f, .212f, .222f, .232f, .213f, .223f, .233f
                                           };
+    std::vector<float> param_kernel_conv2d_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
+                                         .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
+                                         .211f, .222f, .233f, .212f, .222f, .232f};
     param1 = mod.add_parameters({3});
     TensorTools::SetElements(param1.get()->values, param1_vals);
     param2 = mod.add_parameters({3});
@@ -65,6 +72,8 @@ struct NodeTest {
     TensorTools::SetElements(param_cube1.get()->values, param_cube1_vals);
     lookup1 = mod.add_lookup_parameters(3, {3});
     TensorTools::SetElements(lookup1.get()->all_values, param_square1_vals);
+    param_kernel_conv2d = mod.add_parameters({3, 2, 2, 2});
+    TensorTools::SetElements(param_kernel_conv2d.get()->values, param_kernel_conv2d_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);
@@ -79,10 +88,10 @@ struct NodeTest {
     return oss.str();
   }
 
-  std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
+  std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals, conv2d_batch_vals;
   std::vector<char*> av;
   dynet::Model mod;
-  dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1;
+  dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1, param_kernel_conv2d;
   dynet::LookupParameter lookup1;
 };
 
@@ -870,6 +879,16 @@ BOOST_AUTO_TEST_CASE( sum_cols_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression conv2d(const Expression& x ,const Expression& f, const std::vector<unsigned>& stride, bool is_valid);
+BOOST_AUTO_TEST_CASE( conv2d_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({2, 5, 5}, 2), conv2d_batch_vals);
+  Expression kernel = parameter(cg, param_kernel_conv2d);
+  vector<unsigned> stride = {1, 1}; bool is_valid = true;
+  Expression y = conv2d(x, kernel, stride, is_valid);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
 
 // TODO: These are all unimplemented
 // Expression kmh_ngram(const Expression& x, unsigned n);
