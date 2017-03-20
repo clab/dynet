@@ -70,4 +70,29 @@ class ExpressionSpec extends FlatSpec with Matchers {
 
     // TODO(joelgrus): write more tests
   }
+
+  "lists of expressions" should "get converted to vectors" in {
+    ComputationGraph.renew()
+
+    val exprs = for (i <- 1 to 100) yield Expression.input(i)
+
+    val sums = for (i <- 1 to 50) yield Expression.sum(exprs: _*)
+    sums.foreach(_ shouldHaveValue (1 to 100).sum)
+
+    val uberSum = Expression.sum(
+      new ExpressionVector(
+        for {
+          _ <- 1 to 1000
+          i1 = scala.util.Random.nextInt(100)
+          i2 = scala.util.Random.nextInt(100)
+          i3 = scala.util.Random.nextInt(100)
+        } yield Expression.sum(exprs(i1), exprs(i2), exprs(i3))
+      )
+    )
+
+    val value = uberSum.value.toFloat
+    value should be > 30f * 1000 * 3
+    value should be < 70f * 1000 * 3
+
+  }
 }
