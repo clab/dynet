@@ -72,7 +72,7 @@ struct ParameterStorageBase {
   virtual size_t size() const = 0;
   virtual ~ParameterStorageBase();
   DYNET_SERIALIZE_COMMIT_EMPTY()
-};
+}; // struct ParameterStorageBase
 
 // represents parameters (e.g., a weight matrix) that will be optimized
 /**
@@ -125,7 +125,7 @@ private:
   ParameterStorage() : updated(true), owner(nullptr) {}
   explicit ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name); // initialize with custom initializer
   DYNET_SERIALIZE_DECLARE()
-};
+}; // struct ParameterStorage
 
 // represents a matrix/vector embedding of a discrete set
 /**
@@ -220,7 +220,7 @@ private:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
   LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name);
   DYNET_SERIALIZE_SPLIT_DECLARE()
-};
+}; // // struct LookupParameterStorage
 
 /**
  * \ingroup params
@@ -245,6 +245,11 @@ struct Parameter {
    * @return ParameterStorage holding the parameter values
    */
   ParameterStorage& get_storage() const;
+
+  /**
+   * @brief Get the full name of the ParameterStorage object
+   */
+  std::string get_fullname() const;
 
   /**
    * \brief Zero the parameters
@@ -286,7 +291,7 @@ struct Parameter {
 
 private:
   DYNET_SERIALIZE_DECLARE()
-};
+}; // struct Parameter
 
 /**
  * \ingroup params
@@ -315,6 +320,11 @@ struct LookupParameter {
   void zero();
 
   LookupParameterStorage* p; /**< Pointer to the storage for this Parameter */
+
+  /**
+   * @brief Get the full name of the ParameterStorage object
+   */
+  std::string get_fullname() const;
 
   /**
    * \brief Shape of the lookup parameter
@@ -348,7 +358,7 @@ struct LookupParameter {
 
 private:
   DYNET_SERIALIZE_DECLARE()
-};
+}; // struct LookupParameter
 
 // This is an internal class to store parameters in the collection
 struct ParameterCollectionStorage {
@@ -405,6 +415,16 @@ public:
    * \brief Sets all gradients to zero
    */
   void reset_gradient();
+  /**
+   * \brief Add parameters to model and returns Parameter object
+   * \details creates a ParameterStorage object holding a tensor of dimension `d` and returns a Parameter object (to be used as input in the computation graph).
+   *
+   * \param d Shape of the parameter
+   * \param name Name of the parameter
+   *
+   * \return Parameter object to be used in the computation graph
+   */
+  Parameter add_parameters(const Dim& d, const std::string & name);
   // set scale to use custom initialization
   /**
    * \brief Add parameters to model and returns Parameter object
@@ -533,6 +553,11 @@ public:
    * \return The subcollection
    */
   ParameterCollection add_subcollection(const std::string& name = "");
+
+  /**
+   * @brief get namespace of current ParameterCollection object(end with a slash)
+   */
+  std::string get_namespace() { return name; }
 
   /**
    * \brief Get the weight decay object

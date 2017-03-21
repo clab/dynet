@@ -158,6 +158,11 @@ void Parameter::zero() {
   get_storage().zero();
 }
 
+string Parameter::get_fullname() const {
+  DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null parameter");
+  return p->name;
+}
+
 void Parameter::set_updated(bool b) {
   get_storage().updated = b;
 }
@@ -190,6 +195,11 @@ void LookupParameter::zero() {
 
 void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
   get_storage().initialize(index, val);
+}
+
+string LookupParameter::get_fullname() const {
+  DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null parameter");
+  return p->name;
 }
 
 void LookupParameter::set_updated(bool b) {
@@ -240,7 +250,7 @@ ParameterCollection::ParameterCollection(const string & my_name, ParameterCollec
     name(my_name), storage(nullptr), parent(my_parent) { }
 
 ParameterCollection ParameterCollection::add_subcollection(const string & sub_name) {
-  ostringstream oss; oss << name << sub_name << "__" << ++collec_name_cntr[sub_name] << "/";
+  ostringstream oss; oss << name << sub_name << "__" << collec_name_cntr[sub_name]++ << "/";
   return ParameterCollection(oss.str(), this);
 }
 
@@ -257,6 +267,10 @@ void ParameterCollection::project_weights(float radius) {
   get_storage().project_weights(radius);
 }
 
+Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name) {
+  return add_parameters(d, ParameterInitGlorot(), p_name);
+}
+
 Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const std::string & p_name) {
   if(scale == 0.0f)
     return add_parameters(d, ParameterInitGlorot(), p_name);
@@ -265,7 +279,7 @@ Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const s
 }
 
 Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
-  ostringstream oss; oss << name << p_name << "__" << ++name_cntr[p_name];
+  ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
   ParameterStorage* p = new ParameterStorage(d, init, oss.str());
   add_parameters_to_storage(p);
   return Parameter(p);
@@ -287,7 +301,7 @@ LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim
 }
 
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
-  ostringstream oss; oss << name << p_name << "__" << ++name_cntr[p_name];
+  ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
   LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
   add_lookup_parameters_to_storage(p);
   return LookupParameter(p);
