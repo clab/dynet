@@ -1507,6 +1507,7 @@ cpdef Expression pickneglogsoftmax_batch(Expression x, vector[unsigned] vs): ret
 
 cpdef Expression kmh_ngram(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
 cpdef Expression pickrange(Expression x, unsigned v, unsigned u): return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
+cpdef Expression pick_batch_elem(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_pick_batch_elem(x.c(), v))
 cpdef Expression pick_batch_elems(Expression x, vector[unsigned] vs): return Expression.from_cexpr(x.cg_version, c_pick_batch_elems(x.c(), vs))
 #expr-float
 cpdef Expression noise(Expression x, float stddev): return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
