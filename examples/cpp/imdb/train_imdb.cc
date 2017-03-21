@@ -1,14 +1,14 @@
 /**
  * An implementation of [Document Modeling with Gated Recurrent Neural
  * Network for Sentiment Classification](http://aclweb.org/anthology/D15-1167)
- * using `pick_batch_elems`.
+ * using `pick_batch_elem`.
  * 
  * The model in use a bidirectional GRU to represents every sentence in the
  * document and feed the sentence representations into the another bi-GRU
  * to get the final representation of the document.
  *
  * This implementation compiles each i-th words in the sentences into a batch
- * (like that in the rnnlm-batch) and use `pick_batch_elems` to get last representation
+ * (like that in the rnnlm-batch) and use `pick_batch_elem` to get last representation
  * in corresponding batch.
  *
  * On a small proportion of the IMDB data (2500 for training, 500 for dev.), this
@@ -127,7 +127,7 @@ struct DocumentModel {
       for (unsigned b = 0; b < n_sents; ++b) {
         const std::vector<int> & sent = inst.first[b];
         if (i + 1 == sent.size()) {
-          sent_repr[b] = concatenate({ pick_batch_elems(fwd_output, b), pick_batch_elems(bwd_output, b) });
+          sent_repr[b] = concatenate({ pick_batch_elem(fwd_output, b), pick_batch_elem(bwd_output, b) });
         }
       }
     }
