@@ -323,7 +323,7 @@ string Average::as_string(const vector<string>& arg_names) const {
 Dim Average::dim_forward(const vector<Dim>& xs) const {
   Dim d(xs[0]);
   for (unsigned i = 1; i < xs.size(); ++i) {
-    DYNET_ARG_CHECK(xs[0].single_batch() == xs[1].single_batch(),
+    DYNET_ARG_CHECK(xs[0].single_batch() == xs[i].single_batch(),
                             "Mismatched input dimensions in Average: " << xs);
     d.bd = max(xs[i].bd, d.bd);
   }
@@ -465,6 +465,27 @@ Dim ConcatenateColumns::dim_forward(const vector<Dim>& xs) const {
     bd = max(bd, d.bd);
   }
   return Dim({rows, new_cols}, bd);
+}
+
+string ConcatenateBatchElements::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "concat_batch_elems(" << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); ++i) {
+    os << ',' << arg_names[i];
+  }
+  os << ')';
+  return os.str();
+}
+
+Dim ConcatenateBatchElements::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ASSERT(xs.size() > 0, "Failed input count check in ConcatenateColumns")
+  Dim d(xs[0]);
+  for (unsigned i = 1; i < xs.size(); ++i) {
+    DYNET_ARG_CHECK(xs[0].single_batch() == xs[i].single_batch(),
+                            "Mismatched input dimensions in ConcatenateBatchElements: " << xs);
+    d.bd += xs[i].bd;
+  }
+  return d;
 }
 
 string PairwiseRankLoss::as_string(const vector<string>& arg_names) const {
@@ -644,13 +665,13 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
   return Dim({end - start}, xs[0].bd);
 }
 
-string PickBatch::as_string(const vector<string>& arg_names) const {
+string PickBatchElements::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "pick_batch(" << arg_names[0] << ',';
+  s << "pick_batch_elems(" << arg_names[0] << ',';
   if (pval) {
     s << *pval;
   } else {
-    DYNET_ASSERT(pvals, "Have neither index nor index vector in PickBatch");
+    DYNET_ASSERT(pvals, "Have neither index nor index vector in PickBatchElements");
     s << '[';
     if (pvals->size()) {
       s << (*pvals)[0];
@@ -663,15 +684,15 @@ string PickBatch::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-Dim PickBatch::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in PickBatch")
+Dim PickBatchElements::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in PickBatchElements")
   DYNET_ARG_CHECK(xs[0].nd < 4, "PickElement not currently supported for tensors of 4 or more dimensions.");
   Dim ret(xs[0]);
   if (pval) {
     // set batch size to one.
     ret.bd = 1;
   } else {
-    DYNET_ASSERT(pvals, "Have neither index nor index vector in PickBatch");
+    DYNET_ASSERT(pvals, "Have neither index nor index vector in PickBatchElements");
     ret.bd = pvals->size();
   }
   return ret;
