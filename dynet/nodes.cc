@@ -523,6 +523,35 @@ void ConcatenateColumns::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(ConcatenateColumns)
 
 template<class MyDevice>
+void ConcatenateBatchElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const { 
+  unsigned curr_e = 0;
+  src_element_indices.resize(xs.size());
+  Eigen::DSizes<ptrdiff_t, 2> indices(0,0);
+  Eigen::DSizes<ptrdiff_t, 2> sizes(static_cast<ptrdiff_t>(fx.d.batch_size()), 0);
+  for (unsigned i = 0; i < xs.size(); ++i) {
+    indices[1] = src_element_indices[i] = curr_e;
+    sizes[1] = xs[i]->d.bd;
+    fx.tbvec().slice(indices, sizes).device(*dev.edevice) = xs[i]->tbvec();
+    curr_e += xs[i]->d.bd;
+  }
+  
+}
+
+template<class MyDevice>
+void ConcatenateBatchElements::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  DYNET_ASSERT(i < src_element_indices.size(), "Failed boundary check in ConcatenateBatchElements::backward: " << i << " >= " << src_element_indices.size());
+  Eigen::DSizes<ptrdiff_t, 2> indices(0, static_cast<ptrdiff_t>(src_element_indices[i]));
+  Eigen::DSizes<ptrdiff_t, 2> sizes(static_cast<ptrdiff_t>(fx.d.batch_size()), static_cast<ptrdiff_t>(xs[i]->d.bd));
+  dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec().slice(indices, sizes);
+}
+DYNET_NODE_INST_DEV_IMPL(ConcatenateBatchElements)
+
+template<class MyDevice>
 void BinaryLogLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   fx.t<0>().device(*dev.edevice) = xs[0]->tvec().binaryExpr(xs[1]->tvec(), FBinaryLogLoss()).sum();
 }
@@ -1545,39 +1574,39 @@ void PickRange::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(PickRange)
 
 template<class MyDevice>
-void PickBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+void PickBatchElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (pval) {
     fx.tvec().device(*dev.edevice) = xs[0]->tbvec().chip<1>(*pval);
   } else {
-    DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickBatch::forward");
+    DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickBatchElements::forward");
     DYNET_ARG_CHECK(pvals->size() == fx.d.batch_elems(), 
-                            "In PickBatch::forward, number of elements in the passed-in index vector (" << pvals->size() << ") "
+                            "In PickBatchElements::forward, number of elements in the passed-in index vector (" << pvals->size() << ") "
                             "did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
     for (unsigned b = 0; b < pvals->size(); ++b) {
       DYNET_ARG_CHECK((*pvals)[b] < xs[0]->d.bd,
-                              "PickBatch::forward_impl requested element " << (*pvals)[b] << " from a batch size of " << xs[0]->d.nd);
+                              "PickBatchElements::forward_impl requested element " << (*pvals)[b] << " from a batch size of " << xs[0]->d.bd);
       fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[0]->tbvec().chip<1>((*pvals)[b]);
     }
   }
 }
 
 template<class MyDevice>
-void PickBatch::backward_dev_impl(const MyDevice & dev,
+void PickBatchElements::backward_dev_impl(const MyDevice & dev,
                                   const vector<const Tensor*>& xs,
                                   const Tensor& fx,
                                   const Tensor& dEdf,
                                   unsigned i,
                                   Tensor& dEdxi) const {
-  DYNET_ASSERT(i == 0, "Failed dimension check in PickBatch::backward");
+  DYNET_ASSERT(i == 0, "Failed dimension check in PickBatchElements::backward");
   if (pval) {
     dEdxi.tbvec().chip<1>(*pval).device(*dev.edevice) += dEdf.tvec();
   } else {
-    DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickBatch::backward");
+    DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickBatchElements::backward");
     for (unsigned b = 0; b < pvals->size(); ++b)
       dEdxi.tbvec().chip<1>((*pvals)[b]).device(*dev.edevice) += dEdf.tbvec().chip<1>(b);
   }
 }
-DYNET_NODE_INST_DEV_IMPL(PickBatch)
+DYNET_NODE_INST_DEV_IMPL(PickBatchElements)
 
 template<class MyDevice>
 void PoissonRegressionLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {

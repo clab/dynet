@@ -982,7 +982,7 @@ cdef class Expression: #{{{
         return arr
 
     cpdef value(self, recalculate=False):
-        """Gets the value of the expression in the msot relevant format
+        """Gets the value of the expression in the most relevant format
         
         this returns the same thing as `scalar_value`, `vec_value`, `npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
         
@@ -1507,6 +1507,7 @@ cpdef Expression pickneglogsoftmax_batch(Expression x, vector[unsigned] vs): ret
 
 cpdef Expression kmh_ngram(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
 cpdef Expression pickrange(Expression x, unsigned v, unsigned u): return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
+cpdef Expression pick_batch_elems(Expression x, vector[unsigned] vs): return Expression.from_cexpr(x.cg_version, c_pick_batch_elems(x.c(), vs))
 #expr-float
 cpdef Expression noise(Expression x, float stddev): return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
 cpdef Expression dropout(Expression x, float p): return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
@@ -1575,6 +1576,14 @@ cpdef Expression concatenate(list xs):
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat(cvec))
 
+cpdef Expression concat_batch_elems(list xs):
+    assert xs, 'List is empty, nothing to concatenate.'
+    cdef vector[CExpression] cvec
+    cdef Expression x
+    for x in xs:
+        ensure_freshness(x) 
+        cvec.push_back(x.c())
+    return Expression.from_cexpr(x.cg_version, c_concat_batch_elems(cvec))
 
 cpdef Expression affine_transform(list exprs):
     assert exprs, 'List input to affine_transform must not be empty.'

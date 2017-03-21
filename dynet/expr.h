@@ -1354,8 +1354,8 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
 /**
  * \ingroup flowoperations
- * \brief Pick batch.
- * \details Pick a batch from an expression. For a Tensor with 3 batches:
+ * \brief (Modifiable) Pick batch element.
+ * \details Pick batch element from a batched expression. For a Tensor with 3 batch elements:
  *
  *    \f$
  *      \begin{pmatrix}
@@ -1372,7 +1372,7 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
  *      \end{pmatrix}
  *    \f$
  * 
- * pick_batch(t, 1) will return a Tensor of
+ * pick_batch_elems(t, 1) will return a Tensor of
  * 
  *    \f$
  *      \begin{pmatrix}
@@ -1382,17 +1382,17 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
  *    \f$
  *
  * \param x The input expression
- * \param v The index of the batch to be picked.
+ * \param v The index of the batch element to be picked.
  *
- * \return The expression of picked batch. The picked batch is a tensor
+ * \return The expression of picked batch element. The picked element is a tensor
  *         whose `bd` equals to one.
  */
-Expression pick_batch(const Expression& x, unsigned v);
+Expression pick_batch_elems(const Expression& x, unsigned v);
 
 /**
  * \ingroup flowoperations
- * \brief Pick batch.
- * \details Pick several batches from an expression. For a Tensor with 3 batches:
+ * \brief (Modifiable) Pick batch elements.
+ * \details Pick several batch elements from a batched expression. For a Tensor with 3 batch elements:
  *
  *    \f$
  *      \begin{pmatrix}
@@ -1409,7 +1409,7 @@ Expression pick_batch(const Expression& x, unsigned v);
  *      \end{pmatrix}
  *    \f$
  * 
- * pick_batch(t, {2, 3}) will return a Tensor of with 2 batches:
+ * pick_batch_elems(t, {2, 3}) will return a Tensor of with 2 batch elements:
  * 
  *    \f$
  *      \begin{pmatrix}
@@ -1423,12 +1423,50 @@ Expression pick_batch(const Expression& x, unsigned v);
  *    \f$
  *
  * \param x The input expression
- * \param v A vector of indicies of the batches to be picked.
+ * \param v A vector of indicies of the batch elements to be picked.
  *
- * \return The expression of picked batches. The picked batches is a tensor
+ * \return The expression of picked batch elements. The batch elements is a tensor
  *         whose `bd` equals to the size of vector `v`.
  */
-Expression pick_batches(const Expression& x, const std::vector<unsigned> & v);
+Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> & v);
+
+/**
+ * \ingroup flowoperations
+ * \brief Pick batch element.
+ * \details Pick batch element from a batched expression. 
+ * \param x The input expression
+ * \param v A pointer to the index of the correct element to be picked.
+ *
+ * \return The expression of picked batch element. The picked element is a tensor
+ *         whose `bd` equals to one.
+ */
+Expression pick_batch_elems(const Expression& x, const unsigned* v);
+
+/**
+ * \ingroup flowoperations
+ * \brief Pick batch elements.
+ * \details Pick several batch elements from a batched expression. 
+ * \param x The input expression
+ * \param v A pointer to the indexes
+ *
+ * \return The expression of picked batch elements. The batch elements is a tensor
+ *         whose `bd` equals to the size of vector `v`.
+ */
+Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> * pv);
+
+/**
+ * \ingroup flowoperations
+ * \brief Concatenate batch elements
+ * \details Perform a concatenation of several batched expressions along the batch dimension.
+ *          All expressions must have the same shape except for the batch dimension.
+ *
+ * \param xs The input expressions
+ *
+ * \return The expression with the batch dimensions concatenated
+ */
+inline Expression concatenate_batch_elems(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateBatchElements>(xs); }
+template <typename T>
+inline Expression concatenate_batch_elems(const T& xs) { return detail::f<ConcatenateBatchElements>(xs); }
 
 /**
  * \ingroup flowoperations
