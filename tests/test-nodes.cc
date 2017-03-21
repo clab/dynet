@@ -348,6 +348,16 @@ BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
+// Expression concatenate_batch_elems(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( concatenate_batch_elems_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression xsquare = parameter(cg, param_square1);
+  Expression y = concatenate_batch_elems({x1, x2});
+  Expression z = sum_batches(sum_elems(xsquare*y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
 
 // Expression concatenate(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( concatenate_gradient ) {
@@ -902,24 +912,24 @@ BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression pick_batch(const Expression& x, unsigned v);
-BOOST_AUTO_TEST_CASE( pick_batch_gradient1 ) {
+// Expression pick_batch_elem(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pick_batch_elem_gradient ) {
   unsigned idx = 0;
   dynet::ComputationGraph cg;
   Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
-  Expression z = sum_rows(pick_batch(x1, idx));
+  Expression z = sum_rows(pick_batch_elem(x1, idx));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression pick_batches(const Expression& x, cosnt std::vector<unsigned> & v);
-BOOST_AUTO_TEST_CASE( pick_batches_gradient ) {
+// Expression pick_batch_elems(const Expression& x, cosnt std::vector<unsigned> & v);
+BOOST_AUTO_TEST_CASE(  pick_batch_elems_gradient ) {
   dynet::ComputationGraph cg;
   std::vector<unsigned> indices = { 0, 1 };
   Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
-  Expression picked_x1 = pick_batches(x1, indices);
+  Expression picked_x1 = pick_batch_elems(x1, indices);
   Expression z = sum({
-    sum_rows(pick_batch(picked_x1, 0)),
-    sum_rows(pick_batch(picked_x1, 1))
+    sum_rows(pick_batch_elem(picked_x1, (unsigned) 0)),
+    sum_rows(pick_batch_elem(picked_x1, (unsigned) 1))
   });
   BOOST_CHECK(check_grad(mod, z, 0));
 }
