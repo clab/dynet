@@ -912,24 +912,24 @@ BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression pick_batch_elems(const Expression& x, unsigned v);
-BOOST_AUTO_TEST_CASE( pick_batch_elems_gradient0 ) {
+// Expression pick_batch_elem(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pick_batch_elem_gradient ) {
   unsigned idx = 0;
   dynet::ComputationGraph cg;
   Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
-  Expression z = sum_rows(pick_batch_elems(x1, idx));
+  Expression z = sum_rows(pick_batch_elem(x1, idx));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 // Expression pick_batch_elems(const Expression& x, cosnt std::vector<unsigned> & v);
-BOOST_AUTO_TEST_CASE(  pick_batch_elems_gradient1 ) {
+BOOST_AUTO_TEST_CASE(  pick_batch_elems_gradient ) {
   dynet::ComputationGraph cg;
   std::vector<unsigned> indices = { 0, 1 };
   Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
   Expression picked_x1 = pick_batch_elems(x1, indices);
   Expression z = sum({
-    sum_rows(pick_batch_elems(picked_x1, (unsigned) 0)),
-    sum_rows(pick_batch_elems(picked_x1, (unsigned) 1))
+    sum_rows(pick_batch_elem(picked_x1, (unsigned) 0)),
+    sum_rows(pick_batch_elem(picked_x1, (unsigned) 1))
   });
   BOOST_CHECK(check_grad(mod, z, 0));
 }

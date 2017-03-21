@@ -1372,7 +1372,7 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
  *      \end{pmatrix}
  *    \f$
  * 
- * pick_batch_elems(t, 1) will return a Tensor of
+ * pick_batch_elem(t, 1) will return a Tensor of
  * 
  *    \f$
  *      \begin{pmatrix}
@@ -1387,7 +1387,7 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
  * \return The expression of picked batch element. The picked element is a tensor
  *         whose `bd` equals to one.
  */
-Expression pick_batch_elems(const Expression& x, unsigned v);
+Expression pick_batch_elem(const Expression& x, unsigned v);
 
 /**
  * \ingroup flowoperations
@@ -1440,7 +1440,7 @@ Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> & v
  * \return The expression of picked batch element. The picked element is a tensor
  *         whose `bd` equals to one.
  */
-Expression pick_batch_elems(const Expression& x, const unsigned* v);
+Expression pick_batch_elem(const Expression& x, const unsigned* v);
 
 /**
  * \ingroup flowoperations

@@ -313,7 +313,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_pickrange "dynet::expr::pickrange" (CExpression& x, unsigned v, unsigned u) except + #
 
     CExpression c_pick_batch_elems "dynet::expr::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
-
+    CExpression c_pick_batch_elem "dynet::expr::pick_batch_elem" (CExpression& x, unsigned v) except + #
     CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, unsigned v) except + #
     CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) except + #
 
