@@ -6,11 +6,9 @@
 
 #include <unordered_set>
 #include <iostream>
-
 #include <fstream>
 #include <sstream>
-
-
+#include <algorithm>
 #include <stdexcept>
 
 #define LOAD_INIT_FUNC() initialize_lookups()
@@ -84,6 +82,11 @@ DYNET_SERIALIZE_COMMIT(ParameterStorage,
                        DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, dim, values, g))
 DYNET_SERIALIZE_IMPL(ParameterStorage)
 #endif
+
+bool validParameter(const std::string & s) {
+  auto it = std::find_if(s.begin(), s.end(), [] (char ch) { return ch == '/' || ch == '_'; });
+  return it == s.end();
+}
 
 LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), all_updated(false), owner(nullptr) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
@@ -250,8 +253,12 @@ ParameterCollection::ParameterCollection(const string & my_name, ParameterCollec
     name(my_name), storage(nullptr), parent(my_parent) { }
 
 ParameterCollection ParameterCollection::add_subcollection(const string & sub_name) {
-  ostringstream oss; oss << name << sub_name << "__" << collec_name_cntr[sub_name]++ << "/";
-  return ParameterCollection(oss.str(), this);
+  if (validParameter(sub_name)) {
+    ostringstream oss; oss << name << sub_name << "__" << collec_name_cntr[sub_name]++ << "/";
+    return ParameterCollection(oss.str(), this);
+  } else {
+    throw std::runtime_error("Submodel name could not include '/' and '_'");
+  }
 }
 
 ParameterCollection::~ParameterCollection() {
@@ -279,10 +286,14 @@ Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const s
 }
 
 Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
-  ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
-  ParameterStorage* p = new ParameterStorage(d, init, oss.str());
-  add_parameters_to_storage(p);
-  return Parameter(p);
+  if (validParameter(p_name)) {
+    ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
+    ParameterStorage* p = new ParameterStorage(d, init, oss.str());
+    add_parameters_to_storage(p);
+    return Parameter(p);
+  } else {
+    throw std::runtime_error("Parameter name could not include '/' and '_'");
+  }
 }
 
 void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
@@ -301,10 +312,14 @@ LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim
 }
 
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
-  ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
-  LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
-  add_lookup_parameters_to_storage(p);
-  return LookupParameter(p);
+  if (validParameter(p_name)) {
+    ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
+    LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
+    add_lookup_parameters_to_storage(p);
+    return LookupParameter(p);
+  } else {
+    throw std::runtime_error("LookupParameter name could not include '/' and '_'");
+  }
 }
 
 void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorage *p) {
