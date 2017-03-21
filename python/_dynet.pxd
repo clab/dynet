@@ -312,6 +312,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv) except + #
     CExpression c_pickrange "dynet::expr::pickrange" (CExpression& x, unsigned v, unsigned u) except + #
 
+    CExpression c_pick_batch_elems "dynet::expr::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
+
     CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, unsigned v) except + #
     CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) except + #
 
@@ -319,6 +321,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_average     "dynet::expr::average" (vector[CExpression]& xs) except +
     CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs) except +
     CExpression c_concat      "dynet::expr::concatenate" (vector[CExpression]& xs) except +
+    CExpression c_concat_batch_elems      "dynet::expr::concatenate_batch_elems" (vector[CExpression]& xs) except +
 
     CExpression c_sum            "dynet::expr::sum" (vector[CExpression]& xs) except +
     CExpression c_max            "dynet::expr::vmax" (vector[CExpression]& xs) except +
