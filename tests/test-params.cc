@@ -9,8 +9,8 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <iostream>
 #include <fstream>
-
 #include <stdexcept>
+#include "test.h"
 
 using namespace dynet;
 using namespace dynet::expr;
@@ -60,6 +60,25 @@ BOOST_AUTO_TEST_CASE( init_saxe ) {
     float diff = dynet::as_scalar(cg.forward((diff_expr_left + diff_expr_right) / 2.0));
     // Leave a margin of error of epsilon=10^-6
     BOOST_CHECK_LT(diff, epsilon);
+}
+
+BOOST_AUTO_TEST_CASE ( test_parameter_collection ) {
+  dynet::ParameterCollection model;
+  dynet::Parameter a = model.add_parameters({10});
+  dynet::Parameter b1 = model.add_parameters({1,2}, "b");
+  dynet::Parameter b2 = model.add_parameters({1,2}, "b");
+  dynet::ParameterCollection submodel = model.add_subcollection("foo");
+  dynet::Parameter c = submodel.add_parameters({10});
+  dynet::Parameter d = submodel.add_parameters({1, 2}, "d");
+  dynet::Parameter b3 = submodel.add_parameters({1, 2}, "b");
+  DYNET_CHECK_EQUAL(model.get_namespace(), "/");
+  DYNET_CHECK_EQUAL(a.get_fullname(), "/__0");
+  DYNET_CHECK_EQUAL(b1.get_fullname(), "/b__0");
+  DYNET_CHECK_EQUAL(b2.get_fullname(), "/b__1");
+  DYNET_CHECK_EQUAL(submodel.get_namespace(), "/foo__0/");
+  DYNET_CHECK_EQUAL(c.get_fullname(), "/foo__0/__0");
+  DYNET_CHECK_EQUAL(d.get_fullname(), "/foo__0/d__0");
+  DYNET_CHECK_EQUAL(b3.get_fullname(), "/foo__0/b__0");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
