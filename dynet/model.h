@@ -448,6 +448,12 @@ public:
    */
   Parameter add_parameters(const Dim& d, const ParameterInit & init, const std::string & name = "");
   /**
+   * \brief Get parameter in current model
+   * \details It is not recommended to use this
+   * \return the pointer to the Parameter object
+   */
+  ParameterStorage* get_parameter(const std::string & pname);
+  /**
    * \brief Get parameters in current model
    *
    * \return list of points to ParameterStorage objects
@@ -474,6 +480,12 @@ public:
    * \return LookupParameter object to be used in the computation graph
    */
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name = "");
+  /**
+   * \brief Get lookup parameter in current model
+   * \details It is not recommended to use this
+   * \return the pointer to the LookupParameter object
+   */
+  LookupParameterStorage* get_lookup_parameter(const std::string & lookup_pname);
   /**
    * \brief Get lookup parameters in current model
    *
