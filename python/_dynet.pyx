@@ -1053,6 +1053,10 @@ cdef class Expression: #{{{
         if isinstance(self, Expression) and isinstance(other, (int,float)):
             return _cdiv(self, other)
         else: raise NotImplementedError()
+    def __truediv__(self, other):
+        if isinstance(self, Expression) and isinstance(other, (int,float)):
+            return _cdiv(self, other)
+        else: raise NotImplementedError()  
     def __neg__(self):        return _neg(self)
     def __sub__(self, other):
         if isinstance(self,Expression) and isinstance(other,Expression):
