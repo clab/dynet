@@ -313,7 +313,7 @@ def softsign(x): return GVExpr('softsign', [x], copy_dim(x))
 def pow(x, y): return GVExpr('pow', [x,y], ensure_same_dim(x,y))
 def bmin(x, y): return GVExpr('bmin', [x,y], ensure_same_dim(x,y))
 def bmax(x, y): return GVExpr('bmax', [x,y], ensure_same_dim(x,y))
-def transpose(x): return GVExpr('transpose', [x], x.dim[::-1] if x.dim.isvalid() else InvalidDim)
+def transpose(x): return GVExpr('transpose', [x], make_dim(x.dim[1], x.dim[0]) if x.dim.isvalid() else InvalidDim)
 def sum_cols(x): return GVExpr('sum_cols', [x], make_dim(x.dim[0],1) if x.dim.isvalid() else InvalidDim)
 
 def sum_batches(x): return GVExpr('sum_batches', [x], copy_dim(x))
