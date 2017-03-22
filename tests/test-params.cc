@@ -105,16 +105,21 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
     auto params = m.get_parameters();
     auto lookup_params = m.get_lookup_parameters();
     for (auto & param: params) {
-      std::cout << param->name << "saved in file " << fname << std::endl;
+      std::cout << param->name << " saved in file " << fname << std::endl;
     }
     for (auto & lookup_param: lookup_params) {
-      std::cout << lookup_param->name << "saved in file " << fname << std::endl;
+      std::cout << lookup_param->name << " saved in file " << fname << std::endl;
     }
     return params.size() + lookup_params.size();
   };
   auto save_parameters_lambda2 = [] (const std::string & fname, dynet::Parameter & p) -> std::string {
-    std::cout << p.get_storage().name << "saved in file " << fname << std::endl;
+    std::cout << p.get_storage().name << " saved in file " << fname << std::endl;
     return p.get_storage().name;
+  };
+  auto save_parameters_lambda3 = [] (const std::string & fname,
+                                     dynet::ParameterStorage *p) ->std::string {
+    std::cout << p->name << "saved in file " << fname << std::endl;
+    return p->name;
   };
   ParameterCollection collec;
   testModel spec(collec);
@@ -125,7 +130,10 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
   DYNET_CHECK_EQUAL(save_parameters_lambda("affine_file.txt", affine_model), 2);
   auto submodel = collec.add_subcollection("affine");
   auto p = submodel.add_parameters({10});
+  std::cout << p.get_fullname() << std::endl;
   DYNET_CHECK_EQUAL(save_parameters_lambda2("tuning_parameter_file.txt", p), "/affine__1/__0");
+  DYNET_CHECK_EQUAL(save_parameters_lambda3("tuning_parameter_file.txt",
+                                            affine_model.get_parameter("/affine__0/__0")), "/affine__0/__0");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -307,6 +307,20 @@ void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
   }
 }
 
+ParameterStorage* ParameterCollection::get_parameter(const std::string & pname) {
+  if (pname.find(name) == 0) {
+    ParameterCollection *t = this;
+    while (t->parent != nullptr) { t = t->parent; }
+    for (auto & param : t->get_storage().params) {
+      if (param->name == pname) {
+        return param;
+      }
+    }
+  }
+  std::string errMsg = "No existing parameter " + pname + " found in " + name;
+  throw std::runtime_error(errMsg);
+}
+
 std::vector<ParameterStorage*> ParameterCollection::get_parameters() {
   std::vector<ParameterStorage*> params;
   ParameterCollection *t = this;
@@ -343,6 +357,21 @@ void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorag
     storage->all_params.push_back(p);
     storage->lookup_params.push_back(p);
   }
+}
+
+LookupParameterStorage* ParameterCollection::get_lookup_parameter(const std::string & lookup_pname)
+{
+  if (lookup_pname.find(name) == 0) {
+    ParameterCollection *t = this;
+    while (t->parent != nullptr) { t = t->parent; }
+    for (auto & lookup_param : t->get_storage().lookup_params) {
+      if (lookup_param->name == lookup_pname) {
+        return lookup_param;
+      }
+    }
+  }
+  std::string errMsg = "No existing parameter " + lookup_pname + " found in " + name;
+  throw std::runtime_error(errMsg);
 }
 
 std::vector<LookupParameterStorage*> ParameterCollection::get_lookup_parameters() {
