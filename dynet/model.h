@@ -448,6 +448,12 @@ public:
    */
   Parameter add_parameters(const Dim& d, const ParameterInit & init, const std::string & name = "");
   /**
+   * \brief Get parameters in current model
+   *
+   * \return list of points to ParameterStorage objects
+   */
+  std::vector<ParameterStorage*> get_parameters();
+  /**
    * \brief Add lookup parameter to model
    * \details Same as add_parameters. Initializes with Glorot
    *
@@ -468,6 +474,12 @@ public:
    * \return LookupParameter object to be used in the computation graph
    */
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name = "");
+  /**
+   * \brief Get lookup parameters in current model
+   *
+   * \return list of points to LookupParameterStorage objects
+   */
+  std::vector<LookupParameterStorage*> get_lookup_parameters();
   //
   /**
    * \brief project weights so their L2 norm = radius

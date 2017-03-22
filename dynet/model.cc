@@ -307,6 +307,18 @@ void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
   }
 }
 
+std::vector<ParameterStorage*> ParameterCollection::get_parameters() {
+  std::vector<ParameterStorage*> params;
+  ParameterCollection *t = this;
+  while (t->parent != nullptr) { t = t->parent; }
+  for (auto & param : t->get_storage().params) {
+    if (param->name.find(name) == 0) {
+      params.push_back(param);
+    }
+  }
+  return params;
+}
+
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const std::string & p_name) {
   return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name);
 }
@@ -331,6 +343,18 @@ void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorag
     storage->all_params.push_back(p);
     storage->lookup_params.push_back(p);
   }
+}
+
+std::vector<LookupParameterStorage*> ParameterCollection::get_lookup_parameters() {
+  std::vector<LookupParameterStorage*> lookup_params;
+  ParameterCollection *t = this;
+  while (t->parent != nullptr) { t = t->parent; }
+  for (auto & lookup_param: t->get_storage().lookup_params) {
+    if (lookup_param->name.find(name) == 0) {
+      lookup_params.push_back(lookup_param); 
+    }
+  }
+  return lookup_params;
 }
 
 void ParameterCollection::reset_gradient() {
