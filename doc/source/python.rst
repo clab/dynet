@@ -24,9 +24,9 @@ TL;DR
     mkdir build
     cd build
     # without GPU support:
-    cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DPYTHON=`which python`
+    cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DPYTHON=`which python`
     # or with GPU support:
-    cmake .. -DEIGEN3_INCLUDE_DIR=../eigen -DPYTHON=`which python` -DBACKEND=cuda
+    cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DPYTHON=`which python` -DBACKEND=cuda
 
     make -j 2 # replace 2 with the number of available cores
     cd python

@@ -66,13 +66,16 @@ size_t AlignedMemoryPool::used() {
 }
 
 void AlignedMemoryPool::set_used(size_t s) {
-  int c = 0;
-  while (s > pools[c]->used) {
-    s -= pools[c]->used;
-    c++;
-    DYNET_ASSERT(c <= current, "attempt to set_used to a larger value than used()."); // TODO is that the way to use the assert?
-  }
-  // s <= pools[c]->used
-  pools[c]->used = s;
-  current = c;
+  DYNET_ARG_CHECK(pools.size() == 1, "Dynet does not support both dynamic increasing of memory pool size, and checkpointing functionality in AlignedMemoryPool. If you want to use checkpointing, please pre-allocate enough memory using the --dynet-mem command line option.");
+  pools[0]->used = s;
+  // TODO: This is disabled for now, because it would require freeing all the memory pools to do properly
+  // int c = 0;
+  // while (s > pools[c]->used) {
+  //   s -= pools[c]->used;
+  //   c++;
+  //   DYNET_ASSERT(c <= current, "attempt to set_used to a larger value than used().");
+  // }
+  // // s <= pools[c]->used
+  // pools[c]->used = s;
+  // current = c;
 }
