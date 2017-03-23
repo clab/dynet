@@ -467,7 +467,7 @@ Dim ConcatenateColumns::dim_forward(const vector<Dim>& xs) const {
   return Dim({rows, new_cols}, bd);
 }
 
-string ConcatenateBatchElements::as_string(const vector<string>& arg_names) const {
+string ConcatenateToBatch::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "concat_batch_elems(" << arg_names[0];
   for (unsigned i = 1; i < arg_names.size(); ++i) {
@@ -477,12 +477,12 @@ string ConcatenateBatchElements::as_string(const vector<string>& arg_names) cons
   return os.str();
 }
 
-Dim ConcatenateBatchElements::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ASSERT(xs.size() > 0, "Failed input count check in ConcatenateColumns")
+Dim ConcatenateToBatch::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ASSERT(xs.size() > 0, "Failed input count check in ConcatenateToBatch")
   Dim d(xs[0]);
   for (unsigned i = 1; i < xs.size(); ++i) {
     DYNET_ARG_CHECK(xs[0].single_batch() == xs[i].single_batch(),
-                            "Mismatched input dimensions in ConcatenateBatchElements: " << xs);
+                            "Mismatched input dimensions in ConcatenateToBatch: " << xs);
     d.bd += xs[i].bd;
   }
   return d;

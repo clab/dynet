@@ -348,13 +348,13 @@ BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
-// Expression concatenate_batch_elems(const std::initializer_list<Expression>& xs);
-BOOST_AUTO_TEST_CASE( concatenate_batch_elems_gradient ) {
+// Expression concatenate_to_batch(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( concatenate_to_batch_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3}, 2), batch_vals);
   Expression xsquare = parameter(cg, param_square1);
-  Expression y = concatenate_batch_elems({x1, x2});
+  Expression y = concatenate_to_batch({x1, x2});
   Expression z = sum_batches(sum_elems(xsquare*y));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
