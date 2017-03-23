@@ -57,6 +57,24 @@ class testModel {
   dynet::LookupParameter lookup_param;
   dynet::Parameter W_x, b_x;
   dynet::ParameterCollection affine_params;
+}; // class testModel
+
+class testModel2 {
+ public:
+  testModel2(dynet::ParameterCollection &model) {
+    lookup_param = model.add_lookup_parameters(1000, {128});
+    affine_params = model.add_subcollection("affine");
+    W_x = affine_params.add_parameters({40, 30});
+    b_x = affine_params.add_parameters({40});
+    lstm = LSTMBuilder(3, 40, 1, model);
+  }
+  std::string get_affine_model_name() { return affine_params.get_namespace(); }
+  dynet::ParameterCollection get_affine_model() const { return affine_params; }
+  std::vector<ParameterStorage*> get_lstm_parameters() { return lstm.get_parameters(); }
+ private:
+  dynet::LookupParameter lookup_param;
+  dynet::Parameter W_x, b_x;
+  dynet::ParameterCollection affine_params;
   dynet::LSTMBuilder lstm;
 }; // class testModel
 
@@ -118,7 +136,7 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
   };
   auto save_parameters_lambda3 = [] (const std::string & fname,
                                      dynet::ParameterStorage *p) ->std::string {
-    std::cout << p->name << "saved in file " << fname << std::endl;
+    std::cout << p->name << " saved in file " << fname << std::endl;
     return p->name;
   };
   ParameterCollection collec;
@@ -134,6 +152,20 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
   DYNET_CHECK_EQUAL(save_parameters_lambda2("tuning_parameter_file.txt", p), "/affine__1/__0");
   DYNET_CHECK_EQUAL(save_parameters_lambda3("tuning_parameter_file.txt",
                                             affine_model.get_parameter("/affine__0/__0")), "/affine__0/__0");
+}
+
+BOOST_AUTO_TEST_CASE ( test_parameter_class_with_builder ) {
+  auto save_parameters_lambda = [] (const std::string & fname,
+                                    std::vector<ParameterStorage*> & param_list) -> size_t {
+     for (auto & param : param_list) {
+       std::cout << param->name << " saved in file " << fname << std::endl;
+     }
+     return param_list.size();
+  };
+  ParameterCollection collec;
+  testModel2 spec(collec);
+  auto params = spec.get_lstm_parameters();
+  save_parameters_lambda("lstm_file.txt", params);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
