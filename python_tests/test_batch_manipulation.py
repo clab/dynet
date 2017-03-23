@@ -11,7 +11,7 @@ x = dy.lookup_batch(p, [0,1])
 y = dy.pick_batch_elems(x, [0])
 z = dy.pick_batch_elem(x, 1)
 yz = dy.pick_batch_elems(x, [0, 1])
-w = dy.concat_batch_elems([y,z])
+w = dy.concat_to_batch([y,z])
 
 print x.npvalue()
 print y.npvalue()
