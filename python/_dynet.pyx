@@ -316,7 +316,7 @@ cdef class Parameters:
         """
         return self.thisptr.index
 
-    cpdef Expression expr(self, bool update=False):
+    cpdef Expression expr(self, bool update=True):
         """Returns the parameter as an expression
 
         This is the same as calling
