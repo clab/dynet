@@ -324,7 +324,7 @@ cdef class Parameters:
             dy.parameter(param)
         
         Arguments:
-            const {bool} -- If this is set to True, the parameter won't be updated during the backward pass
+            update {bool} -- If this is set to False, the parameter won't be updated during the backward pass
         Returns:
             Expression -- Expression of the parameter
         """
@@ -1074,7 +1074,7 @@ def parameter(p, update=True):
     
     Arguments:
         p {Parameter,LookupParameter} -- Parameter to load (can be a lookup parameter as well)
-        const {bool} -- If this is set to True, the parameter won't be updated during the backward pass
+        update {bool} -- If this is set to False, the parameter won't be updated during the backward pass
     
     Returns:
         Expression -- Parameter expression
