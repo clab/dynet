@@ -227,7 +227,9 @@ Parameter::Parameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
 ParameterStorage* Parameter::get() const {
   return mp->parameters_list()[index];
 }
-
+void Parameter::clip_inplace(float left, float right){
+  this->get()->clip(left, right);
+}
 void Parameter::zero() {
   return mp->parameters_list()[index]->zero();
 }
