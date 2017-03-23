@@ -1456,17 +1456,17 @@ Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> * p
 
 /**
  * \ingroup flowoperations
- * \brief Concatenate batch elements
- * \details Perform a concatenation of several batched expressions along the batch dimension.
+ * \brief Concatenate list of expressions to a single batched expression
+ * \details Perform a concatenation of several expressions along the batch dimension.
  *          All expressions must have the same shape except for the batch dimension.
  *
  * \param xs The input expressions
  *
  * \return The expression with the batch dimensions concatenated
  */
-inline Expression concatenate_batch_elems(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateBatchElements>(xs); }
+inline Expression concatenate_to_batch(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateToBatch>(xs); }
 template <typename T>
-inline Expression concatenate_batch_elems(const T& xs) { return detail::f<ConcatenateBatchElements>(xs); }
+inline Expression concatenate_to_batch(const T& xs) { return detail::f<ConcatenateToBatch>(xs); }
 
 /**
  * \ingroup flowoperations

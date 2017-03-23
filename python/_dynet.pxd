@@ -321,7 +321,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_average     "dynet::expr::average" (vector[CExpression]& xs) except +
     CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs) except +
     CExpression c_concat      "dynet::expr::concatenate" (vector[CExpression]& xs) except +
-    CExpression c_concat_batch_elems      "dynet::expr::concatenate_batch_elems" (vector[CExpression]& xs) except +
+    CExpression c_concat_to_batch      "dynet::expr::concatenate_to_batch" (vector[CExpression]& xs) except +
 
     CExpression c_sum            "dynet::expr::sum" (vector[CExpression]& xs) except +
     CExpression c_max            "dynet::expr::vmax" (vector[CExpression]& xs) except +
