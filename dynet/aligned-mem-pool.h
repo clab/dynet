@@ -46,60 +46,17 @@ class InternalMemoryPool {
 
 class AlignedMemoryPool {
   public:
-    explicit AlignedMemoryPool(const std::string &name, size_t cap, MemAllocator *a) : name(name), current(0), cap(cap), a(a) {
-      pools.push_back(new InternalMemoryPool(name, cap, a));
-    }
-    ~AlignedMemoryPool() {
-      for ( auto p : pools) { delete p; }
-    }
+    explicit AlignedMemoryPool(const std::string &name, size_t cap, MemAllocator *a);
+    ~AlignedMemoryPool();
 
-    void* allocate(size_t n) {
-      void *res = pools[current]->allocate(n);
-      if (res == 0) {
-        std::cout << "alocating more " << current << std::endl;
-        pools.push_back(new InternalMemoryPool(name, cap, a));
-        current++;
-        res = pools[current]->allocate(n);
-      }
-      return res;
-    }
+    void* allocate(size_t n);
 
-    void free() {
-      if (current > 0) {
-        for (auto p : pools) { delete p; }
-        pools.clear();
-        pools.push_back(new InternalMemoryPool(name, cap * (current+1), a));
-        cap = cap * (current + 1);
-        current = 0;
-      } 
-      pools[0]->free();
-    }
+    void free();
 
-    void zero_allocated_memory() {
-      for (auto p : pools) { p->zero_allocated_memory(); }
-    }
+    void zero_allocated_memory();
 
-    
-    size_t used() {
-      if (current == 0) {
-        return pools[0]->used;
-      }
-      size_t res = 0;
-      for (auto p : pools) { res += p->used; }
-      return res;
-    }
-
-    void set_used(size_t s) {
-      int c = 0;
-      while (s > pools[c]->used) {
-        s -= pools[c]->used;
-        c++;
-        DYNET_ASSERT(c <= current, "attempt to set_used to a larger value than used()."); // TODO is that the way to use the assert?
-      } 
-      // s <= pools[c]->used
-      pools[c]->used = s;
-      current = c;
-    }
+    size_t used();
+    void set_used(size_t s);
 
   private:
     std::string name;
