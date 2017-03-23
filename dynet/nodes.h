@@ -252,8 +252,8 @@ struct ConcatenateColumns : public Node {
 };
 
 // concatenate different batched experssions into one single batched tensor
-struct ConcatenateBatchElements : public Node {
-  template <typename T> explicit ConcatenateBatchElements(const T& a) : Node(a) {}
+struct ConcatenateToBatch : public Node {
+  template <typename T> explicit ConcatenateToBatch(const T& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override {return true;}
   mutable std::vector<unsigned> src_element_indices;

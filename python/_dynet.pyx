@@ -1581,14 +1581,14 @@ cpdef Expression concatenate(list xs):
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat(cvec))
 
-cpdef Expression concat_batch_elems(list xs):
+cpdef Expression concat_to_batch(list xs):
     assert xs, 'List is empty, nothing to concatenate.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
         ensure_freshness(x) 
         cvec.push_back(x.c())
-    return Expression.from_cexpr(x.cg_version, c_concat_batch_elems(cvec))
+    return Expression.from_cexpr(x.cg_version, c_concat_to_batch(cvec))
 
 cpdef Expression affine_transform(list exprs):
     assert exprs, 'List input to affine_transform must not be empty.'
