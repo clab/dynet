@@ -266,7 +266,7 @@ cdef class Parameters:
         return c_tensor_as_np(self.thisptr.get().g)
     
     cpdef clip_inplace(self, float left, float right):
-        """Clip the values in the paramenter to a fixed range [left, right] (in place)
+        """Clip the values in the parameter to a fixed range [left, right] (in place)
         
         Returns:
             None
