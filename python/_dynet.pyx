@@ -271,7 +271,7 @@ cdef class Parameters:
         Returns:
             None
         """
-        self.thisptr.get().clip(left, right)
+        self.thisptr.clip_inplace(left, right)
         
     # TODO: make more efficient
     cpdef load_array(self, arr):

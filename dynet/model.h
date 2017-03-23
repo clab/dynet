@@ -271,7 +271,10 @@ struct Parameter {
    * @return Update status
    */
   bool is_updated();
-
+  /**
+   * @brief Clip the values of the parameter to the range [left, right] (in place)
+   */
+  void clip_inplace(float left, float right);
 private:
   DYNET_SERIALIZE_DECLARE()
 };

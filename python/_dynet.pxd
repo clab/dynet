@@ -68,6 +68,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+        void clip_inplace(float left, float right)
         unsigned index
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
