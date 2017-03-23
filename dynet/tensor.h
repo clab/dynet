@@ -396,6 +396,14 @@ std::vector<real> as_vector(const Tensor& v);
  */
 struct TensorTools {
   /**
+   * \brief Clip the values in the tensor to a fixed range
+   *
+   * \param d Tensor to modify
+   * \param left Target minimum value
+   * \param right Target maximum value 
+   */
+  static void Clip(Tensor& d, float left, float right);
+  /**
    * \brief Fills the tensor with a constant value
    *
    * \param d Tensor to modify

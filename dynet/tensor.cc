@@ -136,6 +136,23 @@ void TensorTools::CopyElements(const Tensor& v, const Tensor& v_src) {
 #endif
 }
 
+void TensorTools::Clip(Tensor& d, float left, float right){
+#if HAVE_CUDA
+  if (d.device->type == DeviceType::GPU) {
+    float* t = new float[d.d.size()];
+    for (size_t pos = 0; pos < d.d.size(); ++pos)
+      t[pos] = min(right,max(left, t[pos]));
+    CUDA_CHECK(cudaMemcpy(d.v, t, sizeof(real) * d.d.size(), cudaMemcpyHostToDevice));
+    delete[] t;
+  } else {
+#endif
+    for (size_t pos = 0; pos < d.d.size(); ++pos)
+      d.v[pos] = min(right,max(left, d.v[pos]));
+#if HAVE_CUDA
+  }
+#endif
+}
+
 void TensorTools::Constant(Tensor& d, float c) {
 #if HAVE_CUDA
   if (d.device->type == DeviceType::GPU) {
