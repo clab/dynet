@@ -93,6 +93,10 @@ void ParameterStorage::clear() {
     TensorTools::Zero(g);
 }
 
+void ParameterStorage::clip(float left, float right) {
+  TensorTools::Clip(values, left, right);
+}
+
 #ifndef __CUDACC__
 DYNET_SERIALIZE_COMMIT(ParameterStorage,
                        DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, dim, values, g))

@@ -53,6 +53,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CTensor values
         CTensor g
         CDim dim
+        void clip(float left, float right)
 
     cdef cppclass CLookupParameterStorage "dynet::LookupParameterStorage":
         CLookupParameterStorage()

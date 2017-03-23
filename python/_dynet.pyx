@@ -264,7 +264,15 @@ cdef class Parameters:
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().g)
-
+    
+    cpdef clip_inplace(self, float left, float right):
+        """Clip the values in the paramenter to a fixed range [left, right] (in place)
+        
+        Returns:
+            None
+        """
+        self.thisptr.get().clip(left, right)
+        
     # TODO: make more efficient
     cpdef load_array(self, arr):
         """Deprecated

@@ -104,7 +104,11 @@ struct ParameterStorage : public ParameterStorageBase {
    * @brief Clear the gradient (set it to 0)
    */
   void clear();
-
+  /**
+   * @brief Clip the values to the range [left, right]
+   */
+  void clip(float left, float right);
+  
   Dim dim; /**< Dimensions of the parameter tensor*/
   Tensor values;/**< Values of the parameter */
   Tensor g;/**< Values of the gradient w.r.t. this parameter */
