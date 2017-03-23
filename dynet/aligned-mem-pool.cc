@@ -15,14 +15,64 @@ void* InternalMemoryPool::allocate(size_t n) {
 }
 
 void InternalMemoryPool::sys_alloc(size_t cap) {
-  std::cout << "sys_alloc " << cap << std::endl;
   capacity = a->round_up_align(cap);
   mem = a->malloc(capacity);
-  std::cout << "mem:" << mem << std::endl;
-  if (mem == NULL) {
-    std::ostringstream oss; oss << name << " failed to allocate " << capacity;
-    throw std::runtime_error(oss.str());
-  }
+  if (mem == NULL)
+    DYNET_RUNTIME_ERR(name << " failed to allocate " << capacity);
   used = 0;
-  std::cout << "sys_alloc done" << std::endl;
+}
+
+AlignedMemoryPool::AlignedMemoryPool(const std::string &name, size_t cap, MemAllocator *a) : name(name), current(0), cap(cap), a(a) {
+  DYNET_ASSERT(cap > 0, "Attempt to allocate memory of size 0 in AlignedMemoryPool");
+  pools.push_back(new InternalMemoryPool(name, cap, a));
+}
+AlignedMemoryPool::~AlignedMemoryPool() {
+  for ( auto p : pools) { delete p; }
+}
+
+void* AlignedMemoryPool::allocate(size_t n) {
+  void *res = pools[current]->allocate(n);
+  if (res == 0) {
+    // round up to the nearest multiple of cap
+    pools.push_back(new InternalMemoryPool(name, ((n+cap-1)/cap)*cap, a));
+    current++;
+    res = pools[current]->allocate(n);
+  }
+  return res;
+}
+
+void AlignedMemoryPool::free() {
+  if (current > 0) {
+    for (auto p : pools) { delete p; }
+    pools.clear();
+    pools.push_back(new InternalMemoryPool(name, cap * (current+1), a));
+    cap = cap * (current + 1);
+    current = 0;
+  }
+  pools[0]->free();
+}
+
+void AlignedMemoryPool::zero_allocated_memory() {
+  for (auto p : pools) { p->zero_allocated_memory(); }
+}
+
+size_t AlignedMemoryPool::used() {
+  if (current == 0) {
+    return pools[0]->used;
+  }
+  size_t res = 0;
+  for (auto p : pools) { res += p->used; }
+  return res;
+}
+
+void AlignedMemoryPool::set_used(size_t s) {
+  int c = 0;
+  while (s > pools[c]->used) {
+    s -= pools[c]->used;
+    c++;
+    DYNET_ASSERT(c <= current, "attempt to set_used to a larger value than used()."); // TODO is that the way to use the assert?
+  }
+  // s <= pools[c]->used
+  pools[c]->used = s;
+  current = c;
 }

@@ -66,6 +66,7 @@ void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
   DYNET_ASSERT(mp != DeviceMempool::NONE, "Attempt to allocate tensor for NONE DeviceMempool");
   DYNET_ASSERT(pools[(int)mp] != nullptr, "Attempt to allocate tensor for null DeviceMempool");
   tens.v = (float*)pools[(int)mp]->allocate(tens.d.size() * sizeof(float));
+  DYNET_ASSERT(tens.v != nullptr, "Allocated tensor is zero");
   tens.mem_pool = mp;
 }
 
