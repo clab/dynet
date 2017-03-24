@@ -18,21 +18,22 @@ GRUBuilder::GRUBuilder(unsigned layers,
                        unsigned hidden_dim,
                        ParameterCollection& model) : hidden_dim(hidden_dim), layers(layers) {
   unsigned layer_input_dim = input_dim;
+  auto local_model = model.add_subcollection("--gru-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // z
-    Parameter p_x2z = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2z = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bz = model.add_parameters({hidden_dim});
+    Parameter p_x2z = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2z = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bz = local_model.add_parameters({hidden_dim});
 
     // r
-    Parameter p_x2r = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2r = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_br = model.add_parameters({hidden_dim});
+    Parameter p_x2r = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2r = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_br = local_model.add_parameters({hidden_dim});
 
     // h
-    Parameter p_x2h = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2h = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bh = model.add_parameters({hidden_dim});
+    Parameter p_x2h = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bh = local_model.add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
@@ -152,6 +153,16 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
   for (size_t i = 0; i < params.size(); ++i)
     for (size_t j = 0; j < params[i].size(); ++j)
       params[i][j] = rnn_gru.params[i][j];
+}
+
+std::vector<ParameterStorage*> GRUBuilder::get_parameters() {
+  std::vector<ParameterStorage*> rl;
+  for (auto & p_l : params) {
+    for (auto & p : p_l) {
+      rl.push_back(&p.get_storage());
+    }
+  }
+  return rl;
 }
 
 } // namespace dynet

@@ -43,6 +43,7 @@ struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
   void copy(const RNNBuilder & params) override;
+  std::vector<ParameterStorage*> get_parameters();
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -81,6 +82,7 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
                        ParameterCollection& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  std::vector<ParameterStorage*> get_parameters() { return node_builder.get_parameters(); }
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -101,6 +103,12 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
                        ParameterCollection& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  std::vector<ParameterStorage*> get_parameters() {
+    std::vector<ParameterStorage*> rl = fwd_node_builder.get_parameters();
+    auto rev_ps = rev_node_builder.get_parameters();
+    rl.insert(rl.end(), rev_ps.begin(), rev_ps.end());
+    return rl;
+  }
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;

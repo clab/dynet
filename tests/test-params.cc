@@ -5,6 +5,8 @@
 #include <dynet/model.h>
 #include <dynet/param-init.h>
 #include <dynet/lstm.h>
+#include <dynet/gru.h>
+#include <dynet/treelstm.h>
 #include <boost/test/unit_test.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -166,6 +168,15 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class_with_builder ) {
   testModel2 spec(collec);
   auto params = spec.get_lstm_parameters();
   save_parameters_lambda("lstm_file.txt", params);
+}
+
+BOOST_AUTO_TEST_CASE ( test_parametercollection_with_builder ) {
+  dynet::ParameterCollection collec;
+  auto gru_builder = dynet::GRUBuilder(3, 10, 2, collec);
+  DYNET_CHECK_EQUAL(gru_builder.get_parameters().size(), 9 * 3);
+  dynet::ParameterCollection collec2;
+  auto bi_treelstm_builder = BidirectionalTreeLSTMBuilder(3, 10, 2, collec2);
+  DYNET_CHECK_EQUAL(bi_treelstm_builder.get_parameters().size(), 11 * 3 * 2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
