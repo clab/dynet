@@ -18,23 +18,24 @@ DeepLSTMBuilder::DeepLSTMBuilder(unsigned layers,
                          unsigned hidden_dim,
                          ParameterCollection& model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
+  auto local_model = model.add_subcollection("--deep-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model.add_parameters({hidden_dim});
+    Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2i = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2i = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bi = local_model.add_parameters({hidden_dim});
 
     // o
-    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2o = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2o = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bo = model.add_parameters({hidden_dim});
+    Parameter p_x2o = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2o = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2o = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bo = local_model.add_parameters({hidden_dim});
 
     // c
-    Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2c = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bc = model.add_parameters({hidden_dim});
+    Parameter p_x2c = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2c = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bc = local_model.add_parameters({hidden_dim});
     layer_input_dim = hidden_dim + input_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
@@ -157,6 +158,16 @@ Expression DeepLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   }
   ot = concatenate(cc);
   return ot;
+}
+
+std::vector<ParameterStorage*> DeepLSTMBuilder::get_parameters() {
+  std::vector<ParameterStorage*> rl;
+  for (auto & p_l : params) {
+    for (auto & p : p_l) {
+      rl.push_back(&p.get_storage());
+    }
+  }
+  return rl;
 }
 
 } // namespace dynet

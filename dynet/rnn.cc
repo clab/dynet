@@ -34,7 +34,7 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned hidden_dim,
                        ParameterCollection& model,
                        bool support_lags) : layers(layers), lagging(support_lags) {
-  auto local_model = model.add_subcollection("simple-rnn-builder");
+  auto local_model = model.add_subcollection("--simple-rnn-builder");
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     Parameter p_x2h = local_model.add_parameters({hidden_dim, layer_input_dim});
@@ -184,6 +184,16 @@ void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
       ia >> p.get_storage().values;
     }
   }
+}
+
+std::vector<ParameterStorage*> SimpleRNNBuilder::get_parameters() {
+  std::vector<ParameterStorage*> rl;
+  for (auto & p_l : params) {
+    for (auto & p : p_l) {
+      rl.push_back(&p.get_storage());
+    }
+  }
+  return rl;
 }
 
 DYNET_SERIALIZE_COMMIT(SimpleRNNBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, lagging))

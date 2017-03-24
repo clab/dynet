@@ -347,6 +347,8 @@ public:
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
 
+  std::vector<ParameterStorage*> get_parameters();
+
 private:
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameter>> params;

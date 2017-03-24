@@ -22,10 +22,11 @@ struct C2WBuilder {
                       unsigned layers,
                       unsigned input_dim,
                       unsigned hidden_dim,
-                      ParameterCollection* m) :
-      fc2w(layers, input_dim, hidden_dim, m),
-      rc2w(layers, input_dim, hidden_dim, m),
+                      ParameterCollection& m) :
       p_lookup(m->add_lookup_parameters(vocab_size, {input_dim})) {
+    auto local_model = m.add_subcollection("--c2w-builder");
+    fc2w = LSTMBuilder(layers, input_dim, hidden_dim, local_model);
+    rc2w = LSTMBuilder(layers, input_dim, hidden_dim, local_model);
   }
   void new_graph(ComputationGraph* cg) {
     words.clear();
@@ -53,6 +54,12 @@ struct C2WBuilder {
       it = wordid2vi.insert(std::make_pair(word_id, i_concat)).first;
     }
     return it->second;
+  }
+  std::vector<ParameterStorage*> get_parameters() {
+    std::vector<ParameterStorage*> rl = fc2w.get_parameters();
+    auto rev_ps = rc2w.get_parameters();
+    rl.insert(rl.end(), rev_ps.begin(), rev_ps.end());
+    return rl;
   }
 };
 
