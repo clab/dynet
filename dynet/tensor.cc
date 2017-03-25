@@ -7,7 +7,7 @@
 
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/array.hpp>
-
+#include "dynet/functors.h"
 #if HAVE_CUDA
 #include "dynet/gpu-ops.h"
 #include "dynet/cuda.h"
@@ -139,16 +139,11 @@ void TensorTools::CopyElements(const Tensor& v, const Tensor& v_src) {
 void TensorTools::Clip(Tensor& d, float left, float right){
 #if HAVE_CUDA
   if (d.device->type == DeviceType::GPU) {
-    float* t = new float[d.d.size()];
-    for (size_t pos = 0; pos < d.d.size(); ++pos)
-      t[pos] = min(right,max(left, t[pos]));
-    CUDA_CHECK(cudaMemcpy(d.v, t, sizeof(real) * d.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
-  } else {
+    d.tvec().device(*(((Device_GPU*)d.device)->edevice)) = d.tvec().unaryExpr(FClip(left, right));
+  } else{
 #endif
-    for (size_t pos = 0; pos < d.d.size(); ++pos)
-      d.v[pos] = min(right,max(left, d.v[pos]));
-#if HAVE_CUDA
+    d.tvec().device(*(((Device_CPU*)d.device)->edevice)) = d.tvec().unaryExpr(FClip(left, right));
+#if HAVE_CUDA  
   }
 #endif
 }
