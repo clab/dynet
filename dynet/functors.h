@@ -24,6 +24,15 @@
 
 namespace dynet {
 
+struct FClip {
+  FClip(float l, float r) : l(l), r(r) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x) const {
+    return fminf(r, fmaxf(l, x));
+  }
+  const float l;
+  const float r;
+};
+
 struct FHuberForward {
   FHuberForward(float c) : c(c) {}
   DYNET_DEVICE_FUNC inline float operator()(float x) const {
