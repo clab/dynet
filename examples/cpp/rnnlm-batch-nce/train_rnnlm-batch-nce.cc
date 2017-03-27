@@ -6,11 +6,15 @@
 #include <algorithm>
 #include <unordered_map>
 #include <chrono>
+#include <memory>
 
 #include <dynet/dict.h>
 #include <dynet/expr.h>
 #include <dynet/lstm.h>
 #include <dynet/training.h>
+
+#include "nce.h"
+#include "sampler.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -19,7 +23,7 @@ using namespace dynet::expr;
 
 // Read a file where each line is of the form "word1 word2 ..."
 // Yields lists of the form [word1, word2, ...]
-vector<vector<int> > read(const string & fname, Dict & vw) {
+vector<vector<int> > read(const string & fname, Counter & vw) {
   ifstream fh(fname);
   if(!fh) throw std::runtime_error("Could not open file");
   string str; 
@@ -28,29 +32,41 @@ vector<vector<int> > read(const string & fname, Dict & vw) {
     istringstream iss(str);
     vector<int> tokens;
     while(iss >> str)
-      tokens.push_back(vw.convert(str));
-    tokens.push_back(vw.convert("<s>"));
+      tokens.push_back(vw.convertAndAdd(str));
+    tokens.push_back(vw.convertAndAdd("<s>"));
     sents.push_back(tokens);
   }
   return sents;
 }
 
+typedef enum obj {NCE, FSM} Obj;
+
 struct RNNLanguageModel {
   LookupParameter p_c;
-  Parameter W_sm;
-  Parameter b_sm;
   VanillaLSTMBuilder builder;
-  explicit RNNLanguageModel(unsigned layers, unsigned input_dim, unsigned hidden_dim, unsigned vocab_size, Model& model) : builder(layers, input_dim, hidden_dim, model) {
-    p_c = model.add_lookup_parameters(vocab_size, {input_dim}, ParameterInitUniform(0.1)); 
-    W_sm = model.add_parameters({vocab_size, hidden_dim}, ParameterInitUniform(0.5));
-    b_sm = model.add_parameters({vocab_size}, ParameterInitUniform(0.5));
+
+  Sampler sampler;
+  unique_ptr<LossBuilder> outLayer;
+  float k;
+  
+  explicit RNNLanguageModel(unsigned layers, unsigned input_dim, unsigned hidden_dim, unsigned vocab_size, const vector<unsigned>& voc_counts, unsigned _k, Model& model) :
+    builder(layers, input_dim, hidden_dim, model),
+    sampler(voc_counts)
+  {
+    p_c = model.add_lookup_parameters(vocab_size, {input_dim}, ParameterInitUniform(0.1));
+    k = (float) _k;
+    if(_k > 0) {
+      // Positive k for Noise Contrastive Estimation
+      cout << "With Noise Contrastive Estimation on output with k = " << _k << endl;
+      outLayer.reset(new NCELossBuilder(vocab_size, hidden_dim, model));
+    } else {
+      // 0 k for Full Softmax
+      cout << "With Full Softmax on output" << endl;
+      outLayer.reset(new FSMLossBuilder(vocab_size, hidden_dim, model));
+    }
   }
 
-  Expression calc_lm_loss(const vector<vector<int> > & sent, int pos, int mb_size, ComputationGraph & cg) {
-  
-    // parameters -> expressions
-    Expression W_exp = parameter(cg, W_sm);
-    Expression b_exp = parameter(cg, b_sm);
+  Expression calc_lm_loss(const vector<vector<int> > & sent, int pos, int mb_size, Obj obj, ComputationGraph & cg) {
   
     // initialize the RNN
     builder.new_graph(cg);  // reset RNN builder for new graph
@@ -76,9 +92,19 @@ struct RNNLanguageModel {
         wids[j] = 0;
         masks[j] = 0.f;
       }
-      // calculate the softmax and loss
-      Expression score = affine_transform({b_exp, W_exp, s});
-      Expression loss = pickneglogsoftmax(score, wids);
+      Expression loss;
+      if(obj==NCE) {
+        // And the samples
+        vector<unsigned> sids;
+        vector<float> scnts, sprobs;
+        sampler.sampleBag(k, sids, scnts, sprobs);
+        vector<float> wprobs = sampler.getProbs(wids);
+        // And the NCE loss
+        loss = outLayer->nce_loss(cg, s, wids, wprobs, sids, scnts, sprobs);
+      } else { // (obj==FSM) 
+        // calculate the softmax and loss
+        loss = outLayer->fsm_loss(cg, s, wids);
+      }
       if(0.f == *masks.rbegin())
         loss = cmult(loss, input(cg, Dim({1}, tot_sents), masks));
       losses.push_back(loss);
@@ -109,29 +135,29 @@ int main(int argc, char** argv) {
 
   time_point<system_clock> start = system_clock::now();
 
-  // format of files: each line is "word1 word2 ..."
-  string train_file = "data/text/train.txt";
-  string test_file = "data/text/dev.txt";
-
   // DyNet Starts
   dynet::initialize(argc, argv);
   Model model;
 
-  if(argc != 6) {
-    cerr << "Usage: " << argv[0] << " MB_SIZE EMBED_SIZE HIDDEN_SIZE SPARSE TIMEOUT" << endl;
+  if(argc != 8) {
+    // Positive K for NCE, 0 K for Full Softmax
+    cerr << "Usage: " << argv[0] << " MB_SIZE EMBED_SIZE HIDDEN_SIZE K TIMEOUT TRAIN TEST" << endl;
     return 1;
   }
   int MB_SIZE = atoi(argv[1]);
   int EMBED_SIZE = atoi(argv[2]);
   int HIDDEN_SIZE = atoi(argv[3]);
-  int SPARSE = atoi(argv[4]);
+  int K = atoi(argv[4]);
   int TIMEOUT = atoi(argv[5]);
+  // format of files: each line is "word1 word2 ..."
+  string train_file = argv[6];
+  string test_file = argv[7];
 
   AdamTrainer trainer(model, 0.001);
-  trainer.sparse_updates_enabled = SPARSE;
+  trainer.sparse_updates_enabled = true;
   trainer.clipping_enabled = false;
 
-  Dict vw;
+  Counter vw;
   vw.convert("<s>");
   vector<vector<int> > train = read(train_file, vw);
   vw.freeze();
@@ -142,8 +168,8 @@ int main(int argc, char** argv) {
   for(auto & sent : test) test_words += sent.size();
 
   int nwords = vw.size();
-
-  RNNLanguageModel rnnlm(1, EMBED_SIZE, HIDDEN_SIZE, nwords, model);
+  
+  RNNLanguageModel rnnlm(1, EMBED_SIZE, HIDDEN_SIZE, nwords, vw.getCounts(), K, model);
 
   {
     duration<float> fs = (system_clock::now() - start);
@@ -160,6 +186,8 @@ int main(int argc, char** argv) {
       i++;
       if(i % (500/MB_SIZE) == 0) {
         trainer.status();
+        // Note that this will print the NCE loss, which
+        // is NOT the same as full softmax loss
         cout << this_loss/this_words << endl;
         all_words += this_words;
         this_loss = 0.f;
@@ -171,7 +199,7 @@ int main(int argc, char** argv) {
         float test_loss = 0;
         for(auto sentid : test_ids) {
           ComputationGraph cg;
-          Expression loss_exp = rnnlm.calc_lm_loss(test, sentid, MB_SIZE, cg);
+          Expression loss_exp = rnnlm.calc_lm_loss(test, sentid, MB_SIZE, FSM, cg);
           test_loss += as_scalar(cg.forward(loss_exp));
         }
         cout << "nll=" << test_loss/test_words << ", ppl=" << exp(test_loss/test_words) << ", words=" << test_words << ", time=" << all_time << ", word_per_sec=" << all_words/all_time << endl;
@@ -181,7 +209,7 @@ int main(int argc, char** argv) {
       }
 
       ComputationGraph cg;
-      Expression loss_exp = rnnlm.calc_lm_loss(train, sid, MB_SIZE, cg);
+      Expression loss_exp = rnnlm.calc_lm_loss(train, sid, MB_SIZE, NCE, cg);
       this_loss += as_scalar(cg.forward(loss_exp));
       for(size_t pos = sid; pos < min((size_t)sid+MB_SIZE, train.size()); ++pos)
         this_words += train[pos].size();

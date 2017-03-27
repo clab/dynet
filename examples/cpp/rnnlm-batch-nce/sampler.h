@@ -11,22 +11,30 @@
 using namespace std;
 using namespace dynet;
 
+/**
+ * Wrapper around Dict that also maintains unigram counts
+ *
+ * Stops counting when frozen
+ */
 struct Counter {
 
   vector<unsigned> counts;
-  Dict& dict;
-
-  Counter(Dict& d)
-    : dict(d)
-  {}
+  Dict dict;
 
   unsigned convertAndAdd(string word) {
     unsigned index = dict.convert(word);
-    while(counts.size() <= index)
-      counts.push_back(0);
-    counts[index]++;
+    if(!dict.is_frozen()) {
+      while(counts.size() <= index)
+        counts.push_back(0);
+      counts[index]++;
+    }
+    return index;
   }
 
+  string convert(const int& id) {
+    return dict.convert(id);
+  }
+  
   unsigned convert(string word) {
     return dict.convert(word);
   }
@@ -46,9 +54,17 @@ struct Counter {
   Dict& getDict() {
     return dict;
   }
+
+  void freeze() {
+    dict.freeze();
+  }
   
 };
 
+/**
+ * Wrapper around discrete_distribution that allows for sampling
+ * bags of items from the distribution
+ */
 struct Sampler {
 
   discrete_distribution<> distn;
