@@ -735,6 +735,26 @@ BOOST_AUTO_TEST_CASE( cmult_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_cmult_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_scalar1);
+  Expression x2 = parameter(cg, param2);
+  Expression y = cmult(x1, x2);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_cmult_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_scalar1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = cmult(x1, x2) + cmult(x2, x1);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression dot_product(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( dot_product_gradient ) {
   dynet::ComputationGraph cg;
