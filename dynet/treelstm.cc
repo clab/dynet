@@ -36,29 +36,30 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
                          unsigned hidden_dim,
                          ParameterCollection& model) : layers(layers), N(N), cg(nullptr) {
   unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("--nary-tree-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2i = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2i = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bi = model.add_parameters({hidden_dim});
+    Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2i = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2i = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bi = local_model.add_parameters({hidden_dim});
 
     // f
-    Parameter p_x2f = model.add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2f = model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2f = model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
-    Parameter p_bf = model.add_parameters({hidden_dim});
+    Parameter p_x2f = local_model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2f = local_model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2f = local_model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
+    Parameter p_bf = local_model.add_parameters({hidden_dim});
 
     // o
-    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2o = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2o = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bo = model.add_parameters({hidden_dim});
+    Parameter p_x2o = local_model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2o = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2o = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bo = local_model.add_parameters({hidden_dim});
 
     // c (a.k.a. u)
-    Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2c = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bc = model.add_parameters({hidden_dim});
+    Parameter p_x2c = local_model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2c = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bc = local_model.add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_bi, p_x2f, p_bf, p_x2o, p_bo, p_x2c, p_bc};
@@ -282,6 +283,10 @@ void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
+std::vector<ParameterStorage*> NaryTreeLSTMBuilder::get_parameters() {
+  return local_model.get_parameters();
+}
+
 DYNET_SERIALIZE_COMMIT(NaryTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, params, lparams, layers, N))
 DYNET_SERIALIZE_IMPL(NaryTreeLSTMBuilder);
 
@@ -289,7 +294,8 @@ UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
                          ParameterCollection& model) {
-  node_builder = LSTMBuilder(layers, input_dim, hidden_dim, model);
+  local_model = model.add_subcollection("--unidirectional-tree-lstm-builder");
+  node_builder = LSTMBuilder(layers, input_dim, hidden_dim, local_model);
 }
 
 void UnidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
@@ -326,8 +332,9 @@ BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned hidden_dim,
                          ParameterCollection& model) {
   DYNET_ASSERT(hidden_dim % 2 == 0, "Failed dimension check in TreeLSTMBuilder");
-  fwd_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);
-  rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);
+  local_model = model.add_subcollection("--bidirectional-tree-lstm-builder");
+  fwd_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, local_model);
+  rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, local_model);
 }
 
 void BidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {

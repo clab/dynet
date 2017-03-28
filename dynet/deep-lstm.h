@@ -25,12 +25,18 @@ struct DeepLSTMBuilder : public RNNBuilder {
     for(auto my_h : final_h()) ret.push_back(my_h);
     return ret;
   }
+  /**
+   * \brief Get parameters in DeepLSTMBuilder
+   * \return list of points to ParameterStorage object
+   */
+  std::vector<ParameterStorage*> get_parameters();
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
 
  public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 

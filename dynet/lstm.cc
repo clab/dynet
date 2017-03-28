@@ -19,23 +19,24 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
                          unsigned hidden_dim,
                          ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("--lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model.add_parameters({hidden_dim});
+    Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2i = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2i = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bi = local_model.add_parameters({hidden_dim});
 
     // o
-    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2o = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2o = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bo = model.add_parameters({hidden_dim});
+    Parameter p_x2o = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2o = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2o = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bo = local_model.add_parameters({hidden_dim});
 
     // c
-    Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2c = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bc = model.add_parameters({hidden_dim});
+    Parameter p_x2c = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2c = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bc = local_model.add_parameters({hidden_dim});
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
@@ -131,6 +132,11 @@ void LSTMBuilder::set_dropout_masks(unsigned batch_size) {
     }
   }
 }
+
+std::vector<ParameterStorage*> LSTMBuilder::get_parameters() {
+  return local_model.get_parameters();
+}
+
 // TO DO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
 // Also is creating a new step something we want?
@@ -336,12 +342,13 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned hidden_dim,
                                        ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("--vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model.add_parameters({hidden_dim * 4, layer_input_dim});
-    Parameter p_h2i = model.add_parameters({hidden_dim * 4, hidden_dim});
+    Parameter p_x2i = local_model.add_parameters({hidden_dim * 4, layer_input_dim});
+    Parameter p_h2i = local_model.add_parameters({hidden_dim * 4, hidden_dim});
     //Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model.add_parameters({hidden_dim * 4});
+    Parameter p_bi = local_model.add_parameters({hidden_dim * 4});
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
@@ -407,6 +414,9 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   }
 }
 
+std::vector<ParameterStorage*> VanillaLSTMBuilder::get_parameters() {
+  return local_model.get_parameters();
+}
 
 // TODO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())

@@ -38,6 +38,11 @@ struct FastLSTMBuilder : public RNNBuilder {
   }
 
   void copy(const RNNBuilder & params) override;
+  /**
+   * \brief Get parameters in FastLSTMBuilder
+   * \return list of points to ParameterStorage objects
+   */
+  std::vector<ParameterStorage*> get_parameters();
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -46,6 +51,7 @@ struct FastLSTMBuilder : public RNNBuilder {
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
  public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 
