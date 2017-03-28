@@ -83,7 +83,7 @@ DYNET_SERIALIZE_COMMIT(ParameterStorage,
 DYNET_SERIALIZE_IMPL(ParameterStorage)
 #endif
 
-bool validParameter(const std::string & s) {
+bool valid_parameter(const std::string & s) {
   auto it = std::find_if(s.begin(), s.end(), [] (char ch) { return ch == '/' || ch == '_'; });
   return it == s.end();
 }
@@ -253,7 +253,7 @@ ParameterCollection::ParameterCollection(const string & my_name, ParameterCollec
     name(my_name), storage(nullptr), parent(my_parent) { }
 
 ParameterCollection ParameterCollection::add_subcollection(const string & sub_name) {
-  if (validParameter(sub_name)) {
+  if (valid_parameter(sub_name)) {
     ostringstream oss; oss << name << sub_name << "__" << collec_name_cntr[sub_name]++ << "/";
     return ParameterCollection(oss.str(), this);
   } else {
@@ -286,7 +286,7 @@ Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const s
 }
 
 Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
-  if (validParameter(p_name)) {
+  if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
     ParameterStorage* p = new ParameterStorage(d, init, oss.str());
     add_parameters_to_storage(p);
@@ -338,7 +338,7 @@ LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim
 }
 
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
-  if (validParameter(p_name)) {
+  if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
     LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
     add_lookup_parameters_to_storage(p);

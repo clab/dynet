@@ -18,7 +18,7 @@ GRUBuilder::GRUBuilder(unsigned layers,
                        unsigned hidden_dim,
                        ParameterCollection& model) : hidden_dim(hidden_dim), layers(layers) {
   unsigned layer_input_dim = input_dim;
-  auto local_model = model.add_subcollection("--gru-builder");
+  local_model = model.add_subcollection("--gru-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // z
     Parameter p_x2z = local_model.add_parameters({hidden_dim, layer_input_dim});
@@ -156,13 +156,7 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
 }
 
 std::vector<ParameterStorage*> GRUBuilder::get_parameters() {
-  std::vector<ParameterStorage*> rl;
-  for (auto & p_l : params) {
-    for (auto & p : p_l) {
-      rl.push_back(&p.get_storage());
-    }
-  }
-  return rl;
+  return local_model.get_parameters();
 }
 
 } // namespace dynet

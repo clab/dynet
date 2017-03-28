@@ -19,7 +19,7 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
                          unsigned hidden_dim,
                          ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
-  auto local_model = model.add_subcollection("--lstm-builder");
+  local_model = model.add_subcollection("--lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
     Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
@@ -134,13 +134,7 @@ void LSTMBuilder::set_dropout_masks(unsigned batch_size) {
 }
 
 std::vector<ParameterStorage*> LSTMBuilder::get_parameters() {
-  std::vector<ParameterStorage*> rl;
-  for (auto & p_l : params) {
-    for (auto & p : p_l) {
-      rl.push_back(&p.get_storage());
-    }
-  }
-  return rl;
+  return local_model.get_parameters();
 }
 
 // TO DO - Make this correct
@@ -348,7 +342,7 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned hidden_dim,
                                        ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
-  auto local_model = model.add_subcollection("--vanilla-lstm-builder");
+  local_model = model.add_subcollection("--vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
     Parameter p_x2i = local_model.add_parameters({hidden_dim * 4, layer_input_dim});
@@ -421,13 +415,7 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
 }
 
 std::vector<ParameterStorage*> VanillaLSTMBuilder::get_parameters() {
-  std::vector<ParameterStorage*> rl;
-  for (auto & p_l : params) {
-    for (auto & p : p_l) {
-      rl.push_back(&p.get_storage());
-    }
-  }
-  return rl;
+  return local_model.get_parameters();
 }
 
 // TODO - Make this correct

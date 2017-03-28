@@ -30,6 +30,7 @@ struct GRUBuilder : public RNNBuilder {
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 

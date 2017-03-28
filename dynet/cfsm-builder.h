@@ -39,10 +39,7 @@ public:
   unsigned sample(const expr::Expression& rep);
   expr::Expression full_log_distribution(const expr::Expression& rep);
   std::vector<ParameterStorage*> get_parameters() {
-    std::vector<ParameterStorage*> rl;
-    rl.push_back(&p_w.get_storage());
-    rl.push_back(&p_b.get_storage());
-    return rl;
+    return local_model.get_parameters();
   }
 private:
   StandardSoftmaxBuilder();
@@ -51,6 +48,7 @@ private:
   expr::Expression w;
   expr::Expression b;
   ComputationGraph* pcg;
+  ParameterCollection local_model;
 
   DYNET_SERIALIZE_DECLARE()
 };
@@ -72,16 +70,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   void initialize_expressions();
 
   std::vector<ParameterStorage*> get_parameters() {
-    std::vector<ParameterStorage*> rl;
-    rl.push_back(&p_r2c.get_storage());
-    rl.push_back(&p_cbias.get_storage());
-    for (auto & p : p_rc2ws) {
-      rl.push_back(&p.get_storage());
-    }
-    for (auto & p : p_rcwbiases) {
-      rl.push_back(&p.get_storage());
-    }
-    return rl;
+    return local_model.get_parameters();
   }
 
  private:
@@ -94,6 +83,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   std::vector<std::vector<unsigned>> cidx2words;
   std::vector<bool> singleton_cluster; // does cluster contain a single word type?
 
+  ParameterCollection local_model;
   // parameters
   Parameter p_r2c;
   Parameter p_cbias;
