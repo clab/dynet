@@ -737,6 +737,68 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseMultiply)
 
+template<class MyDevice>
+void ScalarMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in ScalarMultiply::forward (cmult)");
+
+  Eigen::array<int, 2> bcast;
+  if(xs[0]->d.bd == xs[1]->d.bd) { 
+    bcast[0] = fx.d.batch_size(); bcast[1] = 1;
+    fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec();
+  } else {
+    Eigen::array<int, 2> bcast; bcast[0] = fx.d.batch_size(); bcast[1] = fx.d.bd;
+    if(xs[0]->d.bd == 1){
+      bcast[0] = fx.d.batch_size(); bcast[1] = fx.d.bd;
+      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec();
+    } else {
+      bcast[0] = 1; bcast[1] = fx.d.bd;
+      Eigen::array<int, 2> bcast2={ fx.d.batch_size(),1};
+      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast2) * xs[1]->tbvec().broadcast(bcast);
+    }
+  }
+}
+
+template<class MyDevice>
+void ScalarMultiply::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  DYNET_ASSERT(i < 2, "Failed dimension check in ScalarMultiply::backward (cmult)");
+  Eigen::array<int, 2> bcast;
+  Eigen::array<int, 1> red_axis; 
+  if(xs[0]->d.bd == xs[1]->d.bd) {
+    if(i==0){
+      red_axis[0] = 0;
+      dEdxi.tvec().device(*dev.edevice) += (dEdf.tvec() * xs[1]->tvec()).sum(red_axis);
+    }else{
+      bcast[0] = fx.d.batch_size(); bcast[1] = 1;
+      dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[0]->tbvec().broadcast(bcast);
+    }
+  } else if(xs[1-i]->d.bd == 1) {
+    if(i==0){
+      bcast[0] = 1; bcast[1] = fx.d.bd;
+      red_axis[0] = 0;
+      dEdxi.tbvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast)).sum(red_axis);
+    }else{
+      bcast[0] = fx.d.batch_size(); bcast[1] = fx.d.bd;
+      dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast);
+    }
+  } else {
+    if(i==0){
+      Eigen::array<int, 2> red_axes={0,1};
+      dEdxi.tbvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec()).sum(red_axes);
+    }
+    else{
+      bcast[0] = fx.d.batch_size(); bcast[1] = 1;
+      red_axis[0] = 1;
+      dEdxi.tbvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast)).sum(red_axis);
+    }
+  }
+}
+DYNET_NODE_INST_DEV_IMPL(ScalarMultiply)
+
 
 template<class MyDevice>
 void DotProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
