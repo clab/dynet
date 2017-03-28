@@ -128,6 +128,11 @@ struct LSTMBuilder : public RNNBuilder {
    * \param batch_size Batch size
    */
   void set_dropout_masks(unsigned batch_size = 1);
+  /**
+   * \brief Get parameters in LSTMBuilder
+   * \return list of points to ParameterStorage objects
+   */
+  std::vector<ParameterStorage*> get_parameters();
 protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -136,6 +141,8 @@ protected:
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
 public:
+  ParameterCollection local_model;
+
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 
@@ -263,6 +270,11 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \param batch_size Batch size
    */
   void set_dropout_masks(unsigned batch_size = 1);
+  /**
+   * \brief Get parameters in VanillaLSTMBuilder 
+   * \return list of points to ParameterStorage objects
+   */
+  std::vector<ParameterStorage*> get_parameters();
 protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -271,6 +283,7 @@ protected:
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
 public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 

@@ -6,11 +6,9 @@
 
 #include <unordered_set>
 #include <iostream>
-
 #include <fstream>
 #include <sstream>
-
-
+#include <algorithm>
 #include <stdexcept>
 
 #define LOAD_INIT_FUNC() initialize_lookups()
@@ -85,6 +83,11 @@ DYNET_SERIALIZE_COMMIT(ParameterStorage,
 DYNET_SERIALIZE_IMPL(ParameterStorage)
 #endif
 
+bool valid_parameter(const std::string & s) {
+  auto it = std::find_if(s.begin(), s.end(), [] (char ch) { return ch == '/' || ch == '_'; });
+  return it == s.end();
+}
+
 LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), all_updated(false), owner(nullptr) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
@@ -158,6 +161,11 @@ void Parameter::zero() {
   get_storage().zero();
 }
 
+string Parameter::get_fullname() const {
+  DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null parameter");
+  return p->name;
+}
+
 void Parameter::set_updated(bool b) {
   get_storage().updated = b;
 }
@@ -190,6 +198,11 @@ void LookupParameter::zero() {
 
 void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
   get_storage().initialize(index, val);
+}
+
+string LookupParameter::get_fullname() const {
+  DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null parameter");
+  return p->name;
 }
 
 void LookupParameter::set_updated(bool b) {
@@ -240,8 +253,12 @@ ParameterCollection::ParameterCollection(const string & my_name, ParameterCollec
     name(my_name), storage(nullptr), parent(my_parent) { }
 
 ParameterCollection ParameterCollection::add_subcollection(const string & sub_name) {
-  ostringstream oss; oss << name << sub_name << "__" << ++collec_name_cntr[sub_name] << "/";
-  return ParameterCollection(oss.str(), this);
+  if (valid_parameter(sub_name)) {
+    ostringstream oss; oss << name << sub_name << "__" << collec_name_cntr[sub_name]++ << "/";
+    return ParameterCollection(oss.str(), this);
+  } else {
+    throw std::runtime_error("Submodel name could not include '/' and '_'");
+  }
 }
 
 ParameterCollection::~ParameterCollection() {
@@ -257,6 +274,10 @@ void ParameterCollection::project_weights(float radius) {
   get_storage().project_weights(radius);
 }
 
+Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name) {
+  return add_parameters(d, ParameterInitGlorot(), p_name);
+}
+
 Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const std::string & p_name) {
   if(scale == 0.0f)
     return add_parameters(d, ParameterInitGlorot(), p_name);
@@ -265,10 +286,14 @@ Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const s
 }
 
 Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
-  ostringstream oss; oss << name << p_name << "__" << ++name_cntr[p_name];
-  ParameterStorage* p = new ParameterStorage(d, init, oss.str());
-  add_parameters_to_storage(p);
-  return Parameter(p);
+  if (valid_parameter(p_name)) {
+    ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
+    ParameterStorage* p = new ParameterStorage(d, init, oss.str());
+    add_parameters_to_storage(p);
+    return Parameter(p);
+  } else {
+    throw std::runtime_error("Parameter name could not include '/' and '_'");
+  }
 }
 
 void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
@@ -282,15 +307,45 @@ void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
   }
 }
 
+ParameterStorage* ParameterCollection::get_parameter(const std::string & pname) {
+  if (pname.find(name) == 0) {
+    ParameterCollection *t = this;
+    while (t->parent != nullptr) { t = t->parent; }
+    for (auto & param : t->get_storage().params) {
+      if (param->name == pname) {
+        return param;
+      }
+    }
+  }
+  std::string errMsg = "No existing parameter " + pname + " found in " + name;
+  throw std::runtime_error(errMsg);
+}
+
+std::vector<ParameterStorage*> ParameterCollection::get_parameters() {
+  std::vector<ParameterStorage*> params;
+  ParameterCollection *t = this;
+  while (t->parent != nullptr) { t = t->parent; }
+  for (auto & param : t->get_storage().params) {
+    if (param->name.find(name) == 0) {
+      params.push_back(param);
+    }
+  }
+  return params;
+}
+
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const std::string & p_name) {
   return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name);
 }
 
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
-  ostringstream oss; oss << name << p_name << "__" << ++name_cntr[p_name];
-  LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
-  add_lookup_parameters_to_storage(p);
-  return LookupParameter(p);
+  if (valid_parameter(p_name)) {
+    ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
+    LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
+    add_lookup_parameters_to_storage(p);
+    return LookupParameter(p);
+  } else {
+    throw std::runtime_error("LookupParameter name could not include '/' and '_'");
+  }
 }
 
 void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorage *p) {
@@ -302,6 +357,33 @@ void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorag
     storage->all_params.push_back(p);
     storage->lookup_params.push_back(p);
   }
+}
+
+LookupParameterStorage* ParameterCollection::get_lookup_parameter(const std::string & lookup_pname)
+{
+  if (lookup_pname.find(name) == 0) {
+    ParameterCollection *t = this;
+    while (t->parent != nullptr) { t = t->parent; }
+    for (auto & lookup_param : t->get_storage().lookup_params) {
+      if (lookup_param->name == lookup_pname) {
+        return lookup_param;
+      }
+    }
+  }
+  std::string errMsg = "No existing parameter " + lookup_pname + " found in " + name;
+  throw std::runtime_error(errMsg);
+}
+
+std::vector<LookupParameterStorage*> ParameterCollection::get_lookup_parameters() {
+  std::vector<LookupParameterStorage*> lookup_params;
+  ParameterCollection *t = this;
+  while (t->parent != nullptr) { t = t->parent; }
+  for (auto & lookup_param: t->get_storage().lookup_params) {
+    if (lookup_param->name.find(name) == 0) {
+      lookup_params.push_back(lookup_param); 
+    }
+  }
+  return lookup_params;
 }
 
 void ParameterCollection::reset_gradient() {

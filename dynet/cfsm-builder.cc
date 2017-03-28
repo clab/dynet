@@ -20,8 +20,9 @@ SoftmaxBuilder::~SoftmaxBuilder() {}
 StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
 
 StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, ParameterCollection& model) {
-  p_w = model.add_parameters({vocab_size, rep_dim});
-  p_b = model.add_parameters({vocab_size});
+  local_model = model.add_subcollection("--standard-softmax-builder");
+  p_w = local_model.add_parameters({vocab_size, rep_dim});
+  p_b = local_model.add_parameters({vocab_size});
 }
 
 void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg) {
@@ -64,8 +65,9 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              ParameterCollection& model) {
   read_cluster_file(cluster_file, word_dict);
   const unsigned num_clusters = cdict.size();
-  p_r2c = model.add_parameters({num_clusters, rep_dim});
-  p_cbias = model.add_parameters({num_clusters});
+  local_model = model.add_subcollection("--class-factored-softmax-builder");
+  p_r2c = local_model.add_parameters({num_clusters, rep_dim});
+  p_cbias = local_model.add_parameters({num_clusters});
   p_rc2ws.resize(num_clusters);
   p_rcwbiases.resize(num_clusters);
   for (unsigned i = 0; i < num_clusters; ++i) {
@@ -74,8 +76,8 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
     if (num_words_in_cluster > 1) {
       // for singleton clusters, we don't need these parameters, so
       // we don't create them
-      p_rc2ws[i] = model.add_parameters({num_words_in_cluster, rep_dim});
-      p_rcwbiases[i] = model.add_parameters({num_words_in_cluster});
+      p_rc2ws[i] = local_model.add_parameters({num_words_in_cluster, rep_dim});
+      p_rcwbiases[i] = local_model.add_parameters({num_words_in_cluster});
     }
   }
 }

@@ -43,12 +43,14 @@ struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
   void copy(const RNNBuilder & params) override;
+  std::vector<ParameterStorage*> get_parameters();
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression Lookup(unsigned layer, unsigned p_type, unsigned value);
 
  public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
   std::vector<std::vector<LookupParameter>> lparams;
@@ -81,11 +83,13 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
                        ParameterCollection& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  std::vector<ParameterStorage*> get_parameters() { return node_builder.get_parameters(); }
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
 
  public:
+  ParameterCollection local_model;
   LSTMBuilder node_builder;
   std::vector<Expression> h;
 
@@ -101,6 +105,9 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
                        ParameterCollection& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  std::vector<ParameterStorage*> get_parameters() {
+    return local_model.get_parameters();
+  }
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -110,6 +117,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   LSTMBuilder fwd_node_builder;
   LSTMBuilder rev_node_builder;
   std::vector<Expression> h;
+  ParameterCollection local_model;
 
 private:
   DYNET_SERIALIZE_DECLARE()

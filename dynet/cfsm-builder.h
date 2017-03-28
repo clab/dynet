@@ -38,7 +38,9 @@ public:
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
   expr::Expression full_log_distribution(const expr::Expression& rep);
-
+  std::vector<ParameterStorage*> get_parameters() {
+    return local_model.get_parameters();
+  }
 private:
   StandardSoftmaxBuilder();
   Parameter p_w;
@@ -46,6 +48,7 @@ private:
   expr::Expression w;
   expr::Expression b;
   ComputationGraph* pcg;
+  ParameterCollection local_model;
 
   DYNET_SERIALIZE_DECLARE()
 };
@@ -66,6 +69,10 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   expr::Expression full_log_distribution(const expr::Expression& rep);
   void initialize_expressions();
 
+  std::vector<ParameterStorage*> get_parameters() {
+    return local_model.get_parameters();
+  }
+
  private:
   ClassFactoredSoftmaxBuilder();
   void read_cluster_file(const std::string& cluster_file, Dict& word_dict);
@@ -76,6 +83,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   std::vector<std::vector<unsigned>> cidx2words;
   std::vector<bool> singleton_cluster; // does cluster contain a single word type?
 
+  ParameterCollection local_model;
   // parameters
   Parameter p_r2c;
   Parameter p_cbias;
