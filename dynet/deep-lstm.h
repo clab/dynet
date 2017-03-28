@@ -36,6 +36,7 @@ struct DeepLSTMBuilder : public RNNBuilder {
   Expression add_input_impl(int prev, const Expression& x) override;
 
  public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 

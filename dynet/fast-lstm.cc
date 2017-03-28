@@ -23,7 +23,7 @@ FastLSTMBuilder::FastLSTMBuilder(unsigned layers,
                                  unsigned hidden_dim,
                                  ParameterCollection& model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
-  auto local_model = model.add_subcollection("--fast-lstm-builder");
+  local_model = model.add_subcollection("--fast-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
     Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
@@ -212,13 +212,7 @@ void FastLSTMBuilder::copy(const RNNBuilder & rnn) {
 }
 
 std::vector<ParameterStorage*> FastLSTMBuilder::get_parameters() {
-  std::vector<ParameterStorage*> rl;
-  for (auto & p_l : params) {
-    for (auto & p : p_l) {
-      rl.push_back(&p.get_storage());
-    }
-  }
-  return rl;
+  return local_model.get_parameters();
 }
 
 } // namespace dynet

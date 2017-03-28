@@ -36,7 +36,7 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
                          unsigned hidden_dim,
                          ParameterCollection& model) : layers(layers), N(N), cg(nullptr) {
   unsigned layer_input_dim = input_dim;
-  auto local_model = model.add_subcollection("--nary-tree-lstm-builder");
+  local_model = model.add_subcollection("--nary-tree-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
     Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
@@ -284,13 +284,7 @@ void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
 }
 
 std::vector<ParameterStorage*> NaryTreeLSTMBuilder::get_parameters() {
-  std::vector<ParameterStorage*> rl;
-  for (auto & p_l : params) {
-    for (auto & p : p_l) {
-      rl.push_back(&p.get_storage());
-    }
-  }
-  return rl;
+  return local_model.get_parameters();
 }
 
 DYNET_SERIALIZE_COMMIT(NaryTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, params, lparams, layers, N))
@@ -300,7 +294,7 @@ UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
                          ParameterCollection& model) {
-  auto local_model = model.add_subcollection("--unidirectional-tree-lstm-builder");
+  local_model = model.add_subcollection("--unidirectional-tree-lstm-builder");
   node_builder = LSTMBuilder(layers, input_dim, hidden_dim, local_model);
 }
 
@@ -338,7 +332,7 @@ BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned hidden_dim,
                          ParameterCollection& model) {
   DYNET_ASSERT(hidden_dim % 2 == 0, "Failed dimension check in TreeLSTMBuilder");
-  auto local_model = model.add_subcollection("--bidirectional-tree-lstm-builder");
+  local_model = model.add_subcollection("--bidirectional-tree-lstm-builder");
   fwd_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, local_model);
   rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, local_model);
 }
