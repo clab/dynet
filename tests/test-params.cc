@@ -72,7 +72,7 @@ class testModel2 {
   }
   std::string get_affine_model_name() { return affine_params.get_namespace(); }
   dynet::ParameterCollection get_affine_model() const { return affine_params; }
-  std::vector<ParameterStorage*> get_lstm_parameters() { return lstm.get_parameters(); }
+  dynet::ParameterCollection get_lstm_model() { return lstm.get_parameters(); }
  private:
   dynet::LookupParameter lookup_param;
   dynet::Parameter W_x, b_x;
@@ -122,8 +122,8 @@ BOOST_AUTO_TEST_CASE ( test_parameter_collection ) {
 
 BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
   auto save_parameters_lambda = [] (const std::string & fname, dynet::ParameterCollection & m) -> size_t {
-    auto params = m.get_parameters();
-    auto lookup_params = m.get_lookup_parameters();
+    auto params = m.get_parameter_storages();
+    auto lookup_params = m.get_lookup_parameter_storages();
     for (auto & param: params) {
       std::cout << param->name << " saved in file " << fname << std::endl;
     }
@@ -153,20 +153,20 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
   std::cout << p.get_fullname() << std::endl;
   DYNET_CHECK_EQUAL(save_parameters_lambda2("tuning_parameter_file.txt", p), "/affine__1/__0");
   DYNET_CHECK_EQUAL(save_parameters_lambda3("tuning_parameter_file.txt",
-                                            affine_model.get_parameter("/affine__0/__0")), "/affine__0/__0");
+                                            affine_model.get_parameter_storage("/affine__0/__0")), "/affine__0/__0");
 }
 
 BOOST_AUTO_TEST_CASE ( test_parameter_class_with_builder ) {
   auto save_parameters_lambda = [] (const std::string & fname,
-                                    std::vector<ParameterStorage*> & param_list) -> size_t {
-     for (auto & param : param_list) {
+                                    ParameterCollection & param_list) -> size_t {
+     for (auto & param : param_list.get_parameter_storages()) {
        std::cout << param->name << " saved in file " << fname << std::endl;
      }
      return param_list.size();
   };
   ParameterCollection collec;
   testModel2 spec(collec);
-  auto params = spec.get_lstm_parameters();
+  auto params = spec.get_lstm_model();
   save_parameters_lambda("lstm_file.txt", params);
 }
 

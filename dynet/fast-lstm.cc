@@ -211,8 +211,8 @@ void FastLSTMBuilder::copy(const RNNBuilder & rnn) {
         params[i][j] = rnn_lstm.params[i][j];
 }
 
-std::vector<ParameterStorage*> FastLSTMBuilder::get_parameters() {
-  return local_model.get_parameters();
+ParameterCollection & FastLSTMBuilder::get_parameters() {
+  return local_model;
 }
 
 } // namespace dynet

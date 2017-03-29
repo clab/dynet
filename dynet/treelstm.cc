@@ -283,8 +283,8 @@ void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
-std::vector<ParameterStorage*> NaryTreeLSTMBuilder::get_parameters() {
-  return local_model.get_parameters();
+ParameterCollection & NaryTreeLSTMBuilder::get_parameters() {
+  return local_model;
 }
 
 DYNET_SERIALIZE_COMMIT(NaryTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, params, lparams, layers, N))

@@ -155,8 +155,8 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
       params[i][j] = rnn_gru.params[i][j];
 }
 
-std::vector<ParameterStorage*> GRUBuilder::get_parameters() {
-  return local_model.get_parameters();
+ParameterCollection & GRUBuilder::get_parameters() {
+  return local_model;
 }
 
 } // namespace dynet

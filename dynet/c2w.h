@@ -56,8 +56,8 @@ struct C2WBuilder {
     }
     return it->second;
   }
-  std::vector<ParameterStorage*> get_parameters() {
-    return local_model.get_parameters();
+  ParameterCollection & get_parameters() {
+    return local_model;
   }
 };
 

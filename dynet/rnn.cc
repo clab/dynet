@@ -186,8 +186,8 @@ void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
   }
 }
 
-std::vector<ParameterStorage*> SimpleRNNBuilder::get_parameters() {
-  return local_model.get_parameters();
+ParameterCollection & SimpleRNNBuilder::get_parameters() {
+  return local_model;
 }
 
 DYNET_SERIALIZE_COMMIT(SimpleRNNBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, lagging))
