@@ -296,7 +296,7 @@ struct FBinaryLogLoss {
     }
     else {
       if (x == 0.f) x = DYNET_DEVICE_MIN;
-      if (x == 1.f) x -= DYNET_DEVICE_MIN;
+      if (x == 1.f) x = DYNET_DEVICE_MIN;
       return -1.f * (x_true * log(x) + (1.f - x_true) * log1p(-x));
     }
   }
