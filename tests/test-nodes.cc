@@ -1,9 +1,9 @@
 #define BOOST_TEST_MODULE TEST_NODES
 
+#include <dynet/functors.h>
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/grad-check.h>
-#include <dynet/functors.h>
 #include <boost/test/unit_test.hpp>
 #include <stdexcept>
 
