@@ -61,4 +61,19 @@ BOOST_AUTO_TEST_CASE( init_saxe ) {
     BOOST_CHECK_LT(diff, epsilon);
 }
 
+BOOST_AUTO_TEST_CASE( scale ) {
+    dynet::Model mod;
+    // Create parameter
+    dynet::Parameter w_p = mod.add_parameters({1}, ParameterInitConst(1));
+    // Initial value
+    float init_value= as_scalar(*(w_p.values()));
+    // Rescale
+    w_p.scale(0.3);
+    // Value after rescaling
+    float end_value=as_scalar(*(w_p.values()));
+    // Check with a margin of error
+    BOOST_CHECK_CLOSE(init_value * 0.3, end_value, 0.001);
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
