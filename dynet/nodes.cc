@@ -523,7 +523,7 @@ void ConcatenateColumns::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(ConcatenateColumns)
 
 template<class MyDevice>
-void ConcatenateBatchElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const { 
+void ConcatenateToBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const { 
   unsigned curr_e = 0;
   src_element_indices.resize(xs.size());
   Eigen::DSizes<ptrdiff_t, 2> indices(0,0);
@@ -538,18 +538,18 @@ void ConcatenateBatchElements::forward_dev_impl(const MyDevice & dev, const vect
 }
 
 template<class MyDevice>
-void ConcatenateBatchElements::backward_dev_impl(const MyDevice & dev,
+void ConcatenateToBatch::backward_dev_impl(const MyDevice & dev,
                              const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ASSERT(i < src_element_indices.size(), "Failed boundary check in ConcatenateBatchElements::backward: " << i << " >= " << src_element_indices.size());
+  DYNET_ASSERT(i < src_element_indices.size(), "Failed boundary check in ConcatenateToBatch::backward: " << i << " >= " << src_element_indices.size());
   Eigen::DSizes<ptrdiff_t, 2> indices(0, static_cast<ptrdiff_t>(src_element_indices[i]));
   Eigen::DSizes<ptrdiff_t, 2> sizes(static_cast<ptrdiff_t>(fx.d.batch_size()), static_cast<ptrdiff_t>(xs[i]->d.bd));
   dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec().slice(indices, sizes);
 }
-DYNET_NODE_INST_DEV_IMPL(ConcatenateBatchElements)
+DYNET_NODE_INST_DEV_IMPL(ConcatenateToBatch)
 
 template<class MyDevice>
 void BinaryLogLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
