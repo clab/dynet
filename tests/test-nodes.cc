@@ -805,10 +805,10 @@ BOOST_AUTO_TEST_CASE( binary_log_loss_edgecases ) {
       val = as_scalar(z.value());
       if(vx==0.5)
         BOOST_CHECK_CLOSE(val,log(2),0.1);
-      else if (vx==1.0)
-        BOOST_CHECK_CLOSE(val,((1-vy) * infinity),0.1);
-      else if (vx==0.0)
-        BOOST_CHECK_CLOSE(val,(vy * infinity),0.1);
+      else if (vx==vy)
+        BOOST_CHECK_CLOSE(val,0,0.1);
+      else
+        BOOST_CHECK_CLOSE(val,infinity,0.1);
     }
   }
 
