@@ -63,7 +63,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CParameters "dynet::Parameter":
         CParameters()
-        CParameterStorage *get()
+        CParameterStorage get_storage()
         void zero()
         void set_updated(bool b)
         bool is_updated()
@@ -71,7 +71,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
-        CLookupParameterStorage *get()
+        CLookupParameterStorage get_storage()
         CDim dim
         void initialize(unsigned index, const vector[float]& val)
         void zero()
@@ -79,6 +79,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         bool is_updated()
         unsigned index
 
+cdef extern from "dynet/param-init.h" namespace "dynet":
     cdef cppclass CParameterInit "dynet::ParameterInit":
         pass
 
@@ -106,8 +107,8 @@ cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterInitFromVector "dynet::ParameterInitFromVector" (CParameterInit):
         CParameterInitFromVector(vector[float] void)
 
-    cdef cppclass CModel "dynet::Model":
-        CModel()
+    cdef cppclass CParameterCollection "dynet::ParameterCollection":
+        CParameterCollection()
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d)
         CParameters add_parameters(CDim& d, CParameterInit initializer)
@@ -118,8 +119,8 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer)
         vector[CParameterStorage] parameters_list()
 
-    void load_dynet_model "dynet::load_dynet_model" (string filename, CModel *model)
-    void save_dynet_model "dynet::save_dynet_model" (string filename, CModel *model)
+    void load_dynet_model "dynet::load_dynet_model" (string filename, CParameterCollection *model)
+    void save_dynet_model "dynet::save_dynet_model" (string filename, CParameterCollection *model)
 
 cdef extern from "dynet/dynet.h" namespace "dynet":
     ctypedef unsigned VariableIndex
@@ -156,8 +157,8 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer":
-        #CSimpleSGDTrainer(CModel& m, float lam, float e0)
-        CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        #CSimpleSGDTrainer(CParameterCollection& m, float lam, float e0)
+        CSimpleSGDTrainer(CParameterCollection& m, float e0, float edecay) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
@@ -167,7 +168,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void status()
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer":
-        CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
+        CMomentumSGDTrainer(CParameterCollection& m, float e0, float mom, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
@@ -177,7 +178,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void status()
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer":
-        CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
+        CAdagradTrainer(CParameterCollection& m, float e0, float eps, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
@@ -187,7 +188,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void status()
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer":
-        CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
+        CAdadeltaTrainer(CParameterCollection& m, float eps, float rho, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
@@ -197,7 +198,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void status()
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer":
-        CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
+        CAdamTrainer(CParameterCollection& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
@@ -324,7 +325,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
 
 #cdef extern from "dynet/model.h" namespace "dynet":
-#    cdef cppclass Model:
+#    cdef cppclass ParameterCollection:
 
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNPointer "dynet::RNNPointer":
@@ -353,7 +354,7 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
     #cdef cppclass RNNBuilder "dynet::RNNBuilder":
     cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):
         CSimpleRNNBuilder()
-        CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CParameterCollection &model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -369,7 +370,7 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
 cdef extern from "dynet/gru.h" namespace "dynet":
     cdef cppclass CGRUBuilder "dynet::GRUBuilder" (CRNNBuilder):
         CGRUBuilder()
-        CGRUBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        CGRUBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CParameterCollection &model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -385,7 +386,7 @@ cdef extern from "dynet/gru.h" namespace "dynet":
 cdef extern from "dynet/lstm.h" namespace "dynet":
     cdef cppclass CLSTMBuilder "dynet::LSTMBuilder" (CRNNBuilder):
         CLSTMBuilder()
-        CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CParameterCollection &model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -400,11 +401,11 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
     cdef cppclass CVanillaLSTMBuilder "dynet::VanillaLSTMBuilder" (CRNNBuilder):
         CVanillaLSTMBuilder()
-        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CParameterCollection &model)
 
 cdef extern from "dynet/fast-lstm.h" namespace "dynet":
     cdef cppclass CFastLSTMBuilder "dynet::FastLSTMBuilder" (CRNNBuilder):
-        CFastLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        CFastLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CParameterCollection &model)
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -418,22 +419,22 @@ cdef extern from "dynet/fast-lstm.h" namespace "dynet":
         #CRNNPointer state()
 
 cdef extern from "python/pybridge.h" namespace "pydynet":
-    cdef cppclass CModelSaver "pydynet::ModelSaver":
-        CModelSaver(string filename, CModel *model)
-        CModelSaver add_parameter(CParameters p)
-        CModelSaver add_lookup_parameter(CLookupParameters lp)
-        CModelSaver add_gru_builder(CGRUBuilder b)
-        CModelSaver add_lstm_builder(CLSTMBuilder b)
-        CModelSaver add_vanilla_lstm_builder(CVanillaLSTMBuilder b)
-        CModelSaver add_srnn_builder(CSimpleRNNBuilder b)
+    cdef cppclass CParameterCollectionSaver "pydynet::ParameterCollectionSaver":
+        CParameterCollectionSaver(string filename, CParameterCollection *model)
+        CParameterCollectionSaver add_parameter(CParameters p)
+        CParameterCollectionSaver add_lookup_parameter(CLookupParameters lp)
+        CParameterCollectionSaver add_gru_builder(CGRUBuilder b)
+        CParameterCollectionSaver add_lstm_builder(CLSTMBuilder b)
+        CParameterCollectionSaver add_vanilla_lstm_builder(CVanillaLSTMBuilder b)
+        CParameterCollectionSaver add_srnn_builder(CSimpleRNNBuilder b)
         void done()
 
-    cdef cppclass CModelLoader "pydynet::ModelLoader":
-        CModelLoader(string filename, CModel *model)
-        CModelSaver fill_parameter(CParameters p)
-        CModelSaver fill_lookup_parameter(CLookupParameters lp)
-        CModelSaver fill_gru_builder(CGRUBuilder lp)
-        CModelSaver fill_lstm_builder(CLSTMBuilder lp)
-        CModelSaver fill_vanilla_lstm_builder(CVanillaLSTMBuilder lp)
-        CModelSaver fill_srnn_builder(CSimpleRNNBuilder lp)
+    cdef cppclass CParameterCollectionLoader "pydynet::ParameterCollectionLoader":
+        CParameterCollectionLoader(string filename, CParameterCollection *model)
+        CParameterCollectionSaver fill_parameter(CParameters p)
+        CParameterCollectionSaver fill_lookup_parameter(CLookupParameters lp)
+        CParameterCollectionSaver fill_gru_builder(CGRUBuilder lp)
+        CParameterCollectionSaver fill_lstm_builder(CLSTMBuilder lp)
+        CParameterCollectionSaver fill_vanilla_lstm_builder(CVanillaLSTMBuilder lp)
+        CParameterCollectionSaver fill_srnn_builder(CSimpleRNNBuilder lp)
         void done()
