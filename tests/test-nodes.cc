@@ -3,7 +3,7 @@
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/grad-check.h>
-#include <dynet/functor.h>
+#include <dynet/functors.h>
 #include <boost/test/unit_test.hpp>
 #include <stdexcept>
 
