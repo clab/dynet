@@ -17,57 +17,57 @@ namespace pydynet {
 // Wrappers for the templated boost interface so that it is accessible
 // form cython. Needs to add a method for every type we would like to
 // load / save.
-struct ModelSaver {
-    ModelSaver(std::string filename, dynet::Model *model) :
+struct ParameterCollectionSaver {
+    ParameterCollectionSaver(std::string filename, dynet::ParameterCollection *model) :
         ofs(filename),
         oa(ofs)
     {
         oa << *model;
     };
 
-    ModelSaver* add_parameter(dynet::Parameter &p) {
+    ParameterCollectionSaver* add_parameter(dynet::Parameter &p) {
         oa << p; return this;
     }
 
-    ModelSaver* add_lookup_parameter(dynet::LookupParameter &p) {
+    ParameterCollectionSaver* add_lookup_parameter(dynet::LookupParameter &p) {
         oa << p; return this;
     }
 
-    ModelSaver* add_lstm_builder(dynet::LSTMBuilder &p) {
+    ParameterCollectionSaver* add_lstm_builder(dynet::LSTMBuilder &p) {
         oa << p; return this;
     }
 
-    ModelSaver* add_vanilla_lstm_builder(dynet::VanillaLSTMBuilder &p) {
+    ParameterCollectionSaver* add_vanilla_lstm_builder(dynet::VanillaLSTMBuilder &p) {
         oa << p; return this;
     }
 
-    ModelSaver* add_srnn_builder(dynet::SimpleRNNBuilder &p) {
+    ParameterCollectionSaver* add_srnn_builder(dynet::SimpleRNNBuilder &p) {
         oa << p; return this;
     }
 
-    ModelSaver* add_gru_builder(dynet::GRUBuilder &p) {
+    ParameterCollectionSaver* add_gru_builder(dynet::GRUBuilder &p) {
         oa << p; return this;
     }
 
-    ModelSaver* add_hsm_builder(dynet::HierarchicalSoftmaxBuilder &p) {
+    ParameterCollectionSaver* add_hsm_builder(dynet::HierarchicalSoftmaxBuilder &p) {
         oa << p; return this;
     }
 
 
-    ModelSaver* add_fast_lstm_builder(dynet::FastLSTMBuilder &p) {
+    ParameterCollectionSaver* add_fast_lstm_builder(dynet::FastLSTMBuilder &p) {
         oa << p; return this;
     }
 
     // TODO what is this?
-    ModelSaver* add_deep_lstm_builder(dynet::DeepLSTMBuilder &p) {
+    ParameterCollectionSaver* add_deep_lstm_builder(dynet::DeepLSTMBuilder &p) {
         oa << p; return this;
     }
 
-    ModelSaver* add_cfsm_builder(dynet::ClassFactoredSoftmaxBuilder &p) {
+    ParameterCollectionSaver* add_cfsm_builder(dynet::ClassFactoredSoftmaxBuilder &p) {
         oa << p; return this;
     }
 
-    ModelSaver* add_sm_builder(dynet::StandardSoftmaxBuilder &p) {
+    ParameterCollectionSaver* add_sm_builder(dynet::StandardSoftmaxBuilder &p) {
         oa << p; return this;
     }
 
@@ -80,8 +80,8 @@ struct ModelSaver {
 
 };
 
-struct ModelLoader {
-    ModelLoader(std::string filename, dynet::Model *model) :
+struct ParameterCollectionLoader {
+    ParameterCollectionLoader(std::string filename, dynet::ParameterCollection *model) :
         ifs(filename),
         ia(ifs)
     {
@@ -90,48 +90,48 @@ struct ModelLoader {
         printf("done %zu\n", model->parameters_list().size());
     };
 
-    ModelLoader* fill_parameter(dynet::Parameter &p) {
+    ParameterCollectionLoader* fill_parameter(dynet::Parameter &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_lookup_parameter(dynet::LookupParameter &p) {
+    ParameterCollectionLoader* fill_lookup_parameter(dynet::LookupParameter &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_lstm_builder(dynet::LSTMBuilder &p) {
+    ParameterCollectionLoader* fill_lstm_builder(dynet::LSTMBuilder &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_vanilla_lstm_builder(dynet::VanillaLSTMBuilder &p) {
+    ParameterCollectionLoader* fill_vanilla_lstm_builder(dynet::VanillaLSTMBuilder &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_srnn_builder(dynet::SimpleRNNBuilder &p) {
+    ParameterCollectionLoader* fill_srnn_builder(dynet::SimpleRNNBuilder &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_gru_builder(dynet::GRUBuilder &p) {
+    ParameterCollectionLoader* fill_gru_builder(dynet::GRUBuilder &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_hsm_builder(dynet::HierarchicalSoftmaxBuilder &p) {
+    ParameterCollectionLoader* fill_hsm_builder(dynet::HierarchicalSoftmaxBuilder &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_fast_lstm_builder(dynet::FastLSTMBuilder &p) {
+    ParameterCollectionLoader* fill_fast_lstm_builder(dynet::FastLSTMBuilder &p) {
         ia >> p; return this;
     }
 
     // TODO what is this?
-    ModelLoader* fill_deep_lstm_builder(dynet::DeepLSTMBuilder &p) {
+    ParameterCollectionLoader* fill_deep_lstm_builder(dynet::DeepLSTMBuilder &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_cfsm_builder(dynet::ClassFactoredSoftmaxBuilder &p) {
+    ParameterCollectionLoader* fill_cfsm_builder(dynet::ClassFactoredSoftmaxBuilder &p) {
         ia >> p; return this;
     }
 
-    ModelLoader* fill_sm_builder(dynet::StandardSoftmaxBuilder &p) {
+    ParameterCollectionLoader* fill_sm_builder(dynet::StandardSoftmaxBuilder &p) {
         ia >> p; return this;
     }
 

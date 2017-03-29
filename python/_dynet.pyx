@@ -220,7 +220,7 @@ cdef c_tensor_as_np(CTensor &t):
     dim = c_dim_as_shape(t.d)
     return arr.reshape(dim,order='F')
 
-# {{{ Model / Parameters 
+# {{{ ParameterCollection / Parameters 
 cdef class Parameters:
     """Parameters class
     
@@ -245,7 +245,7 @@ cdef class Parameters:
         Returns:
             [type] -- [description]
         """
-        return c_dim_as_shape(self.thisptr.get().dim)
+        return c_dim_as_shape(self.thisptr.get_storage().dim)
 
     cpdef as_array(self):
         """Return as a numpy array.
@@ -254,7 +254,7 @@ cdef class Parameters:
             np.ndarray -- values of the parameter
         """
         cdef CTensor t
-        return c_tensor_as_np(self.thisptr.get().values)
+        return c_tensor_as_np(self.thisptr.get_storage().values)
 
     cpdef grad_as_array(self):
         """Return gradient as a numpy array.
@@ -263,7 +263,7 @@ cdef class Parameters:
             np.ndarray -- values of the gradient w.r.t. this parameter
         """
         cdef CTensor t
-        return c_tensor_as_np(self.thisptr.get().g)
+        return c_tensor_as_np(self.thisptr.get_storage().g)
 
     # TODO: make more efficient
     cpdef load_array(self, arr):
@@ -272,7 +272,7 @@ cdef class Parameters:
         assert(False),"This method is depracated. Use instead model.parameters_from_numpy(arr)."
         cdef CTensor t
         cdef float* vals
-        t = self.thisptr.get().values
+        t = self.thisptr.get_storage().values
         shape = arr.shape
         if len(shape) == 1:
             assert(t.d.ndims() == 1)
@@ -306,13 +306,13 @@ cdef class Parameters:
         """
         self.thisptr.set_updated(b)
 
-    cpdef unsigned get_index(self):
-        """Get parameter index
-        
-        Returns:
-            unsigned -- Index of the parameter
-        """
-        return self.thisptr.index
+    # cpdef unsigned get_index(self):
+    #     """Get parameter index
+    #     
+    #     Returns:
+    #         unsigned -- Index of the parameter
+    #     """
+    #     return self.thisptr.index
 
     cpdef Expression expr(self):
         """Returns the parameter as an expression
@@ -344,16 +344,16 @@ cdef class LookupParameters:
         return self
 
     cpdef init_from_array(self, arr):
-        if len(arr) > self.thisptr.get().values.size():
+        if len(arr) > self.thisptr.get_storage().values.size():
             raise Exception("too many rows")
-        if arr.shape[1] != self.thisptr.get().values[0].d.rows():
+        if arr.shape[1] != self.thisptr.get_storage().values[0].d.rows():
             raise Exception("dim mismatch")
         cdef vector[float] r
         for i,row in enumerate(arr):
             self.init_row(i, row)
 
     cpdef shape(self):
-        return c_dim_as_shape(self.thisptr.get().all_dim)
+        return c_dim_as_shape(self.thisptr.get_storage().all_dim)
 
     def __getitem__(self, int i):
         return lookup(self, i)
@@ -369,7 +369,7 @@ cdef class LookupParameters:
         Return as a numpy array.
         """
         cdef vector[CTensor] vals
-        vals = self.thisptr.get().values
+        vals = self.thisptr.get_storage().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
     cpdef grad_as_array(self):
@@ -377,7 +377,7 @@ cdef class LookupParameters:
         Return gradients as a numpy array.
         """
         cdef vector[CTensor] grads
-        grads = self.thisptr.get().grads
+        grads = self.thisptr.get_storage().grads
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
 
     cpdef Expression expr(self):
@@ -390,7 +390,7 @@ cdef class LookupParameters:
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
-    cpdef unsigned get_index(self): return self.thisptr.index
+    # cpdef unsigned get_index(self): return self.thisptr.index
 
 # TODO document this
 class Saveable(object):
@@ -465,10 +465,10 @@ cdef class NumpyInitializer(PyInitializer):
         return vals
 
 
-cdef class Model: # {{{
-    cdef CModel *thisptr
+cdef class ParameterCollection: # {{{
+    cdef CParameterCollection *thisptr
     def __cinit__(self):
-        self.thisptr = new CModel()
+        self.thisptr = new CParameterCollection()
     def __init__(self):
         pass
 
@@ -476,7 +476,7 @@ cdef class Model: # {{{
 
     @staticmethod
     def from_file(fname):
-        model = Model()
+        model = ParameterCollection()
         res = model.load(fname)
         return model, res
 
@@ -517,7 +517,7 @@ cdef class Model: # {{{
     cdef load_all(self, string fname):
         load_dynet_model(fname, self.thisptr)
 
-    cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
+    cdef _save_one(self, component, CParameterCollectionSaver *saver, fh, pfh):
         # would be nicer to have polymorphism/dispatch-by-type
         # but we cannot because we need to bind to the c-type.
         c = component
@@ -559,7 +559,7 @@ cdef class Model: # {{{
             return
         fh = open(fname+".pym","w")
         pfh = open(fname+".pyk","wb")
-        cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
+        cdef CParameterCollectionSaver *saver = new CParameterCollectionSaver(fname.encode(), self.thisptr)
         for c in components:
             self._save_one(c,saver,fh,pfh)
         saver.done()
@@ -567,7 +567,7 @@ cdef class Model: # {{{
         pfh.close()
         del saver
 
-    cdef _load_one(self, itypes, CModelLoader *loader, pfh):
+    cdef _load_one(self, itypes, CParameterCollectionLoader *loader, pfh):
         cdef CParameters p
         cdef CLookupParameters lp
         cdef GRUBuilder gb_
@@ -623,7 +623,7 @@ cdef class Model: # {{{
         with open(fname+".pym","r") as fh:
             types = fh.read().strip().split()
 
-        cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
+        cdef CParameterCollectionLoader *loader = new CParameterCollectionLoader(fname.encode(), self.thisptr)
         with open(fname+".pyk","rb") as pfh:
             params = []
             itypes = iter(types)
@@ -1717,7 +1717,7 @@ cdef class _RNNBuilder: # {{{
 #}}}
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         if layers > 0:
             self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
@@ -1728,7 +1728,7 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
 #}}}
     
 cdef class GRUBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         if layers > 0:
             self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
@@ -1739,7 +1739,7 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
 # }}}
 
 cdef class LSTMBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         if layers > 0:
             self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
@@ -1750,7 +1750,7 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
 # }}}
 
 cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         if layers > 0:
             self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
@@ -1761,7 +1761,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 # }}}
 
 cdef class FastLSTMBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         self.cg_version = -1
 
@@ -2017,7 +2017,7 @@ cdef class StackedRNNState:
 # {{{ Training 
 cdef class SimpleSGDTrainer:
     cdef CSimpleSGDTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float edecay = 0.0):
         self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
     def __dealloc__(self):
         del self.thisptr
@@ -2047,7 +2047,7 @@ cdef class SimpleSGDTrainer:
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
         self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
     def __dealloc__(self):
         del self.thisptr
@@ -2078,7 +2078,7 @@ cdef class MomentumSGDTrainer:
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
         self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
@@ -2109,7 +2109,7 @@ cdef class AdagradTrainer:
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
-    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
         self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
     def __dealloc__(self):
         del self.thisptr
@@ -2140,7 +2140,7 @@ cdef class AdadeltaTrainer:
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
-    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
+    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
         self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
