@@ -376,14 +376,7 @@ namespace dynet {
       }
     }
 
-    void cleanup(const std::vector<Workload>& workloads) {
-      for (const Workload& workload : workloads) {
-        close (workload.c2p[0]);
-        close (workload.c2p[1]);
-        close (workload.p2c[0]);
-        close (workload.p2c[1]);
-      }
-    }
+    void cleanup(const std::vector<Workload>& workloads);
     
     template<class D, class S>
     S run_simple_parent(const std::vector<D>& train_data, ILearner<D, S>* learner, std::vector<Workload>& workloads) {
@@ -406,7 +399,6 @@ namespace dynet {
         wait(NULL);
       }
 
-      std::cerr << "Parent returning: " << train_loss << std::endl;
       return train_loss;
     }
 
