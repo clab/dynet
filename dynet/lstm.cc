@@ -133,9 +133,7 @@ void LSTMBuilder::set_dropout_masks(unsigned batch_size) {
   }
 }
 
-std::vector<ParameterStorage*> LSTMBuilder::get_parameters() {
-  return local_model.get_parameters();
-}
+ParameterCollection & LSTMBuilder::get_parameters() { return local_model; }
 
 // TO DO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
@@ -414,8 +412,8 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   }
 }
 
-std::vector<ParameterStorage*> VanillaLSTMBuilder::get_parameters() {
-  return local_model.get_parameters();
+ParameterCollection & VanillaLSTMBuilder::get_parameters() {
+  return local_model;
 }
 
 // TODO - Make this correct

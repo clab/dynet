@@ -307,7 +307,7 @@ void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
   }
 }
 
-ParameterStorage* ParameterCollection::get_parameter(const std::string & pname) {
+ParameterStorage* ParameterCollection::get_parameter_storage(const std::string & pname) {
   if (pname.find(name) == 0) {
     ParameterCollection *t = this;
     while (t->parent != nullptr) { t = t->parent; }
@@ -321,7 +321,7 @@ ParameterStorage* ParameterCollection::get_parameter(const std::string & pname) 
   throw std::runtime_error(errMsg);
 }
 
-std::vector<ParameterStorage*> ParameterCollection::get_parameters() {
+std::vector<ParameterStorage*> ParameterCollection::get_parameter_storages() {
   std::vector<ParameterStorage*> params;
   ParameterCollection *t = this;
   while (t->parent != nullptr) { t = t->parent; }
@@ -359,7 +359,7 @@ void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorag
   }
 }
 
-LookupParameterStorage* ParameterCollection::get_lookup_parameter(const std::string & lookup_pname)
+LookupParameterStorage* ParameterCollection::get_lookup_parameter_storage(const std::string & lookup_pname)
 {
   if (lookup_pname.find(name) == 0) {
     ParameterCollection *t = this;
@@ -374,7 +374,7 @@ LookupParameterStorage* ParameterCollection::get_lookup_parameter(const std::str
   throw std::runtime_error(errMsg);
 }
 
-std::vector<LookupParameterStorage*> ParameterCollection::get_lookup_parameters() {
+std::vector<LookupParameterStorage*> ParameterCollection::get_lookup_parameter_storages() {
   std::vector<LookupParameterStorage*> lookup_params;
   ParameterCollection *t = this;
   while (t->parent != nullptr) { t = t->parent; }

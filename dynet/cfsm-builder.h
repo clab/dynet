@@ -38,9 +38,7 @@ public:
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
   expr::Expression full_log_distribution(const expr::Expression& rep);
-  std::vector<ParameterStorage*> get_parameters() {
-    return local_model.get_parameters();
-  }
+  ParameterCollection & get_parameters() { return local_model; }
 private:
   StandardSoftmaxBuilder();
   Parameter p_w;
@@ -69,9 +67,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   expr::Expression full_log_distribution(const expr::Expression& rep);
   void initialize_expressions();
 
-  std::vector<ParameterStorage*> get_parameters() {
-    return local_model.get_parameters();
-  }
+  ParameterCollection & get_parameters() { return local_model; }
 
  private:
   ClassFactoredSoftmaxBuilder();

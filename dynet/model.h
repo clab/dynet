@@ -452,13 +452,13 @@ public:
    * \details It is not recommended to use this
    * \return the pointer to the Parameter object
    */
-  ParameterStorage* get_parameter(const std::string & pname);
+  ParameterStorage* get_parameter_storage(const std::string & pname);
   /**
    * \brief Get parameters in current model
    *
    * \return list of points to ParameterStorage objects
    */
-  std::vector<ParameterStorage*> get_parameters();
+  std::vector<ParameterStorage*> get_parameter_storages();
   /**
    * \brief Add lookup parameter to model
    * \details Same as add_parameters. Initializes with Glorot
@@ -485,13 +485,13 @@ public:
    * \details It is not recommended to use this
    * \return the pointer to the LookupParameter object
    */
-  LookupParameterStorage* get_lookup_parameter(const std::string & lookup_pname);
+  LookupParameterStorage* get_lookup_parameter_storage(const std::string & lookup_pname);
   /**
    * \brief Get lookup parameters in current model
    *
    * \return list of points to LookupParameterStorage objects
    */
-  std::vector<LookupParameterStorage*> get_lookup_parameters();
+  std::vector<LookupParameterStorage*> get_lookup_parameter_storages();
   //
   /**
    * \brief project weights so their L2 norm = radius
@@ -577,6 +577,12 @@ public:
    * \return The subcollection
    */
   ParameterCollection add_subcollection(const std::string& name = "");
+
+  /**
+   * \brief Get size
+   * \details Get the number of parameters in the ParameterCollection
+   */
+  size_t size() { return get_parameter_storages().size(); }
 
   /**
    * @brief get namespace of current ParameterCollection object(end with a slash)

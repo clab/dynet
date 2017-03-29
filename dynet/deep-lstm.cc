@@ -160,8 +160,8 @@ Expression DeepLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   return ot;
 }
 
-std::vector<ParameterStorage*> DeepLSTMBuilder::get_parameters() {
-  return local_model.get_parameters();
+ParameterCollection & DeepLSTMBuilder::get_parameters() {
+  return local_model;
 }
 
 } // namespace dynet
