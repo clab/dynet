@@ -228,7 +228,8 @@ ParameterStorage* Parameter::get() const {
   return mp->parameters_list()[index];
 }
 void Parameter::clip_inplace(float left, float right){
-  this->get()->clip(left, right);
+  float my_scale = 1./ mp->weight_decay.current_weight_decay();
+  get()->clip(left * my_scale, right * my_scale);
 }
 void Parameter::zero() {
   return mp->parameters_list()[index]->zero();
