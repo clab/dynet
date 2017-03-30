@@ -74,6 +74,15 @@ namespace dynet {
       return workloads;
     }
 
+    void cleanup(const std::vector<Workload>& workloads) {
+      for (const Workload& workload : workloads) {
+        close (workload.c2p[0]);
+        close (workload.c2p[1]);
+        close (workload.p2c[0]);
+        close (workload.p2c[1]);
+      }
+    }
+
   }
 }
 #endif
