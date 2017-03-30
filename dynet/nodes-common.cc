@@ -904,4 +904,29 @@ Dim RandomUniform::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
-} // namespace dynet
+string BatchNorm::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "batch_norm(" << arg_names[0] << "," << arg_names[1] << "," << arg_names[2] << "," << arg_names[3] << ","
+    << arg_names[4] << "," << arg_names[5] << ")";
+  return s.str();
+}
+
+Dim BatchNorm::dim_forward(const std::vector<Dim> &xs) const {
+  DYNET_ARG_CHECK(xs.size() == 5, "Failed input count check in BatchNormalization, need 6 args");
+  DYNET_ARG_CHECK(xs[0].ndims() == 3, "Bad input dimensions in BatchNormalization");
+  DYNET_ARG_CHECK(xs[0].d[0] ==  xs[1].batch_size(), "The size of mean should be consistent with the input channel nums");
+  DYNET_ARG_CHECK(xs[0].d[0] == xs[2].batch_size(), "The size of variance should be consistent with the input channel nums");
+  DYNET_ARG_CHECK(xs[0].d[0] == xs[3].batch_size(), "The size of gamma should be consistent with the input channel nums");
+  DYNET_ARG_CHECK(xs[0].d[0] == xs[4].batch_size(), "The size of beta should be consistent with the input channel nums");
+
+  unsigned bacth_size = xs[0].batch_elems();
+  std::vector<long> out_shape(3);
+  for(unsigned i = 0; i < xs[0].ndims(); i++ ){
+    out_shape[i] = xs[0].d[i];
+  }
+  return Dim(out_shape, bacth_size);
+}
+
+}
+
+// namespace dynet

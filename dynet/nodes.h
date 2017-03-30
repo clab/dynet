@@ -581,6 +581,13 @@ struct RandomUniform : public Node {
   real left, right;
 };
 
+struct BatchNorm : public Node {
+    explicit BatchNorm(const std::initializer_list<VariableIndex>& a, real epsilon):epsilon(epsilon){ }
+    virtual bool supports_multibatch() const override { return true; }
+    DYNET_NODE_DEFINE_DEV_IMPL()
+    real epsilon;
+};
+
 
 } // namespace dynet
 
