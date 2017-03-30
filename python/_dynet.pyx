@@ -229,6 +229,8 @@ cdef class Parameters:
     cdef CParameters thisptr # TODO -- no longer pointer
     cdef int _version
     cdef Expression _expr
+    cdef int _const_version
+    cdef Expression _const_expr
     def __cinit__(self):
         self._version = -1
     @staticmethod
@@ -298,6 +300,15 @@ cdef class Parameters:
         """
         self.thisptr.zero()
 
+    cpdef scale(self,float s):
+        """Scales the parameter
+
+        Arguments:
+            s {float} -- Scale
+
+        """
+        self.thisptr.scale(s)
+
     cpdef bool is_updated(self):
         """check whether the parameter is updated or not
         
@@ -322,20 +333,28 @@ cdef class Parameters:
         """
         return self.thisptr.index
 
-    cpdef Expression expr(self):
+    cpdef Expression expr(self, bool update=True):
         """Returns the parameter as an expression
 
         This is the same as calling
 
             dy.parameter(param)
         
+        Arguments:
+            update {bool} -- If this is set to False, the parameter won't be updated during the backward pass
         Returns:
             Expression -- Expression of the parameter
         """
-        if cg_version() != self._version:
-            self._version = cg_version()
-            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
-        return self._expr
+        if update:
+            if cg_version() != self._version:
+                self._version = cg_version()
+                self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+            return self._expr
+        else:
+            if cg_version() != self._const_version:
+                self._const_version = cg_version()
+                self._const_expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
+            return self._const_expr
 
 
 
@@ -387,11 +406,23 @@ cdef class LookupParameters:
         cdef vector[CTensor] grads
         grads = self.thisptr.get().grads
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
+    
+    cpdef scale(self,float s):
+        """Scales the parameter
 
-    cpdef Expression expr(self):
+        Arguments:
+            s {float} -- Scale
+
+        """
+        self.thisptr.scale(s)
+        
+    cpdef Expression expr(self,bool update=True):
         if cg_version() != self._version:
             self._version = cg_version()
-            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+            if update:
+                self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+            else:
+                self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
         return self._expr
 
     cpdef zero(self): self.thisptr.zero()
@@ -1066,13 +1097,14 @@ cdef class Expression: #{{{
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
-def parameter(p):
+def parameter(p, update=True):
     """Load a parameter in the computation graph
     
     Get the expression corresponding to a parameter
     
     Arguments:
         p {Parameter,LookupParameter} -- Parameter to load (can be a lookup parameter as well)
+        update {bool} -- If this is set to False, the parameter won't be updated during the backward pass
     
     Returns:
         Expression -- Parameter expression
@@ -1081,7 +1113,7 @@ def parameter(p):
         NotImplementedError -- Only works with parameters and lookup parameters
     """
     if isinstance(p,Parameters) or isinstance(p,LookupParameters):
-        return p.expr()
+        return p.expr(update)
     else:
         raise NotImplementedError("Cannot call parameter() on anything other than Parameters or LookupParameters")
 

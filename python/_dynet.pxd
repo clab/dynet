@@ -68,7 +68,11 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+<<<<<<< HEAD
         void clip_inplace(float left, float right)
+=======
+        void scale(float s)
+>>>>>>> clab/master
         unsigned index
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
@@ -79,6 +83,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+        void scale(float s)
         unsigned index
 
     cdef cppclass CParameterInit "dynet::ParameterInit":
@@ -221,6 +226,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
     CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CParameters p) except + #
     CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CLookupParameters p) except + #
+    CExpression c_const_parameter "dynet::expr::const_parameter" (CComputationGraph& g, CParameters p) except + #
+    CExpression c_const_parameter "dynet::expr::const_parameter" (CComputationGraph& g, CLookupParameters p) except + #
     #CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
     CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
     CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #

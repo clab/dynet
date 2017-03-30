@@ -266,6 +266,14 @@ struct Parameter {
    * @param b Update status
    */
   void set_updated(bool b);
+
+  /**
+   * @brief Scales the parameter (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale(float s){get()->scale_parameters(s);}
+
   /**
    * @brief Check the update status
    * @return Update status
@@ -320,6 +328,13 @@ struct LookupParameter {
    * \return Values as a `Tensor` object
    */
   std::vector<Tensor>* values() { return &(get()->values); }
+
+  /**
+   * @brief Scales the parameter (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale(float s){get()->scale_parameters(s);}
 
   /**
   * @brief Set the parameter as updated
