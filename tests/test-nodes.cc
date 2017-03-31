@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE TEST_NODES
 
+#include <dynet/functors.h>
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/grad-check.h>
@@ -787,6 +788,30 @@ BOOST_AUTO_TEST_CASE( binary_log_loss_gradient ) {
   Expression x2 = input(cg, {3}, ones3_vals);
   Expression z = binary_log_loss(x1, x2);
   BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression binary_log_loss(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( binary_log_loss_edgecases ) {
+  dynet::ComputationGraph cg;
+  float val, infinity= - log(DYNET_DEVICE_MIN);
+  Expression x,y,z;
+  vector<float> values={0.0,0.5,1.0};
+  for (float vx : values){
+    for(float vy : values){
+      x = input(cg, vx);
+      // and y == 0
+      y = input(cg, vy);
+      z = binary_log_loss(x, y);
+      val = as_scalar(z.value());
+      if(vx==0.5)
+        BOOST_CHECK_CLOSE(val,log(2),0.1);
+      else if (vx==vy)
+        BOOST_CHECK_CLOSE(val,0,0.1);
+      else
+        BOOST_CHECK_CLOSE(val,infinity,0.1);
+    }
+  }
+
 }
 
 // Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
