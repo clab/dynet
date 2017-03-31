@@ -527,7 +527,7 @@ cdef class Model: # {{{
     def save_all(self, string fname):
         save_dynet_model(fname, self.thisptr)
 
-    cdef load_all(self, string fname):
+    def load_all(self, string fname):
         load_dynet_model(fname, self.thisptr)
 
     cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
