@@ -266,7 +266,15 @@ cdef class Parameters:
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().g)
-
+    
+    cpdef clip_inplace(self, float left, float right):
+        """Clip the values in the parameter to a fixed range [left, right] (in place)
+        
+        Returns:
+            None
+        """
+        self.thisptr.clip_inplace(left, right)
+        
     # TODO: make more efficient
     cpdef load_array(self, arr):
         """Deprecated
@@ -291,6 +299,15 @@ cdef class Parameters:
 
         """
         self.thisptr.zero()
+
+    cpdef scale(self,float s):
+        """Scales the parameter
+
+        Arguments:
+            s {float} -- Scale
+
+        """
+        self.thisptr.scale(s)
 
     cpdef bool is_updated(self):
         """check whether the parameter is updated or not
@@ -389,7 +406,16 @@ cdef class LookupParameters:
         cdef vector[CTensor] grads
         grads = self.thisptr.get().grads
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
+    
+    cpdef scale(self,float s):
+        """Scales the parameter
 
+        Arguments:
+            s {float} -- Scale
+
+        """
+        self.thisptr.scale(s)
+        
     cpdef Expression expr(self,bool update=True):
         if cg_version() != self._version:
             self._version = cg_version()

@@ -53,6 +53,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CTensor values
         CTensor g
         CDim dim
+        void clip(float left, float right)
 
     cdef cppclass CLookupParameterStorage "dynet::LookupParameterStorage":
         CLookupParameterStorage()
@@ -67,6 +68,8 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+        void scale(float s)
+        void clip_inplace(float left, float right)
         unsigned index
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
@@ -77,6 +80,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+        void scale(float s)
         unsigned index
 
     cdef cppclass CParameterInit "dynet::ParameterInit":

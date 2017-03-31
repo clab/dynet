@@ -287,17 +287,17 @@ struct FL2SGDUpdate {
 struct FBinaryLogLoss {
   DYNET_DEVICE_FUNC inline float operator()(float x, float x_true) const {
     if (x_true == 1.f) {
-      if (x == 0.f) x = DYNET_DEVICE_MIN;
-      return -1.f * x_true * log(x);
+      if (x == 0.f) return -1.f * log(DYNET_DEVICE_MIN);
+      return -1.f * log(x);
     }
     else if (x_true == 0.f) {
-      if (x == 1.f) x = DYNET_DEVICE_MIN;
-      return (x_true - 1.f) * log1p(-x);
+      if (x == 1.f) return -1.f * log(DYNET_DEVICE_MIN);
+      else return (x_true - 1.f) * log1p(-x);
     }
     else {
-      if (x == 0.f) x = DYNET_DEVICE_MIN;
-      if (x == 1.f) x = DYNET_DEVICE_MIN;
-      return -1.f * (x_true * log(x) + (1.f - x_true) * log1p(-x));
+      if (x == 0.f) return -1.f * log(DYNET_DEVICE_MIN);
+      else if (x == 1.f) return -1.f * log(DYNET_DEVICE_MIN);
+      else return -1.f * (x_true * log(x) + (1.f - x_true) * log1p(-x));
     }
   }
 };
