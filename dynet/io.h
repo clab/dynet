@@ -57,11 +57,15 @@ class Pack {
       os << param->values << std::endl;
       os << param->g << std::endl;
     }
-    /*
     auto lookup_params = model.get_lookup_parameter_storages();
     for (auto & lookup_param: lookup_params) {
+      os << "#LookupParameter#" << std::endl;
+      os << lookup_param->name << std::endl;
+      os << lookup_param->all_dim << std::endl;
+      os << lookup_param->dim << std::endl;
+      os << lookup_param->all_values << std::endl;
+      os << lookup_param->all_grads << std::endl;
     }
-    */
     this->offset = os.tellp();
     os.close();
   }
@@ -109,7 +113,7 @@ class Pack {
           std::getline(f, line);
           std::istringstream iss(line);
           iss >> tmp;
-          params_lst.insert(tmp.end(), params_lst.begin(), params_lst.end());
+          params_lst.insert(params_lst.end(), tmp.begin(), tmp.end());
         }
       };
       deserialize_tensor_lambda();
@@ -122,7 +126,40 @@ class Pack {
     } // while Parameter
     
     while (line == "#LookupParameter#") {
-      // TODO
+      std::getline(f, line);
+      auto name = dynet::str_split(line, '/').back();
+      name = dynet::str_split(name, '_').front();
+
+      Dim all_dim;
+      std::getline(f, line);
+      std::istringstream iss(line);
+      iss >> all_dim;
+      unsigned int N = all_dim.d[all_dim.nd - 1];
+
+      Dim d;
+      std::getline(f, line);
+      std::istringstream iss2(line);
+      iss2 >> d;
+      LookupParameter lookup_param = model.add_lookup_parameters(N, d, name);
+
+      std::vector<float> lookup_params_lst;
+      auto deserialize_tensor_lambda = [&] () {
+        for (int k1 = 0; k1 < all_dim.d[0]; ++k1) {
+          // CHECK DIMENSION
+          std::vector<float> tmp(all_dim.d[1]);
+          std::getline(f, line);
+          std::istringstream iss(line);
+          iss >> tmp;
+          lookup_params_lst.insert(lookup_params_lst.end(), tmp.begin(), tmp.end());
+        }
+      };
+      deserialize_tensor_lambda();
+      TensorTools::SetElements(lookup_param.get_storage().all_values, lookup_params_lst);
+
+      lookup_params_lst.resize(0);
+      deserialize_tensor_lambda();
+      TensorTools::SetElements(lookup_param.get_storage().all_grads, lookup_params_lst);
+      std::getline(f, line);
     }
     if (line.size()) {
       if (line != "#") {
