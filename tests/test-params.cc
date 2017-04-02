@@ -183,7 +183,8 @@ BOOST_AUTO_TEST_CASE ( test_parametercollection_with_builder ) {
 BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   ParameterCollection m;
   Parameter a = m.add_parameters({10}, "a");
-  //Parameter b = m.add_parameters({3,7});
+  Parameter b = m.add_parameters({3,7});
+  LookupParameter c = m.add_lookup_parameters(10, {2});
   dynet::Pack s("test.model");
   s.save(m, "model1");
   s.save(m);
@@ -205,6 +206,16 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
     std::cout << x->dim << std::endl;
     std::cout << x->values << std::endl;
     std::cout << x->g << std::endl;
+  }
+  auto lookup_params = m3.get_lookup_parameter_storages();
+  for(auto & x : lookup_params) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->all_dim << std::endl;
+    std::cout << x->all_values << std::endl;
+    std::cout << x->all_grads << std::endl;
+    std::cout << x->values[0] << std::endl;
+    std::cout << x->grads[0] << std::endl;
   }
 }
 
