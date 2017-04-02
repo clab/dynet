@@ -273,6 +273,13 @@ struct Parameter {
   Tensor* values() { return &(get_storage().values); }
 
   /**
+   * \brief gradients of the parameter
+   *
+   * \return gradients as a `Tensor` object
+   */
+  Tensor* gradients() { return &(get_storage().g); }
+
+  /**
    * \brief Get the current weight decay for the parameters
    */
   float current_weight_decay() const;

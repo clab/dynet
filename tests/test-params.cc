@@ -7,6 +7,7 @@
 #include <dynet/lstm.h>
 #include <dynet/gru.h>
 #include <dynet/treelstm.h>
+#include <dynet/io.h>
 #include <boost/test/unit_test.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -177,6 +178,34 @@ BOOST_AUTO_TEST_CASE ( test_parametercollection_with_builder ) {
   dynet::ParameterCollection collec2;
   auto bi_treelstm_builder = BidirectionalTreeLSTMBuilder(3, 10, 2, collec2);
   DYNET_CHECK_EQUAL(bi_treelstm_builder.get_parameters().size(), 11 * 3 * 2);
+}
+
+BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
+  ParameterCollection m;
+  Parameter a = m.add_parameters({10}, "a");
+  //Parameter b = m.add_parameters({3,7});
+  dynet::Pack s("test.model");
+  s.save(m, "model1");
+  s.save(m);
+
+  ParameterCollection m2;
+  s.load(m2, "model1");
+  auto params1 = m2.get_parameter_storages();
+  for(auto & x : params1) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->values << std::endl;
+    std::cout << x->g << std::endl;
+  }
+  ParameterCollection m3;
+  s.load(m3, "/");
+  auto params2 = m3.get_parameter_storages();
+  for(auto & x : params2) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->values << std::endl;
+    std::cout << x->g << std::endl;
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
