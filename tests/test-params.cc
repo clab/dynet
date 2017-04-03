@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   LookupParameter c = m.add_lookup_parameters(10, {2});
   dynet::Pack s("test.model");
   s.save(m, "model1");
-  s.save(m);
+  s.save(m, m.get_namespace(), true);
 
   ParameterCollection m2;
   s.load(m2, "model1");
