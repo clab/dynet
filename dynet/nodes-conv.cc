@@ -147,43 +147,6 @@ Dim SumDimension::dim_forward(const vector<Dim>& xs) const {
   ret.delete_dim(dimension);
   return ret;
 }
-
-string Conv2D::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "conv2d(" << arg_names[0] << ", f=" << arg_names[1] << ')';
-  return s.str();
-}
-
-Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
-  if (xs.size() != 2) {
-    ostringstream s; s << "Conv2D requires two inputs: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  // check inputs and filters
-  if (xs[0].ndims() != 3 || xs[1].ndims() != 4 ||
-      xs[1].d[1] != xs[0].d[0] || xs[0].d[1] < xs[1].d[2] ||
-      xs[0].d[2] < xs[1].d[3]) {
-    ostringstream s; s << "Bad input dimensions in Conv2D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-
-  unsigned bs = xs[0].batch_elems();
-  std::vector<long> output_shape(3);
-  output_shape[0] = (long)xs[1].d[0];
-  // the first tensor is batched data (Ci x W x H x N)), the second tensor is the filters (Co * Ci * W * H)
-  // the output tensor is (C_o x W x H x N)
-  for (unsigned i = 0; i < 2; ++i ){
-    // skip i = 0, which is the channel dimension
-    unsigned input_dim = xs[0].d[i+1];
-    unsigned kernel_dim = xs[1].d[i+2];
-    if (is_valid) {
-      output_shape[i+1] = (long)((float)(input_dim - kernel_dim + 1) / (float)stride[1-i]);
-    } else {
-      output_shape[i+1] = (long)((float)input_dim / (float)stride[1-i]);
-    }
-  }
-  return Dim(output_shape, bs);
-}
 #endif
 
 template<class MyDevice>
@@ -283,44 +246,6 @@ void Conv1DWide::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(Conv1DWide)
 
-template<class MyDevice>
-void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in Conv2D::forward, at least 2 inputs");
-  DYNET_ASSERT(fx.d.bd == xs[0]->d.bd, "Failed dimension check in Conv2D::forward, batchsize not match");
-  DYNET_ASSERT(fx.d[0] == xs[1]->d[0], "Failed dimension check in Conv2D::forward, #channel not match");
-  Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
-#ifdef __CUDACC__
-  //TODO (Hao Zhang): implement a CUDNN version
-  throw std::runtime_error("Conv2D::forward_dev_impl not working on CUDA yet");
-#else
-  // this is the fastest (available) implementation as reported by TensorFlow community on CPU
-  fx.tb<3>().device(*dev.edevice) = Eigen::SpatialConvolution(xs[0]->tb<3>(), xs[1]->t<4>(), stride[1], stride[0], padding_type);
-#endif
-}
-
-template<class MyDevice>
-void Conv2D::backward_dev_impl(const MyDevice & dev,
-                         const vector<const Tensor*>& xs,
-                         const Tensor& fx,
-                         const Tensor& dEdf,
-                         unsigned i,
-                         Tensor& dEdxi) const {
-  // don't check those already checked in forward_impl
-  DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in Conv2D::backward");
-  DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in Conv2D::backward");
-  DYNET_ASSERT(i < 2, "Failed dimension check in Conv2D::backward");
-#ifdef __CUDACC__
-  //TODO (Hao Zhang): implement a version using CUDNN
-  throw std::runtime_error("Conv2D::backward_dev_impl not working on CUDA yet");
-#else
-  if (i == 0) { //backward w.r.t the input
-    dEdxi.tb<3>().device(*dev.edevice) += Eigen::SpatialConvolutionBackwardInput(xs[1]->t<4>(), dEdf.tb<3>(), xs[0]->d[2], xs[0]->d[1], stride[1], stride[0]);
-  } else { //backward w.r.t the kernel
-    dEdxi.t<4>().device(*dev.edevice) += Eigen::SpatialConvolutionBackwardKernel(xs[0]->tb<3>(), dEdf.tb<3>(), xs[1]->d[3], xs[1]->d[2], stride[1], stride[0]);
-  }
-#endif
-}
-DYNET_NODE_INST_DEV_IMPL(Conv2D)
 
 template<class MyDevice>
 void Filter1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
