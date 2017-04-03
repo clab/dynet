@@ -581,10 +581,23 @@ struct RandomUniform : public Node {
   real left, right;
 };
 
+// Batch Normalization(https://arxiv.org/pdf/1502.03167.pdf)
+// y =x_4 * (x_1 - x_2) / sqrt(x_3 + epsilon) + x_5
+// Note: Batch normalization now is a channel-wise operation.
+// Batch Normalization has 5 arguments：
+// x_1: input [C W H N]
+// x_2: mean [C 1]
+// x_3: variance [C 1]
+// x_4: gamma used to scale [C 1]
+// x_5: beta used to shfit [C 1]
+// above 5 arguments can be optimized.
+// epsilon： a member variable of BatchNorm Node, which is used to prevent division by zero, usually it is
+// a small value such as 0.001 0.00001
 struct BatchNorm : public Node {
     explicit BatchNorm(const std::initializer_list<VariableIndex>& a, real epsilon):epsilon(epsilon){ }
     virtual bool supports_multibatch() const override { return true; }
     DYNET_NODE_DEFINE_DEV_IMPL()
+    size_t aux_storage_size() const override;
     real epsilon;
 };
 
