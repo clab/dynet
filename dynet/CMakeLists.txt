@@ -36,6 +36,7 @@ set(dynet_library_SRCS
     training.cc
     treelstm.cc
     weight-decay.cc
+    io.cc
 )
 
 # Headers:
@@ -80,6 +81,7 @@ set(dynet_library_HDRS
     nodes-macros.h
     weight-decay.h
     io-macros.h
+    io.h
 )
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
