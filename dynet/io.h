@@ -12,6 +12,7 @@
 #include "dynet/str_util.h"
 #include "dynet/dim.h"
 #include "dynet/tensor.h"
+#include "dynet/except.h"
 
 namespace dynet {
 
@@ -25,30 +26,53 @@ class Pack {
  public:
   Pack(std::string filename) : fn(filename), fn_meta(filename + ".meta") {}
 
-  void save(ParameterCollection & model, std::string key = "") {
+  void save(ParameterCollection & model, std::string key = "",
+            bool is_append = false) {
     std::string key_str(key);
     if (key.size() == 0) {
       key_str = model.get_namespace();
     }
-
+    if (duplicate_key_check(key_str) == false) {
+        DYNET_RUNTIME_ERR("You couldn't save ParameterCollections with the same key in file: " + fn);
+    }
+    // write offset info into meta file
     std::ofstream os;
-    os.open(fn_meta, std::ios::app);
+    if (is_append) {
+      os.open(fn_meta, std::ofstream::app);
+    } else {
+      os.open(fn_meta);
+    }
     os << key_str << ':' << offset << '\n';
     os.close();
-
-    this->serialize(model, key);
+    // write model into model file
+    this->serialize(model, key, is_append);
   }
 
   void load(ParameterCollection & model, std::string key = "") {
     this->deserialize(model, key);
   }
-  
+ 
  private:
-  void serialize(ParameterCollection & model, std::string key) {
+  bool duplicate_key_check(const std::string & key) {
+    std::ifstream f(fn_meta);
+    std::string line;
+    while (std::getline(f, line)) {
+      auto kv = dynet::str_split(line, ':');
+      if (kv[0] == key) return false;
+    }
+    f.close();
+    return true;
+  }
+
+  void serialize(ParameterCollection & model, std::string key, bool is_append) {
     std::ofstream os;
-    os.open(fn, std::ios::app);
+    if (is_append) {
+      os.open(fn, std::ofstream::app);
+    } else {
+      os.open(fn);
+    }
     os.seekp(this->offset);
-    os << '#' << std::endl;
+    os << '#' << std::endl; // identifier of beginning of the ParameterCollection
     auto params = model.get_parameter_storages();
     for (auto & param : params) {
       os << "#Parameter#" << std::endl;
@@ -73,7 +97,7 @@ class Pack {
   void deserialize(ParameterCollection & model, std::string key) {
     std::ifstream meta_f(fn_meta);
     std::ifstream f(fn);
-    std::string key_str;
+    // find the offset of the key
     long long local_offset = -1;
     std::string line;
     while (std::getline(meta_f, line)) {
@@ -84,15 +108,17 @@ class Pack {
       }
     }
     if (local_offset == -1) {
-      throw std::runtime_error("Load error: no such key");
+      DYNET_RUNTIME_ERR("Load error: no such key: " + key);
     }
 
+    // check identifier
     f.seekg(local_offset);
     std::getline(f, line);
     if (line != "#") {
-      throw std::runtime_error("Invalid model file format.");
+      DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
     }
 
+    // read parameters
     std::getline(f, line);
     while (line == "#Parameter#") {
       std::getline(f, line);
@@ -103,12 +129,15 @@ class Pack {
       std::getline(f, line);
       std::istringstream iss(line);
       iss >> d;
+
+      // add param into input model
       Parameter param = model.add_parameters(d, name);
 
+      // read param.get_storage().values
       std::vector<float> params_lst;
       auto deserialize_tensor_lambda = [&] () {
         for (int k1 = 0; k1 < d.d[0]; ++k1) {
-          // CHECK DIMENSION
+          // TODO: check dimensions 
           int sz = d.nd == 1 ? 1 : d.d[1];
           std::vector<float> tmp(sz);
           std::getline(f, line);
@@ -125,12 +154,15 @@ class Pack {
           int indx = j * d.d[0] + i;
           params_order_lst[indx] = params_lst[k];
         }
+        params_lst.resize(0);
       };
+      // TODO: high dimensions >=3
       if (d.nd == 2) {
         transpose_lambda();
       }
       TensorTools::SetElements(param.get_storage().values, params_order_lst);
 
+      // read param.get_storage().g
       params_lst.resize(0);
       deserialize_tensor_lambda();
       params_order_lst = params_lst;
@@ -141,6 +173,7 @@ class Pack {
       std::getline(f, line);
     } // while Parameter
     
+    // read lookup parameters
     while (line == "#LookupParameter#") {
       std::getline(f, line);
       auto name = dynet::str_split(line, '/').back();
@@ -156,12 +189,15 @@ class Pack {
       std::getline(f, line);
       std::istringstream iss2(line);
       iss2 >> d;
+
+      // add lookup_param into input model
       LookupParameter lookup_param = model.add_lookup_parameters(N, d, name);
 
+      // read lookup_param.get_storage().all_values
       std::vector<float> lookup_params_lst;
       auto deserialize_tensor_lambda = [&] () {
         for (int k1 = 0; k1 < all_dim.d[0]; ++k1) {
-          // CHECK DIMENSION
+          // TODO: check dimensions 
           std::vector<float> tmp(all_dim.d[1]);
           std::getline(f, line);
           std::istringstream iss(line);
@@ -177,6 +213,7 @@ class Pack {
           int indx = j * all_dim.d[0] + i;
           lookup_params_order_lst[indx] = lookup_params_lst[k];
         }
+        lookup_params_lst.resize(0);
       };
       if (all_dim.nd == 2) {
         transpose_lambda();
@@ -184,9 +221,11 @@ class Pack {
       TensorTools::SetElements(lookup_param.get_storage().all_values,
                                lookup_params_order_lst);
 
+      // read lookup_param.get_storage().all_grads
       lookup_params_lst.resize(0);
       deserialize_tensor_lambda();
       lookup_params_order_lst = lookup_params_lst;
+      // TODO: high dimensions >=3
       if (all_dim.nd == 2) {
         transpose_lambda();
       }
@@ -197,7 +236,7 @@ class Pack {
 
     if (line.size()) {
       if (line != "#") {
-        throw std::runtime_error("Invalid model file format.");
+        DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
       }
     }
     f.close();
