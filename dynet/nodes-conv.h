@@ -3,6 +3,11 @@
 
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/op-helper.h"
+
+#if HAVE_CUDNN
+#include "dynet/cudnn-ops.h"
+#endif
 
 namespace dynet {
 
@@ -57,35 +62,29 @@ struct SumDimension : public Node {
   unsigned dimension;
 };
 
-// 2D convolution
-// TODO(Hao Zhang): move conv2d to standalone files because the code logic could be very long
-// when cudnn is incorporated.
-// y = x_1 *conv x_2
-// x_1 \in R^{Ci x W x H x N} (input)
-// x_2 \in R^{Co x Ci x W x H} (filter)
+// conv2d 
+// y = x_1 *conv2d x_2
+// x_1 \in R^{W x H x Ci x N} (input)
+// x_2 \in R^{W x H x Ci x Co} (filter)
 // stride[0] corresponds to H
 // stride[1] corresponds to W
 // is_valid: true for 'VALID' and false for 'SAME'
-// Note: You may find the dimension here a bit counter-intuitive (e.g. W is ahead of H).
-// The reasons are as follows: in an umcomming GPU implementation, cuDNN can only support NCHW 
-// and NHWC formated Tensor. Follwing DyNet's convention using Eigen::ColMajor, the tensor can 
-// only be viewed as D1 x D2 x D3 x N (the batchsize N is at the last dimension). As swapping
-// dimension of a 4D tensor in runtime is computational prohibitive, I decide to arrange the 
-// tensor as CWHN, so that when using Eigen::RowMajor, we will directly get a NHWC tensor, 
-// which follows a standard cuDNN convention (Viewas<RowMajor> operation does not have cost).
-// On the other hand, CPU version Eigen::SpatialConvolution takes input tensor in CHWN/NWHC format, 
-// so there is another simple trick here: when calling Eigen::SpatialConvolution, swap the Col and 
-// Row dim in the function argument list to fool this function -- you will still get a correct 
-// result except the col and row are swapped.
 struct Conv2D: public Node {
   explicit Conv2D(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& s,
     const bool padding_type = true)
-      : Node(a), stride(s), is_valid(padding_type) { }
+      : Node(a), stride(s), is_valid(padding_type) {}
   virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
   const std::vector<unsigned> stride;
   const bool is_valid;
+
+ private:
+#if HAVE_CUDNN
+  mutable CudnnConvOp* cudnn_conv_op_ = NULL;
+#endif
 };
+
 
 } // namespace dynet
 

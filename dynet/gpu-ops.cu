@@ -118,5 +118,26 @@ void dense_to_sparse_block_add(int n, const unsigned *idx, int bsize, float *src
   }
 }
 
+__global__ void PadInputCustomKernelNCHW(float* output, const float* input,
+        int N, int C, int H, int W, int pad_right, int pad_bottom) {
+  int id = threadIdx.x + blockIdx.x*blockDim.x;
+  int idn = id / (W*H*C);
+  int idc = (id - idn*W*H*C) / (W*H);
+  int idh = (id - idn*W*H*C - idc*W*H) / H;
+  int idw = id - idn*W*H*C - idc*W*H - idh*W;
+  int out_h = H + pad_bottom;
+  int out_w = W + pad_right;
+  if (id < N*C*H*W) {
+    if (idw < out_w && idh < out_h) {
+      output[idn*(C*out_h*out_w) + idc*(out_h*out_w) + idh*(out_w) + idw] = input[id];
+    }
+  }
+}
+
+void pad_input(float* output, const float* input, int N, int C, int H, int W, int pad_right, int pad_bottom) {
+  auto tb = SizeToBlockThreadPair(N * C * H * W);
+  PadInputCustomKernelNCHW<<<tb.first, tb.second>>>(output, input, N, C, H, W, pad_right, pad_bottom);
+}
+
 } // namespace gpu
 } // namespace dynet

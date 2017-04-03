@@ -302,6 +302,7 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
     ++ai;
   }
   node->dim = node->dim_forward(xds);
+  node->set_cg(this);
   if (immediate_compute) {
     const Tensor& value = incremental_forward(i);
     if (check_validity)
