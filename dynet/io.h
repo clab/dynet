@@ -86,6 +86,7 @@ class Pack {
     if (local_offset == -1) {
       throw std::runtime_error("Load error: no such key");
     }
+
     f.seekg(local_offset);
     std::getline(f, line);
     if (line != "#") {
@@ -96,7 +97,7 @@ class Pack {
     while (line == "#Parameter#") {
       std::getline(f, line);
       auto name = dynet::str_split(line, '/').back();
-      name = dynet::str_split(name, '_').front();
+      name = name.substr(0, name.find_first_of("__"));
 
       Dim d;
       std::getline(f, line);
@@ -117,18 +118,33 @@ class Pack {
         }
       };
       deserialize_tensor_lambda();
-      TensorTools::SetElements(param.get_storage().values, params_lst);
+      std::vector<float> params_order_lst = params_lst;
+      auto transpose_lambda = [&] () {
+        for (size_t k = 0; k < params_lst.size(); ++k) {
+          int i = k / d.d[1], j = k % d.d[1];
+          int indx = j * d.d[0] + i;
+          params_order_lst[indx] = params_lst[k];
+        }
+      };
+      if (d.nd == 2) {
+        transpose_lambda();
+      }
+      TensorTools::SetElements(param.get_storage().values, params_order_lst);
 
       params_lst.resize(0);
       deserialize_tensor_lambda();
-      TensorTools::SetElements(param.get_storage().g, params_lst);
+      params_order_lst = params_lst;
+      if (d.nd == 2) {
+        transpose_lambda();
+      }
+      TensorTools::SetElements(param.get_storage().g, params_order_lst);
       std::getline(f, line);
     } // while Parameter
     
     while (line == "#LookupParameter#") {
       std::getline(f, line);
       auto name = dynet::str_split(line, '/').back();
-      name = dynet::str_split(name, '_').front();
+      name = name.substr(0, name.find_first_of("__"));
 
       Dim all_dim;
       std::getline(f, line);
@@ -154,13 +170,31 @@ class Pack {
         }
       };
       deserialize_tensor_lambda();
-      TensorTools::SetElements(lookup_param.get_storage().all_values, lookup_params_lst);
+      std::vector<float> lookup_params_order_lst = lookup_params_lst;
+      auto transpose_lambda = [&] () {
+        for (size_t k = 0; k < lookup_params_lst.size(); ++k) {
+          int i = k / all_dim.d[1], j = k % all_dim.d[1];
+          int indx = j * all_dim.d[0] + i;
+          lookup_params_order_lst[indx] = lookup_params_lst[k];
+        }
+      };
+      if (all_dim.nd == 2) {
+        transpose_lambda();
+      }
+      TensorTools::SetElements(lookup_param.get_storage().all_values,
+                               lookup_params_order_lst);
 
       lookup_params_lst.resize(0);
       deserialize_tensor_lambda();
-      TensorTools::SetElements(lookup_param.get_storage().all_grads, lookup_params_lst);
+      lookup_params_order_lst = lookup_params_lst;
+      if (all_dim.nd == 2) {
+        transpose_lambda();
+      }
+      TensorTools::SetElements(lookup_param.get_storage().all_grads,
+                               lookup_params_order_lst);
       std::getline(f, line);
-    }
+    } // while LookupParameter
+
     if (line.size()) {
       if (line != "#") {
         throw std::runtime_error("Invalid model file format.");

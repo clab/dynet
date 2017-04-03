@@ -198,6 +198,13 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
     std::cout << x->values << std::endl;
     std::cout << x->g << std::endl;
   }
+  auto params11 = m.get_parameter_storages();
+  for(auto & x : params11) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->values << std::endl;
+    std::cout << x->g << std::endl;
+  }
   ParameterCollection m3;
   s.load(m3, "/");
   auto params2 = m3.get_parameter_storages();
@@ -207,8 +214,18 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
     std::cout << x->values << std::endl;
     std::cout << x->g << std::endl;
   }
-  auto lookup_params = m3.get_lookup_parameter_storages();
+  auto lookup_params = m2.get_lookup_parameter_storages();
   for(auto & x : lookup_params) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->all_dim << std::endl;
+    std::cout << x->all_values << std::endl;
+    std::cout << x->all_grads << std::endl;
+    std::cout << x->values[0] << std::endl;
+    std::cout << x->grads[0] << std::endl;
+  }
+  auto lookup_paramss = m.get_lookup_parameter_storages();
+  for(auto & x : lookup_paramss) {
     std::cout << x->name << std::endl;
     std::cout << x->dim << std::endl;
     std::cout << x->all_dim << std::endl;
