@@ -3,7 +3,7 @@
 namespace dynet {
 
 void Pack::save(ParameterCollection & model,
-                std::string key, bool is_append) {
+                const std::string & key, bool is_append) {
   std::string key_str(key);
   if (key.size() == 0) {
     key_str = model.get_namespace();
@@ -24,8 +24,20 @@ void Pack::save(ParameterCollection & model,
   this->serialize(model, key, is_append);
 }
 
-void Pack::load(ParameterCollection & model, std::string key) {
+void Pack::save(ParameterCollection & model,
+                     const std::vector<std::string> & filter_lst,
+                     const std::string & key, bool is_append) {
+  // TODO
+}
+
+void Pack::load(ParameterCollection & model, const std::string & key) {
   this->deserialize(model, key);
+}
+
+void Pack::load(ParameterCollection & model,
+                const std::vector<std::string> & filter_lst,
+                const std::string & key) {
+  // TODO
 }
 
 bool Pack::duplicate_key_check(const std::string & key) {
@@ -39,7 +51,7 @@ bool Pack::duplicate_key_check(const std::string & key) {
   return true;
 }
 
-void Pack::serialize(ParameterCollection & model, std::string key, bool is_append) {
+void Pack::serialize(ParameterCollection & model, const std::string & key, bool is_append) {
   std::ofstream os;
   if (is_append) {
     os.open(fn, std::ofstream::app);
@@ -69,17 +81,23 @@ void Pack::serialize(ParameterCollection & model, std::string key, bool is_appen
   os.close();
 }
 
-void Pack::deserialize(ParameterCollection & model, std::string key) {
+void Pack::deserialize(ParameterCollection & model, const std::string & key) {
   std::ifstream meta_f(fn_meta);
   std::ifstream f(fn);
   // find the offset of the key
   long long local_offset = -1;
+
   std::string line;
-  while (std::getline(meta_f, line)) {
-    auto kv = dynet::str_split(line, ':');
-    if (kv[0] == key) {
-      local_offset = std::stoll(kv[1]);
-      break;
+  if (key.size() == 0) {
+    // case for no key specified
+    local_offset = 0;
+  } else {
+    while (std::getline(meta_f, line)) {
+      auto kv = dynet::str_split(line, ':');
+      if (kv[0] == key) {
+        local_offset = std::stoll(kv[1]);
+        break;
+      }
     }
   }
   if (local_offset == -1) {
