@@ -581,11 +581,11 @@ struct RandomUniform : public Node {
   real left, right;
 };
 
-// Batch Normalization(https://arxiv.org/pdf/1502.03167.pdf)
-// y =x_4 * (x_1 - x_2) / sqrt(x_3 + epsilon) + x_5
+// Batch Normalization
+// y = x_4 * (x_1 - x_2) / sqrt(x_3 + epsilon) + x_5
 // Note: Batch normalization now is a channel-wise operation.
 // Batch Normalization has 5 arguments：
-// x_1: input [C W H N]
+// x_1: input dimension [C W H N]
 // x_2: mean [C 1]
 // x_3: variance [C 1]
 // x_4: gamma used to scale [C 1]
@@ -600,8 +600,5 @@ struct BatchNorm : public Node {
     size_t aux_storage_size() const override;
     real epsilon;
 };
-
-
 } // namespace dynet
-
 #endif
