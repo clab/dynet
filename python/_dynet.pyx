@@ -1394,6 +1394,7 @@ def pick(Expression e, unsigned index=0, unsigned dim=0):
     
     Keyword Arguments:
         index {number} -- Index to pick (default: {0})
+        dim {number} -- Dimension to pick from (default: {0})
     
     Returns:
         _pickerExpression -- Picked expression
@@ -1434,6 +1435,7 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
     Arguments:
         e {Expression} -- Expression to pick from
         indices {list} -- Indices to pick
+        dim {number} -- Dimension to pick from (default: {0})
     
     Returns:
         _pickerBatchExpression -- Picked expression
