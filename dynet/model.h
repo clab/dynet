@@ -465,7 +465,7 @@ public:
    *
    * \return list of points to ParameterStorage objects
    */
-  std::vector<ParameterStorage*> get_parameter_storages();
+  std::vector<ParameterStorage*> get_parameter_storages() const;
   /**
    * \brief Add lookup parameter to model
    * \details Same as add_parameters. Initializes with Glorot
@@ -498,7 +498,7 @@ public:
    *
    * \return list of points to LookupParameterStorage objects
    */
-  std::vector<LookupParameterStorage*> get_lookup_parameter_storages();
+  std::vector<LookupParameterStorage*> get_lookup_parameter_storages() const;
   //
   /**
    * \brief project weights so their L2 norm = radius
@@ -594,7 +594,7 @@ public:
   /**
    * @brief get namespace of current ParameterCollection object(end with a slash)
    */
-  std::string get_namespace() { return name; }
+  std::string get_namespace() const { return name; }
 
   /**
    * \brief Get the weight decay object

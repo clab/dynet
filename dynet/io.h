@@ -26,6 +26,11 @@ std::istream& operator>>(std::istream& is, std::vector<T> & v) {
 class Pack {
  public:
   Pack(std::string filename) : fn(filename), fn_meta(filename + ".meta") {}
+  void reinit(std::string filename) {
+    fn = filename;
+    fn_meta = filename + ".meta";
+    offset = 0;
+  }
   /**
    * @brief Save ParameterCollection with key.
    *        use internal namespace if key is not given.
@@ -35,7 +40,7 @@ class Pack {
    * @param is_append: optional parameter
    *                   to specify whether the model file should be appended or not
    */
-  void save(ParameterCollection & model,
+  void save(const ParameterCollection & model,
             const std::string & key = "", bool is_append = false);
   /**
    * @brief Save ParameterCollection's parameters and lookup parameters with filter_lst and key.
@@ -48,7 +53,7 @@ class Pack {
    * @param is_append: optional parameter
    *                   to specify whether the model file should be appended or not
    */
-  void save(ParameterCollection & model,
+  void save(const ParameterCollection & model,
             const std::vector<std::string> & filter_lst,
             const std::string & key = "", bool is_append = false);
   /**
@@ -74,7 +79,7 @@ class Pack {
  
  private:
   bool duplicate_key_check(const std::string & key); 
-  void serialize(ParameterCollection & model, const std::string & key, bool is_append);
+  void serialize(const ParameterCollection & model, const std::string & key, bool is_append);
   void deserialize(ParameterCollection & model, const std::string & key);
 
  private:

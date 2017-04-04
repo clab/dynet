@@ -2,14 +2,14 @@
 
 namespace dynet {
 
-void Pack::save(ParameterCollection & model,
+void Pack::save(const ParameterCollection & model,
                 const std::string & key, bool is_append) {
   std::string key_str(key);
   if (key.size() == 0) {
     key_str = model.get_namespace();
   }
   if (duplicate_key_check(key_str) == false) {
-    DYNET_RUNTIME_ERR("You couldn't save ParameterCollections with the same key in file: " + fn);
+    DYNET_RUNTIME_ERR("You couldn't save ParameterCollections with the same key " + key_str + " in file: " + fn);
   }
   // write offset info into meta file
   std::ofstream os;
@@ -24,9 +24,9 @@ void Pack::save(ParameterCollection & model,
   this->serialize(model, key, is_append);
 }
 
-void Pack::save(ParameterCollection & model,
-                     const std::vector<std::string> & filter_lst,
-                     const std::string & key, bool is_append) {
+void Pack::save(const ParameterCollection & model,
+                const std::vector<std::string> & filter_lst,
+                const std::string & key, bool is_append) {
   // TODO
 }
 
@@ -51,7 +51,7 @@ bool Pack::duplicate_key_check(const std::string & key) {
   return true;
 }
 
-void Pack::serialize(ParameterCollection & model, const std::string & key, bool is_append) {
+void Pack::serialize(const ParameterCollection & model, const std::string & key, bool is_append) {
   std::ofstream os;
   if (is_append) {
     os.open(fn, std::ofstream::app);
@@ -111,12 +111,15 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
     DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
   }
 
+  std::string ns = model.get_namespace();
   // read parameters
   std::getline(f, line);
   while (line == "#Parameter#") {
     std::getline(f, line);
-    auto name = dynet::str_split(line, '/').back();
-    name = name.substr(0, name.find_first_of("__"));
+    if (dynet::startswith(line, ns) == false) {
+      DYNET_RUNTIME_ERR("Inconsistent namespace error: " + line + " | " + ns);
+    }
+    auto name = line;
 
     Dim d;
     std::getline(f, line);
@@ -124,7 +127,8 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
     iss >> d;
 
     // add param into input model
-    Parameter param = model.add_parameters(d, name);
+    Parameter param = model.add_parameters(d);
+    param.get_storage().name = name;
 
     // read param.get_storage().values
     std::vector<float> params_lst;
@@ -169,8 +173,10 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
   // read lookup parameters
   while (line == "#LookupParameter#") {
     std::getline(f, line);
-    auto name = dynet::str_split(line, '/').back();
-    name = name.substr(0, name.find_first_of("__"));
+    if (dynet::startswith(line, ns) == false) {
+      DYNET_RUNTIME_ERR("Inconsistent namespace error: " + line + " | " + ns);
+    }
+    auto name = line;
 
     Dim all_dim;
     std::getline(f, line);
@@ -184,7 +190,8 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
     iss2 >> d;
 
     // add lookup_param into input model
-    LookupParameter lookup_param = model.add_lookup_parameters(N, d, name);
+    LookupParameter lookup_param = model.add_lookup_parameters(N, d);
+    lookup_param.get_storage().name = name;
 
     // read lookup_param.get_storage().all_values
     std::vector<float> lookup_params_lst;
