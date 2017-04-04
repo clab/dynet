@@ -830,11 +830,11 @@ cdef class ComputationGraph:
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
         return _lookupBatchExpression(self, p, vs, update)
-    cdef outputPicker(self, Expression e, unsigned v=0):
-        r = _pickerExpression(self, e, v)
+    cdef outputPicker(self, Expression e, unsigned v=0, unsigned dim=0):
+        r = _pickerExpression(self, e, v, dim)
         return r
-    cdef outputBatchPicker(self, Expression e, vector[unsigned] vs):
-        r = _pickerBatchExpression(self, e, vs)
+    cdef outputBatchPicker(self, Expression e, vector[unsigned] vs, unsigned dim=0):
+        r = _pickerBatchExpression(self, e, vs, dim)
         return r
 
 
@@ -1362,12 +1362,14 @@ cdef class _pickerExpression(Expression):
     
     """
     cdef UnsignedValue val
-    def __cinit__(self, ComputationGraph g, Expression e, unsigned index=0):
+    cdef unsigned dim
+    def __cinit__(self, ComputationGraph g, Expression e, unsigned index=0, unsigned dim=0):
         self.val = UnsignedValue(index)
+        self.dim = dim
         #self.cg = e.cg
         self.cg_version = g.version()
         cdef CExpression ce
-        ce = c_pick(e.c(), self.val.addr())
+        ce = c_pick(e.c(), self.val.addr(), self.dim)
         self.vindex = ce.i
         g._inputs.append(self)
     def set_index(self,i):
@@ -1382,7 +1384,7 @@ cdef class _pickerExpression(Expression):
         self.cgp().invalidate()
         self.val.set(i)
 
-def pick(Expression e, unsigned index=0):
+def pick(Expression e, unsigned index=0, unsigned dim=0):
     """Pick element.
 
     Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.
@@ -1396,18 +1398,20 @@ def pick(Expression e, unsigned index=0):
     Returns:
         _pickerExpression -- Picked expression
     """
-    return _cg.outputPicker(e, index)
+    return _cg.outputPicker(e, index, dim)
 
 cdef class _pickerBatchExpression(Expression):
     """Batched version of `_pickerExpression`
     
     """
     cdef UnsignedVectorValue val
-    def __cinit__(self, ComputationGraph g, Expression e, vector[unsigned] indices):#
+    cdef unsigned dim
+    def __cinit__(self, ComputationGraph g, Expression e, vector[unsigned] indices, unsigned dim=0):#
         self.val = UnsignedVectorValue(indices)
+        self.dim = dim
         self.cg_version = g.version()
         cdef CExpression ce
-        ce = c_pick(e.c(), self.val.addr())
+        ce = c_pick(e.c(), self.val.addr(), self.dim)
         self.vindex = ce.i
         g._inputs.append(self)
     def set_index(self,i):
@@ -1422,7 +1426,7 @@ cdef class _pickerBatchExpression(Expression):
         self.cgp().invalidate()
         self.val.set(i)
 
-def pick_batch(Expression e, vector[unsigned] indices):
+def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
     """Batched pick.
 
     Pick elements from multiple batches.
@@ -1434,7 +1438,7 @@ def pick_batch(Expression e, vector[unsigned] indices):
     Returns:
         _pickerBatchExpression -- Picked expression
     """
-    return _cg.outputBatchPicker(e, indices)
+    return _cg.outputBatchPicker(e, indices, dim)
 
 cdef class _hingeExpression(Expression):
     """Expression representing the output of the hinge operation

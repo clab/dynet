@@ -312,8 +312,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     #CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned v) except +   #
     CExpression c_select_rows "dynet::expr::select_rows" (CExpression& x, vector[unsigned] rs) except +
     CExpression c_select_cols "dynet::expr::select_cols" (CExpression& x, vector[unsigned] cs) except +
-    CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv) except + #
-    CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv) except + #
+    CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv, unsigned d) except + #
+    CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv, unsigned d) except + #
     CExpression c_pickrange "dynet::expr::pickrange" (CExpression& x, unsigned v, unsigned u) except + #
 
     CExpression c_pick_batch_elems "dynet::expr::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
