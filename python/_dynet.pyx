@@ -2075,157 +2075,195 @@ cdef class StackedRNNState:
 # }}}
 
 # {{{ Training 
-cdef class SimpleSGDTrainer:
-    cdef CSimpleSGDTrainer *thisptr
+cdef class Trainer:
+    """
+    Generic trainer
+    """
+    cdef CTrainer *thisptr
+    def __dealloc__(self):
+        del self.thisptr
+    cpdef update(self, float s=1.0):
+        """Update the parameters
+        
+        The update equation is different for each trainer, check the online c++ documentation for more details on what each trainer does
+        
+        Keyword Arguments:
+            s {number} -- Optional scaling factor to apply on the gradient. (default: {1.0})
+        """
+        self.thisptr.update(s)
+    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
+        """Update a subset of parameters
+        
+        Only use this in last resort, a more elegant way to update only a subset of parameters is to use the "update" keyword in dy.parameter or Parameter.expr() to specify which parameters need to be updated __during the creation of the computation graph__
+        
+        Arguments:
+            updated_params {list} -- Indices of parameters to update
+            updated_lookups {list} -- Indices of lookup parameters to update
+        
+        Keyword Arguments:
+            s {number} -- Optional scaling factor to apply on the gradient. (default: {1.0})
+        """
+        cdef vector[unsigned] uparamvec
+        for i in updated_params: uparamvec.push_back(i)
+        cdef vector[unsigned] ulookupvec
+        for i in updated_lookups: ulookupvec.push_back(i)
+        self.thisptr.update(uparamvec, ulookupvec, s)
+    cpdef update_epoch(self, float r = 1.0):
+        """Update trainers hyper-parameters that depend on epochs
+        
+        Basically learning rate decay.
+        
+        Keyword Arguments:
+            r {number} -- Number of epoch that passed (default: {1.0})
+        """
+        self.thisptr.update_epoch(r)
+    cpdef status(self):
+        """Outputs information about the trainer in the stderr 
+        
+        (number of updates since last call, number of clipped gradients, learning rate, etc...)
+        """
+        self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        """Sets updates to sparse updates
+
+        DyNet trainers support two types of updates for lookup parameters, sparse and dense. Sparse updates are the default. They have the potential to be faster, as they only touch the parameters that have non-zero gradients. However, they may not always be faster (particulary on GPU with mini-batch training), and are not precisely numerically correct for some update rules such as MomentumTrainer and AdamTrainer. Thus, if you set this variable to false, the trainer will perform dense updates and be precisely correct, and maybe faster sometimes.
+        Arguments:
+            su {bool} -- flag to activate/deactivate sparse updates
+        """
+        self.thisptr.sparse_updates_enabled = su
+    cpdef set_clip_threshold(self,float thr):
+        """Set clipping thershold
+        
+        To deactivate clipping, set the threshold to be <=0
+        
+        Arguments:
+            thr {number} -- Clipping threshold
+        """
+        if thr<=0:
+            self.thisptr.clipping_enabled = False
+            self.thisptr.clip_threshold = 0.0
+        else:
+            self.thisptr.clipping_enabled = True
+            self.thisptr.clip_threshold = thr
+    cpdef get_clip_threshold(self):
+        """Get clipping threshold
+        
+        Returns:
+            number -- Gradient clipping threshold
+        """
+        return self.thisptr.clip_threshold
+
+cdef class SimpleSGDTrainer(Trainer):
+    """Stochastic gradient descent trainer
+    
+    This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks.
+    
+    Arguments:
+        m {dynet.Model} -- Model to be trained
+    
+    Keyword Arguments:
+        e0 {number} -- Initial learning rate (default: {0.1})
+        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    """
     def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
         self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "SimpleSGDTrainer"
 
-cdef class MomentumSGDTrainer:
-    cdef CMomentumSGDTrainer *thisptr
+cdef class MomentumSGDTrainer(Trainer):
+    """Stochastic gradient descent with momentum
+    
+    This is a modified version of the SGD algorithm with momentum to stablize the gradient trajectory. 
+    
+    Arguments:
+        m {dynet.Model} -- Model to be trained
+    
+    Keyword Arguments:
+        e0 {number} -- Initial learning rate (default: {0.1})
+        mom {number} -- Momentum (default: {0.9})
+        edecay {number} -- Learning rate decay parameter (default: {0.0})
+
+    """
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
         self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "MomentumSGDTrainer"
 
 
-cdef class AdagradTrainer:
-    cdef CAdagradTrainer *thisptr
+cdef class AdagradTrainer(Trainer):
+    """Adagrad optimizer
+    
+    The adagrad algorithm assigns a different learning rate to each parameter.
+    
+    Arguments:
+        m {dynet.Model} -- Model to be trained
+    
+    Keyword Arguments:
+        e0 {number} -- Initial learning rate (default: {0.1})
+        eps {number} -- Epsilon parameter to prevent numerical instability (default: {1e-20})
+        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    """
     def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
         self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "AdagradTrainer"
 
 
-cdef class AdadeltaTrainer:
-    cdef CAdadeltaTrainer *thisptr
+cdef class AdadeltaTrainer(Trainer):
+    """AdaDelta optimizer
+    
+    The AdaDelta optimizer is a variant of Adagrad aiming to prevent vanishing learning rates.
+    
+    Arguments:
+        m {dynet.Model} -- Model to be trained
+    
+    Keyword Arguments:
+        eps {number} -- Epsilon parameter to prevent numerical instability (default: {1e-6})
+        rho {number} -- Update parameter for the moving average of updates in the numerator (default: {0.95})
+        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    """
     def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
         self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "AdadeltaTrainer"
 
+cdef class RMSPropTrainer(Trainer):
+    """RMSProp optimizer
+    
+    The RMSProp optimizer is a variant of Adagrad where the squared sum of previous gradients is replaced with a moving average with parameter rho.
+    
+    Arguments:
+        m {dynet.Model} -- Model to be trained
+    
+    Keyword Arguments:
+        e0 {number} -- Initial learning rate (default: {0.001})
+        eps {number} -- Epsilon parameter to prevent numerical instability (default: {1e-8})
+        rho {number} -- Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: {0.9})
+        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    """
+    def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
+        self.thisptr = new CRMSPropTrainer(m.thisptr[0], e0, eps, rho, edecay)
+    def whoami(self):
+        return "RMSPropTrainer"
 
-cdef class AdamTrainer:
-    cdef CAdamTrainer *thisptr
-    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
+cdef class AdamTrainer(Trainer):
+    """Adam optimizer
+    
+    The Adam optimizer is similar to RMSProp but uses unbiased estimates of the first and second moments of the gradient
+    
+    Arguments:
+        m {dynet.Model} -- Model to be trained
+    
+    Keyword Arguments:
+        alpha {number} -- Initial learning rate (default: {0.001})
+        beta_1 {number} -- Moving average parameter for the mean (default: {0.9})
+        beta_2 {number} -- Moving average parameter for the variance (default: {0.999})
+        eps {number} -- Epsilon parameter to prevent numerical instability (default: {1e-8})
+        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    """
+    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
         self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "AdamTrainer"
 
 #}}}
