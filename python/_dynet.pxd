@@ -170,8 +170,8 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void update_epoch(float r)
         void status()
 
-        
-    cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer":
+
+    cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer" (CTrainer):
         #CSimpleSGDTrainer(CModel& m, float lam, float e0)
         CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
         # float clip_threshold
@@ -182,7 +182,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         # void update_epoch(float r)
         # void status()
 
-    cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer":
+    cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer" (CTrainer):
         CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
         # float clip_threshold
         # bool clipping_enabled
@@ -192,7 +192,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         # void update_epoch(float r)
         # void status()
 
-    cdef cppclass CAdagradTrainer "dynet::AdagradTrainer":
+    cdef cppclass CAdagradTrainer "dynet::AdagradTrainer" (CTrainer):
         CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
         # float clip_threshold
         # bool clipping_enabled
@@ -202,7 +202,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         # void update_epoch(float r)
         # void status()
 
-    cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer":
+    cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer" (CTrainer):
         CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
         # float clip_threshold
         # bool clipping_enabled
@@ -212,8 +212,8 @@ cdef extern from "dynet/training.h" namespace "dynet":
         # void update_epoch(float r)
         # void status()
 
-    cdef cppclass CRMSPropTrainer "dynet::RMSPropTrainer":
-        CRMSPropTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
+    cdef cppclass CRMSPropTrainer "dynet::RMSPropTrainer" (CTrainer):
+        CRMSPropTrainer(CModel& m, float e0, float eps, float rho, float edecay) # TODO removed lam, update docs
         # float clip_threshold
         # bool clipping_enabled
         # bool sparse_updates_enabled
@@ -222,7 +222,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         # void update_epoch(float r)
         # void status()
 
-    cdef cppclass CAdamTrainer "dynet::AdamTrainer":
+    cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
         # float clip_threshold
         # bool clipping_enabled
