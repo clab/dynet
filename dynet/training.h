@@ -315,7 +315,7 @@ struct AdadeltaTrainer : public Trainer {
  * Reference : [reference needed](ref.need.ed)
  *  
  */
-struct RmsPropTrainer : public Trainer {
+struct RMSPropTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
@@ -325,7 +325,7 @@ struct RmsPropTrainer : public Trainer {
    * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
    * \param edecay Learning rate decay parameter
    */
-  explicit RmsPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
+  explicit RMSPropTrainer(Model& m, real e0 = 0.001, real eps = 1e-08, real rho = 0.9, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps), rho(rho) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -333,10 +333,10 @@ struct RmsPropTrainer : public Trainer {
 
   real epsilon;
   real rho;
-  std::vector<real> hg; // History of gradients
-  std::vector<std::vector<real> > hlg;
+  std::vector<ShadowParameters> hmsg; // History of gradients
+  std::vector<ShadowLookupParameters> hlmsg;
  private:
-  RmsPropTrainer() {}
+  RMSPropTrainer() {}
   DYNET_SERIALIZE_DECLARE()
 };
 
@@ -386,7 +386,7 @@ BOOST_CLASS_EXPORT_KEY(dynet::SimpleSGDTrainer)
 BOOST_CLASS_EXPORT_KEY(dynet::MomentumSGDTrainer)
 BOOST_CLASS_EXPORT_KEY(dynet::AdagradTrainer)
 BOOST_CLASS_EXPORT_KEY(dynet::AdadeltaTrainer)
-BOOST_CLASS_EXPORT_KEY(dynet::RmsPropTrainer)
+BOOST_CLASS_EXPORT_KEY(dynet::RMSPropTrainer)
 BOOST_CLASS_EXPORT_KEY(dynet::AdamTrainer)
 
 #endif
