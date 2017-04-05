@@ -64,8 +64,8 @@ struct SumDimension : public Node {
 
 // conv2d 
 // y = x_1 *conv2d x_2
-// x_1 \in R^{W x H x Ci x N} (input)
-// x_2 \in R^{W x H x Ci x Co} (filter)
+// x_1 \in R^{H x W x Ci x N} (input)
+// x_2 \in R^{H x W x Ci x Co} (filter)
 // stride[0] corresponds to H
 // stride[1] corresponds to W
 // is_valid: true for 'VALID' and false for 'SAME'

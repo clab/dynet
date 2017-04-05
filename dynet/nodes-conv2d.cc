@@ -54,7 +54,7 @@ Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
   for (unsigned i = 0; i < 2; ++i) {
     float input_dim = static_cast<float>(xs[0].d[i]);
     float kernel_dim = static_cast<float>(xs[1].d[i]);
-    float s = static_cast<float>(stride[1-i]);
+    float s = static_cast<float>(stride[i]);
     if (is_valid) {
       output_shape[i] = static_cast<long>(ceil((input_dim - kernel_dim + 1) / s));
     } else {
@@ -99,21 +99,21 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
 #endif
 #else
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
-  void* NHWC_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
-  Tensor NHWC_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(NHWC_x_mem), xs[0]->device, DeviceMempool::FXS);
-  NCHWToNHWC()(xs[0], NHWC_x);
+  void* NWHC_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+  Tensor NWHC_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(NWHC_x_mem), xs[0]->device, DeviceMempool::FXS);
+  NCWHToNWHC()(xs[0], NWHC_x);
   void* WHCN_f_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
-  Tensor WHCN_f = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[1], xs[1]->d[0]}), static_cast<float*>(WHCN_f_mem), xs[1]->device, DeviceMempool::FXS);
-  NCHWToWHCN()(xs[1], WHCN_f);
-  void* NHWC_y_mem = aux_mem_pool.allocate(fx.d.size() * sizeof(float));
-  Tensor NHWC_y = Tensor(Dim({fx.d[2], fx.d[0], fx.d[1]}, fx.d.bd), static_cast<float*>(NHWC_y_mem), fx.device, DeviceMempool::FXS);
-  NHWC_y.tb<3>().device(*dev.edevice) = Eigen::SpatialConvolution(NHWC_x.tb<3>(), WHCN_f.t<4>(), stride[1], stride[0], padding_type);
-  NHWCToNCHW()(&NHWC_y, fx);
+  Tensor WHCN_f = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[0], xs[1]->d[1]}), static_cast<float*>(WHCN_f_mem), xs[1]->device, DeviceMempool::FXS);
+  NCWHToWHCN()(xs[1], WHCN_f);
+  void* NWHC_y_mem = aux_mem_pool.allocate(fx.d.size() * sizeof(float));
+  Tensor NWHC_y = Tensor(Dim({fx.d[2], fx.d[0], fx.d[1]}, fx.d.bd), static_cast<float*>(NWHC_y_mem), fx.device, DeviceMempool::FXS);
+  NWHC_y.tb<3>().device(*dev.edevice) = Eigen::SpatialConvolution(NWHC_x.tb<3>(), WHCN_f.t<4>(), stride[0], stride[1], padding_type);
+  NWHCToNCWH()(&NWHC_y, fx);
   if (xs.size() == 3) {
-    Tensor WHN_bias = Tensor(Dim({fx.d[0], fx.d[1], fx.d.bd}, 1), static_cast<float*>(NHWC_x_mem), xs[2]->device, DeviceMempool::FXS);
+    Tensor bias = Tensor(Dim({fx.d[0], fx.d[1], fx.d.bd}, 1), static_cast<float*>(NWHC_x_mem), xs[2]->device, DeviceMempool::FXS);
     for (unsigned i = 0; i < fx.d[2]; ++i) {
-      TensorTools::Constant(WHN_bias, xs[2]->vec()(i));
-      fx.tb<3>().chip<2>(i).device(*dev.edevice) += WHN_bias.t<3>(); 
+      TensorTools::Constant(bias, xs[2]->vec()(i));
+      fx.tb<3>().chip<2>(i).device(*dev.edevice) += bias.t<3>(); 
     }
   }
 #endif
@@ -140,31 +140,31 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
   throw std::runtime_error("Conv2D::backward_dev_impl not supported without CUDNN");
 #endif
 #else
-  void* NHWC_dy_mem = aux_mem_pool.allocate(dEdf.d.size() * sizeof(float));
-  Tensor NHWC_dy = Tensor(Dim({dEdf.d[2], dEdf.d[0], dEdf.d[1]}, dEdf.d.bd), static_cast<float*>(NHWC_dy_mem), dEdf.device, DeviceMempool::FXS);
-  NCHWToNHWC()(&dEdf, NHWC_dy);
+  void* NWHC_dy_mem = aux_mem_pool.allocate(dEdf.d.size() * sizeof(float));
+  Tensor NWHC_dy = Tensor(Dim({dEdf.d[2], dEdf.d[0], dEdf.d[1]}, dEdf.d.bd), static_cast<float*>(NWHC_dy_mem), dEdf.device, DeviceMempool::FXS);
+  NCWHToNWHC()(&dEdf, NWHC_dy);
   if (i == 0) { //backward w.r.t the input
     void* WHCN_f_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
-    Tensor WHCN_f = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[1], xs[1]->d[0]}), static_cast<float*>(WHCN_f_mem), xs[1]->device, DeviceMempool::FXS);
-    NCHWToWHCN()(xs[1], WHCN_f);
-    void* NHWC_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
-    Tensor NHWC_dEdxi = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(NHWC_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
-    NHWC_dEdxi.tb<3>().device(*dev.edevice) = Eigen::SpatialConvolutionBackwardInput(WHCN_f.t<4>(), NHWC_dy.tb<3>(), xs[0]->d[0], xs[0]->d[1], stride[1], stride[0]);
-    void* NCHW_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
-    Tensor NCHW_dEdxi = Tensor(xs[0]->d, static_cast<float*>(NCHW_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
-    NHWCToNCHW()(&NHWC_dEdxi, NCHW_dEdxi);
-    dEdxi.tb<3>().device(*dev.edevice) += NCHW_dEdxi.tb<3>();
+    Tensor WHCN_f = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[0], xs[1]->d[1]}), static_cast<float*>(WHCN_f_mem), xs[1]->device, DeviceMempool::FXS);
+    NCWHToWHCN()(xs[1], WHCN_f);
+    void* NWHC_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    Tensor NWHC_dEdxi = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(NWHC_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
+    NWHC_dEdxi.tb<3>().device(*dev.edevice) = Eigen::SpatialConvolutionBackwardInput(WHCN_f.t<4>(), NWHC_dy.tb<3>(), xs[0]->d[0], xs[0]->d[1], stride[0], stride[1]);
+    void* NCWH_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    Tensor NCWH_dEdxi = Tensor(xs[0]->d, static_cast<float*>(NCWH_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
+    NWHCToNCWH()(&NWHC_dEdxi, NCWH_dEdxi);
+    dEdxi.tb<3>().device(*dev.edevice) += NCWH_dEdxi.tb<3>();
   } else if (i == 1) { //backward w.r.t the kernel
-    void* NHWC_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
-    Tensor NHWC_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(NHWC_x_mem), xs[0]->device, DeviceMempool::FXS);
-    NCHWToNHWC()(xs[0], NHWC_x);
+    void* NWHC_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    Tensor NWHC_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(NWHC_x_mem), xs[0]->device, DeviceMempool::FXS);
+    NCWHToNWHC()(xs[0], NWHC_x);
     void* WHCN_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
-    Tensor WHCN_dEdxi = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[1], xs[1]->d[0]}), static_cast<float*>(WHCN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
-    WHCN_dEdxi.t<4>().device(*dev.edevice) = Eigen::SpatialConvolutionBackwardKernel(NHWC_x.tb<3>(), NHWC_dy.tb<3>(), xs[1]->d[0], xs[1]->d[1], stride[1], stride[0]);
-    void* NCHW_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
-    Tensor NCHW_dEdxi = Tensor(xs[1]->d, static_cast<float*>(NCHW_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
-    WHCNToNCHW()(&WHCN_dEdxi, NCHW_dEdxi);
-    dEdxi.t<4>().device(*dev.edevice) += NCHW_dEdxi.t<4>();
+    Tensor WHCN_dEdxi = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[0], xs[1]->d[1]}), static_cast<float*>(WHCN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
+    WHCN_dEdxi.t<4>().device(*dev.edevice) = Eigen::SpatialConvolutionBackwardKernel(NWHC_x.tb<3>(), NWHC_dy.tb<3>(), xs[1]->d[0], xs[1]->d[1], stride[0], stride[1]);
+    void* NCWH_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+    Tensor NCWH_dEdxi = Tensor(xs[1]->d, static_cast<float*>(NCWH_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
+    WHCNToNCWH()(&WHCN_dEdxi, NCWH_dEdxi);
+    dEdxi.t<4>().device(*dev.edevice) += NCWH_dEdxi.t<4>();
   } else { //backward w.r.t the bias
     Eigen::array<int, 3> red_axis = {0, 1, 3};
     dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<3>().sum(red_axis);

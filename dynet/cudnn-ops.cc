@@ -46,16 +46,16 @@ void CudnnConvOp::forward_impl(const Device_GPU & dev, const std::vector<const T
  
   unsigned XN = x->d.bd;
   unsigned XC = x->d[2];
-  unsigned XH = x->d[1];
-  unsigned XW = x->d[0];
+  unsigned XH = x->d[0];
+  unsigned XW = x->d[1];
   unsigned FYC = filter->d[3];
   unsigned FXC = filter->d[2];
-  unsigned FH = filter->d[1];
-  unsigned FW = filter->d[0];
+  unsigned FH = filter->d[0];
+  unsigned FW = filter->d[1];
   unsigned YN = fx.d.bd;
   unsigned YC = fx.d[2];
-  unsigned YH = fx.d[1];
-  unsigned YW = fx.d[0];
+  unsigned YH = fx.d[0];
+  unsigned YW = fx.d[1];
 
   // infer pad_h, pad_w
   if (!is_valid) {
@@ -78,8 +78,8 @@ void CudnnConvOp::forward_impl(const Device_GPU & dev, const std::vector<const T
       unsigned new_XH = XH + h_odd;
       unsigned new_XW = XW + w_odd;
       void* temp = mempool_->allocate(sizeof(float) * new_XW * new_XH * XC * XN);
-      padded_x = Tensor(Dim({new_XW, new_XH, XC}, XN), static_cast<float*>(temp), xs[0]->device, DeviceMempool::FXS);
-      dynet::gpu::pad_input(padded_x.v, xs[0]->v, xs[0]->d.bd, xs[0]->d[2], xs[0]->d[1], xs[0]->d[0], static_cast<int>(w_odd), static_cast<int>(h_odd));
+      padded_x = Tensor(Dim({new_XH, new_XW, XC}, XN), static_cast<float*>(temp), xs[0]->device, DeviceMempool::FXS);
+      dynet::gpu::pad_input(padded_x.v, xs[0]->v, xs[0]->d.bd, xs[0]->d[2], xs[0]->d[0], xs[0]->d[1], static_cast<int>(w_odd), static_cast<int>(h_odd));
       XH = new_XH;
       XW = new_XW;
       x = &padded_x;
@@ -93,15 +93,15 @@ void CudnnConvOp::forward_impl(const Device_GPU & dev, const std::vector<const T
   }
   CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_, 
               CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              XN, XC, XH, XW));
+              XN, XC, XW, XH));
   CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_, 
               CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              YN, YC, YH, YW));
+              YN, YC, YW, YH));
   CUDNN_CHECK(cudnnSetFilter4dDescriptor(filter_desc_, 
               DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
-              FYC, FXC, FH, FW));
+              FYC, FXC, FW, FH));
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
-              pad_h/2, pad_w/2, stride[0], stride[1], 1, 1, 
+              pad_w/2, pad_h/2, stride[1], stride[0], 1, 1, 
               CUDNN_CROSS_CORRELATION));
 
   //TODO(Hao Zhang): there should be an autotune function to determine
@@ -139,8 +139,8 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
   Tensor* dxi = &dEdxi;
   unsigned XN = x->d.bd;
   unsigned XC = x->d[2];
-  unsigned XH = x->d[1];
-  unsigned XW = x->d[0];
+  unsigned XH = x->d[0];
+  unsigned XW = x->d[1];
   const bool h_odd = (pad_h % 2 != 0);
   const bool w_odd = (pad_w % 2 != 0);
   void* dx_ptr = NULL;
@@ -149,8 +149,8 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
   if (h_odd || w_odd) {
     unsigned new_XH = XH + h_odd;
     unsigned new_XW = XW + w_odd;
-    DYNET_ASSERT(padded_x.d[0] == new_XW, "Tensor input_padded must have been padded");
-    DYNET_ASSERT(padded_x.d[1] == new_XH, "Tensor input_padded must have been padded");
+    DYNET_ASSERT(padded_x.d[0] == new_XH, "Tensor input_padded must have been padded");
+    DYNET_ASSERT(padded_x.d[1] == new_XW, "Tensor input_padded must have been padded");
     x = &padded_x;
     XH = new_XH;
     XW = new_XW;
@@ -194,8 +194,8 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
                   y_desc_, dy->v,
                   conv_desc_, bwd_d_algo_, bwd_data_workspace, workspace_bwd_data_size_,
                   &beta, x_desc_, dx_ptr));
-      Tensor padded_dx = Tensor(Dim({XW, XH, XC}, XN), static_cast<float*>(dx_ptr), xs[0]->device, DeviceMempool::FXS);
-      dynet::gpu::pad_input(padded_dx.v, dxi->v, padded_dx.d.bd, padded_dx.d[2], padded_dx.d[1], padded_dx.d[0], -static_cast<int>(w_odd), -static_cast<int>(h_odd));
+      Tensor padded_dx = Tensor(Dim({XH, XW, XC}, XN), static_cast<float*>(dx_ptr), xs[0]->device, DeviceMempool::FXS);
+      dynet::gpu::pad_input(dxi->v, padded_dx.v, padded_dx.d.bd, padded_dx.d[2], padded_dx.d[0], padded_dx.d[1], -static_cast<int>(w_odd), -static_cast<int>(h_odd));
     } else {
       CUDNN_CHECK(cudnnConvolutionBackwardData(dev.cudnnHandle,
                   &alpha, filter_desc_, filter->v,
