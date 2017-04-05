@@ -2075,10 +2075,8 @@ cdef class StackedRNNState:
 # }}}
 
 # {{{ Training 
-cdef class SimpleSGDTrainer:
-    cdef CSimpleSGDTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
+cdef class Trainer:
+    cdef CTrainer *thisptr
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -2105,127 +2103,48 @@ cdef class SimpleSGDTrainer:
     cpdef get_clip_threshold(self):
         return self.thisptr.clip_threshold
 
+cdef class SimpleSGDTrainer:
+    cdef CSimpleSGDTrainer *thisptr
+    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
+    def whoami(self):
+        return "SimpleSGDTrainer"
+
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
         self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "MomentumSGDTrainer"
 
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
     def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
         self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "AdagradTrainer"
 
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
     def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
         self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "AdadeltaTrainer"
 
+cdef class RMSPropTrainer:
+    cdef CRMSPropTrainer *thisptr
+    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
+        self.thisptr = new CRMSPropTrainer(m.thisptr[0], eps, rho, edecay)
+    def whoami(self):
+        return "RMSPropTrainer"
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
     def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
         self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef update(self, float s=1.0):
-        self.thisptr.update(s)
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
-        cdef vector[unsigned] uparamvec
-        for i in updated_params: uparamvec.push_back(i)
-        cdef vector[unsigned] ulookupvec
-        for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        self.thisptr.update_epoch(r)
-    cpdef status(self):
-        self.thisptr.status()
-    cpdef set_sparse_updates(self,bool su):
-        self.thisptr.sparse_updates_enabled = su
-    cpdef set_clip_threshold(self,float thr):
-        if thr<=0:
-            self.thisptr.clipping_enabled = False
-            self.thisptr.clip_threshold = 0.0
-        else:
-            self.thisptr.clipping_enabled = True
-            self.thisptr.clip_threshold = thr
-    cpdef get_clip_threshold(self):
-        return self.thisptr.clip_threshold
+    def whoami(self):
+        return "AdamTrainer"
 
 #}}}
