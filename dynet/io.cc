@@ -27,7 +27,7 @@ void Pack::save(const ParameterCollection & model,
 void Pack::save(const ParameterCollection & model,
                 const std::vector<std::string> & filter_lst,
                 const std::string & key, bool is_append) {
-  // TODO
+  DYNET_RUNTIME_ERR("This interface is not implemented yet for Pack object.");
 }
 
 void Pack::load(ParameterCollection & model, const std::string & key) {
@@ -37,7 +37,7 @@ void Pack::load(ParameterCollection & model, const std::string & key) {
 void Pack::load(ParameterCollection & model,
                 const std::vector<std::string> & filter_lst,
                 const std::string & key) {
-  // TODO
+  DYNET_RUNTIME_ERR("This interface is not implemented yet for Pack object.");
 }
 
 bool Pack::duplicate_key_check(const std::string & key) {
@@ -131,41 +131,13 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
     param.get_storage().name = name;
 
     // read param.get_storage().values
-    std::vector<float> params_lst;
-    auto deserialize_tensor_lambda = [&] () {
-      for (int k1 = 0; k1 < d.d[0]; ++k1) {
-        // TODO: check dimensions 
-        int sz = d.nd == 1 ? 1 : d.d[1];
-        std::vector<float> tmp(sz);
-        std::getline(f, line);
-        std::istringstream iss(line);
-        iss >> tmp;
-        params_lst.insert(params_lst.end(), tmp.begin(), tmp.end());
-      }
-    };
-    deserialize_tensor_lambda();
-    std::vector<float> params_order_lst = params_lst;
-    auto transpose_lambda = [&] () {
-      for (size_t k = 0; k < params_lst.size(); ++k) {
-        int i = k / d.d[1], j = k % d.d[1];
-        int indx = j * d.d[0] + i;
-        params_order_lst[indx] = params_lst[k];
-      }
-      params_lst.resize(0);
-    };
-    // TODO: high dimensions >=3
-    if (d.nd == 2) {
-      transpose_lambda();
-    }
+    std::vector<float> params_order_lst;
+    deserialize_tensor(f, d, params_order_lst);
     TensorTools::SetElements(param.get_storage().values, params_order_lst);
 
     // read param.get_storage().g
-    params_lst.resize(0);
-    deserialize_tensor_lambda();
-    params_order_lst = params_lst;
-    if (d.nd == 2) {
-      transpose_lambda();
-    }
+    params_order_lst.resize(0);
+    deserialize_tensor(f, d, params_order_lst);
     TensorTools::SetElements(param.get_storage().g, params_order_lst);
     std::getline(f, line);
   } // while Parameter
@@ -194,41 +166,14 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
     lookup_param.get_storage().name = name;
 
     // read lookup_param.get_storage().all_values
-    std::vector<float> lookup_params_lst;
-    auto deserialize_tensor_lambda = [&] () {
-      for (int k1 = 0; k1 < all_dim.d[0]; ++k1) {
-        // TODO: check dimensions 
-        std::vector<float> tmp(all_dim.d[1]);
-        std::getline(f, line);
-        std::istringstream iss(line);
-        iss >> tmp;
-        lookup_params_lst.insert(lookup_params_lst.end(), tmp.begin(), tmp.end());
-      }
-    };
-    deserialize_tensor_lambda();
-    std::vector<float> lookup_params_order_lst = lookup_params_lst;
-    auto transpose_lambda = [&] () {
-      for (size_t k = 0; k < lookup_params_lst.size(); ++k) {
-        int i = k / all_dim.d[1], j = k % all_dim.d[1];
-        int indx = j * all_dim.d[0] + i;
-        lookup_params_order_lst[indx] = lookup_params_lst[k];
-      }
-      lookup_params_lst.resize(0);
-    };
-    if (all_dim.nd == 2) {
-      transpose_lambda();
-    }
+    std::vector<float> lookup_params_order_lst;
+    deserialize_tensor(f, all_dim, lookup_params_order_lst);
     TensorTools::SetElements(lookup_param.get_storage().all_values,
                              lookup_params_order_lst);
 
     // read lookup_param.get_storage().all_grads
-    lookup_params_lst.resize(0);
-    deserialize_tensor_lambda();
-    lookup_params_order_lst = lookup_params_lst;
-    // TODO: high dimensions >=3
-    if (all_dim.nd == 2) {
-      transpose_lambda();
-    }
+    lookup_params_order_lst.resize(0);
+    deserialize_tensor(f, all_dim, lookup_params_order_lst);
     TensorTools::SetElements(lookup_param.get_storage().all_grads,
                              lookup_params_order_lst);
     std::getline(f, line);
@@ -241,6 +186,30 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
   }
   f.close();
   meta_f.close();
+}
+  
+void Pack::deserialize_tensor(std::ifstream & f, const Dim & d, std::vector<float> & params_order_lst) {
+  std::string line;
+  std::vector<float> params_lst;
+  for (int k1 = 0; k1 < d.d[0]; ++k1) {
+    // TODO: dimension check
+    int sz = d.nd == 1 ? 1 : d.d[1];
+    std::vector<float> tmp(sz);
+    std::getline(f, line);
+    std::istringstream iss(line);
+    iss >> tmp;
+    params_lst.insert(params_lst.end(), tmp.begin(), tmp.end());
+  }
+  params_order_lst = params_lst;
+  if (d.nd == 2) {
+    // transpose
+    // TODO: dimension >= 3
+    for (size_t k = 0; k < params_lst.size(); ++k) {
+      int i = k / d.d[1], j = k % d.d[1];
+      int indx = j * d.d[0] + i;
+      params_order_lst[indx] = params_lst[k];
+    }
+  }
 }
 
 } // namespace dynet
