@@ -60,46 +60,46 @@ struct NodeMemPool {
 };
 
 // template?
-struct NCHWToNHWC {
+struct NCWHToNWHC {
   void operator()(const Tensor* in, Tensor& out) {
 #if HAVE_CUDA
-    throw std::runtime_error("Tensor::NCHWToNHWC not implemented for CUDA");
+    throw std::runtime_error("Tensor::NCWHToNWHC not implemented for CUDA");
 #else
     const unsigned N = (out.d.nd == 4 ? out.d[3]:out.d.bd);
     const unsigned C = out.d[0];
-    const unsigned H = out.d[2];
+    const unsigned H = out.d[1];
+    const unsigned W = out.d[2];
+    for (unsigned n = 0; n < N; ++n)
+      for (unsigned c = 0; c < C; ++c) 
+        for (unsigned h = 0; h < H; ++h)
+          for (unsigned w = 0; w < W; ++w)
+            out.v[n*H*W*C+w*H*C+h*C+c] = in->v[n*H*W*C+c*H*W+w*H+h];
+#endif
+  }
+};
+
+struct NWHCToNCWH {
+  void operator()(const Tensor* in, Tensor& out) {
+#if HAVE_CUDA
+    throw std::runtime_error("Tensor::NWHCToNCWH not implemented for CUDA");
+#else
+    const unsigned N = (out.d.nd == 4 ? out.d[3]:out.d.bd);
+    const unsigned C = out.d[2];
+    const unsigned H = out.d[0];
     const unsigned W = out.d[1];
     for (unsigned n = 0; n < N; ++n)
       for (unsigned c = 0; c < C; ++c) 
         for (unsigned h = 0; h < H; ++h)
           for (unsigned w = 0; w < W; ++w)
-            out.v[n*H*W*C+h*W*C+w*C+c] = in->v[n*H*W*C+c*H*W+h*W+w];
+            out.v[n*H*W*C+c*W*H+w*H+h] = in->v[n*H*W*C+w*C*H+h*C+c];
 #endif
   }
 };
 
-struct NHWCToNCHW {
+struct NCWHToWHCN {
   void operator()(const Tensor* in, Tensor& out) {
 #if HAVE_CUDA
-    throw std::runtime_error("Tensor::NHWCToNCHW not implemented for CUDA");
-#else
-    const unsigned N = (out.d.nd == 4 ? out.d[3]:out.d.bd);
-    const unsigned C = out.d[2];
-    const unsigned H = out.d[1];
-    const unsigned W = out.d[0];
-    for (unsigned n = 0; n < N; ++n)
-      for (unsigned c = 0; c < C; ++c) 
-        for (unsigned h = 0; h < H; ++h)
-          for (unsigned w = 0; w < W; ++w)
-            out.v[n*H*W*C+c*W*H+h*W+w] = in->v[n*H*W*C+h*C*W+w*C+c];
-#endif
-  } 
-};
-
-struct NCHWToWHCN {
-  void operator()(const Tensor* in, Tensor& out) {
-#if HAVE_CUDA
-    throw std::runtime_error("Tensor::NCHWToWHCN not implemented for CUDA");
+    throw std::runtime_error("Tensor::NCWHToWHCN not implemented for CUDA");
 #else
     const unsigned N = out.d[0]; //only applies on filters
     const unsigned C = out.d[1];
@@ -109,25 +109,25 @@ struct NCHWToWHCN {
       for (unsigned c = 0; c < C; ++c)
         for (unsigned h = 0; h < H; ++h)
           for (unsigned w = 0; w < W; ++w)
-            out.v[w*H*C*N+h*C*N+c*N+n] = in->v[n*H*C*W+c*H*W+h*W+w];
+            out.v[w*H*C*N+h*C*N+c*N+n] = in->v[n*H*C*W+c*H*W+w*H+h];
 #endif
   }
 };
 
-struct WHCNToNCHW {
+struct WHCNToNCWH {
   void operator()(const Tensor* in, Tensor& out) {
 #if HAVE_CUDA
-    throw std::runtime_error("Tensor::WHCNToNCHW not implemented for CUDA");
+    throw std::runtime_error("Tensor::WHCNToNCWH not implemented for CUDA");
 #else
     const unsigned N = out.d[3];
     const unsigned C = out.d[2];
-    const unsigned H = out.d[1];
-    const unsigned W = out.d[0];
+    const unsigned H = out.d[0];
+    const unsigned W = out.d[1];
     for (unsigned n = 0; n < N; ++n)
       for (unsigned c = 0; c < C; ++c)
         for (unsigned h = 0; h < H; ++h)
           for (unsigned w = 0; w < W; ++w)
-            out.v[n*C*H*W+c*H*W+h*W+w] = in->v[w*H*C*N+h*C*N+c*N+n];
+            out.v[n*C*H*W+c*H*W+w*H+h] = in->v[w*H*C*N+h*C*N+c*N+n];
 #endif
   }
 };
