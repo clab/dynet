@@ -81,6 +81,8 @@ class Pack {
   bool duplicate_key_check(const std::string & key); 
   void serialize(const ParameterCollection & model, const std::string & key, bool is_append);
   void deserialize(ParameterCollection & model, const std::string & key);
+  void deserialize_tensor(std::ifstream & f, const Dim & d,
+                          std::vector<float> & params_order_lst);
 
  private:
   std::string fn, fn_meta;

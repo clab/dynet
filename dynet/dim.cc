@@ -7,7 +7,7 @@ using namespace std;
 namespace dynet {
 
 ostream& operator<<(ostream& os, const Dim& d) {
-  os << d.nd << '-' << '{';
+  os << '{';
   for (unsigned i = 0; i < d.nd; ++i) {
     if (i) os << ',';
     os << d.d[i];
@@ -26,18 +26,25 @@ ostream& operator<<(ostream& os, const vector<Dim>& ds) {
 istream& operator>>(istream& is, Dim& d) {
   char place_holder;
   int nd = 0;
-  is >> nd >> place_holder;
   is >> place_holder;
-  d.resize(nd);
-  for (unsigned i = 0; i < nd; ++i) {
-    if (i) is >> place_holder;
+  d.resize(DYNET_MAX_TENSOR_DIM);
+  bool batch_flag = false;
+  unsigned i = 0;
+  for (; i < DYNET_MAX_TENSOR_DIM + 1; ++i) {
+    if (i) {
+      is >> place_holder;
+      if (place_holder == 'X') {
+        batch_flag = true;
+        break;
+      } else if (place_holder == '}') {
+        break;
+      }
+    }
     is >> d.d[i];
   }
-  is >> place_holder;
-  if (place_holder == 'X') {
+  d.resize(i);
+  if (batch_flag) {
     is >> d.bd >> place_holder;
-  } else {
-    is >> place_holder;
   }
   return is;
 }
