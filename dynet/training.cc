@@ -245,7 +245,7 @@ void RMSPropTrainer::update_rule_dev(const MyDevice & dev, real scale, real gsca
   ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale); // Scale gradient
   ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho); // Update square gradient exponential average
   ts[1]->tvec().device(*dev.edevice) = - ts[1]->tvec() / (ts[2]->tvec() + epsilon).sqrt(); // Divide by the RMS
-  ts[0]->tvec().device(*dev.edevice) += ts[1]->tvec() / model->weight_decay.current_weight_decay(); // Apply weight decay (should we do this?)
+  ts[0]->tvec().device(*dev.edevice) += eta * ts[1]->tvec() / model->weight_decay.current_weight_decay(); // Apply weight decay (should we do this?)
   // real& d2 = hg[pi++];
   // real g2 = p->g.vec().squaredNorm();
   // d2 = rho * d2 + (1.f - rho) * g2;
