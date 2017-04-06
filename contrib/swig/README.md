@@ -55,7 +55,7 @@ updating: libdynet_swig.jnilib (deflated 83%)
 This command runs SWIG to generate a dynamic library file and JNI
 bindings, then runs `sbt assembly` to produce an "uberjar" containing
 both the Dynet bindings and the Scala helpers. It outputs three
-artifacts in the `build/swig` directory: `dynet_swigJNI.jar`,
+artifacts in the `build/contrib/swig` directory: `dynet_swigJNI.jar`,
 `dynet_swigJNI_dylib.jar` and `dynet_swigJNI_scala.jar`. Note that
 `dynet_swigJNI_dylib.jar` contains a native library that is not
 portable across systems.
