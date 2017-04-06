@@ -100,7 +100,7 @@ function(find_cudnn)
 endfunction()
 
 # look for Boost
-if(DEFINED ENV{BOOST_ROOT})
+if(DEFINED BOOST_ROOT OR DEFINED BOOSTROOT OR DEFINED ENV{BOOST_ROOT} OR DEFINED ENV{BOOSTROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
   if(DEFINED ${Boost_INCLUDE_DIR})
     get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
