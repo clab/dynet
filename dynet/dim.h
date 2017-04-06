@@ -254,6 +254,8 @@ std::ostream& operator<<(std::ostream& os, const Dim& d);
  */
 std::ostream& operator<<(std::ostream& os, const std::vector<Dim>& ds);
 
+std::istream& operator>>(std::istream& os, Dim& d);
+
 } // namespace dynet
 
 #endif
