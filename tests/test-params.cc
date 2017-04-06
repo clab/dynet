@@ -1,5 +1,15 @@
 #define BOOST_TEST_MODULE TEST_PARAMS
 
+#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <stdexcept>
+
+#include <boost/test/unit_test.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/model.h>
@@ -7,13 +17,8 @@
 #include <dynet/lstm.h>
 #include <dynet/gru.h>
 #include <dynet/treelstm.h>
-#include <boost/test/unit_test.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <stdexcept>
+#include <dynet/io.h>
+
 #include "test.h"
 
 using namespace dynet;
@@ -78,7 +83,7 @@ class testModel2 {
   dynet::Parameter W_x, b_x;
   dynet::ParameterCollection affine_params;
   dynet::LSTMBuilder lstm;
-}; // class testModel
+}; // class testModel2
 
 // define the test suite
 BOOST_FIXTURE_TEST_SUITE(params_test, ParamsTest);
@@ -177,6 +182,112 @@ BOOST_AUTO_TEST_CASE ( test_parametercollection_with_builder ) {
   dynet::ParameterCollection collec2;
   auto bi_treelstm_builder = BidirectionalTreeLSTMBuilder(3, 10, 2, collec2);
   DYNET_CHECK_EQUAL(bi_treelstm_builder.get_parameters().size(), 11 * 3 * 2);
+}
+
+BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
+  ParameterCollection m;
+  Parameter a = m.add_parameters({10}, "a");
+  Parameter b = m.add_parameters({3,7});
+  LookupParameter c = m.add_lookup_parameters(10, {2});
+  std::remove("test.model"); std::remove("test.model.meta");
+  dynet::Pack s("test.model");
+  s.save(m, "model1");
+  s.save(m, m.get_namespace(), true);
+
+  ParameterCollection m2;
+  s.load(m2, "model1");
+  auto params1 = m2.get_parameter_storages();
+  for(auto & x : params1) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->values << std::endl;
+    std::cout << x->g << std::endl;
+  }
+  auto params11 = m.get_parameter_storages();
+  for(auto & x : params11) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->values << std::endl;
+    std::cout << x->g << std::endl;
+  }
+  ParameterCollection m3;
+  s.load(m3, "/");
+  auto params2 = m3.get_parameter_storages();
+  for(auto & x : params2) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->values << std::endl;
+    std::cout << x->g << std::endl;
+  }
+  auto lookup_params = m2.get_lookup_parameter_storages();
+  for(auto & x : lookup_params) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->all_dim << std::endl;
+    std::cout << x->all_values << std::endl;
+    std::cout << x->all_grads << std::endl;
+    std::cout << x->values[0] << std::endl;
+    std::cout << x->grads[0] << std::endl;
+  }
+  auto lookup_paramss = m.get_lookup_parameter_storages();
+  for(auto & x : lookup_paramss) {
+    std::cout << x->name << std::endl;
+    std::cout << x->dim << std::endl;
+    std::cout << x->all_dim << std::endl;
+    std::cout << x->all_values << std::endl;
+    std::cout << x->all_grads << std::endl;
+    std::cout << x->values[0] << std::endl;
+    std::cout << x->grads[0] << std::endl;
+  }
+}
+
+BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collections ) {
+  {
+    ParameterCollection collec;
+    testModel2 spec(collec);
+    std::remove("a.model"); std::remove("a.model.meta");
+    Pack s1("a.model");
+    s1.save(collec, "all");
+    ParameterCollection collec2;
+    s1.load(collec2);
+    DYNET_CHECK_EQUAL(collec2.size(), collec.size());
+  
+    std::remove("b.model"); std::remove("b.model.meta");
+    Pack s2("b.model");
+    s2.save(collec, "all");
+    s2.save(spec.get_lstm_model(), "lstm", true);
+    s2.save(spec.get_affine_model(), "affine", true);
+    ParameterCollection collec3, lstm2, affine2;
+    s2.load(affine2, "affine");
+    s2.load(collec3, "all");
+    s2.load(lstm2, "lstm");
+    DYNET_CHECK_EQUAL(affine2.size(), spec.get_affine_model().size());
+    DYNET_CHECK_EQUAL(collec3.size(), collec.size());
+    DYNET_CHECK_EQUAL(lstm2.size(), spec.get_lstm_model().size());
+
+    std::remove("c.model"); std::remove("c.model.meta");
+    s2.reinit("c.model");
+    s2.save(lstm2, "lstm");
+    s2.save(collec3, "all", true);
+    s2.save(affine2, "affine", true);
+  }
+
+  {
+    ParameterCollection cc;
+    auto cc2 = cc.add_subcollection("xx");
+    cc2.add_parameters({10});
+    std::remove("d.model"); std::remove("d.model.meta");
+    Pack s3("d.model");
+    s3.save(cc, "key");
+
+    ParameterCollection ccc;
+    s3.load(ccc, "key");
+    DYNET_CHECK_EQUAL(ccc.size(), cc.size());
+
+    std::remove("e.model"); std::remove("e.model.meta");
+    s3.reinit("e.model");
+    s3.save(ccc);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
