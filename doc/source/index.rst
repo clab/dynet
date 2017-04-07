@@ -33,6 +33,7 @@ And get the basic information to create programs and use models:
    :maxdepth: 3
 
    tutorial
+   python_ref
    core
    commandline
    operations
@@ -56,7 +57,8 @@ And we welcome your contributions!
    :maxdepth: 2
 
    contributing
-   
+
+
 
 Indices and tables
 ==================
