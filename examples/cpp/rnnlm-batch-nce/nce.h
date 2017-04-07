@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <numeric>
 
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
