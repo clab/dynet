@@ -2286,4 +2286,23 @@ void RandomUniform::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(RandomUniform)
 
+template<class MyDevice>
+void RandomGumbel::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomGumbel::forward");
+  DYNET_ARG_CHECK(mu == 0.0 && beta == 1.0, "RandomGumbel only supports Gumbel(0,1) at the moment (pull requests welcome)");
+  TensorTools::RandomizeUniform(fx, 0, 1);
+  fx.tvec().device(*dev.edevice) = -(-fx.tvec().log()).log();
+}
+
+template<class MyDevice>
+void RandomGumbel::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  DYNET_RUNTIME_ERR("Called backward() on an arity 0 node");
+}
+DYNET_NODE_INST_DEV_IMPL(RandomGumbel)
+
 } // namespace dynet
