@@ -2285,4 +2285,85 @@ void RandomUniform::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(RandomUniform)
 
+template<class MyDevice>
+void BatchNorm::forward_dev_impl(const MyDevice &dev, const std::vector<const Tensor *> &xs, Tensor &fx) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("BatchNorm::forward_dev_impl not working on CUDA yet");
+#else
+  const int channels = xs[1]->d[0];
+  const int remain_size = xs[0]->d.batch_size() / channels;
+
+  // reshape
+  Eigen::DSizes<int, 2> channel_by_remain(channels,remain_size);
+  Eigen::DSizes<int, 2> one_by_remain(1, remain_size);
+  Eigen::DSizes<int, 2> channel_by_one(channels,1 );
+  Eigen::DSizes<int, 2> one_by_channel(1, channels);
+
+  fx.tb<3>().reshape(channel_by_remain).device(*dev.edevice) = (xs[0]->tb<3>().reshape(channel_by_remain)-
+                                                                  xs[1]->tvec().reshape(channel_by_one).broadcast(one_by_remain)) *
+                                                               ((xs[2]->tvec() + xs[2]->tvec().constant(this->epsilon)).rsqrt() * xs[3]->tvec())
+                                                                       .eval()
+                                                                       .reshape(channel_by_one)
+                                                                       .broadcast(one_by_remain) +
+                                                               xs[4]->tvec().reshape(channel_by_one).broadcast(one_by_remain);
+
+#endif
+}
+
+template<class MyDevice>
+void BatchNorm::backward_dev_impl(const MyDevice &dev, const std::vector<const Tensor *> &xs, const Tensor &fx,
+                                  const Tensor &dEdf, unsigned int i, Tensor &dEdxi) const {
+#ifdef __CUDACC__
+  throw std::runtime_error("BatchNorm::backward_dev_impl not working on CUDA yet");
+#else
+  const int channels = xs[0]->d[0];
+  const int remain_size = xs[0]->d.batch_size() / channels;
+
+  // reshape
+  Eigen::DSizes<int, 2> channel_by_remain(channels, remain_size);
+  Eigen::DSizes<int, 2> one_by_remain(1, remain_size);
+  Eigen::DSizes<int, 2> channel_by_one(channels, 1);
+  Eigen::array<int, 1> reduction_axis;
+  reduction_axis[0] = 1;
+
+
+  switch(i){
+    // backward w.r.t the batch data [C W H N]
+    case 0:{
+      dEdxi.tb<3>().reshape(channel_by_remain).device(*dev.edevice) = dEdf.tb<3>().reshape(channel_by_remain)*
+                                                                     ((xs[3]->tvec()* (xs[2]->tvec() + xs[2]->tvec().constant(this->epsilon)).rsqrt()).reshape(channel_by_one).broadcast(one_by_remain));
+      break;
+    }
+    // backward w.r.t the mean: vector of C length
+    case 1:{
+      dEdxi.tvec().reshape(channel_by_one).device(*dev.edevice) = -dEdf.tb<3>().reshape(channel_by_remain)*
+                                                                  ((xs[3]->tvec()* (xs[2]->tvec() + xs[2]->tvec().constant(this->epsilon)).rsqrt()).reshape(channel_by_one).broadcast(one_by_remain)).sum(reduction_axis);
+      break;
+    }
+    // backward w.r.t the variance: vector of C length
+    case 2:{
+      auto x_minus_mean = (dEdf.tb<3>().reshape(channel_by_remain) * (xs[0]->tb<3>().reshape(channel_by_remain) - xs[1]->tvec().reshape(channel_by_one).broadcast(one_by_remain))).sum(reduction_axis);
+      auto v_plus_epsilon = xs[2]->tvec().reshape(channel_by_one) + (xs[2]->tvec().reshape(channel_by_one)).constant(this->epsilon);
+      dEdxi.tvec().reshape(channel_by_one).device(*dev.edevice) = x_minus_mean * x_minus_mean.constant(0.5f) * v_plus_epsilon.rsqrt() / v_plus_epsilon;
+      break;
+    }
+    // backward w.r.t the gamma: vector of C length
+    case 3:{
+      dEdxi.tvec().reshape(channel_by_one).device(*dev.edevice) = (dEdf.tb<3>().reshape(channel_by_remain)*
+              (xs[0]->tb<3>().reshape(channel_by_remain) - xs[1]->tvec().reshape(channel_by_one).broadcast(one_by_remain))).sum(reduction_axis);
+    }
+    // backward w.r.t the beta: vector of C length
+    case 4:{
+      dEdxi.tvec().reshape(channel_by_one).device(*dev.edevice) = dEdf.tb<3>().reshape(channel_by_remain).sum(reduction_axis);
+      break;
+    }
+    // exception handle, a better way : replaced by DYNET Exception macro
+    default:{
+      throw std::runtime_error("arguments index out of range");
+    }
+  }
+#endif
+}
+DYNET_NODE_INST_DEV_IMPL(BatchNorm)
+
 } // namespace dynet
