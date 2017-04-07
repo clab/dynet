@@ -2,13 +2,13 @@
 #define DYNET_GPU_FUNCTORS_H
 
 #include <cstdint>
+#include <cmath>
 #include <limits>
 
 #if HAVE_CUDA
 #  define DYNET_DEVICE_FUNC __device__
 #  define DYNET_DEVICE_MIN -1.175494351e-38f
 #else
-#  include <boost/math/special_functions/digamma.hpp>
 #  define DYNET_DEVICE_FUNC
 #  define DYNET_DEVICE_MIN std::numeric_limits<float>::min()
 #endif
@@ -180,12 +180,6 @@ struct FSoftmaxBackward {
   }
   float off_diag_sum;
 };
-
-// struct FLogGammaBackward {
-//   DYNET_DEVICE_FUNC inline float operator()(float x, float d) const {
-//     return boost::math::digamma(x) * d;
-//   }
-// };
 
 struct FNegLogSoftmaxBackward {
   FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}

@@ -1054,7 +1054,6 @@ void LogGamma::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  // dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FLogGammaBackward());
   dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().digamma() * dEdf.tvec();
 }
 DYNET_NODE_INST_DEV_IMPL(LogGamma)
