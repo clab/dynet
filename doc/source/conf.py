@@ -22,6 +22,8 @@ import subprocess
 # sys.path.insert(0, os.path.abspath('../../examples/tutorials'))
 if not os.path.islink('tutorials_notebooks'):
     os.symlink('../../examples/python/tutorials', 'tutorials_notebooks')
+
+sys.path.insert(0, os.path.abspath('../../python/'))
 # Run doxygen if on Readthedocs :
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
@@ -36,7 +38,7 @@ if on_rtd:
     # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
     # ones.
 extensions = [
-    'sphinx.ext.mathjax', 'breathe', 'nbsphinx'
+    'sphinx.ext.mathjax', 'breathe', 'nbsphinx', 'sphinx.ext.autodoc'
 ]
 
 
