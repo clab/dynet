@@ -766,7 +766,9 @@ Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
   if(xs.size() == 1) return xs[0];
   DYNET_ARG_CHECK(xs[0].rows() == xs[1].rows() && xs[1].cols() == xs[2].rows(),
                           "Bad dimensions for AffineTransform: " << xs);
-  Dim d({xs[0].rows(), xs[2].cols()}, max(max(xs[0].bd, xs[1].bd), xs[2].bd));
+  Dim d = (xs[2].cols() != 1 ?
+           Dim({xs[0].rows(), xs[2].cols()}, max(max(xs[0].bd, xs[1].bd), xs[2].bd)) :
+           Dim({xs[0].rows()}, max(max(xs[0].bd, xs[1].bd), xs[2].bd)));
   for (unsigned i = 3; i < xs.size(); i += 2) {
     DYNET_ARG_CHECK(xs[i].cols() == xs[i+1].rows() && d.rows() == xs[i].rows() && d.cols() == xs[i+1].cols(),
                             "Bad dimensions for AffineTransform: " << xs);
