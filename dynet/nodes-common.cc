@@ -917,11 +917,21 @@ Dim RandomBernoulli::dim_forward(const vector<Dim>& xs) const {
 
 string RandomUniform::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "random_uniforml(" << dim << ", " << left << ", " << right << ')';
+  s << "random_uniform(" << dim << ", " << left << ", " << right << ')';
   return s.str();
 }
 
 Dim RandomUniform::dim_forward(const vector<Dim>& xs) const {
+  return dim;
+}
+
+string RandomGumbel::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "random_gumbel(" << dim << ", " << mu << ", " << beta << ')';
+  return s.str();
+}
+
+Dim RandomGumbel::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
