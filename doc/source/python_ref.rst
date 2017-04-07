@@ -3,7 +3,7 @@ Python Reference
 
 
 
-.. automodule:: _dynet
+.. automodule:: mockdynet
    :members:
    :undoc-members:
    :show-inheritance:
