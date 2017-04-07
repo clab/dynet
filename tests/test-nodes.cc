@@ -215,6 +215,7 @@ BOOST_AUTO_TEST_CASE( affine_gradient ) {
   Expression y = sqrt(affine_transform({x1, x2, scalar}));
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
+  BOOST_CHECK(y.dim() == x1.dim());
 }
 
 // Expression operator*(const Expression& x, const Expression& y);
