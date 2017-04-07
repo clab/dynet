@@ -23,7 +23,7 @@ import subprocess
 if not os.path.islink('tutorials_notebooks'):
     os.symlink('../../examples/python/tutorials', 'tutorials_notebooks')
 
-sys.path.insert(0, os.path.abspath('../../python/'))
+sys.path.insert(0, os.path.abspath('../python_module/'))
 # Run doxygen if on Readthedocs :
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
