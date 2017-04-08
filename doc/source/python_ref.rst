@@ -11,7 +11,7 @@ DynetParams
 .. autoclass:: dynet.DynetParams
    :members:
    :show-inheritance:
-   
+
 Initialization functions
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -106,34 +106,6 @@ Expressions
 ~~~~~~~~~~~
 
 .. autoclass:: dynet.Expression
-   :members:
-   :show-inheritance:
-
-.. autoclass:: dynet._inputExpression
-   :members:
-   :show-inheritance:
-
-.. autoclass:: dynet._vecInputExpression
-   :members:
-   :show-inheritance:
-
-.. autoclass:: dynet._lookupExpression
-   :members:
-   :show-inheritance:
-
-.. autoclass:: dynet._lookupBatchExpression
-   :members:
-   :show-inheritance:
-
-.. autoclass:: dynet._pickerExpression
-   :members:
-   :show-inheritance:
-
-.. autoclass:: dynet._pickerBatchExpression
-   :members:
-   :show-inheritance:
-
-.. autoclass:: dynet._hingeExpression
    :members:
    :show-inheritance:
 
@@ -328,6 +300,7 @@ RNN Builders
 .. autoclass:: dynet._RNNBuilder
    :members:
    :show-inheritance:
+   :undoc-members:
 
 .. autoclass:: dynet.SimpleRNNBuilder
    :members:
