@@ -395,6 +395,20 @@ Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scal
  */
 Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right);
 
+/**
+ * \ingroup inputoperations
+ * \brief Create a random Gumbel sampled vector
+ * \details Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported.
+ *
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ * \param mu The mu parameter
+ * \param beta The beta parameter
+ *
+ * \return A "d" dimensioned Gumbel distributed vector
+ */
+Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu = 0.0, real beta = 1.0);
+
 ////////////////////////////////////////////////
 // Arithmetic operations                      //
 ////////////////////////////////////////////////

@@ -1065,6 +1065,13 @@ BOOST_AUTO_TEST_CASE( backward_test ) {
   cg.backward(z);
 }
 
+// This just makes sure that nothing crashes
+BOOST_AUTO_TEST_CASE( random_gumbel_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = random_gumbel(cg, {20});
+  x1.value();
+}
+
 BOOST_AUTO_TEST_CASE( sanity_test ) {
   Expression x;
   {
