@@ -1473,8 +1473,8 @@ def hinge(Expression x, unsigned index, float m=1.0):
     This expression calculates the hinge loss, formally expressed as: 
     
     Args:
-        x(Expression): A vector of scores
-        index(number): The index of the correct candidate
+        x (Expression): A vector of scores
+        index (number): The index of the correct candidate
     
     Keyword Args:
         m(number): Margin (default: (1.0))
