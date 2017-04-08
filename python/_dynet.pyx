@@ -1224,7 +1224,7 @@ def inputMatrix(vector[float] v, tuple d):
     First argument is a list of floats (or a flat numpy array).
     Second argument is a dimension.
     Returns: an expression.
-    Usage example:
+    Usage example::
 
         x = inputMatrix([1,2,3,4,5,6],(2,3))
         x.npvalue()
@@ -1836,13 +1836,13 @@ class BiRNNBuilder(object):
         [o1,o2,o3] = builder.transduce([i1,i2,i3])
     """
     def __init__(self, num_layers, input_dim, hidden_dim, model, rnn_builder_factory, builder_layers=None):
-        """
-        @param num_layers: depth of the BiRNN
-        @param input_dim: size of the inputs
-        @param hidden_dim: size of the outputs (and intermediate layer representations)
-        @param model
-        @param rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
-        @param builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
+        """Args:
+            num_layers: depth of the BiRNN
+            input_dim: size of the inputs
+            hidden_dim: size of the outputs (and intermediate layer representations)
+            model
+            rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
+            builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
         """
         if builder_layers is None:
             assert num_layers > 0
@@ -1873,8 +1873,8 @@ class BiRNNBuilder(object):
         """
         returns the list of state pairs (stateF, stateB) obtained by adding 
         inputs to both forward (stateF) and backward (stateB) RNNs.  
-
-        @param es: a list of Expression
+        Args:
+            es: a list of Expression
 
         see also transduce(xs)
 
@@ -2027,8 +2027,7 @@ cdef class RNNState: # (((
         step.
 
         For SimpleRNN, s() is the same as h()
-        For LSTM, s() is a series of of memory vectors, followed the series
-                  followed by the series returned by h().
+        For LSTM, s() is a series of of memory vectors, followed the series followed by the series returned by h().
         """
         return tuple(self.builder.get_s(CRNNPointer(self.state_idx)))
 
