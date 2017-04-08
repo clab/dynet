@@ -591,6 +591,16 @@ struct RandomUniform : public Node {
   real left, right;
 };
 
+// draw a random real from Uniform(left, right)
+struct RandomGumbel : public Node {
+  explicit RandomGumbel(const std::initializer_list<VariableIndex>& a, const Dim& d, real mu, real beta) : dim(d), mu(mu), beta(beta) {
+    DYNET_ASSERT(a.size() == 0, "RandomGumbel doesn't accept nodes as input");
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  Dim dim;
+  real mu, beta;
+};
+
 
 } // namespace dynet
 
