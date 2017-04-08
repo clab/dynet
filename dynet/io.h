@@ -41,7 +41,7 @@ class Pack {
    *                   to specify whether the model file should be appended or not
    */
   void save(const ParameterCollection & model,
-            const std::string & key = "", bool is_append = false);
+            const std::string & key = "", bool is_append = true);
   /**
    * @brief Save ParameterCollection's parameters and lookup parameters with filter_lst and key.
    *        use internal namespace if key is not given.
@@ -55,7 +55,7 @@ class Pack {
    */
   void save(const ParameterCollection & model,
             const std::vector<std::string> & filter_lst,
-            const std::string & key = "", bool is_append = false);
+            const std::string & key = "", bool is_append = true);
   /**
    * @brief Load ParameterCollection object with key equals to key.
    * 
