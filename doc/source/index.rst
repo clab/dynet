@@ -35,8 +35,8 @@ And get the basic information to create programs and use models:
    tutorial
    commandline
    debugging
-   cpp_ref
    python_ref
+   cpp_ref
    examples
 
 Mode advanced topics are below:
