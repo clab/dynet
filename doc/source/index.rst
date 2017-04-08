@@ -33,13 +33,10 @@ And get the basic information to create programs and use models:
    :maxdepth: 3
 
    tutorial
-   python_ref
-   core
    commandline
-   operations
-   builders
-   optimizers
    debugging
+   cpp_ref
+   python_ref
    examples
 
 Mode advanced topics are below:

@@ -85,7 +85,7 @@ def create_doc_copy(in_file='../../python/_dynet.pyx', out_file='dynet.py'):
                     in_func = True
                     continue
                 # Check if this line declares a class
-                is_class = re.match(r'(\s*)cdef class (.*)(\(.*\))?:', l, re.I)
+                is_class = re.match(r'(\s*)(?:cdef )?class (.*)(\(.*\))?:', l, re.I)
                 if is_class:
                     # Preserve indentation
                     indent = get_indent(is_class.group(INDENT))
