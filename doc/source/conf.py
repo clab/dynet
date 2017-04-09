@@ -16,6 +16,9 @@ import sys
 import os
 import subprocess
 
+sys.path.insert(0, os.path.abspath('.'))
+import doc_util
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -23,7 +26,8 @@ import subprocess
 if not os.path.islink('tutorials_notebooks'):
     os.symlink('../../examples/python/tutorials', 'tutorials_notebooks')
 
-sys.path.insert(0, os.path.abspath('../../python/'))
+# Create copy of _dynet.pyx for documentation purposes
+doc_util.create_doc_copy(in_file = '../../python/_dynet.pyx',out_file = 'dynet.py')
 # Run doxygen if on Readthedocs :
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
@@ -38,7 +42,11 @@ if on_rtd:
     # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
     # ones.
 extensions = [
-    'sphinx.ext.mathjax', 'breathe', 'nbsphinx', 'sphinx.ext.autodoc'
+    'sphinx.ext.mathjax',
+    'breathe',
+    'nbsphinx',
+    'sphinx.ext.autodoc',
+    'sphinxcontrib.napoleon' # Yay Napoleon! Go France!
 ]
 
 
