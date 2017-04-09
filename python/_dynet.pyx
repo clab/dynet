@@ -22,7 +22,7 @@ import os.path
 
 # TODO:
 #  c2w.h   (build a word-from-letters encoder)
-#  dict.h  -- do we even need it?
+#  dict.h : do we even need it?
 
 # Examples:
 #  V xor  
@@ -33,7 +33,7 @@ import os.path
 #  V nlm
 #  - encdec
 #  - embedcl
-#  - embed/nlm -- negative sampling?
+#  - embed/nlm: negative sampling?
 
 from _dynet cimport *
 cimport _dynet as dynet
@@ -58,8 +58,8 @@ cdef class DynetParams:
         You can still modify the parameters after calling this.
         See the documentation about command line arguments for more details
         
-        Keyword Arguments:
-            shared_parameters {[type]} -- [description] (default: {None})
+        Keyword Args:
+            shared_parameters([type]): [description] (default: (None))
         """
         cdef int argc = len(sys.argv)
         cdef char** c_argv
@@ -87,32 +87,32 @@ cdef class DynetParams:
         
         The unit is MB
         
-        Arguments:
-            mem {number} -- memory size in MB
+        Args:
+            mem(number): memory size in MB
         """
         self.cparams.mem_descriptor = str(mem).encode()
 
     cpdef set_random_seed(self, unsigned random_seed):
         """Set random seed for dynet
         
-        Arguments:
-            random_seed {number} -- Random seed
+        Args:
+            random_seed(number): Random seed
         """
         self.cparams.random_seed = random_seed
 
     cpdef set_weight_decay(self, float weight_decay):
         """Set weight decay parameter
         
-        Arguments:
-            weight_decay {float} -- weight decay parameter
+        Args:
+            weight_decay(float): weight decay parameter
         """
         self.cparams.weight_decay = weight_decay
 
     cpdef set_shared_parameters(self, bool shared_parameters):
         """Shared parameters
         
-        Arguments:
-            shared_parameters {bool} -- shared parameters
+        Args:
+            shared_parameters(bool): shared parameters
         """
         self.cparams.shared_parameters = shared_parameters
 
@@ -121,8 +121,8 @@ cdef class DynetParams:
         
         Currently only 1 is supported
         
-        Arguments:
-            requested_gpus {number} -- number of requested gpus
+        Args:
+            requested_gpus(number): number of requested gpus
         """
         self.cparams.requested_gpus = requested_gpus
         self.cparams.ngpus_requested = True
@@ -149,8 +149,8 @@ def init(shared_parameters=None):
 
         import _dynet / import _gdynet
     
-    Keyword Arguments:
-        shared_parameters {bool} -- [description] (default: {None})
+    Keyword Args:
+        shared_parameters(bool): [description] (default: (None))
     """
     params=DynetParams()
     params.from_args(shared_parameters)
@@ -163,8 +163,8 @@ def init_from_params(DynetParams params):
 
         params.init()
     
-    Arguments:
-        params {DynetParams} -- dynet parameters
+    Args:
+        params(DynetParams): dynet parameters
     """
     params.init()
 
@@ -172,12 +172,12 @@ cdef CDim Dim(dim, unsigned int batch_size=1):
     """Get dynet Dim from tuple
     
 
-    Arguments:
-        dim {tuple} -- Dimensions as a tuple
-        batch_size {number} -- Batch size (default: {1})
+    Args:
+        dim(tuple): Dimensions as a tuple
+        batch_size(number): Batch size (default: (1))
     
     Returns:
-        CDim -- Dynet dimension
+        CDim: Dynet dimension
     """
     cdef vector[long] cvec
     if isinstance(dim, tuple):
@@ -220,13 +220,13 @@ cdef c_tensor_as_np(CTensor &t):
     dim = c_dim_as_shape(t.d)
     return arr.reshape(dim,order='F')
 
-# {{{ Model / Parameters 
+# ((( Model / Parameters 
 cdef class Parameters:
     """Parameters class
     
     Parameters are things that are optimized. in contrast to a system like Torch where computational modules may have their own parameters, in DyNet parameters are just parameters.
     """
-    cdef CParameters thisptr # TODO -- no longer pointer
+    cdef CParameters thisptr # TODO: no longer pointer
     cdef int _version
     cdef Expression _expr
     cdef int _const_version
@@ -245,7 +245,7 @@ cdef class Parameters:
         [description]
         
         Returns:
-            [type] -- [description]
+            [type]: [description]
         """
         return c_dim_as_shape(self.thisptr.get().dim)
 
@@ -253,7 +253,7 @@ cdef class Parameters:
         """Return as a numpy array.
         
         Returns:
-            np.ndarray -- values of the parameter
+            np.ndarray: values of the parameter
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().values)
@@ -262,7 +262,7 @@ cdef class Parameters:
         """Return gradient as a numpy array.
         
         Returns:
-            np.ndarray -- values of the gradient w.r.t. this parameter
+            np.ndarray: values of the gradient w.r.t. this parameter
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get().g)
@@ -303,8 +303,8 @@ cdef class Parameters:
     cpdef scale(self,float s):
         """Scales the parameter
 
-        Arguments:
-            s {float} -- Scale
+        Args:
+            s(float): Scale
 
         """
         self.thisptr.scale(s)
@@ -313,15 +313,15 @@ cdef class Parameters:
         """check whether the parameter is updated or not
         
         Returns:
-            bool -- Update status
+            bool: Update status
         """
         return self.thisptr.is_updated()
 
     cpdef set_updated(self, bool b):
         """Set parameter as "updated"
         
-        Arguments:
-            b {bool} -- updated status
+        Args:
+            b(bool): updated status
         """
         self.thisptr.set_updated(b)
 
@@ -329,7 +329,7 @@ cdef class Parameters:
         """Get parameter index
         
         Returns:
-            unsigned -- Index of the parameter
+            unsigned: Index of the parameter
         """
         return self.thisptr.index
 
@@ -340,10 +340,10 @@ cdef class Parameters:
 
             dy.parameter(param)
         
-        Arguments:
-            update {bool} -- If this is set to False, the parameter won't be updated during the backward pass
+        Args:
+            update(bool): If this is set to False, the parameter won't be updated during the backward pass
         Returns:
-            Expression -- Expression of the parameter
+            Expression: Expression of the parameter
         """
         if update:
             if cg_version() != self._version:
@@ -359,7 +359,7 @@ cdef class Parameters:
 
 
 cdef class LookupParameters:
-    cdef CLookupParameters thisptr # TODO -- no longer pointer
+    cdef CLookupParameters thisptr # TODO: no longer pointer
     cdef int _version
     cdef Expression _expr
     def __cinit__(self):
@@ -410,8 +410,8 @@ cdef class LookupParameters:
     cpdef scale(self,float s):
         """Scales the parameter
 
-        Arguments:
-            s {float} -- Scale
+        Args:
+            s(float): Scale
 
         """
         self.thisptr.scale(s)
@@ -504,7 +504,7 @@ cdef class NumpyInitializer(PyInitializer):
         return vals
 
 
-cdef class Model: # {{{
+cdef class Model: # (((
     cdef CModel *thisptr
     def __cinit__(self):
         self.thisptr = new CModel()
@@ -674,13 +674,13 @@ cdef class Model: # {{{
         loader.done()
         del loader
         return params
-    #}}}
+    #)
 
-# }}}
+# )
 
-# {{{ Computation Graph 
+# ((( Computation Graph 
 
-# {{{ "Pointers"
+# ((( "Pointers"
 
 cdef class UnsignedValue:
     cdef unsigned val
@@ -724,7 +724,7 @@ cdef class FloatVectorValue:
     def size(self): return len(deref(self.vals))
     cdef vector[float]* addr(self): return self.vals
 
-# }}}
+# )
 
 cdef int SECRET = 923148
 cdef ComputationGraph _cg = ComputationGraph(SECRET)
@@ -768,7 +768,7 @@ cdef class ComputationGraph:
         return result
 
     #def params_from_model(self, model):
-    #    results = {}
+    #    results = ()
     #    for name in model.regular_parameters():
     #        results[name] = self.parameters(model[name])
     #    for name in model.lookup_parameters():
@@ -839,9 +839,9 @@ cdef class ComputationGraph:
 
 
 
-# }}}
+# )
 
-#{{{ Expressions
+#((( Expressions
 cdef ensure_freshness(Expression a):
     if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
 
@@ -853,7 +853,7 @@ cdef _cadd(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_
 cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_mul(a.c(), b))
 cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
 
-cdef class Expression: #{{{
+cdef class Expression: #(((
     """Expressions are the building block of a Dynet computation graph.
     
     Expressions are the main data types being manipulated in a DyNet program. Each expression represents a sub-computation in a computation graph.
@@ -889,7 +889,7 @@ cdef class Expression: #{{{
         Returns a tuple (dims,batch_dim) where dims is the tuple of dimensions of each batch element
         
         Returns:
-            tuple -- dimension
+            tuple: dimension
         """
         cdef CDim d;
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
@@ -923,15 +923,15 @@ cdef class Expression: #{{{
             # z = [[1, 2, 3],
             #      [4, 5, 6]] 
         
-        Arguments:
-            index {int,slice} -- Slice or index
+        Args:
+            index(int,slice): Slice or index
         
         Returns:
-            Expression -- Slice of the expression
+            Expression: Slice of the expression
         
         Raises:
-            IndexError -- If the indices are too large
-            ValueError -- In case of improper slice or if step is used
+            IndexError: If the indices are too large
+            ValueError: In case of improper slice or if step is used
         """
         assert isinstance(index, (int, slice))
         cdef int rows = self.c().dim().rows()
@@ -975,11 +975,11 @@ cdef class Expression: #{{{
         
         This only works if the expression is a scalar
         
-        Keyword Arguments:
-            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
         
         Returns:
-            float -- Scalar value of the expression
+            float: Scalar value of the expression
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward(self.vindex) # TODO: make recalculate run on the entire graph, not only up to here?
@@ -990,11 +990,11 @@ cdef class Expression: #{{{
         
         In case of a multidimensional expression, the values are flattened according to a column major ordering
         
-        Keyword Arguments:
-            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
         
         Returns:
-            list -- Array of values
+            list: Array of values
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward(self.vindex)
@@ -1005,11 +1005,11 @@ cdef class Expression: #{{{
         
         The last dimension is the batch size (if it's > 1)
         
-        Keyword Arguments:
-            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
         
         Returns:
-            np.ndarray -- numpy array of values
+            np.ndarray: numpy array of values
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
@@ -1025,11 +1025,11 @@ cdef class Expression: #{{{
         
         this returns the same thing as `scalar_value`, `vec_value`, `npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
         
-        Keyword Arguments:
-            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
         
         Returns:
-            float, list, np.ndarray -- Value of the expression
+            float, list, np.ndarray: Value of the expression
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         cdef CTensor t
@@ -1048,8 +1048,8 @@ cdef class Expression: #{{{
         May not be optimal in terms of efficiency.
         Prefer `values`
         
-        Keyword Arguments:
-            recalculate {bool} -- Recalculate the computation graph (for static graphs with new inputs) (default: {False})
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward(self.vindex)
@@ -1092,7 +1092,7 @@ cdef class Expression: #{{{
         elif isinstance(self,Expression) and isinstance(other,(int, float)):
             return _neg(_scalarsub(other, self))
         else: raise NotImplementedError()
-#}}}
+#)
 
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
@@ -1102,22 +1102,22 @@ def parameter(p, update=True):
     
     Get the expression corresponding to a parameter
     
-    Arguments:
-        p {Parameter,LookupParameter} -- Parameter to load (can be a lookup parameter as well)
-        update {bool} -- If this is set to False, the parameter won't be updated during the backward pass
+    Args:
+        p(Parameter,LookupParameter): Parameter to load (can be a lookup parameter as well)
+        update(bool): If this is set to False, the parameter won't be updated during the backward pass
     
     Returns:
-        Expression -- Parameter expression
+        Expression: Parameter expression
     
     Raises:
-        NotImplementedError -- Only works with parameters and lookup parameters
+        NotImplementedError: Only works with parameters and lookup parameters
     """
     if isinstance(p,Parameters) or isinstance(p,LookupParameters):
         return p.expr(update)
     else:
         raise NotImplementedError("Cannot call parameter() on anything other than Parameters or LookupParameters")
 
-# {{{ Mutable Expressions
+# ((( Mutable Expressions
 #     These depend values that can be set by the caller
 
 cdef class _inputExpression(Expression):
@@ -1139,8 +1139,8 @@ cdef class _inputExpression(Expression):
         This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
         This allows you to use dynet as a static framework.
         
-        Arguments:
-            s {float} -- New value
+        Args:
+            s(float): New value
         """
         self.cgp().invalidate()
         self.val.set(s)
@@ -1171,8 +1171,8 @@ cdef class _vecInputExpression(Expression):
         This allows you to use dynet as a static framework.
         For now this only accepts new values as flattened arrays (column majors). TODO : change this
 
-        Arguments:
-            data {vector[float]} -- New value
+        Args:
+            data(vector[float]): New value
         """
         self.cgp().invalidate()
         self.val.set(data)
@@ -1180,22 +1180,22 @@ cdef class _vecInputExpression(Expression):
 def vecInput(int dim):
     """Input an empty vector
     
-    Arguments:
-        dim {number} -- Size
+    Args:
+        dim(number): Size
     
     Returns:
-        _vecInputExpression -- Corresponding expression
+        _vecInputExpression: Corresponding expression
     """
     return _cg.inputVector(dim)
 
 def inputVector(vector[float] v):
     """Input a vector by values
     
-    Arguments:
-        v {vector[float]} -- Values
+    Args:
+        v(vector[float]): Values
     
     Returns:
-        _vecInputExpression -- Corresponding expression
+        _vecInputExpression: Corresponding expression
     """
     return _cg.inputVectorLiteral(v)
 
@@ -1204,12 +1204,12 @@ def matInput(int d1, int d2):
     
     TODO : remove this
     
-    Arguments:
-        int d1 {[type]} -- [description]
-        int d2 {[type]} -- [description]
+    Args:
+        int d1([type]): [description]
+        int d2([type]): [description]
     
     Returns:
-        [type] -- [description]
+        [type]: [description]
     """
     return _cg.inputMatrix(d1, d2)
 
@@ -1224,7 +1224,7 @@ def inputMatrix(vector[float] v, tuple d):
     First argument is a list of floats (or a flat numpy array).
     Second argument is a dimension.
     Returns: an expression.
-    Usage example:
+    Usage example::
 
         x = inputMatrix([1,2,3,4,5,6],(2,3))
         x.npvalue()
@@ -1241,17 +1241,17 @@ def inputTensor(arr,batched=False):
     if batched=True, the last dimension is used as a batch dimension
     if arr is a list of numpy ndarrays, this returns a batched expression where the batch elements are the elements of the list
     
-    Arguments:
-        arr {list,np.ndarray} -- Values : numpy ndarray OR list of np.ndarray OR multidimensional list of floats
+    Args:
+        arr(list,np.ndarray): Values : numpy ndarray OR list of np.ndarray OR multidimensional list of floats
     
-    Keyword Arguments:
-        batched {bool} -- Whether to use the last dimension as a batch dimension (default: {False})
+    Keyword Args:
+        batched(bool): Whether to use the last dimension as a batch dimension (default: (False))
     
     Returns:
-        _vecInputExpression -- Input expression
+        _vecInputExpression: Input expression
     
     Raises:
-        TypeError -- If the type is not respected
+        TypeError: If the type is not respected
     """
     if isinstance(arr,list):
         if all([isinstance(x,np.ndarray) for x in arr]):
@@ -1292,8 +1292,8 @@ cdef class _lookupExpression(Expression):
         This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
         This allows you to use dynet as a static framework.
         
-        Arguments:
-            i {number} -- New lookup index
+        Args:
+            i(number): New lookup index
         """
         self.cgp().invalidate()
         self.val.set(i)
@@ -1319,41 +1319,41 @@ cdef class _lookupBatchExpression(Expression):
         This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
         This allows you to use dynet as a static framework.
         
-        Arguments:
-            i {list(int)} -- New indices
+        Args:
+            i(list(int)): New indices
         """
         self.cgp().invalidate()
         self.val.set(i)
 
 def lookup(LookupParameters p, unsigned index=0, update=True):
     """Pick an embedding from a lookup parameter and returns it as a expression
+
+        :param p: Lookup parameter to pick from
+        :type p: LookupParameters
     
-    Arguments:
-        p {LookupParameters} -- Lookup parameter to pick from
-    
-    Keyword Arguments:
-        index {number} -- Lookup index (default: {0})
-        update {bool} -- Whether to update the lookup parameter [(default: {True})
+    Keyword Args:
+        index(number): Lookup index (default: (0))
+        update(bool): Whether to update the lookup parameter [(default: (True))
     
     Returns:
-        _lookupExpression -- Expression for the embedding
+        _lookupExpression: Expression for the embedding
     """
     return _cg.lookup(p, index, update)
 
 def lookup_batch(LookupParameters p, vector[unsigned] indices, update=True):
     """Look up parameters.
 
-    The mini-batched version of lookup. The resulting expression will be a mini-batch of parameters, where the “i”th element of the batch corresponds to the parameters at the position specified by the “i”th element of “indices”
+    The mini-batched version of lookup. The resulting expression will be a mini-batch of parameters, where the "i"th element of the batch corresponds to the parameters at the position specified by the "i"th element of "indices"
     
-    Arguments:
-        p {LookupParameters} -- Lookup parameter to pick from
-        indices {list(int)} -- Indices to look up for each batch element
+    Args:
+        p(LookupParameters): Lookup parameter to pick from
+        indices(list(int)): Indices to look up for each batch element
     
-    Keyword Arguments:
-        update {bool} -- Whether to update the lookup parameter (default: {True})
+    Keyword Args:
+        update(bool): Whether to update the lookup parameter (default: (True))
     
     Returns:
-        _lookupBatchExpression -- Expression for the batched embeddings
+        _lookupBatchExpression: Expression for the batched embeddings
     """
     return _cg.lookup_batch(p, indices, update)
 
@@ -1378,8 +1378,8 @@ cdef class _pickerExpression(Expression):
         This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
         This allows you to use dynet as a static framework.
         
-        Arguments:
-            i {number} -- New index
+        Args:
+            i(number): New index
         """
         self.cgp().invalidate()
         self.val.set(i)
@@ -1389,15 +1389,15 @@ def pick(Expression e, unsigned index=0, unsigned dim=0):
 
     Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.
     
-    Arguments:
-        e {Expression} -- Expression to pick from
+    Args:
+        e(Expression): Expression to pick from
     
-    Keyword Arguments:
-        index {number} -- Index to pick (default: {0})
-        dim {number} -- Dimension to pick from (default: {0})
+    Keyword Args:
+        index(number): Index to pick (default: (0))
+        dim(number): Dimension to pick from (default: (0))
     
     Returns:
-        _pickerExpression -- Picked expression
+        _pickerExpression: Picked expression
     """
     return _cg.outputPicker(e, index, dim)
 
@@ -1421,8 +1421,8 @@ cdef class _pickerBatchExpression(Expression):
         This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
         This allows you to use dynet as a static framework.
         
-        Arguments:
-            i {list} -- New list of indices
+        Args:
+            i(list): New list of indices
         """
         self.cgp().invalidate()
         self.val.set(i)
@@ -1432,13 +1432,13 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
 
     Pick elements from multiple batches.
     
-    Arguments:
-        e {Expression} -- Expression to pick from
-        indices {list} -- Indices to pick
-        dim {number} -- Dimension to pick from (default: {0})
+    Args:
+        e(Expression): Expression to pick from
+        indices(list): Indices to pick
+        dim(number): Dimension to pick from (default: (0))
     
     Returns:
-        _pickerBatchExpression -- Picked expression
+        _pickerBatchExpression: Picked expression
     """
     return _cg.outputBatchPicker(e, indices, dim)
 
@@ -1461,8 +1461,8 @@ cdef class _hingeExpression(Expression):
         This is useful if you want to to change the target and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
         This allows you to use dynet as a static framework.
         
-        Arguments:
-            i {number} -- New correct index
+        Args:
+            i(number): New correct index
         """
         self.cgp().invalidate()
         self.val.set(i)
@@ -1472,19 +1472,19 @@ def hinge(Expression x, unsigned index, float m=1.0):
 
     This expression calculates the hinge loss, formally expressed as: 
     
-    Arguments:
-        x {Expression} -- A vector of scores
-        index {number} -- The index of the correct candidate
+    Args:
+        x (Expression): A vector of scores
+        index (number): The index of the correct candidate
     
-    Keyword Arguments:
-        m {number} -- Margin (default: {1.0})
+    Keyword Args:
+        m(number): Margin (default: (1.0))
     
     Returns:
-        _hingeExpression -- The hinge loss of candidate index with respect to margin m
+        _hingeExpression: The hinge loss of candidate index with respect to margin m
     """
     return _hingeExpression(_cg, x, index, m)
 
-# }}}
+# )
 
 cpdef Expression zeroes(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
 cpdef Expression random_normal(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
@@ -1647,12 +1647,12 @@ cpdef Expression affine_transform(list exprs):
     return Expression.from_cexpr(e.cg_version, c_affine_transform(ves))
 
 
-# }}}
+# )
     
-# {{{ RNNS / Builders
+# ((( RNNS / Builders
 # TODO: unify these with inheritance
 
-cdef class _RNNBuilder: # {{{
+cdef class _RNNBuilder: # (((
     cdef CRNNBuilder *thisptr
     cdef RNNState _init_state
     cdef int cg_version 
@@ -1775,9 +1775,9 @@ cdef class _RNNBuilder: # {{{
                 self.start_new_sequence()
             self._init_state = RNNState(self, -1)
         return self._init_state
-#}}}
+#)
 
-cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
+cdef class SimpleRNNBuilder(_RNNBuilder): # (((
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -1786,9 +1786,9 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
         self.cg_version = -1
 
     def whoami(self): return "SimpleRNNBuilder"
-#}}}
+#)
     
-cdef class GRUBuilder(_RNNBuilder): # {{{
+cdef class GRUBuilder(_RNNBuilder): # (((
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -1797,9 +1797,9 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
         self.cg_version = -1
 
     def whoami(self): return "GRUBuilder"
-# }}}
+# )
 
-cdef class LSTMBuilder(_RNNBuilder): # {{{
+cdef class LSTMBuilder(_RNNBuilder): # (((
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -1808,9 +1808,9 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
         self.cg_version = -1
 
     def whoami(self): return "LSTMBuilder"
-# }}}
+# )
 
-cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
+cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -1819,15 +1819,15 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         self.cg_version = -1
 
     def whoami(self): return "VanillaLSTMBuilder"
-# }}}
+# )
 
-cdef class FastLSTMBuilder(_RNNBuilder): # {{{
+cdef class FastLSTMBuilder(_RNNBuilder): # (((
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         self.cg_version = -1
 
     def whoami(self): return "FastLSTMBuilder"
-# }}}
+# )
 
 class BiRNNBuilder(object):
     """
@@ -1837,13 +1837,13 @@ class BiRNNBuilder(object):
         [o1,o2,o3] = builder.transduce([i1,i2,i3])
     """
     def __init__(self, num_layers, input_dim, hidden_dim, model, rnn_builder_factory, builder_layers=None):
-        """
-        @param num_layers: depth of the BiRNN
-        @param input_dim: size of the inputs
-        @param hidden_dim: size of the outputs (and intermediate layer representations)
-        @param model
-        @param rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
-        @param builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
+        """Args:
+            num_layers: depth of the BiRNN
+            input_dim: size of the inputs
+            hidden_dim: size of the outputs (and intermediate layer representations)
+            model
+            rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
+            builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
         """
         if builder_layers is None:
             assert num_layers > 0
@@ -1874,8 +1874,8 @@ class BiRNNBuilder(object):
         """
         returns the list of state pairs (stateF, stateB) obtained by adding 
         inputs to both forward (stateF) and backward (stateB) RNNs.  
-
-        @param es: a list of Expression
+        Args:
+            es: a list of Expression
 
         see also transduce(xs)
 
@@ -1928,7 +1928,7 @@ class BiRNNBuilder(object):
             es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
         return es
 
-cdef class RNNState: # {{{
+cdef class RNNState: # (((
     """
     This is the main class for working with RNNs / LSTMs / GRUs.
     Request an RNNState initial_state() from a builder, and then progress from there.
@@ -2028,17 +2028,16 @@ cdef class RNNState: # {{{
         step.
 
         For SimpleRNN, s() is the same as h()
-        For LSTM, s() is a series of of memory vectors, followed the series
-                  followed by the series returned by h().
+        For LSTM, s() is a series of of memory vectors, followed the series followed by the series returned by h().
         """
         return tuple(self.builder.get_s(CRNNPointer(self.state_idx)))
 
     cpdef RNNState prev(self): return self._prev
 
     def b(self): return self.builder
-    #}}}
+    #)
 
-# StackedRNNState   TODO: do at least minimal testing for this #{{{
+# StackedRNNState   TODO: do at least minimal testing for this #(((
 cdef class StackedRNNState:
     cdef list states
     cdef StackedRNNState prev
@@ -2071,11 +2070,11 @@ cdef class StackedRNNState:
             cur = cur.add_input(x)
             states.append(cur)
         return states
-#}}}
+#)
 
-# }}}
+# )
 
-# {{{ Training 
+# ((( Training 
 cdef class Trainer:
     """
     Generic trainer
@@ -2088,8 +2087,8 @@ cdef class Trainer:
         
         The update equation is different for each trainer, check the online c++ documentation for more details on what each trainer does
         
-        Keyword Arguments:
-            s {number} -- Optional scaling factor to apply on the gradient. (default: {1.0})
+        Keyword Args:
+            s(number): Optional scaling factor to apply on the gradient. (default: (1.0))
         """
         self.thisptr.update(s)
     cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
@@ -2097,12 +2096,12 @@ cdef class Trainer:
         
         Only use this in last resort, a more elegant way to update only a subset of parameters is to use the "update" keyword in dy.parameter or Parameter.expr() to specify which parameters need to be updated __during the creation of the computation graph__
         
-        Arguments:
-            updated_params {list} -- Indices of parameters to update
-            updated_lookups {list} -- Indices of lookup parameters to update
+        Args:
+            updated_params(list): Indices of parameters to update
+            updated_lookups(list): Indices of lookup parameters to update
         
-        Keyword Arguments:
-            s {number} -- Optional scaling factor to apply on the gradient. (default: {1.0})
+        Keyword Args:
+            s(number): Optional scaling factor to apply on the gradient. (default: (1.0))
         """
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
@@ -2114,8 +2113,8 @@ cdef class Trainer:
         
         Basically learning rate decay.
         
-        Keyword Arguments:
-            r {number} -- Number of epoch that passed (default: {1.0})
+        Keyword Args:
+            r(number): Number of epoch that passed (default: (1.0))
         """
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -2128,8 +2127,8 @@ cdef class Trainer:
         """Sets updates to sparse updates
 
         DyNet trainers support two types of updates for lookup parameters, sparse and dense. Sparse updates are the default. They have the potential to be faster, as they only touch the parameters that have non-zero gradients. However, they may not always be faster (particulary on GPU with mini-batch training), and are not precisely numerically correct for some update rules such as MomentumTrainer and AdamTrainer. Thus, if you set this variable to false, the trainer will perform dense updates and be precisely correct, and maybe faster sometimes.
-        Arguments:
-            su {bool} -- flag to activate/deactivate sparse updates
+        Args:
+            su(bool): flag to activate/deactivate sparse updates
         """
         self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
@@ -2137,8 +2136,8 @@ cdef class Trainer:
         
         To deactivate clipping, set the threshold to be <=0
         
-        Arguments:
-            thr {number} -- Clipping threshold
+        Args:
+            thr(number): Clipping threshold
         """
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -2150,7 +2149,7 @@ cdef class Trainer:
         """Get clipping threshold
         
         Returns:
-            number -- Gradient clipping threshold
+            number: Gradient clipping threshold
         """
         return self.thisptr.clip_threshold
 
@@ -2159,12 +2158,12 @@ cdef class SimpleSGDTrainer(Trainer):
     
     This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks.
     
-    Arguments:
-        m {dynet.Model} -- Model to be trained
+    Args:
+        m(dynet.Model): Model to be trained
     
-    Keyword Arguments:
-        e0 {number} -- Initial learning rate (default: {0.1})
-        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    Keyword Args:
+        e0(number): Initial learning rate (default: (0.1))
+        edecay(number): Learning rate decay parameter (default: (0.0))
     """
     def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
         self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
@@ -2176,13 +2175,13 @@ cdef class MomentumSGDTrainer(Trainer):
     
     This is a modified version of the SGD algorithm with momentum to stablize the gradient trajectory. 
     
-    Arguments:
-        m {dynet.Model} -- Model to be trained
+    Args:
+        m(dynet.Model): Model to be trained
     
-    Keyword Arguments:
-        e0 {number} -- Initial learning rate (default: {0.1})
-        mom {number} -- Momentum (default: {0.9})
-        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    Keyword Args:
+        e0(number): Initial learning rate (default: (0.1))
+        mom(number): Momentum (default: (0.9))
+        edecay(number): Learning rate decay parameter (default: (0.0))
 
     """
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
@@ -2196,13 +2195,13 @@ cdef class AdagradTrainer(Trainer):
     
     The adagrad algorithm assigns a different learning rate to each parameter.
     
-    Arguments:
-        m {dynet.Model} -- Model to be trained
+    Args:
+        m(dynet.Model): Model to be trained
     
-    Keyword Arguments:
-        e0 {number} -- Initial learning rate (default: {0.1})
-        eps {number} -- Epsilon parameter to prevent numerical instability (default: {1e-20})
-        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    Keyword Args:
+        e0(number): Initial learning rate (default: (0.1))
+        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-20))
+        edecay(number): Learning rate decay parameter (default: (0.0))
     """
     def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
         self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
@@ -2215,13 +2214,13 @@ cdef class AdadeltaTrainer(Trainer):
     
     The AdaDelta optimizer is a variant of Adagrad aiming to prevent vanishing learning rates.
     
-    Arguments:
-        m {dynet.Model} -- Model to be trained
+    Args:
+        m(dynet.Model): Model to be trained
     
-    Keyword Arguments:
-        eps {number} -- Epsilon parameter to prevent numerical instability (default: {1e-6})
-        rho {number} -- Update parameter for the moving average of updates in the numerator (default: {0.95})
-        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    Keyword Args:
+        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-6))
+        rho(number): Update parameter for the moving average of updates in the numerator (default: (0.95))
+        edecay(number): Learning rate decay parameter (default: (0.0))
     """
     def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
         self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
@@ -2233,14 +2232,14 @@ cdef class RMSPropTrainer(Trainer):
     
     The RMSProp optimizer is a variant of Adagrad where the squared sum of previous gradients is replaced with a moving average with parameter rho.
     
-    Arguments:
-        m {dynet.Model} -- Model to be trained
+    Args:
+        m(dynet.Model): Model to be trained
     
-    Keyword Arguments:
-        e0 {number} -- Initial learning rate (default: {0.001})
-        eps {number} -- Epsilon parameter to prevent numerical instability (default: {1e-8})
-        rho {number} -- Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: {0.9})
-        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    Keyword Args:
+        e0(number): Initial learning rate (default: (0.001))
+        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-8))
+        rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: (0.9))
+        edecay(number): Learning rate decay parameter (default: (0.0))
     """
     def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
         self.thisptr = new CRMSPropTrainer(m.thisptr[0], e0, eps, rho, edecay)
@@ -2252,19 +2251,19 @@ cdef class AdamTrainer(Trainer):
     
     The Adam optimizer is similar to RMSProp but uses unbiased estimates of the first and second moments of the gradient
     
-    Arguments:
-        m {dynet.Model} -- Model to be trained
+    Args:
+        m(dynet.Model): Model to be trained
     
-    Keyword Arguments:
-        alpha {number} -- Initial learning rate (default: {0.001})
-        beta_1 {number} -- Moving average parameter for the mean (default: {0.9})
-        beta_2 {number} -- Moving average parameter for the variance (default: {0.999})
-        eps {number} -- Epsilon parameter to prevent numerical instability (default: {1e-8})
-        edecay {number} -- Learning rate decay parameter (default: {0.0})
+    Keyword Args:
+        alpha(number): Initial learning rate (default: (0.001))
+        beta_1(number): Moving average parameter for the mean (default: (0.9))
+        beta_2(number): Moving average parameter for the variance (default: (0.999))
+        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-8))
+        edecay(number): Learning rate decay parameter (default: (0.0))
     """
     def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
         self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
     def whoami(self):
         return "AdamTrainer"
 
-#}}}
+#)
