@@ -11,7 +11,7 @@ endfunction()
 function(check_cython_version VERSION)
   # We use the Cython library directly within Python, make sure it is installed
   # and meets the minimum version required.
-  execute_process(COMMAND ${PYTHON} -c "import Cython; print Cython.__version__;" OUTPUT_VARIABLE CYTHON_VERSION)
+  execute_process(COMMAND ${PYTHON} -c "import Cython; print(Cython.__version__);" OUTPUT_VARIABLE CYTHON_VERSION)
   if(${CYTHON_VERSION} VERSION_LESS ${VERSION})
     message(FATAL_ERROR "DyNet needs at least Cython version ${VERSION}, found verson ${CYTHON_VERSION}")
   else()
