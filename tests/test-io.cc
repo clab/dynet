@@ -139,10 +139,10 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     s.save(m, m.get_namespace(), true);
 
     ParameterCollection m2;
-    s.load(m2, "model1");
+    s.populate(m2, "model1");
     DYNET_CHECK_EQUAL(m2, m);
     ParameterCollection m3;
-    s.load(m3, "/");
+    s.populate(m3, "/");
   }
   {
     ParameterCollection collec;
@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     Pack s1("a.model");
     s1.save(collec, "all");
     ParameterCollection collec2;
-    s1.load(collec2);
+    s1.populate(collec2);
     DYNET_CHECK_EQUAL(collec2.size(), collec.size());
   
     std::remove("b.model"); std::remove("b.model.meta");
@@ -160,9 +160,9 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     s2.save(spec.get_lstm_model(), "lstm", true);
     s2.save(spec.get_affine_model(), "affine", true);
     ParameterCollection collec3, lstm2, affine2;
-    s2.load(affine2, "affine");
-    s2.load(collec3, "all");
-    s2.load(lstm2, "lstm");
+    s2.populate(affine2, "affine");
+    s2.populate(collec3, "all");
+    s2.populate(lstm2, "lstm");
     DYNET_CHECK_EQUAL(affine2.size(), spec.get_affine_model().size());
     DYNET_CHECK_EQUAL(collec3.size(), collec.size());
     DYNET_CHECK_EQUAL(lstm2.size(), spec.get_lstm_model().size());
@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     s3.save(cc, "key");
 
     ParameterCollection ccc;
-    s3.load(ccc, "key");
+    s3.populate(ccc, "key");
     DYNET_CHECK_EQUAL(ccc.size(), cc.size());
 
     std::remove("e.model"); std::remove("e.model.meta");

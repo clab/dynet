@@ -30,13 +30,13 @@ void Pack::save(const ParameterCollection & model,
   DYNET_RUNTIME_ERR("This interface is not implemented yet for Pack object.");
 }
 
-void Pack::load(ParameterCollection & model, const std::string & key) {
+void Pack::populate(ParameterCollection & model, const std::string & key) {
   this->deserialize(model, key);
 }
 
-void Pack::load(ParameterCollection & model,
-                const std::vector<std::string> & filter_lst,
-                const std::string & key) {
+void Pack::populate(ParameterCollection & model,
+                    const std::vector<std::string> & filter_lst,
+                    const std::string & key) {
   DYNET_RUNTIME_ERR("This interface is not implemented yet for Pack object.");
 }
 

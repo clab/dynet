@@ -56,26 +56,30 @@ class Pack {
   void save(const ParameterCollection & model,
             const std::vector<std::string> & filter_lst,
             const std::string & key = "", bool is_append = true);
+  void save(const Parameter & param, const std::string & key = "", bool is_append = true);
+  void save(const LookupParameter & param, const std::string & key = "", bool is_append = true);
   /**
-   * @brief Load ParameterCollection object with key equals to key.
+   * @brief Populate ParameterCollection object with key equals to key.
    * 
-   * @param model: input/output parameter, the ParameterCollection object to be loaded
-   * @param key: optional parameter, the key for loading model
+   * @param model: input/output parameter, the ParameterCollection object to be populated in. 
+   * @param key: optional parameter, the key for loading the model
    *
    */
-  void load(ParameterCollection & model, const std::string & key = "");
+  void populate(ParameterCollection & model, const std::string & key = "");
   /**
-   * @brief Load ParameterCollection object with filter_lst and with key equals to key.
+   * @brief Populate ParameterCollection object with filter_lst and with key equals to key.
    * 
-   * @param model: input/output parameter, the ParameterCollection object to be loaded
-   * @param filter_lst: load parameters and lookup parameters satisfies the filter_lst condition
+   * @param model: input/output parameter, the ParameterCollection object to be populated
+   * @param filter_lst: populate parameters and lookup parameters satisfies the filter_lst condition
    *                    each filter can be regex expression
-   * @param key: optional parameter, the key for loading model
+   * @param key: optional parameter, the key for loading the model
    *
    */
-  void load(ParameterCollection & model,
-            const std::vector<std::string> & filter_lst,
-            const std::string & key = "");
+  void populate(ParameterCollection & model,
+                const std::vector<std::string> & filter_lst,
+                const std::string & key = "");
+  void populate(Parameter & param, const std::string & key = "");
+  void populate(LookupParameter & lookup_param, const std::string & key = "");
  
  private:
   bool duplicate_key_check(const std::string & key); 
