@@ -69,15 +69,15 @@ void GRUBuilder::new_graph_impl(ComputationGraph& cg) {
 void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
   h.clear();
   h0 = h_0;
-  if (!h0.empty() && h0.size() != layers)
-    DYNET_INVALID_ARG("Number of inputs passed to initialize GRUBuilder (" << h0.size() <<
-                      ") is not equal to the number of layers (" << layers << ")");
+  DYNET_ARG_CHECK(h0.empty() || h0.size() == layers,
+                          "Number of inputs passed to initialize GRUBuilder (" << h0.size() << ") "
+                          "is not equal to the number of layers (" << layers << ")");
 }
 
 Expression GRUBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size() && h_new.size() != layers)
-  DYNET_INVALID_ARG("Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() <<
-                    ") is not equal to the number of layers (" << layers << ")");
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() << ") "
+                          "is not equal to the number of layers (" << layers << ")");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {

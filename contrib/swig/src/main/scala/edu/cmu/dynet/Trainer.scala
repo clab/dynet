@@ -41,11 +41,11 @@ class AdagradTrainer private[dynet] (private[dynet] val trainer: internal.Adagra
   }
 }
 
-class RmsPropTrainer private[dynet] (private[dynet] val trainer: internal.RmsPropTrainer)
+class RMSPropTrainer private[dynet] (private[dynet] val trainer: internal.RMSPropTrainer)
     extends Trainer(trainer)
 {
   def this(m: Model, e0: Float = 0.1f, eps: Float = 1e-20f, rho: Float = 0.95f, edecay: Float = 0.0f) {
-    this(new internal.RmsPropTrainer(m.model, e0, eps, rho, edecay))
+    this(new internal.RMSPropTrainer(m.model, e0, eps, rho, edecay))
   }
 }
 
@@ -57,4 +57,3 @@ class AdamTrainer private[dynet] (private[dynet] val trainer: internal.AdamTrain
     this(new internal.AdamTrainer(m.model, e0, beta1, beta2, eps, edecay))
   }
 }
-

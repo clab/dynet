@@ -104,7 +104,11 @@ struct ParameterStorage : public ParameterStorageBase {
    * @brief Clear the gradient (set it to 0)
    */
   void clear();
-
+  /**
+   * @brief Clip the values to the range [left, right]
+   */
+  void clip(float left, float right);
+  
   Dim dim; /**< Dimensions of the parameter tensor*/
   Tensor values;/**< Values of the parameter */
   Tensor g;/**< Values of the gradient w.r.t. this parameter */
@@ -262,12 +266,23 @@ struct Parameter {
    * @param b Update status
    */
   void set_updated(bool b);
+
+  /**
+   * @brief Scales the parameter (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale(float s){get()->scale_parameters(s);}
+
   /**
    * @brief Check the update status
    * @return Update status
    */
   bool is_updated();
-
+  /**
+   * @brief Clip the values of the parameter to the range [left, right] (in place)
+   */
+  void clip_inplace(float left, float right);
 private:
   DYNET_SERIALIZE_DECLARE()
 };
@@ -313,6 +328,13 @@ struct LookupParameter {
    * \return Values as a `Tensor` object
    */
   std::vector<Tensor>* values() { return &(get()->values); }
+
+  /**
+   * @brief Scales the parameter (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale(float s){get()->scale_parameters(s);}
 
   /**
   * @brief Set the parameter as updated
