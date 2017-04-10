@@ -209,6 +209,22 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
     DYNET_CHECK_EQUAL(m, m_out);
     DYNET_CHECK_EQUAL(lookup_m, lookup_m_out);
   }
+  {
+    std::remove("g.model.meta"); std::remove("g.model");
+    Pack packer("g.model");
+    ParameterCollection model;
+    Parameter m = model.add_parameters({10});
+    LookupParameter lookup_m = model.add_lookup_parameters(10, {128});
+    packer.save(model, "model");
+
+    ParameterCollection model_in;
+    Parameter m_in = model_in.add_parameters({10});
+    LookupParameter lookup_m_in = model_in.add_lookup_parameters(10, {128});
+    packer.populate(m_in, "model", "/__0");
+    DYNET_CHECK_EQUAL(m_in, m);
+    packer.populate(lookup_m_in, "model", "/__1");
+    DYNET_CHECK_EQUAL(lookup_m_in, lookup_m);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -79,6 +79,12 @@ void Pack::populate(ParameterCollection & model, const std::string & key) {
   this->deserialize(model, key);
 }
 
+void Pack::populate(Parameter & param,
+                    const std::string & model_name,
+                    const std::string & key) {
+  this->deserialize(param, model_name, key);
+}
+
 void Pack::populate(ParameterCollection & model,
                     const std::vector<std::string> & filter_lst,
                     const std::string & key) {
@@ -91,6 +97,12 @@ void Pack::populate(Parameter & param, const std::string & key) {
 
 void Pack::populate(LookupParameter & lookup_param, const std::string & key) {
   this->deserialize(lookup_param, key);
+}
+
+void Pack::populate(LookupParameter & lookup_param,
+                    const std::string & model_name,
+                    const std::string & key) {
+  this->deserialize(lookup_param, model_name, key);
 }
 
 bool Pack::duplicate_key_check(const std::string & key) {
@@ -330,11 +342,53 @@ void Pack::deserialize(Parameter & param, const std::string & key) {
   deserialize_tensor(f, d, params_order_lst);
   TensorTools::SetElements(param.get_storage().g, params_order_lst);
   std::getline(f, line);
-  if (line.size()) {
-    if (line != "#") {
-      DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
+  f.close();
+  meta_f.close();
+}
+
+void Pack::deserialize(Parameter & param,
+                       const std::string & model_name,
+                       const std::string & key) {
+  std::ifstream meta_f(fn_meta);
+  std::ifstream f(fn);
+  std::string line;
+  long long local_offset = -1;
+  bool model_exist = false;
+  while (std::getline(meta_f, line)) {
+    auto tmp_str = dynet::str_split(line, '|');
+    auto kv = dynet::str_split(tmp_str.front(), ':');
+    if (kv[0] == model_name) {
+      model_exist = true;
+      for (size_t k = 1; k < tmp_str.size(); ++k) {
+        auto kkv = dynet::str_split(tmp_str[k], ':');
+        if (kkv[0] == key) {
+          local_offset = std::stoll(kkv[1]);
+          break;
+        }
+      }
     }
   }
+  if (model_exist == false) {
+    DYNET_RUNTIME_ERR("Load error: no such key:" + key + " under model:" +  model_name);
+  }
+
+  // check identifier
+  f.seekg(local_offset);
+  std::getline(f, line);
+  auto name = line;
+  Dim d;
+  std::getline(f, line);
+  std::istringstream iss(line);
+  iss >> d;
+  param.get_storage().name = name;
+  std::vector<float> params_order_lst;
+  deserialize_tensor(f, d, params_order_lst);
+  TensorTools::SetElements(param.get_storage().values, params_order_lst);
+
+  params_order_lst.resize(0);
+  deserialize_tensor(f, d, params_order_lst);
+  TensorTools::SetElements(param.get_storage().g, params_order_lst);
+  std::getline(f, line);
   f.close();
   meta_f.close();
 }
@@ -384,12 +438,54 @@ void Pack::deserialize(LookupParameter & lookup_param, const std::string & key) 
   deserialize_tensor(f, all_dim, lookup_params_order_lst);
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
                            lookup_params_order_lst);
-  std::getline(f, line);
-  if (line.size()) {
-    if (line != "#") {
-      DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
+  f.close();
+  meta_f.close();
+}
+
+void Pack::deserialize(LookupParameter & lookup_param,
+                       const std::string & model_name,
+                       const std::string & key) {
+  std::ifstream meta_f(fn_meta);
+  std::ifstream f(fn);
+  std::string line;
+  long long local_offset = -1;
+  bool model_exist = false;
+  while (std::getline(meta_f, line)) {
+    auto tmp_str = dynet::str_split(line, '|');
+    auto kv = dynet::str_split(tmp_str.front(), ':');
+    if (kv[0] == model_name) {
+      model_exist = true;
+      for (size_t k = 1; k < tmp_str.size(); ++k) {
+        auto kkv = dynet::str_split(tmp_str[k], ':');
+        if (kkv[0] == key) {
+          local_offset = std::stoll(kkv[1]);
+          break;
+        }
+      }
     }
   }
+  if (model_exist == false) {
+    DYNET_RUNTIME_ERR("Load error: no such key:" + key + " under model:" +  model_name);
+  }
+  f.seekg(local_offset);
+  std::getline(f, line);
+  auto name = line;
+  Dim all_dim;
+  std::getline(f, line);
+  std::istringstream iss(line);
+  iss >> all_dim;
+  
+  std::getline(f, line);
+
+  lookup_param.get_storage().name = name;
+  std::vector<float> lookup_params_order_lst;
+  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+  TensorTools::SetElements(lookup_param.get_storage().all_values,
+                           lookup_params_order_lst);
+  lookup_params_order_lst.resize(0);
+  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+  TensorTools::SetElements(lookup_param.get_storage().all_grads,
+                           lookup_params_order_lst);
   f.close();
   meta_f.close();
 }
