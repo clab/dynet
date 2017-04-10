@@ -53,6 +53,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CTensor values
         CTensor g
         CDim dim
+        void clip(float left, float right)
 
     cdef cppclass CLookupParameterStorage "dynet::LookupParameterStorage":
         CLookupParameterStorage()
@@ -67,6 +68,8 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+        void scale(float s)
+        void clip_inplace(float left, float right)
         unsigned index
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
@@ -77,6 +80,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void zero()
         void set_updated(bool b)
         bool is_updated()
+        void scale(float s)
         unsigned index
 
     cdef cppclass CParameterInit "dynet::ParameterInit":
@@ -155,56 +159,78 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         void print_graphviz() const
 
 cdef extern from "dynet/training.h" namespace "dynet":
-    cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer":
+    cdef cppclass CTrainer "dynet::Trainer":
+        #CTrainer(CModel& m, float lam, float e0)
+        CTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        float clip_threshold
+        bool clipping_enabled
+        bool sparse_updates_enabled
+        void update(float s)
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        void update_epoch(float r)
+        void status()
+
+
+    cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer" (CTrainer):
         #CSimpleSGDTrainer(CModel& m, float lam, float e0)
         CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
-        float clip_threshold
-        bool clipping_enabled
-        bool sparse_updates_enabled
-        void update(float s)
-        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        void update_epoch(float r)
-        void status()
+        # float clip_threshold
+        # bool clipping_enabled
+        # bool sparse_updates_enabled
+        # void update(float s)
+        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        # void update_epoch(float r)
+        # void status()
 
-    cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer":
+    cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer" (CTrainer):
         CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
-        float clip_threshold
-        bool clipping_enabled
-        bool sparse_updates_enabled
-        void update(float s)
-        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        void update_epoch(float r)
-        void status()
+        # float clip_threshold
+        # bool clipping_enabled
+        # bool sparse_updates_enabled
+        # void update(float s)
+        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        # void update_epoch(float r)
+        # void status()
 
-    cdef cppclass CAdagradTrainer "dynet::AdagradTrainer":
+    cdef cppclass CAdagradTrainer "dynet::AdagradTrainer" (CTrainer):
         CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
-        float clip_threshold
-        bool clipping_enabled
-        bool sparse_updates_enabled
-        void update(float s)
-        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        void update_epoch(float r)
-        void status()
+        # float clip_threshold
+        # bool clipping_enabled
+        # bool sparse_updates_enabled
+        # void update(float s)
+        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        # void update_epoch(float r)
+        # void status()
 
-    cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer":
+    cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer" (CTrainer):
         CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
-        float clip_threshold
-        bool clipping_enabled
-        bool sparse_updates_enabled
-        void update(float s)
-        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        void update_epoch(float r)
-        void status()
+        # float clip_threshold
+        # bool clipping_enabled
+        # bool sparse_updates_enabled
+        # void update(float s)
+        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        # void update_epoch(float r)
+        # void status()
 
-    cdef cppclass CAdamTrainer "dynet::AdamTrainer":
+    cdef cppclass CRMSPropTrainer "dynet::RMSPropTrainer" (CTrainer):
+        CRMSPropTrainer(CModel& m, float e0, float eps, float rho, float edecay) # TODO removed lam, update docs
+        # float clip_threshold
+        # bool clipping_enabled
+        # bool sparse_updates_enabled
+        # void update(float s)
+        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        # void update_epoch(float r)
+        # void status()
+
+    cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
-        float clip_threshold
-        bool clipping_enabled
-        bool sparse_updates_enabled
-        void update(float s)
-        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        void update_epoch(float r)
-        void status()
+        # float clip_threshold
+        # bool clipping_enabled
+        # bool sparse_updates_enabled
+        # void update(float s)
+        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        # void update_epoch(float r)
+        # void status()
 
 
 cdef extern from "dynet/expr.h" namespace "dynet::expr":
@@ -219,6 +245,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
     CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CParameters p) except + #
     CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CLookupParameters p) except + #
+    CExpression c_const_parameter "dynet::expr::const_parameter" (CComputationGraph& g, CParameters p) except + #
+    CExpression c_const_parameter "dynet::expr::const_parameter" (CComputationGraph& g, CLookupParameters p) except + #
     #CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
     CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
     CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #
@@ -229,6 +257,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_random_normal "dynet::expr::random_normal" (CComputationGraph& g, CDim& d) except + #
     CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale) except +
     CExpression c_random_uniform "dynet::expr::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
+    CExpression c_random_gumbel "dynet::expr::random_gumbel" (CComputationGraph& g, CDim& d, float left, float right) except + #
 
     # identity function, but derivative is not propagated through it
     CExpression c_nobackprop "dynet::expr::nobackprop" (CExpression& x) except + #
@@ -306,10 +335,12 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     #CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned v) except +   #
     CExpression c_select_rows "dynet::expr::select_rows" (CExpression& x, vector[unsigned] rs) except +
     CExpression c_select_cols "dynet::expr::select_cols" (CExpression& x, vector[unsigned] cs) except +
-    CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv) except + #
-    CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv) except + #
+    CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv, unsigned d) except + #
+    CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv, unsigned d) except + #
     CExpression c_pickrange "dynet::expr::pickrange" (CExpression& x, unsigned v, unsigned u) except + #
 
+    CExpression c_pick_batch_elems "dynet::expr::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
+    CExpression c_pick_batch_elem "dynet::expr::pick_batch_elem" (CExpression& x, unsigned v) except + #
     CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, unsigned v) except + #
     CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) except + #
 
@@ -317,6 +348,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_average     "dynet::expr::average" (vector[CExpression]& xs) except +
     CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs) except +
     CExpression c_concat      "dynet::expr::concatenate" (vector[CExpression]& xs) except +
+    CExpression c_concat_to_batch      "dynet::expr::concatenate_to_batch" (vector[CExpression]& xs) except +
 
     CExpression c_sum            "dynet::expr::sum" (vector[CExpression]& xs) except +
     CExpression c_max            "dynet::expr::vmax" (vector[CExpression]& xs) except +

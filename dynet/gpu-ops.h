@@ -27,7 +27,7 @@ namespace gpu {
 // void pnlsoftmax(int n, int elem_idx, const float* x0, float* y, float* logz);
 // void pnlsoftmax_backward(int n, int elem_idx, const float* x0, const float* dEdf, const float* logz, float* dEdx);
 // void sgd_update(int n, const float* g, float* x, float scale, float lambda);
-
+void clip(int n, float left, float right, float* trg);
 void const_init(int n, float val, float* trg);
 void dense_to_sparse_assign(int n, const unsigned int* ids, float* src, float* trg);
 void sparse_to_dense_assign(int n, const unsigned int* ids, float* src, float* trg);
