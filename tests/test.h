@@ -71,6 +71,16 @@ void equal_check(LookupParameterStorage *p1,
   equal_check(p1->all_grads, p2->all_grads);
 }
 
+void equal_check(Parameter & p1,
+                 Parameter & p2) {
+  equal_check(&p1.get_storage(), &p2.get_storage());
+}
+
+void equal_check(LookupParameter & p1,
+                 LookupParameter & p2) {
+  equal_check(&p1.get_storage(), &p2.get_storage());
+}
+
 template <class T, class U>
 void equal_check(T a, U b) {
   BOOST_CHECK_EQUAL(a, b);

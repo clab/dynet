@@ -79,12 +79,36 @@ class Pack {
                 const std::vector<std::string> & filter_lst,
                 const std::string & key = "");
   void populate(Parameter & param, const std::string & key = "");
-  void populate(LookupParameter & lookup_param, const std::string & key = "");
+  void populate(Parameter & param,
+                const std::string & model_name,
+                const std::string & key) {}
+  void populate(LookupParameter & lookup_param,
+                const std::string & key = "");
+  void populate(LookupParameter & lookup_param,
+                const std::string & model_name,
+                const std::string & key) {}
  
  private:
   bool duplicate_key_check(const std::string & key); 
-  void serialize(const ParameterCollection & model, const std::string & key, bool is_append);
+  void serialize(const ParameterCollection & model,
+                 const std::string & key,
+                 bool is_append,
+                 std::unordered_map<std::string, long long> & offset_dict);
+  void serialize(const Parameter & param,
+                 const std::string & key,
+                 bool is_append);
+  void serialize(const LookupParameter & lookup_param,
+                 const std::string & key,
+                 bool is_append);
   void deserialize(ParameterCollection & model, const std::string & key);
+  void deserialize(Parameter & param, const std::string & key);
+  void deserialize(Parameter & param,
+                   const std::string & model_name,
+                   const std::string key) {}
+  void deserialize(LookupParameter & lookup_param, const std::string & key);
+  void deserialize(LookupParameter & lookup_param,
+                   const std::string & model_name,
+                   const std::string & key) {}
   void deserialize_tensor(std::ifstream & f, const Dim & d,
                           std::vector<float> & params_order_lst);
 

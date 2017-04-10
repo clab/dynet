@@ -191,4 +191,24 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
   }
 }
 
+BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
+  {
+    std::remove("f.model.meta"); std::remove("f.model");
+    Pack packer("f.model");
+    ParameterCollection model_out;
+    Parameter m_out = model_out.add_parameters({100});
+    LookupParameter lookup_m_out = model_out.add_lookup_parameters(10, {128});
+    packer.save(m_out, "m");
+    packer.save(lookup_m_out, "lookup_m");
+
+    ParameterCollection model;
+    Parameter m = model.add_parameters({100});
+    LookupParameter lookup_m = model_out.add_lookup_parameters(10, {128});
+    packer.populate(m, "m");
+    packer.populate(lookup_m, "lookup_m");
+    DYNET_CHECK_EQUAL(m, m_out);
+    DYNET_CHECK_EQUAL(lookup_m, lookup_m_out);
+  }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
