@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE TEST_NODES
 
+#include <dynet/functors.h>
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/grad-check.h>
@@ -214,6 +215,7 @@ BOOST_AUTO_TEST_CASE( affine_gradient ) {
   Expression y = sqrt(affine_transform({x1, x2, scalar}));
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
+  BOOST_CHECK(y.dim() == x1.dim());
 }
 
 // Expression operator*(const Expression& x, const Expression& y);
@@ -346,6 +348,16 @@ BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
   Expression x2 = parameter(cg, param2);
   Expression y = concatenate_cols({x1, x2, x1});
   Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+// Expression concatenate_to_batch(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( concatenate_to_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression xsquare = parameter(cg, param_square1);
+  Expression y = concatenate_to_batch({x1, x2});
+  Expression z = sum_batches(sum_elems(xsquare*y));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -779,6 +791,30 @@ BOOST_AUTO_TEST_CASE( binary_log_loss_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression binary_log_loss(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( binary_log_loss_edgecases ) {
+  dynet::ComputationGraph cg;
+  float val, infinity= - log(DYNET_DEVICE_MIN);
+  Expression x,y,z;
+  vector<float> values={0.0,0.5,1.0};
+  for (float vx : values){
+    for(float vy : values){
+      x = input(cg, vx);
+      // and y == 0
+      y = input(cg, vy);
+      z = binary_log_loss(x, y);
+      val = as_scalar(z.value());
+      if(vx==0.5)
+        BOOST_CHECK_CLOSE(val,log(2),0.1);
+      else if (vx==vy)
+        BOOST_CHECK_CLOSE(val,0,0.1);
+      else
+        BOOST_CHECK_CLOSE(val,infinity,0.1);
+    }
+  }
+
+}
+
 // Expression pairwise_rank_loss(const Expression& x, const Expression& y, real m=1.0);
 BOOST_AUTO_TEST_CASE( pairwise_rank_loss_gradient ) {
   dynet::ComputationGraph cg;
@@ -902,24 +938,24 @@ BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression pick_batch(const Expression& x, unsigned v);
-BOOST_AUTO_TEST_CASE( pick_batch_gradient1 ) {
+// Expression pick_batch_elem(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( pick_batch_elem_gradient ) {
   unsigned idx = 0;
   dynet::ComputationGraph cg;
   Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
-  Expression z = sum_rows(pick_batch(x1, idx));
+  Expression z = sum_rows(pick_batch_elem(x1, idx));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression pick_batches(const Expression& x, cosnt std::vector<unsigned> & v);
-BOOST_AUTO_TEST_CASE( pick_batches_gradient ) {
+// Expression pick_batch_elems(const Expression& x, cosnt std::vector<unsigned> & v);
+BOOST_AUTO_TEST_CASE(  pick_batch_elems_gradient ) {
   dynet::ComputationGraph cg;
   std::vector<unsigned> indices = { 0, 1 };
   Expression x1 = input(cg, Dim({ 3 }, 2), batch_vals);
-  Expression picked_x1 = pick_batches(x1, indices);
+  Expression picked_x1 = pick_batch_elems(x1, indices);
   Expression z = sum({
-    sum_rows(pick_batch(picked_x1, 0)),
-    sum_rows(pick_batch(picked_x1, 1))
+    sum_rows(pick_batch_elem(picked_x1, (unsigned) 0)),
+    sum_rows(pick_batch_elem(picked_x1, (unsigned) 1))
   });
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -1027,6 +1063,13 @@ BOOST_AUTO_TEST_CASE( backward_test ) {
   Expression y = x1 + x2;
   Expression z = sum_elems(y);
   cg.backward(z);
+}
+
+// This just makes sure that nothing crashes
+BOOST_AUTO_TEST_CASE( random_gumbel_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = random_gumbel(cg, {20});
+  x1.value();
 }
 
 BOOST_AUTO_TEST_CASE( sanity_test ) {

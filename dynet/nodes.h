@@ -251,6 +251,14 @@ struct ConcatenateColumns : public Node {
   mutable std::vector<unsigned> src_col_indices;
 };
 
+// concatenate different batched experssions into one single batched tensor
+struct ConcatenateToBatch : public Node {
+  template <typename T> explicit ConcatenateToBatch(const T& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override {return true;}
+  mutable std::vector<unsigned> src_element_indices;
+};
+
 // x_1 is a scalar (or row vector)
 // x_2 is a scalar (or row vector)
 // y = max(0, margin - x_1 + x_2)
@@ -533,13 +541,15 @@ struct PickRange : public Node {
   unsigned end;
 };
 
-// x_1 is a multibatch vector
-// y = (x_1)_{[*pval]}
-struct PickBatch : public Node {
-  explicit PickBatch(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val), vals(), pvals() {}
-  explicit PickBatch(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v) : Node(a), val(), pval(), vals(v), pvals(&vals) {}
+// x is a batched tensor
+// y = (x)_{[*pval]}
+struct PickBatchElements : public Node {
+  explicit PickBatchElements(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val), vals(), pvals() {}
+  explicit PickBatchElements(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v) : Node(a), val(), pval(), vals(v), pvals(&vals) {}
+  explicit PickBatchElements(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv), vals(), pvals() {}
+  explicit PickBatchElements(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv) : Node(a), val(), pval(), vals(), pvals(pv) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
-  virtual bool supports_multibatch() const override { return true; /* for the pick_batches, multibatch should be supported.*/ }
+  virtual bool supports_multibatch() const override { return true; }
   unsigned val;
   const unsigned* pval;
   std::vector<unsigned> vals;
@@ -579,6 +589,16 @@ struct RandomUniform : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
   Dim dim;
   real left, right;
+};
+
+// draw a random real from Uniform(left, right)
+struct RandomGumbel : public Node {
+  explicit RandomGumbel(const std::initializer_list<VariableIndex>& a, const Dim& d, real mu, real beta) : dim(d), mu(mu), beta(beta) {
+    DYNET_ASSERT(a.size() == 0, "RandomGumbel doesn't accept nodes as input");
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  Dim dim;
+  real mu, beta;
 };
 
 
