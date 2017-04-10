@@ -1510,6 +1510,21 @@ inline Expression concatenate(const std::initializer_list<Expression>& xs) { ret
 template <typename T>
 inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); }
 
+/**
+ * \ingroup flowoperations
+ * \brief Max out
+ * \details Select out a element/row/column/sub-tensor from an expression, 
+ *          with maximum value along a given dimension.
+ *          This will result in the dimension of the tensor being reduced
+ *          by 1.
+ *
+ * \param x The input expression
+ * \param d The dimension along which to choose the element
+ *
+ * \return An expression of sub-tensor with max value along dimension d
+ */
+Expression maxout(const Expression& x, unsigned d = 0);
+
 ////////////////////////////////////////////////
 // Noise operations                           //
 ////////////////////////////////////////////////

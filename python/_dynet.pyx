@@ -1728,6 +1728,8 @@ cpdef Expression block_dropout(Expression x, float p): return Expression.from_ce
 #expr-dim
 cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1): return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d, batch_size)))
 
+cpdef Expression maxout(Expression x, unsigned d=0): return Expression.from_cexpr(x.cg_version, c_maxout(x.c(), d))
+
 cpdef Expression esum(list xs):
     assert xs, 'List is empty, nothing to esum.'
     cdef vector[CExpression] cvec

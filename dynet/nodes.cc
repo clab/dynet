@@ -151,6 +151,10 @@ size_t SparsemaxLoss::aux_storage_size() const {
   return rows * sizeof(float);
 }
 
+size_t MaxOut::aux_storage_size() const {
+  return sizeof(Eigen::DenseIndex) * dim.size();
+}
+
 #endif // Finish CPU only functions
 
 // ===== Auxiliary functions for both CPU and GPU
@@ -2303,5 +2307,54 @@ void RandomGumbel::backward_dev_impl(const MyDevice & dev,
   DYNET_RUNTIME_ERR("Called backward() on an arity 0 node");
 }
 DYNET_NODE_INST_DEV_IMPL(RandomGumbel)
+
+template<class MyDevice>
+void MaxOut::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Eigen::DenseIndex* maxmap = static_cast<Eigen::DenseIndex*>(aux_mem);
+  const unsigned batch_size = dim.batch_elems();
+  const unsigned first_dim_size = dim[0];
+  const unsigned second_dim_size = dim[1];
+  Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>> locs(maxmap, first_dim_size, second_dim_size, batch_size);
+  const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {reduced_dim};
+  locs.device(*dev.edevice) = xs[0]->tb<3>().argmax(reduced_dim);
+  fx.tb<2>().device(*dev.edevice) = xs[0]->tb<3>().maximum(reduction_axis);
+}
+
+template<class MyDevice>
+void MaxOut::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  DYNET_ARG_CHECK(i == 0, "Failed dimension check in MaxOut::backward");
+#ifdef __CUDACC__
+  vector<Eigen::DenseIndex> indices(dim.size());
+  Eigen::DenseIndex* maxmap = &indices[0];
+  CUDA_CHECK(cudaMemcpy((void*)maxmap, aux_mem, sizeof(Eigen::DenseIndex) * dim.size(), cudaMemcpyDeviceToHost));
+#else
+  Eigen::DenseIndex* maxmap = static_cast<Eigen::DenseIndex*>(aux_mem);
+#endif
+  const unsigned batch_size = dim.batch_elems();
+  const unsigned first_dim_size = dim[0];
+  const unsigned second_dim_size = dim[1];
+  Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>> locs(maxmap, first_dim_size, second_dim_size, batch_size);
+  for(unsigned b = 0; b < batch_size; ++b){
+    for(unsigned j = 0; j < second_dim_size; ++j){
+      for(unsigned i = 0; i < first_dim_size; ++i){
+        if (reduced_dim > second_dim)
+          dEdxi.tb<3>().chip<3>(b).chip(locs(i, j, b), reduced_dim).chip(j, second_dim).chip(i, first_dim).device(*dev.edevice) 
+            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+        else if (reduced_dim > first_dim)
+          dEdxi.tb<3>().chip<3>(b).chip(j, second_dim).chip(locs(i, j, b), reduced_dim).chip(i, first_dim).device(*dev.edevice) 
+            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+        else
+          dEdxi.tb<3>().chip<3>(b).chip(j, second_dim).chip(i, first_dim).chip(locs(i, j, b), reduced_dim).device(*dev.edevice) 
+            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+      }
+    }
+  }
+}
+DYNET_NODE_INST_DEV_IMPL(MaxOut)
 
 } // namespace dynet
