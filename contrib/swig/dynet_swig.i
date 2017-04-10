@@ -724,8 +724,8 @@ struct AdadeltaTrainer : public Trainer {
   explicit AdadeltaTrainer(Model& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0);
 };
 
-struct RmsPropTrainer : public Trainer {
-   explicit RmsPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0);
+struct RMSPropTrainer : public Trainer {
+   explicit RMSPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0);
 };
 
 struct AdamTrainer : public Trainer {
@@ -957,7 +957,7 @@ void cleanup();
   import java.io.ObjectOutputStream;
   import java.io.IOException;
 %}
- 
+
 %typemap(javacode) ModelSaver %{
   public void add_object(Object o) {
     try {
@@ -977,7 +977,7 @@ void cleanup();
   }
 %}
 
-// Add Java method to ModelLoader for loading java objects. 
+// Add Java method to ModelLoader for loading java objects.
 %typemap(javaimports) ModelLoader %{
   import java.io.ByteArrayInputStream;
   import java.io.ObjectInputStream;
@@ -1010,7 +1010,7 @@ void cleanup();
 
 
 %{
-  
+
 namespace dynet {
 
 struct ModelSaver {
@@ -1170,7 +1170,3 @@ struct ModelLoader {
 };
 
 }
-
-
-
-

@@ -100,7 +100,7 @@ function(find_cudnn)
 endfunction()
 
 # look for Boost
-if(DEFINED ENV{BOOST_ROOT})
+if(DEFINED BOOST_ROOT OR DEFINED BOOSTROOT OR DEFINED ENV{BOOST_ROOT} OR DEFINED ENV{BOOSTROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
   if(DEFINED ${Boost_INCLUDE_DIR})
     get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
@@ -126,6 +126,11 @@ endif()
 # echo "export BOOST_LIBRARYDIR=/usr/local/lib" >> ~/.bashrc
 # echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
 # then run source ~/.bashrc to have those environment variable effective immediately
+
+if (NOT DEFINED DYNET_DEBUG_LEVEL)
+  set(DYNET_DEBUG_LEVEL 1)
+endif()
+add_definitions(-DDYNET_DEBUG_LEVEL=${DYNET_DEBUG_LEVEL})
 
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
