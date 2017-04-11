@@ -26,46 +26,66 @@ std::istream& operator>>(std::istream& is, std::vector<T> & v) {
 class Pack {
  public:
   Pack(std::string filename) : fn(filename), fn_meta(filename + ".meta") {}
+  
   void reinit(std::string filename) {
+    offset = 0;
     fn = filename;
     fn_meta = filename + ".meta";
-    offset = 0;
   }
+
   /**
-   * @brief Save ParameterCollection with key.
-   *        use internal namespace if key is not given.
+   * @brief Save ParameterCollection with key, use internal namespace if key is not given.
    *
-   * @param model: input ParameterCollection object to save
-   * @param key: optional parameter, the key for model
+   * @param model: input ParameterCollection object to be saved
+   * @param key: optional parameter, the key for the model
    * @param is_append: optional parameter
-   *                   to specify whether the model file should be appended or not
+   *                   to specify whether the model file is append mode or not
    */
   void save(const ParameterCollection & model,
             const std::string & key = "", bool is_append = true);
+
   /**
-   * @brief Save ParameterCollection's parameters and lookup parameters with filter_lst and key.
+   * @brief Save ParameterCollection's parameters and lookup parameters with filter_lst and key,
    *        use internal namespace if key is not given.
    *
-   * @param model: input ParameterCollection object to save
-   * @param filter_lst: save parameters and lookup parameters satisfies the filter_lst condition
-   *                    each filter can be regex expression
-   * @param key: optional parameter, the key for model
+   * @param model: input ParameterCollection object to be saved
+   * @param filter_lst: save parameters and lookup parameters satisfy the filter_lst condition
+   *                    each filter can be regex expressions
+   * @param key: optional parameter, the key for the model 
    * @param is_append: optional parameter
-   *                   to specify whether the model file should be appended or not
+   *                   to specify whether the model file is append mode or not
    */
   void save(const ParameterCollection & model,
             const std::vector<std::string> & filter_lst,
             const std::string & key = "", bool is_append = true);
-  void save(const Parameter & param, const std::string & key = "", bool is_append = true);
-  void save(const LookupParameter & param, const std::string & key = "", bool is_append = true);
+
   /**
-   * @brief Populate ParameterCollection object with key equals to key.
+   * @brief Save Parameter with key, use internal name if key is not given.
+   *
+   * @param model: input Parameter object to be saved
+   * @param key: optional parameter, the key for the saving Parameter
+   * @param is_append: optional parameter to specify whether the model file is append mode or not
+   */
+  void save(const Parameter & param, const std::string & key = "", bool is_append = true);
+
+  /**
+   * @brief Save look parameter with key, use internal name if key is not given.
+   * 
+   * @param model: input LookupParameter object to be saved
+   * @param key: optional parameter, the key for the saving Parameter
+   * @param is_append: optional parameter to specify whether the model file is append mode or not
+   */
+  void save(const LookupParameter & param, const std::string & key = "", bool is_append = true);
+
+  /**
+   * @brief Populate ParameterCollection object with key.
    * 
    * @param model: input/output parameter, the ParameterCollection object to be populated in. 
    * @param key: optional parameter, the key for loading the model
    *
    */
   void populate(ParameterCollection & model, const std::string & key = "");
+
   /**
    * @brief Populate ParameterCollection object with filter_lst and with key equals to key.
    * 
@@ -78,16 +98,52 @@ class Pack {
   void populate(ParameterCollection & model,
                 const std::vector<std::string> & filter_lst,
                 const std::string & key = "");
+
+  /**
+   * @brief Populate independent parameter object with key.
+   *        independent here means it has been saved without a ParameterCollection object
+   *
+   * @param param: input/output parameter, the Parameter object to be populated in. 
+   * @param key: optional parameter, the key for loading the parameter 
+   *
+   */
   void populate(Parameter & param, const std::string & key = "");
+
+  /**
+   * @brief Populate parameter object inside a model with key.
+   *
+   * @param param: input/output parameter, the Parameter object to be populated in. 
+   * @param model_name: model_name for holding the wanted parameter
+   * @param key: the key for loading the parameter
+   *
+   */
   void populate(Parameter & param,
                 const std::string & model_name,
                 const std::string & key);
+
+  /**
+   * @brief Populate independent lookup parameter object with key.
+   *        independent here means it has been saved without a LookupParameterCollection object
+   *
+   * @param lookup_param: input/output parameter, the LookupParameter object to be populated in. 
+   * @param key: optional parameter, the key for loading the lookup parameter 
+   *
+   */
   void populate(LookupParameter & lookup_param,
                 const std::string & key = "");
+
+  /**
+   * @brief Populate LookupParameter object inside a model with key.
+   *
+   * @param lookup_param: input/output parameter, the LookupParameter object to be populated in. 
+   * @param model_name: model_name for holding the wanted lookup parameter
+   * @param key: the key for loading the lookup parameter
+   *
+   */
   void populate(LookupParameter & lookup_param,
                 const std::string & model_name,
                 const std::string & key);
- 
+
  private:
   bool duplicate_key_check(const std::string & key);
   void serialize(const ParameterCollection & model,
@@ -111,6 +167,11 @@ class Pack {
                    const std::string & key);
   void deserialize_tensor(std::ifstream & f, const Dim & d,
                           std::vector<float> & params_order_lst);
+  void deserialize_parameter(std::ofstream & os, const ParameterStorage *p);
+  void deserialize_lookup_parameter(std::ofstream & os, const LookupParameterStorage *p);
+  long long seek_offset(const std::string & key);
+  long long seek_offset(const std::string & model_name,
+                        const std::string & key);
 
  private:
   std::string fn, fn_meta;
