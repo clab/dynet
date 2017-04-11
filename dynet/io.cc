@@ -11,14 +11,12 @@ void Pack::save(const ParameterCollection & model,
   if (duplicate_key_check(key_str) == false) {
     DYNET_RUNTIME_ERR("You couldn't save ParameterCollections with the same key " + key_str + " in file: " + fn);
   }
-  // write offset info into meta file
   std::ofstream os;
   if (is_append) {
     os.open(fn_meta, std::ofstream::app);
   } else {
     os.open(fn_meta);
   }
-  // write model into model file
   std::unordered_map<std::string, long long> offset_dict;
   os << key_str << ':' << offset;
   this->serialize(model, key, is_append, offset_dict);
@@ -43,7 +41,6 @@ void Pack::save(const Parameter & param, const std::string & key, bool is_append
   if (duplicate_key_check(key_str) == false) {
     DYNET_RUNTIME_ERR("You couldn't save Parameter with the same key " + key_str + " in file: " + fn);
   }
-
   std::ofstream os;
   if (is_append) {
     os.open(fn_meta, std::ofstream::app);
@@ -79,12 +76,6 @@ void Pack::populate(ParameterCollection & model, const std::string & key) {
   this->deserialize(model, key);
 }
 
-void Pack::populate(Parameter & param,
-                    const std::string & model_name,
-                    const std::string & key) {
-  this->deserialize(param, model_name, key);
-}
-
 void Pack::populate(ParameterCollection & model,
                     const std::vector<std::string> & filter_lst,
                     const std::string & key) {
@@ -93,6 +84,12 @@ void Pack::populate(ParameterCollection & model,
 
 void Pack::populate(Parameter & param, const std::string & key) {
   this->deserialize(param, key);
+}
+
+void Pack::populate(Parameter & param,
+                    const std::string & model_name,
+                    const std::string & key) {
+  this->deserialize(param, model_name, key);
 }
 
 void Pack::populate(LookupParameter & lookup_param, const std::string & key) {
@@ -127,25 +124,18 @@ void Pack::serialize(const ParameterCollection & model,
     os.open(fn);
   }
   os.seekp(this->offset);
-  os << '#' << std::endl; // identifier of beginning of the ParameterCollection
+  os << '#' << std::endl; // beginning identifier
   auto params = model.get_parameter_storages();
   for (auto & param : params) {
     os << "#Parameter#" << std::endl;
     offset_dict[param->name] = os.tellp();
-    os << param->name << std::endl;
-    os << param->dim << std::endl;
-    os << param->values << std::endl;
-    os << param->g << std::endl;
+    deserialize_parameter(os, param);
   }
   auto lookup_params = model.get_lookup_parameter_storages();
   for (auto & lookup_param: lookup_params) {
     os << "#LookupParameter#" << std::endl;
     offset_dict[lookup_param->name] = os.tellp();
-    os << lookup_param->name << std::endl;
-    os << lookup_param->all_dim << std::endl;
-    os << lookup_param->dim << std::endl;
-    os << lookup_param->all_values << std::endl;
-    os << lookup_param->all_grads << std::endl;
+    deserialize_lookup_parameter(os, lookup_param);
   }
   this->offset = os.tellp();
   os.close();
@@ -161,12 +151,9 @@ void Pack::serialize(const Parameter & param,
     os.open(fn);
   }
   os.seekp(this->offset);
-  os << '#' << std::endl; // identifier of beginning of the Parameter
+  os << '#' << std::endl; // beginning identifier
   os << "#Parameter#" << std::endl;
-  os << param.p->name << std::endl;
-  os << param.p->dim << std::endl;
-  os << param.p->values << std::endl;
-  os << param.p->g << std::endl;
+  deserialize_parameter(os, param.p);
   this->offset = os.tellp();
   os.close();
 }
@@ -183,11 +170,7 @@ void Pack::serialize(const LookupParameter & lookup_param,
   os.seekp(this->offset);
   os << '#' << std::endl;
   os << "#LookupParameter#" << std::endl;
-  os << lookup_param.p->name << std::endl;
-  os << lookup_param.p->all_dim << std::endl;
-  os << lookup_param.p->dim << std::endl;
-  os << lookup_param.p->all_values << std::endl;
-  os << lookup_param.p->all_grads << std::endl;
+  deserialize_lookup_parameter(os, lookup_param.p);
   this->offset = os.tellp();
   os.close();
 }
@@ -301,38 +284,22 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
 }
   
 void Pack::deserialize(Parameter & param, const std::string & key) {
-  std::ifstream meta_f(fn_meta);
   std::ifstream f(fn);
   std::string line;
-  long long local_offset = -1;
-  if (key.size() == 0) {
-    local_offset = 0;
-  } else {
-    while (std::getline(meta_f, line)) {
-      auto kv = dynet::str_split(line, ':');
-      if (kv[0] == key) {
-        local_offset = std::stoll(kv[1]);
-        break;
-      }
-    }
-  }
-  if (local_offset== -1) {
-    DYNET_RUNTIME_ERR("Load error: no such key: " + key);
-  }
-
-  // check identifier
-  f.seekg(local_offset);
+  f.seekg(this->seek_offset(key));
   std::getline(f, line);
   if (line != "#") {
     DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
   }
-  std::getline(f, line);
-  std::getline(f, line);
-  auto name = line;
+  std::getline(f, line); // #Parameter#
+  std::getline(f, line); auto name = line;
   Dim d;
   std::getline(f, line);
   std::istringstream iss(line);
   iss >> d;
+  if (param.get_storage().dim != d) {
+    DYNET_RUNTIME_ERR("Dimension is not consistent.");
+  }
   param.get_storage().name = name;
   std::vector<float> params_order_lst;
   deserialize_tensor(f, d, params_order_lst);
@@ -343,43 +310,23 @@ void Pack::deserialize(Parameter & param, const std::string & key) {
   TensorTools::SetElements(param.get_storage().g, params_order_lst);
   std::getline(f, line);
   f.close();
-  meta_f.close();
 }
 
 void Pack::deserialize(Parameter & param,
                        const std::string & model_name,
                        const std::string & key) {
-  std::ifstream meta_f(fn_meta);
   std::ifstream f(fn);
   std::string line;
-  long long local_offset = -1;
-  bool model_exist = false;
-  while (std::getline(meta_f, line)) {
-    auto tmp_str = dynet::str_split(line, '|');
-    auto kv = dynet::str_split(tmp_str.front(), ':');
-    if (kv[0] == model_name) {
-      model_exist = true;
-      for (size_t k = 1; k < tmp_str.size(); ++k) {
-        auto kkv = dynet::str_split(tmp_str[k], ':');
-        if (kkv[0] == key) {
-          local_offset = std::stoll(kkv[1]);
-          break;
-        }
-      }
-    }
-  }
-  if (model_exist == false) {
-    DYNET_RUNTIME_ERR("Load error: no such key:" + key + " under model:" +  model_name);
-  }
-
-  // check identifier
-  f.seekg(local_offset);
+  f.seekg(this->seek_offset(model_name, key));
   std::getline(f, line);
   auto name = line;
   Dim d;
   std::getline(f, line);
   std::istringstream iss(line);
   iss >> d;
+  if (param.get_storage().dim != d) {
+    DYNET_RUNTIME_ERR("Dimension is not consistent.");
+  }
   param.get_storage().name = name;
   std::vector<float> params_order_lst;
   deserialize_tensor(f, d, params_order_lst);
@@ -390,31 +337,12 @@ void Pack::deserialize(Parameter & param,
   TensorTools::SetElements(param.get_storage().g, params_order_lst);
   std::getline(f, line);
   f.close();
-  meta_f.close();
 }
 
 void Pack::deserialize(LookupParameter & lookup_param, const std::string & key) {
-  std::ifstream meta_f(fn_meta);
   std::ifstream f(fn);
   std::string line;
-  long long local_offset = -1;
-  if (key.size() == 0) {
-    local_offset = 0;
-  } else {
-    while (std::getline(meta_f, line)) {
-      auto kv = dynet::str_split(line, ':');
-      if (kv[0] == key) {
-        local_offset = std::stoll(kv[1]);
-        break;
-      }
-    }
-  }
-  if (local_offset== -1) {
-    DYNET_RUNTIME_ERR("Load error: no such key: " + key);
-  }
-
-  // check identifier
-  f.seekg(local_offset);
+  f.seekg(this->seek_offset(key));
   std::getline(f, line);
   if (line != "#") {
     DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
@@ -426,9 +354,11 @@ void Pack::deserialize(LookupParameter & lookup_param, const std::string & key) 
   std::getline(f, line);
   std::istringstream iss(line);
   iss >> all_dim;
-  
-  std::getline(f, line);
+  if (lookup_param.get_storage().all_dim != all_dim) {
+    DYNET_RUNTIME_ERR("Dimension is not consistent.");
+  }
 
+  std::getline(f, line);
   lookup_param.get_storage().name = name;
   std::vector<float> lookup_params_order_lst;
   deserialize_tensor(f, all_dim, lookup_params_order_lst);
@@ -439,44 +369,25 @@ void Pack::deserialize(LookupParameter & lookup_param, const std::string & key) 
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
                            lookup_params_order_lst);
   f.close();
-  meta_f.close();
 }
 
 void Pack::deserialize(LookupParameter & lookup_param,
                        const std::string & model_name,
                        const std::string & key) {
-  std::ifstream meta_f(fn_meta);
   std::ifstream f(fn);
   std::string line;
-  long long local_offset = -1;
-  bool model_exist = false;
-  while (std::getline(meta_f, line)) {
-    auto tmp_str = dynet::str_split(line, '|');
-    auto kv = dynet::str_split(tmp_str.front(), ':');
-    if (kv[0] == model_name) {
-      model_exist = true;
-      for (size_t k = 1; k < tmp_str.size(); ++k) {
-        auto kkv = dynet::str_split(tmp_str[k], ':');
-        if (kkv[0] == key) {
-          local_offset = std::stoll(kkv[1]);
-          break;
-        }
-      }
-    }
-  }
-  if (model_exist == false) {
-    DYNET_RUNTIME_ERR("Load error: no such key:" + key + " under model:" +  model_name);
-  }
-  f.seekg(local_offset);
+  f.seekg(this->seek_offset(model_name, key));
   std::getline(f, line);
   auto name = line;
   Dim all_dim;
   std::getline(f, line);
   std::istringstream iss(line);
   iss >> all_dim;
+  if (lookup_param.get_storage().all_dim != all_dim) {
+    DYNET_RUNTIME_ERR("Dimension is not consistent.");
+  }
   
   std::getline(f, line);
-
   lookup_param.get_storage().name = name;
   std::vector<float> lookup_params_order_lst;
   deserialize_tensor(f, all_dim, lookup_params_order_lst);
@@ -487,7 +398,6 @@ void Pack::deserialize(LookupParameter & lookup_param,
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
                            lookup_params_order_lst);
   f.close();
-  meta_f.close();
 }
 
 void Pack::deserialize_tensor(std::ifstream & f, const Dim & d, std::vector<float> & params_order_lst) {
@@ -512,6 +422,65 @@ void Pack::deserialize_tensor(std::ifstream & f, const Dim & d, std::vector<floa
       params_order_lst[indx] = params_lst[k];
     }
   }
+}
+
+void Pack::deserialize_parameter(std::ofstream & os, const ParameterStorage *p) {
+  os << p->name << '\n' << p->dim << '\n' << p->values << '\n' << p->g << '\n';
+}
+
+void Pack::deserialize_lookup_parameter(std::ofstream & os,
+                                        const LookupParameterStorage *p) {
+  os << p->name << '\n' << p->all_dim << '\n' << p->dim << '\n';
+  os << p->all_values << '\n' << p->all_grads << '\n';
+}
+
+long long Pack::seek_offset(const std::string & key) {
+  std::ifstream meta_f(fn_meta);
+  std::string line;
+  long long local_offset = -1;
+  if (key.size() == 0) {
+    local_offset = 0;
+  } else {
+    while (std::getline(meta_f, line)) {
+      auto kv = dynet::str_split(line, ':');
+      if (kv[0] == key) {
+        local_offset = std::stoll(kv[1]);
+        break;
+      }
+    }
+  }
+  if (local_offset== -1) {
+    DYNET_RUNTIME_ERR("Load error: no such key: " + key);
+  }
+  meta_f.close();
+  return local_offset;
+}
+
+long long Pack::seek_offset(const std::string & model_name,
+                            const std::string & key) {
+  std::ifstream meta_f(fn_meta);
+  std::string line;
+  long long local_offset = -1;
+  bool model_exist = false;
+  while (std::getline(meta_f, line)) {
+    auto tmp_str = dynet::str_split(line, '|');
+    auto kv = dynet::str_split(tmp_str.front(), ':');
+    if (kv[0] == model_name) {
+      model_exist = true;
+      for (size_t k = 1; k < tmp_str.size(); ++k) {
+        auto kkv = dynet::str_split(tmp_str[k], ':');
+        if (kkv[0] == key) {
+          local_offset = std::stoll(kkv[1]);
+          break;
+        }
+      }
+    }
+  }
+  if (model_exist == false) {
+    DYNET_RUNTIME_ERR("Load error: no such key:" + key + " under model:" +  model_name);
+  }
+  meta_f.close();
+  return local_offset;
 }
 
 } // namespace dynet
