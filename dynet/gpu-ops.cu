@@ -124,7 +124,7 @@ __global__ void PadInputCustomKernelNCWH(float* output, const float* input,
   int idn = id / (W*H*C);
   int idc = (id - idn*W*H*C) / (W*H);
   int idw = (id - idn*W*H*C - idc*W*H) / W;
-  int idh = id - idn*W*H*C - idc*W*H - idh*H;
+  int idh = id - idn*W*H*C - idc*W*H - idw*H;
   int out_h = H + pad_bottom;
   int out_w = W + pad_right;
   if (id < N*C*H*W) {
@@ -138,6 +138,5 @@ void pad_input(float* output, const float* input, int N, int C, int H, int W, in
   auto tb = SizeToBlockThreadPair(N * C * H * W);
   PadInputCustomKernelNCWH<<<tb.first, tb.second>>>(output, input, N, C, H, W, pad_right, pad_bottom);
 }
-
 } // namespace gpu
 } // namespace dynet
