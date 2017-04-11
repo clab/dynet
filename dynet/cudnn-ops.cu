@@ -5,7 +5,6 @@
 
 #include "dynet/dynet.h"
 #include "dynet/cudnn-ops.h"
-#include "dynet/gpu-ops.h"
 
 namespace dynet {
 
@@ -78,15 +77,14 @@ void CudnnConvOp::forward_impl(const Device_GPU & dev, const std::vector<const T
       unsigned new_XH = XH + h_odd;
       unsigned new_XW = XW + w_odd;
       void* temp = mempool_->allocate(sizeof(float) * new_XW * new_XH * XC * XN);
-      padded_x = Tensor(Dim({new_XH, new_XW, XC}, XN), static_cast<float*>(temp), xs[0]->device, DeviceMempool::FXS);
-      //Eigen::array<std::pair<int, int>, 4> paddings;
-      //paddings[0] = std::make_pair(0, static_cast<int>(h_odd));
-      //paddings[1] = std::make_pair(0, static_cast<int>(w_odd));
-      //paddings[2] = std::make_pair(0, 0);
-      //paddings[3] = std::make_pair(0, 0);
-      //TODO this function cannot be linked
-      //padded_x.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().pad(paddings);
-      dynet::gpu::pad_input(padded_x.v, xs[0]->v, xs[0]->d.bd, xs[0]->d[2], xs[0]->d[0], xs[0]->d[1], static_cast<int>(w_odd), static_cast<int>(h_odd));
+      padded_x = Tensor(Dim({ new_XH, new_XW, XC }, XN), static_cast<float*>(temp), xs[0]->device, DeviceMempool::FXS);
+      Eigen::array<std::pair<int, int>, 4> paddings;
+      paddings[0] = std::make_pair(0, static_cast<int>(h_odd));
+      paddings[1] = std::make_pair(0, static_cast<int>(w_odd));
+      paddings[2] = std::make_pair(0, 0);
+      paddings[3] = std::make_pair(0, 0);
+      padded_x.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().pad(paddings);
+      //dynet::gpu::pad_input(padded_x.v, xs[0]->v, xs[0]->d.bd, xs[0]->d[2], xs[0]->d[0], xs[0]->d[1], static_cast<int>(w_odd), static_cast<int>(h_odd));
       XH = new_XH;
       XW = new_XW;
       x = &padded_x;
@@ -203,11 +201,10 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
                   &beta, x_desc_, dx_ptr));
       Tensor padded_dx = Tensor(Dim({XH, XW, XC}, XN), static_cast<float*>(dx_ptr), xs[0]->device, DeviceMempool::FXS);
         
-      //Eigen::array<int, 4> offsets = {0, 0, 0, 0};
-      //Eigen::array<int, 4> extents = {static_cast<int>(XH), static_cast<int>(XW), static_cast<int>(XC), static_cast<int>(XN)};
-      //TODO this functio cannot be linked
-      //dxi->tb<3>().device(*dev.edevice) = padded_dx.tb<3>().slice(offsets, extents);
-      dynet::gpu::pad_input(dxi->v, padded_dx.v, padded_dx.d.bd, padded_dx.d[2], padded_dx.d[0], padded_dx.d[1], -static_cast<int>(w_odd), -static_cast<int>(h_odd));
+      Eigen::array<int, 4> offsets = {0, 0, 0, 0};
+      Eigen::array<int, 4> extents = {static_cast<int>(XH), static_cast<int>(XW), static_cast<int>(XC), static_cast<int>(XN)};
+      dxi->tb<3>().device(*dev.edevice) = padded_dx.tb<3>().slice(offsets, extents);
+      //dynet::gpu::pad_input(dxi->v, padded_dx.v, padded_dx.d.bd, padded_dx.d[2], padded_dx.d[0], padded_dx.d[1], -static_cast<int>(w_odd), -static_cast<int>(h_odd));
     } else {
       CUDNN_CHECK(cudnnConvolutionBackwardData(dev.cudnnHandle,
                   &alpha, filter_desc_, filter->v,
