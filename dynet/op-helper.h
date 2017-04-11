@@ -59,6 +59,7 @@ struct NodeMemPool {
   void* mem_;
 };
 
+/*
 // template?
 struct NCWHToNWHC {
   void operator()(const Tensor* in, Tensor& out) {
@@ -131,7 +132,7 @@ struct WHCNToNCWH {
 #endif
   }
 };
-
+*/
 } // namespace dynet
 
 #endif
