@@ -84,7 +84,6 @@ void CudnnConvOp::forward_impl(const Device_GPU & dev, const std::vector<const T
       paddings[2] = std::make_pair(0, 0);
       paddings[3] = std::make_pair(0, 0);
       padded_x.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().pad(paddings);
-      //dynet::gpu::pad_input(padded_x.v, xs[0]->v, xs[0]->d.bd, xs[0]->d[2], xs[0]->d[0], xs[0]->d[1], static_cast<int>(w_odd), static_cast<int>(h_odd));
       XH = new_XH;
       XW = new_XW;
       x = &padded_x;
@@ -111,6 +110,8 @@ void CudnnConvOp::forward_impl(const Device_GPU & dev, const std::vector<const T
 
   //TODO(Hao Zhang): there should be an autotune function to determine
   // the best convolution algorithm to use.
+  // However, as DyNet changes CG for every sample (or every iteration),
+  // This autotune function seems to be unnecessary.
   CUDNN_CHECK(cudnnGetConvolutionForwardAlgorithm(dev.cudnnHandle,
               x_desc_, filter_desc_, conv_desc_, y_desc_,
               CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, workspace_size_limit_bytes,
@@ -204,7 +205,6 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
       Eigen::array<int, 4> offsets = {0, 0, 0, 0};
       Eigen::array<int, 4> extents = {static_cast<int>(XH), static_cast<int>(XW), static_cast<int>(XC), static_cast<int>(XN)};
       dxi->tb<3>().device(*dev.edevice) = padded_dx.tb<3>().slice(offsets, extents);
-      //dynet::gpu::pad_input(dxi->v, padded_dx.v, padded_dx.d.bd, padded_dx.d[2], padded_dx.d[0], padded_dx.d[1], -static_cast<int>(w_odd), -static_cast<int>(h_odd));
     } else {
       CUDNN_CHECK(cudnnConvolutionBackwardData(dev.cudnnHandle,
                   &alpha, filter_desc_, filter->v,
