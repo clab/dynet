@@ -307,6 +307,30 @@ void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
   }
 }
 
+std::vector<ParameterStorageBase*> ParameterCollection::get_parameter_storages_base() const {
+  std::vector<ParameterStorageBase*> all_params;
+  ParameterCollection *t = const_cast<ParameterCollection*>(this);
+  while (t->parent != nullptr) { t = t->parent; }
+  auto all_ps = t->get_storage().all_params;
+  auto ps = t->get_storage().params;
+  auto lps = t->get_storage().lookup_params;
+  size_t i = 0, j = 0;
+  for (size_t k = 0; k < all_ps.size(); ++k) {
+    if (all_ps[k] == ps[i]) {
+      if (ps[i]->name.find(name) == 0) {
+        all_params.push_back(all_ps[k]);
+      }
+      ++i;
+    } else {
+      if (lps[j]->name.find(name) == 0) {
+        all_params.push_back(all_ps[k]);
+      }
+      ++ j;
+    }
+  }
+  return all_params;
+}
+
 ParameterStorage* ParameterCollection::get_parameter_storage(const std::string & pname) {
   if (pname.find(name) == 0) {
     ParameterCollection *t = this;

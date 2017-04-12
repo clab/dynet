@@ -144,14 +144,48 @@ class Pack {
                 const std::string & model_name,
                 const std::string & key);
   
+  /**
+   * @brief Load parameter into model with key
+   * 
+   * @param model: input/output parameter, the model to load parameter
+   * @param key: the key for loading the parameter
+   * @return: the loaded parameter
+   *
+   */
   Parameter load_param(ParameterCollection & model, const std::string & key);
 
+  /**
+   * @brief Load parameter into model with model_name and parameter key
+   * 
+   * @param model: input/output parameter, the model to load parameter
+   * @param model_name: model_name for holding the wanted parameter
+   * @param key: the key for loading the parameter
+   * @return: the loaded parameter
+   *
+   */
   Parameter load_param(ParameterCollection & model,
                        const std::string & model_name,
                        const std::string & key);
 
+  /**
+   * @brief Load lookup parameter into model with key
+   * 
+   * @param model: input/output parameter, the model to load the lookup parameter
+   * @param key: the key for loading the lookup parameter
+   * @return: the loaded lookup parameter
+   *
+   */
   LookupParameter load_lookup_param(ParameterCollection & model, const std::string & key);
 
+  /**
+   * @brief Load lookup parameter into model with model_name and lookup parameter key
+   * 
+   * @param model: input/output parameter, the model to load the lookup parameter
+   * @param model_name: model_name for holding the wanted lookup parameter
+   * @param key: the key for loading the lookup parameter
+   * @return: the loaded lookup parameter
+   *
+   */
   LookupParameter load_lookup_param(ParameterCollection & model,
                                     const std::string & model_name,
                                     const std::string & key);
@@ -190,8 +224,8 @@ class Pack {
                                            const std::string & key);
   void deserialize_tensor(std::ifstream & f, const Dim & d,
                           std::vector<float> & params_order_lst);
-  void deserialize_parameter(std::ofstream & os, const ParameterStorage *p);
-  void deserialize_lookup_parameter(std::ofstream & os, const LookupParameterStorage *p);
+  void serialize_parameter(std::ofstream & os, const ParameterStorage *p);
+  void serialize_lookup_parameter(std::ofstream & os, const LookupParameterStorage *p);
   long long seek_offset(const std::string & key);
   long long seek_offset(const std::string & model_name,
                         const std::string & key);

@@ -230,7 +230,6 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
     DYNET_CHECK_EQUAL(m_in, m);
     packer.populate(lookup_m_in, "model", "/__1");
     DYNET_CHECK_EQUAL(lookup_m_in, lookup_m);
-
     ParameterCollection model_in2;
     Parameter m_in2 = packer.load_param(model_in2, "model", "/__0");
     DYNET_CHECK_EQUAL(m_in2, m);
