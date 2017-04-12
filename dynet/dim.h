@@ -194,6 +194,21 @@ struct Dim {
     }
   }
   /**
+   * \brief Insert a dimension
+   * \param i the index before which to insert the new dimension
+   * \param n the size of the new dimension
+   */
+  inline void insert_dim(unsigned int i, unsigned int n) {
+    DYNET_ARG_CHECK(i <= nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d);
+    if (nd == 1) {
+      d[0] = 1;
+    } else {
+      for (; i + 1 < nd; ++i)
+        d[i] = d[i + 1];
+      --nd;
+    }
+  }
+  /**
   * \brief Transpose a vector or a matrix
   * \details This raises an invalid_argument exception on tensors with more than 2 dimensions
   * \return The transposed Dim structure
