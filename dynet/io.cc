@@ -149,17 +149,22 @@ void Pack::serialize(const ParameterCollection & model,
   }
   os.seekp(this->offset);
   os << '#' << std::endl; // beginning identifier
+  auto all_params = model.get_parameter_storages_base();
   auto params = model.get_parameter_storages();
-  for (auto & param : params) {
-    os << "#Parameter#" << std::endl;
-    offset_dict[param->name] = os.tellp();
-    deserialize_parameter(os, param);
-  }
   auto lookup_params = model.get_lookup_parameter_storages();
-  for (auto & lookup_param: lookup_params) {
-    os << "#LookupParameter#" << std::endl;
-    offset_dict[lookup_param->name] = os.tellp();
-    deserialize_lookup_parameter(os, lookup_param);
+  size_t i = 0, j = 0;
+  for (size_t k = 0; k < all_params.size();  ++k) {
+    if (all_params[k] == params[i]) {
+      os << "#Parameter#" << std::endl;
+      offset_dict[params[i]->name] = os.tellp();
+      serialize_parameter(os, params[i]);
+      ++i;
+    } else {
+      os << "#LookupParameter#" << std::endl;
+      offset_dict[lookup_params[j]->name] = os.tellp();
+      serialize_lookup_parameter(os, lookup_params[j]);
+      ++j;
+    }
   }
   this->offset = os.tellp();
   os.close();
@@ -177,7 +182,7 @@ void Pack::serialize(const Parameter & param,
   os.seekp(this->offset);
   os << '#' << std::endl; // beginning identifier
   os << "#Parameter#" << std::endl;
-  deserialize_parameter(os, param.p);
+  serialize_parameter(os, param.p);
   this->offset = os.tellp();
   os.close();
 }
@@ -194,7 +199,7 @@ void Pack::serialize(const LookupParameter & lookup_param,
   os.seekp(this->offset);
   os << '#' << std::endl;
   os << "#LookupParameter#" << std::endl;
-  deserialize_lookup_parameter(os, lookup_param.p);
+  serialize_lookup_parameter(os, lookup_param.p);
   this->offset = os.tellp();
   os.close();
 }
@@ -223,7 +228,6 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
     DYNET_RUNTIME_ERR("Load error: no such key: " + key);
   }
 
-  // check identifier
   f.seekg(local_offset);
   std::getline(f, line);
   if (line != "#") {
@@ -233,70 +237,69 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
   std::string ns = model.get_namespace();
   // read parameters
   std::getline(f, line);
-  while (line == "#Parameter#") {
-    std::getline(f, line);
-    if (dynet::startswith(line, ns) == false) {
-      DYNET_RUNTIME_ERR("Inconsistent namespace error: " + line + " | " + ns);
+  while (line == "#Parameter#" || line == "#LookupParameter#") {
+    if (line == "#Parameter#") {
+      std::getline(f, line);
+      if (dynet::startswith(line, ns) == false) {
+        DYNET_RUNTIME_ERR("Inconsistent namespace error: " + line + " | " + ns);
+      }
+      auto name = line;
+
+      Dim d;
+      std::getline(f, line);
+      std::istringstream iss(line);
+      iss >> d;
+
+      // add param into input model
+      Parameter param = model.add_parameters(d);
+      param.get_storage().name = name;
+
+      // read param.get_storage().values
+      std::vector<float> params_order_lst;
+      deserialize_tensor(f, d, params_order_lst);
+      TensorTools::SetElements(param.get_storage().values, params_order_lst);
+
+      // read param.get_storage().g
+      params_order_lst.resize(0);
+      deserialize_tensor(f, d, params_order_lst);
+      TensorTools::SetElements(param.get_storage().g, params_order_lst);
+      std::getline(f, line);
+    } else {
+      std::getline(f, line);
+      if (dynet::startswith(line, ns) == false) {
+        DYNET_RUNTIME_ERR("Inconsistent namespace error: " + line + " | " + ns);
+      }
+      auto name = line;
+
+      Dim all_dim;
+      std::getline(f, line);
+      std::istringstream iss(line);
+      iss >> all_dim;
+      unsigned int N = all_dim.d[all_dim.nd - 1];
+
+      Dim d;
+      std::getline(f, line);
+      std::istringstream iss2(line);
+      iss2 >> d;
+
+      // add lookup_param into input model
+      LookupParameter lookup_param = model.add_lookup_parameters(N, d);
+      lookup_param.get_storage().name = name;
+
+      // read lookup_param.get_storage().all_values
+      std::vector<float> lookup_params_order_lst;
+      deserialize_tensor(f, all_dim, lookup_params_order_lst);
+      TensorTools::SetElements(lookup_param.get_storage().all_values,
+                               lookup_params_order_lst);
+
+      // read lookup_param.get_storage().all_grads
+      lookup_params_order_lst.resize(0);
+      deserialize_tensor(f, all_dim, lookup_params_order_lst);
+      TensorTools::SetElements(lookup_param.get_storage().all_grads,
+                               lookup_params_order_lst);
+      std::getline(f, line);
     }
-    auto name = line;
-
-    Dim d;
-    std::getline(f, line);
-    std::istringstream iss(line);
-    iss >> d;
-
-    // add param into input model
-    Parameter param = model.add_parameters(d);
-    param.get_storage().name = name;
-
-    // read param.get_storage().values
-    std::vector<float> params_order_lst;
-    deserialize_tensor(f, d, params_order_lst);
-    TensorTools::SetElements(param.get_storage().values, params_order_lst);
-
-    // read param.get_storage().g
-    params_order_lst.resize(0);
-    deserialize_tensor(f, d, params_order_lst);
-    TensorTools::SetElements(param.get_storage().g, params_order_lst);
-    std::getline(f, line);
-  } // while Parameter
-
-  // read lookup parameters
-  while (line == "#LookupParameter#") {
-    std::getline(f, line);
-    if (dynet::startswith(line, ns) == false) {
-      DYNET_RUNTIME_ERR("Inconsistent namespace error: " + line + " | " + ns);
-    }
-    auto name = line;
-
-    Dim all_dim;
-    std::getline(f, line);
-    std::istringstream iss(line);
-    iss >> all_dim;
-    unsigned int N = all_dim.d[all_dim.nd - 1];
-
-    Dim d;
-    std::getline(f, line);
-    std::istringstream iss2(line);
-    iss2 >> d;
-
-    // add lookup_param into input model
-    LookupParameter lookup_param = model.add_lookup_parameters(N, d);
-    lookup_param.get_storage().name = name;
-
-    // read lookup_param.get_storage().all_values
-    std::vector<float> lookup_params_order_lst;
-    deserialize_tensor(f, all_dim, lookup_params_order_lst);
-    TensorTools::SetElements(lookup_param.get_storage().all_values,
-                             lookup_params_order_lst);
-
-    // read lookup_param.get_storage().all_grads
-    lookup_params_order_lst.resize(0);
-    deserialize_tensor(f, all_dim, lookup_params_order_lst);
-    TensorTools::SetElements(lookup_param.get_storage().all_grads,
-                             lookup_params_order_lst);
-    std::getline(f, line);
-  } // while LookupParameter
+  } // while
 
   if (line.size()) {
     if (line != "#") {
@@ -581,11 +584,11 @@ void Pack::deserialize_tensor(std::ifstream & f, const Dim & d, std::vector<floa
   }
 }
 
-void Pack::deserialize_parameter(std::ofstream & os, const ParameterStorage *p) {
+void Pack::serialize_parameter(std::ofstream & os, const ParameterStorage *p) {
   os << p->name << '\n' << p->dim << '\n' << p->values << '\n' << p->g << '\n';
 }
 
-void Pack::deserialize_lookup_parameter(std::ofstream & os,
+void Pack::serialize_lookup_parameter(std::ofstream & os,
                                         const LookupParameterStorage *p) {
   os << p->name << '\n' << p->all_dim << '\n' << p->dim << '\n';
   os << p->all_values << '\n' << p->all_grads << '\n';
