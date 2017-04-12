@@ -259,6 +259,46 @@ void TensorTools::RandomizeOrthonormal(Tensor& val, real scale) {
 #endif
 }
 
+IndexTensor TensorTools::ArgMax(const Tensor& v, unsigned dim, unsigned num) {
+  Dim ids_dim = v.d; ids_dim.d[dim] = num;
+  IndexTensor ids(ids_dim, nullptr, v.device, v.mem_pool);
+  AlignedMemoryPool* pool = v.device->pools[(int)v.mem_pool];
+  ids.v = static_cast<Eigen::DenseIndex*>(pool->allocate(ids_dim.size() * sizeof(Eigen::DenseIndex)));
+#if HAVE_CUDA
+  if (val.device->type == DeviceType::GPU) {
+    DYNET_RUNTIME_ERR("TODO: ArgMax not implemented on GPU yet.");
+  } else {
+#endif
+    ids.tb<3>() = v.tb<4>().argmax(dim);
+#if HAVE_CUDA
+  }
+#endif
+  return ids;
+}
+
+IndexTensor TensorTools::CategoricalSampleLogProb(const Tensor& v, unsigned dim, unsigned num) {
+  Dim ids_dim = v.d; ids_dim.d[dim] = num;
+  IndexTensor ids(ids_dim, nullptr, v.device, v.mem_pool);
+  AlignedMemoryPool* pool = v.device->pools[(int)v.mem_pool];
+  ids.v = static_cast<Eigen::DenseIndex*>(pool->allocate(ids_dim.size() * sizeof(Eigen::DenseIndex)));
+  size_t used = pool->used();
+  Dim copy_dim = v.d; ids_dim.d[dim] = num;
+  Tensor copy(v.d, nullptr, v.device, v.mem_pool);
+  copy.v = static_cast<float*>(pool->allocate(v.d.size() * sizeof(float)));
+  TensorTools::RandomizeUniform(copy);
+#if HAVE_CUDA
+  if (val.device->type == DeviceType::GPU) {
+    DYNET_RUNTIME_ERR("TODO: CategoricalSample not implemented on GPU yet.");
+  } else {
+#endif
+    ids.tb<3>() = (v.tb<4>() - (-copy.tb<4>().log()).log()).argmax(dim);
+#if HAVE_CUDA
+  }
+#endif
+  pool->set_used(used);
+  return ids;
+}
+
 template<class Archive>
 void Tensor::save(Archive& ar, const unsigned int ver) const {
   ar & d;
