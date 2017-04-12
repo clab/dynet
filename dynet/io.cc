@@ -82,7 +82,8 @@ void Pack::populate(ParameterCollection & model,
   DYNET_RUNTIME_ERR("This interface is not implemented yet for Pack object.");
 }
 
-void Pack::populate(Parameter & param, const std::string & key) {
+void Pack::populate(Parameter & param,
+                    const std::string & key) {
   this->deserialize(param, key);
 }
 
@@ -92,7 +93,8 @@ void Pack::populate(Parameter & param,
   this->deserialize(param, model_name, key);
 }
 
-void Pack::populate(LookupParameter & lookup_param, const std::string & key) {
+void Pack::populate(LookupParameter & lookup_param,
+                    const std::string & key) {
   this->deserialize(lookup_param, key);
 }
 
@@ -100,6 +102,28 @@ void Pack::populate(LookupParameter & lookup_param,
                     const std::string & model_name,
                     const std::string & key) {
   this->deserialize(lookup_param, model_name, key);
+}
+
+Parameter Pack::load_param(ParameterCollection & model,
+                           const std::string & key) {
+  return this->deserialize_param(model, key);
+}
+
+Parameter Pack::load_param(ParameterCollection & model,
+                           const std::string & model_name,
+                           const std::string & key) {
+  return this->deserialize_param(model, model_name, key);
+}
+
+LookupParameter Pack::load_lookup_param(ParameterCollection & model,
+                                        const std::string & key) {
+  return this->deserialize_lookup_param(model, key);
+}
+
+LookupParameter Pack::load_lookup_param(ParameterCollection & model,
+                                        const std::string & model_name,
+                                        const std::string & key) {
+  return this->deserialize_lookup_param(model, model_name, key);
 }
 
 bool Pack::duplicate_key_check(const std::string & key) {
@@ -339,7 +363,8 @@ void Pack::deserialize(Parameter & param,
   f.close();
 }
 
-void Pack::deserialize(LookupParameter & lookup_param, const std::string & key) {
+void Pack::deserialize(LookupParameter & lookup_param,
+                       const std::string & key) {
   std::ifstream f(fn);
   std::string line;
   f.seekg(this->seek_offset(key));
@@ -354,11 +379,12 @@ void Pack::deserialize(LookupParameter & lookup_param, const std::string & key) 
   std::getline(f, line);
   std::istringstream iss(line);
   iss >> all_dim;
+  
+  std::getline(f, line);
   if (lookup_param.get_storage().all_dim != all_dim) {
     DYNET_RUNTIME_ERR("Dimension is not consistent.");
   }
 
-  std::getline(f, line);
   lookup_param.get_storage().name = name;
   std::vector<float> lookup_params_order_lst;
   deserialize_tensor(f, all_dim, lookup_params_order_lst);
@@ -398,6 +424,137 @@ void Pack::deserialize(LookupParameter & lookup_param,
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
                            lookup_params_order_lst);
   f.close();
+}
+
+Parameter Pack::deserialize_param(ParameterCollection & model,
+                                  const std::string & key) {
+  std::ifstream f(fn);
+  std::string line;
+  f.seekg(this->seek_offset(key));
+  std::getline(f, line);
+  if (line != "#") {
+    DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
+  }
+  std::getline(f, line); // #Parameter#
+  std::getline(f, line); auto name = line;
+  Dim d;
+  std::getline(f, line);
+  std::istringstream iss(line);
+  iss >> d;
+  Parameter param = model.add_parameters(d);
+  param.get_storage().name = name;
+  std::vector<float> params_order_lst;
+  deserialize_tensor(f, d, params_order_lst);
+  TensorTools::SetElements(param.get_storage().values, params_order_lst);
+
+  params_order_lst.resize(0);
+  deserialize_tensor(f, d, params_order_lst);
+  TensorTools::SetElements(param.get_storage().g, params_order_lst);
+  std::getline(f, line);
+  f.close();
+  return param;
+}
+
+Parameter Pack::deserialize_param(ParameterCollection & model,
+                            const std::string & model_name,
+                            const std::string & key) {
+  std::ifstream f(fn);
+  std::string line;
+  f.seekg(this->seek_offset(model_name, key));
+  std::getline(f, line);
+  auto name = line;
+  Dim d;
+  std::getline(f, line);
+  std::istringstream iss(line);
+  iss >> d;
+  
+  Parameter param = model.add_parameters(d);
+  param.get_storage().name = name;
+  std::vector<float> params_order_lst;
+  deserialize_tensor(f, d, params_order_lst);
+  TensorTools::SetElements(param.get_storage().values, params_order_lst);
+
+  params_order_lst.resize(0);
+  deserialize_tensor(f, d, params_order_lst);
+  TensorTools::SetElements(param.get_storage().g, params_order_lst);
+  std::getline(f, line);
+  f.close();
+  return param;
+}
+
+LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
+                                         const std::string & model_name,
+                                         const std::string & key) {
+
+  std::ifstream f(fn);
+  std::string line;
+  f.seekg(this->seek_offset(model_name, key));
+  std::getline(f, line);
+  auto name = line;
+  Dim all_dim;
+  std::getline(f, line);
+  std::istringstream iss(line);
+  iss >> all_dim;
+  
+  unsigned int N = all_dim.d[all_dim.nd - 1];
+  Dim d;
+  std::getline(f, line);
+  std::istringstream iss2(line);
+  iss2 >> d;
+  
+  LookupParameter lookup_param = model.add_lookup_parameters(N, d);
+  lookup_param.get_storage().name = name;
+  std::vector<float> lookup_params_order_lst;
+  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+  TensorTools::SetElements(lookup_param.get_storage().all_values,
+                           lookup_params_order_lst);
+  lookup_params_order_lst.resize(0);
+  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+  TensorTools::SetElements(lookup_param.get_storage().all_grads,
+                           lookup_params_order_lst);
+  f.close();
+  return lookup_param;
+}
+
+LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
+                                               const std::string & key) {
+  std::ifstream f(fn);
+  std::string line;
+  f.seekg(this->seek_offset(key));
+  std::getline(f, line);
+  if (line != "#") {
+    DYNET_RUNTIME_ERR("Invalid model file format. Check this line: " + line);
+  }
+  std::getline(f, line);
+  std::getline(f, line);
+  auto name = line;
+  Dim all_dim;
+  std::getline(f, line);
+  std::istringstream iss(line);
+  iss >> all_dim;
+  
+  unsigned int N = all_dim.d[all_dim.nd - 1];
+  Dim d;
+  std::getline(f, line);
+  std::istringstream iss2(line);
+  iss2 >> d;
+  LookupParameter lookup_param = model.add_lookup_parameters(N, d);
+
+  if (lookup_param.get_storage().all_dim != all_dim) {
+    DYNET_RUNTIME_ERR("Dimension is not consistent.");
+  }
+
+  lookup_param.get_storage().name = name;
+  std::vector<float> lookup_params_order_lst;
+  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+  TensorTools::SetElements(lookup_param.get_storage().all_values,
+                           lookup_params_order_lst);
+  lookup_params_order_lst.resize(0);
+  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+  TensorTools::SetElements(lookup_param.get_storage().all_grads,
+                           lookup_params_order_lst);
+  f.close();
+  return lookup_param;
 }
 
 void Pack::deserialize_tensor(std::ifstream & f, const Dim & d, std::vector<float> & params_order_lst) {

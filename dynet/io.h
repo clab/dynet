@@ -143,6 +143,18 @@ class Pack {
   void populate(LookupParameter & lookup_param,
                 const std::string & model_name,
                 const std::string & key);
+  
+  Parameter load_param(ParameterCollection & model, const std::string & key);
+
+  Parameter load_param(ParameterCollection & model,
+                       const std::string & model_name,
+                       const std::string & key);
+
+  LookupParameter load_lookup_param(ParameterCollection & model, const std::string & key);
+
+  LookupParameter load_lookup_param(ParameterCollection & model,
+                                    const std::string & model_name,
+                                    const std::string & key);
 
  private:
   bool duplicate_key_check(const std::string & key);
@@ -161,10 +173,21 @@ class Pack {
   void deserialize(Parameter & param,
                    const std::string & model_name,
                    const std::string & key);
-  void deserialize(LookupParameter & lookup_param, const std::string & key);
+  void deserialize(LookupParameter & lookup_param,
+                   const std::string & key);
   void deserialize(LookupParameter & lookup_param,
                    const std::string & model_name,
                    const std::string & key);
+  Parameter deserialize_param(ParameterCollection & model,
+                              const std::string & key);
+  Parameter deserialize_param(ParameterCollection & model,
+                              const std::string & model_name,
+                              const std::string & key);
+  LookupParameter deserialize_lookup_param(ParameterCollection & model,
+                                           const std::string & key);
+  LookupParameter deserialize_lookup_param(ParameterCollection & model,
+                                           const std::string & model_name,
+                                           const std::string & key);
   void deserialize_tensor(std::ifstream & f, const Dim & d,
                           std::vector<float> & params_order_lst);
   void deserialize_parameter(std::ofstream & os, const ParameterStorage *p);
