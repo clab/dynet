@@ -796,6 +796,7 @@ BOOST_AUTO_TEST_CASE( possion_loss_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+/*
 // Expression conv1d_narrow(const Expression& x, const Expression& f);
 BOOST_AUTO_TEST_CASE( conv1d_narrow_gradient ) {
   dynet::ComputationGraph cg;
@@ -814,6 +815,7 @@ BOOST_AUTO_TEST_CASE( conv1d_wide_gradient ) {
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
+*/
 
 // Expression filter1d_narrow(const Expression& x, const Expression& f);
 BOOST_AUTO_TEST_CASE( filter1d_narrow_gradient ) {
@@ -906,7 +908,7 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
   vector<unsigned> stride = {4, 4}; bool is_valid = false;
   Expression y = conv2d(x, kernel, stride, is_valid);
   Expression z = sum_batches(sum_elems(y));
-  BOOST_CHECK(check_grad(mod, z, 0));
+  BOOST_CHECK(check_grad(mod, z, 2));
 }
 
 // TODO: These are all unimplemented
