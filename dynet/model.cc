@@ -316,7 +316,7 @@ std::vector<ParameterStorageBase*> ParameterCollection::get_parameter_storages_b
   auto lps = t->get_storage().lookup_params;
   size_t i = 0, j = 0;
   for (size_t k = 0; k < all_ps.size(); ++k) {
-    if (all_ps[k] == ps[i]) {
+    if (i < ps.size() && all_ps[k] == ps[i]) {
       if (ps[i]->name.find(name) == 0) {
         all_params.push_back(all_ps[k]);
       }
