@@ -18,6 +18,7 @@ struct AverageColumns : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+/* Deprecated
 // y = x_1 *conv x_2
 // x_1 \in R^{d x s} (input)
 // x_2 \in R^{d x m} (filter)
@@ -33,6 +34,7 @@ struct Conv1DWide : public Node {
   explicit Conv1DWide(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
+*/
 
 // y = x_1 *filter x_2
 // x_1 \in R^{d x s} (input)

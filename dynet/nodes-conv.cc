@@ -49,6 +49,7 @@ Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
   return Dim({orows, xs[0].cols()});
 }
 
+/* Deprecated
 string Conv1DNarrow::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "conv1d_narrow(" << arg_names[0] << ", f=" << arg_names[1] << ')';
@@ -89,6 +90,7 @@ Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
   }
   return Dim({xs[0].rows(), ocols});
 }
+*/
 
 string Filter1DNarrow::as_string(const vector<string>& arg_names) const {
   ostringstream os;
@@ -177,6 +179,7 @@ void AverageColumns::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(AverageColumns)
 
+/* Deprecated
 template<class MyDevice>
 void Conv1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned ycols = dim.cols();
@@ -245,7 +248,7 @@ void Conv1DWide::backward_dev_impl(const MyDevice & dev,
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Conv1DWide)
-
+*/
 
 template<class MyDevice>
 void Filter1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
