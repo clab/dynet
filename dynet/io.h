@@ -229,8 +229,6 @@ class Pack {
   LookupParameter deserialize_lookup_param(ParameterCollection & model,
                                            const std::string & model_name,
                                            const std::string & key);
-  void deserialize_tensor(std::ifstream & f, const Dim & d,
-                          std::vector<float> & params_order_lst);
   void serialize_parameter(std::ofstream & os, const ParameterStorage *p);
   void serialize_lookup_parameter(std::ofstream & os, const LookupParameterStorage *p);
   long long seek_offset(const std::string & key);

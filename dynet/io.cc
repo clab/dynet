@@ -248,8 +248,7 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
 
       Dim d;
       std::getline(f, line);
-      std::istringstream iss(line);
-      iss >> d;
+      std::istringstream iss(line); iss >> d;
 
       // add param into input model
       Parameter param = model.add_parameters(d);
@@ -258,14 +257,12 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
       // read param.get_storage().values
       std::getline(f, line);
       std::vector<real> params_l(d.size());
-      std::istringstream iss2(line);
-      iss2 >> params_l;
+      std::istringstream iss2(line); iss2 >> params_l;
       TensorTools::SetElements(param.get_storage().values, params_l);
 
       // read param.get_storage().g
       std::getline(f, line);
-      std::istringstream iss3(line);
-      iss3 >> params_l;
+      std::istringstream iss3(line); iss3 >> params_l;
       TensorTools::SetElements(param.get_storage().g, params_l);
       std::getline(f, line);
     } else {
@@ -277,14 +274,12 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
 
       Dim all_dim;
       std::getline(f, line);
-      std::istringstream iss(line);
-      iss >> all_dim;
+      std::istringstream iss(line); iss >> all_dim;
       unsigned int N = all_dim.d[all_dim.nd - 1];
 
       Dim d;
       std::getline(f, line);
-      std::istringstream iss2(line);
-      iss2 >> d;
+      std::istringstream iss2(line); iss2 >> d;
 
       // add lookup_param into input model
       LookupParameter lookup_param = model.add_lookup_parameters(N, d);
@@ -293,15 +288,13 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
       // read lookup_param.get_storage().all_values
       std::getline(f, line);
       std::vector<real> lookup_params_l(all_dim.size());
-      std::istringstream iss3(line);
-      iss3 >> lookup_params_l;
+      std::istringstream iss3(line); iss3 >> lookup_params_l;
       TensorTools::SetElements(lookup_param.get_storage().all_values,
                                lookup_params_l);
 
       // read lookup_param.get_storage().all_grads
       std::getline(f, line);
-      std::istringstream iss4(line);
-      iss4 >> lookup_params_l;
+      std::istringstream iss4(line); iss4 >> lookup_params_l;
       TensorTools::SetElements(lookup_param.get_storage().all_grads,
                                lookup_params_l);
       std::getline(f, line);
@@ -329,8 +322,7 @@ void Pack::deserialize(Parameter & param, const std::string & key) {
   std::getline(f, line); auto name = line;
   Dim d;
   std::getline(f, line);
-  std::istringstream iss(line);
-  iss >> d;
+  std::istringstream iss(line); iss >> d;
   if (param.get_storage().dim != d) {
     DYNET_RUNTIME_ERR("Dimension is not consistent.");
   }
@@ -338,13 +330,11 @@ void Pack::deserialize(Parameter & param, const std::string & key) {
   
   std::getline(f, line);
   std::vector<real> params_l(d.size());
-  std::istringstream iss2(line);
-  iss2 >> params_l;
+  std::istringstream iss2(line); iss2 >> params_l;
   TensorTools::SetElements(param.get_storage().values, params_l);
 
   std::getline(f, line);
-  std::istringstream iss3(line);
-  iss3 >> params_l;
+  std::istringstream iss3(line); iss3 >> params_l;
   TensorTools::SetElements(param.get_storage().g, params_l);
   std::getline(f, line);
   f.close();
@@ -360,8 +350,7 @@ void Pack::deserialize(Parameter & param,
   auto name = line;
   Dim d;
   std::getline(f, line);
-  std::istringstream iss(line);
-  iss >> d;
+  std::istringstream iss(line); iss >> d;
   if (param.get_storage().dim != d) {
     DYNET_RUNTIME_ERR("Dimension is not consistent.");
   }
@@ -369,13 +358,11 @@ void Pack::deserialize(Parameter & param,
 
   std::getline(f, line);
   std::vector<real> params_l(d.size());
-  std::istringstream iss2(line);
-  iss2 >> params_l;
+  std::istringstream iss2(line); iss2 >> params_l;
   TensorTools::SetElements(param.get_storage().values, params_l);
 
   std::getline(f, line);
-  std::istringstream iss3(line);
-  iss3 >> params_l;
+  std::istringstream iss3(line); iss3 >> params_l;
   TensorTools::SetElements(param.get_storage().g, params_l);
   std::getline(f, line);
   f.close();
@@ -395,8 +382,7 @@ void Pack::deserialize(LookupParameter & lookup_param,
   auto name = line;
   Dim all_dim;
   std::getline(f, line);
-  std::istringstream iss(line);
-  iss >> all_dim;
+  std::istringstream iss(line); iss >> all_dim;
   
   std::getline(f, line);
   if (lookup_param.get_storage().all_dim != all_dim) {
@@ -407,13 +393,11 @@ void Pack::deserialize(LookupParameter & lookup_param,
   
   std::getline(f, line);
   std::vector<real> lookup_params_l(all_dim.size());
-  std::istringstream iss2(line);
-  iss2 >> lookup_params_l;
+  std::istringstream iss2(line); iss2 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_values,
                            lookup_params_l);
   std::getline(f, line);
-  std::istringstream iss3(line);
-  iss3 >> lookup_params_l;
+  std::istringstream iss3(line); iss3 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
                            lookup_params_l);
   f.close();
@@ -429,8 +413,7 @@ void Pack::deserialize(LookupParameter & lookup_param,
   auto name = line;
   Dim all_dim;
   std::getline(f, line);
-  std::istringstream iss(line);
-  iss >> all_dim;
+  std::istringstream iss(line); iss >> all_dim;
   if (lookup_param.get_storage().all_dim != all_dim) {
     DYNET_RUNTIME_ERR("Dimension is not consistent.");
   }
@@ -440,13 +423,11 @@ void Pack::deserialize(LookupParameter & lookup_param,
 
   std::getline(f, line);
   std::vector<real> lookup_params_l(all_dim.size());
-  std::istringstream iss2(line);
-  iss2 >> lookup_params_l;
+  std::istringstream iss2(line); iss2 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_values,
                            lookup_params_l);
   std::getline(f, line);
-  std::istringstream iss3(line);
-  iss3 >> lookup_params_l;
+  std::istringstream iss3(line); iss3 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
                            lookup_params_l);
   f.close();
@@ -465,8 +446,7 @@ Parameter Pack::deserialize_param(ParameterCollection & model,
   std::getline(f, line); auto name = line;
   Dim d;
   std::getline(f, line);
-  std::istringstream iss(line);
-  iss >> d;
+  std::istringstream iss(line); iss >> d;
   Parameter param = model.add_parameters(d);
   param.get_storage().name = name;
   
@@ -493,8 +473,7 @@ Parameter Pack::deserialize_param(ParameterCollection & model,
   auto name = line;
   Dim d;
   std::getline(f, line);
-  std::istringstream iss(line);
-  iss >> d;
+  std::istringstream iss(line); iss >> d;
   
   Parameter param = model.add_parameters(d);
   param.get_storage().name = name;
@@ -523,14 +502,12 @@ LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
   auto name = line;
   Dim all_dim;
   std::getline(f, line);
-  std::istringstream iss(line);
-  iss >> all_dim;
+  std::istringstream iss(line); iss >> all_dim;
   
   unsigned int N = all_dim.d[all_dim.nd - 1];
   Dim d;
   std::getline(f, line);
-  std::istringstream iss2(line);
-  iss2 >> d;
+  std::istringstream iss2(line); iss2 >> d;
   
   LookupParameter lookup_param = model.add_lookup_parameters(N, d);
   lookup_param.get_storage().name = name;
@@ -562,14 +539,12 @@ LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
   auto name = line;
   Dim all_dim;
   std::getline(f, line);
-  std::istringstream iss(line);
-  iss >> all_dim;
+  std::istringstream iss(line); iss >> all_dim;
   
   unsigned int N = all_dim.d[all_dim.nd - 1];
   Dim d;
   std::getline(f, line);
-  std::istringstream iss2(line);
-  iss2 >> d;
+  std::istringstream iss2(line); iss2 >> d;
   LookupParameter lookup_param = model.add_lookup_parameters(N, d);
 
   if (lookup_param.get_storage().all_dim != all_dim) {
@@ -589,30 +564,6 @@ LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
                            lookup_params_l);
   f.close();
   return lookup_param;
-}
-
-void Pack::deserialize_tensor(std::ifstream & f, const Dim & d, std::vector<float> & params_order_lst) {
-  std::string line;
-  std::vector<float> params_lst;
-  for (int k1 = 0; k1 < d.d[0]; ++k1) {
-    // TODO: dimension check
-    int sz = d.nd == 1 ? 1 : d.d[1];
-    std::vector<float> tmp(sz);
-    std::getline(f, line);
-    std::istringstream iss(line);
-    iss >> tmp;
-    params_lst.insert(params_lst.end(), tmp.begin(), tmp.end());
-  }
-  params_order_lst = params_lst;
-  if (d.nd == 2) {
-    // transpose
-    // TODO: dimension >= 3
-    for (size_t k = 0; k < params_lst.size(); ++k) {
-      int i = k / d.d[1], j = k % d.d[1];
-      int indx = j * d.d[0] + i;
-      params_order_lst[indx] = params_lst[k];
-    }
-  }
 }
 
 void Pack::serialize_parameter(std::ofstream & os, const ParameterStorage *p) {
