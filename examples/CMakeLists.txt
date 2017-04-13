@@ -4,7 +4,8 @@ if (NOT MSVC)
    set(MP_EXAMPLES rnnlm-mp xor-mp xor-simple-mp)
 endif()
 
-foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm read-write segrnn-sup attention imdb ${MP_EXAMPLES})
+
+foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm read-write segrnn-sup attention imdb rnnlm-batch-nce ${MP_EXAMPLES})
   set(TARGET train_${FOLDER})
   ADD_EXECUTABLE(${TARGET} cpp/${FOLDER}/${TARGET}.cc)
   if (WITH_CUDA_BACKEND)

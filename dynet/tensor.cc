@@ -136,6 +136,19 @@ void TensorTools::CopyElements(const Tensor& v, const Tensor& v_src) {
 #endif
 }
 
+void TensorTools::Clip(Tensor& d, float left, float right){
+#if HAVE_CUDA
+	if (d.device->type == DeviceType::GPU){
+		dynet::gpu::clip(d.d.size(), left, right, d.v);
+	} else {
+#endif
+		for (size_t pos =0; pos < d.d.size(); ++pos)
+		  d.v[pos] = min(right, max(left, d.v[pos]));
+#if HAVE_CUDA
+	}
+#endif
+}
+
 void TensorTools::Constant(Tensor& d, float c) {
 #if HAVE_CUDA
   if (d.device->type == DeviceType::GPU) {

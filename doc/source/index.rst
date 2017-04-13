@@ -33,12 +33,10 @@ And get the basic information to create programs and use models:
    :maxdepth: 3
 
    tutorial
-   core
    commandline
-   operations
-   builders
-   optimizers
    debugging
+   python_ref
+   cpp_ref
    examples
 
 Mode advanced topics are below:
@@ -56,7 +54,8 @@ And we welcome your contributions!
    :maxdepth: 2
 
    contributing
-   
+
+
 
 Indices and tables
 ==================
