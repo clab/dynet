@@ -18,6 +18,13 @@
 namespace dynet {
 
 template <class T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T> & v) {
+  for (auto & val : v) os << val << ' ';
+  os << '\n';
+  return os;
+}
+
+template <class T>
 std::istream& operator>>(std::istream& is, std::vector<T> & v) {
   std::copy(std::istream_iterator<T>(is), std::istream_iterator<T>(), v.begin());
   return is;

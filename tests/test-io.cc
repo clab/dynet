@@ -176,7 +176,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
   {
     ParameterCollection cc;
     auto cc2 = cc.add_subcollection("xx");
-    cc2.add_parameters({10});
+    cc2.add_parameters({2, 3, 4, 5});
     std::remove("d.model"); std::remove("d.model.meta");
     Pack s3("d.model");
     s3.save(cc, "key");

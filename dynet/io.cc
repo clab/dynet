@@ -1,4 +1,5 @@
 #include "dynet/io.h"
+#include "dynet/tensor.h"
 
 namespace dynet {
 
@@ -255,14 +256,17 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
       param.get_storage().name = name;
 
       // read param.get_storage().values
-      std::vector<float> params_order_lst;
-      deserialize_tensor(f, d, params_order_lst);
-      TensorTools::SetElements(param.get_storage().values, params_order_lst);
+      std::getline(f, line);
+      std::vector<real> params_l(d.size());
+      std::istringstream iss2(line);
+      iss2 >> params_l;
+      TensorTools::SetElements(param.get_storage().values, params_l);
 
       // read param.get_storage().g
-      params_order_lst.resize(0);
-      deserialize_tensor(f, d, params_order_lst);
-      TensorTools::SetElements(param.get_storage().g, params_order_lst);
+      std::getline(f, line);
+      std::istringstream iss3(line);
+      iss3 >> params_l;
+      TensorTools::SetElements(param.get_storage().g, params_l);
       std::getline(f, line);
     } else {
       std::getline(f, line);
@@ -287,16 +291,19 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
       lookup_param.get_storage().name = name;
 
       // read lookup_param.get_storage().all_values
-      std::vector<float> lookup_params_order_lst;
-      deserialize_tensor(f, all_dim, lookup_params_order_lst);
+      std::getline(f, line);
+      std::vector<real> lookup_params_l(all_dim.size());
+      std::istringstream iss3(line);
+      iss3 >> lookup_params_l;
       TensorTools::SetElements(lookup_param.get_storage().all_values,
-                               lookup_params_order_lst);
+                               lookup_params_l);
 
       // read lookup_param.get_storage().all_grads
-      lookup_params_order_lst.resize(0);
-      deserialize_tensor(f, all_dim, lookup_params_order_lst);
+      std::getline(f, line);
+      std::istringstream iss4(line);
+      iss4 >> lookup_params_l;
       TensorTools::SetElements(lookup_param.get_storage().all_grads,
-                               lookup_params_order_lst);
+                               lookup_params_l);
       std::getline(f, line);
     }
   } // while
@@ -328,13 +335,17 @@ void Pack::deserialize(Parameter & param, const std::string & key) {
     DYNET_RUNTIME_ERR("Dimension is not consistent.");
   }
   param.get_storage().name = name;
-  std::vector<float> params_order_lst;
-  deserialize_tensor(f, d, params_order_lst);
-  TensorTools::SetElements(param.get_storage().values, params_order_lst);
+  
+  std::getline(f, line);
+  std::vector<real> params_l(d.size());
+  std::istringstream iss2(line);
+  iss2 >> params_l;
+  TensorTools::SetElements(param.get_storage().values, params_l);
 
-  params_order_lst.resize(0);
-  deserialize_tensor(f, d, params_order_lst);
-  TensorTools::SetElements(param.get_storage().g, params_order_lst);
+  std::getline(f, line);
+  std::istringstream iss3(line);
+  iss3 >> params_l;
+  TensorTools::SetElements(param.get_storage().g, params_l);
   std::getline(f, line);
   f.close();
 }
@@ -355,13 +366,17 @@ void Pack::deserialize(Parameter & param,
     DYNET_RUNTIME_ERR("Dimension is not consistent.");
   }
   param.get_storage().name = name;
-  std::vector<float> params_order_lst;
-  deserialize_tensor(f, d, params_order_lst);
-  TensorTools::SetElements(param.get_storage().values, params_order_lst);
 
-  params_order_lst.resize(0);
-  deserialize_tensor(f, d, params_order_lst);
-  TensorTools::SetElements(param.get_storage().g, params_order_lst);
+  std::getline(f, line);
+  std::vector<real> params_l(d.size());
+  std::istringstream iss2(line);
+  iss2 >> params_l;
+  TensorTools::SetElements(param.get_storage().values, params_l);
+
+  std::getline(f, line);
+  std::istringstream iss3(line);
+  iss3 >> params_l;
+  TensorTools::SetElements(param.get_storage().g, params_l);
   std::getline(f, line);
   f.close();
 }
@@ -389,14 +404,18 @@ void Pack::deserialize(LookupParameter & lookup_param,
   }
 
   lookup_param.get_storage().name = name;
-  std::vector<float> lookup_params_order_lst;
-  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+  
+  std::getline(f, line);
+  std::vector<real> lookup_params_l(all_dim.size());
+  std::istringstream iss2(line);
+  iss2 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_values,
-                           lookup_params_order_lst);
-  lookup_params_order_lst.resize(0);
-  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+                           lookup_params_l);
+  std::getline(f, line);
+  std::istringstream iss3(line);
+  iss3 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
-                           lookup_params_order_lst);
+                           lookup_params_l);
   f.close();
 }
 
@@ -418,14 +437,18 @@ void Pack::deserialize(LookupParameter & lookup_param,
   
   std::getline(f, line);
   lookup_param.get_storage().name = name;
-  std::vector<float> lookup_params_order_lst;
-  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+
+  std::getline(f, line);
+  std::vector<real> lookup_params_l(all_dim.size());
+  std::istringstream iss2(line);
+  iss2 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_values,
-                           lookup_params_order_lst);
-  lookup_params_order_lst.resize(0);
-  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+                           lookup_params_l);
+  std::getline(f, line);
+  std::istringstream iss3(line);
+  iss3 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
-                           lookup_params_order_lst);
+                           lookup_params_l);
   f.close();
 }
 
@@ -446,13 +469,15 @@ Parameter Pack::deserialize_param(ParameterCollection & model,
   iss >> d;
   Parameter param = model.add_parameters(d);
   param.get_storage().name = name;
-  std::vector<float> params_order_lst;
-  deserialize_tensor(f, d, params_order_lst);
-  TensorTools::SetElements(param.get_storage().values, params_order_lst);
+  
+  std::getline(f, line);
+  std::vector<real> params_l(d.size());
+  std::istringstream iss2(line); iss2 >> params_l;
+  TensorTools::SetElements(param.get_storage().values, params_l);
 
-  params_order_lst.resize(0);
-  deserialize_tensor(f, d, params_order_lst);
-  TensorTools::SetElements(param.get_storage().g, params_order_lst);
+  std::getline(f, line);
+  std::istringstream iss3(line); iss3 >> params_l;
+  TensorTools::SetElements(param.get_storage().g, params_l);
   std::getline(f, line);
   f.close();
   return param;
@@ -473,13 +498,15 @@ Parameter Pack::deserialize_param(ParameterCollection & model,
   
   Parameter param = model.add_parameters(d);
   param.get_storage().name = name;
-  std::vector<float> params_order_lst;
-  deserialize_tensor(f, d, params_order_lst);
-  TensorTools::SetElements(param.get_storage().values, params_order_lst);
 
-  params_order_lst.resize(0);
-  deserialize_tensor(f, d, params_order_lst);
-  TensorTools::SetElements(param.get_storage().g, params_order_lst);
+  std::getline(f, line);
+  std::vector<real> params_l(d.size());
+  std::istringstream iss2(line); iss2 >> params_l;
+  TensorTools::SetElements(param.get_storage().values, params_l);
+
+  std::getline(f, line);
+  std::istringstream iss3(line); iss3 >> params_l;
+  TensorTools::SetElements(param.get_storage().g, params_l);
   std::getline(f, line);
   f.close();
   return param;
@@ -507,14 +534,16 @@ LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
   
   LookupParameter lookup_param = model.add_lookup_parameters(N, d);
   lookup_param.get_storage().name = name;
-  std::vector<float> lookup_params_order_lst;
-  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+
+  std::getline(f, line);
+  std::vector<real> lookup_params_l(all_dim.size());
+  std::istringstream iss3(line); iss3 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_values,
-                           lookup_params_order_lst);
-  lookup_params_order_lst.resize(0);
-  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+                           lookup_params_l);
+  std::getline(f, line);
+  std::istringstream iss4(line); iss4 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
-                           lookup_params_order_lst);
+                           lookup_params_l);
   f.close();
   return lookup_param;
 }
@@ -548,14 +577,16 @@ LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
   }
 
   lookup_param.get_storage().name = name;
-  std::vector<float> lookup_params_order_lst;
-  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+
+  std::getline(f, line);
+  std::vector<real> lookup_params_l(all_dim.size());
+  std::istringstream iss3(line); iss3 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_values,
-                           lookup_params_order_lst);
-  lookup_params_order_lst.resize(0);
-  deserialize_tensor(f, all_dim, lookup_params_order_lst);
+                           lookup_params_l);
+  std::getline(f, line);
+  std::istringstream iss4(line); iss4 >> lookup_params_l;
   TensorTools::SetElements(lookup_param.get_storage().all_grads,
-                           lookup_params_order_lst);
+                           lookup_params_l);
   f.close();
   return lookup_param;
 }
@@ -585,13 +616,16 @@ void Pack::deserialize_tensor(std::ifstream & f, const Dim & d, std::vector<floa
 }
 
 void Pack::serialize_parameter(std::ofstream & os, const ParameterStorage *p) {
-  os << p->name << '\n' << p->dim << '\n' << p->values << '\n' << p->g << '\n';
+  os << p->name << '\n' << p->dim << '\n';
+  os << dynet::as_vector(p->values);
+  os << dynet::as_vector(p->g);
 }
 
 void Pack::serialize_lookup_parameter(std::ofstream & os,
-                                        const LookupParameterStorage *p) {
+                                      const LookupParameterStorage *p) {
   os << p->name << '\n' << p->all_dim << '\n' << p->dim << '\n';
-  os << p->all_values << '\n' << p->all_grads << '\n';
+  os << dynet::as_vector(p->all_values);
+  os << dynet::as_vector(p->all_grads);
 }
 
 long long Pack::seek_offset(const std::string & key) {
