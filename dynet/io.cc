@@ -154,7 +154,7 @@ void Pack::serialize(const ParameterCollection & model,
   auto lookup_params = model.get_lookup_parameter_storages();
   size_t i = 0, j = 0;
   for (size_t k = 0; k < all_params.size();  ++k) {
-    if (all_params[k] == params[i]) {
+    if (i < params.size() && all_params[k] == params[i]) {
       os << "#Parameter#" << std::endl;
       offset_dict[params[i]->name] = os.tellp();
       serialize_parameter(os, params[i]);
