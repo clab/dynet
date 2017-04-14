@@ -649,21 +649,21 @@ cdef class Model: # (((
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    def save_all(self, string fname):
+    def save_all(self, fname):
         """Save all parameters in model to file
         
         Args:
             fname (str): File name
         """
-        save_dynet_model(fname, self.thisptr)
+        save_dynet_model(fname.encode(), self.thisptr)
 
-    def load_all(self, string fname):
+    def load_all(self, fname):
         """Load all parameters in model from file
         
         Args:
             fname (str): File name
         """
-        load_dynet_model(fname, self.thisptr)
+        load_dynet_model(fname.encode(), self.thisptr)
 
     cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
         # would be nicer to have polymorphism/dispatch-by-type
@@ -711,7 +711,7 @@ cdef class Model: # (((
             components (list): List of parameters to save (default: None)
         """
         if not components:
-            self.save_all(fname.encode())
+            self.save_all(fname)
             return
         fh = open(fname+".pym","w")
         pfh = open(fname+".pyk","wb")
@@ -782,7 +782,7 @@ cdef class Model: # (((
             (list): List of parameters loaded from file
         """
         if not os.path.isfile(fname+".pym"):
-            self.load_all(fname.encode())
+            self.load_all(fname)
             return
         with open(fname+".pym","r") as fh:
             types = fh.read().strip().split()
