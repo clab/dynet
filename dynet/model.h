@@ -455,6 +455,12 @@ public:
    */
   Parameter add_parameters(const Dim& d, const ParameterInit & init, const std::string & name = "");
   /**
+   * \brief Get parameters base in current model
+   *
+   * \return list of points to ParameterStorageBase objects
+   */
+  std::vector<ParameterStorageBase*> get_parameter_storages_base() const;
+  /**
    * \brief Get parameter in current model
    * \details It is not recommended to use this
    * \return the pointer to the Parameter object
