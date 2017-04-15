@@ -135,6 +135,22 @@ BOOST_AUTO_TEST_CASE( adadelta_direction ) {
   BOOST_CHECK_LT(after, before);
 }
 
+BOOST_AUTO_TEST_CASE( rmsprop_direction ) {
+  dynet::Model mod;
+  dynet::Parameter param = mod.add_parameters({3});
+  TensorTools::SetElements(param.get()->values,param_vals);
+  RMSPropTrainer trainer(mod);
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param);
+  Expression y = input(cg, {1,3}, ones_vals);
+  Expression z = y*x;
+  float before = as_scalar(cg.forward(z));
+  cg.backward(z);
+  trainer.update(0.1);
+  float after = as_scalar(cg.forward(z));
+  BOOST_CHECK_LT(after, before);
+}
+
 BOOST_AUTO_TEST_CASE( adam_direction ) {
   dynet::Model mod;
   dynet::Parameter param = mod.add_parameters({3});

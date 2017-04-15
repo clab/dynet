@@ -8,13 +8,24 @@ function(get_filename_components DEST ITEMS PART)
   set(${DEST} ${${DEST}} PARENT_SCOPE)
 endfunction()
 
+function(check_cython_version VERSION)
+  # We use the Cython library directly within Python, make sure it is installed
+  # and meets the minimum version required.
+  execute_process(COMMAND ${PYTHON} -c "import Cython; print(Cython.__version__);" OUTPUT_VARIABLE CYTHON_VERSION)
+  if(${CYTHON_VERSION} VERSION_LESS ${VERSION})
+    message(FATAL_ERROR "DyNet needs at least Cython version ${VERSION}, found verson ${CYTHON_VERSION}")
+  else()
+    message(STATUS "Found Cython version ${CYTHON_VERSION}")
+  endif()
+endfunction()
+
 if(!PYTHON)
   find_program(PYTHON "python")
 endif()
 
 if(PYTHON)
-  # look for Cython
-  find_package(Cython REQUIRED)
+  # Verify Cython is installed with the given minimum version
+  check_cython_version(0.23)
   
   # Things to copy the files
   file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py
