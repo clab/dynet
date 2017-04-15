@@ -18,62 +18,64 @@ using namespace std;
 namespace dynet {
 
 ostream& operator<<(ostream& os, const Tensor& t) {
-#if HAVE_CUDA
-  if (t.device->type == DeviceType::GPU) {
-    vector<real> vt = as_vector(t);
-    Eigen::Map<Eigen::MatrixXf> m(&vt[0], t.d.rows(), t.d.cols());
-    os << m;
-  } else {
-#endif
+  if (t.device->type == DeviceType::CPU) {
     os << (*t);
+  } else {
 #if HAVE_CUDA
-  }
+    if (t.device->type == DeviceType::GPU) {
+      vector<real> vt = as_vector(t);
+      Eigen::Map<Eigen::MatrixXf> m(&vt[0], t.d.rows(), t.d.cols());
+      os << m;
+    }
 #endif
+  }
   return os;
 }
 
 real as_scalar(const Tensor& t) {
   if (t.d.size() != 1)
     throw std::runtime_error("Input tensor has more than one element, cannot convert to scalar.");
-#if HAVE_CUDA
-  if (t.device->type == DeviceType::GPU) {
-    float res;
-    CUDA_CHECK(cudaMemcpy(&res, t.v, sizeof(float), cudaMemcpyDeviceToHost));
-    return res;
-  } else {
-#endif
+  real res = 0.;
+  if (t.device->type == DeviceType::CPU) {
     return t.v[0];
+  } else {
 #if HAVE_CUDA
-  }
+    if (t.device->type == DeviceType::GPU) {
+      CUDA_CHECK(cudaMemcpy(&res, t.v, sizeof(float), cudaMemcpyDeviceToHost));
+      return res;
+    }
 #endif
+  }
+  return res;
 }
 
 vector<real> as_vector(const Tensor& v) {
   vector<real> res(v.d.size());
-#if HAVE_CUDA
-  if (v.device->type == DeviceType::GPU) {
-    CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(real) * res.size(), cudaMemcpyDeviceToHost));
-  } else {
-#endif
+  if (v.device->type == DeviceType::CPU) {
     memcpy(&res[0], v.v, sizeof(real) * res.size());
+  } else {
 #if HAVE_CUDA
-  }
+    if (v.device->type == DeviceType::GPU) {
+      CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(real) * res.size(), cudaMemcpyDeviceToHost));
+    }
 #endif
+  }
   return res;
 }
 
 float TensorTools::AccessElement(const Tensor& v, int index) {
-#if HAVE_CUDA
-  if (v.device->type == DeviceType::GPU) {
-    float ret;
-    cudaMemcpy(&ret, &v.v[index], sizeof(real), cudaMemcpyDeviceToHost);
-    return ret;
-  } else {
-#endif
+  float ret = 0.;
+  if (v.device->type == DeviceType::CPU) {
     return v.v[index];
+  } else {
 #if HAVE_CUDA
-  }
+    if (v.device->type == DeviceType::GPU) {
+      cudaMemcpy(&ret, &v.v[index], sizeof(real), cudaMemcpyDeviceToHost);
+      return ret;
+    }
 #endif
+  }
+  return ret;
 }
 
 float TensorTools::AccessElement(const Tensor& v, const Dim& index) {
@@ -85,55 +87,55 @@ float TensorTools::AccessElement(const Tensor& v, const Dim& index) {
 }
 
 void TensorTools::SetElement(const Tensor& v, int index, float value) {
-#if HAVE_CUDA
-  if (v.device->type == DeviceType::GPU) {
-    cudaMemcpyAsync(&v.v[index], &value, sizeof(real), cudaMemcpyHostToDevice);
-  } else {
-#endif
+  if (v.device->type == DeviceType::CPU) {
     v.v[index] = value;
+  } else {
 #if HAVE_CUDA
-  }
+    if (v.device->type == DeviceType::GPU) {
+      cudaMemcpyAsync(&v.v[index], &value, sizeof(real), cudaMemcpyHostToDevice);
+    }
 #endif
+  }
 }
 
 void TensorTools::CopyElement(const Tensor& l, int lindex, Tensor& r, int rindex) {
-#if HAVE_CUDA
-  if (l.device != r.device)
-    throw std::invalid_argument("TensorTools::CopyElement doesn't support inter-device copy yet");
-  if (l.device->type == DeviceType::GPU) {
-    cudaMemcpyAsync(&r.v[rindex], &l.v[lindex], sizeof(real), cudaMemcpyDeviceToDevice);
-  } else {
-#endif
+  if (l.device->type == DeviceType::CPU) {
     r.v[rindex] = l.v[lindex];
+  } else {
 #if HAVE_CUDA
-  }
+    if (l.device != r.device)
+      throw std::invalid_argument("TensorTools::CopyElement doesn't support inter-device copy yet");
+    if (l.device->type == DeviceType::GPU) {
+      cudaMemcpyAsync(&r.v[rindex], &l.v[lindex], sizeof(real), cudaMemcpyDeviceToDevice);
+    }
 #endif
+  }
 }
 
 void TensorTools::SetElements(const Tensor& v, const vector<float>& vec) {
-#if HAVE_CUDA
-  if (v.device->type == DeviceType::GPU) {
-    cudaMemcpyAsync(v.v, &vec[0], sizeof(real) * vec.size(), cudaMemcpyHostToDevice);
-  } else {
-#endif
+  if (v.device->type == DeviceType::CPU) {
     memcpy(v.v, &vec[0], sizeof(real) * vec.size());
+  } else {
 #if HAVE_CUDA
-  }
+    if (v.device->type == DeviceType::GPU) {
+      cudaMemcpyAsync(v.v, &vec[0], sizeof(real) * vec.size(), cudaMemcpyHostToDevice);
+    }
 #endif
+  }
 }
 
 void TensorTools::CopyElements(const Tensor& v, const Tensor& v_src) {
-#if HAVE_CUDA
-  if (v.device != v_src.device)
-    throw std::invalid_argument("TensorTools::CopyElement doesn't support inter-device copy yet");
-  if (v.device->type == DeviceType::GPU) {
-    cudaMemcpyAsync(v.v, v_src.v, sizeof(real) * v.d.size(), cudaMemcpyDeviceToDevice);
-  } else {
-#endif
+  if (v.device->type == DeviceType::CPU) {
     memcpy(v.v, v_src.v, sizeof(real) * v.d.size());
+  } else {
 #if HAVE_CUDA
-  }
+    if (v.device != v_src.device)
+      throw std::invalid_argument("TensorTools::CopyElement doesn't support inter-device copy yet");
+    if (v.device->type == DeviceType::GPU) {
+      cudaMemcpyAsync(v.v, v_src.v, sizeof(real) * v.d.size(), cudaMemcpyDeviceToDevice);
+    }
 #endif
+  }
 }
 
 void TensorTools::Clip(Tensor& d, float left, float right){
@@ -150,23 +152,23 @@ void TensorTools::Clip(Tensor& d, float left, float right){
 }
 
 void TensorTools::Constant(Tensor& d, float c) {
-#if HAVE_CUDA
-  if (d.device->type == DeviceType::GPU) {
-    if (!c) {
-      CUDA_CHECK(cudaMemsetAsync(d.v, 0, d.d.size() * sizeof(float)));
-    } else {
-      dynet::gpu::const_init(d.d.size(), c, d.v);
-    }
-  } else {
-#endif
+  if (d.device->type == DeviceType::CPU) {
     if (!c) {
       memset(d.v, c, d.d.size() * sizeof(float));
     } else {
       fill(d.v, d.v + d.d.size(), c);
     }
+  } else {
 #if HAVE_CUDA
-  }
+    if (d.device->type == DeviceType::GPU) {
+      if (!c) {
+        CUDA_CHECK(cudaMemsetAsync(d.v, 0, d.d.size() * sizeof(float)));
+      } else {
+        dynet::gpu::const_init(d.d.size(), c, d.v);
+      }
+    }
 #endif
+  }
 }
 
 void TensorTools::Zero(Tensor& d) {
@@ -177,74 +179,73 @@ void TensorTools::Identity(Tensor& val) {
   if (val.d.nd != 2 || val.d[0] != val.d[1])
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to identity");
   size_t pos = 0;
-#if HAVE_CUDA
-  if (val.device->type == DeviceType::GPU) {
-    float* t = new float[val.d.size()];
-    for (size_t i = 0; i < val.d[0]; ++i)
-      for (size_t j = 0; j < val.d[1]; ++j)
-        t[pos++] = (i == j ? 1 : 0);
-    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
-  } else {
-#endif
+  if (val.device->type == DeviceType::CPU) {
     for (size_t i = 0; i < val.d[0]; ++i)
       for (size_t j = 0; j < val.d[1]; ++j)
         val.v[pos++] = (i == j ? 1 : 0);
+  } else {
 #if HAVE_CUDA
-  }
+    if (val.device->type == DeviceType::GPU) {
+      float* t = new float[val.d.size()];
+      for (size_t i = 0; i < val.d[0]; ++i)
+        for (size_t j = 0; j < val.d[1]; ++j)
+          t[pos++] = (i == j ? 1 : 0);
+      CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+      delete[] t;
+    }
 #endif
+  }
 }
-
 
 void TensorTools::RandomizeBernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
   auto b = [&] {return distribution(*rndeng) * scale;};
-#if HAVE_CUDA
-  if (val.device->type == DeviceType::GPU) {
-    float* t = new float[val.d.size()];
-    generate(t, t + val.d.size(), b);
-    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
-  } else {
-#endif
+  if (val.device->type == DeviceType::CPU) {
     generate(val.v, val.v + val.d.size(), b);
+  } else {
 #if HAVE_CUDA
-  }
+    if (val.device->type == DeviceType::GPU) {
+      float* t = new float[val.d.size()];
+      generate(t, t + val.d.size(), b);
+      CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+      delete[] t;
+    }
 #endif
+  }
 }
 
 void TensorTools::RandomizeNormal(Tensor& val, real mean, real stddev) {
   normal_distribution<real> distribution(mean, stddev);
   auto b = [&] {return distribution(*rndeng);};
-#if HAVE_CUDA
-  if (val.device->type == DeviceType::GPU) {
-    float* t = new float[val.d.size()];
-    generate(t, t + val.d.size(), b);
-    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
-  } else {
-#endif
+  if (val.device->type == DeviceType::CPU) {
     generate(val.v, val.v + val.d.size(), b);
+  } else {
 #if HAVE_CUDA
-  }
+    if (val.device->type == DeviceType::GPU) {
+      float* t = new float[val.d.size()];
+      generate(t, t + val.d.size(), b);
+      CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+      delete[] t;
+    }
 #endif
+  }
 }
 
 void TensorTools::RandomizeUniform(Tensor& val, real left, real right) {
   uniform_real_distribution<real> distribution(left, right);
   auto b = [&] {return distribution(*rndeng);};
-#if HAVE_CUDA
-  if (val.device->type == DeviceType::GPU) {
-    float* t = new float[val.d.size()];
-    generate(t, t + val.d.size(), b);
-    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
-  } else {
-#endif
+  if (val.device->type == DeviceType::CPU) {
     generate(val.v, val.v + val.d.size(), b);
+  } else {
 #if HAVE_CUDA
-  }
+    if (val.device->type == DeviceType::GPU) {
+      float* t = new float[val.d.size()];
+      generate(t, t + val.d.size(), b);
+      CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+      delete[] t;
+    }
 #endif
+  }
 }
 
 void TensorTools::RandomizeOrthonormal(Tensor& val, real scale) {
@@ -265,19 +266,20 @@ void Tensor::save(Archive& ar, const unsigned int ver) const {
   int dev_id = ((device == default_device) ? (int) - 1 : device->device_id);
   ar & dev_id;
   ar & mem_pool;
-#ifdef HAVE_CUDA
-  if (device->type == DeviceType::GPU) {
-    float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    ar & boost::serialization::make_array(vc, d.size());
-    free(vc);
-  } else {
-#endif
+  if (device->type == DeviceType::CPU) {
     ar & boost::serialization::make_array(v, d.size());
+  } else {
 #ifdef HAVE_CUDA
-  }
+    if (device->type == DeviceType::GPU) {
+      float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
+      CUDA_CHECK(cudaMemcpy(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
+      ar & boost::serialization::make_array(vc, d.size());
+      free(vc);
+    }
 #endif
+  }
 }
+
 template<class Archive>
 void Tensor::load(Archive& ar, const unsigned int ver) {
   ar & d;
@@ -296,18 +298,18 @@ void Tensor::load(Archive& ar, const unsigned int ver) {
     device = devices[dev_id];
   }
   device->allocate_tensor(mem_pool, *this);
-#ifdef HAVE_CUDA
-  if (device->type == DeviceType::GPU) {
-    float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
-    ar & boost::serialization::make_array(vc, d.size());
-    CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
-    free(vc);
-  } else {
-#endif
+  if (device->type == DeviceType::CPU) {
     ar & boost::serialization::make_array(v, d.size());
+  } else {
 #ifdef HAVE_CUDA
-  }
+    if (device->type == DeviceType::GPU) {
+      float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
+      ar & boost::serialization::make_array(vc, d.size());
+      CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
+      free(vc);
+    }
 #endif
+  }
 }
 DYNET_SAVELOAD_IMPL(Tensor)
 
