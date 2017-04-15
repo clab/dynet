@@ -1523,8 +1523,37 @@ Expression sum_cols(const Expression& x);
 Expression sum_rows(const Expression& x);
 Expression average_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
+
+
+/**
+ * \ingroup convolutionoperations
+ * \brief conv2d without bias
+ * \details 2D convolution operators without bias parameters.
+ *
+ * \param x The input feature maps in H x W x Ci x N (ColMaj)
+ * \param f 2D convolution filters H x W x Ci x Co (ColMaj)
+ * \param stride the row and column strides
+ * \param is_valid 'VALID' convolution or 'SAME' convolution, default is True ('VALID')
+ *
+ * \return The output feature maps (H x W x Co x N)
+ */
 Expression conv2d(const Expression& x, const Expression& f, const std::vector<unsigned>& stride, bool is_valid = true);
+
+/**
+ * \ingroup convolutionoperations
+ * \brief conv2d with bias
+ * \details 2D convolution operators with bias parameters.
+ *
+ * \param x The input feature maps (4D: H x W x Ci x N)
+ * \param f 2D convolution filters (4D: H x W x Ci x Co)
+ * \param b The bias (1D: Ci)
+ * \param stride the row and column strides
+ * \param is_valid 'VALID' convolution or 'SAME' convolution, default is True ('VALID')
+ *
+ * \return The output feature maps (H x W x Co x N)
+ */
 Expression conv2d(const Expression& x, const Expression& f, const Expression& b, const std::vector<unsigned>& stride, bool is_valid = true);
+
 ////////////////////////////////////////////////
 // Tensor operations                          //
 ////////////////////////////////////////////////
