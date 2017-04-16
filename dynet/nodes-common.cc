@@ -954,4 +954,21 @@ Dim MaxOut::dim_forward(const vector<Dim>& xs) const {
   return ret;
 }
 
+string MinOut::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "minout(" << arg_names[0] << ", reduced_dim=" << reduced_dim << ')';
+  return s.str();
+}
+
+Dim MinOut::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in MinOut");
+  DYNET_ARG_CHECK(reduced_dim < xs[0].nd,
+                          "Tried to Minout on dimension " << reduced_dim << " bigger than input " << xs[0]);
+  DYNET_ARG_CHECK(xs[0].nd < 4,
+                          "MinOut not currently supported for tensors of 4 or more dimensions.");
+  Dim ret(xs[0]);
+  ret.delete_dim(reduced_dim);
+  return ret;
+}
+
 } // namespace dynet

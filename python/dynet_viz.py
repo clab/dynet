@@ -251,6 +251,7 @@ def pick(a, index=0, dim=0): return GVExpr('pick', [a, index], make_dim(1, infer
 def pick_batch(a, indices, dim=0): return GVExpr('pick_batch', [a, indices], make_dim(len(indices), inferred=True))
 def hinge(x, index, m=1.0): return GVExpr('hinge', [x, index, m], copy_dim(x))
 def maxout(a, d=0): return GVExpr('maxout', [a, d], make_dim(1, inferred=True))
+def minout(a, d=0): return GVExpr('minout', [a, d], make_dim(1, inferred=True))
 
 def nobackprop(x): return GVExpr('nobackprop', [x], copy_dim(x))
 def flip_gradient(x): return GVExpr('flip_gradient', [x], copy_dim(x))
