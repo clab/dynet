@@ -512,6 +512,13 @@ struct TensorTools {
    * \param v_src Source tensor
    */
   static void copy_elements(const Tensor& v, const Tensor& v_src);
+
+protected:
+  template<class MyDevice>
+  static void clip_dev(MyDevice & dev, Tensor& d, float left, float right);
+  template<class MyDevice>
+  static void constant_dev(MyDevice & dev, Tensor& d, float c);
+
 };
 
 /**
