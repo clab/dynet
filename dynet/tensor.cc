@@ -63,7 +63,7 @@ vector<real> as_vector(const Tensor& v) {
   return res;
 }
 
-float TensorTools::AccessElement(const Tensor& v, int index) {
+float TensorTools::access_element(const Tensor& v, int index) {
   float ret = 0.;
   if (v.device->type == DeviceType::CPU) {
     return v.v[index];
@@ -78,15 +78,15 @@ float TensorTools::AccessElement(const Tensor& v, int index) {
   return ret;
 }
 
-float TensorTools::AccessElement(const Tensor& v, const Dim& index) {
+float TensorTools::access_element(const Tensor& v, const Dim& index) {
 #if HAVE_CUDA
-  throw std::runtime_error("TensorTools::AccessElement(Tensor,Dim) not implemented for CUDA");
+  throw std::runtime_error("TensorTools::access_element(Tensor,Dim) not implemented for CUDA");
 #else
   return (*v)(index[0], index[1]);
 #endif
 }
 
-void TensorTools::SetElement(const Tensor& v, int index, float value) {
+void TensorTools::set_element(const Tensor& v, int index, float value) {
   if (v.device->type == DeviceType::CPU) {
     v.v[index] = value;
   } else {
@@ -98,7 +98,7 @@ void TensorTools::SetElement(const Tensor& v, int index, float value) {
   }
 }
 
-void TensorTools::CopyElement(const Tensor& l, int lindex, Tensor& r, int rindex) {
+void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rindex) {
   if (l.device->type == DeviceType::CPU) {
     r.v[rindex] = l.v[lindex];
   } else {
@@ -112,7 +112,7 @@ void TensorTools::CopyElement(const Tensor& l, int lindex, Tensor& r, int rindex
   }
 }
 
-void TensorTools::SetElements(const Tensor& v, const vector<float>& vec) {
+void TensorTools::set_elements(const Tensor& v, const vector<float>& vec) {
   if (v.device->type == DeviceType::CPU) {
     memcpy(v.v, &vec[0], sizeof(real) * vec.size());
   } else {
@@ -124,7 +124,7 @@ void TensorTools::SetElements(const Tensor& v, const vector<float>& vec) {
   }
 }
 
-void TensorTools::CopyElements(const Tensor& v, const Tensor& v_src) {
+void TensorTools::copy_elements(const Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) {
     memcpy(v.v, v_src.v, sizeof(real) * v.d.size());
   } else {
@@ -138,7 +138,7 @@ void TensorTools::CopyElements(const Tensor& v, const Tensor& v_src) {
   }
 }
 
-void TensorTools::Clip(Tensor& d, float left, float right){
+void TensorTools::clip(Tensor& d, float left, float right){
 #if HAVE_CUDA
 	if (d.device->type == DeviceType::GPU){
 		dynet::gpu::clip(d.d.size(), left, right, d.v);
@@ -151,7 +151,7 @@ void TensorTools::Clip(Tensor& d, float left, float right){
 #endif
 }
 
-void TensorTools::Constant(Tensor& d, float c) {
+void TensorTools::constant(Tensor& d, float c) {
   if (d.device->type == DeviceType::CPU) {
     if (!c) {
       memset(d.v, c, d.d.size() * sizeof(float));
@@ -171,11 +171,11 @@ void TensorTools::Constant(Tensor& d, float c) {
   }
 }
 
-void TensorTools::Zero(Tensor& d) {
-  Constant(d, 0);
+void TensorTools::zero(Tensor& d) {
+  constant(d, 0);
 }
 
-void TensorTools::Identity(Tensor& val) {
+void TensorTools::identity(Tensor& val) {
   if (val.d.nd != 2 || val.d[0] != val.d[1])
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to identity");
   size_t pos = 0;
@@ -197,7 +197,7 @@ void TensorTools::Identity(Tensor& val) {
   }
 }
 
-void TensorTools::RandomizeBernoulli(Tensor& val, real p, real scale) {
+void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
   auto b = [&] {return distribution(*rndeng) * scale;};
   if (val.device->type == DeviceType::CPU) {
@@ -214,7 +214,7 @@ void TensorTools::RandomizeBernoulli(Tensor& val, real p, real scale) {
   }
 }
 
-void TensorTools::RandomizeNormal(Tensor& val, real mean, real stddev) {
+void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
   normal_distribution<real> distribution(mean, stddev);
   auto b = [&] {return distribution(*rndeng);};
   if (val.device->type == DeviceType::CPU) {
@@ -231,7 +231,7 @@ void TensorTools::RandomizeNormal(Tensor& val, real mean, real stddev) {
   }
 }
 
-void TensorTools::RandomizeUniform(Tensor& val, real left, real right) {
+void TensorTools::randomize_uniform(Tensor& val, real left, real right) {
   uniform_real_distribution<real> distribution(left, right);
   auto b = [&] {return distribution(*rndeng);};
   if (val.device->type == DeviceType::CPU) {
@@ -248,13 +248,13 @@ void TensorTools::RandomizeUniform(Tensor& val, real left, real right) {
   }
 }
 
-void TensorTools::RandomizeOrthonormal(Tensor& val, real scale) {
+void TensorTools::randomize_orthonormal(Tensor& val, real scale) {
   if (val.d.nd != 2 || val.d[0] != val.d[1])
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to an orthogonal matrix");
 #ifdef HAVE_CUDA
   throw std::runtime_error("Orthonormal initialization not implemented in CUDA (we welcome pull requests)");
 #else
-  RandomizeUniform(val, -1.0, 1.0);
+  randomize_uniform(val, -1.0, 1.0);
   Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
   *val = scale * svd.matrixU();
 #endif

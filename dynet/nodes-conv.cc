@@ -215,7 +215,7 @@ DYNET_NODE_INST_DEV_IMPL(Conv1DNarrow)
 
 template<class MyDevice>
 void Conv1DWide::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  TensorTools::Zero(fx);
+  TensorTools::zero(fx);
   const unsigned xcols = xs[0]->d.cols();
   const unsigned fcols = xs[1]->d.cols();
   for (unsigned j = 0; j < xcols; ++j)
