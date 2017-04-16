@@ -354,8 +354,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_max            "dynet::expr::vmax" (vector[CExpression]& xs) except +
     CExpression c_logsumexp      "dynet::expr::logsumexp" (vector[CExpression]& xs) except +
 
-    CExpression c_maxout "dynet::expr::maxout" (CExpression& x, unsigned d) except + #
-    CExpression c_minout "dynet::expr::minout" (CExpression& x, unsigned d) except + #
+    CExpression c_max_dim "dynet::expr::max_dim" (CExpression& x, unsigned d) except + #
+    CExpression c_min_dim "dynet::expr::min_dim" (CExpression& x, unsigned d) except + #
 
 
 #cdef extern from "dynet/model.h" namespace "dynet":
