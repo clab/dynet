@@ -709,6 +709,10 @@ protected:
   static void clip_dev(MyDevice & dev, Tensor& d, float left, float right);
   template<class MyDevice>
   static void constant_dev(MyDevice & dev, Tensor& d, float c);
+  template<class MyDevice>
+  static IndexTensor argmax_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  template<class MyDevice>
+  static IndexTensor categorical_sample_log_prob_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
 
 };
 
