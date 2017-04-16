@@ -138,8 +138,8 @@ Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_
 
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 
-Expression maxout(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MaxOut>({x.i}, d)); }
-Expression minout(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MinOut>({x.i}, d)); }
+Expression max_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MaxDimension>({x.i}, d)); }
+Expression min_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MinDimension>({x.i}, d)); }
 
 }
 }

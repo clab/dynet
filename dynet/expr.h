@@ -1512,7 +1512,7 @@ inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); 
 
 /**
  * \ingroup flowoperations
- * \brief Max out
+ * \brief Max out through a dimension
  * \details Select out a element/row/column/sub-tensor from an expression, 
  *          with maximum value along a given dimension.
  *          This will result in the dimension of the tensor being reduced
@@ -1523,11 +1523,11 @@ inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); 
  *
  * \return An expression of sub-tensor with max value along dimension d
  */
-Expression maxout(const Expression& x, unsigned d = 0);
+Expression max_dim(const Expression& x, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
- * \brief Min out
+ * \brief Min out through a dimension
  * \details Select out a element/row/column/sub-tensor from an expression, 
  *          with minimum value along a given dimension.
  *          This will result in the dimension of the tensor being reduced
@@ -1538,7 +1538,7 @@ Expression maxout(const Expression& x, unsigned d = 0);
  *
  * \return An expression of sub-tensor with min value along dimension d
  */
-Expression minout(const Expression& x, unsigned d = 0);
+Expression min_dim(const Expression& x, unsigned d = 0);
 
 ////////////////////////////////////////////////
 // Noise operations                           //

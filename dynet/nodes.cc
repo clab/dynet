@@ -151,11 +151,11 @@ size_t SparsemaxLoss::aux_storage_size() const {
   return rows * sizeof(float);
 }
 
-size_t MaxOut::aux_storage_size() const {
+size_t MaxDimension::aux_storage_size() const {
   return sizeof(Eigen::DenseIndex) * dim.size();
 }
 
-size_t MinOut::aux_storage_size() const {
+size_t MinDimension::aux_storage_size() const {
   return sizeof(Eigen::DenseIndex) * dim.size();
 }
 
@@ -2313,7 +2313,7 @@ void RandomGumbel::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(RandomGumbel)
 
 template<class MyDevice>
-void MaxOut::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+void MaxDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Eigen::DenseIndex* maxmap = static_cast<Eigen::DenseIndex*>(aux_mem);
   const unsigned batch_size = dim.batch_elems();
   const unsigned first_dim_size = dim[0];
@@ -2325,13 +2325,13 @@ void MaxOut::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
 }
 
 template<class MyDevice>
-void MaxOut::backward_dev_impl(const MyDevice & dev,
+void MaxDimension::backward_dev_impl(const MyDevice & dev,
                              const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ARG_CHECK(i == 0, "Failed dimension check in MaxOut::backward");
+  DYNET_ARG_CHECK(i == 0, "Failed dimension check in MaxDimension::backward");
 #ifdef __CUDACC__
   vector<Eigen::DenseIndex> indices(dim.size());
   Eigen::DenseIndex* maxmap = &indices[0];
@@ -2359,10 +2359,10 @@ void MaxOut::backward_dev_impl(const MyDevice & dev,
     }
   }
 }
-DYNET_NODE_INST_DEV_IMPL(MaxOut)
+DYNET_NODE_INST_DEV_IMPL(MaxDimension)
 
 template<class MyDevice>
-void MinOut::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+void MinDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Eigen::DenseIndex* minmap = static_cast<Eigen::DenseIndex*>(aux_mem);
   const unsigned batch_size = dim.batch_elems();
   const unsigned first_dim_size = dim[0];
@@ -2374,13 +2374,13 @@ void MinOut::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
 }
 
 template<class MyDevice>
-void MinOut::backward_dev_impl(const MyDevice & dev,
+void MinDimension::backward_dev_impl(const MyDevice & dev,
                              const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  DYNET_ARG_CHECK(i == 0, "Failed dimension check in MinOut::backward");
+  DYNET_ARG_CHECK(i == 0, "Failed dimension check in MinDimension::backward");
 #ifdef __CUDACC__
   vector<Eigen::DenseIndex> indices(dim.size());
   Eigen::DenseIndex* minmap = &indices[0];
@@ -2408,6 +2408,6 @@ void MinOut::backward_dev_impl(const MyDevice & dev,
     }
   }
 }
-DYNET_NODE_INST_DEV_IMPL(MinOut)
+DYNET_NODE_INST_DEV_IMPL(MinDimension)
 
 } // namespace dynet
