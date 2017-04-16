@@ -404,27 +404,27 @@ struct TensorTools {
    * \param left Target minimum value
    * \param right Target maximum value 
    */
-  static void Clip(Tensor& d, float left, float right);
+  static void clip(Tensor& d, float left, float right);
   /**
    * \brief Fills the tensor with a constant value
    *
    * \param d Tensor to modify
    * \param c Target value
    */
-  static void Constant(Tensor& d, float c);
+  static void constant(Tensor& d, float c);
   /**
    * \brief Fills a tensor with zeros
    *
    * \param d Input tensor
    */
-  static void Zero(Tensor& d);
+  static void zero(Tensor& d);
   /**
    * \brief Set the (order 2) tensor as the identity matrix
    * \details this throws a runtime_error exception if the tensor isn't a square matrix
    *
    * \param val Input tensor
    */
-  static void Identity(Tensor& val);
+  static void identity(Tensor& val);
   //
   /**
    * \brief Fill the tensor with bernoulli random variables and scale them by scale
@@ -433,7 +433,7 @@ struct TensorTools {
    * \param p Parameter of the bernoulli distribution
    * \param scale Scale of the random variables
    */
-  static void RandomizeBernoulli(Tensor& val, real p, real scale = 1.0f);
+  static void randomize_bernoulli(Tensor& val, real p, real scale = 1.0f);
   /**
    * \brief Fill the tensor with gaussian random variables
    *
@@ -441,7 +441,7 @@ struct TensorTools {
    * \param mean Mean
    * \param stddev Standard deviation
    */
-  static void RandomizeNormal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
+  static void randomize_normal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
   /**
    * \brief Fill the tensor with uniform random variables
    *
@@ -449,7 +449,7 @@ struct TensorTools {
    * \param left Left bound of the interval
    * \param right Right bound of the interval
    */
-  static void RandomizeUniform(Tensor& val, real left = 0.0f, real right = 0.0f);
+  static void randomize_uniform(Tensor& val, real left = 0.0f, real right = 0.0f);
   /**
    * \brief Takes a square matrix tensor and sets it as a random orthonormal matrix
    * \details More specifically this samples a random matrix with RandomizeUniform and then performs SVD and returns the left orthonormal matrix in the decomposition, scaled by `scale`
@@ -457,7 +457,7 @@ struct TensorTools {
    * \param val Input tensor
    * \param scale Value to which the resulting orthonormal matrix will be scaled
    */
-  static void RandomizeOrthonormal(Tensor& val, real scale = 1.0f);
+  static void randomize_orthonormal(Tensor& val, real scale = 1.0f);
   /**
    * \brief Access element of the tensor by index in the values array
    * \details AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -467,7 +467,7 @@ struct TensorTools {
    *
    * \return `v.v[index]`
    */
-  static float AccessElement(const Tensor& v, int index);
+  static float access_element(const Tensor& v, int index);
   /**
    * \brief Access element of the tensor by indices in the various dimension
    * \details This only works for matrix shaped tensors (+ batch dimension). AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -477,7 +477,7 @@ struct TensorTools {
    *
    * \return `(*v)(index[0], index[1])`
    */
-  static float AccessElement(const Tensor& v, const Dim& index);
+  static float access_element(const Tensor& v, const Dim& index);
   /**
    * \brief Set element of the tensor by index in the values array
    * \details AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -486,7 +486,7 @@ struct TensorTools {
    * \param index Index in the memory
    * \param value Desired value
    */
-  static void SetElement(const Tensor& v, int index, float value);
+  static void set_element(const Tensor& v, int index, float value);
   /**
    * \brief Copy element from one tensor to another (by index in the values array)
    *
@@ -495,7 +495,7 @@ struct TensorTools {
    * \param r Target tensor
    * \param rindex Target index
    */
-  static void CopyElement(const Tensor& l, int lindex, Tensor& r, int rindex);
+  static void copy_element(const Tensor& l, int lindex, Tensor& r, int rindex);
 
   /**
    * \brief Set the elements of a tensor with an array of values
@@ -504,14 +504,14 @@ struct TensorTools {
    * \param v Input Tensor
    * \param vec Values
    */
-  static void SetElements(const Tensor& v, const std::vector<float>& vec);
+  static void set_elements(const Tensor& v, const std::vector<float>& vec);
   /**
    * \brief Copy one tensor into another
    *
    * \param v Target tensor
    * \param v_src Source tensor
    */
-  static void CopyElements(const Tensor& v, const Tensor& v_src);
+  static void copy_elements(const Tensor& v, const Tensor& v_src);
 };
 
 /**
