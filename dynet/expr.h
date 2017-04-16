@@ -1525,6 +1525,21 @@ inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); 
  */
 Expression maxout(const Expression& x, unsigned d = 0);
 
+/**
+ * \ingroup flowoperations
+ * \brief Min out
+ * \details Select out a element/row/column/sub-tensor from an expression, 
+ *          with minimum value along a given dimension.
+ *          This will result in the dimension of the tensor being reduced
+ *          by 1.
+ *
+ * \param x The input expression
+ * \param d The dimension along which to choose the element
+ *
+ * \return An expression of sub-tensor with min value along dimension d
+ */
+Expression minout(const Expression& x, unsigned d = 0);
+
 ////////////////////////////////////////////////
 // Noise operations                           //
 ////////////////////////////////////////////////
