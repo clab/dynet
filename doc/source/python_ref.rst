@@ -24,18 +24,18 @@ Model and Parameters
 
 Model
 ~~~~~
-.. autoclass::dynet.Model
+.. autoclass:: dynet.Model
    :members:
    :show-inheritance:
 
 Parameters and LookupParameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass::dynet.Parameters
+.. autoclass:: dynet.Parameters
    :members:
    :show-inheritance:
 
-.. autoclass::dynet.LookupParameters
+.. autoclass:: dynet.LookupParameters
    :members:
    :show-inheritance:
 

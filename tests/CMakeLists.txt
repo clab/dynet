@@ -5,7 +5,7 @@ find_package(Boost COMPONENTS system filesystem unit_test_framework serializatio
 include_directories(${TEST_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS})
 add_definitions(-DBOOST_TEST_DYN_LINK)
 
-foreach(TESTNAME dynet io mem nodes params trainers serialize)
+foreach(TESTNAME dynet io mem nodes params tensor trainers serialize)
 
   add_executable(test-${TESTNAME} test-${TESTNAME}.cc)
   

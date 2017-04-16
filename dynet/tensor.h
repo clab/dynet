@@ -177,25 +177,27 @@ struct Tensor {
   const Eigen::Map<Eigen::MatrixXf> colbatch_matrix() const {
     return Eigen::Map<Eigen::MatrixXf>(v, d.rows(), d.cols() * d.batch_elems());
   }
+
   /**
    * \brief Check for NaNs and infinite values
    * \details This is very slow: use sparingly (it's linear in the number of elements). This raises a `std::runtime_error` exception if the Tensor is on GPU because it's not implemented yet
    * \return Whether the tensor contains any invalid value
    */
   inline bool is_valid() const {
-#if HAVE_CUDA
     // TODO : replace this with a custom exception
-    if (device->type == DeviceType::GPU) {
-      throw std::runtime_error("is_valid() not implemented on GPU");
-    } else {
-#endif
+    if (device->type == DeviceType::CPU) {
       const size_t s = d.size();
       for (unsigned i = 0; i < s; ++i)
         if (std::isnan(v[i]) || std::isinf(v[i])) return false;
       return true;
+    } else {
 #if HAVE_CUDA
-    }
+      if (device->type == DeviceType::GPU) {
+        throw std::runtime_error("is_valid() not implemented on GPU");
+      }
 #endif
+    }
+    return false;
   }
 
   /**
@@ -368,6 +370,7 @@ template<> inline const Eigen::TensorMap<Eigen::Tensor<float, 5>> Tensor::tb<4>(
  * \param t Tensor
  */
 std::ostream& operator<<(std::ostream& os, const Tensor& t);
+
 /**
  * \ingroup tensor
  * \brief Get a scalar value from an order 0 tensor
@@ -547,6 +550,16 @@ template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>> In
 
 /**
  * \ingroup tensor
+ * \brief Get the array of indices in an index tensor
+ * \details For higher order tensors this returns the flattened value
+ *
+ * \param v Input index tensor
+ * \return Index values
+ */
+std::vector<Eigen::DenseIndex> as_vector(const IndexTensor& v);
+
+/**
+ * \ingroup tensor
  * \brief Provides tools for creating, accessing, copying and modifying tensors (in-place)
  *
  */
@@ -558,27 +571,27 @@ struct TensorTools {
    * \param left Target minimum value
    * \param right Target maximum value 
    */
-  static void Clip(Tensor& d, float left, float right);
+  static void clip(Tensor& d, float left, float right);
   /**
    * \brief Fills the tensor with a constant value
    *
    * \param d Tensor to modify
    * \param c Target value
    */
-  static void Constant(Tensor& d, float c);
+  static void constant(Tensor& d, float c);
   /**
    * \brief Fills a tensor with zeros
    *
    * \param d Input tensor
    */
-  static void Zero(Tensor& d);
+  static void zero(Tensor& d);
   /**
    * \brief Set the (order 2) tensor as the identity matrix
    * \details this throws a runtime_error exception if the tensor isn't a square matrix
    *
    * \param val Input tensor
    */
-  static void Identity(Tensor& val);
+  static void identity(Tensor& val);
   //
   /**
    * \brief Fill the tensor with bernoulli random variables and scale them by scale
@@ -587,7 +600,7 @@ struct TensorTools {
    * \param p Parameter of the bernoulli distribution
    * \param scale Scale of the random variables
    */
-  static void RandomizeBernoulli(Tensor& val, real p, real scale = 1.0f);
+  static void randomize_bernoulli(Tensor& val, real p, real scale = 1.0f);
   /**
    * \brief Fill the tensor with gaussian random variables
    *
@@ -595,7 +608,7 @@ struct TensorTools {
    * \param mean Mean
    * \param stddev Standard deviation
    */
-  static void RandomizeNormal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
+  static void randomize_normal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
   /**
    * \brief Fill the tensor with uniform random variables
    *
@@ -603,7 +616,7 @@ struct TensorTools {
    * \param left Left bound of the interval
    * \param right Right bound of the interval
    */
-  static void RandomizeUniform(Tensor& val, real left = 0.0f, real right = 0.0f);
+  static void randomize_uniform(Tensor& val, real left = 0.0f, real right = 0.0f);
   /**
    * \brief Takes a square matrix tensor and sets it as a random orthonormal matrix
    * \details More specifically this samples a random matrix with RandomizeUniform and then performs SVD and returns the left orthonormal matrix in the decomposition, scaled by `scale`
@@ -611,7 +624,7 @@ struct TensorTools {
    * \param val Input tensor
    * \param scale Value to which the resulting orthonormal matrix will be scaled
    */
-  static void RandomizeOrthonormal(Tensor& val, real scale = 1.0f);
+  static void randomize_orthonormal(Tensor& val, real scale = 1.0f);
   /**
    * \brief Access element of the tensor by index in the values array
    * \details AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -621,7 +634,7 @@ struct TensorTools {
    *
    * \return `v.v[index]`
    */
-  static float AccessElement(const Tensor& v, int index);
+  static float access_element(const Tensor& v, int index);
   /**
    * \brief Access element of the tensor by indices in the various dimension
    * \details This only works for matrix shaped tensors (+ batch dimension). AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -631,7 +644,7 @@ struct TensorTools {
    *
    * \return `(*v)(index[0], index[1])`
    */
-  static float AccessElement(const Tensor& v, const Dim& index);
+  static float access_element(const Tensor& v, const Dim& index);
   /**
    * \brief Set element of the tensor by index in the values array
    * \details AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -640,7 +653,7 @@ struct TensorTools {
    * \param index Index in the memory
    * \param value Desired value
    */
-  static void SetElement(const Tensor& v, int index, float value);
+  static void set_element(const Tensor& v, int index, float value);
   /**
    * \brief Copy element from one tensor to another (by index in the values array)
    *
@@ -649,7 +662,7 @@ struct TensorTools {
    * \param r Target tensor
    * \param rindex Target index
    */
-  static void CopyElement(const Tensor& l, int lindex, Tensor& r, int rindex);
+  static void copy_element(const Tensor& l, int lindex, Tensor& r, int rindex);
 
   /**
    * \brief Set the elements of a tensor with an array of values
@@ -658,14 +671,14 @@ struct TensorTools {
    * \param v Input Tensor
    * \param vec Values
    */
-  static void SetElements(const Tensor& v, const std::vector<float>& vec);
+  static void set_elements(const Tensor& v, const std::vector<float>& vec);
   /**
    * \brief Copy one tensor into another
    *
    * \param v Target tensor
    * \param v_src Source tensor
    */
-  static void CopyElements(const Tensor& v, const Tensor& v_src);
+  static void copy_elements(const Tensor& v, const Tensor& v_src);
 
   /**
    * \brief Calculate the index of the maximum value
@@ -677,7 +690,8 @@ struct TensorTools {
    * \returns A newly allocated LongTensor consisting of argmax IDs. The length of the
    *          dimension "dim" will be "num", consisting of the appropriate IDs.
    */
-  static IndexTensor ArgMax(const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  static IndexTensor argmax(const Tensor& v, unsigned dim = 0, unsigned num = 1);
+
   /**
    * \brief Calculate samples from a log probability
    *
@@ -688,7 +702,14 @@ struct TensorTools {
    * \returns A newly allocated LongTensor consisting of argmax IDs. The length of the
    *          dimension "dim" will be "num", consisting of the appropriate IDs.
    */
-  static IndexTensor CategoricalSampleLogProb(const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  static IndexTensor categorical_sample_log_prob(const Tensor& v, unsigned dim = 0, unsigned num = 1);
+
+protected:
+  template<class MyDevice>
+  static void clip_dev(MyDevice & dev, Tensor& d, float left, float right);
+  template<class MyDevice>
+  static void constant_dev(MyDevice & dev, Tensor& d, float c);
+
 };
 
 /**

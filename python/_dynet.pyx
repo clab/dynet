@@ -59,7 +59,7 @@ cdef class DynetParams:
         See the documentation about command line arguments for more details
         
         Keyword Args:
-            shared_parameters([type]): [description] (default: (None))
+            shared_parameters([type]): [description] (default: None)
         """
         cdef int argc = len(sys.argv)
         cdef char** c_argv
@@ -150,7 +150,7 @@ def init(shared_parameters=None):
         import _dynet / import _gdynet
     
     Keyword Args:
-        shared_parameters(bool): [description] (default: (None))
+        shared_parameters(bool): [description] (default: None)
     """
     params=DynetParams()
     params.from_args(shared_parameters)
@@ -174,7 +174,7 @@ cdef CDim Dim(dim, unsigned int batch_size=1):
 
     Args:
         dim(tuple): Dimensions as a tuple
-        batch_size(number): Batch size (default: (1))
+        batch_size(number): Batch size (default: 1)
     
     Returns:
         CDim: Dynet dimension
@@ -457,6 +457,9 @@ class Saveable(object):
 
 # Initializers
 cdef class PyInitializer:
+    """
+    Base class for parameter initializer
+    """
     cdef CParameterInit *initializer
     def __init__(self):
         assert(False),"Do not create PyInitializer directly."
@@ -464,34 +467,87 @@ cdef class PyInitializer:
         del self.initializer
 
 cdef class NormalInitializer(PyInitializer):
+    """Initialize the parameters with a gaussian distribution
+    
+    Keyword Arguments:
+        mean (number): Mean of the distribution (default: 0)
+        var (number): Variance of the distribution (default: 1)
+    """
     def __init__(self, float mean=0, var=1):
         self.initializer = new CParameterInitNormal(mean, var)
 
 cdef class UniformInitializer(PyInitializer):
+    """Initialize the parameters with a uniform distribution
+    
+    Args:
+        scale (number): Parmeters are sampled from :math:`\mathcal U([-\\texttt{scale},\\texttt{scale}])`
+    """
     def __init__(self, float scale):
         self.initializer = new CParameterInitUniform(scale)
 
 cdef class ConstInitializer(PyInitializer):
+    """Initialize the parameters with a constant value
+    
+    Args:
+        c (number): Value to initialize the parameters
+    """
     def __init__(self, float c):
         self.initializer = new CParameterInitConst(c)
 
 cdef class IdentityInitializer(PyInitializer):
+    """Initialize the parameters as the identity
+    
+    Only works with square matrices
+    """
     def __init__(self):
         self.initializer = new CParameterInitIdentity()
 
 cdef class GlorotInitializer(PyInitializer):
+    """Initializes the weights according to `Glorot & Bengio (2011) <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_ 
+    
+    If the dimensions of the parameter matrix are :math:`m,n`, the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{m+n}},g\sqrt{\\frac{6}{m+n}}])`
+    
+    The gain :math:`g` depends on the activation function : 
+
+    * :math:`\\text{tanh}` : 1.0
+    * :math:`\\text{ReLU}` : 0.5
+    * :math:`\\text{sigmoid}` : 4.0
+    * Any smooth function :math:`f` : :math:`\\frac{1}{f'(0)}`
+    
+    Keyword Arguments:
+        is_lookup (bool): Whether the parameter is alookup parameter (default: False)
+        gain (number): Gain (Depends on the activation function) (default: 1.0)
+    """
     def __init__(self, bool is_lookup=False,float gain=1.0):
         self.initializer = new CParameterInitGlorot(is_lookup,gain)
 
 cdef class SaxeInitializer(PyInitializer):
-   def __init__(self,scale=1.0):
-       self.initializer = new CParameterInitSaxe(scale)
+    """Initializes according to `Saxe et al. (2014) <https://arxiv.org/abs/1312.6120>`_
+
+    Initializes as a random orthonormal matrix (unimplemented for GPU)
+        Keyword Arguments:
+            scale (number): scale to apply to the orthonormal matrix
+    """
+    def __init__(self,scale=1.0):
+        self.initializer = new CParameterInitSaxe(scale)
 
 cdef class FromFileInitializer(PyInitializer):
+    """Initialize parameter from file
+    
+    Args:
+        fname (str): File name
+    """
     def __init__(self, string fname):
         self.initializer = new CParameterInitFromFile(fname)
 
 cdef class NumpyInitializer(PyInitializer):
+    """Initialize from numpy array
+
+    Alternatively, use :code:`Model.parameters_from_numpy()`
+    
+    Args:
+        array (np.ndarray): Numpy array
+    """
     def __init__(self, array):
         self.initializer = new CParameterInitFromVector(self.vec_from_array(array))
 
@@ -505,6 +561,9 @@ cdef class NumpyInitializer(PyInitializer):
 
 
 cdef class Model: # (((
+    """
+    A model holds Parameters. Use it to create, load and save parameters.
+    """
     cdef CModel *thisptr
     def __cinit__(self):
         self.thisptr = new CModel()
@@ -515,6 +574,16 @@ cdef class Model: # (((
 
     @staticmethod
     def from_file(fname):
+        """Create model from file
+        
+        Loads all parameters in file and returns model holding them
+        
+        Args:
+            fname (str): File name
+        
+        Returns:
+            (dynet.Model): Created model
+        """
         model = Model()
         res = model.load(fname)
         return model, res
@@ -523,12 +592,31 @@ cdef class Model: # (((
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
     cpdef parameters_from_numpy(self, array):
+        """Create parameter from numpy array
+        
+        Args:
+            array (np.ndarray): Numpy array
+        
+        Returns:
+            (dynet.Parameters): Parameter
+        """
         dim = array.shape
         cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer))
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
     cpdef add_parameters(self, dim, PyInitializer init=None):
+        """Add a parameter to the model
+        
+        Args:
+            dim (tuple): Shape of the parameter
+        
+        Keyword Arguments:
+            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+        
+        Returns:
+            (dynet.Parameters): Created Parameter
+        """
         assert(isinstance(dim,(tuple,int)))
         cdef CParameters p
         cdef CParameterInit *initializer
@@ -540,6 +628,17 @@ cdef class Model: # (((
         return pp
 
     cpdef add_lookup_parameters(self, dim, PyInitializer init=None):
+        """Add a lookup parameter to the model
+        
+        Args:
+            dim (tuple): Shape of the parameter. The first dimension is the lookup dimension
+        
+        Keyword Arguments:
+            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+        
+        Returns:
+            (dynet.LookupParameters): Created LookupParameter
+        """
         assert(isinstance(dim, tuple))
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
@@ -550,11 +649,21 @@ cdef class Model: # (((
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    def save_all(self, string fname):
-        save_dynet_model(fname, self.thisptr)
+    def save_all(self, fname):
+        """Save all parameters in model to file
+        
+        Args:
+            fname (str): File name
+        """
+        save_dynet_model(fname.encode(), self.thisptr)
 
-    def load_all(self, string fname):
-        load_dynet_model(fname, self.thisptr)
+    def load_all(self, fname):
+        """Load all parameters in model from file
+        
+        Args:
+            fname (str): File name
+        """
+        load_dynet_model(fname.encode(), self.thisptr)
 
     cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
         # would be nicer to have polymorphism/dispatch-by-type
@@ -593,8 +702,16 @@ cdef class Model: # (((
             raise TypeError("Cannot save model component of type %s" % type(c))
 
     def save(self, fname, components=None):
+        """Save a list of parameters to file
+        
+        Args:
+            fname (str): File name
+        
+        Keyword Arguments:
+            components (list): List of parameters to save (default: None)
+        """
         if not components:
-            self.save_all(fname.encode())
+            self.save_all(fname)
             return
         fh = open(fname+".pym","w")
         pfh = open(fname+".pyk","wb")
@@ -656,8 +773,16 @@ cdef class Model: # (((
             assert False,"unsupported type " + tp
 
     cpdef load(self, fname):
+        """Load a list of parameters from file
+        
+        Args:
+            fname (str): File name
+
+        Returns:
+            (list): List of parameters loaded from file
+        """
         if not os.path.isfile(fname+".pym"):
-            self.load_all(fname.encode())
+            self.load_all(fname)
             return
         with open(fname+".pym","r") as fh:
             types = fh.read().strip().split()
@@ -729,17 +854,43 @@ cdef class FloatVectorValue:
 cdef int SECRET = 923148
 cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
-def cg_version(): return _cg._cg_version
-def renew_cg(immediate_compute=False, check_validity=False): return _cg.renew(immediate_compute, check_validity)
+def cg_version(): 
+    """
+    Varsion of the current computation graph
+    """
+    return _cg._cg_version
+def renew_cg(immediate_compute=False, check_validity=False): 
+    """
+    Renew the computation graph.
+
+    Call this before building any new computation graph
+    """
+    return _cg.renew(immediate_compute, check_validity)
 def print_text_graphviz(): return _cg.print_graphviz()
-def cg_checkpoint(): _cg.checkpoint()
-def cg_revert():     _cg.revert()
+def cg_checkpoint(): 
+    """
+    Saves the state of the computation graph
+    """
+    _cg.checkpoint()
+def cg_revert():
+    """
+    Revert the computation graph state to the previous checkpoint
+    """
+    _cg.revert()
 
 cpdef ComputationGraph cg():
+    """
+    Get the current ComputationGraph
+    """
     global _cg
     return _cg
 
 cdef class ComputationGraph:
+    """
+    Computation graph object
+
+    While the ComputationGraph is central to the inner workings of DyNet, from the user's perspective, the only responsibility is to create a new computation graph for each training example.
+    """
     cdef CComputationGraph *thisptr, 
     cdef list _inputs
     cdef int _cg_version
@@ -752,6 +903,9 @@ cdef class ComputationGraph:
         del self.thisptr
 
     cpdef renew(self, immediate_compute=False, check_validity=False):
+        """
+        Same as `dynet.renew_cg()`
+        """
         del self.thisptr
         self.thisptr = new CComputationGraph()
         if immediate_compute: self.thisptr.set_immediate_compute(immediate_compute)
@@ -760,9 +914,16 @@ cdef class ComputationGraph:
         self._cg_version += 1
         return self
 
-    cpdef version(self): return self._cg_version
+    cpdef version(self): 
+        """
+        Same as `dynet.cg_version()`
+        """
+        return self._cg_version
 
     def parameters(self, Parameters params):
+        """
+        Same as `dynet.parameters(params)`
+        """
         cdef Expression result
         result = Expression.from_cexpr(self._cg_version, c_parameter(self.thisptr[0], params.thisptr))
         return result
@@ -976,7 +1137,7 @@ cdef class Expression: #(((
         This only works if the expression is a scalar
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         
         Returns:
             float: Scalar value of the expression
@@ -991,7 +1152,7 @@ cdef class Expression: #(((
         In case of a multidimensional expression, the values are flattened according to a column major ordering
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         
         Returns:
             list: Array of values
@@ -1006,7 +1167,7 @@ cdef class Expression: #(((
         The last dimension is the batch size (if it's > 1)
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         
         Returns:
             np.ndarray: numpy array of values
@@ -1026,7 +1187,7 @@ cdef class Expression: #(((
         this returns the same thing as `scalar_value`, `vec_value`, `npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         
         Returns:
             float, list, np.ndarray: Value of the expression
@@ -1049,7 +1210,7 @@ cdef class Expression: #(((
         Prefer `values`
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward(self.vindex)
@@ -1245,7 +1406,7 @@ def inputTensor(arr,batched=False):
         arr(list,np.ndarray): Values : numpy ndarray OR list of np.ndarray OR multidimensional list of floats
     
     Keyword Args:
-        batched(bool): Whether to use the last dimension as a batch dimension (default: (False))
+        batched(bool): Whether to use the last dimension as a batch dimension (default: False)
     
     Returns:
         _vecInputExpression: Input expression
@@ -1332,8 +1493,8 @@ def lookup(LookupParameters p, unsigned index=0, update=True):
         :type p: LookupParameters
     
     Keyword Args:
-        index(number): Lookup index (default: (0))
-        update(bool): Whether to update the lookup parameter [(default: (True))
+        index(number): Lookup index (default: 0)
+        update(bool): Whether to update the lookup parameter [(default: True)
     
     Returns:
         _lookupExpression: Expression for the embedding
@@ -1350,7 +1511,7 @@ def lookup_batch(LookupParameters p, vector[unsigned] indices, update=True):
         indices(list(int)): Indices to look up for each batch element
     
     Keyword Args:
-        update(bool): Whether to update the lookup parameter (default: (True))
+        update(bool): Whether to update the lookup parameter (default: True)
     
     Returns:
         _lookupBatchExpression: Expression for the batched embeddings
@@ -1393,8 +1554,8 @@ def pick(Expression e, unsigned index=0, unsigned dim=0):
         e(Expression): Expression to pick from
     
     Keyword Args:
-        index(number): Index to pick (default: (0))
-        dim(number): Dimension to pick from (default: (0))
+        index(number): Index to pick (default: 0)
+        dim(number): Dimension to pick from (default: 0)
     
     Returns:
         _pickerExpression: Picked expression
@@ -1435,7 +1596,7 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
     Args:
         e(Expression): Expression to pick from
         indices(list): Indices to pick
-        dim(number): Dimension to pick from (default: (0))
+        dim(number): Dimension to pick from (default: 0)
     
     Returns:
         _pickerBatchExpression: Picked expression
@@ -1477,7 +1638,7 @@ def hinge(Expression x, unsigned index, float m=1.0):
         index (number): The index of the correct candidate
     
     Keyword Args:
-        m(number): Margin (default: (1.0))
+        m(number): Margin (default: 1.0)
     
     Returns:
         _hingeExpression: The hinge loss of candidate index with respect to margin m
@@ -2088,7 +2249,7 @@ cdef class Trainer:
         The update equation is different for each trainer, check the online c++ documentation for more details on what each trainer does
         
         Keyword Args:
-            s(number): Optional scaling factor to apply on the gradient. (default: (1.0))
+            s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
         self.thisptr.update(s)
     cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
@@ -2101,7 +2262,7 @@ cdef class Trainer:
             updated_lookups(list): Indices of lookup parameters to update
         
         Keyword Args:
-            s(number): Optional scaling factor to apply on the gradient. (default: (1.0))
+            s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
@@ -2114,7 +2275,7 @@ cdef class Trainer:
         Basically learning rate decay.
         
         Keyword Args:
-            r(number): Number of epoch that passed (default: (1.0))
+            r(number): Number of epoch that passed (default: 1.0)
         """
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -2162,8 +2323,8 @@ cdef class SimpleSGDTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: (0.1))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        e0(number): Initial learning rate (default: 0.1)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
         self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
@@ -2179,9 +2340,9 @@ cdef class MomentumSGDTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: (0.1))
-        mom(number): Momentum (default: (0.9))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        e0(number): Initial learning rate (default: 0.1)
+        mom(number): Momentum (default: 0.9)
+        edecay(number): Learning rate decay parameter (default: 0.0)
 
     """
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
@@ -2199,9 +2360,9 @@ cdef class AdagradTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: (0.1))
-        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-20))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        e0(number): Initial learning rate (default: 0.1)
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-20)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
         self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
@@ -2218,9 +2379,9 @@ cdef class AdadeltaTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-6))
-        rho(number): Update parameter for the moving average of updates in the numerator (default: (0.95))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-6)
+        rho(number): Update parameter for the moving average of updates in the numerator (default: 0.95)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
         self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
@@ -2236,10 +2397,10 @@ cdef class RMSPropTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: (0.001))
-        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-8))
-        rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: (0.9))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        e0(number): Initial learning rate (default: 0.001)
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
+        rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: 0.9)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
         self.thisptr = new CRMSPropTrainer(m.thisptr[0], e0, eps, rho, edecay)
@@ -2255,11 +2416,11 @@ cdef class AdamTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        alpha(number): Initial learning rate (default: (0.001))
-        beta_1(number): Moving average parameter for the mean (default: (0.9))
-        beta_2(number): Moving average parameter for the variance (default: (0.999))
-        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-8))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        alpha(number): Initial learning rate (default: 0.001)
+        beta_1(number): Moving average parameter for the mean (default: 0.9)
+        beta_2(number): Moving average parameter for the variance (default: 0.999)
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
         self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)

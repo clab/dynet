@@ -5,38 +5,6 @@
 
 namespace dynet {
 namespace gpu {
-// CUDA kernel. Each thread takes care of one element of c
-__global__ void ker_clip(int n, float left, float right, float *trg){
-  // Get our global thread ID
-  int id = blockIdx.x*blockDim.x+threadIdx.x;
-
-  // Make sure we do not go out of bounds
-  if (id <n)
-	trg[id] = min(right, max(left, trg[id]));
-}
-void clip(int n, float left, float right, float* trg){
-	auto tb = SizeToBlockThreadPair(n);
-	int total_size = tb.first*tb.second;
-	for(int curr_pos = 0; curr_pos < n; curr_pos += total_size)
-	  ker_clip<<<tb.first, tb.second>>>(min(total_size, n-curr_pos), left, right, trg+curr_pos);
-}
-
-// CUDA kernel. Each thread takes care of one element of c
-__global__ void ker_const_init(int n, float val, float *trg) {
-  // Get our global thread ID
-  int id = blockIdx.x*blockDim.x+threadIdx.x;
-
-  // Make sure we do not go out of bounds
-  if (id < n)
-    trg[id] = val;
-}
-
-void const_init(int n, float val, float *trg) {
-  auto tb = SizeToBlockThreadPair(n);
-  int total_size = tb.first*tb.second;
-  for(int curr_pos = 0; curr_pos < n; curr_pos += total_size)
-    ker_const_init<<<tb.first, tb.second>>>(min(total_size, n-curr_pos), val, trg+curr_pos);
-}
 
 // CUDA kernel. Each thread takes care of one element of c
 __global__ void ker_dense_to_sparse_assign(int n, const unsigned int *idx, float *src, float *trg) {
