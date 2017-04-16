@@ -54,7 +54,8 @@ BOOST_AUTO_TEST_CASE( argmax ) {
   IndexTensor idx_tens = TensorTools::argmax(x1.value());
   vector<Eigen::DenseIndex> idx_act = as_vector(idx_tens);
   vector<Eigen::DenseIndex> idx_exp = {1, 2};
-  BOOST_TEST(idx_exp == idx_act, boost::test_tools::per_element() );
+  BOOST_CHECK_EQUAL_COLLECTIONS(idx_exp.begin(), idx_exp.end(),
+                                idx_act.begin(), idx_act.end());
 }
 
 // for now, just make sure that things don't die
