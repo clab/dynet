@@ -1,7 +1,8 @@
 """
 Tests for model saving and loading, including for user-defined models.
 """
-from pydynet import *
+from __future__ import print_function
+from dynet import *
 import numpy
 import os
 
@@ -186,7 +187,7 @@ def new_style_save_and_load():
 
 new_style_save_and_load()
 
-print "Model saving tests passed."
+print("Model saving tests passed.")
 
 
 

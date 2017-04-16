@@ -781,7 +781,7 @@ DYNET_NODE_INST_DEV_IMPL(DotProduct)
 template<class MyDevice>
 void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  TensorTools::RandomizeBernoulli(m, (1.f-p), 1.f / (1.f-p));
+  TensorTools::randomize_bernoulli(m, (1.f-p), 1.f / (1.f-p));
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() * m.tvec();
 }
 
@@ -832,7 +832,7 @@ DYNET_NODE_INST_DEV_IMPL(Exp)
 template<class MyDevice>
 void GaussianNoise::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  TensorTools::RandomizeNormal(m, 0, stddev);
+  TensorTools::randomize_normal(m, 0, stddev);
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() + m.tvec();
 }
 
@@ -855,9 +855,9 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
   if(pelement != nullptr) {
     DYNET_ARG_CHECK(fx.d.bd == 1, 
                             "Hinge was passed a single index but the corresponding expression has multiple mini-batch elements (" << fx.d.bd << ")");
-    const real mlystar = margin - TensorTools::AccessElement(*xs[0], *pelement);
+    const real mlystar = margin - TensorTools::access_element(*xs[0], *pelement);
     eloss.tvec().device(*dev.edevice) = (xs[0]->tvec() + mlystar).cwiseMax(0.f);
-    TensorTools::SetElement(eloss, *pelement, 0.f);
+    TensorTools::set_element(eloss, *pelement, 0.f);
     fx.t<0>().device(*dev.edevice) = eloss.tvec().sum();
   } else {
     DYNET_ASSERT(pelements != nullptr, "Hinge::forward has neither pointer to single element nor vector");
@@ -866,9 +866,9 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
                             ") that doesn't match the number of mini-batch elements in the corresponding expression (" << xs[0]->d << ")");
     size_t batch_size = xs[0]->d.batch_size();
     for(size_t b = 0; b < fx.d.bd; b++) {
-      const real mlystar = margin - TensorTools::AccessElement(*xs[0], b*batch_size + (*pelements)[b]);
+      const real mlystar = margin - TensorTools::access_element(*xs[0], b*batch_size + (*pelements)[b]);
       eloss.tb<1>().chip<1>(b).device(*dev.edevice) = (xs[0]->tb<1>().chip<1>(b) + mlystar).cwiseMax(0.f);
-      TensorTools::SetElement(eloss, b*batch_size + (*pelements)[b], 0.f);
+      TensorTools::set_element(eloss, b*batch_size + (*pelements)[b], 0.f);
       fx.tb<0>().chip<0>(b).device(*dev.edevice) = eloss.tb<1>().chip<1>(b).sum();
     }
   }
@@ -1123,7 +1123,7 @@ void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
     Tensor v(Dim({(unsigned int)xs.size()}), static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
     Tensor m(Dim({1}), static_cast<float*>(aux_mem) + xs.size(), fx.device, DeviceMempool::FXS);
     for (unsigned i = 0; i < xs.size(); ++i)
-      TensorTools::CopyElement(*xs[i], 0, v, i);
+      TensorTools::copy_element(*xs[i], 0, v, i);
     logsumexp(dev, v, m, fx);
   }
 }
@@ -1705,7 +1705,7 @@ void RestrictedLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<c
   if(denom.size() == 0)
     DYNET_RUNTIME_ERR("RestrictedLogSoftmax currently only supports single column expressions (contributions expanding support to multiple columns welcome!)");
   const real logz = logsumexp(x, denom);
-  TensorTools::Constant(fx, -numeric_limits<real>::infinity());
+  TensorTools::constant(fx, -numeric_limits<real>::infinity());
   for (auto i : denom)
     (*fx)(i,0) = x(i,0) - logz;
   if (denom.size() == 1) (*fx)(denom.front(), 0) = 0;
@@ -2041,7 +2041,7 @@ void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs
     }
     else {
       // Not all the same batch size, so need to broadcast in the cases where they differ
-      TensorTools::Zero(fx);
+      TensorTools::zero(fx);
 #if __CUDACC__
       Eigen::array<int, 2> bcast({ 1, (int)fx.d.bd });
 #endif
@@ -2220,7 +2220,7 @@ DYNET_NODE_INST_DEV_IMPL(Transpose)
 template<class MyDevice>
 void Zeroes::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in Zeroes::forward");
-  TensorTools::Zero(fx);
+  TensorTools::zero(fx);
 }
 
 template<class MyDevice>
@@ -2237,7 +2237,7 @@ DYNET_NODE_INST_DEV_IMPL(Zeroes)
 template<class MyDevice>
 void RandomNormal::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomNormal::forward");
-  TensorTools::RandomizeNormal(fx);
+  TensorTools::randomize_normal(fx);
 }
 
 template<class MyDevice>
@@ -2254,7 +2254,7 @@ DYNET_NODE_INST_DEV_IMPL(RandomNormal)
 template<class MyDevice>
 void RandomBernoulli::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomBernoulli::forward");
-  TensorTools::RandomizeBernoulli(fx, p, scale);
+  TensorTools::randomize_bernoulli(fx, p, scale);
 }
 
 template<class MyDevice>
@@ -2271,7 +2271,7 @@ DYNET_NODE_INST_DEV_IMPL(RandomBernoulli)
 template<class MyDevice>
 void RandomUniform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomUniform::forward");
-  TensorTools::RandomizeUniform(fx, left, right);
+  TensorTools::randomize_uniform(fx, left, right);
 }
 
 template<class MyDevice>
@@ -2289,7 +2289,7 @@ template<class MyDevice>
 void RandomGumbel::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomGumbel::forward");
   DYNET_ARG_CHECK(mu == 0.0 && beta == 1.0, "RandomGumbel only supports Gumbel(0,1) at the moment (pull requests welcome)");
-  TensorTools::RandomizeUniform(fx, 0, 1);
+  TensorTools::randomize_uniform(fx, 0, 1);
   fx.tvec().device(*dev.edevice) = -(-fx.tvec().log()).log();
 }
 
