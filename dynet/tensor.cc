@@ -8,7 +8,7 @@
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/array.hpp>
 
-#if HAVE_CUDA
+#ifdef __CUDACC__
 #include "dynet/gpu-ops.h"
 #include "dynet/cuda.h"
 #endif
@@ -16,6 +16,10 @@
 using namespace std;
 
 namespace dynet {
+
+// ---- CPU only operations
+
+#ifndef __CUDACC__
 
 ostream& operator<<(ostream& os, const Tensor& t) {
   if (t.device->type == DeviceType::CPU) {
@@ -133,39 +137,6 @@ void TensorTools::copy_elements(const Tensor& v, const Tensor& v_src) {
       throw std::invalid_argument("TensorTools::CopyElement doesn't support inter-device copy yet");
     if (v.device->type == DeviceType::GPU) {
       cudaMemcpyAsync(v.v, v_src.v, sizeof(real) * v.d.size(), cudaMemcpyDeviceToDevice);
-    }
-#endif
-  }
-}
-
-void TensorTools::clip(Tensor& d, float left, float right){
-#if HAVE_CUDA
-	if (d.device->type == DeviceType::GPU){
-		dynet::gpu::clip(d.d.size(), left, right, d.v);
-	} else {
-#endif
-		for (size_t pos =0; pos < d.d.size(); ++pos)
-		  d.v[pos] = min(right, max(left, d.v[pos]));
-#if HAVE_CUDA
-	}
-#endif
-}
-
-void TensorTools::constant(Tensor& d, float c) {
-  if (d.device->type == DeviceType::CPU) {
-    if (!c) {
-      memset(d.v, c, d.d.size() * sizeof(float));
-    } else {
-      fill(d.v, d.v + d.d.size(), c);
-    }
-  } else {
-#if HAVE_CUDA
-    if (d.device->type == DeviceType::GPU) {
-      if (!c) {
-        CUDA_CHECK(cudaMemsetAsync(d.v, 0, d.d.size() * sizeof(float)));
-      } else {
-        dynet::gpu::const_init(d.d.size(), c, d.v);
-      }
     }
 #endif
   }
@@ -329,6 +300,57 @@ real rand_normal() {
   normal_distribution<real> distribution(0, 1);
   return distribution(*rndeng);
 }
+
+#endif
+
+// ---- CPU/GPU operations
+// TODO: would like to get rid of all the verbose code dispatching o the appropriate device
+
+template <class MyDevice>
+void TensorTools::constant_dev(MyDevice & dev, Tensor& d, float c) {
+  d.tvec().device(*dev.edevice) = d.tvec().constant(c);
+}
+#ifdef __CUDACC__
+template void TensorTools::constant_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float c);
+#else
+template void TensorTools::constant_dev<Device_CPU>(Device_CPU & dev, Tensor& d, float c);
+#ifdef HAVE_CUDA
+extern template void TensorTools::constant_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float c);
+void TensorTools::constant(Tensor& d, float c) {
+  if (default_device->type == DeviceType::CPU) { return constant_dev(*(Device_CPU*)default_device, d, c); }
+  else if (default_device->type == DeviceType::GPU) { return constant_dev(*(Device_GPU*)default_device, d, c); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+void TensorTools::constant(Tensor& d, float c) {
+  if (default_device->type == DeviceType::CPU) { return constant_dev(*(Device_CPU*)default_device, d, c); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+#endif
+
+template <class MyDevice>
+void TensorTools::clip_dev(MyDevice & dev, Tensor& d, float left, float right) {
+  d.tvec().device(*dev.edevice) = d.tvec().cwiseMax(left).cwiseMin(right);
+}
+#ifdef __CUDACC__
+template void TensorTools::clip_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float left, float right);
+#else
+template void TensorTools::clip_dev<Device_CPU>(Device_CPU & dev, Tensor& d, float left, float right);
+#ifdef HAVE_CUDA
+extern template void TensorTools::clip_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float left, float right);
+void TensorTools::clip(Tensor& d, float left, float right) {
+  if (default_device->type == DeviceType::CPU) { return clip_dev(*(Device_CPU*)default_device, d, left, right); }
+  else if (default_device->type == DeviceType::GPU) { return clip_dev(*(Device_GPU*)default_device, d, left, right); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+void TensorTools::clip(Tensor& d, float left, float right) {
+  if (default_device->type == DeviceType::CPU) { return clip_dev(*(Device_CPU*)default_device, d, left, right); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+#endif
 
 } // namespace dynet
 
