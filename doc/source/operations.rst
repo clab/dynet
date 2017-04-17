@@ -84,7 +84,7 @@ These operations are used for performing various operations common in linear alg
 	:content-only:
 
 Convolution Operations
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 These operations are convolution-related.
 
