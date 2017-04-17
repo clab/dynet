@@ -184,7 +184,7 @@ struct Dim {
    * \param i index of the dimension to be removed
    */
   inline void delete_dim(unsigned int i) {
-    DYNET_ARG_CHECK(i <= nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d);
+    DYNET_ARG_CHECK(i <= nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << "({" << d << "}," << bd << ')' );
     if(i == nd){
       bd = 1;
     }
