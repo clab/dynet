@@ -937,4 +937,38 @@ Dim RandomGumbel::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
+string MaxDimension::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "max_dim(" << arg_names[0] << ", reduced_dim=" << reduced_dim << ')';
+  return s.str();
+}
+
+Dim MaxDimension::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in MaxDimension");
+  DYNET_ARG_CHECK(reduced_dim < xs[0].nd,
+                          "Tried to MaxDimension on dimension " << reduced_dim << " bigger than input " << xs[0]);
+  DYNET_ARG_CHECK(xs[0].nd < 4,
+                          "MaxDimension not currently supported for tensors of 4 or more dimensions.");
+  Dim ret(xs[0]);
+  ret.delete_dim(reduced_dim);
+  return ret;
+}
+
+string MinDimension::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "min_dim(" << arg_names[0] << ", reduced_dim=" << reduced_dim << ')';
+  return s.str();
+}
+
+Dim MinDimension::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in MinDimension");
+  DYNET_ARG_CHECK(reduced_dim < xs[0].nd,
+                          "Tried to MinDimension on dimension " << reduced_dim << " bigger than input " << xs[0]);
+  DYNET_ARG_CHECK(xs[0].nd < 4,
+                          "MinDimension not currently supported for tensors of 4 or more dimensions.");
+  Dim ret(xs[0]);
+  ret.delete_dim(reduced_dim);
+  return ret;
+}
+
 } // namespace dynet
