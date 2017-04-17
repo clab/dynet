@@ -45,27 +45,27 @@ struct NodeTest {
                                            .211f, .222f, .233f, .212f, .222f, .232f, .213f, .223f, .233f
                                           };
     param1 = mod.add_parameters({3});
-    TensorTools::SetElements(param1.get()->values, param1_vals);
+    TensorTools::set_elements(param1.get()->values, param1_vals);
     param2 = mod.add_parameters({3});
-    TensorTools::SetElements(param2.get()->values, param2_vals);
+    TensorTools::set_elements(param2.get()->values, param2_vals);
     param3 = mod.add_parameters({3});
-    TensorTools::SetElements(param3.get()->values, param3_vals);
+    TensorTools::set_elements(param3.get()->values, param3_vals);
     param4 = mod.add_parameters({6});
-    TensorTools::SetElements(param4.get()->values, param4_vals);
+    TensorTools::set_elements(param4.get()->values, param4_vals);
     param_scalar1 = mod.add_parameters({1});
-    TensorTools::SetElements(param_scalar1.get()->values, param_scalar1_vals);
+    TensorTools::set_elements(param_scalar1.get()->values, param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
-    TensorTools::SetElements(param_scalar2.get()->values, param_scalar2_vals);
+    TensorTools::set_elements(param_scalar2.get()->values, param_scalar2_vals);
     param_kernel1 = mod.add_parameters({3, 2});
-    TensorTools::SetElements(param_kernel1.get()->values, param_kernel1_vals);
+    TensorTools::set_elements(param_kernel1.get()->values, param_kernel1_vals);
     param_filter1 = mod.add_parameters({3, 2, 2});
-    TensorTools::SetElements(param_filter1.get()->values, param_filter1_vals);
+    TensorTools::set_elements(param_filter1.get()->values, param_filter1_vals);
     param_square1 = mod.add_parameters({3, 3});
-    TensorTools::SetElements(param_square1.get()->values, param_square1_vals);
+    TensorTools::set_elements(param_square1.get()->values, param_square1_vals);
     param_cube1 = mod.add_parameters({3, 3, 3});
-    TensorTools::SetElements(param_cube1.get()->values, param_cube1_vals);
+    TensorTools::set_elements(param_cube1.get()->values, param_cube1_vals);
     lookup1 = mod.add_lookup_parameters(3, {3});
-    TensorTools::SetElements(lookup1.get()->all_values, param_square1_vals);
+    TensorTools::set_elements(lookup1.get()->all_values, param_square1_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);
