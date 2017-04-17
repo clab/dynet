@@ -273,22 +273,22 @@ def dot_product(x, y): return GVExpr('dot_product', [x,y], ensure_same_dim(x,y))
 def squared_distance(x, y): return GVExpr('squared_distance', [x,y], ensure_same_dim(x,y))
 def l1_distance(x, y): return GVExpr('l1_distance', [x,y], ensure_same_dim(x,y))
 def binary_log_loss(x, y): return GVExpr('binary_log_loss', [x,y], ensure_same_dim(x,y))
-def conv1d_narrow(x, y):
-  if x.dim.invalid() or y.dim.invalid():
-    d = InvalidDim
-  elif x.dim[0] != y.dim[0]:
-    d = InvalidConcreteDim(x.dim, y.dim)
-  else:
-    d = make_dim(x.dim[0], x.dim[1] - y.dim[1] + 1)
-  return GVExpr('conv1d_narrow', [x,y], d)
-def conv1d_wide(x, y):
-  if x.dim.invalid() or y.dim.invalid():
-    d = InvalidDim
-  elif x.dim[0] != y.dim[0]:
-    d = InvalidConcreteDim(x.dim, y.dim)
-  else:
-    d = make_dim(x.dim[0], x.dim[1] + y.dim[1] - 1)
-  return GVExpr('conv1d_wide', [x,y], d)
+#def conv1d_narrow(x, y):
+#  if x.dim.invalid() or y.dim.invalid():
+#    d = InvalidDim
+#  elif x.dim[0] != y.dim[0]:
+#    d = InvalidConcreteDim(x.dim, y.dim)
+#  else:
+#    d = make_dim(x.dim[0], x.dim[1] - y.dim[1] + 1)
+#  return GVExpr('conv1d_narrow', [x,y], d)
+#def conv1d_wide(x, y):
+#  if x.dim.invalid() or y.dim.invalid():
+#    d = InvalidDim
+#  elif x.dim[0] != y.dim[0]:
+#    d = InvalidConcreteDim(x.dim, y.dim)
+#  else:
+#    d = make_dim(x.dim[0], x.dim[1] + y.dim[1] - 1)
+#  return GVExpr('conv1d_wide', [x,y], d)
 def filter1d_narrow(x, y): 
   if x.dim.invalid() or y.dim.invalid():
     d = InvalidDim
