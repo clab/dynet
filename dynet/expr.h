@@ -1069,7 +1069,7 @@ Expression squared_distance(const Expression& x, const Expression& y);
 
 /**
  * \ingroup lossoperations
- * \brief Squared distance
+ * \brief L1 distance
  * \details The L1 distance between values of ``x`` and ``y``: \f$\sum_i |x_i-y_i|\f$.
  *
  * \param x A vector of values
