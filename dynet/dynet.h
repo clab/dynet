@@ -519,6 +519,13 @@ struct Node {
    */
   inline unsigned arity() const { return args.size(); }
 
+  inline void set_cg(ComputationGraph* cg) { cg_ = cg; }
+
+  inline ComputationGraph* get_cg() const {
+    if (cg_) return cg_;
+    else return NULL;
+  }
+
   std::vector<VariableIndex> args;/**< Dependency structure */
 
   // memory size
@@ -531,6 +538,9 @@ protected:
   explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
   template <typename T>
   explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
+
+private:
+  ComputationGraph* cg_;  // pointer to the computation graph
 
 public:
   // auxiliary memory

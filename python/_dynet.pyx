@@ -1669,9 +1669,14 @@ cpdef Expression squared_norm(Expression x): return Expression.from_cexpr(x.cg_v
 cpdef Expression squared_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_squared_distance(x.c(), y.c()))
 cpdef Expression l1_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_l1_distance(x.c(), y.c()))
 cpdef Expression binary_log_loss(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_binary_log_loss(x.c(), y.c()))
-cpdef Expression conv1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_narrow(x.c(), y.c()))
-cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_wide(x.c(), y.c()))
+#cpdef Expression conv1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_narrow(x.c(), y.c()))
+#cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_wide(x.c(), y.c()))
 cpdef Expression filter1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_filter1d_narrow(x.c(), y.c()))
+cpdef Expression conv2d(Expression x, Expression y, vector[unsigned] stride, bool is_valid = True): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), y.c(), stride, is_valid))
+cpdef Expression conv2d_bias(Expression x, Expression y, Expression b, vector[unsigned] stride, bool is_valid = True):
+    ensure_freshness(y)
+    ensure_freshness(b)
+    return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), y.c(), b.c(), stride, is_valid))
 
 # unary-exp
 cpdef Expression tanh(Expression x): return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
