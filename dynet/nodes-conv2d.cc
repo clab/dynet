@@ -117,7 +117,7 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   if (xs.size() == 3) {
     Tensor bias = Tensor(Dim({fx.d[0], fx.d[1], fx.d.bd}, 1), static_cast<float*>(CHWN_x_mem), xs[2]->device, DeviceMempool::FXS);
     for (unsigned i = 0; i < fx.d[2]; ++i) {
-      TensorTools::Constant(bias, xs[2]->vec()(i));
+      TensorTools::constant(bias, xs[2]->vec()(i));
       fx.tb<3>().chip<2>(i).device(*dev.edevice) += bias.t<3>(); 
     }
   }
