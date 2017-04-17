@@ -915,7 +915,7 @@ BOOST_AUTO_TEST_CASE( conv2d_valid_gradient ) {
   std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
                                          .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
                                          .211f, .222f, .233f, .212f, .222f, .232f};
-  TensorTools::SetElements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
   std::vector<float> conv2d_batch_vals(50 * 50 * 2 * 2);
   for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
     conv2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
@@ -934,7 +934,7 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
   std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
                                          .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
                                          .211f, .222f, .233f, .212f, .222f, .232f};
-  TensorTools::SetElements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
   std::vector<float> conv2d_batch_vals(2 * 50 * 50 * 2);
   for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
     conv2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
