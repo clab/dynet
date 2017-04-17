@@ -47,6 +47,17 @@ cdef extern from "dynet/tensor.h" namespace "dynet":
     float c_as_scalar "dynet::as_scalar" (CTensor& t)
     vector[float] c_as_vector "dynet::as_vector" (CTensor& t)
 
+cdef extern from "dynet/tensor.h" namespace "dynet":
+    cdef cppclass CIndexTensor "dynet::IndexTensor": 
+        CDim d
+        pass
+    vector[ptrdiff_t] c_index_tensor_as_vector "dynet::as_vector" (CIndexTensor& t)
+    cdef cppclass CTensorTools "dynet::TensorTools":
+        @staticmethod
+        CIndexTensor argmax(CTensor& t, unsigned dim, unsigned num) 
+        @staticmethod
+        CIndexTensor categorical_sample_log_prob(CTensor& t, unsigned dim, unsigned num) 
+
 cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterStorage "dynet::ParameterStorage":
         CParameterStorage()

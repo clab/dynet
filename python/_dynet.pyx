@@ -220,6 +220,12 @@ cdef c_tensor_as_np(CTensor &t):
     dim = c_dim_as_shape(t.d)
     return arr.reshape(dim,order='F')
 
+cdef c_index_tensor_as_np(CIndexTensor &t):
+    # TODO: make more efficient, with less copy
+    arr = np.array(c_index_tensor_as_vector(t))
+    dim = c_dim_as_shape(t.d)
+    return arr.reshape(dim,order='F')
+
 # ((( Model / Parameters 
 cdef class Parameters:
     """Parameters class
@@ -1002,6 +1008,79 @@ cdef class ComputationGraph:
 
 # )
 
+cdef class Tensor:
+    """Tensor class
+
+    A Tensor is a value object that is kept on the computation device (GPU or CPU).
+    It can be converted to a python object (a numpy array), which involves a device-to-python
+    copy. More importantly, some operations (ie argmax) can be applied on the tensor on-device,
+    reducing the memory copy and potentially benefitting from more efficiency.
+    """
+    cdef CTensor t
+    cdef CIndexTensor lt
+    cdef int type
+    def __cinit__(self):
+        self.type = -1 # 0 if Tensor, 1 is IndexTensor
+        pass
+
+    @staticmethod
+    cdef wrap_ctensor(CTensor t):
+        self = Tensor()
+        self.t = t
+        self.type = 0
+        return self
+
+    @staticmethod
+    cdef wrap_cindextensor(CIndexTensor t):
+        self = Tensor()
+        self.lt = t
+        self.type = 1
+        return self
+
+    def __str__(self):
+        return "<Dynet Tensor:%s>" % ("int" if self.type==1 else "float")
+
+    cpdef as_numpy(self):
+        """Converts the tensor values into a numpy array.
+
+        Returns:
+            np.ndarray: numpy array of values
+        """
+        if self.type == 0:
+            return np.array(c_tensor_as_np(self.t))
+        elif self.type == 1:
+            return np.array(c_index_tensor_as_np(self.lt))
+        raise ValueError("Improperly Intialized Tensor")
+
+    cpdef argmax(self, unsigned dim=0, unsigned num=1):
+        """Calculate the index of the maximum value.
+
+        Assumes that rach row represents a probability distribution.
+
+        Keyword Args:
+            dim(integer): which dimension to take the argmax over
+            num(integer): the number of kmax values
+        
+        Returns:
+            A newly allocated Tensor consisting of argmax IDs. The length of the
+        """
+        return Tensor.wrap_cindextensor(CTensorTools.argmax(self.t, dim, num))
+
+    cpdef categorical_sample_log_prob(self, unsigned dim=0, unsigned num=1):
+        """Calculate samples from a log probability
+
+        Assumes each row in the tensor represents a log probabiity distribution
+        
+        Keyword Args:
+            dim(integer): Which dimension to take the sample over
+            num(integer): num The number of samples for each row
+
+        Returns:
+            A newly allocated Tensor consisting of argmax IDs. The length of the
+            dimension "dim" will be "num", consisting of the appropriate IDs.
+        """
+        return Tensor.wrap_cindextensor(CTensorTools.categorical_sample_log_prob(self.t, dim, num))
+
 #((( Expressions
 cdef ensure_freshness(Expression a):
     if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
@@ -1180,6 +1259,25 @@ cdef class Expression: #(((
         dim = t.d
         arr = np.array(c_tensor_as_np(t))
         return arr
+
+    cpdef tensor_value(self, recalculate=False):
+        """Returns the value of the expression as a Tensor.
+
+        This is useful if you want to use the value for other on-device calculations
+        that are not part of the computation graph, i.e. using argmax.
+        
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
+        
+        Returns:
+            Tensor: a dynet Tensor object.
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        cdef CTensor t
+        cdef CDim dim
+        if recalculate: self.cg().forward(self.vindex)
+        t = self.cgp().get_value(self.vindex)
+        return Tensor.wrap_ctensor(t)
 
     cpdef value(self, recalculate=False):
         """Gets the value of the expression in the most relevant format
