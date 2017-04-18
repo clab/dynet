@@ -254,6 +254,10 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.concat_to_batch
 
+.. autofunction:: dynet.max_dim
+
+.. autofunction:: dynet.min_dim
+
 .. autofunction:: dynet.nobackprop
 
 .. autofunction:: dynet.flip_gradient
@@ -283,9 +287,9 @@ Linear algebra operations
 Convolution/Pooling operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: dynet.conv1d_narrow
+.. autofunction:: dynet.conv2d
 
-.. autofunction:: dynet.conv1d_wide
+.. autofunction:: dynet.conv2d_bias
 
 .. autofunction:: dynet.filter1d_narrow
 
