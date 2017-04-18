@@ -2101,13 +2101,13 @@ cpdef Expression log_softmax(Expression x, list restrict=None):
 cpdef Expression softmax(Expression x):
     """Softmax
     
-    The softmax function normalizes each column to ensure that all :math:`values are between 0 and 1 and add to one by applying the :math:`\\frac{e^{x_i}}{sum_j e^{x_j}}`.
+    The softmax function normalizes each column to ensure that all values are between 0 and 1 and add to one by applying the :math:`\\frac{e^{x_i}}{sum_j e^{x_j}}`.
     
     Args:
         x (dynet.Expression): Input expression
     
     Returns:
-        dynet.Expression: :math:`\\frac{e^{x_i}}{sum_j e^{x_j}}`
+        dynet.Expression: :math:`\\frac{e^{x_i}}{\sum_j e^{x_j}}`
     """
     return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
 cpdef Expression sparsemax(Expression x):
