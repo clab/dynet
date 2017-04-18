@@ -42,23 +42,28 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
     LookupParameter p_h2i = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
     LookupParameter p_c2i = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
     Parameter p_bi = model.add_parameters({hidden_dim});
+    p_bi.zero();
 
     // f
     Parameter p_x2f = model.add_parameters({hidden_dim, layer_input_dim});
     LookupParameter p_h2f = model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
     LookupParameter p_c2f = model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
     Parameter p_bf = model.add_parameters({hidden_dim});
+    p_bf.zero();
 
     // o
     Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
     LookupParameter p_h2o = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
     LookupParameter p_c2o = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
     Parameter p_bo = model.add_parameters({hidden_dim});
+    p_bo.zero();
 
     // c (a.k.a. u)
     Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
     LookupParameter p_h2c = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
     Parameter p_bc = model.add_parameters({hidden_dim});
+    p_bc.zero();
+
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_bi, p_x2f, p_bf, p_x2o, p_bo, p_x2c, p_bc};

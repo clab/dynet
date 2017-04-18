@@ -22,6 +22,7 @@ StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
 StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model& model) {
   p_w = model.add_parameters({vocab_size, rep_dim});
   p_b = model.add_parameters({vocab_size});
+  p_b.zero();
 }
 
 void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg) {
@@ -66,6 +67,7 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
   const unsigned num_clusters = cdict.size();
   p_r2c = model.add_parameters({num_clusters, rep_dim});
   p_cbias = model.add_parameters({num_clusters});
+  p_cbias.zero();
   p_rc2ws.resize(num_clusters);
   p_rcwbiases.resize(num_clusters);
   for (unsigned i = 0; i < num_clusters; ++i) {
@@ -76,6 +78,7 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
       // we don't create them
       p_rc2ws[i] = model.add_parameters({num_words_in_cluster, rep_dim});
       p_rcwbiases[i] = model.add_parameters({num_words_in_cluster});
+      p_rcwbiases[i].zero();
     }
   }
 }
