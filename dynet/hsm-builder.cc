@@ -55,10 +55,12 @@ void Cluster::initialize(Model& model) {
   else if (output_size == 2) {
     p_weights = model.add_parameters({1, rep_dim});
     p_bias = model.add_parameters({1});
+    p_bias.zero();
   }
   else {
     p_weights = model.add_parameters({output_size, rep_dim});
     p_bias = model.add_parameters({output_size});
+    p_bias.zero();
   }
 
   for (Cluster* child : children) {
