@@ -38,8 +38,7 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
   for (unsigned i = 0; i < layers; ++i) {
     Parameter p_x2h = model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2h = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_hb = model.add_parameters({hidden_dim});
-    p_hb.zero();
+    Parameter p_hb = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     vector<Parameter> ps = {p_x2h, p_h2h, p_hb};
     if (lagging)
