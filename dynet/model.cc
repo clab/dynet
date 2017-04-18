@@ -680,6 +680,7 @@ float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice & dev) const {
   return gradient_norm_scratch[pi];
 #endif
 }
+
 #ifdef __CUDACC__
 template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
 #elif defined(HAVE_CUDA)
@@ -696,6 +697,7 @@ float ParameterCollectionStorage::gradient_l2_norm() const {
   if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
   else { throw std::runtime_error("Bad device type"); }
 }
+
 float ParameterCollection::gradient_l2_norm() const {
   return get_storage().gradient_l2_norm();
 }
