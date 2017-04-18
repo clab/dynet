@@ -2308,10 +2308,11 @@ cpdef Expression huber_distance(Expression x, Expression y, float c=1.345):
     """Huber distance
     
     The huber distance between values of :code:`x` and :code:`y` parameterized by :code:`c`, :math:`\sum_i L_c(x_i, y_i)` where:
+
     .. math::
 
         L_c(x, y) = \\begin{cases}{lr}
-        \\frac{1}{2}(y - x)^2                   & \\textrm{for } \\vert y - f(x)\\vert  \le c, \\
+        \\frac{1}{2}(y - x)^2                   & \\textrm{for } \\vert y - f(x)\\vert  \le c, \\\\
         c\, \\vert y - f(x)\\vert  - \\frac{1}{2}c^2 & \\textrm{otherwise.}
         \end{cases}
 
@@ -2403,16 +2404,16 @@ cpdef Expression pick_batch_elem(Expression x, unsigned v):
     .. math::
 
         \\begin{pmatrix}
-            x_{1,1,1} & x_{1,1,2} \\
-            x_{1,2,1} & x_{1,2,2} \\
-        \end{pmatrix}
+            x_{1,1,1} & x_{1,1,2} \\\\
+            x_{1,2,1} & x_{1,2,2} \\\\
+        \end{pmatrix}\\\\
         \\begin{pmatrix}
-            x_{2,1,1} & x_{2,1,2} \\
-            x_{2,2,1} & x_{2,2,2} \\
-        \end{pmatrix}
+            x_{2,1,1} & x_{2,1,2} \\\\
+            x_{2,2,1} & x_{2,2,2} \\\\
+        \end{pmatrix}\\\\
         \\begin{pmatrix}
-            x_{3,1,1} & x_{3,1,2} \\
-            x_{3,2,1} & x_{3,2,2} \\
+            x_{3,1,1} & x_{3,1,2} \\\\
+            x_{3,2,1} & x_{3,2,2} \\\\
         \end{pmatrix}
 
     :code:`pick_batch_elem(t, 1)` will return a Tensor of
@@ -2420,8 +2421,8 @@ cpdef Expression pick_batch_elem(Expression x, unsigned v):
     .. math::
 
         \\begin{pmatrix}
-            x_{2,1,1} & x_{2,1,2} \\ 
-            x_{2,2,1} & x_{2,2,2} \\
+            x_{2,1,1} & x_{2,1,2} \\\\
+            x_{2,2,1} & x_{2,2,2} \\\\
         \end{pmatrix}
     
     Args:
@@ -2440,16 +2441,16 @@ cpdef Expression pick_batch_elems(Expression x, vector[unsigned] vs):
     .. math::
 
         \\begin{pmatrix}
-            x_{1,1,1} & x_{1,1,2} \\
-            x_{1,2,1} & x_{1,2,2} \\
-        \end{pmatrix}
+            x_{1,1,1} & x_{1,1,2} \\\\
+            x_{1,2,1} & x_{1,2,2} \\\\
+        \end{pmatrix}\\\\
         \\begin{pmatrix}
-            x_{2,1,1} & x_{2,1,2} \\
-            x_{2,2,1} & x_{2,2,2} \\
-        \end{pmatrix}
+            x_{2,1,1} & x_{2,1,2} \\\\
+            x_{2,2,1} & x_{2,2,2} \\\\
+        \end{pmatrix}\\\\
         \\begin{pmatrix}
-            x_{3,1,1} & x_{3,1,2} \\
-            x_{3,2,1} & x_{3,2,2} \\
+            x_{3,1,1} & x_{3,1,2} \\\\
+            x_{3,2,1} & x_{3,2,2} \\\\
         \end{pmatrix}
 
     :code:`pick_batch_elems(t, [2, 3])` will return a Tensor of
@@ -2457,12 +2458,12 @@ cpdef Expression pick_batch_elems(Expression x, vector[unsigned] vs):
     .. math::
 
         \\begin{pmatrix}
-            x_{2,1,1} & x_{2,1,2} \\ 
-            x_{2,2,1} & x_{2,2,2} \\
-        \end{pmatrix}
+            x_{2,1,1} & x_{2,1,2} \\\\
+            x_{2,2,1} & x_{2,2,2} \\\\
+        \end{pmatrix}\\\\
         \\begin{pmatrix}
-            x_{3,1,1} & x_{3,1,2} \\
-            x_{3,2,1} & x_{3,2,2} \\
+            x_{3,1,1} & x_{3,1,2} \\\\
+            x_{3,2,1} & x_{3,2,2} \\\\
         \end{pmatrix}
     
     
@@ -2524,12 +2525,13 @@ cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1):
     """Reshape to another size
     
     This node reshapes a tensor to another size, without changing the underlying layout of the data. The layout of the data in DyNet is column-major, so if we have a 3x4 matrix :
+
     .. math::
 
         \\begin{pmatrix}
-            x_{1,1} & x_{1,2} & x_{1,3} & x_{1,4} \\
-            x_{2,1} & x_{2,2} & x_{2,3} & x_{2,4} \\
-            x_{3,1} & x_{3,2} & x_{3,3} & x_{3,4} \\
+            x_{1,1} & x_{1,2} & x_{1,3} & x_{1,4} \\\\
+            x_{2,1} & x_{2,2} & x_{2,3} & x_{2,4} \\\\
+            x_{3,1} & x_{3,2} & x_{3,3} & x_{3,4} \\\\
         \end{pmatrix}
 
     and transform it into a 2x6 matrix, it will be rearranged as:
@@ -2537,8 +2539,8 @@ cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1):
     .. math::
 
         \\begin{pmatrix}
-            x_{1,1} & x_{3,1} & x_{2,2} & x_{1,3} & x_{3,3} & x_{2,4} \\
-            x_{2,1} & x_{1,2} & x_{3,2} & x_{2,3} & x_{1,4} & x_{3,4} \\
+            x_{1,1} & x_{3,1} & x_{2,2} & x_{1,3} & x_{3,3} & x_{2,4} \\\\
+            x_{2,1} & x_{1,2} & x_{3,2} & x_{2,3} & x_{1,4} & x_{3,4} \\\\
         \end{pmatrix}
 
     **Note:** This is O(1) for forward, and O(n) for backward.
