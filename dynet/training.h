@@ -18,7 +18,6 @@
 
 #include "dynet/model.h"
 #include "dynet/shadow-params.h"
-#include "dynet/io-macros.h"
 
 #define DYNET_TRAINER_DEFINE_DEV_IMPL() \
   void update_params(real scale, real gscale, size_t idx) override; \
@@ -166,9 +165,6 @@ struct Trainer {
    * \param idx The ID of the parameter to update
    */
   virtual void update_lookup_params(real scale, real gscale, size_t idx) = 0;
-
- private:
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -194,7 +190,6 @@ struct SimpleSGDTrainer : public Trainer {
   DYNET_TRAINER_DEFINE_DEV_IMPL()
  private:
   SimpleSGDTrainer() {}
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -232,7 +227,6 @@ struct MomentumSGDTrainer : public Trainer {
   //std::unordered_map<LookupParameterStorage*, std::unordered_map<unsigned, Tensor>> vl;
  private:
   MomentumSGDTrainer() {}
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -265,7 +259,6 @@ struct AdagradTrainer : public Trainer {
   std::vector<ShadowLookupParameters> vlp;
  private:
   AdagradTrainer() {}
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -303,7 +296,6 @@ struct AdadeltaTrainer : public Trainer {
   std::vector<ShadowLookupParameters> hld;
  private:
   AdadeltaTrainer() {}
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -337,7 +329,6 @@ struct RmsPropTrainer : public Trainer {
   std::vector<std::vector<real> > hlg;
  private:
   RmsPropTrainer() {}
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -377,16 +368,8 @@ struct AdamTrainer : public Trainer {
   std::vector<ShadowLookupParameters> lv;
  private:
   AdamTrainer() {}
-  DYNET_SERIALIZE_DECLARE()
 };
 
 } // namespace dynet
-
-BOOST_CLASS_EXPORT_KEY(dynet::SimpleSGDTrainer)
-BOOST_CLASS_EXPORT_KEY(dynet::MomentumSGDTrainer)
-BOOST_CLASS_EXPORT_KEY(dynet::AdagradTrainer)
-BOOST_CLASS_EXPORT_KEY(dynet::AdadeltaTrainer)
-BOOST_CLASS_EXPORT_KEY(dynet::RmsPropTrainer)
-BOOST_CLASS_EXPORT_KEY(dynet::AdamTrainer)
 
 #endif

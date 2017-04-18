@@ -9,11 +9,6 @@ using namespace std;
 using namespace dynet;
 using namespace dynet::expr;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(TreeLSTMBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(NaryTreeLSTMBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(UnidirectionalTreeLSTMBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(BidirectionalTreeLSTMBuilder)
-
 enum { X2I, BI, X2F, BF, X2O, BO, X2C, BC };
 enum { H2I, H2F, H2O, H2C, C2I, C2F, C2O };
 
@@ -23,9 +18,6 @@ std::vector<Expression> TreeLSTMBuilder::final_h() const { throw std::runtime_er
 std::vector<Expression> TreeLSTMBuilder::final_s() const { throw std::runtime_error("final_s() not a valid function for TreeLSTMBuilder"); }
 unsigned TreeLSTMBuilder::num_h0_components() const { throw std::runtime_error("num_h0_components() not a valid function for TreeLSTMBuilder"); }
 void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy() not a valid function for TreeLSTMBuilder"); }
-
-DYNET_SERIALIZE_COMMIT(TreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_EQ_DEFINE(RNNBuilder))
-DYNET_SERIALIZE_IMPL(TreeLSTMBuilder);
 
 // See "Improved Semantic Representations From Tree-Structured Long Short-Term Memory Networks"
 // by Tai, Nary, and Manning (2015), section 3.2, for details on this model.
@@ -287,9 +279,6 @@ ParameterCollection & NaryTreeLSTMBuilder::get_parameters() {
   return local_model;
 }
 
-DYNET_SERIALIZE_COMMIT(NaryTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, params, lparams, layers, N))
-DYNET_SERIALIZE_IMPL(NaryTreeLSTMBuilder);
-
 UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
@@ -323,9 +312,6 @@ Expression UnidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children
   h.push_back(embedding);
   return embedding;
 }
-
-DYNET_SERIALIZE_COMMIT(UnidirectionalTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, node_builder))
-DYNET_SERIALIZE_IMPL(UnidirectionalTreeLSTMBuilder);
 
 BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
@@ -377,6 +363,3 @@ Expression BidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children,
 }
 
 Expression BidirectionalTreeLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) { throw std::runtime_error("set_h() not a valid function for BidirectionalTreeLSTMBuilder"); }
-
-DYNET_SERIALIZE_COMMIT(BidirectionalTreeLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(TreeLSTMBuilder, fwd_node_builder, rev_node_builder))
-DYNET_SERIALIZE_IMPL(BidirectionalTreeLSTMBuilder);

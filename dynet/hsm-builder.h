@@ -8,7 +8,6 @@
 #include "dynet/expr.h"
 #include "dynet/dict.h"
 #include "dynet/cfsm-builder.h"
-#include "dynet/io-macros.h"
 
 namespace dynet {
 
@@ -27,7 +26,6 @@ private:
   unsigned output_size;
 
   expr::Expression predict(expr::Expression h, ComputationGraph& cg) const;
-  DYNET_SERIALIZE_DECLARE()
 
 public:
   Cluster();

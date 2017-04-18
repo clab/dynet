@@ -1,8 +1,6 @@
 #ifndef DYNET_RNN_STATE_MACHINE_H_
 #define DYNET_RNN_STATE_MACHINE_H_
 
-#include "dynet/io-macros.h"
-
 namespace dynet {
 
 // CURRENT STATE | ACTION              | NEXT STATE
@@ -38,8 +36,6 @@ class RNNStateMachine {
   }
  private:
   RNNState q_;
-
-  DYNET_SERIALIZE_DECLARE()
 };
 
 } // namespace dynet
