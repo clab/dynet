@@ -212,7 +212,7 @@ Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Ex
       }
       else
         i_aft = affine_transform({vars[BF], vars[X2F], in});
-      i_ft.push_back(logistic(i_aft));
+      i_ft.push_back(logistic(i_aft + 1.f));
     }
 
     // write memory cell

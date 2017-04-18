@@ -492,7 +492,8 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     i_aot = pickrange(tmp, hid * 2, hid * 3);
     i_agt = pickrange(tmp, hid * 3, hid * 4);
     Expression i_it = logistic(i_ait);
-    Expression i_ft = logistic(i_aft);
+    // TODO(odashi): Should the forget bias be a hyperparameter?
+    Expression i_ft = logistic(i_aft + 1.f);
     Expression i_ot = logistic(i_aot);
     Expression i_gt = tanh(i_agt);
 
