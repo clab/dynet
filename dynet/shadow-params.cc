@@ -49,12 +49,5 @@ vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Parameter
   return v;
 }
 
-DYNET_SERIALIZE_COMMIT(ShadowParameters, DYNET_SERIALIZE_DEFINE(h))
-DYNET_SERIALIZE_IMPL(ShadowParameters)
-
-DYNET_SERIALIZE_SAVE_COMMIT(ShadowLookupParameters, DYNET_SERIALIZE_DEFINE(h))
-DYNET_SERIALIZE_LOAD_COMMIT(ShadowLookupParameters, LOAD_INIT_FUNC(), DYNET_SERIALIZE_DEFINE(h))
-DYNET_SAVELOAD_IMPL(ShadowLookupParameters)
-
 } // namespace dynet
 

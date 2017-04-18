@@ -48,7 +48,6 @@ namespace dynet {
 #ifndef __CUDACC__
 
 ParameterStorageBase::~ParameterStorageBase() {}
-DYNET_SERIALIZE_IMPL(ParameterStorageBase)
 
 ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), owner(nullptr) {
   values.d = g.d = d;
@@ -76,12 +75,6 @@ void ParameterStorage::clear() {
   if (g.v != nullptr)
     TensorTools::Zero(g);
 }
-
-#ifndef __CUDACC__
-DYNET_SERIALIZE_COMMIT(ParameterStorage,
-                       DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, dim, values, g))
-DYNET_SERIALIZE_IMPL(ParameterStorage)
-#endif
 
 bool valid_parameter(const std::string & s) {
   auto it = std::find_if(s.begin(), s.end(), [] (char ch) { return ch == '/' || ch == '_'; });
@@ -140,14 +133,6 @@ void LookupParameterStorage::clear() {
   all_updated = false;
 }
 
-#ifndef __CUDACC__
-DYNET_SERIALIZE_SAVE_COMMIT(LookupParameterStorage,
-		            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
-DYNET_SERIALIZE_LOAD_COMMIT(LookupParameterStorage, LOAD_INIT_FUNC(),
-		            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
-DYNET_SAVELOAD_IMPL(LookupParameterStorage)
-#endif
-
 Parameter::Parameter() : p(nullptr) {}
 
 Parameter::Parameter(ParameterStorage* p) : p(p) {}
@@ -177,11 +162,6 @@ bool Parameter::is_updated() {
 float Parameter::current_weight_decay() const {
   return get_storage().owner->get_weight_decay().current_weight_decay();
 }
-
-#ifndef __CUDACC__
-DYNET_SERIALIZE_COMMIT(Parameter, DYNET_SERIALIZE_DEFINE(p))
-DYNET_SERIALIZE_IMPL(Parameter)
-#endif
 
 LookupParameter::LookupParameter() : p(nullptr) { }
 
@@ -215,12 +195,6 @@ bool LookupParameter::is_updated() {
 float LookupParameter::current_weight_decay() const {
   return get_storage().owner->get_weight_decay().current_weight_decay();
 }
-
-
-#ifndef __CUDACC__
-DYNET_SERIALIZE_COMMIT(LookupParameter, DYNET_SERIALIZE_DEFINE(p))
-DYNET_SERIALIZE_IMPL(LookupParameter)
-#endif
 
 ParameterCollectionStorage::ParameterCollectionStorage() : gradient_norm_scratch(nullptr) {
   weight_decay.set_lambda(weight_decay_lambda);
@@ -451,16 +425,7 @@ const ParameterCollectionStorage& ParameterCollection::get_storage() const {
   return *storage;
 }
 
-#ifndef __CUDACC__
-DYNET_SERIALIZE_COMMIT(ParameterCollectionStorage,
-                       DYNET_SERIALIZE_DEFINE(all_params, params,
-                                              lookup_params, weight_decay))
-DYNET_SERIALIZE_IMPL(ParameterCollectionStorage)
-DYNET_SERIALIZE_COMMIT(ParameterCollection,
-                       DYNET_SERIALIZE_DEFINE(storage, parent))
-DYNET_SERIALIZE_IMPL(ParameterCollection)
-#endif
-
+/*
 void save_dynet_model(std::string filename, ParameterCollection* model) {
   std::ofstream out(filename);
   boost::archive::text_oarchive oa(out);
@@ -472,6 +437,7 @@ void load_dynet_model(std::string filename, ParameterCollection* model) {
   boost::archive::text_iarchive ia(in);
   ia >> (*model);
 };
+*/
 
 #endif
 
@@ -736,8 +702,3 @@ float ParameterCollection::gradient_l2_norm() const {
 #endif
 
 } // namespace dynet
-
-#ifndef __CUDACC__
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::ParameterStorage)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::LookupParameterStorage)
-#endif

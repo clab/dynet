@@ -7,7 +7,6 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "dynet/io-macros.h"
 #include "dynet/except.h"
 
 namespace boost { namespace serialization { class access; } }
@@ -76,8 +75,6 @@ private:
   int unk_id; 
   std::vector<std::string> words_;
   Map d_;
-
-  DYNET_SERIALIZE_DECLARE()
 };
 
 std::vector<int> read_sentence(const std::string& line, Dict& sd);

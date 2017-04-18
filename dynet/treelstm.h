@@ -7,7 +7,6 @@
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
 #include "dynet/lstm.h"
-#include "dynet/io-macros.h"
 
 using namespace dynet::expr;
 
@@ -28,9 +27,6 @@ public:
   virtual void new_graph_impl(ComputationGraph& cg) override = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h0) override = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) override;
-
-private:
-  DYNET_SERIALIZE_DECLARE()
 };
 
 struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -71,8 +67,6 @@ struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
   unsigned N; // Max branching factor
 private:
   ComputationGraph* cg;
-  
-  DYNET_SERIALIZE_DECLARE()
 };
 
 struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -92,9 +86,6 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   ParameterCollection local_model;
   LSTMBuilder node_builder;
   std::vector<Expression> h;
-
-private:
-  DYNET_SERIALIZE_DECLARE()
 };
 
 struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -118,13 +109,6 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   LSTMBuilder rev_node_builder;
   std::vector<Expression> h;
   ParameterCollection local_model;
-
-private:
-  DYNET_SERIALIZE_DECLARE()
 };
-} // namespace dynet
 
-BOOST_CLASS_EXPORT_KEY(dynet::TreeLSTMBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::NaryTreeLSTMBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::UnidirectionalTreeLSTMBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::BidirectionalTreeLSTMBuilder)
+} // namespace dynet

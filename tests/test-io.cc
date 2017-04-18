@@ -64,69 +64,6 @@ class testModel {
 // define the test suite
 BOOST_FIXTURE_TEST_SUITE(io_test, IOTest);
 
-BOOST_AUTO_TEST_CASE( simple_rnn_io ) {
-    dynet::ParameterCollection mod1;
-    dynet::SimpleRNNBuilder rnn1(1, 10, 10, mod1);
-    std::ofstream out(filename);
-    boost::archive::text_oarchive oa(out);
-    oa << mod1 << rnn1;
-    out.close();
-
-    dynet::ParameterCollection mod2;
-    dynet::SimpleRNNBuilder rnn2;
-
-    ifstream in(filename);
-    boost::archive::text_iarchive ia(in);
-    ia >> mod2 >> rnn2;
-    in.close();
-}
-
-BOOST_AUTO_TEST_CASE( vanilla_lstm_io ) {
-    dynet::ParameterCollection mod1;
-    dynet::VanillaLSTMBuilder rnn1(1, 10, 10, mod1);
-    std::ofstream out(filename);
-    boost::archive::text_oarchive oa(out);
-    oa << mod1 << rnn1;
-    out.close();
-
-    dynet::ParameterCollection mod2;
-    dynet::VanillaLSTMBuilder rnn2;
-
-    BOOST_CHECK(rnn2.input_dim == 0);
-    BOOST_CHECK(rnn2.hid == 0);
-
-    ifstream in(filename);
-    boost::archive::text_iarchive ia(in);
-    ia >> mod2 >> rnn2;
-    in.close();
-
-    BOOST_CHECK(rnn2.input_dim == 10);
-    BOOST_CHECK(rnn2.hid == 10);
-}
-
-BOOST_AUTO_TEST_CASE( lstm_io ) {
-    dynet::ParameterCollection mod1;
-    dynet::LSTMBuilder rnn1(1, 10, 10, mod1);
-    std::ofstream out(filename);
-    boost::archive::text_oarchive oa(out);
-    oa << mod1 << rnn1;
-    out.close();
-
-    dynet::ParameterCollection mod2;
-    dynet::LSTMBuilder rnn2;
-
-    BOOST_CHECK(rnn2.input_dim == 0);
-    BOOST_CHECK(rnn2.hid == 0);
-
-    ifstream in(filename);
-    boost::archive::text_iarchive ia(in);
-    ia >> mod2 >> rnn2;
-    in.close();
-
-    BOOST_CHECK(rnn2.input_dim == 10);
-    BOOST_CHECK(rnn2.hid == 10);
-}
-
 BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
   {
     ParameterCollection m;
