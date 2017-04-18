@@ -82,13 +82,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 function(find_cudnn)
   set(CUDNN_ROOT "" CACHE PATH "CUDNN root path")
   find_path(CUDNN_INCLUDE_DIRS cudnn.h
-    PATHS ${CUDNN_ROOT}
+    HINTS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/include
     DOC "CUDNN include path")
-  find_library(CUDNN_LIBRARIES NAMES libcudnn.so
+  find_library(CUDNN_LIBRARIES NAMES libcudnn.so cudnn.lib
     PATHS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/lib
           ${CUDNN_ROOT}/lib64
+          ${CUDNN_ROOT}/lib/x64
     DOC "CUDNN library path")
   if(CUDNN_INCLUDE_DIRS AND CUDNN_LIBRARIES)
     set(CUDNN_FOUND TRUE PARENT_SCOPE)
@@ -160,7 +161,7 @@ if (WITH_CUDA_BACKEND)
     find_cudnn()
     if(CUDNN_FOUND)
       include_directories(SYSTEM ${CUDNN_INCLUDE_DIRS})
-      list(APPEND CUDA_LIBRARIES -L/usr/local/cuda/lib64/ -lcudnn)
+      list(APPEND CUDA_LIBRARIES ${CUDNN_LIBRARIES})
       message("-- Successfully include CUDNN flags")
     endif()
   else()
