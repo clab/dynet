@@ -6,7 +6,7 @@
  * \defgroup lossoperations lossoperations
  * \defgroup flowoperations flowoperations
  * \defgroup noiseoperations noiseoperations
- * \defgroup convoperations convoperations
+ * \defgroup convolutionoperations convolutionoperations
  * \defgroup tensoroperations tensoroperations
  * \defgroup linalgoperations linalgoperations
  * \brief The various operations that you can use in building a DyNet graph
