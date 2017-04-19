@@ -1924,7 +1924,12 @@ cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, boo
     """2D convolution without bias
     
     2D convolution operator without bias parameters.
-    'VALID' and 'SAME' convlutions are supported. Assume:
+    'VALID' and 'SAME' convolutions are supported.
+    Think about when stride is 1, the distinction:
+    - 'SAME': output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+    - 'VALID': output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+
+    In detail, assume
     - Input feature maps: XH x XW x XC x N
     - Filters: FH x FW x XC x FC 
     - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
@@ -1944,10 +1949,6 @@ cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, boo
     - YH = ceil(float(XH - FH + 1) / float(strides[0]))
     - YW = ceil(float(XW - FW + 1) / float(strides[1]))
     and the paddings are always zeros.
- 
-    Think about when stride is 1, the distinction:
-    'SAME': output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
-    'VALID': output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
     
     Args:
         x (dynet.Expression): The input feature maps in H x W x Ci x N (ColMaj)
@@ -1966,7 +1967,12 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     """2D convolution with bias
     
     2D convolution operator with bias parameters.
-    'VALID' and 'SAME' convlutions are supported. Assume:
+    'VALID' and 'SAME' convolutions are supported.
+    Think about when stride is 1, the distinction:
+    - 'SAME': output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+    - 'VALID': output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+
+    In detail, assume
     - Input feature maps: XH x XW x XC x N
     - Filters: FH x FW x XC x FC 
     - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
@@ -1986,10 +1992,6 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     - YH = ceil(float(XH - FH + 1) / float(strides[0]))
     - YW = ceil(float(XW - FW + 1) / float(strides[1]))
     and the paddings are always zeros.
- 
-    Think about when stride is 1, the distinction:
-    'SAME': output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
-    'VALID': output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
     
     Args:
         x (dynet.Expression): The input feature maps (4D: H x W x Ci x N)

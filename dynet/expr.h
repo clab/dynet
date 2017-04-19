@@ -1612,7 +1612,12 @@ Expression kmh_ngram(const Expression& x, unsigned n);
  * \brief conv2d without bias
  * \details
  *   2D convolution operator without bias parameters.
- *   'VALID' and 'SAME' convlutions are supported. Assume:
+ *   'VALID' and 'SAME' convolutions are supported.
+ *   Think about when stride is 1, the distinction:
+ *   - *SAME*: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+ *   - *VALID*: output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+ *
+ *   In detail, assume:
  *   - Input feature maps: XH x XW x XC x N
  *   - Filters: FH x FW x XC x FC 
  *   - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
@@ -1632,10 +1637,6 @@ Expression kmh_ngram(const Expression& x, unsigned n);
  *   - YH = ceil(float(XH - FH + 1) / float(strides[0]))
  *   - YW = ceil(float(XW - FW + 1) / float(strides[1]))
  *   and the paddings are always zeros.
- *
- *   Think about when stride is 1, the distinction:
- *   *SAME*: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
- *   *VALID*: output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
  *
  * \param x The input feature maps in H x W x Ci x N (ColMaj)
  * \param f 2D convolution filters H x W x Ci x Co (ColMaj)
@@ -1651,7 +1652,12 @@ Expression conv2d(const Expression& x, const Expression& f, const std::vector<un
  * \brief conv2d with bias
  * \details
  *   2D convolution operator with bias parameters.
- *   'VALID' and 'SAME' convlutions are supported. Assume:
+ *   'VALID' and 'SAME' convolutions are supported.
+ *   Think about when stride is 1, the distinction:
+ *   - *SAME*: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+ *   - *VALID*: output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+ *
+ *   In detail, assume:
  *   - Input feature maps: XH x XW x XC x N
  *   - Filters: FH x FW x XC x FC 
  *   - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
@@ -1671,10 +1677,6 @@ Expression conv2d(const Expression& x, const Expression& f, const std::vector<un
  *   - YH = ceil(float(XH - FH + 1) / float(strides[0]))
  *   - YW = ceil(float(XW - FW + 1) / float(strides[1]))
  *   and the paddings are always zeros.
- *
- *   Think about when stride is 1, the distinction:
- *   *SAME*: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
- *   *VALID*: output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
  *
  * \param x The input feature maps (4D: H x W x Ci x N)
  * \param f 2D convolution filters (4D: H x W x Ci x Co)
