@@ -37,9 +37,12 @@ Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument(s.str());
   }
   if (xs[0].ndims() != 3 || xs[1].ndims() != 4 ||
-      xs[1].d[2] != xs[0].d[2] || xs[0].d[0] < xs[1].d[0] ||
-      xs[0].d[1] < xs[1].d[1]) {
+      xs[1].d[2] != xs[0].d[2]) {
     ostringstream s; s << "Bad input dimensions in Conv2D: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  if (is_valid && (xs[0].d[0] < xs[1].d[0] || xs[0].d[1] < xs[1].d[1])) {
+    ostringstream s; s << "Bad input dimensions in Conv2D: in VALID convolution, the filter size must be smaller than the feature map size" << xs;
     throw std::invalid_argument(s.str());
   }
   if (xs.size() == 3) { //has bias term
