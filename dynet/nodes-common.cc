@@ -174,12 +174,12 @@ Dim Reshape::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Reshape")
   if(to.size() == xs[0].size()) {
     return to;
-  } else if(to.batch_elems() == 1 && to.batch_size() == xs[0].batch_size()) {
+  } else {
+    DYNET_ARG_CHECK(to.batch_elems() == 1 && to.batch_size() == xs[0].batch_size(),
+                    "Bad arguments to Reshape: " << to << ", " << xs[0]);
     Dim ret(to);
     ret.bd = xs[0].batch_elems();
     return ret;
-  } else {
-    DYNET_INVALID_ARG("Bad arguments to Reshape: " << to << ", " << xs[0]);
   }
 }
 

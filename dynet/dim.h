@@ -207,8 +207,10 @@ struct Dim {
   */
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
-    else if (nd == 2) { return Dim({d[1], d[0]}, bd); }
-    DYNET_INVALID_ARG("Cannot transpose Dim object with more than 2 dimensions");
+    else {
+      DYNET_ARG_CHECK(nd == 2, "Cannot transpose Dim object with more than 2 dimensions, but got " << d);
+      return Dim({d[1], d[0]}, bd);
+    }
   }
 
   unsigned int d[DYNET_MAX_TENSOR_DIM]; /**< Array of dimension */
