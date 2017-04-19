@@ -295,6 +295,17 @@ Convolution/Pooling operations
 
 .. autofunction:: dynet.kmax_pooling
 
+Tensor operations
+^^^^^^^^^^^^^^^^^
+
+.. autofunction:: dynet.contract3d_1d
+
+.. autofunction:: dynet.contract3d_1d_bias
+
+.. autofunction:: dynet.contract3d_1d_1d
+
+.. autofunction:: dynet.contract3d_1d_1d_bias
+
 Recurrent Neural Networks
 -------------------------
 

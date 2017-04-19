@@ -1692,12 +1692,56 @@ Expression conv2d(const Expression& x, const Expression& f, const Expression& b,
 // Tensor operations                          //
 ////////////////////////////////////////////////
 
-// z_ij = x_ijk * y_k
+/**
+ * \ingroup tensoroperations
+ * \brief Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor
+ * \details The resulting tensor \f$z\f$ has coordinates \f$z_ij = \sum_k x_{ijk} y_k\f$
+ * 
+ * \param x Rank 3 tensor
+ * \param y Vector
+ * 
+ * \return Matrix
+ */
 Expression contract3d_1d(const Expression& x, const Expression& y);
 // z_i = x_ijk * y_k * z_j (+ b_i)
+/**
+ * \ingroup tensoroperations
+ * \brief Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor
+ * \details This is the equivalent of calling `contract3d_1d` and then performing a matrix vector multiplication.
+ * 
+ * The resulting tensor \f$t\f$ has coordinates \f$t_i = \sum_{j,k} x_{ijk} y_k z_j\f$
+ * 
+ * \param x Rank 3 tensor
+ * \param y Vector
+ * \param z Vector
+ * \return Vector
+ */
 Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z);
+/**
+ * \ingroup tensoroperations
+ * \brief Same as `contract3d_1d_1d` with an additional bias parameter
+ * \details This is the equivalent of calling `contract3d_1d` and then performing an affine transform.
+ * 
+ * The resulting tensor \f$t\f$ has coordinates \f$t_i = b_i + \sum_{j,k} x_{ijk} y_k z_j\f$
+ * 
+ * \param x Rank 3 tensor
+ * \param y Vector
+ * \param z Vector
+ * \param b Bias vector
+ * \return Vector
+ */
 Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
 // z_ij = x_ijk * y_k + b_ij
+/**
+ * \ingroup tensoroperations
+ * \brief Same as `contract3d_1d` with an additional bias parameter
+ * \details The resulting tensor \f$z\f$ has coordinates \f$z_{ij} = b_{ij}+\sum_k x_{ijk} y_k\f$
+ * 
+ * \param x Rank 3 tensor
+ * \param y Vector
+ * \param b Bias matrix
+ * \return Matrix
+ */
 Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
 
