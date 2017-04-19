@@ -1923,29 +1923,79 @@ cpdef Expression filter1d_narrow(Expression x, Expression y):
 cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, bool is_valid = True): 
     """2D convolution without bias
     
-    2D convolution operators without bias parameters.
+    2D convolution operator without bias parameters.
+    'VALID' and 'SAME' convolutions are supported.
+    Think about when stride is 1, the distinction:
+    - 'SAME': output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+    - 'VALID': output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+
+    In detail, assume
+    - Input feature maps: XH x XW x XC x N
+    - Filters: FH x FW x XC x FC 
+    - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
+ 
+    For the 'SAME' convolution: the output height (YH) and width (YW) are computed as:
+    - YH = ceil(float(XH) / float(strides[0]))
+    - YW = ceil(float(XW) / float(strides[1]))
+    and the paddings are computed as:
+    - pad_along_height = max((YH - 1) * strides[0] + FH - XH, 0)
+    - pad_along_width = max((YW - 1) * strides[1] + FW - XW, 0)
+    - pad_top = pad_along_height / 2
+    - pad_bottom = pad_along_height - pad_top
+    - pad_left = pad_along_width / 2
+    - pad_right = pad_along_width - pad_left
+ 
+    For the 'VALID' convolution: the output height (YH) and width (YW) are computed as:
+    - YH = ceil(float(XH - FH + 1) / float(strides[0]))
+    - YW = ceil(float(XW - FW + 1) / float(strides[1]))
+    and the paddings are always zeros.
     
     Args:
-        x (dynet.Expression): The input feature maps in H x W x Ci x N (ColMaj)
-        f (dynet.Expression): 2D convolution filters H x W x Ci x Co (ColMaj)
+        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+        f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
         stride (list): the row and column strides
     
     Keyword Arguments:
         is_valid (bool): 'VALID' convolution or 'SAME' convolution, default is True ('VALID') (default: (True))
     
     Returns:
-        dynet.Expression: The output feature maps (H x W x Co x N)
+        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
     """
     ensure_freshness(f); 
     return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), f.c(), stride, is_valid))
 cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[unsigned] stride, bool is_valid = True):
     """2D convolution with bias
     
-    2D convolution operators with bias parameters.
+    2D convolution operator with bias parameters.
+    'VALID' and 'SAME' convolutions are supported.
+    Think about when stride is 1, the distinction:
+    - 'SAME': output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+    - 'VALID': output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+
+    In detail, assume
+    - Input feature maps: XH x XW x XC x N
+    - Filters: FH x FW x XC x FC 
+    - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
+ 
+    For the 'SAME' convolution: the output height (YH) and width (YW) are computed as:
+    - YH = ceil(float(XH) / float(strides[0]))
+    - YW = ceil(float(XW) / float(strides[1]))
+    and the paddings are computed as:
+    - pad_along_height = max((YH - 1) * strides[0] + FH - XH, 0)
+    - pad_along_width = max((YW - 1) * strides[1] + FW - XW, 0)
+    - pad_top = pad_along_height / 2
+    - pad_bottom = pad_along_height - pad_top
+    - pad_left = pad_along_width / 2
+    - pad_right = pad_along_width - pad_left
+ 
+    For the 'VALID' convolution: the output height (YH) and width (YW) are computed as:
+    - YH = ceil(float(XH - FH + 1) / float(strides[0]))
+    - YW = ceil(float(XW - FW + 1) / float(strides[1]))
+    and the paddings are always zeros.
     
     Args:
-        x (dynet.Expression): The input feature maps (4D: H x W x Ci x N)
-        f (dynet.Expression): 2D convolution filters (4D: H x W x Ci x Co)
+        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+        f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
         b (dynet.Expression): The bias (1D: Ci)
         stride (list): the row and column strides
     
@@ -1953,7 +2003,7 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
         is_valid (bool): 'VALID' convolution or 'SAME' convolution, default is True ('VALID') (default: (True))
     
     Returns:
-        dynet.Expression: The output feature maps (H x W x Co x N)
+        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
     """
     ensure_freshness(f)
     ensure_freshness(b)
