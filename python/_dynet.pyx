@@ -1951,15 +1951,15 @@ cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, boo
     and the paddings are always zeros.
     
     Args:
-        x (dynet.Expression): The input feature maps in H x W x Ci x N (ColMaj)
-        f (dynet.Expression): 2D convolution filters H x W x Ci x Co (ColMaj)
+        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+        f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
         stride (list): the row and column strides
     
     Keyword Arguments:
         is_valid (bool): 'VALID' convolution or 'SAME' convolution, default is True ('VALID') (default: (True))
     
     Returns:
-        dynet.Expression: The output feature maps (H x W x Co x N)
+        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
     """
     ensure_freshness(f); 
     return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), f.c(), stride, is_valid))
@@ -1994,8 +1994,8 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     and the paddings are always zeros.
     
     Args:
-        x (dynet.Expression): The input feature maps (4D: H x W x Ci x N)
-        f (dynet.Expression): 2D convolution filters (4D: H x W x Ci x Co)
+        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+        f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
         b (dynet.Expression): The bias (1D: Ci)
         stride (list): the row and column strides
     
@@ -2003,7 +2003,7 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
         is_valid (bool): 'VALID' convolution or 'SAME' convolution, default is True ('VALID') (default: (True))
     
     Returns:
-        dynet.Expression: The output feature maps (H x W x Co x N)
+        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
     """
     ensure_freshness(f)
     ensure_freshness(b)

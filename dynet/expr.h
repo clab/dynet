@@ -1618,8 +1618,8 @@ Expression kmh_ngram(const Expression& x, unsigned n);
  *   - *VALID*: output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
  *
  *   In detail, assume:
- *   - Input feature maps: XH x XW x XC x N
- *   - Filters: FH x FW x XC x FC 
+ *   - Input feature maps: (XH x XW x XC) x N
+ *   - Filters: FH x FW x XC x FC, 4D tensor
  *   - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
  *
  *   For the *SAME* convolution: the output height (YH) and width (YW) are computed as:
@@ -1638,12 +1638,12 @@ Expression kmh_ngram(const Expression& x, unsigned n);
  *   - YW = ceil(float(XW - FW + 1) / float(strides[1]))
  *   and the paddings are always zeros.
  *
- * \param x The input feature maps in H x W x Ci x N (ColMaj)
- * \param f 2D convolution filters H x W x Ci x Co (ColMaj)
+ * \param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+ * \param f 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
  * \param stride the row and column strides
  * \param is_valid 'VALID' convolution or 'SAME' convolution, default is True ('VALID')
  *
- * \return The output feature maps (H x W x Co x N)
+ * \return The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
  */
 Expression conv2d(const Expression& x, const Expression& f, const std::vector<unsigned>& stride, bool is_valid = true);
 
@@ -1678,13 +1678,13 @@ Expression conv2d(const Expression& x, const Expression& f, const std::vector<un
  *   - YW = ceil(float(XW - FW + 1) / float(strides[1]))
  *   and the paddings are always zeros.
  *
- * \param x The input feature maps (4D: H x W x Ci x N)
- * \param f 2D convolution filters (4D: H x W x Ci x Co)
+ * \param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+ * \param f 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
  * \param b The bias (1D: Ci)
  * \param stride the row and column strides
  * \param is_valid 'VALID' convolution or 'SAME' convolution, default is True ('VALID')
  *
- * \return The output feature maps (H x W x Co x N)
+ * \return The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
  */
 Expression conv2d(const Expression& x, const Expression& f, const Expression& b, const std::vector<unsigned>& stride, bool is_valid = true);
 
