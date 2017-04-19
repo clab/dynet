@@ -128,11 +128,6 @@ endif()
 # echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
 # then run source ~/.bashrc to have those environment variable effective immediately
 
-if (NOT DEFINED DYNET_DEBUG_LEVEL)
-  set(DYNET_DEBUG_LEVEL 1)
-endif()
-add_definitions(-DDYNET_DEBUG_LEVEL=${DYNET_DEBUG_LEVEL})
-
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
 else()
