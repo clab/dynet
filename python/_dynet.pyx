@@ -3337,6 +3337,39 @@ cdef class SimpleSGDTrainer(Trainer):
     def whoami(self):
         return "SimpleSGDTrainer"
 
+cdef class CyclicalSGDTrainer(Trainer):
+    """This trainer performs stochastic gradient descent with a cyclical learning rate as proposed in `Smith, 2015 <https://arxiv.org/abs/1506.01186>`_.
+
+    This uses a triangular function with optional exponential decay.
+
+    More specifically, at each update, the learning rate :math:`\eta` is updated according to :
+
+    .. math::
+
+        \\begin{split}
+        \\text{cycle} &= \left\lfloor 1 + \\frac{\\texttt{it}}{2 \\times\\texttt{step_size}} \\right\\rfloor\\\\
+       x &= \left\\vert \\frac{\\texttt{it}}{\\texttt{step_size}} - 2 \\times \\text{cycle} + 1\\right\\vert\\\\
+       \eta &= \eta_{\\text{min}} + (\eta_{\\text{max}} - \eta_{\\text{min}}) \\times \max(0, 1 - x) \\times \gamma^{\\texttt{it}}\\\\
+       \end{split}
+    
+    Args:
+        m(dynet.Model): Model to be trained
+    
+    Keyword Args:
+        e0_min (number): Lower learning rate (default: {0.01})
+        e0_max (number): Upper learning rate (default: {0.1})
+        step_size (number): Period of the triangular function in number of iterations (__not__ epochs). According to the original paper, this should be set around (2-8) x (training iterations in epoch) (default: {2000})
+        gamma (number): Learning rate upper bound decay parameter (default: {0.0})
+        edecay (number): Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by :math:`\gamma` (default: {0.0})
+    """
+    cdef CCyclicalSGDTrainer *thischildptr
+    def __cinit__(self, Model m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
+        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr[0], e0_min, e0_max, step_size, gamma, edecay)
+    cpdef update(self, float s=1.0):
+        self.thischildptr.update(s)
+    def whoami(self):
+        return "CyclicalSGDTrainer"
+
 cdef class MomentumSGDTrainer(Trainer):
     """Stochastic gradient descent with momentum
     

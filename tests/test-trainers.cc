@@ -87,6 +87,22 @@ BOOST_AUTO_TEST_CASE( simple_sgd_update_subset ) {
     BOOST_CHECK_EQUAL(param2_vals[i], param2_after[i]);
 }
 
+BOOST_AUTO_TEST_CASE( cyclical_sgd_direction ) {
+  dynet::Model mod;
+  dynet::Parameter param = mod.add_parameters({3});
+  TensorTools::set_elements(param.get()->values,param_vals);
+  CyclicalSGDTrainer trainer(mod);
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param);
+  Expression y = input(cg, {1,3}, ones_vals);
+  Expression z = y*x;
+  float before = as_scalar(cg.forward(z));
+  cg.backward(z);
+  trainer.update(0.1);
+  float after = as_scalar(cg.forward(z));
+  BOOST_CHECK_LT(after, before);
+}
+
 BOOST_AUTO_TEST_CASE( momentum_sgd_direction ) {
   dynet::Model mod;
   dynet::Parameter param = mod.add_parameters({3});
