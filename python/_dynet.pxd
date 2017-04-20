@@ -182,6 +182,17 @@ cdef extern from "dynet/training.h" namespace "dynet":
         # void update_epoch(float r)
         # void status()
 
+    cdef cppclass CCyclicalSGDTrainer "dynet::CyclicalSGDTrainer" (CTrainer):
+        #CCyclicalSGDTrainer(CModel& m, float lam, float e0)
+        CCyclicalSGDTrainer(CModel& m, float e0_min, float e0_max, float step_size, float gamma, float edecay) # TODO removed lam, update docs.
+        # float clip_threshold
+        # bool clipping_enabled
+        # bool sparse_updates_enabled
+        void update(float s)
+        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        # void update_epoch(float r)
+        # void status()
+
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer" (CTrainer):
         CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
         # float clip_threshold

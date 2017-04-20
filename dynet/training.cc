@@ -142,6 +142,30 @@ void SimpleSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx)
 }
 #endif
 
+// --- CyclicalSGDTrainer
+
+// Perform update of ts[0]=parameters, ts[1]=gradients
+template <class MyDevice>
+void CyclicalSGDTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  ts[0]->tvec().device(*dev.edevice) -= ts[1]->tvec() * (eta * scale * gscale / model->weight_decay.current_weight_decay());
+}
+DYNET_TRAINER_INST_DEV_IMPL(CyclicalSGDTrainer)
+
+#ifndef __CUDACC__
+void CyclicalSGDTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g});
+}
+void CyclicalSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx]});
+}
+void CyclicalSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_values, &p->all_grads});
+}
+#endif
+
 // --- MomentumSGDTrainer
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=momentum
@@ -322,6 +346,9 @@ DYNET_SERIALIZE_IMPL(Trainer)
 DYNET_SERIALIZE_COMMIT(SimpleSGDTrainer, DYNET_SERIALIZE_DERIVED_EQ_DEFINE(Trainer))
 DYNET_SERIALIZE_IMPL(SimpleSGDTrainer)
 
+DYNET_SERIALIZE_COMMIT(CyclicalSGDTrainer, DYNET_SERIALIZE_DERIVED_EQ_DEFINE(Trainer))
+DYNET_SERIALIZE_IMPL(CyclicalSGDTrainer)
+
 DYNET_SERIALIZE_COMMIT(MomentumSGDTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, momentum, vp, vlp))
 DYNET_SERIALIZE_IMPL(MomentumSGDTrainer)
 
@@ -343,6 +370,7 @@ DYNET_SERIALIZE_IMPL(AdamTrainer)
 
 #ifndef __CUDACC__
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::SimpleSGDTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(dynet::CyclicalSGDTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::MomentumSGDTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdagradTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdadeltaTrainer)
