@@ -2020,6 +2020,22 @@ void Sqrt::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(Sqrt)
 
 template<class MyDevice>
+void Abs::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().abs();
+}
+
+template<class MyDevice>
+void Abs::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[0]->tvec().sign();
+}
+DYNET_NODE_INST_DEV_IMPL(Abs)
+
+template<class MyDevice>
 void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) 

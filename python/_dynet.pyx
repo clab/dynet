@@ -2074,6 +2074,20 @@ cpdef Expression sqrt(Expression x):
         dynet.Expression: :math:`y = \sqrt{x}`
     """
     return Expression.from_cexpr(x.cg_version, c_sqrt(x.c()))
+
+cpdef Expression abs(Expression x): 
+    """Absolute value
+    
+    Calculate elementwise :math:`y_i = \\vert x_i\\vert`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y = \\vert x\\vert`
+    """
+    return Expression.from_cexpr(x.cg_version, c_abs(x.c()))
+
 cpdef Expression erf(Expression x): 
     """Gaussian error function
 

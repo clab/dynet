@@ -164,6 +164,8 @@ Arithmetic operations
 
 .. autofunction:: dynet.sqrt
 
+.. autofunction:: dynet.abs
+
 .. autofunction:: dynet.erf
 
 .. autofunction:: dynet.cube

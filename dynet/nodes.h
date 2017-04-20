@@ -184,6 +184,13 @@ struct Sqrt : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+// y = abs x_1
+struct Abs : public Node {
+  explicit Abs(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 // y = erf x_1
 struct Erf : public Node {
   explicit Erf(const std::initializer_list<VariableIndex>& a) : Node(a) {}
