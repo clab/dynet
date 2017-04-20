@@ -2668,6 +2668,83 @@ cpdef Expression min_dim(Expression x, unsigned d=0):
     """
     return Expression.from_cexpr(x.cg_version, c_min_dim(x.c(), d))
 
+def contract3d_1d(Expression x, Expression y):
+    """Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor
+    
+    The resulting tensor :math:`z` has coordinates :math:`z_ij = \sum_k x_{ijk} y_k`
+    
+    Args:
+        x (dynet.Expression): Rank 3 tensor
+        y (dynet.Expression): Vector
+    
+    Returns:
+        Matrix
+        dynet.Expression
+    """
+    ensure_freshness(y)
+    return Expression.from_cexpr(x.cg_version, c_contract3d_1d(x.c(),y.c()))
+
+def contract3d_1d_bias(Expression x, Expression y, Expression b):
+    """Same as :code:`contract3d_1d` with an additional bias parameter
+
+    The resulting tensor :math:`z` has coordinates :math:`z_{ij} = b_{ij}+\sum_k x_{ijk} y_k`
+
+    Args:
+        x (dynet.Expression): Rank 3 tensor
+        y (dynet.Expression): Vector
+        b (dynet.Expression): Bias vector
+    
+    Returns:
+        Matrix
+        dynet.Expression
+    """
+    ensure_freshness(y)
+    ensure_freshness(b)
+    return Expression.from_cexpr(x.cg_version, c_contract3d_1d(x.c(),y.c(),b.c()))
+
+def contract3d_1d_1d(Expression x, Expression y, Expression z):
+    """Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor
+
+    This is the equivalent of calling :code:`contract3d_1d` and then performing a matrix vector multiplication.
+
+    The resulting tensor :math:`t` has coordinates :math:`t_i = \sum_{j,k} x_{ijk} y_k z_j`
+    
+    Args:
+        x (dynet.Expression): Rank 3 tensor
+        y (dynet.Expression): Vector
+        z (dynet.Expression): Vector
+    
+    Returns:
+        Vector
+        dynet.Expression
+    """
+    ensure_freshness(y)
+    ensure_freshness(z)
+    return Expression.from_cexpr(x.cg_version, c_contract3d_1d_1d(x.c(),y.c(),z.c()))
+
+def contract3d_1d_1d_bias(Expression x, Expression y, Expression z, Expression b):
+    """Same as :code:`contract3d_1d_1d` with an additional bias parameter
+ 
+    This is the equivalent of calling :code:`contract3d_1d` and then performing an affine transform.
+
+    The resulting tensor :math:`t` has coordinates :math:`t_i = b_i + \sum_{j,k} x_{ijk} y_k z_j`
+
+    Args:
+        x (dynet.Expression): Rank 3 tensor
+        y (dynet.Expression): Vector
+        z (dynet.Expression): Vector
+        b (dynet.Expression): Bias vector
+    
+    Returns:
+        Vector
+        dynet.Expression
+    """
+    ensure_freshness(y)
+    ensure_freshness(z)
+    ensure_freshness(b)
+    return Expression.from_cexpr(x.cg_version, c_contract3d_1d_1d(x.c(),y.c(),z.c(),b.c()))
+
+
 cpdef Expression esum(list xs):
     """Sum
     
