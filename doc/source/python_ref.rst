@@ -352,6 +352,10 @@ Optimizers
    :members:
    :show-inheritance:
 
+.. autoclass:: dynet.CyclicalSGDTrainer
+   :members:
+   :show-inheritance:
+
 .. autoclass:: dynet.MomentumSGDTrainer
    :members:
    :show-inheritance:
