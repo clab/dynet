@@ -341,6 +341,18 @@ Dim Sqrt::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string Abs::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "abs(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim Abs::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Abs")
+  return xs[0];
+}
+
+
 string Erf::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "erf(" << arg_names[0] << ')';

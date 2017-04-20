@@ -609,9 +609,21 @@ inline Expression average(const T& xs) { return detail::f<Average>(xs); }
  *
  * \param x The input expression
  *
- * \return An expression where the ith element is equal to sqrt(x_i)
+ * \return An expression where the ith element is equal to \f$\sqrt(x_i)\f$
  */
 Expression sqrt(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Absolute value
+ * \details Elementwise absolute value.
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to \f$\vert x_i\vert\f$
+ */
+Expression abs(const Expression& x);
+
 
 /**
  * \ingroup arithmeticoperations
