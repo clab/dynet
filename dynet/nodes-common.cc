@@ -440,11 +440,11 @@ Dim Log::dim_forward(const vector<Dim>& xs) const {
 
 string Concatenate::as_string(const vector<string>& arg_names) const {
   ostringstream os;
-  os << "concat(" << arg_names[0];
+  os << "concat({" << arg_names[0];
   for (unsigned i = 1; i < arg_names.size(); ++i) {
     os << ',' << arg_names[i];
   }
-  os << ')';
+  os << "}, " << dimension << ')';
   return os.str();
 }
 
@@ -454,37 +454,15 @@ Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   if (LooksLikeVector(dr)) dr.resize(1);
   for (auto c : xs) {
     if (LooksLikeVector(c)) c.resize(1);
-    new_rows += c[0];
-    dr.set(0, c[0]);
+    new_rows += c[dimension];
+    dr.set(dimension, c[dimension]);
     DYNET_ARG_CHECK(dr.single_batch() == c.single_batch(),
                             "Bad input dimensions in Concatenate: " << xs);
     dr.bd = max(dr.bd, c.bd);
   }
-  dr.set(0, new_rows);
+  dr.nd = max(xs[0].nd, dimension+1);
+  dr.set(dimension, new_rows);
   return dr;
-}
-
-string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "concat_cols(" << arg_names[0];
-  for (unsigned i = 1; i < arg_names.size(); ++i) {
-    os << ',' << arg_names[i];
-  }
-  os << ')';
-  return os.str();
-}
-
-Dim ConcatenateColumns::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ASSERT(xs.size() > 0, "Failed input count check in ConcatenateColumns")
-  unsigned rows = xs[0][0];
-  unsigned new_cols = 0;
-  unsigned bd = 1;
-  for (auto& d : xs) {
-    DYNET_ARG_CHECK(d[0] == rows, "Bad input dimensions in ConcatenateColumns: " << xs);
-    new_cols += d[1];
-    bd = max(bd, d.bd);
-  }
-  return Dim({rows, new_cols}, bd);
 }
 
 string ConcatenateToBatch::as_string(const vector<string>& arg_names) const {
