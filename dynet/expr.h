@@ -79,6 +79,14 @@ Expression f(const T& xs) {
   for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
   return Expression(pg, pg->add_function<F>(xis));
 }
+template <typename F, typename T, typename T1>
+Expression f(const T& xs, const T1& arg1) {
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  int i = 0;
+  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+  return Expression(pg, pg->add_function<F>(xis, arg1));
+}
 }
 
 ////////////////////////////////////////////////
@@ -1508,23 +1516,26 @@ inline Expression concatenate_to_batch(const T& xs) { return detail::f<Concatena
  *
  * \return The expression with the columns concatenated
  */
-inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateColumns>(xs); }
+inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs, 1); }
 template <typename T>
-inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateColumns>(xs); }
+inline Expression concatenate_cols(const T& xs) { return detail::f<Concatenate>(xs, 1); }
 
 /**
  * \ingroup flowoperations
- * \brief Concatenate rows
- * \details Perform a concatenation of the rows in multiple expressions.
- *          All expressions must have the same number of columns.
+ * \brief Concatenate
+ * \details Perform a concatenation of multiple expressions along
+ *          a particular dimension.
+ *          All expressions must have the same dimensions except for
+ *          the dimension to be concatenated (rows by default).
  *
  * \param xs The input expressions
+ * \param xs The dimension along which to perform concatenation
  *
- * \return The expression with the rows concatenated
+ * \return The expression with the specified dimension concatenated
  */
-inline Expression concatenate(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs); }
+inline Expression concatenate(const std::initializer_list<Expression>& xs, unsigned d = 0) { return detail::f<Concatenate>(xs, d); }
 template <typename T>
-inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); }
+inline Expression concatenate(const T& xs, unsigned d = 0) { return detail::f<Concatenate>(xs, d); }
 
 /**
  * \ingroup flowoperations

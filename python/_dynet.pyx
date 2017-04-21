@@ -2947,16 +2947,18 @@ cpdef Expression concatenate_cols(list xs):
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat_cols(cvec))
 
-cpdef Expression concatenate(list xs):
-    """Concatenate rows
+cpdef Expression concatenate(list xs, unsigned d=0):
+    """Concatenate
     
-    Perform a concatenation of the rows in multiple expressions. All expressions must have the same number of columns.
+     Perform a concatenation of multiple expressions along a particular dimension.
+     All expressions must have the same dimensions except for the dimension to be concatenated (rows by default).
     
     Args:
         xs (list): A list of expressions
+        d: The dimension along with to perform concatenation
     
     Returns:
-        dynet.Expression: The expression with the rows concatenated
+        dynet.Expression: The expression concatenated along the particular dimension
     """
     assert xs, 'List is empty, nothing to concatenate.'
     cdef vector[CExpression] cvec
@@ -2964,7 +2966,7 @@ cpdef Expression concatenate(list xs):
     for x in xs:
         ensure_freshness(x) 
         cvec.push_back(x.c())
-    return Expression.from_cexpr(x.cg_version, c_concat(cvec))
+    return Expression.from_cexpr(x.cg_version, c_concat(cvec, d))
 
 cpdef Expression concat_to_batch(list xs):
     """Concatenate list of expressions to a single batched expression
