@@ -384,6 +384,7 @@ struct BinaryLogLoss : public Node {
 struct LogSumExp : public Node {
   template <typename T> explicit LogSumExp(const T& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
 };
 

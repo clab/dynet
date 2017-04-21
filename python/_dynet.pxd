@@ -327,7 +327,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_block_dropout "dynet::expr::block_dropout" (CExpression& x, float p) except + #
 
     CExpression c_reshape "dynet::expr::reshape" (CExpression& x, CDim& d) except + #?
-    CExpression c_transpose "dynet::expr::transpose" (CExpression& x) except + #
+    CExpression c_transpose "dynet::expr::transpose" (CExpression& x, vector[unsigned]& dims) except + #
 
     CExpression c_affine_transform "dynet::expr::affine_transform" (const vector[CExpression]& xs) except +
 
