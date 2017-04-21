@@ -1124,15 +1124,37 @@ DYNET_NODE_INST_DEV_IMPL(LogSoftmax)
 
 template<class MyDevice>
 void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  const unsigned num_args = xs.size();
-  if (num_args == 1) {
+  if (xs.size() == 1) {
     fx.v = xs[0]->v;
   } else {
-    Tensor v(Dim({(unsigned int)xs.size()}), static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
-    Tensor m(Dim({1}), static_cast<float*>(aux_mem) + xs.size(), fx.device, DeviceMempool::FXS);
-    for (unsigned i = 0; i < xs.size(); ++i)
-      TensorTools::copy_element(*xs[i], 0, v, i);
-    logsumexp(dev, v, m, fx);
+    // TODO: Ideally we wouldn't need to allocate this memory permanently.
+    //       We need a good method for allocating "scratch" memory that is only used temporarily.
+    Tensor ms(fx.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
+    Eigen::array<ptrdiff_t, 2> bcast({1,fx.d.bd});
+    // Calculate the max
+    if(ms.d.bd == xs[0]->d.bd)
+      ms.tvec().device(*dev.edevice) = xs[0]->tvec();
+    else
+      ms.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast); 
+    for (size_t i = 1; i < xs.size(); ++i) {
+      if(ms.d.bd == xs[i]->d.bd)
+        ms.tvec().device(*dev.edevice) = ms.tvec().cwiseMax(xs[i]->tvec());
+      else
+        ms.tbvec().device(*dev.edevice) = ms.tbvec().cwiseMax(xs[i]->tbvec().broadcast(bcast)); 
+    }
+    // sumexp
+    if(ms.d.bd == xs[0]->d.bd)
+      fx.tvec().device(*dev.edevice) = (xs[0]->tvec() - ms.tvec()).exp();
+    else
+      fx.tbvec().device(*dev.edevice) = (xs[0]->tbvec().broadcast(bcast) - ms.tbvec()).exp();
+    for (size_t i = 1; i < xs.size(); ++i) {
+      if(ms.d.bd == xs[i]->d.bd)
+        fx.tvec().device(*dev.edevice) += (xs[i]->tvec() - ms.tvec()).exp();
+      else
+        fx.tbvec().device(*dev.edevice) += (xs[i]->tbvec().broadcast(bcast) - ms.tbvec()).exp();
+    }
+    // log and add max
+    fx.tvec().device(*dev.edevice) = fx.tvec().log() + ms.tvec();
   }
 }
 
@@ -1143,13 +1165,19 @@ void LogSumExp::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  if (xs.size() == 0) {
-    dEdxi.t<0>().device(*dev.edevice) += dEdf.t<0>();
+  if (xs.size() == 1) {
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
   } else {
     // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
     //         = 1/{exp f(x)} * exp(x_i)
     //         = exp(x_i - f(x))
-    dEdxi.t<1>().device(*dev.edevice) += (xs[i]->t<1>() - fx.t<1>()).exp() * dEdf.t<1>();
+    if(fx.d.bd == xs[i]->d.bd) {
+      dEdxi.tvec().device(*dev.edevice) += (xs[i]->tvec() - fx.tvec()).exp() * dEdf.tvec();
+    } else {
+      Eigen::array<ptrdiff_t, 2> bcast({1,fx.d.bd});
+      Eigen::array<int, 1> red_axis = {1};
+      dEdxi.tvec().device(*dev.edevice) += ((xs[i]->tbvec().broadcast(bcast) - fx.tbvec()).exp() * dEdf.tbvec()).sum(red_axis);
+    }
   }
 }
 DYNET_NODE_INST_DEV_IMPL(LogSumExp)
