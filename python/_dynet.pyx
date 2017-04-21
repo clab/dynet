@@ -3009,6 +3009,8 @@ cpdef Expression affine_transform(list exprs):
 # TODO: unify these with inheritance
 
 cdef class _RNNBuilder: # (((
+    """
+    """
     cdef CRNNBuilder *thisptr
     cdef RNNState _init_state
     cdef int cg_version 
@@ -3016,8 +3018,21 @@ cdef class _RNNBuilder: # (((
     def __dealloc__(self):
         del self.thisptr
 
-    cpdef set_dropout(self, float f): self.thisptr.set_dropout(f)
-    cpdef disable_dropout(self): self.thisptr.disable_dropout()
+    cpdef set_dropout(self, float f):
+        """[summary]
+        
+        [description]
+        
+        Args:
+            float f: [description]
+        """
+        self.thisptr.set_dropout(f)
+    cpdef disable_dropout(self):
+        """[summary]
+        
+        [description]
+        """
+        self.thisptr.disable_dropout()
 
     cdef new_graph(self):
         self.thisptr.new_graph(_cg.thisptr[0])
@@ -3108,6 +3123,17 @@ cdef class _RNNBuilder: # (((
         return res
 
     cpdef RNNState initial_state(self,vecs=None):
+        """Get a :code:`dynet.RNNState`
+        
+        This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
+        
+        Args:
+            vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression`s  (default: {None})
+        
+        Returns:
+            :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
+            dynet.RNNState
+        """
         if self.cg_version != _cg.version():
             self.new_graph()
             if vecs is not None:
@@ -3118,6 +3144,19 @@ cdef class _RNNBuilder: # (((
         return self._init_state
 
     cpdef RNNState initial_state_from_raw_vectors(self,vecs=None):
+        """Get a :code:`dynet.RNNState`
+        
+        This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
+
+        Use this if you want to initialize the hidden states with values directly rather than expressions.
+        
+        Args:
+            vecs (list): Initial hidden state for each layer as a list of numpy arrays  (default: {None})
+        
+        Returns:
+            :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
+            dynet.RNNState
+        """
         if self.cg_version != _cg.version():
             self.new_graph()
             if vecs is not None:
@@ -3134,6 +3173,10 @@ cdef class _RNNBuilder: # (((
 #)
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # (((
+    """[summary]
+    
+    [description]
+    """
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -3145,6 +3188,10 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # (((
 #)
     
 cdef class GRUBuilder(_RNNBuilder): # (((
+    """[summary]
+    
+    [description]
+    """
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -3156,6 +3203,10 @@ cdef class GRUBuilder(_RNNBuilder): # (((
 # )
 
 cdef class LSTMBuilder(_RNNBuilder): # (((
+    """[summary]
+    
+    [description]
+    """
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -3167,17 +3218,84 @@ cdef class LSTMBuilder(_RNNBuilder): # (((
 # )
 
 cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
+    """VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
+    
+    This cell runs according to the following dynamics :
+
+    .. math::
+
+        \\begin{split}
+            i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+b_i)\\\\
+            f_t & = \sigma(W_{fx}x_t+W_{fh}h_{t-1}+b_f+1)\\\\
+            o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+b_o)\\\\
+            \\tilde{c_t} & = \\tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\\\
+            c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
+            h_t & = \\tanh(c_t)\circ o_t\\\\
+        \end{split}
+
+    Args:
+        layers (int): Number of layers
+        input_dim (int): Dimension of the input
+        hidden_dim (int): Dimension of the recurrent units
+        model (dynet.Model): Model to hold the parameters
+
+    """
+    cdef CVanillaLSTMBuilder* thisvanillaptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
-            self.thisptr = new CVanillaLSTMBuilder()
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
+
+    cpdef void set_dropouts(self, float d, float d_r):
+        """Set the dropout rates
+        
+        The dropout implemented here is the variational dropout with tied weights introduced in `Gal, 2016 <http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks>`_
+
+        More specifically, dropout masks :math:`\mathbf{z_x}\sim \\text(1-d_x)`, :math:`\mathbf{z_h}\sim \\text{Bernoulli}(1-d_h)` are sampled at the start of each sequence.
+
+        The dynamics of the cell are then modified to :
+
+        .. math::
+
+            \\begin{split}
+                i_t & =\sigma(W_{ix}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ih}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_i)\\\\
+                f_t & = \sigma(W_{fx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{fh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_f)\\\\
+                o_t & = \sigma(W_{ox}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{oh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_o)\\\\
+                \\tilde{c_t} & = \tanh(W_{cx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\\\
+                c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
+                h_t & = \\tanh(c_t)\circ o_t\\\\
+            \end{split}
+
+        For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+
+        Args:
+            d (number): Dropout rate :math:`d_x` for the input :math:`x_t`
+            d_r (number): Dropout rate :math:`d_x` for the output :math:`h_t`
+        """
+        self.thisvanillaptr.set_dropout(d, d_r)
+
+    cpdef void set_dropout_masks(self, unsigned batch_size=1):
+        """Set dropout masks at the beginning of a sequence for a specific batch size
+        
+        If this function is not called on batched input, the same mask will be applied across all batch elements. Use this to apply different masks to each batch element
+
+        You need to call this __AFTER__ calling `initial_state`
+        
+        Args:
+            batch_size (int): Batch size (default: {1})
+        """
+        self.thisvanillaptr.set_dropout_masks(batch_size)
 
     def whoami(self): return "VanillaLSTMBuilder"
 # )
 
 cdef class FastLSTMBuilder(_RNNBuilder): # (((
+    """[summary]
+    
+    [description]
+    """
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         self.cg_version = -1
@@ -3231,17 +3349,17 @@ class BiRNNBuilder(object):
         returns the list of state pairs (stateF, stateB) obtained by adding 
         inputs to both forward (stateF) and backward (stateB) RNNs.  
         Args:
-            es: a list of Expression
+            es (list): a list of Expression
 
         see also transduce(xs)
 
-        .transduce(xs) is different from .add_inputs(xs) in the following way:
+        code:`.transduce(xs)` is different from .add_inputs(xs) in the following way:
 
-            .add_inputs(xs) returns a list of RNNState pairs. RNNState objects can be
+        - code:`.add_inputs(xs)` returns a list of RNNState pairs. RNNState objects can be
              queried in various ways. In particular, they allow access to the previous
              state, as well as to the state-vectors (h() and s() )
 
-            .transduce(xs) returns a list of Expression. These are just the output
+        - :code:`.transduce(xs)` returns a list of Expression. These are just the output
              expressions. For many cases, this suffices. 
              transduce is much more memory efficient than add_inputs. 
         """
@@ -3301,36 +3419,71 @@ cdef class RNNState: # (((
         self._out = out
 
     cpdef RNNState set_h(self, es=None):
+        """Manually set the output :math:`h_t`
+        
+        Args:
+            es (list): List of expressions, one for each layer (default: {None})
+        
+        Returns:
+            New RNNState
+            dynet.RNNState
+        """
         cdef Expression res = self.builder.set_h(CRNNPointer(self.state_idx), es)
         cdef int state_idx = <int>self.builder.thisptr.state()
         return RNNState(self.builder, state_idx, self, res)
 
     cpdef RNNState set_s(self, es=None):
+        """Manually set the hidden states
+        
+        This is different from :code:`set_h` because, for LSTMs for instance this also sets the cell state. The format is :code:`[new_c[0],...,new_c[n],new_h[0],...,new_h[n]]`
+        
+        Args:
+            es (list): List of expressions, in this format : :code:`[new_c[0],...,new_c[n],new_h[0],...,new_h[n]]` (default: {None})
+        
+        Returns:
+            New RNNState
+            dynet.RNNState
+        """
         cdef Expression res = self.builder.set_s(CRNNPointer(self.state_idx), es)
         cdef int state_idx = <int>self.builder.thisptr.state()
         return RNNState(self.builder, state_idx, self, res)
 
     cpdef RNNState add_input(self, Expression x):
+        """This computes :math:`h_t = \\text{RNN}(x_t)`
+        
+        Args:
+            x (dynet.Expression): Input expression
+        
+        Returns:
+            New RNNState
+            dynet.RNNState
+        """
         cdef Expression res = self.builder.add_input_to_prev(CRNNPointer(self.state_idx), x)
         cdef int state_idx = <int>self.builder.thisptr.state()
         return RNNState(self.builder, state_idx, self, res)
 
     def add_inputs(self, xs):
-        """
-        returns the list of states obtained by adding the given inputs
-        to the current state, one by one.
+        """Returns the list of states obtained by adding the given inputs to the current state, one by one.
 
-        see also transduce(xs)
+        see also :code:`transduce(xs)`
 
-        .transduce(xs) is different from .add_inputs(xs) in the following way:
+        :code:`.transduce(xs)` is different from :code:`.add_inputs(xs)` in the following way:
 
-            .add_inputs(xs) returns a list of RNNState. RNNState objects can be
+        - :code:`.add_inputs(xs)` returns a list of RNNState. RNNState objects can be
              queried in various ways. In particular, they allow access to the previous
-             state, as well as to the state-vectors (h() and s() )
+             state, as well as to the state-vectors (:code:`h()` and :code:`s()` )
 
-            .transduce(xs) returns a list of Expression. These are just the output
+        - :code:`.transduce(xs)` returns a list of Expression. These are just the output
              expressions. For many cases, this suffices. 
-             transduce is much more memory efficient than add_inputs. 
+        
+        :code:`transduce` is much more memory efficient than :code:`add_inputs`.
+
+        Args:
+            xs (list): list of input expressions
+
+        Returns:
+            New RNNState
+            dynet.RNNState
         """
         states = []
         cur = self
@@ -3344,17 +3497,25 @@ cdef class RNNState: # (((
         returns the list of output Expressions obtained by adding the given inputs
         to the current state, one by one.
         
-        see also add_inputs(xs)
+        see also :code:`add_inputs(xs)`
 
-        .transduce(xs) is different from .add_inputs(xs) in the following way:
+        :code:`.transduce(xs)` is different from :code:`.add_inputs(xs)` in the following way:
 
-            .add_inputs(xs) returns a list of RNNState. RNNState objects can be
+        - :code:`.add_inputs(xs)` returns a list of RNNState. RNNState objects can be
              queried in various ways. In particular, they allow access to the previous
-             state, as well as to the state-vectors (h() and s() )
+             state, as well as to the state-vectors (:code:`h()` and :code:`s()` )
 
-            .transduce(xs) returns a list of Expression. These are just the output
+        - :code:`.transduce(xs)` returns a list of Expression. These are just the output
              expressions. For many cases, this suffices. 
-             transduce is much more memory efficient than add_inputs. 
+        
+        :code:`transduce` is much more memory efficient than :code:`add_inputs`.
+
+        Args:
+            xs (list): list of input expressions
+
+        Returns:
+            New RNNState
+            dynet.RNNState
         """
         cdef list exprs = []
         cdef Expression res
@@ -3388,9 +3549,23 @@ cdef class RNNState: # (((
         """
         return tuple(self.builder.get_s(CRNNPointer(self.state_idx)))
 
-    cpdef RNNState prev(self): return self._prev
+    cpdef RNNState prev(self):
+        """Gets previous RNNState
 
-    def b(self): return self.builder
+        In case you need to rewind
+        """
+        return self._prev
+
+    def b(self):
+        """Get the underlying RNNBuilder
+        
+        In case you need to set dropout or other stuff.
+        
+        Returns:
+            Underlying RNNBuilder
+            dynet.RNNBuilder
+        """
+        return self.builder
     #)
 
 # StackedRNNState   TODO: do at least minimal testing for this #(((

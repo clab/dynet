@@ -246,7 +246,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    *
    * For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
    * \param d Dropout rate \f$d_x\f$ for the input \f$x_t\f$
-   * \param d_h Dropout rate \f$d_x\f$ for the output \f$h_t\f$
+   * \param d_h Dropout rate \f$d_h\f$ for the output \f$h_t\f$
    */
   void set_dropout(float d, float d_r);
   /**
@@ -256,7 +256,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    */
   void disable_dropout();
   /**
-   * \brief Set dropout masks at the beginning of a sequence for a specific bathc size
+   * \brief Set dropout masks at the beginning of a sequence for a specific batch size
    * \details If this function is not called on batched input, the same mask will be applied across
    * all batch elements. Use this to apply different masks to each batch element
    *
