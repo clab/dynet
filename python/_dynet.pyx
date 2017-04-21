@@ -2510,14 +2510,16 @@ cpdef Expression huber_distance(Expression x, Expression y, float c=1.345):
     return Expression.from_cexpr(x.cg_version, c_huber_distance(x.c(), y.c(), c))
 #expr-unsigned
 cpdef Expression kmax_pooling(Expression x, unsigned k, unsigned d=1):
-    """[summary]
+    """Kmax-pooling operation
     
-    [description]
+    Select out k maximum values along a given dimension, in the same order as they appear. This will result in the size of the given dimension being changed to k.
     
     Args:
         x (dynet.Expression): 
-        unsigned k (dynet.Expression): 
-        unsigned d (int): pooled dimension
+        unsigned k (dynet.Expression): Number of maximum values to retrieve along the given dimension
+
+    Keyword Arguments:
+        unsigned d (int): Dimension on which to perform kmax-pooling (default: (1))
     
     Returns:
         dynet.Expression: 
