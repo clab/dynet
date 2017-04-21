@@ -6,7 +6,7 @@
  * \defgroup lossoperations lossoperations
  * \defgroup flowoperations flowoperations
  * \defgroup noiseoperations noiseoperations
- * \defgroup convoperations convoperations
+ * \defgroup convolutionoperations convolutionoperations
  * \defgroup tensoroperations tensoroperations
  * \defgroup linalgoperations linalgoperations
  * \brief The various operations that you can use in building a DyNet graph
@@ -395,6 +395,20 @@ Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scal
  */
 Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right);
 
+/**
+ * \ingroup inputoperations
+ * \brief Create a random Gumbel sampled vector
+ * \details Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported.
+ *
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ * \param mu The mu parameter
+ * \param beta The beta parameter
+ *
+ * \return A "d" dimensioned Gumbel distributed vector
+ */
+Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu = 0.0, real beta = 1.0);
+
 ////////////////////////////////////////////////
 // Arithmetic operations                      //
 ////////////////////////////////////////////////
@@ -595,9 +609,21 @@ inline Expression average(const T& xs) { return detail::f<Average>(xs); }
  *
  * \param x The input expression
  *
- * \return An expression where the ith element is equal to sqrt(x_i)
+ * \return An expression where the ith element is equal to \f$\sqrt(x_i)\f$
  */
 Expression sqrt(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Absolute value
+ * \details Elementwise absolute value.
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to \f$\vert x_i\vert\f$
+ */
+Expression abs(const Expression& x);
+
 
 /**
  * \ingroup arithmeticoperations
@@ -1055,7 +1081,7 @@ Expression squared_distance(const Expression& x, const Expression& y);
 
 /**
  * \ingroup lossoperations
- * \brief Squared distance
+ * \brief L1 distance
  * \details The L1 distance between values of ``x`` and ``y``: \f$\sum_i |x_i-y_i|\f$.
  *
  * \param x A vector of values
@@ -1206,15 +1232,19 @@ Expression reshape(const Expression& x, const Dim& d);
 /**
  * \ingroup flowoperations
  * \brief Transpose a matrix
- * \details Get the transpose of the matrix.
+ * \details Transpose a matrix or tensor, or if dims is specified shuffle the
+ *          dimensions arbitrarily.
  *          **Note:** This is O(1) if either the row or column dimension is 1,
  *          and O(n) otherwise.
  *
  * \param x The input expression
+ * \param dims The dimensions to swap. The ith dimension of the output will be equal
+ *          to the dims[i] dimension of the input. dims must have the same number
+ *          of dimensions as x.
  *
- * \return The transposed expression
+ * \return The transposed/shuffled expression
  */
-Expression transpose(const Expression& x);
+Expression transpose(const Expression& x, const std::vector<unsigned> & dims = {1,0});
 
 /**
  * \ingroup flowoperations
@@ -1456,17 +1486,17 @@ Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> * p
 
 /**
  * \ingroup flowoperations
- * \brief Concatenate batch elements
- * \details Perform a concatenation of several batched expressions along the batch dimension.
+ * \brief Concatenate list of expressions to a single batched expression
+ * \details Perform a concatenation of several expressions along the batch dimension.
  *          All expressions must have the same shape except for the batch dimension.
  *
  * \param xs The input expressions
  *
  * \return The expression with the batch dimensions concatenated
  */
-inline Expression concatenate_batch_elems(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateBatchElements>(xs); }
+inline Expression concatenate_to_batch(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateToBatch>(xs); }
 template <typename T>
-inline Expression concatenate_batch_elems(const T& xs) { return detail::f<ConcatenateBatchElements>(xs); }
+inline Expression concatenate_to_batch(const T& xs) { return detail::f<ConcatenateToBatch>(xs); }
 
 /**
  * \ingroup flowoperations
@@ -1495,6 +1525,36 @@ inline Expression concatenate_cols(const T& xs) { return detail::f<ConcatenateCo
 inline Expression concatenate(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs); }
 template <typename T>
 inline Expression concatenate(const T& xs) { return detail::f<Concatenate>(xs); }
+
+/**
+ * \ingroup flowoperations
+ * \brief Max out through a dimension
+ * \details Select out a element/row/column/sub-tensor from an expression, 
+ *          with maximum value along a given dimension.
+ *          This will result in the dimension of the tensor being reduced
+ *          by 1.
+ *
+ * \param x The input expression
+ * \param d The dimension along which to choose the element
+ *
+ * \return An expression of sub-tensor with max value along dimension d
+ */
+Expression max_dim(const Expression& x, unsigned d = 0);
+
+/**
+ * \ingroup flowoperations
+ * \brief Min out through a dimension
+ * \details Select out a element/row/column/sub-tensor from an expression, 
+ *          with minimum value along a given dimension.
+ *          This will result in the dimension of the tensor being reduced
+ *          by 1.
+ *
+ * \param x The input expression
+ * \param d The dimension along which to choose the element
+ *
+ * \return An expression of sub-tensor with min value along dimension d
+ */
+Expression min_dim(const Expression& x, unsigned d = 0);
 
 ////////////////////////////////////////////////
 // Noise operations                           //
@@ -1551,8 +1611,8 @@ Expression block_dropout(const Expression& x, real p);
 // Convolution operations                     //
 ////////////////////////////////////////////////
 
-Expression conv1d_narrow(const Expression& x, const Expression& f);
-Expression conv1d_wide(const Expression& x, const Expression& f);
+//Expression conv1d_narrow(const Expression& x, const Expression& f);
+//Expression conv1d_wide(const Expression& x, const Expression& f);
 Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows = 2);
@@ -1562,16 +1622,142 @@ Expression sum_rows(const Expression& x);
 Expression average_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 
+
+/**
+ * \ingroup convolutionoperations
+ * \brief conv2d without bias
+ * \details
+ *   2D convolution operator without bias parameters.
+ *   'VALID' and 'SAME' convolutions are supported.
+ *   Think about when stride is 1, the distinction:
+ *   - *SAME*: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+ *   - *VALID*: output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+ *
+ *   In detail, assume:
+ *   - Input feature maps: (XH x XW x XC) x N
+ *   - Filters: FH x FW x XC x FC, 4D tensor
+ *   - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
+ *
+ *   For the *SAME* convolution: the output height (YH) and width (YW) are computed as:
+ *   - YH = ceil(float(XH) / float(strides[0]))
+ *   - YW = ceil(float(XW) / float(strides[1]))
+ *   and the paddings are computed as:
+ *   - pad_along_height = max((YH - 1) * strides[0] + FH - XH, 0)
+ *   - pad_along_width = max((YW - 1) * strides[1] + FW - XW, 0)
+ *   - pad_top = pad_along_height / 2
+ *   - pad_bottom = pad_along_height - pad_top
+ *   - pad_left = pad_along_width / 2
+ *   - pad_right = pad_along_width - pad_left
+ *
+ *   For the *VALID* convolution: the output height (YH) and width (YW) are computed as:
+ *   - YH = ceil(float(XH - FH + 1) / float(strides[0]))
+ *   - YW = ceil(float(XW - FW + 1) / float(strides[1]))
+ *   and the paddings are always zeros.
+ *
+ * \param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+ * \param f 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
+ * \param stride the row and column strides
+ * \param is_valid 'VALID' convolution or 'SAME' convolution, default is True ('VALID')
+ *
+ * \return The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
+ */
+Expression conv2d(const Expression& x, const Expression& f, const std::vector<unsigned>& stride, bool is_valid = true);
+
+/**
+ * \ingroup convolutionoperations
+ * \brief conv2d with bias
+ * \details
+ *   2D convolution operator with bias parameters.
+ *   'VALID' and 'SAME' convolutions are supported.
+ *   Think about when stride is 1, the distinction:
+ *   - *SAME*: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+ *   - *VALID*: output size shrinks by filter_size - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+ *
+ *   In detail, assume:
+ *   - Input feature maps: XH x XW x XC x N
+ *   - Filters: FH x FW x XC x FC 
+ *   - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
+ *
+ *   For the *SAME* convolution: the output height (YH) and width (YW) are computed as:
+ *   - YH = ceil(float(XH) / float(strides[0]))
+ *   - YW = ceil(float(XW) / float(strides[1]))
+ *   and the paddings are computed as:
+ *   - pad_along_height = max((YH - 1) * strides[0] + FH - XH, 0)
+ *   - pad_along_width = max((YW - 1) * strides[1] + FW - XW, 0)
+ *   - pad_top = pad_along_height / 2
+ *   - pad_bottom = pad_along_height - pad_top
+ *   - pad_left = pad_along_width / 2
+ *   - pad_right = pad_along_width - pad_left
+ *
+ *   For the *VALID* convolution: the output height (YH) and width (YW) are computed as:
+ *   - YH = ceil(float(XH - FH + 1) / float(strides[0]))
+ *   - YW = ceil(float(XW - FW + 1) / float(strides[1]))
+ *   and the paddings are always zeros.
+ *
+ * \param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+ * \param f 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
+ * \param b The bias (1D: Ci)
+ * \param stride the row and column strides
+ * \param is_valid 'VALID' convolution or 'SAME' convolution, default is True ('VALID')
+ *
+ * \return The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
+ */
+Expression conv2d(const Expression& x, const Expression& f, const Expression& b, const std::vector<unsigned>& stride, bool is_valid = true);
+
 ////////////////////////////////////////////////
 // Tensor operations                          //
 ////////////////////////////////////////////////
 
-// z_ij = x_ijk * y_k
+/**
+ * \ingroup tensoroperations
+ * \brief Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor
+ * \details The resulting tensor \f$z\f$ has coordinates \f$z_ij = \sum_k x_{ijk} y_k\f$
+ * 
+ * \param x Rank 3 tensor
+ * \param y Vector
+ * 
+ * \return Matrix
+ */
 Expression contract3d_1d(const Expression& x, const Expression& y);
 // z_i = x_ijk * y_k * z_j (+ b_i)
+/**
+ * \ingroup tensoroperations
+ * \brief Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor
+ * \details This is the equivalent of calling `contract3d_1d` and then performing a matrix vector multiplication.
+ * 
+ * The resulting tensor \f$t\f$ has coordinates \f$t_i = \sum_{j,k} x_{ijk} y_k z_j\f$
+ * 
+ * \param x Rank 3 tensor
+ * \param y Vector
+ * \param z Vector
+ * \return Vector
+ */
 Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z);
+/**
+ * \ingroup tensoroperations
+ * \brief Same as `contract3d_1d_1d` with an additional bias parameter
+ * \details This is the equivalent of calling `contract3d_1d` and then performing an affine transform.
+ * 
+ * The resulting tensor \f$t\f$ has coordinates \f$t_i = b_i + \sum_{j,k} x_{ijk} y_k z_j\f$
+ * 
+ * \param x Rank 3 tensor
+ * \param y Vector
+ * \param z Vector
+ * \param b Bias vector
+ * \return Vector
+ */
 Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
 // z_ij = x_ijk * y_k + b_ij
+/**
+ * \ingroup tensoroperations
+ * \brief Same as `contract3d_1d` with an additional bias parameter
+ * \details The resulting tensor \f$z\f$ has coordinates \f$z_{ij} = b_{ij}+\sum_k x_{ijk} y_k\f$
+ * 
+ * \param x Rank 3 tensor
+ * \param y Vector
+ * \param b Bias matrix
+ * \return Matrix
+ */
 Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
 
 

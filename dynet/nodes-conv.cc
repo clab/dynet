@@ -8,6 +8,8 @@
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
+#include "third_party/eigen_spatial_convolutions.h"
+#include "third_party/eigen_backward_spatial_convolutions.h"
 
 #if HAVE_CUDA
 #include "dynet/cuda.h"
@@ -47,6 +49,7 @@ Dim FoldRows::dim_forward(const vector<Dim>& xs) const {
   return Dim({orows, xs[0].cols()});
 }
 
+/* Deprecated
 string Conv1DNarrow::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "conv1d_narrow(" << arg_names[0] << ", f=" << arg_names[1] << ')';
@@ -87,6 +90,7 @@ Dim Conv1DWide::dim_forward(const vector<Dim>& xs) const {
   }
   return Dim({xs[0].rows(), ocols});
 }
+*/
 
 string Filter1DNarrow::as_string(const vector<string>& arg_names) const {
   ostringstream os;
@@ -145,7 +149,6 @@ Dim SumDimension::dim_forward(const vector<Dim>& xs) const {
   ret.delete_dim(dimension);
   return ret;
 }
-
 #endif
 
 template<class MyDevice>
@@ -176,6 +179,7 @@ void AverageColumns::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(AverageColumns)
 
+/* Deprecated
 template<class MyDevice>
 void Conv1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned ycols = dim.cols();
@@ -215,7 +219,7 @@ DYNET_NODE_INST_DEV_IMPL(Conv1DNarrow)
 
 template<class MyDevice>
 void Conv1DWide::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  TensorTools::Zero(fx);
+  TensorTools::zero(fx);
   const unsigned xcols = xs[0]->d.cols();
   const unsigned fcols = xs[1]->d.cols();
   for (unsigned j = 0; j < xcols; ++j)
@@ -244,7 +248,7 @@ void Conv1DWide::backward_dev_impl(const MyDevice & dev,
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Conv1DWide)
-
+*/
 
 template<class MyDevice>
 void Filter1DNarrow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {

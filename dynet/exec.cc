@@ -65,6 +65,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       // Get the device
       DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in SimpleExecutionEngine::incremental_forward");
       nfxs[num_nodes_evaluated].device = node->device;
+      nfxs[num_nodes_evaluated].mem_pool = DeviceMempool::FXS;
       // Get the memory
       nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(node->dim.size() * sizeof(float)));
       if (nfxs[num_nodes_evaluated].v == nullptr)
@@ -104,6 +105,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
     const auto dim = nfxs[i].d;
     ndEdfs[i].d = dim;
     ndEdfs[i].device = nfxs[i].device;
+    ndEdfs[i].mem_pool = DeviceMempool::DEDFS;
     ndEdfs[i].v = static_cast<float*>(ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
     if (!ndEdfs[i].v)
       DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for derivatives of node " << i);

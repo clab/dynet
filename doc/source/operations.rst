@@ -1,10 +1,10 @@
 .. _operations:
 
 Operations
-==========
+----------
 
 Operation Interface
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 The following functions define DyNet "Expressions," which are used as an interface to
 the various functions that can be used to build DyNet computation graphs. Expressions
@@ -15,7 +15,7 @@ for each specific function are listed below.
 	:content-only:
 
 Input Operations
-----------------
+~~~~~~~~~~~~~~~~
 
 These operations allow you to input something into the computation graph, either simple
 scalar/vector/matrix inputs from floats, or parameter inputs from a DyNet parameter
@@ -27,7 +27,7 @@ is being used for this particular calculation.
 	:content-only:
 
 Arithmetic Operations
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 These operations perform basic arithemetic over values in the graph.
 
@@ -36,7 +36,7 @@ These operations perform basic arithemetic over values in the graph.
 	:content-only:
 
 Probability/Loss Operations
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These operations are used for calculating probabilities, or calculating loss functions
 for use in training.
@@ -46,7 +46,7 @@ for use in training.
 	:content-only:
 
 Flow/Shaping Operations
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 These operations control the flow of information through the graph, or the shape of
 the vectors/tensors used in the graph.
@@ -56,7 +56,7 @@ the vectors/tensors used in the graph.
 	:content-only:
 
 Noise Operations
-----------------
+~~~~~~~~~~~~~~~~
 
 These operations are used to add noise to the graph for purposes of making learning
 more robust.
@@ -66,7 +66,7 @@ more robust.
 	:content-only:
 
 Tensor Operations
------------------
+~~~~~~~~~~~~~~~~~
 
 These operations are used for performing operations on higher order tensors.
 
@@ -75,10 +75,19 @@ These operations are used for performing operations on higher order tensors.
 	:content-only:
 
 Linera Algebra Operations
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These operations are used for performing various operations common in linear algebra.
 
 .. doxygengroup:: linalgoperations
+	:members:
+	:content-only:
+
+Convolution Operations
+~~~~~~~~~~~~~~~~~~~~~~
+
+These operations are convolution-related.
+
+.. doxygengroup:: convolutionoperations
 	:members:
 	:content-only:

@@ -47,25 +47,26 @@ Device::~Device() {}
 DeviceMempoolSizes Device::mark(ComputationGraph *cg) {
   cg->incremental_forward({cg, (VariableIndex)(cg->nodes.size() - 1)}); // needed so that we actually allocate the needed memory
   // for all existing nodes.
-  return DeviceMempoolSizes(pools[0]->used, pools[1]->used, pools[2]->used);
+  return DeviceMempoolSizes(pools[0]->used(), pools[1]->used(), pools[2]->used());
 }
 
 void Device::revert(const DeviceMempoolSizes & cp) {
-  if(cp.used[0] > pools[0]->used)
-    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[0] << " > " << pools[0]->used << ")");
-  pools[0]->used = cp.used[0];
-  if(cp.used[1] > pools[1]->used)
-    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[1] << " > " << pools[1]->used << ")");
-  pools[1]->used = cp.used[1];
-  if(cp.used[2] > pools[2]->used)
-    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[2] << " > " << pools[2]->used << ")");
-  pools[2]->used = cp.used[2];
+  if(cp.used[0] > pools[0]->used())
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[0] << " > " << pools[0]->used() << ")");
+  pools[0]->set_used(cp.used[0]);
+  if(cp.used[1] > pools[1]->used())
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[1] << " > " << pools[1]->used() << ")");
+  pools[1]->set_used(cp.used[1]);
+  if(cp.used[2] > pools[2]->used())
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[2] << " > " << pools[2]->used() << ")");
+  pools[2]->set_used(cp.used[2]);
 }
 
 void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
   DYNET_ASSERT(mp != DeviceMempool::NONE, "Attempt to allocate tensor for NONE DeviceMempool");
   DYNET_ASSERT(pools[(int)mp] != nullptr, "Attempt to allocate tensor for null DeviceMempool");
   tens.v = (float*)pools[(int)mp]->allocate(tens.d.size() * sizeof(float));
+  DYNET_ASSERT(tens.v != nullptr, "Allocated tensor is zero");
   tens.mem_pool = mp;
 }
 
@@ -75,6 +76,9 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   CUDA_CHECK(cudaSetDevice(device_id));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
   CUBLAS_CHECK(cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE));
+#if HAVE_CUDNN
+  CUDNN_CHECK(cudnnCreate(&cudnnHandle));
+#endif
   kSCALAR_MINUSONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ZERO = (float*)gpu_mem.malloc(sizeof(float));

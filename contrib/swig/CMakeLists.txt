@@ -84,7 +84,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/ParameterStorageVector.java"
     "${CMAKE_SWIG_OUTDIR}/ParameterVector.java"
     "${CMAKE_SWIG_OUTDIR}/ParameterVectorVector.java"
-    "${CMAKE_SWIG_OUTDIR}/RmsPropTrainer.java"
+    "${CMAKE_SWIG_OUTDIR}/RMSPropTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/RNNBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/SimpleRNNBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/SimpleSGDTrainer.java"
@@ -134,4 +134,3 @@ if(INCLUDE_SCALA)
   add_custom_target(scala_helper ALL DEPENDS scala_helper_uberjar)
 
 endif()
-
