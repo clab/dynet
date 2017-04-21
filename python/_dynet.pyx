@@ -2256,20 +2256,22 @@ cpdef Expression bmax(Expression x, Expression y):
     """
     ensure_freshness(y); 
     return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
-cpdef Expression transpose(Expression x):
+cpdef Expression transpose(Expression x, list dims=[1, 0]):
     """Transpose a matrix
     
-    Get the transpose of the matrix. 
+    Get the transpose of the matrix, or if dims is specified shuffle the dimensions arbitrarily.
 
     **Note:** This is O(1) if either the row or column dimension is 1, and O(n) otherwise.
     
     Args:
         x (dynet.Expression): Input expression
+        dims (list): The dimensions to swap. The ith dimension of the output will be equal to the dims[i] dimension of the input. dims must have the same number of dimensions as x.
     
     Returns:
-        dynet.Expression: :math:`x^T`
+        dynet.Expression: :math:`x^T` / the shuffled expression
     """
-    return Expression.from_cexpr(x.cg_version, c_transpose(x.c()))
+    cdef vector[unsigned] vec = dims
+    return Expression.from_cexpr(x.cg_version, c_transpose(x.c(), vec))
 cpdef Expression select_rows(Expression x, vector[unsigned] rs):
     """Select rows
 
