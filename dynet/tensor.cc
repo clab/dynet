@@ -67,6 +67,20 @@ vector<real> as_vector(const Tensor& v) {
   return res;
 }
 
+vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
+  vector<Eigen::DenseIndex> res(v.d.size());
+  if (v.device->type == DeviceType::CPU) {
+    memcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size());
+  } else {
+#if HAVE_CUDA
+    if (v.device->type == DeviceType::GPU) {
+      CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size(), cudaMemcpyDeviceToHost));
+    }
+#endif
+  }
+  return res;
+}
+
 float TensorTools::access_element(const Tensor& v, int index) {
   float ret = 0.;
   if (v.device->type == DeviceType::CPU) {
@@ -317,13 +331,13 @@ template void TensorTools::constant_dev<Device_CPU>(Device_CPU & dev, Tensor& d,
 #ifdef HAVE_CUDA
 extern template void TensorTools::constant_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float c);
 void TensorTools::constant(Tensor& d, float c) {
-  if (default_device->type == DeviceType::CPU) { return constant_dev(*(Device_CPU*)default_device, d, c); }
-  else if (default_device->type == DeviceType::GPU) { return constant_dev(*(Device_GPU*)default_device, d, c); }
+  if (d.device->type == DeviceType::CPU) { return constant_dev(*(Device_CPU*)d.device, d, c); }
+  else if (d.device->type == DeviceType::GPU) { return constant_dev(*(Device_GPU*)d.device, d, c); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #else
 void TensorTools::constant(Tensor& d, float c) {
-  if (default_device->type == DeviceType::CPU) { return constant_dev(*(Device_CPU*)default_device, d, c); }
+  if (d.device->type == DeviceType::CPU) { return constant_dev(*(Device_CPU*)d.device, d, c); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #endif
@@ -340,13 +354,81 @@ template void TensorTools::clip_dev<Device_CPU>(Device_CPU & dev, Tensor& d, flo
 #ifdef HAVE_CUDA
 extern template void TensorTools::clip_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float left, float right);
 void TensorTools::clip(Tensor& d, float left, float right) {
-  if (default_device->type == DeviceType::CPU) { return clip_dev(*(Device_CPU*)default_device, d, left, right); }
-  else if (default_device->type == DeviceType::GPU) { return clip_dev(*(Device_GPU*)default_device, d, left, right); }
+  if (d.device->type == DeviceType::CPU) { return clip_dev(*(Device_CPU*)d.device, d, left, right); }
+  else if (d.device->type == DeviceType::GPU) { return clip_dev(*(Device_GPU*)d.device, d, left, right); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #else
 void TensorTools::clip(Tensor& d, float left, float right) {
-  if (default_device->type == DeviceType::CPU) { return clip_dev(*(Device_CPU*)default_device, d, left, right); }
+  if (d.device->type == DeviceType::CPU) { return clip_dev(*(Device_CPU*)d.device, d, left, right); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+#endif
+
+template <class MyDevice>
+IndexTensor TensorTools::argmax_dev(MyDevice & dev, const Tensor& v, unsigned dim, unsigned num) {
+  if(num > 1)
+    DYNET_RUNTIME_ERR("Currently do not support num > 1 in argmax");
+  DYNET_ARG_CHECK(v.mem_pool != DeviceMempool::NONE, "Input Tensor to TensorTools::argmax must be associated with a memory pool.");
+  Dim ids_dim = v.d; ids_dim.d[dim] = num;
+  IndexTensor ids(ids_dim, nullptr, v.device, v.mem_pool);
+  AlignedMemoryPool* pool = v.device->pools[(size_t)v.mem_pool];
+  ids.v = static_cast<Eigen::DenseIndex*>(pool->allocate(ids_dim.size() * sizeof(Eigen::DenseIndex)));
+  ids.tb<3>().device(*dev.edevice) = v.tb<4>().argmax(dim);
+  return ids;
+}
+#ifdef __CUDACC__
+template IndexTensor TensorTools::argmax_dev<Device_GPU>(Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
+#else
+template IndexTensor TensorTools::argmax_dev<Device_CPU>(Device_CPU & dev, const Tensor& d, unsigned dim, unsigned num);
+#ifdef HAVE_CUDA
+extern template IndexTensor TensorTools::argmax_dev<Device_GPU>(Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
+IndexTensor TensorTools::argmax(const Tensor& d, unsigned dim, unsigned num) {
+  if (d.device->type == DeviceType::CPU) { return argmax_dev(*(Device_CPU*)d.device, d, dim, num); }
+  else if (d.device->type == DeviceType::GPU) { return argmax_dev(*(Device_GPU*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+IndexTensor TensorTools::argmax(const Tensor& d, unsigned dim, unsigned num) {
+  if (d.device->type == DeviceType::CPU) { return argmax_dev(*(Device_CPU*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+#endif
+
+template <class MyDevice>
+IndexTensor TensorTools::categorical_sample_log_prob_dev(MyDevice & dev, const Tensor& v, unsigned dim, unsigned num) {
+  if(num > 1)
+    DYNET_RUNTIME_ERR("Currently do not support num > 1 in categorical_sample_log_prob");
+  DYNET_ARG_CHECK(v.mem_pool != DeviceMempool::NONE, "Input Tensor to TensorTools::argmax must be associated with a memory pool.");
+  Dim ids_dim = v.d; ids_dim.d[dim] = num;
+  IndexTensor ids(ids_dim, nullptr, v.device, v.mem_pool);
+  AlignedMemoryPool* pool = v.device->pools[(int)v.mem_pool];
+  ids.v = static_cast<Eigen::DenseIndex*>(pool->allocate(ids_dim.size() * sizeof(Eigen::DenseIndex)));
+  size_t used = pool->used();
+  Dim copy_dim = v.d; // TODO: make this match num to enable num
+  Tensor copy(copy_dim, nullptr, v.device, v.mem_pool);
+  copy.v = static_cast<float*>(pool->allocate(v.d.size() * sizeof(float)));
+  TensorTools::randomize_uniform(copy);
+  ids.tb<3>().device(*dev.edevice) = (v.tb<4>() - (-copy.tb<4>().log()).log()).argmax(dim);
+  pool->set_used(used);
+  return ids;
+}
+#ifdef __CUDACC__
+template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_GPU>(Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
+#else
+template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_CPU>(Device_CPU & dev, const Tensor& d, unsigned dim, unsigned num);
+#ifdef HAVE_CUDA
+extern template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_GPU>(Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
+IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned dim, unsigned num) {
+  if (d.device->type == DeviceType::CPU) { return categorical_sample_log_prob_dev(*(Device_CPU*)d.device, d, dim, num); }
+  else if (d.device->type == DeviceType::GPU) { return categorical_sample_log_prob_dev(*(Device_GPU*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned dim, unsigned num) {
+  if (d.device->type == DeviceType::CPU) { return categorical_sample_log_prob_dev(*(Device_CPU*)d.device, d, dim, num); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #endif
