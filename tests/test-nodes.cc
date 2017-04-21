@@ -701,9 +701,19 @@ BOOST_AUTO_TEST_CASE( reshape_batch_gradient ) {
 // Expression transpose(const Expression& x);
 BOOST_AUTO_TEST_CASE( transpose_gradient ) {
   dynet::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
-  Expression y = softsign(x1);
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = x1 * transpose(x1);
   Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression transpose(const Expression& x);
+BOOST_AUTO_TEST_CASE( transpose_higherorder_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression cube1 = parameter(cg, param_cube1);
+  Expression x1 = reshape(transpose(cube1, {2, 0, 1}), Dim({9, 3}));
+  Expression x2 = reshape(transpose(cube1, {1, 2, 0}), Dim({3, 9}));
+  Expression z = sum_elems(x1 * x2);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -953,7 +963,7 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
   vector<unsigned> stride = {4, 4}; bool is_valid = false;
   Expression y = conv2d(x, kernel, stride, is_valid);
   Expression z = sum_batches(sum_elems(y));
-  BOOST_CHECK(check_grad(mod, z, 2));
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 // TODO: These are all unimplemented

@@ -2209,17 +2209,13 @@ DYNET_NODE_INST_DEV_IMPL(Tanh)
 
 template<class MyDevice>
 void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  if (dim.rows() == 1 || dim.cols() == 1) {
+  if (dim.num_nonone_dims() <= 1) {
     fx.v = xs[0]->v;
   } else {
-#if __CUDACC__
-    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
-      CUBLAS_CHECK(cublasSgeam(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, fx.d.rows(), fx.d.cols(),
-                               kSCALAR_ONE, xs[0]->batch_ptr(b), xs[0]->d.rows(), kSCALAR_ZERO, NULL, fx.d.rows(), fx.batch_ptr(b), fx.d.rows()));
-#else
-    for(unsigned b = 0; b < xs[0]->d.bd; ++b)
-      fx.batch_matrix(b).noalias() = xs[0]->batch_matrix(b).transpose();
-#endif
+    array<ptrdiff_t, 5> order;
+    for(size_t i = 0; i < 5; ++i)
+      order[i] = (i >= dims.size() ? i : dims[i]);
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().shuffle(order);
   }
 }
 
@@ -2230,14 +2226,10 @@ void Transpose::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-#if __CUDACC__
-  for(unsigned b = 0; b < xs[0]->d.bd; ++b)
-    CUBLAS_CHECK(cublasSgeam(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, dEdxi.d.rows(), dEdxi.d.cols(),
-                             kSCALAR_ONE, dEdf.batch_ptr(b), dEdf.d.rows(), kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows(), dEdxi.batch_ptr(b), dEdxi.d.rows()));
-#else
-  for(unsigned b = 0; b < xs[0]->d.bd; ++b)
-    dEdxi.batch_matrix(b) += dEdf.batch_matrix(b).transpose();
-#endif
+  array<ptrdiff_t, 5> order;
+  for(size_t i = 0; i < 5; ++i)
+    order[(i >= dims.size() ? i : dims[i])] = i;
+  dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().shuffle(order);
 }
 DYNET_NODE_INST_DEV_IMPL(Transpose)
 
