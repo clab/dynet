@@ -1232,15 +1232,19 @@ Expression reshape(const Expression& x, const Dim& d);
 /**
  * \ingroup flowoperations
  * \brief Transpose a matrix
- * \details Get the transpose of the matrix.
+ * \details Transpose a matrix or tensor, or if dims is specified shuffle the
+ *          dimensions arbitrarily.
  *          **Note:** This is O(1) if either the row or column dimension is 1,
  *          and O(n) otherwise.
  *
  * \param x The input expression
+ * \param dims The dimensions to swap. The ith dimension of the output will be equal
+ *          to the dims[i] dimension of the input. dims must have the same number
+ *          of dimensions as x.
  *
- * \return The transposed expression
+ * \return The transposed/shuffled expression
  */
-Expression transpose(const Expression& x);
+Expression transpose(const Expression& x, const std::vector<unsigned> & dims = {1,0});
 
 /**
  * \ingroup flowoperations
