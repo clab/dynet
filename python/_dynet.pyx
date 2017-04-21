@@ -2509,7 +2509,7 @@ cpdef Expression huber_distance(Expression x, Expression y, float c=1.345):
     ensure_freshness(y);
     return Expression.from_cexpr(x.cg_version, c_huber_distance(x.c(), y.c(), c))
 #expr-unsigned
-cpdef Expression kmax_pooling(Expression x, unsigned k):
+cpdef Expression kmax_pooling(Expression x, unsigned k, unsigned d=1):
     """[summary]
     
     [description]
@@ -2517,11 +2517,12 @@ cpdef Expression kmax_pooling(Expression x, unsigned k):
     Args:
         x (dynet.Expression): 
         unsigned k (dynet.Expression): 
+        unsigned d (int): pooled dimension
     
     Returns:
         dynet.Expression: 
     """
-    return Expression.from_cexpr(x.cg_version, c_kmax_pooling(x.c(), k))
+    return Expression.from_cexpr(x.cg_version, c_kmax_pooling(x.c(), k, d))
 cpdef Expression pickneglogsoftmax(Expression x, unsigned v):
     """Negative softmax log likelihood
     

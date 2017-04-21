@@ -347,7 +347,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     #CExpression c_conv1d_narrow "dynet::expr::conv1d_narrow" (CExpression& x, CExpression& f) except + #
     #CExpression c_conv1d_wide "dynet::expr::conv1d_wide" (CExpression& x, CExpression& f) except + #
     CExpression c_filter1d_narrow "dynet::expr::filter1d_narrow" (CExpression& x, CExpression& f) except + #
-    CExpression c_kmax_pooling "dynet::expr::kmax_pooling" (CExpression& x, unsigned k) except + #
+    CExpression c_kmax_pooling "dynet::expr::kmax_pooling" (CExpression& x, unsigned k, unsigned d) except + #
     CExpression c_fold_rows "dynet::expr::fold_rows" (CExpression& x, unsigned nrows) except + #
     CExpression c_sum_cols "dynet::expr::sum_cols" (CExpression& x) except +               #
     CExpression c_kmh_ngram "dynet::expr::kmh_ngram" (CExpression& x, unsigned n) except + #
