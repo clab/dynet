@@ -144,6 +144,17 @@ struct Dim {
    */
   inline unsigned int rows() const { return d[0]; }
   /**
+   * \brief Number of non-one dimensions
+   * \return Number of non-one dimensions
+   */
+  inline unsigned int num_nonone_dims() const {
+    int ret = 0;
+    for(size_t i = 0; i < nd; ++i)
+      if(d[i] != 1)
+        ++ret;
+    return ret;
+  }
+  /**
    * \brief Size of the second dimension (or 1 if only one dimension)
    * \return Size of the second dimension (or 1 if only one dimension)
    */

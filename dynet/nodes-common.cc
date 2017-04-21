@@ -155,13 +155,21 @@ Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
 
 string Transpose::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << arg_names[0] << "^T";
+  s << "transpose("<< arg_names[0] << ", ";
+  for(size_t i = 0; i < dims.size(); ++i)
+    s << (i == 0?'{':',') << dims[i];
+  s << "})";
   return s.str();
 }
 
 Dim Transpose::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Bad arguments to Transpose: " << xs);
-  return xs[0].transpose();
+  DYNET_ARG_CHECK(xs[0].nd == dims.size() || xs[0].num_nonone_dims() == 1, "Dimensions passed to transpose (" << dims.size() << ") must be equal to dimensions in input tensor (" << xs[0].nd << ')');
+  Dim ret(xs[0]);
+  ret.nd = dims.size();
+  for(size_t i = 0; i < dims.size(); ++i)
+    ret.d[i] = xs[0][dims[i]];
+  return ret;
 }
 
 string Reshape::as_string(const vector<string>& arg_names) const {
