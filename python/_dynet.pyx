@@ -1924,20 +1924,20 @@ cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, boo
     """2D convolution without bias
     
     2D convolution operator without bias parameters.
-    ':code:`VALID`' and ':code:`SAME`' convolutions are supported.
+    :code:`VALID` and :code:`SAME` convolutions are supported.
     
     Think about when stride is 1, the distinction:
     
-    - ':code:`SAME`': output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
-    - ':code:`VALID`': output size shrinks by :code:`filter_size - 1`, and the filters always sweep at valid positions inside the input maps. No padding needed.
+    - :code:`SAME`: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+    - :code:`VALID`: output size shrinks by :code:`filter_size - 1`, and the filters always sweep at valid positions inside the input maps. No padding needed.
 
     In detail, assume
     
     - Input feature maps: :code:`XH x XW x XC x N`
     - Filters: :code:`FH x FW x XC x FC`
-    - Strides: :code:`strides[0]` and :code:`strides[1]` are row (:code:`h) and col (:code:`w`) stride, respectively.
+    - Strides: :code:`strides[0]` and :code:`strides[1]` are row (:code:`h`) and col (:code:`w`) stride, respectively.
  
-    For the ':code:`SAME`' convolution: the output height (YH) and width (YW) are computed as:
+    For the :code:`SAME` convolution: the output height (:code:`YH`) and width (:code:`YW`) are computed as:
     
     - :code:`YH = ceil(float(XH) / float(strides[0]))`
     - :code:`YW = ceil(float(XW) / float(strides[1]))`
@@ -1951,7 +1951,7 @@ cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, boo
     - :code:`pad_left = pad_along_width / 2`
     - :code:`pad_right = pad_along_width - pad_left`
  
-    For the ':code:`VALID`' convolution: the output height (YH) and width (YW) are computed as:
+    For the :code:`VALID` convolution: the output height (:code`YH`) and width (:code:`YW`) are computed as:
     
     - :code:`YH = ceil(float(XH - FH + 1) / float(strides[0]))`
     - :code:`YW = ceil(float(XW - FW + 1) / float(strides[1]))`
@@ -1975,20 +1975,20 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     """2D convolution with bias
     
     2D convolution operator with bias parameters.
-    ':code:`VALID`' and ':code:`SAME`' convolutions are supported.
+    :code:`VALID` and :code:`SAME` convolutions are supported.
     
     Think about when stride is 1, the distinction:
     
-    - ':code:`SAME`': output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
-    - ':code:`VALID`': output size shrinks by :code:`filter_size - 1`, and the filters always sweep at valid positions inside the input maps. No padding needed.
+    - :code:`SAME`: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+    - :code:`VALID`: output size shrinks by :code:`filter_size - 1`, and the filters always sweep at valid positions inside the input maps. No padding needed.
 
     In detail, assume
     
     - Input feature maps: :code:`XH x XW x XC x N`
     - Filters: :code:`FH x FW x XC x FC`
-    - Strides: :code:`strides[0]` and :code:`strides[1]` are row (:code:`h) and col (:code:`w`) stride, respectively.
+    - Strides: :code:`strides[0]` and :code:`strides[1]` are row (:code:`h`) and col (:code:`w`) stride, respectively.
  
-    For the ':code:`SAME`' convolution: the output height (YH) and width (YW) are computed as:
+    For the :code:`SAME` convolution: the output height (:code:`YH`) and width (:code:`YW`) are computed as:
     
     - :code:`YH = ceil(float(XH) / float(strides[0]))`
     - :code:`YW = ceil(float(XW) / float(strides[1]))`
@@ -2002,7 +2002,7 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     - :code:`pad_left = pad_along_width / 2`
     - :code:`pad_right = pad_along_width - pad_left`
  
-    For the ':code:`VALID`' convolution: the output height (YH) and width (YW) are computed as:
+    For the :code:`VALID` convolution: the output height (:code`YH`) and width (:code:`YW`) are computed as:
     
     - :code:`YH = ceil(float(XH - FH + 1) / float(strides[0]))`
     - :code:`YW = ceil(float(XW - FW + 1) / float(strides[1]))`
