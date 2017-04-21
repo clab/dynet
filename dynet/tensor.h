@@ -177,25 +177,27 @@ struct Tensor {
   const Eigen::Map<Eigen::MatrixXf> colbatch_matrix() const {
     return Eigen::Map<Eigen::MatrixXf>(v, d.rows(), d.cols() * d.batch_elems());
   }
+
   /**
    * \brief Check for NaNs and infinite values
    * \details This is very slow: use sparingly (it's linear in the number of elements). This raises a `std::runtime_error` exception if the Tensor is on GPU because it's not implemented yet
    * \return Whether the tensor contains any invalid value
    */
   inline bool is_valid() const {
-#if HAVE_CUDA
     // TODO : replace this with a custom exception
-    if (device->type == DeviceType::GPU) {
-      throw std::runtime_error("is_valid() not implemented on GPU");
-    } else {
-#endif
+    if (device->type == DeviceType::CPU) {
       const size_t s = d.size();
       for (unsigned i = 0; i < s; ++i)
         if (std::isnan(v[i]) || std::isinf(v[i])) return false;
       return true;
+    } else {
 #if HAVE_CUDA
-    }
+      if (device->type == DeviceType::GPU) {
+        throw std::runtime_error("is_valid() not implemented on GPU");
+      }
 #endif
+    }
+    return false;
   }
 
   /**
@@ -368,6 +370,7 @@ template<> inline const Eigen::TensorMap<Eigen::Tensor<float, 5>> Tensor::tb<4>(
  * \param t Tensor
  */
 std::ostream& operator<<(std::ostream& os, const Tensor& t);
+
 /**
  * \ingroup tensor
  * \brief Get a scalar value from an order 0 tensor
@@ -391,30 +394,204 @@ std::vector<real> as_vector(const Tensor& v);
 
 /**
  * \ingroup tensor
+ * \brief Represents a tensor of indices
+ * \details This holds indices to locations within a dimension or tensor.
+ *
+ */
+struct IndexTensor {
+  /**
+   * \brief Create an empty tensor
+   */
+  IndexTensor() : d(Dim()), v(nullptr), device(nullptr), mem_pool(DeviceMempool::NONE) { }
+  /**
+   * \brief Creates a tensor
+   * \details [long description]
+   *
+   * \param d Shape of the tensor
+   * \param v Pointer to the values
+   * \param dev Device
+   * \param mem Memory pool
+   */
+  IndexTensor(const Dim& d, Eigen::DenseIndex* v, Device* dev, DeviceMempool mem) : d(d), v(v), device(dev), mem_pool(mem) {}
+
+  // Get view as an Eigen Tensor (see specializations below-- this is to work Eigen's and DYNETs compile-type vs. run-time differences)
+  /**
+   * \brief Get view as a Tensor
+   * \tparam Order Tensor order. Order 0 through 4 are already implemented for you
+   * \return Eigen Tensor of the given order
+   */
+  template <int Order> Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, Order>> t();
+  template <int Order> const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, Order>> t() const;
+
+  /**
+   * \brief Get view as an Eigen Tensor where the final dimension is the various batches
+   * \tparam Order Tensor order. Order 0 through 4 are already implemented for you
+   * \return Eigen Tensor of the given order + 1
+   */
+  template <int Order> Eigen::TensorMap < Eigen::Tensor < Eigen::DenseIndex, Order + 1 >> tb();
+  template <int Order> const Eigen::TensorMap < Eigen::Tensor < Eigen::DenseIndex, Order + 1 >> tb() const;
+
+  Dim d;  /**< Shape of tensor */
+  Eigen::DenseIndex* v;  /**< Pointer to memory */
+  Device* device;
+  DeviceMempool mem_pool;
+
+private:
+  DYNET_SERIALIZE_SPLIT_DECLARE()
+};
+
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 0>> IndexTensor::t<0>() {
+  DYNET_ASSERT(d.batch_elems() == 1 && d.size() == 1, "Illegal access of tensor in function t<0>(): dim=" << d);
+  return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 0>>(v);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 0>> IndexTensor::t<0>() const {
+  DYNET_ASSERT(d.batch_elems() == 1 && d.size() == 1, "Illegal access of tensor in function t<0>(): dim=" << d);
+  return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 0>>(v);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 1>> IndexTensor::t<1>() {
+  DYNET_ASSERT(d.batch_elems() == 1 && (d.ndims() == 1 || d.size() == d.rows()), "Illegal access of tensor in function t<1>(): dim=" << d);
+  return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 1>>(v, (int)d[0]);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 1>> IndexTensor::t<1>() const {
+  DYNET_ASSERT(d.batch_elems() == 1 && (d.ndims() == 1 || d.size() == d.rows()), "Illegal access of tensor in function t<1>(): dim=" << d);
+  return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 1>>(v, (int)d[0]);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>> IndexTensor::t<2>() {
+  DYNET_ASSERT(d.batch_elems() == 1 && d.ndims() <= 2, "Illegal access of tensor in function t<2>(): dim=" << d);
+  if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>>(v, (int)d[0], (int)d[1]);
+  else               return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>>(v, (int)d[0], (int)1);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>> IndexTensor::t<2>() const {
+  DYNET_ASSERT(d.batch_elems() == 1 && d.ndims() <= 2, "Illegal access of tensor in function t<2>(): dim=" << d);
+  if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>>(v, (int)d[0], (int)d[1]);
+  else               return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>>(v, (int)d[0], (int)1);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>> IndexTensor::t<3>() {
+  DYNET_ASSERT(d.batch_elems() == 1 && d.ndims() <= 3, "Illegal access of tensor in function t<3>(): dim=" << d);
+  if (d.ndims() == 3)      return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)d[1], (int)d[2]);
+  else if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)d[1], (int)1);
+  else                    return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)1, (int)1);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>> IndexTensor::t<3>() const {
+  DYNET_ASSERT(d.batch_elems() == 1 && d.ndims() <= 3, "Illegal access of tensor in function t<3>(): dim=" << d);
+  if (d.ndims() == 3)      return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)d[1], (int)d[2]);
+  else if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)d[1], (int)1);
+  else                    return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)1, (int)1);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>> IndexTensor::t<4>() {
+  DYNET_ASSERT(d.batch_elems() == 1 && d.ndims() <= 4, "Illegal access of tensor in function t<4>(): dim=" << d);
+  if (d.ndims() == 4)      return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3]);
+  else if (d.ndims() == 3) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)1);
+  else if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)1, (int)1);
+  else                    return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)1, (int)1, (int)1);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>> IndexTensor::t<4>() const {
+  DYNET_ASSERT(d.batch_elems() == 1 && d.ndims() <= 4, "Illegal access of tensor in function t<4>(): dim=" << d);
+  if (d.ndims() == 4)      return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3]);
+  else if (d.ndims() == 3) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)1);
+  else if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)1, (int)1);
+  else                    return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)1, (int)1, (int)1);
+}
+// ...
+
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 1>> IndexTensor::tb<0>() {
+  DYNET_ASSERT(d.batch_size() == 1, "Illegal access of tensor in function tb<0>(): dim=" << d);
+  return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 1>>(v, (int)d.bd);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 1>> IndexTensor::tb<0>() const {
+  DYNET_ASSERT(d.batch_size() == 1, "Illegal access of tensor in function tb<0>(): dim=" << d);
+  return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 1>>(v, (int)d.bd);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>> IndexTensor::tb<1>() {
+  DYNET_ASSERT(d.ndims() == 1 || d.batch_size() == d.rows(), "Illegal access of tensor in function tb<1>(): dim=" << d);
+  return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>>(v, (int)d[0], (int)d.bd);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>> IndexTensor::tb<1>() const {
+  DYNET_ASSERT(d.ndims() == 1 || d.batch_size() == d.rows(), "Illegal access of tensor in function tb<1>(): dim=" << d);
+  return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 2>>(v, (int)d[0], (int)d.bd);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>> IndexTensor::tb<2>() {
+  DYNET_ASSERT(d.ndims() <= 2, "Illegal access of tensor in function tb<2>(): dim=" << d);
+  if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)d[1], (int)d.bd);
+  else               return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)1, (int)d.bd);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>> IndexTensor::tb<2>() const {
+  DYNET_ASSERT(d.ndims() <= 2, "Illegal access of tensor in function tb<2>(): dim=" << d);
+  if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)d[1], (int)d.bd);
+  else               return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>>(v, (int)d[0], (int)1, (int)d.bd);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>> IndexTensor::tb<3>() {
+  DYNET_ASSERT(d.ndims() <= 3, "Illegal access of tensor in function tb<3>(): dim=" << d);
+  if (d.ndims() == 3)      return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d.bd);
+  else if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)1, (int)d.bd);
+  else                    return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)1, (int)1, (int)d.bd);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>> IndexTensor::tb<3>() const {
+  DYNET_ASSERT(d.ndims() <= 3, "Illegal access of tensor in function tb<3>(): dim=" << d);
+  if (d.ndims() == 3)      return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d.bd);
+  else if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)d[1], (int)1, (int)d.bd);
+  else                    return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>>(v, (int)d[0], (int)1, (int)1, (int)d.bd);
+}
+template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>> IndexTensor::tb<4>() {
+  DYNET_ASSERT(d.ndims() <= 4, "Illegal access of tensor in function tb<4>(): dim=" << d);
+  if (d.ndims() == 4)      return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3], (int)d.bd);
+  else if (d.ndims() == 3) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>>(v, (int)d[0], (int)d[1], (int)d[2], (int)1, (int)d.bd);
+  else if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>>(v, (int)d[0], (int)d[1], (int)1, (int)1, (int)d.bd);
+  else                    return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>>(v, (int)d[0], (int)1, (int)1, (int)1, (int)d.bd);
+}
+template<> inline const Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>> IndexTensor::tb<4>() const {
+  DYNET_ASSERT(d.ndims() <= 4, "Illegal access of tensor in function tb<4>(): dim=" << d);
+  if (d.ndims() == 4)      return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>>(v, (int)d[0], (int)d[1], (int)d[2], (int)d[3], (int)d.bd);
+  else if (d.ndims() == 3) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>>(v, (int)d[0], (int)d[1], (int)d[2], (int)1, (int)d.bd);
+  else if (d.ndims() == 2) return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>>(v, (int)d[0], (int)d[1], (int)1, (int)1, (int)d.bd);
+  else                    return Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 5>>(v, (int)d[0], (int)1, (int)1, (int)1, (int)d.bd);
+}
+// ...
+
+/**
+ * \ingroup tensor
+ * \brief Get the array of indices in an index tensor
+ * \details For higher order tensors this returns the flattened value
+ *
+ * \param v Input index tensor
+ * \return Index values
+ */
+std::vector<Eigen::DenseIndex> as_vector(const IndexTensor& v);
+
+/**
+ * \ingroup tensor
  * \brief Provides tools for creating, accessing, copying and modifying tensors (in-place)
  *
  */
 struct TensorTools {
+  /**
+   * \brief Clip the values in the tensor to a fixed range
+   *
+   * \param d Tensor to modify
+   * \param left Target minimum value
+   * \param right Target maximum value 
+   */
+  static void clip(Tensor& d, float left, float right);
   /**
    * \brief Fills the tensor with a constant value
    *
    * \param d Tensor to modify
    * \param c Target value
    */
-  static void Constant(Tensor& d, float c);
+  static void constant(Tensor& d, float c);
   /**
    * \brief Fills a tensor with zeros
    *
    * \param d Input tensor
    */
-  static void Zero(Tensor& d);
+  static void zero(Tensor& d);
   /**
    * \brief Set the (order 2) tensor as the identity matrix
    * \details this throws a runtime_error exception if the tensor isn't a square matrix
    *
    * \param val Input tensor
    */
-  static void Identity(Tensor& val);
+  static void identity(Tensor& val);
   //
   /**
    * \brief Fill the tensor with bernoulli random variables and scale them by scale
@@ -423,7 +600,7 @@ struct TensorTools {
    * \param p Parameter of the bernoulli distribution
    * \param scale Scale of the random variables
    */
-  static void RandomizeBernoulli(Tensor& val, real p, real scale = 1.0f);
+  static void randomize_bernoulli(Tensor& val, real p, real scale = 1.0f);
   /**
    * \brief Fill the tensor with gaussian random variables
    *
@@ -431,7 +608,7 @@ struct TensorTools {
    * \param mean Mean
    * \param stddev Standard deviation
    */
-  static void RandomizeNormal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
+  static void randomize_normal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
   /**
    * \brief Fill the tensor with uniform random variables
    *
@@ -439,7 +616,7 @@ struct TensorTools {
    * \param left Left bound of the interval
    * \param right Right bound of the interval
    */
-  static void RandomizeUniform(Tensor& val, real left = 0.0f, real right = 0.0f);
+  static void randomize_uniform(Tensor& val, real left = 0.0f, real right = 0.0f);
   /**
    * \brief Takes a square matrix tensor and sets it as a random orthonormal matrix
    * \details More specifically this samples a random matrix with RandomizeUniform and then performs SVD and returns the left orthonormal matrix in the decomposition, scaled by `scale`
@@ -447,7 +624,7 @@ struct TensorTools {
    * \param val Input tensor
    * \param scale Value to which the resulting orthonormal matrix will be scaled
    */
-  static void RandomizeOrthonormal(Tensor& val, real scale = 1.0f);
+  static void randomize_orthonormal(Tensor& val, real scale = 1.0f);
   /**
    * \brief Access element of the tensor by index in the values array
    * \details AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -457,7 +634,7 @@ struct TensorTools {
    *
    * \return `v.v[index]`
    */
-  static float AccessElement(const Tensor& v, int index);
+  static float access_element(const Tensor& v, int index);
   /**
    * \brief Access element of the tensor by indices in the various dimension
    * \details This only works for matrix shaped tensors (+ batch dimension). AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -467,7 +644,7 @@ struct TensorTools {
    *
    * \return `(*v)(index[0], index[1])`
    */
-  static float AccessElement(const Tensor& v, const Dim& index);
+  static float access_element(const Tensor& v, const Dim& index);
   /**
    * \brief Set element of the tensor by index in the values array
    * \details AccessElement and SetElement are very, very slow (potentially) - use appropriately
@@ -476,7 +653,7 @@ struct TensorTools {
    * \param index Index in the memory
    * \param value Desired value
    */
-  static void SetElement(const Tensor& v, int index, float value);
+  static void set_element(const Tensor& v, int index, float value);
   /**
    * \brief Copy element from one tensor to another (by index in the values array)
    *
@@ -485,7 +662,7 @@ struct TensorTools {
    * \param r Target tensor
    * \param rindex Target index
    */
-  static void CopyElement(const Tensor& l, int lindex, Tensor& r, int rindex);
+  static void copy_element(const Tensor& l, int lindex, Tensor& r, int rindex);
 
   /**
    * \brief Set the elements of a tensor with an array of values
@@ -494,14 +671,49 @@ struct TensorTools {
    * \param v Input Tensor
    * \param vec Values
    */
-  static void SetElements(const Tensor& v, const std::vector<float>& vec);
+  static void set_elements(const Tensor& v, const std::vector<float>& vec);
   /**
    * \brief Copy one tensor into another
    *
    * \param v Target tensor
    * \param v_src Source tensor
    */
-  static void CopyElements(const Tensor& v, const Tensor& v_src);
+  static void copy_elements(const Tensor& v, const Tensor& v_src);
+
+  /**
+   * \brief Calculate the index of the maximum value
+   *
+   * \param v A tensor where each row represents a probability distribution
+   * \param dim Which dimension to take the argmax over
+   * \param num The number of kmax values
+   *
+   * \returns A newly allocated LongTensor consisting of argmax IDs. The length of the
+   *          dimension "dim" will be "num", consisting of the appropriate IDs.
+   */
+  static IndexTensor argmax(const Tensor& v, unsigned dim = 0, unsigned num = 1);
+
+  /**
+   * \brief Calculate samples from a log probability
+   *
+   * \param v A tensor where each row represents a log probability distribution
+   * \param dim Which dimension to take the sample over
+   * \param num The number of samples for each row
+   *
+   * \returns A newly allocated LongTensor consisting of argmax IDs. The length of the
+   *          dimension "dim" will be "num", consisting of the appropriate IDs.
+   */
+  static IndexTensor categorical_sample_log_prob(const Tensor& v, unsigned dim = 0, unsigned num = 1);
+
+protected:
+  template<class MyDevice>
+  static void clip_dev(MyDevice & dev, Tensor& d, float left, float right);
+  template<class MyDevice>
+  static void constant_dev(MyDevice & dev, Tensor& d, float c);
+  template<class MyDevice>
+  static IndexTensor argmax_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  template<class MyDevice>
+  static IndexTensor categorical_sample_log_prob_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+
 };
 
 /**

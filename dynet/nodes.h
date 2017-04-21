@@ -112,9 +112,10 @@ struct DotProduct : public Node {
 // NOTE: if you have a column or row vector as input, runtime is constant
 // if you have a matrix as input, the runtime is O(mn) - try to avoid using this
 struct Transpose : public Node {
-  explicit Transpose(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  explicit Transpose(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned> & dims) : Node(a), dims(dims) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
+  std::vector<unsigned> dims;
 };
 
 // y = reshape(x_1, --> to)
@@ -180,6 +181,13 @@ struct ConstantMinusX : public Node {
 // y = sqrt x_1
 struct Sqrt : public Node {
   explicit Sqrt(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = abs x_1
+struct Abs : public Node {
+  explicit Abs(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
@@ -252,8 +260,8 @@ struct ConcatenateColumns : public Node {
 };
 
 // concatenate different batched experssions into one single batched tensor
-struct ConcatenateBatchElements : public Node {
-  template <typename T> explicit ConcatenateBatchElements(const T& a) : Node(a) {}
+struct ConcatenateToBatch : public Node {
+  template <typename T> explicit ConcatenateToBatch(const T& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override {return true;}
   mutable std::vector<unsigned> src_element_indices;
@@ -598,6 +606,41 @@ struct RandomUniform : public Node {
   real left, right;
 };
 
+// draw a random real from Uniform(left, right)
+struct RandomGumbel : public Node {
+  explicit RandomGumbel(const std::initializer_list<VariableIndex>& a, const Dim& d, real mu, real beta) : dim(d), mu(mu), beta(beta) {
+    DYNET_ASSERT(a.size() == 0, "RandomGumbel doesn't accept nodes as input");
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  Dim dim;
+  real mu, beta;
+};
+
+struct MaxDimension : public Node {
+  explicit MaxDimension(const std::initializer_list<VariableIndex>& a, unsigned dimension = 0) : Node(a), reduced_dim(dimension) {
+    first_dim = reduced_dim == 0 ? 1 : 0;
+    second_dim = first_dim + 1 == reduced_dim ? first_dim + 2 : first_dim + 1;
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  size_t aux_storage_size() const override;
+  unsigned reduced_dim;
+  unsigned first_dim;
+  unsigned second_dim;
+};
+
+struct MinDimension : public Node {
+  explicit MinDimension(const std::initializer_list<VariableIndex>& a, unsigned dimension = 0) : Node(a), reduced_dim(dimension) {
+    first_dim = reduced_dim == 0 ? 1 : 0;
+    second_dim = first_dim + 1 == reduced_dim ? first_dim + 2 : first_dim + 1;
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  size_t aux_storage_size() const override;
+  unsigned reduced_dim;
+  unsigned first_dim;
+  unsigned second_dim;
+};
 
 } // namespace dynet
 

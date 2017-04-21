@@ -56,7 +56,7 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale) : dim(d) {
   values.device = g.device = default_device;
   default_device->allocate_tensor(DeviceMempool::PS, values);
   default_device->allocate_tensor(DeviceMempool::PS, g);
-  TensorTools::Zero(g);
+  TensorTools::zero(g);
   if (scale == 0.0f) {
     ParameterInitGlorot init;
     init.initialize_params(values);
@@ -71,26 +71,30 @@ ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init) : d
   values.device = g.device = default_device;
   default_device->allocate_tensor(DeviceMempool::PS, values);
   default_device->allocate_tensor(DeviceMempool::PS, g);
-  TensorTools::Zero(g);
+  TensorTools::zero(g);
   init.initialize_params(values);
 }
 
 size_t ParameterStorage::size() const { return dim.size(); }
 
 void ParameterStorage::zero() {
-  TensorTools::Zero(values);
+  TensorTools::zero(values);
   clear();
 }
 
 void ParameterStorage::copy(const ParameterStorage & param) {
   DYNET_ARG_CHECK(dim == param.dim,
                           "Attempt to copy between parameters with mismatched dimensions: " << dim << " != " << param.dim);
-  TensorTools::CopyElements(values, param.values);
+  TensorTools::copy_elements(values, param.values);
 }
 
 void ParameterStorage::clear() {
   if (g.v != nullptr)
-    TensorTools::Zero(g);
+    TensorTools::zero(g);
+}
+
+void ParameterStorage::clip(float left, float right) {
+  TensorTools::clip(values, left, right);
 }
 
 #ifndef __CUDACC__
@@ -137,7 +141,7 @@ void LookupParameterStorage::initialize_lookups() {
 }
 
 void LookupParameterStorage::zero() {
-  TensorTools::Zero(all_values);
+  TensorTools::zero(all_values);
 }
 
 size_t LookupParameterStorage::size() const {
@@ -147,16 +151,16 @@ size_t LookupParameterStorage::size() const {
 void LookupParameterStorage::copy(const LookupParameterStorage& param) {
   if(all_dim != param.all_dim)
     DYNET_INVALID_ARG("Attempt to copy between lookup parameters with mismatched dimensions: " << all_dim << " != " << param.all_dim);
-  TensorTools::CopyElements(all_values, param.all_values);
+  TensorTools::copy_elements(all_values, param.all_values);
 }
 
 void LookupParameterStorage::clear() {
   // TODO: the GPU part is hacky, probably need a better heuristic
   if (all_grads.device->type == DeviceType::GPU || all_updated) {
-    TensorTools::Zero(all_grads);
+    TensorTools::zero(all_grads);
   } else {
     for (auto i : non_zero_grads)
-      TensorTools::Zero(grads[i]);
+      TensorTools::zero(grads[i]);
   }
   non_zero_grads.clear();
   all_updated = false;
@@ -171,45 +175,45 @@ DYNET_SAVELOAD_IMPL(LookupParameterStorage)
 #endif
 
 void ParameterInitNormal::initialize_params(Tensor & values) const {
-  TensorTools::RandomizeNormal(values, mean, sqrt(var));
+  TensorTools::randomize_normal(values, mean, sqrt(var));
 }
 
 void ParameterInitUniform::initialize_params(Tensor & values) const {
-  TensorTools::RandomizeUniform(values, left, right);
+  TensorTools::randomize_uniform(values, left, right);
 }
 
 void ParameterInitConst::initialize_params(Tensor & values) const {
-  TensorTools::Constant(values, cnst);
+  TensorTools::constant(values, cnst);
 }
 
 void ParameterInitIdentity::initialize_params(Tensor & values) const {
-  TensorTools::Identity(values);
+  TensorTools::identity(values);
 }
 
 void ParameterInitGlorot::initialize_params(Tensor & values) const {
   int dims = 0, dim_len = values.d.nd - (lookup ? 1 : 0);
   for (int i = 0; i < dim_len; ++i) dims += values.d[i];
   float my_scale = gain * sqrt(6) / sqrt(dims);
-  TensorTools::RandomizeUniform(values, -my_scale, my_scale);
+  TensorTools::randomize_uniform(values, -my_scale, my_scale);
 }
 
 void ParameterInitSaxe::initialize_params(Tensor & values) const {
   if (values.device->type == DeviceType::GPU)
     throw std::runtime_error("Saxe initialization not implemented for CUDA (we welcome pull requests)");
   else
-    TensorTools::RandomizeOrthonormal(values, gain);
+    TensorTools::randomize_orthonormal(values, gain);
 }
 
 
 void ParameterInitFromVector::initialize_params(Tensor & values) const {
-  TensorTools::SetElements(values, vec);
+  TensorTools::set_elements(values, vec);
 }
 
 void ParameterInitFromFile::initialize_params(Tensor & values) const {
   ifstream is(filename);
   istream_iterator<float> start(is), end;
   vector<float> param_vector(start, end);
-  TensorTools::SetElements(values, param_vector);
+  TensorTools::set_elements(values, param_vector);
 }
 
 
@@ -223,7 +227,10 @@ Parameter::Parameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
 ParameterStorage* Parameter::get() const {
   return mp->parameters_list()[index];
 }
-
+void Parameter::clip_inplace(float left, float right){
+  float my_scale = 1./ mp->weight_decay.current_weight_decay();
+  get()->clip(left * my_scale, right * my_scale);
+}
 void Parameter::zero() {
   return mp->parameters_list()[index]->zero();
 }
@@ -531,7 +538,7 @@ DYNET_PARAMNORM_INST_DEV_IMPL(LookupParameterStorage, squared_l2norm, squared_l2
 template <class MyDevice>
 void LookupParameterStorage::g_squared_l2norm_dev(MyDevice & dev, float* sqnorm) const {
   Tensor sqnorm_t({1}, sqnorm, &dev, DeviceMempool::NONE);
-  TensorTools::Zero(sqnorm_t);
+  TensorTools::zero(sqnorm_t);
   // TODO: the GPU part is hacky, probably need a better heuristic
   if (all_grads.device->type == DeviceType::GPU || all_updated) {
     sqnorm_t.t<0>().device(*dev.edevice) += all_grads.tvec().square().sum();

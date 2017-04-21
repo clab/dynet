@@ -8,7 +8,9 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
-
+#if HAVE_CUDNN
+#include <cudnn.h>
+#endif
 #include "dynet/except.h"
 
 #define MAX_GPUS 256
@@ -31,7 +33,17 @@
     }                                                      \
   } while(0)
 
-
+#if HAVE_CUDNN
+#define CUDNN_CHECK(stmt) do {                             \
+    cudnnStatus_t stat = (stmt);                           \
+    if (stat != CUDNN_STATUS_SUCCESS){                     \
+      std::cerr << "CUDNN failure in " << #stmt            \
+                << std::endl << cudnnGetErrorString(stat)       \
+                << std::endl;                              \
+      throw dynet::cuda_exception(#stmt);                  \
+    }                                                      \
+  } while(0)
+#endif
 
 namespace dynet {
 
