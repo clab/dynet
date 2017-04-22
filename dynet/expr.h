@@ -1625,7 +1625,7 @@ Expression block_dropout(const Expression& x, real p);
 //Expression conv1d_narrow(const Expression& x, const Expression& f);
 //Expression conv1d_wide(const Expression& x, const Expression& f);
 Expression filter1d_narrow(const Expression& x, const Expression& f);
-Expression kmax_pooling(const Expression& x, unsigned k);
+Expression kmax_pooling(const Expression& x, unsigned k, unsigned d = 1);
 Expression fold_rows(const Expression& x, unsigned nrows = 2);
 Expression sum_dim(const Expression& x, unsigned d);
 Expression sum_cols(const Expression& x);

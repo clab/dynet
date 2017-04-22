@@ -51,10 +51,17 @@ struct FoldRows : public Node {
 };
 
 struct KMaxPooling : public Node {
-  explicit KMaxPooling(const std::initializer_list<VariableIndex>& a, unsigned k = 1) : Node(a), k(k) {}
+  explicit KMaxPooling(const std::initializer_list<VariableIndex>& a, unsigned k = 1, unsigned dimension = 1) : Node(a), k(k), pooled_dim(dimension) {
+    first_dim = pooled_dim == 0 ? 1 : 0;
+    second_dim = first_dim + 1 == pooled_dim ? first_dim + 2 : first_dim + 1;
+  }
   size_t aux_storage_size() const override;
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   unsigned k;
+  unsigned pooled_dim;
+  unsigned first_dim;
+  unsigned second_dim;
 };
 
 // sum along a single dimension
