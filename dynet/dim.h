@@ -212,6 +212,29 @@ struct Dim {
     }
   }
   /**
+   * \brief Remove multi-dimensions
+   * \param dims dimensions to be removed, assuming that there is no duplicate elements in it
+   * \param reduce_batch reduce the batch dimension or not
+   */
+  inline void delete_dims(std::vector<unsigned int> dims, bool reduce_batch){
+    DYNET_ARG_CHECK(dims.size() < nd, "Out of bounds exception in Dim::delete_dims");
+    for(unsigned int i = 0; i < dims.size(); i++) {
+      DYNET_ARG_CHECK(dims[i] < nd, "Out of bounds exception in Dim::delete_dims");
+    }
+
+    int flag = 0;
+    for(unsigned int i = 0; i < nd; i++){
+      if(std::find(dims.begin(), dims.end(), i) == dims.end()){
+        d[flag++] = d[i];
+      }
+    }
+    nd = flag;
+
+    if(reduce_batch){
+      bd = 1;
+    }
+  }
+  /**
    * \brief Insert a dimension
    * \param i the index before which to insert the new dimension
    * \param n the size of the new dimension
