@@ -333,7 +333,7 @@ def pairwise_rank_loss(x, y, m=1.0): return GVExpr('pairwise_rank_loss', [x,y,m]
 def poisson_loss(x, y): return GVExpr('poisson_loss', [x,y], copy_dim(x))
 def huber_distance(x, y, c=1.345): return GVExpr('huber_distance', [x,y,c], ensure_same_dim(x,y))
 #expr-unsigned
-def kmax_pooling(x, k): return GVExpr('kmax_pooling', [x,k], make_dim(x.dim[0], k) if x.dim.isvalid() else InvalidDim)
+def kmax_pooling(x, k, d=1): return GVExpr('kmax_pooling', [x,k,d], make_dim(x.dim[0], k) if x.dim.isvalid() else InvalidDim)
 def pickneglogsoftmax(x, v): return GVExpr('pickneglogsoftmax', [x,v], make_dim(1, inferred=True))
 def pickneglogsoftmax_batch(x, vs): return GVExpr('pickneglogsoftmax_batch', [x,vs], make_dim(len(vs), inferred=True))
 
