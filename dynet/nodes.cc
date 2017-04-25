@@ -716,8 +716,8 @@ template<class MyDevice>
 void ScalarMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in ScalarMultiply::forward (cmult)");
 
-  Eigen::array<int, 2> bcast_0 = {fx.d.batch_size(), fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd};
-  Eigen::array<int, 2> bcast_1 = {1, fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd};
+  Eigen::array<int, 2> bcast_0 = {(int) fx.d.batch_size(), (int) (fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd)};
+  Eigen::array<int, 2> bcast_1 = {1, (int) (fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd)};
   fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast_0) * xs[1]->tbvec().broadcast(bcast_1);
 }
 
@@ -729,16 +729,16 @@ void ScalarMultiply::backward_dev_impl(const MyDevice & dev,
                                        unsigned i,
                                        Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in ScalarMultiply::backward (cmult)");
-  Eigen::array<int, 2> bcast_0 = {fx.d.batch_size(), fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd};
-  Eigen::array<int, 2> bcast_1 = {1, fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd};
-  Eigen::array<int, 1> red_axis_0 = {0},red_axis_1 = {1};
+  Eigen::array<int, 2> bcast_0 = {(int) fx.d.batch_size(), (int)( fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd)};
+  Eigen::array<int, 2> bcast_1 = {1, (int)(fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd)};
+  Eigen::array<int, 1> red_axis_0 = {0}, red_axis_1 = {1};
   Eigen::array<int, 2> red_axes_01 = {0, 1};
-  if(i==0){
+  if (i == 0) {
     if (xs[0]->d.bd == 1)
       dEdxi.t<0>().device(*dev.edevice) += (dEdf.tb<1>() * xs[1]->tb<1>().broadcast(bcast_1)).sum(red_axes_01);
     else
       dEdxi.tb<0>().device(*dev.edevice) += (dEdf.tb<1>() * xs[1]->tb<1>().broadcast(bcast_1)).sum(red_axis_0);
-  }else{
+  } else {
     if (xs[1]->d.bd == 1)
       dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() * xs[0]->tb<1>().broadcast(bcast_0)).sum(red_axis_1);
     else
@@ -750,8 +750,8 @@ DYNET_NODE_INST_DEV_IMPL(ScalarMultiply)
 template<class MyDevice>
 void ScalarQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in ScalarQuotient::forward (cmult)");
-  Eigen::array<int, 2> bcast_0 = {1, fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd};
-  Eigen::array<int, 2> bcast_1 = {fx.d.batch_size(), fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd};
+  Eigen::array<int, 2> bcast_0 = {1, (int) (fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd)};
+  Eigen::array<int, 2> bcast_1 = {(int) fx.d.batch_size(), (int) (fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd)};
   fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast_0) / xs[1]->tbvec().broadcast(bcast_1);
 }
 
@@ -763,20 +763,20 @@ void ScalarQuotient::backward_dev_impl(const MyDevice & dev,
                                        unsigned i,
                                        Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in ScalarQuotient::backward (cmult)");
-  Eigen::array<int, 2> bcast = {fx.d.batch_size(), fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd};
-  Eigen::array<int, 2> bcast2 = {1, fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd};
+  Eigen::array<int, 2> bcast = {(int)fx.d.batch_size(), (int)(fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd)};
+  Eigen::array<int, 2> bcast2 = {1, (int)(fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd)};
   Eigen::array<int, 1> red_axis_0 = {0}, red_axis_1 = {1};
   Eigen::array<int, 2> red_axes_01 = {0, 1};
-  if(i==0){
+  if (i == 0) {
     if (xs[0]->d.bd == 1)
       dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() / xs[1]->tb<1>().broadcast(bcast)).sum(red_axis_1);
     else
       dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>() / xs[1]->tb<1>().broadcast(bcast);
-  }else{
+  } else {
     if (xs[1]->d.bd == 1)
       dEdxi.t<0>().device(*dev.edevice) += - (dEdf.tb<1>() * xs[0]->tb<1>().broadcast(bcast2)).sum(red_axes_01) / xs[1]->t<0>().square();
     else
-      dEdxi.tb<0>().device(*dev.edevice) += - (dEdf.tb<1>()* xs[0]->tb<1>().broadcast(bcast2)).sum(red_axis_0) / xs[1]->tb<0>().square();
+      dEdxi.tb<0>().device(*dev.edevice) += - (dEdf.tb<1>() * xs[0]->tb<1>().broadcast(bcast2)).sum(red_axis_0) / xs[1]->tb<0>().square();
   }
 }
 DYNET_NODE_INST_DEV_IMPL(ScalarQuotient)
