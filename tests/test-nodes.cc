@@ -337,6 +337,37 @@ BOOST_AUTO_TEST_CASE( cdiv_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_cdiv_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param_scalar2);
+  Expression y = cdiv(x1, x2);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_cdiv_batch1_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x2 = parameter(cg, param_scalar2);
+  Expression y = cdiv(x1, x2);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_cdiv_batch2_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({1}, 6), batch_vals);
+  Expression y = cdiv(x1, x2);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+
 // Expression colwise_add(const Expression& x, const Expression& bias);
 BOOST_AUTO_TEST_CASE( colwise_add_gradient ) {
   dynet::ComputationGraph cg;

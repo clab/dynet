@@ -739,6 +739,22 @@ Dim ScalarMultiply::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string ScalarQuotient::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " / " << arg_names[1];
+  return s.str();
+}
+
+Dim ScalarQuotient::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in ScalarQuotient")
+  Dim d = xs[0].truncate();
+  DYNET_ARG_CHECK(xs[1].batch_size() == 1,
+                          "Mismatched input dimensions in ScalarQuotient: " << xs);
+  d.bd = max(xs[1].bd, d.bd);
+  return d;
+}
+
+
 string Pow::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " ** " << arg_names[1];
