@@ -140,6 +140,34 @@ BOOST_AUTO_TEST_CASE( logsumexp_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression logsumexp(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( logsumexp_vector_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression z = sum_elems(logsumexp({x1, x2}));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression logsumexp(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( logsumexp_singleelem_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param1);
+  Expression y = reshape(x, Dim({1}, 3));
+  Expression z = sum_batches(logsumexp({y}));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression logsumexp(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( logsumexp_inequal_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x3 = x1+x2;
+  Expression z = sum_batches(sum_elems(logsumexp({x1,x3})));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression operator+(const Expression& x, real y);
 BOOST_AUTO_TEST_CASE( addscalar_gradient ) {
   dynet::ComputationGraph cg;

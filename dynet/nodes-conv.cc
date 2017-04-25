@@ -116,20 +116,22 @@ Dim Filter1DNarrow::dim_forward(const vector<Dim>& xs) const {
 
 string KMaxPooling::as_string(const vector<string>& arg_names) const {
   ostringstream os;
-  os << "kmaxpool(" << arg_names[0] << ", k=" << k << ')';
+  os << "kmaxpool(" << arg_names[0] << ", k=" << k << ", d=" << pooled_dim << ')';
   return os.str();
 }
 
 Dim KMaxPooling::dim_forward(const vector<Dim>& xs) const {
-  if (k < 1) {
-    ostringstream s; s << "Bad bad k in KMaxPooling: " << k;
-    throw std::invalid_argument(s.str());
-  }
-  if (xs[0].ndims() != 2 || (xs[0].cols() < k)) {
-    ostringstream s; s << "Bad input dimensions in KMaxPooling: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  return Dim({xs[0].rows(), k});
+  DYNET_ARG_CHECK(pooled_dim < xs[0].nd,
+                          "Tried to MaxDimension on dimension " << pooled_dim << " bigger than input " << xs[0]);
+  DYNET_ARG_CHECK(xs[0].nd < 4,
+                          "MaxDimension not currently supported for tensors of 4 or more dimensions.");
+  DYNET_ARG_CHECK(k >= 1, "Bad bad k in KMaxPooling: " << k);
+  DYNET_ARG_CHECK(k <= xs[0][pooled_dim], 
+                          "Bad k in KMaxPooling: k = " << k << " bigger than the size of pooled dimension " 
+                          << pooled_dim << " with size = " << xs[0][pooled_dim]);
+  Dim ret(xs[0]);
+  ret.set(pooled_dim, k);
+  return ret;
 }
 
 size_t KMaxPooling::aux_storage_size() const {
@@ -343,47 +345,47 @@ DYNET_NODE_INST_DEV_IMPL(FoldRows)
 
 template<class MyDevice>
 void KMaxPooling::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Eigen::DenseIndex* maxmap = static_cast<Eigen::DenseIndex*>(aux_mem);
-  if(k == 1) {
-    Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex,1>> locs(maxmap, dim.size());
-    locs.device(*dev.edevice) = xs[0]->t<2>().argmax(1);
 #ifdef __CUDACC__
     // TODO: The code that works on CPU does not compile on CUDA
     throw std::runtime_error("KMaxPooling::forward_dev_impl not working on CUDA yet");
-#else
-    const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
-    fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().maximum(reduction_axis);
 #endif
-  } else {
-#ifdef __CUDACC__
-    // TODO: Can this be done by CUDNN?
-    throw std::runtime_error("KMaxPooling::forward_dev_impl for k>1 not working on CUDA yet");
-#else
-    auto x=**xs[0];
-    auto y=*fx;
-    float tmp[1024];
-    DYNET_ASSERT(x.cols() < 1024, "KMaxPooling only works for expressions of size < 1024 at the moment. Got " << x.cols());
-    unsigned mi = 0;
-    const unsigned rows = x.rows();
-    const unsigned xcols = x.cols();
-    for (unsigned i=0; i < rows; ++i) {
-      for (unsigned j=0; j < xcols; ++j)
-        tmp[j] = -x(i,j);
-      nth_element(tmp, tmp + (k-1), tmp + xcols);
-      const float c = -tmp[k-1];  // kth largest element in row i
-      unsigned tt = 0;
-      for (unsigned j = 0; j < xcols; ++j) {
-        const float xij = x(i,j);
-        if (xij >= c) {
-          y(i,tt) = xij;
-          maxmap[mi++] = j;
-          ++tt;
-          if (tt == k) break;  // could happen in case of ties
-        }
+  Eigen::DenseIndex* maxmap = static_cast<Eigen::DenseIndex*>(aux_mem);
+  Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>> locs(maxmap, dim[0], dim[1], dim[2], dim.batch_elems());
+  const unsigned batch_size = dim.batch_elems();
+  const unsigned first_dim_size = dim[first_dim];
+  const unsigned second_dim_size = dim[second_dim];
+  Eigen::Tensor<float, 1> tmp(xs[0]->d[pooled_dim]);
+  for (unsigned b = 0; b < batch_size; ++b){
+    for (unsigned j = 0; j < second_dim_size; ++j){
+      for (unsigned i = 0; i < first_dim_size; ++i){
+        // get nth element
+        tmp.device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip(j, second_dim).chip(i, first_dim);
+        nth_element(tmp.data(), tmp.data()+(k-1), tmp.data()+tmp.size(), std::greater<float>());
+        const float c = tmp.data()[k-1];
+        // calculate fx and indices
+        tmp.device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip(j, second_dim).chip(i, first_dim);
+        unsigned tt = 0;
+        for (unsigned l = 0; l < tmp.size(); ++l) {
+          const float tensor_val = tmp.data()[l];
+          if (tensor_val >= c) {
+            if (pooled_dim > second_dim){
+              fx.tb<3>().chip<3>(b).chip(tt, pooled_dim).chip(j, second_dim).chip(i, first_dim).device(*dev.edevice) = tmp.chip<0>(l);
+              locs(i, j, tt, b) = l;
+            }
+            else if (pooled_dim > first_dim){
+              fx.tb<3>().chip<3>(b).chip(j, second_dim).chip(tt, pooled_dim).chip(i, first_dim).device(*dev.edevice) = tmp.chip<0>(l);
+              locs(i, tt, j, b) = l;
+            }
+            else {
+              fx.tb<3>().chip<3>(b).chip(j, second_dim).chip(i, first_dim).chip(tt, pooled_dim).device(*dev.edevice) = tmp.chip<0>(l);
+              locs(tt, i, j, b) = l;
+            }
+            ++tt;
+            if (tt == k) break;  // could happen in case of ties
+          }
+        } 
       }
     }
-    DYNET_ASSERT(mi == dim.size(), "Programming error in KMaxPooling (mi != dim.size())");
-#endif
   }
 }
 
@@ -394,18 +396,36 @@ void KMaxPooling::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  // TODO: This is not at all efficient on GPU. Switch to CUDNN?
+  DYNET_ARG_CHECK(i == 0, "Failed dimension check in KMaxPooling::backward");
 #ifdef __CUDACC__
   vector<Eigen::DenseIndex> indices(dim.size());
-  const Eigen::DenseIndex* maxmap = &indices[0];
+  Eigen::DenseIndex* maxmap = &indices[0];
   CUDA_CHECK(cudaMemcpy((void*)maxmap, aux_mem, sizeof(Eigen::DenseIndex) * dim.size(), cudaMemcpyDeviceToHost));
 #else
-  const Eigen::DenseIndex* maxmap = static_cast<const Eigen::DenseIndex*>(aux_mem);
+  Eigen::DenseIndex* maxmap = static_cast<Eigen::DenseIndex*>(aux_mem);
 #endif
-  const unsigned rows = dim.rows();
-  for(unsigned i = 0; i < rows; ++i)
-    for(unsigned j = 0; j < k; ++j, ++maxmap)
-      dEdxi.t<2>().chip<1>(*maxmap).chip<0>(i).device(*dev.edevice) += dEdf.t<2>().chip<1>(j).chip<0>(i);
+  Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 4>> locs(maxmap, dim[0], dim[1], dim[2], dim.batch_elems());
+  const unsigned batch_size = dim.batch_elems();
+  const unsigned first_dim_size = dim[first_dim];
+  const unsigned second_dim_size = dim[second_dim];
+  const unsigned pooled_dim_size = dim[pooled_dim];
+  for(unsigned b = 0; b < batch_size; ++b){
+    for(unsigned j = 0; j < second_dim_size; ++j){
+      for(unsigned i = 0; i < first_dim_size; ++i){
+        for(unsigned l = 0; l < pooled_dim_size; ++l){
+          if (pooled_dim > second_dim)
+            dEdxi.tb<3>().chip<3>(b).chip(locs(i, j, l, b), pooled_dim).chip(j, second_dim).chip(i, first_dim).device(*dev.edevice) 
+              += dEdf.tb<3>().chip<3>(b).chip<2>(l).chip<1>(j).chip<0>(i);
+          else if (pooled_dim > first_dim)
+            dEdxi.tb<3>().chip<3>(b).chip(j, second_dim).chip(locs(i, l, j, b), pooled_dim).chip(i, first_dim).device(*dev.edevice) 
+              += dEdf.tb<3>().chip<3>(b).chip<2>(j).chip<1>(l).chip<0>(i);
+          else
+            dEdxi.tb<3>().chip<3>(b).chip(j, second_dim).chip(i, first_dim).chip(locs(l, i, j, b), pooled_dim).device(*dev.edevice) 
+              += dEdf.tb<3>().chip<3>(b).chip<2>(j).chip<1>(i).chip<0>(l);
+        }
+      }
+    }
+  }
 }
 DYNET_NODE_INST_DEV_IMPL(KMaxPooling)
 

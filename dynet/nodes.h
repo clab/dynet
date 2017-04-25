@@ -243,20 +243,13 @@ struct Log : public Node {
 
 // concatenate rows
 struct Concatenate : public Node {
-  template <typename T> explicit Concatenate(const T& a) : Node(a) {}
+  template <typename T> explicit Concatenate(const T& a, unsigned d) : Node(a), dimension(d) {}
   virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   // src_row_indices[i] says what row in fx the ith x vector was assigned to
   // used to simplify backprop
-  mutable std::vector<unsigned> src_row_indices;
-};
-
-// concatenate column vectors into a matrix
-// x_i must be a column vector in R^n
-struct ConcatenateColumns : public Node {
-  template <typename T> explicit ConcatenateColumns(const T& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  mutable std::vector<unsigned> src_col_indices;
+  mutable std::vector<unsigned> src_indices;
+  unsigned dimension;
 };
 
 // concatenate different batched experssions into one single batched tensor
@@ -391,6 +384,7 @@ struct BinaryLogLoss : public Node {
 struct LogSumExp : public Node {
   template <typename T> explicit LogSumExp(const T& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
 };
 

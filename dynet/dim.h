@@ -172,7 +172,7 @@ struct Dim {
    * \param s Dimension size
    */
   inline void set(unsigned int i, unsigned int s) {
-    DYNET_ARG_CHECK(i < nd, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << d);
+    DYNET_ARG_CHECK(i < nd || s == 1, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << d);
     DYNET_ARG_CHECK(s != 0, "Attempt to set dimension size to zero in Dim::set(" << i << "," << s << ") for node of size " << d);
     d[i] = s;
   }

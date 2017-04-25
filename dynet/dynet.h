@@ -266,7 +266,11 @@ struct ComputationGraph {
   template <class Function, typename... Args>
   inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments,
                                     Args&&... side_information);
-  template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
+  template <class Function, typename T>
+  inline VariableIndex add_function(const T& arguments);
+  template <class Function, typename T, typename... Args>
+  inline VariableIndex add_function(const T& arguments,
+                                    Args&&... side_information);
 
   // reset ComputationGraph to a newly created state
   /**
@@ -569,6 +573,16 @@ template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments));
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+// pass side information to the function. these are likely to be nondifferentiable arguments
+template <class Function, typename T, typename... Args>
+inline VariableIndex ComputationGraph::add_function(const T& arguments,
+    Args&&... side_information) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
