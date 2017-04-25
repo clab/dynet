@@ -155,13 +155,21 @@ Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
 
 string Transpose::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << arg_names[0] << "^T";
+  s << "transpose("<< arg_names[0] << ", ";
+  for(size_t i = 0; i < dims.size(); ++i)
+    s << (i == 0?'{':',') << dims[i];
+  s << "})";
   return s.str();
 }
 
 Dim Transpose::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Bad arguments to Transpose: " << xs);
-  return xs[0].transpose();
+  DYNET_ARG_CHECK(xs[0].nd == dims.size() || xs[0].num_nonone_dims() == 1, "Dimensions passed to transpose (" << dims.size() << ") must be equal to dimensions in input tensor (" << xs[0].nd << ')');
+  Dim ret(xs[0]);
+  ret.nd = dims.size();
+  for(size_t i = 0; i < dims.size(); ++i)
+    ret.d[i] = xs[0][dims[i]];
+  return ret;
 }
 
 string Reshape::as_string(const vector<string>& arg_names) const {
@@ -174,12 +182,12 @@ Dim Reshape::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Reshape")
   if(to.size() == xs[0].size()) {
     return to;
-  } else if(to.batch_elems() == 1 && to.batch_size() == xs[0].batch_size()) {
+  } else {
+    DYNET_ARG_CHECK(to.batch_elems() == 1 && to.batch_size() == xs[0].batch_size(),
+                    "Bad arguments to Reshape: " << to << ", " << xs[0]);
     Dim ret(to);
     ret.bd = xs[0].batch_elems();
     return ret;
-  } else {
-    DYNET_INVALID_ARG("Bad arguments to Reshape: " << to << ", " << xs[0]);
   }
 }
 
@@ -341,6 +349,18 @@ Dim Sqrt::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string Abs::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "abs(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim Abs::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Abs")
+  return xs[0];
+}
+
+
 string Erf::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "erf(" << arg_names[0] << ')';
@@ -420,11 +440,11 @@ Dim Log::dim_forward(const vector<Dim>& xs) const {
 
 string Concatenate::as_string(const vector<string>& arg_names) const {
   ostringstream os;
-  os << "concat(" << arg_names[0];
+  os << "concat({" << arg_names[0];
   for (unsigned i = 1; i < arg_names.size(); ++i) {
     os << ',' << arg_names[i];
   }
-  os << ')';
+  os << "}, " << dimension << ')';
   return os.str();
 }
 
@@ -434,37 +454,15 @@ Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   if (LooksLikeVector(dr)) dr.resize(1);
   for (auto c : xs) {
     if (LooksLikeVector(c)) c.resize(1);
-    new_rows += c[0];
-    dr.set(0, c[0]);
+    new_rows += c[dimension];
+    dr.set(dimension, c[dimension]);
     DYNET_ARG_CHECK(dr.single_batch() == c.single_batch(),
                             "Bad input dimensions in Concatenate: " << xs);
     dr.bd = max(dr.bd, c.bd);
   }
-  dr.set(0, new_rows);
+  dr.nd = max(xs[0].nd, dimension+1);
+  dr.set(dimension, new_rows);
   return dr;
-}
-
-string ConcatenateColumns::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "concat_cols(" << arg_names[0];
-  for (unsigned i = 1; i < arg_names.size(); ++i) {
-    os << ',' << arg_names[i];
-  }
-  os << ')';
-  return os.str();
-}
-
-Dim ConcatenateColumns::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ASSERT(xs.size() > 0, "Failed input count check in ConcatenateColumns")
-  unsigned rows = xs[0][0];
-  unsigned new_cols = 0;
-  unsigned bd = 1;
-  for (auto& d : xs) {
-    DYNET_ARG_CHECK(d[0] == rows, "Bad input dimensions in ConcatenateColumns: " << xs);
-    new_cols += d[1];
-    bd = max(bd, d.bd);
-  }
-  return Dim({rows, new_cols}, bd);
 }
 
 string ConcatenateToBatch::as_string(const vector<string>& arg_names) const {
@@ -935,6 +933,40 @@ string RandomGumbel::as_string(const vector<string>& arg_names) const {
 
 Dim RandomGumbel::dim_forward(const vector<Dim>& xs) const {
   return dim;
+}
+
+string MaxDimension::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "max_dim(" << arg_names[0] << ", reduced_dim=" << reduced_dim << ')';
+  return s.str();
+}
+
+Dim MaxDimension::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in MaxDimension");
+  DYNET_ARG_CHECK(reduced_dim < xs[0].nd,
+                          "Tried to MaxDimension on dimension " << reduced_dim << " bigger than input " << xs[0]);
+  DYNET_ARG_CHECK(xs[0].nd < 4,
+                          "MaxDimension not currently supported for tensors of 4 or more dimensions.");
+  Dim ret(xs[0]);
+  ret.delete_dim(reduced_dim);
+  return ret;
+}
+
+string MinDimension::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "min_dim(" << arg_names[0] << ", reduced_dim=" << reduced_dim << ')';
+  return s.str();
+}
+
+Dim MinDimension::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in MinDimension");
+  DYNET_ARG_CHECK(reduced_dim < xs[0].nd,
+                          "Tried to MinDimension on dimension " << reduced_dim << " bigger than input " << xs[0]);
+  DYNET_ARG_CHECK(xs[0].nd < 4,
+                          "MinDimension not currently supported for tensors of 4 or more dimensions.");
+  Dim ret(xs[0]);
+  ret.delete_dim(reduced_dim);
+  return ret;
 }
 
 } // namespace dynet

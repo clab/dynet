@@ -144,6 +144,17 @@ struct Dim {
    */
   inline unsigned int rows() const { return d[0]; }
   /**
+   * \brief Number of non-one dimensions
+   * \return Number of non-one dimensions
+   */
+  inline unsigned int num_nonone_dims() const {
+    int ret = 0;
+    for(size_t i = 0; i < nd; ++i)
+      if(d[i] != 1)
+        ++ret;
+    return ret;
+  }
+  /**
    * \brief Size of the second dimension (or 1 if only one dimension)
    * \return Size of the second dimension (or 1 if only one dimension)
    */
@@ -161,7 +172,7 @@ struct Dim {
    * \param s Dimension size
    */
   inline void set(unsigned int i, unsigned int s) {
-    DYNET_ARG_CHECK(i < nd, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << d);
+    DYNET_ARG_CHECK(i < nd || s == 1, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << d);
     DYNET_ARG_CHECK(s != 0, "Attempt to set dimension size to zero in Dim::set(" << i << "," << s << ") for node of size " << d);
     d[i] = s;
   }
@@ -184,7 +195,29 @@ struct Dim {
    * \param i index of the dimension to be removed
    */
   inline void delete_dim(unsigned int i) {
-    DYNET_ARG_CHECK(i < nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d);
+    DYNET_ARG_CHECK(i < nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d );
+    if(i == nd-1){
+      if(nd == 1){
+        d[0] = 1;
+      }
+      else{
+        --nd;
+      }
+    }
+    else{
+      for(; i + 1 < nd; ++i){
+        d[i] = d[i + 1];
+      }
+      --nd;
+    }
+  }
+  /**
+   * \brief Insert a dimension
+   * \param i the index before which to insert the new dimension
+   * \param n the size of the new dimension
+   */
+  inline void insert_dim(unsigned int i, unsigned int n) {
+    DYNET_ARG_CHECK(i <= nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d);
     if (nd == 1) {
       d[0] = 1;
     } else {
@@ -200,8 +233,10 @@ struct Dim {
   */
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
-    else if (nd == 2) { return Dim({d[1], d[0]}, bd); }
-    DYNET_INVALID_ARG("Cannot transpose Dim object with more than 2 dimensions");
+    else {
+      DYNET_ARG_CHECK(nd == 2, "Cannot transpose Dim object with more than 2 dimensions, but got " << d);
+      return Dim({d[1], d[0]}, bd);
+    }
   }
 
   unsigned int d[DYNET_MAX_TENSOR_DIM]; /**< Array of dimension */

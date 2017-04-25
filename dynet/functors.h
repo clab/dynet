@@ -7,7 +7,7 @@
 
 #if HAVE_CUDA
 #  define DYNET_DEVICE_FUNC __device__
-#  define DYNET_DEVICE_MIN -1.175494351e-38f
+#  define DYNET_DEVICE_MIN 1.175494351e-38f
 #else
 #  define DYNET_DEVICE_FUNC
 #  define DYNET_DEVICE_MIN std::numeric_limits<float>::min()

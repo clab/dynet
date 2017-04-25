@@ -59,7 +59,7 @@ cdef class DynetParams:
         See the documentation about command line arguments for more details
         
         Keyword Args:
-            shared_parameters([type]): [description] (default: (None))
+            shared_parameters([type]): [description] (default: None)
         """
         cdef int argc = len(sys.argv)
         cdef char** c_argv
@@ -150,7 +150,7 @@ def init(shared_parameters=None):
         import _dynet / import _gdynet
     
     Keyword Args:
-        shared_parameters(bool): [description] (default: (None))
+        shared_parameters(bool): [description] (default: None)
     """
     params=DynetParams()
     params.from_args(shared_parameters)
@@ -174,7 +174,7 @@ cdef CDim Dim(dim, unsigned int batch_size=1):
 
     Args:
         dim(tuple): Dimensions as a tuple
-        batch_size(number): Batch size (default: (1))
+        batch_size(number): Batch size (default: 1)
     
     Returns:
         CDim: Dynet dimension
@@ -217,6 +217,12 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
 cdef c_tensor_as_np(CTensor &t):
     # TODO: make more efficient, with less copy
     arr = np.array(c_as_vector(t))
+    dim = c_dim_as_shape(t.d)
+    return arr.reshape(dim,order='F')
+
+cdef c_index_tensor_as_np(CIndexTensor &t):
+    # TODO: make more efficient, with less copy
+    arr = np.array(c_index_tensor_as_vector(t))
     dim = c_dim_as_shape(t.d)
     return arr.reshape(dim,order='F')
 
@@ -457,6 +463,9 @@ class Saveable(object):
 
 # Initializers
 cdef class PyInitializer:
+    """
+    Base class for parameter initializer
+    """
     cdef CParameterInit *initializer
     def __init__(self):
         assert(False),"Do not create PyInitializer directly."
@@ -464,34 +473,87 @@ cdef class PyInitializer:
         del self.initializer
 
 cdef class NormalInitializer(PyInitializer):
+    """Initialize the parameters with a gaussian distribution
+    
+    Keyword Arguments:
+        mean (number): Mean of the distribution (default: 0)
+        var (number): Variance of the distribution (default: 1)
+    """
     def __init__(self, float mean=0, var=1):
         self.initializer = new CParameterInitNormal(mean, var)
 
 cdef class UniformInitializer(PyInitializer):
+    """Initialize the parameters with a uniform distribution
+    
+    Args:
+        scale (number): Parmeters are sampled from :math:`\mathcal U([-\\texttt{scale},\\texttt{scale}])`
+    """
     def __init__(self, float scale):
         self.initializer = new CParameterInitUniform(scale)
 
 cdef class ConstInitializer(PyInitializer):
+    """Initialize the parameters with a constant value
+    
+    Args:
+        c (number): Value to initialize the parameters
+    """
     def __init__(self, float c):
         self.initializer = new CParameterInitConst(c)
 
 cdef class IdentityInitializer(PyInitializer):
+    """Initialize the parameters as the identity
+    
+    Only works with square matrices
+    """
     def __init__(self):
         self.initializer = new CParameterInitIdentity()
 
 cdef class GlorotInitializer(PyInitializer):
+    """Initializes the weights according to `Glorot & Bengio (2011) <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_ 
+    
+    If the dimensions of the parameter matrix are :math:`m,n`, the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{m+n}},g\sqrt{\\frac{6}{m+n}}])`
+    
+    The gain :math:`g` depends on the activation function : 
+
+    * :math:`\\text{tanh}` : 1.0
+    * :math:`\\text{ReLU}` : 0.5
+    * :math:`\\text{sigmoid}` : 4.0
+    * Any smooth function :math:`f` : :math:`\\frac{1}{f'(0)}`
+    
+    Keyword Arguments:
+        is_lookup (bool): Whether the parameter is alookup parameter (default: False)
+        gain (number): Gain (Depends on the activation function) (default: 1.0)
+    """
     def __init__(self, bool is_lookup=False,float gain=1.0):
         self.initializer = new CParameterInitGlorot(is_lookup,gain)
 
 cdef class SaxeInitializer(PyInitializer):
-   def __init__(self,scale=1.0):
-       self.initializer = new CParameterInitSaxe(scale)
+    """Initializes according to `Saxe et al. (2014) <https://arxiv.org/abs/1312.6120>`_
+
+    Initializes as a random orthonormal matrix (unimplemented for GPU)
+        Keyword Arguments:
+            scale (number): scale to apply to the orthonormal matrix
+    """
+    def __init__(self,scale=1.0):
+        self.initializer = new CParameterInitSaxe(scale)
 
 cdef class FromFileInitializer(PyInitializer):
+    """Initialize parameter from file
+    
+    Args:
+        fname (str): File name
+    """
     def __init__(self, string fname):
         self.initializer = new CParameterInitFromFile(fname)
 
 cdef class NumpyInitializer(PyInitializer):
+    """Initialize from numpy array
+
+    Alternatively, use :code:`Model.parameters_from_numpy()`
+    
+    Args:
+        array (np.ndarray): Numpy array
+    """
     def __init__(self, array):
         self.initializer = new CParameterInitFromVector(self.vec_from_array(array))
 
@@ -505,6 +567,9 @@ cdef class NumpyInitializer(PyInitializer):
 
 
 cdef class Model: # (((
+    """
+    A model holds Parameters. Use it to create, load and save parameters.
+    """
     cdef CModel *thisptr
     def __cinit__(self):
         self.thisptr = new CModel()
@@ -515,6 +580,16 @@ cdef class Model: # (((
 
     @staticmethod
     def from_file(fname):
+        """Create model from file
+        
+        Loads all parameters in file and returns model holding them
+        
+        Args:
+            fname (str): File name
+        
+        Returns:
+            (dynet.Model): Created model
+        """
         model = Model()
         res = model.load(fname)
         return model, res
@@ -523,12 +598,31 @@ cdef class Model: # (((
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
     cpdef parameters_from_numpy(self, array):
+        """Create parameter from numpy array
+        
+        Args:
+            array (np.ndarray): Numpy array
+        
+        Returns:
+            (dynet.Parameters): Parameter
+        """
         dim = array.shape
         cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer))
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
     cpdef add_parameters(self, dim, PyInitializer init=None):
+        """Add a parameter to the model
+        
+        Args:
+            dim (tuple): Shape of the parameter
+        
+        Keyword Arguments:
+            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+        
+        Returns:
+            (dynet.Parameters): Created Parameter
+        """
         assert(isinstance(dim,(tuple,int)))
         cdef CParameters p
         cdef CParameterInit *initializer
@@ -540,6 +634,17 @@ cdef class Model: # (((
         return pp
 
     cpdef add_lookup_parameters(self, dim, PyInitializer init=None):
+        """Add a lookup parameter to the model
+        
+        Args:
+            dim (tuple): Shape of the parameter. The first dimension is the lookup dimension
+        
+        Keyword Arguments:
+            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+        
+        Returns:
+            (dynet.LookupParameters): Created LookupParameter
+        """
         assert(isinstance(dim, tuple))
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
@@ -550,11 +655,21 @@ cdef class Model: # (((
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    def save_all(self, string fname):
-        save_dynet_model(fname, self.thisptr)
+    def save_all(self, fname):
+        """Save all parameters in model to file
+        
+        Args:
+            fname (str): File name
+        """
+        save_dynet_model(fname.encode(), self.thisptr)
 
-    def load_all(self, string fname):
-        load_dynet_model(fname, self.thisptr)
+    def load_all(self, fname):
+        """Load all parameters in model from file
+        
+        Args:
+            fname (str): File name
+        """
+        load_dynet_model(fname.encode(), self.thisptr)
 
     cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
         # would be nicer to have polymorphism/dispatch-by-type
@@ -593,8 +708,16 @@ cdef class Model: # (((
             raise TypeError("Cannot save model component of type %s" % type(c))
 
     def save(self, fname, components=None):
+        """Save a list of parameters to file
+        
+        Args:
+            fname (str): File name
+        
+        Keyword Arguments:
+            components (list): List of parameters to save (default: None)
+        """
         if not components:
-            self.save_all(fname.encode())
+            self.save_all(fname)
             return
         fh = open(fname+".pym","w")
         pfh = open(fname+".pyk","wb")
@@ -656,8 +779,16 @@ cdef class Model: # (((
             assert False,"unsupported type " + tp
 
     cpdef load(self, fname):
+        """Load a list of parameters from file
+        
+        Args:
+            fname (str): File name
+
+        Returns:
+            (list): List of parameters loaded from file
+        """
         if not os.path.isfile(fname+".pym"):
-            self.load_all(fname.encode())
+            self.load_all(fname)
             return
         with open(fname+".pym","r") as fh:
             types = fh.read().strip().split()
@@ -729,17 +860,43 @@ cdef class FloatVectorValue:
 cdef int SECRET = 923148
 cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
-def cg_version(): return _cg._cg_version
-def renew_cg(immediate_compute=False, check_validity=False): return _cg.renew(immediate_compute, check_validity)
+def cg_version(): 
+    """
+    Varsion of the current computation graph
+    """
+    return _cg._cg_version
+def renew_cg(immediate_compute=False, check_validity=False): 
+    """
+    Renew the computation graph.
+
+    Call this before building any new computation graph
+    """
+    return _cg.renew(immediate_compute, check_validity)
 def print_text_graphviz(): return _cg.print_graphviz()
-def cg_checkpoint(): _cg.checkpoint()
-def cg_revert():     _cg.revert()
+def cg_checkpoint(): 
+    """
+    Saves the state of the computation graph
+    """
+    _cg.checkpoint()
+def cg_revert():
+    """
+    Revert the computation graph state to the previous checkpoint
+    """
+    _cg.revert()
 
 cpdef ComputationGraph cg():
+    """
+    Get the current ComputationGraph
+    """
     global _cg
     return _cg
 
 cdef class ComputationGraph:
+    """
+    Computation graph object
+
+    While the ComputationGraph is central to the inner workings of DyNet, from the user's perspective, the only responsibility is to create a new computation graph for each training example.
+    """
     cdef CComputationGraph *thisptr, 
     cdef list _inputs
     cdef int _cg_version
@@ -752,6 +909,9 @@ cdef class ComputationGraph:
         del self.thisptr
 
     cpdef renew(self, immediate_compute=False, check_validity=False):
+        """
+        Same as :code:`dynet.renew_cg()`
+        """
         del self.thisptr
         self.thisptr = new CComputationGraph()
         if immediate_compute: self.thisptr.set_immediate_compute(immediate_compute)
@@ -760,9 +920,16 @@ cdef class ComputationGraph:
         self._cg_version += 1
         return self
 
-    cpdef version(self): return self._cg_version
+    cpdef version(self): 
+        """
+        Same as :code:`dynet.cg_version()`
+        """
+        return self._cg_version
 
     def parameters(self, Parameters params):
+        """
+        Same as :code:`dynet.parameters(params)`
+        """
         cdef Expression result
         result = Expression.from_cexpr(self._cg_version, c_parameter(self.thisptr[0], params.thisptr))
         return result
@@ -840,6 +1007,79 @@ cdef class ComputationGraph:
 
 
 # )
+
+cdef class Tensor:
+    """Tensor class
+
+    A Tensor is a value object that is kept on the computation device (GPU or CPU).
+    It can be converted to a python object (a numpy array), which involves a device-to-python
+    copy. More importantly, some operations (ie argmax) can be applied on the tensor on-device,
+    reducing the memory copy and potentially benefitting from more efficiency.
+    """
+    cdef CTensor t
+    cdef CIndexTensor lt
+    cdef int type
+    def __cinit__(self):
+        self.type = -1 # 0 if Tensor, 1 is IndexTensor
+        pass
+
+    @staticmethod
+    cdef wrap_ctensor(CTensor t):
+        self = Tensor()
+        self.t = t
+        self.type = 0
+        return self
+
+    @staticmethod
+    cdef wrap_cindextensor(CIndexTensor t):
+        self = Tensor()
+        self.lt = t
+        self.type = 1
+        return self
+
+    def __str__(self):
+        return "<Dynet Tensor:%s>" % ("int" if self.type==1 else "float")
+
+    cpdef as_numpy(self):
+        """Converts the tensor values into a numpy array.
+
+        Returns:
+            np.ndarray: numpy array of values
+        """
+        if self.type == 0:
+            return np.array(c_tensor_as_np(self.t))
+        elif self.type == 1:
+            return np.array(c_index_tensor_as_np(self.lt))
+        raise ValueError("Improperly Intialized Tensor")
+
+    cpdef argmax(self, unsigned dim=0, unsigned num=1):
+        """Calculate the index of the maximum value.
+
+        Assumes that rach row represents a probability distribution.
+
+        Keyword Args:
+            dim(integer): which dimension to take the argmax over
+            num(integer): the number of kmax values
+        
+        Returns:
+            A newly allocated Tensor consisting of argmax IDs. The length of the
+        """
+        return Tensor.wrap_cindextensor(CTensorTools.argmax(self.t, dim, num))
+
+    cpdef categorical_sample_log_prob(self, unsigned dim=0, unsigned num=1):
+        """Calculate samples from a log probability
+
+        Assumes each row in the tensor represents a log probabiity distribution
+        
+        Keyword Args:
+            dim(integer): Which dimension to take the sample over
+            num(integer): num The number of samples for each row
+
+        Returns:
+            A newly allocated Tensor consisting of argmax IDs. The length of the
+            dimension "dim" will be "num", consisting of the appropriate IDs.
+        """
+        return Tensor.wrap_cindextensor(CTensorTools.categorical_sample_log_prob(self.t, dim, num))
 
 #((( Expressions
 cdef ensure_freshness(Expression a):
@@ -976,7 +1216,7 @@ cdef class Expression: #(((
         This only works if the expression is a scalar
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         
         Returns:
             float: Scalar value of the expression
@@ -991,7 +1231,7 @@ cdef class Expression: #(((
         In case of a multidimensional expression, the values are flattened according to a column major ordering
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         
         Returns:
             list: Array of values
@@ -1006,7 +1246,7 @@ cdef class Expression: #(((
         The last dimension is the batch size (if it's > 1)
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         
         Returns:
             np.ndarray: numpy array of values
@@ -1020,13 +1260,32 @@ cdef class Expression: #(((
         arr = np.array(c_tensor_as_np(t))
         return arr
 
+    cpdef tensor_value(self, recalculate=False):
+        """Returns the value of the expression as a Tensor.
+
+        This is useful if you want to use the value for other on-device calculations
+        that are not part of the computation graph, i.e. using argmax.
+        
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
+        
+        Returns:
+            Tensor: a dynet Tensor object.
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        cdef CTensor t
+        cdef CDim dim
+        if recalculate: self.cg().forward(self.vindex)
+        t = self.cgp().get_value(self.vindex)
+        return Tensor.wrap_ctensor(t)
+
     cpdef value(self, recalculate=False):
         """Gets the value of the expression in the most relevant format
         
-        this returns the same thing as `scalar_value`, `vec_value`, `npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
+        this returns the same thing as :code:`scalar_value`, :code:`vec_value`, :code:`npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         
         Returns:
             float, list, np.ndarray: Value of the expression
@@ -1046,10 +1305,10 @@ cdef class Expression: #(((
         """This runs incremental forward on the entire graph
         
         May not be optimal in terms of efficiency.
-        Prefer `values`
+        Prefer :code:`values`
         
         Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: (False))
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         if recalculate: self.cg().forward(self.vindex)
@@ -1136,7 +1395,7 @@ cdef class _inputExpression(Expression):
     def set(self, float s):
         """Change the value of the expression
         
-        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
         This allows you to use dynet as a static framework.
         
         Args:
@@ -1167,7 +1426,7 @@ cdef class _vecInputExpression(Expression):
     def set(self, vector[float] data):
         """Change the value of the expression
         
-        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
         This allows you to use dynet as a static framework.
         For now this only accepts new values as flattened arrays (column majors). TODO : change this
 
@@ -1209,7 +1468,7 @@ def matInput(int d1, int d2):
         int d2([type]): [description]
     
     Returns:
-        [type]: [description]
+        dynet.Expression: [description]
     """
     return _cg.inputMatrix(d1, d2)
 
@@ -1245,7 +1504,7 @@ def inputTensor(arr,batched=False):
         arr(list,np.ndarray): Values : numpy ndarray OR list of np.ndarray OR multidimensional list of floats
     
     Keyword Args:
-        batched(bool): Whether to use the last dimension as a batch dimension (default: (False))
+        batched(bool): Whether to use the last dimension as a batch dimension (default: False)
     
     Returns:
         _vecInputExpression: Input expression
@@ -1289,7 +1548,7 @@ cdef class _lookupExpression(Expression):
     def set(self,i):
         """Change the lookup index
         
-        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
         This allows you to use dynet as a static framework.
         
         Args:
@@ -1316,7 +1575,7 @@ cdef class _lookupBatchExpression(Expression):
     def set(self,i):
         """Change the lookup index
         
-        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
         This allows you to use dynet as a static framework.
         
         Args:
@@ -1332,8 +1591,8 @@ def lookup(LookupParameters p, unsigned index=0, update=True):
         :type p: LookupParameters
     
     Keyword Args:
-        index(number): Lookup index (default: (0))
-        update(bool): Whether to update the lookup parameter [(default: (True))
+        index(number): Lookup index (default: 0)
+        update(bool): Whether to update the lookup parameter [(default: True)
     
     Returns:
         _lookupExpression: Expression for the embedding
@@ -1350,7 +1609,7 @@ def lookup_batch(LookupParameters p, vector[unsigned] indices, update=True):
         indices(list(int)): Indices to look up for each batch element
     
     Keyword Args:
-        update(bool): Whether to update the lookup parameter (default: (True))
+        update(bool): Whether to update the lookup parameter (default: True)
     
     Returns:
         _lookupBatchExpression: Expression for the batched embeddings
@@ -1375,7 +1634,7 @@ cdef class _pickerExpression(Expression):
     def set_index(self,i):
         """Change the pick index
         
-        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
         This allows you to use dynet as a static framework.
         
         Args:
@@ -1393,8 +1652,8 @@ def pick(Expression e, unsigned index=0, unsigned dim=0):
         e(Expression): Expression to pick from
     
     Keyword Args:
-        index(number): Index to pick (default: (0))
-        dim(number): Dimension to pick from (default: (0))
+        index(number): Index to pick (default: 0)
+        dim(number): Dimension to pick from (default: 0)
     
     Returns:
         _pickerExpression: Picked expression
@@ -1402,7 +1661,7 @@ def pick(Expression e, unsigned index=0, unsigned dim=0):
     return _cg.outputPicker(e, index, dim)
 
 cdef class _pickerBatchExpression(Expression):
-    """Batched version of `_pickerExpression`
+    """Batched version of :code:`_pickerExpression`
     
     """
     cdef UnsignedVectorValue val
@@ -1418,7 +1677,7 @@ cdef class _pickerBatchExpression(Expression):
     def set_index(self,i):
         """Change the pick indices
         
-        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code::code:`recalculate=True` when calling :code:`.value()` on the output.
         This allows you to use dynet as a static framework.
         
         Args:
@@ -1435,7 +1694,7 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
     Args:
         e(Expression): Expression to pick from
         indices(list): Indices to pick
-        dim(number): Dimension to pick from (default: (0))
+        dim(number): Dimension to pick from (default: 0)
     
     Returns:
         _pickerBatchExpression: Picked expression
@@ -1458,7 +1717,7 @@ cdef class _hingeExpression(Expression):
     def set_index(self, unsigned i):
         """Change the correct candidate index
         
-        This is useful if you want to to change the target and recompute the graph without needing to re-create it. Don't forget to use `recalculate=True` when calling `.value()` on the output.
+        This is useful if you want to to change the target and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
         This allows you to use dynet as a static framework.
         
         Args:
@@ -1477,7 +1736,7 @@ def hinge(Expression x, unsigned index, float m=1.0):
         index (number): The index of the correct candidate
     
     Keyword Args:
-        m(number): Margin (default: (1.0))
+        m(number): Margin (default: 1.0)
     
     Returns:
         _hingeExpression: The hinge loss of candidate index with respect to margin m
@@ -1486,88 +1745,1120 @@ def hinge(Expression x, unsigned index, float m=1.0):
 
 # )
 
-cpdef Expression zeroes(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
-cpdef Expression random_normal(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
-cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p, scale))
-cpdef Expression random_uniform(dim, float left, float right, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
-cpdef Expression random_gumbel(dim, float mu = 0.0, float beta = 1.0, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_gumbel(_cg.thisptr[0], CDim(dim, batch_size), mu, beta))
+cpdef Expression zeroes(dim, int batch_size=1): 
+    """Create an input full of zeros
+    
+    Create an input full of zeros, sized according to dimensions :code:`dim`
+    
+    Args:
+        dim (tuple): Dimension of the tensor
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A "d" dimensioned zero tensor
+    """
+    return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
+cpdef Expression random_normal(dim, int batch_size=1): 
+    """Create a random normal vector
+    
+    Create a vector distributed according to normal distribution with mean 0, variance 1.
+    
+    Args:
+        dim (tuple): Dimension of the tensor
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor  (default: (1))
+    
+    Returns:
+        dynet.Expression: A "d" dimensioned normally distributed tensor
+    """
+    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
+cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1):
+    """Create a random bernoulli tensor
+    
+    Create a tensor distributed according to bernoulli distribution with parameter :math:`p`.
+    
+    Args:
+        dim (tuple): Dimension of the tensor
+        p (number): Parameter of the bernoulli distribution
+    
+    Keyword Arguments:
+        scale (number): Scaling factor to apply to the sampled tensor (default: (1.0))
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A "d" dimensioned bernoulli distributed tensor
+    """
+    return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p, scale))
+cpdef Expression random_uniform(dim, float left, float right, int batch_size=1):
+    """Create a random uniform tensor
+    
+    Create a tensor distributed according to uniform distribution with boundaries left and right.
 
-cpdef Expression nobackprop(Expression x): return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
-cpdef Expression flip_gradient(Expression x): return Expression.from_cexpr(x.cg_version, c_flip_gradient(x.c()))
+    Args:
+        dim (tuple): Dimension of the tensor
+        left (number): Lower bound of the uniform distribution
+        right (number): Upper bound of the uniform distribution
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A "d" dimensioned uniform distributed tensor
+    """
+    return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
+cpdef Expression random_gumbel(dim, float mu = 0.0, float beta = 1.0, int batch_size=1):
+    """Create a random Gumbel sampled vector
+    
+    Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported.
+    
+    Args:
+        dim (tuple): Dimension of the tensor
+    
+    Keyword Arguments:
+        mu (number): The :math:`\mu` parameter (default: (0.0))
+        beta (number): The :math:`\\beta` parameter (default: (1.0))
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression:  "d" dimensioned Gumbel distributed tensor
+    """
+    return Expression.from_cexpr(_cg.version(), c_random_gumbel(_cg.thisptr[0], CDim(dim, batch_size), mu, beta))
+
+cpdef Expression nobackprop(Expression x):
+    """Prevent backprop
+    
+    This node has no effect on the forward pass, but prevents gradients from flowing backward during the backward pass. This is useful when there's a subgraph for which you don't want loss passed back to the parameters.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: An output expression containing the same as input (only effects on backprop process)
+    """
+    return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
+cpdef Expression flip_gradient(Expression x):
+    """Negative backprop
+    
+    This node has no effect on the forward pass, but takes negative on backprop process. This operation is widely used in adversarial networks.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: An output expression containing the same as input (only effects on backprop process)
+    """
+    return Expression.from_cexpr(x.cg_version, c_flip_gradient(x.c()))
 
 # binary-exp
-cpdef Expression cdiv(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cdiv(x.c(), y.c()))
-cpdef Expression cmult(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_cmult(x.c(), y.c()))
-cpdef Expression colwise_add(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_colwise_add(x.c(), y.c()))
+cpdef Expression cdiv(Expression x, Expression y):
+    """Componentwise division
+    
+    Do a componentwise division where each value is equal to :math:`\\frac{x_i}{y_i}`
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
 
-cpdef Expression inverse(Expression x): return Expression.from_cexpr(x.cg_version, c_inverse(x.c()))
-cpdef Expression logdet(Expression x): return Expression.from_cexpr(x.cg_version, c_logdet(x.c()))
-cpdef Expression trace_of_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_trace_of_product(x.c(), y.c()))
-cpdef Expression dot_product(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
-cpdef Expression squared_norm(Expression x): return Expression.from_cexpr(x.cg_version, c_squared_norm(x.c()))
-cpdef Expression squared_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_squared_distance(x.c(), y.c()))
-cpdef Expression l1_distance(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_l1_distance(x.c(), y.c()))
-cpdef Expression binary_log_loss(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_binary_log_loss(x.c(), y.c()))
-cpdef Expression conv1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_narrow(x.c(), y.c()))
-cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_wide(x.c(), y.c()))
-cpdef Expression filter1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_filter1d_narrow(x.c(), y.c()))
+    Returns:
+        dynet.Expression: An expression where the ith element is equal to :math:`\\frac{x_i}{y_i}`
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version, c_cdiv(x.c(), y.c()))
+cpdef Expression cmult(Expression x, Expression y):
+    """Componentwise multiplication
+    
+    Do a componentwise multiplication where each value is equal to :math:`x_i\\times y_i`
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: An expression where the ith element is equal to :math:`x_i\\times y_i`
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version, c_cmult(x.c(), y.c()))
+cpdef Expression colwise_add(Expression x, Expression y):
+    """Columnwise addition
+    
+    Add vector :math:`y` to each column of matrix :math:`x`
+    
+    Args:
+        x (dynet.Expression): An MxN matrix
+        y (dynet.Expression): A length M vector
+    
+    Returns:
+        dynet.Expression: An expression where :math:`y` is added to each column of :math:`x`
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version, c_colwise_add(x.c(), y.c()))
+
+cpdef Expression inverse(Expression x): 
+    """Matrix Inverse
+    
+    Takes the inverse of a matrix (not implemented on GPU yet, although contributions are welcome: `issue <https://github.com/clab/dynet/issues/158>`_). Note that back-propagating through an inverted matrix can also be the source of stability problems sometimes.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: Inverse of x
+    """
+    return Expression.from_cexpr(x.cg_version, c_inverse(x.c()))
+cpdef Expression logdet(Expression x): 
+    """Log determinant
+
+    Takes the log of the determinant of a matrix. (not implemented on GPU yet, although contributions are welcome: `issue <https://github.com/clab/dynet/issues/158>`_).
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`\log(\\vert x\\vert)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_logdet(x.c()))
+cpdef Expression trace_of_product(Expression x, Expression y):
+    """Trace of Matrix Product
+
+    Takes the trace of the product of matrices. (not implemented on GPU yet, although contributions are welcome: `issue <https://github.com/clab/dynet/issues/158>`_).
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        Expression y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: :math:`\\text{Tr}(xy)`
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version, c_trace_of_product(x.c(), y.c()))
+cpdef Expression dot_product(Expression x, Expression y):
+    """Dot Product
+    
+    Calculate the dot product :math:`x^Ty=\sum_i x_iy_i`
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: :math:`x^Ty=\sum_i x_iy_i`
+    """
+    ensure_freshness(y); 
+    return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
+cpdef Expression squared_norm(Expression x):
+    """Squared norm
+    
+    The squared norm of the values of :code:`x`: :math:`\Vert x\Vert_2^2=\sum_i x_i^2`.
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`\Vert x\Vert_2^2=\sum_i x_i^2`
+    """
+    return Expression.from_cexpr(x.cg_version, c_squared_norm(x.c()))
+cpdef Expression squared_distance(Expression x, Expression y):
+    """Squared distance
+    
+    The squared distance between values of :code:`x` and :code:`y`: :math:`\Vert x-y\Vert_2^2=\sum_i (x_i-y_i)^2`.
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: :math:`\Vert x-y\Vert_2^2=\sum_i (x_i-y_i)^2`
+    """
+    ensure_freshness(y); 
+    return Expression.from_cexpr(x.cg_version, c_squared_distance(x.c(), y.c()))
+cpdef Expression l1_distance(Expression x, Expression y):
+    """L1 distance
+    
+    L1 distance between values of :code:`x` and :code:`y`: :math:`\Vert x-y\Vert_1=\sum_i \\vert x_i-y_i\\vert`.
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: :math:`\Vert x-y\Vert_1=\sum_i \\vert x_i-y_i\\vert`.
+    """
+    ensure_freshness(y); 
+    return Expression.from_cexpr(x.cg_version, c_l1_distance(x.c(), y.c()))
+cpdef Expression binary_log_loss(Expression x, Expression y):
+    """Binary log loss
+    
+    The log loss of a binary decision according to the sigmoid sigmoid function :math:`- \sum_i (y_i  \ln(x_i) + (1-y_i)  \ln(1-x_i))`
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: :math:`- \sum_i (y_i  \ln(x_i) + (1-y_i)  \ln(1-x_i))`
+    """
+    ensure_freshness(y); 
+    return Expression.from_cexpr(x.cg_version, c_binary_log_loss(x.c(), y.c()))
+#cpdef Expression conv1d_narrow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_narrow(x.c(), y.c()))
+#cpdef Expression conv1d_wide(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_conv1d_wide(x.c(), y.c()))
+cpdef Expression filter1d_narrow(Expression x, Expression y): 
+    """[summary]
+    
+    [description]
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: TODO
+    """
+    ensure_freshness(y); 
+    return Expression.from_cexpr(x.cg_version, c_filter1d_narrow(x.c(), y.c()))
+cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, bool is_valid = True): 
+    """2D convolution without bias
+    
+    2D convolution operator without bias parameters.
+    :code:`VALID` and :code:`SAME` convolutions are supported.
+    
+    Think about when stride is 1, the distinction:
+    
+    - :code:`SAME`: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+    - :code:`VALID`: output size shrinks by :code:`filter_size - 1`, and the filters always sweep at valid positions inside the input maps. No padding needed.
+
+    In detail, assume
+    
+    - Input feature maps: :code:`XH x XW x XC x N`
+    - Filters: :code:`FH x FW x XC x FC`
+    - Strides: :code:`strides[0]` and :code:`strides[1]` are row (:code:`h`) and col (:code:`w`) stride, respectively.
+ 
+    For the :code:`SAME` convolution: the output height (:code:`YH`) and width (:code:`YW`) are computed as:
+    
+    - :code:`YH = ceil(float(XH) / float(strides[0]))`
+    - :code:`YW = ceil(float(XW) / float(strides[1]))`
+    
+    and the paddings are computed as:
+    
+    - :code:`pad_along_height = max((YH - 1) * strides[0] + FH - XH, 0)`
+    - :code:`pad_along_width = max((YW - 1) * strides[1] + FW - XW, 0)`
+    - :code:`pad_top = pad_along_height / 2`
+    - :code:`pad_bottom = pad_along_height - pad_top`
+    - :code:`pad_left = pad_along_width / 2`
+    - :code:`pad_right = pad_along_width - pad_left`
+ 
+    For the :code:`VALID` convolution: the output height (:code`YH`) and width (:code:`YW`) are computed as:
+    
+    - :code:`YH = ceil(float(XH - FH + 1) / float(strides[0]))`
+    - :code:`YW = ceil(float(XW - FW + 1) / float(strides[1]))`
+    
+    and the paddings are always zeros.
+    
+    Args:
+        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+        f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
+        stride (list): the row and column strides
+    
+    Keyword Arguments:
+        is_valid (bool): 'VALID' convolution or 'SAME' convolution, default is True ('VALID') (default: (True))
+    
+    Returns:
+        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
+    """
+    ensure_freshness(f); 
+    return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), f.c(), stride, is_valid))
+cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[unsigned] stride, bool is_valid = True):
+    """2D convolution with bias
+    
+    2D convolution operator with bias parameters.
+    :code:`VALID` and :code:`SAME` convolutions are supported.
+    
+    Think about when stride is 1, the distinction:
+    
+    - :code:`SAME`: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+    - :code:`VALID`: output size shrinks by :code:`filter_size - 1`, and the filters always sweep at valid positions inside the input maps. No padding needed.
+
+    In detail, assume
+    
+    - Input feature maps: :code:`XH x XW x XC x N`
+    - Filters: :code:`FH x FW x XC x FC`
+    - Strides: :code:`strides[0]` and :code:`strides[1]` are row (:code:`h`) and col (:code:`w`) stride, respectively.
+ 
+    For the :code:`SAME` convolution: the output height (:code:`YH`) and width (:code:`YW`) are computed as:
+    
+    - :code:`YH = ceil(float(XH) / float(strides[0]))`
+    - :code:`YW = ceil(float(XW) / float(strides[1]))`
+    
+    and the paddings are computed as:
+    
+    - :code:`pad_along_height = max((YH - 1) * strides[0] + FH - XH, 0)`
+    - :code:`pad_along_width = max((YW - 1) * strides[1] + FW - XW, 0)`
+    - :code:`pad_top = pad_along_height / 2`
+    - :code:`pad_bottom = pad_along_height - pad_top`
+    - :code:`pad_left = pad_along_width / 2`
+    - :code:`pad_right = pad_along_width - pad_left`
+ 
+    For the :code:`VALID` convolution: the output height (:code`YH`) and width (:code:`YW`) are computed as:
+    
+    - :code:`YH = ceil(float(XH - FH + 1) / float(strides[0]))`
+    - :code:`YW = ceil(float(XW - FW + 1) / float(strides[1]))`
+    
+    and the paddings are always zeros.
+    
+    Args:
+        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+        f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
+        b (dynet.Expression): The bias (1D: Ci)
+        stride (list): the row and column strides
+    
+    Keyword Arguments:
+        is_valid (bool): 'VALID' convolution or 'SAME' convolution, default is True ('VALID') (default: (True))
+    
+    Returns:
+        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
+    """
+    ensure_freshness(f)
+    ensure_freshness(b)
+    return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), f.c(), b.c(), stride, is_valid))
 
 # unary-exp
-cpdef Expression tanh(Expression x): return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
-cpdef Expression exp(Expression x): return Expression.from_cexpr(x.cg_version, c_exp(x.c()))
-cpdef Expression square(Expression x): return Expression.from_cexpr(x.cg_version, c_square(x.c()))
-cpdef Expression sqrt(Expression x): return Expression.from_cexpr(x.cg_version, c_sqrt(x.c()))
-cpdef Expression erf(Expression x): return Expression.from_cexpr(x.cg_version, c_erf(x.c()))
-cpdef Expression cube(Expression x): return Expression.from_cexpr(x.cg_version, c_cube(x.c()))
-cpdef Expression log(Expression x): return Expression.from_cexpr(x.cg_version, c_log(x.c()))
-cpdef Expression lgamma(Expression x): return Expression.from_cexpr(x.cg_version, c_lgamma(x.c()))
-cpdef Expression logistic(Expression x): return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
-cpdef Expression rectify(Expression x): return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
-cpdef Expression log_softmax(Expression x, list restrict=None): 
+cpdef Expression tanh(Expression x): 
+    """Hyperbolic tangent
+    
+    Elementwise calculation of the hyperbolic tangent
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`\\tanh(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
+cpdef Expression exp(Expression x): 
+    """Natural exponent
+    
+    Calculate elementwise :math:`y_i = e^{x_i}`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`e^{x}`
+    """
+    return Expression.from_cexpr(x.cg_version, c_exp(x.c()))
+cpdef Expression square(Expression x): 
+    """Square
+    
+    Calculate elementwise :math:`y_i = x_i^2`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y = x^2`
+    """
+    return Expression.from_cexpr(x.cg_version, c_square(x.c()))
+cpdef Expression sqrt(Expression x): 
+    """Square root
+    
+    Calculate elementwise :math:`y_i = \sqrt{x_i}`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y = \sqrt{x}`
+    """
+    return Expression.from_cexpr(x.cg_version, c_sqrt(x.c()))
+
+cpdef Expression abs(Expression x): 
+    """Absolute value
+    
+    Calculate elementwise :math:`y_i = \\vert x_i\\vert`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y = \\vert x\\vert`
+    """
+    return Expression.from_cexpr(x.cg_version, c_abs(x.c()))
+
+cpdef Expression erf(Expression x): 
+    """Gaussian error function
+
+    Elementwise calculation of the Gaussian error function :math:`y_i = \\text{erf}(x_i)=\\frac {1}{\sqrt{\pi}}\int_{-x_i}^{x_i}e^{-t^2}\mathrm{d}t`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y_i = \\text{erf}(x_i)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_erf(x.c()))
+cpdef Expression cube(Expression x): 
+    """cube
+    
+    Calculate elementwise :math:`y_i = x_i^3`
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y = x^3`
+    """
+    return Expression.from_cexpr(x.cg_version, c_cube(x.c()))
+cpdef Expression log(Expression x): 
+    """Natural logarithm
+    
+    Elementwise calculation of the natural logarithm :math:`y_i = \ln(x_i)`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y_i = \ln(x_i)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_log(x.c()))
+cpdef Expression lgamma(Expression x): 
+    """Log gamma
+    
+    Calculate elementwise log gamma function :math:`y_i = \ln(\Gamma(x_i))`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y_i = \ln(\Gamma(x_i))`
+    """
+    return Expression.from_cexpr(x.cg_version, c_lgamma(x.c()))
+cpdef Expression logistic(Expression x): 
+    """Logistic sigmoid function
+    
+    Calculate elementwise :math:`y_i = \\frac{1}{1+e^{-x_i}}`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y_i = \\frac{1}{1+e^{-x_i}}`
+    """
+    return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
+cpdef Expression rectify(Expression x): 
+    """Rectifier (or ReLU, Rectified Linear Unit)
+    
+    Calculate elementwise recitifer (ReLU) function :math:`y_i = \max(x_i,0)`
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y_i = \max(x_i,0)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
+cpdef Expression log_softmax(Expression x, list restrict=None):
+    """Restricted log softmax
+    
+    The log softmax function calculated over only a subset of the vector elements. The elements to be included are set by the :code:`restriction` variable. All elements not included in :code:`restriction` are set to negative infinity.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Keyword Arguments:
+        restrict (list): List of log softmax to compute (default: (None))
+    
+    Returns:
+        dynet.Expression: A vector with the log softmax over the specified elements
+    """
     if restrict is None:
         return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c()))
     cdef vector[unsigned] vec = restrict
     return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c(), vec))
-cpdef Expression softmax(Expression x): return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
-cpdef Expression sparsemax(Expression x): return Expression.from_cexpr(x.cg_version, c_sparsemax(x.c()))
-cpdef Expression softsign(Expression x): return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
-cpdef Expression pow(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_pow(x.c(), y.c()))
-cpdef Expression bmin(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
-cpdef Expression bmax(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
-cpdef Expression transpose(Expression x): return Expression.from_cexpr(x.cg_version, c_transpose(x.c()))
-cpdef Expression select_rows(Expression x, vector[unsigned] rs): return Expression.from_cexpr(x.cg_version, c_select_rows(x.c(), rs))
-cpdef Expression select_cols(Expression x, vector[unsigned] rs): return Expression.from_cexpr(x.cg_version, c_select_cols(x.c(), rs))
-cpdef Expression sum_cols(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_cols(x.c()))
-cpdef Expression sum_elems(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_elems(x.c()))
+cpdef Expression softmax(Expression x):
+    """Softmax
+    
+    The softmax function normalizes each column to ensure that all values are between 0 and 1 and add to one by applying the :math:`\\frac{e^{x_i}}{sum_j e^{x_j}}`.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`\\frac{e^{x_i}}{\sum_j e^{x_j}}`
+    """
+    return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
+cpdef Expression sparsemax(Expression x):
+    """Sparsemax
+    
+    The sparsemax function (Martins et al. 2016), which is similar to softmax, but induces sparse solutions where most of the vector elements are zero. **Note:** This function is not yet implemented on GPU.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: The sparsemax of the scores
+    """
+    return Expression.from_cexpr(x.cg_version, c_sparsemax(x.c()))
+cpdef Expression softsign(Expression x):
+    """Softsign function
 
-cpdef Expression sum_batches(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
+    Calculate elementwise the softsign function :math:`y_i = \\frac{x_i}{1+\\vert x_i\\vert}`
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y_i = \\frac{x_i}{1+\\vert x_i\\vert}`
+    """
+    return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
+cpdef Expression pow(Expression x, Expression y):
+    """Power function
+    
+    Calculate an output where the ith element is equal to :math:`x_i^{y_i}`
+
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: :math:`x_i^{y_i}`
+    """
+    ensure_freshness(y); 
+    return Expression.from_cexpr(x.cg_version, c_pow(x.c(), y.c()))
+cpdef Expression bmin(Expression x, Expression y):
+    """Minimum
+    
+    Calculate an output where the ith element is :math:`\min(x_i,y_i)`
+
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: :math:`\min(x_i,y_i)`
+    """
+    ensure_freshness(y); 
+    return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
+cpdef Expression bmax(Expression x, Expression y):
+    """Maximum
+    
+    Calculate an output where the ith element is :math:`\max(x_i,y_i)`
+
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: :math:`\max(x_i,y_i)`
+    """
+    ensure_freshness(y); 
+    return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
+cpdef Expression transpose(Expression x, list dims=[1, 0]):
+    """Transpose a matrix
+    
+    Get the transpose of the matrix, or if dims is specified shuffle the dimensions arbitrarily.
+
+    **Note:** This is O(1) if either the row or column dimension is 1, and O(n) otherwise.
+    
+    Args:
+        x (dynet.Expression): Input expression
+        dims (list): The dimensions to swap. The ith dimension of the output will be equal to the dims[i] dimension of the input. dims must have the same number of dimensions as x.
+    
+    Returns:
+        dynet.Expression: :math:`x^T` / the shuffled expression
+    """
+    cdef vector[unsigned] vec = dims
+    return Expression.from_cexpr(x.cg_version, c_transpose(x.c(), vec))
+cpdef Expression select_rows(Expression x, vector[unsigned] rs):
+    """Select rows
+
+    Select a subset of rows of a matrix.
+
+    Args:
+        x (dynet.Expression): Input expression
+        rs (list): The rows to extract 
+    
+    Returns:
+        dynet.Expression: An expression containing the selected rows
+    """
+    return Expression.from_cexpr(x.cg_version, c_select_rows(x.c(), rs))
+cpdef Expression select_cols(Expression x, vector[unsigned] cs):
+    """Select columns
+
+    Select a subset of columns of a matrix.
+
+    Args:
+        x (dynet.Expression): Input expression
+        cs (list): The columns to extract 
+    
+    Returns:
+        dynet.Expression: An expression containing the selected columns
+    """
+    return Expression.from_cexpr(x.cg_version, c_select_cols(x.c(), cs))
+cpdef Expression sum_cols(Expression x):
+    """[summary]
+    
+    [description]
+    
+    Args:
+        x (dynet.Expression): 
+    
+    Returns:
+        dynet.Expression: 
+    """
+    return Expression.from_cexpr(x.cg_version, c_sum_cols(x.c()))
+cpdef Expression sum_elems(Expression x):
+    """Sum all elements
+    
+    Sum all the elements in an expression.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: The sum of all of its elements
+    """
+    return Expression.from_cexpr(x.cg_version, c_sum_elems(x.c()))
+
+cpdef Expression sum_batches(Expression x):
+    """Sum over minibatches
+    
+    Sum an expression that consists of multiple minibatches into one of equal dimension but with only a single minibatch. This is useful for summing loss functions at the end of minibatch training.
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: An expression with a single batch
+    """
+    return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
 
 #expr-opt
-cpdef Expression fold_rows(Expression x, unsigned nrows=2): return Expression.from_cexpr(x.cg_version, c_fold_rows(x.c(),nrows))
+cpdef Expression fold_rows(Expression x, unsigned nrows=2):
+    """[summary]
+    
+    [description]
+    
+    Args:
+        x (dynet.Expression): 
+    
+    Keyword Arguments:
+        unsigned nrows {number}:  (default: (2))
+    
+    Returns:
+        dynet.Expression: 
+    """
+    return Expression.from_cexpr(x.cg_version, c_fold_rows(x.c(),nrows))
 #expr-expr-opt
 # x is scalar or row vector
 # y is scalar or row vector
 # res = max(0, m - x + y)
-cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_pairwise_rank_loss(x.c(), y.c(), m))
-cpdef Expression poisson_loss(Expression x, unsigned y): return Expression.from_cexpr(x.cg_version, c_poisson_loss(x.c(), y))
-cpdef Expression huber_distance(Expression x, Expression y, float c=1.345): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_huber_distance(x.c(), y.c(), c))
-#expr-unsigned
-cpdef Expression kmax_pooling(Expression x, unsigned k): return Expression.from_cexpr(x.cg_version, c_kmax_pooling(x.c(), k))
-cpdef Expression pickneglogsoftmax(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), v))
-cpdef Expression pickneglogsoftmax_batch(Expression x, vector[unsigned] vs): return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), vs))
+cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0):
+    """Pairwise rank loss
+    
+    A margin-based loss, where every margin violation for each pair of values is penalized: :math:`\sum_i \max(x_i-y_i+m, 0)`
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Keyword Arguments:
+        m (number): The margin (default: (1.0))
+    
+    Returns:
+        dynet.Expression: The pairwise rank loss
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version, c_pairwise_rank_loss(x.c(), y.c(), m))
+cpdef Expression poisson_loss(Expression x, unsigned y):
+    """Poisson loss
+    
+    The negative log probability of :code:`y` according to a Poisson distribution with parameter :code:`x`. Useful in Poisson regression where, we try to predict the parameters of a Possion distribution to maximize the probability of data :code:`y`.
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Returns:
+        dynet.Expression: The Poisson loss
+    """
+    return Expression.from_cexpr(x.cg_version, c_poisson_loss(x.c(), y))
+cpdef Expression huber_distance(Expression x, Expression y, float c=1.345):
+    """Huber distance
+    
+    The huber distance between values of :code:`x` and :code:`y` parameterized by :code:`c`, :math:`\sum_i L_c(x_i, y_i)` where:
 
-cpdef Expression kmh_ngram(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
-cpdef Expression pickrange(Expression x, unsigned v, unsigned u): return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
-cpdef Expression pick_batch_elem(Expression x, unsigned v): return Expression.from_cexpr(x.cg_version, c_pick_batch_elem(x.c(), v))
-cpdef Expression pick_batch_elems(Expression x, vector[unsigned] vs): return Expression.from_cexpr(x.cg_version, c_pick_batch_elems(x.c(), vs))
+    .. math::
+
+        L_c(x, y) = \\begin{cases}{lr}
+        \\frac{1}{2}(y - x)^2                   & \\textrm{for } \\vert y - f(x)\\vert  \le c, \\\\
+        c\, \\vert y - f(x)\\vert  - \\frac{1}{2}c^2 & \\textrm{otherwise.}
+        \end{cases}
+
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+    
+    Keyword Arguments:
+        c (number): The parameter of the huber distance parameterizing the cuttoff (default: (1.345))
+    
+    Returns:
+        dynet.Expression: The huber distance
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version, c_huber_distance(x.c(), y.c(), c))
+#expr-unsigned
+cpdef Expression kmax_pooling(Expression x, unsigned k, unsigned d=1):
+    """Kmax-pooling operation
+    
+    Select out k maximum values along a given dimension, in the same order as they appear. This will result in the size of the given dimension being changed to k.
+    
+    Args:
+        x (dynet.Expression): 
+        unsigned k (dynet.Expression): Number of maximum values to retrieve along the given dimension
+
+    Keyword Arguments:
+        unsigned d (int): Dimension on which to perform kmax-pooling (default: (1))
+    
+    Returns:
+        dynet.Expression: 
+    """
+    return Expression.from_cexpr(x.cg_version, c_kmax_pooling(x.c(), k, d))
+cpdef Expression pickneglogsoftmax(Expression x, unsigned v):
+    """Negative softmax log likelihood
+    
+    This function takes in a vector of scores  :code:`x`, and performs a log softmax, takes the negative, and selects the likelihood corresponding to the element :code:`v`. This is perhaps the most standard loss function for training neural networks to predict one out of a set of elements.
+
+    Args:
+        x (dynet.Expression): Input scores
+        v (int): True class
+    
+    Returns:
+        dynet.Expression: :math:`-\log\left(\\frac{e^{x_v}}{\sum_j e^{x_j}}\\right)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), v))
+cpdef Expression pickneglogsoftmax_batch(Expression x, vector[unsigned] vs):
+    """Negative softmax log likelihood on a batch
+    
+    This function takes in a batched vector of scores :code:`x`, and performs a log softmax, takes the negative, and selects the likelihood corresponding to the elements :code:`vs`. This is perhaps the most standard loss function for training neural networks to predict one out of a set of elements.
+    
+    Args:
+        x (dynet.Expression): Input scores
+        v (list): True classes
+    
+    Returns:
+        dynet.Expression: :math:`-\sum_{v\in \\texttt{vs}}\log\left(\\frac{e^{x_v}}{\sum_j e^{x_j}}\\right)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), vs))
+
+cpdef Expression kmh_ngram(Expression x, unsigned v):
+    """[summary]
+    
+    [description]
+    
+    Args:
+        x (dynet.Expression): 
+        v (dynet.Expression): 
+    
+    Returns:
+        dynet.Expression: 
+    """
+    return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
+cpdef Expression pickrange(Expression x, unsigned v, unsigned u):
+    """Pick range of elements
+    
+    Pick a range of elements from an expression.
+    
+    Args:
+        x (dynet.Expression): input expression
+        v (int): Beginning index
+        u (int): End index
+    
+    Returns:
+        dynet.Expression: The value of {x[v],...,x[u]}
+    """
+    return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
+cpdef Expression pick_batch_elem(Expression x, unsigned v):
+    """Pick batch element.
+
+    Pick batch element from a batched expression. For a Tensor with 3 batch elements:
+
+    .. math::
+
+        \\begin{pmatrix}
+            x_{1,1,1} & x_{1,1,2} \\\\
+            x_{1,2,1} & x_{1,2,2} \\\\
+        \end{pmatrix}\\\\
+        \\begin{pmatrix}
+            x_{2,1,1} & x_{2,1,2} \\\\
+            x_{2,2,1} & x_{2,2,2} \\\\
+        \end{pmatrix}\\\\
+        \\begin{pmatrix}
+            x_{3,1,1} & x_{3,1,2} \\\\
+            x_{3,2,1} & x_{3,2,2} \\\\
+        \end{pmatrix}
+
+    :code:`pick_batch_elem(t, 1)` will return a Tensor of
+
+    .. math::
+
+        \\begin{pmatrix}
+            x_{2,1,1} & x_{2,1,2} \\\\
+            x_{2,2,1} & x_{2,2,2} \\\\
+        \end{pmatrix}
+    
+    Args:
+        x (dynet.Expression): Input expression
+        v (int): The index of the batch element to be picked.
+    
+    Returns:
+        dynet.Expression: The expression of picked batch element. The picked element is a tensor whose batch dimension equals to one.
+    """
+    return Expression.from_cexpr(x.cg_version, c_pick_batch_elem(x.c(), v))
+cpdef Expression pick_batch_elems(Expression x, vector[unsigned] vs):
+    """Pick batch element.
+
+    Pick batch element from a batched expression. For a Tensor with 3 batch elements:
+
+    .. math::
+
+        \\begin{pmatrix}
+            x_{1,1,1} & x_{1,1,2} \\\\
+            x_{1,2,1} & x_{1,2,2} \\\\
+        \end{pmatrix}\\\\
+        \\begin{pmatrix}
+            x_{2,1,1} & x_{2,1,2} \\\\
+            x_{2,2,1} & x_{2,2,2} \\\\
+        \end{pmatrix}\\\\
+        \\begin{pmatrix}
+            x_{3,1,1} & x_{3,1,2} \\\\
+            x_{3,2,1} & x_{3,2,2} \\\\
+        \end{pmatrix}
+
+    :code:`pick_batch_elems(t, [2, 3])` will return a Tensor of
+
+    .. math::
+
+        \\begin{pmatrix}
+            x_{2,1,1} & x_{2,1,2} \\\\
+            x_{2,2,1} & x_{2,2,2} \\\\
+        \end{pmatrix}\\\\
+        \\begin{pmatrix}
+            x_{3,1,1} & x_{3,1,2} \\\\
+            x_{3,2,1} & x_{3,2,2} \\\\
+        \end{pmatrix}
+    
+    
+    Args:
+        x (dynet.Expression): Input expression
+        vs (list): A list of indices of the batch elements to be picked.
+    
+    Returns:
+        dynet.Expression: The expression of picked batch elements. The batch elements is a tensor whose batch dimension equals to the size of list `v`.
+    """
+    return Expression.from_cexpr(x.cg_version, c_pick_batch_elems(x.c(), vs))
 #expr-float
-cpdef Expression noise(Expression x, float stddev): return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
-cpdef Expression dropout(Expression x, float p): return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
-cpdef Expression block_dropout(Expression x, float p): return Expression.from_cexpr(x.cg_version, c_block_dropout(x.c(), p))
+cpdef Expression noise(Expression x, float stddev):
+    """Additive gaussian noise
+    
+    Add gaussian noise to an expression.
+    
+    Args:
+        x (dynet.Expression): Input expression
+        stddev (number): The standard deviation of the gaussian
+    
+    Returns:
+        dynet.Expression: :math:`y\sim\mathcal N(x,\\texttt{stddev})`
+    """
+    return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
+cpdef Expression dropout(Expression x, float p):
+    """Dropout
+    
+    With a fixed probability, drop out (set to zero) nodes in the input expression, and **scale** the remaining nodes by 1/p. Note that there are `two kinds of dropout <http://cs231n.github.io/neural-networks-2/#reg>`_: 
+
+    - *Regular dropout:* where we perform dropout at training time and then scale outputs by p at test time. 
+    - *Inverted dropout:* where we perform dropout and scaling at training time, and do not need to do anything at test time. 
+
+    DyNet implements the latter, so you only need to apply dropout at training time, and do not need to perform scaling and test time.
+    
+    Args:
+        x (dynet.Expression): Input expression
+        p (dynet.Expression): The dropout probability
+    
+    Returns:
+        dynet.Expression: The dropped out expression :math:`y=\\frac{1}{1-\\texttt{p}}x\circ z, z\sim\\text{Bernoulli}(1-\\texttt{p})`
+    """
+    return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
+cpdef Expression block_dropout(Expression x, float p):
+    """Block dropout
+    
+    Identical to the dropout operation, but either drops out *all* or *no* values in the expression, as opposed to making a decision about each value individually.
+    
+    Args:
+        x (dynet.Expression): Input expression
+        p (dynet.Expression): The dropout probability
+    
+    Returns:
+        dynet.Expression: The block dropout expression
+    """
+    return Expression.from_cexpr(x.cg_version, c_block_dropout(x.c(), p))
 #expr-dim
-cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1): return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d, batch_size)))
+cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1):
+    """Reshape to another size
+    
+    This node reshapes a tensor to another size, without changing the underlying layout of the data. The layout of the data in DyNet is column-major, so if we have a 3x4 matrix :
+
+    .. math::
+
+        \\begin{pmatrix}
+            x_{1,1} & x_{1,2} & x_{1,3} & x_{1,4} \\\\
+            x_{2,1} & x_{2,2} & x_{2,3} & x_{2,4} \\\\
+            x_{3,1} & x_{3,2} & x_{3,3} & x_{3,4} \\\\
+        \end{pmatrix}
+
+    and transform it into a 2x6 matrix, it will be rearranged as:
+
+    .. math::
+
+        \\begin{pmatrix}
+            x_{1,1} & x_{3,1} & x_{2,2} & x_{1,3} & x_{3,3} & x_{2,4} \\\\
+            x_{2,1} & x_{1,2} & x_{3,2} & x_{2,3} & x_{1,4} & x_{3,4} \\\\
+        \end{pmatrix}
+
+    **Note:** This is O(1) for forward, and O(n) for backward.
+    
+    Args:
+        x (dynet.Expression): Input expression
+        d (tuple): New dimension
+    
+    Keyword Arguments:
+        batch_size (int): New batch size (default: (1))
+    
+    Returns:
+        dynet.Expression: The reshaped expression
+    """
+    return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d, batch_size)))
+
+cpdef Expression max_dim(Expression x, unsigned d=0):
+    """Max out through a dimension
+    
+    Select out a element/row/column/sub-tensor from an expression, with maximum value along a given dimension. This will result in the dimension of the expression being reduced by 1.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Keyword Arguments:
+        d (int): Dimension on which to perform the maxout (default: (0))
+    
+    Returns:
+        dynet.Expression: An expression of sub-tensor with max value along dimension :code:`d`
+    """
+    return Expression.from_cexpr(x.cg_version, c_max_dim(x.c(), d))
+cpdef Expression min_dim(Expression x, unsigned d=0):
+    """Min out through a dimension
+    
+    Select out a element/row/column/sub-tensor from an expression, with minimum value along a given dimension. This will result in the dimension of the expression being reduced by 1.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Keyword Arguments:
+        d (int): Dimension on which to perform the minout (default: (0))
+    
+    Returns:
+        dynet.Expression: An expression of sub-tensor with min value along dimension :code:`d`
+    """
+    return Expression.from_cexpr(x.cg_version, c_min_dim(x.c(), d))
+
+def contract3d_1d(Expression x, Expression y):
+    """Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor
+    
+    The resulting tensor :math:`z` has coordinates :math:`z_ij = \sum_k x_{ijk} y_k`
+    
+    Args:
+        x (dynet.Expression): Rank 3 tensor
+        y (dynet.Expression): Vector
+    
+    Returns:
+        Matrix
+        dynet.Expression
+    """
+    ensure_freshness(y)
+    return Expression.from_cexpr(x.cg_version, c_contract3d_1d(x.c(),y.c()))
+
+def contract3d_1d_bias(Expression x, Expression y, Expression b):
+    """Same as :code:`contract3d_1d` with an additional bias parameter
+
+    The resulting tensor :math:`z` has coordinates :math:`z_{ij} = b_{ij}+\sum_k x_{ijk} y_k`
+
+    Args:
+        x (dynet.Expression): Rank 3 tensor
+        y (dynet.Expression): Vector
+        b (dynet.Expression): Bias vector
+    
+    Returns:
+        Matrix
+        dynet.Expression
+    """
+    ensure_freshness(y)
+    ensure_freshness(b)
+    return Expression.from_cexpr(x.cg_version, c_contract3d_1d(x.c(),y.c(),b.c()))
+
+def contract3d_1d_1d(Expression x, Expression y, Expression z):
+    """Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor
+
+    This is the equivalent of calling :code:`contract3d_1d` and then performing a matrix vector multiplication.
+
+    The resulting tensor :math:`t` has coordinates :math:`t_i = \sum_{j,k} x_{ijk} y_k z_j`
+    
+    Args:
+        x (dynet.Expression): Rank 3 tensor
+        y (dynet.Expression): Vector
+        z (dynet.Expression): Vector
+    
+    Returns:
+        Vector
+        dynet.Expression
+    """
+    ensure_freshness(y)
+    ensure_freshness(z)
+    return Expression.from_cexpr(x.cg_version, c_contract3d_1d_1d(x.c(),y.c(),z.c()))
+
+def contract3d_1d_1d_bias(Expression x, Expression y, Expression z, Expression b):
+    """Same as :code:`contract3d_1d_1d` with an additional bias parameter
+ 
+    This is the equivalent of calling :code:`contract3d_1d` and then performing an affine transform.
+
+    The resulting tensor :math:`t` has coordinates :math:`t_i = b_i + \sum_{j,k} x_{ijk} y_k z_j`
+
+    Args:
+        x (dynet.Expression): Rank 3 tensor
+        y (dynet.Expression): Vector
+        z (dynet.Expression): Vector
+        b (dynet.Expression): Bias vector
+    
+    Returns:
+        Vector
+        dynet.Expression
+    """
+    ensure_freshness(y)
+    ensure_freshness(z)
+    ensure_freshness(b)
+    return Expression.from_cexpr(x.cg_version, c_contract3d_1d_1d(x.c(),y.c(),z.c(),b.c()))
+
 
 cpdef Expression esum(list xs):
+    """Sum
+    
+    This performs an elementwise sum over all the expressions in :code:`xs`
+    
+    Args:
+        xs (list): A list of expression of same dimension
+    
+    Returns:
+        dynet.Expression: An expression where the ith element is equal to :math:`\sum_{j=0}\\texttt{xs[}j\\texttt{][}i\\texttt{]}`
+    """
     assert xs, 'List is empty, nothing to esum.'
     cdef vector[CExpression] cvec
     cvec = vector[CExpression]()
@@ -1579,6 +2870,16 @@ cpdef Expression esum(list xs):
     return Expression.from_cexpr(x.cg_version, c_sum(cvec))
 
 cpdef Expression logsumexp(list xs):
+    """Log, sum, exp
+    
+    The elementwise "logsumexp" function that calculates :math:`\ln(\sum_i e^{xs_i})`, used in adding probabilities in the log domain.
+    
+    Args:
+        xs (list): A list of expression of same dimension
+
+    Returns:
+        dynet.Expression: An expression where the ith element is equal to :math:`\ln\left(\sum_{j=0}e^{\\texttt{xs[}j\\texttt{][}i\\texttt{]}}\\right)`
+    """
     assert xs, 'List is empty, nothing to logsumexp.'
     cdef vector[CExpression] cvec
     cvec = vector[CExpression]()
@@ -1590,6 +2891,16 @@ cpdef Expression logsumexp(list xs):
     return Expression.from_cexpr(x.cg_version, c_logsumexp(cvec))
 
 cpdef Expression average(list xs):
+    """Average
+    
+    This performs an elementwise average over all the expressions in :code:`xs`
+    
+    Args:
+        xs (list): A list of expression of same dimension
+    
+    Returns:
+        dynet.Expression: An expression where the ith element is equal to :math:`\\frac{1}{\\texttt{len(xs)}}\sum_{j=0}\\texttt{xs[}j\\texttt{][}i\\texttt{]}`
+    """
     assert xs, 'List is empty, nothing to average.'
     cdef vector[CExpression] cvec
     cdef Expression x
@@ -1599,6 +2910,16 @@ cpdef Expression average(list xs):
     return Expression.from_cexpr(x.cg_version, c_average(cvec))
 
 cpdef Expression emax(list xs):
+    """Max
+    
+    This performs an elementwise max over all the expressions in :code:`xs`
+
+    Args:
+        xs (list): A list of expression of same dimension
+    
+    Returns:
+        dynet.Expression: An expression where the ith element is equal to :math:`\max_j\\texttt{xs[}j\\texttt{][}i\\texttt{]}`
+    """
     assert xs, 'List is empty, nothing to emax.'
     cdef Expression c
     cdef Expression x
@@ -1611,6 +2932,16 @@ cpdef Expression emax(list xs):
     #return Expression.from_cexpr(x.cg_version, c_max(cvec))
 
 cpdef Expression concatenate_cols(list xs):
+    """Concatenate columns
+    
+    Perform a concatenation of the columns in multiple expressions. All expressions must have the same number of rows.
+    
+    Args:
+        xs (list): A list of expressions
+    
+    Returns:
+        dynet.Expression: The expression with the columns concatenated
+    """
     assert xs, 'List is empty, nothing to concatenate.'
     cdef vector[CExpression] cvec
     cdef Expression x
@@ -1619,16 +2950,38 @@ cpdef Expression concatenate_cols(list xs):
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat_cols(cvec))
 
-cpdef Expression concatenate(list xs):
+cpdef Expression concatenate(list xs, unsigned d=0):
+    """Concatenate
+    
+     Perform a concatenation of multiple expressions along a particular dimension.
+     All expressions must have the same dimensions except for the dimension to be concatenated (rows by default).
+    
+    Args:
+        xs (list): A list of expressions
+        d: The dimension along with to perform concatenation
+    
+    Returns:
+        dynet.Expression: The expression concatenated along the particular dimension
+    """
     assert xs, 'List is empty, nothing to concatenate.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
         ensure_freshness(x) 
         cvec.push_back(x.c())
-    return Expression.from_cexpr(x.cg_version, c_concat(cvec))
+    return Expression.from_cexpr(x.cg_version, c_concat(cvec, d))
 
 cpdef Expression concat_to_batch(list xs):
+    """Concatenate list of expressions to a single batched expression
+    
+    Perform a concatenation of several expressions along the batch dimension. All expressions must have the same shape except for the batch dimension.
+
+    Args:
+        xs (list): A list of expressions of same dimension (except batch size)
+    
+    Returns:
+        dynet.Expression: The expression with the batch dimensions concatenated
+    """
     assert xs, 'List is empty, nothing to concatenate.'
     cdef vector[CExpression] cvec
     cdef Expression x
@@ -1638,6 +2991,16 @@ cpdef Expression concat_to_batch(list xs):
     return Expression.from_cexpr(x.cg_version, c_concat_to_batch(cvec))
 
 cpdef Expression affine_transform(list exprs):
+    """Affine transform
+    
+    This performs an affine transform over an arbitrary (odd) number of expressions held in the input initializer list xs. The first expression is the "bias," which is added to the expression as-is. The remaining expressions are multiplied together in pairs, then added. A very common usage case is the calculation of the score for a neural network layer (e.g. :math:`b + Wz`) where b is the bias, W is the weight matrix, and z is the input. In this case :code:`xs[0] = b`, :code:`xs[1] = W`, and :code:`xs[2] = z`.
+     
+    Args:
+        exprs (list): A list containing an odd number of expressions
+    
+    Returns:
+        dynet.Expression: An expression equal to: :code:`xs[0] + xs[1]*xs[2] + xs[3]*xs[4] + ...`
+    """
     assert exprs, 'List input to affine_transform must not be empty.'
     cdef Expression e
     cdef vector[CExpression] ves
@@ -1653,6 +3016,8 @@ cpdef Expression affine_transform(list exprs):
 # TODO: unify these with inheritance
 
 cdef class _RNNBuilder: # (((
+    """
+    """
     cdef CRNNBuilder *thisptr
     cdef RNNState _init_state
     cdef int cg_version 
@@ -1660,8 +3025,21 @@ cdef class _RNNBuilder: # (((
     def __dealloc__(self):
         del self.thisptr
 
-    cpdef set_dropout(self, float f): self.thisptr.set_dropout(f)
-    cpdef disable_dropout(self): self.thisptr.disable_dropout()
+    cpdef set_dropout(self, float f):
+        """[summary]
+        
+        [description]
+        
+        Args:
+            float f: [description]
+        """
+        self.thisptr.set_dropout(f)
+    cpdef disable_dropout(self):
+        """[summary]
+        
+        [description]
+        """
+        self.thisptr.disable_dropout()
 
     cdef new_graph(self):
         self.thisptr.new_graph(_cg.thisptr[0])
@@ -1752,6 +3130,17 @@ cdef class _RNNBuilder: # (((
         return res
 
     cpdef RNNState initial_state(self,vecs=None):
+        """Get a :code:`dynet.RNNState`
+        
+        This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
+        
+        Args:
+            vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression`s  (default: {None})
+        
+        Returns:
+            :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
+            dynet.RNNState
+        """
         if self.cg_version != _cg.version():
             self.new_graph()
             if vecs is not None:
@@ -1762,6 +3151,19 @@ cdef class _RNNBuilder: # (((
         return self._init_state
 
     cpdef RNNState initial_state_from_raw_vectors(self,vecs=None):
+        """Get a :code:`dynet.RNNState`
+        
+        This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
+
+        Use this if you want to initialize the hidden states with values directly rather than expressions.
+        
+        Args:
+            vecs (list): Initial hidden state for each layer as a list of numpy arrays  (default: {None})
+        
+        Returns:
+            :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
+            dynet.RNNState
+        """
         if self.cg_version != _cg.version():
             self.new_graph()
             if vecs is not None:
@@ -1778,6 +3180,10 @@ cdef class _RNNBuilder: # (((
 #)
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # (((
+    """[summary]
+    
+    [description]
+    """
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -1789,6 +3195,10 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # (((
 #)
     
 cdef class GRUBuilder(_RNNBuilder): # (((
+    """[summary]
+    
+    [description]
+    """
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -1800,6 +3210,10 @@ cdef class GRUBuilder(_RNNBuilder): # (((
 # )
 
 cdef class LSTMBuilder(_RNNBuilder): # (((
+    """[summary]
+    
+    [description]
+    """
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
             self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
@@ -1811,17 +3225,84 @@ cdef class LSTMBuilder(_RNNBuilder): # (((
 # )
 
 cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
+    """VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
+    
+    This cell runs according to the following dynamics :
+
+    .. math::
+
+        \\begin{split}
+            i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+b_i)\\\\
+            f_t & = \sigma(W_{fx}x_t+W_{fh}h_{t-1}+b_f+1)\\\\
+            o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+b_o)\\\\
+            \\tilde{c_t} & = \\tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\\\
+            c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
+            h_t & = \\tanh(c_t)\circ o_t\\\\
+        \end{split}
+
+    Args:
+        layers (int): Number of layers
+        input_dim (int): Dimension of the input
+        hidden_dim (int): Dimension of the recurrent units
+        model (dynet.Model): Model to hold the parameters
+
+    """
+    cdef CVanillaLSTMBuilder* thisvanillaptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
-            self.thisptr = new CVanillaLSTMBuilder()
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
+
+    cpdef void set_dropouts(self, float d, float d_r):
+        """Set the dropout rates
+        
+        The dropout implemented here is the variational dropout with tied weights introduced in `Gal, 2016 <http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks>`_
+
+        More specifically, dropout masks :math:`\mathbf{z_x}\sim \\text(1-d_x)`, :math:`\mathbf{z_h}\sim \\text{Bernoulli}(1-d_h)` are sampled at the start of each sequence.
+
+        The dynamics of the cell are then modified to :
+
+        .. math::
+
+            \\begin{split}
+                i_t & =\sigma(W_{ix}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ih}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_i)\\\\
+                f_t & = \sigma(W_{fx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{fh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_f)\\\\
+                o_t & = \sigma(W_{ox}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{oh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_o)\\\\
+                \\tilde{c_t} & = \tanh(W_{cx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\\\
+                c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
+                h_t & = \\tanh(c_t)\circ o_t\\\\
+            \end{split}
+
+        For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+
+        Args:
+            d (number): Dropout rate :math:`d_x` for the input :math:`x_t`
+            d_r (number): Dropout rate :math:`d_x` for the output :math:`h_t`
+        """
+        self.thisvanillaptr.set_dropout(d, d_r)
+
+    cpdef void set_dropout_masks(self, unsigned batch_size=1):
+        """Set dropout masks at the beginning of a sequence for a specific batch size
+        
+        If this function is not called on batched input, the same mask will be applied across all batch elements. Use this to apply different masks to each batch element
+
+        You need to call this __AFTER__ calling `initial_state`
+        
+        Args:
+            batch_size (int): Batch size (default: {1})
+        """
+        self.thisvanillaptr.set_dropout_masks(batch_size)
 
     def whoami(self): return "VanillaLSTMBuilder"
 # )
 
 cdef class FastLSTMBuilder(_RNNBuilder): # (((
+    """[summary]
+    
+    [description]
+    """
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         self.cg_version = -1
@@ -1875,17 +3356,17 @@ class BiRNNBuilder(object):
         returns the list of state pairs (stateF, stateB) obtained by adding 
         inputs to both forward (stateF) and backward (stateB) RNNs.  
         Args:
-            es: a list of Expression
+            es (list): a list of Expression
 
         see also transduce(xs)
 
-        .transduce(xs) is different from .add_inputs(xs) in the following way:
+        code:`.transduce(xs)` is different from .add_inputs(xs) in the following way:
 
-            .add_inputs(xs) returns a list of RNNState pairs. RNNState objects can be
+        - code:`.add_inputs(xs)` returns a list of RNNState pairs. RNNState objects can be
              queried in various ways. In particular, they allow access to the previous
              state, as well as to the state-vectors (h() and s() )
 
-            .transduce(xs) returns a list of Expression. These are just the output
+        - :code:`.transduce(xs)` returns a list of Expression. These are just the output
              expressions. For many cases, this suffices. 
              transduce is much more memory efficient than add_inputs. 
         """
@@ -1945,36 +3426,71 @@ cdef class RNNState: # (((
         self._out = out
 
     cpdef RNNState set_h(self, es=None):
+        """Manually set the output :math:`h_t`
+        
+        Args:
+            es (list): List of expressions, one for each layer (default: {None})
+        
+        Returns:
+            New RNNState
+            dynet.RNNState
+        """
         cdef Expression res = self.builder.set_h(CRNNPointer(self.state_idx), es)
         cdef int state_idx = <int>self.builder.thisptr.state()
         return RNNState(self.builder, state_idx, self, res)
 
     cpdef RNNState set_s(self, es=None):
+        """Manually set the hidden states
+        
+        This is different from :code:`set_h` because, for LSTMs for instance this also sets the cell state. The format is :code:`[new_c[0],...,new_c[n],new_h[0],...,new_h[n]]`
+        
+        Args:
+            es (list): List of expressions, in this format : :code:`[new_c[0],...,new_c[n],new_h[0],...,new_h[n]]` (default: {None})
+        
+        Returns:
+            New RNNState
+            dynet.RNNState
+        """
         cdef Expression res = self.builder.set_s(CRNNPointer(self.state_idx), es)
         cdef int state_idx = <int>self.builder.thisptr.state()
         return RNNState(self.builder, state_idx, self, res)
 
     cpdef RNNState add_input(self, Expression x):
+        """This computes :math:`h_t = \\text{RNN}(x_t)`
+        
+        Args:
+            x (dynet.Expression): Input expression
+        
+        Returns:
+            New RNNState
+            dynet.RNNState
+        """
         cdef Expression res = self.builder.add_input_to_prev(CRNNPointer(self.state_idx), x)
         cdef int state_idx = <int>self.builder.thisptr.state()
         return RNNState(self.builder, state_idx, self, res)
 
     def add_inputs(self, xs):
-        """
-        returns the list of states obtained by adding the given inputs
-        to the current state, one by one.
+        """Returns the list of states obtained by adding the given inputs to the current state, one by one.
 
-        see also transduce(xs)
+        see also :code:`transduce(xs)`
 
-        .transduce(xs) is different from .add_inputs(xs) in the following way:
+        :code:`.transduce(xs)` is different from :code:`.add_inputs(xs)` in the following way:
 
-            .add_inputs(xs) returns a list of RNNState. RNNState objects can be
+        - :code:`.add_inputs(xs)` returns a list of RNNState. RNNState objects can be
              queried in various ways. In particular, they allow access to the previous
-             state, as well as to the state-vectors (h() and s() )
+             state, as well as to the state-vectors (:code:`h()` and :code:`s()` )
 
-            .transduce(xs) returns a list of Expression. These are just the output
+        - :code:`.transduce(xs)` returns a list of Expression. These are just the output
              expressions. For many cases, this suffices. 
-             transduce is much more memory efficient than add_inputs. 
+        
+        :code:`transduce` is much more memory efficient than :code:`add_inputs`.
+
+        Args:
+            xs (list): list of input expressions
+
+        Returns:
+            New RNNState
+            dynet.RNNState
         """
         states = []
         cur = self
@@ -1988,17 +3504,25 @@ cdef class RNNState: # (((
         returns the list of output Expressions obtained by adding the given inputs
         to the current state, one by one.
         
-        see also add_inputs(xs)
+        see also :code:`add_inputs(xs)`
 
-        .transduce(xs) is different from .add_inputs(xs) in the following way:
+        :code:`.transduce(xs)` is different from :code:`.add_inputs(xs)` in the following way:
 
-            .add_inputs(xs) returns a list of RNNState. RNNState objects can be
+        - :code:`.add_inputs(xs)` returns a list of RNNState. RNNState objects can be
              queried in various ways. In particular, they allow access to the previous
-             state, as well as to the state-vectors (h() and s() )
+             state, as well as to the state-vectors (:code:`h()` and :code:`s()` )
 
-            .transduce(xs) returns a list of Expression. These are just the output
+        - :code:`.transduce(xs)` returns a list of Expression. These are just the output
              expressions. For many cases, this suffices. 
-             transduce is much more memory efficient than add_inputs. 
+        
+        :code:`transduce` is much more memory efficient than :code:`add_inputs`.
+
+        Args:
+            xs (list): list of input expressions
+
+        Returns:
+            New RNNState
+            dynet.RNNState
         """
         cdef list exprs = []
         cdef Expression res
@@ -2032,9 +3556,23 @@ cdef class RNNState: # (((
         """
         return tuple(self.builder.get_s(CRNNPointer(self.state_idx)))
 
-    cpdef RNNState prev(self): return self._prev
+    cpdef RNNState prev(self):
+        """Gets previous RNNState
 
-    def b(self): return self.builder
+        In case you need to rewind
+        """
+        return self._prev
+
+    def b(self):
+        """Get the underlying RNNBuilder
+        
+        In case you need to set dropout or other stuff.
+        
+        Returns:
+            Underlying RNNBuilder
+            dynet.RNNBuilder
+        """
+        return self.builder
     #)
 
 # StackedRNNState   TODO: do at least minimal testing for this #(((
@@ -2088,7 +3626,7 @@ cdef class Trainer:
         The update equation is different for each trainer, check the online c++ documentation for more details on what each trainer does
         
         Keyword Args:
-            s(number): Optional scaling factor to apply on the gradient. (default: (1.0))
+            s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
         self.thisptr.update(s)
     cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
@@ -2101,7 +3639,7 @@ cdef class Trainer:
             updated_lookups(list): Indices of lookup parameters to update
         
         Keyword Args:
-            s(number): Optional scaling factor to apply on the gradient. (default: (1.0))
+            s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
@@ -2114,7 +3652,7 @@ cdef class Trainer:
         Basically learning rate decay.
         
         Keyword Args:
-            r(number): Number of epoch that passed (default: (1.0))
+            r(number): Number of epoch that passed (default: 1.0)
         """
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -2162,13 +3700,46 @@ cdef class SimpleSGDTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: (0.1))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        e0(number): Initial learning rate (default: 0.1)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
         self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
     def whoami(self):
         return "SimpleSGDTrainer"
+
+cdef class CyclicalSGDTrainer(Trainer):
+    """This trainer performs stochastic gradient descent with a cyclical learning rate as proposed in `Smith, 2015 <https://arxiv.org/abs/1506.01186>`_.
+
+    This uses a triangular function with optional exponential decay.
+
+    More specifically, at each update, the learning rate :math:`\eta` is updated according to :
+
+    .. math::
+
+        \\begin{split}
+        \\text{cycle} &= \left\lfloor 1 + \\frac{\\texttt{it}}{2 \\times\\texttt{step_size}} \\right\\rfloor\\\\
+       x &= \left\\vert \\frac{\\texttt{it}}{\\texttt{step_size}} - 2 \\times \\text{cycle} + 1\\right\\vert\\\\
+       \eta &= \eta_{\\text{min}} + (\eta_{\\text{max}} - \eta_{\\text{min}}) \\times \max(0, 1 - x) \\times \gamma^{\\texttt{it}}\\\\
+       \end{split}
+    
+    Args:
+        m(dynet.Model): Model to be trained
+    
+    Keyword Args:
+        e0_min (number): Lower learning rate (default: {0.01})
+        e0_max (number): Upper learning rate (default: {0.1})
+        step_size (number): Period of the triangular function in number of iterations (__not__ epochs). According to the original paper, this should be set around (2-8) x (training iterations in epoch) (default: {2000})
+        gamma (number): Learning rate upper bound decay parameter (default: {0.0})
+        edecay (number): Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by :math:`\gamma` (default: {0.0})
+    """
+    cdef CCyclicalSGDTrainer *thischildptr
+    def __cinit__(self, Model m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
+        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr[0], e0_min, e0_max, step_size, gamma, edecay)
+    cpdef update(self, float s=1.0):
+        self.thischildptr.update(s)
+    def whoami(self):
+        return "CyclicalSGDTrainer"
 
 cdef class MomentumSGDTrainer(Trainer):
     """Stochastic gradient descent with momentum
@@ -2179,9 +3750,9 @@ cdef class MomentumSGDTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: (0.1))
-        mom(number): Momentum (default: (0.9))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        e0(number): Initial learning rate (default: 0.1)
+        mom(number): Momentum (default: 0.9)
+        edecay(number): Learning rate decay parameter (default: 0.0)
 
     """
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
@@ -2199,9 +3770,9 @@ cdef class AdagradTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: (0.1))
-        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-20))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        e0(number): Initial learning rate (default: 0.1)
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-20)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
         self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
@@ -2218,9 +3789,9 @@ cdef class AdadeltaTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-6))
-        rho(number): Update parameter for the moving average of updates in the numerator (default: (0.95))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-6)
+        rho(number): Update parameter for the moving average of updates in the numerator (default: 0.95)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
         self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
@@ -2236,10 +3807,10 @@ cdef class RMSPropTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: (0.001))
-        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-8))
-        rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: (0.9))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        e0(number): Initial learning rate (default: 0.001)
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
+        rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: 0.9)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
         self.thisptr = new CRMSPropTrainer(m.thisptr[0], e0, eps, rho, edecay)
@@ -2255,11 +3826,11 @@ cdef class AdamTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-        alpha(number): Initial learning rate (default: (0.001))
-        beta_1(number): Moving average parameter for the mean (default: (0.9))
-        beta_2(number): Moving average parameter for the variance (default: (0.999))
-        eps(number): Epsilon parameter to prevent numerical instability (default: (1e-8))
-        edecay(number): Learning rate decay parameter (default: (0.0))
+        alpha(number): Initial learning rate (default: 0.001)
+        beta_1(number): Moving average parameter for the mean (default: 0.9)
+        beta_2(number): Moving average parameter for the variance (default: 0.999)
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
+        edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
         self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
