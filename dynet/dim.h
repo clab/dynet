@@ -217,18 +217,24 @@ struct Dim {
    * \param reduce_batch reduce the batch dimension or not
    */
   inline void delete_dims(std::vector<unsigned int> dims, bool reduce_batch){
-    DYNET_ARG_CHECK(dims.size() < nd, "Out of bounds exception in Dim::delete_dims");
+    DYNET_ARG_CHECK(dims.size() <= nd, "Out of bounds exception in Dim::delete_dims");
     for(unsigned int i = 0; i < dims.size(); i++) {
       DYNET_ARG_CHECK(dims[i] < nd, "Out of bounds exception in Dim::delete_dims");
     }
 
-    int flag = 0;
-    for(unsigned int i = 0; i < nd; i++){
-      if(std::find(dims.begin(), dims.end(), i) == dims.end()){
-        d[flag++] = d[i];
-      }
+    if(dims.size() == nd){
+        nd = 1;
+        d[0] = 1;
     }
-    nd = flag;
+    else{
+      int flag = 0;
+      for(unsigned int i = 0; i < nd; i++){
+        if(std::find(dims.begin(), dims.end(), i) == dims.end()){
+          d[flag++] = d[i];
+        }
+      }
+      nd = flag;
+    }
 
     if(reduce_batch){
       bd = 1;
