@@ -415,7 +415,7 @@ real as_scalar(const Tensor& t);
 std::vector<real> as_vector(const Tensor& v);
 
 struct TensorTools {
-  static float AccessElement(const Tensor& v, const Dim& index);
+  static float access_element(const Tensor& v, const Dim& index);
 };
 
 /////////////////////////////////////
@@ -425,7 +425,6 @@ struct TensorTools {
 struct Sum;
 struct LogSumExp;
 struct AffineTransform;
-struct ConcatenateColumns;
 struct Concatenate;
 struct Average;
 
@@ -445,9 +444,12 @@ struct Expression {
   const Dim& dim() const { return pg->get_dimension(i); }
 };
 
-// This template gets used to instantiate operations on vector<Expression>
+// These templates get used to instantiate operations on vector<Expression>
 namespace detail {
 template <typename F, typename T> Expression f(const T& xs);
+
+template <typename F, typename T, typename T1>
+Expression f(const T& xs, const T1& arg1);
 }
 
 /* INPUT OPERATIONS */
@@ -571,8 +573,22 @@ Expression pick(const Expression& x, const std::vector<unsigned>& v, unsigned d 
 Expression pick(const Expression& x, const unsigned* v, unsigned d = 0);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
-%template(concatenate_cols) detail::f<ConcatenateColumns, std::vector<Expression>>;
-%template(concatenate) detail::f<Concatenate, std::vector<Expression>>;
+// Concatenate and ConcatenateCols got changed around, need to implement
+// explicitly now.
+%{
+namespace dynet { namespace expr {
+inline Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0) {
+  return detail::f<Concatenate>(xs, d);
+};
+
+inline Expression concatenate_cols(const std::vector<Expression>& xs) {
+  return detail::f<Concatenate>(xs, 1);
+};
+} }
+%}
+
+Expression concatenate(const std::vector<Expression>& xs);
+Expression concatenate_cols(const std::vector<Expression>& xs);
 
 /* NOISE OPERATIONS */
 
@@ -582,8 +598,9 @@ Expression block_dropout(const Expression& x, real p);
 
 /* CONVOLUTION OPERATIONS */
 
-Expression conv1d_narrow(const Expression& x, const Expression& f);
-Expression conv1d_wide(const Expression& x, const Expression& f);
+// These two were commented out in the C++ source code.
+//Expression conv1d_narrow(const Expression& x, const Expression& f);
+//Expression conv1d_wide(const Expression& x, const Expression& f);
 Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
