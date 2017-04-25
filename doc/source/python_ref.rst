@@ -24,18 +24,18 @@ Model and Parameters
 
 Model
 ~~~~~
-.. autoclass::dynet.Model
+.. autoclass:: dynet.Model
    :members:
    :show-inheritance:
 
 Parameters and LookupParameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass::dynet.Parameters
+.. autoclass:: dynet.Parameters
    :members:
    :show-inheritance:
 
-.. autoclass::dynet.LookupParameters
+.. autoclass:: dynet.LookupParameters
    :members:
    :show-inheritance:
 
@@ -164,6 +164,8 @@ Arithmetic operations
 
 .. autofunction:: dynet.sqrt
 
+.. autofunction:: dynet.abs
+
 .. autofunction:: dynet.erf
 
 .. autofunction:: dynet.cube
@@ -254,6 +256,10 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.concat_to_batch
 
+.. autofunction:: dynet.max_dim
+
+.. autofunction:: dynet.min_dim
+
 .. autofunction:: dynet.nobackprop
 
 .. autofunction:: dynet.flip_gradient
@@ -283,13 +289,24 @@ Linear algebra operations
 Convolution/Pooling operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: dynet.conv1d_narrow
+.. autofunction:: dynet.conv2d
 
-.. autofunction:: dynet.conv1d_wide
+.. autofunction:: dynet.conv2d_bias
 
 .. autofunction:: dynet.filter1d_narrow
 
 .. autofunction:: dynet.kmax_pooling
+
+Tensor operations
+^^^^^^^^^^^^^^^^^
+
+.. autofunction:: dynet.contract3d_1d
+
+.. autofunction:: dynet.contract3d_1d_bias
+
+.. autofunction:: dynet.contract3d_1d_1d
+
+.. autofunction:: dynet.contract3d_1d_1d_bias
 
 Recurrent Neural Networks
 -------------------------
@@ -345,6 +362,10 @@ Optimizers
    :show-inheritance:
 
 .. autoclass:: dynet.SimpleSGDTrainer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: dynet.CyclicalSGDTrainer
    :members:
    :show-inheritance:
 

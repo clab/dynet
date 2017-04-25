@@ -16,7 +16,7 @@ struct NodeTest {
   NodeTest() {
     // initialize if necessary
     if (default_device == nullptr) {
-      for (auto x : {"NodeTest", "--dynet-mem", "10"}) {
+      for (auto x : {"NodeTest", "--dynet-mem", "100"}) {
         av.push_back(strdup(x));
       }
       char **argv = &av[0];
@@ -45,27 +45,27 @@ struct NodeTest {
                                            .211f, .222f, .233f, .212f, .222f, .232f, .213f, .223f, .233f
                                           };
     param1 = mod.add_parameters({3});
-    TensorTools::SetElements(param1.get()->values, param1_vals);
+    TensorTools::set_elements(param1.get()->values, param1_vals);
     param2 = mod.add_parameters({3});
-    TensorTools::SetElements(param2.get()->values, param2_vals);
+    TensorTools::set_elements(param2.get()->values, param2_vals);
     param3 = mod.add_parameters({3});
-    TensorTools::SetElements(param3.get()->values, param3_vals);
+    TensorTools::set_elements(param3.get()->values, param3_vals);
     param4 = mod.add_parameters({6});
-    TensorTools::SetElements(param4.get()->values, param4_vals);
+    TensorTools::set_elements(param4.get()->values, param4_vals);
     param_scalar1 = mod.add_parameters({1});
-    TensorTools::SetElements(param_scalar1.get()->values, param_scalar1_vals);
+    TensorTools::set_elements(param_scalar1.get()->values, param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
-    TensorTools::SetElements(param_scalar2.get()->values, param_scalar2_vals);
+    TensorTools::set_elements(param_scalar2.get()->values, param_scalar2_vals);
     param_kernel1 = mod.add_parameters({3, 2});
-    TensorTools::SetElements(param_kernel1.get()->values, param_kernel1_vals);
+    TensorTools::set_elements(param_kernel1.get()->values, param_kernel1_vals);
     param_filter1 = mod.add_parameters({3, 2, 2});
-    TensorTools::SetElements(param_filter1.get()->values, param_filter1_vals);
+    TensorTools::set_elements(param_filter1.get()->values, param_filter1_vals);
     param_square1 = mod.add_parameters({3, 3});
-    TensorTools::SetElements(param_square1.get()->values, param_square1_vals);
+    TensorTools::set_elements(param_square1.get()->values, param_square1_vals);
     param_cube1 = mod.add_parameters({3, 3, 3});
-    TensorTools::SetElements(param_cube1.get()->values, param_cube1_vals);
+    TensorTools::set_elements(param_cube1.get()->values, param_cube1_vals);
     lookup1 = mod.add_lookup_parameters(3, {3});
-    TensorTools::SetElements(lookup1.get()->all_values, param_square1_vals);
+    TensorTools::set_elements(lookup1.get()->all_values, param_square1_vals);
   }
   ~NodeTest() {
     for (auto x : av) free(x);
@@ -137,6 +137,34 @@ BOOST_AUTO_TEST_CASE( logsumexp_gradient ) {
   Expression x1 = parameter(cg, param_scalar1);
   Expression x2 = parameter(cg, param_scalar2);
   Expression z = logsumexp({x1, x2});
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression logsumexp(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( logsumexp_vector_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression z = sum_elems(logsumexp({x1, x2}));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression logsumexp(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( logsumexp_singleelem_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param1);
+  Expression y = reshape(x, Dim({1}, 3));
+  Expression z = sum_batches(logsumexp({y}));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression logsumexp(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( logsumexp_inequal_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x3 = x1+x2;
+  Expression z = sum_batches(sum_elems(logsumexp({x1,x3})));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -410,6 +438,15 @@ BOOST_AUTO_TEST_CASE( sqrt_gradient ) {
   dynet::ComputationGraph cg;
   Expression x3 = parameter(cg, param3);
   Expression y = sqrt(x3);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression abs(const Expression& x);
+BOOST_AUTO_TEST_CASE( abs_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x3 = parameter(cg, param3);
+  Expression y = abs(x3);
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -692,9 +729,19 @@ BOOST_AUTO_TEST_CASE( reshape_batch_gradient ) {
 // Expression transpose(const Expression& x);
 BOOST_AUTO_TEST_CASE( transpose_gradient ) {
   dynet::ComputationGraph cg;
-  Expression x1 = parameter(cg, param1);
-  Expression y = softsign(x1);
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = x1 * transpose(x1);
   Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression transpose(const Expression& x);
+BOOST_AUTO_TEST_CASE( transpose_higherorder_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression cube1 = parameter(cg, param_cube1);
+  Expression x1 = reshape(transpose(cube1, {2, 0, 1}), Dim({9, 3}));
+  Expression x2 = reshape(transpose(cube1, {1, 2, 0}), Dim({3, 9}));
+  Expression z = sum_elems(x1 * x2);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -832,6 +879,7 @@ BOOST_AUTO_TEST_CASE( possion_loss_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+/*
 // Expression conv1d_narrow(const Expression& x, const Expression& f);
 BOOST_AUTO_TEST_CASE( conv1d_narrow_gradient ) {
   dynet::ComputationGraph cg;
@@ -850,6 +898,7 @@ BOOST_AUTO_TEST_CASE( conv1d_wide_gradient ) {
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
+*/
 
 // Expression filter1d_narrow(const Expression& x, const Expression& f);
 BOOST_AUTO_TEST_CASE( filter1d_narrow_gradient ) {
@@ -906,6 +955,44 @@ BOOST_AUTO_TEST_CASE( sum_cols_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression conv2d(const Expression& x ,const Expression& f, const std::vector<unsigned>& stride, bool is_valid);
+BOOST_AUTO_TEST_CASE( conv2d_valid_gradient ) {
+  dynet::ComputationGraph cg;
+  Parameter param_kernel = mod.add_parameters({2, 2, 2, 3});
+  std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
+                                         .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
+                                         .211f, .222f, .233f, .212f, .222f, .232f};
+  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  std::vector<float> conv2d_batch_vals(50 * 50 * 2 * 2);
+  for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
+    conv2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
+  }
+  Expression x = input(cg, Dim({50, 50, 2}, 2), conv2d_batch_vals);
+  Expression kernel = parameter(cg, param_kernel);
+  vector<unsigned> stride = {3, 3}; bool is_valid = true;
+  Expression y = conv2d(x, kernel, stride, is_valid);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
+  dynet::ComputationGraph cg;
+  Parameter param_kernel = mod.add_parameters({2, 2, 2, 3});
+  std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
+                                         .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
+                                         .211f, .222f, .233f, .212f, .222f, .232f};
+  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  std::vector<float> conv2d_batch_vals(2 * 50 * 50 * 2);
+  for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
+    conv2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
+  }
+  Expression x = input(cg, Dim({50, 50, 2}, 2), conv2d_batch_vals);
+  Expression kernel = parameter(cg, param_kernel);
+  vector<unsigned> stride = {4, 4}; bool is_valid = false;
+  Expression y = conv2d(x, kernel, stride, is_valid);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
 
 // TODO: These are all unimplemented
 // Expression kmh_ngram(const Expression& x, unsigned n);
