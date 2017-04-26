@@ -1,4 +1,4 @@
-Contibuting to Dynet
+Contributing to Dynet
 ====================
 
 You are very welcome to contribute to Dynet, be it to correct a bug or add a feature. 
