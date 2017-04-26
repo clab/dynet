@@ -712,6 +712,37 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseMultiply)
 
+template<class MyDevice>
+void ScalarAdd::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in ScalarAdd::forward (+)");
+  Eigen::array<int, 2> bcast_0 = {1, (int) (fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd)};
+  Eigen::array<int, 2> bcast_1 = {(int) fx.d.batch_size(), (int) (fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd)};
+  fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast_0) + xs[1]->tbvec().broadcast(bcast_1);
+}
+
+template<class MyDevice>
+void ScalarAdd::backward_dev_impl(const MyDevice & dev,
+                                  const vector<const Tensor*>& xs,
+                                  const Tensor& fx,
+                                  const Tensor& dEdf,
+                                  unsigned i,
+                                  Tensor& dEdxi) const {
+  DYNET_ASSERT(i < 2, "Failed dimension check in ScalarAdd::backward (+)");
+  Eigen::array<int, 1> red_axis_0 = {0}, red_axis_1 = {1};
+  Eigen::array<int, 2> red_axes_01 = {0, 1};
+  if (i == 0) {
+    if (xs[0]->d.bd == 1)
+      dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<1>().sum(red_axis_1);
+    else
+      dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>();
+  } else {
+    if (xs[1]->d.bd == 1)
+      dEdxi.t<0>().device(*dev.edevice) += dEdf.tb<1>().sum(red_axes_01);
+    else
+      dEdxi.tb<0>().device(*dev.edevice) += dEdf.tb<1>().sum(red_axis_0);
+  }
+}
+DYNET_NODE_INST_DEV_IMPL(ScalarAdd)
 
 template<class MyDevice>
 void ScalarMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
@@ -750,7 +781,7 @@ DYNET_NODE_INST_DEV_IMPL(ScalarMultiply)
 
 template<class MyDevice>
 void ScalarQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in ScalarQuotient::forward (cmult)");
+  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in ScalarQuotient::forward (cdiv)");
   Eigen::array<int, 2> bcast_0 = {1, (int) (fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd)};
   Eigen::array<int, 2> bcast_1 = {(int) fx.d.batch_size(), (int) (fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd)};
   fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast_0) / xs[1]->tbvec().broadcast(bcast_1);
@@ -763,7 +794,7 @@ void ScalarQuotient::backward_dev_impl(const MyDevice & dev,
                                        const Tensor& dEdf,
                                        unsigned i,
                                        Tensor& dEdxi) const {
-  DYNET_ASSERT(i < 2, "Failed dimension check in ScalarQuotient::backward (cmult)");
+  DYNET_ASSERT(i < 2, "Failed dimension check in ScalarQuotient::backward (cdiv)");
   Eigen::array<int, 2> bcast = {(int)fx.d.batch_size(), (int)(fx.d.bd == xs[1]->d.bd ? 1 : fx.d.bd)};
   Eigen::array<int, 2> bcast2 = {1, (int)(fx.d.bd == xs[0]->d.bd ? 1 : fx.d.bd)};
   Eigen::array<int, 1> red_axis_0 = {0}, red_axis_1 = {1};

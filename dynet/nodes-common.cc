@@ -724,6 +724,21 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string ScalarAdd::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " + " << arg_names[1];
+  return s.str();
+}
+
+Dim ScalarAdd::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in ScalarAdd")
+  Dim d = xs[0].truncate();
+  DYNET_ARG_CHECK(xs[1].batch_size() == 1,
+                          "Mismatched input dimensions in ScalarAdd: " << xs);
+  d.bd = max(xs[1].bd, d.bd);
+  return d;
+}
+
 string ScalarMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " \\cdot " << arg_names[1];
