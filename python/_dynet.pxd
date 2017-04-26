@@ -387,6 +387,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_max_dim "dynet::expr::max_dim" (CExpression& x, unsigned d) except + #
     CExpression c_min_dim "dynet::expr::min_dim" (CExpression& x, unsigned d) except + #
 
+    CExpression c_layer_norm "dynet::expr::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
+
 
 #cdef extern from "dynet/model.h" namespace "dynet":
 #    cdef cppclass Model:

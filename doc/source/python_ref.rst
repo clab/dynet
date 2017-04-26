@@ -308,6 +308,11 @@ Tensor operations
 
 .. autofunction:: dynet.contract3d_1d_1d_bias
 
+Normalization operations
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: dynet.layer_norm
+
 Recurrent Neural Networks
 -------------------------
 
