@@ -254,7 +254,7 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.concatenate
 
-.. autofunction:: dynet.concat_to_batch
+.. autofunction:: dynet.concatenate_to_batch
 
 .. autofunction:: dynet.max_dim
 
