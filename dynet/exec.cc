@@ -11,6 +11,7 @@ ExecutionEngine::~ExecutionEngine() {}
 
 void SimpleExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
+  backward_computed = 0;
 }
 
 void SimpleExecutionEngine::invalidate(unsigned i) {
@@ -33,6 +34,14 @@ const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
     incremental_forward();
   }
   return nfxs[i];
+}
+
+const Tensor& SimpleExecutionEngine::get_gradient(VariableIndex i) {
+  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in SimpleExecutionEngine::get_value()");
+  if (i >= backward_computed) {
+    DYNET_RUNTIME_ERR("Requested gradient for node " << i << ", but backward pass was computed from node " << backward_computed);
+  }
+  return ndEdfs[i];
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward() {
@@ -85,13 +94,13 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
   return nfxs[i];
 }
 
-void SimpleExecutionEngine::backward() {
+void SimpleExecutionEngine::backward(bool full) {
   DYNET_ASSERT(nfxs.size() >= cg.nodes.size(), "Mismatched array sizes in SimpleExecutionEngine::backward");
-  backward((VariableIndex)(cg.nodes.size()-1));
+  backward((VariableIndex)(cg.nodes.size()-1),full);
 }
 
 // TODO what is happening with parameter nodes if from_where > param_node_id ?
-void SimpleExecutionEngine::backward(VariableIndex from_where) {
+void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   if(!(from_where < nfxs.size()))
     incremental_forward(from_where);
   if (nfxs[from_where].d.size() != 1)
@@ -121,15 +130,17 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
   //   2) it depends on a non-constant node
   // (thus, functions of constants and inputs end up being
   //  false in this computation)
-  vector<bool> needs_derivative(num_nodes, false);
-  for (auto i : cg.parameter_nodes)
-    needs_derivative[i] = true;
+  vector<bool> needs_derivative(num_nodes, full);
+  if (!full) {
+    for (auto i : cg.parameter_nodes)
+      needs_derivative[i] = true;
 
-  for (unsigned ni = 0; ni < num_nodes; ++ni) {
-    bool nd = needs_derivative[ni];
-    for (auto arg : cg.nodes[ni]->args)
-      nd |= needs_derivative[arg];
-    needs_derivative[ni] = nd;
+    for (unsigned ni = 0; ni < num_nodes; ++ni) {
+      bool nd = needs_derivative[ni];
+      for (auto arg : cg.nodes[ni]->args)
+        nd |= needs_derivative[arg];
+      needs_derivative[ni] = nd;
+    }
   }
 
   // loop in reverse topological order
@@ -162,6 +173,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where) {
   // that returns the current value of the parameters
   for (VariableIndex i : cg.parameter_nodes)
     static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
+  backward_computed = from_where;
 }
 
 } // namespace dynet
