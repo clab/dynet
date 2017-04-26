@@ -3135,7 +3135,7 @@ cdef class _RNNBuilder: # (((
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
         
         Args:
-            vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression`s  (default: {None})
+            vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression` s  (default: {None})
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
