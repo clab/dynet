@@ -1303,7 +1303,11 @@ cdef class Expression: #(((
     cpdef gradient(self):
         """Returns the value of the expression as a numpy array
         
-        The last dimension is the batch size (if it's > 1)
+        The last dimension is the batch size (if it's > 1).
+
+        Make sure to call :code:`backward` on a downstream expression before calling this.
+
+        If the Expression is a constant expression (meaning it's not a function of a parameter), dynet won't compute it's gradient for the sake of efficiency. You need to manually force the gradient computation by adding the agument :code:`full=True` to :code:`backward`
         
         Returns:
             np.ndarray: numpy array of values
