@@ -3009,6 +3009,34 @@ cpdef Expression affine_transform(list exprs):
         ves.push_back(e.c())
     return Expression.from_cexpr(e.cg_version, c_affine_transform(ves))
 
+cpdef Expression layer_norm(Expression x, Expression g, Expression b):
+    """Layer normalization
+
+    Performs layer normalization : 
+
+    .. math::
+
+        \\begin{split}
+           \mu &= \\frac 1 n \sum_{i=1}^n x_i\\\\
+           \sigma &= \sqrt{\\frac 1 n \sum_{i=1}^n (x_i-\mu)^2}\\\\
+           y&=\\frac {\\boldsymbol{g}} \sigma \circ (\\boldsymbol{x}-\mu) + \\boldsymbol{b}\\\\
+        \end{split}
+ 
+        
+    Reference : `Ba et al., 2016 <http://arxiv.org/abs/1607.06450>`_
+        
+    Args:
+        x (dynet.Expression): Input expression (possibly batched)
+        g (dynet.Expression): Gain (same dimension as x, no batch dimension)
+        b (dynet.Expression): Bias (same dimension as x, no batch dimension)
+    
+    Returns:
+        An expression of the same dimension as :code:`x`
+        dynet.Expression
+    """
+    ensure_freshness(g)
+    ensure_freshness(b)
+    return Expression.from_cexpr(x.cg_version, c_layer_norm(x.c(),g.c(),b.c()))
 
 # )
     
