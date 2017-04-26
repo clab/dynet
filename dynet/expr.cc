@@ -39,7 +39,14 @@ Expression nobackprop(const Expression& x) { return Expression(x.pg, x.pg->add_f
 Expression flip_gradient(const Expression& x) { return Expression(x.pg, x.pg->add_function<FlipGradient>({x.i})); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
-Expression operator+(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i})); }
+Expression operator+(const Expression& x, const Expression& y) {
+    if (x.dim().batch_size() == 1)
+        return Expression(x.pg, x.pg->add_function<ScalarAdd>({y.i, x.i}));
+    else if (y.dim().batch_size() == 1)
+        return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}));
+    else
+        return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}));
+}
 Expression operator+(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantPlusX>({y.i}, x)); }
 Expression operator+(const Expression& x, real y) { return y + x; }
 Expression operator-(const Expression& x, const Expression& y) { return x + (-y); }
@@ -50,7 +57,7 @@ Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.p
 Expression cmult(const Expression& x, const Expression& y) { 
     if (x.dim().batch_size() == 1) 
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 
-    else if(y.dim().batch_size()==1)
+    else if(y.dim().batch_size() == 1)
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({y.i, x.i})); 
     else 
         return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));
@@ -158,5 +165,12 @@ Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, 
 Expression max_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MaxDimension>({x.i}, d)); }
 Expression min_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MinDimension>({x.i}, d)); }
 
+Expression layer_norm(const Expression& x, const Expression& g, const Expression& b){
+    float n = (float) (x.dim().batch_size());
+    Expression mu = sum_elems(x) / n;
+    Expression x_centered= x - mu;
+    Expression sigma = expr::sqrt(sum_elems(square(x_centered)) / n);
+    return cmult(cdiv(g,sigma), x_centered) + b;
+}
 }
 }

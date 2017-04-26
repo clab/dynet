@@ -208,5 +208,30 @@ class TestIO(unittest.TestCase):
         self.m2.load(self.file)
 
 
+
+class TestOperations(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.m = dy.Model()
+        self.v1 = np.arange(10)
+        self.v2 = np.arange(10)
+        self.v3 = np.arange(10)
+
+    def test_layer_norm(self):
+        dy.renew_cg()
+        x = dy.inputTensor(self.v1)
+        g = dy.inputTensor(self.v2)
+        b = dy.inputTensor(self.v3)
+        y = dy.layer_norm(x,g,b)
+        l = dy.sum_elems(y)
+        l_value = l.scalar_value()
+        l.backward()
+
+        y_np_value = self.v2 / self.v1.std() * (self.v1 - self.v1.mean()) + self.v3
+
+        self.assertTrue(np.allclose(y.npvalue(),y_np_value))
+
+
 if __name__ == '__main__':
     unittest.main()
