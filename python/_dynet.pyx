@@ -2771,7 +2771,7 @@ cpdef Expression min_dim(Expression x, unsigned d=0):
     """
     return Expression.from_cexpr(x.cg_version, c_min_dim(x.c(), d))
 
-def contract3d_1d(Expression x, Expression y):
+cpdef Expression contract3d_1d(Expression x, Expression y):
     """Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor
     
     The resulting tensor :math:`z` has coordinates :math:`z_ij = \sum_k x_{ijk} y_k`
@@ -2787,7 +2787,7 @@ def contract3d_1d(Expression x, Expression y):
     ensure_freshness(y)
     return Expression.from_cexpr(x.cg_version, c_contract3d_1d(x.c(),y.c()))
 
-def contract3d_1d_bias(Expression x, Expression y, Expression b):
+cpdef Expression contract3d_1d_bias(Expression x, Expression y, Expression b):
     """Same as :code:`contract3d_1d` with an additional bias parameter
 
     The resulting tensor :math:`z` has coordinates :math:`z_{ij} = b_{ij}+\sum_k x_{ijk} y_k`
@@ -2805,7 +2805,7 @@ def contract3d_1d_bias(Expression x, Expression y, Expression b):
     ensure_freshness(b)
     return Expression.from_cexpr(x.cg_version, c_contract3d_1d(x.c(),y.c(),b.c()))
 
-def contract3d_1d_1d(Expression x, Expression y, Expression z):
+cpdef Expression contract3d_1d_1d(Expression x, Expression y, Expression z):
     """Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor
 
     This is the equivalent of calling :code:`contract3d_1d` and then performing a matrix vector multiplication.
@@ -2825,7 +2825,7 @@ def contract3d_1d_1d(Expression x, Expression y, Expression z):
     ensure_freshness(z)
     return Expression.from_cexpr(x.cg_version, c_contract3d_1d_1d(x.c(),y.c(),z.c()))
 
-def contract3d_1d_1d_bias(Expression x, Expression y, Expression z, Expression b):
+cpdef Expression contract3d_1d_1d_bias(Expression x, Expression y, Expression z, Expression b):
     """Same as :code:`contract3d_1d_1d` with an additional bias parameter
  
     This is the equivalent of calling :code:`contract3d_1d` and then performing an affine transform.
