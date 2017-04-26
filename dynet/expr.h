@@ -9,6 +9,7 @@
  * \defgroup convolutionoperations convolutionoperations
  * \defgroup tensoroperations tensoroperations
  * \defgroup linalgoperations linalgoperations
+ * \defgroup normoperations normoperations
  * \brief The various operations that you can use in building a DyNet graph
  *
  * \details TODO: **This documentation is incomplete. See expr.h for a full list of expressions.**
@@ -1817,7 +1818,31 @@ Expression logdet(const Expression& x);
  */
 Expression trace_of_product(const Expression& x, const Expression& y);
 
+////////////////////////////////////////////////
+// Normalization operations                   //
+////////////////////////////////////////////////
 
+/**
+ * \ingroup normoperations
+ * \brief Layer normalization
+ * \details Performs layer normalization : 
+ * 
+ * \f$
+ * \begin{split}
+ *    \mu &= \frac 1 n \sum_{i=1}^n x_i\\
+ *    \sigma &= \sqrt{\frac 1 n \sum_{i=1}^n (x_i-\mu)^2}\\
+ *    y&=\frac {\boldsymbol{g}} \sigma \circ (\boldsymbol{x}-\mu) + \boldsymbol{b}\\
+ * \end{split}
+ * \f$
+ * 
+ * Reference : [Ba et al., 2016](http://arxiv.org/abs/1607.06450)
+ * 
+ * \param x Input expression (possibly batched)
+ * \param g Gain (same dimension as x, no batch dimension)
+ * \param b Bias (same dimension as x, no batch dimension)
+ * \return An expression of the same dimension as `x`
+ */
+Expression layer_norm(const Expression& x, const Expression& g, const Expression& b);
 }
 // Because expressions are now such a fundamental part of DyNet it doesn't
 // make much sense to keep them in separate namespaces, so we import expr

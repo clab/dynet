@@ -110,6 +110,87 @@ BOOST_AUTO_TEST_CASE( add_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_expr_add_1_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param_scalar2);
+  Expression y = x1 + x2;
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_expr_add_2_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_scalar2);
+  Expression x2 = parameter(cg, param1);
+  Expression y = x1 + x2;
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_expr_add_batch1_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x2 = parameter(cg, param_scalar2);
+  Expression y = x1 + x2;
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_expr_add_batch2_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({1}, 6), batch_vals);
+  Expression y = x1 + x2;
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_expr_sub_1_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param_scalar2);
+  Expression y = x1 - x2;
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_expr_sub_2_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_scalar2);
+  Expression x2 = parameter(cg, param1);
+  Expression y = x1 - x2;
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_expr_sub_batch1_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x2 = parameter(cg, param_scalar2);
+  Expression y = x1 - x2;
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cdiv(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( scalar_expr_sub_batch2_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({1}, 6), batch_vals);
+  Expression y = x1 - x2;
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+
 // Expression sum(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( sum_gradient ) {
   dynet::ComputationGraph cg;
@@ -1162,6 +1243,30 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_batch_gradient ) {
   Expression x2 = input(cg, Dim({3}, 2), batch_vals);
   Expression z = sum_batches(pickneglogsoftmax(x1 + x2, idx));
   BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression layer_norm(x,g,b);
+BOOST_AUTO_TEST_CASE( layer_norm_backward_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param1);
+  Expression g = parameter(cg, param2);
+  Expression b = parameter(cg, param3);
+  Expression y = layer_norm(x,g,b);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression layer_norm(x,g,b);
+BOOST_AUTO_TEST_CASE( layer_norm_forward_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param1);
+  Expression g = input(cg, Dim({3}), ones3_vals);
+  Expression b = zeroes(cg, Dim({3}));
+  Expression y = layer_norm(x,g,b);
+  float mu = abs(as_scalar((sum_elems(y) / 3.0).value()));
+  float std = as_scalar(sqrt(sum_elems(square(y))/3.0).value());
+  BOOST_CHECK_LT(mu, 1e-6);
+  BOOST_CHECK_CLOSE(std, 1, 0.01);
 }
 
 // Expression sparse_input(vector<unsigned int>& ids, vector<float>& src, float def);

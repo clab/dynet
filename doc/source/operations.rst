@@ -91,3 +91,12 @@ These operations are convolution-related.
 .. doxygengroup:: convolutionoperations
 	:members:
 	:content-only:
+
+Normalization Operations
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This includes batch normalization and the likes.
+
+.. doxygengroup:: normoperations
+	:members:
+	:content-only:
