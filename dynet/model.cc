@@ -691,13 +691,15 @@ float ParameterCollectionStorage::gradient_l2_norm() const {
   else if (default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_GPU*)default_device); }
   else { throw std::runtime_error("Bad device type"); }
 }
+float ParameterCollection::gradient_l2_norm() const {
+  return get_storage().gradient_l2_norm();
+}
 #else
 template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float ParameterCollectionStorage::gradient_l2_norm() const {
   if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
   else { throw std::runtime_error("Bad device type"); }
 }
-
 float ParameterCollection::gradient_l2_norm() const {
   return get_storage().gradient_l2_norm();
 }
