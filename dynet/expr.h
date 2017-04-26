@@ -58,6 +58,17 @@ struct Expression {
     return pg->get_value(i);
   }
   /**
+   * \brief Get gradient of the expression
+   * \details Throws a tuntime_error exception if no computation graph is available
+   * \return Value of the expression as a tensor
+   */
+  const Tensor& gradient() const {
+    if (this->is_stale()) {
+      throw std::runtime_error("Attempt to use a stale expression.");
+    }
+    return pg->get_gradient(i);
+  }
+  /**
    * \brief Get dimension of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
    * \return Dimension of the expression

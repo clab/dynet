@@ -1203,6 +1203,31 @@ BOOST_AUTO_TEST_CASE( backward_test ) {
   cg.backward(z);
 }
 
+BOOST_AUTO_TEST_CASE( gradient_value_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression l = dot_product(x1,x2);
+  cg.backward(l);
+  vector<float> x1_g1 = as_vector(x1.gradient());
+  vector<float> x1_g2 = as_vector(param1.get()->g);
+
+  for(unsigned i=0;i<3;i++){
+    BOOST_CHECK_CLOSE(x1_g1[i],x1_g2[i],0.001);
+  }
+
+}
+
+BOOST_AUTO_TEST_CASE( gradient_sanity_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression l = dot_product(x1,x2);
+  cg.forward(l);
+  BOOST_CHECK_THROW(x1.gradient() , std::runtime_error);
+
+}
+
 // This just makes sure that nothing crashes
 BOOST_AUTO_TEST_CASE( random_gumbel_test ) {
   dynet::ComputationGraph cg;

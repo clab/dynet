@@ -957,8 +957,8 @@ cdef class ComputationGraph:
     cpdef forward(self, VariableIndex index): self.thisptr.forward(index)
     cpdef inc_forward(self, VariableIndex index): self.thisptr.incremental_forward(index)
 
-    cpdef backward(self, VariableIndex index):
-        self.thisptr.backward(index)
+    cpdef backward(self, VariableIndex index, bool full=False):
+        self.thisptr.backward(index, full)
 
     cpdef print_graphviz(self):
         self.thisptr.print_graphviz()
@@ -1300,6 +1300,21 @@ cdef class Expression: #(((
         if len(vec) == 1: return vec[0]
         return vec
 
+    cpdef gradient(self):
+        """Returns the value of the expression as a numpy array
+        
+        The last dimension is the batch size (if it's > 1)
+        
+        Returns:
+            np.ndarray: numpy array of values
+        """
+        cdef CTensor t
+        cdef CDim dim
+        t = self.c().gradient()
+        dim = t.d
+        arr = c_tensor_as_np(t)
+        return arr
+
     # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
     cpdef forward(self, recalculate=False):
         """This runs incremental forward on the entire graph
@@ -1314,13 +1329,26 @@ cdef class Expression: #(((
         if recalculate: self.cg().forward(self.vindex)
         else: self.cg().inc_forward(self.vindex)
 
-    cpdef backward(self):
+    cpdef backward(self, bool full=False):
         """Run the backward pass based on this expression
         
-        The expression should be a scalar (objective)
+        The parameter :code:`full` specifies whether the gradients should be computed for all nodes (:code:`True`) or only non-constant nodes (:code:`False`).
+        
+        By default, a node is constant unless
+        
+        1. it is a parameter node
+        2. it depends on a non-constant node
+        
+        Thus, functions of constants and inputs are considered as constants.
+        
+        Turn :code:`full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
+
+        Args:
+            full (bool): Whether to compute all gradients (including with respect to constant nodes).
+
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        self.cgp().backward(self.vindex)
+        self.cgp().backward(self.vindex, full)
 
     def __add__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
