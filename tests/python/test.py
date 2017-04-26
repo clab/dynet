@@ -184,12 +184,12 @@ class TestBatchManipulation(unittest.TestCase):
         z = dy.pick_batch_elems(x, [0, 1])
         self.assertTrue(np.allclose(z.npvalue(), self.pval.T))
 
-    def test_concat_to_batch(self):
+    def test_concatenate_to_batch(self):
         dy.renew_cg()
         x = dy.lookup_batch(self.p, [0, 1])
         y = dy.pick_batch_elem(x, 0)
         z = dy.pick_batch_elem(x, 1)
-        w = dy.concat_to_batch([y, z])
+        w = dy.concatenate_to_batch([y, z])
         self.assertTrue(np.allclose(w.npvalue(), self.pval.T))
 
 
