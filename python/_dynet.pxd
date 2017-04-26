@@ -262,6 +262,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         CComputationGraph *pg
         long i
         CDim dim() except +
+        bool is_stale()
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) except + #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
@@ -421,6 +422,8 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):
         CSimpleRNNBuilder()
         CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -437,6 +440,8 @@ cdef extern from "dynet/gru.h" namespace "dynet":
     cdef cppclass CGRUBuilder "dynet::GRUBuilder" (CRNNBuilder):
         CGRUBuilder()
         CGRUBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -453,6 +458,8 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
     cdef cppclass CLSTMBuilder "dynet::LSTMBuilder" (CRNNBuilder):
         CLSTMBuilder()
         CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -470,10 +477,14 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
         CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
 
 cdef extern from "dynet/fast-lstm.h" namespace "dynet":
     cdef cppclass CFastLSTMBuilder "dynet::FastLSTMBuilder" (CRNNBuilder):
         CFastLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
