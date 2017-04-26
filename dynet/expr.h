@@ -60,6 +60,11 @@ struct Expression {
   /**
    * \brief Get gradient of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
+   * 
+   * Make sure to call `backward` on a downstream expression before calling this.
+   * 
+   * If the expression is a constant expression (meaning it's not a function of a parameter), dynet won't compute it's gradient for the sake of efficiency. You need to manually force the gradient computation by adding the agument `full=true` to `backward`
+        
    * \return Value of the expression as a tensor
    */
   const Tensor& gradient() const {
