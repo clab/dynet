@@ -5,9 +5,6 @@
 #include <vector>
 #include <cstring>
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/array.hpp>
-
 #if HAVE_CUDA
 #include "dynet/gpu-ops.h"
 #include "dynet/cuda.h"

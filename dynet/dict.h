@@ -9,8 +9,6 @@
 
 #include "dynet/except.h"
 
-namespace boost { namespace serialization { class access; } }
-
 namespace dynet {
 
 class Dict {

@@ -23,8 +23,6 @@
  */
 #define DYNET_MAX_TENSOR_DIM 7
 
-namespace boost { namespace serialization { class access; } }
-
 namespace dynet {
 
 /**

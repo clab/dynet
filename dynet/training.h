@@ -14,8 +14,6 @@
 
 #include <vector>
 
-#include <boost/serialization/export.hpp>
-
 #include "dynet/model.h"
 #include "dynet/shadow-params.h"
 

@@ -80,7 +80,6 @@ set(dynet_library_HDRS
     except.h
     nodes-macros.h
     weight-decay.h
-    io-macros.h
     io.h
 )
 
