@@ -9,8 +9,6 @@
 #ifndef DYNET_RNN_H_
 #define DYNET_RNN_H_
 
-#include <boost/serialization/export.hpp>
-
 #include "dynet/dynet.h"
 #include "dynet/rnn-state-machine.h"
 #include "dynet/expr.h"

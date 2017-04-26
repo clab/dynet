@@ -4,8 +4,6 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/serialization/vector.hpp>
-
 using namespace std;
 
 namespace dynet {

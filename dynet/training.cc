@@ -1,8 +1,5 @@
 #include "dynet/training.h"
 
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/export.hpp>
-
 // #include "dynet/gpu-ops.h"
 #include "dynet/param-nodes.h"
 #include "dynet/weight-decay.h"

@@ -13,7 +13,6 @@
 #include <unordered_map>
 #include <string>
 #include <stdexcept>
-#include <boost/serialization/export.hpp>
 
 #include "dynet/weight-decay.h"
 #include "dynet/tensor.h"
