@@ -2971,7 +2971,7 @@ cpdef Expression concatenate(list xs, unsigned d=0):
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat(cvec, d))
 
-cpdef Expression concat_to_batch(list xs):
+cpdef Expression concatenate_to_batch(list xs):
     """Concatenate list of expressions to a single batched expression
     
     Perform a concatenation of several expressions along the batch dimension. All expressions must have the same shape except for the batch dimension.
