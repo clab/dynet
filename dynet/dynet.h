@@ -345,22 +345,63 @@ struct ComputationGraph {
    * \return Requested value
    */
   const Tensor& get_value(const expr::Expression& e);
+
+  /**
+   * \brief Get gradient for node at index i.
+   * \details Performs backward pass if not available (may compute more than strictly what is needed).
+   *
+   * \param i Index of the variable from which you want the gradient
+   * \return Requested gradient
+   */
+  const Tensor& get_gradient(VariableIndex i);
+  /**
+   * \brief Get forward gradient for the given expression
+   * \details Performs backward pass if not available (may compute more than strictly what is needed).
+   *
+   * \param e Expression from which you want the gradient
+   * \return Requested gradient
+   */
+  const Tensor& get_gradient(const expr::Expression& e);
   /**
    * \brief Clears forward caches (for get_value etc).
    */
   void invalidate();
   /**
    * \brief Computes backward gradients from the front-most evaluated node.
+   * 
+   * \details The parameter `full` specifies whether the gradients should be computed for all nodes (`true`) or only non-constant nodes.
+   * 
+   * By default, a node is constant unless
+   * 
+   * 1. it is a parameter node
+   * 2. it depends on a non-constant node
+   * 
+   * Thus, functions of constants and inputs are considered as constants.
+   * 
+   * Turn `full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    *
    * \param last Expression from which to compute the gradient
+   * \param full Whether to compute all gradients (including with respect to constant nodes). 
    */
-  void backward(const expr::Expression& last);
+  void backward(const expr::Expression& last, bool full = false);
   /**
    * \brief Computes backward gradients from node i (assuming it already been evaluated).
+   * 
+   * \details The parameter `full` specifies whether the gradients should be computed for all nodes (`true`) or only non-constant nodes.
+   * 
+   * By default, a node is constant unless
+   * 
+   * 1. it is a parameter node
+   * 2. it depends on a non-constant node
+   * 
+   * Thus, functions of constants and inputs are considered as constants.
+   * 
+   * Turn `full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    *
    * \param i Index of the node from which to compute the gradient
+   * \param full Whether to compute all gradients (including with respect to constant nodes). Turn this on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    */
-  void backward(VariableIndex i);
+  void backward(VariableIndex i, bool full = false);
   // set immediate_compute variable
   void set_immediate_compute(bool ic);
   // set check_validity variable
