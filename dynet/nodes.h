@@ -18,8 +18,8 @@ struct AddVectorToAllColumns : public Node {
 };
 
 // y = L_sparsemax(x_0; q)
-// where x_0 is a vector of "unnormalized" probabilities
-// q are the vector of labels
+// where x_0 is a std::vector of "unnormalized" probabilities
+// q are the std::vector of labels
 struct SparsemaxLoss : public Node {
   explicit SparsemaxLoss(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& target) : Node(a), q(target), pq(&q) {}
   explicit SparsemaxLoss(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* ptarget) : Node(a), q(), pq(ptarget) {}
@@ -109,7 +109,7 @@ struct DotProduct : public Node {
 };
 
 // y = x_1^T
-// NOTE: if you have a column or row vector as input, runtime is constant
+// NOTE: if you have a column or row std::vector as input, runtime is constant
 // if you have a matrix as input, the runtime is O(mn) - try to avoid using this
 struct Transpose : public Node {
   explicit Transpose(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned> & dims) : Node(a), dims(dims) {}
@@ -161,7 +161,7 @@ struct BlockDropout : public Node {
 };
 
 // y = c + x_1
-// (c is a vector or matrix of the constant, usually 1, but can be configured)
+// (c is a std::vector or matrix of the constant, usually 1, but can be configured)
 struct ConstantPlusX : public Node {
   explicit ConstantPlusX(const std::initializer_list<VariableIndex>& a, real o) : Node(a), c(o) {}
   virtual bool supports_multibatch() const override { return true; }
@@ -170,7 +170,7 @@ struct ConstantPlusX : public Node {
 };
 
 // y = c - x_1
-// (c is a vector or matrix of the constant, usually 1, but can be configured)
+// (c is a std::vector or matrix of the constant, usually 1, but can be configured)
 struct ConstantMinusX : public Node {
   explicit ConstantMinusX(const std::initializer_list<VariableIndex>& a, real o) : Node(a), c(o) {}
   virtual bool supports_multibatch() const override { return true; }
@@ -203,6 +203,8 @@ struct Erf : public Node {
 struct Tanh : public Node {
   explicit Tanh(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "tanh"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -210,6 +212,8 @@ struct Tanh : public Node {
 struct Square : public Node {
   explicit Square(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "square"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -217,6 +221,8 @@ struct Square : public Node {
 struct Cube : public Node {
   explicit Cube(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "cube"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -224,6 +230,8 @@ struct Cube : public Node {
 struct Exp : public Node {
   explicit Exp(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "exp"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -231,6 +239,8 @@ struct Exp : public Node {
 struct LogGamma : public Node {
   explicit LogGamma(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "loggamma"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -238,6 +248,8 @@ struct LogGamma : public Node {
 struct Log : public Node {
   explicit Log(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "log"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -246,7 +258,7 @@ struct Concatenate : public Node {
   template <typename T> explicit Concatenate(const T& a, unsigned d) : Node(a), dimension(d) {}
   virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
-  // src_row_indices[i] says what row in fx the ith x vector was assigned to
+  // src_row_indices[i] says what row in fx the ith x std::vector was assigned to
   // used to simplify backprop
   mutable std::vector<unsigned> src_indices;
   unsigned dimension;
@@ -260,8 +272,8 @@ struct ConcatenateToBatch : public Node {
   mutable std::vector<unsigned> src_element_indices;
 };
 
-// x_1 is a scalar (or row vector)
-// x_2 is a scalar (or row vector)
+// x_1 is a scalar (or row std::vector)
+// x_2 is a scalar (or row std::vector)
 // y = max(0, margin - x_1 + x_2)
 struct PairwiseRankLoss : public Node {
   explicit PairwiseRankLoss(const std::initializer_list<VariableIndex>& a, real m = 1.0) : Node(a), margin(m) {}
@@ -270,7 +282,7 @@ struct PairwiseRankLoss : public Node {
   real margin;
 };
 
-// Let x be a vector-valued input, x_i represents the score of the ith element, then
+// Let x be a std::vector-valued input, x_i represents the score of the ith element, then
 // y = \sum{i != element} max{0, margin - x_element + x_i}
 struct Hinge : public Node {
   explicit Hinge(const std::initializer_list<VariableIndex>& a, unsigned e, real m = 1.0) : Node(a), element(e), pelement(&element), margin(m) {}
@@ -291,6 +303,8 @@ struct Hinge : public Node {
 struct NoBackprop : public Node {
   explicit NoBackprop(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "nobackprop"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -298,6 +312,8 @@ struct NoBackprop : public Node {
 struct FlipGradient : public Node {
   explicit FlipGradient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "flipgradient"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };  
   
@@ -305,12 +321,14 @@ struct FlipGradient : public Node {
 struct Identity : public Node {
   explicit Identity(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile() const override { return "identity"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
 // hyperparameter: width > 1
-// x_1 is a vector in R^n, which we write x
-// y is a vector in R^{n / width}
+// x_1 is a std::vector in R^n, which we write x
+// y is a std::vector in R^{n / width}
 // y_i = max_{x_{i * width - width + 1}, ..., x_{i * width}}
 struct MaxPooling1D : public Node {
   MaxPooling1D(const std::initializer_list<VariableIndex>& a, unsigned w) : Node(a), width(w) {}
@@ -373,6 +391,8 @@ struct AffineTransform : public Node {
 struct Negate : public Node {
   explicit Negate(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; } 
+  virtual std::string autobatch_profile() const override { return "negate"; }  
+  virtual std::vector<bool> autobatch_concat() const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -385,8 +405,8 @@ struct Rectify : public Node {
 
 // you could do this with LogisticSigmoid, Softmax or a variety of other
 // functions, but this is often useful.
-// x_1 must be a vector with values between 0 and 1
-// target_y is an equivalently sized vector w values between 0 and 1
+// x_1 must be a std::vector with values between 0 and 1
+// target_y is an equivalently sized std::vector w values between 0 and 1
 // y = ty * log(x_1) + (1 - ty) * log(x_1)
 struct BinaryLogLoss : public Node {
   BinaryLogLoss(const std::initializer_list<VariableIndex>& a) : Node(a) {}
@@ -534,7 +554,7 @@ struct RestrictedLogSoftmax : public Node {
   std::vector<unsigned> denom;
 };
 
-// x_1 is a vector
+// x_1 is a std::vector
 // y = (x_1)_{*pval}
 // this is used to implement cross-entropy training
 struct PickElement : public Node {
@@ -553,7 +573,7 @@ struct PickElement : public Node {
   unsigned dimension;
 };
 
-// x_1 is a vector
+// x_1 is a std::vector
 // y = x_1[start:end]
 // (start inclusive, end exclusive)
 struct PickRange : public Node {
@@ -579,7 +599,7 @@ struct PickBatchElements : public Node {
   const std::vector<unsigned>* pvals;
 };
 
-// represents a simple vector of 0s
+// represents a simple std::vector of 0s
 struct Zeroes : public Node {
   explicit Zeroes(const Dim& d) : dim(d) {}
   DYNET_NODE_DEFINE_DEV_IMPL()

@@ -43,6 +43,25 @@ class SimpleExecutionEngine : public ExecutionEngine {
   VariableIndex num_nodes_evaluated;
 };
 
+class BatchedExecutionEngine : public ExecutionEngine {
+ public:
+  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) {}
+  void invalidate() override;
+  void invalidate(unsigned i) override;
+  const Tensor& forward() override;
+  const Tensor& forward(VariableIndex i) override;
+  const Tensor& incremental_forward() override;  // if you want to add nodes and evaluate just the new parts
+  const Tensor& incremental_forward(VariableIndex i) override;
+  const Tensor& get_value(VariableIndex i) override;
+  const Tensor& get_gradient(VariableIndex i) override;
+  void backward(bool full = false) override;
+  void backward(VariableIndex i, bool full = false) override;
+ private:
+  std::vector<Tensor> nfxs;
+  std::vector<Tensor> ndEdfs;
+  VariableIndex num_nodes_evaluated;
+};
+
 } // namespace dynet
 
 #endif

@@ -90,7 +90,7 @@ void Node::backward(const std::vector<const Tensor*>& xs,
 }
 
 ComputationGraph::ComputationGraph():
-  ee(new SimpleExecutionEngine(*this)) {
+  ee(new BatchedExecutionEngine(*this)) {
   if (n_hgs > 0) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
     throw std::runtime_error("Attempted to create >1 CG");
