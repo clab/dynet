@@ -232,7 +232,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     // 1) Calculate the batching profiles for every node
     unordered_map<string, int> prof2id(i);        // Batching profile to ID
     prof2id[""] = 0;
-    vector<int> node2id(i + 1, -1);  // Node to ID
+    vector<int> node2id(i + 1, 0);  // Node to ID
     vector<int> node2left(i + 1, 0); // Node to # of predecessors left
     vector<vector<int> > node2successors(i + 1); // Node to # of predecessors left
     // Average ID of batched items, a heuristic for which to run first
@@ -241,7 +241,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     vector<int> active_unbatched;
     vector<vector<int> > active_batched;
     int id = 0;
-    for (VariableIndex j = num_nodes_evaluated; j < i; ++j) {
+    for (VariableIndex j = num_nodes_evaluated; j <= i; ++j) {
       const Node* node = cg.nodes[j];
       // Count the remaining input nodes to be computed for each node
       for (VariableIndex arg : node->args) {
@@ -334,12 +334,12 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
               active_batched[node2id[next_node]].push_back(next_node);
           }
         }
+        ++num_nodes_evaluated;
       // 2.b) If we have a batch of current nodes, execute them together
       } else {
         DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
         DYNET_RUNTIME_ERR("Executing multiple batched nodes not implemented yet.");
       }
-
     }
   }
   return nfxs[i];
