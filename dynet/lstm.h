@@ -10,8 +10,6 @@
 #include "dynet/dynet.h"
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
-#include <boost/serialization/version.hpp>
-
 
 using namespace dynet::expr;
 
@@ -83,8 +81,6 @@ struct LSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder & params) override;
 
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
   /**
    * \brief Set the dropout rates to a unique value
    * \details This has the same effect as `set_dropout(d,d_h,d_c)` except that all the dropout rates are set to the same value.
@@ -167,9 +163,7 @@ public:
   float dropout_rate_h = 0.f, dropout_rate_c = 0.f;
 
 private:
-  DYNET_SERIALIZE_DECLARE()
   ComputationGraph  *_cg;
-
 };
 
 
@@ -225,8 +219,6 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder & params) override;
 
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
   /**
    * \brief Set the dropout rates to a unique value
    * \details This has the same effect as `set_dropout(d,d_h)` except that all the dropout rates are set to the same value.
@@ -304,18 +296,11 @@ public:
   unsigned input_dim, hid;
   float dropout_rate_h;
 
-
-
 private:
-  DYNET_SERIALIZE_DECLARE()
   ComputationGraph* _cg; // Pointer to current cg
 
 };
 
 } // namespace dynet
-
-
-// Class version
-DYNET_VERSION_DEFINE(dynet::LSTMBuilder, 1);
 
 #endif

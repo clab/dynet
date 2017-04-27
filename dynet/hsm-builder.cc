@@ -162,16 +162,6 @@ string Cluster::toString() const {
   return ss.str();
 }
 
-#if BOOST_VERSION >= 105600
-  DYNET_SERIALIZE_COMMIT(Cluster, DYNET_SERIALIZE_DEFINE(rep_dim, children, path, terminals, word2ind))
-#else
-  template<class Archive>
-  void Cluster::serialize(Archive& ar, const unsigned int) {
-    DYNET_RUNTIME_ERR("Serializing clusters is only supported on versions of boost 1.56 or higher");
-  }
-#endif
-DYNET_SERIALIZE_IMPL(Cluster)
-
 HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict& word_dict,

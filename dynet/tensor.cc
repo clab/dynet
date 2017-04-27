@@ -5,9 +5,6 @@
 #include <vector>
 #include <cstring>
 
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/array.hpp>
-
 #if HAVE_CUDA
 #include "dynet/gpu-ops.h"
 #include "dynet/cuda.h"
@@ -245,58 +242,6 @@ void TensorTools::RandomizeOrthonormal(Tensor& val, real scale) {
   *val = scale * svd.matrixU();
 #endif
 }
-
-template<class Archive>
-void Tensor::save(Archive& ar, const unsigned int ver) const {
-  ar & d;
-  int dev_id = ((device == default_device) ? (int) - 1 : device->device_id);
-  ar & dev_id;
-  ar & mem_pool;
-#ifdef HAVE_CUDA
-  if (device->type == DeviceType::GPU) {
-    float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(vc, v, d.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    ar & boost::serialization::make_array(vc, d.size());
-    free(vc);
-  } else {
-#endif
-    ar & boost::serialization::make_array(v, d.size());
-#ifdef HAVE_CUDA
-  }
-#endif
-}
-template<class Archive>
-void Tensor::load(Archive& ar, const unsigned int ver) {
-  ar & d;
-  int dev_id = -1;
-  // This default value is for backward compatibility with models that were
-  // saved without information about what mempool a tensor belongs to.
-  mem_pool = DeviceMempool::PS;
-  if (ver > 0) {
-    ar & dev_id;
-    ar & mem_pool;
-  }
-  if (dev_id == -1) {
-    device = default_device;
-  } else {
-    DYNET_ASSERT(dev_id > 0 && dev_id < (int)devices.size(), "Bad device id " << dev_id << " in Tensor::load with " << devices.size() << " total devices");
-    device = devices[dev_id];
-  }
-  device->allocate_tensor(mem_pool, *this);
-#ifdef HAVE_CUDA
-  if (device->type == DeviceType::GPU) {
-    float* vc = static_cast<float*>(std::malloc(d.size() * sizeof(float)));
-    ar & boost::serialization::make_array(vc, d.size());
-    CUDA_CHECK(cudaMemcpyAsync(v, vc, d.size() * sizeof(float), cudaMemcpyHostToDevice));
-    free(vc);
-  } else {
-#endif
-    ar & boost::serialization::make_array(v, d.size());
-#ifdef HAVE_CUDA
-  }
-#endif
-}
-DYNET_SAVELOAD_IMPL(Tensor)
 
 real rand01() {
   uniform_real_distribution<real> distribution(0, 1);

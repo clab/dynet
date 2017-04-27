@@ -34,15 +34,5 @@ void read_sentence_pair(const std::string& line, std::vector<int>& s, Dict& sd, 
   }
 }
 
-#if BOOST_VERSION >= 105600
-  DYNET_SERIALIZE_COMMIT(Dict, DYNET_SERIALIZE_DEFINE(frozen, map_unk, unk_id, words_, d_))
-#else
-  template<class Archive>
-  void Dict::serialize(Archive& ar, const unsigned int) {
-    throw std::invalid_argument("Serializing dictionaries is only supported on versions of boost 1.56 or higher");
-  }
-#endif
-DYNET_SERIALIZE_IMPL(Dict)
-
 } // namespace dynet
 

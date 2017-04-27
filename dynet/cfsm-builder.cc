@@ -4,8 +4,6 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/serialization/vector.hpp>
-
 using namespace std;
 
 namespace dynet {
@@ -53,9 +51,6 @@ unsigned StandardSoftmaxBuilder::sample(const Expression& rep) {
 Expression StandardSoftmaxBuilder::full_log_distribution(const Expression& rep) {
   return log(softmax(affine_transform({b, w, rep})));
 }
-
-DYNET_SERIALIZE_COMMIT(StandardSoftmaxBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(SoftmaxBuilder, p_w, p_b))
-DYNET_SERIALIZE_IMPL(StandardSoftmaxBuilder)
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
 
@@ -217,9 +212,6 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
   cerr << "Read " << wc << " words in " << cdict.size() << " clusters (" << scs << " singleton clusters)\n";
 }
 
-DYNET_SERIALIZE_COMMIT(ClassFactoredSoftmaxBuilder,
-		       DYNET_SERIALIZE_DERIVED_DEFINE(SoftmaxBuilder, cdict, widx2cidx, widx2cwidx, cidx2words, singleton_cluster, p_r2c, p_cbias, p_rc2ws, p_rcwbiases))
-
 void ClassFactoredSoftmaxBuilder::initialize_expressions() {
   for (unsigned c = 0; c < p_rc2ws.size(); ++c) {
     //get_rc2w(_bias) creates the expression at c if the expression does not already exist.
@@ -228,9 +220,4 @@ void ClassFactoredSoftmaxBuilder::initialize_expressions() {
   }
 }
 
-DYNET_SERIALIZE_IMPL(ClassFactoredSoftmaxBuilder)
-
 } // namespace dynet
-
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::StandardSoftmaxBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::ClassFactoredSoftmaxBuilder)

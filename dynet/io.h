@@ -8,6 +8,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <unordered_map>
+#include <iterator>
 
 #include "dynet/dim.h"
 #include "dynet/model.h"

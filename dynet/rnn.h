@@ -9,12 +9,9 @@
 #ifndef DYNET_RNN_H_
 #define DYNET_RNN_H_
 
-#include <boost/serialization/export.hpp>
-
 #include "dynet/dynet.h"
 #include "dynet/rnn-state-machine.h"
 #include "dynet/expr.h"
-#include "dynet/io-macros.h"
 
 using namespace dynet::expr;
 
@@ -245,32 +242,6 @@ struct RNNBuilder {
    */
   virtual void copy(const RNNBuilder & params) = 0;
 
-  /**
-   * 
-   * \brief This function saves all the parameters associated with
-   * a particular RNNBuilder's derived class to a file.
-   * \details This should not be used to seralize models, it should
-   * only be used to save parameters for pretraining.
-   * If you are interested in serializing models, use the boost
-   * serialization API against your model class.
-   * 
-   * \param fname File you want to save your model to.
-   */
-  virtual void save_parameters_pretraining(const std::string& fname) const;
-  /**
-   * 
-   * \brief Loads all the parameters associated with a particular RNNBuilder's
-   * derived class from a file.
-   * \details This should not be used to seralize models, it should
-   * only be used to load parameters from pretraining.
-   * If you are interested in serializing models, use the boost
-   * serialization API against your model class.
-   * 
-   * \param fname File you want to read your model from.
-   */
-  virtual void load_parameters_pretraining(const std::string& fname);
-
-
 protected:
   virtual void new_graph_impl(ComputationGraph& cg) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
@@ -283,8 +254,6 @@ private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
   std::vector<RNNPointer> head; // head[i] returns the head position
-
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -344,9 +313,6 @@ public:
 
   unsigned num_h0_components() const override { return layers; }
 
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
-
   ParameterCollection & get_parameters();
 
 private:
@@ -366,15 +332,8 @@ private:
 
   unsigned layers;
   bool lagging;
- 
-  DYNET_SERIALIZE_DECLARE()
 };
 
 } // namespace dynet
-
-DYNET_NINTRUSIVE_SERIALIZE_DEFINE(dynet::RNNPointer & p, p.t)
-
-BOOST_CLASS_EXPORT_KEY(dynet::RNNBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::SimpleRNNBuilder)
 
 #endif

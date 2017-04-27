@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <vector>
 #include <string>
+#include <fstream>
+#include <iterator>
 
 namespace dynet {
 
