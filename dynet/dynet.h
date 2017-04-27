@@ -557,6 +557,20 @@ struct Node {
                         unsigned i,
                         Tensor& dEdxi) const final;
 
+  /**
+   * \brief profile for automatic batching
+   * \detail This will be equal only for nodes that can be combined. Returns
+   *         "" for unbatchable functions.
+   */
+  virtual std::string autobatch_profile() const { return ""; }
+  /**
+   * \brief which inputs can be batched
+   * \detail This will be true for inputs that should be concatenated when
+   *         autobatching, and false for inputs that should be shared among
+   *         all batches.
+   */
+  virtual std::vector<bool> autobatch_concat() const { return std::vector<bool>(); }
+
   //
   /**
    * \brief Number of arguments to the function
