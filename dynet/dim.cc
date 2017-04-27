@@ -49,8 +49,5 @@ istream& operator>>(istream& is, Dim& d) {
   return is;
 }
 
-DYNET_SERIALIZE_COMMIT(Dim, DYNET_SERIALIZE_DEFINE(nd, d))
-DYNET_SERIALIZE_IMPL(Dim)
-
 } // namespace dynet
 

@@ -262,44 +262,6 @@ void LSTMBuilder::copy(const RNNBuilder & rnn) {
       params[i][j] = rnn_lstm.params[i][j];
 }
 
-void LSTMBuilder::save_parameters_pretraining(const string& fname) const {
-  cerr << "Writing LSTM parameters to " << fname << endl;
-  ofstream of(fname);
-  if(!of)
-    DYNET_INVALID_ARG("Couldn't write LSTM parameters to " << fname);
-  boost::archive::binary_oarchive oa(of);
-  std::string id = "LSTMBuilder:params";
-  oa << id;
-  oa << layers;
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      oa << p.get_storage().values;
-    }
-  }
-}
-
-void LSTMBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "Loading LSTM parameters from " << fname << endl;
-  ifstream of(fname);
-  if(!of)
-    DYNET_INVALID_ARG("Couldn't read LSTM parameters from " << fname)
-  boost::archive::binary_iarchive ia(of);
-  std::string id;
-  ia >> id;
-  if (id != "LSTMBuilder:params")
-    DYNET_INVALID_ARG("Bad id read in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
-  unsigned l = 0;
-  ia >> l;
-  if (l != layers)
-    DYNET_INVALID_ARG("Bad number of layers in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
-  // TODO check other dimensions
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      ia >> p.get_storage().values;
-    }
-  }
-}
-
 void LSTMBuilder::set_dropout(float d) {
   if (d < 0.f || d > 1.f)
     DYNET_INVALID_ARG("dropout rate must be a probability (>=0 and <=1)");
@@ -321,12 +283,6 @@ void LSTMBuilder::disable_dropout() {
   dropout_rate_h = 0.f;
   dropout_rate_c = 0.f;
 }
-
-DYNET_SERIALIZE_COMMIT(LSTMBuilder,
-		       DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, dropout_rate),
-		       DYNET_VERSION_SERIALIZE_DEFINE(1, MAX_SERIALIZE_VERSION, dropout_rate_h, dropout_rate_c, input_dim, hid))
-
-DYNET_SERIALIZE_IMPL(LSTMBuilder);
 
 // Vanilla LSTM
 
@@ -516,44 +472,6 @@ void VanillaLSTMBuilder::copy(const RNNBuilder & rnn) {
       params[i][j] = rnn_lstm.params[i][j];
 }
 
-void VanillaLSTMBuilder::save_parameters_pretraining(const string& fname) const {
-  cerr << "Writing VanillaLSTM parameters to " << fname << endl;
-  ofstream of(fname);
-  if(!of)
-    DYNET_INVALID_ARG("Couldn't write LSTM parameters to " << fname);
-  boost::archive::binary_oarchive oa(of);
-  std::string id = "VanillaLSTMBuilder:params";
-  oa << id;
-  oa << layers;
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      oa << p.get_storage().values;
-    }
-  }
-}
-
-void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "Loading VanillaLSTM parameters from " << fname << endl;
-  ifstream of(fname);
-  if(!of)
-    DYNET_INVALID_ARG("Couldn't read LSTM parameters from " << fname);
-  boost::archive::binary_iarchive ia(of);
-  std::string id;
-  ia >> id;
-  if (id != "VanillaLSTMBuilder:params")
-    DYNET_INVALID_ARG("Bad id read in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
-  unsigned l = 0;
-  ia >> l;
-  if (l != layers)
-    DYNET_INVALID_ARG("Bad number of layers in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
-  // TODO check other dimensions
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      ia >> p.get_storage().values;
-    }
-  }
-}
-
 void VanillaLSTMBuilder::set_dropout(float d) {
   if (d < 0.f || d > 1.f)
     DYNET_INVALID_ARG("dropout rate must be a probability (>=0 and <=1)");
@@ -572,9 +490,6 @@ void VanillaLSTMBuilder::disable_dropout() {
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
 }
-
-DYNET_SERIALIZE_COMMIT(VanillaLSTMBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, dropout_rate, dropout_rate_h, hid, input_dim))
-DYNET_SERIALIZE_IMPL(VanillaLSTMBuilder);
 
 } // namespace dynet
 

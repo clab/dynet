@@ -1,8 +1,5 @@
 #include "dynet/training.h"
 
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/export.hpp>
-
 // #include "dynet/gpu-ops.h"
 #include "dynet/param-nodes.h"
 #include "dynet/weight-decay.h"
@@ -309,46 +306,4 @@ void AdamTrainer::alloc_impl() {
 }
 #endif
 
-#ifndef __CUDACC__
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::SimpleSGDTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::MomentumSGDTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdagradTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdadeltaTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::RmsPropTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdamTrainer)
-
-DYNET_SERIALIZE_COMMIT(Trainer, DYNET_SERIALIZE_DEFINE(eta0, eta, eta_decay, epoch,
-						       clipping_enabled, clip_threshold, clips, updates,
-						       aux_allocated, model))
-DYNET_SERIALIZE_IMPL(Trainer)
-
-DYNET_SERIALIZE_COMMIT(SimpleSGDTrainer, DYNET_SERIALIZE_DERIVED_EQ_DEFINE(Trainer))
-DYNET_SERIALIZE_IMPL(SimpleSGDTrainer)
-
-DYNET_SERIALIZE_COMMIT(MomentumSGDTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, momentum, vp, vlp))
-DYNET_SERIALIZE_IMPL(MomentumSGDTrainer)
-
-DYNET_SERIALIZE_COMMIT(AdagradTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, epsilon, vp, vlp))
-DYNET_SERIALIZE_IMPL(AdagradTrainer)
-
-DYNET_SERIALIZE_COMMIT(AdadeltaTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, epsilon, rho, hg, hlg, hd, hld))
-DYNET_SERIALIZE_IMPL(AdadeltaTrainer)
-
-DYNET_SERIALIZE_COMMIT(RmsPropTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, epsilon, rho, hg, hlg))
-DYNET_SERIALIZE_IMPL(RmsPropTrainer)
-
-DYNET_SERIALIZE_COMMIT(AdamTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, beta_1, beta_2, epsilon, m, lm, v, lv))
-DYNET_SERIALIZE_IMPL(AdamTrainer)
-
-#endif
-
 } // namespace dynet
-
-#ifndef __CUDACC__
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::SimpleSGDTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::MomentumSGDTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdagradTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdadeltaTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::RmsPropTrainer)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdamTrainer)
-#endif

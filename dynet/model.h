@@ -13,9 +13,7 @@
 #include <unordered_map>
 #include <string>
 #include <stdexcept>
-#include <boost/serialization/export.hpp>
 
-#include "dynet/io-macros.h"
 #include "dynet/weight-decay.h"
 #include "dynet/tensor.h"
 
@@ -71,7 +69,6 @@ struct ParameterStorageBase {
    */
   virtual size_t size() const = 0;
   virtual ~ParameterStorageBase();
-  DYNET_SERIALIZE_COMMIT_EMPTY()
 }; // struct ParameterStorageBase
 
 // represents parameters (e.g., a weight matrix) that will be optimized
@@ -124,7 +121,6 @@ struct ParameterStorage : public ParameterStorageBase {
 private:
   ParameterStorage() : updated(true), owner(nullptr) {}
   explicit ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name); // initialize with custom initializer
-  DYNET_SERIALIZE_DECLARE()
 }; // struct ParameterStorage
 
 // represents a matrix/vector embedding of a discrete set
@@ -219,7 +215,6 @@ struct LookupParameterStorage : public ParameterStorageBase {
 private:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
   LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name);
-  DYNET_SERIALIZE_SPLIT_DECLARE()
 }; // // struct LookupParameterStorage
 
 /**
@@ -295,9 +290,6 @@ struct Parameter {
    * @return Update status
    */
   bool is_updated();
-
-private:
-  DYNET_SERIALIZE_DECLARE()
 }; // struct Parameter
 
 /**
@@ -362,9 +354,6 @@ struct LookupParameter {
    * @return Update status
    */
   bool is_updated();
-
-private:
-  DYNET_SERIALIZE_DECLARE()
 }; // struct LookupParameter
 
 // This is an internal class to store parameters in the collection
@@ -386,9 +375,6 @@ struct ParameterCollectionStorage {
 
   mutable float* gradient_norm_scratch;
   L2WeightDecay weight_decay;
-private:
-  DYNET_SERIALIZE_DECLARE()
-
 };
 
 // this is a collection of parameters
@@ -615,7 +601,6 @@ protected:
 
 private:
   ParameterCollection(const std::string & name, ParameterCollection* parent);
-  DYNET_SERIALIZE_DECLARE()
   std::string name;
   std::unordered_map<std::string,int> name_cntr, collec_name_cntr;
   ParameterCollectionStorage * storage;
@@ -626,8 +611,5 @@ void save_dynet_model(std::string filename, ParameterCollection* model);
 void load_dynet_model(std::string filename, ParameterCollection* model);
 
 } // namespace dynet
-
-BOOST_CLASS_EXPORT_KEY(dynet::ParameterStorage)
-BOOST_CLASS_EXPORT_KEY(dynet::LookupParameterStorage)
 
 #endif

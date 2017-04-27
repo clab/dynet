@@ -7,7 +7,6 @@
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
 #include "dynet/dict.h"
-#include "dynet/io-macros.h"
 
 namespace dynet {
 
@@ -27,8 +26,6 @@ public:
   // returns an Expression representing a vector the size of the vocabulary.
   // The ith dimension gives log p(w_i | rep). This function may be SLOW. Avoid if possible.
   virtual expr::Expression full_log_distribution(const expr::Expression& rep) = 0;
-
-  DYNET_SERIALIZE_COMMIT_EMPTY()
 };
 
 class StandardSoftmaxBuilder : public SoftmaxBuilder {
@@ -47,8 +44,6 @@ private:
   expr::Expression b;
   ComputationGraph* pcg;
   ParameterCollection local_model;
-
-  DYNET_SERIALIZE_DECLARE()
 };
 
 // helps with implementation of hierarchical softmax
@@ -104,11 +99,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   expr::Expression cbias;
   std::vector<expr::Expression> rc2ws;
   std::vector<expr::Expression> rc2biases;
-  DYNET_SERIALIZE_DECLARE()
 };
 }  // namespace dynet
-
-BOOST_CLASS_EXPORT_KEY(dynet::StandardSoftmaxBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::ClassFactoredSoftmaxBuilder)
 
 #endif
