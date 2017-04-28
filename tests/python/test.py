@@ -2,14 +2,12 @@ import dynet as dy
 import numpy as np
 import unittest
 
-
 def npvalue_callable(x):
     return x.npvalue()
 
 def gradient_callable(x):
     return x.gradient()
     
-
 class TestInput(unittest.TestCase):
 
     def setUp(self):
@@ -273,6 +271,103 @@ class TestOperations(unittest.TestCase):
         y_np_value = self.v2 / self.v1.std() * (self.v1 - self.v1.mean()) + self.v3
 
         self.assertTrue(np.allclose(y.npvalue(),y_np_value))
+
+class TestSimpleRNN(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.m = dy.Model()
+        self.rnn = dy.SimpleRNNBuilder(2,10,10,self.m)
+
+    def test_get_parameters(self):
+        dy.renew_cg()
+        self.rnn.initial_state()
+        P_p = self.rnn.get_parameters()
+        P_e = self.rnn.get_parameter_expressions()
+        for l_p,l_e in zip(P_p,P_e):
+            for w_p,w_e in zip(l_p,l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+
+    def test_get_parameters_sanity(self):
+        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+
+class TestGRU(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.m = dy.Model()
+        self.rnn = dy.GRUBuilder(2,10,10,self.m)
+
+    def test_get_parameters(self):
+        dy.renew_cg()
+        self.rnn.initial_state()
+        P_p = self.rnn.get_parameters()
+        P_e = self.rnn.get_parameter_expressions()
+        for l_p,l_e in zip(P_p,P_e):
+            for w_p,w_e in zip(l_p,l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+
+    def test_get_parameters_sanity(self):
+        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+
+class TestLSTM(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.m = dy.Model()
+        self.rnn = dy.LSTMBuilder(2,10,10,self.m)
+
+    def test_get_parameters(self):
+        dy.renew_cg()
+        self.rnn.initial_state()
+        P_p = self.rnn.get_parameters()
+        P_e = self.rnn.get_parameter_expressions()
+        for l_p,l_e in zip(P_p,P_e):
+            for w_p,w_e in zip(l_p,l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+
+    def test_get_parameters_sanity(self):
+        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+
+
+class TestVanillaLSTM(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.m = dy.Model()
+        self.rnn = dy.VanillaLSTMBuilder(2,10,10,self.m)
+
+    def test_get_parameters(self):
+        dy.renew_cg()
+        self.rnn.initial_state()
+        P_p = self.rnn.get_parameters()
+        P_e = self.rnn.get_parameter_expressions()
+        for l_p,l_e in zip(P_p,P_e):
+            for w_p,w_e in zip(l_p,l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+
+    def test_get_parameters_sanity(self):
+        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+
+
+class TestFastLSTM(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.m = dy.Model()
+        self.rnn = dy.FastLSTMBuilder(2,10,10,self.m)
+
+    def test_get_parameters(self):
+        dy.renew_cg()
+        self.rnn.initial_state()
+        P_p = self.rnn.get_parameters()
+        P_e = self.rnn.get_parameter_expressions()
+        for l_p,l_e in zip(P_p,P_e):
+            for w_p,w_e in zip(l_p,l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+
+    def test_get_parameters_sanity(self):
+        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
 
 
 if __name__ == '__main__':
