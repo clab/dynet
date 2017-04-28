@@ -19,7 +19,7 @@ namespace dynet {
 
 class ParameterCollection;
 
-BOOST_STRONG_TYPEDEF(int, RNNPointer)
+typedef int RNNPointer;
 inline void swap(RNNPointer& i1, RNNPointer& i2) {
   RNNPointer t = i1; i1 = i2; i2 = t;
 }
