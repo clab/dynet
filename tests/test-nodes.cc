@@ -490,6 +490,17 @@ BOOST_AUTO_TEST_CASE( concatenate_cols_gradient ) {
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
+
+// Expression concatenate_cols(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( concatenate_cols_vecmatrix_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param_square1);
+  Expression y = concatenate_cols({x1, x2, x1});
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression concatenate_to_batch(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( concatenate_to_batch_gradient ) {
   dynet::ComputationGraph cg;
