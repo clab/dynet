@@ -451,9 +451,9 @@ string Concatenate::as_string(const vector<string>& arg_names) const {
 Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   unsigned new_rows = 0;
   Dim dr = xs[0];
-  if (LooksLikeVector(dr)) dr.resize(1);
   for (auto c : xs) {
-    if (LooksLikeVector(c)) c.resize(1);
+    if(dr.nd < c.nd) dr.resize(c.nd);
+    if(c.nd < dr.nd) c.resize(dr.nd);
     new_rows += c[dimension];
     dr.set(dimension, c[dimension]);
     DYNET_ARG_CHECK(dr.single_batch() == c.single_batch(),

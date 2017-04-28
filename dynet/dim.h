@@ -132,7 +132,11 @@ struct Dim {
    *
    * \param int New number of dimensions
    */
-  inline void resize(unsigned int i) { nd = i; }
+  inline void resize(unsigned int i) {
+    while(nd < i)
+      d[nd++] = 1;
+    nd = i;
+  }
   /**
    * \brief Get number of dimensions
    * \return Number of dimensions
