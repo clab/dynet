@@ -643,7 +643,15 @@ Dim PickElement::dim_forward(const vector<Dim>& xs) const {
                           "Tried to PickElement on dimension " << dimension << " bigger than input " << xs[0]);
   DYNET_ARG_CHECK(xs[0].nd < 4,
                           "PickElement not currently supported for tensors of 4 or more dimensions.");
+  
   Dim ret(xs[0]);
+  if (pvals){
+    DYNET_ARG_CHECK(xs[0].bd == 1 || xs[0].bd == pvals->size(),
+                          "Number of elements in the passed-in index vector (" <<  pvals->size() << ")"
+                            " did not match number of elements in mini-batch elements in expression (of dimension " << xs[0].bd << ") in PickElement");
+    ret.bd = pvals->size();
+  }
+
   ret.delete_dim(dimension);
   return ret;
 }
