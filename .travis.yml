@@ -75,7 +75,7 @@ before_script:
   - cd build
   - conda create -q -n dynet-environment python=$PYVER $CONDA_PACKAGES
   - source activate dynet-environment
-  - cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DENABLE_BOOST -DPYTHON=`which python`
+  - cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DENABLE_BOOST=ON -DPYTHON=`which python`
 
 after_failure:
   - cat $TRAVIS_BUILD_DIR/build/CMakeFiles/CMakeError.log
