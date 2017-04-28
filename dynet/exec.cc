@@ -234,12 +234,12 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     prof2id[""] = 0;
     vector<int> node2id(i + 1, 0);  // Node to ID
     vector<int> node2left(i + 1, 0); // Node to # of predecessors left
-    vector<vector<int> > node2successors(i + 1); // Node to # of predecessors left
+    vector<vector<VariableIndex> > node2successors(i + 1); // Node to successors
     // Average ID of batched items, a heuristic for which to run first
     vector<float> prof2avg(i - num_nodes_evaluated + 2, 0.f), prof2cnt(i - num_nodes_evaluated + 2, 0.f);
     // The active items that cannot or can be batched
-    vector<int> active_unbatched;
-    vector<vector<int> > active_batched;
+    vector<VariableIndex> active_unbatched;
+    vector<vector<VariableIndex> > active_batched;
     int id = 0;
     for (VariableIndex j = num_nodes_evaluated; j <= i; ++j) {
       const Node* node = cg.nodes[j];
@@ -338,7 +338,66 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       // 2.b) If we have a batch of current nodes, execute them together
       } else {
         DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
-        DYNET_RUNTIME_ERR("Executing multiple batched nodes not implemented yet.");
+        // Set up the configuration of each node, including pointer differential from the start of the batch
+        size_t bd = 0, tot_main, tot_aux, my_main, my_aux;
+        for(curr_node : active_batched[curr_prof]) {
+          node = cg.nodes[curr_node];
+          nxfs[curr_node].d = node->dim;
+          bd += node->dim.bd;
+          nxfs[curr_node].device = node->device;
+          nxfs[curr_node].mem_pool = DeviceMempool::FXS;
+          my_main = node->dim.size() * sizeof(float);
+          my_aux = node->aux_storage_size();
+          nxfs[curr_node].v = tot_main; tot_main += my_main;
+          node->aux_mem = my_aux; tot_aux += my_aux;
+        }
+        // Allocate main memory for the batch
+        float *head_main = static_cast<float*>(nfxs[curr_node].device->pools[(int)DeviceMempool::FXS]->allocate(tot_main));
+        if(head_main == nullptr) DYNET_RUNTIME_ERR("Ran out of memory when executing node " << curr_node);
+        for(curr_node : active_batched[curr_prof])
+          nxfs[curr_node].v += head_main;
+        // Allocate auxiliary memory for the batch
+        float *head_aux = nullptr;
+        if(tot_aux > 0) {
+          head_aux = static_cast<float*>(nfxs[curr_node].device->pools[(int)DeviceMempool::FXS]->allocate(tot_aux));
+          if(head_aux == nullptr) DYNET_RUNTIME_ERR("Ran out of memory when executing node " << curr_node);
+          for(curr_node : active_batched[curr_prof])
+            cg.nodes[curr_node]->aux_mem += head_aux;
+        }
+
+        DYNET_RUNTIME_ERR("Implemented up to here.");
+
+        // We need to do something similar for the inputs. For each of the input arguments, check which of the following applies:
+        //  1) the inputs don't need to be concatenated
+        //  2) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
+        //  3) the inputs need to be concatenated, and are not contiguous
+        // In cases 1) and 2), just copy the pointer. In case 3), allocate scratch memory, and copy things into a contiguous block.
+        node = cg.nodes[curr_node];
+        unsigned ai = 0;
+        for (VariableIndex arg : node->args) {
+          xs[ai] = &nfxs[arg];
+        }
+
+        // We need to create a pseudo-node that has the right dimensionality for the batched operation
+        Node* pseudo_node = node->create_pseudo_node(...);
+        pseudo_node->forward(xs, nfxs[curr_node]);
+
+        DYNET_RUNTIME_ERROR("Everything from here beyond should be finished.");
+
+        // Decrement the counts of the predecessors and add them to the active queue as appropriate
+        for(curr_node : active_batched[curr_prof]) {
+          for(auto next_node : node2successors[curr_node]) {
+            if(--node2left[next_node] == 0) {
+              if(node2id[next_node] == 0)
+                active_unbatched.push_back(next_node);
+              else
+                active_batched[node2id[next_node]].push_back(next_node);
+            }
+          }
+        }
+        // Clear the active things for this profile
+        num_nodes_evaluated += active_batched[curr_prof].size();
+        active_batched[curr_prof].clear();
       }
     }
   }
