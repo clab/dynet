@@ -3305,12 +3305,13 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         input_dim (int): Dimension of the input
         hidden_dim (int): Dimension of the recurrent units
         model (dynet.Model): Model to hold the parameters
+        ln_lstm (bool): Whether to use layer normalization
 
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model, ln_lstm=False):
         if layers > 0:
-            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0], ln_lstm)
         else:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
