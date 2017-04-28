@@ -2,6 +2,12 @@ import dynet as dy
 import numpy as np
 import unittest
 
+def npvalue_callable(x):
+    return x.npvalue()
+
+def gradient_callable(x):
+    return x.gradient()
+    
 class TestInput(unittest.TestCase):
 
     def setUp(self):
@@ -205,6 +211,41 @@ class TestIO(unittest.TestCase):
     def test_save_load(self):
         self.m.save(self.file, [self.b])
         self.m2.load(self.file)
+
+class TestExpression(unittest.TestCase):
+
+    def setUp(self):
+
+        self.v1 = np.arange(10)
+        self.v2 = np.arange(10)[::-1]
+
+    def test_value(self):
+        dy.renew_cg()
+        x=dy.inputTensor(self.v1)
+        self.assertTrue(np.allclose(x.npvalue(), self.v1))
+
+    def test_value_sanity(self):
+        dy.renew_cg()
+        x=dy.inputTensor(self.v1)
+        dy.renew_cg()
+        self.assertRaises(RuntimeError, npvalue_callable, x)
+
+    def test_gradient(self):
+        dy.renew_cg()
+        x=dy.inputTensor(self.v1)
+        y=dy.inputTensor(self.v2)
+        l = dy.dot_product(x,y)
+        l.forward()
+        l.backward(full=True)
+        self.assertTrue(np.allclose(x.gradient(), self.v2),msg="{}\n{}\n{}".format(l.value(),x.gradient(),self.v2,y.gradient(),self.v2))
+
+    def test_gradient_sanity(self):
+        dy.renew_cg()
+        x=dy.inputTensor(self.v1)
+        y=dy.inputTensor(self.v2)
+        l = dy.dot_product(x,y)
+        l.forward()
+        self.assertRaises(RuntimeError, gradient_callable, x)
 
 
 
