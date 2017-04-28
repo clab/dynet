@@ -157,7 +157,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         const CTensor& incremental_forward(VariableIndex index) except +
         const CTensor& get_value(VariableIndex i) except +
         void invalidate()
-        void backward(VariableIndex i)
+        void backward(VariableIndex i, bool full)
 
         # checkpointing
         void checkpoint()
@@ -263,6 +263,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         long i
         CDim dim() except +
         bool is_stale()
+        const CTensor& gradient() except +
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) except + #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
@@ -402,8 +403,8 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNBuilder "dynet::RNNBuilder":
         void new_graph(CComputationGraph &cg)
         void start_new_sequence(vector[CExpression] ces)
-        CExpression add_input(CExpression &x)
-        CExpression add_input(CRNNPointer prev, CExpression &x)
+        CExpression add_input(CExpression &x) except +
+        CExpression add_input(CRNNPointer prev, CExpression &x) except +
         CExpression set_h(CRNNPointer prev, vector[CExpression] ces)
         CExpression set_s(CRNNPointer prev, vector[CExpression] ces)
         void rewind_one_step()
@@ -474,7 +475,7 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
     cdef cppclass CVanillaLSTMBuilder "dynet::VanillaLSTMBuilder" (CRNNBuilder):
         CVanillaLSTMBuilder()
-        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
         vector[vector[CParameters]] params
