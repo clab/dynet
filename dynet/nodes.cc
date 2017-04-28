@@ -1561,7 +1561,11 @@ void PickElement::forward_dev_impl(const MyDevice & dev, const vector<const Tens
     for(unsigned b = 0; b < pvals->size(); ++b) {
       DYNET_ARG_CHECK((*pvals)[b] < xs[0]->d[dimension], 
                               "PickElement::forward_impl requested element " << (*pvals)[b] << " from a dimension of length " << xs[0]->d[dimension]);
-      fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip((*pvals)[b], dimension); 
+      if(xs[0]->d.bd == 1){
+        fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->t<3>().chip((*pvals)[b], dimension); 
+      }else{
+        fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip((*pvals)[b], dimension); 
+      }
     }
   }
 }
@@ -1579,8 +1583,13 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
     dEdxi.tb<3>().chip(*pval, dimension).device(*dev.edevice) += dEdf.tb<2>();
   } else {
     DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickElement::forward");
-    for(unsigned b = 0; b < pvals->size(); ++b)
-      dEdxi.tb<3>().chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
+    for(unsigned b = 0; b < pvals->size(); ++b){
+      if(xs[0]->d.bd == 1){
+        dEdxi.t<3>().chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>();
+      }else{
+        dEdxi.tb<3>().chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
+      }
+    }
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PickElement)
