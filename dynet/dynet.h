@@ -570,6 +570,21 @@ struct Node {
    *         all batches.
    */
   virtual std::vector<bool> autobatch_concat() const { return std::vector<bool>(); }
+  /**
+   * \brief create a pseudonode for autobatching
+   * \detail This will combine together multiple nodes into one big node for 
+   *         the automatic batching functionality. It assumes that xs and fx
+   *         already have memory allocated, but their dimensions are simply
+   *         set to be a vector the size of the memory. This is fine for componentwise
+   *         operations, but wll need to be overloaded for any other operations.
+   */
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids,
+                                      const std::vector<bool> & concat,
+                                      std::vector<const Tensor*>& xs,
+                                      Tensor& fx) const {
+    return nullptr;
+  }
 
   //
   /**

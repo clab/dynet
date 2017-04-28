@@ -274,6 +274,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
     // 2) Travel through and do active nodes
     vector<const Tensor*> xs(16);
+    Tensor nfx;
     while(num_nodes_evaluated != i + 1) {
       
       // First find the best node to execute next in order of priority
@@ -337,55 +338,86 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         ++num_nodes_evaluated;
       // 2.b) If we have a batch of current nodes, execute them together
       } else {
+        Node* node;
         DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
+        auto & batch_ids = active_batched[curr_prof];
         // Set up the configuration of each node, including pointer differential from the start of the batch
-        size_t bd = 0, tot_main, tot_aux, my_main, my_aux;
-        for(curr_node : active_batched[curr_prof]) {
+        size_t bd = 0, tot_main = 0, tot_aux = 0, my_main, my_aux;
+        for(auto curr_node : batch_ids) {
           node = cg.nodes[curr_node];
-          nxfs[curr_node].d = node->dim;
+          nfxs[curr_node].d = node->dim;
           bd += node->dim.bd;
-          nxfs[curr_node].device = node->device;
-          nxfs[curr_node].mem_pool = DeviceMempool::FXS;
-          my_main = node->dim.size() * sizeof(float);
+          nfxs[curr_node].device = node->device;
+          nfxs[curr_node].mem_pool = DeviceMempool::FXS;
+          my_main = node->dim.size();
           my_aux = node->aux_storage_size();
-          nxfs[curr_node].v = tot_main; tot_main += my_main;
-          node->aux_mem = my_aux; tot_aux += my_aux;
+          nfxs[curr_node].v = (float*)(tot_main * sizeof(float)); tot_main += my_main;
+          node->aux_mem = (void*)my_aux; tot_aux += my_aux;
         }
+        nfx.device = node->device;
+        nfx.mem_pool = DeviceMempool::FXS;
+        nfx.d = Dim({(unsigned int)tot_main});
+
         // Allocate main memory for the batch
-        float *head_main = static_cast<float*>(nfxs[curr_node].device->pools[(int)DeviceMempool::FXS]->allocate(tot_main));
+        float *head_main = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_main * sizeof(float)));
         if(head_main == nullptr) DYNET_RUNTIME_ERR("Ran out of memory when executing node " << curr_node);
-        for(curr_node : active_batched[curr_prof])
-          nxfs[curr_node].v += head_main;
+        for(auto curr_node : batch_ids)
+          nfxs[curr_node].v += (ptrdiff_t)head_main;
         // Allocate auxiliary memory for the batch
-        float *head_aux = nullptr;
+        void *head_aux = nullptr;
         if(tot_aux > 0) {
-          head_aux = static_cast<float*>(nfxs[curr_node].device->pools[(int)DeviceMempool::FXS]->allocate(tot_aux));
+          head_aux = static_cast<void*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_aux));
           if(head_aux == nullptr) DYNET_RUNTIME_ERR("Ran out of memory when executing node " << curr_node);
-          for(curr_node : active_batched[curr_prof])
-            cg.nodes[curr_node]->aux_mem += head_aux;
+          for(auto curr_node : batch_ids)
+            cg.nodes[curr_node]->aux_mem = (void*)((ptrdiff_t)head_aux + (ptrdiff_t)cg.nodes[curr_node]->aux_mem);
         }
 
-        DYNET_RUNTIME_ERR("Implemented up to here.");
-
+        size_t used = node->device->pools[(int)DeviceMempool::FXS]->used(), arity = node->arity();
+        vector<bool> autobatch_concat = node->autobatch_concat();
+        DYNET_ASSERT(autobatch_concat.size() == arity, "mismatch in arity in batched exec");
+        xs.resize(arity); 
         // We need to do something similar for the inputs. For each of the input arguments, check which of the following applies:
-        //  1) the inputs don't need to be concatenated
-        //  2) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
-        //  3) the inputs need to be concatenated, and are not contiguous
-        // In cases 1) and 2), just copy the pointer. In case 3), allocate scratch memory, and copy things into a contiguous block.
-        node = cg.nodes[curr_node];
-        unsigned ai = 0;
-        for (VariableIndex arg : node->args) {
-          xs[ai] = &nfxs[arg];
+        for(size_t i = 0; i < arity; ++i) {
+          // 1) the inputs don't need to be concatenated. Just use the tensor
+          if(!autobatch_concat[i]) {
+            xs[i] = &nfxs[node->args[i]];
+          // 2) the inputs need to be concatenated
+          } else {
+            Tensor* my_xsi = new Tensor;
+            my_xsi->device = node->device;
+            my_xsi->mem_pool = DeviceMempool::FXS;
+            // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
+            // TODO: This should be implemented, but for now fall back to copying every time
+            // 2.b) the inputs need to be concatenated, and are not contiguous
+            size_t tot_arg = 0, my_arg;
+            for(auto curr_node : batch_ids)
+              tot_arg = nfxs[cg.nodes[curr_node]->args[i]].d.size();
+            my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
+            my_xsi->d = Dim({(unsigned int)tot_arg});
+            tot_arg = 0;
+            for(auto curr_node : batch_ids) {
+              nfx = nfxs[cg.nodes[curr_node]->args[i]];
+              nfx.v = my_xsi->v + tot_arg;
+              TensorTools::copy_elements(nfx, nfxs[cg.nodes[curr_node]->args[i]]);
+              tot_arg += nfx.d.size();
+            }
+            xs[i] = my_xsi;
+          }
         }
+        nfx.v = head_main;
 
-        // We need to create a pseudo-node that has the right dimensionality for the batched operation
-        Node* pseudo_node = node->create_pseudo_node(...);
-        pseudo_node->forward(xs, nfxs[curr_node]);
-
-        DYNET_RUNTIME_ERROR("Everything from here beyond should be finished.");
+        // Create a pseudo-node, and set the dimensions of xs and nfx to be appropriate
+        Node* pseudo_node = node->autobatch_pseudo_node(cg, batch_ids, autobatch_concat, xs, nfx);
+        if(pseudo_node != nullptr) {
+          pseudo_node->aux_mem = head_aux;
+          pseudo_node->forward(xs, nfx);
+          delete pseudo_node;
+        } else {
+          node->forward(xs, nfx);
+        }
 
         // Decrement the counts of the predecessors and add them to the active queue as appropriate
-        for(curr_node : active_batched[curr_prof]) {
+        for(auto curr_node : batch_ids) {
           for(auto next_node : node2successors[curr_node]) {
             if(--node2left[next_node] == 0) {
               if(node2id[next_node] == 0)
@@ -397,7 +429,12 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         }
         // Clear the active things for this profile
         num_nodes_evaluated += active_batched[curr_prof].size();
-        active_batched[curr_prof].clear();
+        batch_ids.clear();
+        // Clear the extra memory
+        node->device->pools[(int)DeviceMempool::FXS]->set_used(used);
+        for(size_t i = 0; i < arity; ++i)
+          if(autobatch_concat[i])
+            delete xs[i];
       }
     }
   }
