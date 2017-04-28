@@ -6,16 +6,16 @@
 
 namespace dynet {
 
-bool startswith(const std::string & str, const std::string & key) {
+inline bool startswith(const std::string & str, const std::string & key) {
   return str.find(key) == 0;
 }
 
-bool endswith(const std::string & str, const std::string & key) {
+inline bool endswith(const std::string & str, const std::string & key) {
   if (str.size() < key.size()) return false;
   return str.rfind(key) == (str.size() - key.size());
 }
 
-std::vector<std::string> str_split(const std::string & str, const char sep) {
+inline std::vector<std::string> str_split(const std::string & str, const char sep) {
   std::vector<std::string> lst;
   size_t st = 0, en = 0;
   while (1) {

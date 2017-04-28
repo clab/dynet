@@ -74,8 +74,6 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -fno-finite-math-only -Wall -Wno-missing-braces -std=c++11 -Ofast -g -march=native")
 endif()
 
-enable_testing()
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
                     ${PROJECT_SOURCE_DIR}/external/easyloggingpp/src)
 
@@ -100,23 +98,6 @@ function(find_cudnn)
 endfunction()
 
 # look for Boost
-if(DEFINED ENV{BOOST_ROOT})
-  set(Boost_NO_SYSTEM_PATHS ON)
-  if(DEFINED ${Boost_INCLUDE_DIR})
-    get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
-  endif()
-endif()
-set(Boost_REALPATH ON)
-find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
-message("-- Boost dir is " ${Boost_INCLUDE_DIR})
-include_directories(${Boost_INCLUDE_DIR})
-if(MSVC)
-  # Boost does auto-linking when using a compiler like Microsoft Visual C++, we just need to help it find the libraries
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
-else()
-  set(LIBS ${LIBS} ${Boost_LIBRARIES})
-endif()
 # trouble shooting:
 # if boost library cannot be found, in addition to install boost library
 # check if environment variables are set
@@ -126,6 +107,25 @@ endif()
 # echo "export BOOST_LIBRARYDIR=/usr/local/lib" >> ~/.bashrc
 # echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
 # then run source ~/.bashrc to have those environment variable effective immediately
+if(ENABLE_BOOST)
+  message("-- Enabling Boost")
+  if(DEFINED ENV{BOOST_ROOT})
+    set(Boost_NO_SYSTEM_PATHS ON)
+    if(DEFINED ${Boost_INCLUDE_DIR})
+      get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+    endif()
+  endif()
+  set(Boost_REALPATH ON)
+  find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
+  message("-- Boost dir is " ${Boost_INCLUDE_DIR})
+  include_directories(${Boost_INCLUDE_DIR})
+  if(MSVC)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
+  else()
+    set(LIBS ${LIBS} ${Boost_LIBRARIES})
+  endif()
+endif()
 
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
@@ -168,15 +168,16 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(dynet)
-add_subdirectory(tests)
 #add_subdirectory(examples)
 add_subdirectory(tutorial)
 add_subdirectory(python)
 
-option(INCLUDE_SWIG "INCLUDE_SWIG" OFF)
-if(INCLUDE_SWIG)
-  message("-- Including SWIG")
+if(ENABLE_SWIG)
+  message("-- Enabling SWIG")
   add_subdirectory(contrib/swig)
-endif(INCLUDE_SWIG)
+endif(ENABLE_SWIG)
 
-enable_testing()
+if(ENABLE_BOOST)
+  add_subdirectory(tests)
+  enable_testing()
+endif()

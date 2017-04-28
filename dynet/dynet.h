@@ -12,8 +12,6 @@
 #include <initializer_list>
 #include <utility>
 
-#include <boost/serialization/strong_typedef.hpp>
-
 #include "dynet/init.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/tensor.h"
@@ -55,7 +53,7 @@ struct ParameterNodeBase;
 struct Node;
 namespace expr { struct Expression; }
 
-BOOST_STRONG_TYPEDEF(unsigned, VariableIndex)
+typedef unsigned VariableIndex;
 
 struct CGCheckpoint {
   int node_idx;
