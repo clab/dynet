@@ -20,7 +20,6 @@ set(dynet_library_SRCS
     lstm.cc
     mem.cc
     model.cc
-    mp.cc
     nodes.cc
     nodes-common.cc
     nodes-contract.cc
@@ -38,6 +37,9 @@ set(dynet_library_SRCS
     weight-decay.cc
     io.cc
 )
+if(ENABLE_BOOST)
+  list(APPEND dynet_library_SRCS mp.cc)
+endif()
 
 # Headers:
 set(dynet_library_HDRS
@@ -63,7 +65,6 @@ set(dynet_library_HDRS
     lstm.h
     mem.h
     model.h
-    mp.h
     nodes.h
     nodes-contract.h
     nodes-conv.h
@@ -82,6 +83,9 @@ set(dynet_library_HDRS
     weight-decay.h
     io.h
 )
+if(ENABLE_BOOST)
+  list(APPEND dynet_library_HDRS mp.h)
+endif()
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 if (NOT MSVC)

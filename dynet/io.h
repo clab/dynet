@@ -14,7 +14,7 @@
 #include "dynet/model.h"
 #include "dynet/tensor.h"
 #include "dynet/except.h"
-#include "dynet/str_util.h"
+#include "dynet/str-util.h"
 
 namespace dynet {
 
