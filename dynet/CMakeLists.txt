@@ -37,7 +37,7 @@ set(dynet_library_SRCS
     weight-decay.cc
     io.cc
 )
-if(INCLUDE_BOOST)
+if(ENABLE_BOOST)
   list(APPEND dynet_library_SRCS mp.cc)
 endif()
 
@@ -83,7 +83,7 @@ set(dynet_library_HDRS
     weight-decay.h
     io.h
 )
-if(INCLUDE_BOOST)
+if(ENABLE_BOOST)
   list(APPEND dynet_library_HDRS mp.h)
 endif()
 

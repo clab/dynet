@@ -107,7 +107,8 @@ endfunction()
 # echo "export BOOST_LIBRARYDIR=/usr/local/lib" >> ~/.bashrc
 # echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
 # then run source ~/.bashrc to have those environment variable effective immediately
-if(INCLUDE_BOOST)
+if(ENABLE_BOOST)
+  message("-- Enabling Boost")
   if(DEFINED ENV{BOOST_ROOT})
     set(Boost_NO_SYSTEM_PATHS ON)
     if(DEFINED ${Boost_INCLUDE_DIR})
@@ -171,13 +172,12 @@ add_subdirectory(dynet)
 add_subdirectory(tutorial)
 add_subdirectory(python)
 
-option(INCLUDE_SWIG "INCLUDE_SWIG" OFF)
-if(INCLUDE_SWIG)
-  message("-- Including SWIG")
+if(ENABLE_SWIG)
+  message("-- Enabling SWIG")
   add_subdirectory(contrib/swig)
-endif(INCLUDE_SWIG)
+endif(ENABLE_SWIG)
 
-if(INCLUDE_BOOST)
+if(ENABLE_BOOST)
   add_subdirectory(tests)
   enable_testing()
 endif()
