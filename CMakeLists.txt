@@ -168,7 +168,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(dynet)
-#add_subdirectory(examples)
+add_subdirectory(examples)
 add_subdirectory(tutorial)
 add_subdirectory(python)
 

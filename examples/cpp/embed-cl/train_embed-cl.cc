@@ -4,13 +4,11 @@
 #include "dynet/timing.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/io.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/access.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -67,11 +65,11 @@ struct Encoder {
 #endif
   }
 
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & p_s;
-    ar & p_t;
+  void save() {
+    std::remove("embed-cl.model.meta"); std::remove("embed-cl.model");
+    Pack packer("embed-cl.model");
+    packer.save(p_s, "p_s");
+    packer.save(p_t, "p_t");
   }
 };
 
@@ -137,9 +135,8 @@ int main(int argc, char** argv) {
   Encoder emb;
   if (argc == 4) {
     string fname = argv[3];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> emb;
+    Pack packer(fname);
+    packer.populate(model, "model");
   }
   else {
     emb = Encoder(model);
