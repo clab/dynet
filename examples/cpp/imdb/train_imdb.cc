@@ -302,7 +302,7 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        packer.save(model, "model");
+        packer.save(model, "model", false);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }
