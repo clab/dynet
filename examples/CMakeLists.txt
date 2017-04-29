@@ -1,11 +1,15 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 if (NOT MSVC)
-  set(MP_EXAMPLES rnnlm-mp xor-mp xor-simple-mp)
+  set(MP_EXAMPLES xor-mp xor-simple-mp)
 endif()
 
 if(ENABLE_BOOST)
-  set(RNNLM rnnlm)
+  if (NOT MSVC)
+    set(RNNLM rnnlm rnnlm-mp)
+  else()
+    set(RNNLM rnnlm)
+  endif()
 endif()
 
 # TODO: segrnn-sup
