@@ -295,15 +295,16 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
             best_avg = prof2avg[i];
           } 
         }
-        if(active_batched[curr_prof].size() == 1)
+        if(active_batched[curr_prof].size() == 1) {
           curr_node = active_batched[curr_prof][0];
+          active_batched[curr_prof].clear();
+        }
       }
 
       // 2.a) If we have a single current node, then we execute it
       if(curr_node != -1) {
-        int SINGLE = 0;
         // cerr << "SINGLE " << ++SINGLE << endl;
-        // cerr << "Processing node " << curr_node << endl;
+        // cerr << "Processing single " << curr_node << endl;
         const Node* node = cg.nodes[curr_node];
         DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in BatchedExecutionEngine::incremental_forward");
         xs.resize(node->arity());
@@ -330,12 +331,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
         // cerr << "nfxs[" << curr_node << "].v==" << (ptrdiff_t)nfxs[curr_node].v;
         // for(size_t j = 0; j < xs.size(); ++j)
-        //   cerr << " xs[" << j << "].v==" << (ptrdiff_t)xs[j]->v;
+        //   // cerr << " xs[" << j << "].v==" << (ptrdiff_t)xs[j]->v;
         // cerr << endl;
         node->forward(xs, nfxs[curr_node]);
         // Decrement the counts of the predecessors and add them to the active queue as appropriate
         // cerr << "SINGLE " << ++SINGLE << endl;
         for(auto next_node : node2successors[curr_node]) {
+          // cerr << "From " << curr_node << " decrementing " << next_node << " to " << node2left[next_node]-1 << endl;
           if(--node2left[next_node] == 0) {
             if(node2id[next_node] == 0)
               active_unbatched.push_back(next_node);
@@ -347,7 +349,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         // cerr << "SINGLE DONE" << endl;
       // 2.b) If we have a batch of current nodes, execute them together
       } else {
-        int BATCH = 0;
         // cerr << "BATCH " << ++BATCH << endl;
 
         Node* node;
@@ -356,9 +357,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         // Set up the configuration of each node, including pointer differential from the start of the batch
         size_t bd = 0, tot_main = 0, tot_aux = 0, my_main, my_aux;
         // cerr << "BATCH " << ++BATCH << endl;
-        // cerr << "Processing batch";
+        // cerr << "Processing batch"; for(auto curr_node : batch_ids) cerr << ' ' << curr_node; cerr << endl;
         for(auto curr_node : batch_ids) {
-          // cerr << " " << curr_node;
           node = cg.nodes[curr_node];
           nfxs[curr_node].d = node->dim;
           bd += node->dim.bd;
@@ -370,7 +370,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
           tot_main += my_main;
           node->aux_mem = (void*)my_aux; tot_aux += my_aux;
         }
-        // cerr << endl;
         // cerr << "BATCH " << ++BATCH << endl;
 
         // Allocate main memory for the batch
@@ -438,11 +437,11 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         Node* pseudo_node = node->autobatch_pseudo_node(cg, batch_ids, autobatch_concat, xs, nfx);
         // cerr << "nfx.d==" << nfx.d;
         // for(size_t j = 0; j < xs.size(); ++j)
-        //   cerr << " xs[" << j << "].d==" << xs[j]->d;
+        //   // cerr << " xs[" << j << "].d==" << xs[j]->d;
         // cerr << endl;
         // cerr << "nfx.v==" << (ptrdiff_t)nfx.v;
         // for(size_t j = 0; j < xs.size(); ++j)
-        //   cerr << " xs[" << j << "].v==" << (ptrdiff_t)xs[j]->v;
+        //   // cerr << " xs[" << j << "].v==" << (ptrdiff_t)xs[j]->v;
         // cerr << endl;
         if(pseudo_node != nullptr) {
           pseudo_node->aux_mem = head_aux;
@@ -456,6 +455,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         // cerr << "BATCH " << ++BATCH << endl;
         for(auto curr_node : batch_ids) {
           for(auto next_node : node2successors[curr_node]) {
+            // cerr << "From " << curr_node << " decrementing " << next_node << " to " << node2left[next_node]-1 << endl;
             if(--node2left[next_node] == 0) {
               if(node2id[next_node] == 0)
                 active_unbatched.push_back(next_node);
@@ -477,6 +477,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       }
     }
   }
+  // cerr << "Returning nfxs[" << i << "]" << endl;
   return nfxs[i];
 }
 
