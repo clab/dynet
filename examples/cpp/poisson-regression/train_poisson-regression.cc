@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
         std::string fname_meta = fname + ".meta";
         std::remove(fname_meta.c_str()); std::remove(fname.c_str());
         Pack packer(fname);
-        packer.save(model, "model");
+        packer.save(model, "model", false);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
