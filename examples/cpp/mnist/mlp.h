@@ -17,9 +17,6 @@
 #include "dynet/expr.h"
 #include "dynet/io-macros.h"
 
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/vector.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <sstream>

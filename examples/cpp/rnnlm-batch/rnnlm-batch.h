@@ -20,10 +20,6 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
