@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> lm(model, cfsm);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model, cfsm);
   if (argc == 5) {
-    Pack packer(argv[4]);
+    Packer packer(argv[4]);
     packer.populate(model, "model");
   }
 
@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
         best = dloss;
         std::string fname_meta = fname + ".meta";
         std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-        Pack packer(fname);
+        Packer packer(fname);
         packer.save(model, "model", false);
       }
     }

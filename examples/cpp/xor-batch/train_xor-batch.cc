@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
   if (argc == 2) {
     // Load the model and parameters from
     // file if given.
-    Pack packer(argv[1]);
+    Packer packer(argv[1]);
     packer.populate(m, "model");
     p_W = packer.load_param(m, "p_W");
     p_b = packer.load_param(m, "p_b");
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
   // Output the model and parameter objects
   // to a cout.
   std::remove("xor-batch.model.meta"); std::remove("xor-batch.model");
-  Pack packer("xor-batch.model");
+  Packer packer("xor-batch.model");
   packer.save(m, "model");
   packer.save(p_W, "p_W");
   packer.save(p_b, "p_b");

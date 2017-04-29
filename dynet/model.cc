@@ -427,12 +427,12 @@ const ParameterCollectionStorage& ParameterCollection::get_storage() const {
 }
 
 void save_dynet_model(std::string filename, ParameterCollection* model) {
-  Pack packer(filename);
+  Packer packer(filename);
   packer.save(*model, "model");
 };
 
 void load_dynet_model(std::string filename, ParameterCollection* model) {
-  Pack packer(filename);
+  Packer packer(filename);
   packer.populate(*model, "model");
 };
 

@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
   if (has_model_to_load) {
     string fname = conf["model"].as<string>();
     cerr << "Reading parameters from " << fname << "...\n";
-    Pack packer(fname);
+    Packer packer(fname);
     packer.save(model, "model");
   }
 
@@ -320,7 +320,7 @@ int main(int argc, char** argv) {
           best = dloss;
           std::string fname_meta = fname + ".meta";
           std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-          Pack packer(fname);
+          Packer packer(fname);
           packer.save(model, "model", false);
         }
         cerr << "\n***DEV [epoch=" << (lines / training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';

@@ -250,7 +250,7 @@ int main(int argc, char** argv) {
   int report = 0;
   unsigned lines = 0;
   std::remove("textcat.model.meta"); std::remove("textcat.model");
-  Pack packer("textcat.model");
+  Packer packer("textcat.model");
   while(1) {
     Timer iteration("completed in");
     double loss = 0;

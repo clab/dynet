@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
   int report = 0;
   unsigned lines = 0;
   std::remove("imdb.model.meta"); std::remove("imdb.model");
-  Pack packer("imdb.model");
+  Packer packer("imdb.model");
   while (1) {
     Timer iteration("completed in");
     double loss = 0;

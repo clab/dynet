@@ -67,7 +67,7 @@ struct Encoder {
 
   void save() {
     std::remove("embed-cl.model.meta"); std::remove("embed-cl.model");
-    Pack packer("embed-cl.model");
+    Packer packer("embed-cl.model");
     packer.save(p_s, "p_s");
     packer.save(p_t, "p_t");
   }
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
   Encoder emb;
   if (argc == 4) {
     string fname = argv[3];
-    Pack packer(fname);
+    Packer packer(fname);
     packer.populate(model, "model");
   }
   else {

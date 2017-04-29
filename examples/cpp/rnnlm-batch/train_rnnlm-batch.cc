@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    Pack packer(params.model_file);
+    Packer packer(params.model_file);
     packer.populate(model, "model");
   }
 
@@ -218,7 +218,7 @@ int main(int argc, char** argv) {
       if (dloss < best) {
         best = dloss;
         std::remove("rnnlm-batch.model.meta"); std::remove("rnnlm-batch.model");
-        Pack packer("rnnlm-batch.model");
+        Packer packer("rnnlm-batch.model");
         packer.save(model, "model", false);
       }
       // Print informations

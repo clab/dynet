@@ -74,7 +74,7 @@ public:
 };
 
 void WriteToFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
-  Pack packer(filename);
+  Packer packer(filename);
   packer.save(dynet_model, "model");
   packer.save(model.pW, "model.pW");
   packer.save(model.pb, "model.pb");
@@ -83,7 +83,7 @@ void WriteToFile(string& filename, XORModel& model, ParameterCollection& dynet_m
 }
 
 void ReadFromFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
-  Pack packer(filename);
+  Packer packer(filename);
   packer.populate(dynet_model, "model");
   packer.populate(model.pW, "model.pW");
   packer.populate(model.pb, "model.pb");
