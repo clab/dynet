@@ -221,15 +221,6 @@ public:
     }
     cerr << endl;
   }
-
-private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int) {
-    ar & LAYERS & INPUT_DIM & HIDDEN_DIM;
-    ar & p_c & p_R & p_bias;
-    ar & rnn;
-  }
 };
 
 #endif

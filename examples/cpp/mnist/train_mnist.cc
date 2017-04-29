@@ -4,6 +4,7 @@
  * This provide an example of usage of the mlp.h model
  */
 #include "mlp.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 #include "../utils/cl-args.h"
 #include "../utils/data-io.h"
@@ -63,9 +64,8 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    ifstream in(params.model_file);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> nn;
+    Pack packer(params.model_file);
+    packer.populate(model, "model");
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -161,9 +161,10 @@ int main(int argc, char** argv) {
       // If the dev loss is lower than the previous ones, save the ,odel
       if (dpos > worst) {
         worst = dpos;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << nn;
+        std::string fname_meta = fname + ".meta";
+        std::remove(fname_meta.c_str()); std::remove(fname.c_str());
+        Pack packer(fname);
+        packer.save(model, "model", false);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)
@@ -177,7 +178,4 @@ int main(int argc, char** argv) {
     ++epoch;
 
   }
-
-
 }
-

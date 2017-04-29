@@ -9,14 +9,12 @@
 #include "dynet/expr.h"
 #include "dynet/cfsm-builder.h"
 #include "dynet/globals.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -151,10 +149,8 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> lm(model, cfsm);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model, cfsm);
   if (argc == 5) {
-    string fname = argv[4];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    Pack packer(argv[4]);
+    packer.populate(model, "model");
   }
 
   unsigned report_every_i = 50;
@@ -209,9 +205,10 @@ int main(int argc, char** argv) {
 #if 1
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        std::string fname_meta = fname + ".meta";
+        std::remove(fname_meta.c_str()); std::remove(fname.c_str());
+        Pack packer(fname);
+        packer.save(model, "model", false);
       }
     }
 #endif

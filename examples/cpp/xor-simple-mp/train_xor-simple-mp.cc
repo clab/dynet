@@ -4,8 +4,6 @@
 #include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
 #include "dynet/mp.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -55,37 +53,7 @@ private:
   Parameter p_W, p_b, p_V, p_a;
   Expression W, b, V, a;
   ComputationGraph* pcg;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & p_W & p_b & p_V & p_a;
-  }
 };
-
-void serialize(const XorModel* const xor_model, const ParameterCollection& dynet_model, const Trainer* const trainer) {
-  // Remove existing stdout output
-  int r = ftruncate(fileno(stdout), 0);
-  if (r != 0) {}
-
-  // Move the cursor to the beginning of the stdout stream
-  fseek(stdout, 0, SEEK_SET);
-
-  // Dump the model to stdout
-  boost::archive::text_oarchive oa(cout);
-  oa & dynet_model;
-  oa & xor_model;
-  oa & trainer;
-}
-
-void deserialize(const string& filename, XorModel* xor_model, ParameterCollection& dynet_model, Trainer* trainer) {
-  ifstream in(filename.c_str());
-  boost::archive::text_iarchive ia(in);
-  ia & dynet_model;
-  ia & xor_model;
-  ia & trainer;
-  in.close();
-}
 
 class SufficientStats {
 public:
@@ -132,11 +100,7 @@ public:
     return SufficientStats(loss, 1);
   }
 
-  void SaveModel() {
-    if (!quiet) {
-      serialize(xor_model, dynet_model, trainer);
-    }
-  }
+  void SaveModel() {}
 
 private:
   XorModel* xor_model;
@@ -155,16 +119,10 @@ int main(int argc, char** argv) {
   XorModel* xor_model = nullptr;
   Trainer* trainer = nullptr;
 
-  if (argc == 2) {
-    // Load the model and parameters from file if given.
-    deserialize(argv[1], xor_model, dynet_model, trainer);
-  }
-  else {
-    // Otherwise, just create a new model.
-    const unsigned HIDDEN_SIZE = 8;
-    xor_model = new XorModel(HIDDEN_SIZE, dynet_model);
-    trainer = new SimpleSGDTrainer(dynet_model);
-  }
+  // Otherwise, just create a new model.
+  const unsigned HIDDEN_SIZE = 8;
+  xor_model = new XorModel(HIDDEN_SIZE, dynet_model);
+  trainer = new SimpleSGDTrainer(dynet_model);
 
   vector<Datum> data(4);
   data[0] = Datum({0, 0}, 0);

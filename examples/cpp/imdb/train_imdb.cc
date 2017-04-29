@@ -14,6 +14,7 @@
  * On a small proportion of the IMDB data (2500 for training, 500 for dev.), this
  * model achieves 80% accuracy on two-way classification.
  */
+#include <unistd.h>
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
 #include "dynet/training.h"
@@ -24,13 +25,12 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/globals.h"
+#include "dynet/io.h"
+
 #include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -253,6 +253,8 @@ int main(int argc, char** argv) {
   bool first = true;
   int report = 0;
   unsigned lines = 0;
+  std::remove("imdb.model.meta"); std::remove("imdb.model");
+  Pack packer("imdb.model");
   while (1) {
     Timer iteration("completed in");
     double loss = 0;
@@ -300,9 +302,7 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        packer.save(model, "model");
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }

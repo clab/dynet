@@ -19,10 +19,6 @@
 
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/vector.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -71,14 +67,7 @@ public:
     activation(activation),
     dropout_rate(dropout_rate) {};
   Layer() {};
-private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int) {
-    ar & input_dim & output_dim & activation & dropout_rate;
-  }
 };
-DYNET_SERIALIZE_IMPL(Layer);
 
 /**
  * \ingroup ffbuilders
@@ -284,16 +273,6 @@ private:
       break;
     }
   }
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int) {
-    ar & LAYERS;
-    ar & layers & params;
-    ar & dropout_active;
-  }
-
-
 };
 
 #endif
