@@ -169,7 +169,7 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
-    Pack packer(argv[3]);
+    Packer packer(argv[3]);
     packer.populate(model, "model");
   }
 

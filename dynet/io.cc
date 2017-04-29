@@ -3,7 +3,7 @@
 
 namespace dynet {
 
-void Pack::save(const ParameterCollection & model,
+void Packer::save(const ParameterCollection & model,
                 const std::string & key, bool is_append) {
   std::string key_str(key);
   if (key.size() == 0) {
@@ -28,13 +28,13 @@ void Pack::save(const ParameterCollection & model,
   os.close();
 }
 
-void Pack::save(const ParameterCollection & model,
+void Packer::save(const ParameterCollection & model,
                 const std::vector<std::string> & filter_lst,
                 const std::string & key, bool is_append) {
-  DYNET_RUNTIME_ERR("This interface is not implemented yet for Pack object.");
+  DYNET_RUNTIME_ERR("This interface is not implemented yet for Packer object.");
 }
 
-void Pack::save(const Parameter & param, const std::string & key, bool is_append) {
+void Packer::save(const Parameter & param, const std::string & key, bool is_append) {
   std::string key_str(key);
   if (key.size() == 0) {
     key_str = param.get_fullname();
@@ -53,7 +53,7 @@ void Pack::save(const Parameter & param, const std::string & key, bool is_append
   os.close();
 }
 
-void Pack::save(const LookupParameter & lookup_param, const std::string & key, bool is_append) {
+void Packer::save(const LookupParameter & lookup_param, const std::string & key, bool is_append) {
   std::string key_str(key);
   if (key.size() == 0) {
     key_str = lookup_param.get_fullname();
@@ -73,61 +73,61 @@ void Pack::save(const LookupParameter & lookup_param, const std::string & key, b
   os.close();
 }
 
-void Pack::populate(ParameterCollection & model, const std::string & key) {
+void Packer::populate(ParameterCollection & model, const std::string & key) {
   this->deserialize(model, key);
 }
 
-void Pack::populate(ParameterCollection & model,
+void Packer::populate(ParameterCollection & model,
                     const std::vector<std::string> & filter_lst,
                     const std::string & key) {
-  DYNET_RUNTIME_ERR("This interface is not implemented yet for Pack object.");
+  DYNET_RUNTIME_ERR("This interface is not implemented yet for Packer object.");
 }
 
-void Pack::populate(Parameter & param,
+void Packer::populate(Parameter & param,
                     const std::string & key) {
   this->deserialize(param, key);
 }
 
-void Pack::populate(Parameter & param,
+void Packer::populate(Parameter & param,
                     const std::string & model_name,
                     const std::string & key) {
   this->deserialize(param, model_name, key);
 }
 
-void Pack::populate(LookupParameter & lookup_param,
+void Packer::populate(LookupParameter & lookup_param,
                     const std::string & key) {
   this->deserialize(lookup_param, key);
 }
 
-void Pack::populate(LookupParameter & lookup_param,
+void Packer::populate(LookupParameter & lookup_param,
                     const std::string & model_name,
                     const std::string & key) {
   this->deserialize(lookup_param, model_name, key);
 }
 
-Parameter Pack::load_param(ParameterCollection & model,
+Parameter Packer::load_param(ParameterCollection & model,
                            const std::string & key) {
   return this->deserialize_param(model, key);
 }
 
-Parameter Pack::load_param(ParameterCollection & model,
+Parameter Packer::load_param(ParameterCollection & model,
                            const std::string & model_name,
                            const std::string & key) {
   return this->deserialize_param(model, model_name, key);
 }
 
-LookupParameter Pack::load_lookup_param(ParameterCollection & model,
+LookupParameter Packer::load_lookup_param(ParameterCollection & model,
                                         const std::string & key) {
   return this->deserialize_lookup_param(model, key);
 }
 
-LookupParameter Pack::load_lookup_param(ParameterCollection & model,
+LookupParameter Packer::load_lookup_param(ParameterCollection & model,
                                         const std::string & model_name,
                                         const std::string & key) {
   return this->deserialize_lookup_param(model, model_name, key);
 }
 
-bool Pack::duplicate_key_check(const std::string & key) {
+bool Packer::duplicate_key_check(const std::string & key) {
   std::ifstream f(fn_meta);
   std::string line;
   while (std::getline(f, line)) {
@@ -138,7 +138,7 @@ bool Pack::duplicate_key_check(const std::string & key) {
   return true;
 }
 
-void Pack::serialize(const ParameterCollection & model,
+void Packer::serialize(const ParameterCollection & model,
                      const std::string & key,
                      bool is_append,
                      std::unordered_map<std::string, long long> & offset_dict) {
@@ -171,7 +171,7 @@ void Pack::serialize(const ParameterCollection & model,
   os.close();
 }
 
-void Pack::serialize(const Parameter & param,
+void Packer::serialize(const Parameter & param,
                      const std::string & key,
                      bool is_append) {
   std::ofstream os;
@@ -188,7 +188,7 @@ void Pack::serialize(const Parameter & param,
   os.close();
 }
 
-void Pack::serialize(const LookupParameter & lookup_param,
+void Packer::serialize(const LookupParameter & lookup_param,
                      const std::string & key,
                      bool is_append) {
   std::ofstream os;
@@ -205,7 +205,7 @@ void Pack::serialize(const LookupParameter & lookup_param,
   os.close();
 }
 
-void Pack::deserialize(ParameterCollection & model, const std::string & key) {
+void Packer::deserialize(ParameterCollection & model, const std::string & key) {
   std::ifstream meta_f(fn_meta);
   std::ifstream f(fn);
   // find the offset of the key
@@ -310,7 +310,7 @@ void Pack::deserialize(ParameterCollection & model, const std::string & key) {
   meta_f.close();
 }
   
-void Pack::deserialize(Parameter & param, const std::string & key) {
+void Packer::deserialize(Parameter & param, const std::string & key) {
   std::ifstream f(fn);
   std::string line;
   f.seekg(this->seek_offset(key));
@@ -340,7 +340,7 @@ void Pack::deserialize(Parameter & param, const std::string & key) {
   f.close();
 }
 
-void Pack::deserialize(Parameter & param,
+void Packer::deserialize(Parameter & param,
                        const std::string & model_name,
                        const std::string & key) {
   std::ifstream f(fn);
@@ -368,7 +368,7 @@ void Pack::deserialize(Parameter & param,
   f.close();
 }
 
-void Pack::deserialize(LookupParameter & lookup_param,
+void Packer::deserialize(LookupParameter & lookup_param,
                        const std::string & key) {
   std::ifstream f(fn);
   std::string line;
@@ -403,7 +403,7 @@ void Pack::deserialize(LookupParameter & lookup_param,
   f.close();
 }
 
-void Pack::deserialize(LookupParameter & lookup_param,
+void Packer::deserialize(LookupParameter & lookup_param,
                        const std::string & model_name,
                        const std::string & key) {
   std::ifstream f(fn);
@@ -433,7 +433,7 @@ void Pack::deserialize(LookupParameter & lookup_param,
   f.close();
 }
 
-Parameter Pack::deserialize_param(ParameterCollection & model,
+Parameter Packer::deserialize_param(ParameterCollection & model,
                                   const std::string & key) {
   std::ifstream f(fn);
   std::string line;
@@ -463,7 +463,7 @@ Parameter Pack::deserialize_param(ParameterCollection & model,
   return param;
 }
 
-Parameter Pack::deserialize_param(ParameterCollection & model,
+Parameter Packer::deserialize_param(ParameterCollection & model,
                             const std::string & model_name,
                             const std::string & key) {
   std::ifstream f(fn);
@@ -491,7 +491,7 @@ Parameter Pack::deserialize_param(ParameterCollection & model,
   return param;
 }
 
-LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
+LookupParameter Packer::deserialize_lookup_param(ParameterCollection & model,
                                          const std::string & model_name,
                                          const std::string & key) {
 
@@ -525,7 +525,7 @@ LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
   return lookup_param;
 }
 
-LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
+LookupParameter Packer::deserialize_lookup_param(ParameterCollection & model,
                                                const std::string & key) {
   std::ifstream f(fn);
   std::string line;
@@ -566,20 +566,20 @@ LookupParameter Pack::deserialize_lookup_param(ParameterCollection & model,
   return lookup_param;
 }
 
-void Pack::serialize_parameter(std::ofstream & os, const ParameterStorage *p) {
+void Packer::serialize_parameter(std::ofstream & os, const ParameterStorage *p) {
   os << p->name << '\n' << p->dim << '\n';
   os << dynet::as_vector(p->values);
   os << dynet::as_vector(p->g);
 }
 
-void Pack::serialize_lookup_parameter(std::ofstream & os,
+void Packer::serialize_lookup_parameter(std::ofstream & os,
                                       const LookupParameterStorage *p) {
   os << p->name << '\n' << p->all_dim << '\n' << p->dim << '\n';
   os << dynet::as_vector(p->all_values);
   os << dynet::as_vector(p->all_grads);
 }
 
-long long Pack::seek_offset(const std::string & key) {
+long long Packer::seek_offset(const std::string & key) {
   std::ifstream meta_f(fn_meta);
   std::string line;
   long long local_offset = -1;
@@ -601,7 +601,7 @@ long long Pack::seek_offset(const std::string & key) {
   return local_offset;
 }
 
-long long Pack::seek_offset(const std::string & model_name,
+long long Packer::seek_offset(const std::string & model_name,
                             const std::string & key) {
   std::ifstream meta_f(fn_meta);
   std::string line;

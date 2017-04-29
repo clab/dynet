@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    Pack packer(params.model_file);
+    Packer packer(params.model_file);
     packer.populate(model, "model");
   }
 
@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
         best = dloss;
         std::string fname_meta = fname + ".meta";
         std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-        Pack packer(fname);
+        Packer packer(fname);
         packer.save(model, "model", false);
       }
       // Print informations

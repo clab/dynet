@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     Parameter b = m.add_parameters({3,7});
     LookupParameter c = m.add_lookup_parameters(10, {2});
     std::remove("test.model"); std::remove("test.model.meta");
-    dynet::Pack s("test.model");
+    dynet::Packer s("test.model");
     s.save(m, "model1");
     s.save(m, m.get_namespace(), true);
 
@@ -85,14 +85,14 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     ParameterCollection collec;
     testModel spec(collec);
     std::remove("a.model"); std::remove("a.model.meta");
-    Pack s1("a.model");
+    Packer s1("a.model");
     s1.save(collec, "all");
     ParameterCollection collec2;
     s1.populate(collec2);
     DYNET_CHECK_EQUAL(collec2.size(), collec.size());
   
     std::remove("b.model"); std::remove("b.model.meta");
-    Pack s2("b.model");
+    Packer s2("b.model");
     s2.save(collec, "all");
     s2.save(spec.get_lstm_model(), "lstm", true);
     s2.save(spec.get_affine_model(), "affine", true);
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     auto cc2 = cc.add_subcollection("xx");
     cc2.add_parameters({2, 3, 4, 5});
     std::remove("d.model"); std::remove("d.model.meta");
-    Pack s3("d.model");
+    Packer s3("d.model");
     s3.save(cc, "key");
 
     ParameterCollection ccc;
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
 BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   {
     std::remove("f.model.meta"); std::remove("f.model");
-    Pack packer("f.model");
+    Packer packer("f.model");
     ParameterCollection model_out;
     Parameter m_out = model_out.add_parameters({100});
     LookupParameter lookup_m_out = model_out.add_lookup_parameters(10, {128});
@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   }
   {
     std::remove("g.model.meta"); std::remove("g.model");
-    Pack packer("g.model");
+    Packer packer("g.model");
     ParameterCollection model;
     Parameter m = model.add_parameters({10});
     LookupParameter lookup_m = model.add_lookup_parameters(10, {128});
