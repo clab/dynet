@@ -61,14 +61,14 @@ int main(int argc, char** argv) {
 
     Expression loss_expr = sum(losses);
 
+    // Print the graph, just for fun.
+    if(iter == 0)
+      cg.print_graphviz();
+
     // Calculate the loss. Batching will automatically be done here.
     float loss = as_scalar(cg.forward(loss_expr)) / 4;
     cg.backward(loss_expr);
     sgd.update(1.0);
-
-    // Show the computation graph, just for fun.
-    if(iter == 0)
-      cg.print_graphviz();
 
     sgd.update_epoch();
     cerr << "E = " << loss << endl;
