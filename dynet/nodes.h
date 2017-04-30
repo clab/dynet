@@ -517,6 +517,8 @@ struct L1Distance : public Node {
 struct LogisticSigmoid : public Node {
   explicit LogisticSigmoid(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "logistic"; }  
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -524,6 +526,8 @@ struct LogisticSigmoid : public Node {
 struct SoftSign : public Node {
   explicit SoftSign(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "softisgn"; }  
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
