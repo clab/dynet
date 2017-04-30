@@ -562,14 +562,14 @@ struct Node {
    * \detail This will be equal only for nodes that can be combined. Returns
    *         "" for unbatchable functions.
    */
-  virtual std::string autobatch_profile() const { return ""; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const { return ""; }
   /**
    * \brief which inputs can be batched
    * \detail This will be true for inputs that should be concatenated when
    *         autobatching, and false for inputs that should be shared among
    *         all batches.
    */
-  virtual std::vector<bool> autobatch_concat() const { return std::vector<bool>(); }
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const { return std::vector<bool>(); }
   /**
    * \brief create a pseudonode for autobatching
    * \detail This will combine together multiple nodes into one big node for 
