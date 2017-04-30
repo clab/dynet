@@ -302,6 +302,7 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
     ++ai;
   }
   node->dim = node->dim_forward(xds);
+  node->set_cg(this);
   if (immediate_compute) {
     const Tensor& value = incremental_forward(i);
     if (check_validity)
@@ -318,9 +319,11 @@ const Tensor& ComputationGraph::incremental_forward(VariableIndex last) { return
 const Tensor& ComputationGraph::forward(VariableIndex last) { return ee->forward(last); }
 const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_value(i); }
 const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return this->get_value(e.i); }
+const Tensor& ComputationGraph::get_gradient(VariableIndex i) { return ee->get_gradient(i); }
+const Tensor& ComputationGraph::get_gradient(const expr::Expression& e) { return this->get_gradient(e.i); }
 void ComputationGraph::invalidate() { ee->invalidate(); }
-void ComputationGraph::backward(const expr::Expression& last) { ee->backward(last.i); }
-void ComputationGraph::backward(VariableIndex i) { ee->backward(i); }
+void ComputationGraph::backward(const expr::Expression& last, bool full) { ee->backward(last.i, full); }
+void ComputationGraph::backward(VariableIndex i, bool full) { ee->backward(i, full); }
 
 void ComputationGraph::set_immediate_compute(bool ic) {
   immediate_compute = ic;
