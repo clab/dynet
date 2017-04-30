@@ -3,8 +3,7 @@
 #include "dynet/training.h"
 #include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include "dynet/io.h"
 
 #include <iostream>
 #include <fstream>
@@ -27,9 +26,12 @@ int main(int argc, char** argv) {
   if (argc == 2) {
     // Load the model and parameters from
     // file if given.
-    ifstream in(argv[1]);
-    boost::archive::text_iarchive ia(in);
-    ia >> m >> p_W >> p_b >> p_V >> p_a;
+    Packer packer(argv[1]);
+    packer.populate(m, "model");
+    p_W = packer.load_param(m, "p_W");
+    p_b = packer.load_param(m, "p_b");
+    p_V = packer.load_param(m, "p_V");
+    p_a = packer.load_param(m, "p_a");
   }
   else {
     // Otherwise, just create a new model.
@@ -81,7 +83,12 @@ int main(int argc, char** argv) {
   }
   // Output the model and parameter objects
   // to a cout.
-  boost::archive::text_oarchive oa(cout);
-  oa << m << p_W << p_b << p_V << p_a << x_values << y_values;
+  std::remove("xor-batch-lookup.model.meta"); std::remove("xor-batch-lookup.model");
+  Packer packer("xor-batch-lookup.model");
+  packer.save(m, "model");
+  packer.save(p_W, "p_W");
+  packer.save(p_b, "p_b");
+  packer.save(p_V, "p_V");
+  packer.save(p_a, "p_a");
 }
 

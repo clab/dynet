@@ -10,6 +10,7 @@
 #include "dynet/cfsm-builder.h"
 #include "dynet/hsm-builder.h"
 #include "dynet/globals.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 
 #include <iostream>
@@ -18,8 +19,6 @@
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/regex.hpp>
 
 using namespace std;
@@ -229,10 +228,8 @@ int main(int argc, char** argv) {
   if (has_model_to_load) {
     string fname = conf["model"].as<string>();
     cerr << "Reading parameters from " << fname << "...\n";
-    ifstream in(fname);
-    assert(in);
-    boost::archive::binary_iarchive ia(in);
-    ia >> model;
+    Packer packer(fname);
+    packer.save(model, "model");
   }
 
   bool LEARN = conf.count("learn");
@@ -321,9 +318,10 @@ int main(int argc, char** argv) {
         }
         if (dloss < best) {
           best = dloss;
-          ofstream out(fname);
-          boost::archive::binary_oarchive oa(out);
-          oa << model;
+          std::string fname_meta = fname + ".meta";
+          std::remove(fname_meta.c_str()); std::remove(fname.c_str());
+          Packer packer(fname);
+          packer.save(model, "model", false);
         }
         cerr << "\n***DEV [epoch=" << (lines / training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
       }

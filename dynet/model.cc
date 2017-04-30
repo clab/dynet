@@ -3,6 +3,7 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet.h"
 #include "dynet/param-init.h"
+#include "dynet/io.h"
 
 #include <unordered_set>
 #include <iostream>
@@ -425,19 +426,15 @@ const ParameterCollectionStorage& ParameterCollection::get_storage() const {
   return *storage;
 }
 
-/*
 void save_dynet_model(std::string filename, ParameterCollection* model) {
-  std::ofstream out(filename);
-  boost::archive::text_oarchive oa(out);
-  oa << (*model);
+  Packer packer(filename);
+  packer.save(*model, "model");
 };
 
 void load_dynet_model(std::string filename, ParameterCollection* model) {
-  std::ifstream in(filename);
-  boost::archive::text_iarchive ia(in);
-  ia >> (*model);
+  Packer packer(filename);
+  packer.populate(*model, "model");
 };
-*/
 
 #endif
 

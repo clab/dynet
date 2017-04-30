@@ -1,10 +1,19 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 if (NOT MSVC)
-   set(MP_EXAMPLES rnnlm-mp xor-mp xor-simple-mp)
+  set(MP_EXAMPLES xor-mp xor-simple-mp)
 endif()
 
-foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat read-write segrnn-sup attention imdb ${MP_EXAMPLES})
+if(ENABLE_BOOST)
+  if (NOT MSVC)
+    set(RNNLM rnnlm rnnlm-mp)
+  else()
+    set(RNNLM rnnlm)
+  endif()
+endif()
+
+# TODO: segrnn-sup
+foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-xent xor-batch xor-batch-lookup rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat read-write attention imdb ${RNNLM} ${MP_EXAMPLES})
   set(TARGET train_${FOLDER})
   ADD_EXECUTABLE(${TARGET} cpp/${FOLDER}/${TARGET}.cc)
   if (WITH_CUDA_BACKEND)
@@ -17,4 +26,3 @@ foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl
     target_link_libraries(${TARGET} rt)
   endif()
 endforeach()
-

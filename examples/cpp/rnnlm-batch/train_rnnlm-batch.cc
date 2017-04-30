@@ -4,9 +4,9 @@
  * This provide an example of usage of the rnnlm-batch.h model
  */
 #include "rnnlm-batch.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 #include "../utils/cl-args.h"
-
 
 using namespace std;
 using namespace dynet;
@@ -134,9 +134,8 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    ifstream in(params.model_file);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> lm;
+    Packer packer(params.model_file);
+    packer.populate(model, "model");
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -215,12 +214,12 @@ int main(int argc, char** argv) {
         // Add loss
         dloss += as_scalar(cg.forward(loss_expr));
       }
-      // If the dev loss is lower than the previous ones, save the ,odel
+      // If the dev loss is lower than the previous ones, save the model
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << lm;
+        std::remove("rnnlm-batch.model.meta"); std::remove("rnnlm-batch.model");
+        Packer packer("rnnlm-batch.model");
+        packer.save(model, "model", false);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)
@@ -238,11 +237,6 @@ int main(int argc, char** argv) {
 
     // Increment epoch
     ++epoch;
-
   }
-
   delete adam;
-
-
 }
-

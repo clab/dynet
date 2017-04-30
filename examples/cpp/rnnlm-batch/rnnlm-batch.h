@@ -20,10 +20,6 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -220,15 +216,6 @@ public:
 
     }
     cerr << endl;
-  }
-
-private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int) {
-    ar & LAYERS & INPUT_DIM & HIDDEN_DIM;
-    ar & p_c & p_R & p_bias;
-    ar & rnn;
   }
 };
 
