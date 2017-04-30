@@ -77,6 +77,13 @@ struct LookupNode : public ParameterNodeBase {
   LookupNode(LookupParameter p, const std::vector<unsigned>* pindices) : dim(p.get()->dim), index(), pindex(), indices(), pindices(pindices), params(p) { dim.bd = pindices->size(); }
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }  
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override;
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids,
+                                      const std::vector<bool> & concat,
+                                      std::vector<const Tensor*>& xs,
+                                      Tensor& fx) const override;
   size_t aux_storage_size() const override;
   void accumulate_grad(const Tensor& g) override;
   Dim dim;

@@ -123,6 +123,8 @@ struct Reshape : public Node {
   explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& to) : Node(a), to(to) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "identity"; }  
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
   Dim to;
 };
 
@@ -182,6 +184,8 @@ struct ConstantMinusX : public Node {
 struct Sqrt : public Node {
   explicit Sqrt(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "sqrt"; }  
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -189,6 +193,8 @@ struct Sqrt : public Node {
 struct Abs : public Node {
   explicit Abs(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "abs"; }  
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -196,6 +202,8 @@ struct Abs : public Node {
 struct Erf : public Node {
   explicit Erf(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "erf"; }  
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 

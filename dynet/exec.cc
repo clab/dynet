@@ -304,9 +304,9 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
       // 2.a) If we have a single current node, then we execute it
       if(curr_node != -1) {
+        // cerr << "Processing single node " << curr_node << endl;
         // int SINGLE = 0;
         // cerr << "SINGLE " << ++SINGLE << endl;
-        // cerr << "Processing single " << curr_node << endl;
         const Node* node = cg.nodes[curr_node];
         DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in BatchedExecutionEngine::incremental_forward");
         xs.resize(node->arity());
@@ -356,11 +356,11 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         Node* node;
         DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
         auto & batch_ids = active_batched[curr_prof];
+        // cerr << "Processing profile " << curr_prof << " batch: "; for(auto curr_node : batch_ids) cerr << ' ' << curr_node; cerr << endl;
         DYNET_ASSERT(batch_ids.size() > 0, "Attempting to process empty batch at " << curr_prof);
         // Set up the configuration of each node, including pointer differential from the start of the batch
         size_t bd = 0, tot_main = 0, tot_aux = 0, my_main, my_aux;
         // cerr << "BATCH " << ++BATCH << endl;
-        // cerr << "Processing profile " << curr_prof << " batch: "; for(auto curr_node : batch_ids) cerr << ' ' << curr_node; cerr << endl;
         for(auto curr_node : batch_ids) {
           node = cg.nodes[curr_node];
           nfxs[curr_node].d = node->dim;

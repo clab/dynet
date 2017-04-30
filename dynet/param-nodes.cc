@@ -84,6 +84,35 @@ Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
   return Dim({1});
 }
 
+std::string LookupNode::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  oss << "lookup ";
+  dim.print_profile(oss);
+  return oss.str();
+}
+std::vector<bool> LookupNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<bool>();
+}
+Node* LookupNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids,
+                                        const std::vector<bool> & concat,
+                                        std::vector<const Tensor*>& xs,
+                                        Tensor& fx) const {
+  autobatch_pseudo_node_concatonly(cg, batch_ids, concat, xs, fx);
+  vector<unsigned> ids;
+  LookupNode* ln;
+  for(auto batch_id : batch_ids) {
+    ln = static_cast<LookupNode*>(cg.nodes[batch_id]);
+    if(ln->pindex != nullptr)
+      ids.push_back(*ln->pindex);
+    else
+      for(auto word_id : *ln->pindices)
+        ids.push_back(word_id);
+  }
+  return new LookupNode(ln->params, ids);
+}
+
+
 size_t LookupNode::aux_storage_size() const {
   return dim.bd * sizeof(unsigned);
 }

@@ -585,6 +585,14 @@ struct Node {
                                       Tensor& fx) const {
     return nullptr;
   }
+  /**
+   * \brief create a pseudonode for autobatching that only concats the memory
+   */
+  Node* autobatch_pseudo_node_concatonly(const ComputationGraph & cg,
+                                         const std::vector<VariableIndex> & batch_ids,
+                                         const std::vector<bool> & concat,
+                                         std::vector<const Tensor*>& xs,
+                                         Tensor& fx) const;
 
   //
   /**

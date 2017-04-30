@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
       //Expression h = tanh(W*x + b);
       Expression h = tanh(affine_transform({b, W, x}));
       //Expression h = softsign(W*x + b);
-      Expression y_pred = V*h + a;
+      Expression y_pred = affine_transform({a, V, h});
       losses.push_back(squared_distance(y_pred, y));
 
     }
