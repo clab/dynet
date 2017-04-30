@@ -860,17 +860,7 @@ Node* AffineTransform::autobatch_pseudo_node(const ComputationGraph & cg,
                                              const std::vector<bool> & concat,
                                              std::vector<const Tensor*>& xs,
                                              Tensor& fx) const {
-  size_t bid = 0;
-  for(auto vid : batch_ids)
-    bid += cg.nodes[vid]->dim.bd;
-  const Node* exemplar = cg.nodes[batch_ids[0]];
-  fx.d = exemplar->dim; fx.d.bd = bid;
-  for(size_t i = 0; i < xs.size(); ++i) {
-    const_cast<Tensor*>(xs[i])->d = cg.nodes[exemplar->args[i]]->dim;
-    if(concat[i])
-      const_cast<Tensor*>(xs[i])->d.bd = bid;
-  }
-  return nullptr;
+  return autobatch_pseudo_node_concatonly(cg, batch_ids, concat, xs, fx);
 }
 
 string Negate::as_string(const vector<string>& arg_names) const {
