@@ -22,9 +22,6 @@
 #include <fstream>
 #include <sstream>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 using namespace std;
 using namespace dynet;
 using namespace dynet::expr;
@@ -362,19 +359,6 @@ public:
     }
 
 private:
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int) {
-        ar & bidirectional;
-        ar & LAYERS & INPUT_DIM & HIDDEN_DIM;
-        ar & p_c & p_ec & p_R & p_bias;
-        if (bidirectional)
-            ar & p_ie2oe & p_boe;
-        if (bidirectional)
-            ar & dec_builder & rev_enc_builder & fwd_enc_builder;
-        else
-            ar & dec_builder & fwd_enc_builder;
-    }
     inline int sample(const vector<float>& v) {
         float p = (float)rand() / (float) RAND_MAX;
         float cumul = 0.f;

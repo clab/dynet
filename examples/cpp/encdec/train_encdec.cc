@@ -5,6 +5,7 @@
  * This provide an example of usage of the encdec.h model
  */
 #include "encdec.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 #include "../utils/cl-args.h"
 
@@ -139,9 +140,8 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    ifstream in(params.model_file);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> lm;
+    Packer packer(params.model_file);
+    packer.populate(model, "model");
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -225,9 +225,10 @@ int main(int argc, char** argv) {
       // If the validation loss is the lowest, save the parameters
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << lm;
+        std::string fname_meta = fname + ".meta";
+        std::remove(fname_meta.c_str()); std::remove(fname.c_str());
+        Packer packer(fname);
+        packer.save(model, "model", false);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)
@@ -271,6 +272,4 @@ int main(int argc, char** argv) {
   }
   // Free memory
   delete adam;
-
 }
-

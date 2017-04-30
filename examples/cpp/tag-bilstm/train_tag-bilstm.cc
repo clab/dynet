@@ -1,3 +1,8 @@
+#include <unistd.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
 #include "dynet/training.h"
@@ -8,14 +13,8 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/globals.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -193,10 +192,8 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
-    string fname = argv[3];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    Packer packer(argv[3]);
+    packer.populate(model, "model");
   }
 
   unsigned report_every_i = 50;
@@ -250,13 +247,13 @@ int main(int argc, char** argv) {
       eval = false;
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        std::string fname_meta = fname + ".meta";
+        std::remove(fname_meta.c_str()); std::remove(fname.c_str());
+        Packer packer(fname);
+        packer.save(model, "model", false);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / dtags) << ' ';
     }
   }
   delete sgd;
 }
-

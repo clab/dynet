@@ -3,8 +3,7 @@
 #include "dynet/training.h"
 #include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include "dynet/io.h"
 
 #include <iostream>
 #include <fstream>
@@ -72,58 +71,25 @@ public:
     Expression y_pred = V*h + a;
     return as_scalar(cg.forward(y_pred));
   }
-
-  // This function should save all those variables in the archive, which
-  // determine the size of other members of the class, here: hidden_size
-  friend class boost::serialization::access;
-  template<class Archive> void serialize(Archive& ar, const unsigned int) {
-
-    // This can either save or read the value of hidden_size from ar,
-    // depending on whether its the output or input archive.
-    ar & hidden_size;
-
-    // We may save class data, such as the hidden size
-    // but we must be sure to save all Parameter objects
-    // that are members of this class.
-    ar & pW;
-    ar & pV;
-    ar & pa;
-    ar & pb;
-  }
 };
 
 void WriteToFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
-  ofstream outfile(filename);
-  if (!outfile.is_open()) {
-    cerr << "File opening failed" << endl;
-    exit(1);
-  }
-
-  // Write out the DYNET model and the XOR model.
-  // It's important to write the DYNET model first.
-  // Since the XOR model uses the DYNET model,
-  // saving in the opposite order will generate a
-  // boost archive "Pointer Conflict" exception.
-  boost::archive::text_oarchive oa(outfile);
-  oa & dynet_model;  // Write down the dynet::Model object.
-  oa & model;  // Write down your class object.
-  outfile.close();
+  Packer packer(filename);
+  packer.save(dynet_model, "model");
+  packer.save(model.pW, "model.pW");
+  packer.save(model.pb, "model.pb");
+  packer.save(model.pV, "model.pV");
+  packer.save(model.pa, "model.pa");
 }
 
 void ReadFromFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
-  ifstream infile(filename);
-  if (!infile.is_open()) {
-    cerr << "File opening failed" << endl;
-    exit(1);
-  }
-
-  boost::archive::text_iarchive ia(infile);
-  ia & dynet_model;  // Read the dynet::Model
-  ia & model;  // Read your class object
-
-  infile.close();
+  Packer packer(filename);
+  packer.populate(dynet_model, "model");
+  packer.populate(model.pW, "model.pW");
+  packer.populate(model.pb, "model.pb");
+  packer.populate(model.pV, "model.pV");
+  packer.populate(model.pa, "model.pa");
 }
-
 
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
@@ -165,4 +131,3 @@ int main(int argc, char** argv) {
   cerr << "Output for the input: " << x_values[0] << " " << x_values[1] << endl;
   cerr << read_model.Decode(x_values);  // Checking output for sanity
 }
-

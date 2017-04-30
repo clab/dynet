@@ -31,9 +31,9 @@ std::istream& operator>>(std::istream& is, std::vector<T> & v) {
   return is;
 }
 
-class Pack {
+class Packer {
  public:
-  Pack(std::string filename) : fn(filename), fn_meta(filename + ".meta") {}
+  Packer(std::string filename) : fn(filename), fn_meta(filename + ".meta") {}
   
   void reinit(std::string filename) {
     offset = 0;
@@ -239,7 +239,7 @@ class Pack {
  private:
   std::string fn, fn_meta;
   long long offset = 0;
-}; // class Pack
+}; // class Packer
 
 } // namespace dynet
 
