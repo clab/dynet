@@ -252,7 +252,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         }
       }
       // Get the node profile ID
-      string prof = node->autobatch_profile();
+      string prof = node->autobatch_profile(cg);
       // If batchable, collect statistics
       if(prof != "") {
         auto it = prof2id.find(prof);
@@ -290,7 +290,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       } else {
         float best_avg = 1e10;
         for(size_t i = 1; i < active_batched.size(); ++i) {
-          if(best_avg > prof2avg[i]) {
+          if(active_batched[i].size() > 0 && best_avg > prof2avg[i]) {
             curr_prof = i;
             best_avg = prof2avg[i];
           } 
@@ -298,11 +298,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         if(active_batched[curr_prof].size() == 1) {
           curr_node = active_batched[curr_prof][0];
           active_batched[curr_prof].clear();
+          curr_prof = -1;
         }
       }
 
       // 2.a) If we have a single current node, then we execute it
       if(curr_node != -1) {
+        // int SINGLE = 0;
         // cerr << "SINGLE " << ++SINGLE << endl;
         // cerr << "Processing single " << curr_node << endl;
         const Node* node = cg.nodes[curr_node];
@@ -349,15 +351,16 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         // cerr << "SINGLE DONE" << endl;
       // 2.b) If we have a batch of current nodes, execute them together
       } else {
+        // int BATCH = 0;
         // cerr << "BATCH " << ++BATCH << endl;
-
         Node* node;
         DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
         auto & batch_ids = active_batched[curr_prof];
+        DYNET_ASSERT(batch_ids.size() > 0, "Attempting to process empty batch at " << curr_prof);
         // Set up the configuration of each node, including pointer differential from the start of the batch
         size_t bd = 0, tot_main = 0, tot_aux = 0, my_main, my_aux;
         // cerr << "BATCH " << ++BATCH << endl;
-        // cerr << "Processing batch"; for(auto curr_node : batch_ids) cerr << ' ' << curr_node; cerr << endl;
+        // cerr << "Processing profile " << curr_prof << " batch: "; for(auto curr_node : batch_ids) cerr << ' ' << curr_node; cerr << endl;
         for(auto curr_node : batch_ids) {
           node = cg.nodes[curr_node];
           nfxs[curr_node].d = node->dim;
@@ -390,7 +393,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
         // cerr << "BATCH " << ++BATCH << endl;
         size_t used = node->device->pools[(int)DeviceMempool::FXS]->used(), arity = node->arity();
-        vector<bool> autobatch_concat = node->autobatch_concat();
+        vector<bool> autobatch_concat = node->autobatch_concat(cg);
         DYNET_ASSERT(autobatch_concat.size() == arity, "mismatch in arity in batched exec");
         xs.resize(arity); 
         // We need to do something similar for the inputs. For each of the input arguments, check which of the following applies:

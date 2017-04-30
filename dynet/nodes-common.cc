@@ -821,6 +821,58 @@ Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+std::string AffineTransform::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  oss << "affine ";
+  // This is a heuristic: we assume that we often have "b + W * x" shaped affine transforms
+  // so when everything is batch size one, optimize for this case
+  if(dim.bd == 1) {
+    oss << 'n' <<  args[0];
+    for(size_t i = 1; i < args.size(); i += 2) {
+      oss << " n" << args[i] << ' ';
+      cg.nodes[args[i+1]]->dim.print_profile(oss);
+    }
+  } else {
+    for(auto nid : args) {
+      const Dim & d = cg.nodes[nid]->dim;
+      oss << ' ';
+      if(d.bd == 1)
+        oss << 'n' << nid;
+      else
+        d.print_profile(oss);
+    }
+  }
+  return oss.str();
+}
+std::vector<bool> AffineTransform::autobatch_concat(const ComputationGraph & cg) const {
+  vector<bool> ret(args.size(), false);
+  if(dim.bd == 1) {
+    for(size_t i = 2; i < ret.size(); i += 2)
+      ret[i] = true;
+  } else {
+    for(size_t i = 0; i < ret.size(); ++i)
+      ret[i] = (cg.nodes[args[i]]->dim.bd > 1);
+  }
+  return ret;
+}
+Node* AffineTransform::autobatch_pseudo_node(const ComputationGraph & cg,
+                                             const std::vector<VariableIndex> & batch_ids,
+                                             const std::vector<bool> & concat,
+                                             std::vector<const Tensor*>& xs,
+                                             Tensor& fx) const {
+  size_t bid = 0;
+  for(auto vid : batch_ids)
+    bid += cg.nodes[vid]->dim.bd;
+  const Node* exemplar = cg.nodes[batch_ids[0]];
+  fx.d = exemplar->dim; fx.d.bd = bid;
+  for(size_t i = 0; i < xs.size(); ++i) {
+    const_cast<Tensor*>(xs[i])->d = cg.nodes[exemplar->args[i]]->dim;
+    if(concat[i])
+      const_cast<Tensor*>(xs[i])->d.bd = bid;
+  }
+  return nullptr;
+}
+
 string Negate::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << '-' << arg_names[0];
