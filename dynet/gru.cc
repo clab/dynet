@@ -22,17 +22,18 @@ GRUBuilder::GRUBuilder(unsigned layers,
     // z
     Parameter p_x2z = model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2z = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bz = model.add_parameters({hidden_dim});
+    Parameter p_bz = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // r
     Parameter p_x2r = model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2r = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_br = model.add_parameters({hidden_dim});
+    Parameter p_br = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // h
     Parameter p_x2h = model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2h = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bh = model.add_parameters({hidden_dim});
+    Parameter p_bh = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
