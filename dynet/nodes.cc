@@ -2072,7 +2072,16 @@ DYNET_NODE_INST_DEV_IMPL(Square)
 template<class MyDevice>
 void SquaredEuclideanDistance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in SquaredEuclideanDistance::forward");
-  fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() - xs[1]->tvec()).square().sum();
+  Eigen::array<ptrdiff_t, 1> red_axis = {0};
+  if(xs[0]->d.bd == xs[1]->d.bd) {
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() - xs[1]->tbvec()).square().sum(red_axis);
+  } else if(xs[0]->d.bd == 1) {
+    Eigen::array<ptrdiff_t, 2> bcast = {1, xs[1]->d.bd};
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec().broadcast(bcast) - xs[1]->tbvec()).square().sum(red_axis);
+  } else {
+    Eigen::array<ptrdiff_t, 2> bcast = {1, xs[0]->d.bd};
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() - xs[1]->tbvec().broadcast(bcast)).square().sum(red_axis);
+  }
 }
 
 template<class MyDevice>
@@ -2083,9 +2092,27 @@ void SquaredEuclideanDistance::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in SquaredEuclideanDistance::backward");
-  real scale = as_scalar(dEdf) * 2;
-  if (i == 1) scale = -scale;
-  dEdxi.tvec().device(*dev.edevice) += (xs[0]->tvec() - xs[1]->tvec()) * scale;
+  float multiplier = (i == 1 ? -2.0f : 2.0f);
+  Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
+  if(xs[0]->d.bd == xs[1]->d.bd) {
+    dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec() - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier;
+  } else if(xs[0]->d.bd == 1) {
+    Eigen::array<ptrdiff_t, 2> batchcast = {1, xs[1]->d.bd};
+    if(i == 1) {
+      dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec().broadcast(batchcast) - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier;
+    } else {
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
+      dEdxi.tvec().device(*dev.edevice) += ((xs[0]->tbvec().broadcast(batchcast) - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier).sum(red_axis);
+    }
+  } else {
+    Eigen::array<ptrdiff_t, 2> batchcast = {1, xs[0]->d.bd};
+    if(i == 0) {
+      dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec() - xs[1]->tbvec().broadcast(batchcast)) * dEdf.tbvec().broadcast(bcast) * multiplier;
+    } else {
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
+      dEdxi.tvec().device(*dev.edevice) += ((xs[0]->tbvec() - xs[1]->tbvec().broadcast(batchcast)) * dEdf.tbvec().broadcast(bcast) * multiplier).sum(red_axis);
+    }
+  }
 }
 DYNET_NODE_INST_DEV_IMPL(SquaredEuclideanDistance)
 
