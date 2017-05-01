@@ -1561,7 +1561,11 @@ void PickElement::forward_dev_impl(const MyDevice & dev, const vector<const Tens
     for(unsigned b = 0; b < pvals->size(); ++b) {
       DYNET_ARG_CHECK((*pvals)[b] < xs[0]->d[dimension], 
                               "PickElement::forward_impl requested element " << (*pvals)[b] << " from a dimension of length " << xs[0]->d[dimension]);
-      fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip((*pvals)[b], dimension); 
+      if(xs[0]->d.bd == 1){
+        fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->t<3>().chip((*pvals)[b], dimension); 
+      }else{
+        fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip((*pvals)[b], dimension); 
+      }
     }
   }
 }
@@ -1579,8 +1583,13 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
     dEdxi.tb<3>().chip(*pval, dimension).device(*dev.edevice) += dEdf.tb<2>();
   } else {
     DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickElement::forward");
-    for(unsigned b = 0; b < pvals->size(); ++b)
-      dEdxi.tb<3>().chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
+    for(unsigned b = 0; b < pvals->size(); ++b){
+      if(xs[0]->d.bd == 1){
+        dEdxi.t<3>().chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>();
+      }else{
+        dEdxi.tb<3>().chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
+      }
+    }
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PickElement)
@@ -1857,7 +1866,7 @@ void SelectCols::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectCols::backward");
   auto& rm = *pcols;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<1>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<1>(i);
+    dEdxi.t<2>().chip<1>(rm[i]).device(*dev.edevice) += dEdf.t<2>().chip<1>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectCols)
 
@@ -1882,7 +1891,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectRows::backward");
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<0>(i);
+    dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) += dEdf.t<2>().chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
@@ -2063,7 +2072,16 @@ DYNET_NODE_INST_DEV_IMPL(Square)
 template<class MyDevice>
 void SquaredEuclideanDistance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in SquaredEuclideanDistance::forward");
-  fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() - xs[1]->tvec()).square().sum();
+  Eigen::array<ptrdiff_t, 1> red_axis = {0};
+  if(xs[0]->d.bd == xs[1]->d.bd) {
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() - xs[1]->tbvec()).square().sum(red_axis);
+  } else if(xs[0]->d.bd == 1) {
+    Eigen::array<ptrdiff_t, 2> bcast = {1, xs[1]->d.bd};
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec().broadcast(bcast) - xs[1]->tbvec()).square().sum(red_axis);
+  } else {
+    Eigen::array<ptrdiff_t, 2> bcast = {1, xs[0]->d.bd};
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() - xs[1]->tbvec().broadcast(bcast)).square().sum(red_axis);
+  }
 }
 
 template<class MyDevice>
@@ -2074,16 +2092,35 @@ void SquaredEuclideanDistance::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in SquaredEuclideanDistance::backward");
-  real scale = as_scalar(dEdf) * 2;
-  if (i == 1) scale = -scale;
-  dEdxi.tvec().device(*dev.edevice) += (xs[0]->tvec() - xs[1]->tvec()) * scale;
+  float multiplier = (i == 1 ? -2.0f : 2.0f);
+  Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
+  if(xs[0]->d.bd == xs[1]->d.bd) {
+    dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec() - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier;
+  } else if(xs[0]->d.bd == 1) {
+    Eigen::array<ptrdiff_t, 2> batchcast = {1, xs[1]->d.bd};
+    if(i == 1) {
+      dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec().broadcast(batchcast) - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier;
+    } else {
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
+      dEdxi.tvec().device(*dev.edevice) += ((xs[0]->tbvec().broadcast(batchcast) - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier).sum(red_axis);
+    }
+  } else {
+    Eigen::array<ptrdiff_t, 2> batchcast = {1, xs[0]->d.bd};
+    if(i == 0) {
+      dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec() - xs[1]->tbvec().broadcast(batchcast)) * dEdf.tbvec().broadcast(bcast) * multiplier;
+    } else {
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
+      dEdxi.tvec().device(*dev.edevice) += ((xs[0]->tbvec() - xs[1]->tbvec().broadcast(batchcast)) * dEdf.tbvec().broadcast(bcast) * multiplier).sum(red_axis);
+    }
+  }
 }
 DYNET_NODE_INST_DEV_IMPL(SquaredEuclideanDistance)
 
 template<class MyDevice>
 void SquaredNorm::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SquaredNorm::forward");
-  fx.t<0>().device(*dev.edevice) = xs[0]->tvec().square().sum();
+  Eigen::array<ptrdiff_t, 1> red_axis = {0};
+  fx.tb<0>().device(*dev.edevice) = xs[0]->tbvec().square().sum(red_axis);
 }
 
 template<class MyDevice>
@@ -2094,8 +2131,8 @@ void SquaredNorm::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 1, "Failed dimension check in SquaredNorm::backward");
-  real scale = as_scalar(dEdf) * 2;
-  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec() * scale;
+  Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
+  dEdxi.tbvec().device(*dev.edevice) += xs[0]->tbvec() * dEdf.tbvec().broadcast(bcast) * 2.0f;
 }
 DYNET_NODE_INST_DEV_IMPL(SquaredNorm)
 
