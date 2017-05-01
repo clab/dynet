@@ -94,11 +94,7 @@ std::vector<bool> LookupNode::autobatch_concat(const ComputationGraph & cg) cons
   return vector<bool>();
 }
 Node* LookupNode::autobatch_pseudo_node(const ComputationGraph & cg,
-                                        const std::vector<VariableIndex> & batch_ids,
-                                        const std::vector<bool> & concat,
-                                        std::vector<const Tensor*>& xs,
-                                        Tensor& fx) const {
-  autobatch_pseudo_node_concatonly(cg, batch_ids, concat, xs, fx);
+                                        const std::vector<VariableIndex> & batch_ids) const {
   vector<unsigned> ids;
   LookupNode* ln;
   for(auto batch_id : batch_ids) {
@@ -222,11 +218,11 @@ std::vector<bool> InputNode::autobatch_concat(const ComputationGraph & cg) const
   return vector<bool>();
 }
 Node* InputNode::autobatch_pseudo_node(const ComputationGraph & cg,
-                                        const std::vector<VariableIndex> & batch_ids,
-                                        const std::vector<bool> & concat,
-                                        std::vector<const Tensor*>& xs,
-                                        Tensor& fx) const {
-  vector<float> values(fx.d[0]);
+                                        const std::vector<VariableIndex> & batch_ids) const {
+  Dim d = cg.nodes[batch_ids[0]]->dim;
+  for(size_t i = 1; i < batch_ids.size(); ++i)
+    d.bd += cg.nodes[batch_ids[0]]->dim.bd;
+  vector<float> values(d.size());
   InputNode* sin;
   size_t curr_pos = 0;
   for(size_t i = 0; i < batch_ids.size(); ++i) {
@@ -235,7 +231,7 @@ Node* InputNode::autobatch_pseudo_node(const ComputationGraph & cg,
     curr_pos += sin->pdata->size();
   }
   DYNET_ASSERT(curr_pos == values.size(), "current position and size of values does not match");
-  return new InputNode(fx.d, values);
+  return new InputNode(d, values);
 }
 
 template<class MyDevice>
@@ -293,17 +289,14 @@ std::vector<bool> ScalarInputNode::autobatch_concat(const ComputationGraph & cg)
   return vector<bool>();
 }
 Node* ScalarInputNode::autobatch_pseudo_node(const ComputationGraph & cg,
-                                        const std::vector<VariableIndex> & batch_ids,
-                                        const std::vector<bool> & concat,
-                                        std::vector<const Tensor*>& xs,
-                                        Tensor& fx) const {
+                                             const std::vector<VariableIndex> & batch_ids) const {
   vector<float> values(batch_ids.size());
   ScalarInputNode* sin;
   for(size_t i = 0; i < batch_ids.size(); ++i) {
     sin = static_cast<ScalarInputNode*>(cg.nodes[batch_ids[i]]);
     values[i] = *sin->pdata;
   }
-  return new InputNode(fx.d, values);
+  return new InputNode(Dim({1}, batch_ids.size()), values);
 }
 
 template<class MyDevice>

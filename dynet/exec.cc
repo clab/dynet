@@ -181,6 +181,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
 
 void BatchedExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
+  num_batches_evaluated = 0;
   backward_computed = 0;
 }
 
@@ -227,8 +228,17 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     for(Device* dev : dynet::devices)
       dev->pools[(int)DeviceMempool::FXS]->free();
 
+
   if (i >= num_nodes_evaluated) {
     nfxs.resize(i + 1);
+
+    // Create the necessary info for batching in the future
+    VariableIndex node_id = num_nodes_evaluated;
+    VariableIndex batch_id = num_batches_evaluated;
+    batched_nfxs.resize(i - num_nodes_evaluated + num_batches_evaluated);
+    batched_nodes.resize(batched_nfxs.size(), nullptr);
+    batched_ids.resize(batched_nfxs.size());
+    batched_concats.resize(batched_nfxs.size());
 
     // 1) Calculate the batching profiles for every node
     unordered_map<string, int> prof2id(i);        // Batching profile to ID
@@ -238,7 +248,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     vector<vector<VariableIndex> > node2successors(i + 1); // Node to successors
     vector<ptrdiff_t> node2diff(i + 1, 0);
     // Average ID of batched items, a heuristic for which to run first
-    vector<float> prof2avg(i - num_nodes_evaluated + 2, 0.f), prof2cnt(i - num_nodes_evaluated + 2, 0.f);
+    vector<float> prof2avg(i - node_id + 2, 0.f), prof2cnt(i - node_id + 2, 0.f);
     // The active items that cannot or can be batched
     queue<VariableIndex> active_unbatched;
     vector<vector<VariableIndex> > active_batched;
@@ -247,7 +257,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       const Node* node = cg.nodes[j];
       // Count the remaining input nodes to be computed for each node
       for (VariableIndex arg : node->args) {
-        if(arg >= num_nodes_evaluated) {
+        if(arg >= node_id) {
           node2left[j]++;
           node2successors[arg].push_back(j);
         }
@@ -276,15 +286,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
     // 2) Travel through and do active nodes
     vector<const Tensor*> xs(16);
-    Tensor nfx;
-    while(num_nodes_evaluated != i + 1) {
+    while(node_id != i + 1) {
       
       // First find the best node to execute next in order of priority
       // 1. Nodes that don't support batching
-      // 2. Nodes that do support batching, but only one appropriate node is available
-      // 3. Nodes that support batching and have multiple inputs available
-      // In cases of 2. and 3., use a heuristic of picking the node with the lowest average
-      // ID of nodes of that profile
+      // 2. Nodes that support batching. In this case, use a heuristic
+      //    of picking the node with the lowest average ID of nodes of
+      //    that profile.
       int curr_node = -1, curr_prof = -1;
       if(!active_unbatched.empty()) {
         curr_node = active_unbatched.front(); active_unbatched.pop();
@@ -309,12 +317,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         cerr << "Processing single: " << curr_node << endl;
         const Node* node = cg.nodes[curr_node];
         DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in BatchedExecutionEngine::incremental_forward");
-        xs.resize(node->arity());
-        unsigned ai = 0;
-        for (VariableIndex arg : node->args) {
-          xs[ai] = &nfxs[arg];
-          ++ai;
-        }
         // Save the node profile
         nfxs[curr_node].d = node->dim;
         nfxs[curr_node].device = node->device;
@@ -322,15 +324,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         // Allocate memory
         nfxs[curr_node].v = static_cast<float*>(nfxs[curr_node].device->pools[(int)DeviceMempool::FXS]->allocate(node->dim.size() * sizeof(float)));
         if (nfxs[curr_node].v == nullptr)
-          DYNET_RUNTIME_ERR("Ran out of memory when executing node " << curr_node);
+          DYNET_RUNTIME_ERR("Ran out of memory when allocating for node " << curr_node);
         size_t aux_size = node->aux_storage_size();
         if (aux_size) {
           node->aux_mem = nfxs[curr_node].device->pools[(int)DeviceMempool::FXS]->allocate(aux_size);
           if (!node->aux_mem)
-            DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node " << curr_node);
+            DYNET_RUNTIME_ERR("Ran out of auxiliary memory when allocating for node " << curr_node);
         }
-        // Perform forward computation
-        node->forward(xs, nfxs[curr_node]);
         // Decrement the counts of the predecessors and add them to the active queue as appropriate
         for(auto next_node : node2successors[curr_node]) {
           if(--node2left[next_node] == 0) {
@@ -340,12 +340,19 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
               active_batched[node2id[next_node]].push_back(next_node);
           }
         }
-        ++num_nodes_evaluated;
+        // Create the information for the batched pseudo-graph
+        batched_nfxs[batch_id] = nfxs[curr_node];
+        batched_ids[batch_id].resize(1, (VariableIndex)curr_node);
+        batched_concats[batch_id].resize(node->arity(), false);
+        // Increment the counts
+        ++batch_id;
+        ++node_id;
       // 2.b) If we have a batch of current nodes, execute them together
       } else {
         Node* node;
         DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
         auto & batch_ids = active_batched[curr_prof];
+        batched_ids[batch_id] = active_batched[curr_prof];
         DYNET_ASSERT(batch_ids.size() > 0, "Attempting to process empty batch at " << curr_prof);
         cerr << "Processing batched:"; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
         // Set up the configuration of each component node, including pointer differential from the start of the batch
@@ -375,55 +382,19 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
           for(auto curr_node : batch_ids)
             cg.nodes[curr_node]->aux_mem = (void*)((ptrdiff_t)head_aux + (ptrdiff_t)cg.nodes[curr_node]->aux_mem);
         }
-        size_t used = node->device->pools[(int)DeviceMempool::FXS]->used(), arity = node->arity();
         
-        vector<bool> autobatch_concat = node->autobatch_concat(cg);
-        DYNET_ASSERT(autobatch_concat.size() == arity, "mismatch in arity in batched exec");
-        xs.resize(arity); 
-        // We need to do something similar for the inputs. For each of the input arguments, check which of the following applies:
-        for(size_t i = 0; i < arity; ++i) {
-          // 1) the inputs don't need to be concatenated. Just use the tensor
-          if(!autobatch_concat[i]) {
-            xs[i] = &nfxs[node->args[i]];
-          // 2) the inputs need to be concatenated
-          } else {
-            Tensor* my_xsi = new Tensor;
-            my_xsi->device = node->device;
-            my_xsi->mem_pool = DeviceMempool::FXS;
-            // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
-            // TODO: This should be implemented, but for now fall back to copying every time
-            // 2.b) the inputs need to be concatenated, and are not contiguous
-            size_t tot_arg = 0;
-            for(auto curr_node : batch_ids)
-              tot_arg += nfxs[cg.nodes[curr_node]->args[i]].d.size();
-            my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
-            my_xsi->d = Dim({(unsigned int)tot_arg});
-            tot_arg = 0;
-            for(auto curr_node : batch_ids) {
-              nfx = nfxs[cg.nodes[curr_node]->args[i]];
-              nfx.v = my_xsi->v + tot_arg;
-              TensorTools::copy_elements(nfx, nfxs[cg.nodes[curr_node]->args[i]]);
-              tot_arg += nfx.d.size();
-            }
-            xs[i] = my_xsi;
-          }
-        }
-
         // Set the size for the final output
+        Tensor & nfx = batched_nfxs[batch_id];
         nfx.device = node->device;
         nfx.mem_pool = DeviceMempool::FXS;
         nfx.d = Dim({(unsigned int)tot_main});
         nfx.v = head_main;
 
-        // Create a pseudo-node, and set the dimensions of xs and nfx to be appropriate
-        Node* pseudo_node = node->autobatch_pseudo_node(cg, batch_ids, autobatch_concat, xs, nfx);
-        if(pseudo_node != nullptr) {
-          pseudo_node->aux_mem = head_aux;
-          pseudo_node->forward(xs, nfx);
-          delete pseudo_node;
-        } else {
-          node->forward(xs, nfx);
-        }
+        // Get the concatenation and pseudo-node info
+        batched_concats[batch_id] = node->autobatch_concat(cg);
+        batched_nodes[batch_id] = node->autobatch_pseudo_node(cg, batch_ids);
+        if(batched_nodes[batch_id] != nullptr)
+          batched_nodes[batch_id]->aux_mem = head_aux;
 
         // Decrement the counts of the predecessors and add them to the active queue as appropriate
         for(auto curr_node : batch_ids) {
@@ -436,18 +407,72 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
             }
           }
         }
+
         // Clear the active things for this profile
-        num_nodes_evaluated += active_batched[curr_prof].size();
+        ++batch_id;
+        node_id += active_batched[curr_prof].size();
         batch_ids.clear();
-        // Clear the extra memory
-        node->device->pools[(int)DeviceMempool::FXS]->set_used(used);
-        for(size_t i = 0; i < arity; ++i)
-          if(autobatch_concat[i])
-            delete xs[i];
       }
     }
+
+    // 3: do the actual execution 
+    Tensor temp_nfx;
+    while(num_batches_evaluated < batch_id) {
+      // Read in the stuff for this batch
+      vector<VariableIndex> & batch_ids = batched_ids[num_batches_evaluated];
+      // cerr << "Evaluating batch " << num_batches_evaluated << ":"; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
+      vector<bool> & autobatch_concat = batched_concats[num_batches_evaluated];
+      vector<bool> autobatch_garbage = autobatch_concat;
+      size_t arity = autobatch_concat.size();
+      Node* node = batched_nodes[num_batches_evaluated];
+      Tensor & nfx = batched_nfxs[num_batches_evaluated];
+      if(node == nullptr) node = cg.nodes[batch_ids[0]];
+      xs.resize(arity); 
+      size_t used = node->device->pools[(int)DeviceMempool::FXS]->used();
+      // Figure out whether we need to create the inputs
+      for(size_t i = 0; i < arity; ++i) {
+        // 1) the inputs don't need to be concatenated. Just use the tensor
+        if(!autobatch_concat[i]) {
+          xs[i] = &nfxs[node->args[i]];
+        // 2) the inputs need to be concatenated
+        } else {
+          // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
+          // TODO: This should be implemented, but for now fall back to copying every time
+          // TODO: If this is the case do the following
+          //       xs[i] = &batched_nfxs[...];
+          //       autobatch_garbage[i] = false;
+          // 2.b) the inputs need to be concatenated, and are not contiguous
+          Tensor* my_xsi = new Tensor;
+          my_xsi->device = node->device;
+          my_xsi->mem_pool = DeviceMempool::FXS;
+          size_t tot_arg = 0;
+          for(auto curr_node : batch_ids)
+            tot_arg += nfxs[cg.nodes[curr_node]->args[i]].d.size();
+          my_xsi->d = Dim({(unsigned int)tot_arg});
+          my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
+          tot_arg = 0;
+          for(auto curr_node : batch_ids) {
+            temp_nfx = nfxs[cg.nodes[curr_node]->args[i]];
+            temp_nfx.v = my_xsi->v + tot_arg;
+            TensorTools::copy_elements(temp_nfx, nfxs[cg.nodes[curr_node]->args[i]]);
+            tot_arg += temp_nfx.d.size();
+          }
+          xs[i] = my_xsi;
+        }
+      }
+
+      node->autobatch_reshape(cg, batch_ids, autobatch_concat, xs, nfx);
+      node->forward(xs, nfx);
+
+      // Clear the extra memory
+      node->device->pools[(int)DeviceMempool::FXS]->set_used(used);
+      for(size_t i = 0; i < arity; ++i)
+        if(autobatch_garbage[i])
+          delete xs[i];
+      ++num_batches_evaluated;
+    }
+
   }
-  // cerr << "Returning nfxs[" << i << "]" << endl;
   return nfxs[i];
 }
 

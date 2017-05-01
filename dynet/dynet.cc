@@ -89,11 +89,11 @@ void Node::backward(const std::vector<const Tensor*>& xs,
   }
 }
 
-Node* Node::autobatch_pseudo_node_concatonly(const ComputationGraph & cg,
-                                             const std::vector<VariableIndex> & batch_ids,
-                                             const std::vector<bool> & concat,
-                                             std::vector<const Tensor*>& xs,
-                                             Tensor& fx) const {
+void Node::autobatch_reshape_concatonly(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids,
+                                        const std::vector<bool> & concat,
+                                        std::vector<const Tensor*>& xs,
+                                        Tensor& fx) const {
   size_t bid = 0;
   for(auto vid : batch_ids)
     bid += cg.nodes[vid]->dim.bd;
@@ -104,7 +104,6 @@ Node* Node::autobatch_pseudo_node_concatonly(const ComputationGraph & cg,
     if(concat[i])
       const_cast<Tensor*>(xs[i])->d.bd = bid;
   }
-  return nullptr;
 }
 
 ComputationGraph::ComputationGraph() {

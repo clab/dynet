@@ -863,13 +863,6 @@ std::vector<bool> AffineTransform::autobatch_concat(const ComputationGraph & cg)
   }
   return ret;
 }
-Node* AffineTransform::autobatch_pseudo_node(const ComputationGraph & cg,
-                                             const std::vector<VariableIndex> & batch_ids,
-                                             const std::vector<bool> & concat,
-                                             std::vector<const Tensor*>& xs,
-                                             Tensor& fx) const {
-  return autobatch_pseudo_node_concatonly(cg, batch_ids, concat, xs, fx);
-}
 
 string Negate::as_string(const vector<string>& arg_names) const {
   ostringstream s;
@@ -982,13 +975,6 @@ std::vector<bool> SquaredEuclideanDistance::autobatch_concat(const ComputationGr
       ret[1] = false;
   }
   return ret;
-}
-Node* SquaredEuclideanDistance::autobatch_pseudo_node(const ComputationGraph & cg,
-                                             const std::vector<VariableIndex> & batch_ids,
-                                             const std::vector<bool> & concat,
-                                             std::vector<const Tensor*>& xs,
-                                             Tensor& fx) const {
-  return autobatch_pseudo_node_concatonly(cg, batch_ids, concat, xs, fx);
 }
 
 string LogisticSigmoid::as_string(const vector<string>& arg_names) const {
