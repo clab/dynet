@@ -454,6 +454,7 @@ struct PoissonRegressionLoss : public Node {
 // y = || x_1 ||^2
 struct SquaredNorm : public Node {
   explicit SquaredNorm(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
