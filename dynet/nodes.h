@@ -123,8 +123,6 @@ struct Reshape : public Node {
   explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& to) : Node(a), to(to) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "identity"; }  
-  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
   Dim to;
 };
 
@@ -499,6 +497,13 @@ struct SquaredNorm : public Node {
 struct SquaredEuclideanDistance : public Node {
   explicit SquaredEuclideanDistance(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override;
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids,
+                                      const std::vector<bool> & concat,
+                                      std::vector<const Tensor*>& xs,
+                                      Tensor& fx) const override;
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
