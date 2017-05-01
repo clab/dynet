@@ -235,7 +235,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     // Create the necessary info for batching in the future
     VariableIndex node_id = num_nodes_evaluated;
     VariableIndex batch_id = num_batches_evaluated;
-    batched_nfxs.resize(i - num_nodes_evaluated + num_batches_evaluated);
+    batched_nfxs.resize(i - num_nodes_evaluated + num_batches_evaluated + 1);
     batched_nodes.resize(batched_nfxs.size(), nullptr);
     batched_ids.resize(batched_nfxs.size());
     batched_concats.resize(batched_nfxs.size());
@@ -314,7 +314,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       // 2.a) If we have a single current node, then we execute it
       if(curr_node != -1) {
         // Set the inputs
-        cerr << "Processing single: " << curr_node << endl;
+        // cerr << "Processing single: " << curr_node << endl;
         const Node* node = cg.nodes[curr_node];
         DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in BatchedExecutionEngine::incremental_forward");
         // Save the node profile
@@ -354,7 +354,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         auto & batch_ids = active_batched[curr_prof];
         batched_ids[batch_id] = active_batched[curr_prof];
         DYNET_ASSERT(batch_ids.size() > 0, "Attempting to process empty batch at " << curr_prof);
-        cerr << "Processing batched:"; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
+        // cerr << "Processing batched:"; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
         // Set up the configuration of each component node, including pointer differential from the start of the batch
         size_t bd = 0, tot_main = 0, tot_aux = 0, my_main, my_aux;
         for(auto curr_node : batch_ids) {
@@ -414,6 +414,11 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         batch_ids.clear();
       }
     }
+
+    // for(size_t j = 0; j < batched_nfxs.size(); ++j) {
+    //   auto & t = batched_nfxs[j];
+    //   cerr << "batched_nfxs[" << j << "]: " << t.d << ", " << (ptrdiff_t)t.v << endl;
+    // }
 
     // 3: do the actual execution 
     Tensor temp_nfx;
