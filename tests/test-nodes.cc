@@ -1199,6 +1199,16 @@ BOOST_AUTO_TEST_CASE( select_rows_gradient ) {
 }
 
 // Expression select_rows(const Expression& x, vector<unsigned>& rows);
+BOOST_AUTO_TEST_CASE( select_rows_multiple_gradient ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> rows = {0,2};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = select_rows(x1, rows) * x1;
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression select_rows(const Expression& x, vector<unsigned>& rows);
 BOOST_AUTO_TEST_CASE( select_rows_oob ) {
   dynet::ComputationGraph cg;
   vector<unsigned> rows = {3};
@@ -1213,6 +1223,16 @@ BOOST_AUTO_TEST_CASE( select_cols_gradient ) {
   vector<unsigned> cols = {1};
   Expression x1 = parameter(cg, param_square1);
   Expression y = select_cols(x1, cols);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression select_cols(const Expression& x, vector<unsigned>& cols);
+BOOST_AUTO_TEST_CASE( select_cols_multiple_gradient ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned> cols = {0,2};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = x1 * select_cols(x1, cols);
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
