@@ -17,7 +17,7 @@ using namespace std;
 
 namespace dynet {
 
-DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0),
+DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(1),
   shared_parameters(false)
 #if HAVE_CUDA
   , ngpus_requested(false), ids_requested(false), requested_gpus(-1)
