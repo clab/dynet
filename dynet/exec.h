@@ -59,7 +59,13 @@ class BatchedExecutionEngine : public ExecutionEngine {
  private:
   std::vector<Tensor> nfxs;
   std::vector<Tensor> ndEdfs;
-  VariableIndex num_nodes_evaluated;
+  VariableIndex num_nodes_evaluated, num_batches_evaluated;
+  // Information about the batched computation graph
+  std::vector<Tensor> batched_nfxs;
+  std::vector<Node*> batched_nodes;
+  std::vector<std::vector<VariableIndex> > batched_ids;
+  std::vector<std::vector<bool> > batched_concats;
+
 };
 
 } // namespace dynet
