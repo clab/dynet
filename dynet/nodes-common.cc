@@ -957,6 +957,40 @@ Dim SquaredEuclideanDistance::dim_forward(const vector<Dim>& xs) const {
   return Dim({1}, max(xs[0].bd, xs[1].bd));
 }
 
+std::string SquaredEuclideanDistance::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  oss << "squared_distance ";
+  const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;
+  if(dleft.bd == dright.bd) {
+    dleft.print_profile(oss);
+  } else if(dleft.bd == 1) {
+    oss << " n" << args[0] << ' ';
+    dright.print_profile(oss);
+  } else {
+    dleft.print_profile(oss);
+    oss << " n" << args[1] << ' ';
+  }
+  return oss.str();
+}
+std::vector<bool> SquaredEuclideanDistance::autobatch_concat(const ComputationGraph & cg) const {
+  const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;
+  vector<bool> ret(2, true);
+  if(dleft.bd != dright.bd) {
+    if(dleft.bd == 1)
+      ret[0] = false;
+    else
+      ret[1] = false;
+  }
+  return ret;
+}
+Node* SquaredEuclideanDistance::autobatch_pseudo_node(const ComputationGraph & cg,
+                                             const std::vector<VariableIndex> & batch_ids,
+                                             const std::vector<bool> & concat,
+                                             std::vector<const Tensor*>& xs,
+                                             Tensor& fx) const {
+  return autobatch_pseudo_node_concatonly(cg, batch_ids, concat, xs, fx);
+}
+
 string LogisticSigmoid::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "\\sigma(" << arg_names[0] << ')';
