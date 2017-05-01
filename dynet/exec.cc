@@ -394,18 +394,33 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
             // TODO: This should be implemented, but for now fall back to copying every time
             // 2.b) the inputs need to be concatenated, and are not contiguous
             size_t tot_arg = 0;
-            for(auto curr_node : batch_ids)
-              tot_arg += nfxs[cg.nodes[curr_node]->args[i]].d.size();
-            my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
-            my_xsi->d = Dim({(unsigned int)tot_arg});
-            tot_arg = 0;
+            float* min_node = nfxs[cg.nodes[batch_ids[0]]->args[i]].v;
+            float* max_node = min_node;
             for(auto curr_node : batch_ids) {
-              nfx = nfxs[cg.nodes[curr_node]->args[i]];
-              nfx.v = my_xsi->v + tot_arg;
-              TensorTools::copy_elements(nfx, nfxs[cg.nodes[curr_node]->args[i]]);
-              tot_arg += nfx.d.size();
+              const Tensor &t = nfxs[cg.nodes[curr_node]->args[i]];
+              tot_arg += t.d.size();
+              float* v = t.v;
+              if (v < min_node) min_node = v;
+              if (v > max_node) max_node = v + t.d.size();
             }
-            xs[i] = my_xsi;
+            if (min_node + tot_arg == max_node) {
+              cerr << "contiguous " << " " << batch_ids.size() <<  endl;
+              my_xsi->v = min_node;
+              my_xsi->d = Dim({(unsigned int)tot_arg});
+              xs[i] = my_xsi;
+            } else {
+              cerr << "non-contiguous: " << " " << batch_ids.size() << " " << min_node << " " << min_node + tot_arg << " " << max_node << endl;
+              my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
+              my_xsi->d = Dim({(unsigned int)tot_arg});
+              tot_arg = 0;
+              for(auto curr_node : batch_ids) {
+                nfx = nfxs[cg.nodes[curr_node]->args[i]];
+                nfx.v = my_xsi->v + tot_arg;
+                TensorTools::copy_elements(nfx, nfxs[cg.nodes[curr_node]->args[i]]);
+                tot_arg += nfx.d.size();
+              }
+              xs[i] = my_xsi;
+            }
           }
         }
 
