@@ -954,6 +954,33 @@ BOOST_AUTO_TEST_CASE( squared_distance_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression squared_distance(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( squared_distance_batchright_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression z = sum_batches(squared_distance(x1, x1+x2));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression squared_distance(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( squared_distance_batchleft_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression z = sum_batches(squared_distance(x1+x2, x1));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression squared_distance(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( squared_distance_batchboth_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression z = sum_batches(squared_distance(x1+x2, cmult(x1, x2)));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
 BOOST_AUTO_TEST_CASE( huber_distance_gradient ) {
   dynet::ComputationGraph cg;
