@@ -1857,7 +1857,7 @@ void SelectCols::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectCols::backward");
   auto& rm = *pcols;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<1>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<1>(i);
+    dEdxi.t<2>().chip<1>(rm[i]).device(*dev.edevice) += dEdf.t<2>().chip<1>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectCols)
 
@@ -1882,7 +1882,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectRows::backward");
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) = dEdf.t<2>().chip<0>(i);
+    dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) += dEdf.t<2>().chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
