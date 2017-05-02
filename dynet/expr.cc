@@ -157,8 +157,18 @@ Expression sum_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.
 Expression sum_rows(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 0)); }
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 1)); }
 Expression sum_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumElements>({x.i})); }
+Expression mean_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<MomentElements>({x.i}, 1)); }
+Expression moment_elems(const Expression& x, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentElements>({x.i}, r)); }
+Expression std_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdElements>({x.i})); }
 
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
+Expression moment_batches(const Expression& x, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentBatches>({x.i}, r)); }
+Expression mean_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<MomentBatches>({x.i}, 1)); }
+Expression std_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdBatches>({x.i})); }
+
+Expression mean_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, d, 1)); }
+Expression moment_dim(const Expression& x, unsigned d, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, d, r)); }
+Expression std_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, d)); }
 
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 
@@ -166,11 +176,10 @@ Expression max_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.
 Expression min_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MinDimension>({x.i}, d)); }
 
 Expression layer_norm(const Expression& x, const Expression& g, const Expression& b){
-    float n = (float) (x.dim().batch_size());
-    Expression mu = sum_elems(x) / n;
+    Expression mu = mean_elems(x);
     Expression x_centered= x - mu;
-    Expression sigma = expr::sqrt(sum_elems(square(x_centered)) / n);
-    return cmult(cdiv(g,sigma), x_centered) + b;
+    Expression sigma = std_elems(x);
+    return cmult(g, cdiv(x_centered,sigma + 1e-8)) + b;
 }
 }
 }

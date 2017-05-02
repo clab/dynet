@@ -194,7 +194,17 @@ Arithmetic operations
 
 .. autofunction:: dynet.sum_elems
 
-.. autofunction:: dynet.sum_batches
+.. autofunction:: dynet.mean_elems
+
+.. autofunction:: dynet.moment_elems
+
+.. autofunction:: dynet.std_elems
+
+.. autofunction:: dynet.mean_dim
+
+.. autofunction:: dynet.moment_dim
+
+.. autofunction:: dynet.std_dim
 
 .. autofunction:: dynet.fold_rows
 
@@ -243,6 +253,14 @@ Flow/Shaping operations
 .. autofunction:: dynet.pick_batch_elem
 
 .. autofunction:: dynet.pick_batch_elems
+
+.. autofunction:: dynet.sum_batches
+
+.. autofunction:: dynet.mean_batches
+
+.. autofunction:: dynet.moment_batches
+
+.. autofunction:: dynet.std_batches
 
 .. autofunction:: dynet.reshape
 
