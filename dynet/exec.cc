@@ -279,7 +279,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         auto it = prof2id.find(prof);
         if(it == prof2id.end()) {
           id = prof2id[prof] = node2id[j] = prof2id.size();
-          active_batched.resize(prof2id.size());
+          active_batched.resize(prof2id.size()+1);
         } else {
           id = node2id[j] = it->second;
         }
