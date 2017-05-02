@@ -425,11 +425,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       }
     }
 
-    // for(size_t j = 0; j < batched_nfxs.size(); ++j) {
-    //   auto & t = batched_nfxs[j];
-    //   cerr << "batched_nfxs[" << j << "]: " << t.d << ", " << (ptrdiff_t)t.v << endl;
-    // }
-
     // 3: do the actual execution 
     Tensor temp_nfx;
     while(num_batches_evaluated < batch_id) {
@@ -452,10 +447,20 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         // 2) the inputs need to be concatenated
         } else {
           // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
-          // TODO: This should be implemented, but for now fall back to copying every time
-          // TODO: If this is the case do the following
-          //       xs[i] = &batched_nfxs[...];
-          //       autobatch_garbage[i] = false;
+          // TODO: make this work completely
+          // float* min_node = nfxs[cg.nodes[batch_ids[0]]->args[i]].v;
+          // float* max_node = min_node;
+          // for(auto curr_node : batch_ids) {
+          //   const Tensor &t = nfxs[cg.nodes[curr_node]->args[i]];
+          //   tot_arg += t.d.size();
+          //   float* v = t.v;
+          //   if (v < min_node) min_node = v;
+          //   if (v > max_node) max_node = v + t.d.size();
+          // }
+          // if (min_node + tot_arg == max_node) {
+          //   xs[i] = &batched_nfxs[...];
+          //   autobatch_garbage[i] = false;
+          // }
           // 2.b) the inputs need to be concatenated, and are not contiguous
           Tensor* my_xsi = new Tensor;
           my_xsi->device = node->device;
