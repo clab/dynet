@@ -219,19 +219,21 @@ std::vector<bool> InputNode::autobatch_concat(const ComputationGraph & cg) const
 }
 Node* InputNode::autobatch_pseudo_node(const ComputationGraph & cg,
                                         const std::vector<VariableIndex> & batch_ids) const {
-  Dim d = cg.nodes[batch_ids[0]]->dim;
-  for(size_t i = 1; i < batch_ids.size(); ++i)
-    d.bd += cg.nodes[batch_ids[0]]->dim.bd;
-  vector<float> values(d.size());
+  size_t my_size = 0;
   InputNode* sin;
+  for(auto bid : batch_ids) {
+    sin = static_cast<InputNode*>(cg.nodes[bid]);
+    my_size += sin->pdata->size();
+  }
+  vector<float> values(my_size);
   size_t curr_pos = 0;
-  for(size_t i = 0; i < batch_ids.size(); ++i) {
-    sin = static_cast<InputNode*>(cg.nodes[batch_ids[i]]);
-    memcpy(&values[curr_pos], &(*sin->pdata->begin()), sin->pdata->size() * sizeof(float));
+  for(auto bid : batch_ids) {
+    sin = static_cast<InputNode*>(cg.nodes[bid]);
+    memcpy(&values[curr_pos], &(*sin->pdata)[0], sin->pdata->size() * sizeof(float));
     curr_pos += sin->pdata->size();
   }
   DYNET_ASSERT(curr_pos == values.size(), "current position and size of values does not match");
-  return new InputNode(d, values);
+  return new InputNode(Dim({(unsigned int)my_size}), values);
 }
 
 template<class MyDevice>

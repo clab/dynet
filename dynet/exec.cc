@@ -10,6 +10,16 @@ using namespace std;
 
 namespace dynet {
 
+inline string print_vec(const std::vector<float> & vec) {
+  string sep = "[";
+  ostringstream oss;
+  for(auto f : vec) {
+    oss << sep << f; sep = ",";
+  }
+  oss << "]";
+  return oss.str();
+}
+
 ExecutionEngine::~ExecutionEngine() {}
 
 void SimpleExecutionEngine::invalidate() {
@@ -429,8 +439,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       vector<bool> & autobatch_concat = batched_concats[num_batches_evaluated];
       vector<bool> autobatch_garbage = autobatch_concat;
       size_t arity = autobatch_concat.size();
-      Node* node = batched_nodes[num_batches_evaluated];
       Tensor & nfx = batched_nfxs[num_batches_evaluated];
+      Node* node = batched_nodes[num_batches_evaluated];
       if(node == nullptr) node = cg.nodes[batch_ids[0]];
       xs.resize(arity); 
       size_t used = node->device->pools[(int)DeviceMempool::FXS]->used();

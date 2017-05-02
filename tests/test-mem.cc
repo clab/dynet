@@ -33,15 +33,17 @@ struct MemTest {
 BOOST_FIXTURE_TEST_SUITE(mem_test, MemTest);
 
 BOOST_AUTO_TEST_CASE( expand_test ) {
-  dynet::Model mod;
-  dynet::Parameter param = mod.add_parameters({1024,1024});
-  SimpleSGDTrainer trainer(mod);
-  dynet::ComputationGraph cg;
-  Expression x = parameter(cg, param);
-  Expression z = sum_rows(sum_cols(x));
-  cg.forward(z);
-  cg.backward(z);
-  trainer.update(0.1);
+  if(!autobatch_flag) {
+    dynet::Model mod;
+    dynet::Parameter param = mod.add_parameters({1024,1024});
+    SimpleSGDTrainer trainer(mod);
+    dynet::ComputationGraph cg;
+    Expression x = parameter(cg, param);
+    Expression z = sum_rows(sum_cols(x));
+    cg.forward(z);
+    cg.backward(z);
+    trainer.update(0.1);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END();

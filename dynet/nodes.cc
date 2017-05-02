@@ -283,7 +283,7 @@ template<class MyDevice>
 void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() % 2 == 1, "Failed dimension check in AffineTransform::forward");
   if (xs.size() == 1) {
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     return;
   } else {
     // Add the first matrix
@@ -427,7 +427,7 @@ template<class MyDevice>
 void Average::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) {
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     return;
   }
   auto res = fx.tvec();
@@ -1008,8 +1008,7 @@ DYNET_NODE_INST_DEV_IMPL(HuberDistance)
 
 template<class MyDevice>
 void Identity::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.d = xs[0]->d;
-  fx.v = xs[0]->v;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -1193,7 +1192,7 @@ DYNET_NODE_INST_DEV_IMPL(LogSoftmax)
 template<class MyDevice>
 void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs.size() == 1) {
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   } else {
     // TODO: Ideally we wouldn't need to allocate this memory permanently.
     //       We need a good method for allocating "scratch" memory that is only used temporarily.
@@ -1397,8 +1396,7 @@ DYNET_NODE_INST_DEV_IMPL(Max)
 
 template<class MyDevice>
 void NoBackprop::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.d = xs[0]->d;
-  fx.v = xs[0]->v;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -1414,7 +1412,7 @@ DYNET_NODE_INST_DEV_IMPL(NoBackprop)
 
 template<class MyDevice>
 void FlipGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.v = xs[0]->v;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -1789,7 +1787,7 @@ template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
-  fx.v = xs[0]->v;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -2172,7 +2170,7 @@ template<class MyDevice>
 void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) 
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   else if (num_args == 2 && xs[0]->d.bd == xs[1]->d.bd)
     fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec();
   else if (num_args == 3 && xs[0]->d.bd == xs[1]->d.bd && xs[1]->d.bd == xs[2]->d.bd)
@@ -2343,7 +2341,7 @@ DYNET_NODE_INST_DEV_IMPL(Tanh)
 template<class MyDevice>
 void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (dim.num_nonone_dims() <= 1) {
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   } else {
     array<ptrdiff_t, 5> order;
     for(size_t i = 0; i < 5; ++i)
