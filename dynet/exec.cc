@@ -250,6 +250,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     batched_nodes.resize(batched_nfxs.size(), nullptr);
     batched_ids.resize(batched_nfxs.size());
     batched_concats.resize(batched_nfxs.size());
+    singles.resize(i - num_nodes_evaluated + num_batches_evaluated + 1, (VariableIndex)0);
 
     // Allocate temporary memory for bookkeeping
     unordered_map<string, int> prof2id(i);        // Batching profile to ID
@@ -282,11 +283,11 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       // Get the node profile ID
       string prof = node->autobatch_profile(cg);
       // If batchable, collect statistics
-      if(prof != "") {
+      if(prof != "") { //&& prof[0] == 'a') {
         auto it = prof2id.find(prof);
         if(it == prof2id.end()) {
           id = prof2id[prof] = node2id[j] = prof2id.size();
-          active_batched.resize(prof2id.size());
+          active_batched.resize(prof2id.size()+1);
         } else {
           id = node2id[j] = it->second;
         }
@@ -304,7 +305,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     // 2) Travel through and do active nodes
     vector<const Tensor*> xs(16);
     while(node_id != i + 1) {
-      
+
       // First find the best node to execute next in order of priority
       // 1. Nodes that don't support batching
       // 2. Nodes that support batching. In this case, use a heuristic
@@ -358,13 +359,14 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
           }
         }
         // Create the information for the batched pseudo-graph
-        batched_nfxs[batch_id] = nfxs[curr_node];
-        batched_ids[batch_id].resize(1, (VariableIndex)curr_node);
-        batched_concats[batch_id].resize(node->arity(), false);
+        singles[batch_id] = curr_node+1;
+        //batched_nfxs[batch_id] = nfxs[curr_node];
+        //batched_ids[batch_id].resize(1, (VariableIndex)curr_node);
+        //batched_concats[batch_id].resize(node->arity(), false);
         // Increment the counts
         ++batch_id;
         ++node_id;
-      // 2.b) If we have a batch of current nodes, execute them together
+        // 2.b) If we have a batch of current nodes, execute them together
       } else {
         Node* node;
         DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
@@ -399,7 +401,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
           for(auto curr_node : batch_ids)
             cg.nodes[curr_node]->aux_mem = (void*)((ptrdiff_t)head_aux + (ptrdiff_t)cg.nodes[curr_node]->aux_mem);
         }
-        
+
         // Set the size for the final output
         Tensor & nfx = batched_nfxs[batch_id];
         nfx.device = node->device;
@@ -436,67 +438,81 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     Tensor temp_nfx;
     while(num_batches_evaluated < batch_id) {
       // Read in the stuff for this batch
-      vector<VariableIndex> & batch_ids = batched_ids[num_batches_evaluated];
-      // cerr << "Evaluating batch " << num_batches_evaluated << ":"; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
-      vector<bool> & autobatch_concat = batched_concats[num_batches_evaluated];
-      vector<bool> autobatch_garbage = autobatch_concat;
-      size_t arity = autobatch_concat.size();
-      Tensor & nfx = batched_nfxs[num_batches_evaluated];
-      Node* node = batched_nodes[num_batches_evaluated];
-      if(node == nullptr) node = cg.nodes[batch_ids[0]];
-      xs.resize(arity); 
-      size_t used = node->device->pools[(int)DeviceMempool::FXS]->used();
-      // Figure out whether we need to create the inputs
-      for(size_t i = 0; i < arity; ++i) {
-        // 1) the inputs don't need to be concatenated. Just use the tensor
-        if(!autobatch_concat[i]) {
-          xs[i] = &nfxs[node->args[i]];
-        // 2) the inputs need to be concatenated
-        } else {
-          // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
-          // TODO: make this work completely
-          // float* min_node = nfxs[cg.nodes[batch_ids[0]]->args[i]].v;
-          // float* max_node = min_node;
-          // for(auto curr_node : batch_ids) {
-          //   const Tensor &t = nfxs[cg.nodes[curr_node]->args[i]];
-          //   tot_arg += t.d.size();
-          //   float* v = t.v;
-          //   if (v < min_node) min_node = v;
-          //   if (v > max_node) max_node = v + t.d.size();
-          // }
-          // if (min_node + tot_arg == max_node) {
-          //   xs[i] = &batched_nfxs[...];
-          //   autobatch_garbage[i] = false;
-          // }
-          // 2.b) the inputs need to be concatenated, and are not contiguous
-          Tensor* my_xsi = new Tensor;
-          my_xsi->device = node->device;
-          my_xsi->mem_pool = DeviceMempool::FXS;
-          size_t tot_arg = 0;
-          for(auto curr_node : batch_ids)
-            tot_arg += nfxs[cg.nodes[curr_node]->args[i]].d.size();
-          my_xsi->d = Dim({(unsigned int)tot_arg});
-          my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
-          tot_arg = 0;
-          for(auto curr_node : batch_ids) {
-            temp_nfx = nfxs[cg.nodes[curr_node]->args[i]];
-            temp_nfx.v = my_xsi->v + tot_arg;
-            TensorTools::copy_elements(temp_nfx, nfxs[cg.nodes[curr_node]->args[i]]);
-            tot_arg += temp_nfx.d.size();
-          }
-          xs[i] = my_xsi;
+      VariableIndex nid = singles[num_batches_evaluated];
+      if (nid != (VariableIndex)0) { // execute a single node
+        nid--;
+        Node* node = cg.nodes[nid];
+        xs.resize(node->arity());
+        unsigned ai = 0;
+        for (VariableIndex arg : node->args) {
+          xs[ai] = &nfxs[arg];
+          ++ai;
         }
+        node->forward(xs, nfxs[nid]);
+        ++num_batches_evaluated;
+      } else { // execute a batch node
+        vector<VariableIndex> & batch_ids = batched_ids[num_batches_evaluated];
+        // cerr << "Evaluating batch " << num_batches_evaluated << ":"; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
+        vector<bool> & autobatch_concat = batched_concats[num_batches_evaluated];
+        vector<bool> autobatch_garbage = autobatch_concat;
+        size_t arity = autobatch_concat.size();
+        Tensor & nfx = batched_nfxs[num_batches_evaluated];
+        Node* node = batched_nodes[num_batches_evaluated];
+        if(node == nullptr) node = cg.nodes[batch_ids[0]];
+        xs.resize(arity); 
+        size_t used = node->device->pools[(int)DeviceMempool::FXS]->used();
+        // Figure out whether we need to create the inputs
+        for(size_t i = 0; i < arity; ++i) {
+          // 1) the inputs don't need to be concatenated. Just use the tensor
+          if(!autobatch_concat[i]) {
+            xs[i] = &nfxs[node->args[i]];
+            // 2) the inputs need to be concatenated
+          } else {
+            // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
+            // TODO: make this work completely
+            // float* min_node = nfxs[cg.nodes[batch_ids[0]]->args[i]].v;
+            // float* max_node = min_node;
+            // for(auto curr_node : batch_ids) {
+            //   const Tensor &t = nfxs[cg.nodes[curr_node]->args[i]];
+            //   tot_arg += t.d.size();
+            //   float* v = t.v;
+            //   if (v < min_node) min_node = v;
+            //   if (v > max_node) max_node = v + t.d.size();
+            // }
+            // if (min_node + tot_arg == max_node) {
+            //   xs[i] = &batched_nfxs[...];
+            //   autobatch_garbage[i] = false;
+            // }
+            // 2.b) the inputs need to be concatenated, and are not contiguous
+            Tensor* my_xsi = new Tensor;
+            my_xsi->device = node->device;
+            my_xsi->mem_pool = DeviceMempool::FXS;
+            size_t tot_arg = 0;
+            for(auto curr_node : batch_ids)
+              tot_arg += nfxs[cg.nodes[curr_node]->args[i]].d.size();
+            my_xsi->d = Dim({(unsigned int)tot_arg});
+            my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
+            tot_arg = 0;
+            for(auto curr_node : batch_ids) {
+              temp_nfx = nfxs[cg.nodes[curr_node]->args[i]];
+              temp_nfx.v = my_xsi->v + tot_arg;
+              TensorTools::copy_elements(temp_nfx, nfxs[cg.nodes[curr_node]->args[i]]);
+              tot_arg += temp_nfx.d.size();
+            }
+            xs[i] = my_xsi;
+          }
+        }
+
+        node->autobatch_reshape(cg, batch_ids, autobatch_concat, xs, nfx);
+        node->forward(xs, nfx);
+
+        // Clear the extra memory
+        node->device->pools[(int)DeviceMempool::FXS]->set_used(used);
+        for(size_t i = 0; i < arity; ++i)
+          if(autobatch_garbage[i])
+            delete xs[i];
+        ++num_batches_evaluated;
       }
-
-      node->autobatch_reshape(cg, batch_ids, autobatch_concat, xs, nfx);
-      // node->forward(xs, nfx);
-
-      // Clear the extra memory
-      node->device->pools[(int)DeviceMempool::FXS]->set_used(used);
-      for(size_t i = 0; i < arity; ++i)
-        if(autobatch_garbage[i])
-          delete xs[i];
-      ++num_batches_evaluated;
     }
 
     free(node2id);
