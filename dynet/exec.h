@@ -65,6 +65,7 @@ class BatchedExecutionEngine : public ExecutionEngine {
   std::vector<Node*> batched_nodes;
   std::vector<std::vector<VariableIndex> > batched_ids;
   std::vector<std::vector<bool> > batched_concats;
+  std::vector<VariableIndex> singles; 
 
 };
 
