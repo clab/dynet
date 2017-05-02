@@ -107,10 +107,11 @@ void Node::autobatch_reshape_concatonly(const ComputationGraph & cg,
 }
 
 ComputationGraph::ComputationGraph() {
-  if(autobatch_flag)
+  if(autobatch_flag) {
     ee = new BatchedExecutionEngine(*this);
-  else
+  } else {
     ee = new SimpleExecutionEngine(*this);
+  }
   if (n_hgs > 0) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
     throw std::runtime_error("Attempted to create >1 CG");
