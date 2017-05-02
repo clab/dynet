@@ -1198,7 +1198,7 @@ void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
     // TODO: Ideally we wouldn't need to allocate this memory permanently.
     //       We need a good method for allocating "scratch" memory that is only used temporarily.
     Tensor ms(fx.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
-    Eigen::array<ptrdiff_t, 2> bcast({1,fx.d.bd});
+    Eigen::array<ptrdiff_t, 2> bcast = {1,fx.d.bd};
     // Calculate the max
     if(ms.d.bd == xs[0]->d.bd)
       ms.tvec().device(*dev.edevice) = xs[0]->tvec();
@@ -1242,7 +1242,7 @@ void LogSumExp::backward_dev_impl(const MyDevice & dev,
     if(fx.d.bd == xs[i]->d.bd) {
       dEdxi.tvec().device(*dev.edevice) += (xs[i]->tvec() - fx.tvec()).exp() * dEdf.tvec();
     } else {
-      Eigen::array<ptrdiff_t, 2> bcast({1,fx.d.bd});
+      Eigen::array<ptrdiff_t, 2> bcast = {1,fx.d.bd};
       Eigen::array<int, 1> red_axis = {1};
       dEdxi.tvec().device(*dev.edevice) += ((xs[i]->tbvec().broadcast(bcast) - fx.tbvec()).exp() * dEdf.tbvec()).sum(red_axis);
     }
