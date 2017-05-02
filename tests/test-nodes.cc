@@ -1329,6 +1329,112 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+
+// Expression sum_elems(x);
+BOOST_AUTO_TEST_CASE( sum_elems_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param4);
+  Expression z = sum_elems(x);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression mean_elems(x);
+BOOST_AUTO_TEST_CASE( mean_elems_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param4);
+  Expression z = mean_elems(x);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression moment_elems(x, r);
+BOOST_AUTO_TEST_CASE( moment_elems_gradient ) {
+  for (unsigned r=2;r<5;r++){
+    dynet::ComputationGraph cg;
+    Expression x = parameter(cg, param4);
+    Expression z = moment_elems(x, r);
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+}
+
+// Expression std_elems(x);
+BOOST_AUTO_TEST_CASE( std_elems_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param4);
+  Expression z = std_elems(x);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression sum_batches(x);
+BOOST_AUTO_TEST_CASE( sum_batches_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param4);
+  Expression y = reshape(x, Dim({1}, 6));
+  Expression z = sum_batches(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression mean_batches(x);
+BOOST_AUTO_TEST_CASE( mean_batches_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param4);
+  Expression y = reshape(x, Dim({1}, 6));
+  Expression z = mean_batches(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression moment_batches(x, r);
+BOOST_AUTO_TEST_CASE( moment_batches_gradient ) {
+  for (unsigned r=2;r<5;r++){
+    dynet::ComputationGraph cg;
+    Expression x = parameter(cg, param4);
+    Expression y = reshape(x, Dim({1}, 6));
+    Expression z = moment_batches(y, r);
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+}
+
+// Expression std_batches(x);
+BOOST_AUTO_TEST_CASE( std_batches_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param4);
+  Expression y = reshape(x, Dim({1}, 6));
+  Expression z = std_batches(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression mean_dim(x);
+BOOST_AUTO_TEST_CASE( mean_dim_gradient ) {
+  dynet::ComputationGraph cg;
+    Expression x = parameter(cg, param_cube1);
+    Expression z = x;
+    for (unsigned d=3;d>0;d--)
+      z = mean_dim(z, d - 1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression moment_dim(x, r);
+BOOST_AUTO_TEST_CASE( moment_dim_gradient ) {
+  for (unsigned r=2;r<5;r++){
+    dynet::ComputationGraph cg;
+    Expression x = parameter(cg, param_cube1);
+    Expression z = x;
+    for (unsigned d=3;d>0;d--)
+      z = moment_dim(z, d - 1, r);
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+}
+
+// Expression mean_dim(x);
+BOOST_AUTO_TEST_CASE( std_dim_gradient ) {
+  dynet::ComputationGraph cg;
+    Expression x = parameter(cg, param_cube1);
+    Expression z = x;
+    for (unsigned d=3;d>0;d--)
+      z = std_dim(z, d - 1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+
 // Expression layer_norm(x,g,b);
 BOOST_AUTO_TEST_CASE( layer_norm_backward_gradient ) {
   dynet::ComputationGraph cg;
@@ -1341,7 +1447,7 @@ BOOST_AUTO_TEST_CASE( layer_norm_backward_gradient ) {
 }
 
 // Expression layer_norm(x,g,b);
-BOOST_AUTO_TEST_CASE( layer_norm_forward_gradient ) {
+BOOST_AUTO_TEST_CASE( layer_norm_forward ) {
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param1);
   Expression g = input(cg, Dim({3}), ones3_vals);
