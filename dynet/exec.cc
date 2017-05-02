@@ -240,6 +240,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
 
   if (i >= num_nodes_evaluated) {
+
     nfxs.resize(i + 1);
 
     // Create the necessary info for batching in the future
@@ -251,18 +252,24 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     batched_concats.resize(batched_nfxs.size());
     singles.resize(i - num_nodes_evaluated + num_batches_evaluated + 1, (VariableIndex)0);
 
-    // 1) Calculate the batching profiles for every node
+    // Allocate temporary memory for bookkeeping
     unordered_map<string, int> prof2id(i);        // Batching profile to ID
     prof2id[""] = 0;
-    vector<int> node2id(i + 1, 0);  // Node to profile ID
-    vector<int> node2left(i + 1, 0); // Node to # of predecessors left
+    size_t temp_data_size = (i+1)*4*sizeof(int) + (i-node_id+2)*sizeof(float);
+    int* node2id = (int*)malloc(temp_data_size); memset(node2id, 0, temp_data_size);
+    int* node2left = node2id + i + 1;
+    int* node2diff = node2left + i + 1;
+    int* active_un_begin = node2diff + i + 1;
+    int* active_un_end = active_un_begin;
+    float* prof2avg = (float*)active_un_begin + i + 1;
+    float* prof2cnt = prof2avg + i - node_id + 2;
+
     vector<vector<VariableIndex> > node2successors(i + 1); // Node to successors
-    vector<ptrdiff_t> node2diff(i + 1, 0);
     // Average ID of batched items, a heuristic for which to run first
-    vector<float> prof2avg(i - node_id + 2, 0.f), prof2cnt(i - node_id + 2, 0.f);
     // The active items that cannot or can be batched
-    queue<VariableIndex> active_unbatched;
     vector<vector<VariableIndex> > active_batched;
+
+    // 1) Calculate the batching profiles for every node
     int id = 0;
     for (VariableIndex j = num_nodes_evaluated; j <= i; ++j) {
       const Node* node = cg.nodes[j];
@@ -289,7 +296,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         if(node2left[j] == 0)
           active_batched[id].push_back(j);
       } else if(node2left[j] == 0) {
-        active_unbatched.push(j);
+        *(active_un_end++) = j;
       }
     }
     for(int j = 1; j < prof2id.size(); ++j)
@@ -305,8 +312,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       //    of picking the node with the lowest average ID of nodes of
       //    that profile.
       int curr_node = -1, curr_prof = -1;
-      if(!active_unbatched.empty()) {
-        curr_node = active_unbatched.front(); active_unbatched.pop();
+      if(active_un_begin != active_un_end) {
+        curr_node = *(active_un_begin++);
       } else {
         float best_avg = 1e10;
         for(size_t i = 1; i < active_batched.size(); ++i) {
@@ -346,7 +353,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         for(auto next_node : node2successors[curr_node]) {
           if(--node2left[next_node] == 0) {
             if(node2id[next_node] == 0)
-              active_unbatched.push(next_node);
+              *(active_un_end++) = next_node;
             else
               active_batched[node2id[next_node]].push_back(next_node);
           }
@@ -413,7 +420,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
           for(auto next_node : node2successors[curr_node]) {
             if(--node2left[next_node] == 0) {
               if(node2id[next_node] == 0)
-                active_unbatched.push(next_node);
+                *(active_un_end++) = next_node;
               else
                 active_batched[node2id[next_node]].push_back(next_node);
             }
@@ -508,6 +515,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       }
     }
 
+    free(node2id);
   }
   num_nodes_evaluated = i+1;
   return nfxs[i];
