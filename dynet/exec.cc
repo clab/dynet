@@ -276,7 +276,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       // Get the node profile ID
       string prof = node->autobatch_profile(cg);
       // If batchable, collect statistics
-      if(prof != "") { //&& prof[0] == 'a') {
+      if(prof != "") {
         auto it = prof2id.find(prof);
         if(it == prof2id.end()) {
           id = prof2id[prof] = node2id[j] = prof2id.size();
@@ -509,6 +509,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     }
 
   }
+  num_nodes_evaluated = i+1;
   return nfxs[i];
 }
 
