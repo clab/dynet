@@ -1216,7 +1216,7 @@ BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
 BOOST_AUTO_TEST_CASE( pick_batch_broadcast_gradient ) {
   std::vector<unsigned> idx = {1, 2};
   dynet::ComputationGraph cg;
-  Expression x1 = input(cg, Dim({3, 2}), batch_vals);
+  Expression x1 = parameter(cg, param_square1);
   Expression z = sum_batches(squared_norm(pick(x1, idx, 0)));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
