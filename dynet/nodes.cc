@@ -1585,7 +1585,7 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
     DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickElement::forward");
     for(unsigned b = 0; b < pvals->size(); ++b){
       if(xs[0]->d.bd == 1){
-        dEdxi.t<3>().chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>();
+        dEdxi.t<3>().chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
       }else{
         dEdxi.tb<3>().chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
       }
