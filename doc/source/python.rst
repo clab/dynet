@@ -180,7 +180,7 @@ There are two ways to import the dynet module :
 
 imports dynet and automatically initializes the global dynet parameters with the command line arguments (see the documentation_). The amount of memory allocated, GPU/CPU usage is fixed from there on.
 
-.. _documentation: commandline
+.. _documentation: commandline.html
 
 ::
 
