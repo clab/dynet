@@ -315,6 +315,16 @@ cdef class Parameters:
         """
         self.thisptr.scale(s)
 
+    cpdef scale_gradient(self,float s):
+        """Scales the gradient
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale_gradient(s)
+
+
     cpdef bool is_updated(self):
         """check whether the parameter is updated or not
         
@@ -421,6 +431,15 @@ cdef class LookupParameters:
 
         """
         self.thisptr.scale(s)
+
+    cpdef scale_gradient(self,float s):
+        """Scales the gradient
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale_gradient(s)
         
     cpdef Expression expr(self,bool update=True):
         if cg_version() != self._version:
