@@ -28,18 +28,19 @@ FastLSTMBuilder::FastLSTMBuilder(unsigned layers,
     Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2i = model.add_parameters({hidden_dim, hidden_dim});
     Parameter p_c2i = model.add_parameters({hidden_dim, 1});
-    Parameter p_bi = model.add_parameters({hidden_dim});
+    Parameter p_bi = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // o
     Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2o = model.add_parameters({hidden_dim, hidden_dim});
     Parameter p_c2o = model.add_parameters({hidden_dim, 1});
-    Parameter p_bo = model.add_parameters({hidden_dim});
+    Parameter p_bo = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // c
     Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2c = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bc = model.add_parameters({hidden_dim});
+    Parameter p_bc = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};

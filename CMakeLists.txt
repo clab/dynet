@@ -82,13 +82,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 function(find_cudnn)
   set(CUDNN_ROOT "" CACHE PATH "CUDNN root path")
   find_path(CUDNN_INCLUDE_DIRS cudnn.h
-    PATHS ${CUDNN_ROOT}
+    HINTS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/include
     DOC "CUDNN include path")
-  find_library(CUDNN_LIBRARIES NAMES libcudnn.so
+  find_library(CUDNN_LIBRARIES NAMES libcudnn.so cudnn.lib
     PATHS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/lib
           ${CUDNN_ROOT}/lib64
+          ${CUDNN_ROOT}/lib/x64
     DOC "CUDNN library path")
   if(CUDNN_INCLUDE_DIRS AND CUDNN_LIBRARIES)
     set(CUDNN_FOUND TRUE PARENT_SCOPE)
@@ -100,7 +101,7 @@ function(find_cudnn)
 endfunction()
 
 # look for Boost
-if(DEFINED ENV{BOOST_ROOT})
+if(DEFINED BOOST_ROOT OR DEFINED BOOSTROOT OR DEFINED ENV{BOOST_ROOT} OR DEFINED ENV{BOOSTROOT})
   set(Boost_NO_SYSTEM_PATHS ON)
   if(DEFINED ${Boost_INCLUDE_DIR})
     get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
@@ -127,11 +128,6 @@ endif()
 # echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
 # then run source ~/.bashrc to have those environment variable effective immediately
 
-if (NOT DEFINED DYNET_DEBUG_LEVEL)
-  set(DYNET_DEBUG_LEVEL 1)
-endif()
-add_definitions(-DDYNET_DEBUG_LEVEL=${DYNET_DEBUG_LEVEL})
-
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
 else()
@@ -156,8 +152,16 @@ if (WITH_CUDA_BACKEND)
   list(REMOVE_ITEM CUDA_LIBRARIES -lpthread)
   set(LIBS ${LIBS} ${CUDA_LIBRARIES})
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_HAS_CUDA_FP16 -DEIGEN_USE_GPU")
-  #find_cudnn()
-  #include_directories(SYSTEM ${CUDNN_INCLUDE_DIRS})
+  if(CUDNN_ROOT)
+    find_cudnn()
+    if(CUDNN_FOUND)
+      include_directories(SYSTEM ${CUDNN_INCLUDE_DIRS})
+      list(APPEND CUDA_LIBRARIES ${CUDNN_LIBRARIES})
+      message("-- Successfully include CUDNN flags")
+    endif()
+  else()
+    message("-- CUDNN not found, some functionalities will be disabled")
+  endif()
 endif()
 
 # look for Eigen
