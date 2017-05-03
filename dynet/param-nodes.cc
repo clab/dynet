@@ -84,6 +84,31 @@ Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
   return Dim({1});
 }
 
+std::string LookupNode::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  oss << "lookup ";
+  dim.print_profile(oss);
+  return oss.str();
+}
+std::vector<bool> LookupNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<bool>();
+}
+Node* LookupNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids) const {
+  vector<unsigned> ids;
+  LookupNode* ln;
+  for(auto batch_id : batch_ids) {
+    ln = static_cast<LookupNode*>(cg.nodes[batch_id]);
+    if(ln->pindex != nullptr)
+      ids.push_back(*ln->pindex);
+    else
+      for(auto word_id : *ln->pindices)
+        ids.push_back(word_id);
+  }
+  return new LookupNode(ln->params, ids);
+}
+
+
 size_t LookupNode::aux_storage_size() const {
   return dim.bd * sizeof(unsigned);
 }
@@ -186,6 +211,31 @@ void InputNode::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(InputNode)
 
+std::string InputNode::autobatch_profile(const ComputationGraph & cg) const {
+  return "input";
+}
+std::vector<bool> InputNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<bool>();
+}
+Node* InputNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids) const {
+  size_t my_size = 0;
+  InputNode* sin;
+  for(auto bid : batch_ids) {
+    sin = static_cast<InputNode*>(cg.nodes[bid]);
+    my_size += sin->pdata->size();
+  }
+  vector<float> values(my_size);
+  size_t curr_pos = 0;
+  for(auto bid : batch_ids) {
+    sin = static_cast<InputNode*>(cg.nodes[bid]);
+    memcpy(&values[curr_pos], &(*sin->pdata)[0], sin->pdata->size() * sizeof(float));
+    curr_pos += sin->pdata->size();
+  }
+  DYNET_ASSERT(curr_pos == values.size(), "current position and size of values does not match");
+  return new InputNode(Dim({(unsigned int)my_size}), values);
+}
+
 template<class MyDevice>
 void SparseInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
@@ -233,6 +283,23 @@ void ScalarInputNode::backward_dev_impl(const MyDevice & dev,
   DYNET_RUNTIME_ERR("called backward() on arity 0 node: i = " << i);
 }
 DYNET_NODE_INST_DEV_IMPL(ScalarInputNode)
+
+std::string ScalarInputNode::autobatch_profile(const ComputationGraph & cg) const {
+  return "scalar_input";
+}
+std::vector<bool> ScalarInputNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<bool>();
+}
+Node* ScalarInputNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                             const std::vector<VariableIndex> & batch_ids) const {
+  vector<float> values(batch_ids.size());
+  ScalarInputNode* sin;
+  for(size_t i = 0; i < batch_ids.size(); ++i) {
+    sin = static_cast<ScalarInputNode*>(cg.nodes[batch_ids[i]]);
+    values[i] = *sin->pdata;
+  }
+  return new InputNode(Dim({1}, batch_ids.size()), values);
+}
 
 template<class MyDevice>
 void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {

@@ -557,6 +557,57 @@ struct Node {
                         unsigned i,
                         Tensor& dEdxi) const final;
 
+  /**
+   * \brief profile for automatic batching
+   * \detail This will be equal only for nodes that can be combined. Returns
+   *         "" for unbatchable functions.
+   */
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const { return ""; }
+  /**
+   * \brief which inputs can be batched
+   * \detail This will be true for inputs that should be concatenated when
+   *         autobatching, and false for inputs that should be shared among
+   *         all batches.
+   */
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const { return std::vector<bool>(); }
+  /**
+   * \brief create a pseudonode for autobatching
+   * \detail This will combine together multiple nodes into one big node for 
+   *         the automatic batching functionality. When a node representing
+   *         one component of the mini-batch can be used as-is it is OK to just
+   *         return the null pointer, otherwise we should make the appropriate
+   *         changes and return a new node.
+   *         
+   */
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids) const {
+    return nullptr;
+  }
+  /**
+   * \brief reshape the tensors for auto
+   * \detail Takes in info, and reshapes the dimensions of xs (for which
+   *         "concat" is true), and fx. By default do no reshaping, which
+   *         is OK for componentwise operations.
+   *
+   */
+  virtual void autobatch_reshape(const ComputationGraph & cg,
+                                 const std::vector<VariableIndex> & batch_ids,
+                                 const std::vector<bool> & concat,
+                                 std::vector<const Tensor*>& xs,
+                                 Tensor& fx) const { }
+  /**
+   * \brief reshape the tensors for auto
+   * \detail Takes in info, and reshapes the dimensions of xs (for which
+   *         "concat" is true) and fx by concatenating their batches.
+   *
+   */
+  void autobatch_reshape_concatonly(const ComputationGraph & cg,
+                                    const std::vector<VariableIndex> & batch_ids,
+                                    const std::vector<bool> & concat,
+                                    std::vector<const Tensor*>& xs,
+                                    Tensor& fx) const;
+
+
   //
   /**
    * \brief Number of arguments to the function

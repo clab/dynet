@@ -907,6 +907,41 @@ Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+std::string AffineTransform::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  oss << "affine ";
+  // This is a heuristic: we assume that we often have "b + W * x" shaped affine transforms
+  // so when everything is batch size one, optimize for this case
+  if(dim.bd == 1) {
+    oss << 'n' <<  args[0];
+    for(size_t i = 1; i < args.size(); i += 2) {
+      oss << " n" << args[i] << ' ';
+      cg.nodes[args[i+1]]->dim.print_profile(oss);
+    }
+  } else {
+    for(auto nid : args) {
+      const Dim & d = cg.nodes[nid]->dim;
+      oss << ' ';
+      if(d.bd == 1)
+        oss << 'n' << nid;
+      else
+        d.print_profile(oss);
+    }
+  }
+  return oss.str();
+}
+std::vector<bool> AffineTransform::autobatch_concat(const ComputationGraph & cg) const {
+  vector<bool> ret(args.size(), false);
+  if(dim.bd == 1) {
+    for(size_t i = 2; i < ret.size(); i += 2)
+      ret[i] = true;
+  } else {
+    for(size_t i = 0; i < ret.size(); ++i)
+      ret[i] = (cg.nodes[args[i]]->dim.bd > 1);
+  }
+  return ret;
+}
+
 string Negate::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << '-' << arg_names[0];
@@ -1003,6 +1038,33 @@ Dim SquaredEuclideanDistance::dim_forward(const vector<Dim>& xs) const {
                           (LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size()),
                           "Bad input dimensions in SquaredEuclideanDistance: " << xs);
   return Dim({1}, max(xs[0].bd, xs[1].bd));
+}
+
+std::string SquaredEuclideanDistance::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  oss << "squared_distance ";
+  const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;
+  if(dleft.bd == dright.bd) {
+    dleft.print_profile(oss);
+  } else if(dleft.bd == 1) {
+    oss << " n" << args[0] << ' ';
+    dright.print_profile(oss);
+  } else {
+    dleft.print_profile(oss);
+    oss << " n" << args[1] << ' ';
+  }
+  return oss.str();
+}
+std::vector<bool> SquaredEuclideanDistance::autobatch_concat(const ComputationGraph & cg) const {
+  const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;
+  vector<bool> ret(2, true);
+  if(dleft.bd != dright.bd) {
+    if(dleft.bd == 1)
+      ret[0] = false;
+    else
+      ret[1] = false;
+  }
+  return ret;
 }
 
 string LogisticSigmoid::as_string(const vector<string>& arg_names) const {

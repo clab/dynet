@@ -270,6 +270,10 @@ struct Dim {
       return Dim({d[1], d[0]}, bd);
     }
   }
+  /**
+  * \brief Print the unbatched profile as a string
+  **/
+  void print_profile(std::ostream & out) const;
 
   unsigned int d[DYNET_MAX_TENSOR_DIM]; /**< Array of dimension */
   unsigned int nd; /**< Number of dimensions */

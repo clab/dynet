@@ -89,8 +89,29 @@ void Node::backward(const std::vector<const Tensor*>& xs,
   }
 }
 
-ComputationGraph::ComputationGraph():
-  ee(new SimpleExecutionEngine(*this)) {
+void Node::autobatch_reshape_concatonly(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids,
+                                        const std::vector<bool> & concat,
+                                        std::vector<const Tensor*>& xs,
+                                        Tensor& fx) const {
+  size_t bid = 0;
+  for(auto vid : batch_ids)
+    bid += cg.nodes[vid]->dim.bd;
+  const Node* exemplar = cg.nodes[batch_ids[0]];
+  fx.d = exemplar->dim; fx.d.bd = bid;
+  for(size_t i = 0; i < xs.size(); ++i) {
+    const_cast<Tensor*>(xs[i])->d = cg.nodes[exemplar->args[i]]->dim;
+    if(concat[i])
+      const_cast<Tensor*>(xs[i])->d.bd = bid;
+  }
+}
+
+ComputationGraph::ComputationGraph() {
+  if(autobatch_flag) {
+    ee = new BatchedExecutionEngine(*this);
+  } else {
+    ee = new SimpleExecutionEngine(*this);
+  }
   if (n_hgs > 0) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
     throw std::runtime_error("Attempted to create >1 CG");
