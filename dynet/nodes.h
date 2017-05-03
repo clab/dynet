@@ -112,9 +112,10 @@ struct DotProduct : public Node {
 // NOTE: if you have a column or row vector as input, runtime is constant
 // if you have a matrix as input, the runtime is O(mn) - try to avoid using this
 struct Transpose : public Node {
-  explicit Transpose(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  explicit Transpose(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned> & dims) : Node(a), dims(dims) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
+  std::vector<unsigned> dims;
 };
 
 // y = reshape(x_1, --> to)
@@ -184,6 +185,13 @@ struct Sqrt : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+// y = abs x_1
+struct Abs : public Node {
+  explicit Abs(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 // y = erf x_1
 struct Erf : public Node {
   explicit Erf(const std::initializer_list<VariableIndex>& a) : Node(a) {}
@@ -235,20 +243,13 @@ struct Log : public Node {
 
 // concatenate rows
 struct Concatenate : public Node {
-  template <typename T> explicit Concatenate(const T& a) : Node(a) {}
+  template <typename T> explicit Concatenate(const T& a, unsigned d) : Node(a), dimension(d) {}
   virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   // src_row_indices[i] says what row in fx the ith x vector was assigned to
   // used to simplify backprop
-  mutable std::vector<unsigned> src_row_indices;
-};
-
-// concatenate column vectors into a matrix
-// x_i must be a column vector in R^n
-struct ConcatenateColumns : public Node {
-  template <typename T> explicit ConcatenateColumns(const T& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  mutable std::vector<unsigned> src_col_indices;
+  mutable std::vector<unsigned> src_indices;
+  unsigned dimension;
 };
 
 // concatenate different batched experssions into one single batched tensor
@@ -332,6 +333,27 @@ struct CwiseMultiply : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+// y = x_1 + x_2  (Addition where x_2 is a scalar)
+struct ScalarAdd : public Node {
+  explicit ScalarAdd(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = x_1 \cdot x_2  (Hadamard product where x_1 is a scalar)
+struct ScalarMultiply : public Node {
+  explicit ScalarMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = x_1 / x_2  (Elementwise division where x_2 is a scalar)
+struct ScalarQuotient : public Node {
+  explicit ScalarQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 // y = x_1 / x_2  (cwiseQuotient)
 struct CwiseQuotient : public Node {
   explicit CwiseQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
@@ -376,6 +398,7 @@ struct BinaryLogLoss : public Node {
 struct LogSumExp : public Node {
   template <typename T> explicit LogSumExp(const T& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
 };
 
@@ -405,6 +428,57 @@ struct SumBatches : public Node {
   virtual bool supports_multibatch() const override { return true; }
 };
 
+// y = \sum_i,j,... x[i,j,...]
+struct StdElements : public Node {
+  template <typename T> explicit StdElements(const T& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+};
+
+// y = \sum_i x_i
+struct StdBatches : public Node {
+  template <typename T> explicit StdBatches(const T& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+};
+
+//y = \sum_i x_i
+struct StdDimension : public Node {
+  template <typename T> explicit StdDimension(const T& a, unsigned d) : Node(a), dimension(d) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned dimension;
+};
+
+// y = \sum_i,j,... x[i,j,...]
+struct MomentElements : public Node {
+  template <typename T> explicit MomentElements(const T& a, unsigned o) : Node(a), order(o) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned order;
+};
+
+// y = \sum_i x_i
+struct MomentBatches : public Node {
+  template <typename T> explicit MomentBatches(const T& a, unsigned o) : Node(a), order(o) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned order;
+};
+
+//y = \sum_i x_i
+struct MomentDimension : public Node {
+  template <typename T> explicit MomentDimension(const T& a, unsigned d, unsigned o) : Node(a), dimension(d), order(o) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned dimension;
+  unsigned order;
+};
+
 // y = ( \sum_i x_i ) / |x|
 struct Average : public Node {
   template <typename T> explicit Average(const T& a) : Node(a) {}
@@ -431,12 +505,21 @@ struct PoissonRegressionLoss : public Node {
 // y = || x_1 ||^2
 struct SquaredNorm : public Node {
   explicit SquaredNorm(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = || x_1 ||
+struct L2Norm : public Node {
+  explicit L2Norm(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = || x_1 - x_2 ||^2
 struct SquaredEuclideanDistance : public Node {
   explicit SquaredEuclideanDistance(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -591,6 +674,41 @@ struct RandomUniform : public Node {
   real left, right;
 };
 
+// draw a random real from Uniform(left, right)
+struct RandomGumbel : public Node {
+  explicit RandomGumbel(const std::initializer_list<VariableIndex>& a, const Dim& d, real mu, real beta) : dim(d), mu(mu), beta(beta) {
+    DYNET_ASSERT(a.size() == 0, "RandomGumbel doesn't accept nodes as input");
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  Dim dim;
+  real mu, beta;
+};
+
+struct MaxDimension : public Node {
+  explicit MaxDimension(const std::initializer_list<VariableIndex>& a, unsigned dimension = 0) : Node(a), reduced_dim(dimension) {
+    first_dim = reduced_dim == 0 ? 1 : 0;
+    second_dim = first_dim + 1 == reduced_dim ? first_dim + 2 : first_dim + 1;
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  size_t aux_storage_size() const override;
+  unsigned reduced_dim;
+  unsigned first_dim;
+  unsigned second_dim;
+};
+
+struct MinDimension : public Node {
+  explicit MinDimension(const std::initializer_list<VariableIndex>& a, unsigned dimension = 0) : Node(a), reduced_dim(dimension) {
+    first_dim = reduced_dim == 0 ? 1 : 0;
+    second_dim = first_dim + 1 == reduced_dim ? first_dim + 2 : first_dim + 1;
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  size_t aux_storage_size() const override;
+  unsigned reduced_dim;
+  unsigned first_dim;
+  unsigned second_dim;
+};
 
 } // namespace dynet
 

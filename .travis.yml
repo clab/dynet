@@ -86,3 +86,5 @@ script:
   - make test
   - cd python
   - python setup.py install --user
+  - cd ../../tests/python
+  - python test.py
