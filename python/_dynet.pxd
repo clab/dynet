@@ -80,6 +80,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void set_updated(bool b)
         bool is_updated()
         void scale(float s)
+        void scale_gradient(float s)
         void clip_inplace(float left, float right)
         unsigned index
 
@@ -92,6 +93,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void set_updated(bool b)
         bool is_updated()
         void scale(float s)
+        void scale_gradient(float s)
         unsigned index
 
     cdef cppclass CParameterInit "dynet::ParameterInit":
