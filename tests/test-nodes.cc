@@ -1251,11 +1251,20 @@ BOOST_AUTO_TEST_CASE(  pick_batch_elems_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression pickrange(const Expression& x, unsigned v, unsigned u);
-BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
+// Expression pick_range(const Expression& x, unsigned v, unsigned u);
+BOOST_AUTO_TEST_CASE( pick_range_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression y = pickrange(x1, 0, 2);
+  Expression y = pick_range(x1, 0, 2);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression pick_range(const Expression& x, unsigned v, unsigned u);
+BOOST_AUTO_TEST_CASE( pick_range_dim_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = pick_range(x1, 0, 2, 1);
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }

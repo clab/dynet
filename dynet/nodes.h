@@ -613,15 +613,14 @@ struct PickElement : public Node {
   unsigned dimension;
 };
 
-// x_1 is a vector
-// y = x_1[start:end]
+// x_1 is a tensor
+// y = x_1[start:end] along dimension d
 // (start inclusive, end exclusive)
 struct PickRange : public Node {
-  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e) : Node(a), start(s), end(e) {}
+  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e, unsigned d = 0) : Node(a), start(s), end(e), dim(d) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  unsigned start;
-  unsigned end;
+  unsigned start, end, dim;
 };
 
 // x is a batched tensor
