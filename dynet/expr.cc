@@ -145,7 +145,11 @@ Expression pick_batch_elems(const Expression& x, const std::vector<unsigned>& v)
 Expression pick_batch_elem(const Expression& x, const unsigned* pv) { return Expression(x.pg, x.pg->add_function<PickBatchElements>({x.i}, pv)); }
 Expression pick_batch_elems(const Expression& x, const vector<unsigned> * pv) { return Expression(x.pg, x.pg->add_function<PickBatchElements>({x.i}, pv)); }
 
-Expression pickrange(const Expression& x, unsigned v, unsigned u) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u)); }
+Expression pick_range(const Expression& x, unsigned v, unsigned u, unsigned d) { return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u, d)); }
+Expression pickrange(const Expression& x, unsigned v, unsigned u) {
+  std::cerr << "WARNING: The function naming pickrange() has been deprecated. Please use pick_range() instead." << std::endl;
+  return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u, 0));
+}
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }

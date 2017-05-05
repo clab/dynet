@@ -1664,10 +1664,15 @@ DYNET_NODE_INST_DEV_IMPL(PickNegLogSoftmax)
 // slice of matrix from index start (inclusive) to index end (exclusive)
 template<class MyDevice>
 void PickRange::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Eigen::DSizes<ptrdiff_t, 3> indices(static_cast<ptrdiff_t>(start),0,0);
-  Eigen::DSizes<ptrdiff_t, 3> sizes(static_cast<ptrdiff_t>(end)- static_cast<ptrdiff_t>(start), 
-                                    static_cast<ptrdiff_t>(fx.d.cols()), static_cast<ptrdiff_t>(fx.d.bd));
-  fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().slice(indices, sizes);
+  Eigen::DSizes<ptrdiff_t, 5> indices(0,0,0,0,0);
+  indices[dim] = start;
+  Eigen::DSizes<ptrdiff_t, 5> sizes(static_cast<ptrdiff_t>(fx.d[0]), 
+                                    static_cast<ptrdiff_t>(fx.d[1]),
+                                    static_cast<ptrdiff_t>(fx.d[2]),
+                                    static_cast<ptrdiff_t>(fx.d[3]),
+                                    static_cast<ptrdiff_t>(fx.d.bd));
+  sizes[dim] = end-start;
+  fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().slice(indices, sizes);
 }
 
 // derivative is 0 in all dimensions except the slice range
@@ -1678,10 +1683,15 @@ void PickRange::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  Eigen::DSizes<ptrdiff_t, 3> indices(static_cast<ptrdiff_t>(start),0,0);
-  Eigen::DSizes<ptrdiff_t, 3> sizes(static_cast<ptrdiff_t>(end) - static_cast<ptrdiff_t>(start), 
-                                    static_cast<ptrdiff_t>(fx.d.cols()) ,static_cast<ptrdiff_t>(fx.d.bd));
-  dEdxi.tb<2>().slice(indices, sizes).device(*dev.edevice) += dEdf.tb<2>();
+  Eigen::DSizes<ptrdiff_t, 5> indices(0,0,0,0,0);
+  indices[dim] = start;
+  Eigen::DSizes<ptrdiff_t, 5> sizes(static_cast<ptrdiff_t>(fx.d[0]), 
+                                    static_cast<ptrdiff_t>(fx.d[1]),
+                                    static_cast<ptrdiff_t>(fx.d[2]),
+                                    static_cast<ptrdiff_t>(fx.d[3]),
+                                    static_cast<ptrdiff_t>(fx.d.bd));
+  sizes[dim] = end-start;
+  dEdxi.tb<4>().slice(indices, sizes).device(*dev.edevice) += dEdf.tb<4>();
 }
 DYNET_NODE_INST_DEV_IMPL(PickRange)
 
