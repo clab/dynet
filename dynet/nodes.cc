@@ -819,13 +819,13 @@ void DotProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   Eigen::array<int, 1> red_axis; red_axis[0] = 0;
   Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
   if(fx.d.bd == 1) {
-    fx.t<0>().device(*dev.edevice) = (xs[0]->t<1>() * xs[1]->t<1>()).sum();
+    fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() * xs[1]->tvec()).sum();
   } else if(xs[0]->d.bd == xs[1]->d.bd) {
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tb<1>() * xs[1]->tb<1>()).sum(red_axis);
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() * xs[1]->tbvec()).sum(red_axis);
   } else if(xs[0]->d.bd == 1) {
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tb<1>().broadcast(bcast) * xs[1]->tb<1>()).sum(red_axis);
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec()).sum(red_axis);
   } else {
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tb<1>() * xs[1]->tb<1>().broadcast(bcast)).sum(red_axis);
+    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() * xs[1]->tbvec().broadcast(bcast)).sum(red_axis);
   }
 }
 
@@ -837,18 +837,18 @@ void DotProduct::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   if(fx.d.bd == 1) {
-    Eigen::array<int, 1> bcast; bcast[0] = xs[i]->d.rows();
-    dEdxi.t<1>().device(*dev.edevice) += xs[1-i]->t<1>() * dEdf.t<1>().broadcast(bcast);
+    Eigen::array<int, 1> bcast; bcast[0] = xs[i]->d.batch_size();
+    dEdxi.tvec().device(*dev.edevice) += xs[1-i]->tvec() * dEdf.tvec().broadcast(bcast);
   } else {
-    Eigen::array<int, 2> bcast; bcast[0] =xs[i]->d.rows(); bcast[1] = 1;
+    Eigen::array<int, 2> bcast; bcast[0] =xs[i]->d.batch_size(); bcast[1] = 1;
     if(xs[0]->d.bd == xs[1]->d.bd) {
-      dEdxi.tb<1>().device(*dev.edevice) += xs[1-i]->tb<1>() * dEdf.tb<1>().broadcast(bcast);
+      dEdxi.tbvec().device(*dev.edevice) += xs[1-i]->tbvec() * dEdf.tbvec().broadcast(bcast);
     } else if(dEdxi.d.bd == 1) {
       Eigen::array<int, 1> red_axis; red_axis[0] = 1;
-      dEdxi.t<1>().device(*dev.edevice) += (xs[1-i]->tb<1>() * dEdf.tb<1>().broadcast(bcast)).sum(red_axis);
+      dEdxi.tvec().device(*dev.edevice) += (xs[1-i]->tbvec() * dEdf.tbvec().broadcast(bcast)).sum(red_axis);
     } else {
       Eigen::array<int, 2> batchcast; batchcast[0] = 1; batchcast[1] = fx.d.bd;
-      dEdxi.tb<1>().device(*dev.edevice) += (xs[1-i]->tb<1>().broadcast(batchcast) * dEdf.tb<1>().broadcast(bcast));
+      dEdxi.tbvec().device(*dev.edevice) += (xs[1-i]->tbvec().broadcast(batchcast) * dEdf.tbvec().broadcast(bcast));
     }
   }
 }

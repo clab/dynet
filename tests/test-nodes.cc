@@ -945,6 +945,14 @@ BOOST_AUTO_TEST_CASE( dot_product_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression dot_product(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( dot_product_matrix_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_square1);
+  Expression z = dot_product(x1, x1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression squared_distance(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( squared_distance_gradient ) {
   dynet::ComputationGraph cg;
