@@ -46,6 +46,7 @@ class SimpleExecutionEngine : public ExecutionEngine {
 class BatchedExecutionEngine : public ExecutionEngine {
  public:
   explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) {}
+  ~BatchedExecutionEngine() { garbage_collect(); }
   void invalidate() override;
   void invalidate(unsigned i) override;
   const Tensor& forward() override;
@@ -56,6 +57,7 @@ class BatchedExecutionEngine : public ExecutionEngine {
   const Tensor& get_gradient(VariableIndex i) override;
   void backward(bool full = false) override;
   void backward(VariableIndex i, bool full = false) override;
+  void garbage_collect();
  private:
   std::vector<Tensor> nfxs;
   std::vector<Tensor> ndEdfs;

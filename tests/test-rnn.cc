@@ -56,7 +56,7 @@ BOOST_FIXTURE_TEST_SUITE(rnn_test, RNNTest);
 #define DYNET_RNN_GRADIENT_TEST_CASE(name, RNN_TYPE)      \
 BOOST_AUTO_TEST_CASE( name ) {                            \
   dynet::Model mod;                                       \
-  RNN_TYPE rnn(2,3,10,mod);                               \
+  RNN_TYPE rnn(2,3,4,mod);                                \
   dynet::ComputationGraph cg;                             \
   rnn.new_graph(cg);                                      \
   rnn.start_new_sequence();                               \
@@ -65,7 +65,8 @@ BOOST_AUTO_TEST_CASE( name ) {                            \
     rnn.add_input(x);                                     \
   }                                                       \
   Expression z = squared_norm(rnn.final_h()[1]);          \
-  BOOST_CHECK(check_grad(mod, z, 0));                     \
+  cg.print_graphviz();                                    \
+  BOOST_CHECK(check_grad(mod, z, 2));                     \
 }                                                         \
 
 DYNET_RNN_GRADIENT_TEST_CASE(simple_rnn_gradient, dynet::SimpleRNNBuilder)

@@ -230,20 +230,23 @@ const Tensor& BatchedExecutionEngine::incremental_forward() {
   return incremental_forward(node_max_index);
 }
 
+void BatchedExecutionEngine::garbage_collect() {
+  // free any old memory if this is a new CG
+  for(Node* pseudo_node : batched_nodes)
+    if(pseudo_node != nullptr)
+      delete pseudo_node;
+  for(Device* dev : dynet::devices)
+    dev->pools[(int)DeviceMempool::FXS]->free();
+  for(auto & kv : batched_args)
+    delete kv.second;
+  batched_args.clear();
+}
+
 const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
   DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::incremental_forward()");
 
-  // free any old memory if this is a new CG
-  if (num_nodes_evaluated == 0) {
-    for(Node* pseudo_node : batched_nodes)
-      if(pseudo_node == nullptr)
-        delete pseudo_node;
-    for(Device* dev : dynet::devices)
-      dev->pools[(int)DeviceMempool::FXS]->free();
-    for(auto & kv : batched_args)
-      delete kv.second;
-    batched_args.clear();
-  }
+  if (num_nodes_evaluated == 0)
+    garbage_collect();
 
   if (i >= num_nodes_evaluated) {
 
@@ -628,11 +631,12 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
     if (!in_computation[i]) continue;
     if (batched_ids[i].size() == 1) { // execute a single node
       VariableIndex nid = batched_ids[i][0];
-      // cerr << "Executing single backward for " << nid << endl;
+      // cerr << "Executing single backward bid=" << i << ", nid=" << nid << endl;
       const Node* node = cg.nodes[nid];
       xs.resize(node->arity());
       unsigned ai = 0;
       for (VariableIndex arg : node->args) {
+        // cerr << "in_computation_single[" << node2batchid[arg] << "] = true" << endl;
         in_computation[node2batchid[arg]] = true;
         xs[ai] = &nfxs[arg];
         ++ai;
@@ -642,13 +646,13 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
         if (needs_derivative[node2batchid[arg]])
           node->backward(xs, nfxs[nid], ndEdfs[nid], ai, ndEdfs[arg]);
         // cerr << "node_>backward(xs, nfxs[" << nid << "], ndEdfs[" << nid << "], " << ai << ", ndEdfs[" << arg << "])" << endl;
-        // cerr << "ndEdfs[" << nid << "] = " << ndEdfs[nid].tvec() << endl;
-        // cerr << "ndEdfs[" << arg << "] = " << ndEdfs[arg].tvec() << endl;
+        // cerr << "ndEdfs[" << nid << "] = " << print_vec(as_vector(ndEdfs[nid])) << endl;
+        // cerr << "ndEdfs[" << arg << "] = " << print_vec(as_vector(ndEdfs[arg])) << endl;
         ++ai;
       }
     } else { // execute a batch node
       vector<VariableIndex> & batch_ids = batched_ids[i];
-      // cerr << "Executing batched backward for"; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
+      // cerr << "Executing batched backward bid=" << i << ", nids="; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
       vector<bool> & autobatch_concat = batched_concats[i];
       size_t arity = autobatch_concat.size();
       Node* node = batched_nodes[i];
@@ -656,11 +660,13 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       xs.resize(arity); 
       size_t ai = 0;
       for (VariableIndex arg : node->args) {
-        in_computation[node2batchid[arg]] = true;
         if(!autobatch_concat[ai]) {
           xs[ai] = &nfxs[arg];
+          in_computation[node2batchid[arg]] = true;
         } else {
           xs[ai] = batched_args[make_pair((VariableIndex)i, ai)];
+          for(auto bid : batch_ids)
+            in_computation[node2batchid[cg.nodes[bid]->args[ai]]] = true;
         }
         ++ai;
       }
@@ -689,7 +695,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
             node->backward(xs, batched_nfxs[i], batched_ndEdfs[i], ai, my_ndEdf);
             // cerr << "node->backward(xs (";
             // for(auto x : xs)
-            //   cerr << x->d << "[" << print_vec(as_vector(*x)) << "] ";
+            //   // cerr << x->d << "[" << print_vec(as_vector(*x)) << "] ";
             // cerr << "), batched_nfxs[" << i << "] (" << batched_nfxs[i].d << "[" << print_vec(as_vector(batched_nfxs[i])) << "]), batched_ndEdfs[" << i << "] ("<<batched_ndEdfs[i].d<<"[" << print_vec(as_vector(batched_ndEdfs[i])) << "]), " << ai << ", my_ndEdf ("<<my_ndEdf.d<<"[" << print_vec(as_vector(my_ndEdf)) << "])" << endl;
             size_t tot_arg = 0;
             for(auto curr_node : batch_ids) {
