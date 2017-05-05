@@ -1506,12 +1506,15 @@ Expression pick(const Expression& x, const std::vector<unsigned> * pv, unsigned 
  * \details Pick a range of elements from an expression.
  *
  * \param x The input expression
- * \param v The beginning index
- * \param u The end index
+ * \param s The start index
+ * \param e The end index
+ * \param d The dimension along which to pick
  *
  * \return The value of {x[v],...,x[u]}
  */
-Expression pickrange(const Expression& x, unsigned v, unsigned u);
+Expression pick_range(const Expression& x, unsigned s, unsigned e, unsigned d = 0);
+// DEPRECATED
+Expression pickrange(const Expression& x, unsigned s, unsigned e);
 
 /**
  * \ingroup flowoperations
