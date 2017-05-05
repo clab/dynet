@@ -2869,12 +2869,31 @@ cpdef Expression dropout(Expression x, float p):
     
     Args:
         x (dynet.Expression): Input expression
-        p (dynet.Expression): The dropout probability
+        p (number): The dropout probability
     
     Returns:
         dynet.Expression: The dropped out expression :math:`y=\\frac{1}{1-\\texttt{p}}x\circ z, z\sim\\text{Bernoulli}(1-\\texttt{p})`
     """
     return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
+
+
+cpdef Expression dropout_dim(Expression x, unsigned d, float p):
+    """Dropout along one dimension
+    
+    Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example 
+
+    For now this only supports tensors of order <= 3 (with or without batch dimension)
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimension along which to drop
+        p (number): The dropout probability
+    
+    Returns:
+        dynet.Expression: The dropped expression
+    """
+    return Expression.from_cexpr(x.cg_version, c_dropout_dim(x.c(), d, p))
+
 cpdef Expression block_dropout(Expression x, float p):
     """Block dropout
     
@@ -2882,7 +2901,7 @@ cpdef Expression block_dropout(Expression x, float p):
     
     Args:
         x (dynet.Expression): Input expression
-        p (dynet.Expression): The dropout probability
+        p (number): The dropout probability
     
     Returns:
         dynet.Expression: The block dropout expression

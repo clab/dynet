@@ -807,24 +807,34 @@ BOOST_AUTO_TEST_CASE( max_gradient ) {
 }
 
 // TODO: Noise is random, so it cannot be tested simply?
-// // Expression noise(const Expression& x, real stddev);
-// BOOST_AUTO_TEST_CASE( noise_gradient ) {
-//   dynet::ComputationGraph cg;
-//   Expression x1 = parameter(cg, param1);
-//   Expression y = noise(x1, 0.5);
-//   Expressionz z = sum_elems(y);
-//   BOOST_CHECK(check_grad(mod, z, 0));
-// }
+// Expression noise(const Expression& x, real stddev);
+BOOST_AUTO_TEST_CASE( noise_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = noise(x1, 0.5);
+  Expression z = sum_elems(y);
+  cg.forward(z);
+}
 
-// TODO: Dropout scales the gradients at training time, so they don't match.
-// // Expression dropout(const Expression& x, real p);
-// BOOST_AUTO_TEST_CASE( dropout_gradient ) {
-//   dynet::ComputationGraph cg;
-//   Expression x1 = parameter(cg, param1);
-//   Expression y = dropout(x1, 0.5);
-//   Expression z = sum_elems(y);
-//   BOOST_CHECK(check_grad(mod, z, 0));
-// }
+//TODO: Dropout scales the gradients at training time, so they don't match.
+// Expression dropout(const Expression& x, real p);
+BOOST_AUTO_TEST_CASE( dropout_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = dropout(x1, 0.5);
+  Expression z = sum_elems(y);
+  cg.forward(z);
+}
+
+BOOST_AUTO_TEST_CASE( dropout_dim_forward ) {
+    for (unsigned d=0;d<3;d++){
+      dynet::ComputationGraph cg;
+      Expression x = parameter(cg, param_cube1);
+      Expression y = dropout_dim(x, d, 0.5);
+      Expression z = sum_elems(y);
+      cg.forward(z);
+    }
+}
 
 // TODO: Dropout scales the gradients at training time, so they don't match.
 // Expression block_dropout(const Expression& x, real p);
