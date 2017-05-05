@@ -15,7 +15,6 @@
 #include "dynet/training.h"
 #include "dynet/timing.h"
 #include "dynet/expr.h"
-#include "dynet/io-macros.h"
 
 #include <iostream>
 #include <fstream>
