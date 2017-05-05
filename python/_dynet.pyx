@@ -1227,7 +1227,7 @@ cdef class Expression: #(((
                 raise ValueError("Improper slice: start index must come strictly before stop index")
             if index.step is not None:
                 raise ValueError("Step sizes not yet supported.")
-            return pickrange(self, i, j)
+            return pick_range(self, i, j)
 
     cpdef scalar_value(self, recalculate=False):
         """Returns value of an expression as a scalar
@@ -2746,20 +2746,24 @@ cpdef Expression kmh_ngram(Expression x, unsigned v):
         dynet.Expression: 
     """
     return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
-cpdef Expression pickrange(Expression x, unsigned v, unsigned u):
+cpdef Expression pick_range(Expression x, unsigned s, unsigned e, unsigned d = 0):
     """Pick range of elements
     
     Pick a range of elements from an expression.
     
     Args:
         x (dynet.Expression): input expression
-        v (int): Beginning index
-        u (int): End index
+        s (int): Start index
+        e (int): End index
+        d (int): Dimension along which to pick
     
     Returns:
-        dynet.Expression: The value of {x[v],...,x[u]}
+        dynet.Expression: The value of {x[v],...,x[u]} along the dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
+    return Expression.from_cexpr(x.cg_version, c_pick_range(x.c(), s, e, d))
+# This is deprecated
+cpdef Expression pickrange(Expression x, unsigned s, unsigned e):
+    return Expression.from_cexpr(x.cg_version, c_pick_range(x.c(), s, e, 0))
 cpdef Expression pick_batch_elem(Expression x, unsigned v):
     """Pick batch element.
 

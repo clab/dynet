@@ -736,15 +736,16 @@ Dim PickElement::dim_forward(const vector<Dim>& xs) const {
 // y = (x_1)[start:end]
 string PickRange::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "slice(" << arg_names[0] << ',' << start << ':' << end << ')';
+  s << "slice(" << arg_names[0] << ',' << start << ':' << end << ", dim=" << dim << ')';
   return s.str();
 }
 
 Dim PickRange::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in PickRange");
-  DYNET_ARG_CHECK(LooksLikeVector(xs[0]) && end <= xs[0][0],
-                          "Bad input dimensions or range in PickRange: " << xs << " range(" << start << ", " << end << ")");
-  return Dim({end - start}, xs[0].bd);
+  DYNET_ARG_CHECK(dim < xs[0].nd && start < end && xs[0][dim] >= end,
+                          "Bad input dimensions or range in PickRange: " << xs << " range(" << start << ", " << end << ") with dim=" << dim);
+  Dim ret = xs[0]; ret.d[dim] = end-start;
+  return ret;
 }
 
 string PickBatchElements::as_string(const vector<string>& arg_names) const {
