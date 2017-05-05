@@ -3,6 +3,7 @@
 #include "dynet/training.h"
 #include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
+#include "dynet/grad-check.h"
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
@@ -22,7 +23,7 @@ int main(int argc, char** argv) {
   //MomentumSGDTrainer sgd(m);
 
   Parameter p_W, p_b, p_V, p_a;
-  const unsigned HIDDEN_SIZE = 8;
+  const unsigned HIDDEN_SIZE = 3;
   p_W = m.add_parameters({HIDDEN_SIZE, 2});
   p_b = m.add_parameters({HIDDEN_SIZE});
   p_V = m.add_parameters({1, HIDDEN_SIZE});
@@ -62,8 +63,10 @@ int main(int argc, char** argv) {
     Expression loss_expr = sum(losses);
 
     // Print the graph, just for fun.
-    if(iter == 0)
+    if(iter == 0) {
       cg.print_graphviz();
+      check_grad(m, loss_expr, 2);
+    }
 
     // Calculate the loss. Batching will automatically be done here.
     float loss = as_scalar(cg.forward(loss_expr)) / 4;
