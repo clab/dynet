@@ -1733,6 +1733,21 @@ Expression dropout(const Expression& x, real p);
 
 /**
  * \ingroup noiseoperations
+ * \brief Dropout along a specific dimension
+ * \details Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example 
+ * 
+ * For now this only supports tensors of order <= 3 (with or without batch dimension)
+ *
+ * \param x The input expression
+ * \param d The dimension along which to drop
+ * \param p The dropout probability
+ *
+ * \return The dropped out expression
+ */
+Expression dropout_dim(const Expression& x, unsigned d, real p);
+
+/**
+ * \ingroup noiseoperations
  * \brief Block dropout
  * \details Identical to the dropout operation, but either drops out *all*
  *          or *no* values in the expression, as opposed to making a decision

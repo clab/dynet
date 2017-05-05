@@ -224,6 +224,19 @@ Dim Dropout::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string DropoutDim::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dropout_dim(" << arg_names[0] << ",p=" << p << ')';
+  return s.str();
+}
+
+Dim DropoutDim::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in DropoutDim")
+  DYNET_ARG_CHECK(xs[0].nd < 4, "DropoutDim only supports tensor up to order 3 + batch dimension, got tensor of order"<<xs[0].nd)
+  DYNET_ARG_CHECK(xs[0].nd > dimension, "In DropoutDim : tried to drop along dimension "<<dimension<<" on tensor of order"<<xs[0].nd)
+  return xs[0];
+}
+
 string BlockDropout::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "block_dropout(" << arg_names[0] << ",dropout_probability=" << dropout_probability << ')';
