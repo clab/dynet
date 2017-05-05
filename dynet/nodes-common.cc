@@ -146,9 +146,7 @@ string DotProduct::as_string(const vector<string>& arg_names) const {
 
 Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2 &&
-                          LooksLikeVector(xs[0]) &&
-                          LooksLikeVector(xs[1]) &&
-                          xs[0].rows() == xs[1].rows(),
+                          xs[0].single_batch() == xs[1].single_batch(),
                           "Bad arguments to DotProduct: " << xs);
   return Dim({1}, max(xs[0].bd, xs[1].bd));
 }
