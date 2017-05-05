@@ -1,5 +1,5 @@
 import _gdynet as G
-print 
+print()
 import _dynet as C
 
 cm = C.Model()
