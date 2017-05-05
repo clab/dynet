@@ -418,23 +418,23 @@ cdef extern from "dynet/fast-lstm.h" namespace "dynet":
         #vector[CExpression] get_s(CRNNPointer i)
         #CRNNPointer state()
 
-cdef extern from "python/pybridge.h" namespace "pydynet":
-    cdef cppclass CParameterCollectionSaver "pydynet::ParameterCollectionSaver":
-        CParameterCollectionSaver(string filename, CParameterCollection *model)
-        CParameterCollectionSaver add_parameter(CParameters p)
-        CParameterCollectionSaver add_lookup_parameter(CLookupParameters lp)
-        CParameterCollectionSaver add_gru_builder(CGRUBuilder b)
-        CParameterCollectionSaver add_lstm_builder(CLSTMBuilder b)
-        CParameterCollectionSaver add_vanilla_lstm_builder(CVanillaLSTMBuilder b)
-        CParameterCollectionSaver add_srnn_builder(CSimpleRNNBuilder b)
-        void done()
-
-    cdef cppclass CParameterCollectionLoader "pydynet::ParameterCollectionLoader":
-        CParameterCollectionLoader(string filename, CParameterCollection *model)
-        CParameterCollectionSaver fill_parameter(CParameters p)
-        CParameterCollectionSaver fill_lookup_parameter(CLookupParameters lp)
-        CParameterCollectionSaver fill_gru_builder(CGRUBuilder lp)
-        CParameterCollectionSaver fill_lstm_builder(CLSTMBuilder lp)
-        CParameterCollectionSaver fill_vanilla_lstm_builder(CVanillaLSTMBuilder lp)
-        CParameterCollectionSaver fill_srnn_builder(CSimpleRNNBuilder lp)
-        void done()
+#cdef extern from "python/pybridge.h" namespace "pydynet":
+#    cdef cppclass CParameterCollectionSaver "pydynet::ParameterCollectionSaver":
+#        CParameterCollectionSaver(string filename, CParameterCollection *model)
+#        CParameterCollectionSaver add_parameter(CParameters p)
+#        CParameterCollectionSaver add_lookup_parameter(CLookupParameters lp)
+#        CParameterCollectionSaver add_gru_builder(CGRUBuilder b)
+#        CParameterCollectionSaver add_lstm_builder(CLSTMBuilder b)
+#        CParameterCollectionSaver add_vanilla_lstm_builder(CVanillaLSTMBuilder b)
+#        CParameterCollectionSaver add_srnn_builder(CSimpleRNNBuilder b)
+#        void done()
+#
+#    cdef cppclass CParameterCollectionLoader "pydynet::ParameterCollectionLoader":
+#        CParameterCollectionLoader(string filename, CParameterCollection *model)
+#        CParameterCollectionSaver fill_parameter(CParameters p)
+#        CParameterCollectionSaver fill_lookup_parameter(CLookupParameters lp)
+#        CParameterCollectionSaver fill_gru_builder(CGRUBuilder lp)
+#        CParameterCollectionSaver fill_lstm_builder(CLSTMBuilder lp)
+#        CParameterCollectionSaver fill_vanilla_lstm_builder(CVanillaLSTMBuilder lp)
+#        CParameterCollectionSaver fill_srnn_builder(CSimpleRNNBuilder lp)
+#        void done()

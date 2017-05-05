@@ -50,8 +50,6 @@ if "${MSVC}"=="1":
     appendCMakeList(LIBRARY_DIRS, '${MKL_LINK_DIRS}')    # Add the MKL dirs, if MKL is being used
     appendCMakeLibList(GPULIBRARIES, '${CUDA_RT_FILES}')  
     appendCMakeList(GPULIBRARY_DIRS, '${CUDA_RT_DIRS}')  
-    # Boost does auto-linking in MSVC, just point to the right directory:
-    appendCMakeList(LIBRARY_DIRS, '${Boost_LIBRARY_DIRS}')
 else:
     COMPILER_ARGS=["-std=c++11"]
     DYNET_LIB_DIR="${PROJECT_BINARY_DIR}/dynet/"
@@ -73,7 +71,7 @@ ext_cpu = Extension(
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
-                      "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
+                      ], # this is the directory where boost is.
         libraries=LIBRARIES,             # ditto
         library_dirs=LIBRARY_DIRS,
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed

@@ -21,7 +21,6 @@ if(PYTHON)
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pxd
                      ${CMAKE_CURRENT_SOURCE_DIR}/dynet_viz.py
-                     ${CMAKE_CURRENT_SOURCE_DIR}/pybridge.h
   )
 
 if (WITH_CUDA_BACKEND)

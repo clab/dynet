@@ -517,124 +517,125 @@ cdef class ParameterCollection: # {{{
     cdef load_all(self, string fname):
         load_dynet_model(fname, self.thisptr)
 
-    cdef _save_one(self, component, CParameterCollectionSaver *saver, fh, pfh):
-        # would be nicer to have polymorphism/dispatch-by-type
-        # but we cannot because we need to bind to the c-type.
-        c = component
-        if isinstance(c, Parameters):
-            fh.write("param ")
-            saver.add_parameter((<Parameters>c).thisptr)
-        elif isinstance(c, LookupParameters):
-            fh.write("lookup ")
-            saver.add_lookup_parameter((<LookupParameters>c).thisptr)
-        elif isinstance(c, GRUBuilder):
-            fh.write("gru_builder ")
-            saver.add_gru_builder((<CGRUBuilder*>(<GRUBuilder>c).thisptr)[0])
-        elif isinstance(c, LSTMBuilder):
-            fh.write("lstm_builder ")
-            saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
-        elif isinstance(c, VanillaLSTMBuilder):
-            fh.write("vanilla_lstm_builder ")
-            saver.add_vanilla_lstm_builder((<CVanillaLSTMBuilder*>(<VanillaLSTMBuilder>c).thisptr)[0])
-        elif isinstance(c, SimpleRNNBuilder):
-            saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
-            fh.write("srnn_builder ")
-        elif isinstance(c, BiRNNBuilder):
-            fh.write("birnn_builder~%d " % (2 * len(c.builder_layers)))
-            for (f,b) in c.builder_layers:
-                self._save_one(f,saver,fh,pfh)
-                self._save_one(b,saver,fh,pfh)
-        elif isinstance(c, Saveable):
-            cs = c.get_components()
-            fh.write("user~%d " % len(cs))
-            pickle.dump(c,pfh)
-            for subc in cs:
-                self._save_one(subc,saver,fh,pfh)
-        else:
-            raise TypeError("Cannot save model component of type %s" % type(c))
+# TODO kill
+#    cdef _save_one(self, component, CParameterCollectionSaver *saver, fh, pfh):
+#        # would be nicer to have polymorphism/dispatch-by-type
+#        # but we cannot because we need to bind to the c-type.
+#        c = component
+#        if isinstance(c, Parameters):
+#            fh.write("param ")
+#            saver.add_parameter((<Parameters>c).thisptr)
+#        elif isinstance(c, LookupParameters):
+#            fh.write("lookup ")
+#            saver.add_lookup_parameter((<LookupParameters>c).thisptr)
+#        elif isinstance(c, GRUBuilder):
+#            fh.write("gru_builder ")
+#            saver.add_gru_builder((<CGRUBuilder*>(<GRUBuilder>c).thisptr)[0])
+#        elif isinstance(c, LSTMBuilder):
+#            fh.write("lstm_builder ")
+#            saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
+#        elif isinstance(c, VanillaLSTMBuilder):
+#            fh.write("vanilla_lstm_builder ")
+#            saver.add_vanilla_lstm_builder((<CVanillaLSTMBuilder*>(<VanillaLSTMBuilder>c).thisptr)[0])
+#        elif isinstance(c, SimpleRNNBuilder):
+#            saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
+#            fh.write("srnn_builder ")
+#        elif isinstance(c, BiRNNBuilder):
+#            fh.write("birnn_builder~%d " % (2 * len(c.builder_layers)))
+#            for (f,b) in c.builder_layers:
+#                self._save_one(f,saver,fh,pfh)
+#                self._save_one(b,saver,fh,pfh)
+#        elif isinstance(c, Saveable):
+#            cs = c.get_components()
+#            fh.write("user~%d " % len(cs))
+#            pickle.dump(c,pfh)
+#            for subc in cs:
+#                self._save_one(subc,saver,fh,pfh)
+#        else:
+#            raise TypeError("Cannot save model component of type %s" % type(c))
 
-    def save(self, fname, components=None):
-        if not components:
-            self.save_all(fname.encode())
-            return
-        fh = open(fname+".pym","w")
-        pfh = open(fname+".pyk","wb")
-        cdef CParameterCollectionSaver *saver = new CParameterCollectionSaver(fname.encode(), self.thisptr)
-        for c in components:
-            self._save_one(c,saver,fh,pfh)
-        saver.done()
-        fh.close()
-        pfh.close()
-        del saver
-
-    cdef _load_one(self, itypes, CParameterCollectionLoader *loader, pfh):
-        cdef CParameters p
-        cdef CLookupParameters lp
-        cdef GRUBuilder gb_
-        cdef LSTMBuilder lb_
-        cdef VanillaLSTMBuilder vlb_
-        cdef SimpleRNNBuilder sb_
-        tp = next(itypes)
-        if tp == "param":
-            loader.fill_parameter(p)
-            param = Parameters.wrap_ptr(p)
-            return param
-        elif tp == "lookup":
-            loader.fill_lookup_parameter(lp)
-            param = LookupParameters.wrap_ptr(lp)
-            return param
-        elif tp == "gru_builder":
-            gb_ = GRUBuilder(0,0,0,self) # empty builder
-            loader.fill_gru_builder((<CGRUBuilder *>gb_.thisptr)[0])
-            return gb_
-        elif tp == "lstm_builder":
-            lb_ = LSTMBuilder(0,0,0,self) # empty builder
-            loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
-            return lb_
-        elif tp == "vanilla_lstm_builder":
-            vlb_ = VanillaLSTMBuilder(0,0,0,self) # empty builder
-            loader.fill_vanilla_lstm_builder((<CVanillaLSTMBuilder *>vlb_.thisptr)[0])
-            return vlb_
-        elif tp == "srnn_builder":
-            sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
-            loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
-            return sb_
-        elif tp.startswith("birnn_builder~"):
-            tp,num = tp.split("~",1)
-            num = int(num)
-            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
-            return BiRNNBuilder(None, None, None, None, None, list(zip(items[0::2], items[1::2])))
-        elif tp.startswith("user~"):
-            # user defiend type
-            tp,num = tp.split("~",1)
-            saveable = pickle.load(pfh)
-            num = int(num)
-            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
-            saveable.restore_components(items)
-            return saveable
-        else:
-            print("Huh?")
-            assert False,"unsupported type " + tp
-
-    cpdef load(self, fname):
-        if not os.path.isfile(fname+".pym"):
-            self.load_all(fname.encode())
-            return
-        with open(fname+".pym","r") as fh:
-            types = fh.read().strip().split()
-
-        cdef CParameterCollectionLoader *loader = new CParameterCollectionLoader(fname.encode(), self.thisptr)
-        with open(fname+".pyk","rb") as pfh:
-            params = []
-            itypes = iter(types)
-            while True: # until iterator is done
-                try:
-                    param = self._load_one(itypes,loader,pfh)
-                except StopIteration: break
-                params.append(param)
-        loader.done()
-        del loader
-        return params
+#    def save(self, fname, components=None):
+#        if not components:
+#            self.save_all(fname.encode())
+#            return
+#        fh = open(fname+".pym","w")
+#        pfh = open(fname+".pyk","wb")
+#        cdef CParameterCollectionSaver *saver = new CParameterCollectionSaver(fname.encode(), self.thisptr)
+#        for c in components:
+#            self._save_one(c,saver,fh,pfh)
+#        saver.done()
+#        fh.close()
+#        pfh.close()
+#        del saver
+#
+#    cdef _load_one(self, itypes, CParameterCollectionLoader *loader, pfh):
+#        cdef CParameters p
+#        cdef CLookupParameters lp
+#        cdef GRUBuilder gb_
+#        cdef LSTMBuilder lb_
+#        cdef VanillaLSTMBuilder vlb_
+#        cdef SimpleRNNBuilder sb_
+#        tp = next(itypes)
+#        if tp == "param":
+#            loader.fill_parameter(p)
+#            param = Parameters.wrap_ptr(p)
+#            return param
+#        elif tp == "lookup":
+#            loader.fill_lookup_parameter(lp)
+#            param = LookupParameters.wrap_ptr(lp)
+#            return param
+#        elif tp == "gru_builder":
+#            gb_ = GRUBuilder(0,0,0,self) # empty builder
+#            loader.fill_gru_builder((<CGRUBuilder *>gb_.thisptr)[0])
+#            return gb_
+#        elif tp == "lstm_builder":
+#            lb_ = LSTMBuilder(0,0,0,self) # empty builder
+#            loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
+#            return lb_
+#        elif tp == "vanilla_lstm_builder":
+#            vlb_ = VanillaLSTMBuilder(0,0,0,self) # empty builder
+#            loader.fill_vanilla_lstm_builder((<CVanillaLSTMBuilder *>vlb_.thisptr)[0])
+#            return vlb_
+#        elif tp == "srnn_builder":
+#            sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
+#            loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
+#            return sb_
+#        elif tp.startswith("birnn_builder~"):
+#            tp,num = tp.split("~",1)
+#            num = int(num)
+#            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
+#            return BiRNNBuilder(None, None, None, None, None, list(zip(items[0::2], items[1::2])))
+#        elif tp.startswith("user~"):
+#            # user defiend type
+#            tp,num = tp.split("~",1)
+#            saveable = pickle.load(pfh)
+#            num = int(num)
+#            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
+#            saveable.restore_components(items)
+#            return saveable
+#        else:
+#            print("Huh?")
+#            assert False,"unsupported type " + tp
+#
+#    cpdef load(self, fname):
+#        if not os.path.isfile(fname+".pym"):
+#            self.load_all(fname.encode())
+#            return
+#        with open(fname+".pym","r") as fh:
+#            types = fh.read().strip().split()
+#
+#        cdef CParameterCollectionLoader *loader = new CParameterCollectionLoader(fname.encode(), self.thisptr)
+#        with open(fname+".pyk","rb") as pfh:
+#            params = []
+#            itypes = iter(types)
+#            while True: # until iterator is done
+#                try:
+#                    param = self._load_one(itypes,loader,pfh)
+#                except StopIteration: break
+#                params.append(param)
+#        loader.done()
+#        del loader
+#        return params
     #}}}
 
 # }}}
