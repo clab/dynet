@@ -732,14 +732,14 @@ void ScalarAdd::backward_dev_impl(const MyDevice & dev,
   Eigen::array<int, 2> red_axes_01 = {0, 1};
   if (i == 0) {
     if (xs[0]->d.bd == 1)
-      dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<1>().sum(red_axis_1);
+      dEdxi.tvec().device(*dev.edevice) += dEdf.tbvec().sum(red_axis_1);
     else
-      dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>();
+      dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec();
   } else {
     if (xs[1]->d.bd == 1)
-      dEdxi.t<0>().device(*dev.edevice) += dEdf.tb<1>().sum(red_axes_01);
+      dEdxi.t<0>().device(*dev.edevice) += dEdf.tbvec().sum(red_axes_01);
     else
-      dEdxi.tb<0>().device(*dev.edevice) += dEdf.tb<1>().sum(red_axis_0);
+      dEdxi.tb<0>().device(*dev.edevice) += dEdf.tbvec().sum(red_axis_0);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(ScalarAdd)
@@ -767,14 +767,14 @@ void ScalarMultiply::backward_dev_impl(const MyDevice & dev,
   Eigen::array<int, 2> red_axes_01 = {0, 1};
   if (i == 0) {
     if (xs[0]->d.bd == 1)
-      dEdxi.t<0>().device(*dev.edevice) += (dEdf.tb<1>() * xs[1]->tb<1>().broadcast(bcast_1)).sum(red_axes_01);
+      dEdxi.t<0>().device(*dev.edevice) += (dEdf.tbvec() * xs[1]->tbvec().broadcast(bcast_1)).sum(red_axes_01);
     else
-      dEdxi.tb<0>().device(*dev.edevice) += (dEdf.tb<1>() * xs[1]->tb<1>().broadcast(bcast_1)).sum(red_axis_0);
+      dEdxi.tb<0>().device(*dev.edevice) += (dEdf.tbvec() * xs[1]->tbvec().broadcast(bcast_1)).sum(red_axis_0);
   } else {
     if (xs[1]->d.bd == 1)
-      dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() * xs[0]->tb<1>().broadcast(bcast_0)).sum(red_axis_1);
+      dEdxi.tvec().device(*dev.edevice) += (dEdf.tbvec() * xs[0]->tbvec().broadcast(bcast_0)).sum(red_axis_1);
     else
-      dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>() * xs[0]->tb<1>().broadcast(bcast_0);
+      dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[0]->tbvec().broadcast(bcast_0);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(ScalarMultiply)
@@ -801,14 +801,14 @@ void ScalarQuotient::backward_dev_impl(const MyDevice & dev,
   Eigen::array<int, 2> red_axes_01 = {0, 1};
   if (i == 0) {
     if (xs[0]->d.bd == 1)
-      dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() / xs[1]->tb<1>().broadcast(bcast)).sum(red_axis_1);
+      dEdxi.tvec().device(*dev.edevice) += (dEdf.tbvec() / xs[1]->tbvec().broadcast(bcast)).sum(red_axis_1);
     else
-      dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>() / xs[1]->tb<1>().broadcast(bcast);
+      dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() / xs[1]->tbvec().broadcast(bcast);
   } else {
     if (xs[1]->d.bd == 1)
-      dEdxi.t<0>().device(*dev.edevice) += - (dEdf.tb<1>() * xs[0]->tb<1>().broadcast(bcast2)).sum(red_axes_01) / xs[1]->t<0>().square();
+      dEdxi.t<0>().device(*dev.edevice) += - (dEdf.tbvec() * xs[0]->tbvec().broadcast(bcast2)).sum(red_axes_01) / xs[1]->t<0>().square();
     else
-      dEdxi.tb<0>().device(*dev.edevice) += - (dEdf.tb<1>() * xs[0]->tb<1>().broadcast(bcast2)).sum(red_axis_0) / xs[1]->tb<0>().square();
+      dEdxi.tb<0>().device(*dev.edevice) += - (dEdf.tbvec() * xs[0]->tbvec().broadcast(bcast2)).sum(red_axis_0) / xs[1]->tb<0>().square();
   }
 }
 DYNET_NODE_INST_DEV_IMPL(ScalarQuotient)
