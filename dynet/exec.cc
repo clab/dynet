@@ -22,6 +22,17 @@ inline string print_vec(const std::vector<float> & vec) {
 
 ExecutionEngine::~ExecutionEngine() {}
 
+vector<const Tensor*> ExecutionEngine::forward(std::vector<VariableIndex> is) {
+  invalidate();
+  VariableIndex i=*(std::max_element(is.begin(),is.end()));
+  incremental_forward(i);
+  vector<const Tensor*> ret;
+  for (auto i : is) {
+      ret.push_back(&(get_value(i)));
+  }
+  return ret;
+}
+
 void SimpleExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
   backward_computed = 0;
