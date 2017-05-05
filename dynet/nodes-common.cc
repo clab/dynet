@@ -832,7 +832,7 @@ string ScalarMultiply::as_string(const vector<string>& arg_names) const {
 
 Dim ScalarMultiply::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in ScalarMultiply")
-  Dim d = xs[1].truncate();
+  Dim d = xs[1];
   DYNET_ARG_CHECK(xs[0].batch_size() == 1,
                           "Mismatched input dimensions in ScalarMultiply: " << xs);
   d.bd = max(xs[0].bd, d.bd);
