@@ -123,6 +123,23 @@ ComputationGraph::ComputationGraph() {
   graph_id = n_cumul_hgs;
 }
 
+ComputationGraph::ComputationGraph(bool batched) {
+  if(batched) {
+    ee = new BatchedExecutionEngine(*this);
+  } else {
+    ee = new SimpleExecutionEngine(*this);
+  }
+  if (n_hgs > 0) {
+    cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
+    throw std::runtime_error("Attempted to create >1 CG");
+  }
+  ++n_hgs;
+  immediate_compute = false;
+  check_validity = false;
+  ++n_cumul_hgs;
+  graph_id = n_cumul_hgs;
+}
+
 ComputationGraph::~ComputationGraph() {
   this->clear();
   delete ee;
