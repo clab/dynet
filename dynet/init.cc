@@ -86,7 +86,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     }
 
     // Memory
-    if (arg == "--dynet-autobatch" || arg == "--dynet_autobatch") {
+    else if (arg == "--dynet-autobatch" || arg == "--dynet_autobatch") {
       if ((argi + 1) > argc) {
         throw std::invalid_argument("[dynet] --dynet-autobatch expects an argument (0 for none 1 for on)");
       } else {

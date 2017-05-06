@@ -795,6 +795,25 @@ Dim MatrixMultiply::dim_forward(const vector<Dim>& xs) const {
   return Dim({xs[0].rows(), xs[1].cols()}, max(xs[0].bd, xs[1].bd));
 }
 
+std::string MatrixMultiply::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  // Currently assumes there are two args, and batches with a shared first arg.
+  // TODO do we want to treat different dimensions of first/second arg differently?
+  if(dim.bd == 1) {
+    oss << "matmul ";
+    oss << 'n' <<  args[0];
+    return oss.str();
+  } else {
+    return ""; // TODO handle the batched case as well? should it differ at all?
+  }
+}
+
+std::vector<bool> MatrixMultiply::autobatch_concat(const ComputationGraph & cg) const {
+  vector<bool> ret(args.size(), false);
+  if (dim.bd == 1) { ret[1] = true; }
+  return ret;
+}
+
 string CwiseMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " \\cdot " << arg_names[1];
