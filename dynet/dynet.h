@@ -81,6 +81,7 @@ struct ComputationGraph {
    * \brief Default constructor
    */
   ComputationGraph();
+  ComputationGraph(bool batched);
   ~ComputationGraph();
 
   // INPUTS

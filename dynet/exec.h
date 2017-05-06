@@ -12,6 +12,7 @@ class ExecutionEngine {
   virtual void invalidate(unsigned) = 0;
   virtual const Tensor& forward() = 0;
   virtual const Tensor& forward(VariableIndex i) = 0;
+  virtual std::vector<const Tensor*> forward(std::vector<VariableIndex> is);  // forward on multiple nodes
   virtual const Tensor& incremental_forward() = 0;  // if you want to add nodes and evaluate just the new parts
   virtual const Tensor& incremental_forward(VariableIndex i) = 0;
   virtual const Tensor& get_value(VariableIndex i) = 0;
@@ -46,6 +47,7 @@ class SimpleExecutionEngine : public ExecutionEngine {
 class BatchedExecutionEngine : public ExecutionEngine {
  public:
   explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) {}
+  ~BatchedExecutionEngine() { garbage_collect(); }
   void invalidate() override;
   void invalidate(unsigned i) override;
   const Tensor& forward() override;
@@ -56,16 +58,18 @@ class BatchedExecutionEngine : public ExecutionEngine {
   const Tensor& get_gradient(VariableIndex i) override;
   void backward(bool full = false) override;
   void backward(VariableIndex i, bool full = false) override;
+  void garbage_collect();
  private:
   std::vector<Tensor> nfxs;
   std::vector<Tensor> ndEdfs;
   VariableIndex num_nodes_evaluated, num_batches_evaluated;
   // Information about the batched computation graph
+  std::vector<size_t> node2batchid;
   std::vector<Tensor> batched_nfxs;
   std::vector<Node*> batched_nodes;
   std::vector<std::vector<VariableIndex> > batched_ids;
   std::vector<std::vector<bool> > batched_concats;
-  std::vector<VariableIndex> singles; 
+  std::map<std::pair<VariableIndex,size_t>,Tensor*> batched_args;
 
 };
 
