@@ -865,13 +865,15 @@ def cg_version():
     Varsion of the current computation graph
     """
     return _cg._cg_version
-def renew_cg(immediate_compute=False, check_validity=False): 
+
+def renew_cg(immediate_compute=False, check_validity=False, autobatching=False): 
     """
     Renew the computation graph.
 
     Call this before building any new computation graph
     """
-    return _cg.renew(immediate_compute, check_validity)
+    return _cg.renew(immediate_compute, check_validity, autobatching)
+
 def print_text_graphviz(): return _cg.print_graphviz()
 def cg_checkpoint(): 
     """
@@ -908,12 +910,12 @@ cdef class ComputationGraph:
     def __dealloc__(self):
         del self.thisptr
 
-    cpdef renew(self, immediate_compute=False, check_validity=False):
+    cpdef renew(self, immediate_compute=False, check_validity=False, autobatching=False):
         """
         Same as :code:`dynet.renew_cg()`
         """
         del self.thisptr
-        self.thisptr = new CComputationGraph()
+        self.thisptr = new CComputationGraph(autobatching)
         if immediate_compute: self.thisptr.set_immediate_compute(immediate_compute)
         if check_validity: self.thisptr.set_check_validity(check_validity)
         self._inputs = []
@@ -1383,7 +1385,24 @@ cdef class Expression: #(((
         elif isinstance(self,Expression) and isinstance(other,(int, float)):
             return _neg(_scalarsub(other, self))
         else: raise NotImplementedError()
-#)
+#)))
+
+cpdef forward(list exps, recalculate=False):
+    cdef Expression maxe = exps[0]
+    cdef Expression e
+    for e in exps:
+        if e.vindex > maxe.vindex: maxe = e
+    maxe.forward(recalculate)
+
+cpdef npvalues(list exps, recalculate=False):
+    cdef Expression e
+    forward(exps, recalculate)
+    return [e.npvalue() for e in exps]
+
+cpdef values(list exps, recalculate=False):
+    cdef Expression e
+    forward(exps, recalculate)
+    return [e.value() for e in exps]
 
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
