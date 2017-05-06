@@ -22,6 +22,17 @@ inline string print_vec(const std::vector<float> & vec) {
 
 ExecutionEngine::~ExecutionEngine() {}
 
+vector<const Tensor*> ExecutionEngine::forward(std::vector<VariableIndex> is) {
+  invalidate();
+  VariableIndex i=*(std::max_element(is.begin(),is.end()));
+  incremental_forward(i);
+  vector<const Tensor*> ret;
+  for (auto i : is) {
+      ret.push_back(&(get_value(i)));
+  }
+  return ret;
+}
+
 void SimpleExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
   backward_computed = 0;
@@ -58,6 +69,7 @@ const Tensor& SimpleExecutionEngine::get_gradient(VariableIndex i) {
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward() {
+  // cerr << "SimpleExecutionEngine::incremental_forward" << endl;
   const VariableIndex node_max_index = (VariableIndex)(cg.nodes.size() - 1);
   return incremental_forward(node_max_index);
 }
@@ -104,6 +116,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       node->forward(xs, nfxs[num_nodes_evaluated]);
     }
   }
+
   return nfxs[i];
 }
 
@@ -187,6 +200,9 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   for (VariableIndex i : cg.parameter_nodes)
     static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
+
+  // for(size_t i = 0; i < ndEdfs.size(); ++i) { cerr << "ndEdfs[" << i << "]: " << print_vec(as_vector(ndEdfs[i])) << endl; }
+
 }
 
 void BatchedExecutionEngine::invalidate() {
@@ -244,6 +260,7 @@ void BatchedExecutionEngine::garbage_collect() {
 
 const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
   DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::incremental_forward()");
+  // cerr << "BatchedExecutionEngine::incremental_forward" << endl;
 
   if (num_nodes_evaluated == 0)
     garbage_collect();
@@ -694,15 +711,14 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
             TensorTools::zero(my_ndEdf);
             node->backward(xs, batched_nfxs[i], batched_ndEdfs[i], ai, my_ndEdf);
             // cerr << "node->backward(xs (";
-            // for(auto x : xs)
-            //   // cerr << x->d << "[" << print_vec(as_vector(*x)) << "] ";
+            // for(auto x : xs) cerr << x->d << "[" << print_vec(as_vector(*x)) << "] ";
             // cerr << "), batched_nfxs[" << i << "] (" << batched_nfxs[i].d << "[" << print_vec(as_vector(batched_nfxs[i])) << "]), batched_ndEdfs[" << i << "] ("<<batched_ndEdfs[i].d<<"[" << print_vec(as_vector(batched_ndEdfs[i])) << "]), " << ai << ", my_ndEdf ("<<my_ndEdf.d<<"[" << print_vec(as_vector(my_ndEdf)) << "])" << endl;
             size_t tot_arg = 0;
             for(auto curr_node : batch_ids) {
               temp_ndEdf = ndEdfs[cg.nodes[curr_node]->args[ai]];
               temp_ndEdf.v = my_ndEdf.v + tot_arg;
               // cerr << "copying into ndEdfs["<<cg.nodes[curr_node]->args[ai]<<"].v == " << (size_t)ndEdfs[cg.nodes[curr_node]->args[ai]].v << " from " << (size_t)temp_ndEdf.v << endl;
-              TensorTools::copy_elements(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
+              TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
               tot_arg += temp_ndEdf.d.size();
             }
             node->device->pools[(int)DeviceMempool::DEDFS]->set_used(used);
@@ -716,6 +732,8 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
     }
   }
 
+  // for(size_t i = 0; i < ndEdfs.size(); ++i) { cerr << "ndEdfs[" << i << "]: " << print_vec(as_vector(ndEdfs[i])) << endl; }
+
   // accumulate gradients into parameters
   // this is simpler than you might find in some other frameworks
   // since we assume parameters come into the graph as a "function"
@@ -725,6 +743,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
   for (VariableIndex i : cg.parameter_nodes)
     static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
+
 }
 
 

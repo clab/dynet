@@ -141,6 +141,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 
     cdef cppclass CComputationGraph "dynet::ComputationGraph":
         CComputationGraph() except +
+        CComputationGraph(bool autobatched) except +
         # Inputs
         VariableIndex add_input(real s) except +
         VariableIndex add_input(const real* ps) except +
