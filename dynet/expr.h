@@ -616,6 +616,40 @@ Expression sum_elems(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Compute moment over all elements
+ * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ over all the elements in each batch of the expression
+ *
+ * \param x The input mini-batched expression
+ * \param r Order of the moment
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression moment_elems(const Expression& x, unsigned r);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Compute mean over all elements
+ * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ over all the elements in each batch of the expression
+ *
+ * \param x The input mini-batched expression
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression mean_elems(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Compute Standard deviation over all elements
+ * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ over all the elements in each batch of the expression
+ *
+ * \param x The input mini-batched expression
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression std_elems(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Average
  * \details This performs an elementwise average over all the expressions in xs
  *
@@ -1337,6 +1371,78 @@ Expression sum_batches(const Expression& x);
 
 /**
  * \ingroup flowoperations
+ * \brief Compute moment over minibatches
+ * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along the batch dimension 
+ *
+ * \param x The input mini-batched expression
+ * \param r Order of the moment
+ *
+ * \return An expression with a single batch
+ */
+Expression moment_batches(const Expression& x, unsigned r);
+
+
+/**
+ * \ingroup flowoperations
+ * \brief Compute mean over minibatches
+ * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension 
+ *
+ * \param x The input mini-batched expression
+ *
+ * \return An expression with a single batch
+ */
+Expression mean_batches(const Expression& x);
+
+/**
+ * \ingroup flowoperations
+ * \brief Compute standard deviation over minibatches
+ * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension 
+ *
+ * \param x The input mini-batched expression
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression std_batches(const Expression& x);
+
+/**
+ * \ingroup flowoperations
+ * \brief Compute standard deviation along an arbitrary dimension
+ * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along an arbitrary dimension
+ *
+ * \param x The input mini-batched expression
+ * \param d Dimension along which to reduce
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression std_dim(const Expression& x, unsigned d);
+
+/**
+ * \ingroup flowoperations
+ * \brief Compute moment along a specific dimension
+ * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along a specific dimension
+ *
+ * \param x The input mini-batched expression
+ * \param d Dimension along which to reduce
+ * \param r Order of the moment
+ *
+ * \return An expression with one less dimension
+ */
+Expression moment_dim(const Expression& x, unsigned d, unsigned r);
+/**
+ * \ingroup flowoperations
+ * \brief Compute mean along  a specific dimension
+ * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along a specific dimension
+ *
+ * \param x The input mini-batched expression
+ * \param d Dimension along which to reduce
+ *
+ * \return An expression with one less dimension
+ */
+Expression mean_dim(const Expression& x, unsigned d);
+
+
+/**
+ * \ingroup flowoperations
  * \brief Pick element
  * \details Pick a single element/row/column/sub-tensor from an expression.
  *          This will result in the dimension of the tensor being reduced
@@ -1583,6 +1689,7 @@ Expression max_dim(const Expression& x, unsigned d = 0);
  * \return An expression of sub-tensor with min value along dimension d
  */
 Expression min_dim(const Expression& x, unsigned d = 0);
+
 
 ////////////////////////////////////////////////
 // Noise operations                           //

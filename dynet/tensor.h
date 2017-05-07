@@ -221,7 +221,6 @@ struct Tensor {
       const unsigned bsize = d.batch_size();
       Dim new_d(d); new_d.bd = 1;
       Tensor ret(new_d, v + bsize * b, device, mem_pool);
-      // std::cerr << "Getting tensor for batch " << (b % d.batch_elems()) << " bsize: " << bsize << ", ptr=" << (long)ret.v << std::endl;
       return ret;
     }
   }
@@ -246,7 +245,6 @@ struct Tensor {
 
   Dim d;  /**< Shape of tensor */
   float* v;  /**< Pointer to memory */
-  std::vector<Tensor> bs;
   Device* device;
   DeviceMempool mem_pool;
 
