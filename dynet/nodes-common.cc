@@ -285,6 +285,14 @@ string Sum::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
+string Sum::autobatch_profile(const ComputationGraph &cg) const {
+  std::stringstream oss;
+  oss << "sum[" << args.size() << "]";
+  dim.print_profile(oss);
+  return oss.str();
+}
+
+
 Dim Sum::dim_forward(const vector<Dim>& xs) const {
   Dim d = xs[0].truncate();
   unsigned int batch = d.bd;
