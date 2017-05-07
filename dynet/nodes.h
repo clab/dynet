@@ -165,6 +165,8 @@ struct BlockDropout : public Node {
 struct ConstantPlusX : public Node {
   explicit ConstantPlusX(const std::initializer_list<VariableIndex>& a, real o) : Node(a), c(o) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { std::stringstream oss; oss << "+" << c; return oss.str(); }  
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
   real c;
 };
@@ -372,6 +374,8 @@ struct MatrixMultiply : public Node {
 struct CwiseMultiply : public Node {
   explicit CwiseMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "cmult"; }
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(2, true); }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -465,6 +469,8 @@ struct LogDet : public Node {
 // y = \sum_i x_i
 struct Sum : public Node {
   template <typename T> explicit Sum(const T& a) : Node(a) {}
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(args.size(), true);}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
 };
