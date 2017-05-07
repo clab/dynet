@@ -44,6 +44,16 @@ class SimpleExecutionEngine : public ExecutionEngine {
   VariableIndex num_nodes_evaluated;
 };
 
+struct BatchInfo {
+public:
+  BatchInfo() : pseudo_node(nullptr) { }
+  Tensor nfx;             // The forward tensor, may be null if singleton batch
+  Node* pseudo_node;      // The pseudo node used for calculation, also may be null if not needed
+  std::vector<VariableIndex> ids; // IDs of the batch components
+  std::vector<bool> concat;       // Whether or not 
+  std::vector<const Tensor*> arg_nfxs; // Concatenated arguments
+};
+
 class BatchedExecutionEngine : public ExecutionEngine {
  public:
   explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) {}
@@ -64,12 +74,8 @@ class BatchedExecutionEngine : public ExecutionEngine {
   std::vector<Tensor> ndEdfs;
   VariableIndex num_nodes_evaluated, num_batches_evaluated;
   // Information about the batched computation graph
-  std::vector<size_t> node2batchid;
-  std::vector<Tensor> batched_nfxs;
-  std::vector<Node*> batched_nodes;
-  std::vector<std::vector<VariableIndex> > batched_ids;
-  std::vector<std::vector<bool> > batched_concats;
-  std::map<std::pair<VariableIndex,size_t>,Tensor*> batched_args;
+  std::vector<VariableIndex> node2batch; // length: number of nodes
+  std::vector<BatchInfo> batches; // length: number of batches
 
 };
 
