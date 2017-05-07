@@ -693,7 +693,7 @@ Node* PickNegLogSoftmax::autobatch_pseudo_node(const ComputationGraph & cg,
       for(auto word_id : *ln->pvals)
         ids.push_back(word_id);
   }
-  return new PickNegLogSoftmax({}, ids);
+  return new PickNegLogSoftmax({(VariableIndex)1}, ids);
 }
 
 string LogSoftmax::as_string(const vector<string>& arg_names) const {
