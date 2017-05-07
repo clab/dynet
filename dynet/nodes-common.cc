@@ -672,6 +672,30 @@ Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
   return Dim({1}, xs[0].bd);
 }
 
+std::string PickNegLogSoftmax::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  oss << "pnls ";
+  dim.print_profile(oss);
+  return oss.str();
+}
+std::vector<bool> PickNegLogSoftmax::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<bool>(1, true);
+}
+Node* PickNegLogSoftmax::autobatch_pseudo_node(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids) const {
+  vector<unsigned> ids;
+  PickNegLogSoftmax* ln;
+  for(auto batch_id : batch_ids) {
+    ln = static_cast<PickNegLogSoftmax*>(cg.nodes[batch_id]);
+    if(ln->pval != nullptr)
+      ids.push_back(*ln->pval);
+    else
+      for(auto word_id : *ln->pvals)
+        ids.push_back(word_id);
+  }
+  return new PickNegLogSoftmax({}, ids);
+}
+
 string LogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "log_softmax(" << arg_names[0] << ')';
