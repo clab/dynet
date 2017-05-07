@@ -6,6 +6,10 @@
 #include "dynet/param-nodes.h"
 #include "dynet/globals.h"
 
+#ifdef HAVE_CUDA
+#include "dynet/gpu-ops.h"
+#endif
+
 using namespace std;
 
 namespace dynet {
@@ -203,6 +207,60 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
 
   // for(size_t i = 0; i < ndEdfs.size(); ++i) { cerr << "ndEdfs[" << i << "]: " << print_vec(as_vector(ndEdfs[i])) << endl; }
 
+}
+
+// copies the list of tensors into a single contig tensor (tout).
+// allocates the memory for tout.
+const void combine_tensors(const vector<Tensor*> &ts, Tensor *tout) {
+
+  AlignedMemoryPool *mempool = ts[0]->device->pools[(int)DeviceMempool::FXS];
+  // determine needed memory
+  unsigned total_dsize = 0;
+  float *base = ts[0]->v;
+  bool cont = true;
+  for (auto t : ts) {
+    cont &= (base + total_dsize == t->v); // TODOO this is only helpful on GPU
+    total_dsize += t->d.size();
+  }
+  tout->d = Dim({total_dsize});
+  if (cont) { // TODO uncomment for no copy for already contiguous? not really tested.
+    tout->v = base;
+    return;
+  }
+  // allocate
+  float* dest = static_cast<float*>(mempool->allocate(total_dsize * sizeof(float)));
+
+#if HAVE_CUDA
+  vector<float*> locs(ts.size()*3);
+  unsigned i = 0;
+  unsigned max_length = 0;
+  const int TRG = ts.size();
+  const int LEN = ts.size()*2;
+#endif
+  tout->v = dest;
+  // copy
+  for (auto t : ts) {
+    const size_t sz = t->d.size();
+
+#if HAVE_CUDA
+    locs[i] = t->v; // src
+    locs[i+TRG] = dest;
+    locs[i+LEN] = (float*)sz;
+    if (max_length < sz) max_length=sz;
+    i++;
+#else
+    memcpy(dest, t->v, sz*sizeof(float));
+#endif
+    dest += sz; // pointer arith
+  }
+#if HAVE_CUDA
+  size_t req_sz = ts.size()*3*sizeof(float*);
+  float** srcs = static_cast<float**>(mempool->allocate(req_sz));
+  float** trgs = srcs + TRG;
+  float** lens = srcs + LEN;
+  CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
+  gpu::parallel_memcpy(ts.size(), max_length, srcs, trgs, lens);
+#endif
 }
 
 void BatchedExecutionEngine::invalidate() {
@@ -510,18 +568,20 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
             Tensor* my_xsi = new Tensor;
             my_xsi->device = node->device;
             my_xsi->mem_pool = DeviceMempool::FXS;
+            vector<Tensor*> ts;
             size_t tot_arg = 0;
-            for(auto curr_node : batch_ids)
-              tot_arg += nfxs[cg.nodes[curr_node]->args[i]].d.size();
-            my_xsi->d = Dim({(unsigned int)tot_arg});
-            my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
-            tot_arg = 0;
             for(auto curr_node : batch_ids) {
-              temp_nfx = nfxs[cg.nodes[curr_node]->args[i]];
-              temp_nfx.v = my_xsi->v + tot_arg;
-              TensorTools::copy_elements(temp_nfx, nfxs[cg.nodes[curr_node]->args[i]]);
-              tot_arg += temp_nfx.d.size();
+              ts.push_back(&(nfxs[cg.nodes[curr_node]->args[i]]));
             }
+            combine_tensors(ts, my_xsi);
+            //my_xsi->v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_arg * sizeof(float)));
+            //tot_arg = 0;
+            //for(auto curr_node : batch_ids) {
+            //  temp_nfx = nfxs[cg.nodes[curr_node]->args[i]];
+            //  temp_nfx.v = my_xsi->v + tot_arg;
+            //  TensorTools::copy_elements(temp_nfx, nfxs[cg.nodes[curr_node]->args[i]]);
+            //   tot_arg += temp_nfx.d.size();
+            //}
             xs[i] = my_xsi;
             batched_args[make_pair(num_batches_evaluated,i)] = my_xsi;
           }
