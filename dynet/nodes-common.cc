@@ -543,6 +543,14 @@ Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   return dr;
 }
 
+std::string Concatenate::autobatch_profile(const ComputationGraph &cg) const {
+  ostringstream oss;
+  oss << "concat";
+  for (auto arg : args) oss << ' ' << cg.nodes[arg]->dim << endl;
+  return oss.str();
+}
+
+
 string ConcatenateToBatch::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "concat_batch_elems(" << arg_names[0];
@@ -771,6 +779,15 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(LooksLikeVector(xs[0]) && end <= xs[0][0],
                           "Bad input dimensions or range in PickRange: " << xs << " range(" << start << ", " << end << ")");
   return Dim({end - start}, xs[0].bd);
+}
+
+std::string PickRange::autobatch_profile(const ComputationGraph & cg) const {
+  ostringstream oss;
+  oss << "pickrange ";
+  const Dim &dim = cg.nodes[args[0]]->dim;
+  dim.print_profile(oss);
+  oss << " " << start << ":" << end;
+  return oss.str();
 }
 
 string PickBatchElements::as_string(const vector<string>& arg_names) const {

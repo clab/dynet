@@ -263,6 +263,15 @@ struct Log : public Node {
 struct Concatenate : public Node {
   template <typename T> explicit Concatenate(const T& a, unsigned d) : Node(a), dimension(d) {}
   virtual bool supports_multibatch() const override { return true; }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(args.size(), true); }  
+  virtual void autobatch_reshape(const ComputationGraph & cg,
+                                 const std::vector<VariableIndex> & batch_ids,
+                                 const std::vector<bool> & concat,
+                                 std::vector<const Tensor*>& xs,
+                                 Tensor& fx) const override {
+    autobatch_reshape_concatonly(cg, batch_ids, concat, xs, fx);
+  }
   DYNET_NODE_DEFINE_DEV_IMPL()
   // src_row_indices[i] says what row in fx the ith x std::vector was assigned to
   // used to simplify backprop
@@ -688,6 +697,15 @@ struct PickElement : public Node {
 // (start inclusive, end exclusive)
 struct PickRange : public Node {
   explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e) : Node(a), start(s), end(e) {}
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(1, true); }  
+  virtual void autobatch_reshape(const ComputationGraph & cg,
+                                 const std::vector<VariableIndex> & batch_ids,
+                                 const std::vector<bool> & concat,
+                                 std::vector<const Tensor*>& xs,
+                                 Tensor& fx) const override {
+    autobatch_reshape_concatonly(cg, batch_ids, concat, xs, fx);
+  }
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   unsigned start;
