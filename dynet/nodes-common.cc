@@ -878,6 +878,15 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+std::string CwiseMultiply::autobatch_profile(const ComputationGraph & cg) const {
+  // TODO: This does not handle the case where dimensions differ
+  return cg.nodes[args[0]]->dim == cg.nodes[args[1]]->dim ? "cmult" : "";
+}
+
+std::vector<bool> CwiseMultiply::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<bool>(2, true);
+}
+
 string ScalarAdd::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " + " << arg_names[1];
