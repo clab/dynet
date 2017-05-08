@@ -70,11 +70,14 @@ class BatchedExecutionEngine : public ExecutionEngine {
   void backward(VariableIndex i, bool full = false) override;
   void garbage_collect();
  private:
-  std::vector<Tensor> nfxs;
+  const Tensor& get_nfx(VariableIndex i);
+  const Tensor& get_ndEdf(VariableIndex i);
+  std::vector<Tensor> nfx_cache;
   std::vector<Tensor> ndEdfs;
   VariableIndex num_nodes_evaluated, num_batches_evaluated;
   // Information about the batched computation graph
   std::vector<VariableIndex> node2batch; // length: number of nodes
+  std::vector<size_t> node2offset, node2size; // length: number of nodes
   std::vector<BatchInfo> batches; // length: number of batches
 
 };
