@@ -71,7 +71,6 @@ class BatchedExecutionEngine : public ExecutionEngine {
   void garbage_collect();
  private:
   const Tensor& get_nfx(VariableIndex i);
-  const Tensor& get_ndEdf(VariableIndex i);
   std::vector<Tensor> nfx_cache;
   std::vector<Tensor> ndEdfs;
   VariableIndex num_nodes_evaluated, num_batches_evaluated;
