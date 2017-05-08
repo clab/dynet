@@ -543,34 +543,43 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
           } else {
             // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
             // TODO: make this work completely
-            // float* min_node = nfxs[cg.nodes[my_batch.ids[0]]->args[i]].v;
-            // float* max_node = min_node;
-            // for(auto curr_node : my_batch.ids) {
-            //   const Tensor &t = nfxs[cg.nodes[curr_node]->args[i]];
-            //   tot_arg += t.d.size();
-            //   float* v = t.v;
-            //   if (v < min_node) min_node = v;
-            //   if (v > max_node) max_node = v + t.d.size();
-            // }
-            // if (min_node + tot_arg == max_node) {
-            //   xs[i] = &batched_nfxs[...];
-            //   autobatch_garbage[i] = false;
-            // }
-            // 2.b) the inputs need to be concatenated, and are not contiguous
             Tensor* my_xsi = new Tensor;
             my_xsi->device = node->device;
             my_xsi->mem_pool = DeviceMempool::FXS;
+
+            // check contig memory
+            float* min_node = nfxs[cg.nodes[my_batch.ids[0]]->args[i]].v;
+            float* max_node = min_node;
+            unsigned tot_arg = 0;
+            for(auto curr_node : my_batch.ids) {
+              const Tensor &t = nfxs[cg.nodes[curr_node]->args[i]];
+              tot_arg += t.d.size();
+              float* v = t.v;
+              if (v < min_node) min_node = v;
+              if (v > max_node) max_node = v + t.d.size();
+            }
+            if (min_node + tot_arg == max_node) { // if contig, use current mem for xs_i
+              //cerr << "    contiguous " << my_batch.ids.size() << node->autobatch_profile(cg) << endl;
+              //xs[i] = &batched_nfxs[...];
+              my_xsi->v = min_node;
+              my_xsi->d = Dim({tot_arg});
+            //   autobatch_garbage[i] = false;
+            } else { // if non-contig, copy xs_i into new mem.
+              //cerr << "non contiguous " << my_batch.ids.size() << node->autobatch_profile(cg) << endl;
+            // 2.b) the inputs need to be concatenated, and are not contiguous
             ts.resize(my_batch.ids.size());
             for(size_t j = 0; j < ts.size(); ++j)
               ts[j] = &(nfxs[cg.nodes[my_batch.ids[j]]->args[i]]);
             combine_tensors(ts, my_xsi);
+            }
             my_batch.arg_nfxs[i] = my_xsi;
           }
         }
 
         node->autobatch_reshape(cg, my_batch.ids, my_batch.concat, my_batch.arg_nfxs, my_batch.nfx);
+        //cerr << "evluaating " << node->as_string() << endl;
         node->forward(my_batch.arg_nfxs, my_batch.nfx);
-        // cerr << "Single evaluation for batched_nfxs[" << num_batches_evaluated << "] = " << print_vec(as_vector(nfx)) << endl;
+        //cerr << "Single evaluation for batched_nfxs[" << num_batches_evaluated << "] = " << print_vec(as_vector(nfx)) << endl;
         ++num_batches_evaluated;
 
       }
