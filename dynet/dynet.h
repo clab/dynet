@@ -470,6 +470,11 @@ struct Node {
    * \return String description of the node
    */
   virtual std::string as_string(const std::vector<std::string>& args) const = 0;
+  virtual std::string as_dummy_string() const {
+    std::vector<std::string> a;
+    a.resize(args.size(), "a");
+    return as_string(a);
+  }
 
   // in general, this will return an empty size, but if a component needs to store
   // extra information in the forward pass for use in the backward pass, it can

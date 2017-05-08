@@ -314,7 +314,7 @@ void BatchedExecutionEngine::garbage_collect() {
 
 const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
   DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::incremental_forward()");
-  // cerr << "BatchedExecutionEngine::incremental_forward" << endl;
+  // cerr << "BatchedExecutionEngine::incremental_forward on graph:" << endl;
 
   if (num_nodes_evaluated == 0)
     garbage_collect();
@@ -409,7 +409,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       // 2.a) If we have a single current node, then we execute it
       if(curr_node != -1) {
         // Set the inputs
-        //cerr << "Processing single: " << curr_node << " " << cg.nodes[curr_node]->as_string() << endl;
+        // cerr << "Processing single: " << curr_node << " " << cg.nodes[curr_node]->as_dummy_string() << endl;
         const Node* node = cg.nodes[curr_node];
         DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in BatchedExecutionEngine::incremental_forward");
         // Save the node profile
@@ -449,7 +449,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         auto & my_batch = batches[batch_id];
         my_batch.ids = active_batched[curr_prof];
         DYNET_ASSERT(batch_ids.size() > 0, "Attempting to process empty batch at " << curr_prof);
-        //cerr << "Processing batched: " << cg.nodes[batch_ids[0]]->autobatch_profile(cg) << ' ' ; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
+        // cerr << "Processing batched: " << cg.nodes[batch_ids[0]]->autobatch_profile(cg) << ' ' ; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
         // Set up the configuration of each component node, including pointer differential from the start of the batch
         size_t bd = 0, tot_main = 0, tot_aux = 0, my_main, my_aux;
         for(auto curr_node : batch_ids) {
