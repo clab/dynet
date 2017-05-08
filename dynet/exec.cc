@@ -290,7 +290,7 @@ const Tensor& BatchedExecutionEngine::get_gradient(VariableIndex i) {
   if (i >= backward_computed) {
     DYNET_RUNTIME_ERR("Requested gradient for node " << i << ", but backward pass was computed from node " << backward_computed);
   }
-  return get_ndEdf(i);
+  return ndEdfs[i];
 }
 
 const Tensor& BatchedExecutionEngine::incremental_forward() {
@@ -805,9 +805,6 @@ const Tensor& BatchedExecutionEngine::get_nfx(VariableIndex i) {
     t.device = bt.device;
   }
   return nfx_cache[i];
-}
-const Tensor& BatchedExecutionEngine::get_ndEdf(VariableIndex i) {
-  DYNET_RUNTIME_ERR("BatchedExecutionEngine::get_ndEdf not implemented yet");
 }
 
 } // namespace dynet
