@@ -374,8 +374,8 @@ struct MatrixMultiply : public Node {
 struct CwiseMultiply : public Node {
   explicit CwiseMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
-  virtual std::string autobatch_profile(const ComputationGraph & cg) const override { return "cmult"; }
-  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<bool>(2, true); }
+  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override;
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
