@@ -117,7 +117,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       }
       node->aux_mem = aux_mem;
 
-      node->forward(xs, nfxs[num_nodes_evaluated]);
+      // node->forward(xs, nfxs[num_nodes_evaluated]);
     }
   }
 
@@ -191,7 +191,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     ai = 0;
     for (VariableIndex arg : node->args) {
       if (needs_derivative[arg]) {
-        node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
+        // node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
       }
       ++ai;
     }
@@ -211,49 +211,52 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
 
 // copies the list of tensors into a single contig tensor (tout).
 // allocates the memory for tout.
-// TODO: This should be moved to TensorTools
-const void combine_tensors(const vector<const Tensor*> &ts, Tensor *tout) {
+void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_ids, int aid, Tensor &tout) {
 
-  AlignedMemoryPool *mempool = ts[0]->device->pools[(int)DeviceMempool::FXS];
+  AlignedMemoryPool *mempool = tout.device->pools[(int)DeviceMempool::FXS];
   // determine needed memory
+  VariableIndex vid;
   unsigned total_dsize = 0;
-  for (auto t : ts)
-    total_dsize += t->d.size();
-  tout->d = Dim({total_dsize});
+  for(auto & id : batch_ids) {
+    id = cg.nodes[id]->args[aid];
+    total_dsize += node2size[id];
+  }
+  tout.d = Dim({total_dsize});
 
   // allocate
   float* dest = static_cast<float*>(mempool->allocate(total_dsize * sizeof(float)));
 
 #if HAVE_CUDA
-  vector<float*> locs(ts.size()*3);
+  vector<float*> locs(batch_ids.size()*3);
   unsigned i = 0;
   unsigned max_length = 0;
-  const int TRG = ts.size();
-  const int LEN = ts.size()*2;
+  const int TRG = batch_ids.size();
+  const int LEN = batch_ids.size()*2;
 #endif
-  tout->v = dest;
+  tout.v = dest;
   // copy
-  for (auto t : ts) {
-    const size_t sz = t->d.size();
+  for (auto id : batch_ids) {
+    const size_t sz = node2size[id];
 
+    float* my_src = batches[node2batch[id]].nfx.v + node2offset[id];
 #if HAVE_CUDA
-    locs[i] = t->v; // src
+    locs[i] = my_src; // src
     locs[i+TRG] = dest;
     locs[i+LEN] = (float*)sz;
     if (max_length < sz) max_length=sz;
     i++;
 #else
-    memcpy(dest, t->v, sz*sizeof(float));
+    memcpy(dest, my_src, sz*sizeof(float));
 #endif
     dest += sz; // pointer arith
   }
 #if HAVE_CUDA
-  size_t req_sz = ts.size()*3*sizeof(float*);
+  size_t req_sz = batch_ids.size()*3*sizeof(float*);
   float** srcs = static_cast<float**>(mempool->allocate(req_sz));
   float** trgs = srcs + TRG;
   float** lens = srcs + LEN;
   CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
-  gpu::parallel_memcpy(ts.size(), max_length, srcs, trgs, lens);
+  gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
 }
 
@@ -527,7 +530,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
           xs[ai] = &get_nfx(arg);
           ++ai;
         }
-        node->forward(xs, my_batch.nfx);
+        // node->forward(xs, my_batch.nfx);
         // cerr << "Single evaluation for nfxs[" << nid << "] = " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
       } else { // execute a batch node
@@ -572,10 +575,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
             } else { // if non-contig, copy xs_i into new mem.
               // cerr << "non contiguous " << my_batch.ids.size() << node->autobatch_profile(cg) << endl;
               // 2.b) the inputs need to be concatenated, and are not contiguous
-              ts.resize(my_batch.ids.size());
-              for(size_t j = 0; j < ts.size(); ++j)
-                ts[j] = &get_nfx(cg.nodes[my_batch.ids[j]]->args[i]);
-              combine_tensors(ts, my_xsi);
+              combine_tensors(my_batch.ids, i, *my_xsi);
             }
             my_batch.arg_nfxs[i] = my_xsi;
           }
@@ -583,7 +583,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
         node->autobatch_reshape(cg, my_batch.ids, my_batch.concat, my_batch.arg_nfxs, my_batch.nfx);
         //cerr << "evluaating " << node->as_string() << endl;
-        node->forward(my_batch.arg_nfxs, my_batch.nfx);
+        // node->forward(my_batch.arg_nfxs, my_batch.nfx);
         // cerr << "Batched evaluation for batched_nfxs[" << num_batches_evaluated << "] = " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
 
@@ -716,7 +716,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       ai = 0;
       for (VariableIndex arg : node->args) {
         if (needs_derivative[node2batch[arg]]) {
-          node->backward(xs, get_nfx(nid), ndEdfs[nid], ai, ndEdfs[arg]);
+          // node->backward(xs, get_nfx(nid), ndEdfs[nid], ai, ndEdfs[arg]);
           // cerr << "Single evaluation for ndEdfs["<<nid<<"]("<<ai<<") -> ndEdfs[" << arg << "] = " << print_vec(as_vector(ndEdfs[arg])) << endl;
         }
         // cerr << "node_>backward(xs, nfxs[" << nid << "], ndEdfs[" << nid << "], " << ai << ", ndEdfs[" << arg << "])" << endl;
@@ -746,7 +746,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       for (VariableIndex arg : node->args) {
         if (!my_batch.concat[ai]) {
           if (needs_derivative[node2batch[arg]]) {
-            node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, batched_ndEdfs[node2batch[arg]]);
+            // node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, batched_ndEdfs[node2batch[arg]]);
             // cerr << "Batched evaluation for batched_ndEdfs["<<i<<"]("<<ai<<") -> batched_ndEdfs[" << arg << "] = " << print_vec(as_vector(batched_ndEdfs[node2batch[arg]])) << endl;
           }
         } else {
@@ -761,7 +761,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
             // cerr << "my_ndEdf.v == " << (size_t)my_ndEdf.v << endl;
             my_ndEdf.mem_pool = DeviceMempool::DEDFS;
             TensorTools::zero(my_ndEdf);
-            node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
+            // node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
             size_t tot_arg = 0;
             for(auto curr_node : my_batch.ids) {
               temp_ndEdf = ndEdfs[cg.nodes[curr_node]->args[ai]];
