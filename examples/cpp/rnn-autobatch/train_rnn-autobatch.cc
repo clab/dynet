@@ -81,37 +81,40 @@ int main(int argc, char** argv) {
   };
 
   string yes = "batch";
+  bool man_batch = (argc >= 2 && yes == argv[1]);
+  int last_step = (argc >= 3 ? atoi(argv[2]) : 2);
 
+  vector<vector<unsigned>> bXs(SEQ_LENGTH, vector<unsigned>(BATCH_SIZE));
+  vector<vector<unsigned>> bYs(SEQ_LENGTH, vector<unsigned>(BATCH_SIZE));
+  vector<Expression> batch(BATCH_SIZE);
   time_point<system_clock> start = system_clock::now();
-  if(argc == 2 && yes == argv[1]) {
-    vector<vector<unsigned>> bXs(SEQ_LENGTH, vector<unsigned>(BATCH_SIZE));
-    vector<vector<unsigned>> bYs(SEQ_LENGTH, vector<unsigned>(BATCH_SIZE));
-    for(size_t i = 0; i < Xs.size(); ) {
+  for(size_t i = 0; i < Xs.size(); ) {
+    Expression s;
+    ComputationGraph cg;
+    Expression T = parameter(cg, T_), W = parameter(cg, W_);
+    fwR.new_graph(cg); bwR.new_graph(cg);
+    fwR2.new_graph(cg); bwR2.new_graph(cg);
+    // Do manual batching
+    if(man_batch) {
       for(size_t b = 0; b < BATCH_SIZE; ++i, ++b) {
         for(size_t s = 0; s < SEQ_LENGTH; ++s) {
           bXs[s][b] = Xs[b][s];
           bYs[s][b] = Ys[b][s];
         }
       }
-      ComputationGraph cg;
-      Expression T = parameter(cg, T_), W = parameter(cg, W_);
-      fwR.new_graph(cg); bwR.new_graph(cg);
-      fwR2.new_graph(cg); bwR2.new_graph(cg);
-      Expression s = transduce_batch(cg, bXs, bYs, T, W);
-      cg.forward(s);
-    }
-  } else {
-    vector<Expression> batch(BATCH_SIZE);
-    for(size_t i = 0; i < Xs.size(); ) {
-      ComputationGraph cg;
-      Expression T = parameter(cg, T_), W = parameter(cg, W_);
-      fwR.new_graph(cg); bwR.new_graph(cg);
-      fwR2.new_graph(cg); bwR2.new_graph(cg);
+      s = sum_batches(transduce_batch(cg, bXs, bYs, T, W));
+    // Do not manual batching
+    } else {
       do {
         batch[i % BATCH_SIZE] = transduce(cg, Xs[i], Ys[i], T, W);
       } while (++i % BATCH_SIZE != 0);
-      Expression s = sum(batch);
-      cg.forward(s);
+      s = sum(batch);
+    }
+    cg.forward(s);
+    if(last_step > 0) {
+      cg.backward(s);
+      if(last_step > 1)
+        trainer.update();
     }
   }
   std::chrono::duration<float> fs = (system_clock::now() - start);
