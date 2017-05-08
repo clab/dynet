@@ -82,3 +82,21 @@ These operations are used for performing various operations common in linear alg
 .. doxygengroup:: linalgoperations
 	:members:
 	:content-only:
+
+Convolution Operations
+~~~~~~~~~~~~~~~~~~~~~~
+
+These operations are convolution-related.
+
+.. doxygengroup:: convolutionoperations
+	:members:
+	:content-only:
+
+Normalization Operations
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This includes batch normalization and the likes.
+
+.. doxygengroup:: normoperations
+	:members:
+	:content-only:

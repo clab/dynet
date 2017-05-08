@@ -43,6 +43,12 @@ struct ParameterStorageBase {
    */
   virtual void scale_parameters(float a) = 0;
   /**
+   * @brief Scale the gradient
+   *
+   * @param a scale factor
+   */
+  virtual void scale_gradient(float a) = 0;
+  /**
    * @brief Set the parameters to 0
    */
   virtual void zero() = 0;
@@ -77,6 +83,9 @@ struct ParameterStorage : public ParameterStorageBase {
   template <class MyDevice>
   void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
+  template <class MyDevice>
+  void scale_gradient_dev(MyDevice & dev, float a);
+  void scale_gradient(float a) override;
   void zero() override;
   template <class MyDevice>
   void squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
@@ -132,6 +141,9 @@ struct LookupParameterStorage : public ParameterStorageBase {
   template <class MyDevice>
   void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
+  template <class MyDevice>
+  void scale_gradient_dev(MyDevice & dev, float a);
+  void scale_gradient(float a) override;
   void zero() override;
   template <class MyDevice>
   void squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
@@ -274,6 +286,14 @@ struct Parameter {
    */
   void scale(float s){get()->scale_parameters(s);}
 
+
+  /**
+   * @brief Scales the gradient (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale_gradient(float s){get()->scale_gradient(s);}
+
   /**
    * @brief Check the update status
    * @return Update status
@@ -335,6 +355,13 @@ struct LookupParameter {
    * @param s scale
    */
   void scale(float s){get()->scale_parameters(s);}
+
+  /**
+   * @brief Scales the gradient (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale_gradient(float s){get()->scale_gradient(s);}
 
   /**
   * @brief Set the parameter as updated

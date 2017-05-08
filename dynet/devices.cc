@@ -76,6 +76,9 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   CUDA_CHECK(cudaSetDevice(device_id));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
   CUBLAS_CHECK(cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE));
+#if HAVE_CUDNN
+  CUDNN_CHECK(cudnnCreate(&cudnnHandle));
+#endif
   kSCALAR_MINUSONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ZERO = (float*)gpu_mem.malloc(sizeof(float));

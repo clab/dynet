@@ -231,8 +231,9 @@ object Expression {
 
   /* CONVOLUTION OPERATIONS */
 
-  def conv1dNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_narrow)
-  def conv1dWide(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_wide)
+  // These were commented out in the C++ code.
+  //def conv1dNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_narrow)
+  //def conv1dWide(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_wide)
   def filter1DNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.filter1d_narrow)
   def kMaxPooling(x: Expression, k: Long): Expression = unary(x, x => dn.kmax_pooling(x, k))
   def foldRows(x: Expression, nRows: Long = 2l): Expression = unary(x, x => dn.fold_rows(x, nRows))
@@ -272,4 +273,3 @@ object Expression {
     def -(e: Expression): Expression = Expression.exprMinus(x.toFloat, e)
   }
 }
-

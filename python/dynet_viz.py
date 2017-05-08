@@ -250,6 +250,8 @@ def lookup_batch(p, indices, update=True): return GVExpr('lookup_batch', [p, ind
 def pick(a, index=0, dim=0): return GVExpr('pick', [a, index], make_dim(1, inferred=True))
 def pick_batch(a, indices, dim=0): return GVExpr('pick_batch', [a, indices], make_dim(len(indices), inferred=True))
 def hinge(x, index, m=1.0): return GVExpr('hinge', [x, index, m], copy_dim(x))
+def max_dim(a, d=0): return GVExpr('max_dim', [a, d], make_dim(1, inferred=True))
+def min_dim(a, d=0): return GVExpr('min_dim', [a, d], make_dim(1, inferred=True))
 
 def nobackprop(x): return GVExpr('nobackprop', [x], copy_dim(x))
 def flip_gradient(x): return GVExpr('flip_gradient', [x], copy_dim(x))
@@ -271,22 +273,22 @@ def dot_product(x, y): return GVExpr('dot_product', [x,y], ensure_same_dim(x,y))
 def squared_distance(x, y): return GVExpr('squared_distance', [x,y], ensure_same_dim(x,y))
 def l1_distance(x, y): return GVExpr('l1_distance', [x,y], ensure_same_dim(x,y))
 def binary_log_loss(x, y): return GVExpr('binary_log_loss', [x,y], ensure_same_dim(x,y))
-def conv1d_narrow(x, y):
-  if x.dim.invalid() or y.dim.invalid():
-    d = InvalidDim
-  elif x.dim[0] != y.dim[0]:
-    d = InvalidConcreteDim(x.dim, y.dim)
-  else:
-    d = make_dim(x.dim[0], x.dim[1] - y.dim[1] + 1)
-  return GVExpr('conv1d_narrow', [x,y], d)
-def conv1d_wide(x, y):
-  if x.dim.invalid() or y.dim.invalid():
-    d = InvalidDim
-  elif x.dim[0] != y.dim[0]:
-    d = InvalidConcreteDim(x.dim, y.dim)
-  else:
-    d = make_dim(x.dim[0], x.dim[1] + y.dim[1] - 1)
-  return GVExpr('conv1d_wide', [x,y], d)
+#def conv1d_narrow(x, y):
+#  if x.dim.invalid() or y.dim.invalid():
+#    d = InvalidDim
+#  elif x.dim[0] != y.dim[0]:
+#    d = InvalidConcreteDim(x.dim, y.dim)
+#  else:
+#    d = make_dim(x.dim[0], x.dim[1] - y.dim[1] + 1)
+#  return GVExpr('conv1d_narrow', [x,y], d)
+#def conv1d_wide(x, y):
+#  if x.dim.invalid() or y.dim.invalid():
+#    d = InvalidDim
+#  elif x.dim[0] != y.dim[0]:
+#    d = InvalidConcreteDim(x.dim, y.dim)
+#  else:
+#    d = make_dim(x.dim[0], x.dim[1] + y.dim[1] - 1)
+#  return GVExpr('conv1d_wide', [x,y], d)
 def filter1d_narrow(x, y): 
   if x.dim.invalid() or y.dim.invalid():
     d = InvalidDim
@@ -331,7 +333,7 @@ def pairwise_rank_loss(x, y, m=1.0): return GVExpr('pairwise_rank_loss', [x,y,m]
 def poisson_loss(x, y): return GVExpr('poisson_loss', [x,y], copy_dim(x))
 def huber_distance(x, y, c=1.345): return GVExpr('huber_distance', [x,y,c], ensure_same_dim(x,y))
 #expr-unsigned
-def kmax_pooling(x, k): return GVExpr('kmax_pooling', [x,k], make_dim(x.dim[0], k) if x.dim.isvalid() else InvalidDim)
+def kmax_pooling(x, k, d=1): return GVExpr('kmax_pooling', [x,k,d], make_dim(x.dim[0], k) if x.dim.isvalid() else InvalidDim)
 def pickneglogsoftmax(x, v): return GVExpr('pickneglogsoftmax', [x,v], make_dim(1, inferred=True))
 def pickneglogsoftmax_batch(x, vs): return GVExpr('pickneglogsoftmax_batch', [x,vs], make_dim(len(vs), inferred=True))
 
