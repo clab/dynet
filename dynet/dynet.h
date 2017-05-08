@@ -470,7 +470,7 @@ struct Node {
    * \return String description of the node
    */
   virtual std::string as_string(const std::vector<std::string>& args) const = 0;
-  virtual std::string as_string() const {
+  virtual std::string as_dummy_string() const {
     std::vector<std::string> a;
     a.resize(args.size(), "a");
     return as_string(a);
