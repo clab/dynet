@@ -285,11 +285,11 @@ string Sum::as_string(const vector<string>& arg_names) const {
   return s.str();
 }
 
-string Sum::autobatch_profile(const ComputationGraph &cg) const {
-  std::stringstream oss;
-  oss << "sum[" << args.size() << "]";
-  dim.print_profile(oss);
-  return oss.str();
+int Sum::autobatch_sig(const ComputationGraph &cg, SigMap &sm) const {
+  Sig s(nt::sum);
+  s.add_node(args.size());
+  s.add_dim(dim);
+  return sm.get_idx(s);
 }
 
 
@@ -551,11 +551,10 @@ Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   return dr;
 }
 
-std::string Concatenate::autobatch_profile(const ComputationGraph &cg) const {
-  ostringstream oss;
-  oss << "concat";
-  for (auto arg : args) oss << ' ' << cg.nodes[arg]->dim << endl;
-  return oss.str();
+int Concatenate::autobatch_sig(const ComputationGraph &cg, SigMap &sm) const {
+  Sig s(nt::concat);
+  for (auto arg:args) s.add_dim(cg.nodes[arg]->dim);
+  return sm.get_idx(s);
 }
 
 
@@ -688,11 +687,10 @@ Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
   return Dim({1}, xs[0].bd);
 }
 
-std::string PickNegLogSoftmax::autobatch_profile(const ComputationGraph & cg) const {
-  ostringstream oss;
-  oss << "pnls ";
-  dim.print_profile(oss);
-  return oss.str();
+int PickNegLogSoftmax::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::pnls);
+  s.add_dim(dim);
+  return sm.get_idx(s);
 }
 std::vector<bool> PickNegLogSoftmax::autobatch_concat(const ComputationGraph & cg) const {
   return vector<bool>(1, true);
@@ -789,13 +787,13 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
   return Dim({end - start}, xs[0].bd);
 }
 
-std::string PickRange::autobatch_profile(const ComputationGraph & cg) const {
-  ostringstream oss;
-  oss << "pickrange ";
+int PickRange::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::pickrange);
   const Dim &dim = cg.nodes[args[0]]->dim;
-  dim.print_profile(oss);
-  oss << " " << start << ":" << end;
-  return oss.str();
+  s.add_dim(dim);
+  s.add_node(start);
+  s.add_node(end);
+  return sm.get_idx(s);
 }
 
 string PickBatchElements::as_string(const vector<string>& arg_names) const {
@@ -844,16 +842,15 @@ Dim MatrixMultiply::dim_forward(const vector<Dim>& xs) const {
   return Dim({xs[0].rows(), xs[1].cols()}, max(xs[0].bd, xs[1].bd));
 }
 
-std::string MatrixMultiply::autobatch_profile(const ComputationGraph & cg) const {
-  ostringstream oss;
+int MatrixMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   // Currently assumes there are two args, and batches with a shared first arg.
   // TODO do we want to treat different dimensions of first/second arg differently?
   if(dim.bd == 1) {
-    oss << "matmul ";
-    oss << 'n' <<  args[0];
-    return oss.str();
+    Sig s(nt::matmul);
+    s.add_node(args[0]);
+    return sm.get_idx(s);
   } else {
-    return ""; // TODO handle the batched case as well? should it differ at all?
+    return 0; // TODO handle the batched case as well? should it differ at all?
   }
 }
 
@@ -878,9 +875,10 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
-std::string CwiseMultiply::autobatch_profile(const ComputationGraph & cg) const {
+int CwiseMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   // TODO: This does not handle the case where dimensions differ
-  return cg.nodes[args[0]]->dim == cg.nodes[args[1]]->dim ? "cmult" : "";
+  Sig s(nt::cmult);
+  return cg.nodes[args[0]]->dim == cg.nodes[args[1]]->dim ? sm.get_idx(s) : -1;
 }
 
 std::vector<bool> CwiseMultiply::autobatch_concat(const ComputationGraph & cg) const {
@@ -984,29 +982,28 @@ Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
-std::string AffineTransform::autobatch_profile(const ComputationGraph & cg) const {
-  ostringstream oss;
-  oss << "affine ";
+int AffineTransform::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::affine);
   // This is a heuristic: we assume that we often have "b + W * x" shaped affine transforms
   // so when everything is batch size one, optimize for this case
   if(dim.bd == 1) {
-    oss << 'n' <<  args[0];
+    s.add_node(args[0]);
     for(size_t i = 1; i < args.size(); i += 2) {
-      oss << " n" << args[i] << ' ';
-      cg.nodes[args[i+1]]->dim.print_profile(oss);
+      s.add_node(args[i]);
+      s.add_dim(cg.nodes[args[i+1]]->dim); // TODO: this is not the exact same as dim->print_profile
     }
   } else {
     for(auto nid : args) {
       const Dim & d = cg.nodes[nid]->dim;
-      oss << ' ';
       if(d.bd == 1)
-        oss << 'n' << nid;
+        s.add_node(nid);
       else
-        d.print_profile(oss);
+        s.add_dim(d); // TODO: this is not the exact same as dim->print_profile
     }
   }
-  return oss.str();
+  return sm.get_idx(s);
 }
+
 std::vector<bool> AffineTransform::autobatch_concat(const ComputationGraph & cg) const {
   vector<bool> ret(args.size(), false);
   if(dim.bd == 1) {
@@ -1117,20 +1114,22 @@ Dim SquaredEuclideanDistance::dim_forward(const vector<Dim>& xs) const {
   return Dim({1}, max(xs[0].bd, xs[1].bd));
 }
 
-std::string SquaredEuclideanDistance::autobatch_profile(const ComputationGraph & cg) const {
-  ostringstream oss;
-  oss << "squared_distance ";
+int SquaredEuclideanDistance::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::squared_distance);
   const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;
   if(dleft.bd == dright.bd) {
-    dleft.print_profile(oss);
+    s.add_node(1);
+    s.add_dim(dleft);
   } else if(dleft.bd == 1) {
-    oss << " n" << args[0] << ' ';
-    dright.print_profile(oss);
+    s.add_node(2);
+    s.add_node(args[0]);
+    s.add_dim(dright);
   } else {
-    dleft.print_profile(oss);
-    oss << " n" << args[1] << ' ';
+    s.add_node(3);
+    s.add_node(args[1]);
+    s.add_dim(dleft);
   }
-  return oss.str();
+  return sm.get_idx(s);
 }
 std::vector<bool> SquaredEuclideanDistance::autobatch_concat(const ComputationGraph & cg) const {
   const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;

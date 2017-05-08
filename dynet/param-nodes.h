@@ -38,7 +38,7 @@ struct InputNode : public Node {
   explicit InputNode(const Dim& d, const std::vector<float>* pdat) : dim(d), data(), pdata(pdat) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override;
   virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
                                       const std::vector<VariableIndex> & batch_ids) const override;
@@ -69,7 +69,7 @@ struct ScalarInputNode : public Node {
   explicit ScalarInputNode(real s) : data(s), pdata(&data) {}
   explicit ScalarInputNode(const real* ps) : data(), pdata(ps) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
-  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override;
   virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
                                       const std::vector<VariableIndex> & batch_ids) const override;
@@ -85,7 +85,7 @@ struct LookupNode : public ParameterNodeBase {
   LookupNode(LookupParameter p, const std::vector<unsigned>* pindices) : dim(p.get()->dim), index(), pindex(), indices(), pindices(pindices), params(p) { dim.bd = pindices->size(); }
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }  
-  virtual std::string autobatch_profile(const ComputationGraph & cg) const override;
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const override;
   virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
                                       const std::vector<VariableIndex> & batch_ids) const override;
