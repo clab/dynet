@@ -70,6 +70,7 @@ class BatchedExecutionEngine : public ExecutionEngine {
   void backward(VariableIndex i, bool full = false) override;
   void garbage_collect();
  private:
+  void combine_tensors(std::vector<VariableIndex> batch_ids, int aid, Tensor &tout);
   const Tensor& get_nfx(VariableIndex i);
   std::vector<Tensor> nfx_cache;
   std::vector<Tensor> ndEdfs;
