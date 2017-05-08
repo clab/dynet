@@ -5,6 +5,7 @@
 
 #include "dynet/param-nodes.h"
 #include "dynet/globals.h"
+#include "dynet/timing.h"
 
 #ifdef HAVE_CUDA
 #include "dynet/gpu-ops.h"
@@ -332,8 +333,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     batches.resize(i - num_nodes_evaluated + num_batches_evaluated + 1);
 
     // Allocate temporary memory for bookkeeping
-    unordered_map<string, int> prof2id(i);        // Batching profile to ID
-    prof2id[""] = 0;
+    //unordered_map<string, int> prof2id(i);        // Batching profile to ID
+    SigMap sigmap;   // Batching signature to id.
     size_t temp_data_size = (i+1)*4*sizeof(int) + (i-node_id+2)*2*sizeof(float);
     int* node2profid = (int*)malloc(temp_data_size); memset(node2profid, 0, temp_data_size);
     int* node2left = node2profid + i + 1;
@@ -360,8 +361,11 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         }
       }
       // Get the node profile ID
-      string prof = node->autobatch_profile(cg);
+      //string prof = node->autobatch_profile(cg);
+      int sig; 
+      sig = node->autobatch_sig(cg, sigmap);
       // If batchable, collect statistics
+      /*
       if(prof != "") {
         auto it = prof2id.find(prof);
         if(it == prof2id.end()) {
@@ -377,8 +381,19 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       } else if(node2left[j] == 0) {
         *(active_un_end++) = j;
       }
+      */
+      if (sig != 0) {
+        id = node2profid[j] = sig; 
+        if (active_batched.size() <= sig) active_batched.resize(sig+1);
+        prof2avg[id] += j;
+        prof2cnt[id]++;
+        if(node2left[j] == 0)
+          active_batched[id].push_back(j);
+      } else if(node2left[j] == 0) {
+        *(active_un_end++) = j;
+      }
     }
-    for(size_t j = 1; j < prof2id.size(); ++j)
+    for(size_t j = 0; j < sigmap.size(); ++j)
       prof2avg[j] /= prof2cnt[j];
 
     // 2) Travel through and do active nodes
@@ -452,7 +467,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         auto & batch_ids = active_batched[curr_prof];
         my_batch.ids = active_batched[curr_prof];
         DYNET_ASSERT(batch_ids.size() > 0, "Attempting to process empty batch at " << curr_prof);
-        // cerr << "Processing batched: " << cg.nodes[batch_ids[0]]->autobatch_profile(cg) << ' ' ; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
+        // cerr << "Processing batched: " << cg.nodes[batch_ids[0]]->as_string() << ' ' ; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
         // Set up the configuration of each component node, including pointer differential from the start of the batch
         size_t tot_main = 0, tot_aux = 0, my_main, my_aux;
         for(auto curr_node : batch_ids) {
@@ -564,13 +579,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
             }
             // cerr << "min_node=" << (size_t)min_node << ", max_node=" << (size_t)max_node << ", tot_arg=" << tot_arg << endl;
             if (min_node + tot_arg == max_node) { // if contig, use current mem for xs_i
-              // cerr << "    contiguous " << my_batch.ids.size() << node->autobatch_profile(cg) << endl;
+              // cerr << "    contiguous " << my_batch.ids.size() << node->as_string() << endl;
               //xs[i] = &batched_nfxs[...];
               my_xsi->v = min_node;
               my_xsi->d = Dim({tot_arg});
             //   autobatch_garbage[i] = false;
             } else { // if non-contig, copy xs_i into new mem.
-              // cerr << "non contiguous " << my_batch.ids.size() << node->autobatch_profile(cg) << endl;
+              // cerr << "non contiguous " << my_batch.ids.size() << node->as_string() << endl;
               // 2.b) the inputs need to be concatenated, and are not contiguous
               ts.resize(my_batch.ids.size());
               for(size_t j = 0; j < ts.size(); ++j)

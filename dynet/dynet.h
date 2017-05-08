@@ -19,6 +19,7 @@
 #include "dynet/tensor.h"
 #include "dynet/model.h"
 #include "dynet/devices.h"
+#include "dynet/sig.h"
 
 
 namespace dynet {
@@ -564,11 +565,11 @@ struct Node {
                         Tensor& dEdxi) const final;
 
   /**
-   * \brief profile for automatic batching
+   * \brief signature for automatic batching
    * \detail This will be equal only for nodes that can be combined. Returns
-   *         "" for unbatchable functions.
+   *         0 for unbatchable functions.
    */
-  virtual std::string autobatch_profile(const ComputationGraph & cg) const { return ""; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const { return 0; }
   /**
    * \brief which inputs can be batched
    * \detail This will be true for inputs that should be concatenated when
