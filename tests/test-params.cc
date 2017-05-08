@@ -75,5 +75,24 @@ BOOST_AUTO_TEST_CASE( scale ) {
     BOOST_CHECK_CLOSE(init_value * 0.3, end_value, 0.001);
 }
 
+BOOST_AUTO_TEST_CASE( scale_grad ) {
+    dynet::Model mod;
+    // Create parameter
+    dynet::Parameter w_p = mod.add_parameters({1}, ParameterInitConst(1));
+    // Run forward/backward
+    dynet::ComputationGraph cg;
+    dynet::Expression x = dynet::input(cg,1.f);
+    dynet::Expression w = dynet::parameter(cg, w_p);
+    dynet::Expression y = x * w;
+    cg.forward(y);
+    cg.backward(y);
+    // Rescale gradient
+    w_p.scale_gradient(0.5);
+    // Value after rescaling
+    float rescaled_grad=as_scalar(w_p.get()->g);
+    // Check with a margin of error
+    BOOST_CHECK_CLOSE(0.5, rescaled_grad, 0.001);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

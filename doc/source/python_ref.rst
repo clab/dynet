@@ -24,18 +24,18 @@ Model and Parameters
 
 Model
 ~~~~~
-.. autoclass::dynet.Model
+.. autoclass:: dynet.Model
    :members:
    :show-inheritance:
 
 Parameters and LookupParameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass::dynet.Parameters
+.. autoclass:: dynet.Parameters
    :members:
    :show-inheritance:
 
-.. autoclass::dynet.LookupParameters
+.. autoclass:: dynet.LookupParameters
    :members:
    :show-inheritance:
 
@@ -164,6 +164,8 @@ Arithmetic operations
 
 .. autofunction:: dynet.sqrt
 
+.. autofunction:: dynet.abs
+
 .. autofunction:: dynet.erf
 
 .. autofunction:: dynet.cube
@@ -192,7 +194,17 @@ Arithmetic operations
 
 .. autofunction:: dynet.sum_elems
 
-.. autofunction:: dynet.sum_batches
+.. autofunction:: dynet.mean_elems
+
+.. autofunction:: dynet.moment_elems
+
+.. autofunction:: dynet.std_elems
+
+.. autofunction:: dynet.mean_dim
+
+.. autofunction:: dynet.moment_dim
+
+.. autofunction:: dynet.std_dim
 
 .. autofunction:: dynet.fold_rows
 
@@ -242,6 +254,14 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.pick_batch_elems
 
+.. autofunction:: dynet.sum_batches
+
+.. autofunction:: dynet.mean_batches
+
+.. autofunction:: dynet.moment_batches
+
+.. autofunction:: dynet.std_batches
+
 .. autofunction:: dynet.reshape
 
 .. autofunction:: dynet.select_rows
@@ -252,7 +272,11 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.concatenate
 
-.. autofunction:: dynet.concat_to_batch
+.. autofunction:: dynet.concatenate_to_batch
+
+.. autofunction:: dynet.max_dim
+
+.. autofunction:: dynet.min_dim
 
 .. autofunction:: dynet.nobackprop
 
@@ -264,6 +288,8 @@ Noise operations
 .. autofunction:: dynet.noise
 
 .. autofunction:: dynet.dropout
+
+.. autofunction:: dynet.dropout_dim
 
 .. autofunction:: dynet.block_dropout
 
@@ -283,13 +309,29 @@ Linear algebra operations
 Convolution/Pooling operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: dynet.conv1d_narrow
+.. autofunction:: dynet.conv2d
 
-.. autofunction:: dynet.conv1d_wide
+.. autofunction:: dynet.conv2d_bias
 
 .. autofunction:: dynet.filter1d_narrow
 
 .. autofunction:: dynet.kmax_pooling
+
+Tensor operations
+^^^^^^^^^^^^^^^^^
+
+.. autofunction:: dynet.contract3d_1d
+
+.. autofunction:: dynet.contract3d_1d_bias
+
+.. autofunction:: dynet.contract3d_1d_1d
+
+.. autofunction:: dynet.contract3d_1d_1d_bias
+
+Normalization operations
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: dynet.layer_norm
 
 Recurrent Neural Networks
 -------------------------
@@ -345,6 +387,10 @@ Optimizers
    :show-inheritance:
 
 .. autoclass:: dynet.SimpleSGDTrainer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: dynet.CyclicalSGDTrainer
    :members:
    :show-inheritance:
 

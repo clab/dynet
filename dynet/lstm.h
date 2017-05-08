@@ -175,7 +175,7 @@ private:
  * \f$
  * \begin{split}
     i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+b_i)\\
-    f_t & = \sigma(W_{fx}x_t+W_{fh}h_{t-1}+b_f)\\
+    f_t & = \sigma(W_{fx}x_t+W_{fh}h_{t-1}+b_f+1)\\
     o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+b_o)\\
     \tilde{c_t} & = \tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\
     c_t & = c_{t-1}\circ f_t + \tilde{c_t}\circ i_t\\
@@ -195,11 +195,13 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \param input_dim Dimention of the input \f$x_t\f$
    * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model Model holding the parameters
+   * \param ln_lstm Whether to use layer normalization
    */
   explicit VanillaLSTMBuilder(unsigned layers,
                               unsigned input_dim,
                               unsigned hidden_dim,
-                              Model& model);
+                              Model& model,
+                              bool ln_lstm = false);
 
   Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
@@ -246,7 +248,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    *
    * For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
    * \param d Dropout rate \f$d_x\f$ for the input \f$x_t\f$
-   * \param d_h Dropout rate \f$d_x\f$ for the output \f$h_t\f$
+   * \param d_h Dropout rate \f$d_h\f$ for the output \f$h_t\f$
    */
   void set_dropout(float d, float d_r);
   /**
@@ -256,7 +258,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    */
   void disable_dropout();
   /**
-   * \brief Set dropout masks at the beginning of a sequence for a specific bathc size
+   * \brief Set dropout masks at the beginning of a sequence for a specific batch size
    * \details If this function is not called on batched input, the same mask will be applied across
    * all batch elements. Use this to apply different masks to each batch element
    *
@@ -273,9 +275,13 @@ protected:
 public:
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> ln_params;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> ln_param_vars;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> masks;
@@ -291,6 +297,7 @@ public:
   unsigned layers;
   unsigned input_dim, hid;
   float dropout_rate_h;
+  bool ln_lstm;
 
 
 
@@ -305,5 +312,8 @@ private:
 
 // Class version
 DYNET_VERSION_DEFINE(dynet::LSTMBuilder, 1);
+// Class version
+DYNET_VERSION_DEFINE(dynet::VanillaLSTMBuilder, 1);
+
 
 #endif

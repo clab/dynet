@@ -266,7 +266,11 @@ struct ComputationGraph {
   template <class Function, typename... Args>
   inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments,
                                     Args&&... side_information);
-  template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
+  template <class Function, typename T>
+  inline VariableIndex add_function(const T& arguments);
+  template <class Function, typename T, typename... Args>
+  inline VariableIndex add_function(const T& arguments,
+                                    Args&&... side_information);
 
   // reset ComputationGraph to a newly created state
   /**
@@ -341,22 +345,63 @@ struct ComputationGraph {
    * \return Requested value
    */
   const Tensor& get_value(const expr::Expression& e);
+
+  /**
+   * \brief Get gradient for node at index i.
+   * \details Performs backward pass if not available (may compute more than strictly what is needed).
+   *
+   * \param i Index of the variable from which you want the gradient
+   * \return Requested gradient
+   */
+  const Tensor& get_gradient(VariableIndex i);
+  /**
+   * \brief Get forward gradient for the given expression
+   * \details Performs backward pass if not available (may compute more than strictly what is needed).
+   *
+   * \param e Expression from which you want the gradient
+   * \return Requested gradient
+   */
+  const Tensor& get_gradient(const expr::Expression& e);
   /**
    * \brief Clears forward caches (for get_value etc).
    */
   void invalidate();
   /**
    * \brief Computes backward gradients from the front-most evaluated node.
+   * 
+   * \details The parameter `full` specifies whether the gradients should be computed for all nodes (`true`) or only non-constant nodes.
+   * 
+   * By default, a node is constant unless
+   * 
+   * 1. it is a parameter node
+   * 2. it depends on a non-constant node
+   * 
+   * Thus, functions of constants and inputs are considered as constants.
+   * 
+   * Turn `full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    *
    * \param last Expression from which to compute the gradient
+   * \param full Whether to compute all gradients (including with respect to constant nodes). 
    */
-  void backward(const expr::Expression& last);
+  void backward(const expr::Expression& last, bool full = false);
   /**
    * \brief Computes backward gradients from node i (assuming it already been evaluated).
+   * 
+   * \details The parameter `full` specifies whether the gradients should be computed for all nodes (`true`) or only non-constant nodes.
+   * 
+   * By default, a node is constant unless
+   * 
+   * 1. it is a parameter node
+   * 2. it depends on a non-constant node
+   * 
+   * Thus, functions of constants and inputs are considered as constants.
+   * 
+   * Turn `full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    *
    * \param i Index of the node from which to compute the gradient
+   * \param full Whether to compute all gradients (including with respect to constant nodes). Turn this on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    */
-  void backward(VariableIndex i);
+  void backward(VariableIndex i, bool full = false);
   // set immediate_compute variable
   void set_immediate_compute(bool ic);
   // set check_validity variable
@@ -519,6 +564,13 @@ struct Node {
    */
   inline unsigned arity() const { return args.size(); }
 
+  inline void set_cg(ComputationGraph* cg) { cg_ = cg; }
+
+  inline ComputationGraph* get_cg() const {
+    if (cg_) return cg_;
+    else return NULL;
+  }
+
   std::vector<VariableIndex> args;/**< Dependency structure */
 
   // memory size
@@ -531,6 +583,9 @@ protected:
   explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
   template <typename T>
   explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
+
+private:
+  ComputationGraph* cg_;  // pointer to the computation graph
 
 public:
   // auxiliary memory
@@ -559,6 +614,16 @@ template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments));
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+// pass side information to the function. these are likely to be nondifferentiable arguments
+template <class Function, typename T, typename... Args>
+inline VariableIndex ComputationGraph::add_function(const T& arguments,
+    Args&&... side_information) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }

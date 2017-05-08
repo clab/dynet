@@ -56,6 +56,9 @@ class Device_GPU : public Device {
   ~Device_GPU();
   int cuda_device_id;
   cublasHandle_t cublas_handle;
+#if HAVE_CUDNN
+  cudnnHandle_t cudnnHandle;
+#endif
   Eigen::GpuDevice* edevice;
   Eigen::CudaStreamDevice* estream;
   GPUAllocator gpu_mem;
