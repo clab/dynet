@@ -520,7 +520,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
         // Decrement the counts of the predecessors and add them to the active queue as appropriate
         size_t batch_ids_size = batch_ids.size();
-        for(auto curr_node : batch_ids) {
+        for(size_t j = 0; j < batch_ids_size; ++j) {
+          VariableIndex curr_node = batch_ids[j];
           node2batch[curr_node] = batch_id;
           for(auto next_node : node2successors[curr_node]) {
             if(--node2left[next_node] == 0) {
