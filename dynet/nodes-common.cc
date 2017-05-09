@@ -878,7 +878,7 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
 int CwiseMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   // TODO: This does not handle the case where dimensions differ
   Sig s(nt::cmult);
-  return cg.nodes[args[0]]->dim == cg.nodes[args[1]]->dim ? sm.get_idx(s) : -1;
+  return cg.nodes[args[0]]->dim == cg.nodes[args[1]]->dim ? sm.get_idx(s) : 0;
 }
 
 std::vector<bool> CwiseMultiply::autobatch_concat(const ComputationGraph & cg) const {

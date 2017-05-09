@@ -339,7 +339,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     //unordered_map<string, int> prof2id(i);        // Batching profile to ID
     SigMap sigmap;   // Batching signature to id.
     size_t temp_data_size = (i+1)*4*sizeof(int) + (i-node_id+2)*2*sizeof(float);
-    int* node2profid = (int*)malloc(temp_data_size); memset(node2profid, 0, temp_data_size);
+    int* node2profid = (int*)malloc(temp_data_size);
+    memset(node2profid, 0, temp_data_size);
     int* node2left = node2profid + i + 1;
     int* active_un_begin = node2left + i + 1;
     int* active_un_end = active_un_begin;
@@ -352,7 +353,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     vector<vector<VariableIndex> > active_batched;
 
     // 1) Calculate the batching profiles for every node
-    int id = 0;
+    int sig = 0;
     for (VariableIndex j = num_nodes_evaluated; j <= i; ++j) {
       const Node* node = cg.nodes[j];
       node2size[j] = node->dim.size();
@@ -365,8 +366,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       }
       // Get the node profile ID
       //string prof = node->autobatch_profile(cg);
-      int sig; 
       sig = node->autobatch_sig(cg, sigmap);
+      // cerr << "node: " << node->as_dummy_string() << ", sig: " << sig << endl;
       // If batchable, collect statistics
       /*
       if(prof != "") {
@@ -386,12 +387,12 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       }
       */
       if (sig != 0) {
-        id = node2profid[j] = sig; 
+        node2profid[j] = sig; 
         if (active_batched.size() <= sig) active_batched.resize(sig+1);
-        prof2avg[id] += j;
-        prof2cnt[id]++;
+        prof2avg[sig] += j;
+        prof2cnt[sig]++;
         if(node2left[j] == 0)
-          active_batched[id].push_back(j);
+          active_batched[sig].push_back(j);
       } else if(node2left[j] == 0) {
         *(active_un_end++) = j;
       }
@@ -414,6 +415,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       } else {
         float best_avg = 1e10;
         for(size_t i = 1; i < active_batched.size(); ++i) {
+          // cerr << "active_batched[" << i << "].size() == " << active_batched[i].size() << endl;
           if(active_batched[i].size() > 0 && best_avg > prof2avg[i]) {
             curr_prof = i;
             best_avg = prof2avg[i];
@@ -425,13 +427,15 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
           curr_prof = -1;
         }
       }
+      // for(size_t j = 0; j < i+1; ++j) cerr << "node2left[" << j << "] == " << node2left[j] << endl;
+      // cerr << "node_id=" << (size_t)node_id << ", i=" << (size_t)i << ", curr_node=" << curr_node << ", curr_prof=" << curr_prof << endl;
 
       // 2.a) If we have a single current node, then we execute it
       auto & my_batch = batches[batch_id];
       auto & nfx = my_batch.nfx;
       if(curr_node != -1) {
         // Set the inputs
-        // cerr << "Processing single: " << curr_node << " " << cg.nodes[curr_node]->as_dummy_string() << endl;
+        // cerr << "Processing single: N" << curr_node << " " << cg.nodes[curr_node]->as_dummy_string() << endl;
         const Node* node = cg.nodes[curr_node];
         DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in BatchedExecutionEngine::incremental_forward");
         // Save the node profile
@@ -451,10 +455,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         // Decrement the counts of the predecessors and add them to the active queue as appropriate
         for(auto next_node : node2successors[curr_node]) {
           if(--node2left[next_node] == 0) {
-            if(node2profid[next_node] == 0)
+            if(node2profid[next_node] == 0) {
               *(active_un_end++) = next_node;
-            else
+              // cerr << "added N" << next_node << " to active_un" << endl;
+            } else {
               active_batched[node2profid[next_node]].push_back(next_node);
+              // cerr << "added N" << next_node << " to active_batched[" << node2profid[next_node] << "]" << endl;
+            }
           }
         }
         // Create the information for the batched pseudo-graph
@@ -470,7 +477,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         auto & batch_ids = active_batched[curr_prof];
         my_batch.ids = active_batched[curr_prof];
         DYNET_ASSERT(batch_ids.size() > 0, "Attempting to process empty batch at " << curr_prof);
-        // cerr << "Processing batched: " << cg.nodes[batch_ids[0]]->as_dummy_string() << ' ' ; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
+        // cerr << "Processing batched: " << cg.nodes[batch_ids[0]]->as_dummy_string() << ' ' ; for(auto bid : batch_ids) cerr << " N" << bid; cerr << endl;
         // Set up the configuration of each component node, including pointer differential from the start of the batch
         size_t tot_main = 0, tot_aux = 0, my_main, my_aux;
         for(auto curr_node : batch_ids) {
@@ -512,22 +519,32 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 
 
         // Decrement the counts of the predecessors and add them to the active queue as appropriate
+        size_t batch_ids_size = batch_ids.size();
         for(auto curr_node : batch_ids) {
           node2batch[curr_node] = batch_id;
           for(auto next_node : node2successors[curr_node]) {
             if(--node2left[next_node] == 0) {
-              if(node2profid[next_node] == 0)
+              if(node2profid[next_node] == 0) {
                 *(active_un_end++) = next_node;
-              else
+                // cerr << "added N" << next_node << " to active_un" << endl;
+              } else {
                 active_batched[node2profid[next_node]].push_back(next_node);
+                // cerr << "added N" << next_node << " to active_batched[" << node2profid[next_node] << "]" << endl;
+              }
             }
           }
         }
 
         // Clear the active things for this profile
         ++batch_id;
-        node_id += active_batched[curr_prof].size();
-        batch_ids.clear();
+        node_id += batch_ids_size;
+        if(batch_ids_size == batch_ids.size()) {
+          // cerr << "clearing" << endl;
+          batch_ids.clear();
+        } else {
+          // cerr << "erasing first " << batch_ids_size << endl;
+          batch_ids.erase(batch_ids.begin(), batch_ids.begin() + batch_ids_size);
+        }
       }
     }
 
@@ -613,7 +630,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
 }
 
 void BatchedExecutionEngine::backward(bool full) {
-  DYNET_ASSERT(nfxs.size() >= cg.nodes.size(), "Mismatched array sizes in BatchedExecutionEngine::backward");
+  DYNET_ASSERT(nfx_cache.size() >= cg.nodes.size(), "Mismatched array sizes in BatchedExecutionEngine::backward");
   backward((VariableIndex)(cg.nodes.size()-1),full);
 }
 
