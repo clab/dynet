@@ -291,6 +291,8 @@ Noise operations
 
 .. autofunction:: dynet.dropout_dim
 
+.. autofunction:: dynet.dropout_batch
+
 .. autofunction:: dynet.block_dropout
 
 Linear algebra operations

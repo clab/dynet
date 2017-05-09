@@ -328,6 +328,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) except + #
     CExpression c_noise "dynet::expr::noise" (CExpression& x, float stddev) except + #
     CExpression c_dropout "dynet::expr::dropout" (CExpression& x, float p) except + #
+    CExpression c_dropout_batch "dynet::expr::dropout_batch" (CExpression& x, float p) except + #
     CExpression c_dropout_dim "dynet::expr::dropout_dim" (CExpression& x, unsigned d, float p) except + #
     CExpression c_block_dropout "dynet::expr::block_dropout" (CExpression& x, float p) except + #
 

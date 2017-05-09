@@ -2857,6 +2857,7 @@ cpdef Expression noise(Expression x, float stddev):
         dynet.Expression: :math:`y\sim\mathcal N(x,\\texttt{stddev})`
     """
     return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
+
 cpdef Expression dropout(Expression x, float p):
     """Dropout
     
@@ -2876,6 +2877,20 @@ cpdef Expression dropout(Expression x, float p):
     """
     return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
 
+    
+cpdef Expression dropout_batch(Expression x, float p):
+    """Dropout entire elements of a minibatch
+    
+    Identical to the dropout operation except entire batch elements are dropped
+
+    Args:
+        x (dynet.Expression): Input expression
+        p (number): The dropout probability
+    
+    Returns:
+        dynet.Expression: The dropped expression
+    """
+    return Expression.from_cexpr(x.cg_version, c_dropout_batch(x.c(), p))
 
 cpdef Expression dropout_dim(Expression x, unsigned d, float p):
     """Dropout along one dimension
