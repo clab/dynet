@@ -499,8 +499,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         if(tot_aux > 0) {
           head_aux = static_cast<void*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_aux));
           if(head_aux == nullptr) DYNET_RUNTIME_ERR("Ran out of memory when executing node " << curr_node);
-          // for(auto curr_node : batch_ids)
-          //   cg.nodes[curr_node]->aux_mem = (void*)((ptrdiff_t)head_aux + (ptrdiff_t)cg.nodes[curr_node]->aux_mem);
+          for(auto curr_node : batch_ids)
+            cg.nodes[curr_node]->aux_mem = (void*)((ptrdiff_t)head_aux + (ptrdiff_t)cg.nodes[curr_node]->aux_mem);
         }
 
         // Set the size for the final output
