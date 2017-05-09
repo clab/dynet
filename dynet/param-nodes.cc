@@ -61,8 +61,8 @@ Dim InputNode::dim_forward(const vector<Dim>& xs) const {
 int InputNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::input); return sm.get_idx(s);
 }
-std::vector<bool> InputNode::autobatch_concat(const ComputationGraph & cg) const {
-  return vector<bool>();
+std::vector<int> InputNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
 }
 Node* InputNode::autobatch_pseudo_node(const ComputationGraph & cg,
                                         const std::vector<VariableIndex> & batch_ids) const {
@@ -112,8 +112,8 @@ Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
 int ScalarInputNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::scalar_input); return sm.get_idx(s);
 }
-std::vector<bool> ScalarInputNode::autobatch_concat(const ComputationGraph & cg) const {
-  return vector<bool>();
+std::vector<int> ScalarInputNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
 }
 Node* ScalarInputNode::autobatch_pseudo_node(const ComputationGraph & cg,
                                              const std::vector<VariableIndex> & batch_ids) const {
@@ -131,8 +131,8 @@ int LookupNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   s.add_dim(dim);
   return sm.get_idx(s);
 }
-std::vector<bool> LookupNode::autobatch_concat(const ComputationGraph & cg) const {
-  return vector<bool>();
+std::vector<int> LookupNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
 }
 Node* LookupNode::autobatch_pseudo_node(const ComputationGraph & cg,
                                         const std::vector<VariableIndex> & batch_ids) const {

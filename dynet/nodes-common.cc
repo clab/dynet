@@ -692,8 +692,8 @@ int PickNegLogSoftmax::autobatch_sig(const ComputationGraph & cg, SigMap &sm) co
   s.add_dim(dim);
   return sm.get_idx(s);
 }
-std::vector<bool> PickNegLogSoftmax::autobatch_concat(const ComputationGraph & cg) const {
-  return vector<bool>(1, true);
+std::vector<int> PickNegLogSoftmax::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>(1, 1);
 }
 Node* PickNegLogSoftmax::autobatch_pseudo_node(const ComputationGraph & cg,
                                         const std::vector<VariableIndex> & batch_ids) const {
@@ -854,9 +854,9 @@ int MatrixMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const
   }
 }
 
-std::vector<bool> MatrixMultiply::autobatch_concat(const ComputationGraph & cg) const {
-  vector<bool> ret(args.size(), false);
-  if (dim.bd == 1) { ret[1] = true; }
+std::vector<int> MatrixMultiply::autobatch_concat(const ComputationGraph & cg) const {
+  vector<int> ret(args.size(), 0);
+  if (dim.bd == 1) { ret[1] = 1; }
   return ret;
 }
 
@@ -881,8 +881,8 @@ int CwiseMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const 
   return cg.nodes[args[0]]->dim == cg.nodes[args[1]]->dim ? sm.get_idx(s) : 0;
 }
 
-std::vector<bool> CwiseMultiply::autobatch_concat(const ComputationGraph & cg) const {
-  return vector<bool>(2, true);
+std::vector<int> CwiseMultiply::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>(2, 1);
 }
 
 string ScalarAdd::as_string(const vector<string>& arg_names) const {
@@ -1004,11 +1004,11 @@ int AffineTransform::autobatch_sig(const ComputationGraph & cg, SigMap &sm) cons
   return sm.get_idx(s);
 }
 
-std::vector<bool> AffineTransform::autobatch_concat(const ComputationGraph & cg) const {
-  vector<bool> ret(args.size(), false);
+std::vector<int> AffineTransform::autobatch_concat(const ComputationGraph & cg) const {
+  vector<int> ret(args.size(), 0);
   if(dim.bd == 1) {
     for(size_t i = 2; i < ret.size(); i += 2)
-      ret[i] = true;
+      ret[i] = 1;
   } else {
     for(size_t i = 0; i < ret.size(); ++i)
       ret[i] = (cg.nodes[args[i]]->dim.bd > 1);
@@ -1131,14 +1131,14 @@ int SquaredEuclideanDistance::autobatch_sig(const ComputationGraph & cg, SigMap 
   }
   return sm.get_idx(s);
 }
-std::vector<bool> SquaredEuclideanDistance::autobatch_concat(const ComputationGraph & cg) const {
+std::vector<int> SquaredEuclideanDistance::autobatch_concat(const ComputationGraph & cg) const {
   const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;
-  vector<bool> ret(2, true);
+  vector<int> ret(2, 1);
   if(dleft.bd != dright.bd) {
     if(dleft.bd == 1)
-      ret[0] = false;
+      ret[0] = 0;
     else
-      ret[1] = false;
+      ret[1] = 0;
   }
   return ret;
 }

@@ -576,7 +576,7 @@ struct Node {
    *         autobatching, and false for inputs that should be shared among
    *         all batches.
    */
-  virtual std::vector<bool> autobatch_concat(const ComputationGraph & cg) const { return std::vector<bool>(); }
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const { return std::vector<int>(); }
   /**
    * \brief create a pseudonode for autobatching
    * \detail This will combine together multiple nodes into one big node for 
@@ -599,7 +599,7 @@ struct Node {
    */
   virtual void autobatch_reshape(const ComputationGraph & cg,
                                  const std::vector<VariableIndex> & batch_ids,
-                                 const std::vector<bool> & concat,
+                                 const std::vector<int> & concat,
                                  std::vector<const Tensor*>& xs,
                                  Tensor& fx) const { }
   /**
@@ -610,7 +610,7 @@ struct Node {
    */
   void autobatch_reshape_concatonly(const ComputationGraph & cg,
                                     const std::vector<VariableIndex> & batch_ids,
-                                    const std::vector<bool> & concat,
+                                    const std::vector<int> & concat,
                                     std::vector<const Tensor*>& xs,
                                     Tensor& fx) const;
 
