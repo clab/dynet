@@ -152,6 +152,25 @@ struct Dropout : public Node {
   real p;
 };
 
+// y = dropout(x,p) where p specifies the dropout probability
+struct DropoutDim : public Node {
+  explicit DropoutDim(const std::initializer_list<VariableIndex>& a, unsigned d,real p) : Node(a), dimension(d), p(p) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
+  virtual bool supports_multibatch() const override { return true; }
+  unsigned dimension;
+  real p;
+};
+
+// y = dropout(x,p) where p specifies the dropout probability
+struct DropoutBatch : public Node {
+  explicit DropoutBatch(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
+  virtual bool supports_multibatch() const override { return true; }
+  real p;
+};
+
 // y = block_dropout(x,p) where p specifies the probability for dropping-out the entire block
 struct BlockDropout : public Node {
   explicit BlockDropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), dropout_probability(p) {}
@@ -333,6 +352,27 @@ struct CwiseMultiply : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+// y = x_1 + x_2  (Addition where x_2 is a scalar)
+struct ScalarAdd : public Node {
+  explicit ScalarAdd(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = x_1 \cdot x_2  (Hadamard product where x_1 is a scalar)
+struct ScalarMultiply : public Node {
+  explicit ScalarMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = x_1 / x_2  (Elementwise division where x_2 is a scalar)
+struct ScalarQuotient : public Node {
+  explicit ScalarQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 // y = x_1 / x_2  (cwiseQuotient)
 struct CwiseQuotient : public Node {
   explicit CwiseQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
@@ -407,6 +447,57 @@ struct SumBatches : public Node {
   virtual bool supports_multibatch() const override { return true; }
 };
 
+// y = \sum_i,j,... x[i,j,...]
+struct StdElements : public Node {
+  template <typename T> explicit StdElements(const T& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+};
+
+// y = \sum_i x_i
+struct StdBatches : public Node {
+  template <typename T> explicit StdBatches(const T& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+};
+
+//y = \sum_i x_i
+struct StdDimension : public Node {
+  template <typename T> explicit StdDimension(const T& a, unsigned d) : Node(a), dimension(d) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned dimension;
+};
+
+// y = \sum_i,j,... x[i,j,...]
+struct MomentElements : public Node {
+  template <typename T> explicit MomentElements(const T& a, unsigned o) : Node(a), order(o) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned order;
+};
+
+// y = \sum_i x_i
+struct MomentBatches : public Node {
+  template <typename T> explicit MomentBatches(const T& a, unsigned o) : Node(a), order(o) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned order;
+};
+
+//y = \sum_i x_i
+struct MomentDimension : public Node {
+  template <typename T> explicit MomentDimension(const T& a, unsigned d, unsigned o) : Node(a), dimension(d), order(o) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned dimension;
+  unsigned order;
+};
+
 // y = ( \sum_i x_i ) / |x|
 struct Average : public Node {
   template <typename T> explicit Average(const T& a) : Node(a) {}
@@ -433,12 +524,21 @@ struct PoissonRegressionLoss : public Node {
 // y = || x_1 ||^2
 struct SquaredNorm : public Node {
   explicit SquaredNorm(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = || x_1 ||
+struct L2Norm : public Node {
+  explicit L2Norm(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = || x_1 - x_2 ||^2
 struct SquaredEuclideanDistance : public Node {
   explicit SquaredEuclideanDistance(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -532,15 +632,14 @@ struct PickElement : public Node {
   unsigned dimension;
 };
 
-// x_1 is a vector
-// y = x_1[start:end]
+// x_1 is a tensor
+// y = x_1[start:end] along dimension d
 // (start inclusive, end exclusive)
 struct PickRange : public Node {
-  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e) : Node(a), start(s), end(e) {}
+  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e, unsigned d = 0) : Node(a), start(s), end(e), dim(d) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  unsigned start;
-  unsigned end;
+  unsigned start, end, dim;
 };
 
 // x is a batched tensor

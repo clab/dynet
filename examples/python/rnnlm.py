@@ -9,6 +9,7 @@ VOCAB_SIZE = 0
 
 from collections import defaultdict
 from itertools import count
+import argparse
 import sys
 import util
 
@@ -87,7 +88,11 @@ class RNNLanguageModel:
         return res
 
 if __name__ == '__main__':
-    train = util.CharsCorpusReader(sys.argv[1],begin="<s>")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('corpus', help='Path to the corpus file.')
+    args = parser.parse_args()
+
+    train = util.CharsCorpusReader(args.corpus, begin="<s>")
     vocab = util.Vocab.from_corpus(train)
     
     VOCAB_SIZE = vocab.size()
@@ -121,6 +126,6 @@ if __name__ == '__main__':
             errs.backward()
             sgd.update(1.0)
             #print "TM:",(time.time() - _start)/len(sent)
-        print("ITER",ITER,loss)
+        print("ITER {}, loss={}".format(ITER, loss))
         sgd.status()
         sgd.update_epoch(1.0)

@@ -22,6 +22,12 @@ struct GRUBuilder : public RNNBuilder {
   unsigned num_h0_components() const override { return layers; }
   void copy(const RNNBuilder & params) override;
 
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> params;
+
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> param_vars;
+
 
  protected:
   void new_graph_impl(ComputationGraph& cg) override;
@@ -29,12 +35,6 @@ struct GRUBuilder : public RNNBuilder {
   Expression add_input_impl(int prev, const Expression& x) override;
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
-
-  // first index is layer, then ...
-  std::vector<std::vector<Parameter>> params;
-
-  // first index is layer, then ...
-  std::vector<std::vector<Expression>> param_vars;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
