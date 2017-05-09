@@ -98,6 +98,11 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 %include "std_pair.i"
 %include "cpointer.i"
 
+// Convert C++ exceptions into Java exceptions. This provides
+// nice error messages for each listed exception, and a default
+// "unknown error" message for all others.
+%catches(std::invalid_argument, ...);
+
 %pointer_functions(unsigned, uintp);
 %pointer_functions(int, intp);
 %pointer_functions(float, floatp);
@@ -408,7 +413,6 @@ class Model {
 struct Tensor {
   Dim d;
   float* v;
-  std::vector<Tensor> bs;
 };
 
 real as_scalar(const Tensor& t);
