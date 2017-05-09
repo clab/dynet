@@ -500,6 +500,28 @@ void ParameterStorage::scale_parameters(float a) {
 #endif
 
 template <class MyDevice>
+void ParameterStorage::scale_gradient_dev(MyDevice & dev, float a) {
+  g.tvec().device(*dev.edevice) = g.tvec() * a;
+}
+#ifdef __CUDACC__
+template void ParameterStorage::scale_gradient_dev<Device_GPU>(Device_GPU & dev, float a);
+#elif defined(HAVE_CUDA)
+extern template void ParameterStorage::scale_gradient_dev<Device_GPU>(Device_GPU & dev, float a);
+template void ParameterStorage::scale_gradient_dev<Device_CPU>(Device_CPU & dev, float a);
+void ParameterStorage::scale_gradient(float a) {
+  if (g.device->type == DeviceType::CPU) { scale_gradient_dev(*(Device_CPU*)g.device, a); }
+  else if (g.device->type == DeviceType::GPU) { scale_gradient_dev(*(Device_GPU*)g.device, a); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+template void ParameterStorage::scale_gradient_dev<Device_CPU>(Device_CPU & dev, float a);
+void ParameterStorage::scale_gradient(float a) {
+  if (g.device->type == DeviceType::CPU) { scale_gradient_dev(*(Device_CPU*)g.device, a); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+
+template <class MyDevice>
 void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, const vector<float>& val) {
   DYNET_ARG_CHECK(int(val.size()) == int(dim.size()),
                           "Attempt to initialize LookupParameters with vector of wrong size "
@@ -648,6 +670,28 @@ void LookupParameterStorage::scale_parameters(float a) {
 template void LookupParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
 void LookupParameterStorage::scale_parameters(float a) {
   if (values[0].device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values[0].device, a); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+
+template <class MyDevice>
+void LookupParameterStorage::scale_gradient_dev(MyDevice & dev, float a) {
+  all_grads.tvec().device(*dev.edevice) = all_grads.tvec() * a;
+}
+#ifdef __CUDACC__
+template void LookupParameterStorage::scale_gradient_dev<Device_GPU>(Device_GPU & dev, float a);
+#elif defined(HAVE_CUDA)
+extern template void LookupParameterStorage::scale_gradient_dev<Device_GPU>(Device_GPU & dev, float a);
+template void LookupParameterStorage::scale_gradient_dev<Device_CPU>(Device_CPU & dev, float a);
+void LookupParameterStorage::scale_gradient(float a) {
+  if (grads[0].device->type == DeviceType::CPU) { scale_gradient_dev(*(Device_CPU*)grads[0].device, a); }
+  else if (grads[0].device->type == DeviceType::GPU) { scale_gradient_dev(*(Device_GPU*)grads[0].device, a); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+template void LookupParameterStorage::scale_gradient_dev<Device_CPU>(Device_CPU & dev, float a);
+void LookupParameterStorage::scale_gradient(float a) {
+  if (grads[0].device->type == DeviceType::CPU) { scale_gradient_dev(*(Device_CPU*)grads[0].device, a); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #endif

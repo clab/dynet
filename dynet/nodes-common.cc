@@ -146,9 +146,7 @@ string DotProduct::as_string(const vector<string>& arg_names) const {
 
 Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2 &&
-                          LooksLikeVector(xs[0]) &&
-                          LooksLikeVector(xs[1]) &&
-                          xs[0].rows() == xs[1].rows(),
+                          xs[0].single_batch() == xs[1].single_batch(),
                           "Bad arguments to DotProduct: " << xs);
   return Dim({1}, max(xs[0].bd, xs[1].bd));
 }
@@ -223,6 +221,30 @@ string Dropout::as_string(const vector<string>& arg_names) const {
 
 Dim Dropout::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Dropout")
+  return xs[0];
+}
+
+string DropoutBatch::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dropout_batch(" << arg_names[0] << ",p=" << p << ')';
+  return s.str();
+}
+
+Dim DropoutBatch::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in DropoutBatch")
+  return xs[0];
+}
+
+string DropoutDim::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dropout_dim(" << arg_names[0] << ",p=" << p << ')';
+  return s.str();
+}
+
+Dim DropoutDim::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in DropoutDim")
+  DYNET_ARG_CHECK(xs[0].nd < 4, "DropoutDim only supports tensor up to order 3 + batch dimension, got tensor of order"<<xs[0].nd)
+  DYNET_ARG_CHECK(xs[0].nd > dimension, "In DropoutDim : tried to drop along dimension "<<dimension<<" on tensor of order"<<xs[0].nd)
   return xs[0];
 }
 
@@ -317,6 +339,84 @@ string SumBatches::as_string(const vector<string>& arg_names) const {
 Dim SumBatches::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in SumBatches")
   return xs[0].single_batch();
+}
+
+string MomentElements::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "moment_elems( expression=" << arg_names[0] << ", order=" << order << " )";
+  return s.str();
+}
+
+Dim MomentElements::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in MomentElements")
+  DYNET_ARG_CHECK(order>= 1, "Order of moment should be >=1 in MomentElements (recieved "<<order<<")")
+  return Dim({1}, xs[0].bd);
+}
+
+string MomentBatches::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "moment_batches( expression=" << arg_names[0] << ", order=" << order << " )";
+  return s.str();
+}
+
+Dim MomentBatches::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in MomentBatches")
+  DYNET_ARG_CHECK(order>= 1, "Order of moment should be >=1 in MomentBatches (recieved "<<order<<")")
+  return xs[0].single_batch();
+}
+
+string StdElements::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "std_elems( expression=" << arg_names[0] << " )";
+  return s.str();
+}
+
+Dim StdElements::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in StdElements")
+  return Dim({1}, xs[0].bd);
+}
+
+string StdBatches::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "std_batches( expression=" << arg_names[0] << " )";
+  return s.str();
+}
+
+Dim StdBatches::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in StdBatches")
+ 
+  return xs[0].single_batch();
+}
+
+string StdDimension::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "moment_dim(expression=" << arg_names[0] << ',' << dimension <<'}';
+  return s.str();
+}
+
+Dim StdDimension::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in StdDimension");
+  DYNET_ARG_CHECK(xs[0].nd <= 3, "StdDimension implemented up to tensors of order 3 (with minibatch) for now")
+  DYNET_ARG_CHECK(dimension < xs[0].nd, "dimension " << dimension << " is out of bounds of tensor of order " << xs[0].nd << " in StdDimension" )
+  Dim ret(xs[0]);
+  ret.delete_dim(dimension);
+  return ret;
+}
+
+string MomentDimension::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "moment_dim(expression=" << arg_names[0] << ',' << dimension << ", order="<<order<<'}';
+  return s.str();
+}
+
+Dim MomentDimension::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in MomentDimension");
+  DYNET_ARG_CHECK(xs[0].nd <= 3, "MomentDimension implemented up to tensors of order 3 (with minibatch) for now")
+  DYNET_ARG_CHECK(dimension < xs[0].nd, "dimension " << dimension << " is out of bounds of tensor of order " << xs[0].nd << " in MomentDimension" )
+  DYNET_ARG_CHECK(order>= 1, "Order of moment should be >=1 in MomentDimension (recieved "<<order<<")")
+  Dim ret(xs[0]);
+  ret.delete_dim(dimension);
+  return ret;
 }
 
 string Average::as_string(const vector<string>& arg_names) const {
@@ -451,9 +551,9 @@ string Concatenate::as_string(const vector<string>& arg_names) const {
 Dim Concatenate::dim_forward(const vector<Dim>& xs) const {
   unsigned new_rows = 0;
   Dim dr = xs[0];
-  if (LooksLikeVector(dr)) dr.resize(1);
   for (auto c : xs) {
-    if (LooksLikeVector(c)) c.resize(1);
+    if(dr.nd < c.nd) dr.resize(c.nd);
+    if(c.nd < dr.nd) c.resize(dr.nd);
     new_rows += c[dimension];
     dr.set(dimension, c[dimension]);
     DYNET_ARG_CHECK(dr.single_batch() == c.single_batch(),
@@ -643,7 +743,15 @@ Dim PickElement::dim_forward(const vector<Dim>& xs) const {
                           "Tried to PickElement on dimension " << dimension << " bigger than input " << xs[0]);
   DYNET_ARG_CHECK(xs[0].nd < 4,
                           "PickElement not currently supported for tensors of 4 or more dimensions.");
+  
   Dim ret(xs[0]);
+  if (pvals){
+    DYNET_ARG_CHECK(xs[0].bd == 1 || xs[0].bd == pvals->size(),
+                          "Number of elements in the passed-in index vector (" <<  pvals->size() << ")"
+                            " did not match number of elements in mini-batch elements in expression (of dimension " << xs[0].bd << ") in PickElement");
+    ret.bd = pvals->size();
+  }
+
   ret.delete_dim(dimension);
   return ret;
 }
@@ -652,15 +760,16 @@ Dim PickElement::dim_forward(const vector<Dim>& xs) const {
 // y = (x_1)[start:end]
 string PickRange::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "slice(" << arg_names[0] << ',' << start << ':' << end << ')';
+  s << "slice(" << arg_names[0] << ',' << start << ':' << end << ", dim=" << dim << ')';
   return s.str();
 }
 
 Dim PickRange::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in PickRange");
-  DYNET_ARG_CHECK(LooksLikeVector(xs[0]) && end <= xs[0][0],
-                          "Bad input dimensions or range in PickRange: " << xs << " range(" << start << ", " << end << ")");
-  return Dim({end - start}, xs[0].bd);
+  DYNET_ARG_CHECK(dim < xs[0].nd && start < end && xs[0][dim] >= end,
+                          "Bad input dimensions or range in PickRange: " << xs << " range(" << start << ", " << end << ") with dim=" << dim);
+  Dim ret = xs[0]; ret.d[dim] = end-start;
+  return ret;
 }
 
 string PickBatchElements::as_string(const vector<string>& arg_names) const {
@@ -723,6 +832,52 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   d.bd = max(xs[1].bd, d.bd);
   return d;
 }
+
+string ScalarAdd::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " + " << arg_names[1];
+  return s.str();
+}
+
+Dim ScalarAdd::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in ScalarAdd")
+  Dim d = xs[0].truncate();
+  DYNET_ARG_CHECK(xs[1].batch_size() == 1,
+                          "Mismatched input dimensions in ScalarAdd: " << xs);
+  d.bd = max(xs[1].bd, d.bd);
+  return d;
+}
+
+string ScalarMultiply::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " \\cdot " << arg_names[1];
+  return s.str();
+}
+
+Dim ScalarMultiply::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in ScalarMultiply")
+  Dim d = xs[1];
+  DYNET_ARG_CHECK(xs[0].batch_size() == 1,
+                          "Mismatched input dimensions in ScalarMultiply: " << xs);
+  d.bd = max(xs[0].bd, d.bd);
+  return d;
+}
+
+string ScalarQuotient::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << " / " << arg_names[1];
+  return s.str();
+}
+
+Dim ScalarQuotient::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in ScalarQuotient")
+  Dim d = xs[0].truncate();
+  DYNET_ARG_CHECK(xs[1].batch_size() == 1,
+                          "Mismatched input dimensions in ScalarQuotient: " << xs);
+  d.bd = max(xs[1].bd, d.bd);
+  return d;
+}
+
 
 string Pow::as_string(const vector<string>& arg_names) const {
   ostringstream s;
@@ -846,6 +1001,18 @@ Dim SquaredNorm::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in SquaredNorm")
   return Dim({1}, xs[0].bd);
 }
+
+string L2Norm::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "|| " << arg_names[0] << " ||";
+  return s.str();
+}
+
+Dim L2Norm::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in L2Norm")
+  return Dim({1}, xs[0].bd);
+}
+
 
 string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {
   ostringstream s;
