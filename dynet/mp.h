@@ -425,6 +425,22 @@ namespace dynet {
     }
     
     template<class D, class S>
+    S run_sp_minibatch_trainer(ILearner<D, S>* learner, Trainer* inputTrainer, const std::vector<D>& data) {
+      Trainer* trainer = inputTrainer;
+      S total_loss;
+      for (unsigned i = 0; i < data.size(); ++i) {
+        const D& datum = data[i];
+        S datum_loss = learner->LearnFromDatum(datum, (trainer != nullptr));
+        total_loss += datum_loss;
+
+        if (trainer != nullptr) {
+          trainer->update();
+        }
+      }
+      return total_loss;
+    }
+
+    template<class D, class S>
     S run_mp_minibatch_trainer(unsigned num_children, ILearner<D, S>* learner, Trainer* inputTrainer, const std::vector<D>& data) {
       queue_name = generate_queue_name();
       boost::interprocess::message_queue::remove(queue_name.c_str());
@@ -445,7 +461,6 @@ namespace dynet {
         return return_value;
       }
     }
-
   }
 }
 #endif // !_WINDOWS

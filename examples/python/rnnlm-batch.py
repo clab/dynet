@@ -8,6 +8,7 @@ HIDDEN_DIM = 256 # 50  #1024
 VOCAB_SIZE = 0
 MB_SIZE = 50  # mini batch size
 
+import argparse
 from collections import defaultdict
 from itertools import count
 import sys
@@ -94,7 +95,11 @@ class RNNLanguageModel:
         return res
 
 if __name__ == '__main__':
-    train = util.CharsCorpusReader(sys.argv[1],begin="<s>")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('corpus', help='Path to the corpus file.')
+    args = parser.parse_args()
+
+    train = util.CharsCorpusReader(args.corpus, begin="<s>")
     vocab = util.Vocab.from_corpus(train)
     
     VOCAB_SIZE = vocab.size()

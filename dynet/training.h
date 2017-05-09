@@ -237,7 +237,7 @@ protected:
   void cyclic_update_eta() {
     float cycle = std::floor(1 + ((float) it)  / (2 * step_size));
     float x = std::abs( ((float) it) / step_size - 2 * cycle + 1);
-    eta = e_min + ((1 - x) > 0 ? (e_max - e_min) * (1 - x) * std::pow(gamma, it) : 0);
+    eta = e_min + ((1 - x) > 0 ? (e_max - e_min) * (1 - x) * (real)std::pow(gamma, it) : 0);
     it++;
   }
   float e_min;

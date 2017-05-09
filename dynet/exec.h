@@ -15,11 +15,13 @@ class ExecutionEngine {
   virtual const Tensor& incremental_forward() = 0;  // if you want to add nodes and evaluate just the new parts
   virtual const Tensor& incremental_forward(VariableIndex i) = 0;
   virtual const Tensor& get_value(VariableIndex i) = 0;
-  virtual void backward() = 0;
-  virtual void backward(VariableIndex i) = 0;
+  virtual const Tensor& get_gradient(VariableIndex i) = 0;
+  virtual void backward(bool full = false) = 0;
+  virtual void backward(VariableIndex i, bool full = false) = 0;
  protected:
   explicit ExecutionEngine(const ComputationGraph& cg) : cg(cg) {}
   const ComputationGraph& cg;
+  VariableIndex backward_computed;
 };
 
 class SimpleExecutionEngine : public ExecutionEngine {
@@ -32,8 +34,9 @@ class SimpleExecutionEngine : public ExecutionEngine {
   const Tensor& incremental_forward() override;  // if you want to add nodes and evaluate just the new parts
   const Tensor& incremental_forward(VariableIndex i) override;
   const Tensor& get_value(VariableIndex i) override;
-  void backward() override;
-  void backward(VariableIndex i) override;
+  const Tensor& get_gradient(VariableIndex i) override;
+  void backward(bool full = false) override;
+  void backward(VariableIndex i, bool full = false) override;
  private:
   std::vector<Tensor> nfxs;
   std::vector<Tensor> ndEdfs;

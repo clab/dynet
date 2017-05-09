@@ -80,6 +80,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void set_updated(bool b)
         bool is_updated()
         void scale(float s)
+        void scale_gradient(float s)
         void clip_inplace(float left, float right)
         unsigned index
 
@@ -92,6 +93,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void set_updated(bool b)
         bool is_updated()
         void scale(float s)
+        void scale_gradient(float s)
         unsigned index
 
     cdef cppclass CParameterInit "dynet::ParameterInit":
@@ -157,7 +159,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         const CTensor& incremental_forward(VariableIndex index) except +
         const CTensor& get_value(VariableIndex i) except +
         void invalidate()
-        void backward(VariableIndex i)
+        void backward(VariableIndex i, bool full)
 
         # checkpointing
         void checkpoint()
@@ -176,8 +178,8 @@ cdef extern from "dynet/training.h" namespace "dynet":
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
-        void update(float s)
-        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        void update(float s) except +
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s) except +
         void update_epoch(float r)
         void status()
 
@@ -199,7 +201,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         # float clip_threshold
         # bool clipping_enabled
         # bool sparse_updates_enabled
-        void update(float s)
+        void update(float s) except +
         # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         # void update_epoch(float r)
         # void status()
@@ -262,6 +264,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         CComputationGraph *pg
         long i
         CDim dim() except +
+        bool is_stale()
+        const CTensor& gradient() except +
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) except + #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
@@ -324,6 +328,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) except + #
     CExpression c_noise "dynet::expr::noise" (CExpression& x, float stddev) except + #
     CExpression c_dropout "dynet::expr::dropout" (CExpression& x, float p) except + #
+    CExpression c_dropout_batch "dynet::expr::dropout_batch" (CExpression& x, float p) except + #
+    CExpression c_dropout_dim "dynet::expr::dropout_dim" (CExpression& x, unsigned d, float p) except + #
     CExpression c_block_dropout "dynet::expr::block_dropout" (CExpression& x, float p) except + #
 
     CExpression c_reshape "dynet::expr::reshape" (CExpression& x, CDim& d) except + #?
@@ -356,13 +362,22 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
 
     CExpression c_sum_batches "dynet::expr::sum_batches" (CExpression& x) except +
     CExpression c_sum_elems "dynet::expr::sum_elems" (CExpression& x) except +
+    CExpression c_moment_batches "dynet::expr::moment_batches" (CExpression& x, unsigned r) except +
+    CExpression c_moment_elems "dynet::expr::moment_elems" (CExpression& x, unsigned r) except +
+    CExpression c_moment_dim "dynet::expr::moment_dim" (CExpression& x, unsigned d, unsigned r) except +
+    CExpression c_mean_elems "dynet::expr::mean_elems" (CExpression& x) except +
+    CExpression c_mean_batches "dynet::expr::mean_batches" (CExpression& x) except +
+    CExpression c_mean_dim "dynet::expr::mean_dim" (CExpression& x, unsigned d) except +
+    CExpression c_std_dim "dynet::expr::std_dim" (CExpression& x, unsigned d) except +
+    CExpression c_std_elems "dynet::expr::std_elems" (CExpression& x) except +
+    CExpression c_std_batches "dynet::expr::std_batches" (CExpression& x) except +
 
     #CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned v) except +   #
     CExpression c_select_rows "dynet::expr::select_rows" (CExpression& x, vector[unsigned] rs) except +
     CExpression c_select_cols "dynet::expr::select_cols" (CExpression& x, vector[unsigned] cs) except +
     CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv, unsigned d) except + #
     CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv, unsigned d) except + #
-    CExpression c_pickrange "dynet::expr::pickrange" (CExpression& x, unsigned v, unsigned u) except + #
+    CExpression c_pick_range "dynet::expr::pick_range" (CExpression& x, unsigned v, unsigned u, unsigned d) except + #
 
     CExpression c_pick_batch_elems "dynet::expr::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
     CExpression c_pick_batch_elem "dynet::expr::pick_batch_elem" (CExpression& x, unsigned v) except + #
@@ -387,6 +402,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_max_dim "dynet::expr::max_dim" (CExpression& x, unsigned d) except + #
     CExpression c_min_dim "dynet::expr::min_dim" (CExpression& x, unsigned d) except + #
 
+    CExpression c_layer_norm "dynet::expr::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
+
 
 #cdef extern from "dynet/model.h" namespace "dynet":
 #    cdef cppclass Model:
@@ -399,8 +416,8 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNBuilder "dynet::RNNBuilder":
         void new_graph(CComputationGraph &cg)
         void start_new_sequence(vector[CExpression] ces)
-        CExpression add_input(CExpression &x)
-        CExpression add_input(CRNNPointer prev, CExpression &x)
+        CExpression add_input(CExpression &x) except +
+        CExpression add_input(CRNNPointer prev, CExpression &x) except +
         CExpression set_h(CRNNPointer prev, vector[CExpression] ces)
         CExpression set_s(CRNNPointer prev, vector[CExpression] ces)
         void rewind_one_step()
@@ -419,6 +436,8 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):
         CSimpleRNNBuilder()
         CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -435,6 +454,8 @@ cdef extern from "dynet/gru.h" namespace "dynet":
     cdef cppclass CGRUBuilder "dynet::GRUBuilder" (CRNNBuilder):
         CGRUBuilder()
         CGRUBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -451,6 +472,8 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
     cdef cppclass CLSTMBuilder "dynet::LSTMBuilder" (CRNNBuilder):
         CLSTMBuilder()
         CLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)
@@ -465,13 +488,17 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
     cdef cppclass CVanillaLSTMBuilder "dynet::VanillaLSTMBuilder" (CRNNBuilder):
         CVanillaLSTMBuilder()
-        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
 
 cdef extern from "dynet/fast-lstm.h" namespace "dynet":
     cdef cppclass CFastLSTMBuilder "dynet::FastLSTMBuilder" (CRNNBuilder):
         CFastLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
         #void new_graph(CComputationGraph &cg)
         #void start_new_sequence(vector[CExpression] ces)
         #CExpression add_input(CExpression &x)

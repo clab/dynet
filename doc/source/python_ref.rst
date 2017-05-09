@@ -194,7 +194,17 @@ Arithmetic operations
 
 .. autofunction:: dynet.sum_elems
 
-.. autofunction:: dynet.sum_batches
+.. autofunction:: dynet.mean_elems
+
+.. autofunction:: dynet.moment_elems
+
+.. autofunction:: dynet.std_elems
+
+.. autofunction:: dynet.mean_dim
+
+.. autofunction:: dynet.moment_dim
+
+.. autofunction:: dynet.std_dim
 
 .. autofunction:: dynet.fold_rows
 
@@ -244,6 +254,14 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.pick_batch_elems
 
+.. autofunction:: dynet.sum_batches
+
+.. autofunction:: dynet.mean_batches
+
+.. autofunction:: dynet.moment_batches
+
+.. autofunction:: dynet.std_batches
+
 .. autofunction:: dynet.reshape
 
 .. autofunction:: dynet.select_rows
@@ -254,7 +272,7 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.concatenate
 
-.. autofunction:: dynet.concat_to_batch
+.. autofunction:: dynet.concatenate_to_batch
 
 .. autofunction:: dynet.max_dim
 
@@ -270,6 +288,10 @@ Noise operations
 .. autofunction:: dynet.noise
 
 .. autofunction:: dynet.dropout
+
+.. autofunction:: dynet.dropout_dim
+
+.. autofunction:: dynet.dropout_batch
 
 .. autofunction:: dynet.block_dropout
 
@@ -307,6 +329,11 @@ Tensor operations
 .. autofunction:: dynet.contract3d_1d_1d
 
 .. autofunction:: dynet.contract3d_1d_1d_bias
+
+Normalization operations
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: dynet.layer_norm
 
 Recurrent Neural Networks
 -------------------------

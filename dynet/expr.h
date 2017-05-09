@@ -9,6 +9,7 @@
  * \defgroup convolutionoperations convolutionoperations
  * \defgroup tensoroperations tensoroperations
  * \defgroup linalgoperations linalgoperations
+ * \defgroup normoperations normoperations
  * \brief The various operations that you can use in building a DyNet graph
  *
  * \details TODO: **This documentation is incomplete. See expr.h for a full list of expressions.**
@@ -56,6 +57,22 @@ struct Expression {
       throw std::runtime_error("Attempt to use a stale expression.");
     }
     return pg->get_value(i);
+  }
+  /**
+   * \brief Get gradient of the expression
+   * \details Throws a tuntime_error exception if no computation graph is available
+   * 
+   * Make sure to call `backward` on a downstream expression before calling this.
+   * 
+   * If the expression is a constant expression (meaning it's not a function of a parameter), dynet won't compute it's gradient for the sake of efficiency. You need to manually force the gradient computation by adding the agument `full=true` to `backward`
+        
+   * \return Value of the expression as a tensor
+   */
+  const Tensor& gradient() const {
+    if (this->is_stale()) {
+      throw std::runtime_error("Attempt to use a stale expression.");
+    }
+    return pg->get_gradient(i);
   }
   /**
    * \brief Get dimension of the expression
@@ -596,6 +613,40 @@ inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
  * \return The sum of all of its elements
  */
 Expression sum_elems(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Compute moment over all elements
+ * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ over all the elements in each batch of the expression
+ *
+ * \param x The input mini-batched expression
+ * \param r Order of the moment
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression moment_elems(const Expression& x, unsigned r);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Compute mean over all elements
+ * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ over all the elements in each batch of the expression
+ *
+ * \param x The input mini-batched expression
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression mean_elems(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Compute Standard deviation over all elements
+ * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ over all the elements in each batch of the expression
+ *
+ * \param x The input mini-batched expression
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression std_elems(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
@@ -1320,6 +1371,78 @@ Expression sum_batches(const Expression& x);
 
 /**
  * \ingroup flowoperations
+ * \brief Compute moment over minibatches
+ * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along the batch dimension 
+ *
+ * \param x The input mini-batched expression
+ * \param r Order of the moment
+ *
+ * \return An expression with a single batch
+ */
+Expression moment_batches(const Expression& x, unsigned r);
+
+
+/**
+ * \ingroup flowoperations
+ * \brief Compute mean over minibatches
+ * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension 
+ *
+ * \param x The input mini-batched expression
+ *
+ * \return An expression with a single batch
+ */
+Expression mean_batches(const Expression& x);
+
+/**
+ * \ingroup flowoperations
+ * \brief Compute standard deviation over minibatches
+ * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension 
+ *
+ * \param x The input mini-batched expression
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression std_batches(const Expression& x);
+
+/**
+ * \ingroup flowoperations
+ * \brief Compute standard deviation along an arbitrary dimension
+ * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along an arbitrary dimension
+ *
+ * \param x The input mini-batched expression
+ * \param d Dimension along which to reduce
+ *
+ * \return A scalar expression (with a potential batch dimension)
+ */
+Expression std_dim(const Expression& x, unsigned d);
+
+/**
+ * \ingroup flowoperations
+ * \brief Compute moment along a specific dimension
+ * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along a specific dimension
+ *
+ * \param x The input mini-batched expression
+ * \param d Dimension along which to reduce
+ * \param r Order of the moment
+ *
+ * \return An expression with one less dimension
+ */
+Expression moment_dim(const Expression& x, unsigned d, unsigned r);
+/**
+ * \ingroup flowoperations
+ * \brief Compute mean along  a specific dimension
+ * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along a specific dimension
+ *
+ * \param x The input mini-batched expression
+ * \param d Dimension along which to reduce
+ *
+ * \return An expression with one less dimension
+ */
+Expression mean_dim(const Expression& x, unsigned d);
+
+
+/**
+ * \ingroup flowoperations
  * \brief Pick element
  * \details Pick a single element/row/column/sub-tensor from an expression.
  *          This will result in the dimension of the tensor being reduced
@@ -1383,12 +1506,15 @@ Expression pick(const Expression& x, const std::vector<unsigned> * pv, unsigned 
  * \details Pick a range of elements from an expression.
  *
  * \param x The input expression
- * \param v The beginning index
- * \param u The end index
+ * \param s The start index
+ * \param e The end index
+ * \param d The dimension along which to pick
  *
  * \return The value of {x[v],...,x[u]}
  */
-Expression pickrange(const Expression& x, unsigned v, unsigned u);
+Expression pick_range(const Expression& x, unsigned s, unsigned e, unsigned d = 0);
+// DEPRECATED
+Expression pickrange(const Expression& x, unsigned s, unsigned e);
 
 /**
  * \ingroup flowoperations
@@ -1567,6 +1693,7 @@ Expression max_dim(const Expression& x, unsigned d = 0);
  */
 Expression min_dim(const Expression& x, unsigned d = 0);
 
+
 ////////////////////////////////////////////////
 // Noise operations                           //
 ////////////////////////////////////////////////
@@ -1603,6 +1730,33 @@ Expression noise(const Expression& x, real stddev);
  * \return The dropped out expression
  */
 Expression dropout(const Expression& x, real p);
+
+/**
+ * \ingroup noiseoperations
+ * \brief Dropout along a specific dimension
+ * \details Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example 
+ * 
+ * For now this only supports tensors of order <= 3 (with or without batch dimension)
+ *
+ * \param x The input expression
+ * \param d The dimension along which to drop
+ * \param p The dropout probability
+ *
+ * \return The dropped out expression
+ */
+Expression dropout_dim(const Expression& x, unsigned d, real p);
+
+/**
+ * \ingroup noiseoperations
+ * \brief Dropout entire elements of a minibatch
+ * \details Identical to the dropout operation except entire batch elements are dropped
+ * 
+ * \param x The input expression
+ * \param p The dropout probability
+ *
+ * \return The dropped out expression
+ */
+Expression dropout_batch(const Expression& x, real p);
 
 /**
  * \ingroup noiseoperations
@@ -1817,7 +1971,31 @@ Expression logdet(const Expression& x);
  */
 Expression trace_of_product(const Expression& x, const Expression& y);
 
+////////////////////////////////////////////////
+// Normalization operations                   //
+////////////////////////////////////////////////
 
+/**
+ * \ingroup normoperations
+ * \brief Layer normalization
+ * \details Performs layer normalization : 
+ * 
+ * \f$
+ * \begin{split}
+ *    \mu &= \frac 1 n \sum_{i=1}^n x_i\\
+ *    \sigma &= \sqrt{\frac 1 n \sum_{i=1}^n (x_i-\mu)^2}\\
+ *    y&=\frac {\boldsymbol{g}} \sigma \circ (\boldsymbol{x}-\mu) + \boldsymbol{b}\\
+ * \end{split}
+ * \f$
+ * 
+ * Reference : [Ba et al., 2016](http://arxiv.org/abs/1607.06450)
+ * 
+ * \param x Input expression (possibly batched)
+ * \param g Gain (same dimension as x, no batch dimension)
+ * \param b Bias (same dimension as x, no batch dimension)
+ * \return An expression of the same dimension as `x`
+ */
+Expression layer_norm(const Expression& x, const Expression& g, const Expression& b);
 }
 // Because expressions are now such a fundamental part of DyNet it doesn't
 // make much sense to keep them in separate namespaces, so we import expr
