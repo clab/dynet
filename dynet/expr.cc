@@ -101,6 +101,7 @@ Expression min(const Expression& x, const Expression& y) { return Expression(x.p
 Expression max(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Max>({x.i, y.i})); }
 Expression noise(const Expression& x, real stddev) { return Expression(x.pg, x.pg->add_function<GaussianNoise>({x.i}, stddev)); }
 Expression dropout(const Expression& x, real p) { return Expression(x.pg, x.pg->add_function<Dropout>({x.i}, p)); }
+Expression dropout_batch(const Expression& x, real p) { return Expression(x.pg, x.pg->add_function<DropoutBatch>({x.i}, p)); }
 Expression dropout_dim(const Expression& x, unsigned d, real p) { return Expression(x.pg, x.pg->add_function<DropoutDim>({x.i}, d, p)); }
 Expression block_dropout(const Expression& x, real p) { return Expression(x.pg, x.pg->add_function<BlockDropout>({x.i}, p)); }
 

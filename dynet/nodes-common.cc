@@ -224,6 +224,17 @@ Dim Dropout::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string DropoutBatch::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dropout_batch(" << arg_names[0] << ",p=" << p << ')';
+  return s.str();
+}
+
+Dim DropoutBatch::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in DropoutBatch")
+  return xs[0];
+}
+
 string DropoutDim::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "dropout_dim(" << arg_names[0] << ",p=" << p << ')';
