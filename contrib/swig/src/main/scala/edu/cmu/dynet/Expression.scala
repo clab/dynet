@@ -121,6 +121,9 @@ object Expression {
 
   private type VectorTransform = internal.ExpressionVector => internal.Expression
   private def vectory(v: ExpressionVector, transformer: VectorTransform) = {
+    // DyNet segfaults if we pass a zero-length vector.
+    // This check results in a nicer error message.
+    assert(v.nonEmpty, "Operation requires > 0 expression arguments")
     v.ensureFresh()
     // Specify v as reference so it can't get prematurely garbage collected.
     new Expression(transformer(v.vector), Seq(v))

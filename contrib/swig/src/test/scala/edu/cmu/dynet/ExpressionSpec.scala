@@ -29,7 +29,7 @@ class ExpressionSpec extends FlatSpec with Matchers {
     }
   }
 
-  "simple expression functions" should "do the right things" in {
+  "expression functions" should "do the right things" in {
     ComputationGraph.renew()
 
     val e1 = Expression.input(1)
@@ -71,6 +71,13 @@ class ExpressionSpec extends FlatSpec with Matchers {
     // TODO(joelgrus): write more tests
   }
 
+  it should "fail gracefully" in {
+    ComputationGraph.renew()
+    assertThrows[AssertionError] {
+      val foo = Expression.concatenate()
+    }
+  }
+
   "lists of expressions" should "get converted to vectors" in {
     ComputationGraph.renew()
 
@@ -93,6 +100,5 @@ class ExpressionSpec extends FlatSpec with Matchers {
     val value = uberSum.value.toFloat
     value should be > 30f * 1000 * 3
     value should be < 70f * 1000 * 3
-
   }
 }
