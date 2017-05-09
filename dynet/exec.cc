@@ -603,6 +603,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
               //xs[i] = &batched_nfxs[...];
               my_xsi->v = min_node;
               my_xsi->d = Dim({tot_arg});
+              my_batch.concat[i] = 2;
             //   autobatch_garbage[i] = false;
             } else { // if non-contig, copy xs_i into new mem.
               // cerr << "non contiguous " << my_batch.ids.size() << node->as_string() << endl;
@@ -776,33 +777,52 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       }
       ai = 0;
       for (VariableIndex arg : node->args) {
-        if (!my_batch.concat[ai]) {
+        // No concatenation whatsoever
+        if (my_batch.concat[ai] == 0) {
           if (needs_derivative[node2batch[arg]]) {
             node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, batched_ndEdfs[node2batch[arg]]);
             // cerr << "Batched evaluation for batched_ndEdfs["<<i<<"]("<<ai<<") -> batched_ndEdfs[" << arg << "] = " << print_vec(as_vector(batched_ndEdfs[node2batch[arg]])) << endl;
           }
+        // Needs concatenation
         } else {
           bool nd = false;
           for(auto nid : my_batch.ids)
             if((bool)(nd = needs_derivative[node2batch[cg.nodes[nid]->args[ai]]]))
               break;
           if (nd) {
-            size_t used = node->device->pools[(int)DeviceMempool::DEDFS]->used();
-            Tensor my_ndEdf = *xs[ai], temp_ndEdf;
-            my_ndEdf.v = static_cast<float*>(batched_ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(my_ndEdf.d.size() * sizeof(float)));
-            my_ndEdf.mem_pool = DeviceMempool::DEDFS;
-            TensorTools::zero(my_ndEdf);
-            node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
-            // cerr << "Batched evaluation for batched_ndEdfs["<<i<<"]("<<ai<<") -> ndEdfs["; for(auto id : my_batch.ids) cerr << ' ' << id; cerr << "] = " << print_vec(as_vector(my_ndEdf)) << endl;
-            size_t tot_arg = 0;
-            for(auto curr_node : my_batch.ids) {
-              VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
-              temp_ndEdf = ndEdfs[my_aid];
-              temp_ndEdf.v = my_ndEdf.v + tot_arg;
-              TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
-              tot_arg += node2size[my_aid];
+            // Non-contiguous
+            Tensor my_ndEdf = *xs[ai];
+            if (my_batch.concat[ai] == 1) {
+              size_t used = node->device->pools[(int)DeviceMempool::DEDFS]->used();
+              my_ndEdf.v = static_cast<float*>(batched_ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(my_ndEdf.d.size() * sizeof(float)));
+              my_ndEdf.mem_pool = DeviceMempool::DEDFS;
+              TensorTools::zero(my_ndEdf);
+              node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
+              // cerr << "Batched evaluation for batched_ndEdfs["<<i<<"]("<<ai<<") -> ndEdfs["; for(auto id : my_batch.ids) cerr << ' ' << id; cerr << "] = " << print_vec(as_vector(my_ndEdf)) << endl;
+              size_t tot_arg = 0;
+              Tensor temp_ndEdf;
+              for(auto curr_node : my_batch.ids) {
+                VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
+                temp_ndEdf = ndEdfs[my_aid];
+                temp_ndEdf.v = my_ndEdf.v + tot_arg;
+                TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
+                tot_arg += node2size[my_aid];
+              }
+              node->device->pools[(int)DeviceMempool::DEDFS]->set_used(used);
+            // Contiguous
+            } else {
+              float *min_node = (float*)std::numeric_limits<size_t>::max(), *max_node = 0;
+              for(auto curr_node : my_batch.ids) {
+                VariableIndex aid = cg.nodes[curr_node]->args[ai];
+                size_t my_arg = node2size[aid];
+                float* v = batched_ndEdfs[node2batch[aid]].v + node2offset[aid];
+                min_node = min(min_node, v);
+                max_node = max(max_node, v + my_arg);
+              }
+              DYNET_ASSERT((size_t)(max_node-min_node) == my_ndEdf.d.size(), "Nodes don't match");
+              my_ndEdf.v = min_node;
+              node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
             }
-            node->device->pools[(int)DeviceMempool::DEDFS]->set_used(used);
           }
         }
         // cerr << "Resulting gradients from argument " << ai << endl;

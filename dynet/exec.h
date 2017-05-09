@@ -50,7 +50,7 @@ public:
   Tensor nfx;             // The forward tensor, may be null if singleton batch
   Node* pseudo_node;      // The pseudo node used for calculation, also may be null if not needed
   std::vector<VariableIndex> ids; // IDs of the batch components
-  std::vector<bool> concat;       // Whether or not 
+  std::vector<int> concat;       // 0=no need to concat, 1=need to concat, 2=need to concat + already contiguous in space 
   std::vector<const Tensor*> arg_nfxs; // Concatenated arguments
 };
 

@@ -91,7 +91,7 @@ void Node::backward(const std::vector<const Tensor*>& xs,
 
 void Node::autobatch_reshape_concatonly(const ComputationGraph & cg,
                                         const std::vector<VariableIndex> & batch_ids,
-                                        const std::vector<bool> & concat,
+                                        const std::vector<int> & concat,
                                         std::vector<const Tensor*>& xs,
                                         Tensor& fx) const {
   size_t bid = 0;
