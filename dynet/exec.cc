@@ -192,7 +192,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     ai = 0;
     for (VariableIndex arg : node->args) {
       if (needs_derivative[arg]) {
-        // node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
+        node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
       }
       ++ai;
     }
@@ -470,7 +470,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         auto & batch_ids = active_batched[curr_prof];
         my_batch.ids = active_batched[curr_prof];
         DYNET_ASSERT(batch_ids.size() > 0, "Attempting to process empty batch at " << curr_prof);
-        // cerr << "Processing batched: " << cg.nodes[batch_ids[0]]->as_string() << ' ' ; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
+        // cerr << "Processing batched: " << cg.nodes[batch_ids[0]]->as_dummy_string() << ' ' ; for(auto bid : batch_ids) cerr << ' ' << bid; cerr << endl;
         // Set up the configuration of each component node, including pointer differential from the start of the batch
         size_t tot_main = 0, tot_aux = 0, my_main, my_aux;
         for(auto curr_node : batch_ids) {
@@ -731,7 +731,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       ai = 0;
       for (VariableIndex arg : node->args) {
         if (needs_derivative[node2batch[arg]]) {
-          // node->backward(xs, get_nfx(nid), ndEdfs[nid], ai, ndEdfs[arg]);
+          node->backward(xs, get_nfx(nid), ndEdfs[nid], ai, ndEdfs[arg]);
           // cerr << "Single evaluation for ndEdfs["<<nid<<"]("<<ai<<") -> ndEdfs[" << arg << "] = " << print_vec(as_vector(ndEdfs[arg])) << endl;
         }
         // cerr << "node_>backward(xs, nfxs[" << nid << "], ndEdfs[" << nid << "], " << ai << ", ndEdfs[" << arg << "])" << endl;
@@ -761,7 +761,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       for (VariableIndex arg : node->args) {
         if (!my_batch.concat[ai]) {
           if (needs_derivative[node2batch[arg]]) {
-            // node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, batched_ndEdfs[node2batch[arg]]);
+            node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, batched_ndEdfs[node2batch[arg]]);
             // cerr << "Batched evaluation for batched_ndEdfs["<<i<<"]("<<ai<<") -> batched_ndEdfs[" << arg << "] = " << print_vec(as_vector(batched_ndEdfs[node2batch[arg]])) << endl;
           }
         } else {
@@ -773,24 +773,24 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
             size_t used = node->device->pools[(int)DeviceMempool::DEDFS]->used();
             Tensor my_ndEdf = *xs[ai], temp_ndEdf;
             my_ndEdf.v = static_cast<float*>(batched_ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(my_ndEdf.d.size() * sizeof(float)));
-            // cerr << "my_ndEdf.v == " << (size_t)my_ndEdf.v << endl;
             my_ndEdf.mem_pool = DeviceMempool::DEDFS;
             TensorTools::zero(my_ndEdf);
-            // node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
+            node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
+            // cerr << "Batched evaluation for batched_ndEdfs["<<i<<"]("<<ai<<") -> ndEdfs["; for(auto id : my_batch.ids) cerr << ' ' << id; cerr << "] = " << print_vec(as_vector(my_ndEdf)) << endl;
             size_t tot_arg = 0;
             for(auto curr_node : my_batch.ids) {
-              temp_ndEdf = ndEdfs[cg.nodes[curr_node]->args[ai]];
+              VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
+              temp_ndEdf = ndEdfs[my_aid];
               temp_ndEdf.v = my_ndEdf.v + tot_arg;
-              // cerr << "copying into ndEdfs["<<cg.nodes[curr_node]->args[ai]<<"].v == " << (size_t)ndEdfs[cg.nodes[curr_node]->args[ai]].v << " from " << (size_t)temp_ndEdf.v << endl;
               TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
-              tot_arg += node2size[curr_node];
+              tot_arg += node2size[my_aid];
             }
             node->device->pools[(int)DeviceMempool::DEDFS]->set_used(used);
           }
         }
         // cerr << "Resulting gradients from argument " << ai << endl;
-        // for(size_t i = 0; i < ndEdfs.size(); ++i) { cerr << "ndEdfs[" << i << "]: " << print_vec(as_vector(ndEdfs[i])) << ", v=" << (ptrdiff_t)ndEdfs[i].v << endl; }
-        // for(size_t i = 0; i < batched_ndEdfs.size(); ++i) { cerr << "batched_ndEdfs[" << i << "]: " << print_vec(as_vector(batched_ndEdfs[i])) << ", v=" << (ptrdiff_t)batched_ndEdfs[i].v << endl; }
+        // for(size_t i = 0; i < ndEdfs.size(); ++i) { cerr << "ndEdfs[" << i << "]: " << print_vec(as_vector(ndEdfs[i])) << endl; }
+        // for(size_t i = 0; i < batched_ndEdfs.size(); ++i) { cerr << "batched_ndEdfs[" << i << "]: " << print_vec(as_vector(batched_ndEdfs[i])) << endl; }
         ++ai;
       }
     }
