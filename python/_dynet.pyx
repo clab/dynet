@@ -315,6 +315,16 @@ cdef class Parameters:
         """
         self.thisptr.scale(s)
 
+    cpdef scale_gradient(self,float s):
+        """Scales the gradient
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale_gradient(s)
+
+
     cpdef bool is_updated(self):
         """check whether the parameter is updated or not
         
@@ -421,6 +431,15 @@ cdef class LookupParameters:
 
         """
         self.thisptr.scale(s)
+
+    cpdef scale_gradient(self,float s):
+        """Scales the gradient
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale_gradient(s)
         
     cpdef Expression expr(self,bool update=True):
         if cg_version() != self._version:
@@ -957,8 +976,8 @@ cdef class ComputationGraph:
     cpdef forward(self, VariableIndex index): self.thisptr.forward(index)
     cpdef inc_forward(self, VariableIndex index): self.thisptr.incremental_forward(index)
 
-    cpdef backward(self, VariableIndex index):
-        self.thisptr.backward(index)
+    cpdef backward(self, VariableIndex index, bool full=False):
+        self.thisptr.backward(index, full)
 
     cpdef print_graphviz(self):
         self.thisptr.print_graphviz()
@@ -1208,7 +1227,7 @@ cdef class Expression: #(((
                 raise ValueError("Improper slice: start index must come strictly before stop index")
             if index.step is not None:
                 raise ValueError("Step sizes not yet supported.")
-            return pickrange(self, i, j)
+            return pick_range(self, i, j)
 
     cpdef scalar_value(self, recalculate=False):
         """Returns value of an expression as a scalar
@@ -1300,6 +1319,25 @@ cdef class Expression: #(((
         if len(vec) == 1: return vec[0]
         return vec
 
+    cpdef gradient(self):
+        """Returns the value of the expression as a numpy array
+        
+        The last dimension is the batch size (if it's > 1).
+
+        Make sure to call :code:`backward` on a downstream expression before calling this.
+
+        If the Expression is a constant expression (meaning it's not a function of a parameter), dynet won't compute it's gradient for the sake of efficiency. You need to manually force the gradient computation by adding the agument :code:`full=True` to :code:`backward`
+        
+        Returns:
+            np.ndarray: numpy array of values
+        """
+        cdef CTensor t
+        cdef CDim dim
+        t = self.c().gradient()
+        dim = t.d
+        arr = c_tensor_as_np(t)
+        return arr
+
     # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
     cpdef forward(self, recalculate=False):
         """This runs incremental forward on the entire graph
@@ -1314,13 +1352,26 @@ cdef class Expression: #(((
         if recalculate: self.cg().forward(self.vindex)
         else: self.cg().inc_forward(self.vindex)
 
-    cpdef backward(self):
+    cpdef backward(self, bool full=False):
         """Run the backward pass based on this expression
         
-        The expression should be a scalar (objective)
+        The parameter :code:`full` specifies whether the gradients should be computed for all nodes (:code:`True`) or only non-constant nodes (:code:`False`).
+        
+        By default, a node is constant unless
+        
+        1. it is a parameter node
+        2. it depends on a non-constant node
+        
+        Thus, functions of constants and inputs are considered as constants.
+        
+        Turn :code:`full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
+
+        Args:
+            full (bool): Whether to compute all gradients (including with respect to constant nodes).
+
         """
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        self.cgp().backward(self.vindex)
+        self.cgp().backward(self.vindex, full)
 
     def __add__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
@@ -2434,6 +2485,136 @@ cpdef Expression sum_batches(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
 
+cpdef Expression mean_elems(Expression x):
+    """Mean of elements of the tensor
+    
+    Computes the mean :math:`\\frac 1 n \sum_ix_i` of all the elements of each minibatch.
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: A scalar expression (minibatched)
+    """
+    return Expression.from_cexpr(x.cg_version, c_mean_elems(x.c()))
+
+cpdef Expression mean_batches(Expression x):
+    """Mean along the batch dimension
+    
+    Computes the mean :math:`\\frac 1 n \sum_ix_i`  along the batch dimension.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: An expression with a single batch
+    """
+    return Expression.from_cexpr(x.cg_version, c_mean_batches(x.c()))
+
+cpdef Expression std_elems(Expression x):
+    """Standard deviation of elements of the tensor
+    
+    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}`of all the elements of each minibatch.
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: A scalar expression (minibatched)
+    """
+    return Expression.from_cexpr(x.cg_version, c_std_elems(x.c()))
+
+cpdef Expression std_batches(Expression x):
+    """Standard deviation along the batch dimension
+    
+    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}`  along the batch dimension.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: An expression with a single batch
+    """
+    return Expression.from_cexpr(x.cg_version, c_std_batches(x.c()))
+
+cpdef Expression std_dim(Expression x, unsigned d):
+    """Standard deviation along an arbitrary dimension
+    
+    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` along an arbitrary dimension.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimension along which to reduce
+    
+    Returns:
+        dynet.Expression: An expression with one less dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_std_dim(x.c(), d))
+
+
+cpdef Expression mean_dim(Expression x, unsigned d):
+    """Mean along an arbitrary dimension
+    
+    Computes the mean :math:`\\frac 1 n \sum_ix_i`  along an arbitrary dimension.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimension along which to reduce
+    
+    Returns:
+        dynet.Expression: An expression with one less dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_mean_dim(x.c(), d))
+
+cpdef Expression moment_elems(Expression x, unsigned r):
+    """Statistical moment of elements of the tensor
+    
+    Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r` of all the elements of each minibatch.
+
+    Args:
+        x (dynet.Expression): Input expression
+        r (int): Moment order
+    
+    Returns:
+        dynet.Expression: A scalar expression (minibatched)
+    """
+    return Expression.from_cexpr(x.cg_version, c_moment_elems(x.c(), r))
+
+cpdef Expression moment_batches(Expression x, unsigned r):
+    """Statistical moment along the batch dimension
+    
+    Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along the batch dimension.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+        r (int): Moment order
+    
+    Returns:
+        dynet.Expression: An expression with a single batch
+    """
+    return Expression.from_cexpr(x.cg_version, c_moment_batches(x.c(), r))
+
+cpdef Expression moment_dim(Expression x, unsigned d, unsigned r):
+    """Statistical moment along an arbitrary dimension
+    
+    Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along an arbitrary dimension.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimension along which to reduce
+        r (int): Moment order
+    
+    Returns:
+        dynet.Expression: An expression with one less dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_moment_dim(x.c(), d, r))
+
 #expr-opt
 cpdef Expression fold_rows(Expression x, unsigned nrows=2):
     """[summary]
@@ -2565,20 +2746,24 @@ cpdef Expression kmh_ngram(Expression x, unsigned v):
         dynet.Expression: 
     """
     return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
-cpdef Expression pickrange(Expression x, unsigned v, unsigned u):
+cpdef Expression pick_range(Expression x, unsigned s, unsigned e, unsigned d = 0):
     """Pick range of elements
     
     Pick a range of elements from an expression.
     
     Args:
         x (dynet.Expression): input expression
-        v (int): Beginning index
-        u (int): End index
+        s (int): Start index
+        e (int): End index
+        d (int): Dimension along which to pick
     
     Returns:
-        dynet.Expression: The value of {x[v],...,x[u]}
+        dynet.Expression: The value of {x[v],...,x[u]} along the dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
+    return Expression.from_cexpr(x.cg_version, c_pick_range(x.c(), s, e, d))
+# This is deprecated
+cpdef Expression pickrange(Expression x, unsigned s, unsigned e):
+    return Expression.from_cexpr(x.cg_version, c_pick_range(x.c(), s, e, 0))
 cpdef Expression pick_batch_elem(Expression x, unsigned v):
     """Pick batch element.
 
@@ -2672,6 +2857,7 @@ cpdef Expression noise(Expression x, float stddev):
         dynet.Expression: :math:`y\sim\mathcal N(x,\\texttt{stddev})`
     """
     return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
+
 cpdef Expression dropout(Expression x, float p):
     """Dropout
     
@@ -2684,12 +2870,45 @@ cpdef Expression dropout(Expression x, float p):
     
     Args:
         x (dynet.Expression): Input expression
-        p (dynet.Expression): The dropout probability
+        p (number): The dropout probability
     
     Returns:
         dynet.Expression: The dropped out expression :math:`y=\\frac{1}{1-\\texttt{p}}x\circ z, z\sim\\text{Bernoulli}(1-\\texttt{p})`
     """
     return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
+
+    
+cpdef Expression dropout_batch(Expression x, float p):
+    """Dropout entire elements of a minibatch
+    
+    Identical to the dropout operation except entire batch elements are dropped
+
+    Args:
+        x (dynet.Expression): Input expression
+        p (number): The dropout probability
+    
+    Returns:
+        dynet.Expression: The dropped expression
+    """
+    return Expression.from_cexpr(x.cg_version, c_dropout_batch(x.c(), p))
+
+cpdef Expression dropout_dim(Expression x, unsigned d, float p):
+    """Dropout along one dimension
+    
+    Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example 
+
+    For now this only supports tensors of order <= 3 (with or without batch dimension)
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimension along which to drop
+        p (number): The dropout probability
+    
+    Returns:
+        dynet.Expression: The dropped expression
+    """
+    return Expression.from_cexpr(x.cg_version, c_dropout_dim(x.c(), d, p))
+
 cpdef Expression block_dropout(Expression x, float p):
     """Block dropout
     
@@ -2697,7 +2916,7 @@ cpdef Expression block_dropout(Expression x, float p):
     
     Args:
         x (dynet.Expression): Input expression
-        p (dynet.Expression): The dropout probability
+        p (number): The dropout probability
     
     Returns:
         dynet.Expression: The block dropout expression
@@ -2771,7 +2990,7 @@ cpdef Expression min_dim(Expression x, unsigned d=0):
     """
     return Expression.from_cexpr(x.cg_version, c_min_dim(x.c(), d))
 
-def contract3d_1d(Expression x, Expression y):
+cpdef Expression contract3d_1d(Expression x, Expression y):
     """Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor
     
     The resulting tensor :math:`z` has coordinates :math:`z_ij = \sum_k x_{ijk} y_k`
@@ -2787,7 +3006,7 @@ def contract3d_1d(Expression x, Expression y):
     ensure_freshness(y)
     return Expression.from_cexpr(x.cg_version, c_contract3d_1d(x.c(),y.c()))
 
-def contract3d_1d_bias(Expression x, Expression y, Expression b):
+cpdef Expression contract3d_1d_bias(Expression x, Expression y, Expression b):
     """Same as :code:`contract3d_1d` with an additional bias parameter
 
     The resulting tensor :math:`z` has coordinates :math:`z_{ij} = b_{ij}+\sum_k x_{ijk} y_k`
@@ -2805,7 +3024,7 @@ def contract3d_1d_bias(Expression x, Expression y, Expression b):
     ensure_freshness(b)
     return Expression.from_cexpr(x.cg_version, c_contract3d_1d(x.c(),y.c(),b.c()))
 
-def contract3d_1d_1d(Expression x, Expression y, Expression z):
+cpdef Expression contract3d_1d_1d(Expression x, Expression y, Expression z):
     """Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor
 
     This is the equivalent of calling :code:`contract3d_1d` and then performing a matrix vector multiplication.
@@ -2825,7 +3044,7 @@ def contract3d_1d_1d(Expression x, Expression y, Expression z):
     ensure_freshness(z)
     return Expression.from_cexpr(x.cg_version, c_contract3d_1d_1d(x.c(),y.c(),z.c()))
 
-def contract3d_1d_1d_bias(Expression x, Expression y, Expression z, Expression b):
+cpdef Expression contract3d_1d_1d_bias(Expression x, Expression y, Expression z, Expression b):
     """Same as :code:`contract3d_1d_1d` with an additional bias parameter
  
     This is the equivalent of calling :code:`contract3d_1d` and then performing an affine transform.
@@ -2971,7 +3190,7 @@ cpdef Expression concatenate(list xs, unsigned d=0):
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat(cvec, d))
 
-cpdef Expression concat_to_batch(list xs):
+cpdef Expression concatenate_to_batch(list xs):
     """Concatenate list of expressions to a single batched expression
     
     Perform a concatenation of several expressions along the batch dimension. All expressions must have the same shape except for the batch dimension.
@@ -3009,6 +3228,34 @@ cpdef Expression affine_transform(list exprs):
         ves.push_back(e.c())
     return Expression.from_cexpr(e.cg_version, c_affine_transform(ves))
 
+cpdef Expression layer_norm(Expression x, Expression g, Expression b):
+    """Layer normalization
+
+    Performs layer normalization : 
+
+    .. math::
+
+        \\begin{split}
+           \mu &= \\frac 1 n \sum_{i=1}^n x_i\\\\
+           \sigma &= \sqrt{\\frac 1 n \sum_{i=1}^n (x_i-\mu)^2}\\\\
+           y&=\\frac {\\boldsymbol{g}} \sigma \circ (\\boldsymbol{x}-\mu) + \\boldsymbol{b}\\\\
+        \end{split}
+ 
+        
+    Reference : `Ba et al., 2016 <http://arxiv.org/abs/1607.06450>`_
+        
+    Args:
+        x (dynet.Expression): Input expression (possibly batched)
+        g (dynet.Expression): Gain (same dimension as x, no batch dimension)
+        b (dynet.Expression): Bias (same dimension as x, no batch dimension)
+    
+    Returns:
+        An expression of the same dimension as :code:`x`
+        dynet.Expression
+    """
+    ensure_freshness(g)
+    ensure_freshness(b)
+    return Expression.from_cexpr(x.cg_version, c_layer_norm(x.c(),g.c(),b.c()))
 
 # )
     
@@ -3135,7 +3382,7 @@ cdef class _RNNBuilder: # (((
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
         
         Args:
-            vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression`s  (default: {None})
+            vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression` s  (default: {None})
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
@@ -3184,12 +3431,54 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # (((
     
     [description]
     """
+    cdef CSimpleRNNBuilder* thissimpleptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
-            self.thisptr = new CSimpleRNNBuilder()
+            self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
+
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the RNN
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
+        
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thissimpleptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
+
+
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the RNN
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thissimpleptr.param_vars.size() == 0 or self.thissimpleptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing SimpleRNNBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thissimpleptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
 
     def whoami(self): return "SimpleRNNBuilder"
 #)
@@ -3199,12 +3488,54 @@ cdef class GRUBuilder(_RNNBuilder): # (((
     
     [description]
     """
+    cdef CGRUBuilder* thisgruptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
-            self.thisptr = new CGRUBuilder()
+            self.thisgruptr = self.thisptr = new CGRUBuilder()
         self.cg_version = -1
+
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the GRU
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
+        
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thisgruptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
+
+
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the GRU
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thisgruptr.param_vars.size() == 0 or self.thisgruptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing GRUBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thisgruptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
 
     def whoami(self): return "GRUBuilder"
 # )
@@ -3214,12 +3545,54 @@ cdef class LSTMBuilder(_RNNBuilder): # (((
     
     [description]
     """
+    cdef CLSTMBuilder* thislstmptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
-            self.thisptr = new CLSTMBuilder()
+            self.thislstmptr = self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
+
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the LSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+        
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thislstmptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
+
+
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the LSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thislstmptr.param_vars.size() == 0 or self.thislstmptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing LSTMBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thislstmptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
 
     def whoami(self): return "LSTMBuilder"
 # )
@@ -3245,15 +3618,92 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         input_dim (int): Dimension of the input
         hidden_dim (int): Dimension of the recurrent units
         model (dynet.Model): Model to hold the parameters
+        ln_lstm (bool): Whether to use layer normalization
 
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model, ln_lstm=False):
         if layers > 0:
-            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0], ln_lstm)
         else:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
+
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the VanillaLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+
+        .. code::
+
+                  h/x   
+                +------+
+                |      |
+            i   |      |
+                +------+
+                |      |
+            f   |      |
+                +------+
+                |      |
+            o   |      |
+                +------+
+                |      |
+            c   |      |
+                +------+
+
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thisvanillaptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
+
+
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the VanillaLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+
+        .. code::
+
+                  h/x   
+                +------+
+                |      |
+            i   |      |
+                +------+
+                |      |
+            f   |      |
+                +------+
+                |      |
+            o   |      |
+                +------+
+                |      |
+            c   |      |
+                +------+
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thisvanillaptr.param_vars.size() == 0 or self.thisvanillaptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing VanillaLSTMBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thisvanillaptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
+
 
     cpdef void set_dropouts(self, float d, float d_r):
         """Set the dropout rates
@@ -3303,9 +3753,52 @@ cdef class FastLSTMBuilder(_RNNBuilder): # (((
     
     [description]
     """
+    cdef CFastLSTMBuilder* thisfastptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+        self.thisfastptr = self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         self.cg_version = -1
+
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the FastLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+        
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thisfastptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
+
+
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the FastLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thisfastptr.param_vars.size() == 0 or self.thisfastptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing FastLSTMBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thisfastptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
+
 
     def whoami(self): return "FastLSTMBuilder"
 # )
