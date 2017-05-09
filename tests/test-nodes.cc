@@ -826,6 +826,15 @@ BOOST_AUTO_TEST_CASE( dropout_forward ) {
   cg.forward(z);
 }
 
+BOOST_AUTO_TEST_CASE( dropout_batch_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = dropout_batch(x, 0.5);
+  Expression z = sum_elems(y);
+  cg.forward(z);
+}
+
+
 BOOST_AUTO_TEST_CASE( dropout_dim_forward ) {
     for (unsigned d=0;d<3;d++){
       dynet::ComputationGraph cg;
