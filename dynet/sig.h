@@ -4,6 +4,7 @@
 #define DYNET_MAX_SIG 100
 
 #include <unordered_map>
+#include <map>
 
 namespace dynet {
 
