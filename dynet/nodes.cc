@@ -111,6 +111,10 @@ size_t DropoutDim::aux_storage_size() const {
   return (dim.size() / dim[dimension]) * sizeof(float);
 }
 
+size_t DropoutBatch::aux_storage_size() const {
+  return dim.batch_elems() * sizeof(float);
+}
+
 size_t GaussianNoise::aux_storage_size() const {
   return dim.size() * sizeof(float);
 }
@@ -876,6 +880,31 @@ void Dropout::backward_dev_impl(const MyDevice & dev,
   dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * m.tvec();
 }
 DYNET_NODE_INST_DEV_IMPL(Dropout)
+
+
+template<class MyDevice>
+void DropoutBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Dim mask_dim({1},xs[0]->d.batch_elems());
+  Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  TensorTools::randomize_bernoulli(m, (1.f-p), 1.f / (1.f-p));
+  Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
+  fx.tbvec().device(*dev.edevice) = xs[0]->tbvec() * m.tbvec().broadcast(bcast);
+}
+
+template<class MyDevice>
+void DropoutBatch::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  Dim mask_dim({1},xs[0]->d.batch_elems());
+  Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
+  dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * m.tbvec().broadcast(bcast);
+}
+DYNET_NODE_INST_DEV_IMPL(DropoutBatch)
+
 
 template<class MyDevice>
 void DropoutDim::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {

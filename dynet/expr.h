@@ -1748,6 +1748,18 @@ Expression dropout_dim(const Expression& x, unsigned d, real p);
 
 /**
  * \ingroup noiseoperations
+ * \brief Dropout entire elements of a minibatch
+ * \details Identical to the dropout operation except entire batch elements are dropped
+ * 
+ * \param x The input expression
+ * \param p The dropout probability
+ *
+ * \return The dropped out expression
+ */
+Expression dropout_batch(const Expression& x, real p);
+
+/**
+ * \ingroup noiseoperations
  * \brief Block dropout
  * \details Identical to the dropout operation, but either drops out *all*
  *          or *no* values in the expression, as opposed to making a decision
