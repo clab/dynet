@@ -413,7 +413,6 @@ class Model {
 struct Tensor {
   Dim d;
   float* v;
-  std::vector<Tensor> bs;
 };
 
 real as_scalar(const Tensor& t);
