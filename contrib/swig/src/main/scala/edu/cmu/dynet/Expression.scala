@@ -243,6 +243,15 @@ object Expression {
   def averageCols(x: Expression): Expression = unary(x, dn.average_cols)
   def kmhNgram(x: Expression, n: Long): Expression = unary(x, x => dn.kmh_ngram(x, n))
 
+  // In the C++ code, is_valid has a default value of true. Scala won't let you have two overloaded
+  // methods with default values, so I just got rid of the default value here.
+  // TODO(joelgrus): write tests for these
+  def conv2d(x: Expression, f: Expression, stride: UnsignedVector, isValid: Boolean) =
+    new Expression(dn.conv2d(x.expr, f.expr, stride.vector, isValid), Seq(x, f, stride))
+
+  def conv2d(x: Expression, f: Expression, b: Expression, stride: UnsignedVector, isValid: Boolean) =
+    new Expression(dn.conv2d(x.expr, f.expr, b.expr, stride.vector, isValid), Seq(x, f, b, stride))
+
   /* TENSOR OPERATIONS */
 
   def contract3d1d(x: Expression, y: Expression): Expression = binary(x, y, dn.contract3d_1d)
