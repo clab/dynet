@@ -261,6 +261,18 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
 #endif
 }
 
+void BatchedExecutionEngine::accumulate_tensors(const Tensor& my_ndEdf, std::vector<VariableIndex> batch_ids, int ai) {
+  size_t tot_arg = 0;
+  Tensor temp_ndEdf;
+  for(auto curr_node : batch_ids) {
+    VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
+    temp_ndEdf = ndEdfs[my_aid];
+    temp_ndEdf.v = my_ndEdf.v + tot_arg;
+    TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
+    tot_arg += node2size[my_aid];
+  }
+}
+
 void BatchedExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
   num_batches_evaluated = 0;
@@ -800,15 +812,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
               TensorTools::zero(my_ndEdf);
               node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
               // cerr << "Batched evaluation for batched_ndEdfs["<<i<<"]("<<ai<<") -> ndEdfs["; for(auto id : my_batch.ids) cerr << ' ' << id; cerr << "] = " << print_vec(as_vector(my_ndEdf)) << endl;
-              size_t tot_arg = 0;
-              Tensor temp_ndEdf;
-              for(auto curr_node : my_batch.ids) {
-                VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
-                temp_ndEdf = ndEdfs[my_aid];
-                temp_ndEdf.v = my_ndEdf.v + tot_arg;
-                TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
-                tot_arg += node2size[my_aid];
-              }
+              accumulate_tensors(my_ndEdf, my_batch.ids, ai);
               node->device->pools[(int)DeviceMempool::DEDFS]->set_used(used);
             // Contiguous
             } else {
