@@ -3257,6 +3257,31 @@ cpdef Expression layer_norm(Expression x, Expression g, Expression b):
     ensure_freshness(b)
     return Expression.from_cexpr(x.cg_version, c_layer_norm(x.c(),g.c(),b.c()))
 
+cpdef Expression weight_norm(Expression w, Expression g):
+    """Weight normalization
+
+    Performs weight normalization : 
+
+    .. math::
+
+        \\begin{split}
+           \hat{w} &= g\\frac{w}{\Vert w\Vert}\\\\
+        \end{split}
+ 
+        
+    Reference : `Salimans, Kingma 2016 <https://arxiv.org/abs/1602.07868>`_
+        
+    Args:
+        w (dynet.Expression): Input expression (weight parameter)
+        g (dynet.Expression): Gain (scalar expression, usually also a parameter)
+    
+    Returns:
+        An expression of the same dimension as :code:`w`
+        dynet.Expression
+    """
+    ensure_freshness(g)
+    return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
+
 # )
     
 # ((( RNNS / Builders

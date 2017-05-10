@@ -335,6 +335,8 @@ Normalization operations
 
 .. autofunction:: dynet.layer_norm
 
+.. autofunction:: dynet.weight_norm
+
 Recurrent Neural Networks
 -------------------------
 
