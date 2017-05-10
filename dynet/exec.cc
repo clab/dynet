@@ -261,16 +261,46 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
 #endif
 }
 
-void BatchedExecutionEngine::accumulate_tensors(const Tensor& my_ndEdf, std::vector<VariableIndex> batch_ids, int ai) {
+void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<VariableIndex> batch_ids, int ai) {
+
+#if HAVE_CUDA
+  vector<float*> locs(batch_ids.size()*3);
+  unsigned i = 0;
+  unsigned max_length = 0;
+  const int TRG = batch_ids.size();
+  const int LEN = batch_ids.size()*2;
+  float* src = tin.v;
+  // copy
+  for (auto id : batch_ids) {
+    const size_t sz = node2size[id];
+
+    float* my_trg = batches[node2batch[id]].nfx.v + node2offset[id];
+    locs[i] = src; // src
+    locs[i+TRG] = my_trg;
+    locs[i+LEN] = (float*)sz;
+    if (max_length < sz) max_length = sz;
+    i++;
+    src += sz; // pointer arith
+  }
+  size_t req_sz = batch_ids.size()*3*sizeof(float*);
+  AlignedMemoryPool *mempool = tin.device->pools[(int)DeviceMempool::DEDFS];
+  float** srcs = static_cast<float**>(mempool->allocate(req_sz));
+  float** trgs = srcs + TRG;
+  float** lens = srcs + LEN;
+  CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
+  gpu::parallel_accumulate(batch_ids.size(), max_length, srcs, trgs, lens);
+#else
   size_t tot_arg = 0;
   Tensor temp_ndEdf;
   for(auto curr_node : batch_ids) {
     VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
     temp_ndEdf = ndEdfs[my_aid];
-    temp_ndEdf.v = my_ndEdf.v + tot_arg;
+    temp_ndEdf.v = tin.v + tot_arg;
     TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
     tot_arg += node2size[my_aid];
   }
+#endif
+
 }
 
 void BatchedExecutionEngine::invalidate() {
@@ -400,7 +430,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
       */
       if (sig != 0) {
         node2profid[j] = sig; 
-        if (active_batched.size() <= sig) active_batched.resize(sig+1);
+        if (active_batched.size() <= (size_t)sig) active_batched.resize(sig+1);
         prof2avg[sig] += j;
         prof2cnt[sig]++;
         if(node2left[j] == 0)
@@ -409,7 +439,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         *(active_un_end++) = j;
       }
     }
-    for(size_t j = 0; j < sigmap.size(); ++j)
+    for(size_t j = 0; j < (size_t)sigmap.size(); ++j)
       prof2avg[j] /= prof2cnt[j];
 
     // 2) Travel through and do active nodes
@@ -484,7 +514,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         ++node_id;
         // 2.b) If we have a batch of current nodes, execute them together
       } else {
-        Node* node;
+        Node* node = nullptr;
         DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
         auto & batch_ids = active_batched[curr_prof];
         my_batch.ids = active_batched[curr_prof];
