@@ -414,7 +414,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           node2depth[j] = depth;
           node2profid[j] = sig; 
           if(autobatch_strategy == 3) ++depthprofcnt[(depth * i) + sig];
-          if (active_batched.size() <= sig) active_batched.resize(sig+1);
+          if (active_batched.size() <= (size_t)sig) active_batched.resize(sig+1);
           prof2avg[sig] += depth;
           prof2cnt[sig]++;
           if(depth == 0) {
@@ -426,7 +426,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           *(active_un_end++) = j;
         }
       }
-      for(size_t j = 0; j < sigmap.size(); ++j)
+      for(size_t j = 0; j < (size_t)sigmap.size(); ++j)
         prof2avg[j] /= prof2cnt[j];
 
       // 2) Travel through and do active nodes
@@ -593,7 +593,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
         // cerr << "Processing batched[" << bid << "]: " << cg.nodes[batch_ids[0]]->as_dummy_string() << ' ' ; for(auto bid : batch_ids) cerr << " N" << bid; cerr << " (depth=" << prof2avg[node2profid[batch_ids[0]]] << ")"  << endl;
         // Set up the configuration of each component node, including pointer differential from the start of the batch
-        const Node* node;
+        const Node* node = nullptr;
         size_t tot_main = 0, tot_aux = 0, my_main, my_aux;
         for(auto curr_node : batch_ids) {
           node = cg.nodes[curr_node];
@@ -715,6 +715,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
     free(node2profid);
   }
+
+  return get_nfx(i);
 }
 
 const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
