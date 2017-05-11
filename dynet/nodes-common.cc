@@ -1136,4 +1136,16 @@ Dim MinDimension::dim_forward(const vector<Dim>& xs) const {
   return ret;
 }
 
+string WeightNormalization::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "weight_norm(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return s.str();
+}
+
+Dim WeightNormalization::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in WeightNormalization");
+  DYNET_ARG_CHECK(1 == xs[1].size()," Size of gain parameter in WeightNormalization should be 1, received " << xs[1].size());
+  return xs[0];
+}
+
 } // namespace dynet
