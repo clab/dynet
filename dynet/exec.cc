@@ -358,43 +358,43 @@ void BatchedExecutionEngine::garbage_collect() {
   batches.clear();
 }
 
-const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex i, int autobatch_strategy) {
-  if (i >= num_nodes_evaluated) {
+const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex upto, int autobatch_strategy) {
+  if (upto >= num_nodes_evaluated) {
 
-    nfx_cache.resize(i + 1);
-    node2batch.resize(i + 1);
-    node2offset.resize(i + 1, 0);
-    node2size.resize(i + 1, 0);
+    nfx_cache.resize(upto + 1);
+    node2batch.resize(upto + 1);
+    node2offset.resize(upto + 1, 0);
+    node2size.resize(upto + 1, 0);
 
     // Create the necessary info for batching in the future
     VariableIndex node_id = num_nodes_evaluated;
     VariableIndex batch_id = num_batches_evaluated;
-    batches.resize(i - num_nodes_evaluated + num_batches_evaluated + 1);
+    batches.resize(upto - num_nodes_evaluated + num_batches_evaluated + 1);
 
     // Allocate temporary memory for bookkeeping
     SigMap sigmap;   // Batching signature to id.
-    size_t temp_data_size = (i+1)*4*sizeof(int) + (i-node_id+2)*2*sizeof(float);
+    size_t temp_data_size = (upto+1)*4*sizeof(int) + (upto-node_id+2)*2*sizeof(float);
     int* node2profid = (int*)malloc(temp_data_size);
     memset(node2profid, 0, temp_data_size);
-    int* node2left = node2profid + i + 1;
-    int* node2depth = node2left + i + 1;
-    int* active_un_begin = node2depth + i + 1;
+    int* node2left = node2profid + upto + 1;
+    int* node2depth = node2left + upto + 1;
+    int* active_un_begin = node2depth + upto + 1;
     int* active_un_end = active_un_begin;
-    float* prof2avg = (float*)(active_un_begin + i + 1);
-    float* prof2cnt = prof2avg + i - node_id + 2;
+    float* prof2avg = (float*)(active_un_begin + upto + 1);
+    float* prof2cnt = prof2avg + upto - node_id + 2;
 
     // More intelligent batching?
     if(autobatch_strategy == 1 || autobatch_strategy == 3) {
 
-      unordered_map<int, int> depthprofcnt(i*3);             // Count of remaining things for this profile
-      vector<vector<VariableIndex> > node2successors(i + 1); // Node to successors
+      unordered_map<int, int> depthprofcnt(upto*3);             // Count of remaining things for this profile
+      vector<vector<VariableIndex> > node2successors(upto + 1); // Node to successors
       // Average ID of batched items, a heuristic for which to run first
       // The active items that cannot or can be batched
       vector<vector<VariableIndex> > active_batched;
 
       // 1) Calculate the batching profiles for every node
       int sig = 0, depth;
-      for (VariableIndex j = num_nodes_evaluated; j <= i; ++j) {
+      for (VariableIndex j = num_nodes_evaluated; j <= upto; ++j) {
         const Node* node = cg.nodes[j];
         node2size[j] = node->dim.size();
         // Count the remaining input nodes to be computed for each node
@@ -413,7 +413,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         if (sig != 0) {
           node2depth[j] = depth;
           node2profid[j] = sig; 
-          if(autobatch_strategy == 3) ++depthprofcnt[(depth * i) + sig];
+          if(autobatch_strategy == 3) ++depthprofcnt[(depth * upto) + sig];
           if (active_batched.size() <= sig) active_batched.resize(sig+1);
           prof2avg[sig] += depth;
           prof2cnt[sig]++;
@@ -430,7 +430,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         prof2avg[j] /= prof2cnt[j];
 
       // 2) Travel through and do active nodes
-      while(node_id != i + 1) {
+      while(node_id != upto + 1) {
 
         // First find the best node to execute next in order of priority
         // 1. Nodes that don't support batching
@@ -446,7 +446,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             // cerr << "active_batched[" << profid << "].size() == " << active_batched[profid].size() << endl;
             if(active_batched[profid].size() > 0 &&
                best_avg > prof2avg[profid] &&
-               (autobatch_strategy == 1 || depthprofcnt[(node2depth[active_batched[profid].back()] * i) + profid] == 0)) {
+               (autobatch_strategy == 1 || depthprofcnt[(node2depth[active_batched[profid].back()] * upto) + profid] == 0)) {
               curr_prof = profid;
               best_avg = prof2avg[profid];
             } 
@@ -480,7 +480,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
                 // cerr << "adding N" << next_node << " to active_batched[" << profid << "]" << endl;
                 active_batched[profid].push_back(next_node);
                 if(autobatch_strategy == 3)
-                  --depthprofcnt[(node2depth[next_node] * i) + profid];
+                  --depthprofcnt[(node2depth[next_node] * upto) + profid];
               }
             }
           }
@@ -510,7 +510,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
                   active_batched[profid].push_back(next_node);
                   // cerr << "added N" << next_node << " to active_batched[" << profid << "]" << endl;
                   if(autobatch_strategy == 3)
-                    --depthprofcnt[(node2depth[next_node] * i) + profid];
+                    --depthprofcnt[(node2depth[next_node] * upto) + profid];
                 }
               }
             }
@@ -534,7 +534,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
       map<pair<int,int>, vector<VariableIndex> > depth_profile_batches;
       int sig, depth;
       Node* node;
-      for (VariableIndex j = num_nodes_evaluated; j <= i; ++j) {
+      for (VariableIndex j = num_nodes_evaluated; j <= upto; ++j) {
         depth = 0;
         node = cg.nodes[j];
         for (auto k : node->args)
