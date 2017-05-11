@@ -429,6 +429,12 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
       for(size_t j = 0; j < sigmap.size(); ++j)
         prof2avg[j] /= prof2cnt[j];
 
+      //vector<size_t> idx(sigmap.size());
+      //iota(idx.begin(), idx.end(), 0);
+      // sort indexes based on comparing values in void
+      //sort(idx.begin(), idx.end(), [&prof2avg](size_t i1, size_t i2) {return prof2avg[i1] < prof2avg[i2];});
+      //for (int i =0; i<sigmap.size(); ++i) { cerr << i << " " << prof2avg[idx[i]] << endl; }
+
       // 2) Travel through and do active nodes
       while(node_id != upto + 1) {
 
@@ -444,13 +450,20 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           float best_avg = 1e10;
           for(size_t profid = 1; profid < active_batched.size(); ++profid) {
             // cerr << "active_batched[" << profid << "].size() == " << active_batched[profid].size() << endl;
+            const float avg = prof2avg[profid];
             if(active_batched[profid].size() > 0 &&
-               best_avg > prof2avg[profid] &&
+               (best_avg > avg || (best_avg == avg && sigmap.sig2type(profid)<nt::COMPLEX )) && // tie-break on type, defer affine and matmul
                (autobatch_strategy == 1 || depthprofcnt[(node2depth[active_batched[profid].back()] * upto) + profid] == 0)) {
               curr_prof = profid;
-              best_avg = prof2avg[profid];
+              best_avg = avg;
             } 
           }
+          //for (auto i : idx) {
+          //  //cerr << "curr_prof=" << i << endl;
+          //  if (active_batched[i].size() > 0) { curr_prof = i; break; }
+          //}
+          //cerr << "selected prof:" << curr_prof << " " << prof2avg[curr_prof] << " " << active_batched[curr_prof].size() << endl;
+
           if(active_batched[curr_prof].size() == 1) {
             curr_node = active_batched[curr_prof][0];
             active_batched[curr_prof].clear();
