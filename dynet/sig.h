@@ -74,8 +74,8 @@ inline bool operator==(const SigString& a, const SigString& b) {
 inline bool operator!=(const SigString& a, const SigString& b) { return !(a == b); }
 
 struct SigHash {
-  SigHash(int which) : hash(0xcc9e2d51 ^ which), which(which) { }
-  SigHash() : hash(0xcc9e2d51a), which(0) { }
+  SigHash(int which) : hash((int)0xcc9e2d51 ^ which), which(which) { }
+  SigHash() : hash((int)0xcc9e2d51a), which(0) { }
   int hash;
   int which;
 
