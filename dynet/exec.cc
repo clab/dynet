@@ -725,13 +725,17 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     garbage_collect();
 
   if (autobatch_flag > 99) {
-    double best_speed = 0;
-    for(size_t strat = 0; strat < 4; ++strat) {
-      Timing timer;
+    Timing timer;
+    incremental_forward_no_update(i, 1);
+    double best_speed = timer.stop();
+    cerr << "autobatch strategy " << 1 << " speed:" << best_speed << endl;
+    autobatch_flag = 1;
+    for(size_t strat = 2; strat < 4; ++strat) {
+      timer.start();
       incremental_forward_no_update(i, strat);
       double speed = timer.stop();
       cerr << "autobatch strategy " << strat << " speed:" << speed << endl;
-      if(speed > best_speed) {
+      if(speed < best_speed) {
         best_speed = speed;
         autobatch_flag = strat;
       }
