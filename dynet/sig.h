@@ -11,8 +11,10 @@ namespace dynet {
   namespace nt {
     enum NodeType { 
       tanh=1, sqrt, abs, erf, square, cube, exp, loggamma, log, nobackprop, flipgradient, identity, negate, rectify, logistic, softsign,
-      plus_const, concat, matmul, cmult, affine, sum, squared_distance, pnls, pickrange,
-      input, scalar_input, lookup
+      plus_const, concat, cmult, sum, squared_distance, pnls, pickrange,
+      input, scalar_input, lookup,
+      COMPLEX,
+      affine, matmul,
     };
   }
 
@@ -72,9 +74,10 @@ inline bool operator==(const SigString& a, const SigString& b) {
 inline bool operator!=(const SigString& a, const SigString& b) { return !(a == b); }
 
 struct SigHash {
-  SigHash(int which) : hash(0xcc9e2d51 ^ which) { }
-  SigHash() : hash(0xcc9e2d51) { }
+  SigHash(int which) : hash(0xcc9e2d51 ^ which), which(which) { }
+  SigHash() : hash(0xcc9e2d51a), which(0) { }
   int hash;
+  int which;
 
   // sbdm hash
   inline void add_int(int i) {
@@ -101,16 +104,20 @@ inline bool operator!=(const SigHash& a, const SigHash& b) {
 
 template <class Sig>
 struct SigLinearMap {
-  SigLinearMap() { sigs.reserve(50); Sig s; sigs.push_back(s); }
+  SigLinearMap() { sigs.reserve(50); whiches.reserve(50); Sig s; sigs.push_back(s); whiches.push_back(s.which); }
   int get_idx(Sig &s) {
     for (int i=0; i<sigs.size(); ++i) {
-      if (sigs[i]==s) return i;
+      if (sigs[i]==s)
+          return i;
     }
     sigs.push_back(s);
+    whiches.push_back(s.which);
     return sigs.size()-1;
   }
+  int sig2type(int sig) { return whiches[sig]; }
   int size() { return sigs.size(); }
   std::vector<Sig> sigs;
+  std::vector<int> whiches;
 };
 
 struct SigHasher {
