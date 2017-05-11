@@ -358,13 +358,7 @@ void BatchedExecutionEngine::garbage_collect() {
   batches.clear();
 }
 
-const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
-  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::incremental_forward()");
-  // cerr << "BatchedExecutionEngine::incremental_forward" << endl;
-
-  if (num_nodes_evaluated == 0)
-    garbage_collect();
-
+const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex i, int autobatch_strategy) {
   if (i >= num_nodes_evaluated) {
 
     nfx_cache.resize(i + 1);
@@ -390,7 +384,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     float* prof2cnt = prof2avg + i - node_id + 2;
 
     // More intelligent batching?
-    if(autobatch_flag == 1) {
+    if(autobatch_strategy == 1) {
 
       vector<vector<VariableIndex> > node2successors(i + 1); // Node to successors
       // Average ID of batched items, a heuristic for which to run first
@@ -517,7 +511,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         }
       }
     // TensorFlow fold style batching
-    } else if(autobatch_flag == 2) {
+    } else if(autobatch_strategy == 2) {
       map<pair<int,int>, vector<VariableIndex> > depth_profile_batches;
       int sig, depth;
       Node* node;
@@ -700,6 +694,30 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     }
 
     free(node2profid);
+  }
+}
+
+const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
+  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::incremental_forward()");
+  // cerr << "BatchedExecutionEngine::incremental_forward" << endl;
+
+  if (num_nodes_evaluated == 0)
+    garbage_collect();
+
+  if (autobatch_flag > 99) {
+    Timing timer;
+    incremental_forward_no_update(i, 1);
+    double i1 = timer.stop();
+
+    timer.start();
+    incremental_forward_no_update(i, 2);
+    double i2 = timer.stop();
+    cerr << "batch 1 speed:" << i1 << endl;
+    cerr << "batch 2 speed:" << i2 << endl;
+
+    autobatch_flag = (i1 > i2) ? 2 : 1;
+  } else {
+    incremental_forward_no_update(i, autobatch_flag);
   }
 
   num_nodes_evaluated = i+1;
