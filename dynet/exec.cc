@@ -358,13 +358,7 @@ void BatchedExecutionEngine::garbage_collect() {
   batches.clear();
 }
 
-const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
-  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::incremental_forward()");
-  // cerr << "BatchedExecutionEngine::incremental_forward" << endl;
-
-  if (num_nodes_evaluated == 0)
-    garbage_collect();
-
+const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex i, int autobatch_strategy) {
   if (i >= num_nodes_evaluated) {
 
     nfx_cache.resize(i + 1);
@@ -390,7 +384,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     float* prof2cnt = prof2avg + i - node_id + 2;
 
     // More intelligent batching?
-    if(autobatch_flag == 1 || autobatch_flag == 3) {
+    if(autobatch_strategy == 1 || autobatch_strategy == 3) {
 
       unordered_map<int, int> depthprofcnt(i*3);             // Count of remaining things for this profile
       vector<vector<VariableIndex> > node2successors(i + 1); // Node to successors
@@ -419,13 +413,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         if (sig != 0) {
           node2depth[j] = depth;
           node2profid[j] = sig; 
-          if(autobatch_flag == 3) ++depthprofcnt[(depth * i) + sig];
+          if(autobatch_strategy == 3) ++depthprofcnt[(depth * i) + sig];
           if (active_batched.size() <= sig) active_batched.resize(sig+1);
           prof2avg[sig] += depth;
           prof2cnt[sig]++;
           if(depth == 0) {
             active_batched[sig].push_back(j);
-            if(autobatch_flag == 3)
+            if(autobatch_strategy == 3)
               --depthprofcnt[sig];
           }
         } else if(node2left[j] == 0) {
@@ -452,7 +446,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
             // cerr << "active_batched[" << profid << "].size() == " << active_batched[profid].size() << endl;
             if(active_batched[profid].size() > 0 &&
                best_avg > prof2avg[profid] &&
-               (autobatch_flag == 1 || depthprofcnt[(node2depth[active_batched[profid].back()] * i) + profid] == 0)) {
+               (autobatch_strategy == 1 || depthprofcnt[(node2depth[active_batched[profid].back()] * i) + profid] == 0)) {
               curr_prof = profid;
               best_avg = prof2avg[profid];
             } 
@@ -485,7 +479,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
               } else {
                 // cerr << "adding N" << next_node << " to active_batched[" << profid << "]" << endl;
                 active_batched[profid].push_back(next_node);
-                if(autobatch_flag == 3)
+                if(autobatch_strategy == 3)
                   --depthprofcnt[(node2depth[next_node] * i) + profid];
               }
             }
@@ -515,7 +509,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
                 } else {
                   active_batched[profid].push_back(next_node);
                   // cerr << "added N" << next_node << " to active_batched[" << profid << "]" << endl;
-                  if(autobatch_flag == 3)
+                  if(autobatch_strategy == 3)
                     --depthprofcnt[(node2depth[next_node] * i) + profid];
                 }
               }
@@ -536,7 +530,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
         }
       }
     // depth-based batching
-    } else if(autobatch_flag == 2) {
+    } else if(autobatch_strategy == 2) {
       map<pair<int,int>, vector<VariableIndex> > depth_profile_batches;
       int sig, depth;
       Node* node;
@@ -720,6 +714,30 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     }
 
     free(node2profid);
+  }
+}
+
+const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
+  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::incremental_forward()");
+  // cerr << "BatchedExecutionEngine::incremental_forward" << endl;
+
+  if (num_nodes_evaluated == 0)
+    garbage_collect();
+
+  if (autobatch_flag > 99) {
+    double best_speed = 0;
+    for(size_t strat = 0; strat < 4; ++strat) {
+      Timing timer;
+      incremental_forward_no_update(i, strat);
+      double speed = timer.stop();
+      cerr << "autobatch strategy " << strat << " speed:" << speed << endl;
+      if(speed > best_speed) {
+        best_speed = speed;
+        autobatch_flag = strat;
+      }
+    }
+  } else {
+    incremental_forward_no_update(i, autobatch_flag);
   }
 
   num_nodes_evaluated = i+1;
