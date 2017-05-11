@@ -1495,6 +1495,26 @@ BOOST_AUTO_TEST_CASE( layer_norm_forward ) {
   BOOST_CHECK_CLOSE(std, 1, 0.01);
 }
 
+// Expression weight_norm(x,g);
+BOOST_AUTO_TEST_CASE( weight_norm_forward ) {
+  dynet::ComputationGraph cg;
+  Expression w = parameter(cg, param_square1);
+  Expression g = parameter(cg, param_scalar1);
+  Expression y = weight_norm(w,g);
+  float norm = as_scalar(sqrt(sum_elems(square(y))).value());
+  BOOST_CHECK_CLOSE(norm, 2.2, 0.01);
+}
+
+// Expression layer_norm(x,g);
+BOOST_AUTO_TEST_CASE( weight_norm_backward_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression w = parameter(cg, param_square1);
+  Expression g = parameter(cg, param_scalar1);
+  Expression y = weight_norm(w,g);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression sparse_input(vector<unsigned int>& ids, vector<float>& src, float def);
 BOOST_AUTO_TEST_CASE( sparse_input_test ) {
   dynet::ComputationGraph cg;

@@ -187,5 +187,7 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
     Expression sigma = std_elems(x);
     return cmult(g, cdiv(x_centered,sigma + 1e-8)) + b;
 }
+
+Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 }
 }

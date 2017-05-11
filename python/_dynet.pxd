@@ -403,6 +403,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_min_dim "dynet::expr::min_dim" (CExpression& x, unsigned d) except + #
 
     CExpression c_layer_norm "dynet::expr::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
+    CExpression c_weight_norm "dynet::expr::weight_norm" (CExpression& w, CExpression& g) except + #
 
 
 #cdef extern from "dynet/model.h" namespace "dynet":
