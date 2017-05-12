@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 
   Parameter p_W, p_b, p_V, p_a;
   if (argc == 2) {
-    Packer packer(argv[1]);
+    TextFilePacker packer(argv[1]);
     packer.populate(m, "model");
     p_W = packer.load_param(m, "p_W");
     p_b = packer.load_param(m, "p_b");
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
   // Output the model and parameter objects
   // to a cout.
   std::remove("xor-xent.model.meta"); std::remove("xor-xent.model");
-  Packer packer("xor-xent.model");
+  TextFilePacker packer("xor-xent.model");
   packer.save(m, "model");
   packer.save(p_W, "p_W");
   packer.save(p_b, "p_b");

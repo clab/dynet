@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 
   RNNLengthPredictor<LSTMBuilder> lm(model);
   if (argc == 4) {
-    Packer packer(argv[3]);
+    TextFilePacker packer(argv[3]);
     packer.populate(model, "model");
   }
 
@@ -193,8 +193,8 @@ int main(int argc, char** argv) {
         best = dloss;
         std::string fname_meta = fname + ".meta";
         std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-        Packer packer(fname);
-        packer.save(model, "model", false);
+        TextFilePacker packer(fname);
+        packer.save(model, "model");
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
