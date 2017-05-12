@@ -390,10 +390,9 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     if(autobatch_strategy == 1 || autobatch_strategy == 3) {
 
       unordered_map<int, int> depthprofcnt(upto*3);             // Count of remaining things for this profile
-      vector<vector<VariableIndex> > node2successors(uptop1); // Node to successors
-      // Average ID of batched items, a heuristic for which to run first
-      // The active items that cannot or can be batched
-      vector<vector<VariableIndex> > active_batched;
+      vector<VariableIndex> node2successors(uptop1,(VariableIndex)0); // Node to successors
+      vector<VariableIndex> active_batched(uptop1*2,(VariableIndex)0);
+      VariableIndex n2sptr, abptr, abmax = (VariableIndex)0;
 
       // 1) Calculate the batching profiles for every node
       int sig = 0, depth;
@@ -405,7 +404,10 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         for (VariableIndex arg : node->args) {
           if(arg >= node_id) {
             node2left[j]++;
-            node2successors[arg].push_back(j);
+            n2sptr = node2successors[arg];
+            node2successors.push_back(j);
+            node2successors[arg] = node2successors.size();
+            node2successors.push_back(n2sptr);
             depth = max(node2depth[arg]+1,depth);
           }
         }
@@ -420,11 +422,15 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             // cerr << "Adding node " << j << " to " << depth << "," << sig << endl;
             ++depthprofcnt[(depth * upto) + sig];
           }
-          if (active_batched.size() <= sig) active_batched.resize(sig+1);
+          abmax = (VariableIndex)max((int)abmax, sig+1);
           prof2avg[sig] += depth;
           prof2cnt[sig]++;
           if(depth == 0) {
-            active_batched[sig].push_back(j);
+            abptr = active_batched[sig];
+            ++active_batched[sig+uptop1];
+            active_batched.push_back(j);
+            active_batched[sig] = active_batched.size();
+            active_batched.push_back(abptr);
             if(autobatch_strategy == 3)
               --depthprofcnt[sig];
           }
@@ -454,13 +460,11 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           curr_node = *(active_un_begin++);
         } else {
           float best_avg = 1e10;
-          for(size_t profid = 1; profid < active_batched.size(); ++profid) {
-            // cerr << "active_batched[" << profid << "].size() == " << active_batched[profid].size() << endl;
+          for(size_t profid = 1; profid < (size_t)abmax; ++profid) {
             const float avg = prof2avg[profid];
-            if(active_batched[profid].size() > 0 &&
-               //(best_avg > avg || (best_avg == avg && sigmap.sig2type(profid)<nt::COMPLEX )) && // tie-break on type, defer affine and matmul
-               (best_avg > avg) && 
-               (autobatch_strategy == 1 || depthprofcnt[(node2depth[active_batched[profid].back()] * upto) + profid] == 0)) {
+            if(active_batched[profid] != (VariableIndex)0 &&
+               (best_avg > avg || (best_avg == avg && sigmap.sig2type(profid)<nt::COMPLEX )) && // tie-break on type, defer affine and matmul
+               (autobatch_strategy == 1 || depthprofcnt[(node2depth[active_batched[active_batched[profid]-1]] * upto) + profid] == 0)) {
               curr_prof = profid;
               best_avg = avg;
             } 
@@ -471,9 +475,11 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           //}
           //cerr << "selected prof:" << curr_prof << " " << prof2avg[curr_prof] << " " << active_batched[curr_prof].size() << endl;
 
-          if(active_batched[curr_prof].size() == 1) {
-            curr_node = active_batched[curr_prof][0];
-            active_batched[curr_prof].clear();
+          abptr = active_batched[curr_prof];
+          if(active_batched[abptr] == 0) {
+            curr_node = active_batched[abptr-1];
+            active_batched[curr_prof] = 0;
+            active_batched[curr_prof + uptop1] = 0;
             curr_prof = -1;
           }
         }
@@ -490,15 +496,20 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           // Increment the counts
           node2batch[curr_node] = batch_id;
           // Decrement the counts of the predecessors and add them to the active queue as appropriate
-          for(auto next_node : node2successors[curr_node]) {
+          n2sptr = node2successors[curr_node];
+          while(n2sptr != (VariableIndex)0) {
+            auto next_node = node2successors[n2sptr-1];
+            n2sptr = node2successors[n2sptr];
             if(--node2left[next_node] == 0) {
               auto profid = node2profid[next_node];
               if(profid == 0) {
-                // cerr << "adding N" << next_node << " to active_un" << endl;
                 *(active_un_end++) = next_node;
               } else {
-                // cerr << "adding N" << next_node << " to active_batched[" << profid << "]" << endl;
-                active_batched[profid].push_back(next_node);
+                abptr = active_batched[profid];
+                ++active_batched[profid+uptop1];
+                active_batched.push_back(next_node);
+                active_batched[profid] = active_batched.size();
+                active_batched.push_back(abptr);
                 if(autobatch_strategy == 3)
                   --depthprofcnt[(node2depth[next_node] * upto) + profid];
               }
@@ -511,24 +522,37 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           // 2.b) If we have a batch of current nodes, execute them together
         } else {
           DYNET_ASSERT(curr_prof != -1, "Must have either a single node or a batch to execute");
-          // cerr << "curr_prof == " << curr_prof << endl;
-          my_batch.ids = active_batched[curr_prof];
-          auto & batch_ids = active_batched[curr_prof];
+          // Copy the things from the linked list to the actual batch
+          abptr = active_batched[curr_prof];
+          assert(abptr != (VariableIndex)0);
+          my_batch.ids.resize(active_batched[curr_prof+uptop1]);
+          for(auto it = my_batch.ids.rbegin(); it != my_batch.ids.rend(); ++it) {
+            *it = active_batched[abptr-1];
+            abptr = active_batched[abptr];
+          }
+          active_batched[curr_prof] = 0;
+          active_batched[curr_prof+uptop1] = 0;
+          auto & batch_ids = my_batch.ids;
           // cerr << "Processing batched[" << batch_id << "]: " << cg.nodes[batch_ids[0]]->as_dummy_string() << ' ' ; for(auto bid : batch_ids) cerr << " N" << bid; cerr << endl;
           // Decrement the counts of the predecessors and add them to the active queue as appropriate
           size_t batch_ids_size = batch_ids.size();
           for(size_t j = 0; j < batch_ids_size; ++j) {
             VariableIndex curr_node = batch_ids[j];
             node2batch[curr_node] = batch_id;
-            for(auto next_node : node2successors[curr_node]) {
+            n2sptr = node2successors[curr_node];
+            while(n2sptr != (VariableIndex)0) {
+              auto next_node = node2successors[n2sptr-1];
+              n2sptr = node2successors[n2sptr];
               if(--node2left[next_node] == 0) {
                 auto profid = node2profid[next_node];
                 if(profid == 0) {
                   *(active_un_end++) = next_node;
-                  // cerr << "added N" << next_node << " to active_un" << endl;
                 } else {
-                  active_batched[profid].push_back(next_node);
-                  // cerr << "added N" << next_node << " to active_batched[" << profid << "]" << endl;
+                  abptr = active_batched[profid];
+                  ++active_batched[profid+uptop1];
+                  active_batched.push_back(next_node);
+                  active_batched[profid] = active_batched.size();
+                  active_batched.push_back(abptr);
                   if(autobatch_strategy == 3)
                     --depthprofcnt[(node2depth[next_node] * upto) + profid];
                 }
@@ -536,16 +560,9 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             }
           }
 
-          // Clear the active things for this profile
+          // Increment
           ++batch_id;
           node_id += batch_ids_size;
-          if(batch_ids_size == batch_ids.size()) {
-            // cerr << "clearing" << endl;
-            batch_ids.clear();
-          } else {
-            // cerr << "erasing first " << batch_ids_size << endl;
-            batch_ids.erase(batch_ids.begin(), batch_ids.begin() + batch_ids_size);
-          }
 
         }
       }
