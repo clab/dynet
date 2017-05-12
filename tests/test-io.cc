@@ -67,13 +67,13 @@ BOOST_FIXTURE_TEST_SUITE(io_test, IOTest);
 BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
   {
     ParameterCollection m;
-    Parameter a = m.add_parameters({10}, "a");
-    Parameter b = m.add_parameters({3,7});
-    LookupParameter c = m.add_lookup_parameters(10, {2});
+    m.add_parameters({10}, "a");
+    m.add_parameters({3,7});
+    m.add_lookup_parameters(10, {2});
     std::remove("test.model"); std::remove("test.model.meta");
-    dynet::Packer s("test.model");
+    dynet::TextFilePacker s("test.model");
     s.save(m, "model1");
-    s.save(m, m.get_namespace(), true);
+    s.save(m, m.get_namespace());
 
     ParameterCollection m2;
     s.populate(m2, "model1");
@@ -85,17 +85,17 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     ParameterCollection collec;
     testModel spec(collec);
     std::remove("a.model"); std::remove("a.model.meta");
-    Packer s1("a.model");
+    TextFilePacker s1("a.model");
     s1.save(collec, "all");
     ParameterCollection collec2;
     s1.populate(collec2);
     DYNET_CHECK_EQUAL(collec2.size(), collec.size());
   
     std::remove("b.model"); std::remove("b.model.meta");
-    Packer s2("b.model");
+    TextFilePacker s2("b.model");
     s2.save(collec, "all");
-    s2.save(spec.get_lstm_model(), "lstm", true);
-    s2.save(spec.get_affine_model(), "affine", true);
+    s2.save(spec.get_lstm_model(), "lstm");
+    s2.save(spec.get_affine_model(), "affine");
     ParameterCollection collec3, lstm2, affine2;
     s2.populate(affine2, "affine");
     s2.populate(collec3, "all");
@@ -105,17 +105,16 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     DYNET_CHECK_EQUAL(lstm2.size(), spec.get_lstm_model().size());
 
     std::remove("c.model"); std::remove("c.model.meta");
-    s2.reinit("c.model");
     s2.save(lstm2, "lstm");
-    s2.save(collec3, "all", true);
-    s2.save(affine2, "affine", true);
+    s2.save(collec3, "all");
+    s2.save(affine2, "affine");
   }
   {
     ParameterCollection cc;
     auto cc2 = cc.add_subcollection("xx");
     cc2.add_parameters({2, 3, 4, 5});
     std::remove("d.model"); std::remove("d.model.meta");
-    Packer s3("d.model");
+    TextFilePacker s3("d.model");
     s3.save(cc, "key");
 
     ParameterCollection ccc;
@@ -123,7 +122,6 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     DYNET_CHECK_EQUAL(ccc.size(), cc.size());
 
     std::remove("e.model"); std::remove("e.model.meta");
-    s3.reinit("e.model");
     s3.save(ccc);
   }
 }
@@ -131,7 +129,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
 BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   {
     std::remove("f.model.meta"); std::remove("f.model");
-    Packer packer("f.model");
+    TextFilePacker packer("f.model");
     ParameterCollection model_out;
     Parameter m_out = model_out.add_parameters({100});
     LookupParameter lookup_m_out = model_out.add_lookup_parameters(10, {128});
@@ -154,7 +152,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   }
   {
     std::remove("g.model.meta"); std::remove("g.model");
-    Packer packer("g.model");
+    TextFilePacker packer("g.model");
     ParameterCollection model;
     Parameter m = model.add_parameters({10});
     LookupParameter lookup_m = model.add_lookup_parameters(10, {128});
@@ -163,15 +161,14 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
     ParameterCollection model_in;
     Parameter m_in = model_in.add_parameters({10});
     LookupParameter lookup_m_in = model_in.add_lookup_parameters(10, {128});
-    packer.populate(m_in, "model", "/__0");
+    packer.populate(m_in, "/__0");
     DYNET_CHECK_EQUAL(m_in, m);
-    packer.populate(lookup_m_in, "model", "/__1");
+    packer.populate(lookup_m_in, "/__1");
     DYNET_CHECK_EQUAL(lookup_m_in, lookup_m);
     ParameterCollection model_in2;
-    Parameter m_in2 = packer.load_param(model_in2, "model", "/__0");
+    Parameter m_in2 = packer.load_param(model_in2, "/__0");
     DYNET_CHECK_EQUAL(m_in2, m);
-    LookupParameter lookup_m_in2 = packer.load_lookup_param(model_in2, "model",
-                                                            "/__1");
+    LookupParameter lookup_m_in2 = packer.load_lookup_param(model_in2, "/__1");
     DYNET_CHECK_EQUAL(lookup_m_in2, lookup_m);
   }
 }

@@ -33,13 +33,120 @@ std::istream& operator>>(std::istream& is, std::vector<T> & v) {
 
 class Packer {
  public:
-  Packer(std::string filename) : fn(filename), fn_meta(filename + ".meta") {}
+  Packer() { }
+  virtual ~Packer() { }
+
+  /**
+   * @brief Save ParameterCollection with key, use internal namespace if key is not given.
+   *
+   * @param model: input ParameterCollection object to be saved
+   * @param key: optional parameter, the key for the model
+   */
+  virtual void save(const ParameterCollection & model,
+                    const std::string & key = "") = 0;
+
+  /**
+   * @brief Save ParameterCollection's parameters and lookup parameters with filter_lst and key,
+   *        use internal namespace if key is not given.
+   *
+   * @param model: input ParameterCollection object to be saved
+   * @param filter_lst: save parameters and lookup parameters satisfy the filter_lst condition
+   *                    each filter can be regex expressions
+   * @param key: optional parameter, the key for the model 
+   */
+  virtual void save(const ParameterCollection & model,
+                    const std::vector<std::string> & filter_lst,
+                    const std::string & key = "") = 0;
+
+  /**
+   * @brief Save Parameter with key, use internal name if key is not given.
+   *
+   * @param model: input Parameter object to be saved
+   * @param key: optional parameter, the key for the saving Parameter
+   */
+  virtual void save(const Parameter & param, const std::string & key = "") = 0;
+
+  /**
+   * @brief Save look parameter with key, use internal name if key is not given.
+   * 
+   * @param model: input LookupParameter object to be saved
+   * @param key: optional parameter, the key for the saving Parameter
+   */
+  virtual void save(const LookupParameter & param, const std::string & key = "") = 0;
+
+  /**
+   * @brief Populate ParameterCollection object with key.
+   * 
+   * @param model: input/output parameter, the ParameterCollection object to be populated in. 
+   * @param key: optional parameter, the key for loading the model
+   *
+   */
+  virtual void populate(ParameterCollection & model, const std::string & key = "") = 0;
+
+  /**
+   * @brief Populate ParameterCollection object with filter_lst and with key equals to key.
+   * 
+   * @param model: input/output parameter, the ParameterCollection object to be populated
+   * @param filter_lst: populate parameters and lookup parameters satisfies the filter_lst condition
+   *                    each filter can be regex expression
+   * @param key: optional parameter, the key for loading the model
+   *
+   */
+  virtual void populate(ParameterCollection & model,
+                        const std::vector<std::string> & filter_lst,
+                        const std::string & key = "") = 0;
+
+  /**
+   * @brief Populate independent parameter object with key.
+   *        independent here means it has been saved without a ParameterCollection object
+   *
+   * @param param: input/output parameter, the Parameter object to be populated in. 
+   * @param key: optional parameter, the key for loading the parameter 
+   *
+   */
+  virtual void populate(Parameter & param, const std::string & key = "") = 0;
+
+  /**
+   * @brief Populate independent lookup parameter object with key.
+   *        independent here means it has been saved without a LookupParameterCollection object
+   *
+   * @param lookup_param: input/output parameter, the LookupParameter object to be populated in. 
+   * @param key: optional parameter, the key for loading the lookup parameter 
+   *
+   */
+  virtual void populate(LookupParameter & lookup_param,
+                        const std::string & key = "") = 0;
   
-  void reinit(std::string filename) {
-    offset = 0;
-    fn = filename;
-    fn_meta = filename + ".meta";
-  }
+  /**
+   * @brief Load parameter into model with key
+   * 
+   * @param model: input/output parameter, the model to load parameter
+   * @param key: the key for loading the parameter
+   * @return: the loaded parameter
+   *
+   */
+  virtual Parameter load_param(ParameterCollection & model,
+                               const std::string & key) = 0;
+
+  /**
+   * @brief Load lookup parameter into model with key
+   * 
+   * @param model: input/output parameter, the model to load the lookup parameter
+   * @param key: the key for loading the lookup parameter
+   * @return: the loaded lookup parameter
+   *
+   */
+  virtual LookupParameter load_lookup_param(ParameterCollection & model,
+                                            const std::string & key) = 0;
+
+
+}; // class Packer
+
+
+class TextFilePacker : public Packer {
+ public:
+  TextFilePacker(std::string filename, bool append = true)
+      : fn(filename), fn_meta(filename + ".meta"), is_append(append) {}
 
   /**
    * @brief Save ParameterCollection with key, use internal namespace if key is not given.
@@ -50,7 +157,7 @@ class Packer {
    *                   to specify whether the model file is append mode or not
    */
   void save(const ParameterCollection & model,
-            const std::string & key = "", bool is_append = true);
+            const std::string & key = "") override;
 
   /**
    * @brief Save ParameterCollection's parameters and lookup parameters with filter_lst and key,
@@ -60,30 +167,26 @@ class Packer {
    * @param filter_lst: save parameters and lookup parameters satisfy the filter_lst condition
    *                    each filter can be regex expressions
    * @param key: optional parameter, the key for the model 
-   * @param is_append: optional parameter
-   *                   to specify whether the model file is append mode or not
    */
   void save(const ParameterCollection & model,
             const std::vector<std::string> & filter_lst,
-            const std::string & key = "", bool is_append = true);
+            const std::string & key = "") override;
 
   /**
    * @brief Save Parameter with key, use internal name if key is not given.
    *
    * @param model: input Parameter object to be saved
    * @param key: optional parameter, the key for the saving Parameter
-   * @param is_append: optional parameter to specify whether the model file is append mode or not
    */
-  void save(const Parameter & param, const std::string & key = "", bool is_append = true);
+  void save(const Parameter & param, const std::string & key = "") override;
 
   /**
    * @brief Save look parameter with key, use internal name if key is not given.
    * 
    * @param model: input LookupParameter object to be saved
    * @param key: optional parameter, the key for the saving Parameter
-   * @param is_append: optional parameter to specify whether the model file is append mode or not
    */
-  void save(const LookupParameter & param, const std::string & key = "", bool is_append = true);
+  void save(const LookupParameter & param, const std::string & key = "") override;
 
   /**
    * @brief Populate ParameterCollection object with key.
@@ -92,7 +195,7 @@ class Packer {
    * @param key: optional parameter, the key for loading the model
    *
    */
-  void populate(ParameterCollection & model, const std::string & key = "");
+  void populate(ParameterCollection & model, const std::string & key = "") override;
 
   /**
    * @brief Populate ParameterCollection object with filter_lst and with key equals to key.
@@ -105,7 +208,7 @@ class Packer {
    */
   void populate(ParameterCollection & model,
                 const std::vector<std::string> & filter_lst,
-                const std::string & key = "");
+                const std::string & key = "") override;
 
   /**
    * @brief Populate independent parameter object with key.
@@ -115,19 +218,7 @@ class Packer {
    * @param key: optional parameter, the key for loading the parameter 
    *
    */
-  void populate(Parameter & param, const std::string & key = "");
-
-  /**
-   * @brief Populate parameter object inside a model with key.
-   *
-   * @param param: input/output parameter, the Parameter object to be populated in. 
-   * @param model_name: model_name for holding the wanted parameter
-   * @param key: the key for loading the parameter
-   *
-   */
-  void populate(Parameter & param,
-                const std::string & model_name,
-                const std::string & key);
+  void populate(Parameter & param, const std::string & key = "") override;
 
   /**
    * @brief Populate independent lookup parameter object with key.
@@ -138,19 +229,7 @@ class Packer {
    *
    */
   void populate(LookupParameter & lookup_param,
-                const std::string & key = "");
-
-  /**
-   * @brief Populate LookupParameter object inside a model with key.
-   *
-   * @param lookup_param: input/output parameter, the LookupParameter object to be populated in. 
-   * @param model_name: model_name for holding the wanted lookup parameter
-   * @param key: the key for loading the lookup parameter
-   *
-   */
-  void populate(LookupParameter & lookup_param,
-                const std::string & model_name,
-                const std::string & key);
+                const std::string & key = "") override;
   
   /**
    * @brief Load parameter into model with key
@@ -160,20 +239,7 @@ class Packer {
    * @return: the loaded parameter
    *
    */
-  Parameter load_param(ParameterCollection & model, const std::string & key);
-
-  /**
-   * @brief Load parameter into model with model_name and parameter key
-   * 
-   * @param model: input/output parameter, the model to load parameter
-   * @param model_name: model_name for holding the wanted parameter
-   * @param key: the key for loading the parameter
-   * @return: the loaded parameter
-   *
-   */
-  Parameter load_param(ParameterCollection & model,
-                       const std::string & model_name,
-                       const std::string & key);
+  Parameter load_param(ParameterCollection & model, const std::string & key) override;
 
   /**
    * @brief Load lookup parameter into model with key
@@ -183,22 +249,14 @@ class Packer {
    * @return: the loaded lookup parameter
    *
    */
-  LookupParameter load_lookup_param(ParameterCollection & model, const std::string & key);
-
-  /**
-   * @brief Load lookup parameter into model with model_name and lookup parameter key
-   * 
-   * @param model: input/output parameter, the model to load the lookup parameter
-   * @param model_name: model_name for holding the wanted lookup parameter
-   * @param key: the key for loading the lookup parameter
-   * @return: the loaded lookup parameter
-   *
-   */
-  LookupParameter load_lookup_param(ParameterCollection & model,
-                                    const std::string & model_name,
-                                    const std::string & key);
+  LookupParameter load_lookup_param(ParameterCollection & model, const std::string & key) override;
 
  private:
+  void reinit(std::string filename) {
+    offset = 0;
+    fn = filename;
+    fn_meta = filename + ".meta";
+  }
   bool duplicate_key_check(const std::string & key);
   void serialize(const ParameterCollection & model,
                  const std::string & key,
@@ -238,6 +296,7 @@ class Packer {
 
  private:
   std::string fn, fn_meta;
+  bool is_append;
   long long offset = 0;
 }; // class Packer
 
