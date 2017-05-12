@@ -4,11 +4,11 @@ import time
 import sys
 random.seed(1)
 
-SEQ_LENGTH=40
-BATCH_SIZE=50
-HIDDEN=200
-NCLASSS=300
-EMBED_SIZE=200
+SEQ_LENGTH=2
+BATCH_SIZE=2
+HIDDEN=1
+NCLASSS=2
+EMBED_SIZE=1
 N_SEQS=1000
 autobatching=True
 
@@ -16,7 +16,7 @@ dy.renew_cg()
 
 random_seq = lambda ln,t: [random.randint(0,t-1) for _ in xrange(ln)]
 seq_lengths = [SEQ_LENGTH for _ in range(N_SEQS)]
-seq_lengths = [random.randint(10, SEQ_LENGTH) for _ in range(N_SEQS)]
+#seq_lengths = [random.randint(10, SEQ_LENGTH) for _ in range(N_SEQS)]
 Xs = [random_seq(L, 100) for L in seq_lengths]
 Ys = [random_seq(L, NCLASSS) for L in seq_lengths]
 
@@ -63,8 +63,8 @@ for X,Y in zip(Xs,Ys):
         print s.npvalue()
         sys.exit()
         #break
-        #s.backward()
-        #trainer.update()
+        s.backward()
+        trainer.update()
         batch = []
         dy.renew_cg()
 print "total time:",time.time() - start, len(Xs) / (time.time() - start)
