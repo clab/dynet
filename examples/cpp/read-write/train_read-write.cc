@@ -74,21 +74,21 @@ public:
 };
 
 void WriteToFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
-  TextFilePacker packer(filename);
-  packer.save(dynet_model, "model");
-  packer.save(model.pW, "model.pW");
-  packer.save(model.pb, "model.pb");
-  packer.save(model.pV, "model.pV");
-  packer.save(model.pa, "model.pa");
+  TextFileSaver saver(filename);
+  saver.save(dynet_model, "model");
+  saver.save(model.pW, "model.pW");
+  saver.save(model.pb, "model.pb");
+  saver.save(model.pV, "model.pV");
+  saver.save(model.pa, "model.pa");
 }
 
 void ReadFromFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
-  TextFilePacker packer(filename);
-  packer.populate(dynet_model, "model");
-  packer.populate(model.pW, "model.pW");
-  packer.populate(model.pb, "model.pb");
-  packer.populate(model.pV, "model.pV");
-  packer.populate(model.pa, "model.pa");
+  TextFileLoader loader(filename);
+  loader.populate(dynet_model, "model");
+  loader.populate(model.pW, "model.pW");
+  loader.populate(model.pb, "model.pb");
+  loader.populate(model.pV, "model.pV");
+  loader.populate(model.pa, "model.pa");
 }
 
 int main(int argc, char** argv) {

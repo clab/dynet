@@ -70,106 +70,120 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     m.add_parameters({10}, "a");
     m.add_parameters({3,7});
     m.add_lookup_parameters(10, {2});
-    std::remove("test.model"); std::remove("test.model.meta");
-    dynet::TextFilePacker s("test.model");
-    s.save(m, "model1");
-    s.save(m, m.get_namespace());
+    {
+      dynet::TextFileSaver s("test.model");
+      s.save(m, "model1");
+      s.save(m, m.get_namespace());
+    }
 
-    ParameterCollection m2;
-    s.populate(m2, "model1");
-    DYNET_CHECK_EQUAL(m2, m);
-    ParameterCollection m3;
-    s.populate(m3, "/");
+    {
+      dynet::TextFileLoader s("test.model");
+      ParameterCollection m2;
+      s.populate(m2, "model1");
+      DYNET_CHECK_EQUAL(m2, m);
+      ParameterCollection m3;
+      s.populate(m3, "/");
+    }
   }
   {
-    ParameterCollection collec;
+    ParameterCollection collec, collec2, collec3, lstm2, affine2;
     testModel spec(collec);
-    std::remove("a.model"); std::remove("a.model.meta");
-    TextFilePacker s1("a.model");
-    s1.save(collec, "all");
-    ParameterCollection collec2;
-    s1.populate(collec2);
+    {
+      TextFileSaver s1("a.model");
+      s1.save(collec, "all");
+    }
+    {
+      TextFileLoader s1("a.model");
+      s1.populate(collec2);
+    }
     DYNET_CHECK_EQUAL(collec2.size(), collec.size());
   
-    std::remove("b.model"); std::remove("b.model.meta");
-    TextFilePacker s2("b.model");
-    s2.save(collec, "all");
-    s2.save(spec.get_lstm_model(), "lstm");
-    s2.save(spec.get_affine_model(), "affine");
-    ParameterCollection collec3, lstm2, affine2;
-    s2.populate(affine2, "affine");
-    s2.populate(collec3, "all");
-    s2.populate(lstm2, "lstm");
+    {
+      TextFileSaver s2("b.model");
+      s2.save(collec, "all");
+      s2.save(spec.get_lstm_model(), "lstm");
+      s2.save(spec.get_affine_model(), "affine");
+    }
+    {
+      TextFileLoader s2("b.model");
+      s2.populate(affine2, "affine");
+      s2.populate(collec3, "all");
+      s2.populate(lstm2, "lstm");
+    }
     DYNET_CHECK_EQUAL(affine2.size(), spec.get_affine_model().size());
     DYNET_CHECK_EQUAL(collec3.size(), collec.size());
     DYNET_CHECK_EQUAL(lstm2.size(), spec.get_lstm_model().size());
 
-    std::remove("c.model"); std::remove("c.model.meta");
-    s2.save(lstm2, "lstm");
-    s2.save(collec3, "all");
-    s2.save(affine2, "affine");
   }
   {
-    ParameterCollection cc;
+    ParameterCollection cc, ccc;
     auto cc2 = cc.add_subcollection("xx");
     cc2.add_parameters({2, 3, 4, 5});
-    std::remove("d.model"); std::remove("d.model.meta");
-    TextFilePacker s3("d.model");
-    s3.save(cc, "key");
-
-    ParameterCollection ccc;
-    s3.populate(ccc, "key");
+    {
+      TextFileSaver s3("d.model");
+      s3.save(cc, "key");
+    }
+    {
+      TextFileLoader s3("d.model");
+      s3.populate(ccc, "key");
+    }
     DYNET_CHECK_EQUAL(ccc.size(), cc.size());
-
-    std::remove("e.model"); std::remove("e.model.meta");
-    s3.save(ccc);
   }
 }
 
 BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   {
-    std::remove("f.model.meta"); std::remove("f.model");
-    TextFilePacker packer("f.model");
     ParameterCollection model_out;
     Parameter m_out = model_out.add_parameters({100});
     LookupParameter lookup_m_out = model_out.add_lookup_parameters(10, {128});
-    packer.save(m_out, "m");
-    packer.save(lookup_m_out, "lookup_m");
+    {
+      TextFileSaver saver("f.model");
+      saver.save(m_out, "m");
+      saver.save(lookup_m_out, "lookup_m");
+    }
 
-    ParameterCollection model;
-    Parameter m = model.add_parameters({100});
-    LookupParameter lookup_m = model_out.add_lookup_parameters(10, {128});
-    packer.populate(m, "m");
-    packer.populate(lookup_m, "lookup_m");
+    ParameterCollection model, model_in;
+    Parameter m = model.add_parameters({100}), m_in;
+    LookupParameter lookup_m = model_out.add_lookup_parameters(10, {128}), lookup_m_in;
+    {
+      TextFileLoader loader("f.model");
+      loader.populate(m, "m");
+      loader.populate(lookup_m, "lookup_m");
+    }
     DYNET_CHECK_EQUAL(m, m_out);
     DYNET_CHECK_EQUAL(lookup_m, lookup_m_out);
-
-    ParameterCollection model_in;
-    Parameter m_in = packer.load_param(model_in, "m");
-    LookupParameter lookup_m_in = packer.load_lookup_param(model_in, "lookup_m");
+    {
+      TextFileLoader loader("f.model");
+      m_in = loader.load_param(model_in, "m");
+      lookup_m_in = loader.load_lookup_param(model_in, "lookup_m");
+    }
     DYNET_CHECK_EQUAL(m_in, m_out);
     DYNET_CHECK_EQUAL(lookup_m_in, lookup_m_out);
   }
   {
-    std::remove("g.model.meta"); std::remove("g.model");
-    TextFilePacker packer("g.model");
     ParameterCollection model;
     Parameter m = model.add_parameters({10});
     LookupParameter lookup_m = model.add_lookup_parameters(10, {128});
-    packer.save(model, "model");
+    {
+      TextFileSaver saver("g.model");
+      saver.save(model, "model");
+    }
 
-    ParameterCollection model_in;
+    ParameterCollection model_in, model_in2;
     Parameter m_in = model_in.add_parameters({10});
     LookupParameter lookup_m_in = model_in.add_lookup_parameters(10, {128});
-    packer.populate(m_in, "/__0");
-    DYNET_CHECK_EQUAL(m_in, m);
-    packer.populate(lookup_m_in, "/__1");
-    DYNET_CHECK_EQUAL(lookup_m_in, lookup_m);
-    ParameterCollection model_in2;
-    Parameter m_in2 = packer.load_param(model_in2, "/__0");
-    DYNET_CHECK_EQUAL(m_in2, m);
-    LookupParameter lookup_m_in2 = packer.load_lookup_param(model_in2, "/__1");
-    DYNET_CHECK_EQUAL(lookup_m_in2, lookup_m);
+
+    {
+      TextFileLoader loader("g.model");
+      loader.populate(m_in, "/__0");
+      DYNET_CHECK_EQUAL(m_in, m);
+      loader.populate(lookup_m_in, "/__1");
+      DYNET_CHECK_EQUAL(lookup_m_in, lookup_m);
+      Parameter m_in2 = loader.load_param(model_in2, "/__0");
+      DYNET_CHECK_EQUAL(m_in2, m);
+      LookupParameter lookup_m_in2 = loader.load_lookup_param(model_in2, "/__1");
+      DYNET_CHECK_EQUAL(lookup_m_in2, lookup_m);
+    }
   }
 }
 

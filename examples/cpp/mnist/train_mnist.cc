@@ -64,8 +64,8 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    TextFilePacker packer(params.model_file);
-    packer.populate(model, "model");
+    TextFileLoader loader(params.model_file);
+    loader.populate(model, "model");
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -161,10 +161,8 @@ int main(int argc, char** argv) {
       // If the dev loss is lower than the previous ones, save the ,odel
       if (dpos > worst) {
         worst = dpos;
-        std::string fname_meta = fname + ".meta";
-        std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-        TextFilePacker packer(fname);
-        packer.save(model, "model");
+        TextFileSaver saver(fname);
+        saver.save(model, "model");
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)

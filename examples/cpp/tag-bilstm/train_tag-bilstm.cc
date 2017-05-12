@@ -192,8 +192,8 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
-    TextFilePacker packer(argv[3]);
-    packer.populate(model, "model");
+    TextFileLoader loader(argv[3]);
+    loader.populate(model, "model");
   }
 
   unsigned report_every_i = 50;
@@ -247,10 +247,8 @@ int main(int argc, char** argv) {
       eval = false;
       if (dloss < best) {
         best = dloss;
-        std::string fname_meta = fname + ".meta";
-        std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-        TextFilePacker packer(fname);
-        packer.save(model, "model");
+        TextFileSaver saver(fname);
+        saver.save(model, "model");
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / dtags) << ' ';
     }

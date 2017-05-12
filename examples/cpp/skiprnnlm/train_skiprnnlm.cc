@@ -134,8 +134,8 @@ int main(int argc, char** argv) {
 
     RNNSkipLM lm(model);
     if (argc == 4) {
-        Packer packer(argv[3]);
-        packer.populate(model, "model");'
+        TextfileLoader loader(argv[3]);
+        loader.populate(model, "model");'
     }
 
     unsigned report_every_i = 50;
@@ -191,10 +191,8 @@ int main(int argc, char** argv) {
             }
             if (dloss < best) {
                 best = dloss;
-                std::string fname_meta = fname + ".meta";
-                std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-                Packer packer(fname);
-                packer.save(model, "model");
+                TextFileSaver saver(fname);
+                saver.save(model, "model");
             }
             LOG(INFO) << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
         }

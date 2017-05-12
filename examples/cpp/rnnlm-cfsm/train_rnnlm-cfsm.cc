@@ -149,8 +149,8 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> lm(model, cfsm);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model, cfsm);
   if (argc == 5) {
-    TextFilePacker packer(argv[4]);
-    packer.populate(model, "model");
+    TextFileLoader loader(argv[4]);
+    loader.populate(model, "model");
   }
 
   unsigned report_every_i = 50;
@@ -205,10 +205,8 @@ int main(int argc, char** argv) {
 #if 1
       if (dloss < best) {
         best = dloss;
-        std::string fname_meta = fname + ".meta";
-        std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-        TextFilePacker packer(fname);
-        packer.save(model, "model");
+        TextFileSaver saver(fname);
+        saver.save(model, "model");
       }
     }
 #endif

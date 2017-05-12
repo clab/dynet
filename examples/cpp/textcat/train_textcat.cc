@@ -249,8 +249,6 @@ int main(int argc, char** argv) {
   bool first = true;
   int report = 0;
   unsigned lines = 0;
-  std::remove("textcat.model.meta"); std::remove("textcat.model");
-  TextFilePacker packer("textcat.model");
   while(1) {
     Timer iteration("completed in");
     double loss = 0;
@@ -306,7 +304,8 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        packer.save(model, "model");
+        TextFileSaver saver("textcat.model");
+        saver.save(model, "model");
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }

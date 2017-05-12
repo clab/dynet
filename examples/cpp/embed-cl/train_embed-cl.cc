@@ -66,10 +66,9 @@ struct Encoder {
   }
 
   void save() {
-    std::remove("embed-cl.model.meta"); std::remove("embed-cl.model");
-    TextFilePacker packer("embed-cl.model");
-    packer.save(p_s, "p_s");
-    packer.save(p_t, "p_t");
+    TextFileSaver saver("embed-cl.model");
+    saver.save(p_s, "p_s");
+    saver.save(p_t, "p_t");
   }
 };
 
@@ -135,8 +134,8 @@ int main(int argc, char** argv) {
   Encoder emb;
   if (argc == 4) {
     string fname = argv[3];
-    TextFilePacker packer(fname);
-    packer.populate(model, "model");
+    TextFileLoader loader(fname);
+    loader.populate(model, "model");
   }
   else {
     emb = Encoder(model);
