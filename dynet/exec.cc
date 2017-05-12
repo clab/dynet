@@ -362,10 +362,12 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
   if (upto >= num_nodes_evaluated) {
     //cerr << "BatchedExecutionEngine::incremental_forward " << upto << " " << num_nodes_evaluated << endl;
 
-    nfx_cache.resize(upto + 1);
-    node2batch.resize(upto + 1);
-    node2offset.resize(upto + 1, 0);
-    node2size.resize(upto + 1, 0);
+    size_t uptop1 = upto + 1;
+
+    nfx_cache.resize(uptop1);
+    node2batch.resize(uptop1);
+    node2offset.resize(uptop1, 0);
+    node2size.resize(uptop1, 0);
 
     // Create the necessary info for batching in the future
     VariableIndex node_id = num_nodes_evaluated;
@@ -374,21 +376,21 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
     // Allocate temporary memory for bookkeeping
     SigMap sigmap;   // Batching signature to id.
-    size_t temp_data_size = (upto+1)*4*sizeof(int) + (upto-node_id+2)*2*sizeof(float);
+    size_t temp_data_size = (uptop1)*4*sizeof(int) + (upto-node_id+2)*2*sizeof(float);
     int* node2profid = (int*)malloc(temp_data_size);
     memset(node2profid, 0, temp_data_size);
-    int* node2left = node2profid + upto + 1;
-    int* node2depth = node2left + upto + 1;
-    int* active_un_begin = node2depth + upto + 1;
+    int* node2left = node2profid + uptop1;
+    int* node2depth = node2left + uptop1;
+    int* active_un_begin = node2depth + uptop1;
     int* active_un_end = active_un_begin;
-    float* prof2avg = (float*)(active_un_begin + upto + 1);
+    float* prof2avg = (float*)(active_un_begin + uptop1);
     float* prof2cnt = prof2avg + upto - node_id + 2;
 
     // More intelligent batching?
     if(autobatch_strategy == 1 || autobatch_strategy == 3) {
 
       unordered_map<int, int> depthprofcnt(upto*3);             // Count of remaining things for this profile
-      vector<vector<VariableIndex> > node2successors(upto + 1); // Node to successors
+      vector<vector<VariableIndex> > node2successors(uptop1); // Node to successors
       // Average ID of batched items, a heuristic for which to run first
       // The active items that cannot or can be batched
       vector<vector<VariableIndex> > active_batched;
@@ -407,14 +409,17 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             depth = max(node2depth[arg]+1,depth);
           }
         }
+        node2depth[j] = depth;
         // cerr << "j==" << j << ", depth==" << depth << endl;
         // Get the node profile ID
         sig = node->autobatch_sig(cg, sigmap);
         // If batchable, collect statistics
         if (sig != 0) {
-          node2depth[j] = depth;
           node2profid[j] = sig; 
-          if(autobatch_strategy == 3) ++depthprofcnt[(depth * upto) + sig];
+          if(autobatch_strategy == 3) {
+            // cerr << "Adding node " << j << " to " << depth << "," << sig << endl;
+            ++depthprofcnt[(depth * upto) + sig];
+          }
           if (active_batched.size() <= sig) active_batched.resize(sig+1);
           prof2avg[sig] += depth;
           prof2cnt[sig]++;
@@ -437,7 +442,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
       //for (int i =0; i<sigmap.size(); ++i) { cerr << i << " " << prof2avg[idx[i]] << endl; }
 
       // 2) Travel through and do active nodes
-      while(node_id != upto + 1) {
+      while(node_id != (VariableIndex)uptop1) {
 
         // First find the best node to execute next in order of priority
         // 1. Nodes that don't support batching
@@ -472,8 +477,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             curr_prof = -1;
           }
         }
-        // cerr << "node2left =="; for(size_t j = 0; j < i+1; ++j) cerr << ' ' << j <<  ":" << node2left[j]; cerr << endl;
-        // cerr << "depthprofcnt =="; for(auto kv : depthprofcnt) cerr << " " << (kv.first / (1 * i)) << ',' << kv.first % (1 * i) << ":" << kv.second; cerr << endl;
+        // cerr << "node2left =="; for(size_t j = 0; j < uptop1; ++j) cerr << ' ' << j <<  ":" << node2left[j]; cerr << endl;
+        // cerr << "depthprofcnt =="; for(auto kv : depthprofcnt) cerr << " " << (kv.first / upto) << ',' << kv.first % upto << ":" << kv.second; cerr << endl;
 
         // 2.a) If we have a single current node, then we execute it
         auto & my_batch = batches[batch_id];
@@ -706,14 +711,14 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             }
             // cerr << "min_node=" << (size_t)min_node << ", max_node=" << (size_t)max_node << ", tot_arg=" << tot_arg << endl;
             if (min_node + tot_arg == max_node) { // if contig, use current mem for xs_i
-              // cerr << "    contiguous " << my_batch.ids.size() << node->as_string() << endl;
+              // cerr << "    contiguous " << my_batch.ids.size() << node->as_dummy_string() << endl;
               //xs[i] = &batched_nfxs[...];
               my_xsi->v = min_node;
               my_xsi->d = Dim({tot_arg});
               my_batch.concat[i] = 2;
             //   autobatch_garbage[i] = false;
             } else { // if non-contig, copy xs_i into new mem.
-              // cerr << "non contiguous " << my_batch.ids.size() << node->as_string() << endl;
+              // cerr << "non contiguous " << my_batch.ids.size() << node->as_dummy_string() << endl;
               // 2.b) the inputs need to be concatenated, and are not contiguous
               combine_tensors(my_batch.ids, i, *my_xsi);
             }
@@ -747,13 +752,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     Timing timer;
     incremental_forward_no_update(i, 1);
     double best_speed = timer.stop();
-    cerr << "autobatch strategy " << 1 << " speed:" << best_speed << endl;
+    // cerr << "autobatch strategy " << 1 << " speed:" << best_speed << endl;
     autobatch_flag = 1;
     for(size_t strat = 2; strat < 4; ++strat) {
       timer.start();
       incremental_forward_no_update(i, strat);
       double speed = timer.stop();
-      cerr << "autobatch strategy " << strat << " speed:" << speed << endl;
+      // cerr << "autobatch strategy " << strat << " speed:" << speed << endl;
       if(speed < best_speed) {
         best_speed = speed;
         autobatch_flag = strat;
@@ -804,7 +809,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->free();
   for (unsigned i = 0; i < num_batches; ++i) {
-    // cerr << "Doing batch " << i << ", batched_nfxs.size()=" << batched_nfxs.size() << ", batched_ndEdfs.size()=" << batched_ndEdfs.size() << endl;
+    // cerr << "Doing batch " << i << ", batches.size()=" << batches.size() << ", batched_ndEdfs.size()=" << batched_ndEdfs.size() << endl;
     const auto & my_batch = batches[i];
     const auto & dim = my_batch.nfx.d;
     batched_ndEdfs[i].d = dim;
