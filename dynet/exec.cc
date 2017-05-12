@@ -360,6 +360,7 @@ void BatchedExecutionEngine::garbage_collect() {
 
 const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex upto, int autobatch_strategy) {
   if (upto >= num_nodes_evaluated) {
+    //cerr << "BatchedExecutionEngine::incremental_forward " << upto << " " << num_nodes_evaluated << endl;
 
     nfx_cache.resize(upto + 1);
     node2batch.resize(upto + 1);
@@ -452,7 +453,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             // cerr << "active_batched[" << profid << "].size() == " << active_batched[profid].size() << endl;
             const float avg = prof2avg[profid];
             if(active_batched[profid].size() > 0 &&
-               (best_avg > avg || (best_avg == avg && sigmap.sig2type(profid)<nt::COMPLEX )) && // tie-break on type, defer affine and matmul
+               //(best_avg > avg || (best_avg == avg && sigmap.sig2type(profid)<nt::COMPLEX )) && // tie-break on type, defer affine and matmul
+               (best_avg > avg) && 
                (autobatch_strategy == 1 || depthprofcnt[(node2depth[active_batched[profid].back()] * upto) + profid] == 0)) {
               curr_prof = profid;
               best_avg = avg;
@@ -665,14 +667,16 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           xs[ai] = &get_nfx(arg);
           ++ai;
         }
+         //cerr << "Single evaluation:" << node->as_dummy_string() << endl;
         node->forward(xs, my_batch.nfx);
-        // cerr << "Single evaluation for nfxs[" << nid << "] = " << print_vec(as_vector(my_batch.nfx)) << endl;
+         //cerr << "Single evaluation for nfxs[" << nid << "] = " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
       } else { // execute a batch node
-        // cerr << "Evaluating batch " << num_batches_evaluated << ":"; for(auto bid : my_batch.ids) cerr << ' ' << bid; cerr << endl;
+         //cerr << "Evaluating batch " << num_batches_evaluated << ":"; for(auto bid : my_batch.ids) cerr << ' ' << bid; cerr << endl;
         size_t arity = my_batch.concat.size();
         Node* node = my_batch.pseudo_node;
         if(node == nullptr) node = cg.nodes[my_batch.ids[0]];
+        //cerr << "batched:" << my_batch.concat.size() << " " << node->as_dummy_string() << endl;
         xs.resize(arity); 
         // Figure out whether we need to create the inputs
         my_batch.arg_nfxs.resize(arity);
@@ -734,7 +738,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
 const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
   DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::incremental_forward()");
-  // cerr << "BatchedExecutionEngine::incremental_forward" << endl;
+  //cerr << "BatchedExecutionEngine::incremental_forward " << autobatch_flag << endl;
 
   if (num_nodes_evaluated == 0)
     garbage_collect();
