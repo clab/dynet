@@ -361,10 +361,12 @@ void BatchedExecutionEngine::garbage_collect() {
 const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex upto, int autobatch_strategy) {
   if (upto >= num_nodes_evaluated) {
 
-    nfx_cache.resize(upto + 1);
-    node2batch.resize(upto + 1);
-    node2offset.resize(upto + 1, 0);
-    node2size.resize(upto + 1, 0);
+    size_t uptop1 = upto + 1;
+
+    nfx_cache.resize(uptop1);
+    node2batch.resize(uptop1);
+    node2offset.resize(uptop1, 0);
+    node2size.resize(uptop1, 0);
 
     // Create the necessary info for batching in the future
     VariableIndex node_id = num_nodes_evaluated;
@@ -373,21 +375,21 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
     // Allocate temporary memory for bookkeeping
     SigMap sigmap;   // Batching signature to id.
-    size_t temp_data_size = (upto+1)*4*sizeof(int) + (upto-node_id+2)*2*sizeof(float);
+    size_t temp_data_size = (uptop1)*4*sizeof(int) + (upto-node_id+2)*2*sizeof(float);
     int* node2profid = (int*)malloc(temp_data_size);
     memset(node2profid, 0, temp_data_size);
-    int* node2left = node2profid + upto + 1;
-    int* node2depth = node2left + upto + 1;
-    int* active_un_begin = node2depth + upto + 1;
+    int* node2left = node2profid + uptop1;
+    int* node2depth = node2left + uptop1;
+    int* active_un_begin = node2depth + uptop1;
     int* active_un_end = active_un_begin;
-    float* prof2avg = (float*)(active_un_begin + upto + 1);
+    float* prof2avg = (float*)(active_un_begin + uptop1);
     float* prof2cnt = prof2avg + upto - node_id + 2;
 
     // More intelligent batching?
     if(autobatch_strategy == 1 || autobatch_strategy == 3) {
 
       unordered_map<int, int> depthprofcnt(upto*3);             // Count of remaining things for this profile
-      vector<vector<VariableIndex> > node2successors(upto + 1); // Node to successors
+      vector<vector<VariableIndex> > node2successors(uptop1); // Node to successors
       // Average ID of batched items, a heuristic for which to run first
       // The active items that cannot or can be batched
       vector<vector<VariableIndex> > active_batched;
@@ -439,7 +441,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
       //for (int i =0; i<sigmap.size(); ++i) { cerr << i << " " << prof2avg[idx[i]] << endl; }
 
       // 2) Travel through and do active nodes
-      while(node_id != upto + 1) {
+      while(node_id != (VariableIndex)uptop1) {
 
         // First find the best node to execute next in order of priority
         // 1. Nodes that don't support batching
@@ -473,7 +475,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             curr_prof = -1;
           }
         }
-        // cerr << "node2left =="; for(size_t j = 0; j < upto+1; ++j) cerr << ' ' << j <<  ":" << node2left[j]; cerr << endl;
+        // cerr << "node2left =="; for(size_t j = 0; j < uptop1; ++j) cerr << ' ' << j <<  ":" << node2left[j]; cerr << endl;
         // cerr << "depthprofcnt =="; for(auto kv : depthprofcnt) cerr << " " << (kv.first / upto) << ',' << kv.first % upto << ":" << kv.second; cerr << endl;
 
         // 2.a) If we have a single current node, then we execute it
