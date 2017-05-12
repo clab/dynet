@@ -389,7 +389,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     if(autobatch_strategy == 1 || autobatch_strategy == 3) {
 
       unordered_map<int, int> depthprofcnt(upto*3);             // Count of remaining things for this profile
-      vector<vector<VariableIndex> > node2successors(uptop1); // Node to successors
+      vector<VariableIndex> node2successors(uptop1,(VariableIndex)0); // Node to successors
+      VariableIndex n2sptr;
       // Average ID of batched items, a heuristic for which to run first
       // The active items that cannot or can be batched
       vector<vector<VariableIndex> > active_batched;
@@ -404,7 +405,10 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         for (VariableIndex arg : node->args) {
           if(arg >= node_id) {
             node2left[j]++;
-            node2successors[arg].push_back(j);
+            VariableIndex n2sptr = node2successors[arg];
+            node2successors.push_back(j);
+            node2successors[arg] = node2successors.size();
+            node2successors.push_back(n2sptr);
             depth = max(node2depth[arg]+1,depth);
           }
         }
@@ -488,7 +492,10 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           // Increment the counts
           node2batch[curr_node] = batch_id;
           // Decrement the counts of the predecessors and add them to the active queue as appropriate
-          for(auto next_node : node2successors[curr_node]) {
+          n2sptr = node2successors[curr_node];
+          while(n2sptr != (VariableIndex)0) {
+            auto next_node = node2successors[n2sptr-1];
+            n2sptr = node2successors[n2sptr];
             if(--node2left[next_node] == 0) {
               auto profid = node2profid[next_node];
               if(profid == 0) {
@@ -518,7 +525,10 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           for(size_t j = 0; j < batch_ids_size; ++j) {
             VariableIndex curr_node = batch_ids[j];
             node2batch[curr_node] = batch_id;
-            for(auto next_node : node2successors[curr_node]) {
+            n2sptr = node2successors[curr_node];
+            while(n2sptr != (VariableIndex)0) {
+              auto next_node = node2successors[n2sptr-1];
+              n2sptr = node2successors[n2sptr];
               if(--node2left[next_node] == 0) {
                 auto profid = node2profid[next_node];
                 if(profid == 0) {
