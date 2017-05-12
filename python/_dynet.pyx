@@ -866,7 +866,7 @@ def cg_version():
     """
     return _cg._cg_version
 
-def renew_cg(immediate_compute=False, check_validity=False, autobatching=False): 
+def renew_cg(immediate_compute=False, check_validity=False, autobatching=None): 
     """
     Renew the computation graph.
 
@@ -910,12 +910,15 @@ cdef class ComputationGraph:
     def __dealloc__(self):
         del self.thisptr
 
-    cpdef renew(self, immediate_compute=False, check_validity=False, autobatching=False):
+    cpdef renew(self, immediate_compute=False, check_validity=False, autobatching=None):
         """
         Same as :code:`dynet.renew_cg()`
         """
         del self.thisptr
-        self.thisptr = new CComputationGraph(autobatching)
+        if autobatching is None:
+            self.thisptr = new CComputationGraph()
+        else:
+            self.thisptr = new CComputationGraph(autobatching)
         if immediate_compute: self.thisptr.set_immediate_compute(immediate_compute)
         if check_validity: self.thisptr.set_check_validity(check_validity)
         self._inputs = []
