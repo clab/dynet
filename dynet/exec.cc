@@ -122,6 +122,8 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
     }
   }
 
+  // for(VariableIndex j = (VariableIndex)0; j <= i; ++j) cerr << "nfx[" << j << "] == " << print_vec(as_vector(nfxs[j])) << endl;
+
   return nfxs[i];
 }
 
@@ -441,12 +443,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
       for(size_t j = 0; j < (size_t)sigmap.size(); ++j)
         prof2avg[j] /= prof2cnt[j];
 
-      //vector<size_t> idx(sigmap.size());
-      //iota(idx.begin(), idx.end(), 0);
-      // sort indexes based on comparing values in void
-      //sort(idx.begin(), idx.end(), [&prof2avg](size_t i1, size_t i2) {return prof2avg[i1] < prof2avg[i2];});
-      //for (int i =0; i<sigmap.size(); ++i) { cerr << i << " " << prof2avg[idx[i]] << endl; }
-
       // 2) Travel through and do active nodes
       while(node_id != (VariableIndex)uptop1) {
 
@@ -586,12 +582,14 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         if(batch_info.first.second == 0) {
           for(auto curr_node : batch_info.second) {
             node2batch[curr_node] = batch_id;
+            // cerr << "Processing single[" << batch_id << "]: " << cg.nodes[curr_node]->as_dummy_string() << " N" << curr_node << endl;
             batches[batch_id++].ids.resize(1, curr_node);
           }
         // batchable
         } else {
           for(auto curr_node : batch_info.second)
             node2batch[curr_node] = batch_id;
+          // cerr << "Processing batched[" << batch_id << "]: " << cg.nodes[batch_info.second[0]]->as_dummy_string() << ' ' ; for(auto bid : batch_info.second) cerr << " N" << bid; cerr << endl;
           batches[batch_id++].ids = batch_info.second;
         }
       }
@@ -691,7 +689,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         }
          //cerr << "Single evaluation:" << node->as_dummy_string() << endl;
         node->forward(xs, my_batch.nfx);
-         //cerr << "Single evaluation for nfxs[" << nid << "] = " << print_vec(as_vector(my_batch.nfx)) << endl;
+         // cerr << "Single evaluation for nfxs[" << nid << "] = " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
       } else { // execute a batch node
          //cerr << "Evaluating batch " << num_batches_evaluated << ":"; for(auto bid : my_batch.ids) cerr << ' ' << bid; cerr << endl;
@@ -715,27 +713,26 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             my_xsi->mem_pool = DeviceMempool::FXS;
 
             // check contig memory
-            float *min_node = (float*)std::numeric_limits<size_t>::max(), *max_node = (float*)0;
-            unsigned int tot_arg = 0, my_arg;
-            // cerr << "min_node=" << (size_t)min_node << ", max_node=" << (size_t)max_node << ", tot_arg=" << tot_arg << endl;
-            for(auto curr_node : my_batch.ids) {
-              VariableIndex aid = cg.nodes[curr_node]->args[i];
+            auto it = my_batch.ids.begin(), itend = my_batch.ids.end();
+            VariableIndex aid = cg.nodes[*(it++)]->args[i];
+            float *min_node = batches[node2batch[aid]].nfx.v + node2offset[aid];
+            unsigned int tot_arg = node2size[aid];
+            bool contig = true;
+            while(it != itend && contig) {
+              aid = cg.nodes[*(it++)]->args[i];
               float* v = batches[node2batch[aid]].nfx.v + node2offset[aid];
-              my_arg = node2size[aid];
-              tot_arg += my_arg;
-              min_node = min(min_node, v);
-              max_node = max(max_node, v + my_arg);
+              contig = contig && v == min_node + tot_arg;
+              tot_arg += node2size[aid];
             }
-            // cerr << "min_node=" << (size_t)min_node << ", max_node=" << (size_t)max_node << ", tot_arg=" << tot_arg << endl;
-            if (min_node + tot_arg == max_node) { // if contig, use current mem for xs_i
-              // cerr << "    contiguous " << my_batch.ids.size() << node->as_dummy_string() << endl;
+            if (contig) { // if contig, use current mem for xs_i
+              // cerr << "    contiguous @ " << num_batches_evaluated << "," << i << ": " << my_batch.ids.size() << " -- " << node->as_dummy_string() << endl;
               //xs[i] = &batched_nfxs[...];
               my_xsi->v = min_node;
               my_xsi->d = Dim({tot_arg});
               my_batch.concat[i] = 2;
             //   autobatch_garbage[i] = false;
             } else { // if non-contig, copy xs_i into new mem.
-              // cerr << "non contiguous " << my_batch.ids.size() << node->as_dummy_string() << endl;
+              // cerr << "non contiguous @ " << num_batches_evaluated << "," << i << ": " << my_batch.ids.size() << " -- " << node->as_dummy_string() << endl;
               // 2.b) the inputs need to be concatenated, and are not contiguous
               combine_tensors(my_batch.ids, i, *my_xsi);
             }
@@ -754,6 +751,8 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
     free(node2profid);
   }
+
+  // for(VariableIndex j = (VariableIndex)0; j <= upto; ++j) cerr << "nfx[" << j << "] == " << print_vec(as_vector(get_nfx(j))) << endl;
 
   return get_nfx(upto);
 }
@@ -962,16 +961,9 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
               node->device->pools[(int)DeviceMempool::DEDFS]->set_used(used);
             // Contiguous
             } else {
-              float *min_node = (float*)std::numeric_limits<size_t>::max(), *max_node = 0;
-              for(auto curr_node : my_batch.ids) {
-                VariableIndex aid = cg.nodes[curr_node]->args[ai];
-                size_t my_arg = node2size[aid];
-                float* v = batched_ndEdfs[node2batch[aid]].v + node2offset[aid];
-                min_node = min(min_node, v);
-                max_node = max(max_node, v + my_arg);
-              }
-              DYNET_ASSERT((size_t)(max_node-min_node) == my_ndEdf.d.size(), "Nodes don't match");
-              my_ndEdf.v = min_node;
+              VariableIndex aid = cg.nodes[my_batch.ids[0]]->args[ai];
+              float* v = batched_ndEdfs[node2batch[aid]].v + node2offset[aid];
+              my_ndEdf.v = v;
               node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
             }
           }
