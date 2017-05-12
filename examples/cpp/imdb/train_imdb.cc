@@ -252,8 +252,7 @@ int main(int argc, char** argv) {
   bool first = true;
   int report = 0;
   unsigned lines = 0;
-  std::remove("imdb.model.meta"); std::remove("imdb.model");
-  TextFilePacker packer("imdb.model");
+  TextFileSaver saver("imdb.model");
   while (1) {
     Timer iteration("completed in");
     double loss = 0;
@@ -301,7 +300,7 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        packer.save(model, "model");
+        saver.save(model, "model");
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }

@@ -228,8 +228,8 @@ int main(int argc, char** argv) {
   if (has_model_to_load) {
     string fname = conf["model"].as<string>();
     cerr << "Reading parameters from " << fname << "...\n";
-    Packer packer(fname);
-    packer.save(model, "model");
+    TextFileLoader loader(fname);
+    loader.save(model, "model");
   }
 
   bool LEARN = conf.count("learn");
@@ -318,10 +318,8 @@ int main(int argc, char** argv) {
         }
         if (dloss < best) {
           best = dloss;
-          std::string fname_meta = fname + ".meta";
-          std::remove(fname_meta.c_str()); std::remove(fname.c_str());
-          Packer packer(fname);
-          packer.save(model, "model", false);
+          TextFileSaver saver(fname);
+          saver.save(model, "model");
         }
         cerr << "\n***DEV [epoch=" << (lines / training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
       }
