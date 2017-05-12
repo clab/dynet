@@ -29,23 +29,19 @@ bwR = dy.VanillaLSTMBuilder(1, EMBED_SIZE, HIDDEN, m)
 T_= m.add_parameters((HIDDEN, HIDDEN*2))
 fwR2 = dy.VanillaLSTMBuilder(1, EMBED_SIZE, HIDDEN, m)
 bwR2 = dy.VanillaLSTMBuilder(1, EMBED_SIZE, HIDDEN, m)
-W_= m.add_parameters((NCLASSS, HIDDEN*2))
+W_= m.add_parameters((NCLASSS, HIDDEN*1))
 
 total_time = 0.0
 
 def transduce(seq,Y):
     seq = [E[i] for i in seq]
     fw = fwR.initial_state().transduce(seq)
-    bw = bwR.initial_state().transduce(reversed(seq))
-    zs = [dy.concatenate([f,b]) for f,b in zip(fw, reversed(bw))]
-    T = T_.expr()
-    zs = [T*z for z in zs]
-    fw = fwR2.initial_state().transduce(zs)
-    bw = bwR2.initial_state().transduce(reversed(zs))
-    zs = [dy.concatenate([f,b]) for f,b in zip(fw, reversed(bw))]
+
+    # this UNUSED part affects strategy 2
+    XXX = fwR2.initial_state().transduce([E[3],E[5]])
+
     W = W_.expr()
-    #zs = [dy.concatenate([f,b]) for f,b in zip(fw, fw)] #
-    outs = [W*z for z in zs]
+    outs = [W*z for z in fw]
     losses = [dy.pickneglogsoftmax(o,y) for o,y in zip(outs,Y)]
     s = dy.esum(losses)
     return s
