@@ -56,7 +56,7 @@ public:
 
 class BatchedExecutionEngine : public ExecutionEngine {
  public:
-  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) {}
+  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) { }
   ~BatchedExecutionEngine() { garbage_collect(); }
   void invalidate() override;
   void invalidate(unsigned i) override;
@@ -81,6 +81,7 @@ class BatchedExecutionEngine : public ExecutionEngine {
   std::vector<VariableIndex> node2batch; // length: number of nodes
   std::vector<size_t> node2offset, node2size; // length: number of nodes
   std::vector<BatchInfo> batches; // length: number of batches
+  SigMap sigmap;
 
 };
 
