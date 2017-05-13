@@ -38,13 +38,13 @@ for iter in range(ITERATIONS):
     mloss = 0.0
     for mi in range(4):
         x1 = mi % 2
-        x2 = (mi / 2) % 2
+        x2 = (mi // 2) % 2
         x.set([T if x1 else F, T if x2 else F])
         y.set(T if x1 != x2 else F)
         mloss += loss.scalar_value()
         loss.backward()
         sgd.update(1.0)
-    sgd.update_epoch();
+    sgd.update_epoch()
     mloss /= 4.
     print("loss: %0.9f" % mloss)
 
