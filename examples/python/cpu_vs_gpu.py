@@ -1,6 +1,8 @@
 import _gdynet as G
-print()
 import _dynet as C
+
+G.init()
+C.init()
 
 cm = C.Model()
 gm = G.Model()
