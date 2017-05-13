@@ -309,6 +309,8 @@ void BatchedExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
   num_batches_evaluated = 0;
   backward_computed = 0;
+  garbage_collect();
+  node2offset.clear(); node2size.clear(); node2batch.clear(); ndEdfs.clear(); nfx_cache.clear();
 }
 
 void BatchedExecutionEngine::invalidate(unsigned i) {
@@ -377,7 +379,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     batches.resize(upto - num_nodes_evaluated + num_batches_evaluated + 1);
 
     // Allocate temporary memory for bookkeeping
-    SigMap sigmap;   // Batching signature to id.
     size_t temp_data_size = (uptop1)*4*sizeof(int) + (upto-node_id+2)*2*sizeof(float);
     int* node2profid = (int*)malloc(temp_data_size);
     memset(node2profid, 0, temp_data_size);

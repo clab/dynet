@@ -120,6 +120,49 @@ struct SigLinearMap {
   std::vector<int> whiches;
 };
 
+template <class Sig>
+struct SigLinearSortedMap {
+  SigLinearSortedMap() : sorted(false), found(0) { sigs.reserve(50); whiches.reserve(50); Sig s; sigs.push_back(std::pair<Sig,int>(s,0)); whiches.push_back(s.which); }
+  int get_idx(Sig &s) {
+    if (sorted) {
+      // search and return
+      auto loc = std::lower_bound(sigs.begin(), sigs.end(), std::pair<Sig, int>(s,0), [](const std::pair<Sig, int> &s1, const std::pair<Sig, int> &s2) { return s1.first<s2.first; });
+      if (loc != sigs.end() && loc->first==s) {
+        return loc->second;
+      }
+      // not found, continue to add.
+    } else { // linear scan
+      for (int i=0; i<sigs.size(); ++i) {
+        if (sigs[i].first==s) {
+          const int res=sigs[i].second;
+          found++;
+          if (found > 50 && !sorted) sort();
+          return res;
+        }
+      }
+    }
+    found=0;
+    sorted=false;
+    sigs.push_back(std::pair<Sig, int>(s, sigs.size()));
+    whiches.push_back(s.which);
+    return sigs.size()-1;
+  }
+  void clear() {
+    sigs.clear(); whiches.clear(); sorted=false;
+  }
+  void sort() {
+    if (sorted) { return; }
+    std::sort(sigs.begin(), sigs.end(), [](std::pair<Sig, int> s1, std::pair<Sig, int> s2) {return s1.first < s2.first;});
+    sorted=true;
+  }
+  int sig2type(int sig) { return whiches[sig]; }
+  int size() { return sigs.size(); }
+  std::vector<std::pair<Sig,int> > sigs;
+  std::vector<int> whiches;
+  bool sorted;
+  int found;
+};
+
 struct SigHasher {
   size_t operator()(const SigHash& k) const { return k.hash; }
 };
@@ -151,7 +194,8 @@ struct SigHashMap {
 };
 
 typedef SigHash Sig;
-typedef SigLinearMap<Sig> SigMap;
+//typedef SigLinearMap<Sig> SigMap;
+typedef SigLinearSortedMap<Sig> SigMap;
 
 } // namespace dynet
 

@@ -150,6 +150,8 @@ void ComputationGraph::clear() {
   parameter_nodes.clear();
   for (auto n : nodes) delete n;
   nodes.clear();
+
+  ee->invalidate();
 }
 
 CGCheckpoint ComputationGraph::_get_checkpoint() {
