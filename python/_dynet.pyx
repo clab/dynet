@@ -3313,8 +3313,8 @@ cdef class _RNNBuilder: # (((
         """
         self.thisptr.disable_dropout()
 
-    cdef new_graph(self):
-        self.thisptr.new_graph(_cg.thisptr[0])
+    cdef new_graph(self, update=True):
+        self.thisptr.new_graph(_cg.thisptr[0], update)
         self.cg_version = _cg.version()
 
     cdef start_new_sequence(self, es=None):
@@ -3401,20 +3401,21 @@ cdef class _RNNBuilder: # (((
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 
-    cpdef RNNState initial_state(self,vecs=None):
+    cpdef RNNState initial_state(self,vecs=None,update=True):
         """Get a :code:`dynet.RNNState`
         
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
         
         Args:
             vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression` s  (default: {None})
+            update (bool): trainer updates internal parameters (default: {True})
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
         if self.cg_version != _cg.version():
-            self.new_graph()
+            self.new_graph(update)
             if vecs is not None:
                 self.start_new_sequence(vecs)
             else:
@@ -3422,7 +3423,7 @@ cdef class _RNNBuilder: # (((
             self._init_state = RNNState(self, -1)
         return self._init_state
 
-    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None):
+    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None, update=True):
         """Get a :code:`dynet.RNNState`
         
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
@@ -3431,13 +3432,14 @@ cdef class _RNNBuilder: # (((
         
         Args:
             vecs (list): Initial hidden state for each layer as a list of numpy arrays  (default: {None})
+            update (bool): trainer updates internal parameters (default: {True})
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
         if self.cg_version != _cg.version():
-            self.new_graph()
+            self.new_graph(update)
             if vecs is not None:
                 es = []
                 for v in vecs:
