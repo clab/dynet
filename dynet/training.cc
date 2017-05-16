@@ -330,13 +330,86 @@ void AdamTrainer::alloc_impl() {
 }
 #endif
 
+//--------------------------------------------------------------------------------------------------------------------------------------------------
+// Note: this function already exists in nodes.cc?
+template <class MyDevice>
+EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor & m, Tensor& z) {
+  if(x.d.bd == 1 && x.d[1] == 1) {
+    m.t<0>().device(*dev.edevice) = x.t<1>().maximum();
+#ifdef __CUDACC__
+    Eigen::array<int, 1> bcast;
+    bcast[0] = x.d[0];
+    // This needs to be split into two lines to prevent memory allocation
+    // TODO? Here and in logsoftmax: Is there a better way to subtract a scalar that is already on the GPU without using broadcasting (and without copying the scalar back to the host first)
+    z.t<0>().device(*dev.edevice) = (x.t<1>() - m.t<1>().broadcast(bcast)).exp().sum();
+    z.t<0>().device(*dev.edevice) = z.t<0>().log() + m.t<0>();
+#else
+    float mval = as_scalar(m);
+    // This needs to be split into two lines to prevent memory allocation
+    z.t<0>().device(*dev.edevice) = (x.t<1>() - mval).exp().sum();
+    z.t<0>().device(*dev.edevice) = z.t<0>().log() + mval;
+#endif
+  } else {
+    Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+    m.tb<1>().device(*dev.edevice) = x.tb<2>().maximum(red_axis);
+    // TODO: Currently, the first version is slower on CPU, hence the switch
+#ifdef __CUDACC__
+    Eigen::array<int, 3> bcast({(int)x.d.rows(), 1, 1});
+    Eigen::array<int, 3> morph({1, (int)m.d[0], (int)m.d.bd});
+    // This needs to be split into two lines to prevent memory allocation
+    z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().reshape(morph).broadcast(bcast)).exp().sum(red_axis);
+    z.tb<1>().device(*dev.edevice) = z.tb<1>().log() + m.tb<1>();
+#else
+    auto miter = m.v;
+    for(size_t b = 0; b < x.d.bd; ++b) {
+      for(size_t i = 0; i < x.d[1]; ++i, ++miter) {
+        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = (x.tb<2>().chip<2>(b).chip<1>(i) - *miter).exp().sum();
+        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = z.tb<1>().chip<1>(b).chip<0>(i).log() + *miter;
+      }
+    }
+#endif
+  }
+}
+//--------------------------------------------------------------------------------------------------------------------------------------------------
+
+// --- EGTrainer
+template <class MyDevice>
+void EGTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  //------------------------------------------------------------------
+  // Add momentum
+  ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * momentum - ts[1]->tvec() * (eta * scale * gscale);
+
+  //------------------------------------------------------------------
+  // METHOD 2: advanced implementation (supposedly faster?)
+  ts[0]->tvec().device(*dev.edevice) = ts[0]->tvec().log() + ts[2]->tvec() / model->weight_decay.current_weight_decay();// with momentum only
+
+  logsumexp(dev, *ts[0], *ts[3], *ts[4]);// z refers to logZ
+     
+  ts[0]->tvec().device(*dev.edevice) = (ts[0]->tvec() - as_scalar(*ts[4])).exp();// FIXME: other way(s) of not using as_scalar(z)?
+  //------------------------------------------------------------------
+}
+DYNET_TRAINER_INST_DEV_IMPL(EGTrainer)
+
 #ifndef __CUDACC__
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::SimpleSGDTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::MomentumSGDTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdagradTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdadeltaTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::RMSPropTrainer)
-// BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdamTrainer)
+void EGTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g, &hp[idx].h, &meg, &zeg});
+}
+void EGTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlp[idx].h[lidx], &meg, &zeg});
+}
+void EGTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_grads, &p->all_grads, &hlp[idx].all_h, &meg, &zeg});
+}
+void EGTrainer::alloc_impl() {
+  hp = allocate_shadow_parameters(*model);
+  hlp = allocate_shadow_lookup_parameters(*model); 
+}
+#endif
+
+#ifndef __CUDACC__
 
 DYNET_SERIALIZE_COMMIT(Trainer, DYNET_SERIALIZE_DEFINE(eta0, eta, eta_decay, epoch,
 						       clipping_enabled, clip_threshold, clips, updates,
@@ -364,6 +437,9 @@ DYNET_SERIALIZE_IMPL(RMSPropTrainer)
 DYNET_SERIALIZE_COMMIT(AdamTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, beta_1, beta_2, epsilon, m, lm, v, lv))
 DYNET_SERIALIZE_IMPL(AdamTrainer)
 
+DYNET_SERIALIZE_COMMIT(EGTrainer, DYNET_SERIALIZE_DERIVED_DEFINE(Trainer, momentum, hp, hlp))
+DYNET_SERIALIZE_IMPL(EGTrainer)
+
 #endif
 
 } // namespace dynet
@@ -376,4 +452,5 @@ BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdagradTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdadeltaTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::RMSPropTrainer)
 BOOST_CLASS_EXPORT_IMPLEMENT(dynet::AdamTrainer)
+BOOST_CLASS_EXPORT_IMPLEMENT(dynet::EGTrainer)
 #endif
