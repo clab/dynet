@@ -40,7 +40,7 @@ cdef extern from "dynet/dim.h" namespace "dynet":
         CDim transpose()
 
 cdef extern from "dynet/tensor.h" namespace "dynet":
-    cdef cppclass CTensor "dynet::Tensor":
+    cdef cppclass CTensor "dynet::Tensor": 
         CDim d
         float* v
         pass
@@ -48,15 +48,15 @@ cdef extern from "dynet/tensor.h" namespace "dynet":
     vector[float] c_as_vector "dynet::as_vector" (CTensor& t)
 
 cdef extern from "dynet/tensor.h" namespace "dynet":
-    cdef cppclass CIndexTensor "dynet::IndexTensor":
+    cdef cppclass CIndexTensor "dynet::IndexTensor": 
         CDim d
         pass
     vector[ptrdiff_t] c_index_tensor_as_vector "dynet::as_vector" (CIndexTensor& t)
     cdef cppclass CTensorTools "dynet::TensorTools":
         @staticmethod
-        CIndexTensor argmax(CTensor& t, unsigned dim, unsigned num)
+        CIndexTensor argmax(CTensor& t, unsigned dim, unsigned num) 
         @staticmethod
-        CIndexTensor categorical_sample_log_prob(CTensor& t, unsigned dim, unsigned num)
+        CIndexTensor categorical_sample_log_prob(CTensor& t, unsigned dim, unsigned num) 
 
 cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterStorage "dynet::ParameterStorage":
@@ -154,7 +154,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         VariableIndex add_lookup(CLookupParameters* p, unsigned index) except +
         VariableIndex add_const_lookup(CLookupParameters* p, const unsigned* pindex) except +
         VariableIndex add_const_lookup(CLookupParameters* p, unsigned index) except +
-
+        
         const CTensor& forward(VariableIndex index) except +
         const CTensor& incremental_forward(VariableIndex index) except +
         const CTensor& get_value(VariableIndex i) except +
@@ -289,7 +289,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_nobackprop "dynet::expr::nobackprop" (CExpression& x) except + #
     # identity function, but derivative takes negative as propagated through it
     CExpression c_flip_gradient "dynet::expr::flip_gradient" (CExpression& x) except + #
-
+    
     CExpression c_op_neg "dynet::expr::operator-" (CExpression& x) except + #
     CExpression c_op_add "dynet::expr::operator+" (CExpression& x, CExpression& y) except + #
     CExpression c_op_scalar_add "dynet::expr::operator+" (CExpression& x, float y) except + #
@@ -388,7 +388,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_contract3d_1d "dynet::expr::contract3d_1d" (CExpression& x, CExpression& y, CExpression& b) except + #
     CExpression c_contract3d_1d_1d "dynet::expr::contract3d_1d_1d" (CExpression& x, CExpression& y, CExpression& z) except + #
     CExpression c_contract3d_1d_1d "dynet::expr::contract3d_1d_1d" (CExpression& x, CExpression& y, CExpression& z, CExpression& b) except + #
-
+    
     # expecting a vector of CExpression
     CExpression c_average     "dynet::expr::average" (vector[CExpression]& xs) except +
     CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs) except +
