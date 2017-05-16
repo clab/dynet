@@ -183,4 +183,22 @@ BOOST_AUTO_TEST_CASE( adam_direction ) {
   BOOST_CHECK_LT(after, before);
 }
 
+BOOST_AUTO_TEST_CASE( eg_direction ) {
+  param_vals = {0.5f,0.1f,0.4f};// EGTrainer requires values belonging to simplex [0,1]
+  dynet::Model mod;
+  dynet::Parameter param = mod.add_parameters({3});
+  TensorTools::set_elements(param.get()->values,param_vals);
+  EGTrainer trainer(mod);
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param);
+  Expression y = input(cg, {1,3}, ones_vals);
+  Expression z = y*x;
+  float before = as_scalar(cg.forward(z));
+  cg.backward(z);
+  trainer.update(0.1);
+  float after = as_scalar(cg.forward(z));
+  BOOST_CHECK_EQUAL(after, before);
+  param_vals = {1.1f,-2.2f,3.3f};// revert back to original values
+}
+
 BOOST_AUTO_TEST_SUITE_END()

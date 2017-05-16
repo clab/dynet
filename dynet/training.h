@@ -56,7 +56,7 @@ struct Trainer {
    *
    * \param scale The scaling factor for the gradients
    */
-  void update(real scale = 1.0);
+  virtual void update(real scale = 1.0);
 
   /**
    * \brief Update subset of parameters
@@ -434,6 +434,76 @@ private:
   DYNET_SERIALIZE_DECLARE()
 };
 
+/**
+ * \ingroup optimizers
+ * 
+ * \brief Exponentiated gradient optimizer with momentum and cyclical learning rate
+ * \details FIXME
+ *  
+ * Reference : FIXME
+ *   
+*/
+struct EGTrainer : public Trainer {
+  explicit EGTrainer(Model& mod, real e0 = 0.1, real mom = 0.9, real ne = 0.0, real edecay = 0.0)
+    : Trainer(mod, e0, edecay), momentum(mom), isCyclical(false) {
+    zeg.d = meg.d = {1};
+    zeg.device = meg.device = default_device;
+    default_device->allocate_tensor(DeviceMempool::PS, zeg);
+    default_device->allocate_tensor(DeviceMempool::PS, meg);
+  }
+
+//-----------------------------------------------------------------------------------------
+  void enableCyclicalLR(float _e0_min = 0.01, float _e0_max = 0.1, float _step_size = 2000, float _gamma = 0.0){
+    isCyclical = true;
+    e_min = _e0_min;
+    e_max = _e0_max;
+    step_size = _step_size;
+    gamma = _gamma;
+    it = 0;
+  }
+
+  virtual void update(real scale = 1.0) override { 
+    Trainer::update(scale); 
+    if (isCyclical) cyclic_update_eta();
+  }
+//-----------------------------------------------------------------------------------------
+
+ protected:
+  DYNET_TRAINER_DEFINE_DEV_IMPL()
+  virtual void alloc_impl() override;
+
+//-----------------------------------------------------------------------------------------
+  real momentum;// with momentum
+  std::vector<ShadowParameters> hp; // (previous) history of parameters
+  std::vector<ShadowLookupParameters> hlp;
+//-----------------------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------------------
+  void cyclic_update_eta() {
+    float cycle = std::floor(1 + ((float) it)  / (2 * step_size));
+    float x = std::abs( ((float) it) / step_size - 2 * cycle + 1);
+    eta = e_min + ((1 - x) > 0 ? (e_max - e_min) * (1 - x) * (real) std::pow(gamma, it) : 0);
+    it++;
+  }
+
+  float e_min = 0;
+  float e_max = 0;
+  float step_size = 0;
+  float gamma = 0;
+  unsigned it = 0;
+  bool isCyclical;
+//-----------------------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------------------
+// temporary tensors for EG calculation
+  Tensor zeg, meg;
+//-----------------------------------------------------------------------------------------
+
+ private:
+  EGTrainer() {}
+  DYNET_SERIALIZE_DECLARE()
+};
+
 } // namespace dynet
 
 BOOST_CLASS_EXPORT_KEY(dynet::SimpleSGDTrainer)
@@ -443,5 +513,6 @@ BOOST_CLASS_EXPORT_KEY(dynet::AdagradTrainer)
 BOOST_CLASS_EXPORT_KEY(dynet::AdadeltaTrainer)
 BOOST_CLASS_EXPORT_KEY(dynet::RMSPropTrainer)
 BOOST_CLASS_EXPORT_KEY(dynet::AdamTrainer)
+BOOST_CLASS_EXPORT_KEY(dynet::EGTrainer)
 
 #endif
