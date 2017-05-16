@@ -48,26 +48,26 @@ FastLSTMBuilder::FastLSTMBuilder(unsigned layers,
   }  // layers
 }
 
-void FastLSTMBuilder::new_graph_impl(ComputationGraph& cg){
+void FastLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update){
   param_vars.clear();
 
   for (unsigned i = 0; i < layers; ++i){
     auto& p = params[i];
 
     //i
-    Expression i_x2i = parameter(cg,p[X2I]);
-    Expression i_h2i = parameter(cg,p[H2I]);
-    Expression i_c2i = parameter(cg,p[C2I]);
-    Expression i_bi = parameter(cg,p[BI]);
+    Expression i_x2i = update ? parameter(cg,p[X2I]) : const_parameter(cg,p[X2I]);
+    Expression i_h2i = update ? parameter(cg,p[H2I]) : const_parameter(cg,p[H2I]);
+    Expression i_c2i = update ? parameter(cg,p[C2I]) : const_parameter(cg,p[C2I]);
+    Expression i_bi = update ? parameter(cg,p[BI]) : const_parameter(cg,p[BI]);
     //o
-    Expression i_x2o = parameter(cg,p[X2O]);
-    Expression i_h2o = parameter(cg,p[H2O]);
-    Expression i_c2o = parameter(cg,p[C2O]);
-    Expression i_bo = parameter(cg,p[BO]);
+    Expression i_x2o = update ? parameter(cg,p[X2O]) : const_parameter(cg,p[X2O]);
+    Expression i_h2o = update ? parameter(cg,p[H2O]) : const_parameter(cg,p[H2O]);
+    Expression i_c2o = update ? parameter(cg,p[C2O]) : const_parameter(cg,p[C2O]);
+    Expression i_bo = update ? parameter(cg,p[BO]) : const_parameter(cg,p[BO]);
     //c
-    Expression i_x2c = parameter(cg,p[X2C]);
-    Expression i_h2c = parameter(cg,p[H2C]);
-    Expression i_bc = parameter(cg,p[BC]);
+    Expression i_x2c = update ? parameter(cg,p[X2C]) : const_parameter(cg,p[X2C]);
+    Expression i_h2c = update ? parameter(cg,p[H2C]) : const_parameter(cg,p[H2C]);
+    Expression i_bc = update ? parameter(cg,p[BC]) : const_parameter(cg,p[BC]);
 
     vector<Expression> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
@@ -82,7 +82,7 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   if (hinit.size() > 0) {
     DYNET_ARG_CHECK(layers * 2 == hinit.size(),
                             "FastLSTMBuilder must be initialized with 2 times as many expressions as layers "
-                            "(hidden state and cell for each layer). However, for " << layers << 
+                            "(hidden state and cell for each layer). However, for " << layers <<
                             " layers, " << hinit.size() << " expressions were passed in");
     h0.resize(layers);
     c0.resize(layers);
@@ -98,7 +98,7 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
 
 // TO DO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
-// Also is creating a new step something we want? 
+// Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
 Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
   DYNET_ARG_CHECK(!(h_new.size() && h_new.size() != layers),
