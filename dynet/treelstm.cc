@@ -69,7 +69,7 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
   }  // layers
 }
 
-void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   this->cg = &cg;
   param_vars.clear();
   lparam_vars.clear();
@@ -81,17 +81,17 @@ void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
     auto& lp = lparams[i];
 
     //i
-    Expression i_x2i = parameter(cg, p[X2I]);
-    Expression i_bi = parameter(cg, p[BI]);
+    Expression i_x2i = update ? parameter(cg, p[X2I]) : const_parameter(cg, p[X2I]);
+    Expression i_bi = update ? parameter(cg, p[BI]) : const_parameter(cg, p[BI]);
     //f
-    Expression i_x2f = parameter(cg, p[X2F]);
-    Expression i_bf = parameter(cg, p[BF]);
+    Expression i_x2f = update ? parameter(cg, p[X2F]) : const_parameter(cg, p[X2F]);
+    Expression i_bf = update ? parameter(cg, p[BF]) : const_parameter(cg, p[BF]);
     //o
-    Expression i_x2o = parameter(cg, p[X2O]);
-    Expression i_bo = parameter(cg, p[BO]);
+    Expression i_x2o = update ? parameter(cg, p[X2O]) : const_parameter(cg, p[X2O]);
+    Expression i_bo = update ? parameter(cg, p[BO]) : const_parameter(cg, p[BO]);
     //c
-    Expression i_x2c = parameter(cg, p[X2C]);
-    Expression i_bc = parameter(cg, p[BC]);
+    Expression i_x2c = update ? parameter(cg, p[X2C]) : const_parameter(cg, p[X2C]);
+    Expression i_bc = update ? parameter(cg, p[BC]) : const_parameter(cg, p[BC]);
 
     vector<Expression> vars = {i_x2i, i_bi, i_x2f, i_bf, i_x2o, i_bo, i_x2c, i_bc};
     param_vars.push_back(vars);
@@ -294,8 +294,8 @@ UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
   node_builder = LSTMBuilder(layers, input_dim, hidden_dim, model);
 }
 
-void UnidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
-  node_builder.new_graph(cg);
+void UnidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+   node_builder.new_graph(cg, update);
 }
 
 // layout: 0..layers = c
@@ -332,9 +332,9 @@ BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
   rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);
 }
 
-void BidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
-  fwd_node_builder.new_graph(cg);
-  rev_node_builder.new_graph(cg);
+void BidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+   fwd_node_builder.new_graph(cg, update);
+   rev_node_builder.new_graph(cg, update);
 }
 
 // layout: 0..layers = c
