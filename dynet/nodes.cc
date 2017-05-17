@@ -2407,13 +2407,13 @@ DYNET_NODE_INST_DEV_IMPL(StdElements)
 template<class MyDevice>
 void MomentBatches::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in MomentBatches::forward");
-  Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+  Eigen::array<int, 1> red_axis; red_axis[0] = 3;
   if(order == 1)
-    fx.t<1>().device(*dev.edevice) = xs[0]->tb<1>().sum(red_axis) / (float) xs[0]->d.bd;
+    fx.t<3>().device(*dev.edevice) = xs[0]->tb<3>().sum(red_axis) / (float) xs[0]->d.bd;
   else if (order == 2)
-    fx.t<1>().device(*dev.edevice) = xs[0]->tb<1>().square().sum(red_axis) / (float) xs[0]->d.bd;
+    fx.t<3>().device(*dev.edevice) = xs[0]->tb<3>().square().sum(red_axis) / (float) xs[0]->d.bd;
   else
-    fx.t<1>().device(*dev.edevice) = xs[0]->tb<1>().pow(order).sum(red_axis) / (float) xs[0]->d.bd;
+    fx.t<3>().device(*dev.edevice) = xs[0]->tb<3>().pow(order).sum(red_axis) / (float) xs[0]->d.bd;
 }
 
 template<class MyDevice>
