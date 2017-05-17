@@ -74,7 +74,7 @@ These operations are used for performing operations on higher order tensors.
 	:members:
 	:content-only:
 
-Linera Algebra Operations
+Linear Algebra Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These operations are used for performing various operations common in linear algebra.
