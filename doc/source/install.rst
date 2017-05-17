@@ -28,8 +28,8 @@ get Boost, CMake, and Mercurial with either homebrew or macports:
 To compile DyNet you also need the `development version of the Eigen
 library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
 released versions, you may get assertion failures or compile errors.**
-If you have sudo access and don't have Eigen installed already, you can get it easily using
-the following command:
+If you have sudo access and don't have Eigen installed already, you can 
+get it easily using the following command:
 
 ::
 
@@ -41,7 +41,8 @@ the following command:
     cd ../..
     
 If you don't have sudo access, clone the Eigen repository but don't attempt
-to build or install; this is `sufficient <https://eigen.tuxfamily.org/dox/GettingStarted.html>`__ for DyNet. 
+to build or install; this is `sufficient <https://eigen.tuxfamily.org/dox/
+GettingStarted.html>`__ for DyNet. 
     
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code
