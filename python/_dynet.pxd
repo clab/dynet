@@ -364,7 +364,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_sum_elems "dynet::expr::sum_elems" (CExpression& x) except +
     CExpression c_moment_batches "dynet::expr::moment_batches" (CExpression& x, unsigned r) except +
     CExpression c_moment_elems "dynet::expr::moment_elems" (CExpression& x, unsigned r) except +
-    CExpression c_moment_dim "dynet::expr::moment_dim" (CExpression& x, unsigned d, unsigned r) except +
+    CExpression c_moment_dim "dynet::expr::moment_dim" (CExpression& x, vector[unsigned] dims, unsigned r) except +
     CExpression c_mean_elems "dynet::expr::mean_elems" (CExpression& x) except +
     CExpression c_mean_batches "dynet::expr::mean_batches" (CExpression& x) except +
     CExpression c_mean_dim "dynet::expr::mean_dim" (CExpression& x, unsigned d) except +

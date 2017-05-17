@@ -2599,7 +2599,7 @@ cpdef Expression moment_batches(Expression x, unsigned r):
     """
     return Expression.from_cexpr(x.cg_version, c_moment_batches(x.c(), r))
 
-cpdef Expression moment_dim(Expression x, unsigned d, unsigned r):
+cpdef Expression moment_dim(Expression x, list d, unsigned r):
     """Statistical moment along an arbitrary dimension
     
     Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along an arbitrary dimension.
@@ -2607,11 +2607,11 @@ cpdef Expression moment_dim(Expression x, unsigned d, unsigned r):
 
     Args:
         x (dynet.Expression): Input expression
-        d (int): Dimension along which to reduce
+        d (list): Dimension along which to reduce
         r (int): Moment order
     
     Returns:
-        dynet.Expression: An expression with one less dimension
+        dynet.Expression: An expression with |d| less dimensions
     """
     return Expression.from_cexpr(x.cg_version, c_moment_dim(x.c(), d, r))
 

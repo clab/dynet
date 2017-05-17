@@ -1422,12 +1422,13 @@ Expression std_dim(const Expression& x, unsigned d);
  * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along a specific dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
  * \param r Order of the moment
+ * \param b Include (and reduce) batch dimension (default: false)
  *
- * \return An expression with one less dimension
+ * \return An expression with |d| less dimensions
  */
-Expression moment_dim(const Expression& x, unsigned d, unsigned r);
+Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, unsigned r, bool b=false);
 /**
  * \ingroup flowoperations
  * \brief Compute mean along  a specific dimension

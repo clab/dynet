@@ -490,12 +490,13 @@ private:
 
 //y = \sum_i x_i
 struct MomentDimension : public Node {
-  template <typename T> explicit MomentDimension(const T& a, unsigned d, unsigned o) : Node(a), dimension(d), order(o) {}
+  template <typename T> explicit MomentDimension(const T& a, const std::vector<unsigned> & d, unsigned o, bool b=false) : Node(a), dims(d), order(o), include_batch_dim(b) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
 private:
-  unsigned dimension;
+  std::vector<unsigned> dims;
   unsigned order;
+  bool include_batch_dim;
 };
 
 // y = ( \sum_i x_i ) / |x|

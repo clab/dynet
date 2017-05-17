@@ -44,6 +44,11 @@ struct NodeTest {
                                            .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
                                            .211f, .222f, .233f, .212f, .222f, .232f, .213f, .223f, .233f
                                           };
+    std::vector<float> param_cube2_vals = {
+	.011f, 1.011f, .022f, 1.022f, .033f, 1.033f, .012f, 1.012f, .022f, 1.022f, .032f, 1.032f, .013f, 1.013f, .023f, 1.023f, .033f, 1.033f, // 18
+	.111f, 1.111f, -.122f, -1.122f, -.033f, -1.033f, -.112f, -1.112f, -.022f, -1.022f, -.132f, -1.132f, -.113f, -1.113f, -.123f, -1.123f, -.133f, -1.133f, // 18
+	.211f, 1.211f, .222f, 1.222f, .233f, 1.233f, .212f, 1.212f, .222f, 1.222f, .232f, 1.232f, .213f, 1.213f, .223f, 1.223f, .233f, 1.233f
+                                                 };
     param1 = mod.add_parameters({3});
     TensorTools::set_elements(param1.get()->values, param1_vals);
     param2 = mod.add_parameters({3});
@@ -64,6 +69,8 @@ struct NodeTest {
     TensorTools::set_elements(param_square1.get()->values, param_square1_vals);
     param_cube1 = mod.add_parameters({3, 3, 3});
     TensorTools::set_elements(param_cube1.get()->values, param_cube1_vals);
+    param_cube2 = mod.add_parameters({3, 3, 6});
+    TensorTools::set_elements(param_cube2.get()->values, param_cube2_vals);
     lookup1 = mod.add_lookup_parameters(3, {3});
     TensorTools::set_elements(lookup1.get()->all_values, param_square1_vals);
   }
@@ -83,7 +90,7 @@ struct NodeTest {
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
   dynet::Model mod;
-  dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1;
+  dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1, param_cube2;
   dynet::LookupParameter lookup1;
 };
 
@@ -1452,10 +1459,14 @@ BOOST_AUTO_TEST_CASE( mean_dim_gradient ) {
 BOOST_AUTO_TEST_CASE( moment_dim_gradient ) {
   for (unsigned r=2;r<5;r++){
     dynet::ComputationGraph cg;
+//    Expression x = dynet::reshape(parameter(cg, param_cube2), Dim({3,3,3}, 2));
     Expression x = parameter(cg, param_cube1);
     Expression z = x;
     for (unsigned d=3;d>0;d--)
-      z = moment_dim(z, d - 1, r);
+      z = moment_dim(z, vector<unsigned>({d - 1}), r, false);
+
+//    z = moment_dim(z, vector<unsigned>({}), r, true);
+    z = moment_batches(z, r);
     BOOST_CHECK(check_grad(mod, z, 0));
   }
 }
