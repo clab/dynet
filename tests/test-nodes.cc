@@ -1418,6 +1418,16 @@ BOOST_AUTO_TEST_CASE( mean_batches_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression mean_batches(x);
+BOOST_AUTO_TEST_CASE( mean_batches_gradient_multidim ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param4);
+  Expression y = reshape(x, Dim({1,2}, 3));
+  Expression z = mean_batches(y);
+  z = mean_dim(z, 1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression moment_batches(x, r);
 BOOST_AUTO_TEST_CASE( moment_batches_gradient ) {
   for (unsigned r=2;r<5;r++){
