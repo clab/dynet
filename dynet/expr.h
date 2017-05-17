@@ -1410,11 +1410,12 @@ Expression std_batches(const Expression& x);
  * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along an arbitrary dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return A scalar expression (with a potential batch dimension)
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression std_dim(const Expression& x, unsigned d);
+Expression std_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
 
 /**
  * \ingroup flowoperations
@@ -1424,9 +1425,9 @@ Expression std_dim(const Expression& x, unsigned d);
  * \param x The input mini-batched expression
  * \param d Dimensions along which to reduce
  * \param r Order of the moment
- * \param b Include (and reduce) batch dimension (default: false)
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return An expression with |d| less dimensions
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
 Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, unsigned r, bool b=false);
 /**
@@ -1435,11 +1436,12 @@ Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, un
  * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along a specific dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return An expression with one less dimension
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression mean_dim(const Expression& x, unsigned d);
+Expression mean_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
 
 
 /**

@@ -168,13 +168,13 @@ Expression moment_elems(const Expression& x, unsigned r) { return Expression(x.p
 Expression std_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdElements>({x.i})); }
 
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
-Expression moment_batches(const Expression& x, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentBatches>({x.i}, r)); }
-Expression mean_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<MomentBatches>({x.i}, 1)); }
-Expression std_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdBatches>({x.i})); }
+Expression moment_batches(const Expression& x, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, vector<unsigned>({}), r, true)); }
+Expression mean_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, vector<unsigned>({}), 1, true)); }
+Expression std_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, vector<unsigned>({}), true)); }
 
-Expression mean_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, std::vector<unsigned>{d}, 1)); }
+Expression mean_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, 1, b)); }
 Expression moment_dim(const Expression& x, const vector<unsigned>& dims, unsigned r, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, r, b)); }
-Expression std_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, d)); }
+Expression std_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, dims, b)); }
 
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 

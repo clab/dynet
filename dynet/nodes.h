@@ -454,34 +454,19 @@ struct StdElements : public Node {
   virtual bool supports_multibatch() const override { return true; }
 };
 
-// y = \sum_i x_i
-struct StdBatches : public Node {
-  template <typename T> explicit StdBatches(const T& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  virtual bool supports_multibatch() const override { return true; }
-};
-
 //y = \sum_i x_i
 struct StdDimension : public Node {
-  template <typename T> explicit StdDimension(const T& a, unsigned d) : Node(a), dimension(d) {}
+  template <typename T> explicit StdDimension(const T& a, const std::vector<unsigned> & d, bool b=false) : Node(a), dims(d), include_batch_dim(b) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
 private:
-  unsigned dimension;
+  std::vector<unsigned> dims;
+  bool include_batch_dim;
 };
 
 // y = \sum_i,j,... x[i,j,...]
 struct MomentElements : public Node {
   template <typename T> explicit MomentElements(const T& a, unsigned o) : Node(a), order(o) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  virtual bool supports_multibatch() const override { return true; }
-private:
-  unsigned order;
-};
-
-// y = \sum_i x_i
-struct MomentBatches : public Node {
-  template <typename T> explicit MomentBatches(const T& a, unsigned o) : Node(a), order(o) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
 private:

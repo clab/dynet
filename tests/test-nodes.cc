@@ -1431,7 +1431,7 @@ BOOST_AUTO_TEST_CASE( mean_batches_gradient_multidim ) {
   Expression x = parameter(cg, param4);
   Expression y = reshape(x, Dim({1,2}, 3));
   Expression z = mean_batches(y);
-  z = mean_dim(z, 1);
+  z = mean_dim(z, {1});
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -1461,7 +1461,7 @@ BOOST_AUTO_TEST_CASE( mean_dim_gradient ) {
     Expression x = parameter(cg, param_cube1);
     Expression z = x;
     for (unsigned d=3;d>0;d--)
-      z = mean_dim(z, d - 1);
+      z = mean_dim(z, {d - 1});
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -1469,16 +1469,96 @@ BOOST_AUTO_TEST_CASE( mean_dim_gradient ) {
 BOOST_AUTO_TEST_CASE( moment_dim_gradient ) {
   for (unsigned r=2;r<5;r++){
     dynet::ComputationGraph cg;
-//    Expression x = dynet::reshape(parameter(cg, param_cube2), Dim({3,3,3}, 2));
     Expression x = parameter(cg, param_cube1);
     Expression z = x;
     for (unsigned d=3;d>0;d--)
       z = moment_dim(z, vector<unsigned>({d - 1}), r, false);
-
-//    z = moment_dim(z, vector<unsigned>({}), r, true);
-    z = moment_batches(z, r);
     BOOST_CHECK(check_grad(mod, z, 0));
   }
+}
+
+// Expression moment_dim(x, r);
+BOOST_AUTO_TEST_CASE( moment_dim_gradient2 ) {
+  for (unsigned r=2;r<5;r++){
+    dynet::ComputationGraph cg;
+    Expression z = dynet::reshape(parameter(cg, param_cube2), Dim({3,3,3}, 2))/10;
+    for (unsigned d=3;d>0;d--)
+      z = moment_dim(z, vector<unsigned>({d - 1}), r, false);
+    z = moment_dim(z, vector<unsigned>({}), r, true);
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+}
+
+// Expression moment_dim(x, r);
+BOOST_AUTO_TEST_CASE( moment_dim_gradient3 ) {
+  for (unsigned r=1;r<5;r++){
+    dynet::ComputationGraph cg;
+    Expression x = dynet::reshape(parameter(cg, param_cube2), Dim({27}, 2))/10;
+
+    Expression y = moment_dim(x, vector<unsigned>({0}), r, true);
+
+    Expression z = moment_dim(x, vector<unsigned>({0}), r, false);
+    z = moment_dim(z, vector<unsigned>({}), r, true);
+
+    BOOST_CHECK(check_grad(mod, y, 0));
+    BOOST_CHECK(check_grad(mod, z, 0));
+    if(r==1) BOOST_CHECK_CLOSE(as_scalar(y.value()), as_scalar(z.value()), 0.001);
+  }
+}
+
+// Expression moment_dim(x, r);
+BOOST_AUTO_TEST_CASE( moment_dim_gradient4 ) {
+  for (unsigned r=1;r<5;r++){
+    dynet::ComputationGraph cg;
+    Expression x = dynet::reshape(parameter(cg, param_cube2), Dim({3,9}, 2))/10;
+
+    Expression y = moment_dim(x, vector<unsigned>({0,1}), r, true);
+
+    Expression z = moment_dim(x, vector<unsigned>({0,1}), r, false);
+    z = moment_dim(z, vector<unsigned>({}), r, true);
+
+    BOOST_CHECK(check_grad(mod, y, 0));
+    BOOST_CHECK(check_grad(mod, z, 0));
+    if(r==1) BOOST_CHECK_CLOSE(as_scalar(y.value()), as_scalar(z.value()), 0.001);
+  }
+}
+
+// Expression std_dim(x);
+BOOST_AUTO_TEST_CASE( std_dim_gradient3 ) {
+  dynet::ComputationGraph cg;
+  Expression x = dynet::reshape(parameter(cg, param_cube2), Dim({27}, 2))/10;
+
+  Expression y = std_dim(x, vector<unsigned>({0}), true);
+
+  Expression z = std_dim(x, vector<unsigned>({0}), false);
+  z = std_dim(z, vector<unsigned>({}), true);
+
+  BOOST_CHECK(check_grad(mod, y, 0));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression std_dim(x);
+BOOST_AUTO_TEST_CASE( std_dim_gradient4 ) {
+  dynet::ComputationGraph cg;
+  Expression x = dynet::reshape(parameter(cg, param_cube2), Dim({3,9}, 2))/10;
+
+  Expression y = std_dim(x, vector<unsigned>({0,1}), true);
+
+  Expression z = std_dim(x, vector<unsigned>({0,1}), false);
+  z = std_dim(z, vector<unsigned>({}), true);
+
+  BOOST_CHECK(check_grad(mod, y, 0));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression std_dim(x);
+BOOST_AUTO_TEST_CASE( std_dim_value ) {
+  dynet::ComputationGraph cg;
+  Expression x = dynet::reshape(parameter(cg, param_cube1), Dim({3,3}, 3));
+  Expression y = std_dim(x, vector<unsigned>({0}), true);
+  Expression z = mean_dim(y, vector<unsigned>({0}), false);
+
+  BOOST_CHECK_CLOSE(as_scalar(z.value()), 0.1306032736, 0.1);
 }
 
 // Expression mean_dim(x);
@@ -1487,7 +1567,7 @@ BOOST_AUTO_TEST_CASE( std_dim_gradient ) {
     Expression x = parameter(cg, param_cube1);
     Expression z = x;
     for (unsigned d=3;d>0;d--)
-      z = std_dim(z, d - 1);
+      z = std_dim(z, {d - 1});
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 

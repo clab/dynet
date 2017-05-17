@@ -353,18 +353,6 @@ Dim MomentElements::dim_forward(const vector<Dim>& xs) const {
   return Dim({1}, xs[0].bd);
 }
 
-string MomentBatches::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "moment_batches( expression=" << arg_names[0] << ", order=" << order << " )";
-  return s.str();
-}
-
-Dim MomentBatches::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in MomentBatches")
-  DYNET_ARG_CHECK(order>= 1, "Order of moment should be >=1 in MomentBatches (recieved "<<order<<")")
-  return xs[0].single_batch();
-}
-
 string StdElements::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "std_elems( expression=" << arg_names[0] << " )";
@@ -376,30 +364,25 @@ Dim StdElements::dim_forward(const vector<Dim>& xs) const {
   return Dim({1}, xs[0].bd);
 }
 
-string StdBatches::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "std_batches( expression=" << arg_names[0] << " )";
-  return s.str();
-}
-
-Dim StdBatches::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in StdBatches")
- 
-  return xs[0].single_batch();
-}
-
 string StdDimension::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "moment_dim(expression=" << arg_names[0] << ',' << dimension <<'}';
+  s << "std_dim(expression=" << arg_names[0] << ',';
+  for(size_t i = 0; i < dims.size(); ++i)
+    s << (i == 0?'{':',') << dims[i];
+  s << "})";
   return s.str();
 }
 
 Dim StdDimension::dim_forward(const vector<Dim>& xs) const {
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in StdDimension");
   DYNET_ARG_CHECK(xs[0].nd <= 3, "StdDimension implemented up to tensors of order 3 (with minibatch) for now")
-  DYNET_ARG_CHECK(dimension < xs[0].nd, "dimension " << dimension << " is out of bounds of tensor of order " << xs[0].nd << " in StdDimension" )
+  for(int i=0; i<dims.size(); i++)
+    DYNET_ARG_CHECK(dims[i] <= xs[0].nd, "dimension " << dims[i]<< " is out of bounds of tensor of order " << xs[0].nd << " in StdDimension" )
+  DYNET_ARG_CHECK(dims.size()<=2, "Number of dimensions to reduce (excluding batch dimension) implemented up to 2 in StdDimension (received "<< dims.size() <<")")
+  if(dims.size()==0)
+    DYNET_ARG_CHECK(include_batch_dim, "At least one dimension has to be reduced (including batch dimension) in StdDimension")
   Dim ret(xs[0]);
-  ret.delete_dim(dimension);
+  ret.delete_dims(dims, include_batch_dim);
   return ret;
 }
 
@@ -408,7 +391,7 @@ string MomentDimension::as_string(const vector<string>& arg_names) const {
   s << "moment_dim(expression=" << arg_names[0] << ',';
   for(size_t i = 0; i < dims.size(); ++i)
     s << (i == 0?'{':',') << dims[i];
-  s << "}), order="<<order<<'}';
+  s << "}), order="<<order;
   return s.str();
 }
 
@@ -420,7 +403,7 @@ Dim MomentDimension::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(order>= 1, "Order of moment should be >=1 in MomentDimension (received "<<order<<")")
   DYNET_ARG_CHECK(dims.size()<=2, "Number of dimensions to reduce (excluding batch dimension) implemented up to 2 in MomentDimension (received "<< dims.size() <<")")
   if(dims.size()==0)
-    DYNET_ARG_CHECK(include_batch_dim, "At least one dimension has to be reduced (including batch dimension) in MomentDimension (received "<<order<<")")
+    DYNET_ARG_CHECK(include_batch_dim, "At least one dimension has to be reduced (including batch dimension) in MomentDimension")
   Dim ret(xs[0]);
   ret.delete_dims(dims, include_batch_dim);
   return ret;
