@@ -2409,11 +2409,11 @@ void MomentBatches::forward_dev_impl(const MyDevice & dev, const vector<const Te
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in MomentBatches::forward");
   Eigen::array<int, 1> red_axis; red_axis[0] = 1;
   if(order == 1)
-    fx.t<1>().device(*dev.edevice) = xs[0]->tb<1>().sum(red_axis) / (float) xs[0]->d.bd;
+    fx.tvec().device(*dev.edevice) = xs[0]->tbvec().sum(red_axis) / (float) xs[0]->d.bd;
   else if (order == 2)
-    fx.t<1>().device(*dev.edevice) = xs[0]->tb<1>().square().sum(red_axis) / (float) xs[0]->d.bd;
+    fx.tvec().device(*dev.edevice) = xs[0]->tbvec().square().sum(red_axis) / (float) xs[0]->d.bd;
   else
-    fx.t<1>().device(*dev.edevice) = xs[0]->tb<1>().pow(order).sum(red_axis) / (float) xs[0]->d.bd;
+    fx.tvec().device(*dev.edevice) = xs[0]->tbvec().pow(order).sum(red_axis) / (float) xs[0]->d.bd;
 }
 
 template<class MyDevice>
