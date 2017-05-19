@@ -688,16 +688,24 @@ DYNET_NODE_INST_DEV_IMPL(CwiseQuotient)
 
 template<class MyDevice>
 void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // convention: 2nd element will be broadcasted (expr.cc code should take care of passing in the right order)
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseMultiply::forward (cmult)");
-  if(xs[0]->d.bd == xs[1]->d.bd) {
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec();
-  } else {
-    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-    if(xs[0]->d.bd == 1)
-      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec();
-    else
-      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec() * xs[1]->tbvec().broadcast(bcast);
+//  if(xs[0]->d.bd == xs[1]->d.bd) {
+//    fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec();
+//  } else {
+//    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+//    if(xs[0]->d.bd == 1)
+//      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec();
+//    else
+//      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec() * xs[1]->tbvec().broadcast(bcast);
+//  }
+  Eigen::array<int, 5> bcast = {1,1,1,1,1};
+  for(int i=0; i<xs[0]->d.nd; i++){
+    if(xs[0]->d[i]==1) bcast[i] = xs[1]->d[i];
   }
+  if(xs[0]->d.bd == 1) bcast[4] = xs[1]->d.bd;
+  fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast) * xs[1]->tb<4>();
+//  cout << "fx:" << fx.d << "\n";
 }
 
 template<class MyDevice>
@@ -708,15 +716,83 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in CwiseMultiply::backward (cmult)");
-  if(xs[0]->d.bd == xs[1]->d.bd) {
-    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
-  } else if(xs[1-i]->d.bd == 1) {
-    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-    dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast);
+//  if(xs[0]->d.bd == xs[1]->d.bd) {
+//    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
+//  } else if(xs[1-i]->d.bd == 1) {
+//    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+//    dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast);
+//  } else {
+//    Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+//    dEdxi.tvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec()).sum(red_axis);
+//  }
+
+
+  if(i == 1) {
+    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    for(int di=0; di<xs[0]->d.nd; di++){
+      if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[1]->d[di];
+    }
+    if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[1]->d.bd;
+
+    dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() * xs[0]->tb<4>().broadcast(bcast);
   } else {
-    Eigen::array<int, 1> red_axis; red_axis[0] = 1;
-    dEdxi.tvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec()).sum(red_axis);
+    int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
+    for(int i=0;i<xs[0]->d.nd; i++) if(xs[0]->d[i]!=xs[1]->d[i]) n_red++;
+
+    Eigen::array<int, 5> morph = {1,1,1,1,1};
+    for(int di=0; di<xs[0]->d.nd; di++){
+      morph[di] = xs[i]->d[di];
+    }
+    morph[4] = xs[i]->d.bd;
+
+    if(n_red==0) {
+	dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
+    } else if(n_red==1) {
+      Eigen::array<int, 1> red_axis={4};
+      int curr_red_axis = 0;
+      for(int di=0;di<xs[0]->d.nd; di++){
+	if(xs[0]->d[di]!=xs[1]->d[di]){
+          red_axis[curr_red_axis] = di;
+          curr_red_axis++;
+	}
+      }
+      dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() * xs[1]->tb<4>()).sum(red_axis).reshape(morph);
+    } else if(n_red==2) {
+      Eigen::array<int, 2> red_axis={0,4};
+      int curr_red_axis = 0;
+      for(int di=0;di<xs[0]->d.nd; di++){
+  	if(xs[0]->d[di]!=xs[1]->d[di]){
+          red_axis[curr_red_axis] = di;
+          curr_red_axis++;
+  	}
+      }
+      dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() * xs[1]->tb<4>()).sum(red_axis).reshape(morph);
+    } else if(n_red==3) {
+      Eigen::array<int, 3> red_axis={0,0,4};
+      int curr_red_axis = 0;
+      for(int i=0;i<xs[0]->d.nd; i++){
+  	if(xs[0]->d[i]!=xs[1]->d[i]){
+          red_axis[curr_red_axis] = i;
+          curr_red_axis++;
+  	}
+      }
+      dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() * xs[1]->tb<4>()).sum(red_axis).reshape(morph);
+    } else if(n_red==4) {
+      Eigen::array<int, 4> red_axis={0,0,0,4};
+      int curr_red_axis = 0;
+      for(int i=0;i<xs[0]->d.nd; i++){
+  	if(xs[0]->d[i]!=xs[1]->d[i]){
+          red_axis[curr_red_axis] = i;
+          curr_red_axis++;
+  	}
+      }
+      dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() * xs[1]->tb<4>()).sum(red_axis).reshape(morph);
+    } else {
+      cout << "n_red>4: not implemented!\n";
+    }
   }
+
+
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseMultiply)
 

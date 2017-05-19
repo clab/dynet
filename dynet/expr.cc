@@ -59,8 +59,20 @@ Expression cmult(const Expression& x, const Expression& y) {
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 
     else if(y.dim().batch_size() == 1)
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({y.i, x.i})); 
-    else 
-        return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));
+    else {
+        bool flip = false;
+        for(int i=0; i<x.dim().nd; i++){
+            if(y.dim().nd > i && x.dim()[i] > y.dim()[i]){
+        	flip = true;
+        	break;
+            }
+        }
+        if(x.dim().bd > y.dim().bd){
+            flip = true;
+        }
+        if(flip) return Expression(x.pg, x.pg->add_function<CwiseMultiply>({y.i, x.i}));
+        else return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));
+    }
 }
 Expression cdiv(const Expression& x, const Expression& y) { 
     if(y.dim().batch_size()==1)

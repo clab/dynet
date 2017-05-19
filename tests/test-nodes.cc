@@ -953,6 +953,34 @@ BOOST_AUTO_TEST_CASE( scalar_cmult_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cmult_broadcast2_gradient ) {
+  Dim dim_permutations[] = {Dim({3,1},2), Dim({3,2},1)};
+  dynet::ComputationGraph cg;
+  for(int i=0; i<2; i++){
+    Dim dim = dim_permutations[i];
+    Expression x1 = reshape(parameter(cg, param1), Dim({3,1},1));
+    Expression x2 = reshape(parameter(cg, param4), dim);
+    Expression y = cmult(x1, x2) + cmult(x2, x1);
+    Expression z = sum_batches(sum_elems(y));
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+}
+
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cmult_broadcast3_gradient ) {
+  Dim dim_permutations[] = {Dim({3,3,3},1), Dim({3,3,1},3), Dim({1,3,3},3), Dim({9,3,1},1), Dim({1,3,9},1), Dim({1,3,1},9)};
+  dynet::ComputationGraph cg;
+  for(int i=0; i<6; i++){
+    Dim dim = dim_permutations[i];
+    Expression x1 = reshape(parameter(cg, param1), Dim({1,3,1},1));
+    Expression x2 = reshape(parameter(cg, param_cube1), dim);
+    Expression y = cmult(x1, x2) + cmult(x2, x1);
+    Expression z = sum_batches(sum_elems(y));
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+}
+
 // Expression dot_product(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( dot_product_gradient ) {
   dynet::ComputationGraph cg;

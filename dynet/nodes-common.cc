@@ -816,10 +816,14 @@ string CwiseMultiply::as_string(const vector<string>& arg_names) const {
 
 Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseMultiply")
-  Dim d = xs[0].truncate();
-  DYNET_ARG_CHECK(d.single_batch() == xs[1].truncate().single_batch(),
-                          "Mismatched input dimensions in CwiseMultiply: " << xs);
-  d.bd = max(xs[1].bd, d.bd);
+  Dim d = xs[1].truncate();
+
+  for(int i=0; i<xs[0].nd; i++)
+    DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || xs[0].d[i]==1, "CwiseMultiply: For each dimension, the dim size needs to match or equal 1.");
+  DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || xs[0].bd==1, "CwiseMultiply: batch size must match or equal 1");
+////  DYNET_ARG_CHECK(d.single_batch() == xs[1].truncate().single_batch(),
+////                          "Mismatched input dimensions in CwiseMultiply: " << xs);
+//  d.bd = max(xs[1].bd, d.bd);
   return d;
 }
 
