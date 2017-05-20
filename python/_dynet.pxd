@@ -80,6 +80,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void set_updated(bool b)
         bool is_updated()
         void scale(float s)
+        void scale_gradient(float s)
         void clip_inplace(float left, float right)
         unsigned index
 
@@ -92,6 +93,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void set_updated(bool b)
         bool is_updated()
         void scale(float s)
+        void scale_gradient(float s)
         unsigned index
 
     cdef cppclass CParameterInit "dynet::ParameterInit":
@@ -176,8 +178,8 @@ cdef extern from "dynet/training.h" namespace "dynet":
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
-        void update(float s)
-        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
+        void update(float s) except +
+        void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s) except +
         void update_epoch(float r)
         void status()
 
@@ -199,7 +201,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         # float clip_threshold
         # bool clipping_enabled
         # bool sparse_updates_enabled
-        void update(float s)
+        void update(float s) except +
         # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
         # void update_epoch(float r)
         # void status()
@@ -326,6 +328,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) except + #
     CExpression c_noise "dynet::expr::noise" (CExpression& x, float stddev) except + #
     CExpression c_dropout "dynet::expr::dropout" (CExpression& x, float p) except + #
+    CExpression c_dropout_batch "dynet::expr::dropout_batch" (CExpression& x, float p) except + #
+    CExpression c_dropout_dim "dynet::expr::dropout_dim" (CExpression& x, unsigned d, float p) except + #
     CExpression c_block_dropout "dynet::expr::block_dropout" (CExpression& x, float p) except + #
 
     CExpression c_reshape "dynet::expr::reshape" (CExpression& x, CDim& d) except + #?
@@ -373,7 +377,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_select_cols "dynet::expr::select_cols" (CExpression& x, vector[unsigned] cs) except +
     CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv, unsigned d) except + #
     CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv, unsigned d) except + #
-    CExpression c_pickrange "dynet::expr::pickrange" (CExpression& x, unsigned v, unsigned u) except + #
+    CExpression c_pick_range "dynet::expr::pick_range" (CExpression& x, unsigned v, unsigned u, unsigned d) except + #
 
     CExpression c_pick_batch_elems "dynet::expr::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
     CExpression c_pick_batch_elem "dynet::expr::pick_batch_elem" (CExpression& x, unsigned v) except + #
@@ -399,6 +403,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_min_dim "dynet::expr::min_dim" (CExpression& x, unsigned d) except + #
 
     CExpression c_layer_norm "dynet::expr::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
+    CExpression c_weight_norm "dynet::expr::weight_norm" (CExpression& w, CExpression& g) except + #
 
 
 #cdef extern from "dynet/model.h" namespace "dynet":
@@ -410,7 +415,7 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
         CRNNPointer(int i)
 
     cdef cppclass CRNNBuilder "dynet::RNNBuilder":
-        void new_graph(CComputationGraph &cg)
+        void new_graph(CComputationGraph &cg, bool update)
         void start_new_sequence(vector[CExpression] ces)
         CExpression add_input(CExpression &x) except +
         CExpression add_input(CRNNPointer prev, CExpression &x) except +

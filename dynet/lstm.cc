@@ -47,26 +47,26 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
   dropout_rate_c = 0.f;
 }
 
-void LSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void LSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
 
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
 
     //i
-    Expression i_x2i = parameter(cg, p[X2I]);
-    Expression i_h2i = parameter(cg, p[H2I]);
-    Expression i_c2i = parameter(cg, p[C2I]);
-    Expression i_bi = parameter(cg, p[BI]);
+    Expression i_x2i = update ? parameter(cg, p[X2I]) : const_parameter(cg, p[X2I]);
+    Expression i_h2i = update ? parameter(cg, p[H2I]) : const_parameter(cg, p[H2I]);
+    Expression i_c2i = update ? parameter(cg, p[C2I]) : const_parameter(cg, p[C2I]);
+    Expression i_bi = update ? parameter(cg, p[BI]) : const_parameter(cg, p[BI]);
     //o
-    Expression i_x2o = parameter(cg, p[X2O]);
-    Expression i_h2o = parameter(cg, p[H2O]);
-    Expression i_c2o = parameter(cg, p[C2O]);
-    Expression i_bo = parameter(cg, p[BO]);
+    Expression i_x2o = update ? parameter(cg, p[X2O]) : const_parameter(cg, p[X2O]);
+    Expression i_h2o = update ? parameter(cg, p[H2O]) : const_parameter(cg, p[H2O]);
+    Expression i_c2o = update ? parameter(cg, p[C2O]) : const_parameter(cg, p[C2O]);
+    Expression i_bo = update ? parameter(cg, p[BO]) : const_parameter(cg, p[BO]);
     //c
-    Expression i_x2c = parameter(cg, p[X2C]);
-    Expression i_h2c = parameter(cg, p[H2C]);
-    Expression i_bc = parameter(cg, p[BC]);
+    Expression i_x2c = update ? parameter(cg, p[X2C]) : const_parameter(cg, p[X2C]);
+    Expression i_h2c = update ? parameter(cg, p[H2C]) : const_parameter(cg, p[H2C]);
+    Expression i_bc = update ? parameter(cg, p[BC]) : const_parameter(cg, p[BC]);
 
     vector<Expression> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
@@ -369,18 +369,18 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
   dropout_rate_h = 0.f;
 }
 
-void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
   if (ln_lstm)ln_param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
     vector<Expression> vars;
-    for (unsigned j = 0; j < p.size(); ++j) { vars.push_back(parameter(cg, p[j])); }
+    for (unsigned j = 0; j < p.size(); ++j) { vars.push_back(update ? parameter(cg, p[j]) : const_parameter(cg, p[j])); }
     param_vars.push_back(vars);
     if (ln_lstm){
       auto& ln_p = ln_params[i];
       vector<Expression> ln_vars;
-      for (unsigned j = 0; j < ln_p.size(); ++j) { ln_vars.push_back(parameter(cg, ln_p[j])); }
+      for (unsigned j = 0; j < ln_p.size(); ++j) { ln_vars.push_back(update ? parameter(cg, ln_p[j]) : const_parameter(cg, ln_p[j])); }
       ln_param_vars.push_back(ln_vars);
     }
   }
@@ -516,10 +516,10 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
       else
         tmp = affine_transform({vars[_BI], vars[_X2I], in});
     }
-    i_ait = pickrange(tmp, 0, hid);
-    i_aft = pickrange(tmp, hid, hid * 2);
-    i_aot = pickrange(tmp, hid * 2, hid * 3);
-    i_agt = pickrange(tmp, hid * 3, hid * 4);
+    i_ait = pick_range(tmp, 0, hid);
+    i_aft = pick_range(tmp, hid, hid * 2);
+    i_aot = pick_range(tmp, hid * 2, hid * 3);
+    i_agt = pick_range(tmp, hid * 3, hid * 4);
     Expression i_it = logistic(i_ait);
     // TODO(odashi): Should the forget bias be a hyperparameter?
     Expression i_ft = logistic(i_aft + 1.f);
@@ -611,10 +611,9 @@ void VanillaLSTMBuilder::disable_dropout() {
   dropout_rate_h = 0.f;
 }
 
-DYNET_SERIALIZE_COMMIT(VanillaLSTMBuilder, 
+DYNET_SERIALIZE_COMMIT(VanillaLSTMBuilder,
   DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, dropout_rate, dropout_rate_h, hid, input_dim),
   DYNET_VERSION_SERIALIZE_DEFINE(1, MAX_SERIALIZE_VERSION, ln_params, ln_lstm))
 DYNET_SERIALIZE_IMPL(VanillaLSTMBuilder);
 
 } // namespace dynet
-
