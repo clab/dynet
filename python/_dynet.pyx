@@ -315,6 +315,16 @@ cdef class Parameters:
         """
         self.thisptr.scale(s)
 
+    cpdef scale_gradient(self,float s):
+        """Scales the gradient
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale_gradient(s)
+
+
     cpdef bool is_updated(self):
         """check whether the parameter is updated or not
         
@@ -421,6 +431,15 @@ cdef class LookupParameters:
 
         """
         self.thisptr.scale(s)
+
+    cpdef scale_gradient(self,float s):
+        """Scales the gradient
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale_gradient(s)
         
     cpdef Expression expr(self,bool update=True):
         if cg_version() != self._version:
@@ -1213,7 +1232,7 @@ cdef class Expression: #(((
                 raise ValueError("Improper slice: start index must come strictly before stop index")
             if index.step is not None:
                 raise ValueError("Step sizes not yet supported.")
-            return pickrange(self, i, j)
+            return pick_range(self, i, j)
 
     cpdef scalar_value(self, recalculate=False):
         """Returns value of an expression as a scalar
@@ -2749,20 +2768,24 @@ cpdef Expression kmh_ngram(Expression x, unsigned v):
         dynet.Expression: 
     """
     return Expression.from_cexpr(x.cg_version, c_kmh_ngram(x.c(), v))
-cpdef Expression pickrange(Expression x, unsigned v, unsigned u):
+cpdef Expression pick_range(Expression x, unsigned s, unsigned e, unsigned d = 0):
     """Pick range of elements
     
     Pick a range of elements from an expression.
     
     Args:
         x (dynet.Expression): input expression
-        v (int): Beginning index
-        u (int): End index
+        s (int): Start index
+        e (int): End index
+        d (int): Dimension along which to pick
     
     Returns:
-        dynet.Expression: The value of {x[v],...,x[u]}
+        dynet.Expression: The value of {x[v],...,x[u]} along the dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_pickrange(x.c(), v, u))
+    return Expression.from_cexpr(x.cg_version, c_pick_range(x.c(), s, e, d))
+# This is deprecated
+cpdef Expression pickrange(Expression x, unsigned s, unsigned e):
+    return Expression.from_cexpr(x.cg_version, c_pick_range(x.c(), s, e, 0))
 cpdef Expression pick_batch_elem(Expression x, unsigned v):
     """Pick batch element.
 
@@ -2856,6 +2879,7 @@ cpdef Expression noise(Expression x, float stddev):
         dynet.Expression: :math:`y\sim\mathcal N(x,\\texttt{stddev})`
     """
     return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
+
 cpdef Expression dropout(Expression x, float p):
     """Dropout
     
@@ -2868,12 +2892,45 @@ cpdef Expression dropout(Expression x, float p):
     
     Args:
         x (dynet.Expression): Input expression
-        p (dynet.Expression): The dropout probability
+        p (number): The dropout probability
     
     Returns:
         dynet.Expression: The dropped out expression :math:`y=\\frac{1}{1-\\texttt{p}}x\circ z, z\sim\\text{Bernoulli}(1-\\texttt{p})`
     """
     return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
+
+    
+cpdef Expression dropout_batch(Expression x, float p):
+    """Dropout entire elements of a minibatch
+    
+    Identical to the dropout operation except entire batch elements are dropped
+
+    Args:
+        x (dynet.Expression): Input expression
+        p (number): The dropout probability
+    
+    Returns:
+        dynet.Expression: The dropped expression
+    """
+    return Expression.from_cexpr(x.cg_version, c_dropout_batch(x.c(), p))
+
+cpdef Expression dropout_dim(Expression x, unsigned d, float p):
+    """Dropout along one dimension
+    
+    Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example 
+
+    For now this only supports tensors of order <= 3 (with or without batch dimension)
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimension along which to drop
+        p (number): The dropout probability
+    
+    Returns:
+        dynet.Expression: The dropped expression
+    """
+    return Expression.from_cexpr(x.cg_version, c_dropout_dim(x.c(), d, p))
+
 cpdef Expression block_dropout(Expression x, float p):
     """Block dropout
     
@@ -2881,7 +2938,7 @@ cpdef Expression block_dropout(Expression x, float p):
     
     Args:
         x (dynet.Expression): Input expression
-        p (dynet.Expression): The dropout probability
+        p (number): The dropout probability
     
     Returns:
         dynet.Expression: The block dropout expression
@@ -3222,6 +3279,31 @@ cpdef Expression layer_norm(Expression x, Expression g, Expression b):
     ensure_freshness(b)
     return Expression.from_cexpr(x.cg_version, c_layer_norm(x.c(),g.c(),b.c()))
 
+cpdef Expression weight_norm(Expression w, Expression g):
+    """Weight normalization
+
+    Performs weight normalization : 
+
+    .. math::
+
+        \\begin{split}
+           \hat{w} &= g\\frac{w}{\Vert w\Vert}\\\\
+        \end{split}
+ 
+        
+    Reference : `Salimans, Kingma 2016 <https://arxiv.org/abs/1602.07868>`_
+        
+    Args:
+        w (dynet.Expression): Input expression (weight parameter)
+        g (dynet.Expression): Gain (scalar expression, usually also a parameter)
+    
+    Returns:
+        An expression of the same dimension as :code:`w`
+        dynet.Expression
+    """
+    ensure_freshness(g)
+    return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
+
 # )
     
 # ((( RNNS / Builders
@@ -3253,8 +3335,8 @@ cdef class _RNNBuilder: # (((
         """
         self.thisptr.disable_dropout()
 
-    cdef new_graph(self):
-        self.thisptr.new_graph(_cg.thisptr[0])
+    cdef new_graph(self, update=True):
+        self.thisptr.new_graph(_cg.thisptr[0], update)
         self.cg_version = _cg.version()
 
     cdef start_new_sequence(self, es=None):
@@ -3341,20 +3423,21 @@ cdef class _RNNBuilder: # (((
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 
-    cpdef RNNState initial_state(self,vecs=None):
+    cpdef RNNState initial_state(self,vecs=None,update=True):
         """Get a :code:`dynet.RNNState`
         
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
         
         Args:
             vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression` s  (default: {None})
+            update (bool): trainer updates internal parameters (default: {True})
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
         if self.cg_version != _cg.version():
-            self.new_graph()
+            self.new_graph(update)
             if vecs is not None:
                 self.start_new_sequence(vecs)
             else:
@@ -3362,7 +3445,7 @@ cdef class _RNNBuilder: # (((
             self._init_state = RNNState(self, -1)
         return self._init_state
 
-    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None):
+    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None, update=True):
         """Get a :code:`dynet.RNNState`
         
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
@@ -3371,13 +3454,14 @@ cdef class _RNNBuilder: # (((
         
         Args:
             vecs (list): Initial hidden state for each layer as a list of numpy arrays  (default: {None})
+            update (bool): trainer updates internal parameters (default: {True})
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
         if self.cg_version != _cg.version():
-            self.new_graph()
+            self.new_graph(update)
             if vecs is not None:
                 es = []
                 for v in vecs:

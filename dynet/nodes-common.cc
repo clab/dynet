@@ -146,9 +146,7 @@ string DotProduct::as_string(const vector<string>& arg_names) const {
 
 Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2 &&
-                          LooksLikeVector(xs[0]) &&
-                          LooksLikeVector(xs[1]) &&
-                          xs[0].rows() == xs[1].rows(),
+                          xs[0].single_batch() == xs[1].single_batch(),
                           "Bad arguments to DotProduct: " << xs);
   return Dim({1}, max(xs[0].bd, xs[1].bd));
 }
@@ -223,6 +221,30 @@ string Dropout::as_string(const vector<string>& arg_names) const {
 
 Dim Dropout::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Dropout")
+  return xs[0];
+}
+
+string DropoutBatch::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dropout_batch(" << arg_names[0] << ",p=" << p << ')';
+  return s.str();
+}
+
+Dim DropoutBatch::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in DropoutBatch")
+  return xs[0];
+}
+
+string DropoutDim::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dropout_dim(" << arg_names[0] << ",p=" << p << ')';
+  return s.str();
+}
+
+Dim DropoutDim::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in DropoutDim")
+  DYNET_ARG_CHECK(xs[0].nd < 4, "DropoutDim only supports tensor up to order 3 + batch dimension, got tensor of order"<<xs[0].nd)
+  DYNET_ARG_CHECK(xs[0].nd > dimension, "In DropoutDim : tried to drop along dimension "<<dimension<<" on tensor of order"<<xs[0].nd)
   return xs[0];
 }
 
@@ -776,15 +798,16 @@ Dim PickElement::dim_forward(const vector<Dim>& xs) const {
 // y = (x_1)[start:end]
 string PickRange::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "slice(" << arg_names[0] << ',' << start << ':' << end << ')';
+  s << "slice(" << arg_names[0] << ',' << start << ':' << end << ", dim=" << dim << ')';
   return s.str();
 }
 
 Dim PickRange::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in PickRange");
-  DYNET_ARG_CHECK(LooksLikeVector(xs[0]) && end <= xs[0][0],
-                          "Bad input dimensions or range in PickRange: " << xs << " range(" << start << ", " << end << ")");
-  return Dim({end - start}, xs[0].bd);
+  DYNET_ARG_CHECK(dim < xs[0].nd && start < end && xs[0][dim] >= end,
+                          "Bad input dimensions or range in PickRange: " << xs << " range(" << start << ", " << end << ") with dim=" << dim);
+  Dim ret = xs[0]; ret.d[dim] = end-start;
+  return ret;
 }
 
 int PickRange::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
@@ -908,7 +931,7 @@ string ScalarMultiply::as_string(const vector<string>& arg_names) const {
 
 Dim ScalarMultiply::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in ScalarMultiply")
-  Dim d = xs[1].truncate();
+  Dim d = xs[1];
   DYNET_ARG_CHECK(xs[0].batch_size() == 1,
                           "Mismatched input dimensions in ScalarMultiply: " << xs);
   d.bd = max(xs[0].bd, d.bd);
@@ -1249,6 +1272,18 @@ Dim MinDimension::dim_forward(const vector<Dim>& xs) const {
   Dim ret(xs[0]);
   ret.delete_dim(reduced_dim);
   return ret;
+}
+
+string WeightNormalization::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "weight_norm(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return s.str();
+}
+
+Dim WeightNormalization::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in WeightNormalization");
+  DYNET_ARG_CHECK(1 == xs[1].size()," Size of gain parameter in WeightNormalization should be 1, received " << xs[1].size());
+  return xs[0];
 }
 
 } // namespace dynet

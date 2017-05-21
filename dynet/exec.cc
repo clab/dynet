@@ -68,7 +68,7 @@ const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
 const Tensor& SimpleExecutionEngine::get_gradient(VariableIndex i) {
   DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in SimpleExecutionEngine::get_value()");
   if (i >= backward_computed) {
-    DYNET_RUNTIME_ERR("Requested gradient for node " << i << ", but backward pass was computed from node " << backward_computed);
+    DYNET_RUNTIME_ERR("Requested gradient for node " << i << ", but backward pass was computed from node " << (backward_computed - 1));
   }
   return ndEdfs[i];
 }
