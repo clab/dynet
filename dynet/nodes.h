@@ -152,6 +152,25 @@ struct Dropout : public Node {
   real p;
 };
 
+// y = dropout(x,p) where p specifies the dropout probability
+struct DropoutDim : public Node {
+  explicit DropoutDim(const std::initializer_list<VariableIndex>& a, unsigned d,real p) : Node(a), dimension(d), p(p) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
+  virtual bool supports_multibatch() const override { return true; }
+  unsigned dimension;
+  real p;
+};
+
+// y = dropout(x,p) where p specifies the dropout probability
+struct DropoutBatch : public Node {
+  explicit DropoutBatch(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
+  virtual bool supports_multibatch() const override { return true; }
+  real p;
+};
+
 // y = block_dropout(x,p) where p specifies the probability for dropping-out the entire block
 struct BlockDropout : public Node {
   explicit BlockDropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), dropout_probability(p) {}
@@ -698,11 +717,11 @@ struct PickElement : public Node {
   unsigned dimension;
 };
 
-// x_1 is a std::vector
-// y = x_1[start:end]
+// x_1 is a tensor
+// y = x_1[start:end] along dimension d
 // (start inclusive, end exclusive)
 struct PickRange : public Node {
-  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e) : Node(a), start(s), end(e) {}
+  explicit PickRange(const std::initializer_list<VariableIndex>& a, unsigned s, unsigned e, unsigned d = 0) : Node(a), start(s), end(e), dim(d) {}
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }  
   virtual void autobatch_reshape(const ComputationGraph & cg,
@@ -714,8 +733,7 @@ struct PickRange : public Node {
   }
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  unsigned start;
-  unsigned end;
+  unsigned start, end, dim;
 };
 
 // x is a batched tensor
@@ -803,6 +821,14 @@ struct MinDimension : public Node {
   unsigned first_dim;
   unsigned second_dim;
 };
+
+// y = x_1 * x_2
+struct WeightNormalization : public Node {
+  explicit WeightNormalization(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return false; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 
 } // namespace dynet
 

@@ -289,6 +289,10 @@ Noise operations
 
 .. autofunction:: dynet.dropout
 
+.. autofunction:: dynet.dropout_dim
+
+.. autofunction:: dynet.dropout_batch
+
 .. autofunction:: dynet.block_dropout
 
 Linear algebra operations
@@ -330,6 +334,8 @@ Normalization operations
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: dynet.layer_norm
+
+.. autofunction:: dynet.weight_norm
 
 Recurrent Neural Networks
 -------------------------

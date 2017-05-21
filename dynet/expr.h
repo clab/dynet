@@ -1506,12 +1506,15 @@ Expression pick(const Expression& x, const std::vector<unsigned> * pv, unsigned 
  * \details Pick a range of elements from an expression.
  *
  * \param x The input expression
- * \param v The beginning index
- * \param u The end index
+ * \param s The start index
+ * \param e The end index
+ * \param d The dimension along which to pick
  *
  * \return The value of {x[v],...,x[u]}
  */
-Expression pickrange(const Expression& x, unsigned v, unsigned u);
+Expression pick_range(const Expression& x, unsigned s, unsigned e, unsigned d = 0);
+// DEPRECATED
+Expression pickrange(const Expression& x, unsigned s, unsigned e);
 
 /**
  * \ingroup flowoperations
@@ -1727,6 +1730,33 @@ Expression noise(const Expression& x, real stddev);
  * \return The dropped out expression
  */
 Expression dropout(const Expression& x, real p);
+
+/**
+ * \ingroup noiseoperations
+ * \brief Dropout along a specific dimension
+ * \details Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example 
+ * 
+ * For now this only supports tensors of order <= 3 (with or without batch dimension)
+ *
+ * \param x The input expression
+ * \param d The dimension along which to drop
+ * \param p The dropout probability
+ *
+ * \return The dropped out expression
+ */
+Expression dropout_dim(const Expression& x, unsigned d, real p);
+
+/**
+ * \ingroup noiseoperations
+ * \brief Dropout entire elements of a minibatch
+ * \details Identical to the dropout operation except entire batch elements are dropped
+ * 
+ * \param x The input expression
+ * \param p The dropout probability
+ *
+ * \return The dropped out expression
+ */
+Expression dropout_batch(const Expression& x, real p);
 
 /**
  * \ingroup noiseoperations
@@ -1966,6 +1996,25 @@ Expression trace_of_product(const Expression& x, const Expression& y);
  * \return An expression of the same dimension as `x`
  */
 Expression layer_norm(const Expression& x, const Expression& g, const Expression& b);
+
+/**
+ * \ingroup normoperations
+ * \brief Weight normalization
+ * \details Performs weight normalization : 
+ * 
+ * \f$
+ * \begin{split}
+ *    \hat{w} &= g\frac{w}{\Vert w\Vert}\\
+ * \end{split}
+ * \f$
+ * 
+ * Reference : [Salimans, Kingma 2016](https://arxiv.org/abs/1602.07868)
+ * 
+ * \param w Input expression (weight parameter)
+ * \param g Gain (scalar expression, usually also a parameter)
+ * \return An expression of the same dimension as `w`
+ */
+Expression weight_norm(const Expression& w, const Expression& g);
 }
 // Because expressions are now such a fundamental part of DyNet it doesn't
 // make much sense to keep them in separate namespaces, so we import expr

@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE( scalar_expr_add_2_gradient ) {
 // Expression cdiv(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( scalar_expr_add_batch1_gradient ) {
   dynet::ComputationGraph cg;
-  Expression x1 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x1 = reshape(parameter(cg,param_square1), Dim({1,3}, 3));
   Expression x2 = parameter(cg, param_scalar2);
   Expression y = x1 + x2;
   Expression z = sum_batches(sum_elems(y));
@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE( scalar_expr_add_batch1_gradient ) {
 BOOST_AUTO_TEST_CASE( scalar_expr_add_batch2_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression x2 = input(cg, Dim({1}, 6), batch_vals);
+  Expression x2 = reshape(parameter(cg,param_square1), Dim({1}, 9));
   Expression y = x1 + x2;
   Expression z = sum_batches(sum_elems(y));
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -173,7 +173,7 @@ BOOST_AUTO_TEST_CASE( scalar_expr_sub_2_gradient ) {
 // Expression cdiv(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( scalar_expr_sub_batch1_gradient ) {
   dynet::ComputationGraph cg;
-  Expression x1 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x1 = reshape(parameter(cg,param_square1), Dim({1,3}, 3));
   Expression x2 = parameter(cg, param_scalar2);
   Expression y = x1 - x2;
   Expression z = sum_batches(sum_elems(y));
@@ -184,7 +184,7 @@ BOOST_AUTO_TEST_CASE( scalar_expr_sub_batch1_gradient ) {
 BOOST_AUTO_TEST_CASE( scalar_expr_sub_batch2_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression x2 = input(cg, Dim({1}, 6), batch_vals);
+  Expression x2 = reshape(parameter(cg,param_square1), Dim({1}, 9));
   Expression y = x1 - x2;
   Expression z = sum_batches(sum_elems(y));
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -431,7 +431,7 @@ BOOST_AUTO_TEST_CASE( scalar_cdiv_gradient ) {
 // Expression cdiv(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( scalar_cdiv_batch1_gradient ) {
   dynet::ComputationGraph cg;
-  Expression x1 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x1 = reshape(parameter(cg,param_square1), Dim({1,3}, 3));
   Expression x2 = parameter(cg, param_scalar2);
   Expression y = cdiv(x1, x2);
   Expression z = sum_batches(sum_elems(y));
@@ -807,24 +807,43 @@ BOOST_AUTO_TEST_CASE( max_gradient ) {
 }
 
 // TODO: Noise is random, so it cannot be tested simply?
-// // Expression noise(const Expression& x, real stddev);
-// BOOST_AUTO_TEST_CASE( noise_gradient ) {
-//   dynet::ComputationGraph cg;
-//   Expression x1 = parameter(cg, param1);
-//   Expression y = noise(x1, 0.5);
-//   Expressionz z = sum_elems(y);
-//   BOOST_CHECK(check_grad(mod, z, 0));
-// }
+// Expression noise(const Expression& x, real stddev);
+BOOST_AUTO_TEST_CASE( noise_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = noise(x1, 0.5);
+  Expression z = sum_elems(y);
+  cg.forward(z);
+}
 
-// TODO: Dropout scales the gradients at training time, so they don't match.
-// // Expression dropout(const Expression& x, real p);
-// BOOST_AUTO_TEST_CASE( dropout_gradient ) {
-//   dynet::ComputationGraph cg;
-//   Expression x1 = parameter(cg, param1);
-//   Expression y = dropout(x1, 0.5);
-//   Expression z = sum_elems(y);
-//   BOOST_CHECK(check_grad(mod, z, 0));
-// }
+//TODO: Dropout scales the gradients at training time, so they don't match.
+// Expression dropout(const Expression& x, real p);
+BOOST_AUTO_TEST_CASE( dropout_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = dropout(x1, 0.5);
+  Expression z = sum_elems(y);
+  cg.forward(z);
+}
+
+BOOST_AUTO_TEST_CASE( dropout_batch_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = dropout_batch(x, 0.5);
+  Expression z = sum_elems(y);
+  cg.forward(z);
+}
+
+
+BOOST_AUTO_TEST_CASE( dropout_dim_forward ) {
+    for (unsigned d=0;d<3;d++){
+      dynet::ComputationGraph cg;
+      Expression x = parameter(cg, param_cube1);
+      Expression y = dropout_dim(x, d, 0.5);
+      Expression z = sum_elems(y);
+      cg.forward(z);
+    }
+}
 
 // TODO: Dropout scales the gradients at training time, so they don't match.
 // Expression block_dropout(const Expression& x, real p);
@@ -921,7 +940,7 @@ BOOST_AUTO_TEST_CASE( scalar_cmult_gradient ) {
 BOOST_AUTO_TEST_CASE( scalar_cmult_batch_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param_scalar1);
-  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression x2 = reshape(parameter(cg,param_square1), Dim({1,3}, 3));
   Expression y = cmult(x1, x2) + cmult(x2, x1);
   Expression z = sum_batches(sum_elems(y));
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -942,6 +961,14 @@ BOOST_AUTO_TEST_CASE( dot_product_batch_gradient ) {
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3}, 2), batch_vals);
   Expression z = sum_batches(dot_product(x1, x2) + dot_product(x2, x1) * 2);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression dot_product(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( dot_product_matrix_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_square1);
+  Expression z = dot_product(x1, x1);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -1216,7 +1243,7 @@ BOOST_AUTO_TEST_CASE( pick_batch_gradient ) {
 BOOST_AUTO_TEST_CASE( pick_batch_broadcast_gradient ) {
   std::vector<unsigned> idx = {1, 2};
   dynet::ComputationGraph cg;
-  Expression x1 = input(cg, Dim({3, 2}), batch_vals);
+  Expression x1 = parameter(cg, param_square1);
   Expression z = sum_batches(squared_norm(pick(x1, idx, 0)));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -1243,11 +1270,20 @@ BOOST_AUTO_TEST_CASE(  pick_batch_elems_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression pickrange(const Expression& x, unsigned v, unsigned u);
-BOOST_AUTO_TEST_CASE( pickrange_gradient ) {
+// Expression pick_range(const Expression& x, unsigned v, unsigned u);
+BOOST_AUTO_TEST_CASE( pick_range_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression y = pickrange(x1, 0, 2);
+  Expression y = pick_range(x1, 0, 2);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression pick_range(const Expression& x, unsigned v, unsigned u);
+BOOST_AUTO_TEST_CASE( pick_range_dim_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = pick_range(x1, 0, 2, 1);
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -1382,6 +1418,16 @@ BOOST_AUTO_TEST_CASE( mean_batches_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression mean_batches(x);
+BOOST_AUTO_TEST_CASE( mean_batches_gradient_multidim ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param4);
+  Expression y = reshape(x, Dim({1,2}, 3));
+  Expression z = mean_batches(y);
+  z = mean_dim(z, 1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression moment_batches(x, r);
 BOOST_AUTO_TEST_CASE( moment_batches_gradient ) {
   for (unsigned r=2;r<5;r++){
@@ -1457,6 +1503,26 @@ BOOST_AUTO_TEST_CASE( layer_norm_forward ) {
   float std = as_scalar(sqrt(sum_elems(square(y))/3.0).value());
   BOOST_CHECK_LT(mu, 1e-6);
   BOOST_CHECK_CLOSE(std, 1, 0.01);
+}
+
+// Expression weight_norm(x,g);
+BOOST_AUTO_TEST_CASE( weight_norm_forward ) {
+  dynet::ComputationGraph cg;
+  Expression w = parameter(cg, param_square1);
+  Expression g = parameter(cg, param_scalar1);
+  Expression y = weight_norm(w,g);
+  float norm = as_scalar(sqrt(sum_elems(square(y))).value());
+  BOOST_CHECK_CLOSE(norm, 2.2, 0.01);
+}
+
+// Expression layer_norm(x,g);
+BOOST_AUTO_TEST_CASE( weight_norm_backward_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression w = parameter(cg, param_square1);
+  Expression g = parameter(cg, param_scalar1);
+  Expression y = weight_norm(w,g);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 // Expression sparse_input(vector<unsigned int>& ids, vector<float>& src, float def);

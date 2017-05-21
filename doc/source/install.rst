@@ -28,17 +28,12 @@ get Boost, CMake, and Mercurial with either homebrew or macports:
 To compile DyNet you also need the `development version of the Eigen
 library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
 released versions, you may get assertion failures or compile errors.**
-If you don't have Eigen installed already, you can get it easily using
-the following command:
+If you don't have Eigen already, you can get it easily using the
+following command:
 
 ::
 
     hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
-    cd eigen
-    mkdir build && cd build
-    cmake ..
-    make install # sudo permissions might be necessary on Linux.
-    cd ../..
     
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code
@@ -135,6 +130,28 @@ GPU, you can link to the "libgdynet" library.
 
 (Eventually you will be able to use a single library to run on either
 CPU or GPU, but this is not fully implemented yet.)
+
+
+cuDNN support
+~~~~~~~~~~~~~
+
+When running DyNet with CUDA on GPUs, some of DyNet's functionalities
+(e.g. conv2d) will depend on the `NVIDIA cuDNN libraries <https://developer.nvidia.com/cudnn>`__.
+CMake will automatically detect cuDNN in the suggested installation path 
+by NVIDIA (i.e. ``/usr/local/cuda``) and enable those functionalities 
+if detected.
+
+If CMake is unable to find cuDNN automatically, try setting `CUDNN_ROOT`, such as
+
+::
+
+    -DCUDNN_ROOT="/path/to/CUDNN"
+
+. However, if you don't have cuDNN installed, those dependend functionalities 
+will be automatically disabled and an error will be throwed during runtime if you try
+to use them.
+
+Currently, DyNet supports cuDNN v5.1, future versions will also be supported soon.
 
 
 MKL support
