@@ -373,7 +373,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     batches.resize(upto - num_nodes_evaluated + num_batches_evaluated + 1);
 
     // Allocate temporary memory for bookkeeping
-    size_t temp_data_size = (uptop1)*4*sizeof(int) + (upto-node_id+2)*2*sizeof(float);
+    size_t temp_data_size = (uptop1)*4*sizeof(int) + (upto+2)*2*sizeof(float);
     int* node2profid = (int*)malloc(temp_data_size);
     memset(node2profid, 0, temp_data_size);
     int* node2left = node2profid + uptop1;
