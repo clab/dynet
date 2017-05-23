@@ -42,25 +42,25 @@ GRUBuilder::GRUBuilder(unsigned layers,
   dropout_rate = 0.f;
 }
 
-void GRUBuilder::new_graph_impl(ComputationGraph& cg) {
+void GRUBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
 
     // z
-    Expression x2z = parameter(cg, p[X2Z]);
-    Expression h2z = parameter(cg, p[H2Z]);
-    Expression bz = parameter(cg, p[BZ]);
+    Expression x2z = update ? parameter(cg, p[X2Z]) : const_parameter(cg, p[X2Z]);
+    Expression h2z = update ? parameter(cg, p[H2Z]) : const_parameter(cg, p[H2Z]);
+    Expression bz = update ? parameter(cg, p[BZ]) : const_parameter(cg, p[BZ]);
 
     // r
-    Expression x2r = parameter(cg, p[X2R]);
-    Expression h2r = parameter(cg, p[H2R]);
-    Expression br = parameter(cg, p[BR]);
+    Expression x2r = update ? parameter(cg, p[X2R]) : const_parameter(cg, p[X2R]);
+    Expression h2r = update ? parameter(cg, p[H2R]) : const_parameter(cg, p[H2R]);
+    Expression br = update ?parameter(cg, p[BR]) : const_parameter(cg, p[BR]);
 
     // h
-    Expression x2h = parameter(cg, p[X2H]);
-    Expression h2h = parameter(cg, p[H2H]);
-    Expression bh = parameter(cg, p[BH]);
+    Expression x2h = update ? parameter(cg, p[X2H]) : const_parameter(cg, p[X2H]);
+    Expression h2h = update ? parameter(cg, p[H2H]) : const_parameter(cg, p[H2H]);
+    Expression bh = update ? parameter(cg, p[BH]) : const_parameter(cg, p[BH]);
 
     vector<Expression> vars = {x2z, h2z, bz, x2r, h2r, br, x2h, h2h, bh};
     param_vars.push_back(vars);

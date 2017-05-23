@@ -38,6 +38,10 @@ struct InputNode : public Node {
   explicit InputNode(const Dim& d, const std::vector<float>* pdat) : dim(d), data(), pdata(pdat) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids) const override;
   Dim dim;
   const std::vector<float> data;
   const std::vector<float>* pdata;
@@ -65,6 +69,10 @@ struct ScalarInputNode : public Node {
   explicit ScalarInputNode(real s) : data(s), pdata(&data) {}
   explicit ScalarInputNode(const real* ps) : data(), pdata(ps) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids) const override;
   const dynet::real data;
   const dynet::real* pdata;
 };
@@ -77,6 +85,17 @@ struct LookupNode : public ParameterNodeBase {
   LookupNode(LookupParameter p, const std::vector<unsigned>* pindices) : dim(p.get()->dim), index(), pindex(), indices(), pindices(pindices), params(p) { dim.bd = pindices->size(); }
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }  
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids) const override;
+  virtual void autobatch_reshape(const ComputationGraph & cg,
+                                 const std::vector<VariableIndex> & batch_ids,
+                                 const std::vector<int> & concat,
+                                 std::vector<const Tensor*>& xs,
+                                 Tensor& fx) const override {
+    autobatch_reshape_concatonly(cg, batch_ids, concat, xs, fx);
+  }
   size_t aux_storage_size() const override;
   void accumulate_grad(const Tensor& g) override;
   Dim dim;
