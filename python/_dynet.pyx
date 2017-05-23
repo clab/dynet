@@ -884,13 +884,15 @@ def cg_version():
     Varsion of the current computation graph
     """
     return _cg._cg_version
-def renew_cg(immediate_compute=False, check_validity=False): 
+
+def renew_cg(immediate_compute=False, check_validity=False, autobatching=None): 
     """
     Renew the computation graph.
 
     Call this before building any new computation graph
     """
-    return _cg.renew(immediate_compute, check_validity)
+    return _cg.renew(immediate_compute, check_validity, autobatching)
+
 def print_text_graphviz(): return _cg.print_graphviz()
 def cg_checkpoint(): 
     """
@@ -927,12 +929,15 @@ cdef class ComputationGraph:
     def __dealloc__(self):
         del self.thisptr
 
-    cpdef renew(self, immediate_compute=False, check_validity=False):
+    cpdef renew(self, immediate_compute=False, check_validity=False, autobatching=None):
         """
         Same as :code:`dynet.renew_cg()`
         """
         del self.thisptr
-        self.thisptr = new CComputationGraph()
+        if autobatching is None:
+            self.thisptr = new CComputationGraph()
+        else:
+            self.thisptr = new CComputationGraph(autobatching)
         if immediate_compute: self.thisptr.set_immediate_compute(immediate_compute)
         if check_validity: self.thisptr.set_check_validity(check_validity)
         self._inputs = []
@@ -1402,7 +1407,24 @@ cdef class Expression: #(((
         elif isinstance(self,Expression) and isinstance(other,(int, float)):
             return _neg(_scalarsub(other, self))
         else: raise NotImplementedError()
-#)
+#)))
+
+cpdef forward(list exps, recalculate=False):
+    cdef Expression maxe = exps[0]
+    cdef Expression e
+    for e in exps:
+        if e.vindex > maxe.vindex: maxe = e
+    maxe.forward(recalculate)
+
+cpdef npvalues(list exps, recalculate=False):
+    cdef Expression e
+    forward(exps, recalculate)
+    return [e.npvalue() for e in exps]
+
+cpdef values(list exps, recalculate=False):
+    cdef Expression e
+    forward(exps, recalculate)
+    return [e.value() for e in exps]
 
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
@@ -3313,8 +3335,8 @@ cdef class _RNNBuilder: # (((
         """
         self.thisptr.disable_dropout()
 
-    cdef new_graph(self):
-        self.thisptr.new_graph(_cg.thisptr[0])
+    cdef new_graph(self, update=True):
+        self.thisptr.new_graph(_cg.thisptr[0], update)
         self.cg_version = _cg.version()
 
     cdef start_new_sequence(self, es=None):
@@ -3401,20 +3423,21 @@ cdef class _RNNBuilder: # (((
             res.append(Expression.from_cexpr(self.cg_version, cexp))
         return res
 
-    cpdef RNNState initial_state(self,vecs=None):
+    cpdef RNNState initial_state(self,vecs=None,update=True):
         """Get a :code:`dynet.RNNState`
         
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
         
         Args:
             vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression` s  (default: {None})
+            update (bool): trainer updates internal parameters (default: {True})
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
         if self.cg_version != _cg.version():
-            self.new_graph()
+            self.new_graph(update)
             if vecs is not None:
                 self.start_new_sequence(vecs)
             else:
@@ -3422,7 +3445,7 @@ cdef class _RNNBuilder: # (((
             self._init_state = RNNState(self, -1)
         return self._init_state
 
-    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None):
+    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None, update=True):
         """Get a :code:`dynet.RNNState`
         
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
@@ -3431,13 +3454,14 @@ cdef class _RNNBuilder: # (((
         
         Args:
             vecs (list): Initial hidden state for each layer as a list of numpy arrays  (default: {None})
+            update (bool): trainer updates internal parameters (default: {True})
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
         if self.cg_version != _cg.version():
-            self.new_graph()
+            self.new_graph(update)
             if vecs is not None:
                 es = []
                 for v in vecs:

@@ -679,6 +679,14 @@ struct TensorTools {
   static void copy_elements(const Tensor& v, const Tensor& v_src);
 
   /**
+   * \brief Accumulate the values of one tensor into another
+   *
+   * \param v Target tensor
+   * \param v_src Source tensor
+   */
+  static void accumulate(Tensor& v, const Tensor& v_src);
+
+  /**
    * \brief Calculate the index of the maximum value
    *
    * \param v A tensor where each row represents a probability distribution
@@ -707,6 +715,8 @@ protected:
   static void clip_dev(MyDevice & dev, Tensor& d, float left, float right);
   template<class MyDevice>
   static void constant_dev(MyDevice & dev, Tensor& d, float c);
+  template<class MyDevice>
+  static void accumulate_dev(MyDevice & dev, Tensor& v_src, const Tensor& v);
   template<class MyDevice>
   static IndexTensor argmax_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
   template<class MyDevice>

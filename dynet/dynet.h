@@ -19,6 +19,7 @@
 #include "dynet/tensor.h"
 #include "dynet/model.h"
 #include "dynet/devices.h"
+#include "dynet/sig.h"
 
 
 namespace dynet {
@@ -81,6 +82,7 @@ struct ComputationGraph {
    * \brief Default constructor
    */
   ComputationGraph();
+  ComputationGraph(bool batched);
   ~ComputationGraph();
 
   // INPUTS
@@ -469,6 +471,11 @@ struct Node {
    * \return String description of the node
    */
   virtual std::string as_string(const std::vector<std::string>& args) const = 0;
+  virtual std::string as_dummy_string() const {
+    std::vector<std::string> a;
+    a.resize(args.size(), "a");
+    return as_string(a);
+  }
 
   // in general, this will return an empty size, but if a component needs to store
   // extra information in the forward pass for use in the backward pass, it can
@@ -556,6 +563,57 @@ struct Node {
                         const Tensor& dEdf,
                         unsigned i,
                         Tensor& dEdxi) const final;
+
+  /**
+   * \brief signature for automatic batching
+   * \detail This will be equal only for nodes that can be combined. Returns
+   *         0 for unbatchable functions.
+   */
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const { return 0; }
+  /**
+   * \brief which inputs can be batched
+   * \detail This will be true for inputs that should be concatenated when
+   *         autobatching, and false for inputs that should be shared among
+   *         all batches.
+   */
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const { return std::vector<int>(); }
+  /**
+   * \brief create a pseudonode for autobatching
+   * \detail This will combine together multiple nodes into one big node for 
+   *         the automatic batching functionality. When a node representing
+   *         one component of the mini-batch can be used as-is it is OK to just
+   *         return the null pointer, otherwise we should make the appropriate
+   *         changes and return a new node.
+   *         
+   */
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids) const {
+    return nullptr;
+  }
+  /**
+   * \brief reshape the tensors for auto
+   * \detail Takes in info, and reshapes the dimensions of xs (for which
+   *         "concat" is true), and fx. By default do no reshaping, which
+   *         is OK for componentwise operations.
+   *
+   */
+  virtual void autobatch_reshape(const ComputationGraph & cg,
+                                 const std::vector<VariableIndex> & batch_ids,
+                                 const std::vector<int> & concat,
+                                 std::vector<const Tensor*>& xs,
+                                 Tensor& fx) const { }
+  /**
+   * \brief reshape the tensors for auto
+   * \detail Takes in info, and reshapes the dimensions of xs (for which
+   *         "concat" is true) and fx by concatenating their batches.
+   *
+   */
+  void autobatch_reshape_concatonly(const ComputationGraph & cg,
+                                    const std::vector<VariableIndex> & batch_ids,
+                                    const std::vector<int> & concat,
+                                    std::vector<const Tensor*>& xs,
+                                    Tensor& fx) const;
+
 
   //
   /**

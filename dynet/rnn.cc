@@ -49,20 +49,20 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
   dropout_rate = 0.f;
 }
 
-void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
+void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
     Parameter p_x2h = params[i][X2H];
     Parameter p_h2h = params[i][H2H];
     Parameter p_hb = params[i][HB];
-    Expression i_x2h =  parameter(cg,p_x2h);
-    Expression i_h2h =  parameter(cg,p_h2h);
-    Expression i_hb =  parameter(cg,p_hb);
+    Expression i_x2h =  update ? parameter(cg,p_x2h) : const_parameter(cg,p_x2h);
+    Expression i_h2h =  update ? parameter(cg,p_h2h) : const_parameter(cg,p_h2h);
+    Expression i_hb =  update ? parameter(cg,p_hb) : const_parameter(cg,p_hb);
     vector<Expression> vars = {i_x2h, i_h2h, i_hb};
 
     if (lagging) {
         Parameter p_l2h = params[i][L2H];
-        Expression i_l2h =  parameter(cg,p_l2h);
+        Expression i_l2h =  update ? parameter(cg,p_l2h) : const_parameter(cg,p_l2h);
         vars.push_back(i_l2h);
     }
 
