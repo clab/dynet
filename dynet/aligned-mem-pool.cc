@@ -67,7 +67,7 @@ size_t AlignedMemoryPool::used() {
 
 void AlignedMemoryPool::set_used(size_t s) {
   if(s != pools.back()->used) {
-    DYNET_ARG_CHECK(pools.size() == 1, "Dynet does not support both dynamic increasing of memory pool size, and checkpointing functionality in AlignedMemoryPool. If you want to use checkpointing, please pre-allocate enough memory using the --dynet-mem command line option.");
+    DYNET_ARG_CHECK(pools.size() == 1, "Dynet does not support both dynamic increasing of memory pool size, and automatic batching or memory checkpointing. If you want to use automatic batching or checkpointing, please pre-allocate enough memory using the --dynet-mem command line option (details http://dynet.readthedocs.io/en/latest/commandline.html).");
     pools[0]->used = s;
   }
   // TODO: This is disabled for now, because it would require freeing all the memory pools to do properly
