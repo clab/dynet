@@ -1932,6 +1932,20 @@ cpdef Expression cmult(Expression x, Expression y):
     """
     ensure_freshness(y);
     return Expression.from_cexpr(x.cg_version, c_cmult(x.c(), y.c()))
+cpdef Expression cadd(Expression x, Expression y):
+    """Componentwise addition
+    
+    Do a componentwise addition, potentially broadcasting the arguments where each value is equal to :math:`x_i\\times y_i`
+    
+    Args:
+        x (dynet.Expression): The first input expression
+        y (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: An expression where the ith element is equal to :math:`x_i\\times y_i`
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version, c_cadd(x.c(), y.c()))
 cpdef Expression colwise_add(Expression x, Expression y):
     """Columnwise addition
     

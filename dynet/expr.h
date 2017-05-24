@@ -573,6 +573,19 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Expression addition
+ * \details Add two expressions, broadcasting dimensions if necessary.
+ *
+ * \param x The first input
+ * \param y The second input
+ *
+ * \return The sum of x and y
+ */
+Expression cadd(const Expression& x, const Expression& y);
+
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Affine transform
  * \details This performs an affine transform over an arbitrary (odd) number of expressions
  *          held in the input initializer list xs.

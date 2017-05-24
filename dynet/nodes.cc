@@ -688,14 +688,18 @@ DYNET_NODE_INST_DEV_IMPL(CwiseQuotient)
 
 template<class MyDevice>
 void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  // convention: 2nd element will be broadcasted (expr.cc code should take care of passing in the right order)
+  // convention: 1st argument will be broadcasted (expr.cc code should take care of passing in the right order)
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseMultiply::forward (cmult)");
-  Eigen::array<int, 5> bcast = {1,1,1,1,1};
-  for(int i=0; i<xs[0]->d.nd; i++){
-    if(xs[0]->d[i]==1) bcast[i] = xs[1]->d[i];
+  if(xs[0]->d.size() == xs[1]->d.size()){
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec();
+  } else {
+    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    for(int di=0; di<xs[0]->d.nd; di++){
+      if(xs[0]->d[di]==1) bcast[di] = xs[1]->d[di];
+    }
+    if(xs[0]->d.bd == 1) bcast[4] = xs[1]->d.bd;
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast) * xs[1]->tb<4>();
   }
-  if(xs[0]->d.bd == 1) bcast[4] = xs[1]->d.bd;
-  fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast) * xs[1]->tb<4>();
 }
 
 template<class MyDevice>
@@ -707,16 +711,19 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in CwiseMultiply::backward (cmult)");
   if(i == 1) {
-    Eigen::array<int, 5> bcast = {1,1,1,1,1};
-    for(int di=0; di<xs[0]->d.nd; di++){
-      if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[1]->d[di];
+    if(xs[0]->d.size() == xs[1]->d.size()){
+      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[0]->tvec();
+    } else {
+      Eigen::array<int, 5> bcast = {1,1,1,1,1};
+      for(int di=0; di<xs[0]->d.nd; di++){
+        if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[1]->d[di];
+      }
+      if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[1]->d.bd;
+      dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() * xs[0]->tb<4>().broadcast(bcast);
     }
-    if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[1]->d.bd;
-
-    dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() * xs[0]->tb<4>().broadcast(bcast);
   } else {
     int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
-    for(int i=0;i<xs[0]->d.nd; i++) if(xs[0]->d[i]!=xs[1]->d[i]) n_red++;
+    for(int di=0;di<xs[0]->d.nd; di++) if(xs[0]->d[di]!=xs[1]->d[di]) n_red++;
     DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
 
     if(n_red==0)      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
@@ -737,9 +744,9 @@ void CwiseMultiply::backward_helper(const MyDevice & dev,
   Eigen::array<int, ReductionOrder> red_axis;
   red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
-  for(int i=0;i<xs[0]->d.nd; i++){
-    if(xs[0]->d[i]!=xs[1]->d[i]){
-      red_axis[curr_red_axis] = i;
+  for(int di=0;di<xs[0]->d.nd; di++){
+    if(xs[0]->d[di]!=xs[1]->d[di]){
+      red_axis[curr_red_axis] = di;
       curr_red_axis++;
     }
   }
@@ -2357,6 +2364,70 @@ void Sum::backward_dev_impl(const MyDevice & dev,
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Sum)
+
+template<class MyDevice>
+void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // convention: 1st argument will be broadcasted (expr.cc code should take care of passing in the right order)
+  DYNET_ASSERT(num_args == 2, "Bad number of arguments in CwiseSum::forward");
+  bool all_dims_same = xs[0]->d.size() == xs[1]->d.size();
+  if (all_dims_same){
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec();
+  } else {
+    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    for(int i=0; i<xs[0]->d.nd; i++){
+      if(xs[0]->d[i]==1) bcast[i] = xs[1]->d[i];
+    }
+    if(xs[0]->d.bd == 1) bcast[4] = xs[1]->d.bd;
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast) + xs[1]->tb<4>();
+  }
+}
+
+template<class MyDevice>
+void CwiseSum::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  if(i==1 || xs[0]->d.size() == xs[1]->d.size()) {
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+  } else {
+    int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
+    for(int i=0;i<xs[0]->d.nd; i++) if(xs[0]->d[i]!=xs[1]->d[i]) n_red++;
+    DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward (cadd)");
+    if(n_red==1)      backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
+  }
+}
+DYNET_NODE_INST_DEV_IMPL(CwiseSum)
+
+template<class MyDevice, int ReductionOrder>
+void CwiseSum::backward_helper(const MyDevice & dev,
+		     const std::vector<const Tensor*>& xs,
+		     const Tensor& fx,
+		     const Tensor& dEdf,
+		     unsigned i,
+		     Tensor& dEdxi) const {
+  Eigen::array<int, ReductionOrder> red_axis;
+  red_axis[ReductionOrder-1] = 4;
+  int curr_red_axis = 0;
+  for(int di=0;di<xs[0]->d.nd; di++){
+    if(xs[0]->d[di]!=xs[1]->d[di]){
+      red_axis[curr_red_axis] = di;
+      curr_red_axis++;
+    }
+  }
+  Eigen::array<int, 5> morph = {1,1,1,1,1};
+  for(int di=0; di<xs[0]->d.nd; di++){
+    morph[di] = xs[i]->d[di];
+  }
+  morph[4] = xs[i]->d.bd;
+
+  dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().sum(red_axis).reshape(morph);
+}
+
 
 template<class MyDevice>
 void SumElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {

@@ -442,6 +442,20 @@ struct Sum : public Node {
   virtual bool supports_multibatch() const override { return true; }
 };
 
+// y = \sum_i x_i
+struct CwiseSum : public Node {
+  template <typename T> explicit CwiseSum(const T& a) : Node(a) {}
+  template<class MyDevice, int ReductionOrder>
+  void backward_helper(const MyDevice & dev,
+		                             const std::vector<const Tensor*>& xs,
+		                             const Tensor& fx,
+		                             const Tensor& dEdf,
+		                             unsigned i,
+		                             Tensor& dEdxi) const;
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+};
+
 // y = \sum_i,j,... x[i,j,...]
 struct SumElements : public Node {
   template <typename T> explicit SumElements(const T& a) : Node(a) {}

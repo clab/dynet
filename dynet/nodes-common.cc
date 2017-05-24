@@ -319,6 +319,24 @@ Dim Sum::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+string CwiseSum::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0];
+  for (unsigned i = 1; i < arg_names.size(); ++i)
+    s << " + " << arg_names[i];
+  return s.str();
+}
+
+Dim CwiseSum::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseSum")
+  Dim d = xs[1].truncate();
+  DYNET_ARG_CHECK(xs[0].nd == xs[1].nd || xs[0].batch_size()==1 || xs[1].batch_size()==1, "CwiseSum: arguments must have equal number of dimensions, or have a scalar as one of its arguments.");
+  for(int i=0; i<xs[0].nd; i++)
+    DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || xs[0].d[i]==1, "CwiseSum: For each dimension, the dim size needs to match or equal 1.");
+  DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || xs[0].bd==1, "CwiseSum: batch size must match or equal 1");
+  return d;
+}
+
 string SumElements::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "sum_elems( " << arg_names[0] << " )";
@@ -818,12 +836,10 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseMultiply")
   Dim d = xs[1].truncate();
 
+  DYNET_ARG_CHECK(xs[0].nd == xs[1].nd || xs[0].batch_size()==1 || xs[1].batch_size()==1, "CwiseMultiply: arguments must have equal number of dimensions, or have a scalar as one of its arguments.");
   for(int i=0; i<xs[0].nd; i++)
     DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || xs[0].d[i]==1, "CwiseMultiply: For each dimension, the dim size needs to match or equal 1.");
   DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || xs[0].bd==1, "CwiseMultiply: batch size must match or equal 1");
-////  DYNET_ARG_CHECK(d.single_batch() == xs[1].truncate().single_batch(),
-////                          "Mismatched input dimensions in CwiseMultiply: " << xs);
-//  d.bd = max(xs[1].bd, d.bd);
   return d;
 }
 
