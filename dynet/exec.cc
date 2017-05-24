@@ -271,9 +271,8 @@ void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<V
   for (auto id : batch_ids) {
     const size_t sz = node2size[id];
 
-    float* my_trg = batches[node2batch[id]].nfx.v + node2offset[id];
     locs[i] = src; // src
-    locs[i+TRG] = my_trg;
+    locs[i+TRG] = ndEdfs[cg.nodes[id]->args[ai]].v;
     locs[i+LEN] = (float*)sz;
     if (max_length < sz) max_length = sz;
     i++;
