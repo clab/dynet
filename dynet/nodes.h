@@ -97,7 +97,7 @@ struct TraceOfProduct : public Node {
 struct ConstScalarMultiply : public Node {
   explicit ConstScalarMultiply(const std::initializer_list<VariableIndex>& a, float alpha) : Node(a), alpha(alpha) {}
   virtual bool supports_multibatch() const override { return true; }
-  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::scalar_mult); s.add_node(alpha); return sm.get_idx(s); }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::scalar_mult); s.add_node(*((int*)&alpha)); return sm.get_idx(s); }
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }
   DYNET_NODE_DEFINE_DEV_IMPL()
   float alpha;
@@ -186,7 +186,7 @@ struct BlockDropout : public Node {
 struct ConstantPlusX : public Node {
   explicit ConstantPlusX(const std::initializer_list<VariableIndex>& a, real o) : Node(a), c(o) {}
   virtual bool supports_multibatch() const override { return true; }
-  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::plus_const); s.add_node(c); return sm.get_idx(s); }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::plus_const); s.add_node(*((int*)&c)); return sm.get_idx(s); }
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
   real c;
