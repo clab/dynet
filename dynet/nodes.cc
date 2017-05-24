@@ -642,14 +642,22 @@ DYNET_NODE_INST_DEV_IMPL(Cube)
 template<class MyDevice>
 void CwiseQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseQuotient::forward (cdiv)");
-  if(xs[0]->d.bd == xs[1]->d.bd) {
+  if(xs[0]->d.size() == xs[1]->d.size()) {
     fx.tvec().device(*dev.edevice) = xs[0]->tvec() / xs[1]->tvec();
-  } else if(xs[0]->d.bd == 1) {
-    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>().broadcast(bcast) / xs[1]->tb<1>();
+  } else if(xs[0]->d.size() < xs[1]->d.size()) {
+    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    for(int di=0; di<xs[0]->d.nd; di++){
+      if(xs[0]->d[di]==1) bcast[di] = xs[1]->d[di];
+    }
+    if(xs[0]->d.bd == 1) bcast[4] = xs[1]->d.bd;
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast) / xs[1]->tb<4>();
   } else {
-    Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<1>() / xs[1]->tb<1>().broadcast(bcast);
+    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    for(int di=0; di<xs[0]->d.nd; di++){
+      if(xs[1]->d[di]==1) bcast[di] = xs[0]->d[di];
+    }
+    if(xs[1]->d.bd == 1) bcast[4] = xs[0]->d.bd;
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() / xs[1]->tb<4>().broadcast(bcast);
   }
 }
 
@@ -662,29 +670,83 @@ void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in CwiseQuotient::backward (cdiv)");
   if (i == 0) {
-    if(xs[0]->d.bd == xs[1]->d.bd) {
+    if(xs[0]->d.size() == xs[1]->d.size()) {
       dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() / xs[1]->tvec();
-    } else if(xs[1]->d.bd == 1) {
-      Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-      dEdxi.tb<1>().device(*dev.edevice) += dEdf.tb<1>() / xs[1]->tb<1>().broadcast(bcast);
+    } else if(xs[1]->d.size() < xs[0]->d.size()) {
+      Eigen::array<int, 5> bcast = {1,1,1,1,1};
+      for(int di=0; di<xs[0]->d.nd; di++){
+        if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
+      }
+      if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[0]->d.bd;
+      dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() / xs[1]->tb<4>().broadcast(bcast);
     } else {
-      Eigen::array<int, 1> red_axis; red_axis[0] = 1;
-      dEdxi.t<1>().device(*dev.edevice) += (dEdf.tb<1>() / xs[1]->tb<1>()).sum(red_axis);
+      int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
+      for(int di=0;di<xs[0]->d.nd; di++) if(xs[0]->d[di]!=xs[1]->d[di]) n_red++;
+      DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseQuotient::backward (cdiv)");
+      if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
+      else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
+      else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
+      else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
     }
   } else { // i = 1
-    if(xs[0]->d.bd == xs[1]->d.bd) {
+    if(xs[0]->d.size() == xs[1]->d.size()) {
       dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec() / xs[1]->tvec().square() * xs[0]->tvec();
-    } else if(xs[1]->d.bd == 1) {
-      Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-      Eigen::array<int, 1> red_axis; red_axis[0] = 1;
-      dEdxi.t<1>().device(*dev.edevice) -= (dEdf.tb<1>() / xs[1]->tb<1>().square().broadcast(bcast) * xs[0]->tb<1>()).sum(red_axis);
+    } else if(xs[1]->d.size() < xs[0]->d.size()) {
+      int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
+      for(int di=0;di<xs[0]->d.nd; di++) if(xs[0]->d[di]!=xs[1]->d[di]) n_red++;
+      DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseQuotient::backward (cdiv)");
+      if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
+      else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
+      else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
+      else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
     } else {
-      Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-      dEdxi.tb<1>().device(*dev.edevice) -= dEdf.tb<1>() / xs[1]->tb<1>().square() * xs[0]->tb<1>().broadcast(bcast);
+      Eigen::array<int, 5> bcast = {1,1,1,1,1};
+      for(int di=0; di<xs[0]->d.nd; di++){
+        if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[1]->d[di];
+      }
+      if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[1]->d.bd;
+      dEdxi.tb<4>().device(*dev.edevice) -= dEdf.tb<4>() / xs[1]->tb<4>().square() * xs[0]->tb<4>().broadcast(bcast);
     }
   }
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseQuotient)
+
+template<class MyDevice, int ReductionOrder>
+void CwiseQuotient::backward_helper(const MyDevice & dev,
+		       const std::vector<const Tensor*>& xs,
+		       const Tensor& fx,
+		       const Tensor& dEdf,
+		       unsigned i,
+		       Tensor& dEdxi) const {
+  Eigen::array<int, ReductionOrder> red_axis;
+  red_axis[ReductionOrder-1] = 4;
+  int curr_red_axis = 0;
+  for(int di=0;di<xs[0]->d.nd; di++){
+    if(xs[0]->d[di]!=xs[1]->d[di]){
+      red_axis[curr_red_axis] = di;
+      curr_red_axis++;
+    }
+  }
+  Eigen::array<int, 5> morph = {1,1,1,1,1};
+  for(int di=0; di<xs[0]->d.nd; di++){
+    morph[di] = xs[i]->d[di];
+  }
+  morph[4] = xs[i]->d.bd;
+  if (i == 0) {
+    // case xs[1]->d.size() > xs[0]->d.size()
+    dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() / xs[1]->tb<4>()).sum(red_axis).reshape(morph);
+  } else {
+    // case xs[1]->d.size() < xs[0]->d.size()
+    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    for(int di=0; di<xs[0]->d.nd; di++){
+      if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
+    }
+    if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[0]->d.bd;
+    dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs[1]->tb<4>().square().broadcast(bcast) * xs[0]->tb<4>()).sum(red_axis).reshape(morph);
+  }
+
+}
+
 
 template<class MyDevice>
 void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {

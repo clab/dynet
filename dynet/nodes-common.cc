@@ -329,7 +329,7 @@ string CwiseSum::as_string(const vector<string>& arg_names) const {
 
 Dim CwiseSum::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseSum")
-  Dim d = xs[1].truncate();
+  Dim d = xs[1];
   DYNET_ARG_CHECK(xs[0].nd == xs[1].nd || xs[0].batch_size()==1 || xs[1].batch_size()==1, "CwiseSum: arguments must have equal number of dimensions, or have a scalar as one of its arguments.");
   for(int i=0; i<xs[0].nd; i++)
     DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || xs[0].d[i]==1, "CwiseSum: For each dimension, the dim size needs to match or equal 1.");
@@ -834,7 +834,7 @@ string CwiseMultiply::as_string(const vector<string>& arg_names) const {
 
 Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseMultiply")
-  Dim d = xs[1].truncate();
+  Dim d = xs[1];
 
   DYNET_ARG_CHECK(xs[0].nd == xs[1].nd || xs[0].batch_size()==1 || xs[1].batch_size()==1, "CwiseMultiply: arguments must have equal number of dimensions, or have a scalar as one of its arguments.");
   for(int i=0; i<xs[0].nd; i++)
@@ -910,9 +910,13 @@ string CwiseQuotient::as_string(const vector<string>& arg_names) const {
 
 Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseQuotient")
-  Dim d = xs[0].truncate();
-  DYNET_ARG_CHECK(d.single_batch() == xs[1].truncate().single_batch(), "Bad input dimensions in CwiseQuotient: " << xs);
-  d.bd = max(xs[1].bd, d.bd);
+  Dim d = (xs[0].size()>=xs[1].size()) ? xs[0] : xs[1];
+  DYNET_ARG_CHECK(xs[0].nd == xs[1].nd || xs[0].batch_size()==1 || xs[1].batch_size()==1, "CwiseQuotient: arguments must have equal number of dimensions, or have a scalar as one of its arguments.");
+  for(int i=0; i<xs[0].nd; i++)
+    DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || (xs[0].d[i]==1 && xs[0].size() < xs[1].size()) || (xs[1].d[i]==1 && xs[0].size() > xs[1].size()),
+		    "CwiseQuotient: For each dimension, the dim size needs to match or equal 1.");
+  DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || (xs[0].bd==1 && xs[0].size() < xs[1].size()) || (xs[1].bd==1 && xs[0].size() > xs[1].size()),
+		  "CwiseQuotient: batch size must match or equal 1");
   return d;
 }
 
