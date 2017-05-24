@@ -143,6 +143,8 @@ Input operations
 
 .. autofunction:: dynet.random_uniform
 
+.. autofunction:: dynet.random_gumbel
+
 .. autofunction:: dynet.noise
 
 Arithmetic operations
