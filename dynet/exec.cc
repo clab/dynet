@@ -575,6 +575,17 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
       }
     }
 
+    // 2.5 print some debug info
+    if (autobatch_debug_flag) {
+      cout << "Forward Call" << endl;
+      for(VariableIndex bid = num_batches_evaluated; bid < batch_id; ++bid) {
+        auto & batch_ids = batches[bid].ids;
+        VariableIndex curr_node = batch_ids[0];
+        const Node* node = cg.nodes[curr_node];
+        cout << "BatchSize:" << batch_ids.size() << " " << node->as_dummy_string() << endl;
+      }
+    }
+
     // 3. Based on the batches, allocate the memory, etc
     for(VariableIndex bid = num_batches_evaluated; bid < batch_id; ++bid) {
 

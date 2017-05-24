@@ -17,7 +17,7 @@ using namespace std;
 
 namespace dynet {
 
-DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0),
+DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
   shared_parameters(false)
 #if HAVE_CUDA
   , ngpus_requested(false), ids_requested(false), requested_gpus(-1)
@@ -94,6 +94,10 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
         istringstream c(a2); c >> params.autobatch;
         remove_args(argc, argv, argi, 2);
       }
+    }
+    else if (arg == "--dynet-autobatch-debug" || arg == "--dynet_autobatch_debug") {
+      params.autobatch_debug = 1;
+        remove_args(argc, argv, argi, 1);
     }
 
 #if HAVE_CUDA
@@ -189,6 +193,7 @@ void initialize(DynetParams& params) {
 
   // Set autobatch
   autobatch_flag = params.autobatch;
+  autobatch_debug_flag = params.autobatch_debug;
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
