@@ -192,7 +192,12 @@ void initialize(DynetParams& params) {
   weight_decay_lambda = params.weight_decay;
 
   // Set autobatch
+  if(params.autobatch)
+    cerr << "[dynet] using autobatching" << endl;
   autobatch_flag = params.autobatch;
+  
+  if(params.autobatch_debug)
+    cerr << "[dynet] using autobatching debugging" << endl;
   autobatch_debug_flag = params.autobatch_debug;
 
   // Allocate memory
