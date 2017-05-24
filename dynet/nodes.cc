@@ -2709,7 +2709,7 @@ void RandomGumbel::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomGumbel::forward");
   DYNET_ARG_CHECK(mu == 0.0 && beta == 1.0, "RandomGumbel only supports Gumbel(0,1) at the moment (pull requests welcome)");
   TensorTools::randomize_uniform(fx, 0, 1);
-  fx.tvec().device(*dev.edevice) = -(-fx.tvec().log()).log();
+  fx.tvec().device(*dev.edevice) = -(-fx.tvec().cwiseMax(1e-20).log()).cwiseMax(1e-20).log();
 }
 
 template<class MyDevice>
