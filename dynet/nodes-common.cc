@@ -670,6 +670,15 @@ Dim Softmax::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+int Softmax::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::softmax);
+  s.add_dim(dim);
+  return sm.get_idx(s);
+}
+std::vector<int> Softmax::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>(1, 1);
+}
+
 string SoftSign::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "softsign(" << arg_names[0] << ')';
