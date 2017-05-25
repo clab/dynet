@@ -269,11 +269,10 @@ void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<V
   float* src = tin.v;
   // copy
   for (auto id : batch_ids) {
-    const size_t sz = node2size[id];
+    const size_t sz = node2size[cg.nodes[id]->args[ai]];
 
-    float* my_trg = batches[node2batch[id]].nfx.v + node2offset[id];
     locs[i] = src; // src
-    locs[i+TRG] = my_trg;
+    locs[i+TRG] = ndEdfs[cg.nodes[id]->args[ai]].v;
     locs[i+LEN] = (float*)sz;
     if (max_length < sz) max_length = sz;
     i++;
@@ -676,6 +675,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           ++ai;
         }
         node->forward(xs, my_batch.nfx);
+        // cerr << "unbatched forward[" << num_batches_evaluated << "] == " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
       } else { // execute a batch node
         size_t arity = my_batch.concat.size();
@@ -724,6 +724,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
         node->autobatch_reshape(cg, my_batch.ids, my_batch.concat, my_batch.arg_nfxs, my_batch.nfx);
         node->forward(my_batch.arg_nfxs, my_batch.nfx);
+        // cerr << "batched forward[" << num_batches_evaluated << "] == " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
 
       }
@@ -866,8 +867,10 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       }
       ai = 0;
       for (VariableIndex arg : node->args) {
-        if (needs_derivative[node2batch[arg]])
+        if (needs_derivative[node2batch[arg]]) {
           node->backward(xs, get_nfx(nid), ndEdfs[nid], ai, ndEdfs[arg]);
+          // cerr << "unbatched backward[" << nid << "](" << ai << ")->" << arg << " == " << print_vec(as_vector(my_batch.nfx)) << endl;
+        }
         ++ai;
       }
     } else { // execute a batch node
@@ -891,8 +894,10 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       for (VariableIndex arg : node->args) {
         // No concatenation whatsoever
         if (my_batch.concat[ai] == 0) {
-          if (needs_derivative[node2batch[arg]])
+          if (needs_derivative[node2batch[arg]]) {
             node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, batched_ndEdfs[node2batch[arg]]);
+            // cerr << "batched backward[" << i << "](" << ai << ")->" << node2batch[arg] << " == " << print_vec(as_vector(batched_ndEdfs[node2batch[arg]])) << endl;
+          }
         // Needs concatenation
         } else {
           bool nd = false;
@@ -908,7 +913,9 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
               my_ndEdf.mem_pool = DeviceMempool::DEDFS;
               TensorTools::zero(my_ndEdf);
               node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
+              // cerr << "noncontig backward[" << i << "](" << ai << ")->" << node2batch[arg] << " == "; for(auto id : my_batch.ids) cerr << " ndEdfs[" << cg.nodes[id]->args[ai] << "] == " << print_vec(as_vector(ndEdfs[cg.nodes[id]->args[ai]])); cerr << " + " << print_vec(as_vector(my_ndEdf)) << " == ";
               accumulate_tensors(my_ndEdf, my_batch.ids, ai);
+              // for(auto id : my_batch.ids) cerr << " ndEdfs[" << cg.nodes[id]->args[ai] << "] == " << print_vec(as_vector(ndEdfs[cg.nodes[id]->args[ai]])); cerr << endl;
               node->device->pools[(int)DeviceMempool::DEDFS]->set_used(used);
             // Contiguous
             } else {
@@ -916,6 +923,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
               float* v = batched_ndEdfs[node2batch[aid]].v + node2offset[aid];
               my_ndEdf.v = v;
               node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
+              // cerr << "contig backward[" << i << "](" << ai << ")->" << node2batch[arg] << " == "; for(auto id : my_batch.ids) cerr << " ndEdfs[" << cg.nodes[id]->args[ai] << "] == " << print_vec(as_vector(ndEdfs[cg.nodes[id]->args[ai]])); cerr << endl;
             }
           }
         }

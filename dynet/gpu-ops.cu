@@ -110,7 +110,7 @@ __global__ void ker_parallel_accumulate(int num_seqs, float **src, float **trg, 
   int seq_id = id % num_seqs;
   int i = id / num_seqs;
   if (i < (unsigned long)len[seq_id])
-    trg[seq_id][i] += src[seq_id][i];
+    atomicAdd(&trg[seq_id][i], src[seq_id][i]);
 
   __syncthreads();
 }
