@@ -636,8 +636,10 @@ struct Node {
 
   Device* device; /**< pointer to the node, or null to inherit device from first input, or default when there is no input */
 
+  unsigned matmul_count; // how many matmul nodes am I an arg of?
+
 protected:
-  Node() : args(), device(default_device) {}
+  Node() : args(), device(default_device), matmul_count(0) {}
   explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
   template <typename T>
   explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
