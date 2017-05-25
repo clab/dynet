@@ -269,7 +269,7 @@ void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<V
   float* src = tin.v;
   // copy
   for (auto id : batch_ids) {
-    const size_t sz = node2size[id];
+    const size_t sz = node2size[cg.nodes[id]->args[ai]];
 
     locs[i] = src; // src
     locs[i+TRG] = ndEdfs[cg.nodes[id]->args[ai]].v;
