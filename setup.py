@@ -141,7 +141,7 @@ class dynet_build(_build):
             cmake_cmd += [
                 "-DBOOST_ROOT:PATHNAME=" + boost_prefix,
                 "-DBoost_NO_BOOST_CMAKE=TRUE",
-                "-DBoost_NO_SYSTEM_PATHS=TRUE,",
+                "-DBoost_NO_SYSTEM_PATHS=TRUE",
                 "-DBoost_LIBRARY_DIRS:FILEPATH=" + boost_prefix + "/lib",
             ]
         log.info("Configuring...")
