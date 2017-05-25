@@ -87,12 +87,17 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       dev->pools[(int)DeviceMempool::FXS]->free();
 
   if (i >= num_nodes_evaluated) {
+    NamedTimer timer; string current_node_name;
     nfxs.resize(i + 1);
 
     //vector<string> dummy(5, "x");
     vector<const Tensor*> xs(16);
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
+      if (autobatch_debug_flag) { 
+        current_node_name = node->as_dummy_string();
+        timer.start(current_node_name);
+      }
       xs.resize(node->arity());
       unsigned ai = 0;
       for (VariableIndex arg : node->args) {
@@ -118,7 +123,10 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       node->aux_mem = aux_mem;
 
       node->forward(xs, nfxs[num_nodes_evaluated]);
+
+      if (autobatch_debug_flag) { timer.stop(current_node_name); }
     }
+    if (autobatch_debug_flag) { cout << "Timing Info:" << endl; timer.show(); }
   }
 
   return nfxs[i];
@@ -359,6 +367,7 @@ void BatchedExecutionEngine::garbage_collect() {
 
 const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex upto, int autobatch_strategy) {
   if (upto >= num_nodes_evaluated) {
+    NamedTimer timer; string current_batch_name;
 
     size_t uptop1 = upto + 1;
 
@@ -666,6 +675,12 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     while(num_batches_evaluated < batch_id) {
       // Read in the stuff for this batch
       auto & my_batch = batches[num_batches_evaluated];
+      if (autobatch_debug_flag) { 
+        VariableIndex nid = my_batch.ids[0];
+        Node* node = cg.nodes[nid];
+        current_batch_name = node->as_dummy_string();
+        timer.start(current_batch_name);
+      }
       if (my_batch.ids.size() == 1) { // execute a single node
         VariableIndex nid = my_batch.ids[0];
         Node* node = cg.nodes[nid];
@@ -727,10 +742,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         ++num_batches_evaluated;
 
       }
+      if (autobatch_debug_flag) { timer.stop(current_batch_name); }
     }
 
     free(node2profid);
+    if (autobatch_debug_flag) { cout << "Timing Info:" << endl; timer.show(); }
   }
+
 
   return get_nfx(upto);
 }
