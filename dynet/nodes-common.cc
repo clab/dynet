@@ -879,7 +879,13 @@ int MatrixMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const
   // TODO do we want to treat different dimensions of first/second arg differently?
   if(dim.bd == 1) {
     Sig s(nt::matmul);
-    s.add_node(args[0]);
+    // if arg0 is likely to be shared, include it in the sig.
+    // otherwise, include both args dims in the sig.
+    if (cg.nodes[args[0]]->matmul_count > 2) {  //TODO why 2? can we set a better number?
+      s.add_node(args[0]); s.add_dim(cg.nodes[args[1]]->dim);
+    } else { 
+      s.add_dim(cg.nodes[args[0]]->dim); s.add_dim(cg.nodes[args[1]]->dim);
+    }
     return sm.get_idx(s);
   } else {
     return 0; // TODO handle the batched case as well? should it differ at all?
@@ -887,8 +893,11 @@ int MatrixMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const
 }
 
 std::vector<int> MatrixMultiply::autobatch_concat(const ComputationGraph & cg) const {
-  vector<int> ret(args.size(), 0);
-  if (dim.bd == 1) { ret[1] = 1; }
+  vector<int> ret(2, 0);
+  if (dim.bd == 1) { 
+    ret[1] = 1; 
+    if (cg.nodes[args[0]]->matmul_count <= 2) { ret[0] = 1; }
+  }
   return ret;
 }
 
