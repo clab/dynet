@@ -21,7 +21,7 @@ struct RNNTest {
   RNNTest() {
     // initialize if necessary
     if (default_device == nullptr) {
-      for (auto x : {"RNNTest", "--dynet-seed", "10", "--dynet-autobatch", "1", "--dynet-mem", "10"}) {
+      for (auto x : {"RNNTest", "--dynet-seed", "10", "--dynet-mem", "10"}) {
         av.push_back(strdup(x));
       }
       char **argv = &av[0];

@@ -68,7 +68,7 @@ struct NodeTest {
     TensorTools::set_elements(lookup1.get()->all_values, param_square1_vals);
   }
   ~NodeTest() {
-    for (auto x : av) free(x);
+    // for (auto x : av) free(x);
   }
 
   template <class T>
