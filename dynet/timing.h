@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <chrono>
+#include <iomanip>
 
 namespace dynet {
 
@@ -26,6 +27,15 @@ struct Timing {
   }
   void start() { _start = std::chrono::high_resolution_clock::now(); }
   std::chrono::high_resolution_clock::time_point _start;
+};
+
+class NamedTimer {
+public:
+  void start(std::string name) { Timing t; timers[name] = t; }
+  void stop(std::string name) { cumtimes[name] += (timers[name]).stop(); }
+  void show() { for (auto &item : cumtimes) { std::cout << std::setprecision(4) << std::setw(11) << item.second << '\t' << item.first << std::endl; } }
+  std::map<std::string, double> cumtimes;
+  std::map<std::string, Timing> timers;
 };
 
 } // namespace dynet
