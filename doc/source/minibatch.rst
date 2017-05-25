@@ -33,6 +33,7 @@ To take full advantage of this, you will want to create a big computation graph 
 .. code-block:: python
 
   for minibatch in training_data:
+    dy.renew_cg()
     losses = []
     for x, y in minibatch:
       l = calculate_my_loss(x, y)
