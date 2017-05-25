@@ -16,7 +16,7 @@ struct NodeTest {
   NodeTest() {
     // initialize if necessary
     if (default_device == nullptr) {
-      for (auto x : {"NodeTest", "--dynet-mem", "100", "--dynet-autobatch", "1"}) {
+      for (auto x : {"NodeTest", "--dynet-mem", "100"}) {
         av.push_back(strdup(x));
       }
       char **argv = &av[0];
