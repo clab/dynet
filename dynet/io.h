@@ -38,9 +38,13 @@ class Saver {
   /**
    * @brief Save ParameterCollection
    *
-   * @param model: input ParameterCollection object to be saved
-   * @param key: optional parameter, the name for the ParameterCollection. This will override
-   *             the name of the PC itself, and instead save the PC with the specified name.
+   * @param model: ParameterCollection object to be saved
+   * @param key: optional parameter, the name for the ParameterCollection in the saved file. This
+   *             will default to the current name of the ParameterCollection.
+   * @detail: Let's say we have a ParameterCollection named "/pc1/" containing parameters
+   *          "/pc1/a", "/pc1/b", and "/pc1/c". This will save the parameters with the names as-is
+   *          if `key` is not specified. If `key` is specified as "/pc2/", then the parameters will
+   *          be saved as "/pc2/a", "/pc2/b", and "/pc2/c".
    */
   virtual void save(const ParameterCollection & model,
                     const std::string & key = "") = 0;
@@ -48,7 +52,7 @@ class Saver {
   /**
    * @brief Save Parameter.
    *
-   * @param model: input Parameter object to be saved
+   * @param model: Parameter object to be saved
    * @param key: optional parameter, the key for the parameter. This will override the Parameter's
    *             original name.
    */
@@ -71,10 +75,21 @@ class Loader {
   virtual ~Loader() { }
 
   /**
-   * @brief Populate ParameterCollection object with key.
+   * @brief Populate the parameters of a ParameterCollection.
    * 
-   * @param model: input/output parameter, the ParameterCollection object to be populated in. 
-   * @param key: optional parameter, the key for loading the model
+   * @param model: The ParameterCollection to be populated.
+   * @param key: optional parameter, the key corresponding to the ParameterCollection
+   * @detail: This is the standard way to load parameters of a ParameterCollection from a
+   *          file, and assumes that we have saved an identical ParameterCollection using
+   *          Saver::save(parameter_collection).
+   *          Before calling this function, we assume that the ParameterCollection has
+   *          been fully specified, and all of its Parameters and LookupParameters have been
+   *          created with the proper dimensions. This function will then travel through the
+   *          file and load all parameters with names starting with prefix `key`, and populate
+   *          the Parameters and LookupParameters one-by-one in order. When the function
+   *          terminates, we must have populated all of the parameters in `model`. `key` is
+   *          by default empty, so by default we will load all parameters in the file, but if
+   *          we specify `key` we can load a subset of the parameters.
    *
    */
   virtual void populate(ParameterCollection & model, const std::string & key = "") = 0;
