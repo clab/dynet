@@ -742,7 +742,7 @@ void CwiseQuotient::backward_helper(const MyDevice & dev,
       if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
     }
     if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[0]->d.bd;
-    dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs[1]->tb<4>().square().broadcast(bcast) * xs[0]->tb<4>()).sum(red_axis).reshape(morph);
+    dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs[1]->tb<4>().square().eval().broadcast(bcast) * xs[0]->tb<4>()).sum(red_axis).reshape(morph);
   }
 
 }
@@ -2727,6 +2727,7 @@ void StdDimension::forward_dev_impl(const MyDevice & dev, const vector<const Ten
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];  bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
     fx.t<1>().device(*dev.edevice) = ((xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
+    // TODO: use eval(), something like    fx.t<1>().device(*dev.edevice) = ((xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).eval().broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   }
 
 }
