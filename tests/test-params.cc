@@ -7,8 +7,6 @@
 #include <stdexcept>
 
 #include <boost/test/unit_test.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
@@ -50,9 +48,9 @@ struct ParamsTest {
     std::vector<char*> av;
 };
 
-class testModel {
+class testParameterCollection {
  public:
-  testModel(dynet::ParameterCollection &model) {
+  testParameterCollection(dynet::ParameterCollection &model) {
     lookup_param = model.add_lookup_parameters(1000, {128});
     affine_params = model.add_subcollection("affine");
     W_x = affine_params.add_parameters({40, 30});
@@ -64,7 +62,7 @@ class testModel {
   dynet::LookupParameter lookup_param;
   dynet::Parameter W_x, b_x;
   dynet::ParameterCollection affine_params;
-}; // class testModel
+}; // class testParameterCollection
 
 // define the test suite
 BOOST_FIXTURE_TEST_SUITE(params_test, ParamsTest);
@@ -87,7 +85,6 @@ BOOST_AUTO_TEST_CASE( init_saxe ) {
     BOOST_CHECK_LT(diff, epsilon);
 }
 
-<<<<<<< HEAD
 BOOST_AUTO_TEST_CASE ( test_parameter_collection ) {
   dynet::ParameterCollection model;
   dynet::Parameter a = model.add_parameters({10});
@@ -129,7 +126,7 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
     return p->name;
   };
   ParameterCollection collec;
-  testModel spec(collec);
+  testParameterCollection spec(collec);
   std::string affine_id_for_posterity = spec.get_affine_model_name();
   DYNET_CHECK_EQUAL(affine_id_for_posterity, "/affine__0/");
   DYNET_CHECK_EQUAL(save_parameters_lambda("model_file.txt", collec), 3);
@@ -151,9 +148,9 @@ BOOST_AUTO_TEST_CASE ( test_parametercollection_with_builder ) {
   auto bi_treelstm_builder = BidirectionalTreeLSTMBuilder(3, 10, 2, collec2);
   DYNET_CHECK_EQUAL(bi_treelstm_builder.get_parameters().size(), 11 * 3 * 2);
 }
-=======
+
 BOOST_AUTO_TEST_CASE( scale ) {
-    dynet::Model mod;
+    dynet::ParameterCollection mod;
     // Create parameter
     dynet::Parameter w_p = mod.add_parameters({1}, ParameterInitConst(1));
     // Initial value
@@ -167,7 +164,7 @@ BOOST_AUTO_TEST_CASE( scale ) {
 }
 
 BOOST_AUTO_TEST_CASE( scale_grad ) {
-    dynet::Model mod;
+    dynet::ParameterCollection mod;
     // Create parameter
     dynet::Parameter w_p = mod.add_parameters({1}, ParameterInitConst(1));
     // Run forward/backward
@@ -180,11 +177,9 @@ BOOST_AUTO_TEST_CASE( scale_grad ) {
     // Rescale gradient
     w_p.scale_gradient(0.5);
     // Value after rescaling
-    float rescaled_grad=as_scalar(w_p.get()->g);
+    float rescaled_grad=as_scalar(w_p.get_storage().g);
     // Check with a margin of error
     BOOST_CHECK_CLOSE(0.5, rescaled_grad, 0.001);
 }
-
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -21,7 +21,6 @@ private:
   Parameter p_bias;
   mutable expr::Expression weights;
   mutable expr::Expression bias;
-  bool initialized;
   unsigned rep_dim;
   unsigned output_size;
 

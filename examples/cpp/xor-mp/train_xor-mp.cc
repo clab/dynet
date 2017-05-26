@@ -87,7 +87,7 @@ public:
 
 class Learner : public ILearner<Datum, SufficientStats> {
 public:
-  Learner(XorModel* xor_model, ParameterCollection& dynet_model, const Trainer* const trainer, bool quiet) : xor_model(xor_model), dynet_model(dynet_model), trainer(trainer), quiet(quiet) {}
+  Learner(XorModel* xor_model) : xor_model(xor_model) {}
   ~Learner() {}
   SufficientStats LearnFromDatum(const Datum& datum, bool learn) {
     ComputationGraph cg;
@@ -105,9 +105,6 @@ public:
 
 private:
   XorModel* xor_model;
-  ParameterCollection& dynet_model; 
-  const Trainer* const trainer;
-  bool quiet;
 };
 
 int main(int argc, char** argv) {
@@ -131,7 +128,7 @@ int main(int argc, char** argv) {
   data[2] = Datum({1, 0}, 1);
   data[3] = Datum({1, 1}, 0);
 
-  Learner learner(xor_model, dynet_model, trainer, false);
+  Learner learner(xor_model);
   if (num_cores == 0) {
     run_single_process<Datum>(&learner, trainer, data, data, ITERATIONS, data.size(), data.size(), data.size());
   }

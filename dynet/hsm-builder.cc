@@ -12,7 +12,7 @@ namespace dynet {
 
 using namespace expr;
 
-Cluster::Cluster() : initialized(false) {}
+Cluster::Cluster() {}
 void Cluster::new_graph(ComputationGraph& cg) {
   for (Cluster* child : children) {
     child->new_graph(cg);

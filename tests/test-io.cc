@@ -5,8 +5,6 @@
 #include <stdexcept>
 
 #include <boost/test/unit_test.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
