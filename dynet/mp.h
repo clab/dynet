@@ -86,14 +86,16 @@ namespace dynet {
     T read_data(int pipe) {
       T v;
       int err = read(pipe, (void*)&v, sizeof(T));
-      DYNET_ASSERT(err != -1, "Failed to read data from pipe in multi-processing");
+      if(err == -1)
+        DYNET_RUNTIME_ERR("Failed to read data from pipe in multi-processing");
       return v;
     }
 
     template <class T>
     void write_data(int pipe, const T& v) {
       int err = write(pipe, (void*)&v, sizeof(T));
-      DYNET_ASSERT(err != -1, "Failed to write data to pipe in multi-processing");
+      if(err == -1)
+        DYNET_RUNTIME_ERR("Failed to write data to pipe in multi-processing");
     }
 
     std::string generate_queue_name();
@@ -215,8 +217,7 @@ namespace dynet {
     int run_child(unsigned cid, ILearner<D, S>* learner, Trainer* trainer,
         std::vector<Workload>& workloads, const std::vector<D>& train_data,
         const std::vector<D>& dev_data) {
-      const unsigned num_children = workloads.size();
-      DYNET_ASSERT(cid >= 0 && cid < num_children, "Bad child ID " << cid << " in run_child()");
+      DYNET_ASSERT(cid >= 0 && cid < workloads.size(), "Bad child ID " << cid << " in run_child()");
       unsigned i;
       unsigned priority;
       boost::interprocess::message_queue::size_type recvd_size;

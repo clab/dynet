@@ -56,7 +56,7 @@ BOOST_FIXTURE_TEST_SUITE(rnn_test, RNNTest);
 
 #define DYNET_RNN_GRADIENT_TEST_CASE(name, RNN_TYPE)      \
 BOOST_AUTO_TEST_CASE( name ) {                            \
-  dynet::Model mod;                                       \
+  dynet::ParameterCollection mod;                         \
   RNN_TYPE rnn(2,3,4,mod);                                \
   dynet::ComputationGraph cg;                             \
   rnn.new_graph(cg);                                      \
@@ -80,7 +80,7 @@ DYNET_RNN_GRADIENT_TEST_CASE(gru_gradient, dynet::GRUBuilder)
 DYNET_RNN_GRADIENT_TEST_CASE(fast_lstm, dynet::FastLSTMBuilder)
 
 BOOST_AUTO_TEST_CASE( vanilla_lstm_ln_gradient ) {
-  dynet::Model mod;
+  dynet::ParameterCollection mod;
   dynet::VanillaLSTMBuilder vanilla_lstm(2, 3, 10, mod, true);
   dynet::ComputationGraph cg;
   vanilla_lstm.new_graph(cg);
