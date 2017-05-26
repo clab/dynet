@@ -136,15 +136,17 @@ void TextFileSaver::serialize(const LookupParameter & lookup_param,
   this->offset = datastream.tellp();
 }
 
+#define TFL_OPEN_FILE() \
+  std::ifstream datastream(dataname); \
+  std::ifstream metastream(metaname); \
+  if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname); \
+  if(!metastream) DYNET_RUNTIME_ERR("Could not read model metadata from " << metaname);
+
 TextFileLoader::TextFileLoader(const std::string & filename) :
-        datastream(filename), metastream(filename + ".meta") {
-  if(!datastream)
-    DYNET_RUNTIME_ERR("Could not read model from " << filename);
-  if(!metastream)
-    DYNET_RUNTIME_ERR("Could not read model metadata from " << (filename + ".meta"));
-}
+        dataname(filename), metaname(filename + ".meta") { }
 
 void TextFileLoader::deserialize(ParameterCollection & model, const std::string & key) {
+  TFL_OPEN_FILE();
   // find the offset of the key
   long long local_offset = -1;
 
@@ -246,6 +248,7 @@ void TextFileLoader::deserialize(ParameterCollection & model, const std::string 
 }
   
 void TextFileLoader::deserialize(Parameter & param, const std::string & key) {
+  TFL_OPEN_FILE();
   std::string line;
   datastream.seekg(this->seek_offset(key));
   std::getline(datastream, line);
@@ -275,6 +278,7 @@ void TextFileLoader::deserialize(Parameter & param, const std::string & key) {
 
 void TextFileLoader::deserialize(LookupParameter & lookup_param,
                        const std::string & key) {
+  TFL_OPEN_FILE();
   std::string line;
   datastream.seekg(this->seek_offset(key));
   std::getline(datastream, line);
@@ -308,6 +312,7 @@ void TextFileLoader::deserialize(LookupParameter & lookup_param,
 
 Parameter TextFileLoader::deserialize_param(ParameterCollection & model,
                                   const std::string & key) {
+  TFL_OPEN_FILE();
   std::string line;
   datastream.seekg(this->seek_offset(key));
   std::getline(datastream, line);
@@ -336,6 +341,7 @@ Parameter TextFileLoader::deserialize_param(ParameterCollection & model,
 
 LookupParameter TextFileLoader::deserialize_lookup_param(ParameterCollection & model,
                                                const std::string & key) {
+  TFL_OPEN_FILE();
   std::string line;
   datastream.seekg(this->seek_offset(key));
   std::getline(datastream, line);
@@ -374,6 +380,7 @@ LookupParameter TextFileLoader::deserialize_lookup_param(ParameterCollection & m
 }
 
 long long TextFileLoader::seek_offset(const std::string & key) {
+  TFL_OPEN_FILE();
   std::string line;
   long long local_offset = -1;
   if (key.size() == 0) {

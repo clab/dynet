@@ -216,7 +216,7 @@ class TextFileLoader : public Loader {
   long long seek_offset(const std::string & model_name,
                         const std::string & key);
 
-  std::ifstream datastream, metastream;
+  std::string dataname, metaname;
   long long offset = 0;
 }; // class TextFileLoader
 
