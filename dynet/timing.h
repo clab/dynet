@@ -32,6 +32,11 @@ struct Timing {
 
 class NamedTimer {
 public:
+  ~NamedTimer() { 
+    if (timers.size()>0) {
+      std::cout << "Timing Info:" << std::endl; show();
+    }
+  }
   void start(std::string name) { Timing t; timers[name] = t; }
   void stop(std::string name) { cumtimes[name] += (timers[name]).stop(); }
   void show() { for (auto &item : cumtimes) { std::cout << std::setprecision(4) << std::setw(11) << item.second << '\t' << item.first << std::endl; } }

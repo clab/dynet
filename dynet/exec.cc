@@ -87,7 +87,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       dev->pools[(int)DeviceMempool::FXS]->free();
 
   if (i >= num_nodes_evaluated) {
-    NamedTimer timer; string current_node_name;
+    string current_node_name;
     nfxs.resize(i + 1);
 
     //vector<string> dummy(5, "x");
@@ -126,7 +126,6 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 
       if (autobatch_debug_flag) { timer.stop(current_node_name); }
     }
-    if (autobatch_debug_flag) { cout << "Timing Info:" << endl; timer.show(); }
   }
 
   return nfxs[i];
@@ -367,7 +366,7 @@ void BatchedExecutionEngine::garbage_collect() {
 
 const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex upto, int autobatch_strategy) {
   if (upto >= num_nodes_evaluated) {
-    NamedTimer timer; string current_batch_name;
+    string current_batch_name;
 
     size_t uptop1 = upto + 1;
 
@@ -746,7 +745,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     }
 
     free(node2profid);
-    if (autobatch_debug_flag) { cout << "Timing Info:" << endl; timer.show(); }
   }
 
 
