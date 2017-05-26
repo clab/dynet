@@ -78,35 +78,27 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}
                     ${PROJECT_SOURCE_DIR}/external/easyloggingpp/src)
 
 function(find_cudnn)
-  set(CUDNN_ROOT "" CACHE PATH "CUDNN root path")
+  set(CUDNN_ROOT /usr/local/cuda CACHE PATH "CUDNN root path")
   find_path(CUDNN_INCLUDE_DIRS cudnn.h
-    PATHS ${CUDNN_ROOT}
+    HINTS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/include
     DOC "CUDNN include path")
-  find_library(CUDNN_LIBRARIES NAMES libcudnn.so
+  find_library(CUDNN_LIBRARIES NAMES libcudnn.so cudnn.lib
     PATHS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/lib
           ${CUDNN_ROOT}/lib64
+          ${CUDNN_ROOT}/lib/x64
     DOC "CUDNN library path")
   if(CUDNN_INCLUDE_DIRS AND CUDNN_LIBRARIES)
     set(CUDNN_FOUND TRUE PARENT_SCOPE)
     message(STATUS "Found CUDNN (include: ${CUDNN_INCLUDE_DIRS}, library: ${CUDNN_LIBRARIES})")
     mark_as_advanced(CUDNN_INCLUDE_DIRS CUDNN_LIBRARIES)
   else()
-    MESSAGE(FATAL_ERROR "Failed to find CUDNN in path: ${CUDNN_ROOT} (Did you set CUDNN_ROOT properly?)")
+    MESSAGE(STATUS "Failed to find CUDNN in path: ${CUDNN_ROOT} (Did you set CUDNN_ROOT properly?)")
   endif()
 endfunction()
 
 # look for Boost
-# trouble shooting:
-# if boost library cannot be found, in addition to install boost library
-# check if environment variables are set
-#
-# to set boost root and its library root in environment variable, use
-# for example
-# echo "export BOOST_LIBRARYDIR=/usr/local/lib" >> ~/.bashrc
-# echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
-# then run source ~/.bashrc to have those environment variable effective immediately
 if(ENABLE_BOOST)
   message("-- Enabling Boost")
   if(DEFINED ENV{BOOST_ROOT})
@@ -151,8 +143,14 @@ if (WITH_CUDA_BACKEND)
   list(REMOVE_ITEM CUDA_LIBRARIES -lpthread)
   set(LIBS ${LIBS} ${CUDA_LIBRARIES})
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_HAS_CUDA_FP16 -DEIGEN_USE_GPU")
-  #find_cudnn()
-  #include_directories(SYSTEM ${CUDNN_INCLUDE_DIRS})
+  find_cudnn()
+  if(CUDNN_FOUND)
+    include_directories(SYSTEM ${CUDNN_INCLUDE_DIRS})
+    list(APPEND CUDA_LIBRARIES ${CUDNN_LIBRARIES})
+    message("-- Successfully include CUDNN flags")
+  else()
+    message("-- CUDNN not found, some dependent functionalities will be disabled")
+  endif()
 endif()
 
 # look for Eigen

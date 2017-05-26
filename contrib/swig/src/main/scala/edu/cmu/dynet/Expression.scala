@@ -3,7 +3,13 @@ package edu.cmu.dynet
 /** Represents an expression on the computation graph. Can only be constructed using the
   * functions contained in the companion object.
   */
-class Expression private[dynet](private[dynet] val expr: internal.Expression) {
+class Expression private[dynet](
+  private[dynet] val expr: internal.Expression,
+  // Expressions sometimes rely on things (e.g. wrapped C++ vectors) that get deleted when the JVM
+  // garbage collector runs. By explicitly grabbing references to them, we can prevent this
+  // premature garbage collection.
+  val references: Seq[AnyRef] = Seq.empty
+) {
   // Give it the current version
   val version = ComputationGraph.version
 
@@ -27,6 +33,8 @@ class Expression private[dynet](private[dynet] val expr: internal.Expression) {
   def -(r: Float): Expression = Expression.exprMinus(this, r)
   def /(r: Float): Expression = Expression.exprDivide(this, r)
   def unary_-(): Expression = Expression.exprMinus(this)
+
+  def debugString(): String = s"(Expression: ${dim.debugString} ${value.toSeq})"
 }
 
 /** Contains methods for creating [[edu.cmu.dynet.Expression]]s. There are several ways to create
@@ -42,38 +50,44 @@ object Expression {
 
   /** Private helper function for wrapping methods that get expressions from the computation
     * graph */
-  private def makeExpr(f: internal.ComputationGraph => internal.Expression): Expression = {
+  private def makeExpr(
+    f: internal.ComputationGraph => internal.Expression,
+    references: Seq[AnyRef] = Seq.empty
+  ): Expression = {
     val version = ComputationGraph.version
     val expr = f(ComputationGraph.cg)
-    new Expression(expr)
+    new Expression(expr, references)
   }
 
   def input(s: Float): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, s))
-  def input(fp: FloatPointer): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp))
+  def input(fp: FloatPointer): Expression =
+    makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp), Seq(fp))
   def input(d: Dim, pdata: FloatVector): Expression =
-    makeExpr(cg => dn.input(cg, d.dim, pdata.vector))
+    makeExpr(cg => dn.input(cg, d.dim, pdata.vector), Seq(d, pdata))
   def input(d: Dim, ids: UnsignedVector, data: FloatVector, defdata: Float = 0f) =
-    makeExpr(cg => dn.input(cg, d.dim, ids.vector, data.vector, defdata))
+    makeExpr(cg => dn.input(cg, d.dim, ids.vector, data.vector, defdata), Seq(d, ids, data))
 
-  def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p.parameter))
-  def constParameter(p: Parameter): Expression = makeExpr(cg => dn.const_parameter(cg, p.parameter))
+  def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p.parameter), Seq(p))
+  def constParameter(p: Parameter): Expression =
+    makeExpr(cg => dn.const_parameter(cg, p.parameter), Seq(p))
 
-  def lookup(p: LookupParameter, index: Long) = makeExpr(cg => dn.lookup(cg, p.lookupParameter, index))
+  def lookup(p: LookupParameter, index: Long) =
+    makeExpr(cg => dn.lookup(cg, p.lookupParameter, index), Seq(p))
   def lookup(p: LookupParameter, pindex: UnsignedPointer) =
-    makeExpr(cg => dn.lookup(cg, p.lookupParameter, pindex.uintp))
+    makeExpr(cg => dn.lookup(cg, p.lookupParameter, pindex.uintp), Seq(p, pindex))
   def constLookup(p: LookupParameter, index: Long) =
-    makeExpr(cg => dn.lookup(cg, p.lookupParameter, index))
+    makeExpr(cg => dn.lookup(cg, p.lookupParameter, index), Seq(p))
   // def constLookup
   def lookup(p: LookupParameter, indices: UnsignedVector) =
-    makeExpr(cg => dn.lookup(cg, p.lookupParameter, indices.vector))
+    makeExpr(cg => dn.lookup(cg, p.lookupParameter, indices.vector), Seq(p, indices))
 
 
-  def zeroes(d: Dim) = makeExpr(cg => dn.zeroes(cg, d.dim))
-  def randomNormal(d: Dim) = makeExpr(cg => dn.random_normal(cg, d.dim))
+  def zeroes(d: Dim) = makeExpr(cg => dn.zeroes(cg, d.dim), Seq(d))
+  def randomNormal(d: Dim) = makeExpr(cg => dn.random_normal(cg, d.dim), Seq(d))
   def randomBernoulli(d: Dim, p: Float, scale: Float = 1.0f) = makeExpr(
-    cg => dn.random_bernoulli(cg, d.dim, p, scale))
+    cg => dn.random_bernoulli(cg, d.dim, p, scale), Seq(d))
   def randomUniform(d: Dim, left: Float, right: Float) = makeExpr(
-    cg => dn.random_uniform(cg, d.dim, left, right))
+    cg => dn.random_uniform(cg, d.dim, left, right), Seq(d))
 
   /* ARITHMETIC OPERATIONS */
 
@@ -82,13 +96,15 @@ object Expression {
     e1.ensureFresh()
     e2.ensureFresh()
     val expr = combiner(e1.expr, e2.expr)
-    new Expression(expr)
+    // Specify e1 and e2 as references so they can't get prematurely garbage collected.
+    new Expression(expr, Seq(e1, e2))
   }
 
   private type UnaryTransform = internal.Expression => internal.Expression
   private def unary(e: Expression, transformer: UnaryTransform) = {
     e.ensureFresh()
-    new Expression(transformer(e.expr))
+    // Specify e as reference so it can't get prematurely garbage collected.
+    new Expression(transformer(e.expr), Seq(e))
   }
 
   def exprMinus(e: Expression): Expression = unary(e, dn.exprMinus)
@@ -105,13 +121,22 @@ object Expression {
 
   private type VectorTransform = internal.ExpressionVector => internal.Expression
   private def vectory(v: ExpressionVector, transformer: VectorTransform) = {
+    // DyNet segfaults if we pass a zero-length vector.
+    // This check results in a nicer error message.
+    assert(v.nonEmpty, "Operation requires > 0 expression arguments")
     v.ensureFresh()
-    new Expression(transformer(v.vector))
+    // Specify v as reference so it can't get prematurely garbage collected.
+    new Expression(transformer(v.vector), Seq(v))
   }
 
   def affineTransform(ev: ExpressionVector): Expression = vectory(ev, dn.affine_transform)
+  def affineTransform(exprs: Expression*): Expression = affineTransform(new ExpressionVector(exprs))
+
   def sum(ev: ExpressionVector): Expression = vectory(ev, dn.sum)
+  def sum(exprs: Expression*): Expression = sum(new ExpressionVector(exprs))
+
   def average(ev: ExpressionVector): Expression = vectory(ev, dn.average)
+  def average(exprs: Expression*): Expression = sum(new ExpressionVector(exprs))
 
   def sqrt(e: Expression): Expression = unary(e, dn.sqrt)
   def erf(e: Expression): Expression = unary(e, dn.erf)
@@ -193,7 +218,10 @@ object Expression {
     unary(x, x => dn.pickrange(x, v, u))
 
   def concatenateCols(v: ExpressionVector): Expression = vectory(v, dn.concatenate_cols)
+  def concatenateCols(exprs: Expression*): Expression = concatenateCols(new ExpressionVector(exprs))
+
   def concatenate(v: ExpressionVector): Expression = vectory(v, dn.concatenate)
+  def concatenate(exprs: Expression*): Expression = concatenate(new ExpressionVector(exprs))
 
   /* NOISE OPERATIONS */
 
@@ -203,8 +231,9 @@ object Expression {
 
   /* CONVOLUTION OPERATIONS */
 
-  def conv1dNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_narrow)
-  def conv1dWide(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_wide)
+  // These were commented out in the C++ code.
+  //def conv1dNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_narrow)
+  //def conv1dWide(x: Expression, f: Expression): Expression = binary(x, f, dn.conv1d_wide)
   def filter1DNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.filter1d_narrow)
   def kMaxPooling(x: Expression, k: Long): Expression = unary(x, x => dn.kmax_pooling(x, k))
   def foldRows(x: Expression, nRows: Long = 2l): Expression = unary(x, x => dn.fold_rows(x, nRows))
@@ -214,20 +243,29 @@ object Expression {
   def averageCols(x: Expression): Expression = unary(x, dn.average_cols)
   def kmhNgram(x: Expression, n: Long): Expression = unary(x, x => dn.kmh_ngram(x, n))
 
+  // In the C++ code, is_valid has a default value of true. Scala won't let you have two overloaded
+  // methods with default values, so I just got rid of the default value here.
+  // TODO(joelgrus): write tests for these
+  def conv2d(x: Expression, f: Expression, stride: UnsignedVector, isValid: Boolean) =
+    new Expression(dn.conv2d(x.expr, f.expr, stride.vector, isValid), Seq(x, f, stride))
+
+  def conv2d(x: Expression, f: Expression, b: Expression, stride: UnsignedVector, isValid: Boolean) =
+    new Expression(dn.conv2d(x.expr, f.expr, b.expr, stride.vector, isValid), Seq(x, f, b, stride))
+
   /* TENSOR OPERATIONS */
 
   def contract3d1d(x: Expression, y: Expression): Expression = binary(x, y, dn.contract3d_1d)
   def contract3d1d1d(x: Expression, y: Expression, z: Expression): Expression = {
     Seq(x, y, z).foreach(_.ensureFresh)
-    new Expression(dn.contract3d_1d_1d(x.expr, y.expr, z.expr))
+    new Expression(dn.contract3d_1d_1d(x.expr, y.expr, z.expr), Seq(x, y, z))
   }
   def contract3d1d1d(x: Expression, y: Expression, z: Expression, b: Expression): Expression = {
     Seq(x, y, z, b).foreach(_.ensureFresh)
-    new Expression(dn.contract3d_1d_1d(x.expr, y.expr, z.expr, b.expr))
+    new Expression(dn.contract3d_1d_1d(x.expr, y.expr, z.expr, b.expr), Seq(x, y, z, b))
   }
   def contract3d1d(x: Expression, y: Expression, b: Expression): Expression = {
     Seq(x, y, b).foreach(_.ensureFresh)
-    new Expression(dn.contract3d_1d(x.expr, y.expr, b.expr))
+    new Expression(dn.contract3d_1d(x.expr, y.expr, b.expr), Seq(x, y, b))
   }
 
   /* LINEAR ALGEBRA OPERATIONS */
@@ -244,4 +282,3 @@ object Expression {
     def -(e: Expression): Expression = Expression.exprMinus(x.toFloat, e)
   }
 }
-

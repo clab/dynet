@@ -7,6 +7,7 @@
 
 #include "dynet/nodes.h"
 #include "dynet/expr.h"
+#include "dynet/param-init.h"
 
 using namespace std;
 using namespace dynet::expr;
@@ -28,7 +29,8 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
   for (unsigned i = 0; i < layers; ++i) {
     Parameter p_x2h = local_model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2h = local_model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_hb = local_model.add_parameters({hidden_dim});
+    Parameter p_hb = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+
     vector<Parameter> ps = {p_x2h, p_h2h, p_hb};
     if (lagging)
         ps.push_back(local_model.add_parameters({hidden_dim, hidden_dim}));
@@ -38,20 +40,20 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
   dropout_rate = 0.f;
 }
 
-void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
+void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
     Parameter p_x2h = params[i][X2H];
     Parameter p_h2h = params[i][H2H];
     Parameter p_hb = params[i][HB];
-    Expression i_x2h =  parameter(cg,p_x2h);
-    Expression i_h2h =  parameter(cg,p_h2h);
-    Expression i_hb =  parameter(cg,p_hb);
+    Expression i_x2h =  update ? parameter(cg,p_x2h) : const_parameter(cg,p_x2h);
+    Expression i_h2h =  update ? parameter(cg,p_h2h) : const_parameter(cg,p_h2h);
+    Expression i_hb =  update ? parameter(cg,p_hb) : const_parameter(cg,p_hb);
     vector<Expression> vars = {i_x2h, i_h2h, i_hb};
 
     if (lagging) {
         Parameter p_l2h = params[i][L2H];
-        Expression i_l2h =  parameter(cg,p_l2h);
+        Expression i_l2h =  update ? parameter(cg,p_l2h) : const_parameter(cg,p_l2h);
         vars.push_back(i_l2h);
     }
 
@@ -62,15 +64,13 @@ void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg) {
 void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   h.clear();
   h0 = h_0;
-  if (h0.size() && h0.size() != layers)
-    DYNET_INVALID_ARG("Number of inputs passed to initialize RNNBuilder (" << h0.size() <<
-                      ") is not equal to the number of layers (" << layers << ")");
+  DYNET_ARG_CHECK(h0.empty() || h0.size() == layers,
+                          "Number of inputs passed to initialize RNNBuilder (" << h0.size() << ") is not equal to the number of layers (" << layers << ")");
 }
 
 Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size() && h_new.size() != layers)
-    DYNET_INVALID_ARG("Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() <<
-                      ") is not equal to the number of layers (" << layers << ")");
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() << ") is not equal to the number of layers (" << layers << ")");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
@@ -128,12 +128,12 @@ Expression SimpleRNNBuilder::add_auxiliary_input(const Expression &in, const Exp
 
 void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
   const SimpleRNNBuilder & rnn_simple = (const SimpleRNNBuilder&)rnn;
-  if(params.size() != rnn_simple.params.size())
-    DYNET_INVALID_ARG("Attempt to copy between two SimpleRNNBuilders that are not the same size");
+  DYNET_ARG_CHECK(params.size() == rnn_simple.params.size(),
+                          "Attempt to copy between two SimpleRNNBuilders that are not the same size");
   for(size_t i = 0; i < rnn_simple.params.size(); ++i) {
-      params[i][0] = rnn_simple.params[i][0];
-      params[i][1] = rnn_simple.params[i][1];
-      params[i][2] = rnn_simple.params[i][2];
+    params[i][0] = rnn_simple.params[i][0];
+    params[i][1] = rnn_simple.params[i][1];
+    params[i][2] = rnn_simple.params[i][2];
   }
 }
 

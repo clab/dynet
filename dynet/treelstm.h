@@ -20,7 +20,7 @@ public:
   std::vector<Expression> get_s(RNNPointer i) const override { throw std::runtime_error("get_s() not a valid function for TreeLSTMBuilder"); }
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override { throw std::runtime_error("set_s_impl() not a valid function for TreeLSTMBuilder"); }
  protected:
-  virtual void new_graph_impl(ComputationGraph& cg) override = 0;
+  virtual void new_graph_impl(ComputationGraph& cg, bool update) override = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h0) override = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) override;
 };
@@ -37,7 +37,7 @@ struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
   void copy(const RNNBuilder & params) override;
   ParameterCollection & get_parameters();
  protected:
-  void new_graph_impl(ComputationGraph& cg) override;
+  void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression Lookup(unsigned layer, unsigned p_type, unsigned value);
 
@@ -75,7 +75,7 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
   ParameterCollection & get_parameters() { return node_builder.get_parameters(); }
  protected:
-  void new_graph_impl(ComputationGraph& cg) override;
+  void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
 
  public:
@@ -96,7 +96,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
     return local_model;
   }
  protected:
-  void new_graph_impl(ComputationGraph& cg) override;
+  void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
 

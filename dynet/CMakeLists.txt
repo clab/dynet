@@ -24,6 +24,7 @@ set(dynet_library_SRCS
     nodes-common.cc
     nodes-contract.cc
     nodes-conv.cc
+    nodes-conv2d.cc
     param-init.cc
     param-nodes.cc
     pretrain.cc
@@ -45,6 +46,7 @@ endif()
 set(dynet_library_HDRS
     aligned-mem-pool.h
     cfsm-builder.h
+    cudnn-ops.h
     c2w.h
     dynet.h
     cuda.h
@@ -68,6 +70,7 @@ set(dynet_library_HDRS
     nodes.h
     nodes-contract.h
     nodes-conv.h
+    op-helper.h
     param-nodes.h
     rnn-state-machine.h
     rnn.h
@@ -118,7 +121,10 @@ target_link_libraries(dynet ${LIBS})
 if(WITH_CUDA_BACKEND)
   # cuda flags
   set(CUDA_SEPARABLE_COMPILATION ON)
-  list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA;")
+  if(CUDNN_FOUND)
+    list(APPEND CUDA_NVCC_FLAGS "-DHAVE_CUDNN")
+  endif()
   if(CMAKE_COMPILER_IS_GNUCXX)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.9)
       # gcc 4.9 or later versions raise SEGV due to the optimization problem.
@@ -136,13 +142,16 @@ if(WITH_CUDA_BACKEND)
     list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu)
+    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu)
   else()
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-param-nodes.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
+    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
   endif()
   set_target_properties(gdynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
+  if(CUDNN_FOUND)
+    target_compile_definitions(gdynet PRIVATE HAVE_CUDNN)
+  endif()
   cuda_add_cublas_to_target(gdynet)
   target_link_libraries(gdynet ${LIBS})
 

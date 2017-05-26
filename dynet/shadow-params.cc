@@ -13,12 +13,12 @@ namespace dynet {
 
 ShadowParameters::ShadowParameters(const ParameterStorage& p) : h(p.values) {
   default_device->allocate_tensor(DeviceMempool::PS, h);
-  TensorTools::Zero(h);
+  TensorTools::zero(h);
 }
 
 ShadowLookupParameters::ShadowLookupParameters(const LookupParameterStorage& lp) : all_h(lp.all_values) {
   default_device->allocate_tensor(DeviceMempool::PS, all_h);
-  TensorTools::Zero(all_h);
+  TensorTools::zero(all_h);
   initialize_lookups();
 }
 

@@ -36,14 +36,14 @@ bool check_grad(ParameterCollection& m, expr::Expression& expr, int verbosity) {
     if(p.g.v == nullptr) continue;
     size_t ts = p.dim.size();
     for (size_t i = 0; i < ts; ++i) {
-      float old = TensorTools::AccessElement(p.values, i);
-      TensorTools::SetElement(p.values, i, old - alpha);
+      float old = TensorTools::access_element(p.values, i);
+      TensorTools::set_element(p.values, i, old - alpha);
       float E_left = as_scalar(g.forward(expr));
-      TensorTools::SetElement(p.values, i, old + alpha);
+      TensorTools::set_element(p.values, i, old + alpha);
       float E_right = as_scalar(g.forward(expr));
-      TensorTools::SetElement(p.values, i, old);
+      TensorTools::set_element(p.values, i, old);
       float g = (E_right - E_left) / (2 * alpha);
-      float g_act = TensorTools::AccessElement(p.g, i);
+      float g_act = TensorTools::access_element(p.g, i);
       float f = fabs(g - g_act);
       float m = std::max(fabs(g), fabs(g_act));
       if (f > 0.01 && m > 0.f) f /= m;
@@ -66,14 +66,14 @@ bool check_grad(ParameterCollection& m, expr::Expression& expr, int verbosity) {
       Tensor& v = p.values[j];
       Tensor& ag = p.grads[j];
       for (size_t i = 0; i < ts; ++i) {
-        float old = TensorTools::AccessElement(v, i);
-        TensorTools::SetElement(v, i, old - alpha);
+        float old = TensorTools::access_element(v, i);
+        TensorTools::set_element(v, i, old - alpha);
         float E_left = as_scalar(g.forward(expr));
-        TensorTools::SetElement(v, i, old + alpha);
+        TensorTools::set_element(v, i, old + alpha);
         float E_right = as_scalar(g.forward(expr));
-        TensorTools::SetElement(v, i, old);
+        TensorTools::set_element(v, i, old);
         float g = (E_right - E_left) / (2 * alpha);
-        float g_act = TensorTools::AccessElement(ag, i);
+        float g_act = TensorTools::access_element(ag, i);
         float f = fabs(g - g_act);
         float m = std::max(fabs(g), fabs(g_act));
         if (f > 0.01 && m > 0.f) f /= m;

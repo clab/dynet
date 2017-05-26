@@ -4,6 +4,7 @@
 
 #include "dynet/nodes.h"
 #include "dynet/treelstm.h"
+#include "dynet/param-init.h"
 
 using namespace std;
 using namespace dynet;
@@ -34,24 +35,25 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
     Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
     LookupParameter p_h2i = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
     LookupParameter p_c2i = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bi = local_model.add_parameters({hidden_dim});
+    Parameter p_bi = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // f
     Parameter p_x2f = local_model.add_parameters({hidden_dim, layer_input_dim});
     LookupParameter p_h2f = local_model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
     LookupParameter p_c2f = local_model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
-    Parameter p_bf = local_model.add_parameters({hidden_dim});
+    Parameter p_bf = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // o
     Parameter p_x2o = local_model.add_parameters({hidden_dim, layer_input_dim});
     LookupParameter p_h2o = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
     LookupParameter p_c2o = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bo = local_model.add_parameters({hidden_dim});
+    Parameter p_bo = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // c (a.k.a. u)
     Parameter p_x2c = local_model.add_parameters({hidden_dim, layer_input_dim});
     LookupParameter p_h2c = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bc = local_model.add_parameters({hidden_dim});
+    Parameter p_bc = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_bi, p_x2f, p_bf, p_x2o, p_bo, p_x2c, p_bc};
@@ -61,7 +63,7 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
   }  // layers
 }
 
-void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   this->cg = &cg;
   param_vars.clear();
   lparam_vars.clear();
@@ -73,17 +75,17 @@ void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
     auto& lp = lparams[i];
 
     //i
-    Expression i_x2i = parameter(cg, p[X2I]);
-    Expression i_bi = parameter(cg, p[BI]);
+    Expression i_x2i = update ? parameter(cg, p[X2I]) : const_parameter(cg, p[X2I]);
+    Expression i_bi = update ? parameter(cg, p[BI]) : const_parameter(cg, p[BI]);
     //f
-    Expression i_x2f = parameter(cg, p[X2F]);
-    Expression i_bf = parameter(cg, p[BF]);
+    Expression i_x2f = update ? parameter(cg, p[X2F]) : const_parameter(cg, p[X2F]);
+    Expression i_bf = update ? parameter(cg, p[BF]) : const_parameter(cg, p[BF]);
     //o
-    Expression i_x2o = parameter(cg, p[X2O]);
-    Expression i_bo = parameter(cg, p[BO]);
+    Expression i_x2o = update ? parameter(cg, p[X2O]) : const_parameter(cg, p[X2O]);
+    Expression i_bo = update ? parameter(cg, p[BO]) : const_parameter(cg, p[BO]);
     //c
-    Expression i_x2c = parameter(cg, p[X2C]);
-    Expression i_bc = parameter(cg, p[BC]);
+    Expression i_x2c = update ? parameter(cg, p[X2C]) : const_parameter(cg, p[X2C]);
+    Expression i_bc = update ? parameter(cg, p[BC]) : const_parameter(cg, p[BC]);
 
     vector<Expression> vars = {i_x2i, i_bi, i_x2f, i_bf, i_x2o, i_bo, i_x2c, i_bc};
     param_vars.push_back(vars);
@@ -117,8 +119,9 @@ void NaryTreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hini
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    if(layers*2 != hinit.size())
-      DYNET_INVALID_ARG("Incorrectly sized initialization in TreeLSTM (" << hinit.size() << "). Must be twice the number of layers (which is " << layers<< ")");
+    DYNET_ARG_CHECK(layers*2 == hinit.size(),
+                            "Incorrectly sized initialization in TreeLSTM (" << hinit.size() << "). "
+                            "Must be twice the number of layers (which is " << layers<< ")");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
@@ -203,7 +206,7 @@ Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Ex
       }
       else
         i_aft = affine_transform({vars[BF], vars[X2F], in});
-      i_ft.push_back(logistic(i_aft));
+      i_ft.push_back(logistic(i_aft + 1.f));
     }
 
     // write memory cell
@@ -287,8 +290,8 @@ UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
   node_builder = LSTMBuilder(layers, input_dim, hidden_dim, local_model);
 }
 
-void UnidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
-  node_builder.new_graph(cg);
+void UnidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+   node_builder.new_graph(cg, update);
 }
 
 // layout: 0..layers = c
@@ -323,9 +326,9 @@ BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
   rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, local_model);
 }
 
-void BidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
-  fwd_node_builder.new_graph(cg);
-  rev_node_builder.new_graph(cg);
+void BidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+   fwd_node_builder.new_graph(cg, update);
+   rev_node_builder.new_graph(cg, update);
 }
 
 // layout: 0..layers = c

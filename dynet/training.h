@@ -2,11 +2,11 @@
  * \file training.h
  * \defgroup optimizers
  * \brief Training procedures
- * 
- * The various trainers are defined here. 
+ *
+ * The various trainers are defined here.
  * All trainers are structures inheriting from the `Trainer` struct.
- * 
- * 
+ *
+ *
  */
 
 #ifndef DYNET_TRAINING_H_
@@ -29,10 +29,10 @@ namespace dynet {
 
 /**
  * \ingroup optimizers
- * 
+ *
  * \struct Trainer
  * \brief General trainer struct
- * 
+ *
  */
 struct Trainer {
   /**
@@ -50,7 +50,7 @@ struct Trainer {
   /**
    * \brief Update parameters
    * \details Update the parameters according to the appropriate update rule
-   * 
+   *
    * \param scale The scaling factor for the gradients
    */
   void update(real scale = 1.0);
@@ -62,7 +62,7 @@ struct Trainer {
    *        parameters to be updated are specified by index, which can be found
    *        for Parameter and LookupParameter objects through the "index" variable
    *        (or the get_index() function in the Python bindings).
-   * 
+   *
    * \param updated_params The parameter indices to be updated
    * \param updated_lookup_params The lookup parameter indices to be updated
    * \param scale The scaling factor for the gradients
@@ -79,7 +79,7 @@ struct Trainer {
    * \details If clipping is enabled and the gradient is too big, return the amount to
    *          scale the gradient by (otherwise 1)
    *
-   * 
+   *
    * \param scale The clipping limit
    * \return The appropriate scaling factor
    */
@@ -127,12 +127,12 @@ struct Trainer {
 
   ParameterCollection* model;  // parameters and gradients live here
 
- protected:
+protected:
   Trainer() {}
   virtual void alloc_impl() { }
   /**
    * \brief The actual rule to update the parameters
-   * 
+   *
    * \param scale Scale of the update (i.e. learning rate)
    * \param gscale Gradient scale based on clipping
    * \param values Values specific to the particular update rule being implemented
@@ -140,7 +140,7 @@ struct Trainer {
   virtual void update_rule(real scale, real gscale, const std::vector<Tensor*> & values) = 0;
   /**
    * \brief Parameter update function
-   * 
+   *
    * \param scale Scale of the update (i.e. learning rate)
    * \param gscale Gradient scale based on clipping
    * \param idx The ID of the parameter to update
@@ -148,7 +148,7 @@ struct Trainer {
   virtual void update_params(real scale, real gscale, size_t idx) = 0;
   /**
    * \brief Sparse lookup parameter update function
-   * 
+   *
    * \param scale Scale of the update (i.e. learning rate)
    * \param gscale Gradient scale based on clipping
    * \param idx The ID of the parameter to update
@@ -157,23 +157,24 @@ struct Trainer {
   virtual void update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) = 0;
   /**
    * \brief Dense lookup parameter update function
-   * 
+   *
    * \param scale Scale of the update (i.e. learning rate)
    * \param gscale Gradient scale based on clipping
    * \param idx The ID of the parameter to update
    */
   virtual void update_lookup_params(real scale, real gscale, size_t idx) = 0;
+
 };
 
 /**
  * \ingroup optimizers
- * 
+ *
  * \brief Stochastic gradient descent trainer
  * \details This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks.
  * In the standard setting, the learning rate at epoch \f$t\f$ is \f$\eta_t=\frac{\eta_0}{1+\eta_{\mathrm{decay}}t}\f$
- * 
+ *
  * Reference : [reference needed](ref.need.ed)
- *  
+ *
  */
 struct SimpleSGDTrainer : public Trainer {
   /**
@@ -186,19 +187,72 @@ struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(ParameterCollection& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
- private:
+private:
   SimpleSGDTrainer() {}
 };
 
 /**
  * \ingroup optimizers
- * 
+ *
+ * \brief Cyclical learning rate SGD
+ * \details This trainer performs stochastic gradient descent with a cyclical learning rate as proposed in [Smith, 2015](https://arxiv.org/abs/1506.01186).
+ *
+ * This uses a triangular function with optional exponential decay.
+ *
+ * More specifically, at each update, the learning rate \f$\eta\f$ is updated according to :
+ *
+ * \f$
+ * \begin{split}
+ * \text{cycle} &= \left\lfloor 1 + \frac{\texttt{it}}{2 \times\texttt{step_size}} \right\rfloor\\
+ * x &= \left\vert \frac{\texttt{it}}{\texttt{step_size}} - 2 \times \text{cycle} + 1\right\vert\\
+ * \eta &= \eta_{\text{min}} + (\eta_{\text{max}} - \eta_{\text{min}}) \times \max(0, 1 - x) \times \gamma^{\texttt{it}}\\
+ * \end{split}
+ * \f$
+ *
+ *
+ * Reference : [Cyclical Learning Rates for Training Neural Networks](https://arxiv.org/abs/1506.01186)
+ *
+ */
+struct CyclicalSGDTrainer : public Trainer {
+  /**
+   * \brief Constructor
+   *
+   * \param m ParameterCollection to be trained
+   * \param e0_min Lower learning rate
+   * \param e0_max Upper learning rate
+   * \param step_size Period of the triangular function in number of iterations (__not__ epochs). According to the original paper, this should be set around (2-8) x (training iterations in epoch)
+   * \param gamma Learning rate upper bound decay parameter
+   * \param edecay Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by \f$\gamma\f$
+   */
+  explicit CyclicalSGDTrainer(ParameterCollection& m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0) : Trainer(m, e0_min, edecay), e_min(e0_min), e_max(e0_max), step_size(step_size), gamma(gamma), it(0) {}
+  void update(real scale = 1.0) { Trainer::update(scale);cyclic_update_eta();}
+protected:
+  DYNET_TRAINER_DEFINE_DEV_IMPL()
+  void cyclic_update_eta() {
+    float cycle = std::floor(1 + ((float) it)  / (2 * step_size));
+    float x = std::abs( ((float) it) / step_size - 2 * cycle + 1);
+    eta = e_min + ((1 - x) > 0 ? (e_max - e_min) * (1 - x) * (real)std::pow(gamma, it) : 0);
+    it++;
+  }
+  float e_min;
+  float e_max;
+  float step_size;
+  float gamma;
+  unsigned it;
+private:
+  CyclicalSGDTrainer() {}
+};
+
+
+/**
+ * \ingroup optimizers
+ *
  * \brief Stochastic gradient descent with momentum
- * \details This is a modified version of the SGD algorithm with momentum to stablize the gradient trajectory. 
+ * \details This is a modified version of the SGD algorithm with momentum to stablize the gradient trajectory.
  * The modified gradient is \f$\theta_{t+1}=\mu\theta_{t}+\nabla_{t+1}\f$ where \f$\mu\f$ is the momentum.
- * 
+ *
  * Reference : [reference needed](ref.need.ed)
- * 
+ *
  */
 struct MomentumSGDTrainer : public Trainer {
   /**
@@ -212,7 +266,7 @@ struct MomentumSGDTrainer : public Trainer {
   explicit MomentumSGDTrainer(ParameterCollection& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
     Trainer(m, e0, edecay), momentum(mom) {}
 
- protected:
+protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
 
@@ -223,19 +277,19 @@ struct MomentumSGDTrainer : public Trainer {
   std::vector<ShadowLookupParameters> vlp;
   //std::unordered_map<ParameterStorage*, Tensor> vp;
   //std::unordered_map<LookupParameterStorage*, std::unordered_map<unsigned, Tensor>> vl;
- private:
+private:
   MomentumSGDTrainer() {}
 };
 
 /**
  * \ingroup optimizers
- * 
+ *
  * \brief Adagrad optimizer
  * \details The adagrad algorithm assigns a different learning rate to each parameter according to the following formula :
  * \f$\delta_\theta^{(t)}=-\frac{\eta_0}{\epsilon+\sum_{i=0}^{t-1}(\nabla_\theta^{(i)})^2}\nabla_\theta^{(t)}\f$
- * 
+ *
  * Reference : [Duchi et al., 2011](http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf)
- *  
+ *
  */
 struct AdagradTrainer : public Trainer {
   /**
@@ -248,28 +302,28 @@ struct AdagradTrainer : public Trainer {
    */
   explicit AdagradTrainer(ParameterCollection& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps) {}
- protected:
+protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
 
   real epsilon;
   std::vector<ShadowParameters> vp;
   std::vector<ShadowLookupParameters> vlp;
- private:
+private:
   AdagradTrainer() {}
 };
 
 /**
  * \ingroup optimizers
- * 
+ *
  * \brief AdaDelta optimizer
  * \details The AdaDelta optimizer is a variant of Adagrad where
- * \f$\frac{\eta_0}{\sqrt{\epsilon+\sum_{i=0}^{t-1}(\nabla_\theta^{(i)})^2}}\f$ is replaced by 
+ * \f$\frac{\eta_0}{\sqrt{\epsilon+\sum_{i=0}^{t-1}(\nabla_\theta^{(i)})^2}}\f$ is replaced by
  * \f$\frac{\sqrt{\epsilon+\sum_{i=0}^{t-1}\rho^{t-i-1}(1-\rho)(\delta_\theta^{(i)})^2}}{\sqrt{\epsilon+\sum_{i=0}^{t-1}(\nabla_\theta^{(i)})^2}}\f$,
  * hence eliminating the need for an initial learning rate.
- * 
+ *
  * Reference : [ADADELTA: An Adaptive Learning Rate Method](https://arxiv.org/pdf/1212.5701v1)
- *  
+ *
  */
 struct AdadeltaTrainer : public Trainer {
   /**
@@ -282,7 +336,7 @@ struct AdadeltaTrainer : public Trainer {
    */
   explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, 1.0, edecay), epsilon(eps), rho(rho) {}
- protected:
+protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
 
@@ -292,20 +346,20 @@ struct AdadeltaTrainer : public Trainer {
   std::vector<ShadowLookupParameters> hlg;
   std::vector<ShadowParameters> hd; // History of deltas
   std::vector<ShadowLookupParameters> hld;
- private:
+private:
   AdadeltaTrainer() {}
 };
 
 /**
  * \ingroup optimizers
- * 
+ *
  * \brief RMSProp optimizer
  * \details The RMSProp optimizer is a variant of Adagrad where the squared sum of previous gradients is replaced with a moving average with parameter \f$\rho\f$.
- * 
+ *
  * Reference : [reference needed](ref.need.ed)
- *  
+ *
  */
-struct RmsPropTrainer : public Trainer {
+struct RMSPropTrainer : public Trainer {
   /**
    * \brief Constructor
    * 
@@ -315,29 +369,29 @@ struct RmsPropTrainer : public Trainer {
    * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
    * \param edecay Learning rate decay parameter
    */
-  explicit RmsPropTrainer(ParameterCollection& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
+  explicit RMSPropTrainer(ParameterCollection& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
     Trainer(m, e0, edecay), epsilon(eps), rho(rho) {}
- protected:
+protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
 
   real epsilon;
   real rho;
-  std::vector<real> hg; // History of gradients
-  std::vector<std::vector<real> > hlg;
- private:
-  RmsPropTrainer() {}
+  std::vector<ShadowParameters> hmsg; // History of gradients
+  std::vector<ShadowLookupParameters> hlmsg;
+private:
+  RMSPropTrainer() {}
 };
 
 /**
  * \ingroup optimizers
- * 
+ *
  * \brief Adam optimizer
  * \details The Adam optimizer is similar to RMSProp but uses unbiased estimates
  * of the first and second moments of the gradient
- * 
+ *
  * Reference : [Adam: A Method for Stochastic Optimization](https://arxiv.org/pdf/1412.6980v8)
- *  
+ *
  */
 struct AdamTrainer : public Trainer {
   /**
@@ -353,7 +407,7 @@ struct AdamTrainer : public Trainer {
   explicit AdamTrainer(ParameterCollection& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
     Trainer(m, e0, edecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
- protected:
+protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
 
@@ -364,7 +418,7 @@ struct AdamTrainer : public Trainer {
   std::vector<ShadowLookupParameters> lm;
   std::vector<ShadowParameters> v; // History of deltas
   std::vector<ShadowLookupParameters> lv;
- private:
+private:
   AdamTrainer() {}
 };
 

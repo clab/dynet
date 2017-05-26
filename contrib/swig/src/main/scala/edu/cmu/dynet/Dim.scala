@@ -36,6 +36,10 @@ class Dim private[dynet] (private[dynet] val dim: internal.Dim) {
     case _ => false
   }
   override def hashCode(): Int = dim.hashCode()
+
+  override def toString: String = "Dim(" + (0 until nDims.toInt).map(get(_)).mkString(", ") + ")"
+
+  def debugString(): String = s"(Dim: ${size} ${nDims} ${(0 until nDims.toInt).map(get(_))} )"
 }
 
 /** Factory for [[edu.cmu.dynet.Dim]] instances. */

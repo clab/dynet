@@ -6,6 +6,7 @@
 
 #include "dynet/nodes.h"
 #include "dynet/training.h"
+#include "dynet/param-init.h"
 
 using namespace std;
 
@@ -23,17 +24,18 @@ GRUBuilder::GRUBuilder(unsigned layers,
     // z
     Parameter p_x2z = local_model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2z = local_model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bz = local_model.add_parameters({hidden_dim});
+    Parameter p_bz = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // r
     Parameter p_x2r = local_model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2r = local_model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_br = local_model.add_parameters({hidden_dim});
+    Parameter p_br = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // h
     Parameter p_x2h = local_model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2h = local_model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bh = local_model.add_parameters({hidden_dim});
+    Parameter p_bh = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2z, p_h2z, p_bz, p_x2r, p_h2r, p_br, p_x2h, p_h2h, p_bh};
@@ -42,25 +44,25 @@ GRUBuilder::GRUBuilder(unsigned layers,
   dropout_rate = 0.f;
 }
 
-void GRUBuilder::new_graph_impl(ComputationGraph& cg) {
+void GRUBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
 
     // z
-    Expression x2z = parameter(cg, p[X2Z]);
-    Expression h2z = parameter(cg, p[H2Z]);
-    Expression bz = parameter(cg, p[BZ]);
+    Expression x2z = update ? parameter(cg, p[X2Z]) : const_parameter(cg, p[X2Z]);
+    Expression h2z = update ? parameter(cg, p[H2Z]) : const_parameter(cg, p[H2Z]);
+    Expression bz = update ? parameter(cg, p[BZ]) : const_parameter(cg, p[BZ]);
 
     // r
-    Expression x2r = parameter(cg, p[X2R]);
-    Expression h2r = parameter(cg, p[H2R]);
-    Expression br = parameter(cg, p[BR]);
+    Expression x2r = update ? parameter(cg, p[X2R]) : const_parameter(cg, p[X2R]);
+    Expression h2r = update ? parameter(cg, p[H2R]) : const_parameter(cg, p[H2R]);
+    Expression br = update ?parameter(cg, p[BR]) : const_parameter(cg, p[BR]);
 
     // h
-    Expression x2h = parameter(cg, p[X2H]);
-    Expression h2h = parameter(cg, p[H2H]);
-    Expression bh = parameter(cg, p[BH]);
+    Expression x2h = update ? parameter(cg, p[X2H]) : const_parameter(cg, p[X2H]);
+    Expression h2h = update ? parameter(cg, p[H2H]) : const_parameter(cg, p[H2H]);
+    Expression bh = update ? parameter(cg, p[BH]) : const_parameter(cg, p[BH]);
 
     vector<Expression> vars = {x2z, h2z, bz, x2r, h2r, br, x2h, h2h, bh};
     param_vars.push_back(vars);
@@ -70,15 +72,15 @@ void GRUBuilder::new_graph_impl(ComputationGraph& cg) {
 void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
   h.clear();
   h0 = h_0;
-  if (!h0.empty() && h0.size() != layers)
-    DYNET_INVALID_ARG("Number of inputs passed to initialize GRUBuilder (" << h0.size() <<
-                      ") is not equal to the number of layers (" << layers << ")");
+  DYNET_ARG_CHECK(h0.empty() || h0.size() == layers,
+                          "Number of inputs passed to initialize GRUBuilder (" << h0.size() << ") "
+                          "is not equal to the number of layers (" << layers << ")");
 }
 
 Expression GRUBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size() && h_new.size() != layers)
-  DYNET_INVALID_ARG("Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() <<
-                    ") is not equal to the number of layers (" << layers << ")");
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "Number of inputs passed to RNNBuilder::set_h() (" << h_new.size() << ") "
+                          "is not equal to the number of layers (" << layers << ")");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {

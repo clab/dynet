@@ -6,8 +6,8 @@ if(ENABLE_BOOST)
   endif()
 endif()
 
-# TODO: segrnn-sup
-foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-xent xor-batch xor-batch-lookup rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat read-write attention imdb ${MP_EXAMPLES})
+# rnnlm is disabled for now because it heavily uses boost
+foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-autobatch xor-xent xor-batch xor-batch-lookup rnn-autobatch rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm read-write attention imdb rnnlm-batch-nce ${MP_EXAMPLES})
   set(TARGET train_${FOLDER})
   ADD_EXECUTABLE(${TARGET} cpp/${FOLDER}/${TARGET}.cc)
   if (WITH_CUDA_BACKEND)

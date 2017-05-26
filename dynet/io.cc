@@ -91,9 +91,9 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
       DYNET_RUNTIME_ERR("Bad parameter specification in model: " << line);
     }
     { getline(datastream, line); istringstream iss(line); iss >> values; }
-    TensorTools::SetElements(*value_t, values);
+    TensorTools::set_elements(*value_t, values);
     { getline(datastream, line); istringstream iss(line); iss >> values; }
-    TensorTools::SetElements(*grad_t, values);
+    TensorTools::set_elements(*grad_t, values);
   }
   if(param_id != storage.params.size() || lookup_id != storage.lookup_params.size())
     DYNET_RUNTIME_ERR("Number of parameter/lookup parameter objects loaded from file (" << 
@@ -117,9 +117,9 @@ void TextFileLoader::populate(Parameter & param,
         DYNET_RUNTIME_ERR("Attempted to populate parameter where arguments don't match (" << param.p->dim << " != " << dim << ")");
       vector<float> values(dim.size());
       { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::SetElements(param.get_storage().values, values);
+      TensorTools::set_elements(param.get_storage().values, values);
       { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::SetElements(param.get_storage().g, values);
+      TensorTools::set_elements(param.get_storage().g, values);
       return;
     } else {
       getline(datastream, line);
@@ -144,9 +144,9 @@ void TextFileLoader::populate(LookupParameter & lookup_param,
         DYNET_RUNTIME_ERR("Attempted to populate lookup parameter where arguments don't match (" << lookup_param.p->all_dim << " != " << dim << ")");
       vector<float> values(dim.size());
       { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::SetElements(lookup_param.get_storage().all_values, values);
+      TensorTools::set_elements(lookup_param.get_storage().all_values, values);
       { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::SetElements(lookup_param.get_storage().all_grads, values);
+      TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
       return;
     } else {
       getline(datastream, line);
@@ -171,9 +171,9 @@ Parameter TextFileLoader::load_param(ParameterCollection & model,
       param.get_storage().name = name;
       vector<float> values(dim.size());
       { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::SetElements(param.get_storage().values, values);
+      TensorTools::set_elements(param.get_storage().values, values);
       { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::SetElements(param.get_storage().g, values);
+      TensorTools::set_elements(param.get_storage().g, values);
       return param;
     } else {
       getline(datastream, line);
@@ -200,9 +200,9 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
       LookupParameter lookup_param = model.add_lookup_parameters(size, dim);
       lookup_param.get_storage().name = name;
       { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::SetElements(lookup_param.get_storage().all_values, values);
+      TensorTools::set_elements(lookup_param.get_storage().all_values, values);
       { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::SetElements(lookup_param.get_storage().all_grads, values);
+      TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
       return lookup_param;
     } else {
       getline(datastream, line);
