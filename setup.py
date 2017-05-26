@@ -213,6 +213,6 @@ setup(
         "bdist_egg": dynet_bdist_egg,
         "develop": dynet_develop,
     },
-    ext_modules=[Extension("_dynet", [])],
+    ext_modules=[Extension("_dynet", ["_dynet.pxd", "_dynet.pyx", "_gdynet.pyx", "dynet.pxd", "dynet.pyx", "gdynet.pyx"])],
     ext_package="dyNET",
 )
