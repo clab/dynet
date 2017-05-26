@@ -27,7 +27,7 @@ class ExecutionEngine {
 
 class SimpleExecutionEngine : public ExecutionEngine {
  public:
-  explicit SimpleExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) {}
+  explicit SimpleExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg), num_nodes_evaluated(0) {}
   void invalidate() override;
   void invalidate(unsigned i) override;
   const Tensor& forward() override;
@@ -56,7 +56,7 @@ public:
 
 class BatchedExecutionEngine : public ExecutionEngine {
  public:
-  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) { }
+  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg), num_nodes_evaluated(0), num_batches_evaluated(0) { }
   ~BatchedExecutionEngine() { garbage_collect(); }
   void invalidate() override;
   void invalidate(unsigned i) override;
