@@ -58,7 +58,7 @@ class testModel {
     W_x = affine_params.add_parameters({40, 30});
     b_x = affine_params.add_parameters({40});
   }
-  std::string get_affine_model_name() { return affine_params.get_namespace(); }
+  std::string get_affine_model_name() { return affine_params.get_fullname(); }
   dynet::ParameterCollection get_affine_model() const { return affine_params; }
  private:
   dynet::LookupParameter lookup_param;
@@ -96,11 +96,11 @@ BOOST_AUTO_TEST_CASE ( test_parameter_collection ) {
   dynet::Parameter c = submodel.add_parameters({10});
   dynet::Parameter d = submodel.add_parameters({1, 2}, "d");
   dynet::Parameter b3 = submodel.add_parameters({1, 2}, "b");
-  DYNET_CHECK_EQUAL(model.get_namespace(), "/");
+  DYNET_CHECK_EQUAL(model.get_fullname(), "/");
   DYNET_CHECK_EQUAL(a.get_fullname(), "/__0");
   DYNET_CHECK_EQUAL(b1.get_fullname(), "/b__0");
   DYNET_CHECK_EQUAL(b2.get_fullname(), "/b__1");
-  DYNET_CHECK_EQUAL(submodel.get_namespace(), "/foo__0/");
+  DYNET_CHECK_EQUAL(submodel.get_fullname(), "/foo__0/");
   DYNET_CHECK_EQUAL(c.get_fullname(), "/foo__0/__0");
   DYNET_CHECK_EQUAL(d.get_fullname(), "/foo__0/d__0");
   DYNET_CHECK_EQUAL(b3.get_fullname(), "/foo__0/b__0");
