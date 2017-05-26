@@ -51,7 +51,7 @@ class testModel {
     b_x = affine_params.add_parameters({40});
     lstm = LSTMBuilder(3, 40, 1, model);
   }
-  std::string get_affine_model_name() { return affine_params.get_namespace(); }
+  std::string get_affine_model_name() { return affine_params.get_fullname(); }
   dynet::ParameterCollection get_affine_model() const { return affine_params; }
   dynet::ParameterCollection get_lstm_model() { return lstm.get_parameters(); }
  private:
@@ -72,14 +72,14 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     m.add_lookup_parameters(10, {2});
     {
       dynet::TextFileSaver s("test.model");
-      s.save(m, "model1");
-      s.save(m, m.get_namespace());
+      s.save(m, "/model1/");
+      s.save(m, m.get_fullname());
     }
 
     {
       dynet::TextFileLoader s("test.model");
       ParameterCollection m2;
-      s.populate(m2, "model1");
+      s.populate(m2, "/model1/");
       DYNET_CHECK_EQUAL(m2, m);
       ParameterCollection m3;
       s.populate(m3, "/");
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     testModel spec(collec);
     {
       TextFileSaver s1("a.model");
-      s1.save(collec, "all");
+      s1.save(collec, "/all/");
     }
     {
       TextFileLoader s1("a.model");
@@ -100,15 +100,15 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
   
     {
       TextFileSaver s2("b.model");
-      s2.save(collec, "all");
-      s2.save(spec.get_lstm_model(), "lstm");
-      s2.save(spec.get_affine_model(), "affine");
+      s2.save(collec, "/all/");
+      s2.save(spec.get_lstm_model(), "/lstm/");
+      s2.save(spec.get_affine_model(), "/affine/");
     }
     {
       TextFileLoader s2("b.model");
-      s2.populate(affine2, "affine");
-      s2.populate(collec3, "all");
-      s2.populate(lstm2, "lstm");
+      s2.populate(affine2, "/affine/");
+      s2.populate(collec3, "/all/");
+      s2.populate(lstm2, "/lstm/");
     }
     DYNET_CHECK_EQUAL(affine2.size(), spec.get_affine_model().size());
     DYNET_CHECK_EQUAL(collec3.size(), collec.size());
@@ -121,11 +121,11 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_collection ) {
     cc2.add_parameters({2, 3, 4, 5});
     {
       TextFileSaver s3("d.model");
-      s3.save(cc, "key");
+      s3.save(cc, "/key/");
     }
     {
       TextFileLoader s3("d.model");
-      s3.populate(ccc, "key");
+      s3.populate(ccc, "/key/");
     }
     DYNET_CHECK_EQUAL(ccc.size(), cc.size());
   }

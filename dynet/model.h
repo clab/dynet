@@ -586,16 +586,17 @@ public:
   /**
    * @brief get namespace of current ParameterCollection object(end with a slash)
    */
-  std::string get_namespace() const { return name; }
+  std::string get_fullname() const { return name; }
 
   /**
    * \brief Get the weight decay object
    */
   L2WeightDecay& get_weight_decay() { return get_storage().weight_decay; }
 
-protected:
   ParameterCollectionStorage& get_storage();
   const ParameterCollectionStorage& get_storage() const;
+
+protected:
   void add_parameters_to_storage(ParameterStorage* p);
   void add_lookup_parameters_to_storage(LookupParameterStorage* p);
 

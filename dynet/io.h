@@ -21,7 +21,6 @@ namespace dynet {
 template <class T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T> & v) {
   for (auto & val : v) os << val << ' ';
-  os << '\n';
   return os;
 }
 
@@ -37,32 +36,21 @@ class Saver {
   virtual ~Saver() { }
 
   /**
-   * @brief Save ParameterCollection with key, use internal namespace if key is not given.
+   * @brief Save ParameterCollection
    *
    * @param model: input ParameterCollection object to be saved
-   * @param key: optional parameter, the key for the model
+   * @param key: optional parameter, the name for the ParameterCollection. This will override
+   *             the name of the PC itself, and instead save the PC with the specified name.
    */
   virtual void save(const ParameterCollection & model,
                     const std::string & key = "") = 0;
 
   /**
-   * @brief Save ParameterCollection's parameters and lookup parameters with filter_lst and key,
-   *        use internal namespace if key is not given.
-   *
-   * @param model: input ParameterCollection object to be saved
-   * @param filter_lst: save parameters and lookup parameters satisfy the filter_lst condition
-   *                    each filter can be regex expressions
-   * @param key: optional parameter, the key for the model 
-   */
-  virtual void save(const ParameterCollection & model,
-                    const std::vector<std::string> & filter_lst,
-                    const std::string & key = "") = 0;
-
-  /**
-   * @brief Save Parameter with key, use internal name if key is not given.
+   * @brief Save Parameter.
    *
    * @param model: input Parameter object to be saved
-   * @param key: optional parameter, the key for the saving Parameter
+   * @param key: optional parameter, the key for the parameter. This will override the Parameter's
+   *             original name.
    */
   virtual void save(const Parameter & param, const std::string & key = "") = 0;
 
@@ -70,7 +58,8 @@ class Saver {
    * @brief Save look parameter with key, use internal name if key is not given.
    * 
    * @param model: input LookupParameter object to be saved
-   * @param key: optional parameter, the key for the saving Parameter
+   * @param key: optional parameter, the key for the parameter. This will override the Parameter's
+   *             original name.
    */
   virtual void save(const LookupParameter & param, const std::string & key = "") = 0;
 
@@ -89,19 +78,6 @@ class Loader {
    *
    */
   virtual void populate(ParameterCollection & model, const std::string & key = "") = 0;
-
-  /**
-   * @brief Populate ParameterCollection object with filter_lst and with key equals to key.
-   * 
-   * @param model: input/output parameter, the ParameterCollection object to be populated
-   * @param filter_lst: populate parameters and lookup parameters satisfies the filter_lst condition
-   *                    each filter can be regex expression
-   * @param key: optional parameter, the key for loading the model
-   *
-   */
-  virtual void populate(ParameterCollection & model,
-                        const std::vector<std::string> & filter_lst,
-                        const std::string & key = "") = 0;
 
   /**
    * @brief Populate independent parameter object with key.
@@ -151,29 +127,18 @@ class Loader {
 
 class TextFileSaver : public Saver {
  public:
-  TextFileSaver(const std::string & filename, bool append = true);
+  TextFileSaver(const std::string & filename, bool append = false);
   virtual ~TextFileSaver() { }
   void save(const ParameterCollection & model,
-            const std::string & key = "") override;
-  void save(const ParameterCollection & model,
-            const std::vector<std::string> & filter_lst,
             const std::string & key = "") override;
   void save(const Parameter & param, const std::string & key = "") override;
   void save(const LookupParameter & param, const std::string & key = "") override;
 
 protected:
-  void serialize(const ParameterCollection & model,
-                 const std::string & key,
-                 std::unordered_map<std::string, long long> & offset_dict);
-  void serialize(const Parameter & param,
-                 const std::string & key);
-  void serialize(const LookupParameter & lookup_param,
-                 const std::string & key);
-  void serialize_parameter(std::ofstream & os, const ParameterStorage *p);
-  void serialize_lookup_parameter(std::ofstream & os, const LookupParameterStorage *p);
+  void save(const ParameterStorage & param, const std::string & key = "");
+  void save(const LookupParameterStorage & param, const std::string & key = "");
 
-  std::ofstream datastream, metastream;
-  long long offset = 0;
+  std::ofstream datastream;
 
 }; // class TextFileSaver
 
@@ -182,9 +147,6 @@ class TextFileLoader : public Loader {
   TextFileLoader(const std::string & filename);
   virtual ~TextFileLoader() { }
   void populate(ParameterCollection & model, const std::string & key = "") override;
-  void populate(ParameterCollection & model,
-                const std::vector<std::string> & filter_lst,
-                const std::string & key = "") override;
   void populate(Parameter & param, const std::string & key = "") override;
   void populate(LookupParameter & lookup_param,
                 const std::string & key = "") override;
@@ -216,7 +178,7 @@ class TextFileLoader : public Loader {
   long long seek_offset(const std::string & model_name,
                         const std::string & key);
 
-  std::string dataname, metaname;
+  std::string dataname;
   long long offset = 0;
 }; // class TextFileLoader
 
