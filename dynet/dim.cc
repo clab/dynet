@@ -16,6 +16,15 @@ ostream& operator<<(ostream& os, const Dim& d) {
   return os << '}';
 }
 
+void Dim::print_profile(ostream& os) const {
+  os << '{';
+  for (unsigned i = 0; i < nd; ++i) {
+    if (i) os << ',';
+    os << d[i];
+  }
+  os << '}';
+}
+
 ostream& operator<<(ostream& os, const vector<Dim>& ds) {
   os << '[';
   for (unsigned i = 0; i < ds.size(); ++i)
@@ -25,7 +34,6 @@ ostream& operator<<(ostream& os, const vector<Dim>& ds) {
 
 istream& operator>>(istream& is, Dim& d) {
   char place_holder;
-  int nd = 0;
   is >> place_holder;
   d.resize(DYNET_MAX_TENSOR_DIM);
   bool batch_flag = false;

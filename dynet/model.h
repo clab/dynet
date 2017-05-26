@@ -43,6 +43,12 @@ struct ParameterStorageBase {
    */
   virtual void scale_parameters(float a) = 0;
   /**
+   * @brief Scale the gradient
+   *
+   * @param a scale factor
+   */
+  virtual void scale_gradient(float a) = 0;
+  /**
    * @brief Set the parameters to 0
    */
   virtual void zero() = 0;
@@ -81,6 +87,9 @@ struct ParameterStorage : public ParameterStorageBase {
   template <class MyDevice>
   void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
+  template <class MyDevice>
+  void scale_gradient_dev(MyDevice & dev, float a);
+  void scale_gradient(float a) override;
   void zero() override;
   template <class MyDevice>
   void squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
@@ -112,6 +121,12 @@ struct ParameterStorage : public ParameterStorageBase {
   bool is_updated() const override { return updated; }
 
   std::string name; /**< Name of this parameter*/
+
+  /**
+   * @brief Clip the values to the range [left, right]
+   */
+  void clip(float left, float right);
+  
   Dim dim; /**< Dimensions of the parameter tensor*/
   Tensor values;/**< Values of the parameter */
   Tensor g;/**< Values of the gradient w.r.t. this parameter */
@@ -120,6 +135,7 @@ struct ParameterStorage : public ParameterStorageBase {
 
 private:
   ParameterStorage() : updated(true), owner(nullptr) {}
+  explicit ParameterStorage(const Dim& d, float scale, const std::string & name); // initialize with a scale
   explicit ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name); // initialize with custom initializer
 }; // struct ParameterStorage
 
@@ -134,6 +150,9 @@ struct LookupParameterStorage : public ParameterStorageBase {
   template <class MyDevice>
   void scale_parameters_dev(MyDevice & dev, float a);
   void scale_parameters(float a) override;
+  template <class MyDevice>
+  void scale_gradient_dev(MyDevice & dev, float a);
+  void scale_gradient(float a) override;
   void zero() override;
   template <class MyDevice>
   void squared_l2norm_dev(MyDevice & dev, float* sqnorm) const;
@@ -285,12 +304,35 @@ struct Parameter {
    * @param b Update status
    */
   void set_updated(bool b);
+
+  /**
+   * @brief Scales the parameter (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale(float s){get_storage().scale_parameters(s);}
+
+
+  /**
+   * @brief Scales the gradient (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale_gradient(float s){get_storage().scale_gradient(s);}
+
   /**
    * @brief Check the update status
    * @return Update status
    */
   bool is_updated();
+
+  /**
+   * @brief Clip the values of the parameter to the range [left, right] (in place)
+   */
+  void clip_inplace(float left, float right);
+
 }; // struct Parameter
+
 
 /**
  * \ingroup params
@@ -342,6 +384,20 @@ struct LookupParameter {
    * \brief Get the current weight decay for the parameters
    */
   float current_weight_decay() const;
+
+  /**
+   * @brief Scales the parameter (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale(float s){get_storage().scale_parameters(s);}
+
+  /**
+   * @brief Scales the gradient (multiplies by `s`)
+   *
+   * @param s scale
+   */
+  void scale_gradient(float s){get_storage().scale_gradient(s);}
 
   /**
   * @brief Set the parameter as updated

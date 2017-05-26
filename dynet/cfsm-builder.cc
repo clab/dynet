@@ -1,5 +1,6 @@
 #include "dynet/cfsm-builder.h"
 #include "dynet/except.h"
+#include "dynet/param-init.h"
 
 #include <fstream>
 #include <iostream>
@@ -20,7 +21,7 @@ StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
 StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, ParameterCollection& model) {
   local_model = model.add_subcollection("--standard-softmax-builder");
   p_w = local_model.add_parameters({vocab_size, rep_dim});
-  p_b = local_model.add_parameters({vocab_size});
+  p_b = local_model.add_parameters({vocab_size}, ParameterInitConst(0.f));
 }
 
 void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg) {
@@ -62,7 +63,7 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
   const unsigned num_clusters = cdict.size();
   local_model = model.add_subcollection("--class-factored-softmax-builder");
   p_r2c = local_model.add_parameters({num_clusters, rep_dim});
-  p_cbias = local_model.add_parameters({num_clusters});
+  p_cbias = local_model.add_parameters({num_clusters}, ParameterInitConst(0.f));
   p_rc2ws.resize(num_clusters);
   p_rcwbiases.resize(num_clusters);
   for (unsigned i = 0; i < num_clusters; ++i) {
@@ -72,7 +73,7 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
       // for singleton clusters, we don't need these parameters, so
       // we don't create them
       p_rc2ws[i] = local_model.add_parameters({num_words_in_cluster, rep_dim});
-      p_rcwbiases[i] = local_model.add_parameters({num_words_in_cluster});
+      p_rcwbiases[i] = local_model.add_parameters({num_words_in_cluster}, ParameterInitConst(0.f));
     }
   }
 }
@@ -91,8 +92,8 @@ void ClassFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg) {
 Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
   // TODO check that new_graph has been called
   int clusteridx = widx2cidx[wordidx];
-  if(clusteridx < 0)
-    DYNET_INVALID_ARG("Word ID " << wordidx << " missing from clusters in ClassFactoredSoftmaxBuilder::neg_log_softmax");
+  DYNET_ARG_CHECK(clusteridx >= 0,
+                          "Word ID " << wordidx << " missing from clusters in ClassFactoredSoftmaxBuilder::neg_log_softmax");
   Expression cscores = affine_transform({cbias, r2c, rep});
   Expression cnlp = pickneglogsoftmax(cscores, clusteridx);
   if (singleton_cluster[clusteridx]) return cnlp;

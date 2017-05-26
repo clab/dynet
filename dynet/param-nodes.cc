@@ -58,6 +58,31 @@ Dim InputNode::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
+int InputNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::input); return sm.get_idx(s);
+}
+std::vector<int> InputNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
+}
+Node* InputNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids) const {
+  size_t my_size = 0;
+  InputNode* sin;
+  for(auto bid : batch_ids) {
+    sin = static_cast<InputNode*>(cg.nodes[bid]);
+    my_size += sin->pdata->size();
+  }
+  vector<float> values(my_size);
+  size_t curr_pos = 0;
+  for(auto bid : batch_ids) {
+    sin = static_cast<InputNode*>(cg.nodes[bid]);
+    memcpy(&values[curr_pos], &(*sin->pdata)[0], sin->pdata->size() * sizeof(float));
+    curr_pos += sin->pdata->size();
+  }
+  DYNET_ASSERT(curr_pos == values.size(), "current position and size of values does not match");
+  return new InputNode(Dim({(unsigned int)my_size}), values);
+}
+
 string SparseInputNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "sparse_constant(" << dim << ')';
@@ -65,8 +90,8 @@ string SparseInputNode::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SparseInputNode::dim_forward(const vector<Dim>& xs) const {
-  if(ids.size() != data.size())
-    DYNET_INVALID_ARG("Mismatch between size of ids (" << ids.size() << ") and size of data (" << data.size() << ") in SparseInput");
+  DYNET_ARG_CHECK(ids.size() == data.size(),
+                          "Mismatch between size of ids (" << ids.size() << ") and size of data (" << data.size() << ") in SparseInput");
   return dim;
 }
 
@@ -83,6 +108,47 @@ string ScalarInputNode::as_string(const vector<string>& arg_names) const {
 Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
   return Dim({1});
 }
+
+int ScalarInputNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::scalar_input); return sm.get_idx(s);
+}
+std::vector<int> ScalarInputNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
+}
+Node* ScalarInputNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                             const std::vector<VariableIndex> & batch_ids) const {
+  vector<float> values(batch_ids.size());
+  ScalarInputNode* sin;
+  for(size_t i = 0; i < batch_ids.size(); ++i) {
+    sin = static_cast<ScalarInputNode*>(cg.nodes[batch_ids[i]]);
+    values[i] = *sin->pdata;
+  }
+  return new InputNode(Dim({1}, batch_ids.size()), values);
+}
+
+int LookupNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::lookup);
+  s.add_dim(dim);
+  return sm.get_idx(s);
+}
+std::vector<int> LookupNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
+}
+Node* LookupNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids) const {
+  vector<unsigned> ids;
+  LookupNode* ln;
+  for(auto batch_id : batch_ids) {
+    ln = static_cast<LookupNode*>(cg.nodes[batch_id]);
+    if(ln->pindex != nullptr)
+      ids.push_back(*ln->pindex);
+    else
+      for(auto word_id : *ln->pindices)
+        ids.push_back(word_id);
+  }
+  return new LookupNode(ln->params, ids);
+}
+
 
 size_t LookupNode::aux_storage_size() const {
   return dim.bd * sizeof(unsigned);
@@ -238,23 +304,23 @@ template<class MyDevice>
 void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   if(pindex) {
-    if(*pindex >= params.get_storage().values.size())
-      DYNET_INVALID_ARG("Out-of-bounds attempt to access index " << *pindex << " for LookupParameter of size " << params.get_storage().values.size());
+    DYNET_ARG_CHECK(*pindex < params.get_storage().values.size(),
+                    "Out-of-bounds attempt to access index " << *pindex << " for LookupParameter of size " << params.get_storage().values.size());
     DYNET_ASSERT(fx.d.batch_elems() == 1, "Batch dimension > 1 for lookup with single index");
     fx.tvec().device(*dev.edevice) = params.get_storage().values[*pindex].tvec() * params.current_weight_decay();
   } else {
     DYNET_ASSERT(pindices, "Have neither index nor index vector in LookupNode");
-    if(fx.d.batch_elems() != pindices->size())
-      DYNET_INVALID_ARG("In LookupNode, in index vector size (" << pindices->size() <<
-                        ") doesn't match batch size in expressions (" << fx.d.batch_elems() << ")");
+    DYNET_ARG_CHECK(fx.d.batch_elems() == pindices->size(),
+                            "In LookupNode, in index vector size (" << pindices->size() << ") "
+                            "doesn't match batch size in expressions (" << fx.d.batch_elems() << ")");
 #if __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync((unsigned*)aux_mem, &(*pindices)[0], fx.d.bd * sizeof(unsigned), cudaMemcpyHostToDevice));
     dynet::gpu::sparse_to_dense_block_assign_and_multiply(fx.d.bd, (unsigned*)aux_mem, fx.d.batch_size(), params.current_weight_decay(), params.get_storage().all_values.v, fx.v);
 #else
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
-      if(i >= params.get_storage().values.size())
-        DYNET_INVALID_ARG("Out-of-bounds attempt to access index " << i << " for LookupParameter of size " << params.get_storage().values.size());
+      DYNET_ARG_CHECK(i < params.get_storage().values.size(),
+                              "Out-of-bounds attempt to access index " << i << " for LookupParameter of size " << params.get_storage().values.size());
       fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get_storage().values[i].t<2>() * params.current_weight_decay();
     }
 #endif

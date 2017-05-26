@@ -87,6 +87,7 @@ BOOST_AUTO_TEST_CASE( init_saxe ) {
     BOOST_CHECK_LT(diff, epsilon);
 }
 
+<<<<<<< HEAD
 BOOST_AUTO_TEST_CASE ( test_parameter_collection ) {
   dynet::ParameterCollection model;
   dynet::Parameter a = model.add_parameters({10});
@@ -150,5 +151,40 @@ BOOST_AUTO_TEST_CASE ( test_parametercollection_with_builder ) {
   auto bi_treelstm_builder = BidirectionalTreeLSTMBuilder(3, 10, 2, collec2);
   DYNET_CHECK_EQUAL(bi_treelstm_builder.get_parameters().size(), 11 * 3 * 2);
 }
+=======
+BOOST_AUTO_TEST_CASE( scale ) {
+    dynet::Model mod;
+    // Create parameter
+    dynet::Parameter w_p = mod.add_parameters({1}, ParameterInitConst(1));
+    // Initial value
+    float init_value= as_scalar(*(w_p.values()));
+    // Rescale
+    w_p.scale(0.3);
+    // Value after rescaling
+    float end_value=as_scalar(*(w_p.values()));
+    // Check with a margin of error
+    BOOST_CHECK_CLOSE(init_value * 0.3, end_value, 0.001);
+}
+
+BOOST_AUTO_TEST_CASE( scale_grad ) {
+    dynet::Model mod;
+    // Create parameter
+    dynet::Parameter w_p = mod.add_parameters({1}, ParameterInitConst(1));
+    // Run forward/backward
+    dynet::ComputationGraph cg;
+    dynet::Expression x = dynet::input(cg,1.f);
+    dynet::Expression w = dynet::parameter(cg, w_p);
+    dynet::Expression y = x * w;
+    cg.forward(y);
+    cg.backward(y);
+    // Rescale gradient
+    w_p.scale_gradient(0.5);
+    // Value after rescaling
+    float rescaled_grad=as_scalar(w_p.get()->g);
+    // Check with a margin of error
+    BOOST_CHECK_CLOSE(0.5, rescaled_grad, 0.001);
+}
+
+>>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
 
 BOOST_AUTO_TEST_SUITE_END()

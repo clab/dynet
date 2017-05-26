@@ -17,6 +17,17 @@ struct Timer {
   std::chrono::high_resolution_clock::time_point start;
 };
 
+struct Timing {
+  Timing() : _start(std::chrono::high_resolution_clock::now()) {}
+  ~Timing() { }
+  double stop() {
+    auto stop = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<double, std::milli>(stop-_start).count();
+  }
+  void start() { _start = std::chrono::high_resolution_clock::now(); }
+  std::chrono::high_resolution_clock::time_point _start;
+};
+
 } // namespace dynet
 
 #endif

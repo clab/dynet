@@ -137,6 +137,30 @@ void SimpleSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx)
 }
 #endif
 
+// --- CyclicalSGDTrainer
+
+// Perform update of ts[0]=parameters, ts[1]=gradients
+template <class MyDevice>
+void CyclicalSGDTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  ts[0]->tvec().device(*dev.edevice) -= ts[1]->tvec() * (eta * scale * gscale / model->get_weight_decay().current_weight_decay());
+}
+DYNET_TRAINER_INST_DEV_IMPL(CyclicalSGDTrainer)
+
+#ifndef __CUDACC__
+void CyclicalSGDTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g});
+}
+void CyclicalSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx]});
+}
+void CyclicalSGDTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_values, &p->all_grads});
+}
+#endif
+
 // --- MomentumSGDTrainer
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=momentum
@@ -230,45 +254,40 @@ void AdadeltaTrainer::alloc_impl() {
 }
 #endif
 
-// --- RmsPropTrainer
+// --- RMSPropTrainer
 // TODO: This is not finished yet, because it memorizes a scalar for each set of parameters, not each parameter itself.
 //       We could implement this with one tensor for each scalar, but this is pretty wasteful
 
 // Perform update of ts[0]=parameters, ts[1]=gradients
 template <class MyDevice>
-void RmsPropTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
-  throw std::runtime_error("RMSProp optimization not implemented yet.");
+void RMSPropTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  ts[1]->tvec().device(*dev.edevice) = ts[1]->tvec() * (scale * gscale); // Scale gradient
+  ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * rho + ts[1]->tvec().square() * (1.f - rho); // Update square gradient exponential average
+  ts[1]->tvec().device(*dev.edevice) = - ts[1]->tvec() / (ts[2]->tvec() + epsilon).sqrt(); // Divide by the RMS
+  ts[0]->tvec().device(*dev.edevice) += eta * ts[1]->tvec() / model->get_weight_decay().current_weight_decay(); // Apply weight decay (should we do this?)
   // real& d2 = hg[pi++];
   // real g2 = p->g.vec().squaredNorm();
   // d2 = rho * d2 + (1.f - rho) * g2;
   // p->values.vec() -= ((eta * scale * gscale / sqrt(d2 + epsilon)) * p->g.vec()) / model->get_weight_decay().current_weight_decay();
 }
-DYNET_TRAINER_INST_DEV_IMPL(RmsPropTrainer)
+DYNET_TRAINER_INST_DEV_IMPL(RMSPropTrainer)
 
 #ifndef __CUDACC__
-void RmsPropTrainer::update_params(real scale, real gscale, size_t idx) {
-  throw std::runtime_error("RMSProp optimization not implemented yet.");
-  // auto & p = model->parameters_list()[idx];
-  // update_rule(scale, gscale, {&p->values, &p->g, &hg[idx].h, &hd[idx].h});
+void RMSPropTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g, &hmsg[idx].h});
 }
-void RmsPropTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
-  throw std::runtime_error("RMSProp optimization not implemented yet.");
-  // auto & p = model->lookup_parameters_list()[idx];
-  // update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlg[idx].h[lidx], &hld[idx].h[lidx]});
+void RMSPropTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlmsg[idx].h[lidx]});
 }
-void RmsPropTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
-  throw std::runtime_error("RMSProp optimization not implemented yet.");
-  // auto & p = model->lookup_parameters_list()[idx];
-  // update_rule(scale, gscale, {&p->all_values, &p->all_grads, &hlg[idx].all_h, &hld[idx].all_h});
+void RMSPropTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_values, &p->all_grads, &hlmsg[idx].all_h});
 }
-void RmsPropTrainer::alloc_impl() {
-  throw std::runtime_error("RMSProp optimization not implemented yet.");
-  // hg.resize(model->parameters_list().size());
-  // unsigned pi = 0;
-  // hlg.resize(model->lookup_parameters_list().size());
-  // for (auto p : model->lookup_parameters_list()) {
-  //   hlg[pi++].resize(p->size());
-  // }
+void RMSPropTrainer::alloc_impl() {
+  hmsg = allocate_shadow_parameters(*model);
+  hlmsg = allocate_shadow_lookup_parameters(*model);
 }
 #endif
 

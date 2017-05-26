@@ -2,7 +2,7 @@
  * \file rnn.h
  * \defgroup rnnbuilders rnnbuilders
  * \brief Helper structures to build recurrent units
- * 
+ *
  * \details TODO: Create documentation and explain rnns, etc...
  */
 
@@ -31,39 +31,40 @@ inline void swap(RNNPointer& i1, RNNPointer& i2) {
  */
 struct RNNBuilder {
   /**
-   * 
+   *
    * \brief Default constructor
    */
   RNNBuilder() : cur(-1) {}
   virtual ~RNNBuilder();
 
   /**
-   * 
+   *
    * \brief Get pointer to the current state
-   * 
+   *
    * \return Pointer to the current state
    */
   RNNPointer state() const { return cur; }
 
   /**
-   * 
+   *
    * \brief Initialize with new computation graph
    * \details call this to reset the builder when you are working with a newly
    * created ComputationGraph object
-   * 
+   *
    * \param cg Computation graph
+   * \param update Update internal parameters while training
    */
-  void new_graph(ComputationGraph& cg) {
+   void new_graph(ComputationGraph& cg, bool update = true) {
     sm.transition(RNNOp::new_graph);
-    new_graph_impl(cg);
+    new_graph_impl(cg, update);
   }
 
   /**
-   * 
+   *
    * \brief Reset for new sequence
    * \details call this before add_input and after new_graph,
    * when starting a new sequence on the same hypergraph.
-   * 
+   *
    * \param h_0 `h_0` is used to initialize hidden layers at timestep 0 to given values
    */
   void start_new_sequence(const std::vector<Expression>& h_0 = {}) {
@@ -73,14 +74,14 @@ struct RNNBuilder {
     start_new_sequence_impl(h_0);
   }
 
-  // 
+  //
   /**
-   * 
+   *
    * \brief Explicitly set the output state of a node
-   * 
+   *
    * \param prev Pointer to the previous state
    * \param h_new The new hidden state
-   * 
+   *
    * \return The hidden representation of the deepest layer
    */
   Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new = {}) {
@@ -90,17 +91,17 @@ struct RNNBuilder {
     return set_h_impl(prev, h_new);
   }
 
-  // 
+  //
   /**
-   * 
+   *
    * \brief Set the internal state of a node (for lstms/grus)
-   * \details For RNNs without internal states (SimpleRNN, GRU...), 
-   * this has the same behaviour as `set_h` 
-   * 
+   * \details For RNNs without internal states (SimpleRNN, GRU...),
+   * this has the same behaviour as `set_h`
+   *
    * \param prev Pointer to the previous state
    * \param s_new The new state. Can be `{new_c[0],...,new_c[n]}`
    *  or `{new_c[0],...,new_c[n], new_h[0],...,new_h[n]}`
-   * 
+   *
    * \return The hidden representation of the deepest layer
    */
   Expression set_s(const RNNPointer& prev, const std::vector<Expression>& s_new = {}) {
@@ -111,11 +112,11 @@ struct RNNBuilder {
   }
 
   /**
-   * 
+   *
    * \brief Add another timestep by reading in the variable x
-   * 
+   *
    * \param x Input variable
-   * 
+   *
    * \return The hidden representation of the deepest layer
    */
   Expression add_input(const Expression& x) {
@@ -127,15 +128,15 @@ struct RNNBuilder {
   }
 
    /**
-    * 
+    *
    * \brief Add another timestep, with arbitrary recurrent connection.
    * \details This allows you to define a recurrent connection to `prev`
    * rather than to `head[cur]`.
    * This can be used to construct trees, implement beam search, etc.
-   * 
+   *
    * \param prev Pointer to the previous state
    * \param x Input variable
-   * 
+   *
    * \return The hidden representation of the deepest layer
    */
   Expression add_input(const RNNPointer& prev, const Expression& x) {
@@ -146,7 +147,7 @@ struct RNNBuilder {
   }
 
   /**
-   * 
+   *
    * \brief Rewind the last timestep
    * \details - this DOES NOT remove the variables from the computation graph,
    * it just means the next time step will see a different previous state.
@@ -157,7 +158,7 @@ struct RNNBuilder {
   }
 
   /**
-   * 
+   *
    * \brief Return the RNN state that is the parent of `p`
    * \details - This can be used in implementing complex structures
    * such as trees, etc.
@@ -167,83 +168,83 @@ struct RNNBuilder {
   }
 
   /**
-   * 
+   *
    * \brief Set Dropout
-   * 
+   *
    * \param d Dropout rate
    */
   void set_dropout(float d) { dropout_rate = d; }
   /**
-   * 
+   *
    * \brief Disable Dropout
    * \details In general, you should disable dropout at test time
    */
   void disable_dropout() { dropout_rate = 0; }
 
   /**
-   * 
+   *
    * \brief Returns node (index) of most recent output
-   * 
+   *
    * \return Node (index) of most recent output
    */
   virtual Expression back() const = 0;
   /**
-   * 
+   *
    * \brief Access the final output of each hidden layer
-   * 
+   *
    * \return Final output of each hidden layer
    */
   virtual std::vector<Expression> final_h() const = 0;
   /**
-   * 
+   *
    * \brief Access the output of any hidden layer
-   * 
+   *
    * \param i Pointer to the step which output you want to access
-   * 
+   *
    * \return Output of each hidden layer at the given step
    */
   virtual std::vector<Expression> get_h(RNNPointer i) const = 0;
 
   /**
-   * 
+   *
    * \brief Access the final state of each hidden layer
-   * \details This returns the state of each hidden layer, 
+   * \details This returns the state of each hidden layer,
    * in a format that can be used in start_new_sequence
    * (i.e. including any internal cell for LSTMs and the likes)
-   * 
-   * \return vector containing, if it exists, the list of final 
-   * internal states, followed by the list of final outputs for 
+   *
+   * \return vector containing, if it exists, the list of final
+   * internal states, followed by the list of final outputs for
    * each layer
    */
   virtual std::vector<Expression> final_s() const = 0;
   /**
-   * 
+   *
    * \brief Access the state of any hidden layer
    * \details See `final_s` for details
-   * 
+   *
    * \param i Pointer to the step which state you want to access
-   * 
+   *
    * \return Internal state of each hidden layer at the given step
    */
   virtual std::vector<Expression> get_s(RNNPointer i) const = 0;
 
   /**
-   * 
+   *
    * \brief Number of components in `h_0`
-   * 
+   *
    * \return Number of components in `h_0`
    */
   virtual unsigned num_h0_components() const  = 0;
   /**
-   * 
+   *
    * \brief Copy the parameters of another builder.
-   * 
+   *
    * \param params RNNBuilder you want to copy parameters from.
    */
   virtual void copy(const RNNBuilder & params) = 0;
 
 protected:
-  virtual void new_graph_impl(ComputationGraph& cg) = 0;
+  virtual void new_graph_impl(ComputationGraph& cg, bool update) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) = 0;
   virtual Expression set_h_impl(int prev, const std::vector<Expression>& h_new) = 0;
@@ -261,14 +262,14 @@ private:
  * \brief This provides a builder for the simplest RNN with tanh nonlinearity
  * \details The equation for this RNN is :
  * \f$h_t=\tanh(W_x x_t + W_h h_{t-1} + b)\f$
- * 
+ *
  */
 struct SimpleRNNBuilder : public RNNBuilder {
   SimpleRNNBuilder() = default;
   /**
-   * 
+   *
    * \brief Builds a simple RNN
-   * 
+   *
    * \param layers Number of layers
    * \param input_dim Dimension of the input
    * \param hidden_dim Hidden layer (and output) size
@@ -282,7 +283,7 @@ struct SimpleRNNBuilder : public RNNBuilder {
                             bool support_lags = false);
 
 protected:
-  void new_graph_impl(ComputationGraph& cg) override;
+  void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h_0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
@@ -290,15 +291,15 @@ protected:
 
 public:
   /**
-   * 
+   *
    * \brief Add auxiliary output
    * \details Returns \f$h_t=\tanh(W_x x_t + W_h h_{t-1} + W_y y + b)\f$
    * where \f$y\f$ is an auxiliary output
    * TODO : clarify
-   * 
+   *
    * \param x Input expression
    * \param aux Auxiliary output expression
-   * 
+   *
    * \return The hidden representation of the deepest layer
    */
   Expression add_auxiliary_input(const Expression& x, const Expression &aux);
@@ -317,11 +318,14 @@ public:
 
 private:
   ParameterCollection local_model;
+
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameter>> params;
 
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Expression>> param_vars;
+
+private:
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
@@ -332,6 +336,7 @@ private:
 
   unsigned layers;
   bool lagging;
+
 };
 
 } // namespace dynet

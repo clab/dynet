@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "dynet/param-init.h"
+
 using namespace std;
 
 namespace dynet {
@@ -54,11 +56,11 @@ void Cluster::initialize(ParameterCollection& model) {
   }
   else if (output_size == 2) {
     p_weights = model.add_parameters({1, rep_dim});
-    p_bias = model.add_parameters({1});
+    p_bias = model.add_parameters({1}, ParameterInitConst(0.f));
   }
   else {
     p_weights = model.add_parameters({output_size, rep_dim});
-    p_bias = model.add_parameters({output_size});
+    p_bias = model.add_parameters({output_size}, ParameterInitConst(0.f));
   }
 
   for (Cluster* child : children) {

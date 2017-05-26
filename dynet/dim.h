@@ -129,7 +129,11 @@ struct Dim {
    *
    * \param int New number of dimensions
    */
-  inline void resize(unsigned int i) { nd = i; }
+  inline void resize(unsigned int i) {
+    while(nd < i)
+      d[nd++] = 1;
+    nd = i;
+  }
   /**
    * \brief Get number of dimensions
    * \return Number of dimensions
@@ -140,6 +144,17 @@ struct Dim {
    * \return Size of the first dimension
    */
   inline unsigned int rows() const { return d[0]; }
+  /**
+   * \brief Number of non-one dimensions
+   * \return Number of non-one dimensions
+   */
+  inline unsigned int num_nonone_dims() const {
+    int ret = 0;
+    for(size_t i = 0; i < nd; ++i)
+      if(d[i] != 1)
+        ++ret;
+    return ret;
+  }
   /**
    * \brief Size of the second dimension (or 1 if only one dimension)
    * \return Size of the second dimension (or 1 if only one dimension)
@@ -158,10 +173,8 @@ struct Dim {
    * \param s Dimension size
    */
   inline void set(unsigned int i, unsigned int s) {
-    if(i >= nd)
-      DYNET_INVALID_ARG("Out of bounds exception in Dim::set("<<i<<","<<s<<") for node of size " << d);
-    if(s == 0)
-      DYNET_INVALID_ARG("Attempt to set dimension size to zero in Dim::set("<<i<<","<<s<<") for node of size " << d);
+    DYNET_ARG_CHECK(i < nd || s == 1, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << d);
+    DYNET_ARG_CHECK(s != 0, "Attempt to set dimension size to zero in Dim::set(" << i << "," << s << ") for node of size " << d);
     d[i] = s;
   }
   /**
@@ -183,8 +196,57 @@ struct Dim {
    * \param i index of the dimension to be removed
    */
   inline void delete_dim(unsigned int i) {
-    if(i >= nd)
-      DYNET_INVALID_ARG("Out of bounds exception in Dim::delete_dim("<<i<<") for node of size " << d);
+    DYNET_ARG_CHECK(i < nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d );
+    if(i == nd-1){
+      if(nd == 1){
+        d[0] = 1;
+      }
+      else{
+        --nd;
+      }
+    }
+    else{
+      for(; i + 1 < nd; ++i){
+        d[i] = d[i + 1];
+      }
+      --nd;
+    }
+  }
+  /**
+   * \brief Remove multi-dimensions
+   * \param dims dimensions to be removed
+   * \param reduce_batch reduce the batch dimension or not
+   */
+  inline void delete_dims(std::vector<unsigned int> dims, bool reduce_batch){
+    std::vector<bool> deleted_dims(nd, false);
+
+    for(unsigned int i = 0; i < dims.size(); i++) {
+      DYNET_ARG_CHECK(dims[i] < nd, "Out of bounds exception in Dim::delete_dims");
+      deleted_dims[dims[i]] = true;
+    }
+
+    if(dims.size() == nd) {
+        nd = 1;
+        d[0] = 1;
+    } else {
+      int flag = 0;
+      for(unsigned int i = 0; i < nd; i++) {
+        if(!deleted_dims[i])
+          d[flag++] = d[i];
+      }
+      nd = flag;
+    }
+
+    if(reduce_batch)
+      bd = 1;
+  }
+  /**
+   * \brief Insert a dimension
+   * \param i the index before which to insert the new dimension
+   * \param n the size of the new dimension
+   */
+  inline void insert_dim(unsigned int i, unsigned int n) {
+    DYNET_ARG_CHECK(i <= nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d);
     if (nd == 1) {
       d[0] = 1;
     } else {
@@ -200,9 +262,15 @@ struct Dim {
   */
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
-    else if (nd == 2) { return Dim({d[1], d[0]}, bd); }
-    DYNET_INVALID_ARG("Cannot transpose Dim object with more than 2 dimensions");
+    else {
+      DYNET_ARG_CHECK(nd == 2, "Cannot transpose Dim object with more than 2 dimensions, but got " << d);
+      return Dim({d[1], d[0]}, bd);
+    }
   }
+  /**
+  * \brief Print the unbatched profile as a string
+  **/
+  void print_profile(std::ostream & out) const;
 
   unsigned int d[DYNET_MAX_TENSOR_DIM]; /**< Array of dimension */
   unsigned int nd; /**< Number of dimensions */

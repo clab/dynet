@@ -1,4 +1,5 @@
 #include "dynet/lstm.h"
+#include "dynet/param-init.h"
 
 #include <fstream>
 #include <string>
@@ -25,18 +26,19 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
     Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2i = local_model.add_parameters({hidden_dim, hidden_dim});
     Parameter p_c2i = local_model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = local_model.add_parameters({hidden_dim});
+    Parameter p_bi = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // o
     Parameter p_x2o = local_model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2o = local_model.add_parameters({hidden_dim, hidden_dim});
     Parameter p_c2o = local_model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bo = local_model.add_parameters({hidden_dim});
+    Parameter p_bo = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // c
     Parameter p_x2c = local_model.add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2c = local_model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bc = local_model.add_parameters({hidden_dim});
+    Parameter p_bc = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
@@ -47,26 +49,26 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
   dropout_rate_c = 0.f;
 }
 
-void LSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void LSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
 
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
 
     //i
-    Expression i_x2i = parameter(cg, p[X2I]);
-    Expression i_h2i = parameter(cg, p[H2I]);
-    Expression i_c2i = parameter(cg, p[C2I]);
-    Expression i_bi = parameter(cg, p[BI]);
+    Expression i_x2i = update ? parameter(cg, p[X2I]) : const_parameter(cg, p[X2I]);
+    Expression i_h2i = update ? parameter(cg, p[H2I]) : const_parameter(cg, p[H2I]);
+    Expression i_c2i = update ? parameter(cg, p[C2I]) : const_parameter(cg, p[C2I]);
+    Expression i_bi = update ? parameter(cg, p[BI]) : const_parameter(cg, p[BI]);
     //o
-    Expression i_x2o = parameter(cg, p[X2O]);
-    Expression i_h2o = parameter(cg, p[H2O]);
-    Expression i_c2o = parameter(cg, p[C2O]);
-    Expression i_bo = parameter(cg, p[BO]);
+    Expression i_x2o = update ? parameter(cg, p[X2O]) : const_parameter(cg, p[X2O]);
+    Expression i_h2o = update ? parameter(cg, p[H2O]) : const_parameter(cg, p[H2O]);
+    Expression i_c2o = update ? parameter(cg, p[C2O]) : const_parameter(cg, p[C2O]);
+    Expression i_bo = update ? parameter(cg, p[BO]) : const_parameter(cg, p[BO]);
     //c
-    Expression i_x2c = parameter(cg, p[X2C]);
-    Expression i_h2c = parameter(cg, p[H2C]);
-    Expression i_bc = parameter(cg, p[BC]);
+    Expression i_x2c = update ? parameter(cg, p[X2C]) : const_parameter(cg, p[X2C]);
+    Expression i_h2c = update ? parameter(cg, p[H2C]) : const_parameter(cg, p[H2C]);
+    Expression i_bc = update ? parameter(cg, p[BC]) : const_parameter(cg, p[BC]);
 
     vector<Expression> vars = {i_x2i, i_h2i, i_c2i, i_bi, i_x2o, i_h2o, i_c2o, i_bo, i_x2c, i_h2c, i_bc};
     param_vars.push_back(vars);
@@ -94,8 +96,10 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    if(layers * 2 != hinit.size())
-      DYNET_INVALID_ARG("LSTMBuilder must be initialized with 2 times as many expressions as layers (hidden state and cell for each layer). However, for " << layers << " layers, " << hinit.size() << " expressions were passed in");
+    DYNET_ARG_CHECK(layers * 2 == hinit.size(),
+                            "LSTMBuilder must be initialized with 2 times as many expressions as layers "
+                            "(hidden state and cell for each layer). However, for " << layers << " layers, "
+                            << hinit.size() << " expressions were passed in");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
@@ -140,9 +144,8 @@ ParameterCollection & LSTMBuilder::get_parameters() { return local_model; }
 // Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
 Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size() && h_new.size() != layers)
-    DYNET_INVALID_ARG("LSTMBuilder::set_h expects as many inputs as layers, but got " <<
-                      h_new.size() << " inputs for " << layers << " layers");
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "LSTMBuilder::set_h expects as many inputs as layers, but got " << h_new.size() << " inputs for " << layers << " layers");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
@@ -157,9 +160,8 @@ Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
-  if (s_new.size() == layers || s_new.size() == 2 * layers)
-    DYNET_INVALID_ARG("LSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " <<
-                      s_new.size() << " inputs for " << layers << " layers");
+  DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
+                          "LSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
   const unsigned t = c.size();
   h.push_back(vector<Expression>(layers));
@@ -255,24 +257,25 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
 void LSTMBuilder::copy(const RNNBuilder & rnn) {
   const LSTMBuilder & rnn_lstm = (const LSTMBuilder&)rnn;
-  if(params.size() != rnn_lstm.params.size())
-    DYNET_INVALID_ARG("Attempt to copy LSTMBuilder with different number of parameters (" << params.size() << " != " << rnn_lstm.params.size() << ")")
+  DYNET_ARG_CHECK(params.size() == rnn_lstm.params.size(),
+                          "Attempt to copy LSTMBuilder with different number of parameters "
+                          "(" << params.size() << " != " << rnn_lstm.params.size() << ")");
   for (size_t i = 0; i < params.size(); ++i)
     for (size_t j = 0; j < params[i].size(); ++j)
       params[i][j] = rnn_lstm.params[i][j];
 }
 
 void LSTMBuilder::set_dropout(float d) {
-  if (d < 0.f || d > 1.f)
-    DYNET_INVALID_ARG("dropout rate must be a probability (>=0 and <=1)");
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d;
   dropout_rate_c = d;
 }
 
 void LSTMBuilder::set_dropout(float d, float d_h, float d_c) {
-  if (d < 0.f || d > 1.f || d_h < 0.f || d_h > 1.f || d_c < 0.f || d_c > 1.f)
-    DYNET_INVALID_ARG("dropout rate must be a probability (>=0 and <=1)");
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f && d_c >= 0.f && d_c <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d_h;
   dropout_rate_c = d_c;
@@ -288,13 +291,15 @@ void LSTMBuilder::disable_dropout() {
 
 //enum { _X2I, _H2I, _C2I, _BI, _X2F, _H2F, _C2F, _BF, _X2O, _H2O, _C2O, _BO, _X2G, _H2G, _C2G, _BG };
 enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
+enum { LN_GH, LN_BH, LN_GX, LN_BX, LN_GC, LN_BC};
 
-VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0) { }
+VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false) { }
 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned input_dim,
                                        unsigned hidden_dim,
-                                       ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
+                                       ParameterCollection& model,
+                                       bool ln_lstm) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm) {
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("--vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -302,25 +307,42 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
     Parameter p_x2i = local_model.add_parameters({hidden_dim * 4, layer_input_dim});
     Parameter p_h2i = local_model.add_parameters({hidden_dim * 4, hidden_dim});
     //Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = local_model.add_parameters({hidden_dim * 4});
+    Parameter p_bi = local_model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_h2i, /*p_c2i,*/ p_bi};
     params.push_back(ps);
+
+    if (ln_lstm){
+      Parameter p_gh = model.add_parameters({hidden_dim * 4}, ParameterInitConst(1.f));
+      Parameter p_bh = model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
+      Parameter p_gx = model.add_parameters({hidden_dim * 4}, ParameterInitConst(1.f));
+      Parameter p_bx = model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
+      Parameter p_gc = model.add_parameters({hidden_dim}, ParameterInitConst(1.f));
+      Parameter p_bc = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+      vector<Parameter> ln_ps = {p_gh, p_bh, p_gx, p_bx, p_gc, p_bc};
+      ln_params.push_back(ln_ps);
+    }
   }  // layers
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
 }
 
-void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
-
+  if (ln_lstm)ln_param_vars.clear();
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
     vector<Expression> vars;
-    for (unsigned j = 0; j < p.size(); ++j) { vars.push_back(parameter(cg, p[j])); }
+    for (unsigned j = 0; j < p.size(); ++j) { vars.push_back(update ? parameter(cg, p[j]) : const_parameter(cg, p[j])); }
     param_vars.push_back(vars);
+    if (ln_lstm){
+      auto& ln_p = ln_params[i];
+      vector<Expression> ln_vars;
+      for (unsigned j = 0; j < ln_p.size(); ++j) { ln_vars.push_back(update ? parameter(cg, ln_p[j]) : const_parameter(cg, ln_p[j])); }
+      ln_param_vars.push_back(ln_vars);
+    }
   }
 
   _cg = &cg;
@@ -332,8 +354,10 @@ void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit
   c.clear();
 
   if (hinit.size() > 0) {
-    if(layers * 2 != hinit.size())
-      DYNET_INVALID_ARG("VanillaLSTMBuilder must be initialized with 2 times as many expressions as layers (hidden state, and cell for each layer). However, for " << layers << " layers, " << hinit.size() << " expressions were passed in");
+    DYNET_ARG_CHECK(layers * 2 == hinit.size(),
+                            "VanillaLSTMBuilder must be initialized with 2 times as many expressions as layers "
+                            "(hidden state, and cell for each layer). However, for " << layers << " layers, " <<
+                            hinit.size() << " expressions were passed in");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
@@ -377,9 +401,9 @@ ParameterCollection & VanillaLSTMBuilder::get_parameters() {
 // Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
 Expression VanillaLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  if (h_new.size() && h_new.size() != layers)
-    DYNET_INVALID_ARG("VanillaLSTMBuilder::set_h expects as many inputs as layers, but got " <<
-                      h_new.size() << " inputs for " << layers << " layers");
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "VanillaLSTMBuilder::set_h expects as many inputs as layers, but got " <<
+                          h_new.size() << " inputs for " << layers << " layers");
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
@@ -394,9 +418,8 @@ Expression VanillaLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression VanillaLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
-  if (s_new.size() == layers || s_new.size() == 2 * layers)
-    DYNET_INVALID_ARG("LSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " <<
-                      s_new.size() << " inputs for " << layers << " layers");
+  DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
+                          "VanillaLSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
   const unsigned t = c.size();
   h.push_back(vector<Expression>(layers));
@@ -418,6 +441,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   Expression in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
+    const vector<Expression>& ln_vars = ln_param_vars[i];
     Expression i_h_tm1, i_c_tm1;
     bool has_prev_state = (prev >= 0 || has_initial_state);
     if (prev < 0) {
@@ -444,44 +468,59 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_aft;
     Expression i_aot;
     Expression i_agt;
-    if (has_prev_state)
-      tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
-    else
-      tmp = affine_transform({vars[_BI], vars[_X2I], in});
-    i_ait = pickrange(tmp, 0, hid);
-    i_aft = pickrange(tmp, hid, hid * 2);
-    i_aot = pickrange(tmp, hid * 2, hid * 3);
-    i_agt = pickrange(tmp, hid * 3, hid * 4);
+    if (ln_lstm){
+      if (has_prev_state)
+        tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
+      else
+        tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]);
+    }else{
+      if (has_prev_state)
+        tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
+      else
+        tmp = affine_transform({vars[_BI], vars[_X2I], in});
+    }
+    i_ait = pick_range(tmp, 0, hid);
+    i_aft = pick_range(tmp, hid, hid * 2);
+    i_aot = pick_range(tmp, hid * 2, hid * 3);
+    i_agt = pick_range(tmp, hid * 3, hid * 4);
     Expression i_it = logistic(i_ait);
-    Expression i_ft = logistic(i_aft);
+    // TODO(odashi): Should the forget bias be a hyperparameter?
+    Expression i_ft = logistic(i_aft + 1.f);
     Expression i_ot = logistic(i_aot);
     Expression i_gt = tanh(i_agt);
 
     ct[i] = has_prev_state ? (cmult(i_ft, i_c_tm1) + cmult(i_it, i_gt)) :  cmult(i_it, i_gt);
-    in = ht[i] = cmult(i_ot, tanh(ct[i]));
+    if (ln_lstm)
+      in = ht[i] = cmult(i_ot, tanh(layer_norm(ct[i],ln_vars[LN_GC],ln_vars[LN_BC])));
+    else
+      in = ht[i] = cmult(i_ot, tanh(ct[i]));
   }
   return ht.back();
 }
 
 void VanillaLSTMBuilder::copy(const RNNBuilder & rnn) {
-  const LSTMBuilder & rnn_lstm = (const LSTMBuilder&)rnn;
-  if(params.size() != rnn_lstm.params.size())
-    DYNET_INVALID_ARG("Attempt to copy LSTMBuilder with different number of parameters (" << params.size() << " != " << rnn_lstm.params.size() << ")")
+  const VanillaLSTMBuilder & rnn_lstm = (const VanillaLSTMBuilder&)rnn;
+  DYNET_ARG_CHECK(params.size() == rnn_lstm.params.size(),
+                          "Attempt to copy VanillaLSTMBuilder with different number of parameters "
+                          "(" << params.size() << " != " << rnn_lstm.params.size() << ")");
   for (size_t i = 0; i < params.size(); ++i)
     for (size_t j = 0; j < params[i].size(); ++j)
       params[i][j] = rnn_lstm.params[i][j];
+  for (size_t i = 0; i < ln_params.size(); ++i)
+    for (size_t j = 0; j < ln_params[i].size(); ++j)
+      ln_params[i][j] = rnn_lstm.ln_params[i][j];
 }
 
 void VanillaLSTMBuilder::set_dropout(float d) {
-  if (d < 0.f || d > 1.f)
-    DYNET_INVALID_ARG("dropout rate must be a probability (>=0 and <=1)");
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d;
 }
 
 void VanillaLSTMBuilder::set_dropout(float d, float d_h) {
-  if (d < 0.f || d > 1.f || d_h < 0.f || d_h > 1.f)
-    DYNET_INVALID_ARG("dropout rate must be a probability (>=0 and <=1)");
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d_h;
 }
@@ -492,4 +531,3 @@ void VanillaLSTMBuilder::disable_dropout() {
 }
 
 } // namespace dynet
-

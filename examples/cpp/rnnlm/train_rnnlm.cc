@@ -228,8 +228,8 @@ int main(int argc, char** argv) {
   if (has_model_to_load) {
     string fname = conf["model"].as<string>();
     cerr << "Reading parameters from " << fname << "...\n";
-    TextFileLoader loader(fname);
-    loader.save(model, "model");
+    TextFileSaver saver(fname);
+    saver.save(model, "model");
   }
 
   bool LEARN = conf.count("learn");

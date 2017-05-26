@@ -17,6 +17,7 @@
 #include "dynet/tensor.h"
 #include "dynet/model.h"
 #include "dynet/devices.h"
+#include "dynet/sig.h"
 
 
 namespace dynet {
@@ -79,6 +80,7 @@ struct ComputationGraph {
    * \brief Default constructor
    */
   ComputationGraph();
+  ComputationGraph(bool batched);
   ~ComputationGraph();
 
   // INPUTS
@@ -264,7 +266,11 @@ struct ComputationGraph {
   template <class Function, typename... Args>
   inline VariableIndex add_function(const std::initializer_list<VariableIndex>& arguments,
                                     Args&&... side_information);
-  template <class Function, typename T> inline VariableIndex add_function(const T& arguments);
+  template <class Function, typename T>
+  inline VariableIndex add_function(const T& arguments);
+  template <class Function, typename T, typename... Args>
+  inline VariableIndex add_function(const T& arguments,
+                                    Args&&... side_information);
 
   // reset ComputationGraph to a newly created state
   /**
@@ -339,22 +345,63 @@ struct ComputationGraph {
    * \return Requested value
    */
   const Tensor& get_value(const expr::Expression& e);
+
+  /**
+   * \brief Get gradient for node at index i.
+   * \details Performs backward pass if not available (may compute more than strictly what is needed).
+   *
+   * \param i Index of the variable from which you want the gradient
+   * \return Requested gradient
+   */
+  const Tensor& get_gradient(VariableIndex i);
+  /**
+   * \brief Get forward gradient for the given expression
+   * \details Performs backward pass if not available (may compute more than strictly what is needed).
+   *
+   * \param e Expression from which you want the gradient
+   * \return Requested gradient
+   */
+  const Tensor& get_gradient(const expr::Expression& e);
   /**
    * \brief Clears forward caches (for get_value etc).
    */
   void invalidate();
   /**
    * \brief Computes backward gradients from the front-most evaluated node.
+   * 
+   * \details The parameter `full` specifies whether the gradients should be computed for all nodes (`true`) or only non-constant nodes.
+   * 
+   * By default, a node is constant unless
+   * 
+   * 1. it is a parameter node
+   * 2. it depends on a non-constant node
+   * 
+   * Thus, functions of constants and inputs are considered as constants.
+   * 
+   * Turn `full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    *
    * \param last Expression from which to compute the gradient
+   * \param full Whether to compute all gradients (including with respect to constant nodes). 
    */
-  void backward(const expr::Expression& last);
+  void backward(const expr::Expression& last, bool full = false);
   /**
    * \brief Computes backward gradients from node i (assuming it already been evaluated).
+   * 
+   * \details The parameter `full` specifies whether the gradients should be computed for all nodes (`true`) or only non-constant nodes.
+   * 
+   * By default, a node is constant unless
+   * 
+   * 1. it is a parameter node
+   * 2. it depends on a non-constant node
+   * 
+   * Thus, functions of constants and inputs are considered as constants.
+   * 
+   * Turn `full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    *
    * \param i Index of the node from which to compute the gradient
+   * \param full Whether to compute all gradients (including with respect to constant nodes). Turn this on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    */
-  void backward(VariableIndex i);
+  void backward(VariableIndex i, bool full = false);
   // set immediate_compute variable
   void set_immediate_compute(bool ic);
   // set check_validity variable
@@ -422,6 +469,11 @@ struct Node {
    * \return String description of the node
    */
   virtual std::string as_string(const std::vector<std::string>& args) const = 0;
+  virtual std::string as_dummy_string() const {
+    std::vector<std::string> a;
+    a.resize(args.size(), "a");
+    return as_string(a);
+  }
 
   // in general, this will return an empty size, but if a component needs to store
   // extra information in the forward pass for use in the backward pass, it can
@@ -510,12 +562,70 @@ struct Node {
                         unsigned i,
                         Tensor& dEdxi) const final;
 
+  /**
+   * \brief signature for automatic batching
+   * \detail This will be equal only for nodes that can be combined. Returns
+   *         0 for unbatchable functions.
+   */
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const { return 0; }
+  /**
+   * \brief which inputs can be batched
+   * \detail This will be true for inputs that should be concatenated when
+   *         autobatching, and false for inputs that should be shared among
+   *         all batches.
+   */
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const { return std::vector<int>(); }
+  /**
+   * \brief create a pseudonode for autobatching
+   * \detail This will combine together multiple nodes into one big node for 
+   *         the automatic batching functionality. When a node representing
+   *         one component of the mini-batch can be used as-is it is OK to just
+   *         return the null pointer, otherwise we should make the appropriate
+   *         changes and return a new node.
+   *         
+   */
+  virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
+                                      const std::vector<VariableIndex> & batch_ids) const {
+    return nullptr;
+  }
+  /**
+   * \brief reshape the tensors for auto
+   * \detail Takes in info, and reshapes the dimensions of xs (for which
+   *         "concat" is true), and fx. By default do no reshaping, which
+   *         is OK for componentwise operations.
+   *
+   */
+  virtual void autobatch_reshape(const ComputationGraph & cg,
+                                 const std::vector<VariableIndex> & batch_ids,
+                                 const std::vector<int> & concat,
+                                 std::vector<const Tensor*>& xs,
+                                 Tensor& fx) const { }
+  /**
+   * \brief reshape the tensors for auto
+   * \detail Takes in info, and reshapes the dimensions of xs (for which
+   *         "concat" is true) and fx by concatenating their batches.
+   *
+   */
+  void autobatch_reshape_concatonly(const ComputationGraph & cg,
+                                    const std::vector<VariableIndex> & batch_ids,
+                                    const std::vector<int> & concat,
+                                    std::vector<const Tensor*>& xs,
+                                    Tensor& fx) const;
+
+
   //
   /**
    * \brief Number of arguments to the function
    * \return Arity of the function
    */
   inline unsigned arity() const { return args.size(); }
+
+  inline void set_cg(ComputationGraph* cg) { cg_ = cg; }
+
+  inline ComputationGraph* get_cg() const {
+    if (cg_) return cg_;
+    else return NULL;
+  }
 
   std::vector<VariableIndex> args;/**< Dependency structure */
 
@@ -529,6 +639,9 @@ protected:
   explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
   template <typename T>
   explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
+
+private:
+  ComputationGraph* cg_;  // pointer to the computation graph
 
 public:
   // auxiliary memory
@@ -557,6 +670,16 @@ template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments));
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
+// pass side information to the function. these are likely to be nondifferentiable arguments
+template <class Function, typename T, typename... Args>
+inline VariableIndex ComputationGraph::add_function(const T& arguments,
+    Args&&... side_information) {
+  VariableIndex new_node_index(nodes.size());
+  nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
