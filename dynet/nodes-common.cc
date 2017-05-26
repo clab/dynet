@@ -880,6 +880,7 @@ int MatrixMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const
   if(dim.bd == 1) {
     Sig s(nt::matmul);
     s.add_node(args[0]);
+    s.add_dim(cg.nodes[args[1]]->dim);
     return sm.get_idx(s);
   } else {
     return 0; // TODO handle the batched case as well? should it differ at all?
