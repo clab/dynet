@@ -91,11 +91,11 @@ class dynet_build(_build):
 
         self.script_dir = script_dir
         self.build_dir = build_dir
-        self.cmake_path = find_executable("cmake")
-        self.make_path = find_executable("make")
+        self.cmake_path = os.environ.get("CMAKE") or find_executable("cmake")
+        self.make_path = os.environ.get("MAKE") or find_executable("make")
         self.hg_path = find_executable("hg")
-        self.cxx_path = find_executable("g++-4.9") or find_executable("g++-4.8") or find_executable("g++")
-        self.cc_path = find_executable("gcc-4.9") or find_executable("gcc-4.8") or find_executable("gcc")
+        self.cxx_path = os.environ.get("CXX") or find_executable("g++")
+        self.cc_path = os.environ.get("CC") or find_executable("gcc")
         self.site_packages_dir = get_python_lib(1, 0, prefix=build_dir)
         self.py_executable = py_executable
         self.py_version = py_version
