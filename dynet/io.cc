@@ -56,28 +56,37 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
   Dim dim;
   vector<float> values;
   Tensor *value_t, *grad_t;
+  size_t param_id = 0, lookup_id = 0;
+  ParameterCollectionStorage & storage = model.get_storage();
   while(getline(datastream, line)) {
     { istringstream iss(line); iss >> type >> name >> dim; }
     // Skip ones that don't match
     if(key.size() != 0 && name.substr(0, key.size()) != key) {
       getline(datastream, line);
       getline(datastream, line);
+      continue;
     // Load a parameter
     } else if(type == "#Parameter#") {
       values.resize(dim.size());
-      Parameter param = model.add_parameters(dim);
-      param.get_storage().name = name;
-      value_t = &param.get_storage().values;
-      grad_t = &param.get_storage().g;
+      if(param_id >= storage.params.size())
+        DYNET_RUNTIME_ERR("Too many parameters to load in populated model at " << name);
+      ParameterStorage & param = *storage.params[param_id++];
+      if(param.dim != dim)
+        DYNET_RUNTIME_ERR("Dimensions of parameter " << name << " looked up from file (" << dim << 
+                            ") do not match parameters to be populated (" << param.dim << ")");
+      value_t = &param.values;
+      grad_t = &param.g;
     // Load a lookup parameter
     } else if(type == "#LookupParameter#") {
       values.resize(dim.size());
-      size_t num = dim[dim.nd-1];
-      --dim.nd;
-      LookupParameter param = model.add_lookup_parameters(num, dim);
-      param.get_storage().name = name;
-      value_t = &param.get_storage().all_values;
-      grad_t = &param.get_storage().all_grads;
+      if(lookup_id >= storage.lookup_params.size())
+        DYNET_RUNTIME_ERR("Too many lookup parameters in populated model at " << name);
+      LookupParameterStorage & param = *storage.lookup_params[lookup_id++];
+      if(param.all_dim != dim)
+        DYNET_RUNTIME_ERR("Dimensions of lookup parameter " << name << " lookup up from file (" << dim << 
+                            ") do not match parameters to be populated (" << param.all_dim << ")");
+      value_t = &param.all_values;
+      grad_t = &param.all_grads;
     } else {
       DYNET_RUNTIME_ERR("Bad parameter specification in model: " << line);
     }
@@ -86,6 +95,11 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
     { getline(datastream, line); istringstream iss(line); iss >> values; }
     TensorTools::SetElements(*grad_t, values);
   }
+  if(param_id != storage.params.size() || lookup_id != storage.lookup_params.size())
+    DYNET_RUNTIME_ERR("Number of parameter/lookup parameter objects loaded from file (" << 
+                      param_id << '/' << lookup_id << ") did not match number to be populated (" <<
+                      storage.params.size() << '/' << storage.lookup_params.size() << ')');
+
 }
 
 void TextFileLoader::populate(Parameter & param,
@@ -101,7 +115,6 @@ void TextFileLoader::populate(Parameter & param,
     if(type == "#Parameter#" && name == key) {
       if(param.p->dim != dim)
         DYNET_RUNTIME_ERR("Attempted to populate parameter where arguments don't match (" << param.p->dim << " != " << dim << ")");
-      param.get_storage().name = name;
       vector<float> values(dim.size());
       { getline(datastream, line); istringstream iss(line); iss >> values; }
       TensorTools::SetElements(param.get_storage().values, values);
@@ -129,7 +142,6 @@ void TextFileLoader::populate(LookupParameter & lookup_param,
     if(type == "#LookupParameter#" && name == key) {
       if(lookup_param.p->all_dim != dim)
         DYNET_RUNTIME_ERR("Attempted to populate lookup parameter where arguments don't match (" << lookup_param.p->all_dim << " != " << dim << ")");
-      lookup_param.get_storage().name = name;
       vector<float> values(dim.size());
       { getline(datastream, line); istringstream iss(line); iss >> values; }
       TensorTools::SetElements(lookup_param.get_storage().all_values, values);

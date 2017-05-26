@@ -56,7 +56,7 @@ void equal_check(std::vector<T> & a,
 
 void equal_check(ParameterStorage *p1,
                  ParameterStorage *p2) {
-  BOOST_CHECK_EQUAL(p1->name, p2->name);
+  // BOOST_CHECK_EQUAL(p1->name, p2->name);
   BOOST_CHECK_EQUAL(p1->dim, p2->dim);
   equal_check(p1->values, p2->values);
   equal_check(p1->g, p2->g);
@@ -64,7 +64,7 @@ void equal_check(ParameterStorage *p1,
 
 void equal_check(LookupParameterStorage *p1,
                  LookupParameterStorage *p2) {
-  BOOST_CHECK_EQUAL(p1->name, p2->name);
+  // BOOST_CHECK_EQUAL(p1->name, p2->name);
   BOOST_CHECK_EQUAL(p1->all_dim, p2->all_dim);
   BOOST_CHECK_EQUAL(p1->dim, p2->dim);
   equal_check(p1->all_values, p2->all_values);
