@@ -82,6 +82,46 @@ void sparse_to_dense_block_assign_and_multiply(int n, const unsigned *idx, int b
   }
 }
 
+// CUDA kernel. Each thread takes care of one row copy.
+__global__ void ker_parallel_memcpy(int num_seqs, float **src, float **trg, float **len) {
+  // Get our global thread ID
+  int id = blockIdx.x*blockDim.x+threadIdx.x;
+
+  int seq_id = id % num_seqs;
+  int i = id / num_seqs;
+  if (i < (unsigned long)len[seq_id])
+    trg[seq_id][i] = src[seq_id][i];
+
+  __syncthreads();
+}
+
+void parallel_memcpy(int num_seqs, int max_len, float **src, float **trg, float **len) {
+  if(num_seqs > 0) {
+    auto tb = SizeToBlockThreadPair(num_seqs*max_len);
+    ker_parallel_memcpy<<<tb.first, tb.second>>>(num_seqs, src, trg, len);
+  }
+}
+
+// CUDA kernel. Each thread takes care of one row copy.
+__global__ void ker_parallel_accumulate(int num_seqs, float **src, float **trg, float **len) {
+  // Get our global thread ID
+  int id = blockIdx.x*blockDim.x+threadIdx.x;
+
+  int seq_id = id % num_seqs;
+  int i = id / num_seqs;
+  if (i < (unsigned long)len[seq_id])
+    atomicAdd(&trg[seq_id][i], src[seq_id][i]);
+
+  __syncthreads();
+}
+
+void parallel_accumulate(int num_seqs, int max_len, float **src, float **trg, float **len) {
+  if(num_seqs > 0) {
+    auto tb = SizeToBlockThreadPair(num_seqs*max_len);
+    ker_parallel_accumulate<<<tb.first, tb.second>>>(num_seqs, src, trg, len);
+  }
+}
+
 // CUDA kernel. Each thread takes care of one element of c
 __global__ void ker_dense_to_sparse_block_add(int n, const unsigned *idx, int bsize, float* src, float *trg) {
   // Get our global thread ID

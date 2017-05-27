@@ -16,6 +16,15 @@ ostream& operator<<(ostream& os, const Dim& d) {
   return os << '}';
 }
 
+void Dim::print_profile(ostream& os) const {
+  os << '{';
+  for (unsigned i = 0; i < nd; ++i) {
+    if (i) os << ',';
+    os << d[i];
+  }
+  os << '}';
+}
+
 ostream& operator<<(ostream& os, const vector<Dim>& ds) {
   os << '[';
   for (unsigned i = 0; i < ds.size(); ++i)

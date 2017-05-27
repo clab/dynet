@@ -21,7 +21,7 @@ struct RNNTest {
   RNNTest() {
     // initialize if necessary
     if (default_device == nullptr) {
-      for (auto x : {"RNNTest", "--dynet-mem", "10"}) {
+      for (auto x : {"RNNTest", "--dynet-seed", "10", "--dynet-mem", "10"}) {
         av.push_back(strdup(x));
       }
       char **argv = &av[0];
@@ -34,7 +34,8 @@ struct RNNTest {
     param2_vals = {1.1f, -2.2f, 3.3f};
   }
   ~RNNTest() {
-    for (auto x : av) free(x);
+    // This was causing double deallocation errors?
+    // for (auto x : av) free(x);
   }
 
   template <class T>
@@ -56,7 +57,7 @@ BOOST_FIXTURE_TEST_SUITE(rnn_test, RNNTest);
 #define DYNET_RNN_GRADIENT_TEST_CASE(name, RNN_TYPE)      \
 BOOST_AUTO_TEST_CASE( name ) {                            \
   dynet::Model mod;                                       \
-  RNN_TYPE rnn(2,3,10,mod);                               \
+  RNN_TYPE rnn(2,3,4,mod);                                \
   dynet::ComputationGraph cg;                             \
   rnn.new_graph(cg);                                      \
   rnn.start_new_sequence();                               \

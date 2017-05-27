@@ -6,6 +6,9 @@
 #include "dynet/dynet.h"
 #include "dynet/cudnn-ops.h"
 
+#define CUDNN_VERSION_MIN(major, minor, patch) \
+        (CUDNN_VERSION >= (major * 1000 + minor * 100 + patch))
+
 namespace dynet {
 
 CudnnConvOp::CudnnConvOp(const std::vector<unsigned>& s, const bool padding_type) {
@@ -101,9 +104,15 @@ void CudnnConvOp::forward_impl(const Device_GPU & dev, const std::vector<const T
   CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_, 
               CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
               YN, YC, YW, YH));
+#if CUDNN_VERSION_MIN(5, 0, 0)
   CUDNN_CHECK(cudnnSetFilter4dDescriptor(filter_desc_, 
               DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
               FYC, FXC, FW, FH));
+#else
+  CUDNN_CHECK(cudnnSetFilter4dDescriptor_v4(filter_desc_, 
+              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
+              FYC, FXC, FW, FH));
+#endif
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
               pad_w/2, pad_h/2, stride[1], stride[0], 1, 1, 
               CUDNN_CROSS_CORRELATION));
