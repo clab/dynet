@@ -40,33 +40,7 @@ if os.path.isdir(d):
     rmtree(d)
 
 
-class dynet_develop(_develop):
-    def __init__(self, *args, **kwargs):
-        _develop.__init__(self, *args, **kwargs)
-
-    def run(self):
-        self.run_command("build")
-        _develop.run(self)
-
-
-class dynet_bdist_egg(_bdist_egg):
-    def __init__(self, *args, **kwargs):
-        _bdist_egg.__init__(self, *args, **kwargs)
-
-    def run(self):
-        self.run_command("build")
-        _bdist_egg.run(self)
-
-
-class dynet_build_ext(_build_ext):
-    def __init__(self, *args, **kwargs):
-        _build_ext.__init__(self, *args, **kwargs)
-
-    def run(self):
-        pass
-
-
-class dynet_build(_build):
+class build(_build):
     def __init__(self, *args, **kwargs):
         _build.__init__(self, *args, **kwargs)
         self.script_dir = None
@@ -169,7 +143,7 @@ except IOError:
     README = ""
 
 setup(
-    name="dynet",
+    name="dyNET",
     version=__version__,
     install_requires=["cython", "numpy"],
     description="The Dynamic Neural Network Toolkit",
@@ -205,14 +179,5 @@ setup(
     url="https://github.com/clab/dynet",
     download_url="https://github.com/clab/dynet/releases",
     license="Apache 2.0",
-    include_package_data=True,
-    zip_safe=False,
-    cmdclass={
-        "build": dynet_build,
-        "build_ext": dynet_build_ext,
-        "bdist_egg": dynet_bdist_egg,
-        "develop": dynet_develop,
-    },
-    ext_modules=[Extension("_dynet", ["_dynet.pxd", "_dynet.pyx", "_gdynet.pyx", "dynet.pxd", "dynet.pyx", "gdynet.pyx"])],
-    ext_package="dyNET",
+    cmdclass={"build": build},
 )
