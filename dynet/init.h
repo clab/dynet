@@ -7,6 +7,8 @@
 namespace dynet {
 
 extern float weight_decay_lambda;
+extern int autobatch_flag;
+extern int autobatch_debug_flag;
 
 /**
  * \brief Represents general parameters for dynet
@@ -15,13 +17,15 @@ extern float weight_decay_lambda;
 struct DynetParams {
   DynetParams();
   ~DynetParams();
-  unsigned random_seed = 0; /**< The seed for random number generation */
-  std::string mem_descriptor = "512"; /**< Total memory to be allocated for Dynet */
-  float weight_decay = 0; /**< Weight decay rate for L2 regularization */
-  bool shared_parameters = false; /**< TO DOCUMENT */
-  bool ngpus_requested = false; /**< GPUs requested by number */
-  bool ids_requested = false; /**< GPUs requested by ids */
-  int requested_gpus = -1; /**< Number of requested GPUs */
+  unsigned random_seed; /**< The seed for random number generation */
+  std::string mem_descriptor; /**< Total memory to be allocated for Dynet */
+  float weight_decay; /**< Weight decay rate for L2 regularization */
+  int autobatch; /**< Whether to autobatch or not */
+  int autobatch_debug; /**< Whether to show autobatch debug info or not */
+  bool shared_parameters; /**< TO DOCUMENT */
+  bool ngpus_requested; /**< GPUs requested by number */
+  bool ids_requested; /**< GPUs requested by ids */
+  int requested_gpus; /**< Number of requested GPUs */
   std::vector<int> gpu_mask; /**< List of required GPUs by ids */
 
 

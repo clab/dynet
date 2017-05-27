@@ -17,7 +17,41 @@ This is usually done by adding an additional dimension to the tensor that they a
 This adds some cognitive load, as the user must keep track of this extra batch dimension in all their calculations, and also ensure that they use the correct ordering of the batch dimensions to achieve maximum computational efficiency.
 Users must also be careful when performing operations that combine batched and unbatched elements (such as batched hidden states of a neural network and unbatched parameter matrices or vectors), in which case they must concatenate vectors into batches, or "broadcast" the unbatched element, duplicating it along the batch dimension to ensure that there are no illegal dimension mismatches.
 
-DyNet hides much of this complexity from the user through the use of specially designed batching operations which treat the number of mini-batch elements not as another standard dimension, but as a special dimension with particular semantics.
+DyNet hides most of this complexity from the user through easy-to-use mini-batching functionality that can either be completely automatic, or
+
+Automatic Mini-batching
+-----------------------
+
+If you want to get many of the benefits of mini-batching without doing any work, you can use DyNet's automatic mini-batching functionality.
+
+.. image:: images/autobatch.gif
+  :align: center
+
+This functionality can be enabled by enabling the `--dynet-autobatch 1` command line option, and if this is enabled, DyNet will automatically attempt to find operations that can be batched together to improve efficiency.
+To take full advantage of this, you will want to create a big computation graph that represents multiple training examples by simply iterating over the multiple training examples as follows:
+
+.. code-block:: python
+
+  for minibatch in training_data:
+    dy.renew_cg()
+    losses = []
+    for x, y in minibatch:
+      l = calculate_my_loss(x, y)
+      losses.append(l)
+    loss = dy.esum(losses)
+    loss.forward()
+    loss.backward()
+    trainer.update()
+
+This is nice because the `calculate_my_loss` function can be arbitrarily complex and doesn't have to have the same structure across sentences.
+A full example of mini-batching in action for a tree-structured neural network model can be found here for `C++ <https://github.com/neulab/dynet-benchmark/blob/master/dynet-cpp/treenn-bulk.cc>`_ and `Python <https://github.com/neulab/dynet-benchmark/blob/master/dynet-py/treenn-bulk.py>`_.
+
+
+Manual Mini-batching
+--------------------
+
+In easy-to-minibatch networks where the structure remains the same across multiple sentences, it is possible to get some further gains by performing manual mini-batching, similarly to what you do in other toolkits.
+Even in this case, DyNet hides much of this complexity from the user through the use of specially designed batching operations which treat the number of mini-batch elements not as another standard dimension, but as a special dimension with particular semantics.
 Broadcasting is done behind the scenes by each operation implemented in DyNet, and thus the user must only think about inputting multiple pieces of data for each batch, and calculating losses using multiple labels.
 
 First, let's take a look at a non-minibatched example using the Python API.
