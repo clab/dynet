@@ -27,6 +27,7 @@ struct DynetParams {
   bool ids_requested = false; /**< GPUs requested by ids */
   int requested_gpus = -1; /**< Number of requested GPUs */
   std::vector<int> gpu_mask; /**< List of required GPUs by ids */
+  int pool_size = 1;
 
 
 };

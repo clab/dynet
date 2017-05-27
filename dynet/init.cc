@@ -85,6 +85,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
       }
     }
 
+
     // Memory
     else if (arg == "--dynet-autobatch" || arg == "--dynet_autobatch") {
       if ((argi + 1) > argc) {
@@ -98,6 +99,17 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     else if (arg == "--dynet-autobatch-debug" || arg == "--dynet_autobatch_debug") {
       params.autobatch_debug = 1;
         remove_args(argc, argv, argi, 1);
+    }
+
+    // Pool size
+    else if (arg == "--dynet-pool" || arg == "--dynet_pool") {
+      if ((argi + 1) > argc) {
+        throw std::invalid_argument("[dynet] --dynet-pool expects an argument (the threadpool size)");
+      } else {
+        string a2 = argv[argi + 1];
+        istringstream c(a2); c >> params.pool_size; // TODO params?
+        remove_args(argc, argv, argi, 2);
+      }
     }
 
 #if HAVE_CUDA
@@ -199,6 +211,8 @@ void initialize(DynetParams& params) {
   if(params.autobatch_debug)
     cerr << "[dynet] using autobatching debugging" << endl;
   autobatch_debug_flag = params.autobatch_debug;
+
+  pool_size = params.pool_size;
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";

@@ -3,6 +3,9 @@
 
 #include "dynet/dynet.h"
 
+#include "third_party/countdownlatchcpp/countdownlatch.hpp"
+#include "third_party/CTPL/ctpl_stl.h"
+
 namespace dynet {
 
 class ExecutionEngine {
@@ -52,11 +55,14 @@ public:
   std::vector<VariableIndex> ids; // IDs of the batch components
   std::vector<int> concat;       // 0=no need to concat, 1=need to concat, 2=need to concat + already contiguous in space 
   std::vector<const Tensor*> arg_nfxs; // Concatenated arguments
+  std::set<unsigned> args; // batches that this batch depends on.
+  std::vector<clatch::countdownlatch *> parents; // batches that this batch feeds into.
+  clatch::countdownlatch *deps;
 };
 
 class BatchedExecutionEngine : public ExecutionEngine {
  public:
-  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) { }
+  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg), pool(pool_size) { }
   ~BatchedExecutionEngine() { garbage_collect(); }
   void invalidate() override;
   void invalidate(unsigned i) override;
@@ -69,7 +75,7 @@ class BatchedExecutionEngine : public ExecutionEngine {
   void backward(bool full = false) override;
   void backward(VariableIndex i, bool full = false) override;
   void garbage_collect();
- private:
+ //private:
   const Tensor& incremental_forward_no_update(VariableIndex i, int autobatch_strategy);
   void combine_tensors(std::vector<VariableIndex> batch_ids, int aid, Tensor &tout);
   void accumulate_tensors(const Tensor& my_ndEdf, std::vector<VariableIndex> batch_ids, int aid);
@@ -82,6 +88,7 @@ class BatchedExecutionEngine : public ExecutionEngine {
   std::vector<size_t> node2offset, node2size; // length: number of nodes
   std::vector<BatchInfo> batches; // length: number of batches
   SigMap sigmap;
+  ctpl::thread_pool pool;
 
 };
 

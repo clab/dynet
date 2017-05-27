@@ -7,6 +7,9 @@
 #include "dynet/globals.h"
 #include "dynet/timing.h"
 
+#include "third_party/countdownlatchcpp/countdownlatch.hpp"
+#include "third_party/CTPL/ctpl_stl.h"
+
 #ifdef HAVE_CUDA
 #include "dynet/gpu-ops.h"
 #endif
@@ -205,6 +208,85 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
 
+}
+
+/////// Batched
+
+void execute_batch(BatchInfo &batch, const ComputationGraph &cg, BatchedExecutionEngine *exec, vector<VariableIndex> &node2batch, vector<BatchInfo> &batches, vector<size_t> &node2offset, vector<size_t> &node2size) {
+  Tensor temp_nfx;
+  vector<const Tensor*> xs(16), ts(16);
+
+  if (batch.ids.size() == 1) { // execute a single node
+    VariableIndex nid = batch.ids[0];
+    Node* node = cg.nodes[nid];
+    xs.resize(node->arity());
+    unsigned ai = 0;
+    for (VariableIndex arg : node->args) {
+      xs[ai] = &exec->get_nfx(arg);
+      ++ai;
+    }
+    node->forward(xs, batch.nfx);
+    // cerr << "unbatched forward[" << num_batches_evaluated << "] == " << print_vec(as_vector(my_batch.nfx)) << endl;
+  } else { // execute a batch node
+    size_t arity = batch.concat.size();
+    Node* node = batch.pseudo_node;
+    if(node == nullptr) node = cg.nodes[batch.ids[0]];
+    xs.resize(arity); 
+    // Figure out whether we need to create the inputs
+    batch.arg_nfxs.resize(arity);
+    for(size_t i = 0; i < arity; ++i) {
+      // 1) the inputs don't need to be concatenated. Just use the tensor
+      if(!batch.concat[i]) {
+        batch.arg_nfxs[i] = &batches[node2batch[node->args[i]]].nfx;
+        // 2) the inputs need to be concatenated
+      } else {
+        // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
+        // TODO: make this work completely
+        Tensor* my_xsi = new Tensor;
+        my_xsi->device = node->device;
+        my_xsi->mem_pool = DeviceMempool::FXS;
+
+        // check contig memory
+        auto it = batch.ids.begin(), itend = batch.ids.end();
+        VariableIndex aid = cg.nodes[*(it++)]->args[i];
+        float *min_node = batches[node2batch[aid]].nfx.v + node2offset[aid];
+        unsigned int tot_arg = node2size[aid];
+        bool contig = true;
+        while(it != itend && contig) {
+          aid = cg.nodes[*(it++)]->args[i];
+          float* v = batches[node2batch[aid]].nfx.v + node2offset[aid];
+          contig = contig && v == min_node + tot_arg;
+          tot_arg += node2size[aid];
+        }
+        if (contig) { // if contig, use current mem for xs_i
+          //xs[i] = &batched_nfxs[...];
+          my_xsi->v = min_node;
+          my_xsi->d = Dim({tot_arg});
+          batch.concat[i] = 2;
+          //   autobatch_garbage[i] = false;
+        } else { // if non-contig, copy xs_i into new mem.
+          // 2.b) the inputs need to be concatenated, and are not contiguous
+          exec->combine_tensors(batch.ids, i, *my_xsi);
+        }
+        batch.arg_nfxs[i] = my_xsi;
+      }
+    }
+
+    node->autobatch_reshape(cg, batch.ids, batch.concat, batch.arg_nfxs, batch.nfx);
+    node->forward(batch.arg_nfxs, batch.nfx);
+    // cerr << "batched forward[" << num_batches_evaluated << "] == " << print_vec(as_vector(my_batch.nfx)) << endl;
+  }
+}
+
+void execute_batch_async(int id, clatch::countdownlatch *all_jobs, BatchInfo *batch, const ComputationGraph *cg, BatchedExecutionEngine *exec, vector<VariableIndex> *node2batch, vector<BatchInfo> *batches, vector<size_t> *node2offset, vector<size_t> *node2size) {
+  Node *n = cg->nodes[batch->ids[0]];
+  //cout << n->as_dummy_string() << " waiting" << endl;
+  batch->deps->await();
+  //cout << n->as_dummy_string() << " started" << endl;
+  execute_batch(*batch, *cg, exec, *node2batch, *batches, *node2offset, *node2size);
+  //cout << n->as_dummy_string() << " releasing " << endl;
+  for (auto p : batch->parents) p->count_down();
+  all_jobs->count_down();
 }
 
 // copies the list of tensors into a single contig tensor (tout).
@@ -584,6 +666,9 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         cout << "BatchSize:" << batch_ids.size() << " " << node->as_dummy_string() << endl;
       }
     }
+    clatch::countdownlatch cl(10);
+
+    
 
     // 3. Based on the batches, allocate the memory, etc
     for(VariableIndex bid = num_batches_evaluated; bid < batch_id; ++bid) {
@@ -659,75 +744,36 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
     }
 
+    // 3.5 calculate batch dependencies 
+    // TODO make more efficient
+    for (VariableIndex i = num_batches_evaluated; i < batch_id; ++i) {
+      BatchInfo &bi = batches[i];
+      for (auto nid : bi.ids) {
+        for (auto arg : cg.nodes[nid]->args) {
+          bi.args.insert(node2batch[arg]);
+        }
+      }
+    }
+    // set up threads dep management
+    for (VariableIndex i = num_batches_evaluated; i < batch_id; ++i) {
+      BatchInfo &bi = batches[i];
+      bi.deps = new clatch::countdownlatch(bi.args.size());
+      for (auto arg : bi.args) { batches[arg].parents.push_back(bi.deps); }
+    }
+
     // 4: do the actual execution 
-    Tensor temp_nfx;
-    vector<const Tensor*> xs(16), ts(16);
+    clatch::countdownlatch njobs(batch_id - num_batches_evaluated);
     while(num_batches_evaluated < batch_id) {
       // Read in the stuff for this batch
       auto & my_batch = batches[num_batches_evaluated];
-      if (my_batch.ids.size() == 1) { // execute a single node
-        VariableIndex nid = my_batch.ids[0];
-        Node* node = cg.nodes[nid];
-        xs.resize(node->arity());
-        unsigned ai = 0;
-        for (VariableIndex arg : node->args) {
-          xs[ai] = &get_nfx(arg);
-          ++ai;
-        }
-        node->forward(xs, my_batch.nfx);
-        // cerr << "unbatched forward[" << num_batches_evaluated << "] == " << print_vec(as_vector(my_batch.nfx)) << endl;
-        ++num_batches_evaluated;
-      } else { // execute a batch node
-        size_t arity = my_batch.concat.size();
-        Node* node = my_batch.pseudo_node;
-        if(node == nullptr) node = cg.nodes[my_batch.ids[0]];
-        xs.resize(arity); 
-        // Figure out whether we need to create the inputs
-        my_batch.arg_nfxs.resize(arity);
-        for(size_t i = 0; i < arity; ++i) {
-          // 1) the inputs don't need to be concatenated. Just use the tensor
-          if(!my_batch.concat[i]) {
-            my_batch.arg_nfxs[i] = &batches[node2batch[node->args[i]]].nfx;
-          // 2) the inputs need to be concatenated
-          } else {
-            // 2.a) the inputs need to be concatenated, but are already in the right order within a contiguous block of memory
-            // TODO: make this work completely
-            Tensor* my_xsi = new Tensor;
-            my_xsi->device = node->device;
-            my_xsi->mem_pool = DeviceMempool::FXS;
-
-            // check contig memory
-            auto it = my_batch.ids.begin(), itend = my_batch.ids.end();
-            VariableIndex aid = cg.nodes[*(it++)]->args[i];
-            float *min_node = batches[node2batch[aid]].nfx.v + node2offset[aid];
-            unsigned int tot_arg = node2size[aid];
-            bool contig = true;
-            while(it != itend && contig) {
-              aid = cg.nodes[*(it++)]->args[i];
-              float* v = batches[node2batch[aid]].nfx.v + node2offset[aid];
-              contig = contig && v == min_node + tot_arg;
-              tot_arg += node2size[aid];
-            }
-            if (contig) { // if contig, use current mem for xs_i
-              //xs[i] = &batched_nfxs[...];
-              my_xsi->v = min_node;
-              my_xsi->d = Dim({tot_arg});
-              my_batch.concat[i] = 2;
-            //   autobatch_garbage[i] = false;
-            } else { // if non-contig, copy xs_i into new mem.
-              // 2.b) the inputs need to be concatenated, and are not contiguous
-              combine_tensors(my_batch.ids, i, *my_xsi);
-            }
-            my_batch.arg_nfxs[i] = my_xsi;
-          }
-        }
-
-        node->autobatch_reshape(cg, my_batch.ids, my_batch.concat, my_batch.arg_nfxs, my_batch.nfx);
-        node->forward(my_batch.arg_nfxs, my_batch.nfx);
-        // cerr << "batched forward[" << num_batches_evaluated << "] == " << print_vec(as_vector(my_batch.nfx)) << endl;
-        ++num_batches_evaluated;
-
-      }
+      //execute_batch(my_batch, cg, this, node2batch, batches, node2offset, node2size);
+      pool.push(execute_batch_async, &njobs, &my_batch, &cg, this, &node2batch, &batches, &node2offset, &node2size);
+      ++num_batches_evaluated;
+    }
+    njobs.await();
+    for (VariableIndex i = num_batches_evaluated; i < batch_id; ++i) {
+      BatchInfo &bi = batches[i];
+      delete bi.deps;
     }
 
     free(node2profid);
