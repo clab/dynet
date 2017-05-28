@@ -7,7 +7,8 @@ from distutils.command.build_ext import build_ext as _build_ext
 from distutils.errors import DistutilsSetupError
 from distutils.spawn import find_executable
 from distutils.sysconfig import get_python_lib
-from shutil import rmtree
+from glob import glob
+from shutil import rmtree, copy
 from subprocess import Popen
 
 from setuptools import setup, Extension
@@ -20,8 +21,8 @@ def run_process(cmds):
     p.wait()
     return p.returncode
 
-__version__ = "1.0.0"
 
+log.basicConfig(stream=sys.stdout, level=log.INFO)
 
 # Change the cwd to our source dir
 try:
@@ -36,7 +37,7 @@ script_dir = os.getcwd()
 # Clean up temp and package folders
 d = os.path.join(script_dir, "build")
 if os.path.isdir(d):
-    print("Removing %s" % d)
+    log.info("Removing " + d)
     rmtree(d)
 
 
@@ -50,50 +51,46 @@ class build(_build):
         self.hg_path = None
         self.cxx_path = None
         self.cc_path = None
-        self.site_packages_dir = None
+        self.install_prefix = None
         self.py_executable = None
         self.py_version = None
-
-    def initialize_options(self):
-        _build.initialize_options(self)
 
     def run(self):
         py_executable = sys.executable
         py_version = "%s.%s" % (sys.version_info[0], sys.version_info[1])
         build_name = "py%s-%s" % (py_version, platform.architecture()[0])
-        build_dir = os.path.join(script_dir, "build", "%s" % build_name)
+        build_dir = os.path.join(script_dir, "build", build_name)
 
         self.script_dir = script_dir
         self.build_dir = build_dir
         self.cmake_path = os.environ.get("CMAKE") or find_executable("cmake")
         self.make_path = os.environ.get("MAKE") or find_executable("make")
         self.hg_path = find_executable("hg")
-        self.cxx_path = os.environ.get("CXX") or find_executable("g++")
         self.cc_path = os.environ.get("CC") or find_executable("gcc")
-        self.site_packages_dir = get_python_lib(1, 0, prefix=build_dir)
+        self.cxx_path = os.environ.get("CXX") or find_executable("g++")
+        self.install_prefix = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
         self.py_executable = py_executable
         self.py_version = py_version
 
+        log.info("=" * 30)
+        log.info("CMake path: " + self.cmake_path)
+        log.info("Make path: " + self.make_path)
+        log.info("Mercurial path: " + self.hg_path)
+        log.info("C compiler path: " + self.cc_path)
+        log.info("CXX compiler path: " + self.cxx_path)
+        log.info("-" * 3)
+        log.info("Script directory: " + self.script_dir)
+        log.info("Build directory: " + self.build_dir)
+        log.info("Library installation directory: " + self.install_prefix)
+        log.info("Python executable: " + self.py_executable)
+        log.info("=" * 30)
+
         # Prepare folders
         if not os.path.exists(self.build_dir):
-            log.info("Creating build directory %s..." % self.build_dir)
+            log.info("Creating build directory " + self.build_dir)
             os.makedirs(self.build_dir)
 
-        log.basicConfig(filename=os.path.join(build_dir, "setup.log"), level=log.INFO)
         os.chdir(self.build_dir)
-
-        log.info("=" * 30)
-        log.info("Package version: %s" % __version__)
-        log.info("-" * 3)
-        log.info("CMake path: %s" % self.cmake_path)
-        log.info("Make path: %s" % self.make_path)
-        log.info("Mercurial path: %s" % self.hg_path)
-        log.info("-" * 3)
-        log.info("Script directory: %s" % self.script_dir)
-        log.info("Build directory: %s" % self.build_dir)
-        log.info("Python site-packages install directory: %s" % self.site_packages_dir)
-        log.info("Python executable: %s" % self.py_executable)
-        log.info("=" * 30)
 
         hg_cmd = [self.hg_path, "clone", "https://bitbucket.org/eigen/eigen"]
         log.info("Cloning Eigen...")
@@ -107,8 +104,9 @@ class build(_build):
         cmake_cmd = [
             self.cmake_path,
             script_dir,
+            "-DCMAKE_INSTALL_PREFIX=" + self.install_prefix,
             "-DEIGEN3_INCLUDE_DIR=eigen",
-            "-DPYTHON=%s" % self.py_executable,
+            "-DPYTHON=" + self.py_executable,
             ]
         boost_prefix = os.environ.get("BOOST")
         if boost_prefix:
@@ -127,8 +125,13 @@ class build(_build):
         if run_process(make_cmd) != 0:
             raise DistutilsSetupError(" ".join(make_cmd))
 
-        setup_cmd = [self.py_executable, "setup.py", "install"]
+        make_cmd = [self.make_path, "install"]
         log.info("Installing...")
+        if run_process(make_cmd) != 0:
+            raise DistutilsSetupError(" ".join(make_cmd))
+
+        setup_cmd = [sys.executable, "setup.py", "install"]
+        log.info("Installing Python modules...")
         os.chdir("python")
         if run_process(setup_cmd) != 0:
             raise DistutilsSetupError(" ".join(setup_cmd))
@@ -144,7 +147,6 @@ except IOError:
 
 setup(
     name="dyNET",
-    version=__version__,
     install_requires=["cython", "numpy"],
     description="The Dynamic Neural Network Toolkit",
     long_description=README,
