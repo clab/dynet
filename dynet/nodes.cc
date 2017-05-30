@@ -2633,7 +2633,7 @@ void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
   if (dim.num_nonone_dims() <= 1) {
     fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   } else {
-    array<ptrdiff_t, 5> order;
+    Eigen::array<ptrdiff_t, 5> order;
     for(size_t i = 0; i < 5; ++i)
       order[i] = (i >= dims.size() ? i : dims[i]);
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().shuffle(order);
@@ -2647,7 +2647,7 @@ void Transpose::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  array<ptrdiff_t, 5> order;
+  Eigen::array<ptrdiff_t, 5> order;
   for(size_t i = 0; i < 5; ++i)
     order[(i >= dims.size() ? i : dims[i])] = i;
   dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().shuffle(order);
