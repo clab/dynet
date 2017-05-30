@@ -364,6 +364,8 @@ void BatchedExecutionEngine::garbage_collect() {
 }
 
 const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableIndex upto, int autobatch_strategy) {
+  // cerr << "running graph" << endl; cg.print_graphviz();
+
   if (upto >= num_nodes_evaluated) {
     string current_batch_name;
 
@@ -689,7 +691,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           ++ai;
         }
         node->forward(xs, my_batch.nfx);
-        // cerr << "unbatched forward[" << num_batches_evaluated << "] == " << print_vec(as_vector(my_batch.nfx)) << endl;
+        // cerr << "unbatched forward[" << num_batches_evaluated << "] (node: " << nid << ") == " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
       } else { // execute a batch node
         size_t arity = my_batch.concat.size();
@@ -738,7 +740,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
         node->autobatch_reshape(cg, my_batch.ids, my_batch.concat, my_batch.arg_nfxs, my_batch.nfx);
         node->forward(my_batch.arg_nfxs, my_batch.nfx);
-        // cerr << "batched forward[" << num_batches_evaluated << "] == " << print_vec(as_vector(my_batch.nfx)) << endl;
+        // cerr << "batched forward[" << num_batches_evaluated << "] (nodes:"; for(auto id : my_batch.ids) cerr << ' ' << id; cerr << ") == " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
 
       }
