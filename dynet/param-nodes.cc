@@ -128,7 +128,7 @@ Node* ScalarInputNode::autobatch_pseudo_node(const ComputationGraph & cg,
 
 int LookupNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::lookup);
-  s.add_node(params.index);
+  s.add_int((size_t)params.mp->lookup_parameters_list()[params.index]);
   return sm.get_idx(s);
 }
 std::vector<int> LookupNode::autobatch_concat(const ComputationGraph & cg) const {
