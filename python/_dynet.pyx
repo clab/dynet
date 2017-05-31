@@ -38,7 +38,7 @@ import os.path
 from _dynet cimport *
 cimport _dynet as dynet
 
-cdef class DynetParams:
+cdef class DynetParams: # {{{
     """This object holds the global parameters of Dynet
 
     You should only need to use this after importing dynet as :
@@ -137,7 +137,9 @@ cdef class DynetParams:
         self.cparams.gpu_mask = cgpu_mask
         self.cparams.ngpus_requested = False
         self.cparams.ids_requested = True
+# DynetParams }}}
 
+# Initialization {{{
 def init(shared_parameters=None):
     """Initialize dynet
     
@@ -167,7 +169,9 @@ def init_from_params(DynetParams params):
         params(DynetParams): dynet parameters
     """
     params.init()
+# }}}
 
+# Dimensions {{{
 cdef CDim Dim(dim, unsigned int batch_size=1):
     """Get dynet Dim from tuple
     
@@ -213,6 +217,7 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
         dim = d
         batch_size = 1
     return Dim(dim,batch_size=batch_size)
+# }}}
 
 cdef c_tensor_as_np(CTensor &t):
     # TODO: make more efficient, with less copy
@@ -226,8 +231,114 @@ cdef c_index_tensor_as_np(CIndexTensor &t):
     dim = c_dim_as_shape(t.d)
     return arr.reshape(dim,order='F')
 
-# ((( Model / Parameters 
-cdef class Parameters:
+
+# Initializers {{{
+cdef class PyInitializer:
+    """
+    Base class for parameter initializer
+    """
+    cdef CParameterInit *initializer
+    def __init__(self):
+        assert(False),"Do not create PyInitializer directly."
+    def __dealloc__(self):
+        del self.initializer
+
+cdef class NormalInitializer(PyInitializer):
+    """Initialize the parameters with a gaussian distribution
+    
+    Keyword Arguments:
+        mean (number): Mean of the distribution (default: 0)
+        var (number): Variance of the distribution (default: 1)
+    """
+    def __init__(self, float mean=0, var=1):
+        self.initializer = new CParameterInitNormal(mean, var)
+
+cdef class UniformInitializer(PyInitializer):
+    """Initialize the parameters with a uniform distribution
+    
+    Args:
+        scale (number): Parmeters are sampled from :math:`\mathcal U([-\\texttt{scale},\\texttt{scale}])`
+    """
+    def __init__(self, float scale):
+        self.initializer = new CParameterInitUniform(scale)
+
+cdef class ConstInitializer(PyInitializer):
+    """Initialize the parameters with a constant value
+    
+    Args:
+        c (number): Value to initialize the parameters
+    """
+    def __init__(self, float c):
+        self.initializer = new CParameterInitConst(c)
+
+cdef class IdentityInitializer(PyInitializer):
+    """Initialize the parameters as the identity
+    
+    Only works with square matrices
+    """
+    def __init__(self):
+        self.initializer = new CParameterInitIdentity()
+
+cdef class GlorotInitializer(PyInitializer):
+    """Initializes the weights according to `Glorot & Bengio (2011) <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_ 
+    
+    If the dimensions of the parameter matrix are :math:`m,n`, the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{m+n}},g\sqrt{\\frac{6}{m+n}}])`
+    
+    The gain :math:`g` depends on the activation function : 
+
+    * :math:`\\text{tanh}` : 1.0
+    * :math:`\\text{ReLU}` : 0.5
+    * :math:`\\text{sigmoid}` : 4.0
+    * Any smooth function :math:`f` : :math:`\\frac{1}{f'(0)}`
+    
+    Keyword Arguments:
+        is_lookup (bool): Whether the parameter is alookup parameter (default: False)
+        gain (number): Gain (Depends on the activation function) (default: 1.0)
+    """
+    def __init__(self, bool is_lookup=False,float gain=1.0):
+        self.initializer = new CParameterInitGlorot(is_lookup,gain)
+
+cdef class SaxeInitializer(PyInitializer):
+    """Initializes according to `Saxe et al. (2014) <https://arxiv.org/abs/1312.6120>`_
+
+    Initializes as a random orthonormal matrix (unimplemented for GPU)
+        Keyword Arguments:
+            scale (number): scale to apply to the orthonormal matrix
+    """
+    def __init__(self,scale=1.0):
+        self.initializer = new CParameterInitSaxe(scale)
+
+cdef class FromFileInitializer(PyInitializer):
+    """Initialize parameter from file
+    
+    Args:
+        fname (str): File name
+    """
+    def __init__(self, string fname):
+        self.initializer = new CParameterInitFromFile(fname)
+
+cdef class NumpyInitializer(PyInitializer):
+    """Initialize from numpy array
+
+    Alternatively, use :code:`Model.parameters_from_numpy()`
+    
+    Args:
+        array (np.ndarray): Numpy array
+    """
+    def __init__(self, array):
+        self.initializer = new CParameterInitFromVector(self.vec_from_array(array))
+
+    cdef vector[float] vec_from_array(self, arr): # TODO make efficient
+        cdef vector[float] vals
+        shape = arr.shape
+        arr = arr.flatten(order='F')
+        for i in xrange(arr.size):
+            vals.push_back(arr[i])
+        return vals
+# }}}
+
+# {{{ Model / Parameters 
+cdef class Parameters: # {{{
     """Parameters class
     
     Parameters are things that are optimized. in contrast to a system like Torch where computational modules may have their own parameters, in DyNet parameters are just parameters.
@@ -361,14 +472,6 @@ cdef class Parameters:
         """
         self.thisptr.set_updated(b)
 
-    # TODO IO
-    #cpdef unsigned get_index(self):
-    #    """Get parameter index
-    #    
-    #    Returns:
-    #        unsigned: Index of the parameter
-    #    """
-    #    return self.thisptr.index
     cpdef name(self):
         """
         Return the full name of this collection.
@@ -398,9 +501,9 @@ cdef class Parameters:
                 self._const_expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
             return self._const_expr
 
+# Parameters }}}
 
-
-cdef class LookupParameters:
+cdef class LookupParameters: # {{{
     cdef CLookupParameters thisptr # TODO: no longer pointer
     cdef int _version
     cdef Expression _expr
@@ -508,6 +611,7 @@ cdef class LookupParameters:
         Return the full name of this collection.
         """
         return self.thisptr.get_fullname()
+# }}}
 
 # TODO document this
 class Saveable(object):
@@ -533,112 +637,8 @@ class Saveable(object):
         return NotImplemented
 
 
-# Initializers
-cdef class PyInitializer:
-    """
-    Base class for parameter initializer
-    """
-    cdef CParameterInit *initializer
-    def __init__(self):
-        assert(False),"Do not create PyInitializer directly."
-    def __dealloc__(self):
-        del self.initializer
 
-cdef class NormalInitializer(PyInitializer):
-    """Initialize the parameters with a gaussian distribution
-    
-    Keyword Arguments:
-        mean (number): Mean of the distribution (default: 0)
-        var (number): Variance of the distribution (default: 1)
-    """
-    def __init__(self, float mean=0, var=1):
-        self.initializer = new CParameterInitNormal(mean, var)
-
-cdef class UniformInitializer(PyInitializer):
-    """Initialize the parameters with a uniform distribution
-    
-    Args:
-        scale (number): Parmeters are sampled from :math:`\mathcal U([-\\texttt{scale},\\texttt{scale}])`
-    """
-    def __init__(self, float scale):
-        self.initializer = new CParameterInitUniform(scale)
-
-cdef class ConstInitializer(PyInitializer):
-    """Initialize the parameters with a constant value
-    
-    Args:
-        c (number): Value to initialize the parameters
-    """
-    def __init__(self, float c):
-        self.initializer = new CParameterInitConst(c)
-
-cdef class IdentityInitializer(PyInitializer):
-    """Initialize the parameters as the identity
-    
-    Only works with square matrices
-    """
-    def __init__(self):
-        self.initializer = new CParameterInitIdentity()
-
-cdef class GlorotInitializer(PyInitializer):
-    """Initializes the weights according to `Glorot & Bengio (2011) <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_ 
-    
-    If the dimensions of the parameter matrix are :math:`m,n`, the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{m+n}},g\sqrt{\\frac{6}{m+n}}])`
-    
-    The gain :math:`g` depends on the activation function : 
-
-    * :math:`\\text{tanh}` : 1.0
-    * :math:`\\text{ReLU}` : 0.5
-    * :math:`\\text{sigmoid}` : 4.0
-    * Any smooth function :math:`f` : :math:`\\frac{1}{f'(0)}`
-    
-    Keyword Arguments:
-        is_lookup (bool): Whether the parameter is alookup parameter (default: False)
-        gain (number): Gain (Depends on the activation function) (default: 1.0)
-    """
-    def __init__(self, bool is_lookup=False,float gain=1.0):
-        self.initializer = new CParameterInitGlorot(is_lookup,gain)
-
-cdef class SaxeInitializer(PyInitializer):
-    """Initializes according to `Saxe et al. (2014) <https://arxiv.org/abs/1312.6120>`_
-
-    Initializes as a random orthonormal matrix (unimplemented for GPU)
-        Keyword Arguments:
-            scale (number): scale to apply to the orthonormal matrix
-    """
-    def __init__(self,scale=1.0):
-        self.initializer = new CParameterInitSaxe(scale)
-
-cdef class FromFileInitializer(PyInitializer):
-    """Initialize parameter from file
-    
-    Args:
-        fname (str): File name
-    """
-    def __init__(self, string fname):
-        self.initializer = new CParameterInitFromFile(fname)
-
-cdef class NumpyInitializer(PyInitializer):
-    """Initialize from numpy array
-
-    Alternatively, use :code:`Model.parameters_from_numpy()`
-    
-    Args:
-        array (np.ndarray): Numpy array
-    """
-    def __init__(self, array):
-        self.initializer = new CParameterInitFromVector(self.vec_from_array(array))
-
-    cdef vector[float] vec_from_array(self, arr): # TODO make efficient
-        cdef vector[float] vals
-        shape = arr.shape
-        arr = arr.flatten(order='F')
-        for i in xrange(arr.size):
-            vals.push_back(arr[i])
-        return vals
-
-
-cdef class Model: # (((
+cdef class Model: # {{{
     """
     A model holds Parameters. Use it to create, load and save parameters.
     """
@@ -906,13 +906,13 @@ cdef class Model: # (((
 #        loader.done()
 #        del loader
 #        return params
-    #)
 
-# )
+# }}}
 
-# ((( Computation Graph 
+# }}}
 
-# ((( "Pointers"
+
+# {{{ "Pointers"
 
 cdef class UnsignedValue:
     cdef unsigned val
@@ -956,8 +956,9 @@ cdef class FloatVectorValue:
     def size(self): return len(deref(self.vals))
     cdef vector[float]* addr(self): return self.vals
 
-# )
+# }}}
 
+# {{{ Computation Graph 
 cdef int SECRET = 923148
 cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
@@ -1040,14 +1041,6 @@ cdef class ComputationGraph:
         result = Expression.from_cexpr(self._cg_version, c_parameter(self.thisptr[0], params.thisptr))
         return result
 
-    #def params_from_model(self, model):
-    #    results = ()
-    #    for name in model.regular_parameters():
-    #        results[name] = self.parameters(model[name])
-    #    for name in model.lookup_parameters():
-    #        results[name] = self.lookup(model[name])
-    #    return results
-
     cpdef forward_scalar(self, VariableIndex index):
         return c_as_scalar(self.thisptr.forward(index))
 
@@ -1109,12 +1102,9 @@ cdef class ComputationGraph:
     cdef outputBatchPicker(self, Expression e, vector[unsigned] vs, unsigned dim=0):
         r = _pickerBatchExpression(self, e, vs, dim)
         return r
+# }}}
 
-
-
-# )
-
-cdef class Tensor:
+cdef class Tensor: #{{{
     """Tensor class
 
     A Tensor is a value object that is kept on the computation device (GPU or CPU).
@@ -1186,8 +1176,9 @@ cdef class Tensor:
             dimension "dim" will be "num", consisting of the appropriate IDs.
         """
         return Tensor.wrap_cindextensor(CTensorTools.categorical_sample_log_prob(self.t, dim, num))
+# Tensor }}}
 
-#((( Expressions
+#{{{ Expressions
 cdef ensure_freshness(Expression a):
     if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
 
@@ -1199,7 +1190,7 @@ cdef _cadd(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_
 cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_mul(a.c(), b))
 cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
 
-cdef class Expression: #(((
+cdef class Expression: #{{{
     """Expressions are the building block of a Dynet computation graph.
     
     Expressions are the main data types being manipulated in a DyNet program. Each expression represents a sub-computation in a computation graph.
@@ -1489,7 +1480,7 @@ cdef class Expression: #(((
         elif isinstance(self,Expression) and isinstance(other,(int, float)):
             return _neg(_scalarsub(other, self))
         else: raise NotImplementedError()
-#)))
+#}}}
 
 cpdef forward(list exps, recalculate=False):
     cdef Expression maxe = exps[0]
@@ -1531,7 +1522,7 @@ def parameter(p, update=True):
     else:
         raise NotImplementedError("Cannot call parameter() on anything other than Parameters or LookupParameters")
 
-# ((( Mutable Expressions
+# {{{ Mutable Expressions
 #     These depend values that can be set by the caller
 
 cdef class _inputExpression(Expression):
@@ -1898,7 +1889,7 @@ def hinge(Expression x, unsigned index, float m=1.0):
     """
     return _hingeExpression(_cg, x, index, m)
 
-# )
+# }}}
 
 cpdef Expression zeroes(dim, int batch_size=1): 
     """Create an input full of zeros
@@ -3386,12 +3377,12 @@ cpdef Expression weight_norm(Expression w, Expression g):
     ensure_freshness(g)
     return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
 
-# )
+# }}}
     
-# ((( RNNS / Builders
+# {{{ RNNS / Builders
 # TODO: unify these with inheritance
 
-cdef class _RNNBuilder: # (((
+cdef class _RNNBuilder: # {{{
     """
     """
     cdef CRNNBuilder *thisptr
@@ -3558,9 +3549,9 @@ cdef class _RNNBuilder: # (((
 
     cpdef Model param_collection(self):
         return Model.wrap(self.thisptr.get_parameter_collection())
-#)
+# _RNNBuilder }}}
 
-cdef class SimpleRNNBuilder(_RNNBuilder): # (((
+cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     """[summary]
     
     [description]
@@ -3616,9 +3607,9 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # (((
         return exprs
 
     def whoami(self): return "SimpleRNNBuilder"
-#)
+# SimpleRNNBuilder }}}
     
-cdef class GRUBuilder(_RNNBuilder): # (((
+cdef class GRUBuilder(_RNNBuilder): # {{{
     """[summary]
     
     [description]
@@ -3674,9 +3665,9 @@ cdef class GRUBuilder(_RNNBuilder): # (((
         return exprs
 
     def whoami(self): return "GRUBuilder"
-# )
+# GRUBuilder }}}
 
-cdef class LSTMBuilder(_RNNBuilder): # (((
+cdef class LSTMBuilder(_RNNBuilder): # {{{
     """[summary]
     
     [description]
@@ -3733,9 +3724,9 @@ cdef class LSTMBuilder(_RNNBuilder): # (((
         return exprs
 
     def whoami(self): return "LSTMBuilder"
-# )
+# LSTMBuilder }}}
 
-cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
+cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
     """VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
     
     This cell runs according to the following dynamics :
@@ -3885,9 +3876,9 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         self.thisvanillaptr.set_dropout_masks(batch_size)
 
     def whoami(self): return "VanillaLSTMBuilder"
-# )
+# VanillaLSTMBuilder }}}
 
-cdef class FastLSTMBuilder(_RNNBuilder): # (((
+cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     """[summary]
     
     [description]
@@ -3940,9 +3931,9 @@ cdef class FastLSTMBuilder(_RNNBuilder): # (((
         return exprs
 
     def whoami(self): return "FastLSTMBuilder"
-# )
+# }}}
 
-class BiRNNBuilder(object):
+class BiRNNBuilder(object): # {{{
     """
     Builder for BiRNNs that delegates to regular RNNs and wires them together.  
     
@@ -4040,8 +4031,9 @@ class BiRNNBuilder(object):
             bs = bb.initial_state().transduce(reversed(es))
             es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
         return es
+# BiRNNBuilder }}}
 
-cdef class RNNState: # (((
+cdef class RNNState: # {{{
     """
     This is the main class for working with RNNs / LSTMs / GRUs.
     Request an RNNState initial_state() from a builder, and then progress from there.
@@ -4205,9 +4197,9 @@ cdef class RNNState: # (((
             dynet.RNNBuilder
         """
         return self.builder
-    #)
+# RNNState }}}
 
-# StackedRNNState   TODO: do at least minimal testing for this #(((
+# StackedRNNState   TODO: do at least minimal testing for this #{{{
 cdef class StackedRNNState:
     cdef list states
     cdef StackedRNNState prev
@@ -4240,11 +4232,11 @@ cdef class StackedRNNState:
             cur = cur.add_input(x)
             states.append(cur)
         return states
-#)
+#}}}
 
-# )
+# RNNS / Builders }}}
 
-# ((( Training 
+# {{{ Trainers
 cdef class Trainer:
     """
     Generic trainer
@@ -4470,4 +4462,4 @@ cdef class AdamTrainer(Trainer):
     def whoami(self):
         return "AdamTrainer"
 
-#)
+# Trainers }}}
