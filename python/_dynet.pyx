@@ -698,7 +698,7 @@ cdef class Model: # (((
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
-    cpdef parameters_from_numpy(self, array):
+    cpdef parameters_from_numpy(self, array,string name=""):
         """Create parameter from numpy array
         
         Args:
@@ -708,7 +708,7 @@ cdef class Model: # (((
             (dynet.Parameters): Parameter
         """
         dim = array.shape
-        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer))
+        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
@@ -716,7 +716,7 @@ cdef class Model: # (((
     #cpdef parameters_from_numpy(self, array):
     #    pass
 
-    cpdef add_parameters(self, dim, PyInitializer init=None):
+    cpdef add_parameters(self, dim, PyInitializer init=None, string name=""):
         """Add a parameter to the model
         
         Args:
@@ -724,6 +724,7 @@ cdef class Model: # (((
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            name (string)             : Optional name for this parameter (default: "")
         
         Returns:
             (dynet.Parameters): Created Parameter
@@ -734,17 +735,16 @@ cdef class Model: # (((
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
-        print("adding")
-        p = self.thisptr.add_parameters(Dim(dim), deref(initializer))
-        print("whoa")
+        p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name=""):
         """Add a lookup parameter to the model
         
         Args:
             dim (tuple): Shape of the parameter. The first dimension is the lookup dimension
+            name (string)             : Optional name for this parameter (default: "")
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
@@ -758,7 +758,7 @@ cdef class Model: # (((
         if init is None:
             init = GlorotInitializer(True)
         initializer = init.initializer
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
@@ -771,24 +771,6 @@ cdef class Model: # (((
         Return the full name of this collection.
         """
         return self.thisptr.get_fullname()
-
-# TODO IO
-#    def save_all(self, fname):
-#        """Save all parameters in model to file
-#        
-#        Args:
-#            fname (str): File name
-#        """
-#        save_dynet_model(fname.encode(), self.thisptr)
-
-# TODO IO
-#    def load_all(self, fname):
-#        """Load all parameters in model from file
-#        
-#        Args:
-#            fname (str): File name
-#        """
-#        load_dynet_model(fname.encode(), self.thisptr)
 
 # TODO IO
 #    cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
@@ -3578,7 +3560,7 @@ cdef class _RNNBuilder: # (((
             self._init_state = RNNState(self, -1)
         return self._init_state
 
-    cpdef get_parameters(self):
+    cpdef Model param_collection(self):
         return Model.wrap(self.thisptr.get_parameters())
 #)
 
@@ -3595,47 +3577,47 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # (((
             self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
 
-# TODO IO
-#    cpdef get_parameters(self):
-#        """Retrieve the internal parameters of the RNN
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
-#        
-#        Returns:
-#            List of parameters for each layer
-#            list
-#        """
-#        params = []
-#        for l in self.thissimpleptr.params:
-#            layer_params=[]
-#            for w in l:
-#                layer_params.append(Parameters.wrap_ptr(w))
-#            params.append(layer_params)
-#        return params
+# TODO rename to parameters()?
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the RNN
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
+        
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thissimpleptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
 
-# TODO IO
-#    cpdef get_parameter_expressions(self):
-#        """Retrieve the internal parameters expressions of the RNN
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
-#        
-#        Returns:
-#            List of parameter expressions for each layer
-#            list
-#
-#        Raises:
-#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-#        """
-#        if self.thissimpleptr.param_vars.size() == 0 or self.thissimpleptr.param_vars[0][0].is_stale():
-#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing SimpleRNNBuilder internal parameters expression")
-#
-#        exprs = []
-#        for l in self.thissimpleptr.param_vars:
-#            layer_exprs=[]
-#            for w in l:
-#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-#            exprs.append(layer_exprs)
-#        return exprs
+# TODO rename to parameter_expressions()?
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the RNN
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thissimpleptr.param_vars.size() == 0 or self.thissimpleptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing SimpleRNNBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thissimpleptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
 
     def whoami(self): return "SimpleRNNBuilder"
 #)
@@ -3653,47 +3635,47 @@ cdef class GRUBuilder(_RNNBuilder): # (((
             self.thisgruptr = self.thisptr = new CGRUBuilder()
         self.cg_version = -1
 
-# TODO IO
-#    cpdef get_parameters(self):
-#        """Retrieve the internal parameters of the GRU
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
-#        
-#        Returns:
-#            List of parameters for each layer
-#            list
-#        """
-#        params = []
-#        for l in self.thisgruptr.params:
-#            layer_params=[]
-#            for w in l:
-#                layer_params.append(Parameters.wrap_ptr(w))
-#            params.append(layer_params)
-#        return params
+# TODO rename to parameters()?
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the GRU
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
+        
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thisgruptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
 
-# TODO IO
-#    cpdef get_parameter_expressions(self):
-#        """Retrieve the internal parameters expressions of the GRU
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
-#        
-#        Returns:
-#            List of parameter expressions for each layer
-#            list
-#
-#        Raises:
-#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-#        """
-#        if self.thisgruptr.param_vars.size() == 0 or self.thisgruptr.param_vars[0][0].is_stale():
-#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing GRUBuilder internal parameters expression")
-#
-#        exprs = []
-#        for l in self.thisgruptr.param_vars:
-#            layer_exprs=[]
-#            for w in l:
-#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-#            exprs.append(layer_exprs)
-#        return exprs
+# TODO rename to parameter_expressions()?
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the GRU
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thisgruptr.param_vars.size() == 0 or self.thisgruptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing GRUBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thisgruptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
 
     def whoami(self): return "GRUBuilder"
 # )
@@ -3711,47 +3693,48 @@ cdef class LSTMBuilder(_RNNBuilder): # (((
             self.thislstmptr = self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
 
-# TODO IO
-#    cpdef get_parameters(self):
-#        """Retrieve the internal parameters of the LSTM
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-#        
-#        Returns:
-#            List of parameters for each layer
-#            list
-#        """
-#        params = []
-#        for l in self.thislstmptr.params:
-#            layer_params=[]
-#            for w in l:
-#                layer_params.append(Parameters.wrap_ptr(w))
-#            params.append(layer_params)
-#        return params
+# TODO rename to parameters()?
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the LSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+        
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thislstmptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
 
-# TODO IO
-#    cpdef get_parameter_expressions(self):
-#        """Retrieve the internal parameters expressions of the LSTM
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-#        
-#        Returns:
-#            List of parameter expressions for each layer
-#            list
-#
-#        Raises:
-#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-#        """
-#        if self.thislstmptr.param_vars.size() == 0 or self.thislstmptr.param_vars[0][0].is_stale():
-#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing LSTMBuilder internal parameters expression")
-#
-#        exprs = []
-#        for l in self.thislstmptr.param_vars:
-#            layer_exprs=[]
-#            for w in l:
-#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-#            exprs.append(layer_exprs)
-#        return exprs
+
+# TODO rename to parameter_expressions()?
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the LSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thislstmptr.param_vars.size() == 0 or self.thislstmptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing LSTMBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thislstmptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
 
     def whoami(self): return "LSTMBuilder"
 # )
@@ -3788,82 +3771,82 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
 
-# TODO IO
-#    cpdef get_parameters(self):
-#        """Retrieve the internal parameters of the VanillaLSTM
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
-#
-#        .. code::
-#
-#                  h/x   
-#                +------+
-#                |      |
-#            i   |      |
-#                +------+
-#                |      |
-#            f   |      |
-#                +------+
-#                |      |
-#            o   |      |
-#                +------+
-#                |      |
-#            c   |      |
-#                +------+
-#
-#        Returns:
-#            List of parameters for each layer
-#            list
-#        """
-#        params = []
-#        for l in self.thisvanillaptr.params:
-#            layer_params=[]
-#            for w in l:
-#                layer_params.append(Parameters.wrap_ptr(w))
-#            params.append(layer_params)
-#        return params
+# TODO rename to parameters()?
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the VanillaLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
 
-# TODO IO
-#    cpdef get_parameter_expressions(self):
-#        """Retrieve the internal parameters expressions of the VanillaLSTM
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
-#
-#        .. code::
-#
-#                  h/x   
-#                +------+
-#                |      |
-#            i   |      |
-#                +------+
-#                |      |
-#            f   |      |
-#                +------+
-#                |      |
-#            o   |      |
-#                +------+
-#                |      |
-#            c   |      |
-#                +------+
-#        
-#        Returns:
-#            List of parameter expressions for each layer
-#            list
-#
-#        Raises:
-#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-#        """
-#        if self.thisvanillaptr.param_vars.size() == 0 or self.thisvanillaptr.param_vars[0][0].is_stale():
-#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing VanillaLSTMBuilder internal parameters expression")
-#
-#        exprs = []
-#        for l in self.thisvanillaptr.param_vars:
-#            layer_exprs=[]
-#            for w in l:
-#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-#            exprs.append(layer_exprs)
-#        return exprs
-#
+        .. code::
+
+                  h/x   
+                +------+
+                |      |
+            i   |      |
+                +------+
+                |      |
+            f   |      |
+                +------+
+                |      |
+            o   |      |
+                +------+
+                |      |
+            c   |      |
+                +------+
+
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thisvanillaptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
+
+# TODO rename to parameter_expressions()?
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the VanillaLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+
+        .. code::
+
+                  h/x   
+                +------+
+                |      |
+            i   |      |
+                +------+
+                |      |
+            f   |      |
+                +------+
+                |      |
+            o   |      |
+                +------+
+                |      |
+            c   |      |
+                +------+
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thisvanillaptr.param_vars.size() == 0 or self.thisvanillaptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing VanillaLSTMBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thisvanillaptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
+
 
     cpdef void set_dropouts(self, float d, float d_r):
         """Set the dropout rates
@@ -3918,48 +3901,47 @@ cdef class FastLSTMBuilder(_RNNBuilder): # (((
         self.thisfastptr = self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
 
-# TODO IO
-#    cpdef get_parameters(self):
-#        """Retrieve the internal parameters of the FastLSTM
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-#        
-#        Returns:
-#            List of parameters for each layer
-#            list
-#        """
-#        params = []
-#        for l in self.thisfastptr.params:
-#            layer_params=[]
-#            for w in l:
-#                layer_params.append(Parameters.wrap_ptr(w))
-#            params.append(layer_params)
-#        return params
+# TODO rename to parameters()?
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the FastLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+        
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thisfastptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
 
-# TODO IO
-#    cpdef get_parameter_expressions(self):
-#        """Retrieve the internal parameters expressions of the FastLSTM
-#        
-#        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-#        
-#        Returns:
-#            List of parameter expressions for each layer
-#            list
-#
-#        Raises:
-#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-#        """
-#        if self.thisfastptr.param_vars.size() == 0 or self.thisfastptr.param_vars[0][0].is_stale():
-#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing FastLSTMBuilder internal parameters expression")
-#
-#        exprs = []
-#        for l in self.thisfastptr.param_vars:
-#            layer_exprs=[]
-#            for w in l:
-#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-#            exprs.append(layer_exprs)
-#        return exprs
+# TODO rename to parameter_expressions()?
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the FastLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+       
+        Returns:
+            List of parameter expressions for each layer
+            list
 
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thisfastptr.param_vars.size() == 0 or self.thisfastptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing FastLSTMBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thisfastptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
 
     def whoami(self): return "FastLSTMBuilder"
 # )
