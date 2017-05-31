@@ -64,10 +64,20 @@ class build(_build):
         self.script_dir = script_dir
         self.build_dir = build_dir
         self.cmake_path = os.environ.get("CMAKE") or find_executable("cmake")
+        if not self.cmake_path:
+            raise DistutilsSetupError("`cmake` not found, and `CMAKE` is not set.")
         self.make_path = os.environ.get("MAKE") or find_executable("make")
+        if not self.make_path:
+            raise DistutilsSetupError("`make` not found, and `MAKE` is not set.")
         self.hg_path = find_executable("hg")
+        if not self.hg_path:
+            raise DistutilsSetupError("`hg` not found.")
         self.cc_path = os.environ.get("CC") or find_executable("gcc")
+        if not self.cc_path:
+            raise DistutilsSetupError("`gcc` not found, and `CC` is not set.")
         self.cxx_path = os.environ.get("CXX") or find_executable("g++")
+        if not self.cxx_path:
+            raise DistutilsSetupError("`g++` not found, and `CXX` is not set.")
         self.install_prefix = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
         self.py_executable = py_executable
         self.py_version = py_version
