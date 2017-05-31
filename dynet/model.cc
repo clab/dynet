@@ -249,7 +249,7 @@ void ParameterCollectionStorage::project_weights(float radius) {
 ParameterCollection::ParameterCollection() : name("/"), storage(new ParameterCollectionStorage), parent(nullptr) { }
 
 ParameterCollection::ParameterCollection(const string & my_name, ParameterCollection* my_parent) :
-    name(my_name), storage(nullptr), parent(my_parent) { }
+    name(my_name), storage(new ParameterCollectionStorage), parent(my_parent) { }
 
 ParameterCollection ParameterCollection::add_subcollection(const string & sub_name) {
   if (valid_parameter(sub_name)) {
