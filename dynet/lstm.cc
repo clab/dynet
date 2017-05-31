@@ -137,7 +137,7 @@ void LSTMBuilder::set_dropout_masks(unsigned batch_size) {
   }
 }
 
-ParameterCollection & LSTMBuilder::get_parameters() { return local_model; }
+ParameterCollection & LSTMBuilder::get_parameter_collection() { return local_model; }
 
 // TO DO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
@@ -392,7 +392,7 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   }
 }
 
-ParameterCollection & VanillaLSTMBuilder::get_parameters() {
+ParameterCollection & VanillaLSTMBuilder::get_parameter_collection() {
   return local_model;
 }
 

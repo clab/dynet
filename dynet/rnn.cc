@@ -137,7 +137,7 @@ void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
-ParameterCollection & SimpleRNNBuilder::get_parameters() {
+ParameterCollection & SimpleRNNBuilder::get_parameter_collection() {
   return local_model;
 }
 
