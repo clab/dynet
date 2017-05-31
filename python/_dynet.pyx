@@ -220,9 +220,6 @@ cdef c_tensor_as_np(CTensor &t):
     dim = c_dim_as_shape(t.d)
     return arr.reshape(dim,order='F')
 
-<<<<<<< HEAD
-# {{{ ParameterCollection / Parameters 
-=======
 cdef c_index_tensor_as_np(CIndexTensor &t):
     # TODO: make more efficient, with less copy
     arr = np.array(c_index_tensor_as_vector(t))
@@ -230,7 +227,6 @@ cdef c_index_tensor_as_np(CIndexTensor &t):
     return arr.reshape(dim,order='F')
 
 # ((( Model / Parameters 
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
 cdef class Parameters:
     """Parameters class
     
@@ -248,6 +244,26 @@ cdef class Parameters:
         self = Parameters()
         self.thisptr = ptr
         return self
+
+    # TODO docs
+    def save(self, string fname, string key=""):
+        self.write_to_textfile(fname, key)
+    def populate(self, string fname, string key=""):
+        self.populate_from_textfile(fname, key)
+
+    # TODO docs
+    def write_to_textfile(self, string fname, string key=""):
+        cdef CTextFileSaver *saver
+        saver = new CTextFileSaver(fname, append=False)
+        saver.save(self.thisptr,key)
+        del saver
+
+    # TODO docs
+    def populate_from_textfile(self, string fname, string key=""):
+        cdef CTextFileLoader *loader
+        loader = new CTextFileLoader(fname)
+        loader.populate(self.thisptr, key)
+        del loader
 
     cpdef shape(self):
         """[summary]
@@ -275,11 +291,7 @@ cdef class Parameters:
             np.ndarray: values of the gradient w.r.t. this parameter
         """
         cdef CTensor t
-<<<<<<< HEAD
         return c_tensor_as_np(self.thisptr.get_storage().g)
-
-=======
-        return c_tensor_as_np(self.thisptr.get().g)
     
     cpdef clip_inplace(self, float left, float right):
         """Clip the values in the parameter to a fixed range [left, right] (in place)
@@ -289,7 +301,6 @@ cdef class Parameters:
         """
         self.thisptr.clip_inplace(left, right)
         
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
     # TODO: make more efficient
     cpdef load_array(self, arr):
         """Deprecated
@@ -350,23 +361,19 @@ cdef class Parameters:
         """
         self.thisptr.set_updated(b)
 
-<<<<<<< HEAD
-    # cpdef unsigned get_index(self):
-    #     """Get parameter index
-    #     
-    #     Returns:
-    #         unsigned -- Index of the parameter
-    #     """
-    #     return self.thisptr.index
-=======
-    cpdef unsigned get_index(self):
-        """Get parameter index
-        
-        Returns:
-            unsigned: Index of the parameter
+    # TODO IO
+    #cpdef unsigned get_index(self):
+    #    """Get parameter index
+    #    
+    #    Returns:
+    #        unsigned: Index of the parameter
+    #    """
+    #    return self.thisptr.index
+    cpdef name(self):
         """
-        return self.thisptr.index
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
+        Return the full name of this collection.
+        """
+        return self.thisptr.get_fullname()
 
     cpdef Expression expr(self, bool update=True):
         """Returns the parameter as an expression
@@ -404,6 +411,26 @@ cdef class LookupParameters:
         self = LookupParameters()
         self.thisptr = ptr
         return self
+
+    # TODO docs
+    def save(self, string fname, string key=""):
+        self.write_to_textfile(fname, key)
+    def populate(self, string fname, string key=""):
+        self.populate_from_textfile(fname, key)
+
+    # TODO docs
+    def write_to_textfile(self, string fname, string key=""):
+        cdef CTextFileSaver *saver
+        saver = new CTextFileSaver(fname, append=False)
+        saver.save(self.thisptr,key)
+        del saver
+
+    # TODO docs
+    def populate_from_textfile(self, string fname, string key=""):
+        cdef CTextFileLoader *loader
+        loader = new CTextFileLoader(fname)
+        loader.populate(self.thisptr, key)
+        del loader
 
     cpdef init_from_array(self, arr):
         if len(arr) > self.thisptr.get_storage().values.size():
@@ -473,7 +500,14 @@ cdef class LookupParameters:
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
-    # cpdef unsigned get_index(self): return self.thisptr.index
+    # TODO IO
+    #cpdef unsigned get_index(self): return self.thisptr.index
+
+    cpdef name(self):
+        """
+        Return the full name of this collection.
+        """
+        return self.thisptr.get_fullname()
 
 # TODO document this
 class Saveable(object):
@@ -604,42 +638,62 @@ cdef class NumpyInitializer(PyInitializer):
         return vals
 
 
-<<<<<<< HEAD
-cdef class ParameterCollection: # {{{
-    cdef CParameterCollection *thisptr
-=======
 cdef class Model: # (((
     """
     A model holds Parameters. Use it to create, load and save parameters.
     """
-    cdef CModel *thisptr
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
-    def __cinit__(self):
-        self.thisptr = new CParameterCollection()
+    cdef CModel thisptr  # Not a pointer...
+    def __cinit__(self, ):
+        pass
+        #self.thisptr = CModel()
+
     def __init__(self):
         pass
 
-    def __dealloc__(self): del self.thisptr
+    #def __dealloc__(self): del self.thisptr
 
     @staticmethod
-    def from_file(fname):
-<<<<<<< HEAD
-        model = ParameterCollection()
-=======
-        """Create model from file
-        
-        Loads all parameters in file and returns model holding them
-        
-        Args:
-            fname (str): File name
-        
-        Returns:
-            (dynet.Model): Created model
-        """
-        model = Model()
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
-        res = model.load(fname)
-        return model, res
+    cdef wrap(CModel m):
+        self = Model()
+        self.thisptr = m
+        return self
+
+    # TODO docs
+    def save(self, string fname, string key=""):
+        self.write_to_textfile(fname, key)
+    def populate(self, string fname, string key=""):
+        self.populate_from_textfile(fname, key)
+
+    # TODO docs
+    def write_to_textfile(self, string fname, string key=""):
+        cdef CTextFileSaver *saver
+        saver = new CTextFileSaver(fname, append=False)
+        saver.save(self.thisptr,key)
+        del saver
+
+    # TODO docs
+    def populate_from_textfile(self, string fname, string key=""):
+        cdef CTextFileLoader *loader
+        loader = new CTextFileLoader(fname)
+        loader.populate(self.thisptr, key)
+        del loader
+
+# TODO IO
+#    @staticmethod
+#    def from_file(fname):
+#        """Create model from file
+#        
+#        Loads all parameters in file and returns model holding them
+#        
+#        Args:
+#            fname (str): File name
+#        
+#        Returns:
+#            (dynet.Model): Created model
+#        """
+#        model = Model()
+#        res = model.load(fname)
+#        return model, res
 
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
@@ -657,6 +711,10 @@ cdef class Model: # (((
         cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer))
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
+
+    # TODO IO implement this
+    #cpdef parameters_from_numpy(self, array):
+    #    pass
 
     cpdef add_parameters(self, dim, PyInitializer init=None):
         """Add a parameter to the model
@@ -676,7 +734,9 @@ cdef class Model: # (((
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
+        print("adding")
         p = self.thisptr.add_parameters(Dim(dim), deref(initializer))
+        print("whoa")
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
@@ -702,25 +762,36 @@ cdef class Model: # (((
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    def save_all(self, fname):
-        """Save all parameters in model to file
-        
-        Args:
-            fname (str): File name
-        """
-        save_dynet_model(fname.encode(), self.thisptr)
+    cpdef add_subcollection(self, name=None):
+        if name is None: return Model.wrap(self.thisptr.add_subcollection(""))
+        else: return Model.wrap(self.thisptr.add_subcollection(name))
 
-    def load_all(self, fname):
-        """Load all parameters in model from file
-        
-        Args:
-            fname (str): File name
+    cpdef name(self):
         """
-        load_dynet_model(fname.encode(), self.thisptr)
+        Return the full name of this collection.
+        """
+        return self.thisptr.get_fullname()
 
-<<<<<<< HEAD
-# TODO kill
-#    cdef _save_one(self, component, CParameterCollectionSaver *saver, fh, pfh):
+# TODO IO
+#    def save_all(self, fname):
+#        """Save all parameters in model to file
+#        
+#        Args:
+#            fname (str): File name
+#        """
+#        save_dynet_model(fname.encode(), self.thisptr)
+
+# TODO IO
+#    def load_all(self, fname):
+#        """Load all parameters in model from file
+#        
+#        Args:
+#            fname (str): File name
+#        """
+#        load_dynet_model(fname.encode(), self.thisptr)
+
+# TODO IO
+#    cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
 #        # would be nicer to have polymorphism/dispatch-by-type
 #        # but we cannot because we need to bind to the c-type.
 #        c = component
@@ -756,21 +827,31 @@ cdef class Model: # (((
 #        else:
 #            raise TypeError("Cannot save model component of type %s" % type(c))
 
+# TODO IO
 #    def save(self, fname, components=None):
+#        """Save a list of parameters to file
+#        
+#        Args:
+#            fname (str): File name
+#        
+#        Keyword Arguments:
+#            components (list): List of parameters to save (default: None)
+#        """
 #        if not components:
-#            self.save_all(fname.encode())
+#            self.save_all(fname)
 #            return
 #        fh = open(fname+".pym","w")
 #        pfh = open(fname+".pyk","wb")
-#        cdef CParameterCollectionSaver *saver = new CParameterCollectionSaver(fname.encode(), self.thisptr)
+#        cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
 #        for c in components:
 #            self._save_one(c,saver,fh,pfh)
 #        saver.done()
 #        fh.close()
 #        pfh.close()
 #        del saver
-#
-#    cdef _load_one(self, itypes, CParameterCollectionLoader *loader, pfh):
+
+# TODO IO
+#    cdef _load_one(self, itypes, CModelLoader *loader, pfh):
 #        cdef CParameters p
 #        cdef CLookupParameters lp
 #        cdef GRUBuilder gb_
@@ -818,15 +899,24 @@ cdef class Model: # (((
 #        else:
 #            print("Huh?")
 #            assert False,"unsupported type " + tp
-#
+
+# TODO IO
 #    cpdef load(self, fname):
+#        """Load a list of parameters from file
+#        
+#        Args:
+#            fname (str): File name
+#
+#        Returns:
+#            (list): List of parameters loaded from file
+#        """
 #        if not os.path.isfile(fname+".pym"):
-#            self.load_all(fname.encode())
+#            self.load_all(fname)
 #            return
 #        with open(fname+".pym","r") as fh:
 #            types = fh.read().strip().split()
 #
-#        cdef CParameterCollectionLoader *loader = new CParameterCollectionLoader(fname.encode(), self.thisptr)
+#        cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
 #        with open(fname+".pyk","rb") as pfh:
 #            params = []
 #            itypes = iter(types)
@@ -838,144 +928,7 @@ cdef class Model: # (((
 #        loader.done()
 #        del loader
 #        return params
-    #}}}
-=======
-    cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
-        # would be nicer to have polymorphism/dispatch-by-type
-        # but we cannot because we need to bind to the c-type.
-        c = component
-        if isinstance(c, Parameters):
-            fh.write("param ")
-            saver.add_parameter((<Parameters>c).thisptr)
-        elif isinstance(c, LookupParameters):
-            fh.write("lookup ")
-            saver.add_lookup_parameter((<LookupParameters>c).thisptr)
-        elif isinstance(c, GRUBuilder):
-            fh.write("gru_builder ")
-            saver.add_gru_builder((<CGRUBuilder*>(<GRUBuilder>c).thisptr)[0])
-        elif isinstance(c, LSTMBuilder):
-            fh.write("lstm_builder ")
-            saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
-        elif isinstance(c, VanillaLSTMBuilder):
-            fh.write("vanilla_lstm_builder ")
-            saver.add_vanilla_lstm_builder((<CVanillaLSTMBuilder*>(<VanillaLSTMBuilder>c).thisptr)[0])
-        elif isinstance(c, SimpleRNNBuilder):
-            saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
-            fh.write("srnn_builder ")
-        elif isinstance(c, BiRNNBuilder):
-            fh.write("birnn_builder~%d " % (2 * len(c.builder_layers)))
-            for (f,b) in c.builder_layers:
-                self._save_one(f,saver,fh,pfh)
-                self._save_one(b,saver,fh,pfh)
-        elif isinstance(c, Saveable):
-            cs = c.get_components()
-            fh.write("user~%d " % len(cs))
-            pickle.dump(c,pfh)
-            for subc in cs:
-                self._save_one(subc,saver,fh,pfh)
-        else:
-            raise TypeError("Cannot save model component of type %s" % type(c))
-
-    def save(self, fname, components=None):
-        """Save a list of parameters to file
-        
-        Args:
-            fname (str): File name
-        
-        Keyword Arguments:
-            components (list): List of parameters to save (default: None)
-        """
-        if not components:
-            self.save_all(fname)
-            return
-        fh = open(fname+".pym","w")
-        pfh = open(fname+".pyk","wb")
-        cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
-        for c in components:
-            self._save_one(c,saver,fh,pfh)
-        saver.done()
-        fh.close()
-        pfh.close()
-        del saver
-
-    cdef _load_one(self, itypes, CModelLoader *loader, pfh):
-        cdef CParameters p
-        cdef CLookupParameters lp
-        cdef GRUBuilder gb_
-        cdef LSTMBuilder lb_
-        cdef VanillaLSTMBuilder vlb_
-        cdef SimpleRNNBuilder sb_
-        tp = next(itypes)
-        if tp == "param":
-            loader.fill_parameter(p)
-            param = Parameters.wrap_ptr(p)
-            return param
-        elif tp == "lookup":
-            loader.fill_lookup_parameter(lp)
-            param = LookupParameters.wrap_ptr(lp)
-            return param
-        elif tp == "gru_builder":
-            gb_ = GRUBuilder(0,0,0,self) # empty builder
-            loader.fill_gru_builder((<CGRUBuilder *>gb_.thisptr)[0])
-            return gb_
-        elif tp == "lstm_builder":
-            lb_ = LSTMBuilder(0,0,0,self) # empty builder
-            loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
-            return lb_
-        elif tp == "vanilla_lstm_builder":
-            vlb_ = VanillaLSTMBuilder(0,0,0,self) # empty builder
-            loader.fill_vanilla_lstm_builder((<CVanillaLSTMBuilder *>vlb_.thisptr)[0])
-            return vlb_
-        elif tp == "srnn_builder":
-            sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
-            loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
-            return sb_
-        elif tp.startswith("birnn_builder~"):
-            tp,num = tp.split("~",1)
-            num = int(num)
-            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
-            return BiRNNBuilder(None, None, None, None, None, list(zip(items[0::2], items[1::2])))
-        elif tp.startswith("user~"):
-            # user defiend type
-            tp,num = tp.split("~",1)
-            saveable = pickle.load(pfh)
-            num = int(num)
-            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
-            saveable.restore_components(items)
-            return saveable
-        else:
-            print("Huh?")
-            assert False,"unsupported type " + tp
-
-    cpdef load(self, fname):
-        """Load a list of parameters from file
-        
-        Args:
-            fname (str): File name
-
-        Returns:
-            (list): List of parameters loaded from file
-        """
-        if not os.path.isfile(fname+".pym"):
-            self.load_all(fname)
-            return
-        with open(fname+".pym","r") as fh:
-            types = fh.read().strip().split()
-
-        cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
-        with open(fname+".pyk","rb") as pfh:
-            params = []
-            itypes = iter(types)
-            while True: # until iterator is done
-                try:
-                    param = self._load_one(itypes,loader,pfh)
-                except StopIteration: break
-                params.append(param)
-        loader.done()
-        del loader
-        return params
     #)
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
 
 # )
 
@@ -3624,6 +3577,9 @@ cdef class _RNNBuilder: # (((
                 self.start_new_sequence()
             self._init_state = RNNState(self, -1)
         return self._init_state
+
+    cpdef get_parameters(self):
+        return Model.wrap(self.thisptr.get_parameters())
 #)
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # (((
@@ -3634,51 +3590,52 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # (((
     cdef CSimpleRNNBuilder* thissimpleptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
 
-    cpdef get_parameters(self):
-        """Retrieve the internal parameters of the RNN
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
-        
-        Returns:
-            List of parameters for each layer
-            list
-        """
-        params = []
-        for l in self.thissimpleptr.params:
-            layer_params=[]
-            for w in l:
-                layer_params.append(Parameters.wrap_ptr(w))
-            params.append(layer_params)
-        return params
+# TODO IO
+#    cpdef get_parameters(self):
+#        """Retrieve the internal parameters of the RNN
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
+#        
+#        Returns:
+#            List of parameters for each layer
+#            list
+#        """
+#        params = []
+#        for l in self.thissimpleptr.params:
+#            layer_params=[]
+#            for w in l:
+#                layer_params.append(Parameters.wrap_ptr(w))
+#            params.append(layer_params)
+#        return params
 
-
-    cpdef get_parameter_expressions(self):
-        """Retrieve the internal parameters expressions of the RNN
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
-        
-        Returns:
-            List of parameter expressions for each layer
-            list
-
-        Raises:
-            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-        """
-        if self.thissimpleptr.param_vars.size() == 0 or self.thissimpleptr.param_vars[0][0].is_stale():
-            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing SimpleRNNBuilder internal parameters expression")
-
-        exprs = []
-        for l in self.thissimpleptr.param_vars:
-            layer_exprs=[]
-            for w in l:
-                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-            exprs.append(layer_exprs)
-        return exprs
+# TODO IO
+#    cpdef get_parameter_expressions(self):
+#        """Retrieve the internal parameters expressions of the RNN
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_{hx},W_{hh},b_h`
+#        
+#        Returns:
+#            List of parameter expressions for each layer
+#            list
+#
+#        Raises:
+#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+#        """
+#        if self.thissimpleptr.param_vars.size() == 0 or self.thissimpleptr.param_vars[0][0].is_stale():
+#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing SimpleRNNBuilder internal parameters expression")
+#
+#        exprs = []
+#        for l in self.thissimpleptr.param_vars:
+#            layer_exprs=[]
+#            for w in l:
+#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+#            exprs.append(layer_exprs)
+#        return exprs
 
     def whoami(self): return "SimpleRNNBuilder"
 #)
@@ -3691,51 +3648,52 @@ cdef class GRUBuilder(_RNNBuilder): # (((
     cdef CGRUBuilder* thisgruptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thisgruptr = self.thisptr = new CGRUBuilder()
         self.cg_version = -1
 
-    cpdef get_parameters(self):
-        """Retrieve the internal parameters of the GRU
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
-        
-        Returns:
-            List of parameters for each layer
-            list
-        """
-        params = []
-        for l in self.thisgruptr.params:
-            layer_params=[]
-            for w in l:
-                layer_params.append(Parameters.wrap_ptr(w))
-            params.append(layer_params)
-        return params
+# TODO IO
+#    cpdef get_parameters(self):
+#        """Retrieve the internal parameters of the GRU
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
+#        
+#        Returns:
+#            List of parameters for each layer
+#            list
+#        """
+#        params = []
+#        for l in self.thisgruptr.params:
+#            layer_params=[]
+#            for w in l:
+#                layer_params.append(Parameters.wrap_ptr(w))
+#            params.append(layer_params)
+#        return params
 
-
-    cpdef get_parameter_expressions(self):
-        """Retrieve the internal parameters expressions of the GRU
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
-        
-        Returns:
-            List of parameter expressions for each layer
-            list
-
-        Raises:
-            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-        """
-        if self.thisgruptr.param_vars.size() == 0 or self.thisgruptr.param_vars[0][0].is_stale():
-            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing GRUBuilder internal parameters expression")
-
-        exprs = []
-        for l in self.thisgruptr.param_vars:
-            layer_exprs=[]
-            for w in l:
-                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-            exprs.append(layer_exprs)
-        return exprs
+# TODO IO
+#    cpdef get_parameter_expressions(self):
+#        """Retrieve the internal parameters expressions of the GRU
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_{zx},W_{zh},b_z,W_{rx},W_{rh},b_r,W_{hx},W_{hh},b_h`
+#        
+#        Returns:
+#            List of parameter expressions for each layer
+#            list
+#
+#        Raises:
+#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+#        """
+#        if self.thisgruptr.param_vars.size() == 0 or self.thisgruptr.param_vars[0][0].is_stale():
+#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing GRUBuilder internal parameters expression")
+#
+#        exprs = []
+#        for l in self.thisgruptr.param_vars:
+#            layer_exprs=[]
+#            for w in l:
+#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+#            exprs.append(layer_exprs)
+#        return exprs
 
     def whoami(self): return "GRUBuilder"
 # )
@@ -3748,51 +3706,52 @@ cdef class LSTMBuilder(_RNNBuilder): # (((
     cdef CLSTMBuilder* thislstmptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thislstmptr = self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
 
-    cpdef get_parameters(self):
-        """Retrieve the internal parameters of the LSTM
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-        
-        Returns:
-            List of parameters for each layer
-            list
-        """
-        params = []
-        for l in self.thislstmptr.params:
-            layer_params=[]
-            for w in l:
-                layer_params.append(Parameters.wrap_ptr(w))
-            params.append(layer_params)
-        return params
+# TODO IO
+#    cpdef get_parameters(self):
+#        """Retrieve the internal parameters of the LSTM
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+#        
+#        Returns:
+#            List of parameters for each layer
+#            list
+#        """
+#        params = []
+#        for l in self.thislstmptr.params:
+#            layer_params=[]
+#            for w in l:
+#                layer_params.append(Parameters.wrap_ptr(w))
+#            params.append(layer_params)
+#        return params
 
-
-    cpdef get_parameter_expressions(self):
-        """Retrieve the internal parameters expressions of the LSTM
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-        
-        Returns:
-            List of parameter expressions for each layer
-            list
-
-        Raises:
-            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-        """
-        if self.thislstmptr.param_vars.size() == 0 or self.thislstmptr.param_vars[0][0].is_stale():
-            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing LSTMBuilder internal parameters expression")
-
-        exprs = []
-        for l in self.thislstmptr.param_vars:
-            layer_exprs=[]
-            for w in l:
-                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-            exprs.append(layer_exprs)
-        return exprs
+# TODO IO
+#    cpdef get_parameter_expressions(self):
+#        """Retrieve the internal parameters expressions of the LSTM
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+#        
+#        Returns:
+#            List of parameter expressions for each layer
+#            list
+#
+#        Raises:
+#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+#        """
+#        if self.thislstmptr.param_vars.size() == 0 or self.thislstmptr.param_vars[0][0].is_stale():
+#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing LSTMBuilder internal parameters expression")
+#
+#        exprs = []
+#        for l in self.thislstmptr.param_vars:
+#            layer_exprs=[]
+#            for w in l:
+#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+#            exprs.append(layer_exprs)
+#        return exprs
 
     def whoami(self): return "LSTMBuilder"
 # )
@@ -3824,138 +3783,99 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
     cdef CVanillaLSTMBuilder* thisvanillaptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model, ln_lstm=False):
         if layers > 0:
-            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0], ln_lstm)
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm)
         else:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
 
-    cpdef get_parameters(self):
-        """Retrieve the internal parameters of the VanillaLSTM
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+# TODO IO
+#    cpdef get_parameters(self):
+#        """Retrieve the internal parameters of the VanillaLSTM
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+#
+#        .. code::
+#
+#                  h/x   
+#                +------+
+#                |      |
+#            i   |      |
+#                +------+
+#                |      |
+#            f   |      |
+#                +------+
+#                |      |
+#            o   |      |
+#                +------+
+#                |      |
+#            c   |      |
+#                +------+
+#
+#        Returns:
+#            List of parameters for each layer
+#            list
+#        """
+#        params = []
+#        for l in self.thisvanillaptr.params:
+#            layer_params=[]
+#            for w in l:
+#                layer_params.append(Parameters.wrap_ptr(w))
+#            params.append(layer_params)
+#        return params
 
-        .. code::
-
-                  h/x   
-                +------+
-                |      |
-            i   |      |
-                +------+
-                |      |
-            f   |      |
-                +------+
-                |      |
-            o   |      |
-                +------+
-                |      |
-            c   |      |
-                +------+
-
-        Returns:
-            List of parameters for each layer
-            list
-        """
-        params = []
-        for l in self.thisvanillaptr.params:
-            layer_params=[]
-            for w in l:
-                layer_params.append(Parameters.wrap_ptr(w))
-            params.append(layer_params)
-        return params
-
-
-    cpdef get_parameter_expressions(self):
-        """Retrieve the internal parameters expressions of the VanillaLSTM
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
-
-        .. code::
-
-                  h/x   
-                +------+
-                |      |
-            i   |      |
-                +------+
-                |      |
-            f   |      |
-                +------+
-                |      |
-            o   |      |
-                +------+
-                |      |
-            c   |      |
-                +------+
-        
-        Returns:
-            List of parameter expressions for each layer
-            list
-
-        Raises:
-            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-        """
-        if self.thisvanillaptr.param_vars.size() == 0 or self.thisvanillaptr.param_vars[0][0].is_stale():
-            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing VanillaLSTMBuilder internal parameters expression")
-
-        exprs = []
-        for l in self.thisvanillaptr.param_vars:
-            layer_exprs=[]
-            for w in l:
-                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-            exprs.append(layer_exprs)
-        return exprs
-
-<<<<<<< HEAD
-cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
-        if layers > 0:
-            self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
-        else:
-            self.thisptr = new CSimpleRNNBuilder()
-        self.cg_version = -1
-
-    def whoami(self): return "SimpleRNNBuilder"
-#}}}
-    
-cdef class GRUBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
-        if layers > 0:
-            self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
-        else:
-            self.thisptr = new CGRUBuilder()
-        self.cg_version = -1
-=======
+# TODO IO
+#    cpdef get_parameter_expressions(self):
+#        """Retrieve the internal parameters expressions of the VanillaLSTM
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+#
+#        .. code::
+#
+#                  h/x   
+#                +------+
+#                |      |
+#            i   |      |
+#                +------+
+#                |      |
+#            f   |      |
+#                +------+
+#                |      |
+#            o   |      |
+#                +------+
+#                |      |
+#            c   |      |
+#                +------+
+#        
+#        Returns:
+#            List of parameter expressions for each layer
+#            list
+#
+#        Raises:
+#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+#        """
+#        if self.thisvanillaptr.param_vars.size() == 0 or self.thisvanillaptr.param_vars[0][0].is_stale():
+#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing VanillaLSTMBuilder internal parameters expression")
+#
+#        exprs = []
+#        for l in self.thisvanillaptr.param_vars:
+#            layer_exprs=[]
+#            for w in l:
+#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+#            exprs.append(layer_exprs)
+#        return exprs
+#
 
     cpdef void set_dropouts(self, float d, float d_r):
         """Set the dropout rates
         
         The dropout implemented here is the variational dropout with tied weights introduced in `Gal, 2016 <http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks>`_
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
 
         More specifically, dropout masks :math:`\mathbf{z_x}\sim \\text(1-d_x)`, :math:`\mathbf{z_h}\sim \\text{Bernoulli}(1-d_h)` are sampled at the start of each sequence.
 
-<<<<<<< HEAD
-cdef class LSTMBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
-        if layers > 0:
-            self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
-        else:
-            self.thisptr = new CLSTMBuilder()
-        self.cg_version = -1
-=======
         The dynamics of the cell are then modified to :
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
 
         .. math::
 
-<<<<<<< HEAD
-cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
-        if layers > 0:
-            self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
-        else:
-            self.thisptr = new CVanillaLSTMBuilder()
-        self.cg_version = -1
-=======
             \\begin{split}
                 i_t & =\sigma(W_{ix}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ih}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_i)\\\\
                 f_t & = \sigma(W_{fx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{fh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_f)\\\\
@@ -3984,16 +3904,10 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
             batch_size (int): Batch size (default: {1})
         """
         self.thisvanillaptr.set_dropout_masks(batch_size)
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
 
     def whoami(self): return "VanillaLSTMBuilder"
 # )
 
-<<<<<<< HEAD
-cdef class FastLSTMBuilder(_RNNBuilder): # {{{
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
-        self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
-=======
 cdef class FastLSTMBuilder(_RNNBuilder): # (((
     """[summary]
     
@@ -4001,50 +3915,50 @@ cdef class FastLSTMBuilder(_RNNBuilder): # (((
     """
     cdef CFastLSTMBuilder* thisfastptr
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisfastptr = self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
+        self.thisfastptr = self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
 
-    cpdef get_parameters(self):
-        """Retrieve the internal parameters of the FastLSTM
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-        
-        Returns:
-            List of parameters for each layer
-            list
-        """
-        params = []
-        for l in self.thisfastptr.params:
-            layer_params=[]
-            for w in l:
-                layer_params.append(Parameters.wrap_ptr(w))
-            params.append(layer_params)
-        return params
+# TODO IO
+#    cpdef get_parameters(self):
+#        """Retrieve the internal parameters of the FastLSTM
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+#        
+#        Returns:
+#            List of parameters for each layer
+#            list
+#        """
+#        params = []
+#        for l in self.thisfastptr.params:
+#            layer_params=[]
+#            for w in l:
+#                layer_params.append(Parameters.wrap_ptr(w))
+#            params.append(layer_params)
+#        return params
 
-
-    cpdef get_parameter_expressions(self):
-        """Retrieve the internal parameters expressions of the FastLSTM
-        
-        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-        
-        Returns:
-            List of parameter expressions for each layer
-            list
-
-        Raises:
-            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
-        """
-        if self.thisfastptr.param_vars.size() == 0 or self.thisfastptr.param_vars[0][0].is_stale():
-            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing FastLSTMBuilder internal parameters expression")
-
-        exprs = []
-        for l in self.thisfastptr.param_vars:
-            layer_exprs=[]
-            for w in l:
-                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
-            exprs.append(layer_exprs)
-        return exprs
+# TODO IO
+#    cpdef get_parameter_expressions(self):
+#        """Retrieve the internal parameters expressions of the FastLSTM
+#        
+#        The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
+#        
+#        Returns:
+#            List of parameter expressions for each layer
+#            list
+#
+#        Raises:
+#            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+#        """
+#        if self.thisfastptr.param_vars.size() == 0 or self.thisfastptr.param_vars[0][0].is_stale():
+#            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing FastLSTMBuilder internal parameters expression")
+#
+#        exprs = []
+#        for l in self.thisfastptr.param_vars:
+#            layer_exprs=[]
+#            for w in l:
+#                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+#            exprs.append(layer_exprs)
+#        return exprs
 
 
     def whoami(self): return "FastLSTMBuilder"
@@ -4352,20 +4266,12 @@ cdef class StackedRNNState:
 
 # )
 
-<<<<<<< HEAD
-# {{{ Training 
-cdef class SimpleSGDTrainer:
-    cdef CSimpleSGDTrainer *thisptr
-    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
-=======
 # ((( Training 
 cdef class Trainer:
     """
     Generic trainer
     """
     cdef CTrainer *thisptr
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -4377,6 +4283,7 @@ cdef class Trainer:
             s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
         self.thisptr.update(s)
+
     cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
         """Update a subset of parameters
         
@@ -4393,7 +4300,7 @@ cdef class Trainer:
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec
         for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
+        #self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         """Update trainers hyper-parameters that depend on epochs
         
@@ -4439,11 +4346,6 @@ cdef class Trainer:
         """
         return self.thisptr.clip_threshold
 
-<<<<<<< HEAD
-cdef class MomentumSGDTrainer:
-    cdef CMomentumSGDTrainer *thisptr
-    def __cinit__(self, ParameterCollection m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-=======
 cdef class SimpleSGDTrainer(Trainer):
     """Stochastic gradient descent trainer
     
@@ -4457,7 +4359,7 @@ cdef class SimpleSGDTrainer(Trainer):
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
     def whoami(self):
         return "SimpleSGDTrainer"
 
@@ -4488,7 +4390,7 @@ cdef class CyclicalSGDTrainer(Trainer):
     """
     cdef CCyclicalSGDTrainer *thischildptr
     def __cinit__(self, Model m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
-        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr[0], e0_min, e0_max, step_size, gamma, edecay)
+        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, e0_min, e0_max, step_size, gamma, edecay)
     cpdef update(self, float s=1.0):
         self.thischildptr.update(s)
     def whoami(self):
@@ -4509,17 +4411,11 @@ cdef class MomentumSGDTrainer(Trainer):
 
     """
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
     def whoami(self):
         return "MomentumSGDTrainer"
 
 
-<<<<<<< HEAD
-cdef class AdagradTrainer:
-    cdef CAdagradTrainer *thisptr
-    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-=======
 cdef class AdagradTrainer(Trainer):
     """Adagrad optimizer
     
@@ -4534,17 +4430,11 @@ cdef class AdagradTrainer(Trainer):
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
-        self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
+        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
     def whoami(self):
         return "AdagradTrainer"
 
 
-<<<<<<< HEAD
-cdef class AdadeltaTrainer:
-    cdef CAdadeltaTrainer *thisptr
-    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-=======
 cdef class AdadeltaTrainer(Trainer):
     """AdaDelta optimizer
     
@@ -4559,8 +4449,7 @@ cdef class AdadeltaTrainer(Trainer):
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
-        self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
     def whoami(self):
         return "AdadeltaTrainer"
 
@@ -4579,15 +4468,10 @@ cdef class RMSPropTrainer(Trainer):
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
-        self.thisptr = new CRMSPropTrainer(m.thisptr[0], e0, eps, rho, edecay)
+        self.thisptr = new CRMSPropTrainer(m.thisptr, e0, eps, rho, edecay)
     def whoami(self):
         return "RMSPropTrainer"
 
-<<<<<<< HEAD
-cdef class AdamTrainer:
-    cdef CAdamTrainer *thisptr
-    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
-=======
 cdef class AdamTrainer(Trainer):
     """Adam optimizer
     
@@ -4604,8 +4488,7 @@ cdef class AdamTrainer(Trainer):
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
     def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
->>>>>>> fcd2ef6bfa9ecb4e891d37883ba68f8568742dd5
-        self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
+        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
     def whoami(self):
         return "AdamTrainer"
 

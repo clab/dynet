@@ -243,6 +243,8 @@ struct RNNBuilder {
    */
   virtual void copy(const RNNBuilder & params) = 0;
 
+  virtual ParameterCollection & get_parameters() = 0;
+
 protected:
   virtual void new_graph_impl(ComputationGraph& cg, bool update) = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h_0) = 0;
