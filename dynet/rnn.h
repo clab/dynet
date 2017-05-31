@@ -318,9 +318,6 @@ public:
 
   ParameterCollection & get_parameters();
 
-private:
-  ParameterCollection local_model;
-
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameter>> params;
 
@@ -328,6 +325,7 @@ private:
   std::vector<std::vector<Expression>> param_vars;
 
 private:
+  ParameterCollection local_model;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
