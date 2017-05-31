@@ -42,7 +42,7 @@ struct FastLSTMBuilder : public RNNBuilder {
    * \brief Get parameters in FastLSTMBuilder
    * \return list of points to ParameterStorage objects
    */
-  ParameterCollection & get_parameters();
+  ParameterCollection & get_parameter_collection() override;
  protected:
   void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;

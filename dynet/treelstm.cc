@@ -278,7 +278,7 @@ void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
-ParameterCollection & NaryTreeLSTMBuilder::get_parameters() {
+ParameterCollection & NaryTreeLSTMBuilder::get_parameter_collection() {
   return local_model;
 }
 

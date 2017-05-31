@@ -21,7 +21,7 @@ struct GRUBuilder : public RNNBuilder {
   std::vector<Expression> get_s(RNNPointer i) const override { return get_h(i); }
   unsigned num_h0_components() const override { return layers; }
   void copy(const RNNBuilder & params) override;
-  ParameterCollection & get_parameters();
+  ParameterCollection & get_parameter_collection() override;
 
 
   // first index is layer, then ...

@@ -678,23 +678,6 @@ cdef class Model: # (((
         loader.populate(self.thisptr, key)
         del loader
 
-# TODO IO
-#    @staticmethod
-#    def from_file(fname):
-#        """Create model from file
-#        
-#        Loads all parameters in file and returns model holding them
-#        
-#        Args:
-#            fname (str): File name
-#        
-#        Returns:
-#            (dynet.Model): Created model
-#        """
-#        model = Model()
-#        res = model.load(fname)
-#        return model, res
-
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
@@ -713,8 +696,21 @@ cdef class Model: # (((
         return pp
 
     # TODO IO implement this
-    #cpdef parameters_from_numpy(self, array):
-    #    pass
+    cpdef lookup_parameters_from_numpy(self, array, string name=""):
+        """Create LookupParameters from numpy array
+        
+        Args:
+            array (np.ndarray): Numpy array. rows: vocab_size, cols: dims.
+        
+        Returns:
+            (dynet.Parameters): LookupParameter
+        """
+        vocab_size = array.shape[0]
+        emb_dim = array.shape[1:]
+        init = NumpyInitializer(array.T)
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name)
+        cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
+        return pp
 
     cpdef add_parameters(self, dim, PyInitializer init=None, string name=""):
         """Add a parameter to the model
@@ -743,7 +739,7 @@ cdef class Model: # (((
         """Add a lookup parameter to the model
         
         Args:
-            dim (tuple): Shape of the parameter. The first dimension is the lookup dimension
+            dim (tuple): Shape of the parameter. The first dimension is the vocab size
             name (string)             : Optional name for this parameter (default: "")
         
         Keyword Arguments:
@@ -3561,7 +3557,7 @@ cdef class _RNNBuilder: # (((
         return self._init_state
 
     cpdef Model param_collection(self):
-        return Model.wrap(self.thisptr.get_parameters())
+        return Model.wrap(self.thisptr.get_parameter_collection())
 #)
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # (((

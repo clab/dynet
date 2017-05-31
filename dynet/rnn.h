@@ -243,7 +243,7 @@ struct RNNBuilder {
    */
   virtual void copy(const RNNBuilder & params) = 0;
 
-  virtual ParameterCollection & get_parameters() = 0;
+  virtual ParameterCollection & get_parameter_collection() = 0;
 
 protected:
   virtual void new_graph_impl(ComputationGraph& cg, bool update) = 0;
@@ -316,7 +316,7 @@ public:
 
   unsigned num_h0_components() const override { return layers; }
 
-  ParameterCollection & get_parameters();
+  ParameterCollection & get_parameter_collection() override;
 
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameter>> params;

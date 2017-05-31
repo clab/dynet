@@ -157,7 +157,7 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
       params[i][j] = rnn_gru.params[i][j];
 }
 
-ParameterCollection & GRUBuilder::get_parameters() {
+ParameterCollection & GRUBuilder::get_parameter_collection() {
   return local_model;
 }
 

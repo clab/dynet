@@ -216,7 +216,7 @@ void FastLSTMBuilder::copy(const RNNBuilder & rnn) {
         params[i][j] = rnn_lstm.params[i][j];
 }
 
-ParameterCollection & FastLSTMBuilder::get_parameters() {
+ParameterCollection & FastLSTMBuilder::get_parameter_collection() {
   return local_model;
 }
 
