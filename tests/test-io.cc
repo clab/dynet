@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include <stdexcept>
 
 #include <boost/test/unit_test.hpp>
@@ -81,7 +82,6 @@ BOOST_AUTO_TEST_CASE ( test_save_populate_pc ) {
   DYNET_CHECK_EQUAL(m2, m);
 }
 
-
 BOOST_AUTO_TEST_CASE ( test_save_populate_sub_pc ) {
   // Create a parameter collection with a sub collection
   ParameterCollection m, m2;
@@ -111,7 +111,6 @@ BOOST_AUTO_TEST_CASE ( test_save_populate_sub_pc ) {
   DYNET_CHECK_EQUAL(m2, m_sub);
 }
 
-
 BOOST_AUTO_TEST_CASE ( test_save_populate_parameter ) {
   ParameterCollection m, m2;
   Parameter ma = m.add_parameters({10}, "a");
@@ -134,7 +133,7 @@ BOOST_AUTO_TEST_CASE ( test_save_populate_parameter ) {
   DYNET_CHECK_EQUAL(m2b, mb);
   DYNET_CHECK_EQUAL(m2c, mc);
 }
-
+ 
 BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   ParameterCollection m, m2;
   Parameter ma = m.add_parameters({10}, "a");
@@ -155,6 +154,80 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   DYNET_CHECK_EQUAL(m2a, ma);
   DYNET_CHECK_EQUAL(m2b, mb);
   DYNET_CHECK_EQUAL(m2c, mc);
+}
+
+BOOST_AUTO_TEST_CASE ( test_save1_perf ) {
+  ParameterCollection m;
+  for (int l = 0; l < 256; ++l)
+    auto param = m.add_parameters({1024, 1024});
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
+  {
+    dynet::TextFileSaver s("test.model");
+    s.save(m);
+  }
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "elapsed time: " << elapsed_seconds.count() << "ms" << std::endl;
+}
+
+BOOST_AUTO_TEST_CASE ( test_load1_perf ) {
+  ParameterCollection m, m_l;
+  Parameter param;
+  Parameter param_l = m_l.add_parameters({1024, 1024});
+  for (int l = 0; l < 256; ++l)
+    param = m.add_parameters({1024, 1024});
+  {
+    dynet::TextFileSaver s("test.model");
+    s.save(m);
+  }
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
+  {
+    dynet::TextFileLoader l("test.model");
+    l.populate(param_l, param.get_fullname());
+  }
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "elapsed time: " << elapsed_seconds.count() << "ms" << std::endl;
+  DYNET_CHECK_EQUAL(param, param_l);
+}
+
+BOOST_AUTO_TEST_CASE ( test_save2_perf ) {
+  ParameterCollection m;
+  for (int l = 0; l < 5120; ++l)
+    auto param = m.add_parameters({128, 128});
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
+  {
+    dynet::TextFileSaver s("test.model");
+    s.save(m);
+  }
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "elapsed time: " << elapsed_seconds.count() << "ms" << std::endl;
+}
+
+BOOST_AUTO_TEST_CASE ( test_load2_perf ) {
+  ParameterCollection m, m_l;
+  Parameter param;
+  Parameter param_l = m_l.add_parameters({128, 128});
+  for (int l = 0; l < 5120; ++l)
+    param = m.add_parameters({128, 128});
+  {
+    dynet::TextFileSaver s("test.model");
+    s.save(m);
+  }
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
+  {
+    dynet::TextFileLoader l("test.model");
+    l.populate(param_l, param.get_fullname());
+  }
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "elapsed time: " << elapsed_seconds.count() << "ms" << std::endl;
+  DYNET_CHECK_EQUAL(param, param_l);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
