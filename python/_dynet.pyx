@@ -38,6 +38,7 @@ import os.path
 from _dynet cimport *
 cimport _dynet as dynet
 
+
 cdef class DynetParams: # {{{
     """This object holds the global parameters of Dynet
 
@@ -219,6 +220,84 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
     return Dim(dim,batch_size=batch_size)
 # }}}
 
+# IO {{{
+class Saveable(object):
+    def __getstate__(self):
+        return ""
+
+    def __setstate__(self, state):
+        return self # return an instance of the class
+
+
+cdef save_one(string datafname, fh, obj):
+    if isinstance(obj, Parameters):
+        pickle.dump(("Parameters", obj.name()), fh)
+        obj.save(datafname,append=True)
+    elif isinstance(obj, LookupParameters):
+        pickle.dump(("LookupParameters", obj.name()), fh)
+        obj.save(datafname,append=True)
+    elif isinstance(obj, VanillaLSTMBuilder):
+        pickle.dump(("VanillaLSTMBuilder", obj.spec, obj.param_collection().name()), fh)
+        obj.param_collection().save(datafname,append=True)
+    elif isinstance(obj, LSTMBuilder):
+        pickle.dump(("LSTMBuilder", obj.spec, obj.param_collection().name()), fh)
+        obj.param_collection().save(datafname,append=True)
+    elif isinstance(obj, SimpleRNNBuilder):
+        pickle.dump(("SimpleRNNBuilder", obj.spec, obj.param_collection().name()), fh)
+        obj.param_collection().save(datafname,append=True)
+    elif isinstance(obj, GRUBuilder):
+        pickle.dump(("GRUBuilder", obj.spec, obj.param_collection().name()), fh)
+        obj.param_collection().save(datafname,append=True)
+    else: # assume saveable
+        pickle.dump((obj, obj.spec, obj.param_collection().name()), fh)
+        obj.param_collection().save(datafname,"",append=True)
+
+cdef load_one(string datafname, fh, model):
+    o = pickle.load(fh)
+    if o[0] == 'Parameters':
+        p = model.load_param(datafname, o[1])
+        return p
+    if o[0] == 'LookupParameters':
+        p = model.load_lookup_param(datafname, o[1])
+        return p
+
+    if o[0] == 'VanillaLSTMBuilder':
+        _, spec, name = o
+        obj = VanillaLSTMBuilder.from_spec(spec, model)
+    elif o[0] == 'LSTMBuilder':
+        _, spec, name = o
+        obj = LSTMBuilder.from_spec(spec, model)
+    elif o[0] == 'SimpleRNNBuilder':
+        _, spec, name = o
+        obj = SimpleRNNBuilder.from_spec(spec, model)
+    elif o[0] == 'GRUBuilder':
+        _, spec, name = o
+        obj = GRUBuilder.from_spec(spec, model)
+    else: # python saveable
+        obj, spec, name = o
+        obj = obj.from_spec(spec, model)
+    obj.param_collection().populate(datafname, name)
+    return obj
+
+cpdef save(basename, lst):
+    file(basename+".data","w").close() # delete current
+    fh = file(basename+".meta","w")
+    for item in lst:
+        save_one(basename+".data", fh, item)
+    fh.close()
+
+cpdef load(basename, model):
+    fh = file(basename+".meta","r")
+    res = []
+    while True:
+        try:
+            obj = load_one(basename+".data", fh, model)
+        except EOFError: break
+        res.append(obj)
+    fh.close()
+    return res
+# }}}
+
 cdef c_tensor_as_np(CTensor &t):
     # TODO: make more efficient, with less copy
     arr = np.array(c_as_vector(t))
@@ -357,15 +436,15 @@ cdef class Parameters: # {{{
         return self
 
     # TODO docs
-    def save(self, string fname, string key=""):
-        self.write_to_textfile(fname, key)
+    def save(self, string fname, string key="",append=False):
+        self.write_to_textfile(fname, key,append)
     def populate(self, string fname, string key=""):
         self.populate_from_textfile(fname, key)
 
     # TODO docs
-    def write_to_textfile(self, string fname, string key=""):
+    def write_to_textfile(self, string fname, string key="", bool append=False):
         cdef CTextFileSaver *saver
-        saver = new CTextFileSaver(fname, append=False)
+        saver = new CTextFileSaver(fname, append=append)
         saver.save(self.thisptr,key)
         del saver
 
@@ -516,15 +595,15 @@ cdef class LookupParameters: # {{{
         return self
 
     # TODO docs
-    def save(self, string fname, string key=""):
-        self.write_to_textfile(fname, key)
+    def save(self, string fname, string key="", append=False):
+        self.write_to_textfile(fname, key, append)
     def populate(self, string fname, string key=""):
         self.populate_from_textfile(fname, key)
 
     # TODO docs
-    def write_to_textfile(self, string fname, string key=""):
+    def write_to_textfile(self, string fname, string key="", bool append=False):
         cdef CTextFileSaver *saver
-        saver = new CTextFileSaver(fname, append=False)
+        saver = new CTextFileSaver(fname, append=append)
         saver.save(self.thisptr,key)
         del saver
 
@@ -611,31 +690,6 @@ cdef class LookupParameters: # {{{
         return self.thisptr.get_fullname()
 # }}}
 
-# TODO document this
-class Saveable(object):
-    def __init__(self):
-        pass
-
-    def __getstate__(self):
-        odict = dict()
-        params = self.get_components()
-        for k,v in self.__dict__.items(): # remove unpicklable things which we save otherwise
-            if v not in params:
-                odict[k] = v
-        return odict
-
-    def get_components(self):
-        """
-        List of parameter-containing components that are
-        members of this object and are created by it.
-        """
-        return NotImplemented
-
-    def restore_components(self, components):
-        return NotImplemented
-
-
-
 cdef class Model: # {{{
     """
     A model holds Parameters. Use it to create, load and save parameters.
@@ -657,15 +711,28 @@ cdef class Model: # {{{
         return self
 
     # TODO docs
-    def save(self, string fname, string key=""):
-        self.write_to_textfile(fname, key)
+    def save(self, string fname, string key="",append=False):
+        self.write_to_textfile(fname, key,append)
     def populate(self, string fname, string key=""):
         self.populate_from_textfile(fname, key)
+    cpdef load_param(self, string fname, string key):
+        cdef CTextFileLoader *loader
+        loader = new CTextFileLoader(fname)
+        p = Parameters.wrap_ptr(loader.load_param(self.thisptr, key))
+        del loader
+        return p
+    cpdef load_lookup_param(self, string fname, string key):
+        cdef CTextFileLoader *loader
+        loader = new CTextFileLoader(fname)
+        p = LookupParameters.wrap_ptr(loader.load_lookup_param(self.thisptr, key))
+        del loader
+        return p
+
 
     # TODO docs
-    def write_to_textfile(self, string fname, string key=""):
+    def write_to_textfile(self, string fname, string key="",append=False):
         cdef CTextFileSaver *saver
-        saver = new CTextFileSaver(fname, append=False)
+        saver = new CTextFileSaver(fname, append=append)
         saver.save(self.thisptr,key)
         del saver
 
@@ -3555,12 +3622,20 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     [description]
     """
     cdef CSimpleRNNBuilder* thissimpleptr
+    cdef tuple _spec
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
+
+    @property
+    def spec(self): return self._spec
+    @classmethod
+    def from_spec(cls, spec, model):
+        return SimpleRNNBuilder(*spec, model)
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
@@ -3613,12 +3688,20 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
     [description]
     """
     cdef CGRUBuilder* thisgruptr
+    cdef tuple _spec
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        _spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thisgruptr = self.thisptr = new CGRUBuilder()
         self.cg_version = -1
+
+    @property
+    def spec(self): return self._spec
+    @classmethod
+    def from_spec(cls, spec, model):
+        return GRUBuilder(*spec, model)
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
@@ -3671,12 +3754,20 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
     [description]
     """
     cdef CLSTMBuilder* thislstmptr
+    cdef tuple _spec
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+        self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thislstmptr = self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
+
+    @property
+    def spec(self): return self._spec
+    @classmethod
+    def from_spec(cls, spec, model):
+        return LSTMBuilder(*spec, model)
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
@@ -3749,12 +3840,23 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model, ln_lstm=False):
+    cdef tuple _spec
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model, ln_lstm=False):
+        self._spec = (layers, input_dim, hidden_dim, ln_lstm)
         if layers > 0:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm)
         else:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
+
+    @property
+    def spec(self): return self._spec
+
+    @classmethod
+    def from_spec(cls, spec, model):
+        layers, input_dim, hidden_dim, ln_lstm = spec
+        return VanillaLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm)
+
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
@@ -3931,7 +4033,7 @@ cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     def whoami(self): return "FastLSTMBuilder"
 # }}}
 
-class BiRNNBuilder(object): # {{{
+class BiRNNBuilder(Saveable): # {{{
     """
     Builder for BiRNNs that delegates to regular RNNs and wires them together.  
     
@@ -3947,6 +4049,8 @@ class BiRNNBuilder(object): # {{{
             rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
             builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
         """
+        self.spec = num_layers, input_dim, hidden_dim, rnn_builder_factory, builder_layers
+        model = self.model = model.add_subcollection("birnn")
         if builder_layers is None:
             assert num_layers > 0
             assert hidden_dim % 2 == 0
@@ -3960,6 +4064,13 @@ class BiRNNBuilder(object): # {{{
                 self.builder_layers.append((f,b))
         else:
             self.builder_layers = builder_layers
+
+    @classmethod
+    def from_spec(cls, spec, model):
+        num_layers, input_dim, hidden_dim, rnn_builder_factory, builder_layers = spec
+        return cls(num_layers, input_dim, hidden_dim, model, rnn_builder_factory, builder_layers)
+
+    def param_collection(self): return self.model
 
     def whoami(self): return "BiRNNBuilder"
 
