@@ -125,6 +125,8 @@ cdef extern from "dynet/io.h" namespace "dynet":
         void populate(CModel & model, string key)
         void populate(CParameters & param, string key) except +
         void populate(CLookupParameters & param, string key) except +
+        CParameters load_param(CModel & model, string key) except +
+        CLookupParameters load_lookup_param(CModel & model, string key) except +
 
 
 cdef extern from "dynet/param-init.h" namespace "dynet":
