@@ -1,8 +1,16 @@
 #include "dynet/io.h"
 #include "dynet/tensor.h"
+#include "dynet/except.h"
 
 using namespace std;
 using namespace dynet;
+
+bool valid_key(const std::string & s) {
+  if (s == "/") return false;
+  auto it = std::find_if(s.begin(), s.end(),
+                         [] (char ch) { return ch == ' ' || ch == '#';});
+  return it == s.end();
+}
 
 TextFileSaver::TextFileSaver(const string & filename, bool append) :
         datastream(filename, append ? ofstream::app : ofstream::out) {
@@ -12,6 +20,8 @@ TextFileSaver::TextFileSaver(const string & filename, bool append) :
 
 void TextFileSaver::save(const ParameterCollection & model,
                          const string & key) {
+  if (!valid_key(key)) 
+    DYNET_INVALID_ARG("Key could not include ' ' or '#': " << key);
   const ParameterCollectionStorage & storage = model.get_storage();
   if(key.size() == 0) {
     for (auto & p : storage.params) save(*p, key);
@@ -27,11 +37,15 @@ void TextFileSaver::save(const ParameterCollection & model,
 
 void TextFileSaver::save(const Parameter & param,
                          const string & key) {
+  if (!valid_key(key))
+    DYNET_INVALID_ARG("Key could not include ' ' or '#': " << key);
   save(*param.p, key);
 }
 
 void TextFileSaver::save(const LookupParameter & param,
                          const string & key) {
+  if (!valid_key(key))
+    DYNET_INVALID_ARG("Key could not include ' ' or '#': " << key);
   save(*param.p, key);
 }
 
@@ -40,7 +54,8 @@ void TextFileSaver::save(const ParameterStorage & p,
   std::ostringstream buffer;
   buffer << dynet::as_vector(p.values) << endl;
   buffer << dynet::as_vector(p.g) << endl;
-  datastream << "#Parameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.dim << ' ' << buffer.str().size() << endl;
+  datastream << "#Parameter# " << (key.size() > 0 ? key : p.name) << ' '
+    << p.dim << ' ' << buffer.str().size() << endl;
   datastream.write(buffer.str().c_str(), buffer.str().size());
 }
 
@@ -70,7 +85,8 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
     { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
     // Skip ones that don't match
     if(key.size() != 0 && name.substr(0, key.size()) != key) {
-      datastream.seekg(datastream.tellg() + byte_count);
+      size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
+      datastream.seekg(offset);
       continue;
     // Load a parameter
     } else if(type == "#Parameter#") {
@@ -129,7 +145,8 @@ void TextFileLoader::populate(Parameter & param,
       TensorTools::set_elements(param.get_storage().g, values);
       return;
     } else {
-      datastream.seekg(datastream.tellg() + byte_count);
+      size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
+      datastream.seekg(offset);
     }
   }
   DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
@@ -156,7 +173,8 @@ void TextFileLoader::populate(LookupParameter & lookup_param,
       TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
       return;
     } else {
-      datastream.seekg(datastream.tellg() + byte_count);
+      size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
+      datastream.seekg(offset);
     }
   }
   DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
@@ -172,7 +190,7 @@ Parameter TextFileLoader::load_param(ParameterCollection & model,
   Dim dim;
   size_t byte_count = 0;
   while(getline(datastream, line)) {
-    { istringstream iss(line); iss >> type >> name >> dim; }
+    { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
     if(type == "#Parameter#" && name == key) {
       Parameter param = model.add_parameters(dim);
       param.get_storage().name = name;
@@ -183,7 +201,8 @@ Parameter TextFileLoader::load_param(ParameterCollection & model,
       TensorTools::set_elements(param.get_storage().g, values);
       return param;
     } else {
-      datastream.seekg(datastream.tellg() + byte_count);
+      size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
+      datastream.seekg(offset);
     }
   }
   DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
@@ -199,7 +218,7 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
   Dim dim;
   size_t byte_count = 0;
   while(getline(datastream, line)) {
-    { istringstream iss(line); iss >> type >> name >> dim; }
+    { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
     if(type == "#LookupParameter#" && name == key) {
       vector<float> values(dim.size());
       size_t size = dim[dim.nd-1]; dim.nd--;
@@ -211,7 +230,8 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
       TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
       return lookup_param;
     } else {
-      datastream.seekg(datastream.tellg() + byte_count);
+      size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
+      datastream.seekg(offset);
     }
   }
   DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
