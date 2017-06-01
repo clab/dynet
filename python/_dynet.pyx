@@ -603,8 +603,6 @@ cdef class LookupParameters: # {{{
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
-    # TODO IO
-    #cpdef unsigned get_index(self): return self.thisptr.index
 
     cpdef name(self):
         """
@@ -695,7 +693,7 @@ cdef class Model: # {{{
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    # TODO IO implement this
+    # TODO this may fail with >2 dim arrays.
     cpdef lookup_parameters_from_numpy(self, array, string name=""):
         """Create LookupParameters from numpy array
         
