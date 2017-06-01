@@ -169,32 +169,7 @@ class TextFileLoader : public Loader {
   LookupParameter load_lookup_param(ParameterCollection & model, const std::string & key) override;
 
  private:
-  void deserialize(ParameterCollection & model, const std::string & key);
-  void deserialize(Parameter & param, const std::string & key);
-  void deserialize(Parameter & param,
-                   const std::string & model_name,
-                   const std::string & key);
-  void deserialize(LookupParameter & lookup_param,
-                   const std::string & key);
-  void deserialize(LookupParameter & lookup_param,
-                   const std::string & model_name,
-                   const std::string & key);
-  Parameter deserialize_param(ParameterCollection & model,
-                              const std::string & key);
-  Parameter deserialize_param(ParameterCollection & model,
-                              const std::string & model_name,
-                              const std::string & key);
-  LookupParameter deserialize_lookup_param(ParameterCollection & model,
-                                           const std::string & key);
-  LookupParameter deserialize_lookup_param(ParameterCollection & model,
-                                           const std::string & model_name,
-                                           const std::string & key);
-  //long long seek_offset(const std::string & key);
-  //long long seek_offset(const std::string & model_name,
-  //                      const std::string & key);
-
   std::string dataname;
-  //long long offset = 0;
 }; // class TextFileLoader
 
 } // namespace dynet
