@@ -19,7 +19,7 @@ DeepLSTMBuilder::DeepLSTMBuilder(unsigned layers,
                          unsigned hidden_dim,
                          ParameterCollection& model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
-  local_model = model.add_subcollection("--deep-lstm-builder");
+  local_model = model.add_subcollection("deep-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
     Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});

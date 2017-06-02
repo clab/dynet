@@ -19,7 +19,7 @@ SoftmaxBuilder::~SoftmaxBuilder() {}
 StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
 
 StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, ParameterCollection& model) {
-  local_model = model.add_subcollection("--standard-softmax-builder");
+  local_model = model.add_subcollection("standard-softmax-builder");
   p_w = local_model.add_parameters({vocab_size, rep_dim});
   p_b = local_model.add_parameters({vocab_size}, ParameterInitConst(0.f));
 }
@@ -61,7 +61,7 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              ParameterCollection& model) {
   read_cluster_file(cluster_file, word_dict);
   const unsigned num_clusters = cdict.size();
-  local_model = model.add_subcollection("--class-factored-softmax-builder");
+  local_model = model.add_subcollection("class-factored-softmax-builder");
   p_r2c = local_model.add_parameters({num_clusters, rep_dim});
   p_cbias = local_model.add_parameters({num_clusters}, ParameterInitConst(0.f));
   p_rc2ws.resize(num_clusters);

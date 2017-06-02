@@ -168,7 +168,7 @@ HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict& word_dict,
                              ParameterCollection& model) {
-  local_model = model.add_subcollection();
+  local_model = model.add_subcollection("hsm-builder");
   root = read_cluster_file(cluster_file, word_dict);
   root->initialize(rep_dim, local_model);
 }
