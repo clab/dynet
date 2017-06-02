@@ -20,7 +20,7 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
                          unsigned hidden_dim,
                          ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
-  local_model = model.add_subcollection("--lstm-builder");
+  local_model = model.add_subcollection("lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
     Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
@@ -301,7 +301,7 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        ParameterCollection& model,
                                        bool ln_lstm) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm) {
   unsigned layer_input_dim = input_dim;
-  local_model = model.add_subcollection("--vanilla-lstm-builder");
+  local_model = model.add_subcollection("vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
     Parameter p_x2i = local_model.add_parameters({hidden_dim * 4, layer_input_dim});
