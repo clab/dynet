@@ -221,13 +221,6 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
 # }}}
 
 # IO {{{
-class Saveable(object):
-    def __getstate__(self):
-        return ""
-
-    def __setstate__(self, state):
-        return self # return an instance of the class
-
 
 cdef save_one(string datafname, fh, obj):
     if isinstance(obj, Parameters):
@@ -236,21 +229,9 @@ cdef save_one(string datafname, fh, obj):
     elif isinstance(obj, LookupParameters):
         pickle.dump(("LookupParameters", obj.name()), fh)
         obj.save(datafname,append=True)
-    elif isinstance(obj, VanillaLSTMBuilder):
-        pickle.dump(("VanillaLSTMBuilder", obj.spec, obj.param_collection().name()), fh)
+    else:
+        pickle.dump((obj.__class__, obj.spec, obj.param_collection().name()), fh)
         obj.param_collection().save(datafname,append=True)
-    elif isinstance(obj, LSTMBuilder):
-        pickle.dump(("LSTMBuilder", obj.spec, obj.param_collection().name()), fh)
-        obj.param_collection().save(datafname,append=True)
-    elif isinstance(obj, SimpleRNNBuilder):
-        pickle.dump(("SimpleRNNBuilder", obj.spec, obj.param_collection().name()), fh)
-        obj.param_collection().save(datafname,append=True)
-    elif isinstance(obj, GRUBuilder):
-        pickle.dump(("GRUBuilder", obj.spec, obj.param_collection().name()), fh)
-        obj.param_collection().save(datafname,append=True)
-    else: # assume saveable
-        pickle.dump((obj, obj.spec, obj.param_collection().name()), fh)
-        obj.param_collection().save(datafname,"",append=True)
 
 cdef load_one(string datafname, fh, model):
     o = pickle.load(fh)
@@ -260,24 +241,11 @@ cdef load_one(string datafname, fh, model):
     if o[0] == 'LookupParameters':
         p = model.load_lookup_param(datafname, o[1])
         return p
-
-    if o[0] == 'VanillaLSTMBuilder':
-        _, spec, name = o
-        obj = VanillaLSTMBuilder.from_spec(spec, model)
-    elif o[0] == 'LSTMBuilder':
-        _, spec, name = o
-        obj = LSTMBuilder.from_spec(spec, model)
-    elif o[0] == 'SimpleRNNBuilder':
-        _, spec, name = o
-        obj = SimpleRNNBuilder.from_spec(spec, model)
-    elif o[0] == 'GRUBuilder':
-        _, spec, name = o
-        obj = GRUBuilder.from_spec(spec, model)
-    else: # python saveable
-        obj, spec, name = o
-        obj = obj.from_spec(spec, model)
-    obj.param_collection().populate(datafname, name)
-    return obj
+    else:
+        cls, spec, name = o
+        obj = cls.from_spec(spec, model)
+        obj.param_collection().populate(datafname, name)
+        return obj
 
 cpdef save(basename, lst):
     file(basename+".data","w").close() # delete current
@@ -3893,7 +3861,7 @@ cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     def whoami(self): return "FastLSTMBuilder"
 # }}}
 
-class BiRNNBuilder(Saveable): # {{{
+class BiRNNBuilder(object): # {{{
     """
     Builder for BiRNNs that delegates to regular RNNs and wires them together.  
     
