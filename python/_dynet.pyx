@@ -12,28 +12,6 @@ except ImportError:
     import pickle
     
 import os.path
-# TODO:
-#  - set random seed (in DYNET)
-#  - better input / output support
-#    WORKS, but need to be unified? for example, why "pick" takes a pointer to int, and "squared_distance" takes an expression?
-#  - load embeddings file
-#  - load/save models
-#  - NOTE: why do we need to filter short sentences in rnnlm.py or crash??
-
-# TODO:
-#  c2w.h   (build a word-from-letters encoder)
-#  dict.h : do we even need it?
-
-# Examples:
-#  V xor  
-#  V xor-xent
-#  - textcat
-#  - tag-bilstm
-#  - rnnlm
-#  V nlm
-#  - encdec
-#  - embedcl
-#  - embed/nlm: negative sampling?
 
 from _dynet cimport *
 cimport _dynet as dynet
@@ -222,7 +200,7 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
 
 # IO {{{
 
-cdef save_one(string datafname, fh, obj):
+cdef _save_one(string datafname, fh, obj):
     if isinstance(obj, Parameters):
         pickle.dump(("Parameters", obj.name()), fh)
         obj.save(datafname,append=True)
@@ -233,7 +211,7 @@ cdef save_one(string datafname, fh, obj):
         pickle.dump((obj.__class__, obj.spec, obj.param_collection().name()), fh)
         obj.param_collection().save(datafname,append=True)
 
-cdef load_one(string datafname, fh, model):
+cdef _load_one(string datafname, fh, model):
     o = pickle.load(fh)
     if o[0] == 'Parameters':
         p = model.load_param(datafname, o[1])
@@ -251,7 +229,7 @@ cpdef save(basename, lst):
     file(basename+".data","w").close() # delete current
     fh = file(basename+".meta","w")
     for item in lst:
-        save_one(basename+".data", fh, item)
+        _save_one(basename+".data", fh, item)
     fh.close()
 
 cpdef load(basename, model):
@@ -259,7 +237,7 @@ cpdef load(basename, model):
     res = []
     while True:
         try:
-            obj = load_one(basename+".data", fh, model)
+            obj = _load_one(basename+".data", fh, model)
         except EOFError: break
         res.append(obj)
     fh.close()
@@ -367,7 +345,7 @@ cdef class FromFileInitializer(PyInitializer):
 cdef class NumpyInitializer(PyInitializer):
     """Initialize from numpy array
 
-    Alternatively, use :code:`Model.parameters_from_numpy()`
+    Alternatively, use :code:`ParameterCollection.parameters_from_numpy()`
     
     Args:
         array (np.ndarray): Numpy array
@@ -384,7 +362,7 @@ cdef class NumpyInitializer(PyInitializer):
         return vals
 # }}}
 
-# {{{ Model / Parameters 
+# {{{ ParameterCollection / Parameters 
 cdef class Parameters: # {{{
     """Parameters class
     
@@ -658,21 +636,22 @@ cdef class LookupParameters: # {{{
         return self.thisptr.get_fullname()
 # }}}
 
-cdef class Model: # {{{
+cdef class ParameterCollection: # {{{
     """
-    A model holds Parameters. Use it to create, load and save parameters.
+    A ParameterCollection holds Parameters. Use it to create, load and save parameters.
+
+    (It used to be called Model in previous versions of DyNet, and Model is still an alias for ParameterCollection.)
     """
     cdef CModel thisptr  # Not a pointer...
     def __cinit__(self, ):
         pass
-        #self.thisptr = CModel()
 
     def __init__(self):
         pass
 
     @staticmethod
     cdef wrap(CModel m):
-        self = Model()
+        self = ParameterCollection()
         self.thisptr = m
         return self
 
@@ -744,7 +723,7 @@ cdef class Model: # {{{
         return pp
 
     cpdef add_parameters(self, dim, PyInitializer init=None, string name=""):
-        """Add a parameter to the model
+        """Add a parameter to the ParameterCollection
         
         Args:
             dim (tuple): Shape of the parameter
@@ -767,7 +746,7 @@ cdef class Model: # {{{
         return pp
 
     cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name=""):
-        """Add a lookup parameter to the model
+        """Add a lookup parameter to the ParameterCollection
         
         Args:
             dim (tuple): Shape of the parameter. The first dimension is the vocab size
@@ -790,8 +769,8 @@ cdef class Model: # {{{
         return pp
 
     cpdef add_subcollection(self, name=None):
-        if name is None: return Model.wrap(self.thisptr.add_subcollection(""))
-        else: return Model.wrap(self.thisptr.add_subcollection(name))
+        if name is None: return ParameterCollection.wrap(self.thisptr.add_subcollection(""))
+        else: return ParameterCollection.wrap(self.thisptr.add_subcollection(name))
 
     cpdef name(self):
         """
@@ -799,6 +778,8 @@ cdef class Model: # {{{
         """
         return self.thisptr.get_fullname()
 
+# Alias Model and ParameterCollection
+Model=ParameterCollection
 
 # }}}
 
@@ -3440,8 +3421,8 @@ cdef class _RNNBuilder: # {{{
             self._init_state = RNNState(self, -1)
         return self._init_state
 
-    cpdef Model param_collection(self):
-        return Model.wrap(self.thisptr.get_parameter_collection())
+    cpdef ParameterCollection param_collection(self):
+        return ParameterCollection.wrap(self.thisptr.get_parameter_collection())
 # _RNNBuilder }}}
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
@@ -3451,7 +3432,7 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     """
     cdef CSimpleRNNBuilder* thissimpleptr
     cdef tuple _spec
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
@@ -3517,7 +3498,7 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
     """
     cdef CGRUBuilder* thisgruptr
     cdef tuple _spec
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         _spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
@@ -3583,7 +3564,7 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
     """
     cdef CLSTMBuilder* thislstmptr
     cdef tuple _spec
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
@@ -3663,13 +3644,13 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         layers (int): Number of layers
         input_dim (int): Dimension of the input
         hidden_dim (int): Dimension of the recurrent units
-        model (dynet.Model): Model to hold the parameters
+        model (dynet.ParameterCollection): ParameterCollection to hold the parameters
         ln_lstm (bool): Whether to use layer normalization
 
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
     cdef tuple _spec
-    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model, ln_lstm=False):
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False):
         self._spec = (layers, input_dim, hidden_dim, ln_lstm)
         if layers > 0:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm)
@@ -3812,7 +3793,7 @@ cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     [description]
     """
     cdef CFastLSTMBuilder* thisfastptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         self.thisfastptr = self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
 
@@ -4259,13 +4240,13 @@ cdef class SimpleSGDTrainer(Trainer):
     This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks.
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0(number): Initial learning rate (default: 0.1)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float edecay = 0.0):
         self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
     def whoami(self):
         return "SimpleSGDTrainer"
@@ -4286,7 +4267,7 @@ cdef class CyclicalSGDTrainer(Trainer):
        \end{split}
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0_min (number): Lower learning rate (default: {0.01})
@@ -4296,7 +4277,7 @@ cdef class CyclicalSGDTrainer(Trainer):
         edecay (number): Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by :math:`\gamma` (default: {0.0})
     """
     cdef CCyclicalSGDTrainer *thischildptr
-    def __cinit__(self, Model m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
         self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, e0_min, e0_max, step_size, gamma, edecay)
     cpdef update(self, float s=1.0):
         self.thischildptr.update(s)
@@ -4309,7 +4290,7 @@ cdef class MomentumSGDTrainer(Trainer):
     This is a modified version of the SGD algorithm with momentum to stablize the gradient trajectory. 
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0(number): Initial learning rate (default: 0.1)
@@ -4317,7 +4298,7 @@ cdef class MomentumSGDTrainer(Trainer):
         edecay(number): Learning rate decay parameter (default: 0.0)
 
     """
-    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
         self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
     def whoami(self):
         return "MomentumSGDTrainer"
@@ -4329,14 +4310,14 @@ cdef class AdagradTrainer(Trainer):
     The adagrad algorithm assigns a different learning rate to each parameter.
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0(number): Initial learning rate (default: 0.1)
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-20)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
         self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
     def whoami(self):
         return "AdagradTrainer"
@@ -4348,14 +4329,14 @@ cdef class AdadeltaTrainer(Trainer):
     The AdaDelta optimizer is a variant of Adagrad aiming to prevent vanishing learning rates.
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-6)
         rho(number): Update parameter for the moving average of updates in the numerator (default: 0.95)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
         self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
     def whoami(self):
         return "AdadeltaTrainer"
@@ -4366,7 +4347,7 @@ cdef class RMSPropTrainer(Trainer):
     The RMSProp optimizer is a variant of Adagrad where the squared sum of previous gradients is replaced with a moving average with parameter rho.
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0(number): Initial learning rate (default: 0.001)
@@ -4374,7 +4355,7 @@ cdef class RMSPropTrainer(Trainer):
         rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: 0.9)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
+    def __cinit__(self, ParameterCollection m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
         self.thisptr = new CRMSPropTrainer(m.thisptr, e0, eps, rho, edecay)
     def whoami(self):
         return "RMSPropTrainer"
@@ -4385,7 +4366,7 @@ cdef class AdamTrainer(Trainer):
     The Adam optimizer is similar to RMSProp but uses unbiased estimates of the first and second moments of the gradient
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         alpha(number): Initial learning rate (default: 0.001)
@@ -4394,7 +4375,7 @@ cdef class AdamTrainer(Trainer):
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
+    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
         self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
     def whoami(self):
         return "AdamTrainer"
