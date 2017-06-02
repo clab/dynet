@@ -21,11 +21,8 @@ cdef extern from "dynet/init.h" namespace "dynet":
 cdef extern from "dynet/dim.h" namespace "dynet":
     cdef cppclass CDim "dynet::Dim":
         CDim() except +
-        #CDim(int m) except +
-        #CDim(int m, int n) except +
         CDim(vector[long]& ds) except +
         CDim(vector[long]& ds, unsigned int bs) except +
-        #CDim(std::initializer_list[long] x) except +
         int size()
         unsigned int batch_elems()
         int sum_dims()
@@ -83,7 +80,6 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void scale_gradient(float s)
         void clip_inplace(float left, float right)
         string get_fullname()
-        #unsigned index
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
@@ -96,7 +92,6 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void scale(float s)
         void scale_gradient(float s)
         string get_fullname()
-        #unsigned index
 
     cdef cppclass CModel "dynet::ParameterCollection":
         CModel()
@@ -108,10 +103,6 @@ cdef extern from "dynet/model.h" namespace "dynet":
         vector[CParameterStorage] parameters_list()
         CModel add_subcollection(string name)
         string get_fullname()
-
-    # TODO IO
-    #void load_dynet_model "dynet::load_dynet_model" (string filename, CModel *model)
-    #void save_dynet_model "dynet::save_dynet_model" (string filename, CModel *model)
 
 cdef extern from "dynet/io.h" namespace "dynet":
     cdef cppclass CTextFileSaver "dynet::TextFileSaver":
@@ -194,7 +185,6 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CTrainer "dynet::Trainer":
-        #CTrainer(CModel& m, float lam, float e0)
         CTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
@@ -206,76 +196,25 @@ cdef extern from "dynet/training.h" namespace "dynet":
 
 
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer" (CTrainer):
-        #CSimpleSGDTrainer(CModel& m, float lam, float e0)
         CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
-        # float clip_threshold
-        # bool clipping_enabled
-        # bool sparse_updates_enabled
-        # void update(float s)
-        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        # void update_epoch(float r)
-        # void status()
 
     cdef cppclass CCyclicalSGDTrainer "dynet::CyclicalSGDTrainer" (CTrainer):
-        #CCyclicalSGDTrainer(CModel& m, float lam, float e0)
         CCyclicalSGDTrainer(CModel& m, float e0_min, float e0_max, float step_size, float gamma, float edecay) # TODO removed lam, update docs.
-        # float clip_threshold
-        # bool clipping_enabled
-        # bool sparse_updates_enabled
-        #void update(float s) except +
-        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        # void update_epoch(float r)
-        # void status()
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer" (CTrainer):
         CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
-        # float clip_threshold
-        # bool clipping_enabled
-        # bool sparse_updates_enabled
-        # void update(float s)
-        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        # void update_epoch(float r)
-        # void status()
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer" (CTrainer):
         CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
-        # float clip_threshold
-        # bool clipping_enabled
-        # bool sparse_updates_enabled
-        # void update(float s)
-        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        # void update_epoch(float r)
-        # void status()
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer" (CTrainer):
         CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
-        # float clip_threshold
-        # bool clipping_enabled
-        # bool sparse_updates_enabled
-        # void update(float s)
-        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        # void update_epoch(float r)
-        # void status()
 
     cdef cppclass CRMSPropTrainer "dynet::RMSPropTrainer" (CTrainer):
         CRMSPropTrainer(CModel& m, float e0, float eps, float rho, float edecay) # TODO removed lam, update docs
-        # float clip_threshold
-        # bool clipping_enabled
-        # bool sparse_updates_enabled
-        # void update(float s)
-        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        # void update_epoch(float r)
-        # void status()
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
-        # float clip_threshold
-        # bool clipping_enabled
-        # bool sparse_updates_enabled
-        # void update(float s)
-        # void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s)
-        # void update_epoch(float r)
-        # void status()
 
 
 cdef extern from "dynet/expr.h" namespace "dynet::expr":
@@ -426,10 +365,6 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_layer_norm "dynet::expr::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
     CExpression c_weight_norm "dynet::expr::weight_norm" (CExpression& w, CExpression& g) except + #
 
-
-#cdef extern from "dynet/model.h" namespace "dynet":
-#    cdef cppclass Model:
-
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNPointer "dynet::RNNPointer":
         CRNNPointer()
@@ -453,26 +388,14 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
         void disable_dropout()
         CModel get_parameter_collection()
 
-# TODO unify with LSTMBuilder using inheritance
 cdef extern from "dynet/rnn.h" namespace "dynet":
-    #cdef cppclass RNNBuilder "dynet::RNNBuilder":
     cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):
         CSimpleRNNBuilder()
         CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
 
-        #void new_graph(CComputationGraph &cg)
-        #void start_new_sequence(vector[CExpression] ces)
-        #CExpression add_input(CExpression &x)
-        #CExpression add_input(CRNNPointer prev, CExpression &x)
-        #void rewind_one_step()
-        #CExpression back()
-        #vector[CExpression] final_h()
-        #vector[CExpression] final_s()
-        #vector[CExpression] get_h(CRNNPointer i)
-        #vector[CExpression] get_s(CRNNPointer i)
-        #CRNNPointer state()
 
 cdef extern from "dynet/gru.h" namespace "dynet":
     cdef cppclass CGRUBuilder "dynet::GRUBuilder" (CRNNBuilder):
@@ -482,18 +405,6 @@ cdef extern from "dynet/gru.h" namespace "dynet":
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
 
-        #void new_graph(CComputationGraph &cg)
-        #void start_new_sequence(vector[CExpression] ces)
-        #CExpression add_input(CExpression &x)
-        #CExpression add_input(CRNNPointer prev, CExpression &x)
-        #void rewind_one_step()
-        #CExpression back()
-        #vector[CExpression] final_h()
-        #vector[CExpression] final_s()
-        #vector[CExpression] get_h(CRNNPointer i)
-        #vector[CExpression] get_s(CRNNPointer i)
-        #CRNNPointer state()
-
 cdef extern from "dynet/lstm.h" namespace "dynet":
     cdef cppclass CLSTMBuilder "dynet::LSTMBuilder" (CRNNBuilder):
         CLSTMBuilder()
@@ -501,18 +412,6 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
-
-        #void new_graph(CComputationGraph &cg)
-        #void start_new_sequence(vector[CExpression] ces)
-        #CExpression add_input(CExpression &x)
-        #CExpression add_input(CRNNPointer prev, CExpression &x)
-        #void rewind_one_step()
-        #CExpression back()
-        #vector[CExpression] final_h()
-        #vector[CExpression] final_s()
-        #vector[CExpression] get_h(CRNNPointer i)
-        #vector[CExpression] get_s(CRNNPointer i)
-        #CRNNPointer state()
 
     cdef cppclass CVanillaLSTMBuilder "dynet::VanillaLSTMBuilder" (CRNNBuilder):
         CVanillaLSTMBuilder()
@@ -530,36 +429,3 @@ cdef extern from "dynet/fast-lstm.h" namespace "dynet":
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
 
-        #void new_graph(CComputationGraph &cg)
-        #void start_new_sequence(vector[CExpression] ces)
-        #CExpression add_input(CExpression &x)
-        #CExpression add_input(CRNNPointer prev, CExpression &x)
-        #void rewind_one_step()
-        #CExpression back()
-        #vector[CExpression] final_h()
-        #vector[CExpression] final_s()
-        #vector[CExpression] get_h(CRNNPointer i)
-        #vector[CExpression] get_s(CRNNPointer i)
-        #CRNNPointer state()
-
-# TODO IO
-#cdef extern from "python/pybridge.h" namespace "pydynet":
-#    cdef cppclass CModelSaver "pydynet::ModelSaver":
-#        CModelSaver(string filename, CModel *model)
-#        CModelSaver add_parameter(CParameters p)
-#        CModelSaver add_lookup_parameter(CLookupParameters lp)
-#        CModelSaver add_gru_builder(CGRUBuilder b)
-#        CModelSaver add_lstm_builder(CLSTMBuilder b)
-#        CModelSaver add_vanilla_lstm_builder(CVanillaLSTMBuilder b)
-#        CModelSaver add_srnn_builder(CSimpleRNNBuilder b)
-#        void done()
-#
-#    cdef cppclass CModelLoader "pydynet::ModelLoader":
-#        CModelLoader(string filename, CModel *model)
-#        CModelSaver fill_parameter(CParameters p)
-#        CModelSaver fill_lookup_parameter(CLookupParameters lp)
-#        CModelSaver fill_gru_builder(CGRUBuilder lp)
-#        CModelSaver fill_lstm_builder(CLSTMBuilder lp)
-#        CModelSaver fill_vanilla_lstm_builder(CVanillaLSTMBuilder lp)
-#        CModelSaver fill_srnn_builder(CSimpleRNNBuilder lp)
-#        void done()
