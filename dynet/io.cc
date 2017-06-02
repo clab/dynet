@@ -81,10 +81,12 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
   Tensor *value_t, *grad_t;
   size_t param_id = 0, lookup_id = 0;
   ParameterCollectionStorage & storage = model.get_storage();
+  string key_ = key;
+  if (key_.back() != '/') key_ += "/";
   while(getline(datastream, line)) {
     { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
     // Skip ones that don't match
-    if(key.size() != 0 && name.substr(0, key.size()) != key) {
+    if(key.size() != 0 && name.substr(0, key_.size()) != key_) {
       size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
       datastream.seekg(offset);
       continue;

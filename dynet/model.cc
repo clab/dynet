@@ -253,7 +253,10 @@ ParameterCollection::ParameterCollection(const string & my_name, ParameterCollec
 
 ParameterCollection ParameterCollection::add_subcollection(const string & sub_name) {
   if (valid_parameter(sub_name)) {
-    ostringstream oss; oss << name << sub_name << "__" << collec_name_cntr[sub_name]++ << "/";
+    ostringstream oss; oss << name << sub_name;
+    int idx = collec_name_cntr[sub_name]++;
+    if (idx > 0 || sub_name.size() == 0) oss << "_" << idx;
+    oss << "/";
     return ParameterCollection(oss.str(), this);
   } else {
     throw std::runtime_error("Submodel name could not include '/' and '_'");
@@ -286,7 +289,10 @@ Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const s
 
 Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
   if (valid_parameter(p_name)) {
-    ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
+    ostringstream oss; oss << name << p_name;
+    int idx = name_cntr[p_name]++;
+    if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
+
     ParameterStorage* p = new ParameterStorage(d, init, oss.str());
     add_parameters_to_storage(p);
     return Parameter(p);
@@ -362,7 +368,10 @@ LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim
 
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
   if (valid_parameter(p_name)) {
-    ostringstream oss; oss << name << p_name << "__" << name_cntr[p_name]++;
+    ostringstream oss; oss << name << p_name;
+    int idx = name_cntr[p_name]++;
+    if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
+
     LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
     add_lookup_parameters_to_storage(p);
     return LookupParameter(p);
