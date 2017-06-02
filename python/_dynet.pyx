@@ -226,18 +226,92 @@ cdef _load_one(string datafname, fh, model):
         return obj
 
 cpdef save(basename, lst):
+    """Saves a list of parameters, lookup parameters and builder objects to disk.
+
+    Args:
+        basename (string): The base-name of the files to save. 
+                           Two files will be created: `basename.data` and `basename.meta`.
+        lst      (list):  A list of objects to save (see below).
+
+
+    Example:
+        import dynet as dy
+
+        pc = dy.ParametersCollection()
+        W = pc.add_parameters((100,50))
+        E = pc.add_lookup_parameters((1000,50))
+        builder = dy.LSTMBuilder(2, 50, 50, pc)
+
+        dy.save("model", [E, builder, W])
+
+        # then, when loading:
+        pc = dy.ParametersCollection()
+        E2, builder2, W2 = dy.load("model", pc)
+
+    
+    What can be saved:
+        Each object in `lst` must be one of the following:
+        (1) Parameter
+        (2) LookupParameter
+        (3) one of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder,
+                                       SimpleRNNBuilder, BiRNNBuilder)
+        (4) a type adhering to the following interface:
+            - has a `param_collection()` method returning a ParameterCollection object with the
+              parameters in the object.
+            - has a `.spec` property with picklable items describing the object
+            - has a `.from_spec(spec, model)` static method that will create and return a
+              new instane with the needed parameters/etc in the model.
+
+        Note, the built-in types in (3) above can be saved/loaded this way simply because 
+        they support this interface.
+
+        behind the scenes:
+        - for each item, we write to `.meta`:
+            if its a Parameters/ParametersCollection: 
+                its type and full name.
+            if its a builder:
+                its class, its spec, the full name of its parameters collection.
+        - the associated parameters/sub-collection is then saved to `.data`
+    """
     file(basename+".data","w").close() # delete current
     fh = file(basename+".meta","w")
     for item in lst:
         _save_one(basename+".data", fh, item)
     fh.close()
 
-cpdef load(basename, model):
+cpdef load(basename, params):
+    """Loads a list of parameters, lookup parameters and builder objects from disk.
+    The loaded objects are added to the supplied params collection, and returned.
+
+    Args:
+        basename (string):  The basename to read from. 
+                            This is the same string that was used when saving the objects.
+        params   (dynet.ParametersCollection): A ParameterCollection to add the loaded objects to.
+
+    Returns:
+        A list of parameters, lookup parameters and builder objects, in the same order they
+        were passed to the save function.
+
+
+    Example:
+        import dynet as dy
+
+        pc = dy.ParametersCollection()
+        W = pc.add_parameters((100,50))
+        E = pc.add_lookup_parameters((1000,50))
+        builder = dy.LSTMBuilder(2, 50, 50, pc)
+
+        dy.save("model", [E, builder, W])
+
+        # then, when loading:
+        pc = dy.ParametersCollection()
+        E2, builder2, W2 = dy.load("model", pc)
+    """
     fh = file(basename+".meta","r")
     res = []
     while True:
         try:
-            obj = _load_one(basename+".data", fh, model)
+            obj = _load_one(basename+".data", fh, params)
         except EOFError: break
         res.append(obj)
     fh.close()
@@ -384,7 +458,17 @@ cdef class Parameters: # {{{
     # TODO docs
     def save(self, string fname, string key="",append=False):
         self.write_to_textfile(fname, key,append)
-    def populate(self, string fname, string key=""):
+
+    # TODO docs
+    def populate(self, string fname, string key):
+        """Populate the values of this Parameters object from
+        the parameter named `key` in the file `fname`.
+        The sizes of saved parameters and this object must match.
+
+        Args:
+            fname (string): the name of a file to load from.
+            key   (string): the parameter to read from the file.
+        """
         self.populate_from_textfile(fname, key)
 
     # TODO docs
@@ -499,7 +583,7 @@ cdef class Parameters: # {{{
 
     cpdef name(self):
         """
-        Return the full name of this collection.
+        Return the full name of this parameter.
         """
         return self.thisptr.get_fullname()
 
@@ -544,16 +628,22 @@ cdef class LookupParameters: # {{{
     def save(self, string fname, string key="", append=False):
         self.write_to_textfile(fname, key, append)
     def populate(self, string fname, string key=""):
+        """Populate the values of this LookupParameters object from
+        the parameter named `key` in the file `fname`.
+        The sizes of saved parameters and this object must match.
+
+        Args:
+            fname (string): the name of a file to load from.
+            key   (string): the parameter to read from the file.
+        """
         self.populate_from_textfile(fname, key)
 
-    # TODO docs
     def write_to_textfile(self, string fname, string key="", bool append=False):
         cdef CTextFileSaver *saver
         saver = new CTextFileSaver(fname, append=append)
         saver.save(self.thisptr,key)
         del saver
 
-    # TODO docs
     def populate_from_textfile(self, string fname, string key=""):
         cdef CTextFileLoader *loader
         loader = new CTextFileLoader(fname)
@@ -631,7 +721,7 @@ cdef class LookupParameters: # {{{
 
     cpdef name(self):
         """
-        Return the full name of this collection.
+        Return the full name of this lookup parameter.
         """
         return self.thisptr.get_fullname()
 # }}}
@@ -641,6 +731,36 @@ cdef class ParameterCollection: # {{{
     A ParameterCollection holds Parameters. Use it to create, load and save parameters.
 
     (It used to be called Model in previous versions of DyNet, and Model is still an alias for ParameterCollection.)
+
+    A ParameterCollection is a container for Parameters and LookupParameters.
+
+    dynet.Trainer objects take ParameterCollection objects that define which parameters
+    are being trained.
+    
+    The values of the parameters in a collection can be persisted to and loaded from files.
+
+    Hierarchy:
+        The parameter collections can be nested, where each collection can hold zero or more
+        sub-collection, which are also ParameterCollection objects. Each (sub-)collection contains
+        the parameters in it and in all the (sub-)collections below it.
+
+    Naming:
+        Parameters, LookupParameters and ParameterCollections have associated string names.
+        The names can be accessed using the `.name()` method. 
+        
+        The names are used for identifying the parameters and the collection hierarchy 
+        when loading from disk, and in particular when loading only a subset of the objects 
+        in a saved file.
+
+        The name of a parameter, lookup parameter or sub-collection is unique within
+        a ParameterCollection, and reflects the hierarchy structure.
+
+        One can supply an optional informative name when creating the parameter or
+        sub-collection.  The supplied names are then appended with running index to
+        avoid name clashes. The `.name()` method returns the full name of an object,
+        including the appended index and its location within the collection hierarchy.
+        The user-supplied names cannot inclue the characters `/` (which is used as a hierarchy
+        separator) or `_` (which is used as an index separator).
     """
     cdef CModel thisptr  # Not a pointer...
     def __cinit__(self, ):
@@ -655,24 +775,60 @@ cdef class ParameterCollection: # {{{
         self.thisptr = m
         return self
 
-    # TODO docs
-    def save(self, string fname, string key="",append=False):
-        self.write_to_textfile(fname, key,append)
+    def save(self, string fname, string name="",append=False):
+        """Save the values of all parameters in this collection to file.
+
+        Args:
+            fname (string): file name to save into.
+        """
+        self.write_to_textfile(fname, name ,append)
+
     def populate(self, string fname, string key=""):
+        """Populate the values of all parameters in this collection from file.
+
+        This only populates the values of existing parameters, and does not add parameters to the collection.
+        Thus, the content of the file and the parameters in this collection must match.
+        One should make sure to add to the collection the same parameters (and in the same order) before calling
+        populate, as the ones that were added before calling save.
+
+        Args:
+            fname (string): file name to read parameter values from.
+        """
         self.populate_from_textfile(fname, key)
+
     cpdef load_param(self, string fname, string key):
+        """Loads a named parameter from a file, adds it to the collection,
+        and returns the loaded parameter.
+
+        Args:
+            fname (string): the file name to read from.
+            key   (string): the full-name of the parameter to read.
+
+        Returns:
+            (dynet.Parameters) The Parameters object.
+        """
         cdef CTextFileLoader *loader
         loader = new CTextFileLoader(fname)
         p = Parameters.wrap_ptr(loader.load_param(self.thisptr, key))
         del loader
         return p
+
     cpdef load_lookup_param(self, string fname, string key):
+        """Loads a named lookup-parameter from a file, adds it to the collection,
+        and returns the loaded parameter.
+
+        Args:
+            fname (string): the file name to read from.
+            key   (string): the full-name of the lookup parameter to read.
+
+        Returns:
+            (dynet.LookupParameters) The LookupParameters object.
+        """
         cdef CTextFileLoader *loader
         loader = new CTextFileLoader(fname)
         p = LookupParameters.wrap_ptr(loader.load_lookup_param(self.thisptr, key))
         del loader
         return p
-
 
     # TODO docs
     def write_to_textfile(self, string fname, string key="",append=False):
@@ -696,6 +852,7 @@ cdef class ParameterCollection: # {{{
         
         Args:
             array (np.ndarray): Numpy array
+            name  (string): optional name for this parameter.
         
         Returns:
             (dynet.Parameters): Parameter
@@ -711,9 +868,10 @@ cdef class ParameterCollection: # {{{
         
         Args:
             array (np.ndarray): Numpy array. rows: vocab_size, cols: dims.
+            name  (string): optional name for this parameter.
         
         Returns:
-            (dynet.Parameters): LookupParameter
+            (dynet.LookupParameters): LookupParameter
         """
         vocab_size = array.shape[0]
         emb_dim = array.shape[1:]
@@ -750,10 +908,10 @@ cdef class ParameterCollection: # {{{
         
         Args:
             dim (tuple): Shape of the parameter. The first dimension is the vocab size
-            name (string)             : Optional name for this parameter (default: "")
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            name (string)             : Optional name for this parameter (default: "")
         
         Returns:
             (dynet.LookupParameters): Created LookupParameter
@@ -769,6 +927,32 @@ cdef class ParameterCollection: # {{{
         return pp
 
     cpdef add_subcollection(self, name=None):
+        """Creates a sub-collection of the current collection, and returns it.
+        
+        A sub-collection is simply a ParameterCollection object which is tied to a
+        parent collection. ParameterCollections can be nested to arbitraty depth.
+
+        Sub-collections are used for grouping of parameters,
+        for example if one wants to train only a subset of the parameters, one
+        can add them in a subcollection and pass the subcollection to a trainer.
+        Similarly, for saving (or loading) only some of the parameters, one can save/populate
+        a sub-collection.
+
+        Sub-collections are used inside builder objects (such as the LSTMBuilder):
+        The builder creates a local sub-collection and adds parameters to it instead
+        of to the global collection that is passed to it in the constructor.
+        This way, the parameters participating in the builder are logically grouped,
+        and can be saved/loaded/trained seperately if needed.
+
+        Args:
+            name (string): an optional name for the sub-collection.
+
+        Keyword Arguments:
+            name (string)             : Optional name for this sub-collection (default: "")
+
+        Returns:
+            (dynet.ParameterCollection) a parameter collection.
+        """
         if name is None: return ParameterCollection.wrap(self.thisptr.add_subcollection(""))
         else: return ParameterCollection.wrap(self.thisptr.add_subcollection(name))
 
