@@ -1208,6 +1208,10 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+BOOST_AUTO_TEST_CASE( maxpool_same_gradient ) {
+  BOOST_CHECK(true);
+}
+
 // TODO: These are all unimplemented
 // Expression kmh_ngram(const Expression& x, unsigned n);
 

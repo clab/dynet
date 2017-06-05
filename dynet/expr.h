@@ -1869,6 +1869,47 @@ Expression conv2d(const Expression& x, const Expression& f, const std::vector<un
  */
 Expression conv2d(const Expression& x, const Expression& f, const Expression& b, const std::vector<unsigned>& stride, bool is_valid = true);
 
+/**
+ * \ingroup convolutionoperations
+ * \brief maxpool
+ * \details
+ *   2D convolution operator without bias parameters.
+ *   'VALID' and 'SAME' convolutions are supported.
+ *   Think about when stride is 1, the distinction:
+ *   - *SAME*: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
+ *   - *VALID*: output size shrinks by ksize - 1, and the filters always sweep at valid positions inside the input maps. No padding needed.
+ *
+ *   In detail, assume:
+ *   - Input feature maps: (XH x XW x XC) x N
+ *   - ksize: ksize[0] and ksize[1] are row (h) and col (w) stride, respectively
+ *   - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
+ *
+ *   For the *SAME* convolution: the output height (YH) and width (YW) are computed as:
+ *   - YH = ceil(float(XH) / float(strides[0]))
+ *   - YW = ceil(float(XW) / float(strides[1]))
+ *   and the paddings are computed as:
+ *   - pad_along_height = max((YH - 1) * strides[0] + FH - XH, 0)
+ *   - pad_along_width = max((YW - 1) * strides[1] + FW - XW, 0)
+ *   - pad_top = pad_along_height / 2
+ *   - pad_bottom = pad_along_height - pad_top
+ *   - pad_left = pad_along_width / 2
+ *   - pad_right = pad_along_width - pad_left
+ *
+ *   For the *VALID* convolution: the output height (YH) and width (YW) are computed as:
+ *   - YH = ceil(float(XH - FH + 1) / float(strides[0]))
+ *   - YW = ceil(float(XW - FW + 1) / float(strides[1]))
+ *   and the paddings are always zeros.
+ *
+ * \param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+ * \param ksize the height and width of the maxpool window or kernel
+ * \param stride the row and column strides
+ * \param is_valid 'VALID' convolution or 'SAME' convolution, default is True ('VALID')
+ *
+ * \return The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
+ */
+Expression maxpool(const Expression& x, const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride, bool is_valid = true);
+
+
 ////////////////////////////////////////////////
 // Tensor operations                          //
 ////////////////////////////////////////////////
