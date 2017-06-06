@@ -10,6 +10,7 @@
 #include "dynet/nodes-macros.h"
 #include "third_party/eigen_spatial_convolutions.h"
 #include "third_party/eigen_backward_spatial_convolutions.h"
+#include "third_party/eigen_pooling.h"
 
 #if HAVE_CUDA
 #include "dynet/cuda.h"
@@ -226,6 +227,11 @@ Dim MaxPool::dim_forward(const vector<Dim>& xs) const {
 }
 
 
+size_t MaxPool::aux_storage_size() const {
+  return 100000;
+}
+
+
 template<class MyDevice>
 void MaxPool::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in MaxPool::forward, exactly one input");
@@ -240,7 +246,7 @@ void MaxPool::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   }
   cudnn_conv_op_->forward_impl(dev, xs, fx);
 #else
-  throw std::runtime_error("Conv2D::forward_dev_impl not supported without CUDNN");
+  throw std::runtime_error("MaxPool::forward_dev_impl not supported without CUDNN");
 #endif
 #else
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
@@ -254,6 +260,7 @@ void MaxPool::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   CHWN_y.tb<3>().device(*dev.edevice) = Eigen::SpatialMaxPooling(CHWN_x.tb<3>(), ksize[0], ksize[1], stride[0], stride[1], padding_type);
   shuffles[0] = 1; shuffles[1] = 2; shuffles[2] = 0; shuffles[3] = 3;
   fx.tb<3>().device(*dev.edevice) = CHWN_y.tb<3>().shuffle(shuffles);
+  std::cout << "exited forward dev ";
 #endif
 }
 
@@ -265,6 +272,7 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
                          const Tensor& dEdf,
                          unsigned i,
                          Tensor& dEdxi) const {
+  std::cout << "entered backward dev";
   // don't check those already checked in forward_impl
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in MaxPool::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in MaxPool::backward");
@@ -276,7 +284,7 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
   cudnn_conv_op_->set_pool(&aux_mem_pool);
   cudnn_conv_op_->backward_impl(dev, xs, fx, dEdf, i, dEdxi);
 #else
-  throw std::runtime_error("Conv2D::backward_dev_impl not supported without CUDNN");
+  throw std::runtime_error("MaxPool::backward_dev_impl not supported without CUDNN");
 #endif
 #else
   // convert dEdf to eigen format
@@ -290,20 +298,27 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
   Tensor CHWN_fx = Tensor(Dim({fx.d[2], fx.d[0], fx.d[1]}, fx.d.bd), static_cast<float*>(CHWN_fx_mem), fx.device, DeviceMempool::FXS);
   CHWN_fx.tb<3>().device(*dev.edevice) = fx.tb<3>().shuffle(shuffles);
   //then convert xs to eigen format
-  void* CHWN_xs_mem = aux_mem_pool.allocate(xs.d.size() * sizeof(float));
-  Tensor CHWN_xs = Tensor(Dim({xs.d[2], xs.d[0], xs.d[1]}, xs.d.bd), static_cast<float*>(CHWN_xs_mem), xs.device, DeviceMempool::FXS);
-  CHWN_xs.tb<3>().device(*dev.edevice) = xs.tb<3>().shuffle(shuffles);
+  void* CHWN_xs_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+  Tensor CHWN_xs = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_xs_mem), xs[0]->device, DeviceMempool::FXS);
+  CHWN_xs.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().shuffle(shuffles);
   
   //now, compute the result in eigen
   // first, create eigen tensor to hold the results
   void* CHWN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
   Tensor CHWN_dEdxi = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
   // then initialize it
+  std::cout << "is_valid = " << is_valid << endl;
+  std::cout << "dimensions are: " << endl;
+  std::cout << "bd = " << xs[0]->d.bd << endl;
+  std::cout << "d = " << xs[0]->d[2] << endl;
+  std::cout << "i = " << xs[0]->d[0] << endl;
+  std::cout << "j = " << xs[0]->d[1] << endl;
+
   for (int b = 0; b < xs[0]->d.bd; ++b) {
     for (int d = 0; d < xs[0]->d[2]; ++d) {
       for (int i = 0; i < xs[0]->d[0]; ++i) {
         for (int j = 0; j < xs[0]->d[1]; ++j) {
-          CHWN_dEdxi(d, i, j, b) = 0.f;
+          CHWN_dEdxi.tb<3>()(d, i, j, b) = 0.f;
         }
       }
     }
@@ -319,14 +334,14 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
           float largest = -10000.f;
           for (int r = 0; r < ksize[0]; ++r) {
             for (int c = 0; c < ksize[1]; ++c) {
-              if (CHWN_xs(b, c + j, r + i, d) > largest) {
-                largest = CHWN_xs(b, c + j, r + i, d);
+              if (CHWN_xs.tb<3>()(b, c + j, r + i, d) > largest) {
+                largest = CHWN_xs.tb<3>()(b, c + j, r + i, d);
                 largest_r = r + i;
                 largest_c = c + j;
               }
             }
           }
-          CHWN_dEdxi(d, largest_c,largest_r, b) += CHWN_fx(b, j, i, b);
+          (CHWN_dEdxi.tb<3>())(d, largest_c,largest_r, b) += (CHWN_fx.tb<3>())(b, j, i, b);
         }
       }
     }
@@ -342,5 +357,6 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
 
 #endif
 }
+DYNET_NODE_INST_DEV_IMPL(MaxPool)
 
 } // namespace dynet
