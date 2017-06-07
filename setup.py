@@ -147,16 +147,17 @@ class build(_build):
 
 
 try:
-    with open(os.path.join(script_dir, "README.md")) as f:
-        README = f.read()
-except IOError:
-    README = ""
+    import pypandoc
+    long_description = pypandoc.convert("README.md", "rst")
+except (IOError, ImportError):
+    long_description = ""
 
 setup(
     name="dyNET",
+    #version="0.0.0",
     install_requires=["cython", "numpy"],
     description="The Dynamic Neural Network Toolkit",
-    long_description=README,
+    long_description=long_description,
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
