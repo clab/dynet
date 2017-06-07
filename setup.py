@@ -6,6 +6,7 @@ from distutils.command.build import build as _build
 from distutils.errors import DistutilsSetupError
 from distutils.spawn import find_executable
 from distutils.sysconfig import get_python_lib
+from multiprocessing import cpu_count
 from shutil import rmtree
 from subprocess import Popen
 
@@ -126,7 +127,7 @@ class build(_build):
         if run_process(cmake_cmd) != 0:
             raise DistutilsSetupError(" ".join(cmake_cmd))
 
-        make_cmd = [self.make_path]
+        make_cmd = [self.make_path, "-j", str(cpu_count())]
         log.info("Compiling...")
         if run_process(make_cmd) != 0:
             raise DistutilsSetupError(" ".join(make_cmd))
