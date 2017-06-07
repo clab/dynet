@@ -7,7 +7,7 @@
 #include "dynet/nodes-macros.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
-#define DYNET_SKIP_CUDA_CONTRACTIONS
+
 
 using namespace std;
 
@@ -33,8 +33,8 @@ Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
   }
   Dim d({xs[0].size(0), xs[0].size(1)}, max(xs[0].bd, xs[1].bd));
   if(xs.size() == 3) d.bd = max(d.bd, xs[2].bd);
-  if (xs.size() == 3 && xs[2] != d) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D: " << xs;
+  if (xs.size() == 3 && xs[2].single_batch() != d.single_batch()) {
+    ostringstream s; s << "Bad bias dimensions in InnerProduct3D_1D: " << xs;
     throw std::invalid_argument(s.str());
   }
   return d;
