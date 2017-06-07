@@ -3,17 +3,13 @@ import os
 import platform
 import sys
 from distutils.command.build import build as _build
-from distutils.command.build_ext import build_ext as _build_ext
 from distutils.errors import DistutilsSetupError
 from distutils.spawn import find_executable
 from distutils.sysconfig import get_python_lib
-from glob import glob
-from shutil import rmtree, copy
+from shutil import rmtree
 from subprocess import Popen
 
-from setuptools import setup, Extension
-from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
-from setuptools.command.develop import develop as _develop
+from setuptools import setup
 
 
 def run_process(cmds):
