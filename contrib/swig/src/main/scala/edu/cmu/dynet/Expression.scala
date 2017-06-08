@@ -136,7 +136,7 @@ object Expression {
   def sum(exprs: Expression*): Expression = sum(new ExpressionVector(exprs))
 
   def average(ev: ExpressionVector): Expression = vectory(ev, dn.average)
-  def average(exprs: Expression*): Expression = sum(new ExpressionVector(exprs))
+  def average(exprs: Expression*): Expression = average(new ExpressionVector(exprs))
 
   def sqrt(e: Expression): Expression = unary(e, dn.sqrt)
   def erf(e: Expression): Expression = unary(e, dn.erf)
