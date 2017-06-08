@@ -112,7 +112,7 @@ class build(_build):
             self.cmake_path,
             script_dir,
             "-DCMAKE_INSTALL_PREFIX=" + self.install_prefix,
-            "-DEIGEN3_INCLUDE_DIR=eigen",
+            "-DEIGEN3_INCLUDE_DIR=" + os.path.join(self.build_dir, "eigen"),
             "-DPYTHON=" + self.py_executable,
             ]
         boost_prefix = os.environ.get("BOOST")
