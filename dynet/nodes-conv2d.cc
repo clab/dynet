@@ -102,6 +102,22 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   throw std::runtime_error("Conv2D::forward_dev_impl not supported without CUDNN");
 #endif
 #else
+  std::cout << "Conv2D forward input" << endl;
+  std::cout << "is_valid = " << is_valid << endl;
+  std::cout << "dimensions are: " << endl;
+  std::cout << "bd = " << xs[0]->d.bd << endl;
+  std::cout << "d = " << xs[0]->d[2] << endl;
+  std::cout << "i = " << xs[0]->d[0] << endl;
+  std::cout << "j = " << xs[0]->d[1] << endl;
+  std::cout << "Conv2D forward output" << endl;
+  std::cout << "is_valid = " << is_valid << endl;
+  std::cout << "dimensions are: " << endl;
+  std::cout << "bd = " << fx.d.bd << endl;
+  std::cout << "d = " << fx.d[2] << endl;
+  std::cout << "i = " << fx.d[0] << endl;
+  std::cout << "j = " << fx.d[1] << endl;
+  //std::cout << "xs =" << *xs[0];
+
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
   void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
   Tensor CHWN_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_x_mem), xs[0]->device, DeviceMempool::FXS);
@@ -125,6 +141,7 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
       fx.tb<3>().chip<2>(i).device(*dev.edevice) += bias.t<3>(); 
     }
   }
+  //std::cout << "fx =" << fx;
 #endif
 }
 
@@ -227,8 +244,15 @@ Dim MaxPool::dim_forward(const vector<Dim>& xs) const {
 }
 
 
+
 size_t MaxPool::aux_storage_size() const {
-  return 100000;
+  vector<unsigned> input_size(arity());
+  for (unsigned i = 0; i < arity(); ++i) {
+    input_size[i] = get_cg()->nodes[args[i]]->dim.size();
+  }
+  size_t nbytes = 0;
+  nbytes += sizeof(float) * (2*input_size[0] + 2*input_size[1] + dim.size());
+  return nbytes;
 }
 
 
@@ -238,6 +262,20 @@ void MaxPool::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   DYNET_ASSERT(fx.d.bd == xs[0]->d.bd, "Failed dimension check in MaxPool::forward, batchsize not match");
   DYNET_ASSERT(fx.d[2] == xs[0]->d[2], "Failed dimension check in MaxPool::forward, #channel not match");
   NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
+  std::cout << "MaxPool forward input" << endl;
+  std::cout << "is_valid = " << is_valid << endl;
+  std::cout << "dimensions are: " << endl;
+  std::cout << "bd = " << xs[0]->d.bd << endl;
+  std::cout << "d = " << xs[0]->d[2] << endl;
+  std::cout << "i = " << xs[0]->d[0] << endl;
+  std::cout << "j = " << xs[0]->d[1] << endl;
+  std::cout << "MaxPool forward output" << endl;
+  std::cout << "is_valid = " << is_valid << endl;
+  std::cout << "dimensions are: " << endl;
+  std::cout << "bd = " << fx.d.bd << endl;
+  std::cout << "d = " << fx.d[2] << endl;
+  std::cout << "i = " << fx.d[0] << endl;
+  std::cout << "j = " << fx.d[1] << endl;
 #ifdef __CUDACC__
 #if HAVE_CUDNN
   if (cudnn_conv_op_ == NULL) {
@@ -260,7 +298,6 @@ void MaxPool::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   CHWN_y.tb<3>().device(*dev.edevice) = Eigen::SpatialMaxPooling(CHWN_x.tb<3>(), ksize[0], ksize[1], stride[0], stride[1], padding_type);
   shuffles[0] = 1; shuffles[1] = 2; shuffles[2] = 0; shuffles[3] = 3;
   fx.tb<3>().device(*dev.edevice) = CHWN_y.tb<3>().shuffle(shuffles);
-  std::cout << "exited forward dev ";
 #endif
 }
 
@@ -272,7 +309,7 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
                          const Tensor& dEdf,
                          unsigned i,
                          Tensor& dEdxi) const {
-  std::cout << "entered backward dev";
+  std::cout << "entered backward dev JAJAJAJAJA" << endl;
   // don't check those already checked in forward_impl
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in MaxPool::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in MaxPool::backward");
@@ -288,9 +325,9 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
 #endif
 #else
   // convert dEdf to eigen format
+  Eigen::array<ptrdiff_t, 4> shuffles; 
   void* CHWN_dy_mem = aux_mem_pool.allocate(dEdf.d.size() * sizeof(float));
   Tensor CHWN_dy = Tensor(Dim({dEdf.d[2], dEdf.d[0], dEdf.d[1]}, dEdf.d.bd), static_cast<float*>(CHWN_dy_mem), dEdf.device, DeviceMempool::FXS);
-  Eigen::array<ptrdiff_t, 4> shuffles; 
   shuffles[0] = 2; shuffles[1] = 0; shuffles[2] = 1; shuffles[3] = 3;
   CHWN_dy.tb<3>().device(*dev.edevice) = dEdf.tb<3>().shuffle(shuffles);
   //then convert fx to eigen format
@@ -307,46 +344,115 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
   void* CHWN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
   Tensor CHWN_dEdxi = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
   // then initialize it
-  std::cout << "is_valid = " << is_valid << endl;
-  std::cout << "dimensions are: " << endl;
-  std::cout << "bd = " << xs[0]->d.bd << endl;
-  std::cout << "d = " << xs[0]->d[2] << endl;
-  std::cout << "i = " << xs[0]->d[0] << endl;
-  std::cout << "j = " << xs[0]->d[1] << endl;
 
-  for (int b = 0; b < xs[0]->d.bd; ++b) {
-    for (int d = 0; d < xs[0]->d[2]; ++d) {
-      for (int i = 0; i < xs[0]->d[0]; ++i) {
-        for (int j = 0; j < xs[0]->d[1]; ++j) {
-          CHWN_dEdxi.tb<3>()(d, i, j, b) = 0.f;
+  std::cout << "bd, d0, d1, d2" << CHWN_dEdxi.d.bd << CHWN_dEdxi.d[0] << CHWN_dEdxi.d[1] << CHWN_dEdxi.d[2];
+  for (int b = 0; b < CHWN_dEdxi.d.bd; ++b) {
+    for (int ch = 0; ch < CHWN_dEdxi.d[0]; ++ch) {
+      for (int i = 0; i < CHWN_dEdxi.d[1]; ++i) {
+        for (int j = 0; j < CHWN_dEdxi.d[2]; ++j) {
+          CHWN_dEdxi.tb<3>()(ch, i, j, b) = 0.f;
         }
       }
     }
   }
-  
+
   //then fill it out with the correct result
-  for (int b = 0; b < xs[0]->d.bd; ++b) {
-    for (int d = 0; d < xs[0]->d[2]; ++d) {
-      for (int i = 0; i < xs[0]->d[0]; ++i) {
-        for (int j = 0; j < xs[0]->d[1]; ++j) {
-	  int largest_r = i;
-          int largest_c = j;
+  for (int b = 0; b < CHWN_fx.d.bd; ++b) {
+    for (int ch = 0; ch < CHWN_fx.d[0]; ++ch) {
+      for (int i = 0; i < CHWN_fx.d[1]; ++i) {
+        for (int j = 0; j < CHWN_fx.d[2]; ++j) {
+	  int largest_r = stride[0] * i;
+          int largest_c = stride[1] * j;
           float largest = -10000.f;
           for (int r = 0; r < ksize[0]; ++r) {
             for (int c = 0; c < ksize[1]; ++c) {
-              if (CHWN_xs.tb<3>()(b, c + j, r + i, d) > largest) {
-                largest = CHWN_xs.tb<3>()(b, c + j, r + i, d);
-                largest_r = r + i;
-                largest_c = c + j;
+              int row = stride[0] * i + r;
+              int col = stride[1] * j + c;
+              if ((col < CHWN_xs.d[2]) && (row < CHWN_xs.d[1])) {
+                if (CHWN_xs.tb<3>()(ch, row, col, b) > largest) {
+                  largest = CHWN_xs.tb<3>()(ch, row, col, b);
+                  largest_r = row;
+                  largest_c = col;
+                }
               }
             }
           }
-          (CHWN_dEdxi.tb<3>())(d, largest_c,largest_r, b) += (CHWN_fx.tb<3>())(b, j, i, b);
+          std::cout << "\n r range: " << i * stride[1] << "to :" << i * stride[1] + ksize[0] - 1;
+          std::cout << "\n c range: " << j * stride[0] << "to :" << j * stride[0] + ksize[1] - 1;
+          std::cout << "\ni, j, lar_r, lar_c larg: " << i << j << largest_r << largest_c << largest;
+          std::cout << "\nCHWN_dy.tb<3>()(ch, i, j, b): " << (CHWN_dy.tb<3>())(ch, i, j, b);
+          (CHWN_dEdxi.tb<3>())(ch, largest_r, largest_c, b) += (CHWN_dy.tb<3>())(ch, i, j, b);
         }
       }
     }
   }
   
+  std::cout << "about to print the input of maxpool backward" << endl;
+  for (int i = 0; i < CHWN_xs.d[1]; ++i) {
+    for (int j = 0; j < CHWN_xs.d[2]; ++j) {
+      std::cout << (CHWN_xs.tb<3>())(0, i, j, 0) << " ";
+    }
+    std::cout << endl;
+  }
+  
+  std::cout << "about to print the fx of maxpool backward" << endl;
+  for (int i = 0; i < CHWN_fx.d[1]; ++i) {
+    for (int j = 0; j < CHWN_fx.d[2]; ++j) {
+      std::cout << (CHWN_fx.tb<3>())(0, i, j, 0) << " ";
+    }
+    std::cout << endl;
+  }
+  
+  std::cout << "about to print the dEdf of maxpool backward" << endl;
+  for (int i = 0; i < CHWN_dy.d[1]; ++i) {
+    for (int j = 0; j < CHWN_dy.d[2]; ++j) {
+      std::cout << (CHWN_dy.tb<3>())(0, i, j, 0) << " ";
+    }
+    std::cout << endl;
+  }
+
+  std::cout << "about to print the output of maxpool backward" << endl;
+  for (int i = 0; i < CHWN_dEdxi.d[1]; ++i) {
+    for (int j = 0; j < CHWN_dEdxi.d[2]; ++j) {
+      std::cout << (CHWN_dEdxi.tb<3>())(0, i, j, 0) << " ";
+    }
+    std::cout << endl;
+  }
+
+  std::cout << "about to print the input of maxpool backward" << endl;
+  for (int i = 0; i < CHWN_xs.d[1]; ++i) {
+    for (int j = 0; j < CHWN_xs.d[2]; ++j) {
+      std::cout << (CHWN_xs.tb<3>())(0, i, j, 1) << " ";
+    }
+    std::cout << endl;
+  }
+  
+  std::cout << "about to print the fx of maxpool backward" << endl;
+  for (int i = 0; i < CHWN_fx.d[1]; ++i) {
+    for (int j = 0; j < CHWN_fx.d[2]; ++j) {
+      std::cout << (CHWN_fx.tb<3>())(0, i, j, 1) << " ";
+    }
+    std::cout << endl;
+  }
+  
+  std::cout << "about to print the dEdf of maxpool backward" << endl;
+  for (int i = 0; i < CHWN_dy.d[1]; ++i) {
+    for (int j = 0; j < CHWN_dy.d[2]; ++j) {
+      std::cout << (CHWN_dy.tb<3>())(0, i, j, 1) << " ";
+    }
+    std::cout << endl;
+  }
+
+  std::cout << "about to print the output of maxpool backward" << endl;
+  for (int i = 0; i < CHWN_dEdxi.d[1]; ++i) {
+    for (int j = 0; j < CHWN_dEdxi.d[2]; ++j) {
+      std::cout << (CHWN_dEdxi.tb<3>())(0, i, j, 1) << " ";
+    }
+    std::cout << endl;
+  }
+
+
+
   //now convert it back to dynet tensor
   void* HWCN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
   Tensor HWCN_dEdxi = Tensor(xs[0]->d, static_cast<float*>(HWCN_dEdxi_mem), 
