@@ -274,6 +274,14 @@ object Expression {
   def logdet(x: Expression): Expression = unary(x, dn.logdet)
   def traceOfProduct(x: Expression, y: Expression): Expression = binary(x, y, dn.trace_of_product)
 
+  /* NORMALIZATION OPERATIONS */
+
+  def layerNorm(x: Expression, g: Expression, b: Expression): Expression = {
+    Seq(x, g, b).foreach(_.ensureFresh)
+    new Expression(dn.layer_norm(x.expr, g.expr, b.expr), Seq(x, g, b))
+  }
+  def weightNorm(w: Expression, g: Expression): Expression = binary(w, g, dn.weight_norm)
+
   /** Augment numbers so that they can do arithmetic with expressions. */
   implicit class ImplicitNumerics[T](x: T)(implicit n: Numeric[T]) {
     import n._
