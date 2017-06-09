@@ -841,6 +841,8 @@ struct LSTMBuilder : public RNNBuilder {
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
 
+  void set_dropout(float d, float d_h, float d_c);
+
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 
@@ -849,6 +851,10 @@ struct LSTMBuilder : public RNNBuilder {
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
+
+  // first index is layer, then ...
+  // masks for Gal dropout
+  std::vector<std::vector<Expression>> masks;
 
   // initial values of h and c at each layer
   // - both default to zero matrix input
@@ -877,6 +883,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
+
+  void set_dropout(float d, float d_r);
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
