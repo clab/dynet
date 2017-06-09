@@ -874,7 +874,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   explicit VanillaLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       Model& model,
+                       bool ln_lstm = false);
 
   Expression back() const override;
   std::vector<Expression> final_h() const override;
@@ -893,9 +894,13 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> ln_params;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> ln_param_vars;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
