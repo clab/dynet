@@ -143,7 +143,7 @@ struct SigLinearSortedMap {
     }
     found=0;
     sorted=false;
-    sigs.push_back(std::pair<Sig, int>(s, sigs.size()));
+    sigs.push_back(std::pair<Sig, int>(s, (int)sigs.size()));
     whiches.push_back(s.which);
     return sigs.size()-1;
   }
