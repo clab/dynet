@@ -632,6 +632,11 @@ Expression inverse(const Expression& x);
 Expression logdet(const Expression& x);
 Expression trace_of_product(const Expression& x, const Expression& y);
 
+/* NORMALIZATION OPERATIONS */
+
+Expression layer_norm(const Expression& x, const Expression& g, const Expression& b);
+Expression weight_norm(const Expression& w, const Expression& g);
+
 } // namespace expr
 
 /////////////////////////////////////
