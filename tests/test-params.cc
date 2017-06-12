@@ -95,13 +95,13 @@ BOOST_AUTO_TEST_CASE ( test_parameter_collection ) {
   dynet::Parameter d = submodel.add_parameters({1, 2}, "d");
   dynet::Parameter b3 = submodel.add_parameters({1, 2}, "b");
   DYNET_CHECK_EQUAL(model.get_fullname(), "/");
-  DYNET_CHECK_EQUAL(a.get_fullname(), "/__0");
-  DYNET_CHECK_EQUAL(b1.get_fullname(), "/b__0");
-  DYNET_CHECK_EQUAL(b2.get_fullname(), "/b__1");
-  DYNET_CHECK_EQUAL(submodel.get_fullname(), "/foo__0/");
-  DYNET_CHECK_EQUAL(c.get_fullname(), "/foo__0/__0");
-  DYNET_CHECK_EQUAL(d.get_fullname(), "/foo__0/d__0");
-  DYNET_CHECK_EQUAL(b3.get_fullname(), "/foo__0/b__0");
+  DYNET_CHECK_EQUAL(a.get_fullname(), "/_0");
+  DYNET_CHECK_EQUAL(b1.get_fullname(), "/b");
+  DYNET_CHECK_EQUAL(b2.get_fullname(), "/b_1");
+  DYNET_CHECK_EQUAL(submodel.get_fullname(), "/foo/");
+  DYNET_CHECK_EQUAL(c.get_fullname(), "/foo/_0");
+  DYNET_CHECK_EQUAL(d.get_fullname(), "/foo/d");
+  DYNET_CHECK_EQUAL(b3.get_fullname(), "/foo/b");
 }
 
 BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
@@ -128,16 +128,16 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
   ParameterCollection collec;
   testParameterCollection spec(collec);
   std::string affine_id_for_posterity = spec.get_affine_model_name();
-  DYNET_CHECK_EQUAL(affine_id_for_posterity, "/affine__0/");
+  DYNET_CHECK_EQUAL(affine_id_for_posterity, "/affine/");
   DYNET_CHECK_EQUAL(save_parameters_lambda("model_file.txt", collec), 3);
   auto affine_model = spec.get_affine_model();
   DYNET_CHECK_EQUAL(save_parameters_lambda("affine_file.txt", affine_model), 2);
   auto submodel = collec.add_subcollection("affine");
   auto p = submodel.add_parameters({10});
   std::cout << p.get_fullname() << std::endl;
-  DYNET_CHECK_EQUAL(save_parameters_lambda2("tuning_parameter_file.txt", p), "/affine__1/__0");
+  DYNET_CHECK_EQUAL(save_parameters_lambda2("tuning_parameter_file.txt", p), "/affine_1/_0");
   DYNET_CHECK_EQUAL(save_parameters_lambda3("tuning_parameter_file.txt",
-                                            affine_model.get_parameter_storage("/affine__0/__0")), "/affine__0/__0");
+                                            affine_model.get_parameter_storage("/affine/_1")), "/affine/_1");
 }
 
 BOOST_AUTO_TEST_CASE ( test_parametercollection_with_builder ) {
