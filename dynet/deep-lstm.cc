@@ -164,7 +164,7 @@ Expression DeepLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   return ot;
 }
 
-ParameterCollection & DeepLSTMBuilder::get_parameters() {
+ParameterCollection & DeepLSTMBuilder::get_parameter_collection() {
   return local_model;
 }
 

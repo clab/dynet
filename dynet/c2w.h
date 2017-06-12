@@ -56,7 +56,7 @@ struct C2WBuilder {
     }
     return it->second;
   }
-  ParameterCollection & get_parameters() {
+  ParameterCollection & get_parameter_collection() {
     return local_model;
   }
 };

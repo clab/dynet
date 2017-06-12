@@ -52,7 +52,7 @@ class testModel {
   }
   std::string get_affine_model_name() { return affine_params.get_fullname(); }
   dynet::ParameterCollection get_affine_model() const { return affine_params; }
-  dynet::ParameterCollection get_lstm_model() { return lstm.get_parameters(); }
+  dynet::ParameterCollection get_lstm_model() { return lstm.get_parameter_collection(); }
  private:
   dynet::LookupParameter lookup_param;
   dynet::Parameter W_x, b_x;
