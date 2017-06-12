@@ -74,11 +74,11 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
 #if defined(__CUDACC__) && defined(DYNET_SKIP_CUDA_CONTRACTIONS)
   throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl disabled on CUDA. Comment out DYNET_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
-  Eigen::array<int, 2> bcast_b = {1, xs[1]->d.bd == 1 ? fx.d.bd : 1};
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
-  auto b = xs[1]->tb<1>();
-  if (xs[0]->d.bd == 1) {
+  if (xs[0]->d.bd == 1) {  // A is a 3 tensor
+    Eigen::array<int, 2> bcast_b = {1, xs[1]->d.bd == 1 ? fx.d.bd : 1};
+    auto b = xs[1]->tb<1>();
     auto A = xs[0]->t<3>();
     if (xs.size() == 2) {
       fx.tb<2>().device(*dev.edevice) = A.contract(b.broadcast(bcast_b), dims);
@@ -87,41 +87,44 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
       Eigen::array<int, 3> bcast_C = {1, 1, xs[2]->d.bd == 1 ? fx.d.bd : 1};
       fx.tb<2>().device(*dev.edevice) = A.contract(b.broadcast(bcast_b), dims) + C.broadcast(bcast_C);
     }
-  } else {
+  } else { // A is a 4 tensor
     // Loop over batches
     auto A = xs[0]->tb<3>();
-    auto b_ = b;
-    if (xs.size() == 2) {
-      for (unsigned i = 0; i < xs[0]->d.bd; ++i) {
-        if (xs[1]->d.bd != 1) {
-          b_ = b.chip<1>(i);
-        }
-        fx.tb<2>().chip<2>(i).device(*dev.edevice) = A.chip<3>(i).contract(b_, dims);
+    if (xs[1]->d.bd == 1) { // b is a 1 tensor
+      auto b = xs[1]->t<1>();
+      if (xs.size() == 2) {
+        fx.tb<2>().device(*dev.edevice) = A.contract(b, dims);
+      } else {
+        auto C = xs[2]->tb<2>();
+        Eigen::array<int, 3> bcast_C = {1, 1, xs[2]->d.bd == 1 ? fx.d.bd : 1};
+        fx.tb<2>().device(*dev.edevice) = A.contract(b, dims) + C.broadcast(bcast_C);
       }
     } else {
-      auto C = xs[2]->tb<2>();
-      auto C_ = C;
-      for (unsigned i = 0; i < xs[0]->d.bd; ++i) {
-        if (xs[1]->d.bd != 1) {
-          b_ = b.chip<1>(i);
+      // If both A and b are batched loop over batches
+      auto b = xs[1]->tb<1>();
+      if (xs.size() == 2) {
+        for (unsigned i = 0; i < fx.d.bd; ++i) {
+          auto b_ = b.chip<1>(i);
+          fx.tb<2>().chip<2>(i).device(*dev.edevice) = A.chip<3>(i).contract(b_, dims);
         }
-        if (xs[2]->d.bd != 1) {
-          C_ = C.chip<2>(i);
+      } else {
+        if (xs[2]->d.bd == 1) {
+          auto C = xs[2]->t<2>();
+          for (unsigned i = 0; i < fx.d.bd; ++i) {
+            auto b_ = b.chip<1>(i);
+            fx.tb<2>().chip<2>(i).device(*dev.edevice) = A.chip<3>(i).contract(b_, dims) + C;
+          }
+        } else {
+          auto C = xs[2]->tb<2>();
+          for (unsigned i = 0; i < fx.d.bd; ++i) {
+            auto b_ = b.chip<1>(i);
+            auto C_ = C.chip<2>(i);
+            fx.tb<2>().chip<2>(i).device(*dev.edevice) = A.chip<3>(i).contract(b_, dims) + C_;
+          }
         }
-        fx.tb<2>().chip<2>(i).device(*dev.edevice) = A.chip<3>(i).contract(b_, dims) + C;
       }
     }
   }
-  // auto A = xs[0]->tb<3>();
-  // typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
-  // Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
-  // if (xs.size() == 2) {
-  //   fx.tb<2>().device(*dev.edevice) = A.broadcast(bcast_A).contract(b.broadcast(bcast_b), dims);
-  // } else {
-  //   auto C = xs[2]->tb<2>();
-  //   Eigen::array<int, 2> bcast_C = {1, xs[2]->d.bd == 1 ? fx.d.bd : 1};
-  //   fx.tb<2>().device(*dev.edevice) = A.broadcast(bcast_A).contract(b.broadcast(bcast_b), dims) + C.broadcast(bcast_C);
-  // }
 #endif
 }
 
@@ -137,33 +140,33 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
 #else
   auto tdEdf = dEdf.tb<2>();  // 2 tensor
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
-  if (i == 0) { // 3 tensor
-    Eigen::array<int, 2> bcast_b = {1, xs[1]->d.bd == 1 ? fx.d.bd : 1};
-    if (xs[0]->d.bd == 1) {
+  if (i == 0) {
+    if (xs[0]->d.bd == 1) { // A is a 3 tensor
       // tensor product
-      if (xs[1]->d.bd == 1) {
-        auto b = xs[1]->t<1>();
-        Eigen::array<int, 1> red_axis; red_axis[0] = 2;
-        dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(b, Eigen::array<DimPair, 0> {{}}).sum(red_axis);
-      } else {
-        auto b = xs[1]->tb<1>();
-        Eigen::array<DimPair, 1> dims({{DimPair(2, 1)}});
-        dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(b, dims);
-      }
+      auto b = xs[1]->tb<1>();
+      Eigen::array<int, 2> bcast_b = {1, xs[1]->d.bd == 1 ? fx.d.bd : 1};
+      Eigen::array<DimPair, 1> dims({{DimPair(2, 1)}});
+      dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(b.broadcast(bcast_b), dims);
+
     } else {
       if (xs[1]->d.bd == 1) {
+        // auto b = xs[1]->t<1>();
+        // Eigen::array<int, 4> morph {dEdf.d[0], dEdf.d[1], xs[1]->d[0], dEdf.d.bd};
+        // dEdxi.tb<3>().device(*dev.edevice) += tdEdf.contract(b, Eigen::array<DimPair, 0> {{}}).reshape(morph);
         auto b = xs[1]->t<1>();
-        dEdxi.tb<3>().device(*dev.edevice) += tdEdf.contract(b, Eigen::array<DimPair, 0> {{}});
+        for (unsigned i = 0; i < fx.d.bd; ++i) {
+          dEdxi.tb<3>().chip<3>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(b, Eigen::array<DimPair, 0> {{}});
+        }
       } else {
         auto b = xs[1]->tb<1>();
-        for (unsigned i = 0; i < xs[0]->d.bd; ++i) {
-          dEdxi.tb<3>().chip<3>(i).device(*dev.edevice) = tdEdf.chip<2>(i).contract(b.chip<1>(i), Eigen::array<DimPair, 0> {{}});
+        for (unsigned i = 0; i < fx.d.bd; ++i) {
+          dEdxi.tb<3>().chip<3>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(b.chip<1>(i), Eigen::array<DimPair, 0> {{}});
         }
 
       }
     }
   } else if (i == 1) {
-    if (xs[1]->d.bd == 1) {
+    if (xs[1]->d.bd == 1) { // b is a 1 tensor
       if (xs[0]->d.bd == 1) {
         auto A = xs[0]->t<3>();  // A is 3 tensor
         Eigen::array<int, 1> red_axis; red_axis[0] = 0;
@@ -174,22 +177,22 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
         Eigen::array<DimPair, 3> dims({{DimPair(0, 0), DimPair(1, 1), DimPair(2, 3)}});
         dEdxi.t<1>().device(*dev.edevice) += tdEdf.contract(A, dims);
       }
-    } else {
+    } else { // b is a 2 tensor
       if (xs[0]->d.bd == 1) {
         auto A = xs[0]->t<3>();  // A is 3 tensor
         Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
-        dEdxi.t<1>().device(*dev.edevice) += tdEdf.contract(A, dims);
+        dEdxi.tb<1>().device(*dev.edevice) += A.contract(tdEdf, dims);
       } else {
         auto A = xs[0]->tb<3>();  // A is 4 tensor
         Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
-        for (unsigned i = 0; i < xs[0]->d.bd; ++i) {
-          dEdxi.tb<1>().chip<1>(i).device(*dev.edevice) = tdEdf.chip<2>(i).contract(A.chip<3>(i), dims);
+        for (unsigned i = 0; i < fx.d.bd; ++i) {
+          dEdxi.tb<1>().chip<1>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(A.chip<3>(i), dims);
         }
       }
     }
   } else if (i == 2) {
-    if (xs[2]->d.bd != fx.d.bd) {
-      Eigen::array<int, 1> red_axis; red_axis[0] = 3;
+    if (xs[2]->d.bd == 1) {
+      Eigen::array<int, 1> red_axis; red_axis[0] = 2;
       dEdxi.t<2>().device(*dev.edevice) += tdEdf.sum(red_axis);
     } else {
       dEdxi.tb<2>().device(*dev.edevice) += tdEdf;
