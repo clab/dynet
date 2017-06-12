@@ -324,43 +324,14 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
   throw std::runtime_error("MaxPool::backward_dev_impl not supported without CUDNN");
 #endif
 #else
-  // convert dEdf to eigen format
-  Eigen::array<ptrdiff_t, 4> shuffles; 
-  void* CHWN_dy_mem = aux_mem_pool.allocate(dEdf.d.size() * sizeof(float));
-  Tensor CHWN_dy = Tensor(Dim({dEdf.d[2], dEdf.d[0], dEdf.d[1]}, dEdf.d.bd), static_cast<float*>(CHWN_dy_mem), dEdf.device, DeviceMempool::FXS);
-  shuffles[0] = 2; shuffles[1] = 0; shuffles[2] = 1; shuffles[3] = 3;
-  CHWN_dy.tb<3>().device(*dev.edevice) = dEdf.tb<3>().shuffle(shuffles);
-  //then convert fx to eigen format
-  void* CHWN_fx_mem = aux_mem_pool.allocate(fx.d.size() * sizeof(float));
-  Tensor CHWN_fx = Tensor(Dim({fx.d[2], fx.d[0], fx.d[1]}, fx.d.bd), static_cast<float*>(CHWN_fx_mem), fx.device, DeviceMempool::FXS);
-  CHWN_fx.tb<3>().device(*dev.edevice) = fx.tb<3>().shuffle(shuffles);
-  //then convert xs to eigen format
-  void* CHWN_xs_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
-  Tensor CHWN_xs = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_xs_mem), xs[0]->device, DeviceMempool::FXS);
-  CHWN_xs.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().shuffle(shuffles);
-  
-  //now, compute the result in eigen
-  // first, create eigen tensor to hold the results
-  void* CHWN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
-  Tensor CHWN_dEdxi = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
-  // then initialize it
 
-  std::cout << "bd, d0, d1, d2" << CHWN_dEdxi.d.bd << CHWN_dEdxi.d[0] << CHWN_dEdxi.d[1] << CHWN_dEdxi.d[2];
-  for (int b = 0; b < CHWN_dEdxi.d.bd; ++b) {
-    for (int ch = 0; ch < CHWN_dEdxi.d[0]; ++ch) {
-      for (int i = 0; i < CHWN_dEdxi.d[1]; ++i) {
-        for (int j = 0; j < CHWN_dEdxi.d[2]; ++j) {
-          CHWN_dEdxi.tb<3>()(ch, i, j, b) = 0.f;
-        }
-      }
-    }
-  }
+
 
   //then fill it out with the correct result
-  for (int b = 0; b < CHWN_fx.d.bd; ++b) {
-    for (int ch = 0; ch < CHWN_fx.d[0]; ++ch) {
-      for (int i = 0; i < CHWN_fx.d[1]; ++i) {
-        for (int j = 0; j < CHWN_fx.d[2]; ++j) {
+  for (int b = 0; b < fx.d.bd; ++b) {
+    for (int i = 0; i < fx.d[0]; ++i) {
+      for (int j = 0; j < fx.d[1]; ++j) {
+        for (int ch = 0; ch < fx.d[2]; ++ch) {
 	  int largest_r = stride[0] * i;
           int largest_c = stride[1] * j;
           float largest = -10000.f;
@@ -368,98 +339,21 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
             for (int c = 0; c < ksize[1]; ++c) {
               int row = stride[0] * i + r;
               int col = stride[1] * j + c;
-              if ((col < CHWN_xs.d[2]) && (row < CHWN_xs.d[1])) {
-                if (CHWN_xs.tb<3>()(ch, row, col, b) > largest) {
-                  largest = CHWN_xs.tb<3>()(ch, row, col, b);
+              if ((col < xs[0]->d[1]) && (row < xs[0]->d[0])) {
+                if (xs[0]->tb<3>()(row, col, ch, b) > largest) {
+                  largest = xs[0]->tb<3>()(row, col, ch, b);
                   largest_r = row;
                   largest_c = col;
                 }
               }
             }
           }
-          std::cout << "\n r range: " << i * stride[1] << "to :" << i * stride[1] + ksize[0] - 1;
-          std::cout << "\n c range: " << j * stride[0] << "to :" << j * stride[0] + ksize[1] - 1;
-          std::cout << "\ni, j, lar_r, lar_c larg: " << i << j << largest_r << largest_c << largest;
-          std::cout << "\nCHWN_dy.tb<3>()(ch, i, j, b): " << (CHWN_dy.tb<3>())(ch, i, j, b);
-          (CHWN_dEdxi.tb<3>())(ch, largest_r, largest_c, b) += (CHWN_dy.tb<3>())(ch, i, j, b);
+          (dEdxi.tb<3>())(largest_r, largest_c, ch, b) += (dEdf.tb<3>())(i, j, ch, b);
         }
       }
     }
   }
-  
-  std::cout << "about to print the input of maxpool backward" << endl;
-  for (int i = 0; i < CHWN_xs.d[1]; ++i) {
-    for (int j = 0; j < CHWN_xs.d[2]; ++j) {
-      std::cout << (CHWN_xs.tb<3>())(0, i, j, 0) << " ";
-    }
-    std::cout << endl;
-  }
-  
-  std::cout << "about to print the fx of maxpool backward" << endl;
-  for (int i = 0; i < CHWN_fx.d[1]; ++i) {
-    for (int j = 0; j < CHWN_fx.d[2]; ++j) {
-      std::cout << (CHWN_fx.tb<3>())(0, i, j, 0) << " ";
-    }
-    std::cout << endl;
-  }
-  
-  std::cout << "about to print the dEdf of maxpool backward" << endl;
-  for (int i = 0; i < CHWN_dy.d[1]; ++i) {
-    for (int j = 0; j < CHWN_dy.d[2]; ++j) {
-      std::cout << (CHWN_dy.tb<3>())(0, i, j, 0) << " ";
-    }
-    std::cout << endl;
-  }
 
-  std::cout << "about to print the output of maxpool backward" << endl;
-  for (int i = 0; i < CHWN_dEdxi.d[1]; ++i) {
-    for (int j = 0; j < CHWN_dEdxi.d[2]; ++j) {
-      std::cout << (CHWN_dEdxi.tb<3>())(0, i, j, 0) << " ";
-    }
-    std::cout << endl;
-  }
-
-  std::cout << "about to print the input of maxpool backward" << endl;
-  for (int i = 0; i < CHWN_xs.d[1]; ++i) {
-    for (int j = 0; j < CHWN_xs.d[2]; ++j) {
-      std::cout << (CHWN_xs.tb<3>())(0, i, j, 1) << " ";
-    }
-    std::cout << endl;
-  }
-  
-  std::cout << "about to print the fx of maxpool backward" << endl;
-  for (int i = 0; i < CHWN_fx.d[1]; ++i) {
-    for (int j = 0; j < CHWN_fx.d[2]; ++j) {
-      std::cout << (CHWN_fx.tb<3>())(0, i, j, 1) << " ";
-    }
-    std::cout << endl;
-  }
-  
-  std::cout << "about to print the dEdf of maxpool backward" << endl;
-  for (int i = 0; i < CHWN_dy.d[1]; ++i) {
-    for (int j = 0; j < CHWN_dy.d[2]; ++j) {
-      std::cout << (CHWN_dy.tb<3>())(0, i, j, 1) << " ";
-    }
-    std::cout << endl;
-  }
-
-  std::cout << "about to print the output of maxpool backward" << endl;
-  for (int i = 0; i < CHWN_dEdxi.d[1]; ++i) {
-    for (int j = 0; j < CHWN_dEdxi.d[2]; ++j) {
-      std::cout << (CHWN_dEdxi.tb<3>())(0, i, j, 1) << " ";
-    }
-    std::cout << endl;
-  }
-
-
-
-  //now convert it back to dynet tensor
-  void* HWCN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
-  Tensor HWCN_dEdxi = Tensor(xs[0]->d, static_cast<float*>(HWCN_dEdxi_mem), 
-				dEdxi.device, DeviceMempool::FXS);
-  shuffles[0] = 1; shuffles[1] = 2; shuffles[2] = 0; shuffles[3] = 3;
-  HWCN_dEdxi.tb<3>().device(*dev.edevice) = CHWN_dEdxi.tb<3>().shuffle(shuffles);
-  dEdxi.tb<3>().device(*dev.edevice) += HWCN_dEdxi.tb<3>();
 
 #endif
 }
