@@ -5,8 +5,22 @@ Installing the Python DyNet module.
 
 Python bindings to DyNet are supported for both Python 2.x and 3.x.
 
-TL;DR
------
+On most systems, the following will download, build and install DyNet:
+
+.. code:: bash
+
+    pip install git+https://github.com/clab/dynet#egg=dynet
+
+Alternatively, you can add the following to your `requirements.txt`:
+
+.. code:: bash
+
+    git+https://github.com/clab/dynet#egg=dynet
+
+In case installation using `pip` fails, you will need to install DyNet manually.
+
+Manual Installation
+-------------------
 
 (see below for the details)
 

@@ -143,6 +143,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 
     cdef cppclass CComputationGraph "dynet::ComputationGraph":
         CComputationGraph() except +
+        CComputationGraph(bool autobatched) except +
         # Inputs
         VariableIndex add_input(real s) except +
         VariableIndex add_input(const real* ps) except +
@@ -416,7 +417,7 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
         CRNNPointer(int i)
 
     cdef cppclass CRNNBuilder "dynet::RNNBuilder":
-        void new_graph(CComputationGraph &cg)
+        void new_graph(CComputationGraph &cg, bool update)
         void start_new_sequence(vector[CExpression] ces)
         CExpression add_input(CExpression &x) except +
         CExpression add_input(CRNNPointer prev, CExpression &x) except +

@@ -58,6 +58,31 @@ Dim InputNode::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
+int InputNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::input); return sm.get_idx(s);
+}
+std::vector<int> InputNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
+}
+Node* InputNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids) const {
+  size_t my_size = 0;
+  InputNode* sin;
+  for(auto bid : batch_ids) {
+    sin = static_cast<InputNode*>(cg.nodes[bid]);
+    my_size += sin->pdata->size();
+  }
+  vector<float> values(my_size);
+  size_t curr_pos = 0;
+  for(auto bid : batch_ids) {
+    sin = static_cast<InputNode*>(cg.nodes[bid]);
+    memcpy(&values[curr_pos], &(*sin->pdata)[0], sin->pdata->size() * sizeof(float));
+    curr_pos += sin->pdata->size();
+  }
+  DYNET_ASSERT(curr_pos == values.size(), "current position and size of values does not match");
+  return new InputNode(Dim({(unsigned int)my_size}), values);
+}
+
 string SparseInputNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "sparse_constant(" << dim << ')';
@@ -83,6 +108,47 @@ string ScalarInputNode::as_string(const vector<string>& arg_names) const {
 Dim ScalarInputNode::dim_forward(const vector<Dim>& xs) const {
   return Dim({1});
 }
+
+int ScalarInputNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::scalar_input); return sm.get_idx(s);
+}
+std::vector<int> ScalarInputNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
+}
+Node* ScalarInputNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                             const std::vector<VariableIndex> & batch_ids) const {
+  vector<float> values(batch_ids.size());
+  ScalarInputNode* sin;
+  for(size_t i = 0; i < batch_ids.size(); ++i) {
+    sin = static_cast<ScalarInputNode*>(cg.nodes[batch_ids[i]]);
+    values[i] = *sin->pdata;
+  }
+  return new InputNode(Dim({1}, batch_ids.size()), values);
+}
+
+int LookupNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::lookup);
+  s.add_int((size_t)params.mp->lookup_parameters_list()[params.index]);
+  return sm.get_idx(s);
+}
+std::vector<int> LookupNode::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>();
+}
+Node* LookupNode::autobatch_pseudo_node(const ComputationGraph & cg,
+                                        const std::vector<VariableIndex> & batch_ids) const {
+  vector<unsigned> ids;
+  LookupNode* ln;
+  for(auto batch_id : batch_ids) {
+    ln = static_cast<LookupNode*>(cg.nodes[batch_id]);
+    if(ln->pindex != nullptr)
+      ids.push_back(*ln->pindex);
+    else
+      for(auto word_id : *ln->pindices)
+        ids.push_back(word_id);
+  }
+  return new LookupNode(ln->params, ids);
+}
+
 
 size_t LookupNode::aux_storage_size() const {
   return dim.bd * sizeof(unsigned);

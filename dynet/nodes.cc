@@ -242,7 +242,8 @@ inline void CUDAMatrixMultiply(const Device_GPU & dev, const Tensor& l, const Te
 
 template<class MyDevice>
 void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  // TODO: Profile on CPU. Broadcasting may be slow.
+  // Broadcasting is slow on CPU, so split codepaths
+#ifdef __CUDACC__
   if(xs[0]->d.bd >= xs[1]->d.bd) {
     Eigen::array<int, 3> bcasts = {1, (int)xs[0]->d[1], (int)(xs[0]->d.bd/xs[1]->d.bd)};
     fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>() + xs[1]->tb<2>().broadcast(bcasts);
@@ -253,6 +254,23 @@ void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<
     Eigen::array<int, 3> bcasts1 = {1, (int)xs[0]->d[1], 1};
     fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcasts0) + xs[1]->tb<2>().broadcast(bcasts1);
   }
+#else
+  // First, add the matrix
+  if(xs[0]->d.bd == fx.d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  else
+    for(size_t b = 0; b < fx.d.bd; ++b)
+      fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[0]->tvec();
+  // Second, add the columns
+  if(xs[1]->d.bd == fx.d.bd) {
+    for(size_t i = 0; i < xs[0]->d[1]; ++i) 
+      fx.tb<2>().chip<1>(i).device(*dev.edevice) += xs[1]->tb<1>();
+  } else {
+    for(size_t b = 0; b < fx.d.bd; ++b)
+      for(size_t i = 0; i < fx.d[1]; ++i) 
+        fx.tb<2>().chip<2>(b).chip<1>(i).device(*dev.edevice) += xs[1]->t<1>();
+  }
+#endif
 }
 
 template<class MyDevice>
@@ -291,7 +309,7 @@ template<class MyDevice>
 void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() % 2 == 1, "Failed dimension check in AffineTransform::forward");
   if (xs.size() == 1) {
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     return;
   } else {
     // Add the first matrix
@@ -435,7 +453,7 @@ template<class MyDevice>
 void Average::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) {
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     return;
   }
   auto res = fx.tvec();
@@ -1169,8 +1187,7 @@ DYNET_NODE_INST_DEV_IMPL(HuberDistance)
 
 template<class MyDevice>
 void Identity::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.d = xs[0]->d;
-  fx.v = xs[0]->v;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -1354,7 +1371,7 @@ DYNET_NODE_INST_DEV_IMPL(LogSoftmax)
 template<class MyDevice>
 void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs.size() == 1) {
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   } else {
     // TODO: Ideally we wouldn't need to allocate this memory permanently.
     //       We need a good method for allocating "scratch" memory that is only used temporarily.
@@ -1558,8 +1575,7 @@ DYNET_NODE_INST_DEV_IMPL(Max)
 
 template<class MyDevice>
 void NoBackprop::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.d = xs[0]->d;
-  fx.v = xs[0]->v;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -1575,7 +1591,7 @@ DYNET_NODE_INST_DEV_IMPL(NoBackprop)
 
 template<class MyDevice>
 void FlipGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.v = xs[0]->v;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -1960,7 +1976,7 @@ template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
-  fx.v = xs[0]->v;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -2364,7 +2380,7 @@ template<class MyDevice>
 void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   const unsigned num_args = xs.size();
   if (num_args == 1) 
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   else if (num_args == 2 && xs[0]->d.bd == xs[1]->d.bd)
     fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec();
   else if (num_args == 3 && xs[0]->d.bd == xs[1]->d.bd && xs[1]->d.bd == xs[2]->d.bd)
@@ -2867,9 +2883,9 @@ DYNET_NODE_INST_DEV_IMPL(Tanh)
 template<class MyDevice>
 void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (dim.num_nonone_dims() <= 1) {
-    fx.v = xs[0]->v;
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   } else {
-    array<ptrdiff_t, 5> order;
+    Eigen::array<ptrdiff_t, 5> order;
     for(size_t i = 0; i < 5; ++i)
       order[i] = (i >= dims.size() ? i : dims[i]);
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().shuffle(order);
@@ -2883,7 +2899,7 @@ void Transpose::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  array<ptrdiff_t, 5> order;
+  Eigen::array<ptrdiff_t, 5> order;
   for(size_t i = 0; i < 5; ++i)
     order[(i >= dims.size() ? i : dims[i])] = i;
   dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().shuffle(order);
@@ -2963,7 +2979,8 @@ void RandomGumbel::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomGumbel::forward");
   DYNET_ARG_CHECK(mu == 0.0 && beta == 1.0, "RandomGumbel only supports Gumbel(0,1) at the moment (pull requests welcome)");
   TensorTools::randomize_uniform(fx, 0, 1);
-  fx.tvec().device(*dev.edevice) = -(-fx.tvec().log()).log();
+  float eps = 1e-20;
+  fx.tvec().device(*dev.edevice) = -(-fx.tvec().cwiseMax(eps).log()).cwiseMax(eps).log();
 }
 
 template<class MyDevice>

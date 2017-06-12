@@ -73,9 +73,11 @@ struct NodeTest {
     TensorTools::set_elements(param_cube2.get()->values, param_cube2_vals);
     lookup1 = mod.add_lookup_parameters(3, {3});
     TensorTools::set_elements(lookup1.get()->all_values, param_square1_vals);
+    lookup2 = mod.add_lookup_parameters(10, {3});
+    lookup3 = mod2.add_lookup_parameters(10, {3});
   }
   ~NodeTest() {
-    for (auto x : av) free(x);
+    // for (auto x : av) free(x);
   }
 
   template <class T>
@@ -89,9 +91,9 @@ struct NodeTest {
 
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
-  dynet::Model mod;
+  dynet::Model mod, mod2;
   dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1, param_cube2;
-  dynet::LookupParameter lookup1;
+  dynet::LookupParameter lookup1, lookup2, lookup3;
 };
 
 // define the test suite
@@ -1737,6 +1739,26 @@ BOOST_AUTO_TEST_CASE( lookup_test ) {
   dynet::ComputationGraph cg;
   Expression x1 = lookup(cg, lookup1, (unsigned)0);
   Expression x2 = lookup(cg, lookup1, (unsigned)2);
+  Expression y = x1 + x2;
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression lookup();
+BOOST_AUTO_TEST_CASE( lookup_autobatch_dim_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = lookup(cg, lookup1, (unsigned)0);
+  Expression x2 = lookup(cg, lookup2, (unsigned)5);
+  Expression y = x1 + x2;
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression lookup();
+BOOST_AUTO_TEST_CASE( lookup_autobatch_diffmodel_test ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = lookup(cg, lookup1, (unsigned)0);
+  Expression x2 = lookup(cg, lookup3, (unsigned)5);
   Expression y = x1 + x2;
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
