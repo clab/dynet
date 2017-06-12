@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
 
 BOOST_AUTO_TEST_CASE ( test_save1_perf ) {
   ParameterCollection m;
-  for (int l = 0; l < 256; ++l)
+  for (int l = 0; l < 16; ++l)
     auto param = m.add_parameters({1024, 1024});
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE ( test_load1_perf ) {
   ParameterCollection m, m_l;
   Parameter param;
   Parameter param_l = m_l.add_parameters({1024, 1024});
-  for (int l = 0; l < 256; ++l)
+  for (int l = 0; l < 16; ++l)
     param = m.add_parameters({1024, 1024});
   {
     dynet::TextFileSaver s("test.model");
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE ( test_load1_perf ) {
 
 BOOST_AUTO_TEST_CASE ( test_save2_perf ) {
   ParameterCollection m;
-  for (int l = 0; l < 5120; ++l)
+  for (int l = 0; l < 512; ++l)
     auto param = m.add_parameters({128, 128});
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE ( test_load2_perf ) {
   ParameterCollection m, m_l;
   Parameter param;
   Parameter param_l = m_l.add_parameters({128, 128});
-  for (int l = 0; l < 5120; ++l)
+  for (int l = 0; l < 512; ++l)
     param = m.add_parameters({128, 128});
   {
     dynet::TextFileSaver s("test.model");
