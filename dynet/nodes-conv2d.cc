@@ -1,5 +1,6 @@
 #include "dynet/nodes-conv.h"
 
+#include <algorithm>
 #include <sstream>
 #include <limits>
 #include <cmath>
@@ -326,31 +327,216 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
 #else
 
 
-
-  //then fill it out with the correct result
-  for (int b = 0; b < fx.d.bd; ++b) {
-    for (int i = 0; i < fx.d[0]; ++i) {
-      for (int j = 0; j < fx.d[1]; ++j) {
-        for (int ch = 0; ch < fx.d[2]; ++ch) {
-	  int largest_r = stride[0] * i;
-          int largest_c = stride[1] * j;
-          float largest = -10000.f;
-          for (int r = 0; r < ksize[0]; ++r) {
-            for (int c = 0; c < ksize[1]; ++c) {
-              int row = stride[0] * i + r;
-              int col = stride[1] * j + c;
-              if ((col < xs[0]->d[1]) && (row < xs[0]->d[0])) {
-                if (xs[0]->tb<3>()(row, col, ch, b) > largest) {
-                  largest = xs[0]->tb<3>()(row, col, ch, b);
-                  largest_r = row;
-                  largest_c = col;
+  if (is_valid) {
+    //then fill it out with the correct result
+    for (int b = 0; b < fx.d.bd; ++b) {
+      for (int i = 0; i < fx.d[0]; ++i) {
+        for (int j = 0; j < fx.d[1]; ++j) {
+          for (int ch = 0; ch < fx.d[2]; ++ch) {
+	    int largest_r = stride[0] * i;
+            int largest_c = stride[1] * j;
+            float largest = -10000.f;
+            for (int r = 0; r < ksize[0]; ++r) {
+              for (int c = 0; c < ksize[1]; ++c) {
+                int row = stride[0] * i + r;
+                int col = stride[1] * j + c;
+                if ((col < xs[0]->d[1]) && (row < xs[0]->d[0])) {
+                  if (xs[0]->tb<3>()(row, col, ch, b) > largest) {
+                    largest = xs[0]->tb<3>()(row, col, ch, b);
+                    largest_r = row;
+                    largest_c = col;
+                  }
                 }
               }
             }
+            (dEdxi.tb<3>())(largest_r, largest_c, ch, b) += (dEdf.tb<3>())(i, j, ch, b);
           }
-          (dEdxi.tb<3>())(largest_r, largest_c, ch, b) += (dEdf.tb<3>())(i, j, ch, b);
         }
       }
+    }
+  } else {
+    int in_height = xs[0]->d[0];
+    int in_width = xs[1]->d[1];
+    int filter_height = ksize[0];
+    int filter_width = ksize[1];
+    int out_height = ceil(float(in_height) / float(stride[0]));
+    int out_width  = ceil(float(in_width) / float(stride[1]));
+    int stride_rows = stride[0];
+    int stride_cols = stride[1];
+    int pad_along_height = ((out_height - 1) * stride_rows +
+                    filter_height - in_height);
+    int pad_along_width = ((out_width - 1) * stride_cols +
+                   filter_width - in_width);
+    int pad_top = pad_along_height / 2;
+    int pad_left = pad_along_width / 2;
+    for (int b = 0; b < fx.d.bd; ++b) {
+      for (int i = 0; i < fx.d[0]; ++i) {
+        for (int j = 0; j < fx.d[1]; ++j) {
+          for (int ch = 0; ch < fx.d[2]; ++ch) {
+	    int largest_r = stride[0] * i - pad_top;
+            int largest_c = stride[1] * j - pad_left;
+            float largest = -10000.f;
+            for (int r = 0; r < filter_height; ++r) {
+              for (int c = 0; c < filter_width; ++c) {
+                int row = stride[0] * i + r - pad_top;
+                int col = stride[1] * j + c - pad_left;
+                if (((col < in_width) && (row < in_height)) && 
+                   ((0 <= col) && (0 <= row))) {
+                  if (xs[0]->tb<3>()(row, col, ch, b) > largest) {
+                    largest = xs[0]->tb<3>()(row, col, ch, b);
+                    largest_r = row;
+                    largest_c = col;
+                  }
+                }
+              }
+            }
+            std::cout << "i, j, largest_r, largest_c, largest" << 
+			i << j << largest_r << largest_c << largest << endl;
+            (dEdxi.tb<3>())(largest_r, largest_c, ch, b) += 
+			(dEdf.tb<3>())(i, j, ch, b);
+          }
+        }
+      }
+    }
+  }
+
+
+   /* else {
+    int in_rows = xs[0]->d[0];
+    int in_cols = xs[0]->d[1];
+    int window_rows = ksize[0];
+    int window_cols = ksize[1];
+    int row_stride = stride[0];
+    int col_stride = stride[1];
+    int out_rows = ceil(float(in_rows) / float(row_stride));
+    int out_cols = ceil(float(in_cols) / float(col_stride));
+    int pad_rows = ((out_rows - 1) * row_stride + window_rows - in_rows)/2;
+    int pad_cols = ((out_cols - 1) * col_stride + window_cols - in_cols)/2;
+    for (int b = 0; b < xs[0]->d.bd; ++b) {
+      for (int h = 0; h < in_rows; ++h) {
+        for (int w = 0; w < in_cols; ++h) {
+          for (int ch = 0; ch < xs[0]->d[2]; ++ch) {
+            int hpad = h + pad_rows;
+            int wpad = w + pad_cols;
+            int h_start = (hpad < window_rows) ? 0 : (hpad - window_rows) / row_stride + 1;
+            int h_end = std::min(hpad / row_stride + 1, out_rows);
+            int w_start = (wpad < window_cols) ? 0 : (wpad - window_cols) / col_stride + 1;
+            int w_end = std::min(wpad / col_stride + 1, out_cols);
+            //compute elementwise max
+            int largest_r = h_start;
+            int largest_c = w_start;
+            int largest = -10000.f;
+            for (int ph = h_start; ph < h_end; ++ph) {
+              for (int pw = w_start; pw < w_end; ++pw) {
+                if (largest < xs[0]->tb<3>()(ph, pw, ch, b)) {
+                  largest = xs[0]->tb<3>()(ph, pw, ch, b);
+                  largest_r = ph;
+                  largest_c = pw;
+                }
+              }
+            }
+            (dEdxi.tb<3>())(largest_r, largest_c, ch, b) += (dEdf.tb<3>())(h, w, ch, b);
+          }
+        }
+      }
+    }
+   
+
+  } */
+
+
+  /*
+  else {
+    int in_height = xs[0]->d[0];
+    int in_width = xs[1]->d[1];
+    int filter_height = ksize[0];
+    int filter_width = ksize[1];
+    int out_height = ceil(float(in_height) / float(stride[0]));
+    int out_width  = ceil(float(in_width) / float(stride[1]));
+    int pad_along_height = ((out_height - 1) * stride[0] +
+                    filter_height - in_height);
+    int pad_along_width = ((out_width - 1) * stride[1] +
+                   filter_width - in_width);
+    int pad_top = pad_along_height / 2;
+    int pad_left = pad_along_width / 2;
+    for (int b = 0; b < fx.d.bd; ++b) {
+      for (int i = 0; i < fx.d[0]; ++i) {
+        for (int j = 0; j < fx.d[1]; ++j) {
+          for (int ch = 0; ch < fx.d[2]; ++ch) {
+	    int largest_r = stride[0] * i - pad_top;
+            int largest_c = stride[1] * j - pad_left;
+            float largest = -10000.f;
+            for (int r = 0; r < ksize[0]; ++r) {
+              for (int c = 0; c < ksize[1]; ++c) {
+                int row = stride[0] * i + r - pad_top;
+                int col = stride[1] * j + c - pad_left;
+                if (((col < in_width) && (row < in_height)) && 
+                   ((0 <= col) && (0 <= row))) {
+                  if (xs[0]->tb<3>()(row, col, ch, b) > largest) {
+                    largest = xs[0]->tb<3>()(row, col, ch, b);
+                    largest_r = row;
+                    largest_c = col;
+                  }
+                }
+              }
+            }
+            (dEdxi.tb<3>())(largest_r, largest_c, ch, b) += (dEdf.tb<3>())(i, j, ch, b);
+          }
+        }
+      }
+    }
+  }
+  */
+
+  std::cout << "printing xs: " << endl;
+  for (int b = 0; b < xs[0]->d.bd; ++b) {
+    std::cout << "batch\n";
+    for (int i = 0; i < xs[0]->d[0]; ++i) {
+      for (int j = 0; j < xs[0]->d[1]; ++j) { 
+        for (int ch = 0; ch < xs[0]->d[2]; ++ch) {
+          std::cout << (xs[0]->tb<3>())(i, j, ch, b);
+        }
+      }
+      std::cout << endl;
+    }
+  }
+
+  std::cout << "printing fx: " << endl;
+  for (int b = 0; b < fx.d.bd; ++b) {
+    std::cout << "batch\n";
+    for (int i = 0; i < fx.d[0]; ++i) {
+      for (int j = 0; j < fx.d[1]; ++j) { 
+        for (int ch = 0; ch < fx.d[2]; ++ch) {
+          std::cout << (fx.tb<3>())(i, j, ch, b);
+        }
+      }
+      std::cout << endl;
+    }
+  }
+
+  std::cout << "printing dEdf: " << endl;
+  for (int b = 0; b < dEdf.d.bd; ++b) {
+    std::cout << "batch\n";
+    for (int i = 0; i < dEdf.d[0]; ++i) {
+      for (int j = 0; j < dEdf.d[1]; ++j) { 
+        for (int ch = 0; ch < dEdf.d[2]; ++ch) {
+          std::cout << (dEdf.tb<3>())(i, j, ch, b);
+        }
+      }
+      std::cout << endl;
+    }
+  }
+
+  std::cout << "printing dEdxi: " << endl;
+  for (int b = 0; b < dEdxi.d.bd; ++b) {
+    std::cout << "batch\n";
+    for (int i = 0; i < dEdxi.d[0]; ++i) {
+      for (int j = 0; j < dEdxi.d[1]; ++j) { 
+        for (int ch = 0; ch < dEdxi.d[2]; ++ch) {
+          std::cout << (dEdxi.tb<3>())(i, j, ch, b);
+        }
+      }
+      std::cout << endl;
     }
   }
 

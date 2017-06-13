@@ -1209,8 +1209,8 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
 }
 
 BOOST_AUTO_TEST_CASE( maxpool_valid_gradient ) {
-  std::cout << "ABOUT TO START THE ONE IMPORTANT TEST LOOL-------------------";
   dynet::ComputationGraph cg;
+  std::cout << "ABOUT TO START THE ONE IMPORTANT TEST LOOL-------------------";
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
 
@@ -1220,6 +1220,31 @@ BOOST_AUTO_TEST_CASE( maxpool_valid_gradient ) {
     maxpool_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
   }
   Expression x = input(cg, Dim({11, 11, 1}, 2), maxpool_batch_vals);
+  Expression kernel = parameter(cg, param_kernel);
+  std::vector<unsigned> ksize = {2, 2};
+  std::vector<unsigned> stride = {2, 5};
+  bool is_valid = false;
+  Expression w = conv2d(x, kernel, stride, is_valid);
+  //Expression z = sum_batches(sum_elems(w));
+  //BOOST_CHECK(check_grad(mod, z, 0));
+  is_valid = false;
+  Expression y = maxpool(w, ksize, stride, is_valid);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+BOOST_AUTO_TEST_CASE( maxpool_same_gradient ) {
+  std::cout << "ABOUT TO START THE ONE IMPORTANT TEST LOOL-------------------";
+  dynet::ComputationGraph cg;
+  Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
+  std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
+
+  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  std::vector<float> maxpool_batch_vals(1 * 21 * 21 * 2);
+  for (unsigned i = 0; i < maxpool_batch_vals.size(); ++i) {
+    maxpool_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
+  }
+  Expression x = input(cg, Dim({21, 21, 1}, 2), maxpool_batch_vals);
   Expression kernel = parameter(cg, param_kernel);
   std::vector<unsigned> ksize = {2, 2};
   std::vector<unsigned> stride = {2, 5};
