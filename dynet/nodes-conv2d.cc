@@ -306,17 +306,24 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
     for (int i = 0; i < fx.d[0]; ++i) {
       for (int j = 0; j < fx.d[1]; ++j) {
         for (int ch = 0; ch < fx.d[2]; ++ch) {    
-          int largest_r = stride[0] * i - pad_top;
-          int largest_c = stride[1] * j - pad_left;
-          float largest = -10000.f;
+          int largest_r;
+          int largest_c;
+          float largest;
+          bool is_meaningful = false;
           for (int r = 0; r < ksize[0]; ++r) {
             for (int c = 0; c < ksize[1]; ++c) {
               int row = stride[0] * i + r - pad_top;
               int col = stride[1] * j + c - pad_left;
               if (((col < xs[0]->d[1]) && (row < xs[0]->d[0])) && 
                  ((0 <= col) && (0 <= row))) {
-                if (xs[0]->tb<3>()(row, col, ch, b) > largest) {
-                  largest = xs[0]->tb<3>()(row, col, ch, b);
+                float entry = xs[0]->tb<3>()(row, col, ch, b);
+                if (!is_meaningful) {
+                  largest = entry;
+                  largest_r = row;
+                  largest_c = col;
+                  is_meaningful = true;
+		} else if (entry > largest) {
+                  largest = entry;
                   largest_r = row;
                   largest_c = col;
                 }
