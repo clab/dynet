@@ -60,19 +60,20 @@ class build(_build):
 
         self.script_dir = script_dir
         self.build_dir = build_dir
-        self.cmake_path = os.environ.get("CMAKE") or find_executable("cmake")
+        self.cmake_path = os.environ.get("CMAKE", find_executable("cmake"))
         if not self.cmake_path:
             raise DistutilsSetupError("`cmake` not found, and `CMAKE` is not set.")
-        self.make_path = os.environ.get("MAKE") or find_executable("make")
+        self.make_path = os.environ.get("MAKE", find_executable("make"))
         if not self.make_path:
             raise DistutilsSetupError("`make` not found, and `MAKE` is not set.")
+        self.make_flags = os.environ.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
         self.hg_path = find_executable("hg")
         if not self.hg_path:
             raise DistutilsSetupError("`hg` not found.")
-        self.cc_path = os.environ.get("CC") or find_executable("gcc")
+        self.cc_path = os.environ.get("CC", find_executable("gcc"))
         if not self.cc_path:
             raise DistutilsSetupError("`gcc` not found, and `CC` is not set.")
-        self.cxx_path = os.environ.get("CXX") or find_executable("g++")
+        self.cxx_path = os.environ.get("CXX", find_executable("g++"))
         if not self.cxx_path:
             raise DistutilsSetupError("`g++` not found, and `CXX` is not set.")
         self.install_prefix = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
@@ -82,6 +83,7 @@ class build(_build):
         log.info("=" * 30)
         log.info("CMake path: " + self.cmake_path)
         log.info("Make path: " + self.make_path)
+        log.info("Make flags: " + " ".join(self.make_flags))
         log.info("Mercurial path: " + self.hg_path)
         log.info("C compiler path: " + self.cc_path)
         log.info("CXX compiler path: " + self.cxx_path)
@@ -91,6 +93,8 @@ class build(_build):
         log.info("Library installation directory: " + self.install_prefix)
         log.info("Python executable: " + self.py_executable)
         log.info("=" * 30)
+        run_process([self.cmake_path, "--version"])
+        run_process([self.cxx_path, "--version"])
 
         # Prepare folders
         if not os.path.exists(self.build_dir):
@@ -112,7 +116,7 @@ class build(_build):
             self.cmake_path,
             script_dir,
             "-DCMAKE_INSTALL_PREFIX=" + self.install_prefix,
-            "-DEIGEN3_INCLUDE_DIR=eigen",
+            "-DEIGEN3_INCLUDE_DIR=" + os.path.join(self.build_dir, "eigen"),
             "-DPYTHON=" + self.py_executable,
             ]
         boost_prefix = os.environ.get("BOOST")
@@ -127,7 +131,7 @@ class build(_build):
         if run_process(cmake_cmd) != 0:
             raise DistutilsSetupError(" ".join(cmake_cmd))
 
-        make_cmd = [self.make_path, "-j", str(cpu_count())]
+        make_cmd = [self.make_path] + self.make_flags
         log.info("Compiling...")
         if run_process(make_cmd) != 0:
             raise DistutilsSetupError(" ".join(make_cmd))
