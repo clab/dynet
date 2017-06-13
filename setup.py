@@ -66,7 +66,7 @@ class build(_build):
         self.make_path = os.environ.get("MAKE", find_executable("make"))
         if not self.make_path:
             raise DistutilsSetupError("`make` not found, and `MAKE` is not set.")
-		self.make_flags = os.environ.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
+        self.make_flags = os.environ.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
         self.hg_path = find_executable("hg")
         if not self.hg_path:
             raise DistutilsSetupError("`hg` not found.")
@@ -93,8 +93,8 @@ class build(_build):
         log.info("Library installation directory: " + self.install_prefix)
         log.info("Python executable: " + self.py_executable)
         log.info("=" * 30)
-		run_process([self.cmake_path, "--version"])
-		run_process([self.cxx_path, "--version"])
+        run_process([self.cmake_path, "--version"])
+        run_process([self.cxx_path, "--version"])
 
         # Prepare folders
         if not os.path.exists(self.build_dir):
