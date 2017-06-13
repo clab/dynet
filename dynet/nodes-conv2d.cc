@@ -103,21 +103,6 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   throw std::runtime_error("Conv2D::forward_dev_impl not supported without CUDNN");
 #endif
 #else
-  std::cout << "Conv2D forward input" << endl;
-  std::cout << "is_valid = " << is_valid << endl;
-  std::cout << "dimensions are: " << endl;
-  std::cout << "bd = " << xs[0]->d.bd << endl;
-  std::cout << "d = " << xs[0]->d[2] << endl;
-  std::cout << "i = " << xs[0]->d[0] << endl;
-  std::cout << "j = " << xs[0]->d[1] << endl;
-  std::cout << "Conv2D forward output" << endl;
-  std::cout << "is_valid = " << is_valid << endl;
-  std::cout << "dimensions are: " << endl;
-  std::cout << "bd = " << fx.d.bd << endl;
-  std::cout << "d = " << fx.d[2] << endl;
-  std::cout << "i = " << fx.d[0] << endl;
-  std::cout << "j = " << fx.d[1] << endl;
-  //std::cout << "xs =" << *xs[0];
 
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
   void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
@@ -142,7 +127,6 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
       fx.tb<3>().chip<2>(i).device(*dev.edevice) += bias.t<3>(); 
     }
   }
-  //std::cout << "fx =" << fx;
 #endif
 }
 
@@ -263,20 +247,6 @@ void MaxPool::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   DYNET_ASSERT(fx.d.bd == xs[0]->d.bd, "Failed dimension check in MaxPool::forward, batchsize not match");
   DYNET_ASSERT(fx.d[2] == xs[0]->d[2], "Failed dimension check in MaxPool::forward, #channel not match");
   NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
-  std::cout << "MaxPool forward input" << endl;
-  std::cout << "is_valid = " << is_valid << endl;
-  std::cout << "dimensions are: " << endl;
-  std::cout << "bd = " << xs[0]->d.bd << endl;
-  std::cout << "d = " << xs[0]->d[2] << endl;
-  std::cout << "i = " << xs[0]->d[0] << endl;
-  std::cout << "j = " << xs[0]->d[1] << endl;
-  std::cout << "MaxPool forward output" << endl;
-  std::cout << "is_valid = " << is_valid << endl;
-  std::cout << "dimensions are: " << endl;
-  std::cout << "bd = " << fx.d.bd << endl;
-  std::cout << "d = " << fx.d[2] << endl;
-  std::cout << "i = " << fx.d[0] << endl;
-  std::cout << "j = " << fx.d[1] << endl;
 #ifdef __CUDACC__
 #if HAVE_CUDNN
   if (cudnn_conv_op_ == NULL) {
@@ -310,7 +280,6 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
                          const Tensor& dEdf,
                          unsigned i,
                          Tensor& dEdxi) const {
-  std::cout << "entered backward dev JAJAJAJAJA" << endl;
   // don't check those already checked in forward_impl
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in MaxPool::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in MaxPool::backward");
@@ -326,18 +295,11 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
 #endif
 #else
 
-  int in_height = xs[0]->d[0];
-  int in_width = xs[0]->d[1];
-  int filter_height = ksize[0];
-  int filter_width = ksize[1];
-  int out_height = ceil(float(in_height) / float(stride[0]));
-  int out_width  = ceil(float(in_width) / float(stride[1]));
-  int stride_rows = stride[0];
-  int stride_cols = stride[1];
-  int pad_along_height = ((out_height - 1) * stride_rows +
-                  filter_height - in_height);
-  int pad_along_width = ((out_width - 1) * stride_cols +
-                 filter_width - in_width);
+
+  int pad_along_height = ((fx.d[0] - 1) * stride[0] +
+                  ksize[0] - xs[0]->d[0]);
+  int pad_along_width = ((fx.d[1] - 1) * stride[1] +
+                 ksize[1] - xs[0]->d[1]);
   int pad_top = is_valid ? 0 : pad_along_height / 2;
   int pad_left = is_valid ? 0 : pad_along_width / 2;
   for (int b = 0; b < fx.d.bd; ++b) {
@@ -347,11 +309,11 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
           int largest_r = stride[0] * i - pad_top;
           int largest_c = stride[1] * j - pad_left;
           float largest = -10000.f;
-          for (int r = 0; r < filter_height; ++r) {
-            for (int c = 0; c < filter_width; ++c) {
+          for (int r = 0; r < ksize[0]; ++r) {
+            for (int c = 0; c < ksize[1]; ++c) {
               int row = stride[0] * i + r - pad_top;
               int col = stride[1] * j + c - pad_left;
-              if (((col < in_width) && (row < in_height)) && 
+              if (((col < xs[0]->d[1]) && (row < xs[0]->d[0])) && 
                  ((0 <= col) && (0 <= row))) {
                 if (xs[0]->tb<3>()(row, col, ch, b) > largest) {
                   largest = xs[0]->tb<3>()(row, col, ch, b);
@@ -361,8 +323,6 @@ void MaxPool::backward_dev_impl(const MyDevice & dev,
               }
             }
           }
-          std::cout << "i, j, largest_r, largest_c, largest" << 
-            		i << j << largest_r << largest_c << largest << endl;
           (dEdxi.tb<3>())(largest_r, largest_c, ch, b) += 
 		(dEdf.tb<3>())(i, j, ch, b);
         }
