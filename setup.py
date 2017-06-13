@@ -83,6 +83,7 @@ class build(_build):
         log.info("=" * 30)
         log.info("CMake path: " + self.cmake_path)
         log.info("Make path: " + self.make_path)
+        log.info("Make flags: " + " ".join(self.make_flags))
         log.info("Mercurial path: " + self.hg_path)
         log.info("C compiler path: " + self.cc_path)
         log.info("CXX compiler path: " + self.cxx_path)
@@ -92,6 +93,8 @@ class build(_build):
         log.info("Library installation directory: " + self.install_prefix)
         log.info("Python executable: " + self.py_executable)
         log.info("=" * 30)
+		run_process([self.cmake_path, "--version"])
+		run_process([self.cxx_path, "--version"])
 
         # Prepare folders
         if not os.path.exists(self.build_dir):
