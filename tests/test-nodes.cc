@@ -1256,7 +1256,6 @@ BOOST_AUTO_TEST_CASE( maxpool_valid_gradient ) {
 
 BOOST_AUTO_TEST_CASE( maxpool_valid_gradient_two ) {
   dynet::ComputationGraph cg;
-  std::cout << "ABOUT TO START THE ONE IMPORTANT TEST LOOL-------HHHHHH-------";
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
   TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
@@ -1279,7 +1278,6 @@ BOOST_AUTO_TEST_CASE( maxpool_valid_gradient_two ) {
 }
 
 BOOST_AUTO_TEST_CASE( maxpool_same_gradient_two ) {
-  std::cout << "ABOUT TO START THE ONE IMPORTANT TEST LOOL-------------------";
   dynet::ComputationGraph cg;
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
