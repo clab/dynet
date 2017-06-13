@@ -94,18 +94,18 @@ struct Conv2D: public Node {
 #endif
 };
 
-// maxpool
-// y = x_1 * maxpool
+// maxpooling2d
+// y = x_1 * maxpooling2d
 // x_1 \in R^{H x W x Ci x N} (input)
 // ksize[0] corresponds to H
 // ksize[1] corresponds to W
 // stride[0] corresponds to H
 // stride[1] corresponds to W
 // is_valid: true for 'VALID' and false for 'SAME'
-struct MaxPool: public Node {
-  explicit MaxPool(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& t, const std::vector<unsigned>& s,
+struct MaxPooling2D: public Node {
+  explicit MaxPooling2D(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& k, const std::vector<unsigned>& s,
     const bool padding_type = true)
-      : Node(a), ksize(t), stride(s), is_valid(padding_type) {}
+      : Node(a), ksize(k), stride(s), is_valid(padding_type) {}
   virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
@@ -115,7 +115,7 @@ struct MaxPool: public Node {
 
  private:
 #if HAVE_CUDNN
-  mutable CudnnConvOp* cudnn_conv_op_ = NULL;
+  mutable CudnnMaxPooling2DOp* cudnn_maxpool_op_ = NULL;
 #endif
 };
 

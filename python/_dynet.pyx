@@ -2143,57 +2143,6 @@ cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, boo
     ensure_freshness(f); 
     return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), f.c(), stride, is_valid))
 
-cpdef Expression maxpool(Expression x, vector[unsigned] ksize, vector[unsigned] stride, bool is_valid = True): 
-    """2D maxpool
-    
-    2D maxpool operator.
-    :code:`VALID` and :code:`SAME` maxpools are supported.
-    
-    Think about when stride is 1, the distinction:
-    
-    - :code:`SAME`: output size is the same with input size. To do so, one needs to pad the input so the filter can sweep outside of the input maps.
-    - :code:`VALID`: output size shrinks by :code:`filter_size - 1`, and the filters always sweep at valid positions inside the input maps. No padding needed.
-
-    In detail, assume
-    
-    - Input feature maps: :code:`XH x XW x XC x N`
-    - ksize: :code: 'ksize[0]' and :code:'ksize[1]' are kernel height and width
-    - Strides: :code:`strides[0]` and :code:`strides[1]` are row (:code:`h`) and col (:code:`w`) stride, respectively.
- 
-    For the :code:`SAME` convolution: the output height (:code:`YH`) and width (:code:`YW`) are computed as:
-    
-    - :code:`YH = ceil(float(XH) / float(strides[0]))`
-    - :code:`YW = ceil(float(XW) / float(strides[1]))`
-    
-    and the paddings are computed as:
-    
-    - :code:`pad_along_height = max((YH - 1) * strides[0] + FH - XH, 0)`
-    - :code:`pad_along_width = max((YW - 1) * strides[1] + FW - XW, 0)`
-    - :code:`pad_top = pad_along_height / 2`
-    - :code:`pad_bottom = pad_along_height - pad_top`
-    - :code:`pad_left = pad_along_width / 2`
-    - :code:`pad_right = pad_along_width - pad_left`
- 
-    For the :code:`VALID` convolution: the output height (:code`YH`) and width (:code:`YW`) are computed as:
-    
-    - :code:`YH = ceil(float(XH - ksize[0] + 1) / float(strides[0]))`
-    - :code:`YW = ceil(float(XW - ksize[1] + 1) / float(strides[1]))`
-    
-    and the paddings are always zeros.
-    
-    Args:
-        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
-        f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
-        stride (list): the row and column strides
-    
-    Keyword Arguments:
-        is_valid (bool): 'VALID' convolution or 'SAME' convolution, default is True ('VALID') (default: (True))
-    
-    Returns:
-        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
-    """
-    return Expression.from_cexpr(x.cg_version, c_maxpool(x.c(), ksize, stride, is_valid))
-
 cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[unsigned] stride, bool is_valid = True):
     """2D convolution with bias
     
@@ -2247,6 +2196,25 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     ensure_freshness(f)
     ensure_freshness(b)
     return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), f.c(), b.c(), stride, is_valid))
+
+cpdef Expression maxpooling2d(Expression x, vector[unsigned] ksize, vector[unsigned] stride, bool is_valid = True): 
+    """2D maxpooling
+    
+    2D maxpooling operator.
+    :code:`VALID` and :code:`SAME` maxpooling are supported.
+    
+    Args:
+        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+        ksize (list): the max pooling 2d window size 
+        stride (list): the row and column strides
+    
+    Keyword Arguments:
+        is_valid (bool): 'VALID' or 'SAME', default is True ('VALID') (default: (True))
+    
+    Returns:
+        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_maxpooling2d(x.c(), ksize, stride, is_valid))
 
 # unary-exp
 cpdef Expression tanh(Expression x): 
