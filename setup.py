@@ -66,6 +66,7 @@ class build(_build):
         self.make_path = os.environ.get("MAKE") or find_executable("make")
         if not self.make_path:
             raise DistutilsSetupError("`make` not found, and `MAKE` is not set.")
+		self.make_flags = os.environ.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
         self.hg_path = find_executable("hg")
         if not self.hg_path:
             raise DistutilsSetupError("`hg` not found.")
@@ -127,7 +128,7 @@ class build(_build):
         if run_process(cmake_cmd) != 0:
             raise DistutilsSetupError(" ".join(cmake_cmd))
 
-        make_cmd = [self.make_path, "-j", str(cpu_count())]
+        make_cmd = [self.make_path] + self.make_flags
         log.info("Compiling...")
         if run_process(make_cmd) != 0:
             raise DistutilsSetupError(" ".join(make_cmd))
