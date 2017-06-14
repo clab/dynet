@@ -1,15 +1,23 @@
 #include "dynet/io.h"
 #include "dynet/tensor.h"
 #include "dynet/except.h"
+#include "dynet/str-util.h"
 
 using namespace std;
 using namespace dynet;
 
 bool valid_key(const std::string & s) {
+  if (s.size() == 0) return true;
   if (s == "/") return false;
   auto it = std::find_if(s.begin(), s.end(),
                          [] (char ch) { return ch == ' ' || ch == '#';});
   return it == s.end();
+}
+
+bool valid_pc_key(const std::string & s) {
+  if (s.size() == 0) return true;
+  if (!(startswith(s, "/") && endswith(s, "/"))) return false;
+  return valid_key(s);
 }
 
 TextFileSaver::TextFileSaver(const string & filename, bool append) :
@@ -20,8 +28,8 @@ TextFileSaver::TextFileSaver(const string & filename, bool append) :
 
 void TextFileSaver::save(const ParameterCollection & model,
                          const string & key) {
-  if (!valid_key(key)) 
-    DYNET_INVALID_ARG("Key could not include ' ' or '#': " << key);
+  if (!valid_pc_key(key))
+    DYNET_INVALID_ARG("Key should start with, end with '/' and could not include ' ' or '#': " << key);
   const ParameterCollectionStorage & storage = model.get_storage();
   if(key.size() == 0) {
     for (auto & p : storage.params) save(*p, key);
