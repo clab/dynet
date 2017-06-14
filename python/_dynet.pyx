@@ -237,7 +237,7 @@ cpdef save(basename, lst):
     Example:
         import dynet as dy
 
-        pc = dy.ParametersCollection()
+        pc = dy.ParameterCollection()
         W = pc.add_parameters((100,50))
         E = pc.add_lookup_parameters((1000,50))
         builder = dy.LSTMBuilder(2, 50, 50, pc)
@@ -245,7 +245,7 @@ cpdef save(basename, lst):
         dy.save("model", [E, builder, W])
 
         # then, when loading:
-        pc = dy.ParametersCollection()
+        pc = dy.ParameterCollection()
         E2, builder2, W2 = dy.load("model", pc)
 
     
@@ -267,7 +267,7 @@ cpdef save(basename, lst):
 
         behind the scenes:
         - for each item, we write to `.meta`:
-            if its a Parameters/ParametersCollection: 
+            if its a Parameters/ParameterCollection: 
                 its type and full name.
             if its a builder:
                 its class, its spec, the full name of its parameters collection.
@@ -286,7 +286,7 @@ cpdef load(basename, params):
     Args:
         basename (string):  The basename to read from. 
                             This is the same string that was used when saving the objects.
-        params   (dynet.ParametersCollection): A ParameterCollection to add the loaded objects to.
+        params   (dynet.ParameterCollection): A ParameterCollection to add the loaded objects to.
 
     Returns:
         A list of parameters, lookup parameters and builder objects, in the same order they
@@ -296,7 +296,7 @@ cpdef load(basename, params):
     Example:
         import dynet as dy
 
-        pc = dy.ParametersCollection()
+        pc = dy.ParameterCollection()
         W = pc.add_parameters((100,50))
         E = pc.add_lookup_parameters((1000,50))
         builder = dy.LSTMBuilder(2, 50, 50, pc)
@@ -304,7 +304,7 @@ cpdef load(basename, params):
         dy.save("model", [E, builder, W])
 
         # then, when loading:
-        pc = dy.ParametersCollection()
+        pc = dy.ParameterCollection()
         E2, builder2, W2 = dy.load("model", pc)
     """
     fh = file(basename+".meta","r")
