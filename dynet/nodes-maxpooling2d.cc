@@ -133,7 +133,7 @@ void MaxPooling2D::backward_dev_impl(const MyDevice & dev,
     for (int i = 0; i < fx.d[0]; ++i) {
       for (int j = 0; j < fx.d[1]; ++j) {
         for (int ch = 0; ch < fx.d[2]; ++ch) {    
-          int max_r, max_c;
+          int max_r = 0, max_c = 0;
           float max_val;
           bool is_feasible = false;
           for (int r = 0; r < ksize[0]; ++r) {
