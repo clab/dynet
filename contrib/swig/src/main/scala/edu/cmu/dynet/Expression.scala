@@ -68,6 +68,7 @@ object Expression {
     makeExpr(cg => dn.input(cg, d.dim, ids.vector, data.vector, defdata), Seq(d, ids, data))
 
   def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p.parameter), Seq(p))
+  def parameter(lp: LookupParameter): Expression = makeExpr(cg => dn.parameter(cg, lp.lookupParameter), Seq(lp))
   def constParameter(p: Parameter): Expression =
     makeExpr(cg => dn.const_parameter(cg, p.parameter), Seq(p))
 
