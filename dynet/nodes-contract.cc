@@ -8,10 +8,11 @@
 #include "dynet/nodes.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
-#define DYNET_SKIP_CUDA_CONTRACTIONS
+// #define DYNET_SKIP_CUDA_CONTRACTIONS
 
 
 #if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+#include "dynet/nodes.cc"
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
 #endif
@@ -95,7 +96,7 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
   const Tensor new_xs0(new_xs0_d, xs[0]->v, xs[0]->device, xs[0]->mem_pool);
   // Reshape fx to a vector
   Dim new_fx_d({fx.d[0] * fx.d[1]}, fx.d.bd);
-  const Tensor new_fx(new_fx_d, fx.v, fx.device, fx.mem_pool);
+  Tensor new_fx(new_fx_d, fx.v, fx.device, fx.mem_pool);
   // CUDA matrix multiply ftw
   CUDAMatrixMultiply(dev, new_xs0, *xs[1], new_fx, kSCALAR_ONE);
 #else
@@ -137,11 +138,24 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
   if (i == 0) {
     if (xs[0]->d.bd == 1) { // A is a 3 tensor
       // tensor product
+#if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+      // For now the case where dEdf is batched but not xs[1] (ie xs[2] is batched) is not supported
+      DYNET_ASSERT( (dEdf.d.bd == xs[1]->d.bd), "InnerProduct3D_1D::backward_dev_impl does not support broadcasting on the bias");
+      // Basically here dEdxi[i,j,k] = \sum_b dEdf[i,j,b] * B[k,b]
+      // Which we do as matrix multiplication dEdxi[i*j, k] = \sum_b dEdf[i*j,b] * B^T[b,k]
+      // CUDA matrix multiply ftw
+      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+                               dEdxi.d[0] * dEdxi.d[1], dEdxi.d[2] , dEdf.d.bd,
+                               kSCALAR_ONE,
+                               dEdf.v, dEdf.d.batch_size(),
+                               xs[1]->v, dEdxi.d[2],
+                               kSCALAR_ONE, dEdxi.v, dEdxi.d[0] * dEdxi.d[1]));
+#else
       auto b = xs[1]->tb<1>();
       Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
       Eigen::array<DimPair, 1> dims({{DimPair(2, 1)}});
       dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(b.broadcast(bcast_b), dims);
-
+#endif
     } else {
       if (xs[1]->d.bd == 1) {
         // auto b = xs[1]->t<1>();
@@ -160,6 +174,30 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
       }
     }
   } else if (i == 1) {
+#if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+    if (xs[0]->d.bd == 1) {
+
+      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+                               dEdxi.d.rows(), dEdxi.d.batch_elems(), dEdf.d.batch_size(),
+                               kSCALAR_ONE,
+                               xs[0]->v, xs[0]->d[0] * xs[0]->d[1],
+                               dEdf.v, dEdf.d.batch_size(),
+                               kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+    } else {
+      const float* dEdfv = dEdf.v;
+      for (unsigned b = 0; b < xs[0]->d.bd; ++b) {
+        if (dEdf.d.bd > 1) {
+          dEdfv = dEdf.batch_ptr(b);
+        }
+        CUBLAS_CHECK(cublasSgemv(dev.cublas_handle, CUBLAS_OP_T,
+                                 dEdf.d.batch_size(), dEdxi.d.rows(),
+                                 kSCALAR_ONE,
+                                 xs[0]->batch_ptr(b), dEdf.d.batch_size(),
+                                 dEdfv, 1,
+                                 kSCALAR_ONE, dEdxi.batch_ptr(b), 1));
+      }
+    }
+#else
     if (xs[1]->d.bd == 1) { // b is a 1 tensor
       if (xs[0]->d.bd == 1) {
         auto A = xs[0]->t<3>();  // A is 3 tensor
@@ -184,6 +222,7 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
         }
       }
     }
+#endif
   } else if (i == 2) {
     if (xs[2]->d.bd == 1) {
       Eigen::array<int, 1> red_axis; red_axis[0] = 2;
