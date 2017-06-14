@@ -5,9 +5,17 @@
 #include <stdexcept>
 
 #include "dynet/nodes-macros.h"
+#include "dynet/nodes.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
 #define DYNET_SKIP_CUDA_CONTRACTIONS
+
+
+#if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+#include "dynet/cuda.h"
+#include "dynet/gpu-ops.h"
+#endif
+
 
 using namespace std;
 
@@ -76,55 +84,41 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
 #else
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
+  if (xs.size() == 3) {
+    auto C = xs[2]->tb<2>();
+    Eigen::array<int, 3> bcast_C = {1, 1, (int)(xs[2]->d.bd == 1 ? fx.d.bd : 1)};
+    fx.tb<2>().device(*dev.edevice) = C.broadcast(bcast_C);
+  }
+#if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+  // Reshape xs[0] to a matrix
+  Dim new_xs0_d({xs[0]->d[0] * xs[0]->d[1], xs[0]->d[2]}, xs[0]->d.bd);
+  const Tensor new_xs0(new_xs0_d, xs[0]->v, xs[0]->device, xs[0]->mem_pool);
+  // Reshape fx to a vector
+  Dim new_fx_d({fx.d[0] * fx.d[1]}, fx.d.bd);
+  const Tensor new_fx(new_fx_d, fx.v, fx.device, fx.mem_pool);
+  // CUDA matrix multiply ftw
+  CUDAMatrixMultiply(dev, new_xs0, *xs[1], new_fx, kSCALAR_ONE);
+#else
   if (xs[0]->d.bd == 1) {  // A is a 3 tensor
-    Eigen::array<int, 2> bcast_b = {1, xs[1]->d.bd == 1 ? fx.d.bd : 1};
+    Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
     auto b = xs[1]->tb<1>();
     auto A = xs[0]->t<3>();
-    if (xs.size() == 2) {
-      fx.tb<2>().device(*dev.edevice) = A.contract(b.broadcast(bcast_b), dims);
-    } else {
-      auto C = xs[2]->tb<2>();
-      Eigen::array<int, 3> bcast_C = {1, 1, xs[2]->d.bd == 1 ? fx.d.bd : 1};
-      fx.tb<2>().device(*dev.edevice) = A.contract(b.broadcast(bcast_b), dims) + C.broadcast(bcast_C);
-    }
+    fx.tb<2>().device(*dev.edevice) += A.contract(b.broadcast(bcast_b), dims);
   } else { // A is a 4 tensor
-    // Loop over batches
     auto A = xs[0]->tb<3>();
     if (xs[1]->d.bd == 1) { // b is a 1 tensor
       auto b = xs[1]->t<1>();
-      if (xs.size() == 2) {
-        fx.tb<2>().device(*dev.edevice) = A.contract(b, dims);
-      } else {
-        auto C = xs[2]->tb<2>();
-        Eigen::array<int, 3> bcast_C = {1, 1, xs[2]->d.bd == 1 ? fx.d.bd : 1};
-        fx.tb<2>().device(*dev.edevice) = A.contract(b, dims) + C.broadcast(bcast_C);
-      }
+      fx.tb<2>().device(*dev.edevice) += A.contract(b, dims);
     } else {
       // If both A and b are batched loop over batches
       auto b = xs[1]->tb<1>();
-      if (xs.size() == 2) {
-        for (unsigned i = 0; i < fx.d.bd; ++i) {
-          auto b_ = b.chip<1>(i);
-          fx.tb<2>().chip<2>(i).device(*dev.edevice) = A.chip<3>(i).contract(b_, dims);
-        }
-      } else {
-        if (xs[2]->d.bd == 1) {
-          auto C = xs[2]->t<2>();
-          for (unsigned i = 0; i < fx.d.bd; ++i) {
-            auto b_ = b.chip<1>(i);
-            fx.tb<2>().chip<2>(i).device(*dev.edevice) = A.chip<3>(i).contract(b_, dims) + C;
-          }
-        } else {
-          auto C = xs[2]->tb<2>();
-          for (unsigned i = 0; i < fx.d.bd; ++i) {
-            auto b_ = b.chip<1>(i);
-            auto C_ = C.chip<2>(i);
-            fx.tb<2>().chip<2>(i).device(*dev.edevice) = A.chip<3>(i).contract(b_, dims) + C_;
-          }
-        }
+      for (unsigned i = 0; i < fx.d.bd; ++i) {
+        auto b_ = b.chip<1>(i);
+        fx.tb<2>().chip<2>(i).device(*dev.edevice) += A.chip<3>(i).contract(b_, dims);
       }
     }
   }
+#endif
 #endif
 }
 
@@ -144,7 +138,7 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
     if (xs[0]->d.bd == 1) { // A is a 3 tensor
       // tensor product
       auto b = xs[1]->tb<1>();
-      Eigen::array<int, 2> bcast_b = {1, xs[1]->d.bd == 1 ? fx.d.bd : 1};
+      Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
       Eigen::array<DimPair, 1> dims({{DimPair(2, 1)}});
       dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(b.broadcast(bcast_b), dims);
 
