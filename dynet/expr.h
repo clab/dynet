@@ -1869,6 +1869,22 @@ Expression conv2d(const Expression& x, const Expression& f, const std::vector<un
  */
 Expression conv2d(const Expression& x, const Expression& f, const Expression& b, const std::vector<unsigned>& stride, bool is_valid = true);
 
+/**
+ * \ingroup convolutionoperations
+ * \brief maxpooling2d
+ * \details
+ *   2D maxpooling operator.
+ *
+ * \param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+ * \param ksize the height and width of the maxpooling2d window or kernel
+ * \param stride the row and column strides
+ * \param is_valid 'VALID' or 'SAME' (see comments for conv2d) , default is True ('VALID')
+ *
+ * \return The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
+ */
+Expression maxpooling2d(const Expression& x, const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride, bool is_valid = true);
+
+
 ////////////////////////////////////////////////
 // Tensor operations                          //
 ////////////////////////////////////////////////

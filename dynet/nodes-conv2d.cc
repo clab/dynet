@@ -1,5 +1,6 @@
 #include "dynet/nodes-conv.h"
 
+#include <algorithm>
 #include <sstream>
 #include <limits>
 #include <cmath>
@@ -94,13 +95,14 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
 #if HAVE_CUDNN
   if (cudnn_conv_op_ == NULL) {
     cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
-    cudnn_conv_op_->set_pool(&aux_mem_pool);
   }
+  cudnn_conv_op_->set_pool(&aux_mem_pool);
   cudnn_conv_op_->forward_impl(dev, xs, fx);
 #else
   throw std::runtime_error("Conv2D::forward_dev_impl not supported without CUDNN");
 #endif
 #else
+
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
   void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
   Tensor CHWN_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_x_mem), xs[0]->device, DeviceMempool::FXS);
@@ -116,7 +118,6 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   CHWN_y.tb<3>().device(*dev.edevice) = Eigen::SpatialConvolution(CHWN_x.tb<3>(), NCHW_f.t<4>(), stride[0], stride[1], padding_type);
   shuffles[0] = 1; shuffles[1] = 2; shuffles[2] = 0; shuffles[3] = 3;
   fx.tb<3>().device(*dev.edevice) = CHWN_y.tb<3>().shuffle(shuffles);
-  //NWHCToNCWH()(&NWHC_y, fx);
   if (xs.size() == 3) {
     Tensor bias = Tensor(Dim({fx.d[0], fx.d[1], fx.d.bd}, 1), static_cast<float*>(CHWN_x_mem), xs[2]->device, DeviceMempool::FXS);
     for (unsigned i = 0; i < fx.d[2]; ++i) {
@@ -187,4 +188,4 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(Conv2D)
 
-} // namespace dynet 
+} // namespace dynet

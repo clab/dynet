@@ -2142,6 +2142,7 @@ cpdef Expression conv2d(Expression x, Expression f, vector[unsigned] stride, boo
     """
     ensure_freshness(f); 
     return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), f.c(), stride, is_valid))
+
 cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[unsigned] stride, bool is_valid = True):
     """2D convolution with bias
     
@@ -2195,6 +2196,25 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     ensure_freshness(f)
     ensure_freshness(b)
     return Expression.from_cexpr(x.cg_version, c_conv2d(x.c(), f.c(), b.c(), stride, is_valid))
+
+cpdef Expression maxpooling2d(Expression x, vector[unsigned] ksize, vector[unsigned] stride, bool is_valid = True): 
+    """2D maxpooling
+    
+    2D maxpooling operator.
+    :code:`VALID` and :code:`SAME` maxpooling are supported.
+    
+    Args:
+        x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
+        ksize (list): the max pooling 2d window size 
+        stride (list): the row and column strides
+    
+    Keyword Arguments:
+        is_valid (bool): 'VALID' or 'SAME', default is True ('VALID') (default: (True))
+    
+    Returns:
+        dynet.Expression: The output feature maps (H x W x Co) x N, 3D tensor with an optional batch dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_maxpooling2d(x.c(), ksize, stride, is_valid))
 
 # unary-exp
 cpdef Expression tanh(Expression x): 
