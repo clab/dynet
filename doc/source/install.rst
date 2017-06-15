@@ -1,5 +1,5 @@
-Building/Installing
-===================
+Installing the DyNet for C++
+============================
 
 How to build DyNet and link it with your programs
 
@@ -14,7 +14,7 @@ For example on **Ubuntu Linux**:
 
 ::
 
-    sudo apt-get install libboost-all-dev cmake mercurial
+    sudo apt-get install build-essential libboost-all-dev cmake mercurial
 
 Or on **macOS**, first make sure the Apple Command Line Tools are installed, then
 get Boost, CMake, and Mercurial with either homebrew or macports:
