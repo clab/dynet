@@ -139,17 +139,29 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
     if (xs[0]->d.bd == 1) { // A is a 3 tensor
       // tensor product
 #if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
-      // For now the case where dEdf is batched but not xs[1] (ie xs[2] is batched) is not supported
-      DYNET_ASSERT( (dEdf.d.bd == xs[1]->d.bd), "InnerProduct3D_1D::backward_dev_impl does not support broadcasting on the bias");
-      // Basically here dEdxi[i,j,k] = \sum_b dEdf[i,j,b] * B[k,b]
-      // Which we do as matrix multiplication dEdxi[i*j, k] = \sum_b dEdf[i*j,b] * B^T[b,k]
-      // CUDA matrix multiply ftw
-      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
-                               dEdxi.d[0] * dEdxi.d[1], dEdxi.d[2] , dEdf.d.bd,
-                               kSCALAR_ONE,
-                               dEdf.v, dEdf.d.batch_size(),
-                               xs[1]->v, dEdxi.d[2],
-                               kSCALAR_ONE, dEdxi.v, dEdxi.d[0] * dEdxi.d[1]));
+      if (dEdf.d.bd == xs[1]->d.bd) {
+        // Basically here dEdxi[i,j,k] = \sum_b dEdf[i,j,b] * B[k,b]
+        // Which we do as matrix multiplication dEdxi[i*j, k] = \sum_b dEdf[i*j,b] * B^T[b,k]
+        // CUDA matrix multiply ftw
+        CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+                                 dEdxi.d[0] * dEdxi.d[1], dEdxi.d[2] , dEdf.d.bd,
+                                 kSCALAR_ONE,
+                                 dEdf.v, dEdf.d.batch_size(),
+                                 xs[1]->v, dEdxi.d[2],
+                                 kSCALAR_ONE, dEdxi.v, dEdxi.d[0] * dEdxi.d[1]));
+      } else {
+        // This is the tricky case where dEdf is batched but not xs[1] (ie xs[2] is batched) is not supported
+        // Iterate over the batches of dEdf and then do an outer product beween flattened dEdf and xs[1]
+        // and accumulate the result in dEdxi
+        for (unsigned b = 0; b < dEdf.d.bd; b++) {
+          CUBLAS_CHECK(cublasSger(dev.cublas_handle,
+                                  dEdxi.d[0] * dEdxi.d[1], dEdxi.d[2] ,
+                                  kSCALAR_ONE,
+                                  dEdf.batch_ptr(b), 1,
+                                  xs[1]->v, 1,
+                                  dEdxi.v, dEdxi.d[0] * dEdxi.d[1]));
+        }
+      }
 #else
       auto b = xs[1]->tb<1>();
       Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
