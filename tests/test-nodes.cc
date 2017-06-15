@@ -690,8 +690,28 @@ BOOST_AUTO_TEST_CASE( log_softmax_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = log_softmax(x1);
-  Expression z = input(cg, {1, 3}, first_one_vals) * y;
+  Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression log_softmax(const Expression& x);
+BOOST_AUTO_TEST_CASE( log_softmax_autobatch_gradient ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  dynet::autobatch_flag = 1;
+  dynet::ComputationGraph cg;
+  vector<Expression> vals;
+  {
+    Expression x1 = parameter(cg, param1);
+    vals.push_back(log_softmax(x1));
+  }
+  {
+    Expression x2 = parameter(cg, param2);
+    vals.push_back(log_softmax(x2));
+  }
+  Expression y = sum(vals);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+  dynet::autobatch_flag = autobatch_cache;
 }
 
 // Expression log_softmax(const Expression& x, unsigned v);
@@ -1384,6 +1404,33 @@ BOOST_AUTO_TEST_CASE( select_rows_oob ) {
   BOOST_CHECK_THROW(y.value(), std::invalid_argument);
 }
 
+// Expression select_rows(const Expression& x, vector<unsigned>& rows);
+BOOST_AUTO_TEST_CASE( select_rows_autobatch_gradient ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  dynet::autobatch_flag = 1;
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_square1);
+  vector<Expression> vals;
+  {
+    vector<unsigned> rows = {0,2};
+    Expression y = select_rows(x1, rows) * x1;
+    vals.push_back(sum_elems(y));
+  }
+  {
+    vector<unsigned> rows = {2,1};
+    Expression y = select_rows(x1, rows) * x1;
+    vals.push_back(sum_elems(y));
+  }
+  {
+    vector<unsigned> rows = {0};
+    Expression y = select_rows(x1, rows) * x1;
+    vals.push_back(sum_elems(y));
+  }
+  Expression z = sum(vals);
+  BOOST_CHECK(check_grad(mod, z, 0));
+  dynet::autobatch_flag = autobatch_cache;
+}
+
 // Expression select_cols(const Expression& x, vector<unsigned>& rows);
 BOOST_AUTO_TEST_CASE( select_cols_gradient ) {
   dynet::ComputationGraph cg;
@@ -1616,22 +1663,28 @@ BOOST_AUTO_TEST_CASE( lookup_test ) {
 
 // Expression lookup();
 BOOST_AUTO_TEST_CASE( lookup_autobatch_dim_test ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  dynet::autobatch_flag = 1;
   dynet::ComputationGraph cg;
   Expression x1 = lookup(cg, lookup1, (unsigned)0);
   Expression x2 = lookup(cg, lookup2, (unsigned)5);
   Expression y = x1 + x2;
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
+  dynet::autobatch_flag = autobatch_cache;
 }
 
 // Expression lookup();
 BOOST_AUTO_TEST_CASE( lookup_autobatch_diffmodel_test ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  dynet::autobatch_flag = 1;
   dynet::ComputationGraph cg;
   Expression x1 = lookup(cg, lookup1, (unsigned)0);
   Expression x2 = lookup(cg, lookup3, (unsigned)5);
   Expression y = x1 + x2;
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
+  dynet::autobatch_flag = autobatch_cache;
 }
 
 // Expression parameter() with lookup parameter input;

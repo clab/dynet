@@ -83,6 +83,12 @@ struct SigHash {
   inline void add_int(int i) {
     hash = i + (hash << 6) + (hash << 16) - hash;
   }
+  inline void add_float(float i) {
+    assert(sizeof(int) >= sizeof(float));
+    int temp_val = 0;
+    memcpy(&temp_val, &i, sizeof(float));
+    hash = temp_val + (hash << 6) + (hash << 16) - hash;
+  }
   void add_node(unsigned i) { add_int((int)i); }
   void add_dim(const Dim &d) {
     add_int(-(int)d.nd);
