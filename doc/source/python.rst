@@ -1,11 +1,32 @@
-Installing the Python DyNet module.
-===================================
+Installing the DyNet for Python
+===============================
 
 (for instructions on installing on a computer with GPU, see below)
 
 Python bindings to DyNet are supported for both Python 2.x and 3.x.
+Before installing, we first need to ensure several packages are installed.
+You can generally do this with your standard package manager (details on
+doing this through Anaconda are listed below).
+For example on **Ubuntu Linux**:
 
-On most systems, the following will download, build and install DyNet:
+::
+    
+    sudo apt-get update
+    sudo apt-get install python-pip build-essential libboost-all-dev cmake mercurial
+
+Or on **macOS**, first make sure the Apple Command Line Tools are installed, then
+get Boost, CMake, and Mercurial with either homebrew or macports:
+
+::
+
+    xcode-select --install
+    brew install boost cmake hg python # Using homebrew.
+    sudo port install boost cmake mercurial py-pip # Using macports.
+
+Once these packages are installed, the following will download, build and install
+DyNet. Note that compiling DyNet may take a long time, up to 10 minutes or more, but as
+long as you see "Running setup.py install for dynet" with the moving progress
+wheel, things should be running.
 
 .. code:: bash
 
@@ -17,7 +38,9 @@ Alternatively, you can add the following to your `requirements.txt`:
 
     git+https://github.com/clab/dynet#egg=dynet
 
-In case installation using `pip` fails, you will need to install DyNet manually.
+In case installation using `pip` fails, if you copy-and-paste the entire log that you
+get after running the `pip` command into a `github issue <https://github.com/clab/dynet/issues>`_,
+we will help you debug. You can also try to install DyNet manually as listed below.
 
 Manual Installation
 -------------------
