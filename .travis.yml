@@ -34,6 +34,10 @@ matrix:
       compiler: clang
     - os: osx
       compiler: gcc
+    - os: osx
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip
+    - os: osx
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip
 
 before_install:
   # We do this conditionally because it saves us some downloading if the
