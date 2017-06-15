@@ -1,7 +1,7 @@
-Installing the DyNet for C++
-============================
+Installing DyNet for C++
+========================
 
-How to build DyNet and link it with your programs
+How to build DyNet and link it with your C++ programs.
 
 Prerequisites
 -------------
