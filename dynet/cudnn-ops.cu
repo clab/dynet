@@ -275,9 +275,15 @@ void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev, const std::vector
   CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_, 
               CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
               YN, YC, YW, YH));
-  CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
-              CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
-              ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  #if CUDNN_VERSION_MIN(5, 0, 0)
+    CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
+                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  #else
+    CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(pooling_desc_,
+                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  #endif
   float alpha = 1.f, beta = 0.f;
   CUDNN_CHECK(cudnnPoolingForward(dev.cudnnHandle, pooling_desc_, 
               &alpha, x_desc_, x->v,
