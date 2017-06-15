@@ -231,7 +231,7 @@ You can also use Python on Windows. For simplicity, we recommend
 using a Python distribution that already has Cython installed. The following has been tested to work:
 
 1) Install WinPython 2.7.10 (comes with Cython already installed).
-2) Compile DyNet according to the directions in the Windows C++ documentation (:ref:`windows-python-install`), and additionally add the following flag when executing ``cmake``: ``-DPYTHON=/path/to/your/python.exe``.
+2) Compile DyNet according to the directions in the Windows C++ documentation (:ref:`windows-cpp-install`), and additionally add the following flag when executing ``cmake``: ``-DPYTHON=/path/to/your/python.exe``.
 3) Open a command prompt and set ``VS90COMNTOOLS`` to the path to your Visual Studio "Common7/Tools" directory. One easy way to do this is a command such as:
 
 ::
