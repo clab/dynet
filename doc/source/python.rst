@@ -1,5 +1,5 @@
-Installing the DyNet for Python
-===============================
+Installing DyNet for Python
+===========================
 
 (for instructions on installing on a computer with GPU, see below)
 
