@@ -25,6 +25,8 @@ get Boost, CMake, and Mercurial with either homebrew or macports:
     brew install boost cmake hg  # Using homebrew.
     sudo port install boost cmake mercurial # Using macports.
 
+On **Windows**, see :ref:`windows-cpp-install`.
+
 To compile DyNet you also need the `development version of the Eigen
 library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
 released versions, you may get assertion failures or compile errors.**
@@ -110,8 +112,8 @@ looks fishy. If you would like help, send this ``make.log`` file via the
 "Issues" tab on GitHub, or to the dynet-users mailing list.
 
 
-GPU/MKL support and build options
----------------------------------
+GPU/cuDNN/MKL support
+---------------------
 
 GPU (CUDA) support
 ~~~~~~~~~~~~~~~~~~
@@ -200,7 +202,7 @@ still using only one core. Increasing the number of cores to 2 or 3 is quite ben
 there are diminishing returns or even slowdown.
 
 Non-standard Boost location
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------
 
 DyNet requires Boost, and will find it if it is in the standard
 location. If Boost is in a non-standard location, say ``$HOME/boost``,
@@ -217,8 +219,10 @@ the ``boost/lib`` directory.
 Note also that Boost must be compiled with the same compiler version as
 you are using to compile DyNet.
 
-Building for Windows
-~~~~~~~~~~~~~~~~~~~~
+.. _windows-cpp-install:
+
+Windows Support
+---------------
 
 DyNet has been tested to build in Windows using Microsoft Visual Studio
 2015. You may be able to build with MSVC 2013 by slightly modifying the
