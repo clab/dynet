@@ -58,17 +58,7 @@ Dim MaxPooling2D::dim_forward(const vector<Dim>& xs) const {
 }
 
 size_t MaxPooling2D::aux_storage_size() const {
-  vector<unsigned> input_size(arity());
-  for (unsigned i = 0; i < arity(); ++i) {
-    input_size[i] = get_cg()->nodes[args[i]]->dim.size();
-  }
-  size_t nbytes = 0;
-#if HAVE_CUDNN
-  nbytes += 0;
-#else
-  nbytes += sizeof(float) * (2 * input_size[0] + 2 * input_size[1] + dim.size());
-#endif
-  return nbytes;
+  return sizeof(float) * (2 * get_cg()->nodes[args[0]]->dim.size() + dim.size());
 }
 #endif
 
