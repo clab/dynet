@@ -198,7 +198,7 @@ class TestBatchManipulation(unittest.TestCase):
         self.assertTrue(np.allclose(w.npvalue(), self.pval.T))
 
 
-class TestIO(unittest.TestCase):
+class TestIO_1(unittest.TestCase):
 
     def setUp(self):
         self.file = "bilstm.model"
@@ -209,8 +209,23 @@ class TestIO(unittest.TestCase):
         self.b = dy.BiRNNBuilder(2, 10, 10, self.m, dy.LSTMBuilder)
 
     def test_save_load(self):
-        self.m.save(self.file, [self.b])
-        self.m2.load(self.file)
+        self.m.save(self.file)
+        b = dy.BiRNNBuilder(2, 10, 10, self.m2, dy.LSTMBuilder)
+        self.m2.populate(self.file)
+
+class TestIO_2(unittest.TestCase):
+
+    def setUp(self):
+        self.file = "bilstm.model"
+        # create models
+        self.m = dy.Model()
+        self.m2 = dy.Model()
+        # Create birnn
+        self.b = dy.BiRNNBuilder(2, 10, 10, self.m, dy.LSTMBuilder)
+
+    def test_save_load(self):
+        dy.save(self.file, [self.b])
+        [b] = dy.load(self.file, self.m2)
 
 class TestExpression(unittest.TestCase):
 
