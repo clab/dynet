@@ -463,6 +463,7 @@ Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 Expression parameter(ComputationGraph& g, Parameter p);
+Expression parameter(ComputationGraph& g, LookupParameter lp);
 Expression const_parameter(ComputationGraph& g, Parameter p);
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
@@ -631,6 +632,11 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 Expression inverse(const Expression& x);
 Expression logdet(const Expression& x);
 Expression trace_of_product(const Expression& x, const Expression& y);
+
+/* NORMALIZATION OPERATIONS */
+
+Expression layer_norm(const Expression& x, const Expression& g, const Expression& b);
+Expression weight_norm(const Expression& w, const Expression& g);
 
 } // namespace expr
 
@@ -841,6 +847,8 @@ struct LSTMBuilder : public RNNBuilder {
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
 
+  void set_dropout(float d, float d_h, float d_c);
+
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 
@@ -849,6 +857,10 @@ struct LSTMBuilder : public RNNBuilder {
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
+
+  // first index is layer, then ...
+  // masks for Gal dropout
+  std::vector<std::vector<Expression>> masks;
 
   // initial values of h and c at each layer
   // - both default to zero matrix input
@@ -863,7 +875,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   explicit VanillaLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       Model& model,
+                       bool ln_lstm = false);
 
   Expression back() const override;
   std::vector<Expression> final_h() const override;
@@ -878,11 +891,17 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   void save_parameters_pretraining(const std::string& fname) const override;
   void load_parameters_pretraining(const std::string& fname) override;
 
+  void set_dropout(float d, float d_r);
+
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> ln_params;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> ln_param_vars;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
@@ -956,6 +975,8 @@ struct DynetParams {
   unsigned random_seed = 0; /**< The seed for random number generation */
   std::string mem_descriptor = "512"; /**< Total memory to be allocated for Dynet */
   float weight_decay = 0; /**< Weight decay rate for L2 regularization */
+  int autobatch = 0; /**< Whether to autobatch or not */
+  int autobatch_debug = 0; /**< Whether to show autobatch debug info or not */
   bool shared_parameters = false; /**< TO DOCUMENT */
 
 #ifdef SWIG_USE_CUDA
