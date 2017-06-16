@@ -68,6 +68,7 @@ object Expression {
     makeExpr(cg => dn.input(cg, d.dim, ids.vector, data.vector, defdata), Seq(d, ids, data))
 
   def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p.parameter), Seq(p))
+  def parameter(lp: LookupParameter): Expression = makeExpr(cg => dn.parameter(cg, lp.lookupParameter), Seq(lp))
   def constParameter(p: Parameter): Expression =
     makeExpr(cg => dn.const_parameter(cg, p.parameter), Seq(p))
 
@@ -136,7 +137,7 @@ object Expression {
   def sum(exprs: Expression*): Expression = sum(new ExpressionVector(exprs))
 
   def average(ev: ExpressionVector): Expression = vectory(ev, dn.average)
-  def average(exprs: Expression*): Expression = sum(new ExpressionVector(exprs))
+  def average(exprs: Expression*): Expression = average(new ExpressionVector(exprs))
 
   def sqrt(e: Expression): Expression = unary(e, dn.sqrt)
   def erf(e: Expression): Expression = unary(e, dn.erf)
@@ -273,6 +274,14 @@ object Expression {
   def inverse(x: Expression): Expression = unary(x, dn.inverse)
   def logdet(x: Expression): Expression = unary(x, dn.logdet)
   def traceOfProduct(x: Expression, y: Expression): Expression = binary(x, y, dn.trace_of_product)
+
+  /* NORMALIZATION OPERATIONS */
+
+  def layerNorm(x: Expression, g: Expression, b: Expression): Expression = {
+    Seq(x, g, b).foreach(_.ensureFresh)
+    new Expression(dn.layer_norm(x.expr, g.expr, b.expr), Seq(x, g, b))
+  }
+  def weightNorm(w: Expression, g: Expression): Expression = binary(w, g, dn.weight_norm)
 
   /** Augment numbers so that they can do arithmetic with expressions. */
   implicit class ImplicitNumerics[T](x: T)(implicit n: Numeric[T]) {
