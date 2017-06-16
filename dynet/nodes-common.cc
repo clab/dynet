@@ -310,8 +310,29 @@ string Sum::as_string(const vector<string>& arg_names) const {
 int Sum::autobatch_sig(const ComputationGraph &cg, SigMap &sm) const {
   Sig s(nt::sum);
   s.add_node(args.size());
-  s.add_dim(dim);
+  // Two cases:
+  // If unbatched, it's just an elementwise addition
+  // TODO: This will be more efficient if we identify arguments that are used
+  //       multiple times (e.g. bias vectors)
+  if(dim.bd == 1) {
+    s.add_int(-2);
+  // Otherwise, make sure the dimensions match and that batched nodes don't intersect
+  } else {
+    s.add_dim(dim);
+    for(auto ai : args) {
+      s.add_int(cg.nodes[ai]->dim.bd == 1 ? ai : -1);
+    }
+  }
   return sm.get_idx(s);
+}
+
+std::vector<int> Sum::autobatch_concat(const ComputationGraph & cg) const {
+  vector<int> ret(args.size(), 1);
+  // If batched, true if multiple batched input as well
+  if(dim.bd != 1)
+    for(size_t i = 0; i < args.size(); ++i)
+      ret[i] = cg.nodes[args[i]]->dim.bd == 1 ? 0 : 1;
+  return ret;
 }
 
 
@@ -694,9 +715,9 @@ Dim SoftSign::dim_forward(const vector<Dim>& xs) const {
 string PickNegLogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   if(pval) {
-    s << "log_softmax(" << arg_names[0] << ")_{" << *pval << '}';
+    s << "pickneglogsoftmax(" << arg_names[0] << ")_{" << *pval << '}';
   } else {
-    s << "log_softmax(" << arg_names[0] << ")_{";
+    s << "pickneglogsoftmax(" << arg_names[0] << ")_{";
     string sep = "";
     for(auto v : *pvals) { s << sep << v; sep = ","; }
     s << '}';

@@ -242,7 +242,8 @@ inline void CUDAMatrixMultiply(const Device_GPU & dev, const Tensor& l, const Te
 
 template<class MyDevice>
 void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  // TODO: Profile on CPU. Broadcasting may be slow.
+  // Broadcasting is slow on CPU, so split codepaths
+#ifdef __CUDACC__
   if(xs[0]->d.bd >= xs[1]->d.bd) {
     Eigen::array<int, 3> bcasts = {1, (int)xs[0]->d[1], (int)(xs[0]->d.bd/xs[1]->d.bd)};
     fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>() + xs[1]->tb<2>().broadcast(bcasts);
@@ -253,6 +254,23 @@ void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<
     Eigen::array<int, 3> bcasts1 = {1, (int)xs[0]->d[1], 1};
     fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcasts0) + xs[1]->tb<2>().broadcast(bcasts1);
   }
+#else
+  // First, add the matrix
+  if(xs[0]->d.bd == fx.d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  else
+    for(size_t b = 0; b < fx.d.bd; ++b)
+      fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[0]->tvec();
+  // Second, add the columns
+  if(xs[1]->d.bd == fx.d.bd) {
+    for(size_t i = 0; i < xs[0]->d[1]; ++i) 
+      fx.tb<2>().chip<1>(i).device(*dev.edevice) += xs[1]->tb<1>();
+  } else {
+    for(size_t b = 0; b < fx.d.bd; ++b)
+      for(size_t i = 0; i < fx.d[1]; ++i) 
+        fx.tb<2>().chip<2>(b).chip<1>(i).device(*dev.edevice) += xs[1]->t<1>();
+  }
+#endif
 }
 
 template<class MyDevice>
@@ -2615,7 +2633,7 @@ void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
   if (dim.num_nonone_dims() <= 1) {
     fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   } else {
-    array<ptrdiff_t, 5> order;
+    Eigen::array<ptrdiff_t, 5> order;
     for(size_t i = 0; i < 5; ++i)
       order[i] = (i >= dims.size() ? i : dims[i]);
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().shuffle(order);
@@ -2629,7 +2647,7 @@ void Transpose::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  array<ptrdiff_t, 5> order;
+  Eigen::array<ptrdiff_t, 5> order;
   for(size_t i = 0; i < 5; ++i)
     order[(i >= dims.size() ? i : dims[i])] = i;
   dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().shuffle(order);

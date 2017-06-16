@@ -228,6 +228,87 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
   }
 }
 
+
+CudnnMaxPooling2DOp::CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride,
+      const bool padding_type) {
+  ksize_.resize(ksize.size());
+  stride_.resize(stride.size());
+  for (unsigned i = 0; i < ksize.size(); ++i) {
+    ksize_[i] = static_cast<int>(ksize[i]);
+    stride_[i] = static_cast<int>(stride[i]);
+  }
+  is_valid_ = padding_type;
+  mempool_ = NULL;
+  CUDNN_CHECK(cudnnCreateTensorDescriptor(&x_desc_));
+  CUDNN_CHECK(cudnnCreateTensorDescriptor(&y_desc_));
+  CUDNN_CHECK(cudnnCreatePoolingDescriptor(&pooling_desc_));
+}
+
+CudnnMaxPooling2DOp::~CudnnMaxPooling2DOp() {
+  CUDNN_CHECK(cudnnDestroyTensorDescriptor(x_desc_));
+  CUDNN_CHECK(cudnnDestroyTensorDescriptor(y_desc_));
+  CUDNN_CHECK(cudnnDestroyPoolingDescriptor(pooling_desc_));
+}
+
+void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev, const std::vector<const Tensor*>& xs, Tensor& fx) {
+  const Tensor* x = xs[0]; 
+  Tensor* y = &fx;
+ 
+  unsigned XN = x->d.bd;
+  unsigned XC = x->d[2];
+  unsigned XH = x->d[0];
+  unsigned XW = x->d[1];
+  unsigned YN = fx.d.bd;
+  unsigned YC = fx.d[2];
+  unsigned YH = fx.d[0];
+  unsigned YW = fx.d[1];
+
+  // infer pad_h, pad_w
+  if (!is_valid_) {
+    pad_h = std::max<int>(0, (YH - 1) * stride_[0] + ksize_[0] - XH) / 2;
+    pad_w = std::max<int>(0, (YW - 1) * stride_[1] + ksize_[1] - XW) / 2;
+  }
+
+  CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_, 
+              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
+              XN, XC, XW, XH));
+  CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_, 
+              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
+              YN, YC, YW, YH));
+  #if CUDNN_VERSION_MIN(5, 0, 0)
+    CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
+                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  #else
+    CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(pooling_desc_,
+                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  #endif
+  float alpha = 1.f, beta = 0.f;
+  CUDNN_CHECK(cudnnPoolingForward(dev.cudnnHandle, pooling_desc_, 
+              &alpha, x_desc_, x->v,
+              &beta, y_desc_, y->v));
+}
+
+void CudnnMaxPooling2DOp::backward_impl(const Device_GPU & dev,
+              const std::vector<const Tensor*>& xs,
+              const Tensor& fx,
+              const Tensor& dEdf,
+              unsigned i,
+              Tensor& dEdxi) {
+  const Tensor* x = xs[0]; 
+  const Tensor* y = &fx; 
+  const Tensor* dy = &dEdf;
+  Tensor* dxi = &dEdxi;
+  // here we could reuse the descriptor we created for forward, because 
+  // they share the same size
+  float alpha = 1.f, beta = 0.f;
+  CUDNN_CHECK(cudnnPoolingBackward(dev.cudnnHandle, pooling_desc_,
+              &alpha, y_desc_, y->v, y_desc_, dy->v, 
+              x_desc_, x->v, &beta, x_desc_, dxi->v));
+}
+
+
 } // namespace dynet
 
 #endif

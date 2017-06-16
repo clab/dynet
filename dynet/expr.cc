@@ -136,6 +136,10 @@ Expression conv2d(const Expression& x, const Expression& f, const std::vector<un
 Expression conv2d(const Expression& x, const Expression& f, const Expression& b, const std::vector<unsigned>& stride, bool is_valid) {
   return Expression(x.pg, x.pg->add_function<Conv2D>({x.i, f.i, b.i}, stride, is_valid));
 }
+Expression maxpooling2d(const Expression& x, const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride, bool is_valid) {
+  return Expression(x.pg, x.pg->add_function<MaxPooling2D>({x.i}, ksize, stride, is_valid));
+}
+
 
 Expression pick(const Expression& x, unsigned v, unsigned d) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, v, d)); }
 Expression pick(const Expression& x, const vector<unsigned> & v, unsigned d) { return Expression(x.pg, x.pg->add_function<PickElement>({x.i}, v, d)); }

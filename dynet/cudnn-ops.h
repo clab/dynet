@@ -55,11 +55,36 @@ class CudnnConvOp {
   NodeMemPool* mempool_;
 };
 
-/*
-class CudnnMaxPoolingOp {
 
+class CudnnMaxPooling2DOp {
+ public: 
+  explicit CudnnMaxPooling2DOp() {}
+  explicit CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride,
+      const bool padding_type);
+  ~CudnnMaxPooling2DOp();
+  void forward_impl(const Device_GPU & dev, const std::vector<const Tensor*>& xs, Tensor& fx);
+  void backward_impl(const Device_GPU & dev,
+                const std::vector<const Tensor*>& xs,
+                const Tensor& fx,
+                const Tensor& dEdf,
+                unsigned i,
+                Tensor& dEdxi);
+
+ protected:
+  std::vector<int> ksize_;
+  std::vector<int> stride_;
+  bool is_valid_;
+
+  /* cuDNN resource */
+  cudnnTensorDescriptor_t x_desc_, y_desc_;
+  cudnnPoolingDescriptor_t pooling_desc_;
+
+ private:
+  NodeMemPool* mempool_;
+  int pad_h = 0;
+  int pad_w = 0;
 };
-*/
+
 } // namespace dynet
 
 #endif

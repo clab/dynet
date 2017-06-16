@@ -1,14 +1,50 @@
-Installing the Python DyNet module.
-===================================
-
-(for instructions on installing on a computer with GPU, see below)
+Installing DyNet for Python
+===========================
 
 Python bindings to DyNet are supported for both Python 2.x and 3.x.
+Before installing DyNet, you will need to make sure that several packages are installed.
+For example on **Ubuntu Linux**:
 
-TL;DR
------
+::
+    
+    sudo apt-get update
+    sudo apt-get install python-pip build-essential libboost-all-dev cmake mercurial
 
-(see below for the details)
+Or on **macOS**, first make sure the Apple Command Line Tools are installed, then
+get Boost, CMake, and Mercurial with either homebrew or macports:
+
+::
+
+    xcode-select --install
+    brew install boost cmake hg python # Using homebrew.
+    sudo port install boost cmake mercurial py-pip # Using macports.
+
+On **Windows**, see :ref:`windows-python-install`.
+
+
+Once these packages are installed, the following will download, build and install
+DyNet. Note that compiling DyNet may take a long time, up to 10 minutes or more, but as
+long as you see "Running setup.py install for dynet" with the moving progress
+wheel, things should be running.
+
+.. code:: bash
+
+    pip install git+https://github.com/clab/dynet#egg=dynet
+
+Alternatively, you can add the following to your `requirements.txt`:
+
+.. code:: bash
+
+    git+https://github.com/clab/dynet#egg=dynet
+
+In case installation using `pip` fails, if you copy-and-paste the entire log that you
+get after running the `pip` command into a `github issue <https://github.com/clab/dynet/issues>`_,
+we will help you debug. You can also try to install DyNet manually as listed below.
+
+Manual Installation
+-------------------
+
+The following is a list of all the commands needed to perform a manual install:
 
 .. code:: bash
 
@@ -37,10 +73,8 @@ TL;DR
     # /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
 
-Detailed Instructions
----------------------
 
-First, get DyNet:
+To explain these one-by-one, first we get DyNet:
 
 .. code:: bash
 
@@ -175,26 +209,29 @@ Anaconda Support
 ----------------
 
 `Anaconda 
-<https://www.continuum.io/downloads>`_ is a popular package management system for Python. DyNet can be used from within an Anaconda environment, but be sure to activate the environment
+<https://www.continuum.io/downloads>`_ is a popular package management system for Python, and DyNet can be installed into this environment.
+First, make sure that you install all the necessary packages according to the instructions at the top of this page.
+Then create an Anaconda environment and activate it as below:
+
+::
 
      source activate my_environment_name
 
-then install some necessary packages as follows:
+After this, you should be able to install using pip or manual installation as normal.
 
-     conda install gcc cmake boost cython
+Note that on some conda environments, people have had trouble if ``C++`` related packages such as ``boost`` are installed within the Anaconda environment.
+We suggest that you install these packages through the system-wide package manager instead of through Anaconda. But if you would like to install them through Anaconda and encounter build errors, try the solution in `this comment <https://github.com/clab/dynet/issues/268#issuecomment-278806398>`_.
 
-After this, the build process should be the same as normal.
-
-Note that on some conda environments, people have reported build errors related to the interaction between the ``icu`` and ``boost`` packages. If you encounter this, try the solution in `this comment <https://github.com/clab/dynet/issues/268#issuecomment-278806398>`_.
+.. _windows-python-install:
 
 Windows Support
 ---------------
 
-You can also use Python on Windows by following similar steps to the above. For simplicity, we recommend 
+You can also use Python on Windows. For simplicity, we recommend 
 using a Python distribution that already has Cython installed. The following has been tested to work:
 
 1) Install WinPython 2.7.10 (comes with Cython already installed).
-2) Run CMake as above with ``-DPYTHON=/path/to/your/python.exe``.
+2) Compile DyNet according to the directions in the Windows C++ documentation (:ref:`windows-cpp-install`), and additionally add the following flag when executing ``cmake``: ``-DPYTHON=/path/to/your/python.exe``.
 3) Open a command prompt and set ``VS90COMNTOOLS`` to the path to your Visual Studio "Common7/Tools" directory. One easy way to do this is a command such as:
 
 ::
@@ -272,8 +309,6 @@ to initialize the global parameters, as follows:
     # Same as import dynet as dy
     import _dynet as dy
     dy.init()
-
-
 
 
 Running with MKL
