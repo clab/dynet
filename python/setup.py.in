@@ -61,12 +61,15 @@ else:
 
 LIBRARY_DIRS.append(DYNET_LIB_DIR)
 GPULIBRARY_DIRS = LIBRARY_DIRS + GPULIBRARY_DIRS
+EXTRA_LINK_ARGS = []
 
 import platform
 
 # in some OSX systems, the following extra flags are needed:
 if platform.system() == 'Darwin':
     COMPILER_ARGS.extend(["-stdlib=libc++","-mmacosx-version-min=10.7"])
+    if "${CMAKE_INSTALL_PREFIX}":
+        EXTRA_LINK_ARGS.append("-Wl,-rpath,${CMAKE_INSTALL_PREFIX}/lib/")
 
 
 ext_cpu = Extension(
@@ -78,6 +81,7 @@ ext_cpu = Extension(
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
         libraries=LIBRARIES,             # ditto
         library_dirs=LIBRARY_DIRS,
+        extra_link_args=EXTRA_LINK_ARGS,
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
         runtime_library_dirs=RUNTIME_LIB_DIRS,
@@ -92,6 +96,7 @@ ext_gpu = Extension(
                       "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
         libraries=GPULIBRARIES,             # ditto
         library_dirs=GPULIBRARY_DIRS,
+        extra_link_args=EXTRA_LINK_ARGS,
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
         runtime_library_dirs=RUNTIME_LIB_DIRS,
