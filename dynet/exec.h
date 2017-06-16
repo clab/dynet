@@ -20,7 +20,7 @@ class ExecutionEngine {
   virtual void backward(bool full = false) = 0;
   virtual void backward(VariableIndex i, bool full = false) = 0;
  protected:
-  explicit ExecutionEngine(const ComputationGraph& cg) : cg(cg) {}
+  explicit ExecutionEngine(const ComputationGraph& cg) : cg(cg), backward_computed(0) {}
   const ComputationGraph& cg;
   VariableIndex backward_computed;
 };
