@@ -136,7 +136,6 @@ void SimpleExecutionEngine::backward(bool full) {
   backward((VariableIndex)(cg.nodes.size()-1),full);
 }
 
-// TODO what is happening with parameter nodes if from_where > param_node_id ?
 void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   if(!(from_where < nfxs.size()))
     incremental_forward(from_where);
@@ -209,7 +208,8 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   // since we assume parameters come into the graph as a "function"
   // that returns the current value of the parameters
   for (VariableIndex i : cg.parameter_nodes)
-    static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
+    if(i <= from_where)
+      static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
 
 }
@@ -787,7 +787,6 @@ void BatchedExecutionEngine::backward(bool full) {
   backward((VariableIndex)(cg.nodes.size()-1),full);
 }
 
-// TODO what is happening with parameter nodes if from_where > param_node_id ?
 void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
 
   if(!(from_where < node2batch.size()))
@@ -855,7 +854,8 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
   vector<bool> needs_derivative(num_batches, full);
   if (!full) {
     for (auto i : cg.parameter_nodes)
-      needs_derivative[node2batch[i]] = true;  
+      if(i <= from_where)
+        needs_derivative[node2batch[i]] = true;  
     for (unsigned bi = 0; bi < num_batches; ++bi) {
       bool nd = needs_derivative[bi];
       for (auto ni : batches[bi].ids)
@@ -957,7 +957,8 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
   // TODO: Can this be batched? Maybe not with the current assumptions, but
   //       it would be nice to have.
   for (VariableIndex i : cg.parameter_nodes)
-    static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
+    if(i < (VariableIndex)ndEdfs.size() && ndEdfs[i].v != nullptr)
+      static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
 
 }
