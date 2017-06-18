@@ -28,7 +28,7 @@ class SimpleSGDTrainer private[dynet] (private[dynet] val trainer: internal.Simp
 class MomentumSGDTrainer private[dynet] (private[dynet] val trainer: internal.MomentumSGDTrainer)
     extends Trainer(trainer)
 {
-  def this(m: Model, e0: Float = 0.1f, mom: Float = 0.9f, edecay: Float = 0.0f) {
+  def this(m: Model, e0: Float = 0.01f, mom: Float = 0.9f, edecay: Float = 0.0f) {
     this(new internal.MomentumSGDTrainer(m.model, e0, mom, edecay))
   }
 }
@@ -41,10 +41,18 @@ class AdagradTrainer private[dynet] (private[dynet] val trainer: internal.Adagra
   }
 }
 
+class AdadeltaTrainer private[dynet] (private[dynet] val trainer: internal.AdadeltaTrainer)
+  extends Trainer(trainer)
+{
+  def this(m: Model, eps: Float = 1e-6f, rho:Float = 0.95f, edecay: Float = 0.0f) {
+    this(new internal.AdadeltaTrainer(m.model, eps, rho, edecay))
+  }
+}
+
 class RMSPropTrainer private[dynet] (private[dynet] val trainer: internal.RMSPropTrainer)
     extends Trainer(trainer)
 {
-  def this(m: Model, e0: Float = 0.1f, eps: Float = 1e-20f, rho: Float = 0.95f, edecay: Float = 0.0f) {
+  def this(m: Model, e0: Float = 0.001f, eps: Float = 1e-8f, rho: Float = 0.9f, edecay: Float = 0.0f) {
     this(new internal.RMSPropTrainer(m.model, e0, eps, rho, edecay))
   }
 }
