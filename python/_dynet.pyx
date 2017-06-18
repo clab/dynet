@@ -273,8 +273,8 @@ cpdef save(basename, lst):
                 its class, its spec, the full name of its parameters collection.
         - the associated parameters/sub-collection is then saved to `.data`
     """
-    file(basename+".data","w").close() # delete current
-    fh = file(basename+".meta","w")
+    open(basename+".data","w").close() # delete current
+    fh = open(basename+".meta","w")
     for item in lst:
         _save_one(basename+".data", fh, item)
     fh.close()
@@ -307,7 +307,7 @@ cpdef load(basename, params):
         pc = dy.ParameterCollection()
         E2, builder2, W2 = dy.load("model", pc)
     """
-    fh = file(basename+".meta","r")
+    fh = open(basename+".meta","r")
     res = []
     while True:
         try:
