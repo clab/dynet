@@ -953,8 +953,8 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.ParameterCollection) a parameter collection.
         """
-        if name is None: return ParameterCollection.wrap(self.thisptr.add_subcollection(""))
-        else: return ParameterCollection.wrap(self.thisptr.add_subcollection(name))
+        if name is None: return ParameterCollection.wrap(self.thisptr.add_subcollection("".encode()))
+        else: return ParameterCollection.wrap(self.thisptr.add_subcollection(name.encode()))
 
     cpdef name(self):
         """
