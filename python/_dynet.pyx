@@ -200,7 +200,7 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
 
 # IO {{{
 
-cdef _save_one(string datafname, fh, obj):
+cdef _save_one(datafname, fh, obj):
     if isinstance(obj, Parameters):
         pickle.dump(("Parameters", obj.name()), fh)
         obj.save(datafname,append=True)
@@ -211,7 +211,7 @@ cdef _save_one(string datafname, fh, obj):
         pickle.dump((obj.__class__, obj.spec, obj.param_collection().name()), fh)
         obj.param_collection().save(datafname,append=True)
 
-cdef _load_one(string datafname, fh, model):
+cdef _load_one(datafname, fh, model):
     o = pickle.load(fh)
     if o[0] == 'Parameters':
         p = model.load_param(datafname, o[1])
@@ -274,7 +274,7 @@ cpdef save(basename, lst):
         - the associated parameters/sub-collection is then saved to `.data`
     """
     open(basename+".data","w").close() # delete current
-    fh = open(basename+".meta","w")
+    fh = open(basename+".meta","wb")
     for item in lst:
         _save_one(basename+".data", fh, item)
     fh.close()
@@ -307,7 +307,7 @@ cpdef load(basename, params):
         pc = dy.ParameterCollection()
         E2, builder2, W2 = dy.load("model", pc)
     """
-    fh = open(basename+".meta","r")
+    fh = open(basename+".meta","rb")
     res = []
     while True:
         try:
@@ -456,11 +456,11 @@ cdef class Parameters: # {{{
         return self
 
     # TODO docs
-    def save(self, string fname, string key="",append=False):
+    def save(self, fname, key="",append=False):
         self.write_to_textfile(fname, key,append)
 
     # TODO docs
-    def populate(self, string fname, string key):
+    def populate(self, fname, key):
         """Populate the values of this Parameters object from
         the parameter named `key` in the file `fname`.
         The sizes of saved parameters and this object must match.
@@ -472,17 +472,21 @@ cdef class Parameters: # {{{
         self.populate_from_textfile(fname, key)
 
     # TODO docs
-    def write_to_textfile(self, string fname, string key="", bool append=False):
+    def write_to_textfile(self, fname, key="", bool append=False):
         cdef CTextFileSaver *saver
-        saver = new CTextFileSaver(fname, append=append)
-        saver.save(self.thisptr,key)
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        saver = new CTextFileSaver(_fname, append=append)
+        saver.save(self.thisptr,_key)
         del saver
 
     # TODO docs
     def populate_from_textfile(self, string fname, string key=""):
         cdef CTextFileLoader *loader
-        loader = new CTextFileLoader(fname)
-        loader.populate(self.thisptr, key)
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        loader.populate(self.thisptr, _key)
         del loader
 
     cpdef shape(self):
@@ -585,7 +589,7 @@ cdef class Parameters: # {{{
         """
         Return the full name of this parameter.
         """
-        return self.thisptr.get_fullname()
+        return self.thisptr.get_fullname().decode("utf8")
 
     cpdef Expression expr(self, bool update=True):
         """Returns the parameter as an expression
@@ -625,9 +629,9 @@ cdef class LookupParameters: # {{{
         return self
 
     # TODO docs
-    def save(self, string fname, string key="", append=False):
+    def save(self, fname, key="", append=False):
         self.write_to_textfile(fname, key, append)
-    def populate(self, string fname, string key=""):
+    def populate(self, fname, key=""):
         """Populate the values of this LookupParameters object from
         the parameter named `key` in the file `fname`.
         The sizes of saved parameters and this object must match.
@@ -638,16 +642,20 @@ cdef class LookupParameters: # {{{
         """
         self.populate_from_textfile(fname, key)
 
-    def write_to_textfile(self, string fname, string key="", bool append=False):
+    def write_to_textfile(self, fname, key="", bool append=False):
         cdef CTextFileSaver *saver
-        saver = new CTextFileSaver(fname, append=append)
-        saver.save(self.thisptr,key)
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        saver = new CTextFileSaver(_fname, append=append)
+        saver.save(self.thisptr,_key)
         del saver
 
-    def populate_from_textfile(self, string fname, string key=""):
+    def populate_from_textfile(self, fname, key=""):
         cdef CTextFileLoader *loader
-        loader = new CTextFileLoader(fname)
-        loader.populate(self.thisptr, key)
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        loader.populate(self.thisptr, _key)
         del loader
 
     cpdef init_from_array(self, arr):
@@ -723,7 +731,7 @@ cdef class LookupParameters: # {{{
         """
         Return the full name of this lookup parameter.
         """
-        return self.thisptr.get_fullname()
+        return self.thisptr.get_fullname().decode("utf8")
 # }}}
 
 cdef class ParameterCollection: # {{{
@@ -775,7 +783,7 @@ cdef class ParameterCollection: # {{{
         self.thisptr = m
         return self
 
-    def save(self, string fname, string name="",append=False):
+    def save(self, fname, name="",append=False):
         """Save the values of all parameters in this collection to file.
 
         Args:
@@ -783,7 +791,7 @@ cdef class ParameterCollection: # {{{
         """
         self.write_to_textfile(fname, name ,append)
 
-    def populate(self, string fname, string key=""):
+    def populate(self, fname, key=""):
         """Populate the values of all parameters in this collection from file.
 
         This only populates the values of existing parameters, and does not add parameters to the collection.
@@ -796,7 +804,7 @@ cdef class ParameterCollection: # {{{
         """
         self.populate_from_textfile(fname, key)
 
-    cpdef load_param(self, string fname, string key):
+    cpdef load_param(self, fname, key):
         """Loads a named parameter from a file, adds it to the collection,
         and returns the loaded parameter.
 
@@ -808,12 +816,14 @@ cdef class ParameterCollection: # {{{
             (dynet.Parameters) The Parameters object.
         """
         cdef CTextFileLoader *loader
-        loader = new CTextFileLoader(fname)
-        p = Parameters.wrap_ptr(loader.load_param(self.thisptr, key))
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        p = Parameters.wrap_ptr(loader.load_param(self.thisptr, _key))
         del loader
         return p
 
-    cpdef load_lookup_param(self, string fname, string key):
+    cpdef load_lookup_param(self, fname, key):
         """Loads a named lookup-parameter from a file, adds it to the collection,
         and returns the loaded parameter.
 
@@ -825,23 +835,29 @@ cdef class ParameterCollection: # {{{
             (dynet.LookupParameters) The LookupParameters object.
         """
         cdef CTextFileLoader *loader
-        loader = new CTextFileLoader(fname)
-        p = LookupParameters.wrap_ptr(loader.load_lookup_param(self.thisptr, key))
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        p = LookupParameters.wrap_ptr(loader.load_lookup_param(self.thisptr, _key))
         del loader
         return p
 
     # TODO docs
-    def write_to_textfile(self, string fname, string key="",append=False):
+    def write_to_textfile(self, fname, key="",append=False):
         cdef CTextFileSaver *saver
-        saver = new CTextFileSaver(fname, append=append)
-        saver.save(self.thisptr,key)
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        saver = new CTextFileSaver(_fname, append=append)
+        saver.save(self.thisptr,_key)
         del saver
 
     # TODO docs
-    def populate_from_textfile(self, string fname, string key=""):
+    def populate_from_textfile(self, fname, key=""):
         cdef CTextFileLoader *loader
-        loader = new CTextFileLoader(fname)
-        loader.populate(self.thisptr, key)
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        loader.populate(self.thisptr, _key)
         del loader
 
     # TODO: for debug, remove
@@ -960,7 +976,7 @@ cdef class ParameterCollection: # {{{
         """
         Return the full name of this collection.
         """
-        return self.thisptr.get_fullname()
+        return self.thisptr.get_fullname().decode("utf8")
 
 # Alias Model and ParameterCollection
 Model=ParameterCollection
