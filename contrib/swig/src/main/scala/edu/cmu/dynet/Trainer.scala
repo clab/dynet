@@ -25,6 +25,14 @@ class SimpleSGDTrainer private[dynet] (private[dynet] val trainer: internal.Simp
   }
 }
 
+class CyclicalSGDTrainer private[dynet] (private[dynet] val trainer: internal.CyclicalSGDTrainer)
+  extends Trainer(trainer)
+{
+  def this(m: Model, e0_min: Float = 0.01f, e0_max: Float = 0.1f, step_size: Float = 2000f, gamma: Float = 0.0f, edecay: Float = 0.0f) {
+    this(new internal.CyclicalSGDTrainer(m.model, e0_min, e0_max, step_size, gamma, edecay))
+  }
+}
+
 class MomentumSGDTrainer private[dynet] (private[dynet] val trainer: internal.MomentumSGDTrainer)
     extends Trainer(trainer)
 {
