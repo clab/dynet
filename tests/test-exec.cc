@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE( param_after_node ) {
   for(size_t i = 0; i < 3; ++i) {
     dynet::autobatch_flag = i;
 	  ComputationGraph cg;
-	  Model model;
+	  ParameterCollection model;
 	  Parameter param = model.add_parameters({ 1 });
 
 	  Expression loss = zeroes(cg, { 1 });
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE( param_after_node_2 ) {
   for(size_t i = 0; i < 3; ++i) {
     dynet::autobatch_flag = i;
 	  ComputationGraph cg;
-	  Model model;
+	  ParameterCollection model;
 	  LookupParameter param = model.add_lookup_parameters(10, { 1 });
 
 	  lookup(cg, param, 1);

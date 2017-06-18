@@ -1234,7 +1234,7 @@ BOOST_AUTO_TEST_CASE( maxpooling2d_same_gradient ) {
   dynet::ComputationGraph cg;
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
-  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
   std::vector<float> maxpooling2d_batch_vals(1 * 11 * 11 * 2);
   for (unsigned i = 0; i < maxpooling2d_batch_vals.size(); ++i) {
     maxpooling2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
@@ -1257,7 +1257,7 @@ BOOST_AUTO_TEST_CASE( maxpooling2d_valid_gradient ) {
   dynet::ComputationGraph cg;
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
-  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
   std::vector<float> maxpooling2d_batch_vals(1 * 21 * 21 * 2);
   for (unsigned i = 0; i < maxpooling2d_batch_vals.size(); ++i) {
     maxpooling2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
@@ -1278,7 +1278,7 @@ BOOST_AUTO_TEST_CASE( maxpooling2d_same_gradient_two ) {
   dynet::ComputationGraph cg;
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
-  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
   std::vector<float> maxpooling2d_batch_vals(1 * 31 * 16 * 2);
   for (unsigned i = 0; i < maxpooling2d_batch_vals.size(); ++i) {
     maxpooling2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
