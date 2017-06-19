@@ -137,7 +137,7 @@ std::vector<int> LookupNode::autobatch_concat(const ComputationGraph & cg) const
 Node* LookupNode::autobatch_pseudo_node(const ComputationGraph & cg,
                                         const std::vector<VariableIndex> & batch_ids) const {
   vector<unsigned> ids;
-  LookupNode* ln;
+  LookupNode* ln = nullptr;
   for(auto batch_id : batch_ids) {
     ln = static_cast<LookupNode*>(cg.nodes[batch_id]);
     if(ln->pindex != nullptr)
