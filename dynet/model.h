@@ -667,6 +667,12 @@ private:
 void save_dynet_model(std::string filename, ParameterCollection* model);
 void load_dynet_model(std::string filename, ParameterCollection* model);
 
+class Model : public ParameterCollection {
+public:
+  Model();
+};
+
 } // namespace dynet
+
 
 #endif

@@ -780,4 +780,9 @@ float ParameterCollection::gradient_l2_norm() const {
 }
 #endif
 
+Model::Model() : ParameterCollection() {
+  cerr << "The name dynet::Model has been deprecated and replaced by dynet::ParameterCollection." << endl
+       << "Please replace references to dynet::Model with references to dynet::ParameterCollection." << endl;
+}
+
 } // namespace dynet
