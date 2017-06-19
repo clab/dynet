@@ -1687,6 +1687,20 @@ BOOST_AUTO_TEST_CASE( lookup_autobatch_diffmodel_test ) {
   dynet::autobatch_flag = autobatch_cache;
 }
 
+// Expression lookup();
+BOOST_AUTO_TEST_CASE( lookup_autobatch_and_manbatch_test ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  for(dynet::autobatch_flag = 0; dynet::autobatch_flag < 2; ++dynet::autobatch_flag) {
+    dynet::ComputationGraph cg;
+    Expression x1 = lookup(cg, lookup1, {0,1});
+    Expression x2 = lookup(cg, lookup1, {2,0});
+    Expression y = x1 + x2;
+    Expression z = sum_batches(sum_elems(y));
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+  dynet::autobatch_flag = autobatch_cache;
+}
+
 // Expression parameter() with lookup parameter input;
 BOOST_AUTO_TEST_CASE( lookup_matrix_test ) {
   dynet::ComputationGraph cg;
