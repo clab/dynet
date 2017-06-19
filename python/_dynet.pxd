@@ -9,6 +9,8 @@ cdef extern from "dynet/init.h" namespace "dynet":
         unsigned random_seed
         string mem_descriptor
         float weight_decay
+        int autobatch
+        int autobatch_debug
         bool shared_parameters
         bool ngpus_requested
         bool ids_requested

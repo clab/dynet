@@ -79,6 +79,28 @@ cdef class DynetParams: # {{{
         """
         self.cparams.random_seed = random_seed
 
+    cpdef set_autobatch(self, bool autobatch):
+        """Activate autobatching
+        
+        Args:
+            autobatch(bool): Set to :code:`True` to activate autobatching
+        """
+        if autobatch:
+            self.cparams.autobatch = 1
+        else:
+            self.cparams.autobatch = 0
+
+    cpdef set_autobatch_debug(self, bool autobatch_debug):
+        """Activate autobatching debug
+        
+        Args:
+            autobatch(bool): Set to :code:`True` to activate autobatching debug
+        """
+        if autobatch_debug:
+            self.cparams.autobatch_debug = 1
+        else:
+            self.cparams.autobatch_debug = 0
+
     cpdef set_weight_decay(self, float weight_decay):
         """Set weight decay parameter
         
@@ -490,12 +512,10 @@ cdef class Parameters: # {{{
         del loader
 
     cpdef shape(self):
-        """[summary]
-        
-        [description]
+        """Returns shape of the parameter
         
         Returns:
-            [type]: [description]
+            tuple: Shape of the parameter
         """
         return c_dim_as_shape(self.thisptr.get_storage().dim)
 
@@ -520,27 +540,24 @@ cdef class Parameters: # {{{
     cpdef clip_inplace(self, float left, float right):
         """Clip the values in the parameter to a fixed range [left, right] (in place)
         
-        Returns:
-            None
+        Args:
+            arr(np.ndarray): Scale
         """
         self.thisptr.clip_inplace(left, right)
         
     # TODO: make more efficient
-    cpdef load_array(self, arr):
-        """Deprecated
+    cpdef set_value(self, arr):
+        """Set value of the parameter
+
         """
-        assert(False),"This method is depracated. Use instead model.parameters_from_numpy(arr)."
         cdef CTensor t
         cdef float* vals
         t = self.thisptr.get_storage().values
         shape = arr.shape
-        if len(shape) == 1:
-            assert(t.d.ndims() == 1)
-            assert(t.d.size() == arr.size)
-        if len(shape) == 2:
-            assert(t.d.rows() == shape[0] and t.d.cols() == shape[1])
+        if self.shape() != shape:
+            raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
         vals = t.v
-        arr = arr.flatten()
+        arr = arr.flatten(order='F')
         for i in xrange(arr.size):
             vals[i] = arr[i]
 
@@ -1690,7 +1707,7 @@ def matInput(int d1, int d2):
     Returns:
         dynet.Expression: [description]
     """
-    return _cg.inputMatrix(d1, d2)
+    raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
 def inputMatrix(vector[float] v, tuple d):
     """DEPRECATED : use inputTensor
@@ -1711,7 +1728,7 @@ def inputMatrix(vector[float] v, tuple d):
         array([[ 1.,  3.,  5.],
                [ 2.,  4.,  6.]])
     """
-    return _cg.inputMatrixLiteral(v, d)
+    raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
 def inputTensor(arr,batched=False):
     """Creates a tensor expression based on a numpy array or a list.

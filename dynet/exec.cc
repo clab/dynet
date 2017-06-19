@@ -128,6 +128,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
     }
   }
 
+  // for(VariableIndex vi = (VariableIndex)0; vi <= i; ++vi) cerr << "nfxs[" << vi << "] == " << print_vec(as_vector(nfxs[vi])) << endl;
   return nfxs[i];
 }
 
@@ -211,6 +212,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     if(i <= from_where)
       static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
+  // for(VariableIndex vi = (VariableIndex)0; vi <= backward_computed; ++vi) cerr << "ndEdfs[" << vi << "] == " << print_vec(as_vector(ndEdfs[vi])) << endl;
 
 }
 
@@ -632,7 +634,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           my_aux = node->aux_storage_size();
           node2offset[curr_node] = tot_main;
           tot_main += my_main;
-          node->aux_mem = (void*)my_aux;
+          node->aux_mem = (void*)tot_aux;
           tot_aux += my_aux;
         }
 
@@ -640,14 +642,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         // Allocate main/auxiliary memory for the batch
         float *head_main = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_main * sizeof(float)));
         if(head_main == nullptr) DYNET_RUNTIME_ERR("Ran out of memory when executing batch " << bid);
-        // for(auto curr_node : batch_ids)
-        //   nfxs[curr_node].v = head_main + node2diff[curr_node];
-        void *head_aux = nullptr;
+        // for(auto curr_node : batch_ids) nfxs[curr_node].v = head_main + node2diff[curr_node];
+        char *head_aux = nullptr;
         if(tot_aux > 0) {
-          head_aux = static_cast<void*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_aux));
+          head_aux = static_cast<char*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_aux));
           if(head_aux == nullptr) DYNET_RUNTIME_ERR("Ran out of memory when executing node " << bid);
           for(auto curr_node : batch_ids)
-            cg.nodes[curr_node]->aux_mem = (void*)((ptrdiff_t)head_aux + (ptrdiff_t)cg.nodes[curr_node]->aux_mem);
+            cg.nodes[curr_node]->aux_mem = (void*)(head_aux + (ptrdiff_t)cg.nodes[curr_node]->aux_mem);
         }
 
         // Get the concatenation and pseudo-node info
@@ -749,7 +750,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     free(node2profid);
   }
 
-
+  // for(VariableIndex vi = (VariableIndex)0; vi <= upto; ++vi) cerr << "nfxs[" << vi << "] == " << print_vec(as_vector(get_nfx(vi))) << endl;
   return get_nfx(upto);
 }
 
@@ -959,6 +960,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
     if(i < (VariableIndex)ndEdfs.size() && ndEdfs[i].v != nullptr)
       static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
+  // for(VariableIndex vi = (VariableIndex)0; vi <= backward_computed; ++vi) cerr << "ndEdfs[" << vi << "] == " << print_vec(as_vector(ndEdfs[vi])) << endl;
 
 }
 
