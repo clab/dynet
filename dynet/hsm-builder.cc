@@ -10,8 +10,6 @@ using namespace std;
 
 namespace dynet {
 
-using namespace expr;
-
 Cluster::Cluster() {}
 void Cluster::new_graph(ComputationGraph& cg) {
   for (Cluster* child : children) {
@@ -108,12 +106,12 @@ Expression Cluster::neg_log_softmax(Expression h, unsigned r, ComputationGraph& 
   }
 }
 
-unsigned Cluster::sample(expr::Expression h, ComputationGraph& cg) const {
+unsigned Cluster::sample(Expression h, ComputationGraph& cg) const {
   if (output_size == 1) {
     return 0;
   }
   else if (output_size == 2) {
-    expr::Expression prob0_expr = logistic(predict(h, cg));
+    Expression prob0_expr = logistic(predict(h, cg));
     double prob0 = as_scalar(cg.incremental_forward(prob0_expr));
     double p = rand01();
     if (p < prob0) {
@@ -124,7 +122,7 @@ unsigned Cluster::sample(expr::Expression h, ComputationGraph& cg) const {
     }
   }
   else {
-    expr::Expression dist_expr = softmax(predict(h, cg));
+    Expression dist_expr = softmax(predict(h, cg));
     vector<float> dist = as_vector(cg.incremental_forward(dist_expr));
     unsigned c = 0;
     double p = rand01();
@@ -212,7 +210,7 @@ Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, un
   return sum(log_probs);
 }
 
-unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
+unsigned HierarchicalSoftmaxBuilder::sample(const Expression& rep) {
   if(pcg != NULL)
     DYNET_INVALID_ARG("In HierarchicalSoftmaxBuilder, you must call new_graph before calling sample!");
 
@@ -230,7 +228,7 @@ unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
 
 Expression HierarchicalSoftmaxBuilder::full_log_distribution(const Expression& rep) {
   DYNET_RUNTIME_ERR("full_distribution not implemented for HierarchicalSoftmaxBuilder");
-  return dynet::expr::Expression();
+  return dynet::Expression();
 }
 
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }

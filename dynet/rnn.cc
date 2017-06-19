@@ -10,7 +10,6 @@
 #include "dynet/param-init.h"
 
 using namespace std;
-using namespace dynet::expr;
 using namespace dynet;
 
 namespace dynet {

@@ -51,8 +51,6 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include "model.h"
 #include "tensor.h"
 #include "dynet.h"
@@ -86,9 +84,9 @@ VECTORCONSTRUCTOR(float, Float, FloatVector)
 VECTORCONSTRUCTOR(double, Double, DoubleVector)
 VECTORCONSTRUCTOR(int, Integer, IntVector)
 VECTORCONSTRUCTOR(unsigned, Integer, UnsignedVector)
-VECTORCONSTRUCTOR(dynet::expr::Expression, Expression, ExpressionVector)
+VECTORCONSTRUCTOR(dynet::Expression, Expression, ExpressionVector)
 VECTORCONSTRUCTOR(dynet::Parameter, Parameter, ParameterVector)
-VECTORCONSTRUCTOR(std::vector<dynet::expr::Expression>, ExpressionVector, ExpressionVectorVector)
+VECTORCONSTRUCTOR(std::vector<dynet::Expression>, ExpressionVector, ExpressionVectorVector)
 VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVectorVector)
 
 
@@ -107,7 +105,7 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 %pointer_functions(int, intp);
 %pointer_functions(float, floatp);
 
-struct dynet::expr::Expression;
+struct dynet::Expression;
 
 // Declare explicit types for needed instantiations of generic types
 namespace std {
@@ -117,10 +115,10 @@ namespace std {
   %template(FloatVector)                  vector<float>;
   %template(LongVector)                   vector<long>;
   %template(StringVector)                 vector<std::string>;
-  %template(ExpressionVector)             vector<dynet::expr::Expression>;
+  %template(ExpressionVector)             vector<dynet::Expression>;
   %template(ParameterStorageVector)       vector<dynet::ParameterStorage*>;
   %template(LookupParameterStorageVector) vector<dynet::LookupParameterStorage*>;
-  %template(ExpressionVectorVector)       vector<vector<dynet::expr::Expression>>;
+  %template(ExpressionVectorVector)       vector<vector<dynet::Expression>>;
   %template(ParameterVector)              vector<dynet::Parameter>;
   %template(ParameterVectorVector)        vector<vector<dynet::Parameter>>;
 }
@@ -439,7 +437,6 @@ struct Average;
 
 struct ComputationGraph;
 
-namespace expr {
 struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
@@ -522,11 +519,11 @@ Expression min(const Expression& x, const Expression& y);
 // gets unhappy when you use it to overload a function, so we have to define
 // the `ExpressionVector` version of `max` explicitly.
 %{
-namespace dynet { namespace expr {
+namespace dynet {
 Expression max(const std::vector<Expression>& xs) {
   return detail::f<Max, std::vector<Expression>>(xs);
 };
-} }
+}
 %}
 
 Expression max(const Expression& x, const Expression& y);
@@ -581,7 +578,7 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u);
 // Concatenate and ConcatenateCols got changed around, need to implement
 // explicitly now.
 %{
-namespace dynet { namespace expr {
+namespace dynet {
 inline Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0) {
   return detail::f<Concatenate>(xs, d);
 };
@@ -589,7 +586,7 @@ inline Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0)
 inline Expression concatenate_cols(const std::vector<Expression>& xs) {
   return detail::f<Concatenate>(xs, 1);
 };
-} }
+}
 %}
 
 Expression concatenate(const std::vector<Expression>& xs);
@@ -637,8 +634,6 @@ Expression trace_of_product(const Expression& x, const Expression& y);
 
 Expression layer_norm(const Expression& x, const Expression& g, const Expression& b);
 Expression weight_norm(const Expression& w, const Expression& g);
-
-} // namespace expr
 
 /////////////////////////////////////
 // declarations from dynet/dynet.h //
@@ -689,14 +684,14 @@ struct ComputationGraph {
 
   Dim& get_dimension(VariableIndex index) const;
 
-  const Tensor& forward(const expr::Expression& last);
+  const Tensor& forward(const Expression& last);
   //const Tensor& forward(VariableIndex i);
-  const Tensor& incremental_forward(const expr::Expression& last);
+  const Tensor& incremental_forward(const Expression& last);
   //const Tensor& incremental_forward(VariableIndex i);
   //const Tensor& get_value(VariableIndex i);
-  const Tensor& get_value(const expr::Expression& e);
+  const Tensor& get_value(const Expression& e);
   void invalidate();
-  void backward(const expr::Expression& last);
+  void backward(const Expression& last);
   //void backward(VariableIndex i);
 
   void print_graphviz() const;
@@ -769,8 +764,6 @@ struct AdamTrainer : public Trainer {
 
 %nodefaultctor RNNBuilder;
 struct RNNBuilder {
-  using namespace dynet::expr;
-
   RNNPointer state() const;
   void new_graph(ComputationGraph& cg);
   void start_new_sequence(const std::vector<Expression>& h_0 = {});
@@ -797,7 +790,6 @@ struct RNNBuilder {
 };
 
 struct SimpleRNNBuilder : public RNNBuilder {
-  using namespace dynet::expr;
   SimpleRNNBuilder() = default;
 
   explicit SimpleRNNBuilder(unsigned layers,
@@ -827,8 +819,6 @@ struct SimpleRNNBuilder : public RNNBuilder {
 ////////////////////////////////////
 
 struct LSTMBuilder : public RNNBuilder {
-  using namespace dynet::expr;
-
   LSTMBuilder() = default;
   explicit LSTMBuilder(unsigned layers,
                        unsigned input_dim,

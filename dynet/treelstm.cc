@@ -8,7 +8,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 enum { X2I, BI, X2F, BF, X2O, BO, X2C, BC };
 enum { H2I, H2F, H2O, H2C, C2I, C2F, C2O };

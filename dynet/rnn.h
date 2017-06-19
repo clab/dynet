@@ -13,8 +13,6 @@
 #include "dynet/rnn-state-machine.h"
 #include "dynet/expr.h"
 
-using namespace dynet::expr;
-
 namespace dynet {
 
 class ParameterCollection;

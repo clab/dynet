@@ -18,30 +18,30 @@ public:
   virtual void new_graph(ComputationGraph& cg) = 0;
 
   // -log(p(w | rep))
-  virtual expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx) = 0;
+  virtual Expression neg_log_softmax(const Expression& rep, unsigned wordidx) = 0;
 
   // samples a word from p(w | rep)
-  virtual unsigned sample(const expr::Expression& rep) = 0;
+  virtual unsigned sample(const Expression& rep) = 0;
 
   // returns an Expression representing a vector the size of the vocabulary.
   // The ith dimension gives log p(w_i | rep). This function may be SLOW. Avoid if possible.
-  virtual expr::Expression full_log_distribution(const expr::Expression& rep) = 0;
+  virtual Expression full_log_distribution(const Expression& rep) = 0;
 };
 
 class StandardSoftmaxBuilder : public SoftmaxBuilder {
 public:
   StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, ParameterCollection& model);
   void new_graph(ComputationGraph& cg);
-  expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
-  unsigned sample(const expr::Expression& rep);
-  expr::Expression full_log_distribution(const expr::Expression& rep);
+  Expression neg_log_softmax(const Expression& rep, unsigned wordidx);
+  unsigned sample(const Expression& rep);
+  Expression full_log_distribution(const Expression& rep);
   ParameterCollection & get_parameter_collection() { return local_model; }
 private:
   StandardSoftmaxBuilder();
   Parameter p_w;
   Parameter p_b;
-  expr::Expression w;
-  expr::Expression b;
+  Expression w;
+  Expression b;
   ComputationGraph* pcg;
   ParameterCollection local_model;
 };
@@ -57,9 +57,9 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
                               ParameterCollection& model);
 
   void new_graph(ComputationGraph& cg);
-  expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
-  unsigned sample(const expr::Expression& rep);
-  expr::Expression full_log_distribution(const expr::Expression& rep);
+  Expression neg_log_softmax(const Expression& rep, unsigned wordidx);
+  unsigned sample(const Expression& rep);
+  Expression full_log_distribution(const Expression& rep);
   void initialize_expressions();
 
   ParameterCollection & get_parameter_collection() { return local_model; }
@@ -82,23 +82,23 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
   std::vector<Parameter> p_rcwbiases; // len = number of classes
 
   // Expressions for current graph
-  inline expr::Expression& get_rc2w(unsigned cluster_idx) {
-    expr::Expression& e = rc2ws[cluster_idx];
+  inline Expression& get_rc2w(unsigned cluster_idx) {
+    Expression& e = rc2ws[cluster_idx];
     if (!e.pg)
-      e = expr::parameter(*pcg, p_rc2ws[cluster_idx]);
+      e = parameter(*pcg, p_rc2ws[cluster_idx]);
     return e;
   }
-  inline expr::Expression& get_rc2wbias(unsigned cluster_idx) {
-    expr::Expression& e = rc2biases[cluster_idx];
+  inline Expression& get_rc2wbias(unsigned cluster_idx) {
+    Expression& e = rc2biases[cluster_idx];
     if (!e.pg)
-      e = expr::parameter(*pcg, p_rcwbiases[cluster_idx]);
+      e = parameter(*pcg, p_rcwbiases[cluster_idx]);
     return e;
   }
   ComputationGraph* pcg;
-  expr::Expression r2c;
-  expr::Expression cbias;
-  std::vector<expr::Expression> rc2ws;
-  std::vector<expr::Expression> rc2biases;
+  Expression r2c;
+  Expression cbias;
+  std::vector<Expression> rc2ws;
+  std::vector<Expression> rc2biases;
 };
 }  // namespace dynet
 

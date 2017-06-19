@@ -6,7 +6,6 @@
 #include "dynet/nodes-conv.h"
 
 namespace dynet {
-namespace expr {
 
 using std::vector;
 
@@ -193,5 +192,5 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 }
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
-}
-}
+
+}  // namespace dynet

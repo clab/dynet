@@ -9,8 +9,6 @@ using namespace std;
 
 namespace dynet {
 
-using namespace expr;
-
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
 inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
 

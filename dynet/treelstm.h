@@ -4,8 +4,6 @@
 #include "dynet/expr.h"
 #include "dynet/lstm.h"
 
-using namespace dynet::expr;
-
 namespace dynet {
 
 struct TreeLSTMBuilder : public RNNBuilder {
