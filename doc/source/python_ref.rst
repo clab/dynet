@@ -180,6 +180,10 @@ Arithmetic operations
 
 .. autofunction:: dynet.rectify
 
+.. autofunction:: dynet.elu
+
+.. autofunction:: dynet.selu
+
 .. autofunction:: dynet.sparsemax
 
 .. autofunction:: dynet.softsign

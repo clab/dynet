@@ -1870,6 +1870,23 @@ void Rectify::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(Rectify)
 
 template<class MyDevice>
+void ExponentialLinearUnit::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in ExponentialLinearUnit::forward");
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FELUForward(alpha, lambda));;
+}
+
+template<class MyDevice>
+void ExponentialLinearUnit::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FELUBackward(alpha, lambda));
+}
+DYNET_NODE_INST_DEV_IMPL(ExponentialLinearUnit)
+
+template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
