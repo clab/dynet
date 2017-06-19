@@ -106,7 +106,7 @@ cdef class DynetParams:
         Args:
             autobatch(bool): Set to :code:`True` to activate autobatching
         """
-        if autobatch
+        if autobatch:
             self.cparams.autobatch = 1
         else:
             self.cparams.autobatch = 0
@@ -117,7 +117,7 @@ cdef class DynetParams:
         Args:
             autobatch(bool): Set to :code:`True` to activate autobatching debug
         """
-        if autobatch_debug
+        if autobatch_debug:
             self.cparams.autobatch_debug = 1
         else:
             self.cparams.autobatch_debug = 0
@@ -311,7 +311,7 @@ cdef class Parameters:
         t = self.thisptr.get().values
         shape = arr.shape
         if self.shape() == shape:
-            raise ValueError("Shape of values and parameter don't match in Parameters.set_value"
+            raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
         vals = t.v
         arr = arr.flatten(order='F')
         for i in xrange(arr.size):
