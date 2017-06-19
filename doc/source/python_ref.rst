@@ -317,6 +317,8 @@ Convolution/Pooling operations
 
 .. autofunction:: dynet.conv2d_bias
 
+.. autofunction:: dynet.maxpooling2d
+
 .. autofunction:: dynet.filter1d_narrow
 
 .. autofunction:: dynet.kmax_pooling
