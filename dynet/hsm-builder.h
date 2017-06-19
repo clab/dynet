@@ -19,12 +19,12 @@ private:
   std::unordered_map<unsigned, unsigned> word2ind;
   Parameter p_weights;
   Parameter p_bias;
-  mutable expr::Expression weights;
-  mutable expr::Expression bias;
+  mutable Expression weights;
+  mutable Expression bias;
   unsigned rep_dim;
   unsigned output_size;
 
-  expr::Expression predict(expr::Expression h, ComputationGraph& cg) const;
+  Expression predict(Expression h, ComputationGraph& cg) const;
 
 public:
   Cluster();
@@ -34,16 +34,16 @@ public:
   void initialize(unsigned rep_dim, ParameterCollection& model);
 
   void new_graph(ComputationGraph& cg);
-  unsigned sample(expr::Expression h, ComputationGraph& cg) const;
-  expr::Expression neg_log_softmax(expr::Expression h, unsigned r, ComputationGraph& cg) const;
+  unsigned sample(Expression h, ComputationGraph& cg) const;
+  Expression neg_log_softmax(Expression h, unsigned r, ComputationGraph& cg) const;
 
   unsigned get_index(unsigned word) const;
   unsigned get_word(unsigned index) const;
   unsigned num_children() const;
   const Cluster* get_child(unsigned i) const;
   const std::vector<unsigned>& get_path() const;
-  expr::Expression get_weights(ComputationGraph& cg) const;
-  expr::Expression get_bias(ComputationGraph& cg) const;
+  Expression get_weights(ComputationGraph& cg) const;
+  Expression get_bias(ComputationGraph& cg) const;
 
   std::string toString() const;
 };
@@ -65,12 +65,12 @@ class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
   void new_graph(ComputationGraph& cg);
 
   // -log(p(c | rep) * p(w | c, rep))
-  expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
+  Expression neg_log_softmax(const Expression& rep, unsigned wordidx);
 
   // samples a word from p(w,c | rep)
-  unsigned sample(const expr::Expression& rep);
+  unsigned sample(const Expression& rep);
 
-  expr::Expression full_log_distribution(const expr::Expression& rep);
+  Expression full_log_distribution(const Expression& rep);
 
  private:
   ParameterCollection local_model;

@@ -217,8 +217,8 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
 
 
-cdef extern from "dynet/expr.h" namespace "dynet::expr":
-    cdef cppclass CExpression "dynet::expr::Expression":
+cdef extern from "dynet/expr.h" namespace "dynet":
+    cdef cppclass CExpression "dynet::Expression":
         CExpression()
         CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
@@ -226,145 +226,145 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         CDim dim() except +
         bool is_stale()
         const CTensor& gradient() except +
-    #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
-    CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) except + #
-    CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
-    CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CParameters p) except + #
-    CExpression c_parameter "dynet::expr::parameter" (CComputationGraph& g, CLookupParameters p) except + #
-    CExpression c_const_parameter "dynet::expr::const_parameter" (CComputationGraph& g, CParameters p) except + #
-    CExpression c_const_parameter "dynet::expr::const_parameter" (CComputationGraph& g, CLookupParameters p) except + #
-    #CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
-    CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
-    CExpression c_lookup "dynet::expr::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #
-    #CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
-    CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
-    CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #
-    CExpression c_zeroes "dynet::expr::zeroes" (CComputationGraph& g, CDim& d) except + #
-    CExpression c_random_normal "dynet::expr::random_normal" (CComputationGraph& g, CDim& d) except + #
-    CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale) except +
-    CExpression c_random_uniform "dynet::expr::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
-    CExpression c_random_gumbel "dynet::expr::random_gumbel" (CComputationGraph& g, CDim& d, float left, float right) except + #
+    #CExpression c_input "dynet::input" (CComputationGraph& g, float s)   #
+    CExpression c_input "dynet::input" (CComputationGraph& g, float *ps) except + #
+    CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
+    CExpression c_parameter "dynet::parameter" (CComputationGraph& g, CParameters p) except + #
+    CExpression c_parameter "dynet::parameter" (CComputationGraph& g, CLookupParameters p) except + #
+    CExpression c_const_parameter "dynet::const_parameter" (CComputationGraph& g, CParameters p) except + #
+    CExpression c_const_parameter "dynet::const_parameter" (CComputationGraph& g, CLookupParameters p) except + #
+    #CExpression c_lookup "dynet::lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
+    CExpression c_lookup "dynet::lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
+    CExpression c_lookup "dynet::lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #
+    #CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
+    CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
+    CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #
+    CExpression c_zeroes "dynet::zeroes" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_random_bernoulli "dynet::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale) except +
+    CExpression c_random_uniform "dynet::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
+    CExpression c_random_gumbel "dynet::random_gumbel" (CComputationGraph& g, CDim& d, float left, float right) except + #
 
     # identity function, but derivative is not propagated through it
-    CExpression c_nobackprop "dynet::expr::nobackprop" (CExpression& x) except + #
+    CExpression c_nobackprop "dynet::nobackprop" (CExpression& x) except + #
     # identity function, but derivative takes negative as propagated through it
-    CExpression c_flip_gradient "dynet::expr::flip_gradient" (CExpression& x) except + #
+    CExpression c_flip_gradient "dynet::flip_gradient" (CExpression& x) except + #
     
-    CExpression c_op_neg "dynet::expr::operator-" (CExpression& x) except + #
-    CExpression c_op_add "dynet::expr::operator+" (CExpression& x, CExpression& y) except + #
-    CExpression c_op_scalar_add "dynet::expr::operator+" (CExpression& x, float y) except + #
-    CExpression c_op_mul "dynet::expr::operator*" (CExpression& x, CExpression& y) except + #
-    CExpression c_op_scalar_mul "dynet::expr::operator*" (CExpression& x, float y) except + #
-    CExpression c_op_scalar_div "dynet::expr::operator/" (CExpression& x, float y) except + #
-    CExpression c_op_scalar_sub "dynet::expr::operator-" (float y, CExpression& x) except + #
+    CExpression c_op_neg "dynet::operator-" (CExpression& x) except + #
+    CExpression c_op_add "dynet::operator+" (CExpression& x, CExpression& y) except + #
+    CExpression c_op_scalar_add "dynet::operator+" (CExpression& x, float y) except + #
+    CExpression c_op_mul "dynet::operator*" (CExpression& x, CExpression& y) except + #
+    CExpression c_op_scalar_mul "dynet::operator*" (CExpression& x, float y) except + #
+    CExpression c_op_scalar_div "dynet::operator/" (CExpression& x, float y) except + #
+    CExpression c_op_scalar_sub "dynet::operator-" (float y, CExpression& x) except + #
 
-    CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) except + #
-    CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) except + #
+    CExpression c_bmax "dynet::max" (CExpression& x, CExpression& y) except + #
+    CExpression c_bmin "dynet::min" (CExpression& x, CExpression& y) except + #
 
-    CExpression c_cdiv "dynet::expr::cdiv" (CExpression& x, CExpression& y) except + #
-    CExpression c_cmult "dynet::expr::cmult" (CExpression& x, CExpression& y) except + #
-    CExpression c_colwise_add "dynet::expr::colwise_add" (CExpression& x, CExpression& bias) except + #
+    CExpression c_cdiv "dynet::cdiv" (CExpression& x, CExpression& y) except + #
+    CExpression c_cmult "dynet::cmult" (CExpression& x, CExpression& y) except + #
+    CExpression c_colwise_add "dynet::colwise_add" (CExpression& x, CExpression& bias) except + #
 
-    CExpression c_tanh "dynet::expr::tanh" (CExpression& x) except + #
-    CExpression c_exp "dynet::expr::exp" (CExpression& x) except + #
-    CExpression c_square "dynet::expr::square" (CExpression& x) except + #
-    CExpression c_sqrt "dynet::expr::sqrt" (CExpression& x) except + #
-    CExpression c_abs "dynet::expr::abs" (CExpression& x) except + #
-    CExpression c_erf "dynet::expr::erf" (CExpression& x) except + #
-    CExpression c_cube "dynet::expr::cube" (CExpression& x) except + #
-    CExpression c_log "dynet::expr::log" (CExpression& x) except + #
-    CExpression c_lgamma "dynet::expr::lgamma" (CExpression& x) except + #
-    CExpression c_logistic "dynet::expr::logistic" (CExpression& x) except + #
-    CExpression c_rectify "dynet::expr::rectify" (CExpression& x) except + #
-    #CExpression c_hinge "dynet::expr::hinge" (CExpression& x, unsigned index, float m=?) except + #
-    CExpression c_hinge "dynet::expr::hinge" (CExpression& x, unsigned* pindex, float m) except + #
-    CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x) except + #
-    CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x, vector[unsigned]& restriction) except + #?
-    CExpression c_softmax "dynet::expr::softmax" (CExpression& x) except + #
-    CExpression c_sparsemax "dynet::expr::sparsemax" (CExpression& x) except + #
-    CExpression c_softsign "dynet::expr::softsign" (CExpression& x) except + #
-    CExpression c_pow "dynet::expr::pow" (CExpression& x, CExpression& y) except + #
-    CExpression c_bmin "dynet::expr::min" (CExpression& x, CExpression& y) except + #
-    CExpression c_bmax "dynet::expr::max" (CExpression& x, CExpression& y) except + #
-    CExpression c_noise "dynet::expr::noise" (CExpression& x, float stddev) except + #
-    CExpression c_dropout "dynet::expr::dropout" (CExpression& x, float p) except + #
-    CExpression c_dropout_batch "dynet::expr::dropout_batch" (CExpression& x, float p) except + #
-    CExpression c_dropout_dim "dynet::expr::dropout_dim" (CExpression& x, unsigned d, float p) except + #
-    CExpression c_block_dropout "dynet::expr::block_dropout" (CExpression& x, float p) except + #
+    CExpression c_tanh "dynet::tanh" (CExpression& x) except + #
+    CExpression c_exp "dynet::exp" (CExpression& x) except + #
+    CExpression c_square "dynet::square" (CExpression& x) except + #
+    CExpression c_sqrt "dynet::sqrt" (CExpression& x) except + #
+    CExpression c_abs "dynet::abs" (CExpression& x) except + #
+    CExpression c_erf "dynet::erf" (CExpression& x) except + #
+    CExpression c_cube "dynet::cube" (CExpression& x) except + #
+    CExpression c_log "dynet::log" (CExpression& x) except + #
+    CExpression c_lgamma "dynet::lgamma" (CExpression& x) except + #
+    CExpression c_logistic "dynet::logistic" (CExpression& x) except + #
+    CExpression c_rectify "dynet::rectify" (CExpression& x) except + #
+    #CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m=?) except + #
+    CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned* pindex, float m) except + #
+    CExpression c_log_softmax "dynet::log_softmax" (CExpression& x) except + #
+    CExpression c_log_softmax "dynet::log_softmax" (CExpression& x, vector[unsigned]& restriction) except + #?
+    CExpression c_softmax "dynet::softmax" (CExpression& x) except + #
+    CExpression c_sparsemax "dynet::sparsemax" (CExpression& x) except + #
+    CExpression c_softsign "dynet::softsign" (CExpression& x) except + #
+    CExpression c_pow "dynet::pow" (CExpression& x, CExpression& y) except + #
+    CExpression c_bmin "dynet::min" (CExpression& x, CExpression& y) except + #
+    CExpression c_bmax "dynet::max" (CExpression& x, CExpression& y) except + #
+    CExpression c_noise "dynet::noise" (CExpression& x, float stddev) except + #
+    CExpression c_dropout "dynet::dropout" (CExpression& x, float p) except + #
+    CExpression c_dropout_batch "dynet::dropout_batch" (CExpression& x, float p) except + #
+    CExpression c_dropout_dim "dynet::dropout_dim" (CExpression& x, unsigned d, float p) except + #
+    CExpression c_block_dropout "dynet::block_dropout" (CExpression& x, float p) except + #
 
-    CExpression c_reshape "dynet::expr::reshape" (CExpression& x, CDim& d) except + #?
-    CExpression c_transpose "dynet::expr::transpose" (CExpression& x, vector[unsigned]& dims) except + #
+    CExpression c_reshape "dynet::reshape" (CExpression& x, CDim& d) except + #?
+    CExpression c_transpose "dynet::transpose" (CExpression& x, vector[unsigned]& dims) except + #
 
-    CExpression c_affine_transform "dynet::expr::affine_transform" (const vector[CExpression]& xs) except +
+    CExpression c_affine_transform "dynet::affine_transform" (const vector[CExpression]& xs) except +
 
-    CExpression c_inverse "dynet::expr::inverse" (CExpression& x) except + #
-    CExpression c_logdet "dynet::expr::logdet" (CExpression& x) except + #
-    CExpression c_trace_of_product "dynet::expr::trace_of_product" (CExpression& x, CExpression& y) except +;
+    CExpression c_inverse "dynet::inverse" (CExpression& x) except + #
+    CExpression c_logdet "dynet::logdet" (CExpression& x) except + #
+    CExpression c_trace_of_product "dynet::trace_of_product" (CExpression& x, CExpression& y) except +;
 
-    CExpression c_dot_product "dynet::expr::dot_product" (CExpression& x, CExpression& y) except + #
-    CExpression c_squared_distance "dynet::expr::squared_distance" (CExpression& x, CExpression& y) except + #
-    CExpression c_squared_norm "dynet::expr::squared_norm" (CExpression& x) except + #
-    CExpression c_huber_distance "dynet::expr::huber_distance" (CExpression& x, CExpression& y, float c) except + #
-    CExpression c_l1_distance "dynet::expr::l1_distance" (CExpression& x, CExpression& y) except + #
-    CExpression c_binary_log_loss "dynet::expr::binary_log_loss" (CExpression& x, CExpression& y) except + #
-    CExpression c_pairwise_rank_loss "dynet::expr::pairwise_rank_loss" (CExpression& x, CExpression& y, float m) except + #
-    CExpression c_poisson_loss "dynet::expr::poisson_loss" (CExpression& x, unsigned y) except +
+    CExpression c_dot_product "dynet::dot_product" (CExpression& x, CExpression& y) except + #
+    CExpression c_squared_distance "dynet::squared_distance" (CExpression& x, CExpression& y) except + #
+    CExpression c_squared_norm "dynet::squared_norm" (CExpression& x) except + #
+    CExpression c_huber_distance "dynet::huber_distance" (CExpression& x, CExpression& y, float c) except + #
+    CExpression c_l1_distance "dynet::l1_distance" (CExpression& x, CExpression& y) except + #
+    CExpression c_binary_log_loss "dynet::binary_log_loss" (CExpression& x, CExpression& y) except + #
+    CExpression c_pairwise_rank_loss "dynet::pairwise_rank_loss" (CExpression& x, CExpression& y, float m) except + #
+    CExpression c_poisson_loss "dynet::poisson_loss" (CExpression& x, unsigned y) except +
 
-    #CExpression c_conv1d_narrow "dynet::expr::conv1d_narrow" (CExpression& x, CExpression& f) except + #
-    #CExpression c_conv1d_wide "dynet::expr::conv1d_wide" (CExpression& x, CExpression& f) except + #
-    CExpression c_filter1d_narrow "dynet::expr::filter1d_narrow" (CExpression& x, CExpression& f) except + #
-    CExpression c_kmax_pooling "dynet::expr::kmax_pooling" (CExpression& x, unsigned k, unsigned d) except + #
-    CExpression c_fold_rows "dynet::expr::fold_rows" (CExpression& x, unsigned nrows) except + #
-    CExpression c_sum_cols "dynet::expr::sum_cols" (CExpression& x) except +               #
-    CExpression c_kmh_ngram "dynet::expr::kmh_ngram" (CExpression& x, unsigned n) except + #
-    CExpression c_conv2d "dynet::expr::conv2d" (CExpression& x, CExpression& f, vector[unsigned] stride, bool is_valid) except + #
-    CExpression c_conv2d "dynet::expr::conv2d" (CExpression& x, CExpression& f, CExpression& b, vector[unsigned] stride, bool is_valid) except + #
-    CExpression c_maxpooling2d "dynet::expr::maxpooling2d" (CExpression& x, vector[unsigned] ksize, vector[unsigned] stride, bool is_valid) except + #
+    #CExpression c_conv1d_narrow "dynet::conv1d_narrow" (CExpression& x, CExpression& f) except + #
+    #CExpression c_conv1d_wide "dynet::conv1d_wide" (CExpression& x, CExpression& f) except + #
+    CExpression c_filter1d_narrow "dynet::filter1d_narrow" (CExpression& x, CExpression& f) except + #
+    CExpression c_kmax_pooling "dynet::kmax_pooling" (CExpression& x, unsigned k, unsigned d) except + #
+    CExpression c_fold_rows "dynet::fold_rows" (CExpression& x, unsigned nrows) except + #
+    CExpression c_sum_cols "dynet::sum_cols" (CExpression& x) except +               #
+    CExpression c_kmh_ngram "dynet::kmh_ngram" (CExpression& x, unsigned n) except + #
+    CExpression c_conv2d "dynet::conv2d" (CExpression& x, CExpression& f, vector[unsigned] stride, bool is_valid) except + #
+    CExpression c_conv2d "dynet::conv2d" (CExpression& x, CExpression& f, CExpression& b, vector[unsigned] stride, bool is_valid) except + #
+    CExpression c_maxpooling2d "dynet::maxpooling2d" (CExpression& x, vector[unsigned] ksize, vector[unsigned] stride, bool is_valid) except + #
 
-    CExpression c_sum_batches "dynet::expr::sum_batches" (CExpression& x) except +
-    CExpression c_sum_elems "dynet::expr::sum_elems" (CExpression& x) except +
-    CExpression c_moment_batches "dynet::expr::moment_batches" (CExpression& x, unsigned r) except +
-    CExpression c_moment_elems "dynet::expr::moment_elems" (CExpression& x, unsigned r) except +
-    CExpression c_moment_dim "dynet::expr::moment_dim" (CExpression& x, unsigned d, unsigned r) except +
-    CExpression c_mean_elems "dynet::expr::mean_elems" (CExpression& x) except +
-    CExpression c_mean_batches "dynet::expr::mean_batches" (CExpression& x) except +
-    CExpression c_mean_dim "dynet::expr::mean_dim" (CExpression& x, unsigned d) except +
-    CExpression c_std_dim "dynet::expr::std_dim" (CExpression& x, unsigned d) except +
-    CExpression c_std_elems "dynet::expr::std_elems" (CExpression& x) except +
-    CExpression c_std_batches "dynet::expr::std_batches" (CExpression& x) except +
+    CExpression c_sum_batches "dynet::sum_batches" (CExpression& x) except +
+    CExpression c_sum_elems "dynet::sum_elems" (CExpression& x) except +
+    CExpression c_moment_batches "dynet::moment_batches" (CExpression& x, unsigned r) except +
+    CExpression c_moment_elems "dynet::moment_elems" (CExpression& x, unsigned r) except +
+    CExpression c_moment_dim "dynet::moment_dim" (CExpression& x, unsigned d, unsigned r) except +
+    CExpression c_mean_elems "dynet::mean_elems" (CExpression& x) except +
+    CExpression c_mean_batches "dynet::mean_batches" (CExpression& x) except +
+    CExpression c_mean_dim "dynet::mean_dim" (CExpression& x, unsigned d) except +
+    CExpression c_std_dim "dynet::std_dim" (CExpression& x, unsigned d) except +
+    CExpression c_std_elems "dynet::std_elems" (CExpression& x) except +
+    CExpression c_std_batches "dynet::std_batches" (CExpression& x) except +
 
-    #CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned v) except +   #
-    CExpression c_select_rows "dynet::expr::select_rows" (CExpression& x, vector[unsigned] rs) except +
-    CExpression c_select_cols "dynet::expr::select_cols" (CExpression& x, vector[unsigned] cs) except +
-    CExpression c_pick "dynet::expr::pick" (CExpression& x, unsigned* pv, unsigned d) except + #
-    CExpression c_pick "dynet::expr::pick" (CExpression& x, vector[unsigned]* pv, unsigned d) except + #
-    CExpression c_pick_range "dynet::expr::pick_range" (CExpression& x, unsigned v, unsigned u, unsigned d) except + #
+    #CExpression c_pick "dynet::pick" (CExpression& x, unsigned v) except +   #
+    CExpression c_select_rows "dynet::select_rows" (CExpression& x, vector[unsigned] rs) except +
+    CExpression c_select_cols "dynet::select_cols" (CExpression& x, vector[unsigned] cs) except +
+    CExpression c_pick "dynet::pick" (CExpression& x, unsigned* pv, unsigned d) except + #
+    CExpression c_pick "dynet::pick" (CExpression& x, vector[unsigned]* pv, unsigned d) except + #
+    CExpression c_pick_range "dynet::pick_range" (CExpression& x, unsigned v, unsigned u, unsigned d) except + #
 
-    CExpression c_pick_batch_elems "dynet::expr::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
-    CExpression c_pick_batch_elem "dynet::expr::pick_batch_elem" (CExpression& x, unsigned v) except + #
-    CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, unsigned v) except + #
-    CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) except + #
+    CExpression c_pick_batch_elems "dynet::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
+    CExpression c_pick_batch_elem "dynet::pick_batch_elem" (CExpression& x, unsigned v) except + #
+    CExpression c_pickneglogsoftmax "dynet::pickneglogsoftmax" (CExpression& x, unsigned v) except + #
+    CExpression c_pickneglogsoftmax "dynet::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) except + #
 
-    CExpression c_contract3d_1d "dynet::expr::contract3d_1d" (CExpression& x, CExpression& y) except + #
-    CExpression c_contract3d_1d "dynet::expr::contract3d_1d" (CExpression& x, CExpression& y, CExpression& b) except + #
-    CExpression c_contract3d_1d_1d "dynet::expr::contract3d_1d_1d" (CExpression& x, CExpression& y, CExpression& z) except + #
-    CExpression c_contract3d_1d_1d "dynet::expr::contract3d_1d_1d" (CExpression& x, CExpression& y, CExpression& z, CExpression& b) except + #
+    CExpression c_contract3d_1d "dynet::contract3d_1d" (CExpression& x, CExpression& y) except + #
+    CExpression c_contract3d_1d "dynet::contract3d_1d" (CExpression& x, CExpression& y, CExpression& b) except + #
+    CExpression c_contract3d_1d_1d "dynet::contract3d_1d_1d" (CExpression& x, CExpression& y, CExpression& z) except + #
+    CExpression c_contract3d_1d_1d "dynet::contract3d_1d_1d" (CExpression& x, CExpression& y, CExpression& z, CExpression& b) except + #
     
     # expecting a vector of CExpression
-    CExpression c_average     "dynet::expr::average" (vector[CExpression]& xs) except +
-    CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs) except +
-    CExpression c_concat      "dynet::expr::concatenate" (vector[CExpression]& xs, unsigned d) except +
-    CExpression c_concat_to_batch      "dynet::expr::concatenate_to_batch" (vector[CExpression]& xs) except +
+    CExpression c_average     "dynet::average" (vector[CExpression]& xs) except +
+    CExpression c_concat_cols "dynet::concatenate_cols" (vector[CExpression]& xs) except +
+    CExpression c_concat      "dynet::concatenate" (vector[CExpression]& xs, unsigned d) except +
+    CExpression c_concat_to_batch      "dynet::concatenate_to_batch" (vector[CExpression]& xs) except +
 
-    CExpression c_sum            "dynet::expr::sum" (vector[CExpression]& xs) except +
-    CExpression c_max            "dynet::expr::vmax" (vector[CExpression]& xs) except +
-    CExpression c_logsumexp      "dynet::expr::logsumexp" (vector[CExpression]& xs) except +
+    CExpression c_sum            "dynet::sum" (vector[CExpression]& xs) except +
+    CExpression c_max            "dynet::vmax" (vector[CExpression]& xs) except +
+    CExpression c_logsumexp      "dynet::logsumexp" (vector[CExpression]& xs) except +
 
-    CExpression c_max_dim "dynet::expr::max_dim" (CExpression& x, unsigned d) except + #
-    CExpression c_min_dim "dynet::expr::min_dim" (CExpression& x, unsigned d) except + #
+    CExpression c_max_dim "dynet::max_dim" (CExpression& x, unsigned d) except + #
+    CExpression c_min_dim "dynet::min_dim" (CExpression& x, unsigned d) except + #
 
-    CExpression c_layer_norm "dynet::expr::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
-    CExpression c_weight_norm "dynet::expr::weight_norm" (CExpression& w, CExpression& g) except + #
+    CExpression c_layer_norm "dynet::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
+    CExpression c_weight_norm "dynet::weight_norm" (CExpression& w, CExpression& g) except + #
 
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNPointer "dynet::RNNPointer":

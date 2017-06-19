@@ -9,7 +9,6 @@
 #include "dynet/nodes.h"
 
 using namespace std;
-using namespace dynet::expr;
 
 namespace dynet {
 

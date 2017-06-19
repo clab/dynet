@@ -353,16 +353,16 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
   }
 }
 
-const Tensor& ComputationGraph::incremental_forward(const expr::Expression& last) { return ee->incremental_forward(last.i); }
-const Tensor& ComputationGraph::forward(const expr::Expression& last) { return ee->forward(last.i); }
+const Tensor& ComputationGraph::incremental_forward(const Expression& last) { return ee->incremental_forward(last.i); }
+const Tensor& ComputationGraph::forward(const Expression& last) { return ee->forward(last.i); }
 const Tensor& ComputationGraph::incremental_forward(VariableIndex last) { return ee->incremental_forward(last); }
 const Tensor& ComputationGraph::forward(VariableIndex last) { return ee->forward(last); }
 const Tensor& ComputationGraph::get_value(VariableIndex i) { return ee->get_value(i); }
-const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return this->get_value(e.i); }
+const Tensor& ComputationGraph::get_value(const Expression& e) { return this->get_value(e.i); }
 const Tensor& ComputationGraph::get_gradient(VariableIndex i) { return ee->get_gradient(i); }
-const Tensor& ComputationGraph::get_gradient(const expr::Expression& e) { return this->get_gradient(e.i); }
+const Tensor& ComputationGraph::get_gradient(const Expression& e) { return this->get_gradient(e.i); }
 void ComputationGraph::invalidate() { ee->invalidate(); }
-void ComputationGraph::backward(const expr::Expression& last, bool full) { ee->backward(last.i, full); }
+void ComputationGraph::backward(const Expression& last, bool full) { ee->backward(last.i, full); }
 void ComputationGraph::backward(VariableIndex i, bool full) { ee->backward(i, full); }
 
 void ComputationGraph::set_immediate_compute(bool ic) {

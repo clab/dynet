@@ -36,7 +36,7 @@ int get_number_of_active_graphs();
 /**
  * \ingroup compgraph
  * \brief Get id of the current active graph
- * \details This can help check whether a graph is stale 
+ * \details This can help check whether a graph is stale
  * \return Id of the current graph
  */
 unsigned get_current_graph_id();
@@ -52,7 +52,7 @@ extern Device* default_device; // where parameters go by default
 class ExecutionEngine;
 struct ParameterNodeBase;
 struct Node;
-namespace expr { struct Expression; }
+struct Expression;
 
 typedef unsigned VariableIndex;
 
@@ -305,7 +305,7 @@ struct ComputationGraph {
    * \param last Expression up to which the forward pass must be computed
    * \return Value of the `last` Expression after execution
    */
-  const Tensor& forward(const expr::Expression& last);
+  const Tensor& forward(const Expression& last);
   /**
    * \brief Run complete forward pass from first node to given one, ignoring all precomputed values.
    *
@@ -320,7 +320,7 @@ struct ComputationGraph {
    * \param last Expression up to which the forward pass must be computed
    * \return Value of the `last` Expression after execution
    */
-  const Tensor& incremental_forward(const expr::Expression& last);
+  const Tensor& incremental_forward(const Expression& last);
   /**
    * \brief Run forward pass from the last computed node to given one.
    * \details Useful if you want to add nodes and evaluate just the new parts.
@@ -344,7 +344,7 @@ struct ComputationGraph {
    * \param e Expression from which you want the value
    * \return Requested value
    */
-  const Tensor& get_value(const expr::Expression& e);
+  const Tensor& get_value(const Expression& e);
 
   /**
    * \brief Get gradient for node at index i.
@@ -361,41 +361,41 @@ struct ComputationGraph {
    * \param e Expression from which you want the gradient
    * \return Requested gradient
    */
-  const Tensor& get_gradient(const expr::Expression& e);
+  const Tensor& get_gradient(const Expression& e);
   /**
    * \brief Clears forward caches (for get_value etc).
    */
   void invalidate();
   /**
    * \brief Computes backward gradients from the front-most evaluated node.
-   * 
+   *
    * \details The parameter `full` specifies whether the gradients should be computed for all nodes (`true`) or only non-constant nodes.
-   * 
+   *
    * By default, a node is constant unless
-   * 
+   *
    * 1. it is a parameter node
    * 2. it depends on a non-constant node
-   * 
+   *
    * Thus, functions of constants and inputs are considered as constants.
-   * 
+   *
    * Turn `full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    *
    * \param last Expression from which to compute the gradient
-   * \param full Whether to compute all gradients (including with respect to constant nodes). 
+   * \param full Whether to compute all gradients (including with respect to constant nodes).
    */
-  void backward(const expr::Expression& last, bool full = false);
+  void backward(const Expression& last, bool full = false);
   /**
    * \brief Computes backward gradients from node i (assuming it already been evaluated).
-   * 
+   *
    * \details The parameter `full` specifies whether the gradients should be computed for all nodes (`true`) or only non-constant nodes.
-   * 
+   *
    * By default, a node is constant unless
-   * 
+   *
    * 1. it is a parameter node
    * 2. it depends on a non-constant node
-   * 
+   *
    * Thus, functions of constants and inputs are considered as constants.
-   * 
+   *
    * Turn `full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
    *
    * \param i Index of the node from which to compute the gradient
@@ -577,12 +577,12 @@ struct Node {
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const { return std::vector<int>(); }
   /**
    * \brief create a pseudonode for autobatching
-   * \detail This will combine together multiple nodes into one big node for 
+   * \detail This will combine together multiple nodes into one big node for
    *         the automatic batching functionality. When a node representing
    *         one component of the mini-batch can be used as-is it is OK to just
    *         return the null pointer, otherwise we should make the appropriate
    *         changes and return a new node.
-   *         
+   *
    */
   virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
                                       const std::vector<VariableIndex> & batch_ids) const {

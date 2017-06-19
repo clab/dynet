@@ -25,7 +25,6 @@
 
 
 namespace dynet {
-namespace expr {
 /**
  * \ingroup operations
  * \brief Expressions are the building block of a Dynet computation graph
@@ -2031,11 +2030,7 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
  * \return An expression of the same dimension as `w`
  */
 Expression weight_norm(const Expression& w, const Expression& g);
-}
-// Because expressions are now such a fundamental part of DyNet it doesn't
-// make much sense to keep them in separate namespaces, so we import expr
-// to the dynet namespace.
-using namespace expr;
-}
+
+}  // namespace dynet
 
 #endif

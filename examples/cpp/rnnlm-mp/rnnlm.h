@@ -7,7 +7,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 unsigned LAYERS = 2;
 unsigned INPUT_DIM = 8;  //256

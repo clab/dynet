@@ -23,7 +23,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 /**
  * \ingroup ffbuilders
  * Common activation functions used in multilayer perceptrons

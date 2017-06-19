@@ -17,7 +17,6 @@
 #include "test.h"
 
 using namespace dynet;
-using namespace dynet::expr;
 using namespace std;
 
 struct IOTest {

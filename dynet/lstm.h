@@ -11,8 +11,6 @@
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
 
-using namespace dynet::expr;
-
 namespace dynet {
 
 class ParameterCollection;
