@@ -7,7 +7,7 @@ def npvalue_callable(x):
 
 def gradient_callable(x):
     return x.gradient()
-    
+
 class TestInput(unittest.TestCase):
 
     def setUp(self):
