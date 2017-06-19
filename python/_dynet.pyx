@@ -310,7 +310,7 @@ cdef class Parameters:
         cdef float* vals
         t = self.thisptr.get().values
         shape = arr.shape
-        if self.shape() == shape:
+        if self.shape() != shape:
             raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
         vals = t.v
         arr = arr.flatten(order='F')
