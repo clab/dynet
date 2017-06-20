@@ -848,6 +848,9 @@ struct WeightNormalization : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+#ifdef __CUDACC__
+inline void CUDAMatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor& r, Tensor& y, const float* acc_scalar);
+#endif
 
 } // namespace dynet
 
