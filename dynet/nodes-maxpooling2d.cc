@@ -58,17 +58,7 @@ Dim MaxPooling2D::dim_forward(const vector<Dim>& xs) const {
 }
 
 size_t MaxPooling2D::aux_storage_size() const {
-  vector<unsigned> input_size(arity());
-  for (unsigned i = 0; i < arity(); ++i) {
-    input_size[i] = get_cg()->nodes[args[i]]->dim.size();
-  }
-  size_t nbytes = 0;
-#if HAVE_CUDNN
-  nbytes += 0;
-#else
-  nbytes += sizeof(float) * (2 * input_size[0] + 2 * input_size[1] + dim.size());
-#endif
-  return nbytes;
+  return sizeof(float) * (2 * get_cg()->nodes[args[0]]->dim.size() + dim.size());
 }
 #endif
 
@@ -77,17 +67,18 @@ void MaxPooling2D::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in MaxPooling2D::forward, exactly one input");
   DYNET_ASSERT(fx.d.bd == xs[0]->d.bd, "Failed dimension check in MaxPooling2D::forward, batchsize not match");
   DYNET_ASSERT(fx.d[2] == xs[0]->d[2], "Failed dimension check in MaxPooling2D::forward, #channel not match");
+  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
 #ifdef __CUDACC__
 #if HAVE_CUDNN
   if (cudnn_maxpool_op_ == NULL) {
     cudnn_maxpool_op_ = new CudnnMaxPooling2DOp(ksize, stride, is_valid);
   }
+  cudnn_maxpool_op_->set_pool(&aux_mem_pool);
   cudnn_maxpool_op_->forward_impl(dev, xs, fx);
 #else
   throw std::runtime_error("MaxPooling2D::forward_dev_impl not supported without CUDNN");
 #endif
 #else
-  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
   // convert x from HWCN to CHWN
   void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
@@ -115,9 +106,13 @@ void MaxPooling2D::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in MaxPooling2D::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in MaxPooling2D::backward");
   DYNET_ASSERT(i == 0, "Failed dimension check in MaxPooling2D::backward: i must be 0");
+  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  DYNET_ASSERT(cudnn_maxpool_op_ != NULL, "cudnn maxpool operator is not initialized");
+  if (cudnn_maxpool_op_ == NULL) {
+    cudnn_maxpool_op_ = new CudnnMaxPooling2DOp(ksize, stride, is_valid);
+  }
+  cudnn_maxpool_op_->set_pool(&aux_mem_pool);
   cudnn_maxpool_op_->backward_impl(dev, xs, fx, dEdf, i, dEdxi);
 #else
   throw std::runtime_error("MaxPooling2D::backward_dev_impl not supported without CUDNN");

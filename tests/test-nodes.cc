@@ -1196,6 +1196,9 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
                                          .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
                                          .211f, .222f, .233f, .212f, .222f, .232f};
   TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  Parameter param_kernel2 = mod.add_parameters({2, 2, 3, 2});
+  TensorTools::set_elements(param_kernel2.get()->values, param_kernel_vals);
+
   std::vector<float> conv2d_batch_vals(2 * 50 * 50 * 2);
   for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
     conv2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
@@ -1204,8 +1207,10 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
   Expression kernel = parameter(cg, param_kernel);
   vector<unsigned> stride = {4, 4}; bool is_valid = false;
   Expression y = conv2d(x, kernel, stride, is_valid);
-  Expression z = sum_batches(sum_elems(y));
-  BOOST_CHECK(check_grad(mod, z, 0));
+  Expression kernel2 = parameter(cg, param_kernel2);
+  Expression y2 = conv2d(y, kernel2, stride, is_valid);
+  Expression z = sum_batches(sum_elems(y2));
+  BOOST_CHECK(check_grad(mod, z, 5));
 }
 
 BOOST_AUTO_TEST_CASE( maxpooling2d_same_gradient ) {
