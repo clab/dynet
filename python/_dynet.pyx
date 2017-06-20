@@ -2381,7 +2381,7 @@ cpdef Expression elu(Expression x, float alpha=1.0):
                    \\alpha\\times(e^{x_i} - 1), & \\text{if }x\leqslant 0
                  \end{array}\\right.
         
-    Reference: `Clevert et al., 2015 <https://arxiv.org/abs/1511.07289v5>_`
+    Reference: `Clevert et al., 2015 <https://arxiv.org/abs/1511.07289v5>`_
  
     Args:
         x (dynet.Expression): Input expression
@@ -2412,7 +2412,7 @@ cpdef Expression selu(Expression x):
             \\alpha &=\\texttt{1.6732632423543772848170429916717}\\\\
         \end{split}
 
-    Reference: `Klambaouer et al., 2017 <https://arxiv.org/abs/1706.02515>_`
+    Reference: `Klambaouer et al., 2017 <https://arxiv.org/abs/1706.02515>`_
  
     Args:
         x (dynet.Expression): Input expression
