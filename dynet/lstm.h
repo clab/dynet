@@ -16,7 +16,7 @@ namespace dynet {
 class ParameterCollection;
 /**
  * \ingroup rnnbuilders
- * \brief LSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
+ * \brief CoupledLSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
  *
  * \details More specifically, here are the equations for the dynamics of this cell :
  *
@@ -31,11 +31,11 @@ class ParameterCollection;
 \end{split}
 \f$
  */
-struct LSTMBuilder : public RNNBuilder {
+struct CoupledLSTMBuilder : public RNNBuilder {
   /**
    * \brief Default constructor
    */
-  LSTMBuilder() = default;
+  CoupledLSTMBuilder() = default;
   /**
    * \brief Constructor for the LSTMBuilder
    *
@@ -44,10 +44,10 @@ struct LSTMBuilder : public RNNBuilder {
    * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model ParameterCollection holding the parameters
    */
-  explicit LSTMBuilder(unsigned layers,
-                       unsigned input_dim,
-                       unsigned hidden_dim,
-                       ParameterCollection& model);
+  explicit CoupledLSTMBuilder(unsigned layers,
+                              unsigned input_dim,
+                              unsigned hidden_dim,
+                              ParameterCollection& model);
 
   Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
@@ -305,6 +305,8 @@ private:
   ComputationGraph* _cg; // Pointer to current cg
 
 };
+
+typedef VanillaLSTMBuilder LSTMBuilder;
 
 } // namespace dynet
 

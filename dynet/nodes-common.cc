@@ -1092,6 +1092,17 @@ Dim Rectify::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string ExponentialLinearUnit::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "ELU(" << arg_names[0] << ", lambda=" << lambda << ", alpha=" << alpha << ')';
+  return s.str();
+}
+
+Dim ExponentialLinearUnit::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in ExponentialLinearUnit");
+  return xs[0];
+}
+
 string HuberDistance::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||_H(" << d << ')';

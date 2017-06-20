@@ -84,6 +84,8 @@ Expression square(const Expression& x) { return Expression(x.pg, x.pg->add_funct
 Expression cube(const Expression& x) { return Expression(x.pg, x.pg->add_function<Cube>({x.i})); }
 Expression logistic(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogisticSigmoid>({x.i})); }
 Expression rectify(const Expression& x) { return Expression(x.pg, x.pg->add_function<Rectify>({x.i})); }
+Expression elu(const Expression& x, float alpha) { return Expression(x.pg, x.pg->add_function<ExponentialLinearUnit>({x.i}, 1.0, alpha)); }
+Expression selu(const Expression& x) { return Expression(x.pg, x.pg->add_function<ExponentialLinearUnit>({x.i}, 1.0507009873554804934193349852946, 1.6732632423543772848170429916717)); }
 Expression hinge(const Expression& x, unsigned index, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, index, m)); }
 Expression hinge(const Expression& x, const unsigned* pindex, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, pindex, m)); }
 Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, indices, m)); }
