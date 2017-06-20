@@ -8,7 +8,7 @@
 #include "dynet/nodes.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
-// #define DYNET_SKIP_CUDA_CONTRACTIONS
+#define DYNET_SKIP_CUDA_CONTRACTIONS
 
 
 #if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
