@@ -15,6 +15,7 @@ class CudnnConvOp {
   ~CudnnConvOp();
   /* call this function before using the CudnnConvOp */
   void set_pool(NodeMemPool* mempool) {
+    DYNET_ASSERT(mempool->used() == 0, "mempool must have been reset");
     mempool_ = mempool;
   }
   void forward_impl(const Device_GPU & dev, const std::vector<const Tensor*>& xs, Tensor& fx);
@@ -27,8 +28,8 @@ class CudnnConvOp {
   static const size_t workspace_size_limit_bytes = 8 * 1024 * 1024;
 
  protected:
-  std::vector<int> stride;
-  bool is_valid;
+  std::vector<int> stride_;
+  bool is_valid_;
 
   /* cuDNN resource */
   cudnnTensorDescriptor_t x_desc_, y_desc_;
@@ -48,10 +49,6 @@ class CudnnConvOp {
   void* bwd_data_workspace;
 
  private:
-  int pad_h = 0;
-  int pad_w = 0;
-  Tensor padded_x;
-  Tensor padded_dx;
   NodeMemPool* mempool_;
 };
 
@@ -62,6 +59,11 @@ class CudnnMaxPooling2DOp {
   explicit CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride,
       const bool padding_type);
   ~CudnnMaxPooling2DOp();
+  /* call this function before using the CudnnMaxPooling2DOp */
+  void set_pool(NodeMemPool* mempool) {
+    DYNET_ASSERT(mempool->used() == 0, "mempool must have been reset");
+    mempool_ = mempool;
+  }
   void forward_impl(const Device_GPU & dev, const std::vector<const Tensor*>& xs, Tensor& fx);
   void backward_impl(const Device_GPU & dev,
                 const std::vector<const Tensor*>& xs,
@@ -81,8 +83,6 @@ class CudnnMaxPooling2DOp {
 
  private:
   NodeMemPool* mempool_;
-  int pad_h = 0;
-  int pad_w = 0;
 };
 
 } // namespace dynet

@@ -102,7 +102,6 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   throw std::runtime_error("Conv2D::forward_dev_impl not supported without CUDNN");
 #endif
 #else
-
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
   void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
   Tensor CHWN_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_x_mem), xs[0]->device, DeviceMempool::FXS);
@@ -142,7 +141,9 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
   NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  DYNET_ASSERT(cudnn_conv_op_ != NULL, "cudnn operator is not initialized");
+  if (cudnn_conv_op_ == NULL) {
+    cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
+  }
   cudnn_conv_op_->set_pool(&aux_mem_pool);
   cudnn_conv_op_->backward_impl(dev, xs, fx, dEdf, i, dEdxi);
 #else
