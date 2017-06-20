@@ -545,6 +545,41 @@ BOOST_AUTO_TEST_CASE( contract3d_1d_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
+BOOST_AUTO_TEST_CASE( contract3d_batch_1d_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression square1 = parameter(cg, param_square1);
+  Expression cube1 = parameter(cg, param_cube1);
+  Expression batched_cube1 = concatenate_to_batch({cube1,cube1,cube1});
+  Expression y = contract3d_1d(batched_cube1, x1, square1);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
+BOOST_AUTO_TEST_CASE( contract3d_1d_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression batched_x1 = reshape(parameter(cg, param_square1), Dim({3},3));
+  Expression square1 = parameter(cg, param_square1);
+  Expression cube1 = parameter(cg, param_cube1);
+  Expression y = contract3d_1d(cube1, batched_x1, square1);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression contract3d_1d(const Expression& x, const Expression& y, const Expression& b);
+BOOST_AUTO_TEST_CASE( contract3d_batch_1d_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression batched_x1 = reshape(parameter(cg, param_square1), Dim({3},3));
+  Expression square1 = parameter(cg, param_square1);
+  Expression cube1 = parameter(cg, param_cube1);
+  Expression batched_cube1 = concatenate_to_batch({cube1,cube1,cube1});
+  Expression y = contract3d_1d(batched_cube1, batched_x1, square1);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b);
 BOOST_AUTO_TEST_CASE( contract3d_1d_1d_gradient ) {
   dynet::ComputationGraph cg;
@@ -652,6 +687,25 @@ BOOST_AUTO_TEST_CASE( rectify_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = rectify(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+
+// Expression elu(const Expression& x);
+BOOST_AUTO_TEST_CASE( elu_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = elu(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression selu(const Expression& x);
+BOOST_AUTO_TEST_CASE( selu_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = selu(x1);
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }

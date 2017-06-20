@@ -782,6 +782,55 @@ Expression logistic(const Expression& x);
  */
 Expression rectify(const Expression& x);
 
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Exponential Linear Unit
+ * \details Calculate elementwise the function 
+ * 
+ * \f$
+ * y_i = \left\{\begin{array}{lr}
+ *            x_i, & \text{if } x>0\\
+ *            \alpha\times(e^{x_i} - 1), & \text{if }x\leqslant 0\\
+ *          \end{array}\right.
+ * \f$
+ * 
+ * Reference: [Clevert et al., 2015](https://arxiv.org/abs/1511.07289v5)
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to \f$\text{ELU}(x_i, \alpha)\f$
+ */
+Expression elu(const Expression& x, float alpha=1.f);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Scaled Exponential Linear Unit (SELU)
+ * \details Calculate elementwise the function 
+ * 
+ * \f$
+ * y_i = \lambda\times\left\{\begin{array}{lr}
+ *            x_i, & \text{if } x>0\\
+ *            \alpha\times(e^{x_i} - 1), & \text{if }x\leqslant 0\\
+ *          \end{array}\right.
+ * \f$
+ * 
+ * With 
+ * \f$
+ * \begin{split}
+ * \lambda &=\texttt{1.0507009873554804934193349852946}\\
+ * \alpha &=\texttt{1.6732632423543772848170429916717}\\
+ * \end{split}
+ * \f$
+ * 
+ * Reference: [Klambaouer et al., 2017](https://arxiv.org/abs/1706.02515)
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to \f$\text{SELU}(x_i)\f$
+ */
+Expression selu(const Expression& x);
+
 /**
  * \ingroup arithmeticoperations
  * \brief Soft Sign

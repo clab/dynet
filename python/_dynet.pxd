@@ -351,6 +351,9 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_contract3d_1d "dynet::contract3d_1d" (CExpression& x, CExpression& y, CExpression& b) except + #
     CExpression c_contract3d_1d_1d "dynet::contract3d_1d_1d" (CExpression& x, CExpression& y, CExpression& z) except + #
     CExpression c_contract3d_1d_1d "dynet::contract3d_1d_1d" (CExpression& x, CExpression& y, CExpression& z, CExpression& b) except + #
+
+    CExpression c_elu "dynet::elu" (CExpression& x, float alpha) except + #
+    CExpression c_selu "dynet::selu" (CExpression& x) except + #
     
     # expecting a vector of CExpression
     CExpression c_average     "dynet::average" (vector[CExpression]& xs) except +
