@@ -2356,6 +2356,7 @@ cpdef Expression logistic(Expression x):
         dynet.Expression: :math:`y_i = \\frac{1}{1+e^{-x_i}}`
     """
     return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
+
 cpdef Expression rectify(Expression x): 
     """Rectifier (or ReLU, Rectified Linear Unit)
     
@@ -2368,6 +2369,59 @@ cpdef Expression rectify(Expression x):
         dynet.Expression: :math:`y_i = \max(x_i,0)`
     """
     return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
+
+cpdef Expression elu(Expression x, float alpha=1.0): 
+    """Exponential Linear Unit (ELU)
+
+    Calculate elementwise the function 
+
+    .. math::
+        y_i = \left\{\\begin{array}{lr}
+                   x_i, & \\text{if } x>0\\\\
+                   \\alpha\\times(e^{x_i} - 1), & \\text{if }x\leqslant 0
+                 \end{array}\\right.
+        
+    Reference: `Clevert et al., 2015 <https://arxiv.org/abs/1511.07289v5>_`
+ 
+    Args:
+        x (dynet.Expression): Input expression
+        alpha (number): :math:`\\alpha` parameter
+    
+    Returns:
+        dynet.Expression: :math:`\\text{ELU}(x_i, \\alpha)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_elu(x.c(), alpha))
+
+cpdef Expression selu(Expression x): 
+    """Scaled Exponential Linear Unit (SELU)
+
+    Calculate elementwise the function 
+
+    .. math::
+        y_i = \lambda\\times\left\{
+        \\begin{array}{lr}
+           x_i, & \\text{if } x>0\\\\
+           \\alpha\\times(e^{x_i} - 1), & \\text{if }x\leqslant 0\\\\
+        \end{array}\\right.
+
+    With
+
+    .. math::
+        \\begin{split}
+            \lambda &=\\texttt{1.0507009873554804934193349852946}\\\\
+            \\alpha &=\\texttt{1.6732632423543772848170429916717}\\\\
+        \end{split}
+
+    Reference: `Klambaouer et al., 2017 <https://arxiv.org/abs/1706.02515>_`
+ 
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`\\text{SELU}(x_i)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_selu(x.c()))
+
 cpdef Expression log_softmax(Expression x, list restrict=None):
     """Restricted log softmax
     
@@ -3720,7 +3774,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         
         The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
 
-        .. code::
+        .. code-block:: text
 
                   h/x   
                 +------+
@@ -3755,7 +3809,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         
         The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
 
-        .. code::
+        .. code-block:: text
 
                   h/x   
                 +------+
