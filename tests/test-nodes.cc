@@ -1210,7 +1210,7 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
   Expression kernel2 = parameter(cg, param_kernel2);
   Expression y2 = conv2d(y, kernel2, stride, is_valid);
   Expression z = sum_batches(sum_elems(y2));
-  BOOST_CHECK(check_grad(mod, z, 5));
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 BOOST_AUTO_TEST_CASE( maxpooling2d_same_gradient ) {
