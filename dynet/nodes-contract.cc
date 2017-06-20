@@ -5,9 +5,18 @@
 #include <stdexcept>
 
 #include "dynet/nodes-macros.h"
+#include "dynet/nodes.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
 #define DYNET_SKIP_CUDA_CONTRACTIONS
+
+
+#if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+#include "dynet/nodes.cc"
+#include "dynet/cuda.h"
+#include "dynet/gpu-ops.h"
+#endif
+
 
 using namespace std;
 
@@ -32,9 +41,9 @@ Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument(s.str());
   }
   Dim d({xs[0].size(0), xs[0].size(1)}, max(xs[0].bd, xs[1].bd));
-  if(xs.size() == 3) d.bd = max(d.bd, xs[2].bd);
-  if (xs.size() == 3 && xs[2] != d) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D: " << xs;
+  if (xs.size() == 3) d.bd = max(d.bd, xs[2].bd);
+  if (xs.size() == 3 && xs[2].single_batch() != d.single_batch()) {
+    ostringstream s; s << "Bad bias dimensions in InnerProduct3D_1D: " << xs;
     throw std::invalid_argument(s.str());
   }
   return d;
@@ -58,7 +67,7 @@ Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument(s.str());
   }
   Dim d({xs[0].size(0)}, max(max(xs[0].bd, xs[1].bd), xs[2].bd));
-  if(xs.size() == 4) d.bd = max(d.bd, xs[3].bd);
+  if (xs.size() == 4) d.bd = max(d.bd, xs[3].bd);
   if (xs.size() == 4 && xs[3] != d) {
     ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
     throw std::invalid_argument(s.str());
@@ -74,41 +83,188 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
 #if defined(__CUDACC__) && defined(DYNET_SKIP_CUDA_CONTRACTIONS)
   throw std::runtime_error("InnerProduct3D_1D::forward_dev_impl disabled on CUDA. Comment out DYNET_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
-  auto A = xs[0]->t<3>();
-  auto b = xs[1]->t<1>();
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
-  if (xs.size() == 2) {
-    fx.t<2>().device(*dev.edevice) = A.contract(b, dims);
-  } else {
-    auto C = xs[2]->t<2>();
-    fx.t<2>().device(*dev.edevice) = A.contract(b, dims) + C;
+  // Handle hypothetical bias
+  if (xs.size() == 3) {
+    auto C = xs[2]->tb<2>();
+    Eigen::array<int, 3> bcast_C = {1, 1, (int)(xs[2]->d.bd == 1 ? fx.d.bd : 1)};
+    fx.tb<2>().device(*dev.edevice) = C.broadcast(bcast_C);
   }
+#if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+  // Use CUDA if accessible
+  // Reshape xs[0] to a matrix
+  Dim new_xs0_d({xs[0]->d[0] * xs[0]->d[1], xs[0]->d[2]}, xs[0]->d.bd);
+  const Tensor new_xs0(new_xs0_d, xs[0]->v, xs[0]->device, xs[0]->mem_pool);
+  // Reshape fx to a vector
+  Dim new_fx_d({fx.d[0] * fx.d[1]}, fx.d.bd);
+  Tensor new_fx(new_fx_d, fx.v, fx.device, fx.mem_pool);
+  // CUDA matrix multiply ftw
+  CUDAMatrixMultiply(dev, new_xs0, *xs[1], new_fx, kSCALAR_ONE);
+#else
+  // Otherwise use Eigen tensor contraction.
+  // TODO : maybe on CPU broadcast is not as affective as looping?
+  if (xs[0]->d.bd == 1) {
+    // A is a 3 tensor
+    Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
+    auto b = xs[1]->tb<1>();
+    auto A = xs[0]->t<3>();
+    fx.tb<2>().device(*dev.edevice) += A.contract(b.broadcast(bcast_b), dims);
+  } else {
+    // A is a 4 tensor : loop over the batch dimension
+    auto A = xs[0]->tb<3>();
+    if (xs[1]->d.bd == 1) { // b is a 1 tensor
+      auto b = xs[1]->t<1>();
+      fx.tb<2>().device(*dev.edevice) += A.contract(b, dims);
+    } else {
+      // If both A and b are batched loop over batches
+      auto b = xs[1]->tb<1>();
+      for (unsigned i = 0; i < fx.d.bd; ++i) {
+        auto b_ = b.chip<1>(i);
+        fx.tb<2>().chip<2>(i).device(*dev.edevice) += A.chip<3>(i).contract(b_, dims);
+      }
+    }
+  }
+#endif
 #endif
 }
 
 template<class MyDevice>
 void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
-                             const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
+    const vector<const Tensor*>& xs,
+    const Tensor& fx,
+    const Tensor& dEdf,
+    unsigned i,
+    Tensor& dEdxi) const {
 #if defined(__CUDACC__) && defined(DYNET_SKIP_CUDA_CONTRACTIONS)
   throw std::runtime_error("InnerProduct3D_1D::backward_dev_impl disabled on CUDA. Comment out DYNET_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
-  auto tdEdf = dEdf.t<2>();  // 2 tensor
+  auto tdEdf = dEdf.tb<2>();  // 2 tensor
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
-  if (i == 0) { // 3 tensor
-    // tensor product
-    auto b = xs[1]->t<1>();
-    dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(b, Eigen::array<DimPair, 0>{{}});
-  } else if (i == 1) {
-    auto A = xs[0]->t<3>();  // A is 3 tensor
-    Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
-    dEdxi.t<1>().device(*dev.edevice) += tdEdf.contract(A, dims);
-  } else if (i == 2) {
-    dEdxi.t<2>().device(*dev.edevice) += tdEdf;
+
+  if (i == 0) { // dEdA
+#if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+    if (dEdxi.d.bd == 1 && dEdf.d.bd == xs[1]->d.bd) {
+      // Basically here dEdxi_ijk = \sum_b dEdf_ijb * B_kb
+      // Which we do as matrix multiplication dEdxi_(i*j)k = \sum_b dEdf_(i*j)b * B^T_bk
+      // CUDA matrix multiply ftw
+      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+                               dEdxi.d[0] * dEdxi.d[1], dEdxi.d[2] , dEdf.d.bd,
+                               kSCALAR_ONE,
+                               dEdf.v, dEdf.d.batch_size(),
+                               xs[1]->v, dEdxi.d[2],
+                               kSCALAR_ONE, dEdxi.v, dEdxi.d[0] * dEdxi.d[1]));
+    } else {
+      // In this case dEdxi is batched and b isn't or neither dEdxi nor b are batched but dEdf is (ie C is batched)
+      // Iterate over the batches of dEdf and then do an outer product beween flattened dEdf and b
+      // and accumulate the result in dEdxi
+      float* dEdAv = dEdxi.v;
+      for (unsigned b = 0; b < dEdf.d.bd; b++) {
+        if (dEdxi.d.bd == dEdf.d.bd) // If A is batched
+          dEdAv = dEdxi.batch_ptr(b);
+        CUBLAS_CHECK(cublasSger(dev.cublas_handle,
+                                dEdxi.d[0] * dEdxi.d[1], dEdxi.d[2] ,
+                                kSCALAR_ONE,
+                                dEdf.batch_ptr(b), 1,
+                                xs[1]->v, 1,
+                                dEdAv, dEdxi.d[0] * dEdxi.d[1]));
+      }
+    }
+#else
+    if (xs[0]->d.bd == 1) { // A is a 3 tensor
+      // tensor product
+      auto b = xs[1]->tb<1>();
+      Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
+      Eigen::array<DimPair, 1> dims({{DimPair(2, 1)}});
+      dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(b.broadcast(bcast_b), dims);
+    } else {
+      // For now if A is batched the CUDA version is not implemented
+      if (xs[1]->d.bd == 1) {
+        // auto b = xs[1]->t<1>();
+        // Eigen::array<int, 4> morph {dEdf.d[0], dEdf.d[1], xs[1]->d[0], dEdf.d.bd};
+        // dEdxi.tb<3>().device(*dev.edevice) += tdEdf.contract(b, Eigen::array<DimPair, 0> {{}}).reshape(morph);
+        auto b = xs[1]->t<1>();
+        for (unsigned i = 0; i < fx.d.bd; ++i) {
+          dEdxi.tb<3>().chip<3>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(b, Eigen::array<DimPair, 0> {{}});
+        }
+      } else {
+        auto b = xs[1]->tb<1>();
+        for (unsigned i = 0; i < fx.d.bd; ++i) {
+          dEdxi.tb<3>().chip<3>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(b.chip<1>(i), Eigen::array<DimPair, 0> {{}});
+        }
+
+      }
+    }
+
+#endif
+  } else if (i == 1) { // dEdb
+    // dEdb_k = \sum_ij A_ijk dEdf_ij
+#if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
+    if (xs[0]->d.bd == 1 && dEdf.d.bd == xs[1]->d.bd) {
+      // If b has the same batch dimension as dEdf and A is not batched,
+      // the double contraction can be done as a (transposed) matrix product
+      // dEdxi_kb = \sum_ij A_ijk dEdf_ijb = \sum_(i*j) A^T_k(i*j) dEdf_(i*j)b
+      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+                               dEdxi.d.rows(), dEdxi.d.batch_elems(), dEdf.d.batch_size(),
+                               kSCALAR_ONE,
+                               xs[0]->v, xs[0]->d[0] * xs[0]->d[1],
+                               dEdf.v, dEdf.d.batch_size(),
+                               kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+    } else {
+      // Here dEdf is batched so we iterate over it and depending on whether A or b is
+      // batched we take the slice/accumulate
+      // If everything is batched dEdb_k = \sum_(i*j) A^T_k(i*j) dEdf_(i*j) (for each batch element)
+      float* dEdbv = dEdxi.v;
+      const float* Av = xs[0]->v;
+      for (unsigned b = 0; b < dEdf.d.bd; ++b) {
+        if (dEdxi.d.bd > 1) {
+          dEdbv = dEdxi.batch_ptr(b);
+        }
+        if (xs[0]->d.bd > 1) {
+          Av = xs[0]->batch_ptr(b);
+        }
+        CUBLAS_CHECK(cublasSgemv(dev.cublas_handle, CUBLAS_OP_T,
+                                 dEdf.d.batch_size(), dEdxi.d.rows(),
+                                 kSCALAR_ONE,
+                                 Av, dEdf.d.batch_size(),
+                                 dEdf.batch_ptr(b), 1,
+                                 kSCALAR_ONE, dEdbv, 1));
+      }
+    }
+#else
+    // When on CPU we use Eigen contractions
+    if (xs[1]->d.bd == 1) { // b is a 1 tensor
+      if (xs[0]->d.bd == 1) {
+        auto A = xs[0]->t<3>();  // A is 3 tensor
+        Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+        Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
+        dEdxi.t<1>().device(*dev.edevice) += tdEdf.contract(A, dims).sum(red_axis);
+      } else {
+        auto A = xs[0]->tb<3>();  // A is 4 tensor
+        Eigen::array<DimPair, 3> dims({{DimPair(0, 0), DimPair(1, 1), DimPair(2, 3)}});
+        dEdxi.t<1>().device(*dev.edevice) += tdEdf.contract(A, dims);
+      }
+    } else { // b is a 2 tensor
+      if (xs[0]->d.bd == 1) {
+        auto A = xs[0]->t<3>();  // A is 3 tensor
+        Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
+        dEdxi.tb<1>().device(*dev.edevice) += A.contract(tdEdf, dims);
+      } else {
+        auto A = xs[0]->tb<3>();  // A is 4 tensor
+        Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
+        for (unsigned i = 0; i < fx.d.bd; ++i) {
+          dEdxi.tb<1>().chip<1>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(A.chip<3>(i), dims);
+        }
+      }
+    }
+#endif
+  } else if (i == 2) { // dEdC
+    if (xs[2]->d.bd == 1) {
+      Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+      dEdxi.t<2>().device(*dev.edevice) += tdEdf.sum(red_axis);
+    } else {
+      dEdxi.tb<2>().device(*dev.edevice) += tdEdf;
+    }
   } else {
     throw std::runtime_error("Illegal configuration in InnerProduct3D");
   }
@@ -139,11 +295,11 @@ void InnerProduct3D_1D_1D::forward_dev_impl(const MyDevice & dev, const vector<c
 
 template<class MyDevice>
 void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
-                                             const vector<const Tensor*>& xs,
-                                             const Tensor& fx,
-                                             const Tensor& dEdf,
-                                             unsigned i,
-                                             Tensor& dEdxi) const {
+    const vector<const Tensor*>& xs,
+    const Tensor& fx,
+    const Tensor& dEdf,
+    unsigned i,
+    Tensor& dEdxi) const {
 #if defined(__CUDACC__) && defined(DYNET_SKIP_CUDA_CONTRACTIONS)
   throw std::runtime_error("InnerProduct3D_1D_1D::backward_dev_impl disabled on CUDA. Comment out DYNET_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
@@ -153,7 +309,7 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
     // tensor product
     auto b = xs[1]->t<1>();
     auto c = xs[2]->t<1>();
-    dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(c, Eigen::array<DimPair, 0>{{}}).contract(b, Eigen::array<DimPair, 0>{{}});
+    dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(c, Eigen::array<DimPair, 0> {{}}).contract(b, Eigen::array<DimPair, 0> {{}});
   } else if (i == 1) { // vector 1
     // TODO these should be reorganized so the contraction is first with tdEdf and then with c or b.
     // in theory, that intermediate result could be cached (although DYNET doesn't support this). the fact that it
