@@ -513,6 +513,8 @@ Expression lgamma(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
+Expression elu(const Expression& x, float alpha=1.f);
+Expression selu(const Expression& x);
 Expression softsign(const Expression& x);
 Expression pow(const Expression& x, const Expression& y);
 
