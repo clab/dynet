@@ -29,14 +29,3 @@ class LstmBuilder private[dynet](private[dynet] val builder: internal.LSTMBuilde
 
   def setDropout(d: Float, dH: Float, dC: Float): Unit = builder.set_dropout(d, dH, dC)
 }
-
-class FastLstmBuilder private[dynet](private[dynet] val builder: internal.FastLSTMBuilder)
-  extends RnnBuilder(builder) {
-
-  def this() { this(new internal.FastLSTMBuilder()) }
-
-  def this(layers: Long, inputDim: Long, hiddenDim: Long, model: Model) {
-    this(new internal.FastLSTMBuilder(layers, inputDim, hiddenDim, model.model))
-  }
-
-}
