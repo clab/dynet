@@ -333,12 +333,14 @@ extern template void TensorTools::accumulate_dev<Device_GPU>(Device_GPU & dev, T
 void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) { return accumulate_dev(*(Device_CPU*)v.device, v, v_src); }
   else if (v.device->type == DeviceType::GPU) { return accumulate_dev(*(Device_GPU*)v.device, v, v_src); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (v.device->type == DeviceType::ThreadPool) { return accumulate_dev(*(Device_ThreadPool*)v.device, v, v_src); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) { return accumulate_dev(*(Device_CPU*)v.device, v, v_src); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (v.device->type == DeviceType::ThreadPool) { return accumulate_dev(*(Device_ThreadPool*)v.device, v, v_src); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif
@@ -356,12 +358,14 @@ extern template void TensorTools::constant_dev<Device_GPU>(Device_GPU & dev, Ten
 void TensorTools::constant(Tensor& d, float c) {
   if (d.device->type == DeviceType::CPU) { return constant_dev(*(Device_CPU*)d.device, d, c); }
   else if (d.device->type == DeviceType::GPU) { return constant_dev(*(Device_GPU*)d.device, d, c); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return constant_dev(*(Device_ThreadPool*)d.device, d, c); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 void TensorTools::constant(Tensor& d, float c) {
   if (d.device->type == DeviceType::CPU) { return constant_dev(*(Device_CPU*)d.device, d, c); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return constant_dev(*(Device_ThreadPool*)d.device, d, c); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif
@@ -379,12 +383,14 @@ extern template void TensorTools::clip_dev<Device_GPU>(Device_GPU & dev, Tensor&
 void TensorTools::clip(Tensor& d, float left, float right) {
   if (d.device->type == DeviceType::CPU) { return clip_dev(*(Device_CPU*)d.device, d, left, right); }
   else if (d.device->type == DeviceType::GPU) { return clip_dev(*(Device_GPU*)d.device, d, left, right); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return clip_dev(*(Device_ThreadPool*)d.device, d, left, right); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 void TensorTools::clip(Tensor& d, float left, float right) {
   if (d.device->type == DeviceType::CPU) { return clip_dev(*(Device_CPU*)d.device, d, left, right); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return clip_dev(*(Device_ThreadPool*)d.device, d, left, right); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif
@@ -410,12 +416,14 @@ extern template IndexTensor TensorTools::argmax_dev<Device_GPU>(Device_GPU & dev
 IndexTensor TensorTools::argmax(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return argmax_dev(*(Device_CPU*)d.device, d, dim, num); }
   else if (d.device->type == DeviceType::GPU) { return argmax_dev(*(Device_GPU*)d.device, d, dim, num); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return argmax_dev(*(Device_ThreadPool*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 IndexTensor TensorTools::argmax(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return argmax_dev(*(Device_CPU*)d.device, d, dim, num); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) {return argmax_dev(*(Device_ThreadPool*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif
@@ -447,12 +455,14 @@ extern template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_
 IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return categorical_sample_log_prob_dev(*(Device_CPU*)d.device, d, dim, num); }
   else if (d.device->type == DeviceType::GPU) { return categorical_sample_log_prob_dev(*(Device_GPU*)d.device, d, dim, num); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return categorical_sample_log_prob_dev(*(Device_ThreadPool*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return categorical_sample_log_prob_dev(*(Device_CPU*)d.device, d, dim, num); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return categorical_sample_log_prob_dev(*(Device_ThreadPool*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif

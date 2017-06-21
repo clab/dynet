@@ -128,6 +128,12 @@ endif()
 # echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
 # then run source ~/.bashrc to have those environment variable effective immediately
 
+if (THREADPOOL) 
+  add_definitions(-DTHREAD_POOL=${THREADPOOL})
+endif()
+
+
+
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
 else()
