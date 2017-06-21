@@ -40,4 +40,3 @@ class FastLstmBuilder private[dynet](private[dynet] val builder: internal.FastLS
   }
 
 }
-
