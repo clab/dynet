@@ -119,17 +119,17 @@ void MaxPooling2D::backward_dev_impl(const MyDevice & dev,
                  ksize[1] - xs[0]->d[1]);
   int pad_top = is_valid ? 0 : pad_along_height / 2;
   int pad_left = is_valid ? 0 : pad_along_width / 2;
-  for (int b = 0; b < fx.d.bd; ++b) {
-    for (int i = 0; i < fx.d[0]; ++i) {
-      for (int j = 0; j < fx.d[1]; ++j) {
-        for (int ch = 0; ch < fx.d[2]; ++ch) {    
+  for (unsigned b = 0; b < fx.d.bd; ++b) {
+    for (unsigned i = 0; i < fx.d[0]; ++i) {
+      for (unsigned j = 0; j < fx.d[1]; ++j) {
+        for (unsigned ch = 0; ch < fx.d[2]; ++ch) {    
           int max_r = 0, max_c = 0;
           float max_val;
           bool is_feasible = false;
-          for (int r = 0; r < ksize[0]; ++r) {
-            for (int c = 0; c < ksize[1]; ++c) {
-              int row = stride[0] * i + r - pad_top;
-              int col = stride[1] * j + c - pad_left;
+          for (unsigned r = 0; r < ksize[0]; ++r) {
+            for (unsigned c = 0; c < ksize[1]; ++c) {
+              unsigned row = stride[0] * i + r - pad_top;
+              unsigned col = stride[1] * j + c - pad_left;
               if (((col < xs[0]->d[1]) && (row < xs[0]->d[0])) && ((0 <= col) && (0 <= row))) {
                 if (!is_feasible) {
                   max_val = xs[0]->tb<3>()(row, col, ch, b);

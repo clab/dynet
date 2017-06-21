@@ -100,6 +100,28 @@ cdef class DynetParams:
         """
         self.cparams.random_seed = random_seed
 
+    cpdef set_autobatch(self, bool autobatch):
+        """Activate autobatching
+        
+        Args:
+            autobatch(bool): Set to :code:`True` to activate autobatching
+        """
+        if autobatch:
+            self.cparams.autobatch = 1
+        else:
+            self.cparams.autobatch = 0
+
+    cpdef set_autobatch_debug(self, bool autobatch_debug):
+        """Activate autobatching debug
+        
+        Args:
+            autobatch(bool): Set to :code:`True` to activate autobatching debug
+        """
+        if autobatch_debug:
+            self.cparams.autobatch_debug = 1
+        else:
+            self.cparams.autobatch_debug = 0
+
     cpdef set_weight_decay(self, float weight_decay):
         """Set weight decay parameter
         
@@ -246,12 +268,10 @@ cdef class Parameters:
         return self
 
     cpdef shape(self):
-        """[summary]
-        
-        [description]
+        """Returns shape of the parameter
         
         Returns:
-            [type]: [description]
+            tuple: Shape of the parameter
         """
         return c_dim_as_shape(self.thisptr.get().dim)
 
@@ -276,27 +296,24 @@ cdef class Parameters:
     cpdef clip_inplace(self, float left, float right):
         """Clip the values in the parameter to a fixed range [left, right] (in place)
         
-        Returns:
-            None
+        Args:
+            arr(np.ndarray): Scale
         """
         self.thisptr.clip_inplace(left, right)
         
     # TODO: make more efficient
-    cpdef load_array(self, arr):
-        """Deprecated
+    cpdef set_value(self, arr):
+        """Set value of the parameter
+
         """
-        assert(False),"This method is depracated. Use instead model.parameters_from_numpy(arr)."
         cdef CTensor t
         cdef float* vals
         t = self.thisptr.get().values
         shape = arr.shape
-        if len(shape) == 1:
-            assert(t.d.ndims() == 1)
-            assert(t.d.size() == arr.size)
-        if len(shape) == 2:
-            assert(t.d.rows() == shape[0] and t.d.cols() == shape[1])
+        if self.shape() != shape:
+            raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
         vals = t.v
-        arr = arr.flatten()
+        arr = arr.flatten(order='F')
         for i in xrange(arr.size):
             vals[i] = arr[i]
 
@@ -1543,7 +1560,7 @@ def matInput(int d1, int d2):
     Returns:
         dynet.Expression: [description]
     """
-    return _cg.inputMatrix(d1, d2)
+    raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
 def inputMatrix(vector[float] v, tuple d):
     """DEPRECATED : use inputTensor
@@ -1564,7 +1581,7 @@ def inputMatrix(vector[float] v, tuple d):
         array([[ 1.,  3.,  5.],
                [ 2.,  4.,  6.]])
     """
-    return _cg.inputMatrixLiteral(v, d)
+    raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
 def inputTensor(arr,batched=False):
     """Creates a tensor expression based on a numpy array or a list.
@@ -2339,6 +2356,7 @@ cpdef Expression logistic(Expression x):
         dynet.Expression: :math:`y_i = \\frac{1}{1+e^{-x_i}}`
     """
     return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
+
 cpdef Expression rectify(Expression x): 
     """Rectifier (or ReLU, Rectified Linear Unit)
     
@@ -2351,6 +2369,59 @@ cpdef Expression rectify(Expression x):
         dynet.Expression: :math:`y_i = \max(x_i,0)`
     """
     return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
+
+cpdef Expression elu(Expression x, float alpha=1.0): 
+    """Exponential Linear Unit (ELU)
+
+    Calculate elementwise the function 
+
+    .. math::
+        y_i = \left\{\\begin{array}{lr}
+                   x_i, & \\text{if } x>0\\\\
+                   \\alpha\\times(e^{x_i} - 1), & \\text{if }x\leqslant 0
+                 \end{array}\\right.
+        
+    Reference: `Clevert et al., 2015 <https://arxiv.org/abs/1511.07289v5>`_
+ 
+    Args:
+        x (dynet.Expression): Input expression
+        alpha (number): :math:`\\alpha` parameter
+    
+    Returns:
+        dynet.Expression: :math:`\\text{ELU}(x_i, \\alpha)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_elu(x.c(), alpha))
+
+cpdef Expression selu(Expression x): 
+    """Scaled Exponential Linear Unit (SELU)
+
+    Calculate elementwise the function 
+
+    .. math::
+        y_i = \lambda\\times\left\{
+        \\begin{array}{lr}
+           x_i, & \\text{if } x>0\\\\
+           \\alpha\\times(e^{x_i} - 1), & \\text{if }x\leqslant 0\\\\
+        \end{array}\\right.
+
+    With
+
+    .. math::
+        \\begin{split}
+            \lambda &=\\texttt{1.0507009873554804934193349852946}\\\\
+            \\alpha &=\\texttt{1.6732632423543772848170429916717}\\\\
+        \end{split}
+
+    Reference: `Klambaouer et al., 2017 <https://arxiv.org/abs/1706.02515>`_
+ 
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`\\text{SELU}(x_i)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_selu(x.c()))
+
 cpdef Expression log_softmax(Expression x, list restrict=None):
     """Restricted log softmax
     
@@ -3703,7 +3774,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         
         The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
 
-        .. code::
+        .. code-block:: text
 
                   h/x   
                 +------+
@@ -3738,7 +3809,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         
         The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
 
-        .. code::
+        .. code-block:: text
 
                   h/x   
                 +------+

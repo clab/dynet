@@ -180,6 +180,10 @@ Arithmetic operations
 
 .. autofunction:: dynet.rectify
 
+.. autofunction:: dynet.elu
+
+.. autofunction:: dynet.selu
+
 .. autofunction:: dynet.sparsemax
 
 .. autofunction:: dynet.softsign
@@ -316,6 +320,8 @@ Convolution/Pooling operations
 .. autofunction:: dynet.conv2d
 
 .. autofunction:: dynet.conv2d_bias
+
+.. autofunction:: dynet.maxpooling2d
 
 .. autofunction:: dynet.filter1d_narrow
 
