@@ -81,6 +81,8 @@ To see that things have built properly, you can run
 
 which will train a multilayer perceptron to predict the xor function.
 
+If any process here fails, please see :ref:`debugging-asking` for help.
+
 Compiling/linking external programs
 -----------------------------------
 
@@ -96,21 +98,6 @@ and link with the DyNet library:
 ::
 
     -L/path/to/dynet/build/dynet -ldynet
-
-Debugging build problems
-------------------------
-
-If you have a build problem and want to debug, please run
-
-::
-
-    make clean
-    make VERBOSE=1 &> make.log
-
-then examine the commands in the ``make.log`` file to see if anything
-looks fishy. If you would like help, send this ``make.log`` file via the
-"Issues" tab on GitHub, or to the dynet-users mailing list.
-
 
 GPU/cuDNN/MKL support
 ---------------------
