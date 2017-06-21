@@ -9,6 +9,8 @@ cdef extern from "dynet/init.h" namespace "dynet":
         unsigned random_seed
         string mem_descriptor
         float weight_decay
+        int autobatch
+        int autobatch_debug
         bool shared_parameters
         bool ngpus_requested
         bool ids_requested
@@ -317,6 +319,8 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_lgamma "dynet::expr::lgamma" (CExpression& x) except + #
     CExpression c_logistic "dynet::expr::logistic" (CExpression& x) except + #
     CExpression c_rectify "dynet::expr::rectify" (CExpression& x) except + #
+    CExpression c_elu "dynet::expr::elu" (CExpression& x, float alpha) except + #
+    CExpression c_selu "dynet::expr::selu" (CExpression& x) except + #
     #CExpression c_hinge "dynet::expr::hinge" (CExpression& x, unsigned index, float m=?) except + #
     CExpression c_hinge "dynet::expr::hinge" (CExpression& x, unsigned* pindex, float m) except + #
     CExpression c_log_softmax "dynet::expr::log_softmax" (CExpression& x) except + #
