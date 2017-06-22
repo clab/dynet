@@ -76,10 +76,11 @@ string SelectRows::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SelectRows::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1 && xs[0].ndims() == 2, "Bad arguments in SelectRows: " << xs);
+  DYNET_ARG_CHECK(xs.size() == 1, "Bad arguments in SelectRows: " << xs);
   unsigned nrows = prows->size();
-  if (xs[0].ndims() == 1) return Dim({nrows});
-  return Dim({nrows, xs[0].cols()});
+  Dim ret(xs[0]);
+  ret.d[0] = nrows;
+  return ret;
 }
 
 string SelectCols::as_string(const vector<string>& arg_names) const {
