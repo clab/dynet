@@ -6,6 +6,11 @@
 using namespace std;
 using namespace dynet;
 
+// Precision required not to lose accuracy when serializing float32 to text.
+// We should probably use std::hexfloat, but it's not supported by some
+// older incomplete implementations of C++11.
+static const int FLOAT32_PRECISION = 8;
+
 bool valid_key(const std::string & s) {
   if (s.size() == 0) return true;
   if (s == "/") return false;
@@ -60,6 +65,7 @@ void TextFileSaver::save(const LookupParameter & param,
 void TextFileSaver::save(const ParameterStorage & p,
                          const string & key) {
   std::ostringstream buffer;
+  buffer.precision(FLOAT32_PRECISION);
   buffer << dynet::as_vector(p.values) << endl;
   buffer << dynet::as_vector(p.g) << endl;
   datastream << "#Parameter# " << (key.size() > 0 ? key : p.name) << ' '
@@ -70,6 +76,7 @@ void TextFileSaver::save(const ParameterStorage & p,
 void TextFileSaver::save(const LookupParameterStorage & p,
                          const string & key) {
   std::ostringstream buffer;
+  buffer.precision(FLOAT32_PRECISION);
   buffer << dynet::as_vector(p.all_values) << endl;
   buffer << dynet::as_vector(p.all_grads) << endl;
   datastream << "#LookupParameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.all_dim << ' ' << buffer.str().size() << endl;
