@@ -84,7 +84,7 @@ void ParameterStorage::zero() {
 
 void ParameterStorage::copy(const ParameterStorage & param) {
   DYNET_ARG_CHECK(dim == param.dim,
-                          "Attempt to copy between parameters with mismatched dimensions: " << dim << " != " << param.dim);
+                  "Attempt to copy between parameters with mismatched dimensions: " << dim << " != " << param.dim);
   TensorTools::copy_elements(values, param.values);
 }
 
@@ -149,7 +149,7 @@ size_t LookupParameterStorage::size() const {
 }
 
 void LookupParameterStorage::copy(const LookupParameterStorage& param) {
-  if(all_dim != param.all_dim)
+  if (all_dim != param.all_dim)
     DYNET_INVALID_ARG("Attempt to copy between lookup parameters with mismatched dimensions: " << all_dim << " != " << param.all_dim);
   TensorTools::copy_elements(all_values, param.all_values);
 }
@@ -168,9 +168,9 @@ void LookupParameterStorage::clear() {
 
 #ifndef __CUDACC__
 DYNET_SERIALIZE_SAVE_COMMIT(LookupParameterStorage,
-		            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
+                            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
 DYNET_SERIALIZE_LOAD_COMMIT(LookupParameterStorage, LOAD_INIT_FUNC(),
-		            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
+                            DYNET_SERIALIZE_DERIVED_DEFINE(ParameterStorageBase, all_dim, all_values, all_grads))
 DYNET_SAVELOAD_IMPL(LookupParameterStorage)
 #endif
 
@@ -193,7 +193,7 @@ void ParameterInitIdentity::initialize_params(Tensor & values) const {
 void ParameterInitGlorot::initialize_params(Tensor & values) const {
   int dims = 0, dim_len = values.d.nd - (lookup ? 1 : 0);
   for (int i = 0; i < dim_len; ++i) dims += values.d[i];
-  float my_scale = gain * sqrt(6) / sqrt(dims);
+  float my_scale = gain * sqrt(3 * dim_len) / sqrt(dims);
   TensorTools::randomize_uniform(values, -my_scale, my_scale);
 }
 
@@ -227,8 +227,8 @@ Parameter::Parameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
 ParameterStorage* Parameter::get() const {
   return mp->parameters_list()[index];
 }
-void Parameter::clip_inplace(float left, float right){
-  float my_scale = 1./ mp->weight_decay.current_weight_decay();
+void Parameter::clip_inplace(float left, float right) {
+  float my_scale = 1. / mp->weight_decay.current_weight_decay();
   get()->clip(left * my_scale, right * my_scale);
 }
 void Parameter::zero() {
@@ -411,8 +411,8 @@ size_t Model::updated_parameter_count() const {
 #ifndef __CUDACC__
 DYNET_SERIALIZE_COMMIT(Model,
                        DYNET_SERIALIZE_DEFINE(all_params, params,
-                                              lookup_params, weight_decay,
-                                              updated_params, updated_lookup_params))
+                           lookup_params, weight_decay,
+                           updated_params, updated_lookup_params))
 DYNET_SERIALIZE_IMPL(Model)
 #endif
 
@@ -524,8 +524,8 @@ void ParameterStorage::scale_gradient(float a) {
 template <class MyDevice>
 void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, const vector<float>& val) {
   DYNET_ARG_CHECK(int(val.size()) == int(dim.size()),
-                          "Attempt to initialize LookupParameters with vector of wrong size "
-                          "(" << val.size() << " != " << dim.size() << ")");
+                  "Attempt to initialize LookupParameters with vector of wrong size "
+                  "(" << val.size() << " != " << dim.size() << ")");
 #ifdef __CUDACC__
   cudaMemcpyAsync(values[index].v, &val[0], val.size() * sizeof(float), cudaMemcpyHostToDevice);
 #else

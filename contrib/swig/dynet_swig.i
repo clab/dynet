@@ -513,6 +513,8 @@ Expression lgamma(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
+Expression elu(const Expression& x, float alpha=1.f);
+Expression selu(const Expression& x);
 Expression softsign(const Expression& x);
 Expression pow(const Expression& x, const Expression& y);
 
@@ -743,6 +745,10 @@ struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0);
 };
 
+struct CyclicalSGDTrainer : public Trainer {
+  explicit CyclicalSGDTrainer(Model& m, real e0_min = 0.01, real e0_max = 0.1, real step_size = 2000, real gamma = 0.0, real edecay = 0.0);
+};
+
 struct MomentumSGDTrainer : public Trainer {
   explicit MomentumSGDTrainer(Model& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0);
 };
@@ -756,7 +762,7 @@ struct AdadeltaTrainer : public Trainer {
 };
 
 struct RMSPropTrainer : public Trainer {
-   explicit RMSPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0);
+   explicit RMSPropTrainer(Model& m, real e0 = 0.001, real eps = 1e-08, real rho = 0.9, real edecay = 0.0);
 };
 
 struct AdamTrainer : public Trainer {
