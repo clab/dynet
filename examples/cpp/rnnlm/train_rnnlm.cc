@@ -12,14 +12,11 @@
 #include "dynet/globals.h"
 #include "dynet/io.h"
 #include "../utils/getpid.h"
+#include "../utils/cl-args.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include <boost/algorithm/string/join.hpp>
-#include <boost/program_options.hpp>
-#include <boost/regex.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -38,39 +35,6 @@ int kEOS;
 
 volatile bool INTERRUPTED = false;
 
-namespace po = boost::program_options;
-void InitCommandLine(int argc, char** argv, po::variables_map* conf) {
-  po::options_description opts("Configuration options");
-  opts.add_options()
-        ("train,t", po::value<string>(), "training corpus")
-        ("dev,d", po::value<string>(), "development/validation corpus")
-        ("test,p", po::value<string>(), "test corpus")
-        ("nbest", po::value<string>(), "N-best list to score (- for stdin)")
-        ("learn,x", "set this to estimate the language model from the training data")
-        ("clusters,c", po::value<string>(), "word cluster file for class factored softmax")
-        ("paths,b", po::value<string>(), "word paths file for hierarchical softmax")
-        ("sample,s", "periodically generate random samples from model as it trains (recommended)")
-        ("model,m", po::value<string>(), "load model from this file")
-        ("input_dim,i", po::value<unsigned>()->default_value(128), "input embedding dimension")
-        ("hidden_dim,H", po::value<unsigned>()->default_value(128), "hidden layer size")
-        ("layers,l", po::value<unsigned>()->default_value(2), "number of layers in RNN")
-        ("dropout,D", po::value<float>(), "dropout rate (recommended between 0.2 and 0.5)")
-        ("eta0,e", po::value<float>()->default_value(0.1f), "initial learning rate")
-        ("eta_decay_onset_epoch", po::value<unsigned>(), "start decaying eta every epoch after this epoch (try 8)")
-        ("eta_decay_rate", po::value<float>(), "how much to decay eta by (recommended 0.5)")
-        ("help,h", "Help");
-  po::options_description dcmdline_options;
-  dcmdline_options.add(opts);
-  po::store(parse_command_line(argc, argv, dcmdline_options), *conf);
-  if (conf->count("help")) {
-    cerr << dcmdline_options << endl;
-    exit(1);
-  }
-  if (conf->count("train") == 0) {
-    cerr << "Training data must always be specified (it determines the vocab mapping) with --train\n";
-    exit(1);
-  }
-}
 
 template <class Builder>
 struct RNNLanguageModel {
@@ -129,7 +93,7 @@ struct RNNLanguageModel {
     Expression h_t = builder.add_input(lookup(cg, p_c, kSOS)); // read <s>
     int cur = kSOS;
     int len = 0;
-    while(len < max_len) {
+    while (len < max_len) {
       if (cfsm) { // class-factored softmax
         cur = cfsm->sample(h_t);
       } else { // regular softmax
@@ -154,42 +118,58 @@ struct RNNLanguageModel {
   }
 };
 
+
+void inline read_fields(string line, vector<string>& fields, string delimiter = "|||") {
+  string field;
+  int start = 0, end = 0, delim_size = delimiter.size();
+  while (true) {
+    end = line.find(delimiter, start);
+    fields.push_back(line.substr(start, end - start));
+    if (end == std::string::npos) break;
+    start = end + delim_size;
+  }
+}
+
+
 int main(int argc, char** argv) {
-  cerr << "COMMAND LINE:"; 
+  cerr << "COMMAND LINE:";
   for (unsigned i = 0; i < static_cast<unsigned>(argc); ++i) cerr << ' ' << argv[i];
   cerr << endl;
-  dynet::initialize(argc, argv);
-  po::variables_map conf;
-  InitCommandLine(argc, argv, &conf);
+
+  // Fetch dynet params ----------------------------------------------------------------------------
+  auto dyparams = dynet::extract_dynet_params(argc, argv);
+  dynet::initialize(dyparams);
+
+  // Fetch program specific parameters (see ../utils/cl-args.h) ------------------------------------
+  Params params;
+
+  get_args(argc, argv, params, TRAIN);
+
   kSOS = d.convert("<s>");
   kEOS = d.convert("</s>");
-  LAYERS = conf["layers"].as<unsigned>();
-  INPUT_DIM = conf["input_dim"].as<unsigned>();
-  HIDDEN_DIM = conf["hidden_dim"].as<unsigned>();
-  SAMPLE = conf.count("sample");
-  if (conf.count("dropout"))
-    DROPOUT = conf["dropout"].as<float>();
-  ParameterCollection model;
-  if (conf.count("clusters"))
-    cfsm = new ClassFactoredSoftmaxBuilder(HIDDEN_DIM, conf["clusters"].as<string>(), d, model);
-  else if (conf.count("paths"))
-    cfsm = new HierarchicalSoftmaxBuilder(HIDDEN_DIM, conf["paths"].as<string>(), d, model);
-  float eta_decay_rate = 1;
-  unsigned eta_decay_onset_epoch = 0;
-  if (conf.count("eta_decay_onset_epoch"))
-    eta_decay_onset_epoch = conf["eta_decay_onset_epoch"].as<unsigned>();
-  if (conf.count("eta_decay_rate"))
-    eta_decay_rate = conf["eta_decay_rate"].as<float>();
+  LAYERS = params.LAYERS;
+  INPUT_DIM = params.INPUT_DIM;
+  HIDDEN_DIM = params.HIDDEN_DIM;
+  SAMPLE = params.sample;
+  if (params.dropout_rate)
+    DROPOUT = params.dropout_rate;
+  Model model;
+  if (params.clusters_file != "")
+    cfsm = new ClassFactoredSoftmaxBuilder(HIDDEN_DIM, params.clusters_file, d, model);
+  else if (params.paths_file != "")
+    cfsm = new HierarchicalSoftmaxBuilder(HIDDEN_DIM, params.paths_file, d, model);
+  float eta_decay_rate = params.eta_decay_rate;
+  unsigned eta_decay_onset_epoch = params.eta_decay_onset_epoch;
   vector<vector<int>> training, dev, test;
   string line;
   int tlc = 0;
   int ttoks = 0;
   {
-    string trainf = conf["train"].as<string>();
+    string trainf = params.train_file;
     cerr << "Reading training data from " << trainf << " ...\n";
     ifstream in(trainf);
     assert(in);
-    while(getline(in, line)) {
+    while (getline(in, line)) {
       ++tlc;
       training.push_back(read_sentence(line, d));
       ttoks += training.back().size();
@@ -206,12 +186,12 @@ int main(int argc, char** argv) {
   if (!cfsm)
     cfsm = new StandardSoftmaxBuilder(HIDDEN_DIM, VOCAB_SIZE, model);
 
-  if (conf.count("test")) {
-    string testf = conf["test"].as<string>();
+  if (params.test_file != "") {
+    string testf = params.test_file;
     cerr << "Reading test data from " << testf << " ...\n";
     ifstream in(testf);
     assert(in);
-    while(getline(in, line)) {
+    while (getline(in, line)) {
       test.push_back(read_sentence(line, d));
       if (test.back().front() == kSOS || test.back().back() == kEOS) {
         cerr << "Test sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
@@ -221,31 +201,31 @@ int main(int argc, char** argv) {
   }
 
   Trainer* sgd = new SimpleSGDTrainer(model);
-  sgd->eta0 = sgd->eta = conf["eta0"].as<float>();
+  sgd->eta0 = sgd->eta = params.eta0;
   RNNLanguageModel<LSTMBuilder> lm(model);
 
-  bool has_model_to_load = conf.count("model");
+  bool has_model_to_load = params.model_file != "";
   if (has_model_to_load) {
-    string fname = conf["model"].as<string>();
+    string fname = params.model_file;
     cerr << "Reading parameters from " << fname << "...\n";
     TextFileSaver saver(fname);
     saver.save(model);
   }
 
-  bool LEARN = conf.count("learn");
+  bool TRAIN = (params.train_file != "");
 
-  if (LEARN) {
+  if (TRAIN) {
     int dlc = 0;
     int dtoks = 0;
-    if (conf.count("dev") == 0) {
-      cerr << "You must specify a development set (--dev file.txt) with --learn" << endl;
+    if (params.dev_file == "") {
+      cerr << "You must specify a development set (--dev file.txt) with --train" << endl;
       abort();
     } else {
-      string devf = conf["dev"].as<string>();
+      string devf = params.dev_file;
       cerr << "Reading dev data from " << devf << " ...\n";
       ifstream in(devf);
       assert(in);
-      while(getline(in, line)) {
+      while (getline(in, line)) {
         ++dlc;
         dev.push_back(read_sentence(line, d));
         dtoks += dev.back().size();
@@ -276,7 +256,7 @@ int main(int argc, char** argv) {
     int report = 0;
     double lines = 0;
     int completed_epoch = -1;
-    while(!INTERRUPTED) {
+    while (!INTERRUPTED) {
       if (SAMPLE) lm.RandomSample();
       Timer iteration("completed in");
       double loss = 0;
@@ -325,7 +305,7 @@ int main(int argc, char** argv) {
       }
     }
   }  // train?
-  if (conf.count("test")) {
+  if (params.test_file != "") {
     cerr << "Evaluating test data...\n";
     double tloss = 0;
     int tchars = 0;
@@ -341,34 +321,28 @@ int main(int argc, char** argv) {
   }
 
   // N-best scoring
-  if (conf.count("nbest")) {
+  if (params.nbest_file != "") {
     // cdec: index ||| hypothesis ||| feature=val ... ||| ...
     // Moses: index ||| hypothesis ||| feature= val(s) ... ||| ...
     const int HYP_FIELD = 1;
     const int FEAT_FIELD = 2;
     const string FEAT_NAME = "RNNLM";
     // Input
-    string nbestf = conf["nbest"].as<string>();
+    string nbestf = params.nbest_file;
     cerr << "Scoring N-best list " << nbestf << " ..." << endl;
     shared_ptr<istream> in;
     if (nbestf == "-") {
-      in.reset(&cin, [](...){});
+      in.reset(&cin, [](...) {});
     } else {
       in.reset(new ifstream(nbestf));
     }
-    // Split on |||, consume whitespace
-    boost::regex delim("\\s*\\|\\|\\|\\s*");
-    boost::sregex_token_iterator end;
     // Match spacing of input file
     string sep = "=";
     bool sep_detected = false;
     // Input lines
     while (getline(*in, line)) {
       vector<string> fields;
-      boost::sregex_token_iterator it(line.begin(), line.end(), delim, -1);
-      while (it != end) {
-        fields.push_back(*it++);
-      }
+      read_fields(line, fields);
       // Check sep if needed
       if (!sep_detected) {
         sep_detected = true;
@@ -386,7 +360,12 @@ int main(int argc, char** argv) {
       os << fields[FEAT_FIELD] << " " << FEAT_NAME << sep << loss;
       fields[FEAT_FIELD] = os.str();
       // Write augmented line
-      cout << boost::algorithm::join(fields, " ||| ") << endl;
+      for (unsigned f = 0; f < fields.size(); ++f) {
+        if (f > 0)
+          cout << " ||| ";
+        cout << fields[f];
+      }
+      cout << endl;
     }
   }
 

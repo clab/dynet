@@ -16,6 +16,8 @@ enum Task {
   TEST
 };
 
+
+using namespace std;
 /**
  * \brief Structure holding any possible command line argument
  *
@@ -23,6 +25,8 @@ enum Task {
 struct Params {
   string exp_name = "encdec";
   string train_file = "";
+  string clusters_file = "";
+  string paths_file = "";
   string dev_file = "";
   string train_labels_file = "";
   string dev_labels_file = "";
@@ -30,13 +34,19 @@ struct Params {
   string dic_file = "";
   string test_file = "";
   string test_labels_file = "";
+  string nbest_file = "";
   unsigned LAYERS = 1;
   unsigned INPUT_DIM = 2;
   unsigned HIDDEN_DIM = 4;
   unsigned BATCH_SIZE = 1;
   unsigned DEV_BATCH_SIZE = 16;
+  unsigned eta_decay_onset_epoch = 0;
+  float eta0 = 1.0;
+  float eta_decay_rate = 1.0;
   int NUM_EPOCHS = -1;
+  float dropout_rate = 0.f;
   bool bidirectionnal = false;
+  bool sample = false;
 };
 
 /**
@@ -70,6 +80,22 @@ void get_args(int argc,
       }
       istringstream d(argv[i + 1]);
       d >> params.train_file;
+      i++;
+    } else if (arg == "--clusters" || arg == "-c") {
+      if (i + 1 == argc) {
+        std::cerr << "No matching argument for " << arg << std::endl;
+        abort();
+      }
+      istringstream d(argv[i + 1]);
+      d >> params.clusters_file;
+      i++;
+    } else if (arg == "--paths" || arg == "-p") {
+      if (i + 1 == argc) {
+        std::cerr << "No matching argument for " << arg << std::endl;
+        abort();
+      }
+      istringstream d(argv[i + 1]);
+      d >> params.paths_file;
       i++;
     } else if (arg == "--dev" || arg == "-d") {
       if (i + 1 == argc) {
@@ -110,6 +136,14 @@ void get_args(int argc,
       }
       istringstream d(argv[i + 1]);
       d >> params.test_file;
+      i++;
+    } else if (arg == "--nbest" || arg == "-nb") {
+      if (i + 1 == argc) {
+        std::cerr << "No matching argument for " << arg << std::endl;
+        abort();
+      }
+      istringstream d(argv[i + 1]);
+      d >> params.nbest_file;
       i++;
     } else if (arg == "--model" || arg == "-m") {
       if (i + 1 == argc) {
@@ -159,8 +193,42 @@ void get_args(int argc,
       istringstream d(argv[i + 1]);
       d >> params.NUM_EPOCHS;
       i++;
+    } else if (arg == "--eta0" || arg == "-e0") {
+      if (i + 1 == argc) {
+        std::cerr << "No matching argument for " << arg << std::endl;
+        abort();
+      }
+      istringstream d(argv[i + 1]);
+      d >> params.eta0;
+      i++;
+    } else if (arg == "--eta_decay_rate" || arg == "-edr") {
+      if (i + 1 == argc) {
+        std::cerr << "No matching argument for " << arg << std::endl;
+        abort();
+      }
+      istringstream d(argv[i + 1]);
+      d >> params.eta_decay_rate;
+      i++;
+    } else if (arg == "--eta_decay_onset_epoch" || arg == "-edoe") {
+      if (i + 1 == argc) {
+        std::cerr << "No matching argument for " << arg << std::endl;
+        abort();
+      }
+      istringstream d(argv[i + 1]);
+      d >> params.eta_decay_onset_epoch;
+      i++;
+    } else if (arg == "--dropout_rate" || arg == "-D") {
+      if (i + 1 == argc) {
+        std::cerr << "No matching argument for " << arg << std::endl;
+        abort();
+      }
+      istringstream d(argv[i + 1]);
+      d >> params.dropout_rate;
+      i++;
     } else  if (arg == "--bidirectionnal" || arg == "-bid") {
       params.bidirectionnal = true;
+    } else  if (arg == "--sample" || arg == "-s") {
+      params.sample = true;
     }
     i++;
   }
