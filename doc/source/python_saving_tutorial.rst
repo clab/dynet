@@ -31,8 +31,7 @@ In the first option, complete `ParameterCollection` object is saved. At loading 
 Partial Saving And Loading (Low-level API)
 ==========================================
 
-(This API follows the C++ partial saving and loading paradigm. See below for a
- higher level pythonic API.)
+ (This API follows the C++ partial saving and loading paradigm. See below for a higher level pythonic API.)
 
 In some cases it is useful to save only a subset of parameter objects (for example, if users wish to load these in a pretraining setup). Here, `Parameter` or `LookupParameter` objects can be saved explicitly. User could also specify keys for partial saving and loading.
 
@@ -125,8 +124,7 @@ Each object in `lst` must be one of the following:
 
 1. Parameter
 2. LookupParameter
-3. One of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder,
-                                SimpleRNNBuilder, BiRNNBuilder)
+3. One of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder, SimpleRNNBuilder, BiRNNBuilder)
 4. A type adhering to the following interface:
     - has a `param_collection()` method returning a ParameterCollection object with the
         parameters in the object.
