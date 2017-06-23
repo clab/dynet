@@ -10,6 +10,7 @@ See the tutorials for the C++ version of DyNet
    :maxdepth: 2
 
    cpp_basic_tutorial
+   cpp_saving_tutorial
 
 Python Tutorial
 ---------------
