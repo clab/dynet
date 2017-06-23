@@ -23,22 +23,15 @@ int main(int argc, char** argv) {
   ComputationGraph cg;
   Parameter p_W, p_b, p_V, p_a;
 
+  p_W = m.add_parameters({HIDDEN_SIZE, 2});
+  p_b = m.add_parameters({HIDDEN_SIZE});
+  p_V = m.add_parameters({1, HIDDEN_SIZE});
+  p_a = m.add_parameters({1});
+
   if (argc == 2) {
-    // Load the model and parameters from
-    // file if given.
+    // Load the model and parameters from file if given.
     TextFileLoader loader(argv[1]);
-    loader.populate(m, "model");
-    p_W = loader.load_param(m, "p_W");
-    p_b = loader.load_param(m, "p_b");
-    p_V = loader.load_param(m, "p_V");
-    p_a = loader.load_param(m, "p_a");
-  }
-  else {
-    // Otherwise, just create a new model.
-    p_W = m.add_parameters({HIDDEN_SIZE, 2});
-    p_b = m.add_parameters({HIDDEN_SIZE});
-    p_V = m.add_parameters({1, HIDDEN_SIZE});
-    p_a = m.add_parameters({1});
+    loader.populate(m);
   }
 
   Expression W = parameter(cg, p_W);
@@ -73,10 +66,6 @@ int main(int argc, char** argv) {
 
   // Output the model and parameter objects
   // to a cout.
-  TextFileSaver saver("xor-batch.model");
-  saver.save(m, "model");
-  saver.save(p_W, "p_W");
-  saver.save(p_b, "p_b");
-  saver.save(p_V, "p_V");
-  saver.save(p_a, "p_a");
+  TextFileSaver saver("/tmp/xor-batch.model");
+  saver.save(m);
 }
