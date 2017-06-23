@@ -67,6 +67,6 @@ int main(int argc, char** argv) {
   }
 
   // Output the model and parameter objects to a file.
-  TextFileSaver saver("xor.model");
+  TextFileSaver saver("/tmp/xor.model");
   saver.save(m);
 }
