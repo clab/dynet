@@ -742,7 +742,8 @@ Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
 
 int PickNegLogSoftmax::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::pnls);
-  s.add_dim(dim);
+  const Dim &in_dim = cg.nodes[args[0]]->dim;
+  s.add_dim(in_dim);
   return sm.get_idx(s);
 }
 std::vector<int> PickNegLogSoftmax::autobatch_concat(const ComputationGraph & cg) const {
@@ -843,8 +844,8 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
 
 int PickRange::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::pickrange);
-  const Dim &dim = cg.nodes[args[0]]->dim;
-  s.add_dim(dim);
+  const Dim &in_dim = cg.nodes[args[0]]->dim;
+  s.add_dim(in_dim);
   s.add_node(start);
   s.add_node(end);
   return sm.get_idx(s);
