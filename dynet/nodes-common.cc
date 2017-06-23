@@ -76,10 +76,11 @@ string SelectRows::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SelectRows::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1 && xs[0].ndims() == 2, "Bad arguments in SelectRows: " << xs);
+  DYNET_ARG_CHECK(xs.size() == 1, "Bad arguments in SelectRows: " << xs);
   unsigned nrows = prows->size();
-  if (xs[0].ndims() == 1) return Dim({nrows});
-  return Dim({nrows, xs[0].cols()});
+  Dim ret(xs[0]);
+  ret.d[0] = nrows;
+  return ret;
 }
 
 string SelectCols::as_string(const vector<string>& arg_names) const {
@@ -741,7 +742,8 @@ Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
 
 int PickNegLogSoftmax::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::pnls);
-  s.add_dim(dim);
+  const Dim &in_dim = cg.nodes[args[0]]->dim;
+  s.add_dim(in_dim);
   return sm.get_idx(s);
 }
 std::vector<int> PickNegLogSoftmax::autobatch_concat(const ComputationGraph & cg) const {
@@ -842,8 +844,8 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
 
 int PickRange::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::pickrange);
-  const Dim &dim = cg.nodes[args[0]]->dim;
-  s.add_dim(dim);
+  const Dim &in_dim = cg.nodes[args[0]]->dim;
+  s.add_dim(in_dim);
   s.add_node(start);
   s.add_node(end);
   return sm.get_idx(s);

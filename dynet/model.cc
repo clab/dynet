@@ -83,7 +83,7 @@ void ParameterStorage::zero() {
 
 void ParameterStorage::copy(const ParameterStorage & param) {
   DYNET_ARG_CHECK(dim == param.dim,
-                          "Attempt to copy between parameters with mismatched dimensions: " << dim << " != " << param.dim);
+                  "Attempt to copy between parameters with mismatched dimensions: " << dim << " != " << param.dim);
   TensorTools::copy_elements(values, param.values);
 }
 
@@ -136,7 +136,7 @@ size_t LookupParameterStorage::size() const {
 }
 
 void LookupParameterStorage::copy(const LookupParameterStorage& param) {
-  if(all_dim != param.all_dim)
+  if (all_dim != param.all_dim)
     DYNET_INVALID_ARG("Attempt to copy between lookup parameters with mismatched dimensions: " << all_dim << " != " << param.all_dim);
   TensorTools::copy_elements(all_values, param.all_values);
 }
@@ -565,8 +565,8 @@ void ParameterStorage::scale_gradient(float a) {
 template <class MyDevice>
 void LookupParameterStorage::initialize_dev(MyDevice & dev, unsigned index, const vector<float>& val) {
   DYNET_ARG_CHECK(int(val.size()) == int(dim.size()),
-                          "Attempt to initialize LookupParameters with vector of wrong size "
-                          "(" << val.size() << " != " << dim.size() << ")");
+                  "Attempt to initialize LookupParameters with vector of wrong size "
+                  "(" << val.size() << " != " << dim.size() << ")");
 #ifdef __CUDACC__
   cudaMemcpyAsync(values[index].v, &val[0], val.size() * sizeof(float), cudaMemcpyHostToDevice);
 #else
