@@ -3,9 +3,31 @@ Saving and Loading
 
 DyNet provides C++ interfaces for users to save and restore model parameters. The user has two options for saving a model. In the most basic use case, a complete `ParameterCollection` object can be saved. At loading time, the user should define and allocate the same parameter variables that were present in the model when it was saved (this usually amounts to having the same parameter creation called by both code paths), and then call `populate` and pass in the `ParameterCollection` object containing the parameters that should be loaded.
 
-However, in some cases it is useful to save only a subset of parameter objects (for example, if you wish to load these in a pretraining setup). Here, `Parameter` or `LookupParameter` objects can be saved explicitly.
+.. code:: cpp
 
-* You need to provide a more basic example with a single ParameterCollection.
+    #include <dynet/io.h>
+    // save end
+    ParameterCollection m;
+    Parameter a = m.add_parameters({100});
+    LookupParameter b = m.add_lookup_parameters(10, {100});
+    Parameter c = m.add_parameters({1000});
+    {
+        dynet::TextFileSaver s("/tmp/tmp1.model");
+        s.save(m);
+    }
+
+    // load end
+    ParameterCollection m;
+    m.add_parameter({100});
+    m.add_lookup_parameters(10, {100});
+    m.add_lookup_parameters({1000});
+    {
+        dynet::TextFileLoader l("/tmp/tmp1.model");
+        l.populate(m);
+    }
+
+
+However, in some cases it is useful to save only a subset of parameter objects(for example, if users wish to load these in a pretraining setup). Here, `Parameter` or `LookupParameter` objects can be saved explicitly. User could also specify keys for partial saving and loading.
 
 .. code:: cpp
 
