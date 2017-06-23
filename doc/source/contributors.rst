@@ -14,7 +14,7 @@ It relies `contributors <https://github.com/clab/dynet/graphs/contributors>`_ fr
   :target: http://allenai.org
 
 .. image:: images/naist.png
-  :target: http://naist.jp
+  :target: http://www.naist.jp/en/
 
 .. image:: images/petuum.png
   :target: http://petuum.com
