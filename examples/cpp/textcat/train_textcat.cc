@@ -304,8 +304,8 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        TextFileSaver saver("textcat.model");
-        saver.save(model, "model");
+        TextFileSaver saver("/tmp/textcat.model");
+        saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }

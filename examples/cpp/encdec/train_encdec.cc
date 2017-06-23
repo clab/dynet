@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
     TextFileLoader loader(params.model_file);
-    loader.populate(model, "model");
+    loader.populate(model);
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
       if (dloss < best) {
         best = dloss;
         TextFileSaver saver(fname);
-        saver.save(model, "model");
+        saver.save(model);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)

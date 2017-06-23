@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
     TextFileLoader loader(params.model_file);
-    loader.populate(model, "model");
+    loader.populate(model);
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -217,8 +217,8 @@ int main(int argc, char** argv) {
       // If the dev loss is lower than the previous ones, save the model
       if (dloss < best) {
         best = dloss;
-        TextFileSaver saver("rnnlm-batch.model");
-        saver.save(model, "model");
+        TextFileSaver saver("/tmp/rnnlm-batch.model");
+        saver.save(model);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)

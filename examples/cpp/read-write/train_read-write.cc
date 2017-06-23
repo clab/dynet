@@ -73,22 +73,14 @@ public:
   }
 };
 
-void WriteToFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
+void WriteToFile(string& filename, ParameterCollection& dynet_model) {
   TextFileSaver saver(filename);
-  saver.save(dynet_model, "model");
-  saver.save(model.pW, "model.pW");
-  saver.save(model.pb, "model.pb");
-  saver.save(model.pV, "model.pV");
-  saver.save(model.pa, "model.pa");
+  saver.save(dynet_model);
 }
 
-void ReadFromFile(string& filename, XORModel& model, ParameterCollection& dynet_model) {
+void ReadFromFile(string& filename, ParameterCollection& dynet_model) {
   TextFileLoader loader(filename);
-  loader.populate(dynet_model, "model");
-  loader.populate(model.pW, "model.pW");
-  loader.populate(model.pb, "model.pb");
-  loader.populate(model.pV, "model.pV");
-  loader.populate(model.pa, "model.pa");
+  loader.populate(dynet_model);
 }
 
 int main(int argc, char** argv) {
@@ -118,16 +110,16 @@ int main(int argc, char** argv) {
     cerr << "E = " << loss << endl;
   }
 
-  string outfile = "out.txt";
+  string outfile = "/tmp/out.model";
   cerr << "Written model to File: " << outfile << endl;
-  WriteToFile(outfile, model, m);  // Writing objects to file
+  WriteToFile(outfile, m);  // Writing objects to file
 
-  // New objects in which the written archive will be read
+  // New objects in which the written model will be read
   ParameterCollection read_dynet_model;
-  XORModel read_model;
+  XORModel read_model(HIDDEN, read_dynet_model);
 
   cerr << "Reading model from File: " << outfile << endl;
-  ReadFromFile(outfile, read_model, read_dynet_model);  // Reading from file
+  ReadFromFile(outfile, read_dynet_model);  // Reading from file
   cerr << "Output for the input: " << x_values[0] << " " << x_values[1] << endl;
   cerr << read_model.Decode(x_values);  // Checking output for sanity
 }

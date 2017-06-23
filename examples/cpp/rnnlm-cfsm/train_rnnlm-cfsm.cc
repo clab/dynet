@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
   //RNNLanguageModel<SimpleRNNBuilder> lm(model, cfsm);
   if (argc == 5) {
     TextFileLoader loader(argv[4]);
-    loader.populate(model, "model");
+    loader.populate(model);
   }
 
   unsigned report_every_i = 50;
@@ -206,7 +206,7 @@ int main(int argc, char** argv) {
       if (dloss < best) {
         best = dloss;
         TextFileSaver saver(fname);
-        saver.save(model, "model");
+        saver.save(model);
       }
     }
 #endif
