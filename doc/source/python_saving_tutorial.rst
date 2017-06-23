@@ -63,7 +63,10 @@ In some cases it is useful to save only a subset of parameter objects (for examp
     a.populate("/tmp/tmp.model", "/a")
     c.populate("/tmp/tmp.model", "/m3/pc")
 
- (See the documentation of ``ParameterCollection`` for further information about ``sub_collections`` and the use of collection hierarchies )
+
+(See the documentation of ``ParameterCollection`` for further information about ``sub_collections`` and the use of collection hierarchies )
+
+----
 
 One can also save and load builder objects using the internal parameter collection.
 
