@@ -63,7 +63,7 @@ In some cases it is useful to save only a subset of parameter objects (for examp
     a.populate("/tmp/tmp.model", "/a")
     c.populate("/tmp/tmp.model", "/m3/pc")
 
-(See the documentation of `ParameterCollection` for further information about sub_collections and the use of collection hierarchies )
+ (See the documentation of ``ParameterCollection`` for further information about ``sub_collections`` and the use of collection hierarchies )
 
 One can also save and load builder objects using the internal parameter collection.
 
@@ -91,12 +91,12 @@ One can also save and load builder objects using the internal parameter collecti
 Partial Saving And Loading (High-level API)
 ===========================================
 
-Use the module level `dy.save(basename, lst)` and `dy.load(basename, param_collection)` methods. 
+Use the module level ``dy.save(basename, lst)`` and ``dy.load(basename, param_collection)`` methods. 
 
-`dy.save` gets a base filename and a list of saveable objects (see below), and saves them to file.
+``dy.save`` gets a base filename and a list of saveable objects (see below), and saves them to file.
 
-`dy.load` gets a base filename and a parameter collection (model), and returns a
-list of objects, in the same order that were passed to `dy.save`. The paramters
+``dy.load`` gets a base filename and a parameter collection (model), and returns a
+list of objects, in the same order that were passed to ``dy.save``. The paramters
 of the objects are added to the model.
 
 Notice that you do not need to specify sizes when loading.
@@ -120,28 +120,26 @@ Notice that you do not need to specify sizes when loading.
 What can be saved?
 ------------------
 
-Each object in `lst` must be one of the following:
+Each object in ``lst`` must be one of the following:
 
 1. Parameter
 2. LookupParameter
 3. One of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder, SimpleRNNBuilder, BiRNNBuilder)
 4. A type adhering to the following interface:
-    - has a `param_collection()` method returning a ParameterCollection object with the
-        parameters in the object.
-    - has a pickleable `.spec` property with items describing the object
-    - has a `.from_spec(spec, model)` static method that will create and return a
-        new instane with the needed parameters/etc in the model.
+    - has a ``.param_collection()`` method returning a ParameterCollection object with the parameters in the object.
+    - has a pickleable ``.spec`` property with items describing the object
+    - has a ``.from_spec(spec, model)`` static method that will create and return a new instane of the object with the needed parameters/etc.
 
 Note, the built-in types in (3) above can be saved/loaded this way simply because 
 they support this interface.
 
 behind the scenes:
-- for each item, we write to `.meta`:
+- for each item, we write to ``basename.meta``:
     - if its a Parameters/ParameterCollection: 
         its type and full name.
     - if its a builder:
         its class, its spec, the full name of its parameters collection.
-- the associated parameters/sub-collection is then saved to `.data`
+- the associated parameters/sub-collection is then saved to ``.data``
 
 Example of a user-defined saveable type:
 ----------------------------------------
@@ -205,7 +203,7 @@ And for the usage:
 File format
 ===========
 
-Currently, DyNet only supports plain text format. The native format is quite simple so very readable. The model file is consist of basic storage blocks. A basic block starts with a first line of meta data information: `#object_type# object_name dimension block_size` and the remaining part of real data. During loading process, DyNet uses meta data lines to locate the objects user wants to load.
+Currently, DyNet only supports plain text format. The native format is quite simple so very readable. The model file is consist of basic storage blocks. A basic block starts with a first line of meta data information: ``#object_type# object_name dimension block_size`` and the remaining part of real data. During loading process, DyNet uses meta data lines to locate the objects user wants to load.
 
-In the pythonic high-level partial saving/loading API, the `.data` file adheres to
-the format above, while the `.meta` file conains information on objects types and sizes (for the specifics of the `.meta` file format see `_save_one` and `_load_one` in `_dynet.pyx`).
+In the pythonic high-level partial saving/loading API, the ``.data`` file adheres to
+the format above, while the ``.meta`` file conains information on objects types and sizes (for the specifics of the ``.meta`` file format see code of ``_save_one`` and ``_load_one`` in ``_dynet.pyx``).
