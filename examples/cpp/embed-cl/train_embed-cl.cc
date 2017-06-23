@@ -65,10 +65,9 @@ struct Encoder {
 #endif
   }
 
-  void save() {
-    TextFileSaver saver("embed-cl.model");
-    saver.save(p_s, "p_s");
-    saver.save(p_t, "p_t");
+  void save(ParameterCollection &model) {
+    TextFileSaver saver("/tmp/embed-cl.model");
+    saver.save(model);
   }
 };
 
@@ -132,13 +131,11 @@ int main(int argc, char** argv) {
 #endif
   ParameterCollection model;
   Encoder emb;
+  emb = Encoder(model);
   if (argc == 4) {
     string fname = argv[3];
     TextFileLoader loader(fname);
-    loader.populate(model, "model");
-  }
-  else {
-    emb = Encoder(model);
+    loader.populate(model);
   }
 
   bool use_momentum = false;

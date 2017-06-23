@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
     string fname = conf["model"].as<string>();
     cerr << "Reading parameters from " << fname << "...\n";
     TextFileSaver saver(fname);
-    saver.save(model, "model");
+    saver.save(model);
   }
 
   bool LEARN = conf.count("learn");
@@ -319,7 +319,7 @@ int main(int argc, char** argv) {
         if (dloss < best) {
           best = dloss;
           TextFileSaver saver(fname);
-          saver.save(model, "model");
+          saver.save(model);
         }
         cerr << "\n***DEV [epoch=" << (lines / training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
       }

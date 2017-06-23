@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
   RNNLengthPredictor<LSTMBuilder> lm(model);
   if (argc == 4) {
     TextFileLoader loader(argv[3]);
-    loader.populate(model, "model");
+    loader.populate(model);
   }
 
   unsigned report_every_i = 50;
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
       if (dloss < best) {
         best = dloss;
         TextFileSaver saver(fname);
-        saver.save(model, "model");
+        saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
