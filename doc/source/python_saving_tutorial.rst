@@ -129,9 +129,9 @@ Each object in ``lst`` must be one of the following:
 2. LookupParameter
 3. One of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder, SimpleRNNBuilder, BiRNNBuilder)
 4. A type adhering to the following interface:
- - has a ``.param_collection()`` method returning a ParameterCollection object with the parameters in the object.
- - has a pickleable ``.spec`` property with items describing the object
- - has a ``.from_spec(spec, model)`` static method that will create and return a new instane of the object with the needed parameters/etc.
+- has a ``.param_collection()`` method returning a ParameterCollection object with the parameters in the object.
+- has a pickleable ``.spec`` property with items describing the object
+- has a ``.from_spec(spec, model)`` static method that will create and return a new instane of the object with the needed parameters/etc.
 
 Note, the built-in types in (3) above can be saved/loaded this way simply because 
 they support this interface.
