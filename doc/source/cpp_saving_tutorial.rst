@@ -67,6 +67,6 @@ However, in some cases it is useful to save only a subset of parameter objects(f
     }
 
 
-A word of warning: in previous versions of DyNet, Builder objects needed to be serialized. This is no longer the case.
+A word of warning: in previous versions of DyNet, Builder objects needed to be serialized. This is no longer the case. (The Python inerface does allow serialization of builder objects out of the box).
 
 Currently, DyNet only supports plain text format. The native format is quite simple so very readable. The model file is consist of basic storage blocks. A basic block starts with a first line of meta data information: `#object_type# object_name dimension block_size` and the remaining part of real data. During loading process, DyNet uses meta data lines to locate the objects user wants to load.
