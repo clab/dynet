@@ -53,6 +53,10 @@ struct NodeMemPool {
     return capacity_;
   }
 
+  size_t used() {
+    return used_;
+  }
+
  private:
   size_t capacity_;
   size_t used_;
