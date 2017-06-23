@@ -469,6 +469,11 @@ void load_dynet_model(std::string filename, ParameterCollection* model) {
   loader.populate(*model, "model");
 };
 
+Model::Model() : ParameterCollection() {
+  cerr << "The name dynet::Model has been deprecated and replaced by dynet::ParameterCollection." << endl
+       << "Please replace references to dynet::Model with references to dynet::ParameterCollection." << endl;
+}
+
 #endif
 
 // CPU/GPU code
@@ -779,10 +784,5 @@ float ParameterCollection::gradient_l2_norm() const {
   return get_storage().gradient_l2_norm();
 }
 #endif
-
-Model::Model() : ParameterCollection() {
-  cerr << "The name dynet::Model has been deprecated and replaced by dynet::ParameterCollection." << endl
-       << "Please replace references to dynet::Model with references to dynet::ParameterCollection." << endl;
-}
 
 } // namespace dynet
