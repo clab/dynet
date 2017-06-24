@@ -106,9 +106,9 @@ void MaxPooling2D::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in MaxPooling2D::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in MaxPooling2D::backward");
   DYNET_ASSERT(i == 0, "Failed dimension check in MaxPooling2D::backward: i must be 0");
-  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
 #ifdef __CUDACC__
 #if HAVE_CUDNN
+  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
   if (cudnn_maxpool_op_ == NULL) {
     cudnn_maxpool_op_ = new CudnnMaxPooling2DOp(ksize, stride, is_valid);
   }
