@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE ( test_parametercollection_with_builder ) {
   DYNET_CHECK_EQUAL(gru_builder.get_parameter_collection().size(), 9 * 3);
   dynet::ParameterCollection collec2;
   auto bi_treelstm_builder = BidirectionalTreeLSTMBuilder(3, 10, 2, collec2);
-  DYNET_CHECK_EQUAL(bi_treelstm_builder.get_parameter_collection().size(), 11 * 3 * 2);
+  DYNET_CHECK_EQUAL(bi_treelstm_builder.get_parameter_collection().size(), 3 * 3 * 2);
 }
 
 BOOST_AUTO_TEST_CASE( scale ) {
