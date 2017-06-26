@@ -7,7 +7,7 @@ import scala.language.implicitConversions
 import java.nio.file.Paths
 
 class EncoderDecoder(
-  model: Model,
+  model: ParameterCollection,
   numLayers: Int,
   inputDim: Int,
   hiddenDim: Int,
@@ -315,7 +315,7 @@ object EncoderDecoder {
       }
     }
 
-    val model = new Model()
+    val model = new ParameterCollection()
     val adam = new AdamTrainer(model, 0.001f, 0.9f, 0.999f, 1e-8f)
     adam.clipThreshold = adam.clipThreshold * BATCH_SIZE
 

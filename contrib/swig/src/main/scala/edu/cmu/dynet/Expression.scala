@@ -42,7 +42,7 @@ class Expression private[dynet](
   *
   *  * from explicit values (e.g. `input`)
   *  * randomly (e.g. `randomNormal`)
-  *  * from [[edu.cmu.dynet.Model]] parameters (e.g. `parameter`)
+  *  * from [[edu.cmu.dynet.ParameterCollection]] parameters (e.g. `parameter`)
   *  * from other expressions (e.g. `softmax` and `pow`)
   */
 object Expression {

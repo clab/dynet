@@ -6,7 +6,7 @@ import scala.language.implicitConversions
 import java.nio.file.Paths
 
 class RnnLanguageModelBatch(
-  model: Model,
+  model: ParameterCollection,
   layers: Int,
   inputDim: Int,
   hiddenDim: Int,
@@ -204,7 +204,7 @@ object RnnLanguageModelBatch {
       }
     }
 
-    val model = new Model
+    val model = new ParameterCollection
     val adam = new AdamTrainer(model, 0.001f, 0.9f, 0.999f, 1e-8f)
     adam.clipThreshold = adam.clipThreshold * BATCH_SIZE
 
