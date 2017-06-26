@@ -201,9 +201,15 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
   CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
               CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
               YN, YC, YW, YH));
-  CUDNN_CHECK(cudnnSetFilter4dDescriptor(filter_desc_,
+#if CUDNN_VERSION_MIN(5, 0, 0)
+  CUDNN_CHECK(cudnnSetFilter4dDescriptor(filter_desc_, 
               DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
               FYC, FXC, FW, FH));
+#else
+  CUDNN_CHECK(cudnnSetFilter4dDescriptor_v4(filter_desc_, 
+              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
+              FYC, FXC, FW, FH));
+#endif
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
               pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
               CUDNN_CROSS_CORRELATION));
@@ -362,9 +368,15 @@ void CudnnMaxPooling2DOp::backward_impl(const Device_GPU & dev,
   CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
               CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
               YN, YC, YW, YH));
-  CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
-              CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
-              ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  #if CUDNN_VERSION_MIN(5, 0, 0)
+    CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
+                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  #else
+    CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(pooling_desc_,
+                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  #endif
 
   // here we could reuse the descriptor we created for forward, because 
   // they share the same size

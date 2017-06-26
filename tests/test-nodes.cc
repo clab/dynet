@@ -1226,6 +1226,17 @@ BOOST_AUTO_TEST_CASE( fold_rows_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression average(const Expression& x);
+BOOST_AUTO_TEST_CASE( average_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param2);
+  Expression x3 = parameter(cg, param3);
+  Expression y = average({x1, x2, x3});
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression average_cols(const Expression& x);
 BOOST_AUTO_TEST_CASE( average_cols_gradient ) {
   dynet::ComputationGraph cg;
