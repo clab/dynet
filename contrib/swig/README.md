@@ -275,33 +275,13 @@ that are nicer to work with and that implicitly convert to the SWIG types.
 
 ### Serialization
 
-DyNet uses `boost::serialization` to correctly serialize/deserialize
-an object graph of `Model`s, `Builder`s, and so on. On the Java side
-we expose `ModelLoader` and `ModelSaver` classes that wrap this
-functionality and allow complex serialization from Scala code. We also
-extended these classes to serialize primitives and Java/Scala objects
-that implement `Serializable`:
+DyNet used to use `boost::serialization` to serialize/deserialize
+an object graph of `Model`s, `Builder`s, and so on. Accordingly, earlier
+versions of the Scala bindings provided fairly complex serialization
+functionality.
 
-```scala
-    val mod1 = new Model()
-    val rnn1 = new SimpleRNNBuilder(1, 10, 10, mod1)
-
-    val path = "/path/to/save/model/files"
-    val saver = new ModelSaver(path)
-    saver.addModel(mod1)
-    saver.addSRnnBuilder(rnn1)
-    saver.addObject(new Foo())
-    saver.addInt(3)
-    saver.done()
-
-    val loader = new ModelLoader(path)
-    val mod2 = loader.loadModel()
-    val rnn2 = loader.loadSRnnBuilder()
-    val foo = loader.loadObject(classOf[Foo])
-    val i = loader.loadInt()
-    loader.done()
-```
-
-The `ModelSaver` doesn't do any tracking of what it saves (or in what order),
-so it's on you to track that and/or make sure you deserialize things in the
-same order they were serialized.
+With the v2 release, DyNet provides simple `Saver` and `Loader` classes
+that don't rely on boost.  Accordingly, we have removed boost
+(and hence a lot of the extra serialization functionality that relied on it)
+from the bindings and included Scala wrappers around `TextFileSaver` and `TextFileLoader`.
+If you find you really need some of the missing functionality, let us know (or submit a PR).
