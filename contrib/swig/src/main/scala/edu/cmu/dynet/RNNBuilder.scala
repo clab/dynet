@@ -49,7 +49,7 @@ class SimpleRnnBuilder private[dynet](private[dynet] val builder: internal.Simpl
     extends RnnBuilder(builder) {
   def this() { this(new internal.SimpleRNNBuilder()) }
 
-  def this(layers: Long, inputDim: Long, hiddenDim: Long, model: Model, supportLags: Boolean = false) {
+  def this(layers: Long, inputDim: Long, hiddenDim: Long, model: ParameterCollection, supportLags: Boolean = false) {
     this(new internal.SimpleRNNBuilder(layers, inputDim, hiddenDim, model.model, supportLags))
   }
 

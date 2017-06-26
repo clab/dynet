@@ -17,7 +17,7 @@ object LinearRegression {
       r = scala.util.Random.nextGaussian()
     } yield (-5.0 + 2.0 * x + 0.0033 * r).toFloat
 
-    val model = new Model
+    val model = new ParameterCollection
     val trainer = new SimpleSGDTrainer(model, 0.01f)
     ComputationGraph.renew()
 
