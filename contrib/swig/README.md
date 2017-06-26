@@ -23,14 +23,14 @@ Note that if you are using Ubuntu, `apt-get` will almost certainly install
 a much older version that won't work here. You also need to make sure that
 your `$JAVA_HOME` environment variable is set correctly.
 
-Then to build DyNet with the SWIG bindings, simply add `-DINCLUDE_SWIG=ON` to the
+Then to build DyNet with the SWIG bindings, simply add `-DENABLE_SWIG=ON` to the
 `cmake` command. (See the [DyNet
 documentation](http://dynet.readthedocs.io/en/latest/install.html) for
 general build instructions). For example, run this from the `build`
 directory:
 
 ```
-build$ cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DINCLUDE_SWIG=ON
+build$ cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DENABLE_SWIG=ON
 build$ make
 ```
 
@@ -94,7 +94,7 @@ the same code on the CPU.
 
 ## Modifying the Bindings
 
-As more functionality is added to (C++) DyNet, corresponding changes 
+As more functionality is added to (C++) DyNet, corresponding changes
 will need to be made to these bindings. Here is how to update the Scala
 bindings for (say) a new class `NewClass`:
 
@@ -102,14 +102,14 @@ bindings for (say) a new class `NewClass`:
 
 * Make sure that the `.i` file `#include`s the relevant C++ header file
   (if it doesn't already)
-* Declare the class and whatever methods you want wrappers for in the 
+* Declare the class and whatever methods you want wrappers for in the
   `.i` file. (The existing declarations should be a good guide.)
 
 ### In `CMakeLists.txt`
 
 * SWIG will generate an intermediate `NewClass.java` file; add it to the
   `add_jar` directive
-  
+
 ### In Scala
 
 * create a Scala class with a private constructor that wraps the SWIG-generated
@@ -218,13 +218,13 @@ differences.
 ### Naming
 
 Everything has been given Scala-cased names. So `affine_transform`
-becomes `affineTransform` and so on. 
+becomes `affineTransform` and so on.
 
 ### `ComputationGraph`s
 
-In Scala there is a singleton `ComputationGraph`. Accordingly, any 
-function or method that in C++ would take the computation graph as a 
-parameter, in Scala doesn't. 
+In Scala there is a singleton `ComputationGraph`. Accordingly, any
+function or method that in C++ would take the computation graph as a
+parameter, in Scala doesn't.
 
 When you want to clear the computation graph and get a new one, call the
 static method
@@ -246,9 +246,9 @@ In Scala these are all static methods on the `Expression` companion object.
 
 ### `std::vector`s
 
-DyNet does a lot behind the scenes with C++ `std::vector<>`s. 
+DyNet does a lot behind the scenes with C++ `std::vector<>`s.
 In Scala there are `IntVector`, `FloatVector`, `UnsignedVector`, and
-`ExpressionVector` classes that thinly wrap these C++ vectors. 
+`ExpressionVector` classes that thinly wrap these C++ vectors.
 They all implement `IndexedSeq` so that they're pretty easy to work
 with.
 
@@ -265,11 +265,11 @@ takes an `unsigned` on the C++ side takes a `Long` on the C++ side.
 ### Pointers
 
 For the most part you shouldn't have to worry about pointers; most things
-are references in Java, so where a C++ method might take a 
+are references in Java, so where a C++ method might take a
 `Model*` parameter, the corresponding Java method just takes a `Model`.
 
 The exception is primitives. SWIG produces (for example) a `SWIGTYPE_p_int`
-type wrapper for `int*` and bare functions for working with these. 
+type wrapper for `int*` and bare functions for working with these.
 The Scala API provides wrapper classes `IntPointer` and `FloatPointer`
 that are nicer to work with and that implicitly convert to the SWIG types.
 
@@ -305,4 +305,3 @@ that implement `Serializable`:
 The `ModelSaver` doesn't do any tracking of what it saves (or in what order),
 so it's on you to track that and/or make sure you deserialize things in the
 same order they were serialized.
-
