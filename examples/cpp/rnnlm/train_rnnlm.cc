@@ -17,6 +17,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <memory>
 
 using namespace std;
 using namespace dynet;
@@ -125,7 +126,7 @@ void inline read_fields(string line, vector<string>& fields, string delimiter = 
   while (true) {
     end = line.find(delimiter, start);
     fields.push_back(line.substr(start, end - start));
-    if (end == std::string::npos) break;
+    if (end == (int)std::string::npos) break;
     start = end + delim_size;
   }
 }
