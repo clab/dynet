@@ -8,7 +8,7 @@ class ParameterInitSpec extends FlatSpec with Matchers {
   Initialize.initialize()
 
   "ParameterInitConst" should "set constant values" in {
-    val model = new Model
+    val model = new ParameterCollection
     val p_W = model.addParameters(Dim(10))
 
     val init = ParameterInit.const(10.0f)
@@ -19,7 +19,7 @@ class ParameterInitSpec extends FlatSpec with Matchers {
   }
 
   "ParameterInitNormal" should "initialize things normally" in {
-    val model = new Model
+    val model = new ParameterCollection
     val p_W = model.addParameters(Dim(10000))
 
     // mean 10, variance 4
@@ -39,7 +39,7 @@ class ParameterInitSpec extends FlatSpec with Matchers {
   }
 
   "ParameterInitUniform" should "initialize things uniformly" in {
-    val model = new Model
+    val model = new ParameterCollection
     val p_W = model.addParameters(Dim(10000))
 
     // uniform from 12 to 17
@@ -62,7 +62,7 @@ class ParameterInitSpec extends FlatSpec with Matchers {
   }
 
   "ParameterInitIdentity" should "initialize to the identity matrix" in {
-    val model = new Model
+    val model = new ParameterCollection
     val p_W = model.addParameters(Dim(100, 100))
 
     val init = ParameterInit.identity()
@@ -80,7 +80,7 @@ class ParameterInitSpec extends FlatSpec with Matchers {
   }
 
   "ParameterInitFromVector" should "initialize from a vector" in {
-    val model = new Model
+    val model = new ParameterCollection
     val p_W = model.addParameters(Dim(1000))
 
     val valuesIn = (1 to 1000).map(x => math.sin(x).toFloat)
@@ -97,7 +97,7 @@ class ParameterInitSpec extends FlatSpec with Matchers {
   }
 
   "ParameterInitGlorot" should "initialize using the correct distribution" in {
-    val model = new Model
+    val model = new ParameterCollection
     val p_W = model.addParameters(Dim(20, 5))
 
     val init = ParameterInit.glorot()
