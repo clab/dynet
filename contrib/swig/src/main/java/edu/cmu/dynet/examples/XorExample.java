@@ -22,7 +22,7 @@ public class XorExample {
     System.out.println("Running XOR example");
     initialize(new DynetParams());
     System.out.println("Dynet initialized!");
-    Model m = new Model();
+    ParameterCollection m = new ParameterCollection();
     SimpleSGDTrainer sgd = new SimpleSGDTrainer(m);
     ComputationGraph cg = ComputationGraph.getNew();
 

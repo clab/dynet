@@ -11,7 +11,7 @@ class GruBuilder private[dynet](private[dynet] val builder: internal.GRUBuilder)
 
   /** Create a GruBuilder with the specified parameters.
     */
-  def this(layers: Long, inputDim: Long, hiddenDim: Long, model: Model) {
+  def this(layers: Long, inputDim: Long, hiddenDim: Long, model: ParameterCollection) {
     this(new internal.GRUBuilder(layers, inputDim, hiddenDim, model.model))
   }
 }

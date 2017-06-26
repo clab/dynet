@@ -13,7 +13,7 @@ object PoissonRegression {
   val HIDDEN_DIM = 32
   var VOCAB_SIZE = 0
 
-  class RNNLengthPredictor(model: Model) {
+  class RNNLengthPredictor(model: ParameterCollection) {
     val builder = new LstmBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
     val p_c = model.addLookupParameters(VOCAB_SIZE, Dim(INPUT_DIM))
     val p_R = model.addParameters(Dim(1, HIDDEN_DIM))
@@ -108,7 +108,7 @@ object PoissonRegression {
 
     var best = Float.MaxValue
 
-    val model = new Model()
+    val model = new ParameterCollection()
     val sgd = new SimpleSGDTrainer(model)
 
     val lm = new RNNLengthPredictor(model)

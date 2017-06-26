@@ -5,7 +5,7 @@ class FastLstmBuilder private[dynet](private[dynet] val builder: internal.FastLS
 
   def this() { this(new internal.FastLSTMBuilder()) }
 
-  def this(layers: Long, inputDim: Long, hiddenDim: Long, model: Model) {
+  def this(layers: Long, inputDim: Long, hiddenDim: Long, model: ParameterCollection) {
     this(new internal.FastLSTMBuilder(layers, inputDim, hiddenDim, model.model))
   }
 
