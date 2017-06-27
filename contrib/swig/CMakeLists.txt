@@ -48,6 +48,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/AdagradTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/AdamTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/ComputationGraph.java"
+    "${CMAKE_SWIG_OUTDIR}/CyclicalSGDTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/Dim.java"
     "${CMAKE_SWIG_OUTDIR}/DoubleVector.java"
     "${CMAKE_SWIG_OUTDIR}/dynet_swig.java"

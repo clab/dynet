@@ -77,5 +77,39 @@ BOOST_AUTO_TEST_CASE( autobatch_lstm_gradient ) {
     BOOST_CHECK_CLOSE(results[0], results[i], 0.0001);
 }
 
+BOOST_AUTO_TEST_CASE( param_after_node ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  for(size_t i = 0; i < 3; ++i) {
+    dynet::autobatch_flag = i;
+	  ComputationGraph cg;
+	  Model model;
+	  Parameter param = model.add_parameters({ 1 });
+
+	  Expression loss = zeroes(cg, { 1 });
+	  parameter(cg, param);
+
+	  cg.incremental_forward(loss);
+	  cg.backward(loss);
+  }
+  dynet::autobatch_flag = autobatch_cache;
+}
+
+BOOST_AUTO_TEST_CASE( param_after_node_2 ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  for(size_t i = 0; i < 3; ++i) {
+    dynet::autobatch_flag = i;
+	  ComputationGraph cg;
+	  Model model;
+	  LookupParameter param = model.add_lookup_parameters(10, { 1 });
+
+	  lookup(cg, param, 1);
+	  Expression loss = zeroes(cg, { 1 });
+
+	  cg.incremental_forward(loss);
+	  cg.backward(loss);
+  }
+  dynet::autobatch_flag = autobatch_cache;
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

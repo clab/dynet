@@ -24,15 +24,20 @@ env:
   global:
     - PYTHON=python CONDA_PACKAGES="numpy cython"
   matrix:
-    - PYVER=3.4 PYNUM=3
-    - PYVER=2.7 PYNUM=2
+    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip
+    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
+    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip
 matrix:
   exclude:
     - os: linux
       compiler: clang
     - os: osx
       compiler: gcc
-
+    - os: osx
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip
+    - os: osx
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip
 
 before_install:
   # We do this conditionally because it saves us some downloading if the
@@ -52,30 +57,37 @@ before_install:
   - conda info -a
 
 install:
-  - hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
-  - cd eigen
-  - mkdir build && cd build
-  - cmake ..
-  - sudo make install
-  - cd ../..
-
+  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
+      hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb || travis_terminate 1;
+      cd eigen;
+      mkdir build && cd build;
+      cmake .. || travis_terminate 1;
+      sudo make install || travis_terminate 1;
+      cd ../..;
+    fi'
 
 before_script:
   - cd $TRAVIS_BUILD_DIR
-  - mkdir build
-  - cd build
   - conda create -q -n dynet-environment python=$PYVER $CONDA_PACKAGES
   - source activate dynet-environment
-  - cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DPYTHON=`which python`
+  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
+      mkdir build;
+      cd build;
+      cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DPYTHON=`which python` || travis_terminate 1;
+    else
+      pip install -v . || travis_terminate 1;
+    fi'
 
 after_failure:
   - cat $TRAVIS_BUILD_DIR/build/CMakeFiles/CMakeError.log
 
 script:
-  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then make -j$(nproc); fi
-  - if [[ $TRAVIS_OS_NAME == "osx" ]]; then make -j$(sysctl -n hw.ncpu); fi
-  - make test
-  - cd python
-  - python setup.py install --user
-  - cd ../../tests/python
+  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
+      if [[ $TRAVIS_OS_NAME == "linux" ]]; then make -j$(nproc); fi;
+      if [[ $TRAVIS_OS_NAME == "osx" ]]; then make -j$(sysctl -n hw.ncpu); fi;
+      make test || travis_terminate 1;
+      cd python;
+      python setup.py install --user || travis_terminate 1;
+    fi'
+  - cd $TRAVIS_BUILD_DIR/tests/python
   - python test.py
