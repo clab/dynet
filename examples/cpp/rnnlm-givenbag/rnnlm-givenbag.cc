@@ -237,9 +237,8 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+	TextFileSaver saver("/tmp/rnnlm-givenbag.model");
+	saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
