@@ -149,6 +149,8 @@ object Expression {
   def log(e: Expression): Expression = unary(e, dn.log)
   def logistic(e: Expression): Expression = unary(e, dn.logistic)
   def rectify(e: Expression): Expression = unary(e, dn.rectify)
+  def elu(e: Expression): Expression = unary(e, dn.elu)
+  def selu(e: Expression): Expression = unary(e, dn.selu)
   def softsign(e: Expression): Expression = unary(e, dn.softsign)
   def pow(x: Expression, y: Expression): Expression = binary(x, y, dn.pow)
 

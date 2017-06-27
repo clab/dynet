@@ -18,6 +18,7 @@ namespace dynet {
 //   (dE/dC)_ij = (dE/dY)_ij
 struct InnerProduct3D_1D : public Node {
   InnerProduct3D_1D(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 

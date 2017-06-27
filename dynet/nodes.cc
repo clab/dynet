@@ -456,17 +456,51 @@ void Average::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     return;
   }
-  auto res = fx.tvec();
-  const unsigned remainder = num_args % 4;
-  switch (remainder) {
-    case 0: res.setZero(); break;
-    case 1: res.device(*dev.edevice) = xs[0]->tvec(); break;
-    case 2: res.device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec(); break;
-    case 3: res.device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec(); break;
+  if (num_args == 2 && xs[0]->d.bd == xs[1]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec();
+  else if (num_args == 3 && xs[0]->d.bd == xs[1]->d.bd && xs[1]->d.bd == xs[2]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec();
+  else if (num_args == 4 && xs[0]->d.bd == xs[1]->d.bd && xs[1]->d.bd == xs[2]->d.bd && xs[2]->d.bd == xs[3]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec() + xs[3]->tvec();
+  else {
+    bool allSameBatchSize = std::all_of(xs.begin(), xs.end(), [&](const Tensor* x) { return x->d.bd == xs[0]->d.bd;});
+    if (allSameBatchSize) {
+      // Since they are all the same batch size, we can easily unroll the addition (results in lower GPU latency by merging multiple adds together in one CUDA call):
+      DYNET_ASSERT(num_args > 4, "Bad loop unrolling in Sum::forward");        // If it was <=4, we would have handled it in the special cases above
+      fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec() + xs[3]->tvec();
+
+      const unsigned remainder = (num_args - 4 ) % 4;
+      switch (remainder) {
+        case 0: break;
+        case 1: fx.tvec().device(*dev.edevice) += xs[4]->tvec(); break;
+        case 2: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec(); break;
+        case 3: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec() + xs[6]->tvec(); break;
+      }
+      for (unsigned i = 4 + remainder; i < num_args; i += 4)
+        fx.tvec().device(*dev.edevice) += xs[i]->tvec() + xs[i + 1]->tvec() + xs[i + 2]->tvec() + xs[i + 3]->tvec();
+    }
+    else {
+      // Not all the same batch size, so need to broadcast in the cases where they differ
+      TensorTools::zero(fx);
+#if __CUDACC__
+      Eigen::array<int, 2> bcast({ 1, (int)fx.d.bd });
+#endif
+      for (unsigned i = 0; i < num_args; ++i) {
+        if (xs[i]->d.bd == fx.d.bd) {
+          fx.tvec().device(*dev.edevice) += xs[i]->tvec();
+        }
+        else {
+#if __CUDACC__
+          fx.tbvec().device(*dev.edevice) += xs[i]->tbvec().broadcast(bcast);
+#else
+          for (unsigned b = 0; b < fx.d.bd; ++b)
+            fx.tbvec().chip<1>(b).device(*dev.edevice) += xs[i]->tvec();
+#endif
+        }
+      }
+    }
   }
-  for (unsigned i = remainder; i < num_args; i += 4)
-    res.device(*dev.edevice) += xs[i]->tvec() + xs[i+1]->tvec() + xs[i+2]->tvec() + xs[i+3]->tvec();
-  res.device(*dev.edevice) = res / (float)num_args;
+  fx.tvec().device(*dev.edevice) = fx.tvec() / (float)xs.size();
 }
 
 template<class MyDevice>
@@ -1973,6 +2007,23 @@ void Rectify::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(Rectify)
 
 template<class MyDevice>
+void ExponentialLinearUnit::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in ExponentialLinearUnit::forward");
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FELUForward(alpha, lambda));;
+}
+
+template<class MyDevice>
+void ExponentialLinearUnit::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FELUBackward(alpha, lambda));
+}
+DYNET_NODE_INST_DEV_IMPL(ExponentialLinearUnit)
+
+template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
@@ -2064,7 +2115,7 @@ void SelectRows::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   for (unsigned i = 0; i < rm.size(); ++i) {
     DYNET_ARG_CHECK(rm[i] < xs[0]->d.rows(),
                             "Out-of-bounds index " << rm[i] << " in SelectRows over expression of dimensions " << xs[0]->d);
-    fx.t<2>().chip<0>(i).device(*dev.edevice) = xs[0]->t<2>().chip<0>(rm[i]);
+    fx.t<4>().chip<0>(i).device(*dev.edevice) = xs[0]->t<4>().chip<0>(rm[i]);
   }
 }
 
@@ -2078,7 +2129,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectRows::backward");
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) += dEdf.t<2>().chip<0>(i);
+    dEdxi.t<4>().chip<0>(rm[i]).device(*dev.edevice) += dEdf.t<4>().chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
