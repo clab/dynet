@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 
     dynet::initialize(argc, argv);
     if (argc != 3 && argc != 4) {
-        LOG(INFO) << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+        LOG(INFO) << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
         return 1;
     }
     kSOS = d.convert("<s>");

@@ -65,16 +65,12 @@ struct Encoder {
 #endif
   }
 
-  void save(ParameterCollection &model) {
-    TextFileSaver saver("/tmp/embed-cl.model");
-    saver.save(model);
-  }
 };
 
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
     return 1;
   }
   vector<pair<vector<int>, vector<int>>> training, dev;
@@ -210,9 +206,8 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << emb;
+	TextFileSaver saver("/tmp/embed-cl.model");
+	saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }

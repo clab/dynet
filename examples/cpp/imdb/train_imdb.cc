@@ -179,7 +179,7 @@ void read_one_line(const string & line, Instance & inst, Dict & wd, Dict & td) {
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
     return 1;
   }
   kSOS = d.convert("<s>");
@@ -243,6 +243,11 @@ int main(int argc, char** argv) {
   sgd = new AdamTrainer(model);
 
   DocumentModel engine(model);
+
+  if (argc == 4) {
+    TextFileLoader loader(argv[3]);
+    loader.populate(model);
+  }
 
   unsigned report_every_i = min(100, int(training.size()));
   unsigned dev_every_i_reports = 25;
