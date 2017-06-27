@@ -83,7 +83,7 @@ struct RNNLanguageModel {
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 4 && argc != 5) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt clusters.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt clusters.txt [model.file]\n";
     return 1;
   }
   kSOS = d.convert("<s>");

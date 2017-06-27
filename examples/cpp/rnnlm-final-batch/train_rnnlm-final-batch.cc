@@ -127,7 +127,7 @@ struct CompareLen {
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
     return 1;
   }
   kSOS = d.convert("<s>");

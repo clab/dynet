@@ -209,8 +209,8 @@ int main(int argc, char** argv) {
   if (has_model_to_load) {
     string fname = params.model_file;
     cerr << "Reading parameters from " << fname << "...\n";
-    TextFileSaver saver(fname);
-    saver.save(model);
+    TextFileLoader loader(fname);
+    loader.populate(model);
   }
 
   bool TRAIN = (params.train_file != "");
