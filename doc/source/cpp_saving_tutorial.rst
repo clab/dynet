@@ -12,7 +12,7 @@ DyNet provides C++ interfaces for users to save and restore model parameters. Th
     LookupParameter b = m.add_lookup_parameters(10, {100});
     Parameter c = m.add_parameters({1000});
     {
-        dynet::TextFileSaver s("/tmp/tmp1.model");
+        dynet::TextFileSaver s("/tmp/tmp.model");
         s.save(m);
     }
 
@@ -22,7 +22,7 @@ DyNet provides C++ interfaces for users to save and restore model parameters. Th
     m.add_lookup_parameters(10, {100});
     m.add_lookup_parameters({1000});
     {
-        dynet::TextFileLoader l("/tmp/tmp1.model");
+        dynet::TextFileLoader l("/tmp/tmp.model");
         l.populate(m);
     }
 
