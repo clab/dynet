@@ -21,7 +21,7 @@ bool valid_key(const std::string & s) {
 
 bool valid_pc_key(const std::string & s) {
   if (s.size() == 0) return true;
-  if (!(startswith(s, "/") && endswith(s, "/"))) return false;
+  if (!(startswith(s, "/")) return false;
   return valid_key(s);
 }
 
@@ -34,7 +34,9 @@ TextFileSaver::TextFileSaver(const string & filename, bool append) :
 void TextFileSaver::save(const ParameterCollection & model,
                          const string & key) {
   if (!valid_pc_key(key))
-    DYNET_INVALID_ARG("Key should start with, end with '/' and could not include ' ' or '#': " << key);
+    DYNET_INVALID_ARG("Key should start with '/' and could not include ' ' or '#': " << key);
+  string key_ = key;
+  if (key_.back() != '/') key_ += "/";
   const ParameterCollectionStorage & storage = model.get_storage();
   if(key.size() == 0) {
     for (auto & p : storage.params) save(*p, key);
@@ -42,9 +44,9 @@ void TextFileSaver::save(const ParameterCollection & model,
   } else {
     size_t strip_size = model.get_fullname().size();
     for (auto & p : storage.params) 
-      save(*p, key + p->name.substr(strip_size));
+      save(*p, key_ + p->name.substr(strip_size));
     for (auto & p : storage.lookup_params) 
-      save(*p, key + p->name.substr(strip_size));
+      save(*p, key_ + p->name.substr(strip_size));
   }
 }
 
