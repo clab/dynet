@@ -21,7 +21,7 @@ bool valid_key(const std::string & s) {
 
 bool valid_pc_key(const std::string & s) {
   if (s.size() == 0) return true;
-  if (!(startswith(s, "/")) return false;
+  if (!(startswith(s, "/"))) return false;
   return valid_key(s);
 }
 
