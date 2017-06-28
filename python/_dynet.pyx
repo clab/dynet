@@ -3443,6 +3443,22 @@ cdef class _RNNBuilder: # (((
         """
         self.thisptr.disable_dropout()
 
+    cpdef set_weight_noise(self, float f):
+        """[summary]
+        
+        [description]
+        
+        Args:
+            float f: [description]
+        """
+        self.thisptr.set_weight_noise(f)
+    cpdef disable_weight_noise(self):
+        """[summary]
+        
+        [description]
+        """
+        self.thisptr.disable_weight_noise()
+
     cdef new_graph(self, update=True):
         self.thisptr.new_graph(_cg.thisptr[0], update)
         self.cg_version = _cg.version()
@@ -4000,6 +4016,14 @@ class BiRNNBuilder(object):
       for (fb,bb) in self.builder_layers:
         fb.disable_dropout()
         bb.disable_dropout()
+    def set_weight_noise(self, p):
+      for (fb,bb) in self.builder_layers:
+        fb.set_weight_noise(p)
+        bb.set_weight_noise(p)
+    def disable_weight_noise(self):
+      for (fb,bb) in self.builder_layers:
+        fb.disable_weight_noise()
+        bb.disable_weight_noise()
 
     def add_inputs(self, es):
         """
