@@ -57,6 +57,9 @@ endfunction()
 ######## Cross-compiler, cross-platform options
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
 if (MKL OR MKL_ROOT)
+  if (DEFINED ENV{MKL_ROOT} AND NOT DEFINED MKL_ROOT)  # use env variable if not defined
+    set(MKL_ROOT $ENV{MKL_ROOT})
+  endif()
   find_mkl()  # sets include/lib directories and sets ${LIBS} needed for linking
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
 endif()
