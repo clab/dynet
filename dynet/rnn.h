@@ -186,6 +186,20 @@ struct RNNBuilder {
 
   /**
    *
+   * \brief Set Weight Noise
+   *
+   * \param d std of weight noise
+   */
+  void set_weight_noise(float d) { weight_noise = d; }
+  /**
+   *
+   * \brief Disable Weight Noise
+   * \details In general, you should disable weight noise at test time
+   */
+  void disable_weight_noise() { weight_noise = 0; }
+
+  /**
+   *
    * \brief Returns node (index) of most recent output
    *
    * \return Node (index) of most recent output
@@ -280,6 +294,7 @@ protected:
   virtual Expression set_s_impl(int prev, const std::vector<Expression>& c_new) = 0;
   RNNPointer cur;
   float dropout_rate;
+  float weight_noise;
 private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;

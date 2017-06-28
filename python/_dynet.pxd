@@ -437,6 +437,8 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
         CRNNPointer state()
         void set_dropout(float f)
         void disable_dropout()
+        void set_weight_noise(float f)
+        void disable_weight_noise()
 
 # TODO unify with LSTMBuilder using inheritance
 cdef extern from "dynet/rnn.h" namespace "dynet":
