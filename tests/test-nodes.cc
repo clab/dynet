@@ -1100,6 +1100,23 @@ BOOST_AUTO_TEST_CASE( squared_norm_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression l2_norm(const Expression&);
+BOOST_AUTO_TEST_CASE( l2_norm_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression z = l2_norm(x1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression l2_norm(const Expression& x);
+BOOST_AUTO_TEST_CASE( l2_norm_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression z = sum_batches(l2_norm(x1 + x2));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
 BOOST_AUTO_TEST_CASE( huber_distance_gradient ) {
   dynet::ComputationGraph cg;

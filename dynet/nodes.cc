@@ -2275,7 +2275,8 @@ template<class MyDevice>
 void L2Norm::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in L2Norm::forward");
   Eigen::array<ptrdiff_t, 1> red_axis = {0};
-  fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec().square().sum(red_axis) / (float) xs[0]->d.batch_size()).sqrt() ;
+  fx.tb<0>().device(*dev.edevice) =
+      (xs[0]->tbvec().square().sum(red_axis)).sqrt();
 }
 
 template<class MyDevice>
@@ -2287,8 +2288,10 @@ void L2Norm::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 1, "Failed dimension check in L2Norm::backward");
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
-  dEdxi.tbvec().device(*dev.edevice) += xs[0]->tbvec() * ((fx.tvec() / (float) xs[0]->d.batch_size()).binaryExpr(dEdf.tvec(), FSqrtBackward())).broadcast(bcast);
-
+  dEdxi.tbvec().device(*dev.edevice) +=
+      xs[0]->tbvec() *
+      (2 * fx.tbvec().binaryExpr(dEdf.tbvec(),
+                                 FSqrtBackward())).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(L2Norm)
 
