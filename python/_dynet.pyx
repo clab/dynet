@@ -2197,6 +2197,18 @@ cpdef Expression squared_norm(Expression x):
         dynet.Expression: :math:`\Vert x\Vert_2^2=\sum_i x_i^2`
     """
     return Expression.from_cexpr(x.cg_version, c_squared_norm(x.c()))
+cpdef Expression l2_norm(Expression x):
+    """L2 norm
+
+    The l2 norm of the values of :code:`x`: :math:`\Vert x\Vert_2=\sqrt{\sum_i x_i^2}`.
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\Vert x\Vert_2=\sqrt{\sum_i x_i^2}`
+    """
+    return Expression.from_cexpr(x.cg_version, c_l2_norm(x.c()))
 cpdef Expression squared_distance(Expression x, Expression y):
     """Squared distance
     
