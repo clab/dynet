@@ -8,6 +8,7 @@
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
+#include "dynet/param-init.h"
 
 using namespace dynet;
 using namespace std;
@@ -38,7 +39,7 @@ private:
   LookupParameter p_oX, p_ob;
 
 public:
-  NCELossBuilder(unsigned vocabSize, unsigned hDim, Model& model, float initWidth=0.1) {
+  NCELossBuilder(unsigned vocabSize, unsigned hDim, ParameterCollection& model, float initWidth=0.1) {
     // Note that the output layer is represented with lookup parameters
     // for sparse efficiency
     p_oX = model.add_lookup_parameters(vocabSize, {hDim}, ParameterInitUniform(initWidth));
@@ -117,7 +118,7 @@ private:
   Parameter b_sm;
 
 public:
-  FSMLossBuilder(unsigned vocabSize, unsigned hDim, Model& model, float initWidth=0.5) {
+  FSMLossBuilder(unsigned vocabSize, unsigned hDim, ParameterCollection& model, float initWidth=0.5) {
     W_sm = model.add_parameters({vocabSize, hDim}, ParameterInitUniform(initWidth));
     b_sm = model.add_parameters({vocabSize}, ParameterInitUniform(initWidth));
   }

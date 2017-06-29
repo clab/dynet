@@ -5,6 +5,7 @@
  * This provide an example of usage of the encdec.h model
  */
 #include "encdec.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 #include "../utils/cl-args.h"
 
@@ -111,7 +112,7 @@ int main(int argc, char** argv) {
       while (dev[i + j].size() < dev[i].size())
         dev[i + j].push_back(kEOS);
 
-  // Model name (for saving) -----------------------------------------------------------------------
+  // ParameterCollection name (for saving) -----------------------------------------------------------------------
   ostringstream os;
   // Store a bunch of information in the model name
   os << params.exp_name
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
 
   // Initialize model and trainer ------------------------------------------------------------------
-  Model model;
+  ParameterCollection model;
   // Use Adam optimizer
   Trainer* adam = nullptr;
   adam = new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8);
@@ -139,9 +140,8 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    ifstream in(params.model_file);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> lm;
+    TextFileLoader loader(params.model_file);
+    loader.populate(model);
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -225,9 +225,8 @@ int main(int argc, char** argv) {
       // If the validation loss is the lowest, save the parameters
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << lm;
+        TextFileSaver saver(fname);
+        saver.save(model);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)
@@ -271,6 +270,4 @@ int main(int argc, char** argv) {
   }
   // Free memory
   delete adam;
-
 }
-

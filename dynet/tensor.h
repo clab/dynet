@@ -16,7 +16,6 @@
 #include "dynet/except.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/devices.h"
-#include "dynet/io-macros.h"
 
 #if HAVE_CUDA
 #include <cuda.h>
@@ -247,9 +246,6 @@ struct Tensor {
   float* v;  /**< Pointer to memory */
   Device* device;
   DeviceMempool mem_pool;
-
-private:
-  DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
 template<> inline Eigen::TensorMap<Eigen::Tensor<float, 0>> Tensor::t<0>() {
@@ -434,8 +430,6 @@ struct IndexTensor {
   Device* device;
   DeviceMempool mem_pool;
 
-private:
-  DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
 template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 0>> IndexTensor::t<0>() {
@@ -748,5 +742,4 @@ real rand_normal();
 
 } // namespace dynet
 
-DYNET_VERSION_DEFINE(dynet::Tensor, 1)
 #endif

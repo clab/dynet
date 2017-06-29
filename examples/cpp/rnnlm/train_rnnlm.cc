@@ -10,15 +10,14 @@
 #include "dynet/cfsm-builder.h"
 #include "dynet/hsm-builder.h"
 #include "dynet/globals.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 #include "../utils/cl-args.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
+#include <memory>
 
 using namespace std;
 using namespace dynet;
@@ -44,8 +43,8 @@ struct RNNLanguageModel {
   Parameter p_R;
   Parameter p_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
-    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
+  explicit RNNLanguageModel(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
+    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
   }
@@ -127,7 +126,7 @@ void inline read_fields(string line, vector<string>& fields, string delimiter = 
   while (true) {
     end = line.find(delimiter, start);
     fields.push_back(line.substr(start, end - start));
-    if (end == std::string::npos) break;
+    if (end == (int)std::string::npos) break;
     start = end + delim_size;
   }
 }
@@ -210,10 +209,8 @@ int main(int argc, char** argv) {
   if (has_model_to_load) {
     string fname = params.model_file;
     cerr << "Reading parameters from " << fname << "...\n";
-    ifstream in(fname);
-    assert(in);
-    boost::archive::binary_iarchive ia(in);
-    ia >> model;
+    TextFileLoader loader(fname);
+    loader.populate(model);
   }
 
   bool TRAIN = (params.train_file != "");
@@ -302,9 +299,8 @@ int main(int argc, char** argv) {
         }
         if (dloss < best) {
           best = dloss;
-          ofstream out(fname);
-          boost::archive::binary_oarchive oa(out);
-          oa << model;
+          TextFileSaver saver(fname);
+          saver.save(model);
         }
         cerr << "\n***DEV [epoch=" << (lines / training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
       }

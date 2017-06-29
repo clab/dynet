@@ -19,7 +19,6 @@
 using namespace std;
 using namespace std::chrono;
 using namespace dynet;
-using namespace dynet::expr;
 
 // Read a file where each line is of the form "word1 word2 ..."
 // Yields lists of the form [word1, word2, ...]
@@ -49,7 +48,7 @@ struct RNNLanguageModel {
   unique_ptr<LossBuilder> outLayer;
   float k;
   
-  explicit RNNLanguageModel(unsigned layers, unsigned input_dim, unsigned hidden_dim, unsigned vocab_size, const vector<unsigned>& voc_counts, unsigned _k, Model& model) :
+  explicit RNNLanguageModel(unsigned layers, unsigned input_dim, unsigned hidden_dim, unsigned vocab_size, const vector<unsigned>& voc_counts, unsigned _k, ParameterCollection& model) :
     builder(layers, input_dim, hidden_dim, model),
     sampler(voc_counts)
   {
@@ -137,7 +136,7 @@ int main(int argc, char** argv) {
 
   // DyNet Starts
   dynet::initialize(argc, argv);
-  Model model;
+  ParameterCollection model;
 
   if(argc != 8) {
     // Positive K for NCE, 0 K for Full Softmax

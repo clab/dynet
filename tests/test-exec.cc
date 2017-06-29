@@ -13,7 +13,6 @@
 #include <fstream>
 
 using namespace dynet;
-using namespace dynet::expr;
 using namespace std;
 
 
@@ -52,7 +51,7 @@ BOOST_FIXTURE_TEST_SUITE(exec_test, ExecTest);
 
 BOOST_AUTO_TEST_CASE( autobatch_lstm_gradient ) {
   vector<float> results;
-  dynet::Model mod;
+  dynet::ParameterCollection mod;
   dynet::VanillaLSTMBuilder lstm(2, 3, 10, mod);
   dynet::LookupParameter lp = mod.add_lookup_parameters(10, {3});
   for(size_t i = 0; i < 3; ++i) {
@@ -82,7 +81,7 @@ BOOST_AUTO_TEST_CASE( param_after_node ) {
   for(size_t i = 0; i < 3; ++i) {
     dynet::autobatch_flag = i;
 	  ComputationGraph cg;
-	  Model model;
+	  ParameterCollection model;
 	  Parameter param = model.add_parameters({ 1 });
 
 	  Expression loss = zeroes(cg, { 1 });
@@ -99,7 +98,7 @@ BOOST_AUTO_TEST_CASE( param_after_node_2 ) {
   for(size_t i = 0; i < 3; ++i) {
     dynet::autobatch_flag = i;
 	  ComputationGraph cg;
-	  Model model;
+	  ParameterCollection model;
 	  LookupParameter param = model.add_lookup_parameters(10, { 1 });
 
 	  lookup(cg, param, 1);
