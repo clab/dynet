@@ -15,7 +15,6 @@
 #include <cstring>
 #include <vector>
 
-#include "dynet/io-macros.h"
 #include "dynet/except.h"
 
 /**
@@ -23,8 +22,6 @@
  * Maximum number of dimensions supported by dynet : 7
  */
 #define DYNET_MAX_TENSOR_DIM 7
-
-namespace boost { namespace serialization { class access; } }
 
 namespace dynet {
 
@@ -278,8 +275,6 @@ struct Dim {
   unsigned int d[DYNET_MAX_TENSOR_DIM]; /**< Array of dimension */
   unsigned int nd; /**< Number of dimensions */
   unsigned int bd; /**< Batch dimension */
-private:
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -321,6 +316,8 @@ std::ostream& operator<<(std::ostream& os, const Dim& d);
  * \param ds vector of Dims
  */
 std::ostream& operator<<(std::ostream& os, const std::vector<Dim>& ds);
+
+std::istream& operator>>(std::istream& os, Dim& d);
 
 } // namespace dynet
 

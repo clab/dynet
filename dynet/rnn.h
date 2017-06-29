@@ -9,20 +9,15 @@
 #ifndef DYNET_RNN_H_
 #define DYNET_RNN_H_
 
-#include <boost/serialization/export.hpp>
-
 #include "dynet/dynet.h"
 #include "dynet/rnn-state-machine.h"
 #include "dynet/expr.h"
-#include "dynet/io-macros.h"
-
-using namespace dynet::expr;
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 
-BOOST_STRONG_TYPEDEF(int, RNNPointer)
+typedef int RNNPointer;
 inline void swap(RNNPointer& i1, RNNPointer& i2) {
   RNNPointer t = i1; i1 = i2; i2 = t;
 }
@@ -246,31 +241,7 @@ struct RNNBuilder {
    */
   virtual void copy(const RNNBuilder & params) = 0;
 
-  /**
-   *
-   * \brief This function saves all the parameters associated with
-   * a particular RNNBuilder's derived class to a file.
-   * \details This should not be used to seralize models, it should
-   * only be used to save parameters for pretraining.
-   * If you are interested in serializing models, use the boost
-   * serialization API against your model class.
-   *
-   * \param fname File you want to save your model to.
-   */
-  virtual void save_parameters_pretraining(const std::string& fname) const;
-  /**
-   *
-   * \brief Loads all the parameters associated with a particular RNNBuilder's
-   * derived class from a file.
-   * \details This should not be used to seralize models, it should
-   * only be used to load parameters from pretraining.
-   * If you are interested in serializing models, use the boost
-   * serialization API against your model class.
-   *
-   * \param fname File you want to read your model from.
-   */
-  virtual void load_parameters_pretraining(const std::string& fname);
-
+  virtual ParameterCollection & get_parameter_collection() = 0;
 
 protected:
   virtual void new_graph_impl(ComputationGraph& cg, bool update) = 0;
@@ -284,8 +255,6 @@ private:
   // the state machine ensures that the caller is behaving
   RNNStateMachine sm;
   std::vector<RNNPointer> head; // head[i] returns the head position
-
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -304,13 +273,13 @@ struct SimpleRNNBuilder : public RNNBuilder {
    * \param layers Number of layers
    * \param input_dim Dimension of the input
    * \param hidden_dim Hidden layer (and output) size
-   * \param model Model holding the parameters
+   * \param model ParameterCollection holding the parameters
    * \param support_lags Allow for auxiliary output?
    */
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
-                            Model& model,
+                            ParameterCollection& model,
                             bool support_lags = false);
 
 protected:
@@ -345,8 +314,7 @@ public:
 
   unsigned num_h0_components() const override { return layers; }
 
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
+  ParameterCollection & get_parameter_collection() override;
 
   // first index is layer, then x2h h2h hb
   std::vector<std::vector<Parameter>> params;
@@ -355,6 +323,7 @@ public:
   std::vector<std::vector<Expression>> param_vars;
 
 private:
+  ParameterCollection local_model;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
@@ -366,14 +335,8 @@ private:
   unsigned layers;
   bool lagging;
 
-  DYNET_SERIALIZE_DECLARE()
 };
 
 } // namespace dynet
-
-DYNET_NINTRUSIVE_SERIALIZE_DEFINE(dynet::RNNPointer & p, p.t)
-
-BOOST_CLASS_EXPORT_KEY(dynet::RNNBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::SimpleRNNBuilder)
 
 #endif

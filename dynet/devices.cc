@@ -1,6 +1,5 @@
 #include "dynet/devices.h"
 
-#include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <unsupported/Eigen/CXX11/Tensor>
 
@@ -8,6 +7,7 @@
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
 #include "dynet/except.h"
+#include "dynet/str-util.h"
 
 using namespace std;
 
@@ -26,8 +26,7 @@ DeviceMempoolSizes::DeviceMempoolSizes(size_t fx_s, size_t dEdfs_s, size_t ps_s)
 }
 
 DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
-  vector<string> strs;
-  boost::algorithm::split(strs, descriptor, boost::is_any_of(","));
+  vector<string> strs = str_split(descriptor, ',');
   if (strs.size() == 1) {
     size_t total_size = stoi(strs[0]);
     used[0] = total_size / 3;

@@ -6,24 +6,24 @@ How to build DyNet and link it with your C++ programs.
 Prerequisites
 -------------
 
-DyNet relies on a number of external libraries including Boost, CMake,
-Eigen, and Mercurial (to install Eigen). Boost, CMake, and Mercurial can
+DyNet relies on a number of external programs/libraries including CMake,
+Eigen, and Mercurial (to install Eigen). CMake, and Mercurial can
 be installed from standard repositories. 
 
 For example on **Ubuntu Linux**:
 
 ::
 
-    sudo apt-get install build-essential libboost-all-dev cmake mercurial
+    sudo apt-get install build-essential cmake mercurial
 
 Or on **macOS**, first make sure the Apple Command Line Tools are installed, then
-get Boost, CMake, and Mercurial with either homebrew or macports:
+get CMake, and Mercurial with either homebrew or macports:
 
 ::
 
     xcode-select --install
-    brew install boost cmake hg  # Using homebrew.
-    sudo port install boost cmake mercurial # Using macports.
+    brew install cmake hg  # Using homebrew.
+    sudo port install cmake mercurial # Using macports.
 
 On **Windows**, see :ref:`windows-cpp-install`.
 
@@ -188,10 +188,13 @@ As you can see, for this particular example, using MKL roughly doubles the speed
 still using only one core. Increasing the number of cores to 2 or 3 is quite beneficial, but beyond that
 there are diminishing returns or even slowdown.
 
-Non-standard Boost location
----------------------------
+Compiling with Boost
+~~~~~~~~~~~~~~~~~~~~
 
-DyNet requires Boost, and will find it if it is in the standard
+DyNet requires Boost for a few pieces of less-commonly-used functionality
+to be enabled (unit tests and multi-processing). Boost can be enabled by using the
+``-DENABLE_BOOST=ON`` flag to ``cmake``. In general, DyNet will find
+Boost it if it is in the standard
 location. If Boost is in a non-standard location, say ``$HOME/boost``,
 you can specify the location by adding the following to your CMake
 options:
@@ -217,10 +220,6 @@ instructions below.
 
 First, install Eigen following the above instructions.
 
-Second, install `Boost <http://www.boost.org/>`__ for your compiler and
-platform. Follow the instructions for compiling Boost or just download
-the already-compiled binaries.
-
 To generate the MSVC solution and project files, run
 `cmake <http://www.cmake.org>`__, pointing it to the location you
 installed Eigen and Boost (for example, at c:\\libs\\Eigen and c:\\libs\\boost_1_61_0):
@@ -229,7 +228,7 @@ installed Eigen and Boost (for example, at c:\\libs\\Eigen and c:\\libs\\boost_1
 
     mkdir build
     cd build
-    cmake .. -DEIGEN3_INCLUDE_DIR=c:\libs\Eigen -DBOOST_ROOT=c:\libs\boost_1_61_0 -DBOOST_LIBRARYDIR=c:\libs\boost_1_61_0\lib64-msvc-14.0 -DBoost_NO_BOOST_CMAKE=ON -G"Visual Studio 14 2015 Win64"
+    cmake .. -DEIGEN3_INCLUDE_DIR=c:\libs\Eigen -G"Visual Studio 14 2015 Win64"
 
 This will generate `dynet.sln` and a bunch of `*.vcxproj` files (one for
 the DyNet library, and one per example). You should be able to just open

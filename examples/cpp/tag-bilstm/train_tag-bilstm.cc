@@ -1,3 +1,8 @@
+#include <unistd.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
 #include "dynet/training.h"
@@ -8,14 +13,8 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/globals.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -47,7 +46,7 @@ struct RNNLanguageModel {
   Parameter p_tbias;
   Builder l2rbuilder;
   Builder r2lbuilder;
-  explicit RNNLanguageModel(Model& model) :
+  explicit RNNLanguageModel(ParameterCollection& model) :
       l2rbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
       r2lbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_w = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
@@ -182,7 +181,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   bool use_momentum = true;
   Trainer* sgd = nullptr;
   if (use_momentum)
@@ -193,10 +192,8 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
-    string fname = argv[3];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    TextFileLoader loader(argv[3]);
+    loader.populate(model);
   }
 
   unsigned report_every_i = 50;
@@ -250,13 +247,11 @@ int main(int argc, char** argv) {
       eval = false;
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        TextFileSaver saver(fname);
+        saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / dtags) << ' ';
     }
   }
   delete sgd;
 }
-

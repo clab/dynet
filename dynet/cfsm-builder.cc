@@ -1,16 +1,13 @@
 #include "dynet/cfsm-builder.h"
 #include "dynet/except.h"
+#include "dynet/param-init.h"
 
 #include <fstream>
 #include <iostream>
 
-#include <boost/serialization/vector.hpp>
-
 using namespace std;
 
 namespace dynet {
-
-using namespace expr;
 
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
 inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
@@ -19,9 +16,10 @@ SoftmaxBuilder::~SoftmaxBuilder() {}
 
 StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
 
-StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model& model) {
-  p_w = model.add_parameters({vocab_size, rep_dim});
-  p_b = model.add_parameters({vocab_size}, ParameterInitConst(0.f));
+StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, ParameterCollection& model) {
+  local_model = model.add_subcollection("standard-softmax-builder");
+  p_w = local_model.add_parameters({vocab_size, rep_dim});
+  p_b = local_model.add_parameters({vocab_size}, ParameterInitConst(0.f));
 }
 
 void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg) {
@@ -53,19 +51,17 @@ Expression StandardSoftmaxBuilder::full_log_distribution(const Expression& rep) 
   return log(softmax(affine_transform({b, w, rep})));
 }
 
-DYNET_SERIALIZE_COMMIT(StandardSoftmaxBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(SoftmaxBuilder, p_w, p_b))
-DYNET_SERIALIZE_IMPL(StandardSoftmaxBuilder)
-
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict& word_dict,
-                             Model& model) {
+                             ParameterCollection& model) {
   read_cluster_file(cluster_file, word_dict);
   const unsigned num_clusters = cdict.size();
-  p_r2c = model.add_parameters({num_clusters, rep_dim});
-  p_cbias = model.add_parameters({num_clusters}, ParameterInitConst(0.f));
+  local_model = model.add_subcollection("class-factored-softmax-builder");
+  p_r2c = local_model.add_parameters({num_clusters, rep_dim});
+  p_cbias = local_model.add_parameters({num_clusters}, ParameterInitConst(0.f));
   p_rc2ws.resize(num_clusters);
   p_rcwbiases.resize(num_clusters);
   for (unsigned i = 0; i < num_clusters; ++i) {
@@ -74,8 +70,8 @@ ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
     if (num_words_in_cluster > 1) {
       // for singleton clusters, we don't need these parameters, so
       // we don't create them
-      p_rc2ws[i] = model.add_parameters({num_words_in_cluster, rep_dim});
-      p_rcwbiases[i] = model.add_parameters({num_words_in_cluster}, ParameterInitConst(0.f));
+      p_rc2ws[i] = local_model.add_parameters({num_words_in_cluster, rep_dim});
+      p_rcwbiases[i] = local_model.add_parameters({num_words_in_cluster}, ParameterInitConst(0.f));
     }
   }
 }
@@ -215,9 +211,6 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
   cerr << "Read " << wc << " words in " << cdict.size() << " clusters (" << scs << " singleton clusters)\n";
 }
 
-DYNET_SERIALIZE_COMMIT(ClassFactoredSoftmaxBuilder,
-		       DYNET_SERIALIZE_DERIVED_DEFINE(SoftmaxBuilder, cdict, widx2cidx, widx2cwidx, cidx2words, singleton_cluster, p_r2c, p_cbias, p_rc2ws, p_rcwbiases))
-
 void ClassFactoredSoftmaxBuilder::initialize_expressions() {
   for (unsigned c = 0; c < p_rc2ws.size(); ++c) {
     //get_rc2w(_bias) creates the expression at c if the expression does not already exist.
@@ -226,9 +219,4 @@ void ClassFactoredSoftmaxBuilder::initialize_expressions() {
   }
 }
 
-DYNET_SERIALIZE_IMPL(ClassFactoredSoftmaxBuilder)
-
 } // namespace dynet
-
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::StandardSoftmaxBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::ClassFactoredSoftmaxBuilder)

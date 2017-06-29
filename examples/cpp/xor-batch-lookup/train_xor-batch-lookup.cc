@@ -3,8 +3,7 @@
 #include "dynet/training.h"
 #include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include "dynet/io.h"
 
 #include <iostream>
 #include <fstream>
@@ -18,36 +17,31 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned HIDDEN_SIZE = 8;
   const unsigned ITERATIONS = 200;
-  Model m;
+  ParameterCollection m;
   SimpleSGDTrainer sgd(m);
 
   ComputationGraph cg;
   Parameter p_W, p_b, p_V, p_a;
   LookupParameter x_values, y_values;
-  if (argc == 2) {
-    // Load the model and parameters from
-    // file if given.
-    ifstream in(argv[1]);
-    boost::archive::text_iarchive ia(in);
-    ia >> m >> p_W >> p_b >> p_V >> p_a;
-  }
-  else {
-    // Otherwise, just create a new model.
-    p_W = m.add_parameters({HIDDEN_SIZE, 2});
-    p_b = m.add_parameters({HIDDEN_SIZE});
-    p_V = m.add_parameters({1, HIDDEN_SIZE});
-    p_a = m.add_parameters({1});
+  p_W = m.add_parameters({HIDDEN_SIZE, 2});
+  p_b = m.add_parameters({HIDDEN_SIZE});
+  p_V = m.add_parameters({1, HIDDEN_SIZE});
+  p_a = m.add_parameters({1});
 
-    x_values = m.add_lookup_parameters(4, {2});
-    y_values = m.add_lookup_parameters(4, {1});
-    x_values.initialize(0, {1.0, 1.0});
-    x_values.initialize(1, {-1.0, 1.0});
-    x_values.initialize(2, {1.0, -1.0});
-    x_values.initialize(3, {-1.0, -1.0});
-    y_values.initialize(0, {-1.0});
-    y_values.initialize(1, {1.0});
-    y_values.initialize(2, {1.0});
-    y_values.initialize(3, {-1.0});
+  x_values = m.add_lookup_parameters(4, {2});
+  y_values = m.add_lookup_parameters(4, {1});
+  x_values.initialize(0, {1.0, 1.0});
+  x_values.initialize(1, {-1.0, 1.0});
+  x_values.initialize(2, {1.0, -1.0});
+  x_values.initialize(3, {-1.0, -1.0});
+  y_values.initialize(0, {-1.0});
+  y_values.initialize(1, {1.0});
+  y_values.initialize(2, {1.0});
+  y_values.initialize(3, {-1.0});
+  if (argc == 2) {
+    // Load the model and parameters from file if given.
+    TextFileLoader loader(argv[1]);
+    loader.populate(m);
   }
 
   Expression W = parameter(cg, p_W);
@@ -81,7 +75,7 @@ int main(int argc, char** argv) {
   }
   // Output the model and parameter objects
   // to a cout.
-  boost::archive::text_oarchive oa(cout);
-  oa << m << p_W << p_b << p_V << p_a << x_values << y_values;
+  TextFileSaver saver("/tmp/xor-batch-lookup.model");
+  saver.save(m);
 }
 

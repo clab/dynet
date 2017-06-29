@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
     Ys[i] = random_seq(SEQ_LENGTH, NCLASSES);
   }
   
-  Model m;
+  ParameterCollection m;
   SimpleSGDTrainer trainer(m);
   
   LookupParameter E = m.add_lookup_parameters(NVOCAB, {EMBED_SIZE});

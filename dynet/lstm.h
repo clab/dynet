@@ -10,17 +10,13 @@
 #include "dynet/dynet.h"
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
-#include <boost/serialization/version.hpp>
-
-
-using namespace dynet::expr;
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 /**
  * \ingroup rnnbuilders
- * \brief LSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
+ * \brief CoupledLSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
  *
  * \details More specifically, here are the equations for the dynamics of this cell :
  *
@@ -35,23 +31,23 @@ class Model;
 \end{split}
 \f$
  */
-struct LSTMBuilder : public RNNBuilder {
+struct CoupledLSTMBuilder : public RNNBuilder {
   /**
    * \brief Default constructor
    */
-  LSTMBuilder() = default;
+  CoupledLSTMBuilder() = default;
   /**
    * \brief Constructor for the LSTMBuilder
    *
    * \param layers Number of layers
    * \param input_dim Dimention of the input \f$x_t\f$
    * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
-   * \param model Model holding the parameters
+   * \param model ParameterCollection holding the parameters
    */
-  explicit LSTMBuilder(unsigned layers,
-                       unsigned input_dim,
-                       unsigned hidden_dim,
-                       Model& model);
+  explicit CoupledLSTMBuilder(unsigned layers,
+                              unsigned input_dim,
+                              unsigned hidden_dim,
+                              ParameterCollection& model);
 
   Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
@@ -83,8 +79,6 @@ struct LSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder & params) override;
 
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
   /**
    * \brief Set the dropout rates to a unique value
    * \details This has the same effect as `set_dropout(d,d_h,d_c)` except that all the dropout rates are set to the same value.
@@ -128,6 +122,10 @@ struct LSTMBuilder : public RNNBuilder {
    * \param batch_size Batch size
    */
   void set_dropout_masks(unsigned batch_size = 1);
+  /**
+   * \brief Get parameters in LSTMBuilder
+   */
+   ParameterCollection & get_parameter_collection() override;
 protected:
   void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -136,6 +134,8 @@ protected:
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
 public:
+  ParameterCollection local_model;
+
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 
@@ -161,9 +161,7 @@ public:
   float dropout_rate_h = 0.f, dropout_rate_c = 0.f;
 
 private:
-  DYNET_SERIALIZE_DECLARE()
   ComputationGraph  *_cg;
-
 };
 
 
@@ -194,13 +192,13 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \param layers Number of layers
    * \param input_dim Dimention of the input \f$x_t\f$
    * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
-   * \param model Model holding the parameters
+   * \param model ParameterCollection holding the parameters
    * \param ln_lstm Whether to use layer normalization
    */
   explicit VanillaLSTMBuilder(unsigned layers,
                               unsigned input_dim,
                               unsigned hidden_dim,
-                              Model& model,
+                              ParameterCollection& model,
                               bool ln_lstm = false);
 
   Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
@@ -221,8 +219,6 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder & params) override;
 
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
   /**
    * \brief Set the dropout rates to a unique value
    * \details This has the same effect as `set_dropout(d,d_h)` except that all the dropout rates are set to the same value.
@@ -265,6 +261,11 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \param batch_size Batch size
    */
   void set_dropout_masks(unsigned batch_size = 1);
+  /**
+   * \brief Get parameters in VanillaLSTMBuilder 
+   * \return list of points to ParameterStorage objects
+   */
+  ParameterCollection & get_parameter_collection() override;
 protected:
   void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -273,6 +274,7 @@ protected:
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
 public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
   // first index is layer, then ...
@@ -299,21 +301,13 @@ public:
   float dropout_rate_h;
   bool ln_lstm;
 
-
-
 private:
-  DYNET_SERIALIZE_DECLARE()
   ComputationGraph* _cg; // Pointer to current cg
 
 };
 
+typedef VanillaLSTMBuilder LSTMBuilder;
+
 } // namespace dynet
-
-
-// Class version
-DYNET_VERSION_DEFINE(dynet::LSTMBuilder, 1);
-// Class version
-DYNET_VERSION_DEFINE(dynet::VanillaLSTMBuilder, 1);
-
 
 #endif
