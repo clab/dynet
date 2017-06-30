@@ -8,7 +8,7 @@ DyNet provides the ability to save and restore model parameters. The user has se
 Saving an entire model
 ======================
 
-In the first option, complete `ParameterCollection` object is saved. At loading time, the user should define and allocate the same parameter objects that were present in the model when it was saved, and in the same order (this usually amounts to having the same parameter creation called by both code paths), and then call `populate` on the `ParameterCollection` object containing the parameters that should be loaded.
+In the first option, complete ``ParameterCollection`` object is saved. At loading time, the user should define and allocate the same parameter objects that were present in the model when it was saved, and in the same order (this usually amounts to having the same parameter creation called by both code paths), and then call ``populate`` on the ``ParameterCollection`` object containing the parameters that should be loaded.
 
 .. code:: python
 
@@ -22,9 +22,9 @@ In the first option, complete `ParameterCollection` object is saved. At loading 
 
     # load 
     m2 = dy.ParameterCollection()
-    x = m2.add_parameter(100);
+    x = m2.add_parameters(100);
     y = m2.add_lookup_parameters((10, 100))
-    z = m2.add_lookup_parameters(1000)
+    z = m2.add_parameters(1000)
     m.populate("/tmp/tmp.model")
 
 
@@ -33,7 +33,7 @@ Partial Saving And Loading (Low-level API)
 
  (This API follows the C++ partial saving and loading paradigm. See below for a higher level pythonic API.)
 
-In some cases it is useful to save only a subset of parameter objects (for example, if users wish to load these in a pretraining setup). Here, `Parameter` or `LookupParameter` objects can be saved explicitly. User could also specify keys for partial saving and loading.
+In some cases it is useful to save only a subset of parameter objects (for example, if users wish to load these in a pretraining setup). Here, ``Parameter`` or ``LookupParameter`` objects can be saved explicitly. User could also specify keys for partial saving and loading.
 
 
 .. code:: python
@@ -58,7 +58,7 @@ In some cases it is useful to save only a subset of parameter objects (for examp
     m = dy.ParameterCollection()
     a2 = m.add_parameters(10)
     L2 = m.add_lookup_parameters((10, 2))
-    d = m.add_parameters((3,7))
+    c = m.add_parameters((3,7))
     L2.populate("/tmp/tmp.model", "/X")
     a.populate("/tmp/tmp.model", "/a")
     c.populate("/tmp/tmp.model", "/m3/pc")
