@@ -141,7 +141,7 @@ then, within Python:
 
     import dynet as dy
     print dy.__version__
-    model = dy.Model()
+    pc = dy.ParameterCollection()
 
 In order to install the module so that it is accessible from everywhere
 in the system, run the following:
@@ -177,7 +177,7 @@ installation is likely to be working:
 ::
 
     from dynet import *
-    model = Model()
+    pc = ParameterCollection()
 
 If it doesn't work and you get an error similar to the following:
 ::
