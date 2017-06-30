@@ -19,12 +19,12 @@ Initialization functions
 
 .. autofunction:: dynet.init_from_params
 
-Model and Parameters
+ParameterCollection and Parameters
 --------------------
 
-Model
-~~~~~
-.. autoclass:: dynet.Model
+ParameterCollection
+~~~~~~~~~~~~~~~~~~~
+.. autoclass:: dynet.ParameterCollection
    :members:
    :show-inheritance:
 
