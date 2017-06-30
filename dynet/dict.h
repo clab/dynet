@@ -68,7 +68,7 @@ public:
   
   void clear() { words_.clear(); d_.clear(); }
 
-private:
+protected:
   bool frozen;
   bool map_unk; // if true, map unknown word to unk_id
   int unk_id; 
