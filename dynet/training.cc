@@ -325,4 +325,34 @@ void AdamTrainer::alloc_impl() {
 }
 #endif
 
+// --- EGTrainer
+template <class MyDevice>
+void EGTrainer::update_rule_dev(const MyDevice & dev, real scale, real gscale, const std::vector<Tensor*> & ts) {
+  // Add momentum
+  ts[2]->tvec().device(*dev.edevice) = ts[2]->tvec() * momentum - ts[1]->tvec() * (eta * scale * gscale);
+  ts[0]->tvec().device(*dev.edevice) = ts[0]->tvec().log() + ts[2]->tvec() / model->get_weight_decay().current_weight_decay();// with momentum only
+  TensorTools::logsumexp_dev(dev, *ts[0], *ts[3], *ts[4]);// z refers to logZ
+  ts[0]->tvec().device(*dev.edevice) = (ts[0]->tvec() - as_scalar(*ts[4])).exp();// FIXME: other way(s) of not using as_scalar(z)?
+}
+DYNET_TRAINER_INST_DEV_IMPL(EGTrainer)
+
+#ifndef __CUDACC__
+void EGTrainer::update_params(real scale, real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values, &p->g, &hp[idx].h, &meg, &zeg});
+}
+void EGTrainer::update_lookup_params(real scale, real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->values[lidx], &p->grads[lidx], &hlp[idx].h[lidx], &meg, &zeg});
+}
+void EGTrainer::update_lookup_params(real scale, real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(scale, gscale, {&p->all_grads, &p->all_grads, &hlp[idx].all_h, &meg, &zeg});
+}
+void EGTrainer::alloc_impl() {
+  hp = allocate_shadow_parameters(*model);
+  hlp = allocate_shadow_lookup_parameters(*model); 
+}
+#endif
+
 } // namespace dynet
