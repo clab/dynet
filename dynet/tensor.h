@@ -681,6 +681,15 @@ struct TensorTools {
   static void accumulate(Tensor& v, const Tensor& v_src);
 
   /**
+  * \brief Calculate the logsumexp function over all columns of the tensor
+  *
+  * \param x The input tensor
+  * \param m A tensor of scratch memory to hold the maximum values of each column
+  * \param z The output tensor
+  */
+  static void logsumexp(const Tensor& x, Tensor &m, Tensor &z);
+
+  /**
    * \brief Calculate the index of the maximum value
    *
    * \param v A tensor where each row represents a probability distribution
@@ -704,17 +713,19 @@ struct TensorTools {
    */
   static IndexTensor categorical_sample_log_prob(const Tensor& v, unsigned dim = 0, unsigned num = 1);
 
-protected:
+  // Device functions that can be called directly if the device is already known
   template<class MyDevice>
-  static void clip_dev(MyDevice & dev, Tensor& d, float left, float right);
+  static void clip_dev(const MyDevice & dev, Tensor& d, float left, float right);
   template<class MyDevice>
-  static void constant_dev(MyDevice & dev, Tensor& d, float c);
+  static void constant_dev(const MyDevice & dev, Tensor& d, float c);
   template<class MyDevice>
-  static void accumulate_dev(MyDevice & dev, Tensor& v_src, const Tensor& v);
+  static void accumulate_dev(const MyDevice & dev, Tensor& v_src, const Tensor& v);
   template<class MyDevice>
-  static IndexTensor argmax_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  static IndexTensor argmax_dev(const MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
   template<class MyDevice>
-  static IndexTensor categorical_sample_log_prob_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  static IndexTensor categorical_sample_log_prob_dev(const MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  template <class MyDevice>
+  static void logsumexp_dev(const MyDevice & dev, const Tensor& x, Tensor &m, Tensor &z);
 
 };
 
