@@ -444,6 +444,7 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned i
 Expression parameter(ComputationGraph& g, Parameter p);
 Expression parameter(ComputationGraph& g, LookupParameter lp);
 Expression const_parameter(ComputationGraph& g, Parameter p);
+Expression const_parameter(ComputationGraph& g, LookupParameter lp);
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
