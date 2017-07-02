@@ -158,7 +158,7 @@ except (IOError, ImportError):
 
 setup(
     name="dyNET",
-    #version="0.0.0",
+    version="1.1.0",
     install_requires=["cython", "numpy"],
     description="The Dynamic Neural Network Toolkit",
     long_description=long_description,
