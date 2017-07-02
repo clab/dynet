@@ -817,7 +817,9 @@ struct CoupledLSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder& params) override;
 
+  void set_dropout(float d);
   void set_dropout(float d, float d_h, float d_c);
+  void disable_dropout();
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
@@ -858,7 +860,9 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder & params) override;
 
+  void set_dropout(float d);
   void set_dropout(float d, float d_r);
+  void disable_dropout();
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
