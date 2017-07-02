@@ -724,6 +724,7 @@ struct SimpleSGDTrainer : public Trainer {
 
 struct CyclicalSGDTrainer : public Trainer {
   explicit CyclicalSGDTrainer(ParameterCollection& m, real e0_min = 0.01, real e0_max = 0.1, real step_size = 2000, real gamma = 0.0, real edecay = 0.0);
+  void update(real scale = 1.0);
 };
 
 struct MomentumSGDTrainer : public Trainer {
