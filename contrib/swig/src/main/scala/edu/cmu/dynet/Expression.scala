@@ -71,6 +71,8 @@ object Expression {
   def parameter(lp: LookupParameter): Expression = makeExpr(cg => dn.parameter(cg, lp.lookupParameter), Seq(lp))
   def constParameter(p: Parameter): Expression =
     makeExpr(cg => dn.const_parameter(cg, p.parameter), Seq(p))
+  def constParameter(lp: LookupParameter): Expression =
+    makeExpr(cg => dn.const_parameter(cg, lp.lookupParameter), Seq(lp))
 
   def lookup(p: LookupParameter, index: Long) =
     makeExpr(cg => dn.lookup(cg, p.lookupParameter, index), Seq(p))
