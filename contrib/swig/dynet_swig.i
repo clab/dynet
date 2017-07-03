@@ -444,6 +444,7 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned i
 Expression parameter(ComputationGraph& g, Parameter p);
 Expression parameter(ComputationGraph& g, LookupParameter lp);
 Expression const_parameter(ComputationGraph& g, Parameter p);
+Expression const_parameter(ComputationGraph& g, LookupParameter lp);
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
@@ -724,6 +725,7 @@ struct SimpleSGDTrainer : public Trainer {
 
 struct CyclicalSGDTrainer : public Trainer {
   explicit CyclicalSGDTrainer(ParameterCollection& m, real e0_min = 0.01, real e0_max = 0.1, real step_size = 2000, real gamma = 0.0, real edecay = 0.0);
+  void update(real scale = 1.0);
 };
 
 struct MomentumSGDTrainer : public Trainer {
@@ -817,7 +819,9 @@ struct CoupledLSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder& params) override;
 
+  void set_dropout(float d);
   void set_dropout(float d, float d_h, float d_c);
+  void disable_dropout();
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
@@ -858,7 +862,9 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder & params) override;
 
+  void set_dropout(float d);
   void set_dropout(float d, float d_r);
+  void disable_dropout();
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;

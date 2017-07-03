@@ -15,6 +15,9 @@ class Trainer private[dynet](_trainer: internal.Trainer) {
 
   def clipThreshold: Float = _trainer.getClip_threshold
   def clipThreshold_=(x: Float): Unit = _trainer.setClip_threshold(x)
+
+  def eta:Float = _trainer.getEta()
+  def eta_=(x:Float): Unit = _trainer.setEta(x)
 }
 
 class SimpleSGDTrainer private[dynet] (private[dynet] val trainer: internal.SimpleSGDTrainer)
@@ -34,7 +37,7 @@ class CyclicalSGDTrainer private[dynet] (private[dynet] val trainer: internal.Cy
 }
 
 class MomentumSGDTrainer private[dynet] (private[dynet] val trainer: internal.MomentumSGDTrainer)
-    extends Trainer(trainer)
+  extends Trainer(trainer)
 {
   def this(m: ParameterCollection, e0: Float = 0.01f, mom: Float = 0.9f, edecay: Float = 0.0f) {
     this(new internal.MomentumSGDTrainer(m.model, e0, mom, edecay))
@@ -42,7 +45,7 @@ class MomentumSGDTrainer private[dynet] (private[dynet] val trainer: internal.Mo
 }
 
 class AdagradTrainer private[dynet] (private[dynet] val trainer: internal.AdagradTrainer)
-    extends Trainer(trainer)
+  extends Trainer(trainer)
 {
   def this(m: ParameterCollection, e0: Float = 0.1f, eps: Float = 1e-20f, edecay: Float = 0.0f) {
     this(new internal.AdagradTrainer(m.model, e0, eps, edecay))
@@ -58,7 +61,7 @@ class AdadeltaTrainer private[dynet] (private[dynet] val trainer: internal.Adade
 }
 
 class RMSPropTrainer private[dynet] (private[dynet] val trainer: internal.RMSPropTrainer)
-    extends Trainer(trainer)
+  extends Trainer(trainer)
 {
   def this(m: ParameterCollection, e0: Float = 0.001f, eps: Float = 1e-8f, rho: Float = 0.9f, edecay: Float = 0.0f) {
     this(new internal.RMSPropTrainer(m.model, e0, eps, rho, edecay))
@@ -66,10 +69,10 @@ class RMSPropTrainer private[dynet] (private[dynet] val trainer: internal.RMSPro
 }
 
 class AdamTrainer private[dynet] (private[dynet] val trainer: internal.AdamTrainer)
-    extends Trainer(trainer)
+  extends Trainer(trainer)
 {
   def this(m: ParameterCollection, e0: Float = 0.001f, beta1: Float = 0.9f, beta2: Float = 0.999f,
-    eps: Float = 1e-8f, edecay: Float = 0.0f) {
+           eps: Float = 1e-8f, edecay: Float = 0.0f) {
     this(new internal.AdamTrainer(m.model, e0, beta1, beta2, eps, edecay))
   }
 }
