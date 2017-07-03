@@ -47,6 +47,10 @@ struct Dim {
    * \param x List of dimentions
    */
   Dim(std::initializer_list<unsigned int> x) : nd(0), bd(1) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with initializer_list of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -56,6 +60,10 @@ struct Dim {
    * \param b Batch size
    */
   Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(0), bd(b) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with initializer_list of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -65,6 +73,10 @@ struct Dim {
    * \param x Array of dimentions
    */
   Dim(const std::vector<long> & x) : nd(0), bd(1) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with vector of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -74,6 +86,10 @@ struct Dim {
      * \param b Batch size
      */
   Dim(const std::vector<long> & x, unsigned int b) : nd(0), bd(b) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with vector of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
