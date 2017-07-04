@@ -254,6 +254,7 @@ struct Parameter {
    * @param p Pointer to the parameter storage
    */
   Parameter(ParameterStorage* p);
+  Parameter(ParameterStorage* p, ParameterStorage* avg_p);
   /**
    * @brief Get underlying ParameterStorage object
    * @return ParameterStorage holding the parameter values
@@ -271,6 +272,8 @@ struct Parameter {
   void zero();
 
   ParameterStorage* p; /**< Pointer to the storage for this Parameter */
+
+  ParameterStorage* avg_p; /**< Pointer to the storage for the average Parameter of this Parameter */
 
   /**
    * \brief Shape of the parameter
@@ -331,6 +334,12 @@ struct Parameter {
    */
   void clip_inplace(float left, float right);
 
+  /**
+   * \brief Get a parameter's corresponding average parameter
+   * \return A parameter's corresponding average parameter
+   */
+  Parameter get_average_parameter() {return Parameter(avg_p); };
+
 }; // struct Parameter
 
 
@@ -342,6 +351,7 @@ struct Parameter {
 struct LookupParameter {
   LookupParameter();
   LookupParameter(LookupParameterStorage* p);
+  LookupParameter(LookupParameterStorage* p, LookupParameterStorage* avg_p);
   /**
    * @brief Get underlying LookupParameterStorage object
    * @return LookupParameterStorage holding the parameter values
@@ -361,6 +371,8 @@ struct LookupParameter {
   void zero();
 
   LookupParameterStorage* p; /**< Pointer to the storage for this Parameter */
+
+  LookupParameterStorage* avg_p; /**< Pointer to the storage for the average Parameter of this Parameter */
 
   /**
    * @brief Get the full name of the ParameterStorage object
@@ -410,6 +422,13 @@ struct LookupParameter {
    * @return Update status
    */
   bool is_updated();
+
+  /**
+   * \brief Get a lookup parameter's corresponding average lookup parameter
+   * \return A lookup parameter's corresponding average lookup parameter
+   */
+  LookupParameter get_average_lookup_parameter() {return LookupParameter(avg_p); };
+
 }; // struct LookupParameter
 
 // This is an internal class to store parameters in the collection
@@ -428,6 +447,8 @@ struct ParameterCollectionStorage {
   std::vector<ParameterStorageBase*> all_params;
   std::vector<ParameterStorage*> params;
   std::vector<LookupParameterStorage*> lookup_params;
+  std::unordered_map<ParameterStorage*, ParameterStorage*> avg_params_map;
+  std::unordered_map<LookupParameterStorage*, LookupParameterStorage*> avg_lookup_params_map;
 
   mutable float* gradient_norm_scratch;
   L2WeightDecay weight_decay;
@@ -473,7 +494,7 @@ public:
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, const std::string & name);
+  Parameter add_parameters(const Dim& d, const std::string & name, bool maintain_average = false);
   // set scale to use custom initialization
   /**
    * \brief Add parameters to model and returns Parameter object
@@ -485,7 +506,7 @@ public:
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, float scale = 0.0f, const std::string & name = "");
+  Parameter add_parameters(const Dim& d, float scale = 0.0f, const std::string & name = "", bool maintain_average = false);
   /**
    * \brief Add parameters with custom initializer
    *
@@ -495,7 +516,7 @@ public:
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, const ParameterInit & init, const std::string & name = "");
+  Parameter add_parameters(const Dim& d, const ParameterInit & init, const std::string & name = "", bool maintain_average = false);
   /**
    * \brief Get parameters base in current model
    *
@@ -524,7 +545,7 @@ public:
    *
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const std::string & name = "");
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const std::string & name = "", bool maintain_average = false);
   /**
    * \brief Add lookup parameter with custom initializer
    *
@@ -534,7 +555,7 @@ public:
    * \param name Name of the parameter
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name = "");
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name = "", bool maintain_average = false);
   /**
    * \brief Get lookup parameter in current model
    * \details It is not recommended to use this
@@ -575,6 +596,18 @@ public:
    * \return List of pointers to LookupParameterSorages
    */
   const std::vector<LookupParameterStorage*>& lookup_parameters_list() const { return get_storage().lookup_params; }
+
+
+  /**
+   * \brief Returns a map that maps parameter to its corresponding average parameter
+   * \return A map that maps parameter to its corresponding average parameter
+   */
+  const std::unordered_map<ParameterStorage*, ParameterStorage*>& average_parameters_map() const { return get_storage().avg_params_map; }
+  /**
+   * \brief Returns a map that maps lookup parameter to its corresponding average lookup parameter
+   * \return A map that maps lookup parameter to its corresponding average lookup parameter
+   */
+  const std::unordered_map<LookupParameterStorage*, LookupParameterStorage*>& average_lookup_parameters_map() const { return get_storage().avg_lookup_params_map; }
 
   //
   //

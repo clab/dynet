@@ -631,6 +631,14 @@ cdef class Parameters: # {{{
                 self._const_expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
             return self._const_expr
 
+    cpdef get_average_parameter(self):
+        """Get average parameter
+
+        """
+        cdef CParameters avg_p = self.thisptr.get_average_parameter()
+        cdef Parameters avg_pp = Parameters.wrap_ptr(avg_p)
+        return avg_pp
+
 # Parameters }}}
 
 cdef class LookupParameters: # {{{
@@ -749,6 +757,14 @@ cdef class LookupParameters: # {{{
         Return the full name of this lookup parameter.
         """
         return self.thisptr.get_fullname().decode("utf8")
+
+    cpdef get_average_lookup_parameter(self):
+        """Get average lookup parameter
+
+        """
+        cdef CLookupParameters avg_p = self.thisptr.get_average_lookup_parameter()
+        cdef LookupParameters avg_pp = LookupParameters.wrap_ptr(avg_p)
+        return avg_pp
 # }}}
 
 cdef class ParameterCollection: # {{{
@@ -880,28 +896,30 @@ cdef class ParameterCollection: # {{{
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
-    cpdef parameters_from_numpy(self, array,string name=""):
+    cpdef parameters_from_numpy(self, array,string name="", maintain_average=False):
         """Create parameter from numpy array
         
         Args:
             array (np.ndarray): Numpy array
             name  (string): optional name for this parameter.
+            maintain_average (boolean): Whether to maintain average parameters
         
         Returns:
             (dynet.Parameters): Parameter
         """
         dim = array.shape
-        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name)
+        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), name, maintain_average)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
     # TODO this may fail with >2 dim arrays.
-    cpdef lookup_parameters_from_numpy(self, array, string name=""):
+    cpdef lookup_parameters_from_numpy(self, array, string name="", maintain_average=False):
         """Create LookupParameters from numpy array
         
         Args:
             array (np.ndarray): Numpy array. rows: vocab_size, cols: dims.
             name  (string): optional name for this parameter.
+            maintain_average (boolean): Whether to maintain average parameters
         
         Returns:
             (dynet.LookupParameters): LookupParameter
@@ -909,11 +927,11 @@ cdef class ParameterCollection: # {{{
         vocab_size = array.shape[0]
         emb_dim = array.shape[1:]
         init = NumpyInitializer(array.T)
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name)
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name, maintain_average)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None, string name=""):
+    cpdef add_parameters(self, dim, PyInitializer init=None, string name="", maintain_average=False):
         """Add a parameter to the ParameterCollection
         
         Args:
@@ -922,6 +940,7 @@ cdef class ParameterCollection: # {{{
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
+            maintain_average (boolean): Whether to maintain average parameters
         
         Returns:
             (dynet.Parameters): Created Parameter
@@ -932,11 +951,11 @@ cdef class ParameterCollection: # {{{
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
-        p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
+        p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name, maintain_average)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name=""):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name="", maintain_average=False):
         """Add a lookup parameter to the ParameterCollection
         
         Args:
@@ -945,6 +964,7 @@ cdef class ParameterCollection: # {{{
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
+            maintain_average (boolean): Whether to maintain average parameters
         
         Returns:
             (dynet.LookupParameters): Created LookupParameter
@@ -955,7 +975,7 @@ cdef class ParameterCollection: # {{{
         if init is None:
             init = GlorotInitializer(True)
         initializer = init.initializer
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name)
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name, maintain_average)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
@@ -4549,8 +4569,8 @@ cdef class SimpleSGDTrainer(Trainer):
         e0(number): Initial learning rate (default: 0.1)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
+    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay, emadecay)
     def whoami(self):
         return "SimpleSGDTrainer"
 
@@ -4580,8 +4600,8 @@ cdef class CyclicalSGDTrainer(Trainer):
         edecay (number): Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by :math:`\gamma` (default: {0.0})
     """
     cdef CCyclicalSGDTrainer *thischildptr
-    def __cinit__(self, ParameterCollection m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
-        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, e0_min, e0_max, step_size, gamma, edecay)
+    def __cinit__(self, ParameterCollection m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0, float emadecay = 0.9999):
+        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, e0_min, e0_max, step_size, gamma, edecay, emadecay)
     cpdef update(self, float s=1.0):
         self.thischildptr.update(s)
     def whoami(self):
@@ -4601,8 +4621,8 @@ cdef class MomentumSGDTrainer(Trainer):
         edecay(number): Learning rate decay parameter (default: 0.0)
 
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
+    def __cinit__(self, ParameterCollection m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay, emadecay)
     def whoami(self):
         return "MomentumSGDTrainer"
 
@@ -4620,8 +4640,8 @@ cdef class AdagradTrainer(Trainer):
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-20)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
+    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay, emadecay)
     def whoami(self):
         return "AdagradTrainer"
 
@@ -4639,8 +4659,8 @@ cdef class AdadeltaTrainer(Trainer):
         rho(number): Update parameter for the moving average of updates in the numerator (default: 0.95)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
+    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay, emadecay)
     def whoami(self):
         return "AdadeltaTrainer"
 
@@ -4658,8 +4678,8 @@ cdef class RMSPropTrainer(Trainer):
         rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: 0.9)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
-        self.thisptr = new CRMSPropTrainer(m.thisptr, e0, eps, rho, edecay)
+    def __cinit__(self, ParameterCollection m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CRMSPropTrainer(m.thisptr, e0, eps, rho, edecay, emadecay)
     def whoami(self):
         return "RMSPropTrainer"
 
@@ -4678,8 +4698,8 @@ cdef class AdamTrainer(Trainer):
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
-        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
+    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay, emadecay)
     def whoami(self):
         return "AdamTrainer"
 

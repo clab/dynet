@@ -82,6 +82,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void scale_gradient(float s)
         void clip_inplace(float left, float right)
         string get_fullname()
+        CParameters get_average_parameter()
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
@@ -94,14 +95,15 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void scale(float s)
         void scale_gradient(float s)
         string get_fullname()
+        CLookupParameters get_average_lookup_parameter()
 
     cdef cppclass CModel "dynet::ParameterCollection":
         CModel()
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d)
-        CParameters add_parameters(CDim& d, CParameterInit initializer, string name)
+        CParameters add_parameters(CDim& d, CParameterInit initializer, string name, bool maintain_average)
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
-        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name)
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, bool maintain_average)
         vector[CParameterStorage] parameters_list()
         CModel add_subcollection(string name)
         string get_fullname()
@@ -187,7 +189,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CTrainer "dynet::Trainer":
-        CTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        CTrainer(CModel& m, float e0, float edecay, float emadecay) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
@@ -198,25 +200,25 @@ cdef extern from "dynet/training.h" namespace "dynet":
 
 
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer" (CTrainer):
-        CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        CSimpleSGDTrainer(CModel& m, float e0, float edecay, float emadecay) # TODO removed lam, update docs.
 
     cdef cppclass CCyclicalSGDTrainer "dynet::CyclicalSGDTrainer" (CTrainer):
-        CCyclicalSGDTrainer(CModel& m, float e0_min, float e0_max, float step_size, float gamma, float edecay) # TODO removed lam, update docs.
+        CCyclicalSGDTrainer(CModel& m, float e0_min, float e0_max, float step_size, float gamma, float edecay, float emadecay) # TODO removed lam, update docs.
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer" (CTrainer):
-        CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
+        CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay, float emadecay) # TODO removed lam, update docs
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer" (CTrainer):
-        CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
+        CAdagradTrainer(CModel& m, float e0, float eps, float edecay, float emadecay) # TODO removed lam, update docs
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer" (CTrainer):
-        CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
+        CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay, float emadecay) # TODO removed lam, update docs
 
     cdef cppclass CRMSPropTrainer "dynet::RMSPropTrainer" (CTrainer):
-        CRMSPropTrainer(CModel& m, float e0, float eps, float rho, float edecay) # TODO removed lam, update docs
+        CRMSPropTrainer(CModel& m, float e0, float eps, float rho, float edecay, float emadecay) # TODO removed lam, update docs
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
-        CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
+        CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay, float emadecay) # TODO removed lam, update docs
 
 
 cdef extern from "dynet/expr.h" namespace "dynet":

@@ -41,10 +41,11 @@ struct Trainer {
    * \param m ParameterCollection to be trained
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay
+   * \param emadecay Exponential moving average decay
    */
-  explicit Trainer(ParameterCollection& m, real e0, real edecay = 0.0) :
+  explicit Trainer(ParameterCollection& m, real e0, real edecay = 0.0, real emadecay = 0.9999) :
     eta0(e0), eta(e0), eta_decay(edecay), epoch(), clipping_enabled(true), clip_threshold(5),
-    clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
+    clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(false), ema_decay(emadecay), model(&m) {}
   virtual ~Trainer();
 
   /**
@@ -125,6 +126,20 @@ struct Trainer {
     updates_since_status = clips_since_status = 0;
   }
 
+  /**
+   * \brief The decay parameter used in exponential moving average
+   * \details The exponential moving average of 'parameter' updated with 'new_value' is
+   *          parameter = parameter * decay + new_value * (1 - decay), which is the same
+   *          as parameter -= (1 - decay) * (parameter - new_value).
+   */
+  real ema_decay;
+  template <class MyDevice> 
+  void update_average_dev(const MyDevice & dev, const std::vector<Tensor*> & values); 
+  void update_average(const std::vector<Tensor*> & values);
+  void update_average_params(size_t idx);
+  void update_average_lookup_params(size_t idx, size_t lidx);
+  void update_average_lookup_params(size_t idx);
+
   ParameterCollection* model;  // parameters and gradients live here
 
 protected:
@@ -183,8 +198,9 @@ struct SimpleSGDTrainer : public Trainer {
    * \param m ParameterCollection to be trained
    * \param e0 Initial learning rate
    * \param edecay Learning rate decay parameter.
+   * \param emadecay Exponential moving average decay
    */
-  explicit SimpleSGDTrainer(ParameterCollection& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
+  explicit SimpleSGDTrainer(ParameterCollection& m, real e0 = 0.1, real edecay = 0.0, real emadecay = 0.9999) : Trainer(m, e0, edecay, emadecay) {}
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
 private:
@@ -223,8 +239,9 @@ struct CyclicalSGDTrainer : public Trainer {
    * \param step_size Period of the triangular function in number of iterations (__not__ epochs). According to the original paper, this should be set around (2-8) x (training iterations in epoch)
    * \param gamma Learning rate upper bound decay parameter
    * \param edecay Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by \f$\gamma\f$
+   * \param emadecay Exponential moving average decay
    */
-  explicit CyclicalSGDTrainer(ParameterCollection& m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0) : Trainer(m, e0_min, edecay), e_min(e0_min), e_max(e0_max), step_size(step_size), gamma(gamma), it(0) {}
+  explicit CyclicalSGDTrainer(ParameterCollection& m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0, float emadecay = 0.9999) : Trainer(m, e0_min, edecay, emadecay), e_min(e0_min), e_max(e0_max), step_size(step_size), gamma(gamma), it(0) {}
   void update(real scale = 1.0) override {
     Trainer::update(scale);
     cyclic_update_eta();
@@ -265,9 +282,10 @@ struct MomentumSGDTrainer : public Trainer {
    * \param e0 Initial learning rate
    * \param mom Momentum
    * \param edecay Learning rate decay parameter
+   * \param emadecay Exponential moving average decay
    */
-  explicit MomentumSGDTrainer(ParameterCollection& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0) :
-    Trainer(m, e0, edecay), momentum(mom) {}
+  explicit MomentumSGDTrainer(ParameterCollection& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0, real emadecay = 0.9999) :
+    Trainer(m, e0, edecay, emadecay), momentum(mom) {}
 
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -302,9 +320,10 @@ struct AdagradTrainer : public Trainer {
    * \param e0 Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param edecay Learning rate decay parameter
+   * \param emadecay Exponential moving average decay
    */
-  explicit AdagradTrainer(ParameterCollection& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0) :
-    Trainer(m, e0, edecay), epsilon(eps) {}
+  explicit AdagradTrainer(ParameterCollection& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0, real emadecay = 0.9999) :
+    Trainer(m, e0, edecay, emadecay), epsilon(eps) {}
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -336,9 +355,10 @@ struct AdadeltaTrainer : public Trainer {
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average of updates in the numerator
    * \param edecay Learning rate decay parameter
+   * \param emadecay Exponential moving average decay
    */
-  explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0) :
-    Trainer(m, 1.0, edecay), epsilon(eps), rho(rho) {}
+  explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0, real emadecay = 0.9999) :
+    Trainer(m, 1.0, edecay, emadecay), epsilon(eps), rho(rho) {}
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -371,9 +391,10 @@ struct RMSPropTrainer : public Trainer {
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
    * \param edecay Learning rate decay parameter
+   * \param emadecay Exponential moving average decay
    */
-  explicit RMSPropTrainer(ParameterCollection& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0) :
-    Trainer(m, e0, edecay), epsilon(eps), rho(rho) {}
+  explicit RMSPropTrainer(ParameterCollection& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0, real emadecay = 0.9999) :
+    Trainer(m, e0, edecay, emadecay), epsilon(eps), rho(rho) {}
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -406,9 +427,10 @@ struct AdamTrainer : public Trainer {
    * \param beta_2 Moving average parameter for the variance
    * \param eps Bias parameter \f$\epsilon\f$
    * \param edecay Learning rate decay parameter
+   * \param emadecay Exponential moving average decay
    */
-  explicit AdamTrainer(ParameterCollection& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0) :
-    Trainer(m, e0, edecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+  explicit AdamTrainer(ParameterCollection& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0, real emadecay = 0.9999) :
+    Trainer(m, e0, edecay, emadecay), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -435,8 +457,8 @@ private:
  *   
 */
 struct EGTrainer : public Trainer {
-  explicit EGTrainer(ParameterCollection& mod, real e0 = 0.1, real mom = 0.9, real ne = 0.0, real edecay = 0.0)
-    : Trainer(mod, e0, edecay), momentum(mom), isCyclical(false) {
+  explicit EGTrainer(ParameterCollection& mod, real e0 = 0.1, real mom = 0.9, real ne = 0.0, real edecay = 0.0, real emadecay = 0.9999)
+    : Trainer(mod, e0, edecay, emadecay), momentum(mom), isCyclical(false) {
     zeg.d = meg.d = {1};
     zeg.device = meg.device = default_device;
     default_device->allocate_tensor(DeviceMempool::PS, zeg);
