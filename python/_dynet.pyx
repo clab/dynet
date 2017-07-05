@@ -1938,48 +1938,6 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
     """
     return _cg.outputBatchPicker(e, indices, dim)
 
-cdef class _hingeExpression(Expression):
-    """Expression representing the output of the hinge operation
-    
-    """
-    cdef UnsignedValue val
-    def __cinit__(self, ComputationGraph g, Expression x, unsigned index, float m=1.0):
-        self.val = UnsignedValue(index)
-        #self.cg = x.cg
-        self.cg_version = g.version()
-        cdef CExpression e
-        e = c_hinge(x.c(), self.val.addr(), m)
-        self.vindex = e.i
-        g._inputs.append(self)
-    def set_index(self, unsigned i):
-        """Change the correct candidate index
-        
-        This is useful if you want to to change the target and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
-        This allows you to use dynet as a static framework.
-        
-        Args:
-            i(number): New correct index
-        """
-        self.cgp().invalidate()
-        self.val.set(i)
-
-def hinge(Expression x, unsigned index, float m=1.0):
-    """Hinge loss.
-
-    This expression calculates the hinge loss, formally expressed as: 
-    
-    Args:
-        x (Expression): A vector of scores
-        index (number): The index of the correct candidate
-    
-    Keyword Args:
-        m(number): Margin (default: 1.0)
-    
-    Returns:
-        _hingeExpression: The hinge loss of candidate index with respect to margin m
-    """
-    return _hingeExpression(_cg, x, index, m)
-
 # }}}
 
 cpdef Expression zeroes(dim, int batch_size=1): 
@@ -3004,6 +2962,35 @@ cpdef Expression pickneglogsoftmax_batch(Expression x, vector[unsigned] vs):
         dynet.Expression: :math:`-\sum_{v\in \\texttt{vs}}\log\left(\\frac{e^{x_v}}{\sum_j e^{x_j}}\\right)`
     """
     return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), vs))
+cpdef Expression hinge(Expression x, unsigned v, float m=1.0):
+    """Hinge loss
+    
+    This function takes in a vector of scores  :code:`x`, and calculates a hinge loss such that the element :code:`v` must be greater than all other elements by at least :code:`m`, otherwise a loss is incurred.
+
+    Args:
+        x (dynet.Expression): Input scores
+        v (int): True class
+        m (float): The margin
+    
+    Returns:
+        dynet.Expression: :math:\\sum_{\\tilde{v} != v} max(x_{\\tilde{v}} - x_v + m, 0)
+    """
+    return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), v, m))
+cpdef Expression hinge_batch(Expression x, vector[unsigned] vs, float m=1.0):
+    """Hinge loss on a batch
+    
+    This function takes in a batched vector of scores  :code:`xs`, and calculates a hinge loss such that the elements :code:`vs` must be greater than all other elements by at least :code:`m`, otherwise a loss is incurred.
+    
+    Args:
+        x (dynet.Expression): Input scores
+        v (list): True classes
+        m (float): The margin
+    
+    Returns:
+        dynet.Expression: The batched hinge loss function
+    """
+    return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), vs, m))
+
 
 cpdef Expression kmh_ngram(Expression x, unsigned v):
     """[summary]
