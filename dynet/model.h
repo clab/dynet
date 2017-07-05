@@ -70,6 +70,11 @@ struct ParameterStorageBase {
    */
   virtual bool is_updated() const = 0;
   /**
+   * @brief Check whether the gradient is zero or not (true if gradient is non-zero)
+   *
+   */
+  virtual bool has_grad() const = 0;
+  /**
    * @brief Get the size (number of scalar parameters)
    * @return Number of scalar parameters
    */
@@ -119,6 +124,7 @@ struct ParameterStorage : public ParameterStorageBase {
   void clear();
 
   bool is_updated() const override { return updated; }
+  bool has_grad() const override { return nonzero_grad; }
 
   std::string name; /**< Name of this parameter*/
 
@@ -127,10 +133,12 @@ struct ParameterStorage : public ParameterStorageBase {
    */
   void clip(float left, float right);
   
+
   Dim dim; /**< Dimensions of the parameter tensor*/
   Tensor values;/**< Values of the parameter */
   Tensor g;/**< Values of the gradient w.r.t. this parameter */
   bool updated; /**< Whether this is updated */
+  bool nonzero_grad; /**< Whether the gradient is zero */
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
 
 private:
@@ -216,6 +224,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
   void initialize_lookups();
 
   bool is_updated() const override { return updated; }
+  bool has_grad() const override { return nonzero_grad; }
 
   std::string name; /**< Name of this parameter*/
   // Tensors for all dimensions at once
@@ -230,6 +239,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
   std::unordered_set<unsigned> non_zero_grads; /**< Gradients are sparse, so track which components are nonzero */
   bool updated; /**< Whether this lookup parameter should be updated */
   bool all_updated; /** Whether all of the gradients have been updated. */
+  bool nonzero_grad; /**< Whether the gradient is zero */
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
 private:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}

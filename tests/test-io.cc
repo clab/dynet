@@ -155,6 +155,31 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter ) {
   DYNET_CHECK_EQUAL(m2c, mc);
 }
 
+BOOST_AUTO_TEST_CASE ( test_save_load_parameter_nonzerograd ) {
+  ParameterCollection m, m2;
+  Parameter ma = m.add_parameters({10}, "a");
+  ma.get_storage().nonzero_grad = true;
+  Parameter mb = m.add_parameters({3,7});
+  mb.get_storage().nonzero_grad = true;
+  LookupParameter mc = m.add_lookup_parameters(10, {2});
+  mc.get_storage().nonzero_grad = true;
+  Parameter m2a, m2b;
+  LookupParameter m2c;
+  {
+    dynet::TextFileSaver s("test.model");
+    s.save(m);
+  }
+  {
+    dynet::TextFileLoader s("test.model");
+    m2a = s.load_param(m2, ma.get_fullname());
+    m2b = s.load_param(m2, mb.get_fullname());
+    m2c = s.load_lookup_param(m2, mc.get_fullname());
+  }
+  DYNET_CHECK_EQUAL(m2a, ma);
+  DYNET_CHECK_EQUAL(m2b, mb);
+  DYNET_CHECK_EQUAL(m2c, mc);
+}
+
 BOOST_AUTO_TEST_CASE ( test_save1_perf ) {
   ParameterCollection m;
   for (int l = 0; l < 16; ++l)

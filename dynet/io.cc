@@ -25,6 +25,24 @@ bool valid_pc_key(const std::string & s) {
   return valid_key(s);
 }
 
+bool grad_is_zero(const ParameterStorageBase & p){
+  return !p.has_grad();
+}
+
+void read_param_header(string line, string &type, string &name, Dim& dim,size_t& byte_count, bool& zero_grad){
+  // Read header
+  istringstream iss(line);
+  iss >> type >> name >> dim >> byte_count;
+  // Check whether gradient is 0
+  // Check for EOF (for backward compatibility)
+  string grad;
+  if (!iss.eof()){
+    iss >> grad;
+    if (grad == "ZERO_GRAD")
+      zero_grad = true;
+  }
+}
+
 TextFileSaver::TextFileSaver(const string & filename, bool append) :
         datastream(filename, append ? ofstream::app : ofstream::out) {
   if(!datastream)
@@ -69,9 +87,16 @@ void TextFileSaver::save(const ParameterStorage & p,
   std::ostringstream buffer;
   buffer.precision(FLOAT32_PRECISION);
   buffer << dynet::as_vector(p.values) << endl;
-  buffer << dynet::as_vector(p.g) << endl;
+  bool zero_grad = grad_is_zero(p);
+  if(!zero_grad)
+    buffer << dynet::as_vector(p.g) << endl;
   datastream << "#Parameter# " << (key.size() > 0 ? key : p.name) << ' '
-    << p.dim << ' ' << buffer.str().size() << endl;
+    << p.dim << ' ' << buffer.str().size();
+  if(zero_grad)
+    datastream << " ZERO_GRAD";
+  else
+    datastream << " FULL_GRAD";
+  datastream << endl;
   datastream.write(buffer.str().c_str(), buffer.str().size());
 }
 
@@ -80,8 +105,15 @@ void TextFileSaver::save(const LookupParameterStorage & p,
   std::ostringstream buffer;
   buffer.precision(FLOAT32_PRECISION);
   buffer << dynet::as_vector(p.all_values) << endl;
-  buffer << dynet::as_vector(p.all_grads) << endl;
-  datastream << "#LookupParameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.all_dim << ' ' << buffer.str().size() << endl;
+  bool zero_grad = grad_is_zero(p);
+  if(!zero_grad)
+    buffer << dynet::as_vector(p.all_grads) << endl;
+  datastream << "#LookupParameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.all_dim << ' ' << buffer.str().size();
+  if(zero_grad)
+    datastream << " ZERO_GRAD";
+  else
+    datastream << " FULL_GRAD";
+  datastream << endl;
   datastream.write(buffer.str().c_str(), buffer.str().size());
 }
 
@@ -92,6 +124,7 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
   ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   string line, type, name;
+  bool zero_grad = false;
   Dim dim;
   size_t byte_count = 0;
   vector<float> values;
@@ -101,7 +134,7 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
   string key_ = key;
   if (key_.back() != '/') key_ += "/";
   while(getline(datastream, line)) {
-    { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
+    read_param_header(line, type, name, dim, byte_count, zero_grad);
     // Skip ones that don't match
     if(key.size() != 0 && name.substr(0, key_.size()) != key_) {
       size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
@@ -134,8 +167,12 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
     }
     { getline(datastream, line); istringstream iss(line); iss >> values; }
     TensorTools::set_elements(*value_t, values);
-    { getline(datastream, line); istringstream iss(line); iss >> values; }
-    TensorTools::set_elements(*grad_t, values);
+    if(!zero_grad){
+      { getline(datastream, line); istringstream iss(line); iss >> values; }
+      TensorTools::set_elements(*grad_t, values);
+    } else {
+      TensorTools::zero(*grad_t);
+    }
   }
   if(param_id != storage.params.size() || lookup_id != storage.lookup_params.size())
     DYNET_RUNTIME_ERR("Number of parameter/lookup parameter objects loaded from file (" << 
@@ -150,18 +187,23 @@ void TextFileLoader::populate(Parameter & param,
   ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   string line, type, name;
+  bool zero_grad=false;
   Dim dim;
   size_t byte_count = 0;
   while(getline(datastream, line)) {
-    { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
+    read_param_header(line, type, name, dim, byte_count, zero_grad);
     if(type == "#Parameter#" && name == key) {
       if(param.p->dim != dim)
         DYNET_RUNTIME_ERR("Attempted to populate parameter where arguments don't match (" << param.p->dim << " != " << dim << ")");
       vector<float> values(dim.size());
       { getline(datastream, line); istringstream iss(line); iss >> values; }
       TensorTools::set_elements(param.get_storage().values, values);
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::set_elements(param.get_storage().g, values);
+      if(!zero_grad){
+        { getline(datastream, line); istringstream iss(line); iss >> values; }
+        TensorTools::set_elements(param.get_storage().g, values);
+      } else {
+        TensorTools::zero(param.get_storage().g);
+      }
       return;
     } else {
       size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
@@ -178,18 +220,23 @@ void TextFileLoader::populate(LookupParameter & lookup_param,
   ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   string line, type, name;
+  bool zero_grad=false;
   Dim dim;
   size_t byte_count = 0;
   while(getline(datastream, line)) {
-    { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
+    read_param_header(line, type, name, dim, byte_count, zero_grad);
     if(type == "#LookupParameter#" && name == key) {
       if(lookup_param.p->all_dim != dim)
         DYNET_RUNTIME_ERR("Attempted to populate lookup parameter where arguments don't match (" << lookup_param.p->all_dim << " != " << dim << ")");
       vector<float> values(dim.size());
       { getline(datastream, line); istringstream iss(line); iss >> values; }
       TensorTools::set_elements(lookup_param.get_storage().all_values, values);
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
+      if(!zero_grad){
+        { getline(datastream, line); istringstream iss(line); iss >> values; }
+        TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
+      } else {
+        TensorTools::zero(lookup_param.get_storage().all_grads);
+      }
       return;
     } else {
       size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
@@ -206,18 +253,23 @@ Parameter TextFileLoader::load_param(ParameterCollection & model,
   ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   string line, type, name;
+  bool zero_grad=false;
   Dim dim;
   size_t byte_count = 0;
   while(getline(datastream, line)) {
-    { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
+    read_param_header(line, type, name, dim, byte_count, zero_grad);
     if(type == "#Parameter#" && name == key) {
       Parameter param = model.add_parameters(dim);
       param.get_storage().name = name;
       vector<float> values(dim.size());
       { getline(datastream, line); istringstream iss(line); iss >> values; }
       TensorTools::set_elements(param.get_storage().values, values);
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::set_elements(param.get_storage().g, values);
+      if(!zero_grad){
+        { getline(datastream, line); istringstream iss(line); iss >> values; }
+        TensorTools::set_elements(param.get_storage().g, values);
+      } else {
+        TensorTools::zero(param.get_storage().g);
+      }
       return param;
     } else {
       size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
@@ -234,10 +286,11 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
   ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   string line, type, name;
+  bool zero_grad=false;
   Dim dim;
   size_t byte_count = 0;
   while(getline(datastream, line)) {
-    { istringstream iss(line); iss >> type >> name >> dim >> byte_count; }
+    read_param_header(line, type, name, dim, byte_count, zero_grad);
     if(type == "#LookupParameter#" && name == key) {
       vector<float> values(dim.size());
       size_t size = dim[dim.nd-1]; dim.nd--;
@@ -245,8 +298,12 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
       lookup_param.get_storage().name = name;
       { getline(datastream, line); istringstream iss(line); iss >> values; }
       TensorTools::set_elements(lookup_param.get_storage().all_values, values);
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
-      TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
+      if(!zero_grad){
+        { getline(datastream, line); istringstream iss(line); iss >> values; }
+        TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
+      } else {
+        TensorTools::zero(lookup_param.get_storage().all_grads);
+      }
       return lookup_param;
     } else {
       size_t offset = static_cast<size_t>(datastream.tellg()) + byte_count;
