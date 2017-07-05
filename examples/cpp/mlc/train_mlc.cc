@@ -78,7 +78,7 @@ vector<TrainingInstance> ReadFiles(const char* xfname, const char* yfname, unsig
 }
 
 struct MLCBuilder {
-  explicit MLCBuilder(Model& m, unsigned nfeats, unsigned labels) {
+  explicit MLCBuilder(ParameterCollection& m, unsigned nfeats, unsigned labels) {
     unsigned HIDDEN_SIZE = 200;
     p_xe = m.add_lookup_parameters(nfeats, {HIDDEN_SIZE});
     p_bh = m.add_parameters({HIDDEN_SIZE});
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
   max_yi++;
 
   // parameters
-  Model m;
+  ParameterCollection m;
   MLCBuilder mlc(m, max_xi, max_yi);
 
   //AdadeltaTrainer sgd(m);

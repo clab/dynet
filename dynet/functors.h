@@ -312,6 +312,23 @@ struct FBinaryLogLossBackward {
   float d;
 };
 
+struct FELUForward {
+  explicit FELUForward(float alpha, float lambda) : alpha(alpha), lambda(lambda) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x) const {
+    return lambda * ((x > 0.f) ? x : alpha * (expm1f(x)));
+  }
+  float alpha, lambda;
+};
+
+struct FELUBackward {
+  explicit FELUBackward(float alpha, float lambda) : alpha(alpha), lambda(lambda) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x, float d) const {
+    return d * ((x > 0.f) ? lambda : lambda * alpha * expf(x));
+  }
+  float alpha, lambda;
+};
+
+
 } // namespace dynet
 
 #endif

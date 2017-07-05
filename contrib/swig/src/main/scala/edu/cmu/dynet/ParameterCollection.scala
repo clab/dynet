@@ -1,17 +1,19 @@
 package edu.cmu.dynet
 
-class Model private[dynet] (private[dynet] val model: internal.Model) {
+class ParameterCollection private[dynet] (private[dynet] val model: internal.ParameterCollection) {
 
-  def this() { this( new internal.Model ) }
+  def this() { this( new internal.ParameterCollection ) }
 
   def gradientL2Norm(): Float = model.gradient_l2_norm()
   def resetGradient(): Unit = model.reset_gradient()
 
+  /*
   def getParameter(index: Long): Parameter =
     new Parameter(new internal.Parameter(this.model, index))
   def getLookupParameter(index: Long): LookupParameter = {
     new LookupParameter(new internal.LookupParameter(this.model, index))
   }
+  */
 
   def addParameters(d: Dim, scale: Float = 0.0f): Parameter =
     new Parameter(model.add_parameters(d.dim, scale))
@@ -29,6 +31,7 @@ class Model private[dynet] (private[dynet] val model: internal.Model) {
   def parameterCount(): Long = model.parameter_count()
   def updatedParameterCount(): Long = model.updated_parameter_count()
 
+  /*
   def setUpdatedParam(p: Parameter, status: Boolean): Unit =
     model.set_updated_param(p.parameter, status)
   def setUpdatedLookupParam(p: LookupParameter, status: Boolean): Unit =
@@ -36,6 +39,7 @@ class Model private[dynet] (private[dynet] val model: internal.Model) {
 
   def isUpdatedParam(p: Parameter) = model.is_updated_param(p.parameter)
   def isUpdatedLookupParam(p: LookupParameter) = model.is_updated_lookup_param(p.lookupParameter)
+  */
 
   def parametersList(): Seq[ParameterStorage] = {
     val params = model.parameters_list

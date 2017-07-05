@@ -50,21 +50,24 @@ if "${MSVC}"=="1":
     appendCMakeList(LIBRARY_DIRS, '${MKL_LINK_DIRS}')    # Add the MKL dirs, if MKL is being used
     appendCMakeLibList(GPULIBRARIES, '${CUDA_RT_FILES}')  
     appendCMakeList(GPULIBRARY_DIRS, '${CUDA_RT_DIRS}')  
-    # Boost does auto-linking in MSVC, just point to the right directory:
-    appendCMakeList(LIBRARY_DIRS, '${Boost_LIBRARY_DIRS}')
 else:
     COMPILER_ARGS=["-std=c++11"]
     DYNET_LIB_DIR="${PROJECT_BINARY_DIR}/dynet/"
     RUNTIME_LIB_DIRS=[DYNET_LIB_DIR]
+    if "${CMAKE_INSTALL_PREFIX}":
+        RUNTIME_LIB_DIRS.append("${CMAKE_INSTALL_PREFIX}/lib/")
 
 LIBRARY_DIRS.append(DYNET_LIB_DIR)
 GPULIBRARY_DIRS = LIBRARY_DIRS + GPULIBRARY_DIRS
+EXTRA_LINK_ARGS = []
 
 import platform
 
 # in some OSX systems, the following extra flags are needed:
 if platform.system() == 'Darwin':
     COMPILER_ARGS.extend(["-stdlib=libc++","-mmacosx-version-min=10.7"])
+    if "${CMAKE_INSTALL_PREFIX}":
+        EXTRA_LINK_ARGS.append("-Wl,-rpath,${CMAKE_INSTALL_PREFIX}/lib/")
 
 
 ext_cpu = Extension(
@@ -73,9 +76,10 @@ ext_cpu = Extension(
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
-                      "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
+                      ],
         libraries=LIBRARIES,             # ditto
         library_dirs=LIBRARY_DIRS,
+        extra_link_args=EXTRA_LINK_ARGS,
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
         runtime_library_dirs=RUNTIME_LIB_DIRS,
@@ -87,9 +91,10 @@ ext_gpu = Extension(
         language="c++",              # this causes Pyrex/Cython to create C++ source
         include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
                       "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
-                      "${Boost_INCLUDE_DIR}"], # this is the directory where boost is.
+                      ],
         libraries=GPULIBRARIES,             # ditto
         library_dirs=GPULIBRARY_DIRS,
+        extra_link_args=EXTRA_LINK_ARGS,
         #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
         extra_compile_args=COMPILER_ARGS,
         runtime_library_dirs=RUNTIME_LIB_DIRS,
