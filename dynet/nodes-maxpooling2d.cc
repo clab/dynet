@@ -154,6 +154,5 @@ void MaxPooling2D::backward_dev_impl(const MyDevice & dev,
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(MaxPooling2D)
-//DYNET_NODE_INST_DEV_IMPL_THREADPOOL(MaxPooling2D)
 
 } // namespace dynet

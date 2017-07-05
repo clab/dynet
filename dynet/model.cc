@@ -32,6 +32,13 @@
     else if(default_device->type == DeviceType::GPU) { dev_func(*(Device_GPU*)default_device,sqnorm); } \
     else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
+#elif THREAD_POOL
+#define DYNET_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
+  template void MyParam::dev_func<Device_ThreadPool>(Device_ThreadPool & dev, float *sqnorm) const; \
+  void MyParam::regular_func(float *sqnorm) const { \
+    if(default_device->type == DeviceType::ThreadPool) { dev_func(*(Device_ThreadPool*)default_device,sqnorm); } \
+    else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
+  }
 #else
 #define DYNET_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
   template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \

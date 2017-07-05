@@ -22,7 +22,7 @@ namespace dynet {
 #ifndef __CUDACC__
 
 ostream& operator<<(ostream& os, const Tensor& t) {
-  if (t.device->type == DeviceType::CPU) {
+  if ((t.device->type == DeviceType::CPU) || (t.device->type == DeviceType::ThreadPool)) {
     os << (*t);
   } else {
 #if HAVE_CUDA
@@ -40,7 +40,7 @@ real as_scalar(const Tensor& t) {
   if (t.d.size() != 1)
     throw std::runtime_error("Input tensor has more than one element, cannot convert to scalar.");
   real res = 0.;
-  if (t.device->type == DeviceType::CPU) {
+  if ((t.device->type == DeviceType::CPU) || (t.device->type == DeviceType::ThreadPool)) {
     return t.v[0];
   } else {
 #if HAVE_CUDA
@@ -55,7 +55,7 @@ real as_scalar(const Tensor& t) {
 
 vector<real> as_vector(const Tensor& v) {
   vector<real> res(v.d.size());
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)) {
     memcpy(&res[0], v.v, sizeof(real) * res.size());
   } else {
 #if HAVE_CUDA
@@ -69,7 +69,7 @@ vector<real> as_vector(const Tensor& v) {
 
 vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
   vector<Eigen::DenseIndex> res(v.d.size());
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)) {
     memcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size());
   } else {
 #if HAVE_CUDA
@@ -83,7 +83,7 @@ vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
 
 float TensorTools::access_element(const Tensor& v, int index) {
   float ret = 0.;
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)) {
     return v.v[index];
   } else {
 #if HAVE_CUDA
@@ -105,7 +105,7 @@ float TensorTools::access_element(const Tensor& v, const Dim& index) {
 }
 
 void TensorTools::set_element(const Tensor& v, int index, float value) {
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)) {
     v.v[index] = value;
   } else {
 #if HAVE_CUDA
@@ -117,7 +117,7 @@ void TensorTools::set_element(const Tensor& v, int index, float value) {
 }
 
 void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rindex) {
-  if (l.device->type == DeviceType::CPU) {
+  if ((l.device->type == DeviceType::CPU) || (l.device->type == DeviceType::ThreadPool)) {
     r.v[rindex] = l.v[lindex];
   } else {
 #if HAVE_CUDA
@@ -131,7 +131,7 @@ void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rinde
 }
 
 void TensorTools::set_elements(const Tensor& v, const vector<float>& vec) {
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)){
     memcpy(v.v, &vec[0], sizeof(real) * vec.size());
   } else {
 #if HAVE_CUDA
@@ -143,7 +143,7 @@ void TensorTools::set_elements(const Tensor& v, const vector<float>& vec) {
 }
 
 void TensorTools::copy_elements(const Tensor& v, const Tensor& v_src) {
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)){
     memcpy(v.v, v_src.v, sizeof(real) * v.d.size());
   } else {
 #if HAVE_CUDA
@@ -164,7 +164,7 @@ void TensorTools::identity(Tensor& val) {
   if (val.d.nd != 2 || val.d[0] != val.d[1])
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to identity");
   size_t pos = 0;
-  if (val.device->type == DeviceType::CPU) {
+  if ((val.device->type == DeviceType::CPU) || (val.device->type == DeviceType::ThreadPool)){
     for (size_t i = 0; i < val.d[0]; ++i)
       for (size_t j = 0; j < val.d[1]; ++j)
         val.v[pos++] = (i == j ? 1 : 0);
@@ -185,7 +185,7 @@ void TensorTools::identity(Tensor& val) {
 void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
   auto b = [&] {return distribution(*rndeng) * scale;};
-  if (val.device->type == DeviceType::CPU) {
+  if ((val.device->type == DeviceType::CPU) || (val.device->type == DeviceType::ThreadPool)) {
     generate(val.v, val.v + val.d.size(), b);
   } else {
 #if HAVE_CUDA
@@ -202,7 +202,7 @@ void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
 void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
   normal_distribution<real> distribution(mean, stddev);
   auto b = [&] {return distribution(*rndeng);};
-  if (val.device->type == DeviceType::CPU) {
+  if ((val.device->type == DeviceType::CPU) || (val.device->type == DeviceType::ThreadPool)) {
     generate(val.v, val.v + val.d.size(), b);
   } else {
 #if HAVE_CUDA
@@ -219,7 +219,7 @@ void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
 void TensorTools::randomize_uniform(Tensor& val, real left, real right) {
   uniform_real_distribution<real> distribution(left, right);
   auto b = [&] {return distribution(*rndeng);};
-  if (val.device->type == DeviceType::CPU) {
+  if ((val.device->type == DeviceType::CPU) || (val.device->type == DeviceType::ThreadPool)) {
     generate(val.v, val.v + val.d.size(), b);
   } else {
 #if HAVE_CUDA
@@ -251,7 +251,7 @@ void Tensor::save(Archive& ar, const unsigned int ver) const {
   int dev_id = ((device == default_device) ? (int) - 1 : device->device_id);
   ar & dev_id;
   ar & mem_pool;
-  if (device->type == DeviceType::CPU) {
+  if ((device->type == DeviceType::CPU) || (device->type == DeviceType::ThreadPool)) {
     ar & boost::serialization::make_array(v, d.size());
   } else {
 #ifdef HAVE_CUDA
@@ -283,7 +283,7 @@ void Tensor::load(Archive& ar, const unsigned int ver) {
     device = devices[dev_id];
   }
   device->allocate_tensor(mem_pool, *this);
-  if (device->type == DeviceType::CPU) {
+  if ((device->type == DeviceType::CPU) || (device->type == DeviceType::ThreadPool)) {
     ar & boost::serialization::make_array(v, d.size());
   } else {
 #ifdef HAVE_CUDA
