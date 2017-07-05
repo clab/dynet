@@ -278,8 +278,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_lgamma "dynet::lgamma" (CExpression& x) except + #
     CExpression c_logistic "dynet::logistic" (CExpression& x) except + #
     CExpression c_rectify "dynet::rectify" (CExpression& x) except + #
-    #CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m=?) except + #
-    CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned* pindex, float m) except + #
+    CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m) except + #
+    CExpression c_hinge "dynet::hinge" (CExpression& x, vector[unsigned] vs, float m) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x, vector[unsigned]& restriction) except + #?
     CExpression c_softmax "dynet::softmax" (CExpression& x) except + #
