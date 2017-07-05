@@ -76,10 +76,11 @@ string SelectRows::as_string(const vector<string>& arg_names) const {
 }
 
 Dim SelectRows::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1 && xs[0].ndims() == 2, "Bad arguments in SelectRows: " << xs);
+  DYNET_ARG_CHECK(xs.size() == 1, "Bad arguments in SelectRows: " << xs);
   unsigned nrows = prows->size();
-  if (xs[0].ndims() == 1) return Dim({nrows});
-  return Dim({nrows, xs[0].cols()});
+  Dim ret(xs[0]);
+  ret.d[0] = nrows;
+  return ret;
 }
 
 string SelectCols::as_string(const vector<string>& arg_names) const {
@@ -310,8 +311,29 @@ string Sum::as_string(const vector<string>& arg_names) const {
 int Sum::autobatch_sig(const ComputationGraph &cg, SigMap &sm) const {
   Sig s(nt::sum);
   s.add_node(args.size());
-  s.add_dim(dim);
+  // Two cases:
+  // If unbatched, it's just an elementwise addition
+  // TODO: This will be more efficient if we identify arguments that are used
+  //       multiple times (e.g. bias vectors)
+  if(dim.bd == 1) {
+    s.add_int(-2);
+  // Otherwise, make sure the dimensions match and that batched nodes don't intersect
+  } else {
+    s.add_dim(dim);
+    for(auto ai : args) {
+      s.add_int(cg.nodes[ai]->dim.bd == 1 ? ai : -1);
+    }
+  }
   return sm.get_idx(s);
+}
+
+std::vector<int> Sum::autobatch_concat(const ComputationGraph & cg) const {
+  vector<int> ret(args.size(), 1);
+  // If batched, true if multiple batched input as well
+  if(dim.bd != 1)
+    for(size_t i = 0; i < args.size(); ++i)
+      ret[i] = cg.nodes[args[i]]->dim.bd == 1 ? 0 : 1;
+  return ret;
 }
 
 
@@ -694,9 +716,9 @@ Dim SoftSign::dim_forward(const vector<Dim>& xs) const {
 string PickNegLogSoftmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   if(pval) {
-    s << "log_softmax(" << arg_names[0] << ")_{" << *pval << '}';
+    s << "pickneglogsoftmax(" << arg_names[0] << ")_{" << *pval << '}';
   } else {
-    s << "log_softmax(" << arg_names[0] << ")_{";
+    s << "pickneglogsoftmax(" << arg_names[0] << ")_{";
     string sep = "";
     for(auto v : *pvals) { s << sep << v; sep = ","; }
     s << '}';
@@ -720,7 +742,8 @@ Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
 
 int PickNegLogSoftmax::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::pnls);
-  s.add_dim(dim);
+  const Dim &in_dim = cg.nodes[args[0]]->dim;
+  s.add_dim(in_dim);
   return sm.get_idx(s);
 }
 std::vector<int> PickNegLogSoftmax::autobatch_concat(const ComputationGraph & cg) const {
@@ -821,8 +844,8 @@ Dim PickRange::dim_forward(const vector<Dim>& xs) const {
 
 int PickRange::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::pickrange);
-  const Dim &dim = cg.nodes[args[0]]->dim;
-  s.add_dim(dim);
+  const Dim &in_dim = cg.nodes[args[0]]->dim;
+  s.add_dim(in_dim);
   s.add_node(start);
   s.add_node(end);
   return sm.get_idx(s);
@@ -1068,6 +1091,17 @@ string Rectify::as_string(const vector<string>& arg_names) const {
 
 Dim Rectify::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Rectify");
+  return xs[0];
+}
+
+string ExponentialLinearUnit::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "ELU(" << arg_names[0] << ", lambda=" << lambda << ", alpha=" << alpha << ')';
+  return s.str();
+}
+
+Dim ExponentialLinearUnit::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in ExponentialLinearUnit");
   return xs[0];
 }
 

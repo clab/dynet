@@ -169,47 +169,6 @@ size_t MinDimension::aux_storage_size() const {
 
 #endif // Finish CPU only functions
 
-// ===== Auxiliary functions for both CPU and GPU
-
-template <class MyDevice>
-EIGEN_STRONG_INLINE void logsumexp(const MyDevice & dev, const Tensor& x, Tensor & m, Tensor& z) {
-  if(x.d.bd == 1 && x.d[1] == 1) {
-    m.t<0>().device(*dev.edevice) = x.t<1>().maximum();
-#ifdef __CUDACC__
-    Eigen::array<int, 1> bcast;
-    bcast[0] = x.d[0];
-    // This needs to be split into two lines to prevent memory allocation
-    // TODO? Here and in logsoftmax: Is there a better way to subtract a scalar that is already on the GPU without using broadcasting (and without copying the scalar back to the host first)
-    z.t<0>().device(*dev.edevice) = (x.t<1>() - m.t<1>().broadcast(bcast)).exp().sum();
-    z.t<0>().device(*dev.edevice) = z.t<0>().log() + m.t<0>();
-#else
-    float mval = as_scalar(m);
-    // This needs to be split into two lines to prevent memory allocation
-    z.t<0>().device(*dev.edevice) = (x.t<1>() - mval).exp().sum();
-    z.t<0>().device(*dev.edevice) = z.t<0>().log() + mval;
-#endif
-  } else {
-    Eigen::array<int, 1> red_axis; red_axis[0] = 0;
-    m.tb<1>().device(*dev.edevice) = x.tb<2>().maximum(red_axis);
-    // TODO: Currently, the first version is slower on CPU, hence the switch
-#ifdef __CUDACC__
-    Eigen::array<int, 3> bcast({(int)x.d.rows(), 1, 1});
-    Eigen::array<int, 3> morph({1, (int)m.d[0], (int)m.d.bd});
-    // This needs to be split into two lines to prevent memory allocation
-    z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().reshape(morph).broadcast(bcast)).exp().sum(red_axis);
-    z.tb<1>().device(*dev.edevice) = z.tb<1>().log() + m.tb<1>();
-#else
-    auto miter = m.v;
-    for(size_t b = 0; b < x.d.bd; ++b) {
-      for(size_t i = 0; i < x.d[1]; ++i, ++miter) {
-        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = (x.tb<2>().chip<2>(b).chip<1>(i) - *miter).exp().sum();
-        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = z.tb<1>().chip<1>(b).chip<0>(i).log() + *miter;
-      }
-    }
-#endif
-  }
-}
-
 // ===== Functions to be compiled on both CPU and GPU
 
 #ifdef __CUDACC__
@@ -242,7 +201,8 @@ inline void CUDAMatrixMultiply(const Device_GPU & dev, const Tensor& l, const Te
 
 template<class MyDevice>
 void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  // TODO: Profile on CPU. Broadcasting may be slow.
+  // Broadcasting is slow on CPU, so split codepaths
+#ifdef __CUDACC__
   if(xs[0]->d.bd >= xs[1]->d.bd) {
     Eigen::array<int, 3> bcasts = {1, (int)xs[0]->d[1], (int)(xs[0]->d.bd/xs[1]->d.bd)};
     fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>() + xs[1]->tb<2>().broadcast(bcasts);
@@ -253,6 +213,23 @@ void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<
     Eigen::array<int, 3> bcasts1 = {1, (int)xs[0]->d[1], 1};
     fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcasts0) + xs[1]->tb<2>().broadcast(bcasts1);
   }
+#else
+  // First, add the matrix
+  if(xs[0]->d.bd == fx.d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  else
+    for(size_t b = 0; b < fx.d.bd; ++b)
+      fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[0]->tvec();
+  // Second, add the columns
+  if(xs[1]->d.bd == fx.d.bd) {
+    for(size_t i = 0; i < xs[0]->d[1]; ++i) 
+      fx.tb<2>().chip<1>(i).device(*dev.edevice) += xs[1]->tb<1>();
+  } else {
+    for(size_t b = 0; b < fx.d.bd; ++b)
+      for(size_t i = 0; i < fx.d[1]; ++i) 
+        fx.tb<2>().chip<2>(b).chip<1>(i).device(*dev.edevice) += xs[1]->t<1>();
+  }
+#endif
 }
 
 template<class MyDevice>
@@ -438,17 +415,51 @@ void Average::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     fx.tvec().device(*dev.edevice) = xs[0]->tvec();
     return;
   }
-  auto res = fx.tvec();
-  const unsigned remainder = num_args % 4;
-  switch (remainder) {
-    case 0: res.setZero(); break;
-    case 1: res.device(*dev.edevice) = xs[0]->tvec(); break;
-    case 2: res.device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec(); break;
-    case 3: res.device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec(); break;
+  if (num_args == 2 && xs[0]->d.bd == xs[1]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec();
+  else if (num_args == 3 && xs[0]->d.bd == xs[1]->d.bd && xs[1]->d.bd == xs[2]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec();
+  else if (num_args == 4 && xs[0]->d.bd == xs[1]->d.bd && xs[1]->d.bd == xs[2]->d.bd && xs[2]->d.bd == xs[3]->d.bd)
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec() + xs[3]->tvec();
+  else {
+    bool allSameBatchSize = std::all_of(xs.begin(), xs.end(), [&](const Tensor* x) { return x->d.bd == xs[0]->d.bd;});
+    if (allSameBatchSize) {
+      // Since they are all the same batch size, we can easily unroll the addition (results in lower GPU latency by merging multiple adds together in one CUDA call):
+      DYNET_ASSERT(num_args > 4, "Bad loop unrolling in Sum::forward");        // If it was <=4, we would have handled it in the special cases above
+      fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec() + xs[2]->tvec() + xs[3]->tvec();
+
+      const unsigned remainder = (num_args - 4 ) % 4;
+      switch (remainder) {
+        case 0: break;
+        case 1: fx.tvec().device(*dev.edevice) += xs[4]->tvec(); break;
+        case 2: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec(); break;
+        case 3: fx.tvec().device(*dev.edevice) += xs[4]->tvec() + xs[5]->tvec() + xs[6]->tvec(); break;
+      }
+      for (unsigned i = 4 + remainder; i < num_args; i += 4)
+        fx.tvec().device(*dev.edevice) += xs[i]->tvec() + xs[i + 1]->tvec() + xs[i + 2]->tvec() + xs[i + 3]->tvec();
+    }
+    else {
+      // Not all the same batch size, so need to broadcast in the cases where they differ
+      TensorTools::zero(fx);
+#if __CUDACC__
+      Eigen::array<int, 2> bcast({ 1, (int)fx.d.bd });
+#endif
+      for (unsigned i = 0; i < num_args; ++i) {
+        if (xs[i]->d.bd == fx.d.bd) {
+          fx.tvec().device(*dev.edevice) += xs[i]->tvec();
+        }
+        else {
+#if __CUDACC__
+          fx.tbvec().device(*dev.edevice) += xs[i]->tbvec().broadcast(bcast);
+#else
+          for (unsigned b = 0; b < fx.d.bd; ++b)
+            fx.tbvec().chip<1>(b).device(*dev.edevice) += xs[i]->tvec();
+#endif
+        }
+      }
+    }
   }
-  for (unsigned i = remainder; i < num_args; i += 4)
-    res.device(*dev.edevice) += xs[i]->tvec() + xs[i+1]->tvec() + xs[i+2]->tvec() + xs[i+3]->tvec();
-  res.device(*dev.edevice) = res / (float)num_args;
+  fx.tvec().device(*dev.edevice) = fx.tvec() / (float)xs.size();
 }
 
 template<class MyDevice>
@@ -1213,7 +1224,7 @@ void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in LogSoftmax::forward");
   Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
-  logsumexp(dev, *xs[0], m, z);
+  TensorTools::logsumexp_dev(dev, *xs[0], m, z);
   if(fx.d.size() == fx.d.rows()) {
 #ifdef __CUDACC__
     Eigen::array<int, 1> bcast;
@@ -1674,11 +1685,11 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
     }
 #if __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync(ids_dev, ids_host, fx.d.bd * sizeof(unsigned int), cudaMemcpyHostToDevice));
-    logsumexp(dev, *xs[0], m, z);
+    TensorTools::logsumexp_dev(dev, *xs[0], m, z);
     dynet::gpu::sparse_to_dense_assign(fx.d.bd, ids_dev, xs[0]->v, fx.v);
     free(ids_host);
 #else
-    logsumexp(dev, *xs[0], m, z);
+    TensorTools::logsumexp_dev(dev, *xs[0], m, z);
     for(unsigned b = 0; b < fx.d.bd; ++b)
       fx.v[b] = xs[0]->v[ids_dev[b]];
 #endif
@@ -1852,6 +1863,23 @@ void Rectify::backward_dev_impl(const MyDevice & dev,
 DYNET_NODE_INST_DEV_IMPL(Rectify)
 
 template<class MyDevice>
+void ExponentialLinearUnit::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in ExponentialLinearUnit::forward");
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FELUForward(alpha, lambda));;
+}
+
+template<class MyDevice>
+void ExponentialLinearUnit::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FELUBackward(alpha, lambda));
+}
+DYNET_NODE_INST_DEV_IMPL(ExponentialLinearUnit)
+
+template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
@@ -1943,7 +1971,7 @@ void SelectRows::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   for (unsigned i = 0; i < rm.size(); ++i) {
     DYNET_ARG_CHECK(rm[i] < xs[0]->d.rows(),
                             "Out-of-bounds index " << rm[i] << " in SelectRows over expression of dimensions " << xs[0]->d);
-    fx.t<2>().chip<0>(i).device(*dev.edevice) = xs[0]->t<2>().chip<0>(rm[i]);
+    fx.t<4>().chip<0>(i).device(*dev.edevice) = xs[0]->t<4>().chip<0>(rm[i]);
   }
 }
 
@@ -1957,7 +1985,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectRows::backward");
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<0>(rm[i]).device(*dev.edevice) += dEdf.t<2>().chip<0>(i);
+    dEdxi.t<4>().chip<0>(rm[i]).device(*dev.edevice) += dEdf.t<4>().chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
@@ -1966,7 +1994,7 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in Softmax::forward");
   Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
-  logsumexp(dev, *xs[0], m, z);
+  TensorTools::logsumexp_dev(dev, *xs[0], m, z);
   // TODO? Is this broadcast efficient on CPU?
   Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
   Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
@@ -2206,7 +2234,8 @@ template<class MyDevice>
 void L2Norm::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in L2Norm::forward");
   Eigen::array<ptrdiff_t, 1> red_axis = {0};
-  fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec().square().sum(red_axis) / (float) xs[0]->d.batch_size()).sqrt() ;
+  fx.tb<0>().device(*dev.edevice) =
+      (xs[0]->tbvec().square().sum(red_axis)).sqrt();
 }
 
 template<class MyDevice>
@@ -2218,8 +2247,10 @@ void L2Norm::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 1, "Failed dimension check in L2Norm::backward");
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
-  dEdxi.tbvec().device(*dev.edevice) += xs[0]->tbvec() * ((fx.tvec() / (float) xs[0]->d.batch_size()).binaryExpr(dEdf.tvec(), FSqrtBackward())).broadcast(bcast);
-
+  dEdxi.tbvec().device(*dev.edevice) +=
+      xs[0]->tbvec() *
+      (2 * fx.tbvec().binaryExpr(dEdf.tbvec(),
+                                 FSqrtBackward())).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(L2Norm)
 
@@ -2615,7 +2646,7 @@ void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
   if (dim.num_nonone_dims() <= 1) {
     fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   } else {
-    array<ptrdiff_t, 5> order;
+    Eigen::array<ptrdiff_t, 5> order;
     for(size_t i = 0; i < 5; ++i)
       order[i] = (i >= dims.size() ? i : dims[i]);
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().shuffle(order);
@@ -2629,7 +2660,7 @@ void Transpose::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  array<ptrdiff_t, 5> order;
+  Eigen::array<ptrdiff_t, 5> order;
   for(size_t i = 0; i < 5; ++i)
     order[(i >= dims.size() ? i : dims[i])] = i;
   dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().shuffle(order);

@@ -1,15 +1,8 @@
 #pragma once
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/vector.hpp>
 #include "dynet/dynet.h"
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
 #include "dynet/lstm.h"
-#include "dynet/io-macros.h"
-
-using namespace dynet::expr;
 
 namespace dynet {
 
@@ -28,9 +21,6 @@ public:
   virtual void new_graph_impl(ComputationGraph& cg, bool update) override = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h0) override = 0;
   virtual Expression add_input_impl(int prev, const Expression& x) override;
-
-private:
-  DYNET_SERIALIZE_DECLARE()
 };
 
 struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -39,16 +29,18 @@ struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
                        unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       ParameterCollection& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
   void copy(const RNNBuilder & params) override;
+  ParameterCollection & get_parameter_collection() override;
  protected:
   void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression Lookup(unsigned layer, unsigned p_type, unsigned value);
 
  public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
   std::vector<std::vector<LookupParameter>> lparams;
@@ -69,8 +61,6 @@ struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
   unsigned N; // Max branching factor
 private:
   ComputationGraph* cg;
-
-  DYNET_SERIALIZE_DECLARE()
 };
 
 struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -78,19 +68,18 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   explicit UnidirectionalTreeLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       ParameterCollection& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  ParameterCollection & get_parameter_collection() override { return node_builder.get_parameter_collection(); }
  protected:
   void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
 
  public:
+  ParameterCollection local_model;
   LSTMBuilder node_builder;
   std::vector<Expression> h;
-
-private:
-  DYNET_SERIALIZE_DECLARE()
 };
 
 struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
@@ -98,9 +87,12 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   explicit BidirectionalTreeLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       ParameterCollection& model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  ParameterCollection & get_parameter_collection() override {
+    return local_model;
+  }
  protected:
   void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
@@ -110,13 +102,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   LSTMBuilder fwd_node_builder;
   LSTMBuilder rev_node_builder;
   std::vector<Expression> h;
-
-private:
-  DYNET_SERIALIZE_DECLARE()
+  ParameterCollection local_model;
 };
-} // namespace dynet
 
-BOOST_CLASS_EXPORT_KEY(dynet::TreeLSTMBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::NaryTreeLSTMBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::UnidirectionalTreeLSTMBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::BidirectionalTreeLSTMBuilder)
+} // namespace dynet

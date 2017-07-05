@@ -25,6 +25,12 @@ object Initialize {
     args.get("shared-parameters")
         .foreach(arg => params.setShared_parameters(arg.asInstanceOf[Boolean]))
 
+    args.get("autobatch")
+        .foreach(arg => params.setAutobatch(arg.asInstanceOf[Int]))
+
+    args.get("autobatch_debug")
+        .foreach(arg => params.setAutobatch_debug(arg.asInstanceOf[Int]))
+
     initialize(params)
   }
 }

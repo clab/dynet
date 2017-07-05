@@ -20,12 +20,13 @@ set(dynet_library_SRCS
     lstm.cc
     mem.cc
     model.cc
-    mp.cc
     nodes.cc
     nodes-common.cc
     nodes-contract.cc
     nodes-conv.cc
     nodes-conv2d.cc
+    nodes-maxpooling2d.cc
+    param-init.cc
     param-nodes.cc
     pretrain.cc
     rnn.cc
@@ -36,7 +37,11 @@ set(dynet_library_SRCS
     training.cc
     treelstm.cc
     weight-decay.cc
+    io.cc
 )
+if(ENABLE_BOOST)
+  list(APPEND dynet_library_SRCS mp.cc)
+endif()
 
 # Headers:
 set(dynet_library_HDRS
@@ -63,7 +68,6 @@ set(dynet_library_HDRS
     lstm.h
     mem.h
     model.h
-    mp.h
     nodes.h
     nodes-contract.h
     nodes-conv.h
@@ -81,8 +85,11 @@ set(dynet_library_HDRS
     except.h
     nodes-macros.h
     weight-decay.h
-    io-macros.h
+    io.h
 )
+if(ENABLE_BOOST)
+  list(APPEND dynet_library_HDRS mp.h)
+endif()
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 if (NOT MSVC)
@@ -136,10 +143,10 @@ if(WITH_CUDA_BACKEND)
     list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu)
+    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-nodes-maxpooling2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu)
   else()
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
+    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-nodes-maxpooling2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
   endif()
   set_target_properties(gdynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)

@@ -19,7 +19,7 @@ namespace dynet {
 
 string ConstParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "const_parameters(" << dim << ") @ " << params.get();
+  s << "const_parameters(" << dim << ") @ " << &params.get_storage();
   return s.str();
 }
 
@@ -30,7 +30,7 @@ Dim ConstParameterNode::dim_forward(const vector<Dim>& xs) const {
 
 string ParameterNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "parameters(" << dim << ") @ " << params.get();
+  s << "parameters(" << dim << ") @ " << &params.get_storage();
   return s.str();
 }
 
@@ -40,10 +40,10 @@ Dim ParameterNode::dim_forward(const vector<Dim>& xs) const {
 }
 
 void ParameterNode::accumulate_grad(const Tensor& g) {
-  if(params.mp != nullptr)
-    params.get()->accumulate_grad(g);
-  else if(lparams.mp != nullptr)
-    lparams.get()->accumulate_grad(g);
+  if(params.p != nullptr)
+    params.get_storage().accumulate_grad(g);
+  else if(lparams.p != nullptr)
+    lparams.get_storage().accumulate_grad(g);
   else
     DYNET_RUNTIME_ERR("ConstParameterNode has neither Parameter nor LookupParameter");
 }
@@ -128,7 +128,7 @@ Node* ScalarInputNode::autobatch_pseudo_node(const ComputationGraph & cg,
 
 int LookupNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::lookup);
-  s.add_node(params.index);
+  s.add_int((size_t)params.p);
   return sm.get_idx(s);
 }
 std::vector<int> LookupNode::autobatch_concat(const ComputationGraph & cg) const {
@@ -137,7 +137,7 @@ std::vector<int> LookupNode::autobatch_concat(const ComputationGraph & cg) const
 Node* LookupNode::autobatch_pseudo_node(const ComputationGraph & cg,
                                         const std::vector<VariableIndex> & batch_ids) const {
   vector<unsigned> ids;
-  LookupNode* ln;
+  LookupNode* ln = nullptr;
   for(auto batch_id : batch_ids) {
     ln = static_cast<LookupNode*>(cg.nodes[batch_id]);
     if(ln->pindex != nullptr)
@@ -156,7 +156,7 @@ size_t LookupNode::aux_storage_size() const {
 
 string LookupNode::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "lookup_parameters(|x|=" << params.get()->values.size() << " --> " << dim << ") @ " << params.get();
+  s << "lookup_parameters(|x|=" << params.get_storage().values.size() << " --> " << dim << ") @ " << &params.get_storage();
   return s.str();
 }
 
@@ -166,10 +166,10 @@ Dim LookupNode::dim_forward(const vector<Dim>& xs) const {
 
 void LookupNode::accumulate_grad(const Tensor& g) {
   if(pindex) {
-    params.get()->accumulate_grad(*pindex, g);
+    params.get_storage().accumulate_grad(*pindex, g);
   } else {
     DYNET_ASSERT(pindices, "Have neither index nor index vector in LookupNode");
-    params.get()->accumulate_grads(pindices->size(), &(*pindices)[0], (unsigned*)aux_mem, g.v);
+    params.get_storage().accumulate_grads(pindices->size(), &(*pindices)[0], (unsigned*)aux_mem, g.v);
   }
 }
 
@@ -178,10 +178,10 @@ void LookupNode::accumulate_grad(const Tensor& g) {
 template<class MyDevice>
 void ConstParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
-  if(params.mp != nullptr)
-    fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.current_weight_decay();
-  else if(lparams.mp != nullptr)
-    fx.tvec().device(*dev.edevice) = lparams.get()->all_values.tvec() * lparams.mp->weight_decay.current_weight_decay();
+  if(params.p != nullptr)
+    fx.tvec().device(*dev.edevice) = params.get_storage().values.tvec() * params.current_weight_decay();
+  else if(lparams.p != nullptr)
+    fx.tvec().device(*dev.edevice) = lparams.get_storage().all_values.tvec() * lparams.current_weight_decay();
   else
     DYNET_RUNTIME_ERR("ConstParameterNode has neither Parameter nor LookupParameter");
 }
@@ -205,10 +205,10 @@ void ParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Te
 //    fx.v = params->values.v;
 //    return;
 //  }
-  if(params.mp != nullptr)
-    fx.tvec().device(*dev.edevice) = params.get()->values.tvec() * params.mp->weight_decay.current_weight_decay();
-  else if(lparams.mp != nullptr)
-    fx.tvec().device(*dev.edevice) = lparams.get()->all_values.tvec() * lparams.mp->weight_decay.current_weight_decay();
+  if(params.p != nullptr)
+    fx.tvec().device(*dev.edevice) = params.get_storage().values.tvec() * params.current_weight_decay();
+  else if(lparams.p != nullptr)
+    fx.tvec().device(*dev.edevice) = lparams.get_storage().all_values.tvec() * lparams.current_weight_decay();
   else
     DYNET_RUNTIME_ERR("ParameterNode has neither Parameter nor LookupParameter");
 }
@@ -304,10 +304,10 @@ template<class MyDevice>
 void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   if(pindex) {
-    DYNET_ARG_CHECK(*pindex < params.get()->values.size(),
-                            "Out-of-bounds attempt to access index " << *pindex << " for LookupParameter of size " << params.get()->values.size());
+    DYNET_ARG_CHECK(*pindex < params.get_storage().values.size(),
+                    "Out-of-bounds attempt to access index " << *pindex << " for LookupParameter of size " << params.get_storage().values.size());
     DYNET_ASSERT(fx.d.batch_elems() == 1, "Batch dimension > 1 for lookup with single index");
-    fx.tvec().device(*dev.edevice) = params.get()->values[*pindex].tvec() * params.mp->weight_decay.current_weight_decay();
+    fx.tvec().device(*dev.edevice) = params.get_storage().values[*pindex].tvec() * params.current_weight_decay();
   } else {
     DYNET_ASSERT(pindices, "Have neither index nor index vector in LookupNode");
     DYNET_ARG_CHECK(fx.d.batch_elems() == pindices->size(),
@@ -315,13 +315,13 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
                             "doesn't match batch size in expressions (" << fx.d.batch_elems() << ")");
 #if __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync((unsigned*)aux_mem, &(*pindices)[0], fx.d.bd * sizeof(unsigned), cudaMemcpyHostToDevice));
-    dynet::gpu::sparse_to_dense_block_assign_and_multiply(fx.d.bd, (unsigned*)aux_mem, fx.d.batch_size(), params.mp->weight_decay.current_weight_decay(), params.get()->all_values.v, fx.v);
+    dynet::gpu::sparse_to_dense_block_assign_and_multiply(fx.d.bd, (unsigned*)aux_mem, fx.d.batch_size(), params.current_weight_decay(), params.get_storage().all_values.v, fx.v);
 #else
     for (unsigned b = 0; b < pindices->size(); ++b) {
       unsigned i = pindices->at(b);
-      DYNET_ARG_CHECK(i < params.get()->values.size(),
-                              "Out-of-bounds attempt to access index " << i << " for LookupParameter of size " << params.get()->values.size());
-      fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get()->values[i].t<2>() * params.mp->weight_decay.current_weight_decay();
+      DYNET_ARG_CHECK(i < params.get_storage().values.size(),
+                              "Out-of-bounds attempt to access index " << i << " for LookupParameter of size " << params.get_storage().values.size());
+      fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get_storage().values[i].t<2>() * params.current_weight_decay();
     }
 #endif
   }

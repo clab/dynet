@@ -8,7 +8,6 @@
 #include <stdexcept>
 
 using namespace dynet;
-using namespace dynet::expr;
 using namespace std;
 
 
@@ -41,7 +40,7 @@ struct TensorTest {
 
   std::vector<char*> av;
   std::vector<float> batch_vals;
-  dynet::Model mod;
+  dynet::ParameterCollection mod;
 };
 
 // define the test suite
