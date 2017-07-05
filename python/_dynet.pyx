@@ -1792,8 +1792,7 @@ def inputTensor(arr,batched=False):
         dim = arr.shape
         batch_size= 1
     arr = arr.flatten(order='F')
-    return 
-    _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
+    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
 
 
 def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
