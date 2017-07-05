@@ -239,6 +239,10 @@ Loss/Probability operations
 
 .. autofunction:: dynet.pickneglogsoftmax_batch
 
+.. autofunction:: dynet.hinge
+
+.. autofunction:: dynet.hinge_batch
+
 .. autofunction:: dynet.kmh_ngram
 
 .. autofunction:: dynet.squared_distance
