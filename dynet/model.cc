@@ -50,7 +50,7 @@ namespace dynet {
 
 ParameterStorageBase::~ParameterStorageBase() {}
 
-ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name) : name(name), dim(d), updated(true), owner(nullptr) {
+ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name) : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
   values.d = g.d = d;
   values.device = g.device = default_device;
   default_device->allocate_tensor(DeviceMempool::PS, values);
@@ -65,7 +65,7 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string 
   }
 }
 
-ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), owner(nullptr) {
+ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
   values.d = g.d = d;
   values.device = g.device = default_device;
   default_device->allocate_tensor(DeviceMempool::PS, values);
@@ -88,6 +88,7 @@ void ParameterStorage::copy(const ParameterStorage & param) {
 }
 
 void ParameterStorage::clear() {
+  nonzero_grad = false;
   if (g.v != nullptr)
     TensorTools::zero(g);
 }
@@ -101,7 +102,7 @@ bool valid_parameter(const std::string & s) {
   return it == s.end();
 }
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), all_updated(false), owner(nullptr) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), all_updated(false), nonzero_grad(false), owner(nullptr) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
   all_grads.device = all_values.device = default_device;
@@ -151,6 +152,7 @@ void LookupParameterStorage::clear() {
   }
   non_zero_grads.clear();
   all_updated = false;
+  nonzero_grad = false;
 }
 
 Parameter::Parameter() : p(nullptr) {}
@@ -511,6 +513,7 @@ template void ParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev
 extern template void ParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d);
 template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
 void ParameterStorage::accumulate_grad(const Tensor& d) {
+  nonzero_grad = true;
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
   else if (values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values.device, d); }
   else { throw std::runtime_error("Bad device type"); }
@@ -518,6 +521,7 @@ void ParameterStorage::accumulate_grad(const Tensor& d) {
 #else
 template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
 void ParameterStorage::accumulate_grad(const Tensor& d) {
+  nonzero_grad = true;
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
   else { throw std::runtime_error("Bad device type"); }
 }
@@ -629,6 +633,7 @@ template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU
 extern template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, const Tensor& d);
 template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
 void LookupParameterStorage::accumulate_grad(const Tensor& d) {
+  nonzero_grad = true;
   if (all_values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)all_values.device, d); }
   else if (all_values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)all_values.device, d); }
   else { throw std::runtime_error("Bad device type"); }
@@ -636,6 +641,7 @@ void LookupParameterStorage::accumulate_grad(const Tensor& d) {
 #else
 template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
 void LookupParameterStorage::accumulate_grad(const Tensor& d) {
+  nonzero_grad = true;
   if (all_values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)all_values.device, d); }
   else { throw std::runtime_error("Bad device type"); }
 }
@@ -652,6 +658,7 @@ template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU
 extern template void LookupParameterStorage::accumulate_grad_dev<Device_GPU>(Device_GPU & dev, unsigned index, const Tensor& d);
 template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, unsigned index, const Tensor& d);
 void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
+  nonzero_grad = true;
   if (values[index].device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values[index].device, index, d); }
   else if (values[index].device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values[index].device, index, d); }
   else { throw std::runtime_error("Bad device type"); }
@@ -659,6 +666,7 @@ void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
 #else
 template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, unsigned index, const Tensor& d);
 void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
+  nonzero_grad = true;
   if (values[index].device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values[index].device, index, d); }
   else { throw std::runtime_error("Bad device type"); }
 }

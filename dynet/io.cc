@@ -26,9 +26,7 @@ bool valid_pc_key(const std::string & s) {
 }
 
 bool grad_is_zero(const ParameterStorageBase & p){
-  float grad_norm;
-  p.g_squared_l2norm(&grad_norm);
-  return (grad_norm == 0);
+  return !p.has_grad();
 }
 
 void read_param_header(string line, string &type, string &name, Dim& dim,size_t& byte_count, bool& zero_grad){
