@@ -29,6 +29,24 @@ class TestInput(unittest.TestCase):
             self.assertEqual(dy.squared_norm(x).scalar_value(), self.squared_norm,
                              msg="Value mismatch")
 
+
+    def test_sparse_inputTensor(self):
+	dy.renew_cg()
+	input_tensor = self.input_vals.reshape((3, 3, 3, 3))
+        input_vals = [input_tensor[0,0,0,0], input_tensor[0,1,2,0]]
+        input_indices = ([0, 0],[0, 1],[0, 2],[0, 0])
+	x = dy.sparse_inputTensor(input_indices, input_vals, (3, 3, 3, 3), batched=True)
+	self.assertEqual(x.dim()[0], (3,3,3),
+			 msg="Dimension mismatch")
+	self.assertEqual(x.dim()[1], 3,
+			 msg="Dimension mismatch")
+	self.assertTrue(np.allclose(x.npvalue()[0,0,0,0], input_vals[0]),
+			msg="Expression value different from initial value")
+	self.assertTrue(np.allclose(x.npvalue()[0,1,2,0], input_vals[1]),
+			msg="Expression value different from initial value")
+	self.assertTrue(np.allclose(x.npvalue()[1,1,1,1], 0),
+			msg="Expression value different from initial value")
+
     def test_inputTensor_batched(self):
         for i in range(4):
             dy.renew_cg()

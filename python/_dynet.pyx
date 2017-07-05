@@ -1183,6 +1183,8 @@ cdef class ComputationGraph:
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
     def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1):
         return _vecInputExpression(self, v, d,batch_size)
+    def inputSparseTensor(self, vector[unsigned] idxs, vector[float] v, tuple dim, int batch_size=1, float defval=0):
+        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -1673,6 +1675,32 @@ cdef class _vecInputExpression(Expression):
         self.cgp().invalidate()
         self.val.set(data)
 
+cdef class _sparseInputExpression(Expression):
+    """Subclass of Expression corresponding to any non-scalar input expressions
+    
+    Despite the name, this also represents tensors (in column major format).
+    TODO : change this
+    """
+    def __cinit__(self, ComputationGraph g, vector[unsigned] idxs, vector[float] val, dim ,batch_size=1, defval=0):
+        #self.cg = g.thisptr
+        self.cg_version = g.version()
+        cdef CExpression e
+        e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval)
+        self.vindex = e.i
+        g._inputs.append(self)
+
+    def set(self, vector[float] data):
+        """Change the value of the expression
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
+        This allows you to use dynet as a static framework.
+        For now this only accepts new values as flattened arrays (column majors). TODO : change this
+
+        Args:
+            data(vector[float]): New value
+        """
+        raise ValueError('Can\'t set value of sparse input vector for now')
+
 def vecInput(int dim):
     """Input an empty vector
     
@@ -1756,7 +1784,7 @@ def inputTensor(arr,batched=False):
         else:
             arr=np.asarray(arr,dtype=float)
     if not isinstance(arr,np.ndarray):
-        raise TypeError("Input Tensor should be a numpy.ndarray or a valid list pf floats")
+        raise TypeError("Input Tensor should be a numpy.ndarray or a valid list of floats")
     if batched:
         dim = arr.shape[:-1] if len(arr.shape) > 1 else (1,)
         batch_size= arr.shape[-1]
@@ -1764,7 +1792,43 @@ def inputTensor(arr,batched=False):
         dim = arr.shape
         batch_size= 1
     arr = arr.flatten(order='F')
-    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
+    return 
+    _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
+
+
+def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
+    """Creates a tensor expression based on a numpy array or a list.
+    
+    The dimension is inferred from the shape of the input.
+    if batched=True, the last dimension is used as a batch dimension
+    if arr is a list of numpy ndarrays, this returns a batched expression where the batch elements are the elements of the list
+    
+    Args:
+        arr(list,np.ndarray): Values : numpy ndarray OR list of np.ndarray OR multidimensional list of floats
+    
+    Keyword Args:
+        batched(bool): Whether to use the last dimension as a batch dimension (default: False)
+    
+    Returns:
+        _vecInputExpression: Input expression
+    
+    Raises:
+        TypeError: If the type is not respected
+    """
+    if isinstance(values, list):
+        values = np.asarray(values, dtype=float)
+    if not len(values.shape) == 1:
+        raise TypeError("values should be a 1d array")
+    if not len(idxs) == len(shape):
+        raise ValueError("Number of indices doesn't match shape")
+    if batched:
+        dim = shape[:-1] if len(shape) > 1 else (1,)
+        batch_size= shape[-1]
+    else:
+        dim = shape
+        batch_size = 1
+    idxs = np.ravel_multi_index(idxs, shape, order='F')
+    return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval)
 
 cdef class _lookupExpression(Expression):
     """Expression corresponding to a lookup from lookup parameter
