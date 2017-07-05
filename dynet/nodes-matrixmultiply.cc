@@ -1,6 +1,7 @@
 #include "dynet/nodes.h"
 
 #include "dynet/nodes-macros.h"
+#include "dynet/cuda-matrix-multiply.h"
 
 using namespace std;
 

@@ -2,6 +2,11 @@
 
 #include "dynet/nodes-macros.h"
 
+#ifdef __CUDACC__
+#include "dynet/cuda.h"
+#include "dynet/gpu-ops.h"
+#endif
+
 using namespace std;
 
 namespace dynet {
