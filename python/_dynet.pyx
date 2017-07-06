@@ -1796,23 +1796,26 @@ def inputTensor(arr,batched=False):
 
 
 def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
-    """Creates a tensor expression based on a numpy array or a list.
+    """Creates a tensor expression based on indices and values
     
     The dimension is inferred from the shape of the input.
     if batched=True, the last dimension is used as a batch dimension
     if arr is a list of numpy ndarrays, this returns a batched expression where the batch elements are the elements of the list
     
     Args:
-        arr(list,np.ndarray): Values : numpy ndarray OR list of np.ndarray OR multidimensional list of floats
-    
+        idxs(tuple, list): A tuple/list of integer arrays, one array for each dimension (including the batch dimension)
+        values(list,np.ndarray): A 1D array/list of values
+        shape: The desired shape
     Keyword Args:
-        batched(bool): Whether to use the last dimension as a batch dimension (default: False)
+        batched(bool): Whether to use the last dimension as a batch dimension (default: False). For example if :code:`shape=(3, 3, 3)` and :code:`batched=True` the resulting expression will be a batch of 3 3x3 matrices
+        defval(number): The default value for all non specified coordinates (default: 0)
     
     Returns:
         _vecInputExpression: Input expression
     
     Raises:
         TypeError: If the type is not respected
+        ValueError: If the number of dimensions don't match
     """
     if isinstance(values, list):
         values = np.asarray(values, dtype=float)
