@@ -1,8 +1,10 @@
 #ifndef DYNET_NODES_CONTRACT_H_
 #define DYNET_NODES_CONTRACT_H_
 
-#include "dynet/dynet.h"
+#include <initializer_list>
+
 #include "dynet/devices.h"
+#include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
 
 // See nodes-macros.h for more details about DYNET_NODE_DEFINE_DEV_IMPL().

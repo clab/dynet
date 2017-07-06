@@ -1,6 +1,7 @@
 #ifndef DYNET_EIGEN_INIT_H
 #define DYNET_EIGEN_INIT_H
 
+#include <iosfwd>
 #include <string>
 #include <vector>
 

@@ -1,11 +1,12 @@
 #ifndef DYNET_DICT_H_
 #define DYNET_DICT_H_
 
-#include <unordered_map>
-#include <string>
-#include <vector>
 #include <iostream>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "dynet/except.h"
 

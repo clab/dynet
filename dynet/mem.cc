@@ -4,19 +4,18 @@
 #include <cstring>
 #include <iostream>
 #if !_WINDOWS
-#include <sys/shm.h>
 #include <sys/mman.h>
 #endif
 
-#include <fcntl.h>
 #if !_WINDOWS
 #include <mm_malloc.h>
 #endif
 #include "dynet/except.h"
 #if HAVE_CUDA
-#include "dynet/cuda.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
+
+#include "dynet/cuda.h"
 #endif
 
 using namespace std;

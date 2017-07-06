@@ -1,13 +1,19 @@
-#include "dynet/nodes-conv.h"
-
-#include <sstream>
-#include <limits>
-#include <cmath>
-#include <stdexcept>
+#include <stddef.h>
 #include <array>
+#include <cmath>
+#include <sstream>
+#include <stdexcept>
+#include <vector>
 
-#include "dynet/functors.h"
+#include <unsupported/Eigen/CXX11/Tensor>
+#include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/dynet.h"
+#include "dynet/except.h"
+#include "dynet/nodes-conv.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/op-helper.h"
+#include "dynet/tensor.h"
 #include "third_party/eigen_pooling.h"
 
 #if HAVE_CUDA

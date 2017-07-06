@@ -1,6 +1,14 @@
-#include "dynet/nodes.h"
+#include <stddef.h>
+#include <ostream>
+#include <vector>
 
+#include <unsupported/Eigen/CXX11/Tensor>
+#include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/except.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/nodes.h"
+#include "dynet/tensor.h"
 
 using namespace std;
 

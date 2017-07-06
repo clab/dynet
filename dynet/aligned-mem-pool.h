@@ -1,10 +1,13 @@
 #ifndef DYNET_ALIGNED_MEM_POOL_H
 #define DYNET_ALIGNED_MEM_POOL_H
 
+#include <stddef.h>
 #include <iostream>
-#include "dynet/mem.h"
-#include "dynet/globals.h"
+#include <vector>
+
 #include "dynet/except.h"
+#include "dynet/globals.h"
+#include "dynet/mem.h"
 
 namespace dynet {
 

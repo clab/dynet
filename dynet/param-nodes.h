@@ -1,9 +1,15 @@
 #ifndef DYNET_PARAM_NODES_H_
 #define DYNET_PARAM_NODES_H_
 
+#include <stddef.h>
+#include <vector>
+
+#include "dynet/dim.h"
 #include "dynet/dynet.h"
 #include "dynet/model.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/sig.h"
+#include "dynet/tensor.h"
 
 namespace dynet {
 

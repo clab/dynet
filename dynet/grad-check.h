@@ -6,6 +6,7 @@
 namespace dynet {
 
 class ParameterCollection;
+struct Expression;
 struct ComputationGraph;
 
 // verbosity is zero for silence, one for only printing errors, two for everything

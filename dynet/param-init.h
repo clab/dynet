@@ -7,11 +7,11 @@
 #ifndef DYNET_PARAM_INIT_H_
 #define DYNET_PARAM_INIT_H_
 
-#include <stdexcept>
-#include <vector>
-#include <string>
 #include <fstream>
 #include <iterator>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace dynet {
 

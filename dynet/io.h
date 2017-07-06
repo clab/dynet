@@ -1,20 +1,21 @@
 #ifndef DYNET_IO_H_
 #define DYNET_IO_H_
 
-#include <string>
-#include <vector>
-#include <sstream>
+#include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <stdexcept>
-#include <unordered_map>
 #include <iterator>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "dynet/dim.h"
-#include "dynet/model.h"
-#include "dynet/tensor.h"
 #include "dynet/except.h"
+#include "dynet/model.h"
 #include "dynet/str-util.h"
+#include "dynet/tensor.h"
 
 namespace dynet {
 

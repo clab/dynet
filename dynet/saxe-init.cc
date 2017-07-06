@@ -1,11 +1,13 @@
 #include "dynet/saxe-init.h"
-#include "dynet/tensor.h"
-#include "dynet/globals.h"
 
+#include <algorithm>
 #include <random>
-#include <cstring>
 
+#include <Eigen/Core>
 #include <Eigen/SVD>
+#include "dynet/dim.h"
+#include "dynet/globals.h"
+#include "dynet/tensor.h"
 
 using namespace std;
 

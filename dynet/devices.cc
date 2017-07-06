@@ -1,13 +1,15 @@
 #include "dynet/devices.h"
 
 #include <iostream>
-#include <unsupported/Eigen/CXX11/Tensor>
+#include <string>
 
-#include "dynet/cuda.h"
+#include "dynet/aligned-mem-pool.h"
+#include "dynet/dim.h"
 #include "dynet/dynet.h"
-#include "dynet/expr.h"
 #include "dynet/except.h"
 #include "dynet/str-util.h"
+#include "dynet/tensor.h"
+#include "dynet/expr.h"
 
 using namespace std;
 

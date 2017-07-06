@@ -1,7 +1,12 @@
 #include "dynet/io.h"
-#include "dynet/tensor.h"
+
+#include <stddef.h>
+#include <string>
+
+#include "dynet/dim.h"
 #include "dynet/except.h"
 #include "dynet/str-util.h"
+#include "dynet/tensor.h"
 
 using namespace std;
 using namespace dynet;

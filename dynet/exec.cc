@@ -1,10 +1,21 @@
 #include "dynet/exec.h"
 
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
+#include <iostream>
+#include <map>
 #include <unordered_map>
-#include <queue>
+#include <utility>
 
-#include "dynet/param-nodes.h"
+#include "dynet/aligned-mem-pool.h"
+#include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/except.h"
 #include "dynet/globals.h"
+#include "dynet/init.h"
+#include "dynet/param-nodes.h"
 #include "dynet/timing.h"
 
 #ifdef HAVE_CUDA

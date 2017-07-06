@@ -1,7 +1,11 @@
 #include "dynet/graph.h"
-#include "dynet/dynet.h"
+
+#include <iostream>
+#include <stdexcept>
+#include <string>
 #include <vector>
-#include "dynet/dynet-helper.h"
+
+#include "dynet/dynet.h"
 
 using namespace std;
 

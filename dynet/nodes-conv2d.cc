@@ -1,16 +1,23 @@
-#include "dynet/nodes-conv.h"
-
+#include <stddef.h>
 #include <algorithm>
-#include <sstream>
-#include <limits>
-#include <cmath>
-#include <stdexcept>
 #include <array>
+#include <cmath>
+#include <sstream>
+#include <stdexcept>
+#include <vector>
 
-#include "dynet/functors.h"
+#include <Eigen/Core>
+#include <unsupported/Eigen/CXX11/Tensor>
+#include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/dynet.h"
+#include "dynet/except.h"
+#include "dynet/nodes-conv.h"
 #include "dynet/nodes-macros.h"
-#include "third_party/eigen_spatial_convolutions.h"
+#include "dynet/op-helper.h"
+#include "dynet/tensor.h"
 #include "third_party/eigen_backward_spatial_convolutions.h"
+#include "third_party/eigen_spatial_convolutions.h"
 
 #if HAVE_CUDA
 #include "dynet/cuda.h"

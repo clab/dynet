@@ -8,11 +8,12 @@
 #ifndef DYNET_DIM_H
 #define DYNET_DIM_H
 
-#include <initializer_list>
-#include <type_traits>
-#include <stdexcept>
-#include <iosfwd>
 #include <cstring>
+#include <initializer_list>
+#include <iosfwd>
+#include <ostream>
+#include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include "dynet/except.h"

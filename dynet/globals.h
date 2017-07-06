@@ -4,6 +4,8 @@
 #include <random>
 #include <vector>
 
+#include "dynet/timing.h"
+
 namespace dynet {
 
 class Device;

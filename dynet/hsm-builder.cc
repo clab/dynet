@@ -1,10 +1,14 @@
 #include "dynet/hsm-builder.h"
 
-#include <fstream>
+#include <stddef.h>
 #include <iostream>
-#include <sstream>
+#include <string>
+#include <utility>
 
+#include "dynet/dynet.h"
+#include "dynet/except.h"
 #include "dynet/param-init.h"
+#include "dynet/tensor.h"
 
 using namespace std;
 

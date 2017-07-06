@@ -1,6 +1,7 @@
 #ifndef DYNET_MEM_H
 #define DYNET_MEM_H
 
+#include <stddef.h>
 #include <vector>
 
 namespace dynet {

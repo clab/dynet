@@ -1,13 +1,12 @@
 #include "dynet/expr.h"
-
-#include <initializer_list>
-
 #include "dynet/nodes.h"
 #include "dynet/nodes-conv.h"
 
+#include <iostream>
+
 namespace dynet {
 
-using std::vector;
+using namespace std;
 
 Expression input(ComputationGraph& g, real s) { return Expression(&g, g.add_input(s)); }
 Expression input(ComputationGraph& g, const real *ps) { return Expression(&g, g.add_input(ps)); }

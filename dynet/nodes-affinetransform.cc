@@ -1,7 +1,16 @@
-#include "dynet/nodes.h"
+#include <string.h>
+#include <algorithm>
+#include <ostream>
+#include <vector>
 
+#include <Eigen/Core>
+#include "dynet/dim.h"
+#include "dynet/dynet.h"
+#include "dynet/except.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/cuda-matrix-multiply.h"
+#include "dynet/nodes.h"
+#include "dynet/sig.h"
+#include "dynet/tensor.h"
 
 using namespace std;
 

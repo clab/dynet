@@ -1,30 +1,41 @@
 #pragma once
 #if !_WINDOWS
-#include "dynet/globals.h"
-#include "dynet/dynet.h"
-#include "dynet/training.h"
-#include "dynet/expr.h"
-#include "dynet/dict.h"
-#include "dynet/lstm.h"
 #include <boost/algorithm/string.hpp>
-#include <boost/interprocess/ipc/message_queue.hpp>
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-#include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #include <boost/interprocess/anonymous_shared_memory.hpp>
-
+#include <boost/interprocess/ipc/message_queue.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/sync/interprocess_semaphore.hpp>
+#include <stdlib.h>
+#include <sys/_types/_timespec.h>
+#include <sys/shm.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/shm.h>
-#include <iostream>
-#include <limits>
-#include <fstream>
-#include <vector>
-#include <utility>
-#include <sstream>
-#include <random>
+#include <unistd.h>
 #include <algorithm>
 #include <chrono>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <limits>
+#include <new>
+#include <numeric>
+#include <random>
+#include <sstream>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include "boost/interprocess/creation_tags.hpp"
+#include "boost/interprocess/interprocess_fwd.hpp"
+#include "dynet/dict.h"
+#include "dynet/dynet.h"
+#include "dynet/except.h"
+#include "dynet/expr.h"
+#include "dynet/globals.h"
+#include "dynet/lstm.h"
+#include "dynet/tensor.h"
+#include "dynet/training.h"
 
 namespace dynet {
   namespace mp {

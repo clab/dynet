@@ -1,7 +1,12 @@
 #ifndef DYNET_EXEC_H
 #define DYNET_EXEC_H
 
+#include <stddef.h>
+#include <vector>
+
 #include "dynet/dynet.h"
+#include "dynet/sig.h"
+#include "dynet/tensor.h"
 
 namespace dynet {
 

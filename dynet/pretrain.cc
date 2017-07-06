@@ -1,11 +1,14 @@
 #include "dynet/pretrain.h"
 
+#include <iostream>
+#include <fstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <iostream>
-#include <fstream>
+
+#include <Eigen/Core>
 #include "dynet/dict.h"
+#include "dynet/except.h"
 #include "dynet/model.h"
 
 using namespace std;

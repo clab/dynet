@@ -1,12 +1,17 @@
 #ifndef DYNET_GRU_H_
 #define DYNET_GRU_H_
 
+#include <vector>
+
 #include "dynet/dynet.h"
+#include "dynet/expr.h"
+#include "dynet/model.h"
 #include "dynet/rnn.h"
 
 namespace dynet {
 
 class ParameterCollection;
+struct ComputationGraph;
 
 struct GRUBuilder : public RNNBuilder {
   GRUBuilder() = default;

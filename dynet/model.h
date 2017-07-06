@@ -7,15 +7,18 @@
 #ifndef DYNET_PARAMS_H_
 #define DYNET_PARAMS_H_
 
-#include <vector>
+#include <stddef.h>
+#include <iosfwd>
 #include <set>
-#include <unordered_set>
-#include <unordered_map>
-#include <string>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-#include "dynet/weight-decay.h"
+#include "dynet/dim.h"
 #include "dynet/tensor.h"
+#include "dynet/weight-decay.h"
 
 namespace dynet {
 

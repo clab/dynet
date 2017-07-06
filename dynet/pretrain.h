@@ -1,13 +1,17 @@
 #ifndef DYNET_PRETRAIN_H
 #define DYNET_PRETRAIN_H
 
+#include <iosfwd>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
+
 #include "dynet/dict.h"
 #include "dynet/model.h"
 
 namespace dynet {
+
+class Dict;
 
 void save_pretrained_embeddings(const std::string& fname,
     const Dict& d,

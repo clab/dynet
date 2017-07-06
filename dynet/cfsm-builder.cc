@@ -1,9 +1,12 @@
 #include "dynet/cfsm-builder.h"
+
+#include <iostream>
+#include <string>
+
+#include "dynet/dynet.h"
 #include "dynet/except.h"
 #include "dynet/param-init.h"
-
-#include <fstream>
-#include <iostream>
+#include "dynet/tensor.h"
 
 using namespace std;
 

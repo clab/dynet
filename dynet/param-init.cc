@@ -1,10 +1,16 @@
 #include "dynet/param-init.h"
+
+#include "dynet/devices.h"
+#include "dynet/dim.h"
 #include "dynet/tensor.h"
 
 using namespace dynet;
 using namespace std;
 
+#include <cmath>
 #include <fstream>
+#include <iterator>
+#include <string>
 
 void ParameterInitNormal::initialize_params(Tensor & values) const {
   TensorTools::randomize_normal(values, mean, sqrt(var));
