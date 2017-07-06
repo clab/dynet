@@ -259,7 +259,7 @@ void Average::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     else {
       // Not all the same batch size, so need to broadcast in the cases where they differ
       TensorTools::zero(fx);
-#if __CUDACC__
+#ifdef __CUDACC__
       Eigen::array<int, 2> bcast({ 1, (int)fx.d.bd });
 #endif
       for (unsigned i = 0; i < num_args; ++i) {
@@ -267,7 +267,7 @@ void Average::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
           fx.tvec().device(*dev.edevice) += xs[i]->tvec();
         }
         else {
-#if __CUDACC__
+#ifdef __CUDACC__
           fx.tbvec().device(*dev.edevice) += xs[i]->tbvec().broadcast(bcast);
 #else
           for (unsigned b = 0; b < fx.d.bd; ++b)
@@ -1916,7 +1916,7 @@ void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs
     else {
       // Not all the same batch size, so need to broadcast in the cases where they differ
       TensorTools::zero(fx);
-#if __CUDACC__
+#ifdef __CUDACC__
       Eigen::array<int, 2> bcast({ 1, (int)fx.d.bd });
 #endif
       for (unsigned i = 0; i < num_args; ++i) {
@@ -1924,7 +1924,7 @@ void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs
           fx.tvec().device(*dev.edevice) += xs[i]->tvec();
         }
         else {
-#if __CUDACC__
+#ifdef __CUDACC__
           fx.tbvec().device(*dev.edevice) += xs[i]->tbvec().broadcast(bcast);
 #else
           for (unsigned b = 0; b < fx.d.bd; ++b)
@@ -2185,7 +2185,7 @@ void SumBatches::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in SumBatches::backward");
-#if __CUDACC__
+#ifdef __CUDACC__
   Eigen::array<int, 3> bcast({1, 1, (int)fx.d.bd});
   dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().broadcast(bcast);
 #else

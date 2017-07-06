@@ -227,7 +227,7 @@ DYNET_NODE_INST_DEV_IMPL(ParameterNode)
 template<class MyDevice>
 void InputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
-#if __CUDACC__
+#ifdef __CUDACC__
   cudaMemcpyAsync(fx.v, &pdata->front(), dim.size() * sizeof(float), cudaMemcpyHostToDevice);
 #else
   // TODO memcpy is only necessary if pdata->front() points to an unaligned location
@@ -256,7 +256,7 @@ template<class MyDevice>
 void SparseInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   fx.tvec().device(*dev.edevice) = fx.tvec().constant(defdata);
-#if __CUDACC__
+#ifdef __CUDACC__
   unsigned int* ids_ptr = (unsigned int*)aux_mem;
   float* data_ptr = (float*)(ids_ptr + ids.size());
   cudaMemcpyAsync(ids_ptr, &ids[0], ids.size() * sizeof(unsigned int), cudaMemcpyHostToDevice);
@@ -282,7 +282,7 @@ DYNET_NODE_INST_DEV_IMPL(SparseInputNode)
 template<class MyDevice>
 void ScalarInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
-#if __CUDACC__
+#ifdef __CUDACC__
   cudaMemcpyAsync(fx.v, pdata, 1 * sizeof(float), cudaMemcpyHostToDevice);
 #else
   fx.v[0] = *pdata;
@@ -313,7 +313,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
     DYNET_ARG_CHECK(fx.d.batch_elems() == pindices->size(),
                             "In LookupNode, in index vector size (" << pindices->size() << ") "
                             "doesn't match batch size in expressions (" << fx.d.batch_elems() << ")");
-#if __CUDACC__
+#ifdef __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync((unsigned*)aux_mem, &(*pindices)[0], fx.d.bd * sizeof(unsigned), cudaMemcpyHostToDevice));
     dynet::gpu::sparse_to_dense_block_assign_and_multiply(fx.d.bd, (unsigned*)aux_mem, fx.d.batch_size(), params.current_weight_decay(), params.get_storage().all_values.v, fx.v);
 #else

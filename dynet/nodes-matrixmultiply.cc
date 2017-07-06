@@ -74,7 +74,7 @@ void MatrixMultiply::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in MatrixMultiply::backward");
   int max_b = max(xs[0]->d.bd, xs[1]->d.bd);
-#if __CUDACC__
+#ifdef __CUDACC__
   if (i == 0) {
     if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[1]->d.bd)) {
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
