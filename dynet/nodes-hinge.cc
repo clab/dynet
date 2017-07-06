@@ -33,6 +33,7 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
   if(pelement != nullptr) {
     DYNET_ARG_CHECK(fx.d.bd == 1, 
                             "Hinge was passed a single index but the corresponding expression has multiple mini-batch elements (" << fx.d.bd << ")");
+    DYNET_ARG_CHECK(*pelement < xs[0]->d[0], "Index " << *pelement << " is out of bounds for hinge loss over tensor of size " << xs[0]->d);
     const real mlystar = margin - TensorTools::access_element(*xs[0], *pelement);
     eloss.tvec().device(*dev.edevice) = (xs[0]->tvec() + mlystar).cwiseMax(0.f);
     TensorTools::set_element(eloss, *pelement, 0.f);
@@ -44,6 +45,7 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
                             ") that doesn't match the number of mini-batch elements in the corresponding expression (" << xs[0]->d << ")");
     size_t batch_size = xs[0]->d.batch_size();
     for(size_t b = 0; b < fx.d.bd; b++) {
+      DYNET_ARG_CHECK((*pelements)[b] < xs[0]->d[0], "Index for batch " << b << " is " << (*pelements)[b] << ", which is out of bounds for hinge loss over tensor of size " << xs[0]->d);
       const real mlystar = margin - TensorTools::access_element(*xs[0], b*batch_size + (*pelements)[b]);
       eloss.tb<1>().chip<1>(b).device(*dev.edevice) = (xs[0]->tb<1>().chip<1>(b) + mlystar).cwiseMax(0.f);
       TensorTools::set_element(eloss, b*batch_size + (*pelements)[b], 0.f);
