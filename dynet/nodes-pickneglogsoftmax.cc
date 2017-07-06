@@ -78,7 +78,7 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
     Tensor z(Dim({1},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
     Tensor m(Dim({1},fx.d.bd), (float*)aux_mem + fx.d.bd, fx.device, DeviceMempool::FXS);
     unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 2*fx.d.bd), *ids_host;
-#if __CUDACC__
+#ifdef __CUDACC__
     ids_host = (unsigned int*)malloc(fx.d.bd * sizeof(unsigned int));
 #else
     ids_host = ids_dev;
@@ -94,7 +94,7 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
       for(unsigned b = 0; b < fx.d.bd; ++b)
         ids_host[b] = batch_size * b + (*pvals)[b];
     }
-#if __CUDACC__
+#ifdef __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync(ids_dev, ids_host, fx.d.bd * sizeof(unsigned int), cudaMemcpyHostToDevice));
     TensorTools::logsumexp_dev(dev, *xs[0], m, z);
     dynet::gpu::sparse_to_dense_assign(fx.d.bd, ids_dev, xs[0]->v, fx.v);
@@ -120,7 +120,7 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
   if (xs[0]->d.cols() == 1) {
     Tensor z(Dim({1},fx.d.batch_elems()), (float*)aux_mem, fx.device, DeviceMempool::FXS);
     unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 2*fx.d.bd);
-#if __CUDACC__ 
+#ifdef __CUDACC__ 
     Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1});
     dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp() * dEdf.tb<1>().broadcast(bcast);
     dynet::gpu::dense_to_sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);

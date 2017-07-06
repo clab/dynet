@@ -21,7 +21,8 @@ void dense_to_sparse_assign(int n, const unsigned int *idx, float *src, float *t
     auto tb = SizeToBlockThreadPair(n);
     int total_size = tb.first*tb.second;
     for(int curr_pos = 0; curr_pos < n; curr_pos += total_size)
-      ker_dense_to_sparse_assign<<<tb.first, tb.second>>>(min(total_size, n-curr_pos), idx+curr_pos, src+curr_pos, trg);
+      ker_dense_to_sparse_assign<<<tb.first, tb.second>>>(
+          std::min(total_size, n-curr_pos), idx+curr_pos, src+curr_pos, trg);
   }
 }
 
@@ -40,7 +41,8 @@ void sparse_to_dense_assign(int n, const unsigned int *idx, float *src, float *t
     auto tb = SizeToBlockThreadPair(n);
     int total_size = tb.first*tb.second;
     for(int curr_pos = 0; curr_pos < n; curr_pos += total_size)
-      ker_sparse_to_dense_assign<<<tb.first, tb.second>>>(min(total_size, n-curr_pos), idx+curr_pos, src, trg+curr_pos);
+      ker_sparse_to_dense_assign<<<tb.first, tb.second>>>(
+          std::min(total_size, n-curr_pos), idx+curr_pos, src, trg+curr_pos);
   }
 }
 
@@ -59,7 +61,8 @@ void dense_to_sparse_subtract(int n, const unsigned int *idx, float *src, float 
     auto tb = SizeToBlockThreadPair(n);
     int total_size = tb.first*tb.second;
     for(int curr_pos = 0; curr_pos < n; curr_pos += total_size)
-      ker_dense_to_sparse_subtract<<<tb.first, tb.second>>>(min(total_size, n-curr_pos), idx+curr_pos, src+curr_pos, trg);
+      ker_dense_to_sparse_subtract<<<tb.first, tb.second>>>(
+          std::min(total_size, n-curr_pos), idx+curr_pos, src+curr_pos, trg);
   }
 }
 
@@ -78,7 +81,9 @@ void sparse_to_dense_block_assign_and_multiply(int n, const unsigned *idx, int b
     auto tb = SizeToBlockThreadPair(n*bsize);
     int total_size = tb.first*tb.second;
     for(int curr_pos = 0; curr_pos < n; curr_pos += total_size/bsize)
-      ker_sparse_to_dense_block_assign_and_multiply<<<tb.first, tb.second>>>(min(total_size/bsize, n-curr_pos), idx+curr_pos, bsize, mult, src, trg+curr_pos*bsize);
+      ker_sparse_to_dense_block_assign_and_multiply<<<tb.first, tb.second>>>(
+          std::min(total_size/bsize, n-curr_pos),
+          idx+curr_pos, bsize, mult, src, trg+curr_pos*bsize);
   }
 }
 
@@ -137,7 +142,9 @@ void dense_to_sparse_block_add(int n, const unsigned *idx, int bsize, float *src
     auto tb = SizeToBlockThreadPair(n*bsize);
     int total_size = tb.first*tb.second;
     for(int curr_pos = 0; curr_pos < n; curr_pos += total_size/bsize)
-      ker_dense_to_sparse_block_add<<<tb.first, tb.second>>>(min(total_size/bsize, n-curr_pos), idx+curr_pos, bsize, src+curr_pos*bsize, trg);
+      ker_dense_to_sparse_block_add<<<tb.first, tb.second>>>(
+          std::min(total_size/bsize, n-curr_pos),
+          idx+curr_pos, bsize, src+curr_pos*bsize, trg);
   }
 }
 

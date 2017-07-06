@@ -158,7 +158,7 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
   // Left argument of matrix multiply
   } else if (i % 2 == 1) {
     int max_b = max(dEdf.d.bd, xs[i+1]->d.bd);
-#if __CUDACC__
+#ifdef __CUDACC__
     if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[i+1]->d.bd)) {
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
             dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols() * dEdf.d.batch_elems(),
@@ -185,7 +185,7 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
 #endif
   } else {  // right argument of matrix multiply
     int max_b = max(xs[i-1]->d.bd, dEdf.d.bd);
-#if __CUDACC__
+#ifdef __CUDACC__
     // Do a single multiply if xs[i-1] has one batch
     if(xs[i-1]->d.bd == 1 && dEdxi.d.bd == dEdf.d.bd) {
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, 
