@@ -15,6 +15,7 @@
 #include "dynet/nodes.cc"
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
+#include "dynet/cuda-matrix-multiply.h"
 #endif
 
 
