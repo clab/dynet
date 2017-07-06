@@ -107,9 +107,15 @@ void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Te
               DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
               FYC, FXC, FW, FH));
 #endif
+#if CUDNN_VERSION_MIN(6, 0, 0)
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
               pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
               CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT));
+#else
+  CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
+              pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
+              CUDNN_CROSS_CORRELATION));
+#endif
   if (xs.size() == 3) {
     CUDNN_CHECK(cudnnSetTensor4dDescriptor(bias_desc_,
                 CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
@@ -210,9 +216,15 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
               DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
               FYC, FXC, FW, FH));
 #endif
+#if CUDNN_VERSION_MIN(6, 0, 0)
+  CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
+              pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
+              CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT));
+#else
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
               pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
               CUDNN_CROSS_CORRELATION));
+#endif
   if (i == 2) {
     CUDNN_CHECK(cudnnSetTensor4dDescriptor(bias_desc_,
                 CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
