@@ -2,11 +2,14 @@ import dynet as dy
 import numpy as np
 import unittest
 
+
 def npvalue_callable(x):
     return x.npvalue()
 
+
 def gradient_callable(x):
     return x.gradient()
+
 
 class TestInput(unittest.TestCase):
 
@@ -28,6 +31,23 @@ class TestInput(unittest.TestCase):
                             msg="Expression value different from initial value")
             self.assertEqual(dy.squared_norm(x).scalar_value(), self.squared_norm,
                              msg="Value mismatch")
+
+    def test_sparse_inputTensor(self):
+        dy.renew_cg()
+        input_tensor = self.input_vals.reshape((3, 3, 3, 3))
+        input_vals = [input_tensor[0, 0, 0, 0], input_tensor[0, 1, 2, 0]]
+        input_indices = ([0, 0], [0, 1], [0, 2], [0, 0])
+        x = dy.sparse_inputTensor(input_indices, input_vals, (3, 3, 3, 3), batched=True)
+        self.assertEqual(x.dim()[0], (3, 3, 3),
+                         msg="Dimension mismatch")
+        self.assertEqual(x.dim()[1], 3,
+                         msg="Dimension mismatch")
+        self.assertTrue(np.allclose(x.npvalue()[0, 0, 0, 0], input_vals[0]),
+                        msg="Expression value different from initial value")
+        self.assertTrue(np.allclose(x.npvalue()[0, 1, 2, 0], input_vals[1]),
+                        msg="Expression value different from initial value")
+        self.assertTrue(np.allclose(x.npvalue()[1, 1, 1, 1], 0),
+                        msg="Expression value different from initial value")
 
     def test_inputTensor_batched(self):
         for i in range(4):
@@ -73,7 +93,7 @@ class TestParameters(unittest.TestCase):
         self.lp1 = self.m.add_lookup_parameters((10, 10), init=dy.ConstInitializer(1))
         self.lp2 = self.m.add_lookup_parameters((10, 10), init=dy.ConstInitializer(1))
         # Trainer
-        self.trainer = dy.SimpleSGDTrainer(self.m,e0=0.1)
+        self.trainer = dy.SimpleSGDTrainer(self.m, e0=0.1)
         self.trainer.set_clip_threshold(-1)
 
     def test_grad(self):
@@ -129,7 +149,7 @@ class TestParameters(unittest.TestCase):
         self.assertFalse(self.lp2.is_updated())
 
     def test_update(self):
-        ones=np.ones((10, 10))
+        ones = np.ones((10, 10))
         updated = np.ones((10, 10)) * 0.99
         gradient = np.ones((10, 10)) * 0.01
 
@@ -140,23 +160,28 @@ class TestParameters(unittest.TestCase):
         a = pp1 * self.lp1[1]
         b = pp2 * self.lp2[1]
         l = dy.dot_product(a, b) / 100
-        self.assertEqual(l.scalar_value(),10,msg=str(l.scalar_value()))
+        self.assertEqual(l.scalar_value(), 10, msg=str(l.scalar_value()))
         l.backward()
 
-        self.assertTrue(np.allclose(self.p1.grad_as_array(), 0.1 * ones),msg=np.array_str(self.p1.grad_as_array()))
-        self.assertTrue(np.allclose(self.p2.grad_as_array(), 0.1 * ones),msg=np.array_str(self.p2.grad_as_array()))
-        self.assertTrue(np.allclose(self.lp1.grad_as_array()[1], ones[0]),msg=np.array_str(self.lp1.grad_as_array()))
-        self.assertTrue(np.allclose(self.lp2.grad_as_array()[1], ones[0]),msg=np.array_str(self.lp2.grad_as_array()))
+        self.assertTrue(np.allclose(self.p1.grad_as_array(), 0.1 * ones),
+                        msg=np.array_str(self.p1.grad_as_array()))
+        self.assertTrue(np.allclose(self.p2.grad_as_array(), 0.1 * ones),
+                        msg=np.array_str(self.p2.grad_as_array()))
+        self.assertTrue(np.allclose(self.lp1.grad_as_array()[1], ones[
+                        0]), msg=np.array_str(self.lp1.grad_as_array()))
+        self.assertTrue(np.allclose(self.lp2.grad_as_array()[1], ones[
+                        0]), msg=np.array_str(self.lp2.grad_as_array()))
 
         self.trainer.update()
 
-
-
-        self.assertTrue(np.allclose(self.p1.as_array(), ones * 0.99),msg=np.array_str(self.p1.as_array()))
-        self.assertTrue(np.allclose(self.p2.as_array(), ones * 0.99),msg=np.array_str(self.p2.as_array()))
-        self.assertTrue(np.allclose(self.lp1.as_array()[1], ones[0] * 0.9),msg=np.array_str(self.lp1.as_array()[1]))
-        self.assertTrue(np.allclose(self.lp2.as_array()[1], ones[0] * 0.9),msg=np.array_str(self.lp2.as_array()))
-
+        self.assertTrue(np.allclose(self.p1.as_array(), ones * 0.99),
+                        msg=np.array_str(self.p1.as_array()))
+        self.assertTrue(np.allclose(self.p2.as_array(), ones * 0.99),
+                        msg=np.array_str(self.p2.as_array()))
+        self.assertTrue(np.allclose(self.lp1.as_array()[1], ones[
+                        0] * 0.9), msg=np.array_str(self.lp1.as_array()[1]))
+        self.assertTrue(np.allclose(self.lp2.as_array()[1], ones[
+                        0] * 0.9), msg=np.array_str(self.lp2.as_array()))
 
 
 class TestBatchManipulation(unittest.TestCase):
@@ -213,6 +238,7 @@ class TestIO_1(unittest.TestCase):
         b = dy.BiRNNBuilder(2, 10, 10, self.m2, dy.LSTMBuilder)
         self.m2.populate(self.file)
 
+
 class TestIO_2(unittest.TestCase):
 
     def setUp(self):
@@ -227,6 +253,7 @@ class TestIO_2(unittest.TestCase):
         dy.save(self.file, [self.b])
         [b] = dy.load(self.file, self.m2)
 
+
 class TestExpression(unittest.TestCase):
 
     def setUp(self):
@@ -236,32 +263,32 @@ class TestExpression(unittest.TestCase):
 
     def test_value(self):
         dy.renew_cg()
-        x=dy.inputTensor(self.v1)
+        x = dy.inputTensor(self.v1)
         self.assertTrue(np.allclose(x.npvalue(), self.v1))
 
     def test_value_sanity(self):
         dy.renew_cg()
-        x=dy.inputTensor(self.v1)
+        x = dy.inputTensor(self.v1)
         dy.renew_cg()
         self.assertRaises(RuntimeError, npvalue_callable, x)
 
     def test_gradient(self):
         dy.renew_cg()
-        x=dy.inputTensor(self.v1)
-        y=dy.inputTensor(self.v2)
-        l = dy.dot_product(x,y)
+        x = dy.inputTensor(self.v1)
+        y = dy.inputTensor(self.v2)
+        l = dy.dot_product(x, y)
         l.forward()
         l.backward(full=True)
-        self.assertTrue(np.allclose(x.gradient(), self.v2),msg="{}\n{}\n{}".format(l.value(),x.gradient(),self.v2,y.gradient(),self.v2))
+        self.assertTrue(np.allclose(x.gradient(), self.v2), msg="{}\n{}\n{}".format(
+            l.value(), x.gradient(), self.v2, y.gradient(), self.v2))
 
     def test_gradient_sanity(self):
         dy.renew_cg()
-        x=dy.inputTensor(self.v1)
-        y=dy.inputTensor(self.v2)
-        l = dy.dot_product(x,y)
+        x = dy.inputTensor(self.v1)
+        y = dy.inputTensor(self.v2)
+        l = dy.dot_product(x, y)
         l.forward()
         self.assertRaises(RuntimeError, gradient_callable, x)
-
 
 
 class TestOperations(unittest.TestCase):
@@ -278,71 +305,74 @@ class TestOperations(unittest.TestCase):
         x = dy.inputTensor(self.v1)
         g = dy.inputTensor(self.v2)
         b = dy.inputTensor(self.v3)
-        y = dy.layer_norm(x,g,b)
+        y = dy.layer_norm(x, g, b)
         l = dy.sum_elems(y)
         l_value = l.scalar_value()
         l.backward()
 
         y_np_value = self.v2 / self.v1.std() * (self.v1 - self.v1.mean()) + self.v3
 
-        self.assertTrue(np.allclose(y.npvalue(),y_np_value))
+        self.assertTrue(np.allclose(y.npvalue(), y_np_value))
+
 
 class TestSimpleRNN(unittest.TestCase):
 
     def setUp(self):
         # create model
         self.m = dy.Model()
-        self.rnn = dy.SimpleRNNBuilder(2,10,10,self.m)
+        self.rnn = dy.SimpleRNNBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
         dy.renew_cg()
         self.rnn.initial_state()
         P_p = self.rnn.get_parameters()
         P_e = self.rnn.get_parameter_expressions()
-        for l_p,l_e in zip(P_p,P_e):
-            for w_p,w_e in zip(l_p,l_e):
-                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+        for l_p, l_e in zip(P_p, P_e):
+            for w_p, w_e in zip(l_p, l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
+
 
 class TestGRU(unittest.TestCase):
 
     def setUp(self):
         # create model
         self.m = dy.Model()
-        self.rnn = dy.GRUBuilder(2,10,10,self.m)
+        self.rnn = dy.GRUBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
         dy.renew_cg()
         self.rnn.initial_state()
         P_p = self.rnn.get_parameters()
         P_e = self.rnn.get_parameter_expressions()
-        for l_p,l_e in zip(P_p,P_e):
-            for w_p,w_e in zip(l_p,l_e):
-                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+        for l_p, l_e in zip(P_p, P_e):
+            for w_p, w_e in zip(l_p, l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
+
 
 class TestLSTM(unittest.TestCase):
 
     def setUp(self):
         # create model
         self.m = dy.Model()
-        self.rnn = dy.LSTMBuilder(2,10,10,self.m)
+        self.rnn = dy.LSTMBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
         dy.renew_cg()
         self.rnn.initial_state()
         P_p = self.rnn.get_parameters()
         P_e = self.rnn.get_parameter_expressions()
-        for l_p,l_e in zip(P_p,P_e):
-            for w_p,w_e in zip(l_p,l_e):
-                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+        for l_p, l_e in zip(P_p, P_e):
+            for w_p, w_e in zip(l_p, l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
 
 class TestVanillaLSTM(unittest.TestCase):
@@ -350,19 +380,19 @@ class TestVanillaLSTM(unittest.TestCase):
     def setUp(self):
         # create model
         self.m = dy.Model()
-        self.rnn = dy.VanillaLSTMBuilder(2,10,10,self.m)
+        self.rnn = dy.VanillaLSTMBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
         dy.renew_cg()
         self.rnn.initial_state()
         P_p = self.rnn.get_parameters()
         P_e = self.rnn.get_parameter_expressions()
-        for l_p,l_e in zip(P_p,P_e):
-            for w_p,w_e in zip(l_p,l_e):
-                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+        for l_p, l_e in zip(P_p, P_e):
+            for w_p, w_e in zip(l_p, l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
 
 class TestFastLSTM(unittest.TestCase):
@@ -370,19 +400,19 @@ class TestFastLSTM(unittest.TestCase):
     def setUp(self):
         # create model
         self.m = dy.Model()
-        self.rnn = dy.FastLSTMBuilder(2,10,10,self.m)
+        self.rnn = dy.FastLSTMBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
         dy.renew_cg()
         self.rnn.initial_state()
         P_p = self.rnn.get_parameters()
         P_e = self.rnn.get_parameter_expressions()
-        for l_p,l_e in zip(P_p,P_e):
-            for w_p,w_e in zip(l_p,l_e):
-                self.assertTrue(np.allclose(w_e.npvalue(),w_p.as_array()))
+        for l_p, l_e in zip(P_p, P_e):
+            for w_p, w_e in zip(l_p, l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x : x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
 
 if __name__ == '__main__':
