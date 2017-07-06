@@ -219,7 +219,7 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
 #if CUDNN_VERSION_MIN(6, 0, 0)
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
               pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
-              CUDNN_CROSS_CORRELATION));
+              CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT));
 #else
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
               pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
