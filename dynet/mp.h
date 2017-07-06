@@ -7,7 +7,6 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #include <stdlib.h>
-#include <sys/_types/_timespec.h>
 #include <sys/shm.h>
 #include <sys/types.h>
 #include <sys/wait.h>

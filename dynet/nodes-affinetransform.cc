@@ -11,6 +11,7 @@
 #include "dynet/nodes.h"
 #include "dynet/sig.h"
 #include "dynet/tensor.h"
+#include "dynet/cuda-matrix-multiply.h"
 
 using namespace std;
 
