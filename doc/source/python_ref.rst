@@ -334,6 +334,8 @@ Convolution/Pooling operations
 Tensor operations
 ^^^^^^^^^^^^^^^^^
 
+**Remark**: Compiling the contraction operations takes a lot of time with CUDA. For this reason, only the CPU implementation is compiled by default. If you need those operations, you need to un-comment `this line <https://github.com/clab/dynet/blob/master/dynet/nodes-contract.cc#L11>`_ in the source before compiling. TODO: make this simpler.
+
 .. autofunction:: dynet.contract3d_1d
 
 .. autofunction:: dynet.contract3d_1d_bias
