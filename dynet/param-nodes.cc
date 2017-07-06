@@ -1,11 +1,11 @@
 #include "dynet/param-nodes.h"
 
-#include <limits>
-#include <cmath>
-#include <stdexcept>
+#include <string.h>
+#include <ostream>
 
+#include <unsupported/Eigen/CXX11/Tensor>
+#include "dynet/except.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/weight-decay.h"
 
 #ifdef HAVE_CUDA
 #include "dynet/gpu-ops.h"

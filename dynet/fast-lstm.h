@@ -1,13 +1,17 @@
 #ifndef DYNET_FAST_LSTM_H_
 #define DYNET_FAST_LSTM_H_
 
+#include <vector>
+
 #include "dynet/dynet.h"
-#include "dynet/rnn.h"
 #include "dynet/expr.h"
+#include "dynet/model.h"
+#include "dynet/rnn.h"
 
 namespace dynet {
 
 class ParameterCollection;
+struct ComputationGraph;
 
 /*
 FastLSTM replaces the matrices from cell to other units, by diagonal matrices.

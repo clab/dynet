@@ -1,13 +1,20 @@
 #include "dynet/tensor.h"
-#include "dynet/globals.h"
 
+#include <algorithm>
+#include <array>
+#include <cstring>
 #include <random>
 #include <vector>
-#include <cstring>
+
+#include <Eigen/Core>
+#include <Eigen/SVD>
+#include <unsupported/Eigen/CXX11/Tensor>
+#include "dynet/aligned-mem-pool.h"
+#include "dynet/globals.h"
 
 #ifdef __CUDACC__
-#include "dynet/gpu-ops.h"
 #include "dynet/cuda.h"
+#include "dynet/gpu-ops.h"
 #endif
 
 using namespace std;

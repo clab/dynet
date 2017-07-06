@@ -18,10 +18,16 @@
 #ifndef DYNET_EXPR_H
 #define DYNET_EXPR_H
 
-#include "dynet/dynet.h"
-#include "dynet/nodes.h"
-#include "dynet/nodes-contract.h"
+#include <initializer_list>
 #include <stdexcept>
+#include <vector>
+
+#include "dynet/dim.h"
+#include "dynet/dynet.h"
+#include "dynet/model.h"
+#include "dynet/nodes-contract.h"
+#include "dynet/nodes.h"
+#include "dynet/tensor.h"
 
 
 namespace dynet {
@@ -30,6 +36,14 @@ namespace dynet {
  * \brief Expressions are the building block of a Dynet computation graph
  * \details [long description]
  */
+struct AffineTransform;
+struct Average;
+struct Concatenate;
+struct ConcatenateToBatch;
+struct LogSumExp;
+struct Max;
+struct Sum;
+
 struct Expression {
   ComputationGraph *pg;
   VariableIndex i;

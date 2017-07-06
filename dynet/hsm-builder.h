@@ -1,15 +1,20 @@
 #ifndef DYNET_HSMBUILDER_H
 #define DYNET_HSMBUILDER_H
 
-#include <vector>
+#include <iosfwd>
 #include <string>
 #include <unordered_map>
+#include <vector>
+
+#include "dynet/cfsm-builder.h"
+#include "dynet/dict.h"
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
-#include "dynet/dict.h"
-#include "dynet/cfsm-builder.h"
+#include "dynet/model.h"
 
 namespace dynet {
+
+struct ComputationGraph;
 
 class Cluster {
 private:

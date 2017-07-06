@@ -6,18 +6,21 @@
 #ifndef DYNET_DYNET_H_
 #define DYNET_DYNET_H_
 
-#include <string>
-#include <vector>
-#include <iostream>
+#include <stddef.h>
 #include <initializer_list>
+#include <iostream>
+#include <string>
+#include <type_traits>
 #include <utility>
+#include <vector>
 
-#include "dynet/init.h"
 #include "dynet/aligned-mem-pool.h"
-#include "dynet/tensor.h"
-#include "dynet/model.h"
 #include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/init.h"
+#include "dynet/model.h"
 #include "dynet/sig.h"
+#include "dynet/tensor.h"
 
 
 namespace dynet {
@@ -50,9 +53,9 @@ unsigned get_current_graph_id();
 extern Device* default_device; // where parameters go by default
 
 class ExecutionEngine;
-struct ParameterNodeBase;
-struct Node;
 struct Expression;
+struct Node;
+struct ParameterNodeBase;
 
 typedef unsigned VariableIndex;
 

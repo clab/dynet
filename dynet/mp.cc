@@ -1,6 +1,11 @@
 #if !_WINDOWS
 #include "mp.h"
+
+#include <sys/types.h>
+#include <fstream>
+
 #include "dynet/except.h"
+
 using namespace std;
 using namespace boost::interprocess;
 

@@ -1,11 +1,14 @@
-#include "dynet/nodes.h"
-
-#include <limits>
-#include <cmath>
+#include <stddef.h>
+#include <algorithm>
 #include <sstream>
+#include <vector>
 
+#include "dynet/dim.h"
+#include "dynet/dynet.h"
+#include "dynet/except.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/globals.h"
+#include "dynet/nodes.h"
+#include "dynet/sig.h"
 
 using namespace std;
 

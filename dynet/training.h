@@ -12,10 +12,21 @@
 #ifndef DYNET_TRAINING_H_
 #define DYNET_TRAINING_H_
 
+#include <stddef.h>
+#include <cmath>
+#include <iostream>
 #include <vector>
 
+#include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/globals.h"
 #include "dynet/model.h"
 #include "dynet/shadow-params.h"
+#include "dynet/tensor.h"
+
+namespace dynet {
+class ParameterCollection;
+}  // namespace dynet
 
 #define DYNET_TRAINER_DEFINE_DEV_IMPL() \
   void update_params(real scale, real gscale, size_t idx) override; \

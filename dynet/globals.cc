@@ -1,5 +1,5 @@
 #include "dynet/globals.h"
-#include "dynet/devices.h"
+
 #include "dynet/timing.h"
 
 namespace dynet {

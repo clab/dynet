@@ -1,13 +1,22 @@
 #ifndef DYNET_DEVICES_H
 #define DYNET_DEVICES_H
 
+#include <stddef.h>
+#include <iosfwd>
 #include <string>
+#include <vector>
+
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/cuda.h"
+#include "dynet/mem.h"
+
+namespace dynet {
+class AlignedMemoryPool;
+}  // namespace dynet
 
 namespace Eigen {
-  struct DefaultDevice;
   class CudaStreamDevice;
+  struct DefaultDevice;
   struct GpuDevice;
 }
 

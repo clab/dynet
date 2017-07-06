@@ -9,13 +9,17 @@
 #ifndef DYNET_RNN_H_
 #define DYNET_RNN_H_
 
+#include <vector>
+
 #include "dynet/dynet.h"
-#include "dynet/rnn-state-machine.h"
 #include "dynet/expr.h"
+#include "dynet/model.h"
+#include "dynet/rnn-state-machine.h"
 
 namespace dynet {
 
 class ParameterCollection;
+struct ComputationGraph;
 
 typedef int RNNPointer;
 inline void swap(RNNPointer& i1, RNNPointer& i2) {

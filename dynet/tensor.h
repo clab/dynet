@@ -7,30 +7,33 @@
 #ifndef DYNET_EIGEN_TENSOR_H
 #define DYNET_EIGEN_TENSOR_H
 
+#include <stddef.h>
+#include <cmath>
 #include <initializer_list>
-#include <vector>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 
-#include "dynet/dim.h"
-#include "dynet/except.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/except.h"
+#include <unsupported/Eigen/CXX11/Tensor>
 
 #if HAVE_CUDA
 #include <cuda.h>
 #include <cuda_runtime.h>
+
 #include "dynet/cuda.h"
 #endif
 
 // Following line is commented out because it causes errors with large nets (Antonis)
 //#define EIGEN_NO_MALLOC
 
-#ifndef __CUDACC__
-#include <Eigen/Eigen>
-#endif
+// #ifndef __CUDACC__
+// #include <Eigen/Eigen>
+// #endif
 
-#include <unsupported/Eigen/CXX11/Tensor>
 
 namespace dynet {
 

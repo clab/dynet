@@ -1,9 +1,17 @@
 #ifndef DYNET_NODES_H_
 #define DYNET_NODES_H_
 
-#include "dynet/dynet.h"
+#include <stddef.h>
+#include <initializer_list>
+#include <vector>
+
 #include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/dynet.h"
+#include "dynet/except.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/sig.h"
+#include "dynet/tensor.h"
 
 // See nodes-macros.h for more details about DYNET_NODE_DEFINE_DEV_IMPL().
 

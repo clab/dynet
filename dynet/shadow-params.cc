@@ -1,9 +1,12 @@
-#include "dynet/dynet.h"
-
 #include "dynet/shadow-params.h"
-#include "dynet/tensor.h"
-#include "dynet/aligned-mem-pool.h"
+
+#include <vector>
+
+#include "dynet/devices.h"
+#include "dynet/dim.h"
+#include "dynet/dynet.h"
 #include "dynet/model.h"
+#include "dynet/tensor.h"
 
 #define LOAD_INIT_FUNC() initialize_lookups()
 

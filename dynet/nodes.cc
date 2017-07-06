@@ -1,13 +1,20 @@
 #include "dynet/nodes.h"
 
-#include <limits>
+#include <algorithm>
+#include <array>
 #include <cmath>
-#include <stdexcept>
+#include <complex>
+#include <functional>
+#include <limits>
+#include <ostream>
+#include <random>
 
-#include "dynet/simd-functors.h"
+#include <unsupported/Eigen/CXX11/Tensor>
+#include "dynet/devices.h"
 #include "dynet/functors.h"
-#include "dynet/nodes-macros.h"
 #include "dynet/globals.h"
+#include "dynet/nodes-macros.h"
+#include "dynet/simd-functors.h"
 
 #ifdef __CUDACC__
 #include "dynet/cuda.h"

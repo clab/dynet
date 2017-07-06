@@ -1,9 +1,11 @@
-#include <iostream>
-#include <vector>
+#include <stddef.h>
 #include <algorithm>
+#include <iostream>
+#include <stdexcept>
+#include <vector>
 
-#include "dynet/dynet.h"
-#include "dynet/cuda.h"
+#include "dynet/devices.h"
+#include "dynet/except.h"
 #include "dynet/init.h"
 
 using namespace std;

@@ -7,13 +7,18 @@
 #ifndef DYNET_LSTM_H_
 #define DYNET_LSTM_H_
 
+#include <vector>
+
 #include "dynet/dynet.h"
-#include "dynet/rnn.h"
 #include "dynet/expr.h"
+#include "dynet/model.h"
+#include "dynet/rnn.h"
 
 namespace dynet {
 
 class ParameterCollection;
+struct ComputationGraph;
+
 /**
  * \ingroup rnnbuilders
  * \brief CoupledLSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.

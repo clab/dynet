@@ -1,11 +1,13 @@
 #include "dynet/dynet.h"
 
+#include <cstring>
+#include <stdexcept>
+#include <string>
+
 #include "dynet/exec.h"
-#include "dynet/nodes.h"
-#include "dynet/param-nodes.h"
-#include "dynet/aligned-mem-pool.h"
-#include "dynet/dynet-helper.h"
 #include "dynet/expr.h"
+#include "dynet/init.h"
+#include "dynet/param-nodes.h"
 
 using namespace std;
 

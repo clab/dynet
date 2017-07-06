@@ -1,6 +1,6 @@
 #include "aligned-mem-pool.h"
 
-#include <sstream>
+#include "dynet/except.h"
 
 using namespace dynet;
 

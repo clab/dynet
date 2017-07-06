@@ -1,14 +1,18 @@
 #ifndef DYNET_CFSMBUILDER_H
 #define DYNET_CFSMBUILDER_H
 
-#include <vector>
+#include <iosfwd>
 #include <string>
+#include <vector>
 
+#include "dynet/dict.h"
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
-#include "dynet/dict.h"
+#include "dynet/model.h"
 
 namespace dynet {
+
+struct ComputationGraph;
 
 class SoftmaxBuilder {
 public:

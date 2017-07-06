@@ -1,10 +1,16 @@
-#include <string>
-#include <vector>
-#include <iostream>
-
-#include "dynet/nodes.h"
 #include "dynet/treelstm.h"
+
+#include <stdexcept>
+
+#include "dynet/except.h"
+#include "dynet/expr.h"
+#include "dynet/model.h"
+#include "dynet/rnn.h"
 #include "dynet/param-init.h"
+
+namespace dynet {
+struct ComputationGraph;
+}  // namespace dynet
 
 using namespace std;
 using namespace dynet;

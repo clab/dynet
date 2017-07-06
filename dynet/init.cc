@@ -1,16 +1,19 @@
 #include "dynet/init.h"
-#include "dynet/aligned-mem-pool.h"
-#include "dynet/dynet.h"
-#include "dynet/weight-decay.h"
-#include "dynet/globals.h"
 
 #include <iostream>
 #include <random>
-#include <cmath>
+#include <stdexcept>
+#include <string>
+
+#include "dynet/devices.h"
+#include "dynet/dynet.h"
+#include "dynet/except.h"
+#include "dynet/globals.h"
 
 #if HAVE_CUDA
-#include "dynet/cuda.h"
 #include <device_launch_parameters.h>
+
+#include "dynet/cuda.h"
 #endif
 
 using namespace std;

@@ -1,16 +1,21 @@
 #include "dynet/model.h"
-#include "dynet/tensor.h"
-#include "dynet/aligned-mem-pool.h"
-#include "dynet/dynet.h"
-#include "dynet/param-init.h"
-#include "dynet/io.h"
 
-#include <unordered_set>
-#include <iostream>
-#include <fstream>
-#include <sstream>
+#include <math.h>
+#include <string.h>
 #include <algorithm>
+#include <iostream>
 #include <stdexcept>
+#include <unordered_set>
+
+#include <unsupported/Eigen/CXX11/Tensor>
+#include "dynet/devices.h"
+#include "dynet/dynet.h"
+#include "dynet/except.h"
+#include "dynet/init.h"
+#include "dynet/io.h"
+#include "dynet/mem.h"
+#include "dynet/param-init.h"
+#include "dynet/tensor.h"
 
 #define LOAD_INIT_FUNC() initialize_lookups()
 

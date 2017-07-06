@@ -1,8 +1,15 @@
 #include "dynet/training.h"
 
-// #include "dynet/gpu-ops.h"
-#include "dynet/param-nodes.h"
+#include <ostream>
+#include <stdexcept>
+
+#include "dynet/dynet.h"
+#include "dynet/model.h"
 #include "dynet/weight-decay.h"
+
+namespace Eigen {
+template <typename Derived> class MatrixBase;
+}  // namespace Eigen
 
 // Macros for defining parameter update functions
 #ifdef __CUDACC__

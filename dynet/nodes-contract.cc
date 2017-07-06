@@ -1,20 +1,24 @@
 #include "dynet/nodes-contract.h"
 
-#include <limits>
-#include <cmath>
+#include <algorithm>
+#include <array>
+#include <ostream>
 #include <stdexcept>
+#include <vector>
 
+#include <unsupported/Eigen/CXX11/Tensor>
+#include "dynet/dim.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/nodes.h"
+#include "dynet/tensor.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
 #define DYNET_SKIP_CUDA_CONTRACTIONS
 
 
 #if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
-#include "dynet/nodes.cc"
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
+#include "dynet/nodes.cc"
 #endif
 
 

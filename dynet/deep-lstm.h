@@ -1,13 +1,17 @@
 #ifndef DYNET_DEEP_LSTM_H_
 #define DYNET_DEEP_LSTM_H_
 
+#include <vector>
+
 #include "dynet/dynet.h"
-#include "dynet/rnn.h"
 #include "dynet/expr.h"
+#include "dynet/model.h"
+#include "dynet/rnn.h"
 
 namespace dynet {
 
 class ParameterCollection;
+struct ComputationGraph;
 
 struct DeepLSTMBuilder : public RNNBuilder {
   DeepLSTMBuilder() = default;

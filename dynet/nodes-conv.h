@@ -1,6 +1,10 @@
 #ifndef DYNET_NODES_CONV_H_
 #define DYNET_NODES_CONV_H_
 
+#include <stddef.h>
+#include <initializer_list>
+#include <vector>
+
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
 #include "dynet/op-helper.h"

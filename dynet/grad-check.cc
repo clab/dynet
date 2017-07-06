@@ -1,12 +1,16 @@
 #include "dynet/grad-check.h"
 
-#include <iostream>
+#include <stddef.h>
 #include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <vector>
 
-#include "dynet/model.h"
+#include "dynet/dim.h"
 #include "dynet/dynet.h"
-#include "dynet/tensor.h"
 #include "dynet/expr.h"
+#include "dynet/model.h"
+#include "dynet/tensor.h"
 
 using namespace std;
 
