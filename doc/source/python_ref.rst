@@ -20,7 +20,7 @@ Initialization functions
 .. autofunction:: dynet.init_from_params
 
 ParameterCollection and Parameters
---------------------
+----------------------------------
 
 ParameterCollection
 ~~~~~~~~~~~~~~~~~~~
@@ -117,9 +117,11 @@ Operations are used to build expressions
 Input operations
 ^^^^^^^^^^^^^^^^
 
-.. autofunction:: dynet.parameter
-
 .. autofunction:: dynet.inputTensor
+
+.. autofunction:: dynet.sparse_inputTensor
+
+.. autofunction:: dynet.parameter
 
 .. autofunction:: dynet.scalarInput
 
