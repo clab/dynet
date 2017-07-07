@@ -62,6 +62,7 @@ void Cluster::initialize(ParameterCollection& model) {
   }
 
   for (Cluster* child : children) {
+    child->rep_dim = this->rep_dim;
     child->initialize(model);
   }
 }
@@ -81,8 +82,7 @@ unsigned Cluster::get_word(unsigned index) const { return terminals[index]; }
 Expression Cluster::predict(Expression h, ComputationGraph& cg) const {
   if (output_size == 1) {
     return input(cg, 1.0f);
-  }
-  else {
+  } else {
     Expression b = get_bias(cg);
     Expression w = get_weights(cg);
     return affine_transform({b, w, h});
@@ -184,7 +184,7 @@ void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
 }
 
 Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
-  if(pcg != NULL)
+  if(pcg == NULL)
     DYNET_INVALID_ARG("In HierarchicalSoftmaxBuilder, you must call new_graph before calling neg_log_softmax!");
   Cluster* path = widx2path[wordidx];
 
@@ -211,7 +211,7 @@ Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, un
 }
 
 unsigned HierarchicalSoftmaxBuilder::sample(const Expression& rep) {
-  if(pcg != NULL)
+  if(pcg == NULL)
     DYNET_INVALID_ARG("In HierarchicalSoftmaxBuilder, you must call new_graph before calling sample!");
 
   const Cluster* node = root;
