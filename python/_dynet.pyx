@@ -3039,7 +3039,7 @@ cpdef Expression hinge(Expression x, unsigned v, float m=1.0):
         m (float): The margin
     
     Returns:
-        dynet.Expression: :math:\\sum_{\\tilde{v} != v} max(x_{\\tilde{v}} - x_v + m, 0)
+        dynet.Expression: :math:`\\sum_{\\tilde{v} != v} max(x_{\\tilde{v}} - x_v + m, 0)`
     """
     return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), v, m))
 cpdef Expression hinge_batch(Expression x, vector[unsigned] vs, float m=1.0):
