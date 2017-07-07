@@ -4,7 +4,6 @@
 #include <iostream>
 #include <unsupported/Eigen/CXX11/Tensor>
 
-#define EIGEN_USE_THREADS
 #include <unsupported/Eigen/CXX11/ThreadPool>
 #include <unsupported/Eigen/CXX11/src/Tensor/TensorDeviceThreadPool.h>
 
