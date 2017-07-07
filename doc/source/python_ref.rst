@@ -20,7 +20,7 @@ Initialization functions
 .. autofunction:: dynet.init_from_params
 
 ParameterCollection and Parameters
---------------------
+----------------------------------
 
 ParameterCollection
 ~~~~~~~~~~~~~~~~~~~
@@ -117,9 +117,11 @@ Operations are used to build expressions
 Input operations
 ^^^^^^^^^^^^^^^^
 
-.. autofunction:: dynet.parameter
-
 .. autofunction:: dynet.inputTensor
+
+.. autofunction:: dynet.sparse_inputTensor
+
+.. autofunction:: dynet.parameter
 
 .. autofunction:: dynet.scalarInput
 
@@ -335,6 +337,8 @@ Convolution/Pooling operations
 
 Tensor operations
 ^^^^^^^^^^^^^^^^^
+
+**Remark**: Compiling the contraction operations takes a lot of time with CUDA. For this reason, only the CPU implementation is compiled by default. If you need those operations, you need to un-comment `this line <https://github.com/clab/dynet/blob/master/dynet/nodes-contract.cc#L11>`_ in the source before compiling. TODO: make this simpler.
 
 .. autofunction:: dynet.contract3d_1d
 
