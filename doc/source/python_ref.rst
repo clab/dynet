@@ -19,12 +19,12 @@ Initialization functions
 
 .. autofunction:: dynet.init_from_params
 
-Model and Parameters
+ParameterCollection and Parameters
 --------------------
 
-Model
-~~~~~
-.. autoclass:: dynet.Model
+ParameterCollection
+~~~~~~~~~~~~~~~~~~~
+.. autoclass:: dynet.ParameterCollection
    :members:
    :show-inheritance:
 
@@ -240,6 +240,10 @@ Loss/Probability operations
 .. autofunction:: dynet.pickneglogsoftmax
 
 .. autofunction:: dynet.pickneglogsoftmax_batch
+
+.. autofunction:: dynet.hinge
+
+.. autofunction:: dynet.hinge_batch
 
 .. autofunction:: dynet.kmh_ngram
 

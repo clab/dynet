@@ -119,14 +119,6 @@ class build(_build):
             "-DEIGEN3_INCLUDE_DIR=" + os.path.join(self.build_dir, "eigen"),
             "-DPYTHON=" + self.py_executable,
             ]
-        boost_prefix = os.environ.get("BOOST")
-        if boost_prefix:
-            cmake_cmd += [
-                "-DBOOST_ROOT:PATHNAME=" + boost_prefix,
-                "-DBoost_NO_BOOST_CMAKE=TRUE",
-                "-DBoost_NO_SYSTEM_PATHS=TRUE",
-                "-DBoost_LIBRARY_DIRS:FILEPATH=" + boost_prefix + "/lib",
-            ]
         log.info("Configuring...")
         if run_process(cmake_cmd) != 0:
             raise DistutilsSetupError(" ".join(cmake_cmd))

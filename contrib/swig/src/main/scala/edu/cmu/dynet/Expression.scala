@@ -42,7 +42,7 @@ class Expression private[dynet](
   *
   *  * from explicit values (e.g. `input`)
   *  * randomly (e.g. `randomNormal`)
-  *  * from [[edu.cmu.dynet.Model]] parameters (e.g. `parameter`)
+  *  * from [[edu.cmu.dynet.ParameterCollection]] parameters (e.g. `parameter`)
   *  * from other expressions (e.g. `softmax` and `pow`)
   */
 object Expression {
@@ -71,6 +71,8 @@ object Expression {
   def parameter(lp: LookupParameter): Expression = makeExpr(cg => dn.parameter(cg, lp.lookupParameter), Seq(lp))
   def constParameter(p: Parameter): Expression =
     makeExpr(cg => dn.const_parameter(cg, p.parameter), Seq(p))
+  def constParameter(lp: LookupParameter): Expression =
+    makeExpr(cg => dn.const_parameter(cg, lp.lookupParameter), Seq(lp))
 
   def lookup(p: LookupParameter, index: Long) =
     makeExpr(cg => dn.lookup(cg, p.lookupParameter, index), Seq(p))

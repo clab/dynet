@@ -6,7 +6,6 @@
 #include "dynet/nodes-conv.h"
 
 namespace dynet {
-namespace expr {
 
 using std::vector;
 
@@ -153,6 +152,8 @@ Expression trace_of_product(const Expression& x, const Expression& y) {return Ex
 
 Expression squared_norm(const Expression& x) { return Expression(x.pg, x.pg->add_function<SquaredNorm>({x.i})); }
 
+Expression l2_norm(const Expression& x) { return Expression(x.pg, x.pg->add_function<L2Norm>({x.i})); }
+
 Expression dot_product(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<DotProduct>({x.i, y.i})); }
 Expression squared_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<SquaredEuclideanDistance>({x.i, y.i})); }
 Expression huber_distance(const Expression& x, const Expression& y, real c) { return Expression(x.pg, x.pg->add_function<HuberDistance>({x.i, y.i}, c)); }
@@ -228,5 +229,5 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 }
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
-}
-}
+
+}  // namespace dynet

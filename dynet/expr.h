@@ -25,7 +25,6 @@
 
 
 namespace dynet {
-namespace expr {
 /**
  * \ingroup operations
  * \brief Expressions are the building block of a Dynet computation graph
@@ -1180,13 +1179,24 @@ Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptar
 /**
  * \ingroup lossoperations
  * \brief Squared norm
- * \details The squared norm of the values of x: \f$\sum_i x_i^2\f$.
+ * \details The squared L2 norm of the values of x: \f$\sum_i x_i^2\f$.
  *
  * \param x A vector of values
  *
- * \return The squared norm
+ * \return The squared L2 norm
  */
 Expression squared_norm(const Expression& x);
+
+/**
+ * \ingroup lossoperations
+ * \brief L2 norm
+ * \details The L2 norm of the values of x: \f$\sum_i x_i^2\f$.
+ *
+ * \param x A vector of values
+ *
+ * \return The L2 norm
+ */
+Expression l2_norm(const Expression& x);
 
 /**
  * \ingroup lossoperations
@@ -2096,11 +2106,7 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
  * \return An expression of the same dimension as `w`
  */
 Expression weight_norm(const Expression& w, const Expression& g);
-}
-// Because expressions are now such a fundamental part of DyNet it doesn't
-// make much sense to keep them in separate namespaces, so we import expr
-// to the dynet namespace.
-using namespace expr;
-}
+
+}  // namespace dynet
 
 #endif

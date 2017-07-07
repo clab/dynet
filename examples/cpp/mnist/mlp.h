@@ -15,14 +15,6 @@
 #include "dynet/training.h"
 #include "dynet/timing.h"
 #include "dynet/expr.h"
-#include "dynet/io-macros.h"
-
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -31,7 +23,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 /**
  * \ingroup ffbuilders
  * Common activation functions used in multilayer perceptrons
@@ -71,14 +62,7 @@ public:
     activation(activation),
     dropout_rate(dropout_rate) {};
   Layer() {};
-private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int) {
-    ar & input_dim & output_dim & activation & dropout_rate;
-  }
 };
-DYNET_SERIALIZE_IMPL(Layer);
 
 /**
  * \ingroup ffbuilders
@@ -103,17 +87,17 @@ public:
    * \brief Default constructor
    * \details Dont forget to add layers!
    */
-  MLP(Model & model) {
+  MLP(ParameterCollection & model) {
     LAYERS = 0;
   }
   /**
    * \brief Returns a Multilayer perceptron
    * \details Creates a feedforward multilayer perceptron based on a list of layer descriptions
    *
-   * \param model Model to contain parameters
+   * \param model ParameterCollection to contain parameters
    * \param layers Layers description
    */
-  MLP(Model& model,
+  MLP(ParameterCollection& model,
       vector<Layer> layers) {
     // Verify layers compatibility
     for (unsigned l = 0; l < layers.size() - 1; ++l) {
@@ -134,7 +118,7 @@ public:
    * \param model [description]
    * \param layer [description]
    */
-  void append(Model& model, Layer layer) {
+  void append(ParameterCollection& model, Layer layer) {
     // Check compatibility
     if (LAYERS > 0)
       if (layers[LAYERS - 1].output_dim != layer.input_dim)
@@ -284,16 +268,6 @@ private:
       break;
     }
   }
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int) {
-    ar & LAYERS;
-    ar & layers & params;
-    ar & dropout_active;
-  }
-
-
 };
 
 #endif

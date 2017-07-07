@@ -50,7 +50,7 @@ Feel free to contact the `dynet-users <https://groups.google.com/forum/#!forum/d
 When you have an issue, including the following information in your report will greatly help us debug:
 
 * What is the error? Copy and paste the error message.
-* What is your environment? Are you running on CPU or GPU? What OS? If the problem seems to be related to a specific library (CUDA, Boost, Eigen), what version of that library are you using?
+* What is your environment? Are you running on CPU or GPU? What OS? If the problem seems to be related to a specific library (CUDA, Eigen), what version of that library are you using?
 * If possible, it will be really really helpful if you can provide a minimal code example that will cause the problem to occur. This way the developers will be able to reproduce the problem in their own environment.
 
 If you have a build problem and want to debug, please run

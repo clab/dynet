@@ -10,7 +10,7 @@ object XorScala {
     println("Running XOR example")
     Initialize.initialize()
     println("Dynet initialized!")
-    val m = new Model
+    val m = new ParameterCollection
     val sgd = new SimpleSGDTrainer(m)
     ComputationGraph.renew()
 

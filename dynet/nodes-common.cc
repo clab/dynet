@@ -646,17 +646,6 @@ Dim PairwiseRankLoss::dim_forward(const vector<Dim>& xs) const {
   return xs[0].bd >= xs[1].bd ? xs[0] : xs[1];
 }
 
-string Hinge::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "hinge(" << arg_names[0] << ", pe=" << pelement << ", m=" << margin << ')';
-  return os.str();
-}
-
-Dim Hinge::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1 && LooksLikeVector(xs[0]), "Bad input dimensions in Hinge: " << xs);
-  return Dim({1}, xs[0].bd);
-}
-
 string Identity::as_string(const vector<string>& arg_names) const {
   return arg_names[0];
 }
@@ -719,57 +708,6 @@ Dim SoftSign::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in SoftSign");
   DYNET_ARG_CHECK(LooksLikeVector(xs[0]), "Bad input dimensions in SoftSign: " << xs);
   return xs[0];
-}
-
-string PickNegLogSoftmax::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  if(pval) {
-    s << "pickneglogsoftmax(" << arg_names[0] << ")_{" << *pval << '}';
-  } else {
-    s << "pickneglogsoftmax(" << arg_names[0] << ")_{";
-    string sep = "";
-    for(auto v : *pvals) { s << sep << v; sep = ","; }
-    s << '}';
-  }
-  return s.str();
-}
-
-Dim PickNegLogSoftmax::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in PickNegLogSoftmax");
-  DYNET_ARG_CHECK(LooksLikeVector(xs[0]), "Bad input dimensions in PickNegLogSoftmax: " << xs);
-  DYNET_ARG_CHECK((pval == nullptr || xs[0].bd == 1),
-                          "PickNegLogSoftmax was called with a single ID (" << *pval <<
-                          "), but the expression under consideration had multiple mini-batch elements (" <<
-                          xs[0].bd << "). A vector of IDs of size " << xs[0].bd << " must be passed instead.");
-  DYNET_ARG_CHECK((pvals == nullptr || xs[0].bd == pvals->size()),
-                          "The number of IDs passed to PickNegLogSoftmax (" << pvals->size() <<
-                          "), did not match the number of mini-batch elements in the expression under consideration (" <<
-                          xs[0].bd << "). These numbers must match.");
-  return Dim({1}, xs[0].bd);
-}
-
-int PickNegLogSoftmax::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
-  Sig s(nt::pnls);
-  const Dim &in_dim = cg.nodes[args[0]]->dim;
-  s.add_dim(in_dim);
-  return sm.get_idx(s);
-}
-std::vector<int> PickNegLogSoftmax::autobatch_concat(const ComputationGraph & cg) const {
-  return vector<int>(1, 1);
-}
-Node* PickNegLogSoftmax::autobatch_pseudo_node(const ComputationGraph & cg,
-                                        const std::vector<VariableIndex> & batch_ids) const {
-  vector<unsigned> ids;
-  PickNegLogSoftmax* ln;
-  for(auto batch_id : batch_ids) {
-    ln = static_cast<PickNegLogSoftmax*>(cg.nodes[batch_id]);
-    if(ln->pval != nullptr)
-      ids.push_back(*ln->pval);
-    else
-      for(auto word_id : *ln->pvals)
-        ids.push_back(word_id);
-  }
-  return new PickNegLogSoftmax({(VariableIndex)1}, ids);
 }
 
 string LogSoftmax::as_string(const vector<string>& arg_names) const {
@@ -892,38 +830,6 @@ Dim PickBatchElements::dim_forward(const vector<Dim>& xs) const {
   return ret;
 }
 
-string MatrixMultiply::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << arg_names[0] << " * " << arg_names[1];
-  return s.str();
-}
-
-Dim MatrixMultiply::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in MatrixMultiply")
-  DYNET_ARG_CHECK(xs[0].cols() == xs[1].rows(), "Mismatched input dimensions in MatrixMultiply: " << xs);
-  if (xs[1].ndims() == 1) return Dim({xs[0].rows()}, max(xs[0].bd, xs[1].bd));
-  return Dim({xs[0].rows(), xs[1].cols()}, max(xs[0].bd, xs[1].bd));
-}
-
-int MatrixMultiply::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
-  // Currently assumes there are two args, and batches with a shared first arg.
-  // TODO do we want to treat different dimensions of first/second arg differently?
-  if(dim.bd == 1) {
-    Sig s(nt::matmul);
-    s.add_node(args[0]);
-    s.add_dim(cg.nodes[args[1]]->dim);
-    return sm.get_idx(s);
-  } else {
-    return 0; // TODO handle the batched case as well? should it differ at all?
-  }
-}
-
-std::vector<int> MatrixMultiply::autobatch_concat(const ComputationGraph & cg) const {
-  vector<int> ret(args.size(), 0);
-  if (dim.bd == 1) { ret[1] = 1; }
-  return ret;
-}
-
 string CwiseMultiply::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << " \\cdot " << arg_names[1];
@@ -1026,64 +932,6 @@ Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || (xs[0].bd==1 && xs[0].size() < xs[1].size()) || (xs[1].bd==1 && xs[0].size() > xs[1].size()),
 		  "CwiseQuotient: batch size must match or equal 1");
   return d;
-}
-
-string AffineTransform::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << arg_names[0];
-  for (unsigned i = 1; i < arg_names.size(); i += 2)
-    s << " + " << arg_names[i] << " * " << arg_names[i+1];
-  return s.str();
-}
-
-Dim AffineTransform::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK((xs.size() - 1) % 2 == 0, "Bad number of inputs in AffineTransform: " << xs);
-  if(xs.size() == 1) return xs[0];
-  DYNET_ARG_CHECK(xs[0].rows() == xs[1].rows() && xs[1].cols() == xs[2].rows(),
-                          "Bad dimensions for AffineTransform: " << xs);
-  Dim d = (xs[2].cols() != 1 ?
-           Dim({xs[0].rows(), xs[2].cols()}, max(max(xs[0].bd, xs[1].bd), xs[2].bd)) :
-           Dim({xs[0].rows()}, max(max(xs[0].bd, xs[1].bd), xs[2].bd)));
-  for (unsigned i = 3; i < xs.size(); i += 2) {
-    DYNET_ARG_CHECK(xs[i].cols() == xs[i+1].rows() && d.rows() == xs[i].rows() && d.cols() == xs[i+1].cols(),
-                            "Bad dimensions for AffineTransform: " << xs);
-    d.bd = max(max(d.bd, xs[i].bd), xs[i+1].bd);
-  }
-  return d;
-}
-
-int AffineTransform::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
-  Sig s(nt::affine);
-  // This is a heuristic: we assume that we often have "b + W * x" shaped affine transforms
-  // so when everything is batch size one, optimize for this case
-  if(dim.bd == 1) {
-    s.add_node(args[0]);
-    for(size_t i = 1; i < args.size(); i += 2) {
-      s.add_node(args[i]);
-      s.add_dim(cg.nodes[args[i+1]]->dim); // TODO: this is not the exact same as dim->print_profile
-    }
-  } else {
-    for(auto nid : args) {
-      const Dim & d = cg.nodes[nid]->dim;
-      if(d.bd == 1)
-        s.add_node(nid);
-      else
-        s.add_dim(d); // TODO: this is not the exact same as dim->print_profile
-    }
-  }
-  return sm.get_idx(s);
-}
-
-std::vector<int> AffineTransform::autobatch_concat(const ComputationGraph & cg) const {
-  vector<int> ret(args.size(), 0);
-  if(dim.bd == 1) {
-    for(size_t i = 2; i < ret.size(); i += 2)
-      ret[i] = 1;
-  } else {
-    for(size_t i = 0; i < ret.size(); ++i)
-      ret[i] = (cg.nodes[args[i]]->dim.bd > 1);
-  }
-  return ret;
 }
 
 string Negate::as_string(const vector<string>& arg_names) const {

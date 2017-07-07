@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <cmath>
 #include <iostream>
-#include "dynet/io-macros.h"
 
 namespace dynet {
 
@@ -35,8 +34,6 @@ struct L2WeightDecay {
     weight_decay = 1.0f;
   }
  private:
-  DYNET_SERIALIZE_DECLARE()
-
   float weight_decay;
   float lambda;
 };

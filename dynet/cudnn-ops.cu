@@ -235,7 +235,7 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
                   conv_desc_, bwd_d_algo_, bwd_data_workspace, workspace_bwd_data_size_,
                   &beta, x_desc_, dxi));
       Tensor padded_dx = Tensor(Dim({XH, XW, XC}, XN), static_cast<float*>(dxi), xs[0]->device, DeviceMempool::FXS);
-      std::cout << padded_dx.d << " " << dEdxi.d << std::endl;
+      //std::cout << padded_dx.d << " " << dEdxi.d << std::endl;
       Eigen::array<int, 4> offsets = {0, 0, 0, 0};
       Eigen::array<int, 4> extents = {static_cast<int>(XH - h_odd), static_cast<int>(XW - w_odd), static_cast<int>(XC), static_cast<int>(XN)};
       dEdxi.tb<3>().device(*dev.edevice) += padded_dx.tb<3>().slice(offsets, extents);

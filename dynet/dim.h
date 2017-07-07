@@ -15,7 +15,6 @@
 #include <cstring>
 #include <vector>
 
-#include "dynet/io-macros.h"
 #include "dynet/except.h"
 
 /**
@@ -23,8 +22,6 @@
  * Maximum number of dimensions supported by dynet : 7
  */
 #define DYNET_MAX_TENSOR_DIM 7
-
-namespace boost { namespace serialization { class access; } }
 
 namespace dynet {
 
@@ -50,6 +47,10 @@ struct Dim {
    * \param x List of dimentions
    */
   Dim(std::initializer_list<unsigned int> x) : nd(0), bd(1) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with initializer_list of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -59,6 +60,10 @@ struct Dim {
    * \param b Batch size
    */
   Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(0), bd(b) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with initializer_list of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -68,6 +73,10 @@ struct Dim {
    * \param x Array of dimentions
    */
   Dim(const std::vector<long> & x) : nd(0), bd(1) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with vector of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -77,6 +86,10 @@ struct Dim {
      * \param b Batch size
      */
   Dim(const std::vector<long> & x, unsigned int b) : nd(0), bd(b) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with vector of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -278,8 +291,6 @@ struct Dim {
   unsigned int d[DYNET_MAX_TENSOR_DIM]; /**< Array of dimension */
   unsigned int nd; /**< Number of dimensions */
   unsigned int bd; /**< Batch dimension */
-private:
-  DYNET_SERIALIZE_DECLARE()
 };
 
 /**
@@ -321,6 +332,8 @@ std::ostream& operator<<(std::ostream& os, const Dim& d);
  * \param ds vector of Dims
  */
 std::ostream& operator<<(std::ostream& os, const std::vector<Dim>& ds);
+
+std::istream& operator>>(std::istream& os, Dim& d);
 
 } // namespace dynet
 

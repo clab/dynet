@@ -4,8 +4,6 @@
 #include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
 #include "dynet/mp.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -24,7 +22,7 @@ struct Datum {
 
 class XorModel {
 public:
-  XorModel(const unsigned hidden_size, Model& dynet_model) : pcg(nullptr) {
+  XorModel(const unsigned hidden_size, ParameterCollection& dynet_model) : pcg(nullptr) {
     p_W = dynet_model.add_parameters({hidden_size, 2});
     p_b = dynet_model.add_parameters({hidden_size});
     p_V = dynet_model.add_parameters({1, hidden_size});
@@ -55,37 +53,7 @@ private:
   Parameter p_W, p_b, p_V, p_a;
   Expression W, b, V, a;
   ComputationGraph* pcg;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & p_W & p_b & p_V & p_a;
-  }
 };
-
-void serialize(const XorModel* const xor_model, const Model& dynet_model, const Trainer* const trainer) {
-  // Remove existing stdout output
-  int r = ftruncate(fileno(stdout), 0);
-  if (r != 0) {}
-
-  // Move the cursor to the beginning of the stdout stream
-  fseek(stdout, 0, SEEK_SET);
-
-  // Dump the model to stdout
-  boost::archive::text_oarchive oa(cout);
-  oa & dynet_model;
-  oa & xor_model;
-  oa & trainer;
-}
-
-void deserialize(const string& filename, XorModel* xor_model, Model& dynet_model, Trainer* trainer) {
-  ifstream in(filename.c_str());
-  boost::archive::text_iarchive ia(in);
-  ia & dynet_model;
-  ia & xor_model;
-  ia & trainer;
-  in.close();
-}
 
 class SufficientStats {
 public:
@@ -118,7 +86,7 @@ public:
 
 class Learner : public ILearner<Datum, SufficientStats> {
 public:
-  Learner(XorModel* xor_model, Model& dynet_model, const Trainer* const trainer, bool quiet) : xor_model(xor_model), dynet_model(dynet_model), trainer(trainer), quiet(quiet) {}
+  Learner(XorModel* xor_model, ParameterCollection& dynet_model, const Trainer* const trainer, bool quiet) : xor_model(xor_model), dynet_model(dynet_model), trainer(trainer), quiet(quiet) {}
   ~Learner() {}
   SufficientStats LearnFromDatum(const Datum& datum, bool learn) {
     ComputationGraph cg;
@@ -132,15 +100,11 @@ public:
     return SufficientStats(loss, 1);
   }
 
-  void SaveModel() {
-    if (!quiet) {
-      serialize(xor_model, dynet_model, trainer);
-    }
-  }
+  void SaveModel() {}
 
 private:
   XorModel* xor_model;
-  Model& dynet_model; 
+  ParameterCollection& dynet_model; 
   const Trainer* const trainer;
   bool quiet;
 };
@@ -151,20 +115,14 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned num_cores = 4;
   const unsigned ITERATIONS = 1000;
-  Model dynet_model;
+  ParameterCollection dynet_model;
   XorModel* xor_model = nullptr;
   Trainer* trainer = nullptr;
 
-  if (argc == 2) {
-    // Load the model and parameters from file if given.
-    deserialize(argv[1], xor_model, dynet_model, trainer);
-  }
-  else {
-    // Otherwise, just create a new model.
-    const unsigned HIDDEN_SIZE = 8;
-    xor_model = new XorModel(HIDDEN_SIZE, dynet_model);
-    trainer = new SimpleSGDTrainer(dynet_model);
-  }
+  // Otherwise, just create a new model.
+  const unsigned HIDDEN_SIZE = 8;
+  xor_model = new XorModel(HIDDEN_SIZE, dynet_model);
+  trainer = new SimpleSGDTrainer(dynet_model);
 
   vector<Datum> data(4);
   data[0] = Datum({0, 0}, 0);

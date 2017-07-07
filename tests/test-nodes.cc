@@ -8,7 +8,6 @@
 #include <stdexcept>
 
 using namespace dynet;
-using namespace dynet::expr;
 using namespace std;
 
 
@@ -50,29 +49,29 @@ struct NodeTest {
 	.211f, 1.211f, .222f, 1.222f, .233f, 1.233f, .212f, 1.212f, .222f, 1.222f, .232f, 1.232f, .213f, 1.213f, .223f, 1.223f, .233f, 1.233f
                                                  };
     param1 = mod.add_parameters({3});
-    TensorTools::set_elements(param1.get()->values, param1_vals);
+    TensorTools::set_elements(param1.get_storage().values, param1_vals);
     param2 = mod.add_parameters({3});
-    TensorTools::set_elements(param2.get()->values, param2_vals);
+    TensorTools::set_elements(param2.get_storage().values, param2_vals);
     param3 = mod.add_parameters({3});
-    TensorTools::set_elements(param3.get()->values, param3_vals);
+    TensorTools::set_elements(param3.get_storage().values, param3_vals);
     param4 = mod.add_parameters({6});
-    TensorTools::set_elements(param4.get()->values, param4_vals);
+    TensorTools::set_elements(param4.get_storage().values, param4_vals);
     param_scalar1 = mod.add_parameters({1});
-    TensorTools::set_elements(param_scalar1.get()->values, param_scalar1_vals);
+    TensorTools::set_elements(param_scalar1.get_storage().values, param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
-    TensorTools::set_elements(param_scalar2.get()->values, param_scalar2_vals);
+    TensorTools::set_elements(param_scalar2.get_storage().values, param_scalar2_vals);
     param_kernel1 = mod.add_parameters({3, 2});
-    TensorTools::set_elements(param_kernel1.get()->values, param_kernel1_vals);
+    TensorTools::set_elements(param_kernel1.get_storage().values, param_kernel1_vals);
     param_filter1 = mod.add_parameters({3, 2, 2});
-    TensorTools::set_elements(param_filter1.get()->values, param_filter1_vals);
+    TensorTools::set_elements(param_filter1.get_storage().values, param_filter1_vals);
     param_square1 = mod.add_parameters({3, 3});
-    TensorTools::set_elements(param_square1.get()->values, param_square1_vals);
+    TensorTools::set_elements(param_square1.get_storage().values, param_square1_vals);
     param_cube1 = mod.add_parameters({3, 3, 3});
-    TensorTools::set_elements(param_cube1.get()->values, param_cube1_vals);
+    TensorTools::set_elements(param_cube1.get_storage().values, param_cube1_vals);
     param_cube2 = mod.add_parameters({3, 3, 6});
-    TensorTools::set_elements(param_cube2.get()->values, param_cube2_vals);
+    TensorTools::set_elements(param_cube2.get_storage().values, param_cube2_vals);
     lookup1 = mod.add_lookup_parameters(3, {3});
-    TensorTools::set_elements(lookup1.get()->all_values, param_square1_vals);
+    TensorTools::set_elements(lookup1.get_storage().all_values, param_square1_vals);
     lookup2 = mod.add_lookup_parameters(10, {3});
     lookup3 = mod2.add_lookup_parameters(10, {3});
   }
@@ -91,7 +90,7 @@ struct NodeTest {
 
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
-  dynet::Model mod, mod2;
+  dynet::ParameterCollection mod, mod2;
   dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1, param_cube2;
   dynet::LookupParameter lookup1, lookup2, lookup3;
 };
@@ -1212,6 +1211,23 @@ BOOST_AUTO_TEST_CASE( squared_norm_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression l2_norm(const Expression&);
+BOOST_AUTO_TEST_CASE( l2_norm_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression z = l2_norm(x1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression l2_norm(const Expression& x);
+BOOST_AUTO_TEST_CASE( l2_norm_batch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression z = sum_batches(l2_norm(x1 + x2));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
 BOOST_AUTO_TEST_CASE( huber_distance_gradient ) {
   dynet::ComputationGraph cg;
@@ -1374,7 +1390,7 @@ BOOST_AUTO_TEST_CASE( conv2d_valid_gradient ) {
   std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
                                          .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
                                          .211f, .222f, .233f, .212f, .222f, .232f};
-  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
   std::vector<float> conv2d_batch_vals(50 * 50 * 2 * 2);
   for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
     conv2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
@@ -1393,9 +1409,9 @@ BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
   std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
                                          .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
                                          .211f, .222f, .233f, .212f, .222f, .232f};
-  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
   Parameter param_kernel2 = mod.add_parameters({2, 2, 3, 2});
-  TensorTools::set_elements(param_kernel2.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel2.get_storage().values, param_kernel_vals);
 
   std::vector<float> conv2d_batch_vals(2 * 50 * 50 * 2);
   for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
@@ -1415,7 +1431,7 @@ BOOST_AUTO_TEST_CASE( maxpooling2d_same_gradient ) {
   dynet::ComputationGraph cg;
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
-  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
   std::vector<float> maxpooling2d_batch_vals(1 * 11 * 11 * 2);
   for (unsigned i = 0; i < maxpooling2d_batch_vals.size(); ++i) {
     maxpooling2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
@@ -1438,7 +1454,7 @@ BOOST_AUTO_TEST_CASE( maxpooling2d_valid_gradient ) {
   dynet::ComputationGraph cg;
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
-  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
   std::vector<float> maxpooling2d_batch_vals(1 * 21 * 21 * 2);
   for (unsigned i = 0; i < maxpooling2d_batch_vals.size(); ++i) {
     maxpooling2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
@@ -1459,7 +1475,7 @@ BOOST_AUTO_TEST_CASE( maxpooling2d_same_gradient_two ) {
   dynet::ComputationGraph cg;
   Parameter param_kernel = mod.add_parameters({2, 2, 1, 1});
   std::vector<float> param_kernel_vals = {.011f, .022f, .012f, .022f};
-  TensorTools::set_elements(param_kernel.get()->values, param_kernel_vals);
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
   std::vector<float> maxpooling2d_batch_vals(1 * 31 * 16 * 2);
   for (unsigned i = 0; i < maxpooling2d_batch_vals.size(); ++i) {
     maxpooling2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
@@ -1990,7 +2006,7 @@ BOOST_AUTO_TEST_CASE( gradient_value_test ) {
   Expression l = dot_product(x1,x2);
   cg.backward(l);
   vector<float> x1_g1 = as_vector(x1.gradient());
-  vector<float> x1_g2 = as_vector(param1.get()->g);
+  vector<float> x1_g2 = as_vector(param1.get_storage().g);
 
   for(unsigned i=0;i<3;i++){
     BOOST_CHECK_CLOSE(x1_g1[i],x1_g2[i],0.001);

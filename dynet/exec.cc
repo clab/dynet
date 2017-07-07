@@ -222,7 +222,6 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
 
   AlignedMemoryPool *mempool = tout.device->pools[(int)DeviceMempool::FXS];
   // determine needed memory
-  VariableIndex vid;
   unsigned total_dsize = 0;
   for(auto & id : batch_ids) {
     id = cg.nodes[id]->args[aid];

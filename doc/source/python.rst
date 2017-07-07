@@ -8,16 +8,16 @@ For example on **Ubuntu Linux**:
 ::
     
     sudo apt-get update
-    sudo apt-get install python-pip build-essential libboost-all-dev cmake mercurial
+    sudo apt-get install python-pip build-essential cmake mercurial
 
 Or on **macOS**, first make sure the Apple Command Line Tools are installed, then
-get Boost, CMake, and Mercurial with either homebrew or macports:
+get CMake, and Mercurial with either homebrew or macports:
 
 ::
 
     xcode-select --install
-    brew install boost cmake hg python # Using homebrew.
-    sudo port install boost cmake mercurial py-pip # Using macports.
+    brew install cmake hg python # Using homebrew.
+    sudo port install cmake mercurial py-pip # Using macports.
 
 On **Windows**, see :ref:`windows-python-install`.
 
@@ -121,19 +121,6 @@ This is pretty much the same process as compiling DyNet, with the
 addition of the ``-DPYTHON=`` flag, pointing to the location of your
 Python interpreter.
 
-If Boost is installed in a non-standard location, you should add the
-corresponding flags to the ``cmake`` commandline, see the `DyNet
-installation instructions page <install.rst>`__.
-
-.. code:: bash
-
-    cd $PATH_TO_DYNET
-    PATH_TO_PYTHON=`which python`
-    mkdir build
-    cd build
-    cmake .. -DEIGEN3_INCLUDE_DIR=$PATH_TO_EIGEN -DPYTHON=$PATH_TO_PYTHON
-    make -j 2
-
 Assuming that the ``cmake`` command found all the needed libraries and
 didn't fail, the ``make`` command will take a while, and compile DyNet
 as well as the Python bindings. You can change ``make -j 2`` to a higher
@@ -154,7 +141,7 @@ then, within Python:
 
     import dynet as dy
     print dy.__version__
-    model = dy.Model()
+    pc = dy.ParameterCollection()
 
 In order to install the module so that it is accessible from everywhere
 in the system, run the following:
@@ -190,7 +177,7 @@ installation is likely to be working:
 ::
 
     from dynet import *
-    model = Model()
+    pc = ParameterCollection()
 
 If it doesn't work and you get an error similar to the following:
 ::
@@ -218,9 +205,6 @@ Then create an Anaconda environment and activate it as below:
      source activate my_environment_name
 
 After this, you should be able to install using pip or manual installation as normal.
-
-Note that on some conda environments, people have had trouble if ``C++`` related packages such as ``boost`` are installed within the Anaconda environment.
-We suggest that you install these packages through the system-wide package manager instead of through Anaconda. But if you would like to install them through Anaconda and encounter build errors, try the solution in `this comment <https://github.com/clab/dynet/issues/268#issuecomment-278806398>`_.
 
 .. _windows-python-install:
 

@@ -16,7 +16,6 @@
 #include "dynet/except.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/devices.h"
-#include "dynet/io-macros.h"
 
 #if HAVE_CUDA
 #include <cuda.h>
@@ -247,9 +246,6 @@ struct Tensor {
   float* v;  /**< Pointer to memory */
   Device* device;
   DeviceMempool mem_pool;
-
-private:
-  DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
 template<> inline Eigen::TensorMap<Eigen::Tensor<float, 0>> Tensor::t<0>() {
@@ -434,8 +430,6 @@ struct IndexTensor {
   Device* device;
   DeviceMempool mem_pool;
 
-private:
-  DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
 template<> inline Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 0>> IndexTensor::t<0>() {
@@ -687,6 +681,15 @@ struct TensorTools {
   static void accumulate(Tensor& v, const Tensor& v_src);
 
   /**
+  * \brief Calculate the logsumexp function over all columns of the tensor
+  *
+  * \param x The input tensor
+  * \param m A tensor of scratch memory to hold the maximum values of each column
+  * \param z The output tensor
+  */
+  static void logsumexp(const Tensor& x, Tensor &m, Tensor &z);
+
+  /**
    * \brief Calculate the index of the maximum value
    *
    * \param v A tensor where each row represents a probability distribution
@@ -710,17 +713,19 @@ struct TensorTools {
    */
   static IndexTensor categorical_sample_log_prob(const Tensor& v, unsigned dim = 0, unsigned num = 1);
 
-protected:
+  // Device functions that can be called directly if the device is already known
   template<class MyDevice>
-  static void clip_dev(MyDevice & dev, Tensor& d, float left, float right);
+  static void clip_dev(const MyDevice & dev, Tensor& d, float left, float right);
   template<class MyDevice>
-  static void constant_dev(MyDevice & dev, Tensor& d, float c);
+  static void constant_dev(const MyDevice & dev, Tensor& d, float c);
   template<class MyDevice>
-  static void accumulate_dev(MyDevice & dev, Tensor& v_src, const Tensor& v);
+  static void accumulate_dev(const MyDevice & dev, Tensor& v_src, const Tensor& v);
   template<class MyDevice>
-  static IndexTensor argmax_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  static IndexTensor argmax_dev(const MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
   template<class MyDevice>
-  static IndexTensor categorical_sample_log_prob_dev(MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  static IndexTensor categorical_sample_log_prob_dev(const MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
+  template <class MyDevice>
+  static void logsumexp_dev(const MyDevice & dev, const Tensor& x, Tensor &m, Tensor &z);
 
 };
 
@@ -748,5 +753,4 @@ real rand_normal();
 
 } // namespace dynet
 
-DYNET_VERSION_DEFINE(dynet::Tensor, 1)
 #endif
