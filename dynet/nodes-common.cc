@@ -139,19 +139,6 @@ Dim ConstScalarMultiply::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-string DotProduct::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << arg_names[0] << "^T . " << arg_names[1];
-  return s.str();
-}
-
-Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 2 &&
-                          xs[0].single_batch() == xs[1].single_batch(),
-                          "Bad arguments to DotProduct: " << xs);
-  return Dim({1}, max(xs[0].bd, xs[1].bd));
-}
-
 string Transpose::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "transpose("<< arg_names[0] << ", ";
@@ -468,29 +455,6 @@ Dim Average::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
-string Sqrt::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "sqrt(" << arg_names[0] << ')';
-  return s.str();
-}
-
-Dim Sqrt::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Sqrt")
-  return xs[0];
-}
-
-string Abs::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "abs(" << arg_names[0] << ')';
-  return s.str();
-}
-
-Dim Abs::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Abs")
-  return xs[0];
-}
-
-
 string Erf::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "erf(" << arg_names[0] << ')';
@@ -513,39 +477,6 @@ Dim Tanh::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-string Square::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "square(" << arg_names[0] << ')';
-  return s.str();
-}
-
-Dim Square::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Square")
-  return xs[0];
-}
-
-string Cube::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "cube(" << arg_names[0] << ')';
-  return s.str();
-}
-
-Dim Cube::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Cube")
-  return xs[0];
-}
-
-string Exp::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "exp(" << arg_names[0] << ')';
-  return os.str();
-}
-
-Dim Exp::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Exp")
-  return xs[0];
-}
-
 string LogGamma::as_string(const vector<string>& arg_names) const {
   ostringstream os;
   os << "lgamma(" << arg_names[0] << ')';
@@ -554,17 +485,6 @@ string LogGamma::as_string(const vector<string>& arg_names) const {
 
 Dim LogGamma::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in LogGamma")
-  return xs[0];
-}
-
-string Log::as_string(const vector<string>& arg_names) const {
-  ostringstream os;
-  os << "log(" << arg_names[0] << ')';
-  return os.str();
-}
-
-Dim Log::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Log")
   return xs[0];
 }
 
@@ -920,17 +840,6 @@ Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
-string Negate::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << '-' << arg_names[0];
-  return s.str();
-}
-
-Dim Negate::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Negate");
-  return xs[0];
-}
-
 string Rectify::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "ReLU(" << arg_names[0] << ')';
@@ -953,34 +862,6 @@ Dim ExponentialLinearUnit::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-string HuberDistance::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||_H(" << d << ')';
-  return s.str();
-}
-
-Dim HuberDistance::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in HuberDistance");
-  DYNET_ARG_CHECK(xs[0].single_batch() == xs[1].single_batch() ||
-                          (LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size()),
-                          "Mismatched input dimensions in HuberDistance: " << xs);
-  return Dim({1}, max(xs[0].bd, xs[1].bd));
-}
-
-string L1Distance::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||_1";
-  return s.str();
-}
-
-Dim L1Distance::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in L1Distance")
-  DYNET_ARG_CHECK(xs[0].single_batch() == xs[1].single_batch() ||
-                          (LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size()),
-                          "Mismatched input dimensions in L1Distance: " << xs);
-  return Dim({1}, max(xs[0].bd, xs[1].bd));
-}
-
 string PoissonRegressionLoss::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "-log Poisson(" << pty << "; lambda=\\exp" << arg_names[0] << ')';
@@ -990,72 +871,6 @@ string PoissonRegressionLoss::as_string(const vector<string>& arg_names) const {
 Dim PoissonRegressionLoss::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1 && xs[0].size() == 1, "Bad input dimensions in PoissonRegressionLoss: " << xs);
   return xs[0];
-}
-
-string SquaredNorm::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "|| " << arg_names[0] << " ||^2";
-  return s.str();
-}
-
-Dim SquaredNorm::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in SquaredNorm")
-  return Dim({1}, xs[0].bd);
-}
-
-string L2Norm::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "|| " << arg_names[0] << " ||";
-  return s.str();
-}
-
-Dim L2Norm::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in L2Norm")
-  return Dim({1}, xs[0].bd);
-}
-
-
-string SquaredEuclideanDistance::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "|| " << arg_names[0] << " - " << arg_names[1] << " ||^2";
-  return s.str();
-}
-
-Dim SquaredEuclideanDistance::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in SquaredEuclideanDistance")
-  DYNET_ARG_CHECK(xs[0].single_batch() == xs[1].single_batch() ||
-                          (LooksLikeVector(xs[0]) && LooksLikeVector(xs[1]) && xs[0].batch_size() == xs[1].batch_size()),
-                          "Bad input dimensions in SquaredEuclideanDistance: " << xs);
-  return Dim({1}, max(xs[0].bd, xs[1].bd));
-}
-
-int SquaredEuclideanDistance::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
-  Sig s(nt::squared_distance);
-  const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;
-  if(dleft.bd == dright.bd) {
-    s.add_node(1);
-    s.add_dim(dleft);
-  } else if(dleft.bd == 1) {
-    s.add_node(2);
-    s.add_node(args[0]);
-    s.add_dim(dright);
-  } else {
-    s.add_node(3);
-    s.add_node(args[1]);
-    s.add_dim(dleft);
-  }
-  return sm.get_idx(s);
-}
-std::vector<int> SquaredEuclideanDistance::autobatch_concat(const ComputationGraph & cg) const {
-  const Dim &dleft = cg.nodes[args[0]]->dim, &dright = cg.nodes[args[1]]->dim;
-  vector<int> ret(2, 1);
-  if(dleft.bd != dright.bd) {
-    if(dleft.bd == 1)
-      ret[0] = 0;
-    else
-      ret[1] = 0;
-  }
-  return ret;
 }
 
 string LogisticSigmoid::as_string(const vector<string>& arg_names) const {
