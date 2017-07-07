@@ -160,6 +160,8 @@ Arithmetic operations
 
 .. autofunction:: dynet.squared_norm
 
+.. autofunction:: dynet.l2_norm
+
 .. autofunction:: dynet.tanh
 
 .. autofunction:: dynet.exp
