@@ -410,189 +410,94 @@ SpatialConvolutionBackwardKernel(
       kernelCols + (kernelCols - 1) * (col_in_stride - 1);
 
   // Computing the forward padding
-  if (is_valid) {
-    const TensorIndex padRows = numext::maxi<Index>(
-        0, (outputRows - 1) * row_stride + kernelRowsEff - inputRows);
-    const TensorIndex padCols = numext::maxi<Index>(
-        0, (outputCols - 1) * col_stride + kernelColsEff - inputCols);
-    //padRows = (outputRows - 1) * row_stride + kernelRowsEff - inputRows;
-    //padCols = (outputCols - 1) * col_stride + kernelColsEff - inputCols;
+  const TensorIndex padRows_tmp = (outputRows - 1) * row_stride + kernelRowsEff - inputRows;
+  const TensorIndex padCols_tmp = (outputCols - 1) * col_stride + kernelColsEff - inputCols;
+  const TensorIndex padRows = is_valid ? numext::maxi<Index>(0, padRows_tmp) : padRows_tmp;
+  const TensorIndex padCols = is_valid ? numext::maxi<Index>(0, padCols_tmp) : padCols_tmp;
 
-    const TensorIndex padding_top = padRows / 2;
-    const TensorIndex padding_bottom = padRows - padding_top;
-    const TensorIndex padding_left = padCols / 2;
-    const TensorIndex padding_right = padCols - padding_left;
+  const TensorIndex padding_top = padRows / 2;
+  const TensorIndex padding_bottom = padRows - padding_top;
+  const TensorIndex padding_left = padCols / 2;
+  const TensorIndex padding_right = padCols - padding_left;
 
-    // Reshaped out
-    DSizes<TensorIndex, 2> output_dims;
-    if (isColMajor) {
-      output_dims[0] = kernelFilters;
-      output_dims[1] = outputRows * outputCols;
-      for (int i = 3; i < NumDims; ++i) {
-        output_dims[1] *= out.dimension(i);
-      }
-    } else {
-      output_dims[1] = kernelFilters;
-      output_dims[0] = outputCols * outputRows;
-      for (int i = 0; i < NumDims - 3; ++i) {
-        output_dims[0] *= out.dimension(i);
-      }
+  // Reshaped out
+  DSizes<TensorIndex, 2> output_dims;
+  if (isColMajor) {
+    output_dims[0] = kernelFilters;
+    output_dims[1] = outputRows * outputCols;
+    for (int i = 3; i < NumDims; ++i) {
+      output_dims[1] *= out.dimension(i);
     }
-
-    // Reshaped extract_image_patches(in)
-    DSizes<TensorIndex, 2> pre_contract_dims;
-    if (isColMajor) {
-      pre_contract_dims[0] = kernelChannels * kernelRows * kernelCols;
-      pre_contract_dims[1] = outputRows * outputCols;
-      for (int i = 3; i < NumDims; ++i) {
-        pre_contract_dims[1] *= in.dimension(i);
-      }
-      eigen_assert(output_dims[1] == pre_contract_dims[1]);
-    } else {
-      pre_contract_dims[1] = kernelCols * kernelRows * kernelChannels;
-      pre_contract_dims[0] = outputRows * outputCols;
-      for (int i = 0; i < NumDims - 3; ++i) {
-        pre_contract_dims[0] *= in.dimension(i);
-      }
-      eigen_assert(output_dims[0] == pre_contract_dims[0]);
-    }
-
-    array<TensorIndex, 2> shuffle_dims;
-    shuffle_dims[0] = 1;
-    shuffle_dims[1] = 0;
-
-    array<IndexPair<TensorIndex>, 1> contract_dims;
-    contract_dims[0] = IndexPair<TensorIndex>(1, 0);
-
-    // After the contraction, the kernel will have the desired shape
-    // out_depth X in_shape X kernel_rows X kernel_cols
-    DSizes<TensorIndex, 4> kernel_dims;
-    if (isColMajor) {
-      kernel_dims[0] = kernelFilters;
-      kernel_dims[1] = kernelChannels;
-      kernel_dims[2] = kernelRows;
-      kernel_dims[3] = kernelCols;
-    } else {
-      kernel_dims[3] = kernelFilters;
-      kernel_dims[2] = kernelChannels;
-      kernel_dims[1] = kernelRows;
-      kernel_dims[0] = kernelCols;
-    }
-
-    return choose(
-        Cond<internal::traits<Input>::Layout == ColMajor>(),
-        output_backward.reshape(output_dims)
-            .contract(
-                input
-                    .extract_image_patches(
-                        kernelRows, kernelCols, row_stride, col_stride,
-                        row_in_stride, col_in_stride, 1, 1, padding_top,
-                        padding_bottom, padding_left, padding_right, OutScalar(0))
-                    .reshape(pre_contract_dims)
-                    .shuffle(shuffle_dims),
-                contract_dims)
-            .reshape(kernel_dims),
-        input
-            .extract_image_patches(kernelRows, kernelCols, row_stride, col_stride,
-                                   row_in_stride, col_in_stride, 1, 1,
-                                   padding_top, padding_bottom, padding_left,
-                                   padding_right, OutScalar(0))
-            .reshape(pre_contract_dims)
-            .shuffle(shuffle_dims)
-            .contract(output_backward.reshape(output_dims), contract_dims)
-            .reshape(kernel_dims));
   } else {
-    //const TensorIndex padRows = numext::maxi<Index>(
-    //    0, (outputRows - 1) * row_stride + kernelRowsEff - inputRows);
-    //const TensorIndex padCols = numext::maxi<Index>(
-    //    0, (outputCols - 1) * col_stride + kernelColsEff - inputCols);
-    const TensorIndex padRows = (outputRows - 1) * row_stride + kernelRowsEff - inputRows;
-    const TensorIndex padCols = (outputCols - 1) * col_stride + kernelColsEff - inputCols;
-
-    const TensorIndex padding_top = padRows / 2;
-    const TensorIndex padding_bottom = padRows - padding_top;
-    const TensorIndex padding_left = padCols / 2;
-    const TensorIndex padding_right = padCols - padding_left;
-
-    // Reshaped out
-    DSizes<TensorIndex, 2> output_dims;
-    if (isColMajor) {
-      output_dims[0] = kernelFilters;
-      output_dims[1] = outputRows * outputCols;
-      for (int i = 3; i < NumDims; ++i) {
-        output_dims[1] *= out.dimension(i);
-      }
-    } else {
-      output_dims[1] = kernelFilters;
-      output_dims[0] = outputCols * outputRows;
-      for (int i = 0; i < NumDims - 3; ++i) {
-        output_dims[0] *= out.dimension(i);
-      }
+    output_dims[1] = kernelFilters;
+    output_dims[0] = outputCols * outputRows;
+    for (int i = 0; i < NumDims - 3; ++i) {
+      output_dims[0] *= out.dimension(i);
     }
-
-    // Reshaped extract_image_patches(in)
-    DSizes<TensorIndex, 2> pre_contract_dims;
-    if (isColMajor) {
-      pre_contract_dims[0] = kernelChannels * kernelRows * kernelCols;
-      pre_contract_dims[1] = outputRows * outputCols;
-      for (int i = 3; i < NumDims; ++i) {
-        pre_contract_dims[1] *= in.dimension(i);
-      }
-      eigen_assert(output_dims[1] == pre_contract_dims[1]);
-    } else {
-      pre_contract_dims[1] = kernelCols * kernelRows * kernelChannels;
-      pre_contract_dims[0] = outputRows * outputCols;
-      for (int i = 0; i < NumDims - 3; ++i) {
-        pre_contract_dims[0] *= in.dimension(i);
-      }
-      eigen_assert(output_dims[0] == pre_contract_dims[0]);
-    }
-
-    array<TensorIndex, 2> shuffle_dims;
-    shuffle_dims[0] = 1;
-    shuffle_dims[1] = 0;
-
-    array<IndexPair<TensorIndex>, 1> contract_dims;
-    contract_dims[0] = IndexPair<TensorIndex>(1, 0);
-
-    // After the contraction, the kernel will have the desired shape
-    // out_depth X in_shape X kernel_rows X kernel_cols
-    DSizes<TensorIndex, 4> kernel_dims;
-    if (isColMajor) {
-      kernel_dims[0] = kernelFilters;
-      kernel_dims[1] = kernelChannels;
-      kernel_dims[2] = kernelRows;
-      kernel_dims[3] = kernelCols;
-    } else {
-      kernel_dims[3] = kernelFilters;
-      kernel_dims[2] = kernelChannels;
-      kernel_dims[1] = kernelRows;
-      kernel_dims[0] = kernelCols;
-    }
-
-    return choose(
-        Cond<internal::traits<Input>::Layout == ColMajor>(),
-        output_backward.reshape(output_dims)
-            .contract(
-                input
-                    .extract_image_patches(
-                        kernelRows, kernelCols, row_stride, col_stride,
-                        row_in_stride, col_in_stride, 1, 1, padding_top,
-                        padding_bottom, padding_left, padding_right, OutScalar(0))
-                    .reshape(pre_contract_dims)
-                    .shuffle(shuffle_dims),
-                contract_dims)
-            .reshape(kernel_dims),
-        input
-            .extract_image_patches(kernelRows, kernelCols, row_stride, col_stride,
-                                   row_in_stride, col_in_stride, 1, 1,
-                                   padding_top, padding_bottom, padding_left,
-                                   padding_right, OutScalar(0))
-            .reshape(pre_contract_dims)
-            .shuffle(shuffle_dims)
-            .contract(output_backward.reshape(output_dims), contract_dims)
-            .reshape(kernel_dims));
   }
+
+  // Reshaped extract_image_patches(in)
+  DSizes<TensorIndex, 2> pre_contract_dims;
+  if (isColMajor) {
+    pre_contract_dims[0] = kernelChannels * kernelRows * kernelCols;
+    pre_contract_dims[1] = outputRows * outputCols;
+    for (int i = 3; i < NumDims; ++i) {
+      pre_contract_dims[1] *= in.dimension(i);
+    }
+    eigen_assert(output_dims[1] == pre_contract_dims[1]);
+  } else {
+    pre_contract_dims[1] = kernelCols * kernelRows * kernelChannels;
+    pre_contract_dims[0] = outputRows * outputCols;
+    for (int i = 0; i < NumDims - 3; ++i) {
+      pre_contract_dims[0] *= in.dimension(i);
+    }
+    eigen_assert(output_dims[0] == pre_contract_dims[0]);
+  }
+
+  array<TensorIndex, 2> shuffle_dims;
+  shuffle_dims[0] = 1;
+  shuffle_dims[1] = 0;
+
+  array<IndexPair<TensorIndex>, 1> contract_dims;
+  contract_dims[0] = IndexPair<TensorIndex>(1, 0);
+
+  // After the contraction, the kernel will have the desired shape
+  // out_depth X in_shape X kernel_rows X kernel_cols
+  DSizes<TensorIndex, 4> kernel_dims;
+  if (isColMajor) {
+    kernel_dims[0] = kernelFilters;
+    kernel_dims[1] = kernelChannels;
+    kernel_dims[2] = kernelRows;
+    kernel_dims[3] = kernelCols;
+  } else {
+    kernel_dims[3] = kernelFilters;
+    kernel_dims[2] = kernelChannels;
+    kernel_dims[1] = kernelRows;
+    kernel_dims[0] = kernelCols;
+  }
+
+  return choose(
+      Cond<internal::traits<Input>::Layout == ColMajor>(),
+      output_backward.reshape(output_dims)
+          .contract(
+              input
+                  .extract_image_patches(
+                      kernelRows, kernelCols, row_stride, col_stride,
+                      row_in_stride, col_in_stride, 1, 1, padding_top,
+                      padding_bottom, padding_left, padding_right, OutScalar(0))
+                  .reshape(pre_contract_dims)
+                  .shuffle(shuffle_dims),
+              contract_dims)
+          .reshape(kernel_dims),
+      input
+          .extract_image_patches(kernelRows, kernelCols, row_stride, col_stride,
+                                 row_in_stride, col_in_stride, 1, 1,
+                                 padding_top, padding_bottom, padding_left,
+                                 padding_right, OutScalar(0))
+          .reshape(pre_contract_dims)
+          .shuffle(shuffle_dims)
+          .contract(output_backward.reshape(output_dims), contract_dims)
+          .reshape(kernel_dims));
 }
 
 }  // end namespace Eigen

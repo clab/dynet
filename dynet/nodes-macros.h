@@ -3,9 +3,6 @@
 
 #include "dynet/dim.h"
 
-
-
-
 namespace dynet {
 inline bool LooksLikeVector(const Dim& d) {
   if (d.ndims() == 1) return true;
@@ -38,7 +35,6 @@ inline bool LooksLikeVector(const Dim& d) {
                 const Tensor& dEdf, \
                 unsigned i, \
                 Tensor& dEdxi) const;
-
 
 // A macro to instantiate templated device functions
 // If the implementation is the same for both devices (using Eigen Tensors),
@@ -136,8 +132,5 @@ inline bool LooksLikeVector(const Dim& d) {
     else { throw std::runtime_error("Invalid device in MyNode::backward_impl"); } \
   }
 #endif
+
 #endif
-
-
-
-

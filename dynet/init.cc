@@ -200,11 +200,7 @@ void initialize(DynetParams& params) {
       devices.push_back(gpu);
   } else {
 #ifdef THREAD_POOL
-#if THREAD_POOL > 1
     devices.push_back(new Device_ThreadPool(devices.size(), params.mem_descriptor, params.shared_parameters, THREAD_POOL));
-#else
-    devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
-#endif
 #else
     devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
 #endif
