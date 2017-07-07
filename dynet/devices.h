@@ -4,22 +4,13 @@
 #include <string>
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/cuda.h"
-
-#ifndef __CUDACC__
-#include <Eigen/Eigen>
-#endif
-
 #define EIGEN_USE_THREADS
-#include <unsupported/Eigen/CXX11/Tensor>
-#include <unsupported/Eigen/CXX11/ThreadPool>
-#include <unsupported/Eigen/CXX11/TensorSymmetry>
-#include <unsupported/Eigen/CXX11/src/Tensor/TensorDeviceThreadPool.h>
-
 
 namespace Eigen {
   struct DefaultDevice;
   class CudaStreamDevice;
   struct GpuDevice;
+  struct ThreadPoolDevice;
 }
 
 namespace dynet {
@@ -87,13 +78,13 @@ class Device_CPU : public Device {
 };
 
 class Device_ThreadPool : public Device {
-  public:
-   typedef Eigen::ThreadPoolDevice EigenDevice;
-   explicit Device_ThreadPool(int my_id, const DeviceMempoolSizes &mb, bool shared, int num_cores);
-   ~Device_ThreadPool();
-   CPUAllocator cpu_mem;
-   Eigen::ThreadPoolDevice* edevice;
-   MemAllocator* shmem;
+ public:
+  typedef Eigen::ThreadPoolDevice EigenDevice;
+  explicit Device_ThreadPool(int my_id, const DeviceMempoolSizes &mb, bool shared, int num_cores);
+  ~Device_ThreadPool();
+  CPUAllocator cpu_mem;
+  Eigen::ThreadPoolDevice* edevice;
+  MemAllocator* shmem;
 };
 
 } // namespace dynet

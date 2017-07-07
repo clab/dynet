@@ -4,6 +4,10 @@
 #include <iostream>
 #include <unsupported/Eigen/CXX11/Tensor>
 
+#define EIGEN_USE_THREADS
+#include <unsupported/Eigen/CXX11/ThreadPool>
+#include <unsupported/Eigen/CXX11/src/Tensor/TensorDeviceThreadPool.h>
+
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
@@ -27,7 +31,6 @@ DeviceMempoolSizes::DeviceMempoolSizes(size_t fx_s, size_t dEdfs_s, size_t ps_s)
 
 DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
   vector<string> strs;
-
   boost::algorithm::split(strs, descriptor, boost::is_any_of(","));
   if (strs.size() == 1) {
     size_t total_size = stoi(strs[0]);
@@ -124,7 +127,8 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
 
 Device_CPU::~Device_CPU() {}
 
-Device_ThreadPool::Device_ThreadPool(int my_id, const DeviceMempoolSizes & mbs, bool shared, int num_cores) : Device(my_id, DeviceType::ThreadPool, &cpu_mem), shmem(mem) {
+Device_ThreadPool::Device_ThreadPool(int my_id, const DeviceMempoolSizes & mbs, bool shared, int num_cores) :
+    Device(my_id, DeviceType::ThreadPool, &cpu_mem), shmem(mem) {
   if (shared) shmem = new SharedAllocator();
   kSCALAR_MINUSONE = (float *) mem->malloc(sizeof(float));
   *kSCALAR_MINUSONE = -1;
