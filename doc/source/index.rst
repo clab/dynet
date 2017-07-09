@@ -56,6 +56,7 @@ And we welcome your contributions!
    :maxdepth: 2
 
    contributing
+   citing
 
 
 
