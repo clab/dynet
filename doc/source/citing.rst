@@ -1,4 +1,4 @@
-.. _contributing:
+.. _citing:
 
 Citing/Logos
 ============
