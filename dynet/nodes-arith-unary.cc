@@ -240,4 +240,37 @@ void Abs::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(Abs)
 
+// ************* LogGamma *************
+
+#ifndef __CUDACC__
+
+string LogGamma::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "lgamma(" << arg_names[0] << ')';
+  return os.str();
+}
+
+Dim LogGamma::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in LogGamma")
+  return xs[0];
+}
+
+#endif
+
+template<class MyDevice>
+void LogGamma::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().lgamma();
+}
+
+template<class MyDevice>
+void LogGamma::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().digamma() * dEdf.tvec();
+}
+DYNET_NODE_INST_DEV_IMPL(LogGamma)
+
 }

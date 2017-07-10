@@ -8,7 +8,29 @@ Coding Tips
 One of the most common things that one will want to do to modify DyNet is to add a new operation
 to calculate a new function.
 You can find more information on how to do so at the end of the tutorial slides
-`here <http://phontron.com/slides/emnlp2016-dynet-tutorial-part1.pdf>`_.
+`here <http://phontron.com/slides/emnlp2016-dynet-tutorial-part1.pdf>`_ (note that some file
+names are old).
+
+Taking a look at the existing operations in the ``nodes-XXX.h`` and ``nodes-XXX.cc`` files
+will be the best guide in creating new operations. Here are some fine-grained tips for
+those that want to dive into the process.
+
+1. ``fx`` is a pointer to the (preallocated) location for the result
+   of forward to be stored
+2. ``fx`` is not initialized, so after calling forward ``fx`` must contain the correct answer
+3. dEdxi MUST **ACCUMULATE** a result since multiple calls to forward may depend on
+   the same ``x_i``. Even, e.g., Identity must be implemented as ``dEdx1 += dEdf``.
+4. scalars results of forward are placed in ``fx.v[0]``
+5. DyNet manages its own memory, not Eigen, and it is configured with the
+   EIGEN_NO_MALLOC option. If you get an error about Eigen attempting to allocate
+   memory, it is (probably) because of an implicit creation of a temporary variable.
+   If you really do need a temporary variable, its capacity must be requested by
+   Node::aux_storage_size
+
+And here are some notes on debugging problems with new operations
+
+1. fx is uninitialized when forward is called- are you relying on it being 0?
+2. dEdxi must accumulate (see point 3 above!)
 
 Coding Practices
 ----------------
