@@ -26,6 +26,8 @@ Dim PairwiseRankLoss::dim_forward(const vector<Dim>& xs) const {
   return xs[0].bd >= xs[1].bd ? xs[0] : xs[1];
 }
 
+#endif
+
 template<class MyDevice>
 void PairwiseRankLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   fx.tvec().device(*dev.edevice) = xs[0]->tvec().binaryExpr(xs[1]->tvec(), FPairwiseRankLoss(margin));
@@ -45,8 +47,6 @@ void PairwiseRankLoss::backward_dev_impl(const MyDevice & dev,
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PairwiseRankLoss)
-
-#endif
 
 // ************* BinaryLogLoss *************
 

@@ -16,6 +16,7 @@
 #if HAVE_CUDA
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
+#include "dynet/cudnn-ops.h"
 #endif
 
 using namespace std;
