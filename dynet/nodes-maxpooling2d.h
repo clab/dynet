@@ -4,6 +4,10 @@
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
 
+#if HAVE_CUDNN
+#include "dynet/cudnn-ops.h"
+#endif
+
 namespace dynet {
 
 // maxpooling2d
