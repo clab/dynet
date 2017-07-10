@@ -1,4 +1,4 @@
-#include "dynet/nodes.h"
+#include "dynet/nodes-pickneglogsoftmax.h"
 
 #include "dynet/nodes-macros.h"
 
@@ -10,6 +10,8 @@
 using namespace std;
 
 namespace dynet {
+
+// ************* PickNegLogSoftmax *************
 
 #ifndef __CUDACC__
 

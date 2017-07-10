@@ -5,14 +5,11 @@
 #include <stdexcept>
 
 #include "dynet/nodes-macros.h"
-#include "dynet/nodes.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
 #define DYNET_SKIP_CUDA_CONTRACTIONS
 
-
 #if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
-#include "dynet/nodes.cc"
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
 #include "dynet/cuda-matrix-multiply.h"
@@ -22,6 +19,8 @@
 using namespace std;
 
 namespace dynet {
+
+// ************* InnerProduct3D_1D *************
 
 #ifndef __CUDACC__
 
@@ -45,32 +44,6 @@ Dim InnerProduct3D_1D::dim_forward(const vector<Dim>& xs) const {
   if (xs.size() == 3) d.bd = max(d.bd, xs[2].bd);
   if (xs.size() == 3 && xs[2].single_batch() != d.single_batch()) {
     ostringstream s; s << "Bad bias dimensions in InnerProduct3D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  return d;
-}
-
-string InnerProduct3D_1D_1D::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "dotdot(" << arg_names[0] << "," << arg_names[1] << "," << arg_names[2] << ')';
-  if (arg_names.size() == 4) s << " + " << arg_names[3];
-  return s.str();
-}
-
-Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
-  if (xs.size() != 3 && xs.size() != 4)
-    throw std::invalid_argument("Expected three or four arguments in InnerProduct3D_1D");
-  if (xs[0].ndims() != 3 ||
-      !LooksLikeVector(xs[1]) ||
-      !LooksLikeVector(xs[2])) {
-    // TODO fix add check
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
-    throw std::invalid_argument(s.str());
-  }
-  Dim d({xs[0].size(0)}, max(max(xs[0].bd, xs[1].bd), xs[2].bd));
-  if (xs.size() == 4) d.bd = max(d.bd, xs[3].bd);
-  if (xs.size() == 4 && xs[3] != d) {
-    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
     throw std::invalid_argument(s.str());
   }
   return d;
@@ -272,6 +245,38 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(InnerProduct3D_1D)
+
+// ************* InnerProduct3D_1D_1D *************
+
+#ifndef __CUDACC__
+
+string InnerProduct3D_1D_1D::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "dotdot(" << arg_names[0] << "," << arg_names[1] << "," << arg_names[2] << ')';
+  if (arg_names.size() == 4) s << " + " << arg_names[3];
+  return s.str();
+}
+
+Dim InnerProduct3D_1D_1D::dim_forward(const vector<Dim>& xs) const {
+  if (xs.size() != 3 && xs.size() != 4)
+    throw std::invalid_argument("Expected three or four arguments in InnerProduct3D_1D");
+  if (xs[0].ndims() != 3 ||
+      !LooksLikeVector(xs[1]) ||
+      !LooksLikeVector(xs[2])) {
+    // TODO fix add check
+    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  Dim d({xs[0].size(0)}, max(max(xs[0].bd, xs[1].bd), xs[2].bd));
+  if (xs.size() == 4) d.bd = max(d.bd, xs[3].bd);
+  if (xs.size() == 4 && xs[3] != d) {
+    ostringstream s; s << "Bad input dimensions in InnerProduct3D_1D_1D: " << xs;
+    throw std::invalid_argument(s.str());
+  }
+  return d;
+}
+
+#endif
 
 //   Y_ij = A_ijk * B_k * C_j (+ D_i)
 template<class MyDevice>

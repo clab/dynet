@@ -3,11 +3,11 @@
 set(dynet_library_SRCS
     aligned-mem-pool.cc
     cfsm-builder.cc
-    dynet.cc
     deep-lstm.cc
     devices.cc
     dict.cc
     dim.cc
+    dynet.cc
     exec.cc
     expr.cc
     fast-lstm.cc
@@ -17,34 +17,51 @@ set(dynet_library_SRCS
     gru.cc
     hsm-builder.cc
     init.cc
+    io.cc
     lstm.cc
     mem.cc
     model.cc
-    nodes.cc
-    nodes-common.cc
+    nodes-activations.cc
+    nodes-affinetransform.cc
+    nodes-arith-const.cc
+    nodes-arith-cwise.cc
+    nodes-arith-scalar.cc
+    nodes-arith-sum.cc
+    nodes-arith-unary.cc
+    nodes-concat.cc
+    nodes-const.cc
     nodes-contract.cc
     nodes-conv.cc
     nodes-conv2d.cc
-    nodes-maxpooling2d.cc
-    nodes-pickneglogsoftmax.cc
-    nodes-matrixmultiply.cc
+    nodes-dropout.cc
+    nodes-flow.cc
     nodes-hinge.cc
-    nodes-affinetransform.cc
-    nodes-similarities.cc
+    nodes-linalg.cc
+    nodes-logsumexp.cc
+    nodes-losses.cc
+    nodes-matrixmultiply.cc
+    nodes-maxpooling2d.cc
+    nodes-minmax.cc
+    nodes-moments.cc
+    nodes-normalization.cc
     nodes-norms.cc
-    nodes-unary-arith.cc
+    nodes-pickneglogsoftmax.cc
+    nodes-random.cc
+    nodes-select.cc
+    nodes-similarities.cc
+    nodes-softmaxes.cc
+    nodes-trig.cc
     param-init.cc
     param-nodes.cc
     pretrain.cc
-    rnn.cc
     rnn-state-machine.cc
+    rnn.cc
     saxe-init.cc
     shadow-params.cc
     tensor.cc
     training.cc
     treelstm.cc
     weight-decay.cc
-    io.cc
 )
 if(ENABLE_BOOST)
   list(APPEND dynet_library_SRCS mp.cc)
@@ -53,14 +70,18 @@ endif()
 # Headers:
 set(dynet_library_HDRS
     aligned-mem-pool.h
-    cfsm-builder.h
-    cudnn-ops.h
     c2w.h
-    dynet.h
+    cfsm-builder.h
+    cuda-matrix-multiply.h
     cuda.h
+    cudnn-ops.h
+    deep-lstm.h
     devices.h
     dict.h
     dim.h
+    dynet-helper.h
+    dynet.h
+    except.h
     exec.h
     expr.h
     fast-lstm.h
@@ -68,35 +89,79 @@ set(dynet_library_HDRS
     globals.h
     gpu-kernels.h
     gpu-ops.h
+    grad-check.h
     graph.h
     gru.h
     hsm-builder.h
     init.h
+    io.h
     lstm.h
     mem.h
     model.h
-    nodes.h
     nodes-contract.h
     nodes-conv.h
+    nodes-macros.h
+    nodes.h
     op-helper.h
+    param-init.h
     param-nodes.h
+    pretrain.h
     rnn-state-machine.h
     rnn.h
     saxe-init.h
     shadow-params.h
+    sig.h
     simd-functors.h
+    str-util.h
     tensor.h
     timing.h
     training.h
     treelstm.h
-    except.h
-    nodes-macros.h
     weight-decay.h
-    io.h
 )
 if(ENABLE_BOOST)
   list(APPEND dynet_library_HDRS mp.h)
 endif()
+
+set(dynet_gpu_SRCS
+    cuda.cc
+    cudnn-ops.cu
+    gpu-ops.cu 
+    gpu-nodes-activations.cu
+    gpu-nodes-affinetransform.cu
+    gpu-nodes-arith-const.cu
+    gpu-nodes-arith-cwise.cu
+    gpu-nodes-arith-scalar.cu
+    gpu-nodes-arith-sum.cu
+    gpu-nodes-arith-unary.cu
+    gpu-nodes-concat.cu
+    gpu-nodes-const.cu
+    gpu-nodes-contract.cu
+    gpu-nodes-conv2d.cu
+    gpu-nodes-conv.cu
+    gpu-nodes-dropout.cu
+    gpu-nodes-flow.cu
+    gpu-nodes-hinge.cu
+    gpu-nodes-linalg.cu
+    gpu-nodes-logsumexp.cu
+    gpu-nodes-losses.cu
+    gpu-nodes-matrixmultiply.cu
+    gpu-nodes-maxpooling2d.cu
+    gpu-nodes-minmax.cu
+    gpu-nodes-moments.cu
+    gpu-nodes-normalization.cu
+    gpu-nodes-norms.cu
+    gpu-nodes-pickneglogsoftmax.cu
+    gpu-nodes-random.cu
+    gpu-nodes-select.cu
+    gpu-nodes-similarities.cu
+    gpu-nodes-softmaxes.cu
+    gpu-nodes-trig.cu
+    gpu-param-nodes.cu
+    gpu-tensor.cu
+    gpu-training.cu
+    gpu-model.cu
+)
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 if (NOT MSVC)
@@ -150,10 +215,10 @@ if(WITH_CUDA_BACKEND)
     list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-nodes-maxpooling2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu gpu-nodes-pickneglogsoftmax.cu gpu-nodes-matrixmultiply.cu gpu-nodes-hinge.cu gpu-nodes-affinetransform.cu gpu-nodes-similarities.cu gpu-nodes-norms.cu gpu-nodes-unary-arith.cu)
+    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} ${dynet_gpu_SRCS})
   else()
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-nodes-maxpooling2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu gpu-nodes-pickneglogsoftmax.cu gpu-nodes-matrixmultiply.cu gpu-nodes-hinge.cu gpu-nodes-affinetransform.cu gpu-nodes-similarities.cu gpu-nodes-norms.cu gpu-nodes-unary-arith.cu OPTIONS --compiler-options "-fPIC")
+    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} ${dynet_gpu_SRCS} OPTIONS --compiler-options "-fPIC")
   endif()
   set_target_properties(gdynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
@@ -172,4 +237,3 @@ if(WITH_CUDA_BACKEND)
 endif(WITH_CUDA_BACKEND)
 
 # target_compile_features(dynet PRIVATE cxx_range_for)
-
