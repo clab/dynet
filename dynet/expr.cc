@@ -197,4 +197,6 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
+Expression vanilla_lstm(const Expression& x, const Expression& hc){return Expression(x.pg, x.pg->add_function<VanillaLSTM>({x.i,hc.i}));}
+
 }  // namespace dynet

@@ -2195,6 +2195,50 @@ void WeightNormalization::backward_dev_impl(const MyDevice & dev,
     dEdxi.t<0>().device(*dev.edevice) += ((dEdf.tvec() * xs[0]->tvec()).sum(red_axis)) /  xs[0]->tvec().square().sum(red_axis).sqrt();
   }
 }
+
 DYNET_NODE_INST_DEV_IMPL(WeightNormalization)
+
+//size_t VanillaLSTM::aux_storage_size() const {
+//  return dim.size() * sizeof(float);
+//}
+
+template<class MyDevice>
+void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Eigen::DSizes<ptrdiff_t, 3> indices_h(0,0,0);
+  Eigen::DSizes<ptrdiff_t, 3> indices_c(1,0,0);
+  array<int, 2> two_dims{{(int)xs[0]->d[1], (int)xs[0]->d.bd}};
+  Eigen::DSizes<ptrdiff_t, 3> sizes(1, xs[0]->d[1], static_cast<ptrdiff_t>(xs[0]->d.bd));
+  array<Eigen::IndexPair<int>, 1> product_dims = { Eigen::IndexPair<int>(1, 0) }; // traditional matrix product according to https://github.com/RLovelett/eigen/tree/master/unsupported/Eigen/CXX11/src/Tensor#contraction
+  // xs[0] = x_t
+  // xs[1] = [h_tm1,c_tm1]
+  // xs[2] = W_i
+  // xs[3] = b_i
+  // xs[4] = W_f
+  // xs[5] = b_f
+  // xs[6] = W_o
+  // xs[7] = b_o
+  // xs[8] = W_g
+  // xs[9] = b_g
+  // TODO: put all params into one big tensor
+  DYNET_ASSERT(xs.size() == 10, "Failed dimension check in VanillaLSTM::forward");
+  // c_t = sigmoid(h_tm1 * W_i + b_i) * tanh(h_tm1 * W_g + b_g) + sigmoid(h_tm1 * W_f + b_f + 1) * c_tm1
+  fx.tb<2>().slice(indices_c, sizes).device(*dev.edevice) = ((xs[0]->tb<2>().contract(xs[2]->tb<1>(), product_dims) + xs[3]->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>()) * (xs[0]->tb<2>().contract(xs[8]->tb<1>(), product_dims) + xs[9]->tb<1>()).tanh()) + (xs[0]->tb<2>().contract(xs[4]->tb<1>(), product_dims) + xs[5]->tb<1>() + xs[5]->tb<1>().constant(1)).unaryExpr(scalar_logistic_sigmoid_op<float>()) * xs[1]->tb<2>().slice(indices_c, sizes);
+  // h_t = sigmoid(h_tm1 * W_o + b_o) * tanh(c_t)
+  fx.tb<2>().slice(indices_h, sizes).device(*dev.edevice) = (xs[0]->tb<2>().contract(xs[6]->tb<1>(), product_dims) + xs[7]->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>()) * fx.tb<2>().slice(indices_c, sizes).tanh();
+}
+
+template<class MyDevice>
+void VanillaLSTM::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+}
+
+DYNET_NODE_INST_DEV_IMPL(VanillaLSTM)
+
+
+
 
 } // namespace dynet

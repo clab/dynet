@@ -2091,6 +2091,25 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
  */
 Expression weight_norm(const Expression& w, const Expression& g);
 
+/**
+ * \ingroup normoperations
+ * \brief Weight normalization
+ * \details Performs weight normalization :
+ *
+ * \f$
+ * \begin{split}
+ *    \hat{w} &= g\frac{w}{\Vert w\Vert}\\
+ * \end{split}
+ * \f$
+ *
+ * Reference : [Salimans, Kingma 2016](https://arxiv.org/abs/1602.07868)
+ *
+ * \param w Input expression (weight parameter)
+ * \param g Gain (scalar expression, usually also a parameter)
+ * \return An expression of the same dimension as `w`
+ */
+Expression vanilla_lstm(const Expression& x, const Expression& hc);
+
 }  // namespace dynet
 
 #endif

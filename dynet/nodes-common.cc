@@ -993,4 +993,16 @@ Dim WeightNormalization::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+string VanillaLSTM::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "vanilla_lstm(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return s.str();
+}
+
+Dim VanillaLSTM::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in VanillaLSTM");
+  DYNET_ARG_CHECK(xs[1].size()/2 == xs[0].size()," Size of input parameter in VanillaLSTM should be half of state size (" << xs[1].size() << "/2), received " << xs[0].size());
+  return xs[1];
+}
+
 } // namespace dynet
