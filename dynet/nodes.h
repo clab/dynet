@@ -17,6 +17,20 @@ struct AddVectorToAllColumns : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+// with a single argument x \in R^{n x m}
+// y_i = \sum_j x_i,j / m
+struct AverageColumns : public Node {
+  template <typename T> explicit AverageColumns(const T& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// sum along a single dimension
+struct SumDimension : public Node {
+  template <typename T> explicit SumDimension(const T& a, unsigned d) : Node(a), dimension(d) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  unsigned dimension;
+};
+
 // y = L_sparsemax(x_0; q)
 // where x_0 is a std::vector of "unnormalized" probabilities
 // q are the std::vector of labels
@@ -126,13 +140,6 @@ struct Reshape : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   Dim to;
-};
-
-// y_i = \sum_{j=1}^n x_1:{i-1+j}
-struct KMHNGram : public Node {
-  explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) : Node(a), n(n) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  unsigned n;  // width, n=2 for Karl's paper
 };
 
 // n_{i,j} ~ N(0,stddev)

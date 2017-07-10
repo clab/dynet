@@ -11,31 +11,6 @@
 
 namespace dynet {
 
-// with a single argument x \in R^{n x m}
-// y_i = \sum_j x_i,j / m
-struct AverageColumns : public Node {
-  template <typename T> explicit AverageColumns(const T& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-};
-
-/* Deprecated
-// y = x_1 *conv x_2
-// x_1 \in R^{d x s} (input)
-// x_2 \in R^{d x m} (filter)
-struct Conv1DNarrow : public Node {
-  explicit Conv1DNarrow(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-};
-
-// y = x_1 *conv x_2
-// x_1 \in R^{d x s} (input)
-// x_2 \in R^{d x m} (filter)
-struct Conv1DWide : public Node {
-  explicit Conv1DWide(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-};
-*/
-
 // y = x_1 *filter x_2
 // x_1 \in R^{d x s} (input)
 // x_2 \in R^{d x m} (filter)
@@ -62,13 +37,6 @@ struct KMaxPooling : public Node {
   unsigned pooled_dim;
   unsigned first_dim;
   unsigned second_dim;
-};
-
-// sum along a single dimension
-struct SumDimension : public Node {
-  template <typename T> explicit SumDimension(const T& a, unsigned d) : Node(a), dimension(d) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  unsigned dimension;
 };
 
 // conv2d 
@@ -117,6 +85,13 @@ struct MaxPooling2D: public Node {
 #if HAVE_CUDNN
   mutable CudnnMaxPooling2DOp* cudnn_maxpool_op_ = NULL;
 #endif
+};
+
+// y_i = \sum_{j=1}^n x_1:{i-1+j}
+struct KMHNGram : public Node {
+  explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) : Node(a), n(n) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  unsigned n;  // width, n=2 for Karl's paper
 };
 
 
