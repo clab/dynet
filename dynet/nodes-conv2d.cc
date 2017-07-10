@@ -1,4 +1,4 @@
-#include "dynet/nodes-conv.h"
+#include "dynet/nodes-conv2d.h"
 
 #include <algorithm>
 #include <sstream>
@@ -9,12 +9,14 @@
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/op-helper.h"
 #include "third_party/eigen_spatial_convolutions.h"
 #include "third_party/eigen_backward_spatial_convolutions.h"
 
 #if HAVE_CUDA
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
+#include "dynet/cudnn-ops.h"
 #endif
 
 using namespace std;
