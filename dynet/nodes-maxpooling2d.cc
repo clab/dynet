@@ -1,4 +1,4 @@
-#include "dynet/nodes-conv.h"
+#include "dynet/nodes-maxpooling2d.h"
 
 #include <sstream>
 #include <limits>
@@ -8,6 +8,7 @@
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/op-helper.h"
 #include "third_party/eigen_pooling.h"
 
 #if HAVE_CUDA

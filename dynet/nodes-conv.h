@@ -3,11 +3,6 @@
 
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/op-helper.h"
-
-#if HAVE_CUDNN
-#include "dynet/cudnn-ops.h"
-#endif
 
 namespace dynet {
 
@@ -39,54 +34,6 @@ struct KMaxPooling : public Node {
   unsigned second_dim;
 };
 
-// conv2d 
-// y = x_1 *conv2d x_2
-// x_1 \in R^{H x W x Ci x N} (input)
-// x_2 \in R^{H x W x Ci x Co} (filter)
-// stride[0] corresponds to H
-// stride[1] corresponds to W
-// is_valid: true for 'VALID' and false for 'SAME'
-struct Conv2D: public Node {
-  explicit Conv2D(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& s,
-    const bool padding_type = true)
-      : Node(a), stride(s), is_valid(padding_type) {}
-  virtual bool supports_multibatch() const override { return true; }
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  size_t aux_storage_size() const override;
-  const std::vector<unsigned> stride;
-  const bool is_valid;
-
- private:
-#if HAVE_CUDNN
-  mutable CudnnConvOp* cudnn_conv_op_ = NULL;
-#endif
-};
-
-// maxpooling2d
-// y = x_1 * maxpooling2d
-// x_1 \in R^{H x W x Ci x N} (input)
-// ksize[0] corresponds to H
-// ksize[1] corresponds to W
-// stride[0] corresponds to H
-// stride[1] corresponds to W
-// is_valid: true for 'VALID' and false for 'SAME'
-struct MaxPooling2D: public Node {
-  explicit MaxPooling2D(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& k, const std::vector<unsigned>& s,
-    const bool padding_type = true)
-      : Node(a), ksize(k), stride(s), is_valid(padding_type) {}
-  virtual bool supports_multibatch() const override { return true; }
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  size_t aux_storage_size() const override;
-  const std::vector<unsigned> ksize;
-  const std::vector<unsigned> stride;
-  const bool is_valid;
-
- private:
-#if HAVE_CUDNN
-  mutable CudnnMaxPooling2DOp* cudnn_maxpool_op_ = NULL;
-#endif
-};
-
 // y_i = \sum_{j=1}^n x_1:{i-1+j}
 struct KMHNGram : public Node {
   explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) : Node(a), n(n) {}
@@ -94,6 +41,16 @@ struct KMHNGram : public Node {
   unsigned n;  // width, n=2 for Karl's paper
 };
 
+// hyperparameter: width > 1
+// x_1 is a std::vector in R^n, which we write x
+// y is a std::vector in R^{n / width}
+// y_i = max_{x_{i * width - width + 1}, ..., x_{i * width}}
+struct MaxPooling1D : public Node {
+  MaxPooling1D(const std::initializer_list<VariableIndex>& a, unsigned w) : Node(a), width(w) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  unsigned width;
+  mutable std::vector<unsigned> ind;
+};
 
 } // namespace dynet
 

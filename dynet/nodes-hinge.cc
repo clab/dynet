@@ -1,10 +1,12 @@
-#include "dynet/nodes.h"
+#include "dynet/nodes-hinge.h"
 
 #include "dynet/nodes-macros.h"
 
 using namespace std;
 
 namespace dynet {
+
+// ************* Hinge *************
 
 #ifndef __CUDACC__
 

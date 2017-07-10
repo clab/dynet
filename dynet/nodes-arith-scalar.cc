@@ -1,4 +1,4 @@
-#include "dynet/nodes.h"
+#include "dynet/nodes-arith-scalar.h"
 
 #include "dynet/nodes-macros.h"
 

@@ -1,4 +1,4 @@
-#include "dynet/nodes.h"
+#include "dynet/nodes-softmaxes.h"
 
 #include "dynet/nodes-macros.h"
 #include "dynet/functors.h"
