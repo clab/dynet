@@ -2221,6 +2221,7 @@ void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   // xs[9] = b_g
   // TODO: put all params into one big tensor
   DYNET_ASSERT(xs.size() == 10, "Failed dimension check in VanillaLSTM::forward");
+  // TODO: we could put all matrix multiplications into one operation, but would probably have to allocate auxiliary memory in that case
   // c_t = sigmoid(h_tm1 * W_i + b_i) * tanh(h_tm1 * W_g + b_g) + sigmoid(h_tm1 * W_f + b_f + 1) * c_tm1
   fx.tb<2>().slice(indices_c, sizes).device(*dev.edevice) = ((xs[0]->tb<2>().contract(xs[2]->tb<1>(), product_dims) + xs[3]->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>()) * (xs[0]->tb<2>().contract(xs[8]->tb<1>(), product_dims) + xs[9]->tb<1>()).tanh()) + (xs[0]->tb<2>().contract(xs[4]->tb<1>(), product_dims) + xs[5]->tb<1>() + xs[5]->tb<1>().constant(1)).unaryExpr(scalar_logistic_sigmoid_op<float>()) * xs[1]->tb<2>().slice(indices_c, sizes);
   // h_t = sigmoid(h_tm1 * W_o + b_o) * tanh(c_t)
