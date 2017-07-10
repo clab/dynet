@@ -1,4 +1,4 @@
-#include "dynet/nodes.h"
+#include "dynet/nodes-logsumexp.h"
 
 #include "dynet/nodes-macros.h"
 

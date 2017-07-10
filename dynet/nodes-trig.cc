@@ -1,4 +1,4 @@
-#include "dynet/nodes.h"
+#include "dynet/nodes-trig.h"
 
 #include "dynet/nodes-macros.h"
 #include "dynet/simd-functors.h"
@@ -7,7 +7,7 @@ using namespace std;
 
 namespace dynet {
 
-// ************* *************
+// ************* Tanh *************
 
 #ifndef __CUDACC__
 
