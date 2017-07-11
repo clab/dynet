@@ -2204,28 +2204,52 @@ DYNET_NODE_INST_DEV_IMPL(WeightNormalization)
 
 template<class MyDevice>
 void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Eigen::DSizes<ptrdiff_t, 3> indices_h(0,0,0);
-  Eigen::DSizes<ptrdiff_t, 3> indices_c(1,0,0);
-  array<int, 2> two_dims{{(int)xs[0]->d[1], (int)xs[0]->d.bd}};
-  Eigen::DSizes<ptrdiff_t, 3> sizes(1, xs[0]->d[1], static_cast<ptrdiff_t>(xs[0]->d.bd));
+  DYNET_ASSERT(xs.size() == 14, "Failed dimension check in VanillaLSTM::forward");
+
+  const Tensor *x_t = xs[0];
+
+  unsigned hidden_dim_size = x_t->d[0];
+  unsigned batch_size = x_t->d.bd;
+
+  // xs[1] = [h_tm1,c_tm1] (TODO: device & mempool correct?)
+  // un-convention: xs[1] stores h and c such that both are separate in memory: {hidden_dim_size, batch_size, h_or_c}
+  // in this way we can return 2 vectors, but still have them separate in memory; the caller is responsible for separating the outputs properly
+  Tensor h_tm1(Dim({hidden_dim_size}, batch_size), xs[1]->v, fx.device, DeviceMempool::FXS);
+  Tensor c_tm1(Dim({hidden_dim_size}, batch_size), xs[1]->v + hidden_dim_size * batch_size, fx.device, DeviceMempool::FXS);
+
+  // TODO: might later put these into one matrix- + one bias-tensor (for separate initialization), but let's first see how things tie in with the LSTMBuilder
+  const Tensor *W_i = xs[2];
+  const Tensor *W_f = xs[3];
+  const Tensor *W_o = xs[4];
+  const Tensor *W_g = xs[5];
+  const Tensor *R_i = xs[6];
+  const Tensor *R_f = xs[7];
+  const Tensor *R_o = xs[8];
+  const Tensor *R_g = xs[9];
+  const Tensor *b_i = xs[10];
+  const Tensor *b_f = xs[11];
+  const Tensor *b_o = xs[12];
+  const Tensor *b_g = xs[13];
+
   array<Eigen::IndexPair<int>, 1> product_dims = { Eigen::IndexPair<int>(1, 0) }; // traditional matrix product according to https://github.com/RLovelett/eigen/tree/master/unsupported/Eigen/CXX11/src/Tensor#contraction
-  // xs[0] = x_t
-  // xs[1] = [h_tm1,c_tm1]
-  // xs[2] = W_i
-  // xs[3] = b_i
-  // xs[4] = W_f
-  // xs[5] = b_f
-  // xs[6] = W_o
-  // xs[7] = b_o
-  // xs[8] = W_g
-  // xs[9] = b_g
-  // TODO: put all params into one big tensor
-  DYNET_ASSERT(xs.size() == 10, "Failed dimension check in VanillaLSTM::forward");
-  // TODO: we could put all matrix multiplications into one operation, but would probably have to allocate auxiliary memory in that case
-  // c_t = sigmoid(h_tm1 * W_i + b_i) * tanh(h_tm1 * W_g + b_g) + sigmoid(h_tm1 * W_f + b_f + 1) * c_tm1
-  fx.tb<2>().slice(indices_c, sizes).device(*dev.edevice) = ((xs[0]->tb<2>().contract(xs[2]->tb<1>(), product_dims) + xs[3]->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>()) * (xs[0]->tb<2>().contract(xs[8]->tb<1>(), product_dims) + xs[9]->tb<1>()).tanh()) + (xs[0]->tb<2>().contract(xs[4]->tb<1>(), product_dims) + xs[5]->tb<1>() + xs[5]->tb<1>().constant(1)).unaryExpr(scalar_logistic_sigmoid_op<float>()) * xs[1]->tb<2>().slice(indices_c, sizes);
-  // h_t = sigmoid(h_tm1 * W_o + b_o) * tanh(c_t)
-  fx.tb<2>().slice(indices_h, sizes).device(*dev.edevice) = (xs[0]->tb<2>().contract(xs[6]->tb<1>(), product_dims) + xs[7]->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>()) * fx.tb<2>().slice(indices_c, sizes).tanh();
+
+  // separated outputs (TODO: device & mempool correct?)
+  Tensor h_t(Dim({hidden_dim_size}, batch_size), fx.v, fx.device, DeviceMempool::FXS);
+  Tensor c_t(Dim({hidden_dim_size}, batch_size), fx.v + hidden_dim_size * batch_size, fx.device, DeviceMempool::FXS);
+
+  // TODO: we should put all matrix multiplications into one operation, but will probably have to allocate auxiliary memory for that
+  // c_t = sigmoid(x_t*W_i + h_tm1*R_i + b_i)
+  //       * tanh(x_t*W_g + h_tm1*R_g + b_g)
+  //       + sigmoid(x_t*W_f + h_tm1*R_f + b_f + 1)
+  //       * c_tm1
+  c_t.tb<2>().device(*dev.edevice) = ( (x_t->tb<2>().contract(W_i->tb<1>(), product_dims) + h_tm1.tb<2>().contract(R_i->tb<1>(), product_dims) + b_i->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>())
+                                     * (x_t->tb<2>().contract(W_g->tb<1>(), product_dims) + h_tm1.tb<2>().contract(R_g->tb<1>(), product_dims) + b_g->tb<1>()).tanh())
+				     + (x_t->tb<2>().contract(W_o->tb<1>(), product_dims) + h_tm1.tb<2>().contract(R_o->tb<1>(), product_dims) + b_f->tb<1>() + xs[5]->tb<1>().constant(1)).unaryExpr(scalar_logistic_sigmoid_op<float>())
+				     * c_tm1.tb<2>();
+  // h_t = sigmoid(x_t*W_o + h_tm1*R_o + b_o)
+  //       * tanh(c_t)
+  h_t.tb<2>().device(*dev.edevice) = (x_t->tb<2>().contract(W_o->tb<1>(), product_dims) + h_tm1.tb<2>().contract(R_o->tb<1>(), product_dims) + b_o->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>())
+                                     * c_t.tb<2>().tanh();
 }
 
 template<class MyDevice>
