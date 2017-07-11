@@ -126,41 +126,41 @@ endif()
 set(dynet_gpu_SRCS
     cuda.cc
     cudnn-ops.cu
-    gpu-ops.cu 
-    gpu-nodes-activations.cu
-    gpu-nodes-affinetransform.cu
-    gpu-nodes-arith-const.cu
-    gpu-nodes-arith-cwise.cu
-    gpu-nodes-arith-scalar.cu
-    gpu-nodes-arith-sum.cu
-    gpu-nodes-arith-unary.cu
-    gpu-nodes-concat.cu
-    gpu-nodes-const.cu
-    gpu-nodes-contract.cu
-    gpu-nodes-conv2d.cu
-    gpu-nodes-conv.cu
-    gpu-nodes-dropout.cu
-    gpu-nodes-flow.cu
-    gpu-nodes-hinge.cu
-    gpu-nodes-linalg.cu
-    gpu-nodes-logsumexp.cu
-    gpu-nodes-losses.cu
-    gpu-nodes-matrixmultiply.cu
-    gpu-nodes-maxpooling2d.cu
-    gpu-nodes-minmax.cu
-    gpu-nodes-moments.cu
-    gpu-nodes-normalization.cu
-    gpu-nodes-norms.cu
-    gpu-nodes-pickneglogsoftmax.cu
-    gpu-nodes-random.cu
-    gpu-nodes-select.cu
-    gpu-nodes-similarities.cu
-    gpu-nodes-softmaxes.cu
-    gpu-nodes-trig.cu
-    gpu-param-nodes.cu
-    gpu-tensor.cu
-    gpu-training.cu
-    gpu-model.cu
+    gpu-ops.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-activations.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-affinetransform.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-const.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-cwise.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-scalar.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-sum.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-unary.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-concat.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-const.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-contract.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-conv2d.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-conv.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-dropout.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-flow.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-hinge.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-linalg.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-logsumexp.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-losses.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-matrixmultiply.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-maxpooling2d.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-minmax.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-moments.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-normalization.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-norms.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-pickneglogsoftmax.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-random.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-select.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-similarities.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-softmaxes.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-trig.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-param-nodes.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-tensor.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-training.cu
+    ${PROJECT_BINARY_DIR}/dynet/gpu-model.cu
 )
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
@@ -192,6 +192,11 @@ endif()
 add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
 target_link_libraries(dynet ${LIBS})
 if(WITH_CUDA_BACKEND)
+  foreach(FILENAME nodes-activations nodes-affinetransform nodes-arith-const nodes-arith-cwise nodes-arith-scalar nodes-arith-sum nodes-arith-unary nodes-concat  nodes-const nodes-contract nodes-conv2d nodes-conv nodes-dropout nodes-flow nodes-hinge nodes-linalg nodes-logsumexp nodes-losses nodes-matrixmultiply nodes-maxpooling2d nodes-minmax nodes-moments nodes-normalization nodes-norms nodes-pickneglogsoftmax nodes-random nodes-select nodes-similarities nodes-softmaxes nodes-trig param-nodes tensor training model)
+    set(FILEPREFIX ${FILENAME})
+    configure_file(gpu-file-template.cu.in gpu-${FILENAME}.cu)
+  endforeach()
+
   # cuda flags
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA;")

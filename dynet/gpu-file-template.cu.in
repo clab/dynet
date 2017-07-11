@@ -1,2 +1,2 @@
 // This is a dummy file that contains the same content as ${FILEPREFIX}.cc but compiled on CUDA
-#include "${FILEPREFIX}.cc"
+#include "${PROJECT_SOURCE_DIR}/dynet/${FILEPREFIX}.cc"
