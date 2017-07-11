@@ -3,6 +3,8 @@
 #include "dynet/gpu-kernels.h"
 #include "dynet/functors.h"
 
+#include <algorithm>				// For std::min and std::max
+
 namespace dynet {
 namespace gpu {
 
