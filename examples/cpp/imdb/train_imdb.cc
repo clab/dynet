@@ -14,7 +14,6 @@
  * On a small proportion of the IMDB data (2500 for training, 500 for dev.), this
  * model achieves 80% accuracy on two-way classification.
  */
-#include <unistd.h>
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
 #include "dynet/training.h"
