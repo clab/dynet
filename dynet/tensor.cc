@@ -1,5 +1,6 @@
 #include "dynet/tensor.h"
 #include "dynet/globals.h"
+#include "dynet/except.h"
 
 #include <random>
 #include <vector>
@@ -94,11 +95,14 @@ float TensorTools::access_element(const Tensor& v, int index) {
 }
 
 float TensorTools::access_element(const Tensor& v, const Dim& index) {
+  if (v.device->type == DeviceType::CPU) {
+    return (*v)(index[0], index[1]);
+  } else {
 #if HAVE_CUDA
-  throw std::runtime_error("TensorTools::access_element(Tensor,Dim) not implemented for CUDA");
-#else
-  return (*v)(index[0], index[1]);
+    DYNET_NO_CUDA_IMPL_WARNING("TensorTools::access_element(Tensor, Dim)");
+    return (*v)(index[0], index[1]);
 #endif
+  }
 }
 
 void TensorTools::set_element(const Tensor& v, int index, float value) {
@@ -233,13 +237,18 @@ void TensorTools::randomize_uniform(Tensor& val, real left, real right) {
 void TensorTools::randomize_orthonormal(Tensor& val, real scale) {
   if (val.d.nd != 2 || val.d[0] != val.d[1])
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to an orthogonal matrix");
+  if (val.device->type == DeviceType::CPU) {
+    randomize_uniform(val, -1.0, 1.0);
+    Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
+    *val = scale * svd.matrixU();
+  } else {
 #ifdef HAVE_CUDA
-  throw std::runtime_error("Orthonormal initialization not implemented in CUDA (we welcome pull requests)");
-#else
-  randomize_uniform(val, -1.0, 1.0);
-  Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
-  *val = scale * svd.matrixU();
+    DYNET_NO_CUDA_IMPL_WARNING("Orthonormal initialization"); 
+    randomize_uniform(val, -1.0, 1.0);
+    Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
+    *val = scale * svd.matrixU();
 #endif
+  }
 }
 
 real rand01() {

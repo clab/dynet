@@ -1,5 +1,6 @@
 #include "dynet/param-init.h"
 #include "dynet/tensor.h"
+#include "dynet/except.h"
 
 using namespace dynet;
 using namespace std;
@@ -31,7 +32,8 @@ void ParameterInitGlorot::initialize_params(Tensor & values) const {
 
 void ParameterInitSaxe::initialize_params(Tensor & values) const {
   if (values.device->type == DeviceType::GPU)
-    throw std::runtime_error("Saxe initialization not implemented for CUDA (we welcome pull requests)");
+    DYNET_NO_CUDA_IMPL_WARNING("Saxe")
+    TensorTools::randomize_orthonormal(values, gain);
   else
     TensorTools::randomize_orthonormal(values, gain);
 }

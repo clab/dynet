@@ -1,6 +1,6 @@
 #include "dynet/nodes-linalg.h"
-
 #include "dynet/nodes-macros.h"
+#include "dynet/except.h"
 
 using namespace std;
 
@@ -76,9 +76,7 @@ Dim MatrixInverse::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void MatrixInverse::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in MatrixInverse::forward");
-#ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("MatrixInverse not yet implemented for CUDA");
-#else
+#ifndef __CUDACC__
   auto x = **xs[0];
   auto y = *fx;
   y = x.inverse();
@@ -95,15 +93,13 @@ void MatrixInverse::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in MatrixInverse::backward");
-#ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("MatrixInverse not yet implemented for CUDA");
-#else
+#ifndef __CUDACC__
   auto d = *dEdf;
   auto y = *fx;
   (*dEdxi) -= y * d * y;
 #endif
 }
-DYNET_NODE_INST_DEV_IMPL(MatrixInverse)
+DYNET_NODE_INST_DEV_IMPL_CPU_TMP(MatrixInverse, "MatrixInverse")
 
 // ************* LogDet *************
 
@@ -124,6 +120,9 @@ Dim LogDet::dim_forward(const vector<Dim>& xs) const {
 // for dep parsing it won't be
 template <typename MatrixType>
 inline typename MatrixType::Scalar logdet(const MatrixType& M, bool use_cholesky = false) {
+#ifdef HAVE_CUDA
+  DYNET_NO_CUDA_IMPL_WARNING("logdet");
+#endif
   using namespace Eigen;
   using std::log;
   typedef typename MatrixType::Scalar Scalar;
@@ -152,9 +151,7 @@ inline typename MatrixType::Scalar logdet(const MatrixType& M, bool use_cholesky
 
 template<class MyDevice>
 void LogDet::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("LogDet not implemented for CUDA");
-#else
+#ifndef __CUDACC__
   fx.v[0] = logdet(**xs[0], false);
 #endif
 }
@@ -166,14 +163,12 @@ void LogDet::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-#ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("KMHNGram not implemented for CUDA");
-#else
+#ifndef __CUDACC__
   auto trans = (**xs[0]).transpose();
   (*dEdxi) += (dEdf.v[0]) * trans.inverse();
 #endif
 }
-DYNET_NODE_INST_DEV_IMPL(LogDet)
+DYNET_NODE_INST_DEV_IMPL_CPU_TMP(LogDet, "LogDet")
 
 // ************* TraceOfProduct *************
 
@@ -194,9 +189,7 @@ Dim TraceOfProduct::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void TraceOfProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("TraceOfProduct not yet implemented for CUDA");
-#else
+#ifndef __CUDACC__
   auto x1 = **xs[0];
   auto x2 = **xs[1];
   fx.v[0] = (x1 * x2.transpose()).trace();
@@ -211,14 +204,12 @@ void TraceOfProduct::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i < 2, "Failed dimension check in TraceOfProduce::backward");
-#ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("TraceOfProduct not yet implemented for CUDA");
-#else
+#ifndef __CUDACC__
   const float d = dEdf.v[0];
   auto xother = **xs[1 - i];
   *dEdxi += d * xother;
 #endif
 }
-DYNET_NODE_INST_DEV_IMPL(TraceOfProduct)
+DYNET_NODE_INST_DEV_IMPL_CPU_TMP(TraceOfProduct, "TraceOfProduct")
 
 }

@@ -192,7 +192,11 @@ struct Tensor {
     } else {
 #if HAVE_CUDA
       if (device->type == DeviceType::GPU) {
-        throw std::runtime_error("is_valid() not implemented on GPU");
+        DYNET_NO_CUDA_IMPL_WARNING("is_valid()");
+        const size_t s = d.size();
+        for (unsigned i = 0; i < s; ++i)
+          if (std::isnan(v[i]) || std::isinf(v[i])) return false;
+        return true;
       }
 #endif
     }
