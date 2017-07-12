@@ -1,17 +1,17 @@
 Basic Tutorial
 ~~~~~~~~~~~~~~
 
-An illustration of how models are trained (for a simple logistic
+An illustration of how parameter collections are trained (for a simple logistic
 regression model) is below:
 
- First, we set up the structure of the model.
+ First, we set up the structure of the parameter collection.
 
-Create a model, and an SGD trainer to update its parameters.
+Create a parameter collection, and an SGD trainer to update its parameters.
 
 .. code:: cpp
 
-    Model mod;
-    SimpleSGDTrainer sgd(mod);
+    ParameterCollection pc;
+    SimpleSGDTrainer sgd(pc);
 
 Create a "computation graph," which will define the flow of information.
 
@@ -23,7 +23,7 @@ Initialize a 1x3 parameter vector, and add the parameters to be part of the comp
 
 .. code:: cpp
 
-    Expression W = parameter(cg, mod.add_parameters({1, 3}));
+    Expression W = parameter(cg, pc.add_parameters({1, 3}));
 
 Create variables defining the input and output of the regression, and load them into the computation graph. Note that we don't need to set concrete values yet.
 
@@ -65,20 +65,20 @@ Now, we perform a parameter update for a single example. Set the input/output to
 
     dynet::real loss = as_scalar(cg.forward(l));
 
-"backward" performs back-propagation, and accumulates the gradients of the parameters within the "Model" data structure.
+"backward" performs back-propagation, and accumulates the gradients of the parameters within the ``ParameterCollection`` data structure.
 
 .. code:: cpp
 
     cg.backward(l);
 
-"sgd.update" updates parameters of the model that was passed to its constructor. Here 1.0 is the scaling factor that allows us to control the size of the update.
+``sgd.update`` updates parameters of the parameter collection that was passed to its constructor. Here 1.0 is the scaling factor that allows us to control the size of the update.
 
 .. code:: cpp
 
     sgd.update(1.0);
 
 Note that this very simple example that doesn't cover things like memory
-initialization, reading/writing models, recurrent/LSTM networks, or
+initialization, reading/writing parameter collections, recurrent/LSTM networks, or
 adding biases to functions. The best way to get an idea of how to use
 DyNet for real is to look in the ``example`` directory, particularly
 starting with the simplest ``xor`` example.

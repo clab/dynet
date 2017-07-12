@@ -29,13 +29,13 @@ unsigned STATE_SIZE = 0;
 int main(int argc, char **argv) {
   dynet::initialize(argc, argv);
   attention attention_example;
-  Model model;
+  ParameterCollection model;
   SimpleSGDTrainer trainer(model);
   attention_example.initialize(model);
   attention_example.train(model, "it is working", trainer);
 }
 
-void attention::initialize(Model& model) {
+void attention::initialize(ParameterCollection& model) {
   string characters = "abcdefghijklmnopqrstuvwxyz ";
   vector<string> alphabets;
   for (auto c : characters) {
@@ -197,7 +197,7 @@ Expression attention::get_loss(string input_sentence, string output_sentence, LS
   return decode(dec_lstm, encoded, output_sentence, cg);
 }
 
-void attention::train(Model& model, string sentence, SimpleSGDTrainer& trainer) {
+void attention::train(ParameterCollection& model, string sentence, SimpleSGDTrainer& trainer) {
   for (int i = 0; i < 600; i++) {
     ComputationGraph cg;
     enc_fwd_lstm.new_graph(cg);

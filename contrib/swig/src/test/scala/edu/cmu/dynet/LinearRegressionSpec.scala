@@ -16,14 +16,14 @@ class LinearRegressionSpec extends FlatSpec with Matchers {
     assert(xs.size > 0)
     assert(xs.size == ys.size)
 
-    val model = new Model
+    val model = new ParameterCollection
     val trainer = new SimpleSGDTrainer(model, 0.01f)
 
     val p_W = model.addParameters(Dim(1))
     val p_b = model.addParameters(Dim(1))
 
     val examples = xs.zip(ys)
-    
+
     for (iter <- 1 to numIterations) {
       for ((x, y) <- examples) {
         ComputationGraph.renew()

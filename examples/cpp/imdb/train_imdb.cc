@@ -24,13 +24,12 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/globals.h"
+#include "dynet/io.h"
+
 #include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -62,7 +61,7 @@ struct DocumentModel {
   Parameter p_h2o;
   Parameter p_obias;
 
-  DocumentModel(Model & m) :
+  DocumentModel(ParameterCollection & m) :
     p_w(m.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM })),
     fwd_sent_builder(N_LAYERS, INPUT_DIM, SENTENCE_DIM, m),
     bwd_sent_builder(N_LAYERS, INPUT_DIM, SENTENCE_DIM, m),
@@ -160,7 +159,6 @@ void read_one_line(const string & line, Instance & inst, Dict & wd, Dict & td) {
   string token;
   string label_doc_sep = "|||";
   string sent_sep = "|";
-  Dict * d = &td; // first read the tags.
   std::vector<int> sentence;
   bool reading_label = true;
   while (in) {
@@ -180,7 +178,7 @@ void read_one_line(const string & line, Instance & inst, Dict & wd, Dict & td) {
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
     return 1;
   }
   kSOS = d.convert("<s>");
@@ -239,11 +237,16 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   Trainer* sgd = nullptr;
   sgd = new AdamTrainer(model);
 
   DocumentModel engine(model);
+
+  if (argc == 4) {
+    TextFileLoader loader(argv[3]);
+    loader.populate(model);
+  }
 
   unsigned report_every_i = min(100, int(training.size()));
   unsigned dev_every_i_reports = 25;
@@ -253,6 +256,7 @@ int main(int argc, char** argv) {
   bool first = true;
   int report = 0;
   unsigned lines = 0;
+  TextFileSaver saver("/tmp/imdb.model");
   while (1) {
     Timer iteration("completed in");
     double loss = 0;
@@ -300,9 +304,7 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }

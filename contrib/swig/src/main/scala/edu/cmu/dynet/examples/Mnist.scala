@@ -59,7 +59,7 @@ object Mnist {
     val batchSize = params.get("--batch_size").map(_.toInt).getOrElse(128)
     val numEpochs = params.get("--num_epochs").map(_.toInt).getOrElse(20)
 
-    val model = new Model()
+    val model = new ParameterCollection()
     val adam = new AdamTrainer(model)
     adam.clipThreshold = adam.clipThreshold * batchSize
 

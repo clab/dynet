@@ -27,12 +27,13 @@ If you want to get many of the benefits of mini-batching without doing any work,
 .. image:: images/autobatch.gif
   :align: center
 
-This functionality can be enabled by enabling the `--dynet-autobatch 1` command line option, and if this is enabled, DyNet will automatically attempt to find operations that can be batched together to improve efficiency.
+This functionality can be enabled by enabling the ``--dynet-autobatch 1`` command line option, and if this is enabled, DyNet will automatically attempt to find operations that can be batched together to improve efficiency.
 To take full advantage of this, you will want to create a big computation graph that represents multiple training examples by simply iterating over the multiple training examples as follows:
 
 .. code-block:: python
 
   for minibatch in training_data:
+    dy.renew_cg()
     losses = []
     for x, y in minibatch:
       l = calculate_my_loss(x, y)

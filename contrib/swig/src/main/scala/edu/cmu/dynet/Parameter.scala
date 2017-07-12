@@ -1,7 +1,7 @@
 package edu.cmu.dynet
 
 /** The underlying storage for a model parameter. You will never need to construct this yourself,
-  * but can get it back from [[edu.cmu.dynet.Model.parametersList()]].
+  * but can get it back from [[edu.cmu.dynet.ParameterCollection.parametersList()]].
   */
 class ParameterStorage private[dynet](private[dynet] val storage: internal.ParameterStorage) {
   def size(): Long = storage.size()
@@ -16,7 +16,7 @@ class LookupParameterStorage private[dynet](private[dynet] val storage: internal
 /** A (learnable) parameter of a model.
   */
 class Parameter private[dynet] (private[dynet] val parameter: internal.Parameter) {
-  def this(model: Model, index: Long) { this(new internal.Parameter(model.model, index)) }
+  //def this(model: ParameterCollection, index: Long) { this(new internal.Parameter(model.model, index)) }
 
   def zero(): Unit = parameter.zero()
 
@@ -29,7 +29,7 @@ class Parameter private[dynet] (private[dynet] val parameter: internal.Parameter
 
 class LookupParameter private[dynet] (private[dynet] val lookupParameter: internal.LookupParameter) {
 
-  def this(model: Model, index: Long) { this(new internal.LookupParameter(model.model, index))}
+  //def this(model: ParameterCollection, index: Long) { this(new internal.LookupParameter(model.model, index))}
 
   def initialize(index: Long, values: FloatVector) = {
     lookupParameter.initialize(index, values.vector)

@@ -1,4 +1,4 @@
-#include "dynet/nodes-conv.h"
+#include "dynet/nodes-conv2d.h"
 
 #include <algorithm>
 #include <sstream>
@@ -9,12 +9,14 @@
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/op-helper.h"
 #include "third_party/eigen_spatial_convolutions.h"
 #include "third_party/eigen_backward_spatial_convolutions.h"
 
 #if HAVE_CUDA
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
+#include "dynet/cudnn-ops.h"
 #endif
 
 using namespace std;
@@ -186,7 +188,7 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
     //void* NCHW_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
     void* NCHW_dEdxi_mem = scratch_allocator->allocate(xs[1]->d.size() * sizeof(float));
     Tensor NCHW_dEdxi = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[0], xs[1]->d[1]}), static_cast<float*>(NCHW_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
-    NCHW_dEdxi.t<4>().device(*dev.edevice) = Eigen::SpatialConvolutionBackwardKernel(CHWN_x.tb<3>(), CHWN_dy.tb<3>(), xs[1]->d[0], xs[1]->d[1], stride[0], stride[1]);
+    NCHW_dEdxi.t<4>().device(*dev.edevice) = Eigen::SpatialConvolutionBackwardKernel(CHWN_x.tb<3>(), CHWN_dy.tb<3>(), xs[1]->d[0], xs[1]->d[1], stride[0], stride[1], is_valid);
     //void* HWCN_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
     void* HWCN_dEdxi_mem = scratch_allocator->allocate(xs[1]->d.size() * sizeof(float));
     Tensor HWCN_dEdxi = Tensor(xs[1]->d, static_cast<float*>(HWCN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
