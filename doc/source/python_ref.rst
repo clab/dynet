@@ -401,6 +401,26 @@ RNN state
    :members:
    :show-inheritance:
 
+Softmax Builders
+----------------
+
+
+.. autoclass:: dynet.SoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
+.. autoclass:: dynet.StandardSoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
+.. autoclass:: dynet.ClassFactoredSoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
+
 Optimizers
 ----------
 

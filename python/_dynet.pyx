@@ -4737,3 +4737,238 @@ cdef class AdamTrainer(Trainer):
         return "AdamTrainer"
 
 # Trainers }}}
+
+
+# {{{ Softmax Builders
+cdef class SoftmaxBuilder:
+    """Interface for building softmax layers
+
+    A softmax layer returns a probability distribution over :math:`C` classes given a vector :math:`h\in\mathbb R^d`, with
+
+    .. math::
+        p(c)\propto \exp(W_i^Th + b_i)\ \\forall i\in\{1\ldots C\}
+
+    Where :math:`W\in \mathbb R^{C\\times d}, b \in \mathbb R^C`
+    """
+
+    cdef CSoftmaxBuilder *thisptr
+    cdef int cg_version
+    cdef int const_cg_version
+    def __dealloc__(self):
+        del self.thisptr
+
+    cdef check_and_renew_graph(self, bool update):
+        if update:
+            if self.cg_version != cg_version():
+                self.cg_version = cg_version()
+                self.thisptr.new_graph(cg().thisptr[0], update)
+        else:
+            if self.const_cg_version != cg_version():
+                self.const_cg_version = cg_version()
+                self.thisptr.new_graph(cg().thisptr[0], update)
+
+    cpdef neg_log_softmax(self, Expression x, unsigned c, bool update=True):
+        """Negative log probability of a class
+        
+        Given class :math:`c` and vector :math:`x`, this returns :math:`-\log(p(c \mid x))`
+        
+        Args:
+            x(dynet.Expression): Input vector
+            c(unsigned): Class id
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Log probability of given class
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.neg_log_softmax(x.c(), c))
+
+    cpdef neg_log_softmax_batch(self, Expression x, vector[unsigned] c, bool update=True):
+        """Batched version of :code:`neg_log_softmax`
+        
+        Args:
+            x(dynet.Expression): Input vector (batched)
+            c(list): list of class ids (one per batch element)
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Log probability of given class
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.neg_log_softmax(x.c(), c))
+
+    cpdef sample(self, Expression x):
+        """Sample from the softmax distribution
+        
+        Args:
+            x(dynet.Expression): Input vector
+        
+        Returns:
+            Sampled class
+            int
+        """
+        self.check_and_renew_graph(True)
+        return self.thisptr.sample(x.c())
+
+    cpdef full_log_distribution(self, Expression x, bool update=True):
+        """Returns an Expression representing a vector the size of the number of classes.
+        
+        The ith dimension gives :math:`\log p(c_i | x)`. This function may be SLOW. Avoid if possible.
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(c\mid x)`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.full_log_distribution(x.c()))
+
+    cpdef full_logits(self, Expression x, bool update=True):
+        """Returns the logits (before application of the softmax)
+        
+        The ith dimension gives :math:`W_i^Tx + b_i`
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.full_logits(x.c()))
+
+    cpdef ParameterCollection param_collection(self):
+        """Returns the ParameterCollection containing the softmax parameters
+        
+        The first parameter in the parametercollection is the weight matrix, the second is the biases (if any)
+        
+        Returns:
+            Subcollection holding the parameters
+            ParameterCollection
+        """
+        return ParameterCollection.wrap(self.thisptr.get_parameter_collection())
+
+
+
+cdef class StandardSoftmaxBuilder(SoftmaxBuilder):
+    """
+    This class implements the standard Softmax
+    """
+
+    def __cinit__(self, unsigned input_dim, unsigned num_classes, ParameterCollection pc, bool bias=True):
+        """Constructs a softmaxbuilder
+
+        Args:
+            rep_dim(unsigned): Dimension of the input vectors
+            num_classes(unsigned): Number of classes
+            pc(dynet.ParameterCollection): Parameter collection
+            bias(bool): Whether to use a bias vector or not
+        """
+        self.thisptr = new CStandardSoftmaxBuilder(input_dim, num_classes, pc.thisptr, bias)
+
+
+cdef class ClassFactoredSoftmaxBuilder(SoftmaxBuilder):
+    """Class factored softmax
+
+    Each class is separated into a subclass, ie :math:`p(i\mid h)=p(i\mid h, c) p(c\mid h)` where :math:`c` is a class and :math:`i` a subclass
+
+    """
+    cdef CClassFactoredSoftmaxBuilder *thiscfptr
+    cdef CDict cdic
+
+    cdef dict_to_cdict(self, dict dic):
+        words = sorted(dic.keys(), key=lambda x: dic[x])
+        for w in words:
+            i = self.cdic.convert(w)
+            if i != dic[w]:
+                raise ValueError('Dictionary should have unique ids from 0 to num_classes')
+        self.cdic.freeze()
+
+    def __cinit__(self, unsigned input_dim, string cluster_file, dict dic, ParameterCollection pc, bool bias=True):
+        """Constructor from file
+
+        This constructs the CFSM from a file with lines of the following format
+
+        .. code::
+
+            CLASSID   word    [freq]
+
+        For words for instance
+
+        Args:
+            input_dim (unsigned): Dimension of the input vectors
+            cluster_file (str): File containing classes
+            dic (dict): A python dictionary converting words to indices. The dict should be one to one with :math:`\{0,\ldots,\\texttt{num_classes}-1\}` and cover all the words in the :code:`cluster_file`
+            pc(dynet.ParameterCollection): Parameter collection
+            bias(bool): Whether to use a bias vector or not
+        """
+        self.dict_to_cdict(dic)
+        self.thiscfptr = self.thisptr = new CClassFactoredSoftmaxBuilder(input_dim, cluster_file, self.cdic, pc.thisptr, bias)
+
+
+    cpdef class_log_distribution(self, Expression x, bool update=True):
+        """Get log distribution over classes
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(c\mid x)`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.class_log_distribution(x.c()))
+
+    cpdef class_logits(self, Expression x, bool update=True):
+        """Returns the logits over classes
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.class_logits(x.c()))
+
+    cpdef subclass_log_distribution(self, Expression x, unsigned classid, bool update=True):
+        """ Get log distribution over subclasses of class
+        
+        Args:
+            x(dynet.Expression): Input vector
+            classid(int): class index
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(i\mid x, \\texttt{classid})`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.subclass_log_distribution(x.c(), classid))
+
+    cpdef subclass_logits(self, Expression x, unsigned classid, bool update=True):
+        """Logits over subclasses of class
+        
+        Args:
+            x(dynet.Expression): Input vector
+            classid(int): class index
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.subclass_logits(x.c(), classid))
+
+# Softmax Builders }}}
