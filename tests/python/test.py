@@ -425,10 +425,10 @@ class TestStandardSoftmax(unittest.TestCase):
     def test_sanity(self):
         for i in range(3):
             dy.renew_cg()
-            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 4, update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 5, update=False)
-            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 6, update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 7, update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 4, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 5, update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 6, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 7, update=False)
             nll.value()
             nll_const.value()
 
@@ -450,10 +450,10 @@ class TestClassFactoredSoftmax(unittest.TestCase):
     def test_sanity(self):
         for i in range(3):
             dy.renew_cg()
-            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 4, update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 5, update=False)
-            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 6, update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 7, update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 4, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 5, update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 6, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 7, update=False)
             nll.value()
             nll_const.value()
 

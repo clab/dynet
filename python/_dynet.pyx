@@ -4886,12 +4886,12 @@ cdef class ClassFactoredSoftmaxBuilder(SoftmaxBuilder):
     cdef dict_to_cdict(self, dict dic):
         words = sorted(dic.keys(), key=lambda x: dic[x])
         for w in words:
-            i = self.cdic.convert(w)
+            i = self.cdic.convert(w.encode('utf8'))
             if i != dic[w]:
                 raise ValueError('Dictionary should have unique ids from 0 to num_classes')
         self.cdic.freeze()
 
-    def __cinit__(self, unsigned input_dim, string cluster_file, dict dic, ParameterCollection pc, bool bias=True):
+    def __cinit__(self, unsigned input_dim, str cluster_file, dict dic, ParameterCollection pc, bool bias=True):
         """Constructor from file
 
         This constructs the CFSM from a file with lines of the following format
@@ -4910,7 +4910,8 @@ cdef class ClassFactoredSoftmaxBuilder(SoftmaxBuilder):
             bias(bool): Whether to use a bias vector or not
         """
         self.dict_to_cdict(dic)
-        self.thiscfptr = self.thisptr = new CClassFactoredSoftmaxBuilder(input_dim, cluster_file, self.cdic, pc.thisptr, bias)
+        cdef string _fname = <string> cluster_file.encode("utf8")
+        self.thiscfptr = self.thisptr = new CClassFactoredSoftmaxBuilder(input_dim, _fname, self.cdic, pc.thisptr, bias)
 
 
     cpdef class_log_distribution(self, Expression x, bool update=True):
