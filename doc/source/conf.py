@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Dynet documentation build configuration file, created by
+# DyNet documentation build configuration file, created by
 # sphinx-quickstart on Thu Oct 13 16:13:12 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -53,7 +53,7 @@ extensions = [
 breathe_projects = {"dynet": "../doxygen/xml/"}
 breathe_default_project = "dynet"
 
-# Don't execute notebooks because it requires installing Dynet
+# Don't execute notebooks because it requires installing DyNet
 nbsphinx_execute = 'never'
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,7 +69,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Dynet'
+project = u'DyNet'
 copyright = u'2016, Clab'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -143,7 +143,7 @@ html_theme = 'default'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = "images/dynet_logo_white.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -202,7 +202,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Dynetdoc'
+htmlhelp_basename = 'DyNetdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -222,7 +222,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    ('index', 'Dynet.tex', u'Dynet Documentation',
+    ('index', 'DyNet.tex', u'DyNet Documentation',
      u'Clab', 'manual'),
 ]
 
@@ -252,7 +252,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'dynet', u'Dynet Documentation',
+    ('index', 'dynet', u'DyNet Documentation',
      [u'Clab'], 1)
 ]
 
@@ -266,8 +266,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    ('index', 'Dynet', u'Dynet Documentation',
-     u'Clab', 'Dynet', 'One line description of project.',
+    ('index', 'DyNet', u'DyNet Documentation',
+     u'Clab', 'DyNet', 'One line description of project.',
      'Miscellaneous'),
 ]
 

@@ -1,4 +1,5 @@
 #include "dynet/lstm.h"
+#include "dynet/param-init.h"
 
 #include <fstream>
 #include <string>
@@ -8,34 +9,34 @@
 #include "dynet/nodes.h"
 
 using namespace std;
-using namespace dynet::expr;
 
 namespace dynet {
 
 enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 
-LSTMBuilder::LSTMBuilder(unsigned layers,
+CoupledLSTMBuilder::CoupledLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
+                         ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2i = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2i = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bi = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // o
-    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2o = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2o = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bo = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2o = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2o = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2o = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bo = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // c
-    Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2c = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bc = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2c = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2c = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bc = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
@@ -47,7 +48,7 @@ LSTMBuilder::LSTMBuilder(unsigned layers,
   dropout_rate_c = 0.f;
 }
 
-void LSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+void CoupledLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
 
   for (unsigned i = 0; i < layers; ++i) {
@@ -76,7 +77,7 @@ void LSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
 
 // layout: 0..layers = c
 //         layers+1..2*layers = h
-void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
+void CoupledLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   // Check input dim and hidden dim
   if (input_dim != params[0][X2I].dim()[1]) {
     cerr << "Warning : LSTMBuilder input dimension " << input_dim
@@ -112,12 +113,12 @@ void LSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
   set_dropout_masks();
 }
 
-void LSTMBuilder::set_dropout_masks(unsigned batch_size) {
+void CoupledLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   masks.clear();
   for (unsigned i = 0; i < layers; ++i) {
     std::vector<Expression> masks_i;
     unsigned idim = (i == 0) ? input_dim : hid;
-    if (dropout_rate > 0.f) {
+    if (dropout_rate > 0.f || dropout_rate_h > 0.f || dropout_rate_c > 0.f) {
       float retention_rate = 1.f - dropout_rate;
       float retention_rate_h = 1.f - dropout_rate_h;
       float retention_rate_c = 1.f - dropout_rate_c;
@@ -134,11 +135,14 @@ void LSTMBuilder::set_dropout_masks(unsigned batch_size) {
     }
   }
 }
+
+ParameterCollection & CoupledLSTMBuilder::get_parameter_collection() { return local_model; }
+
 // TO DO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
 // Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
-Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
+Expression CoupledLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
   DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
                           "LSTMBuilder::set_h expects as many inputs as layers, but got " << h_new.size() << " inputs for " << layers << " layers");
   const unsigned t = h.size();
@@ -154,7 +158,7 @@ Expression LSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
 }
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
-Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
+Expression CoupledLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
   DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
                           "LSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
@@ -170,7 +174,7 @@ Expression LSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_ne
   return h[t].back();
 }
 
-Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
+Expression CoupledLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -250,8 +254,8 @@ Expression LSTMBuilder::add_input_impl(int prev, const Expression& x) {
   return ht.back();
 }
 
-void LSTMBuilder::copy(const RNNBuilder & rnn) {
-  const LSTMBuilder & rnn_lstm = (const LSTMBuilder&)rnn;
+void CoupledLSTMBuilder::copy(const RNNBuilder & rnn) {
+  const CoupledLSTMBuilder & rnn_lstm = (const CoupledLSTMBuilder&)rnn;
   DYNET_ARG_CHECK(params.size() == rnn_lstm.params.size(),
                           "Attempt to copy LSTMBuilder with different number of parameters "
                           "(" << params.size() << " != " << rnn_lstm.params.size() << ")");
@@ -260,45 +264,7 @@ void LSTMBuilder::copy(const RNNBuilder & rnn) {
       params[i][j] = rnn_lstm.params[i][j];
 }
 
-void LSTMBuilder::save_parameters_pretraining(const string& fname) const {
-  cerr << "Writing LSTM parameters to " << fname << endl;
-  ofstream of(fname);
-  if (!of)
-    DYNET_INVALID_ARG("Couldn't write LSTM parameters to " << fname);
-  boost::archive::binary_oarchive oa(of);
-  std::string id = "LSTMBuilder:params";
-  oa << id;
-  oa << layers;
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      oa << p.get()->values;
-    }
-  }
-}
-
-void LSTMBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "Loading LSTM parameters from " << fname << endl;
-  ifstream of(fname);
-  if (!of)
-    DYNET_INVALID_ARG("Couldn't read LSTM parameters from " << fname);
-  boost::archive::binary_iarchive ia(of);
-  std::string id;
-  ia >> id;
-  if (id != "LSTMBuilder:params")
-    DYNET_INVALID_ARG("Bad id read in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
-  unsigned l = 0;
-  ia >> l;
-  if (l != layers)
-    DYNET_INVALID_ARG("Bad number of layers in LSTMBuilder::load_parameters_pretraining. Invalid model format?");
-  // TODO check other dimensions
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      ia >> p.get()->values;
-    }
-  }
-}
-
-void LSTMBuilder::set_dropout(float d) {
+void CoupledLSTMBuilder::set_dropout(float d) {
   DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
                           "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
@@ -306,7 +272,7 @@ void LSTMBuilder::set_dropout(float d) {
   dropout_rate_c = d;
 }
 
-void LSTMBuilder::set_dropout(float d, float d_h, float d_c) {
+void CoupledLSTMBuilder::set_dropout(float d, float d_h, float d_c) {
   DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f && d_c >= 0.f && d_c <= 1.f,
                           "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
@@ -314,17 +280,11 @@ void LSTMBuilder::set_dropout(float d, float d_h, float d_c) {
   dropout_rate_c = d_c;
 }
 
-void LSTMBuilder::disable_dropout() {
+void CoupledLSTMBuilder::disable_dropout() {
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
   dropout_rate_c = 0.f;
 }
-
-DYNET_SERIALIZE_COMMIT(LSTMBuilder,
-		       DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, dropout_rate),
-		       DYNET_VERSION_SERIALIZE_DEFINE(1, MAX_SERIALIZE_VERSION, dropout_rate_h, dropout_rate_c, input_dim, hid))
-
-DYNET_SERIALIZE_IMPL(LSTMBuilder);
 
 // Vanilla LSTM
 
@@ -337,17 +297,16 @@ VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned input_dim,
                                        unsigned hidden_dim,
-                                       Model& model,
+                                       ParameterCollection& model,
                                        bool ln_lstm) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm) {
   unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
-    // [i; f; o; g]
-    Parameter p_x2i = model.add_parameters({hidden_dim * 4, layer_input_dim});
-    Parameter p_h2i = model.add_parameters({hidden_dim * 4, hidden_dim});
+    // i
+    Parameter p_x2i = local_model.add_parameters({hidden_dim * 4, layer_input_dim});
+    Parameter p_h2i = local_model.add_parameters({hidden_dim * 4, hidden_dim});
     //Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
-
-
+    Parameter p_bi = local_model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
@@ -418,7 +377,7 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   for (unsigned i = 0; i < layers; ++i) {
     std::vector<Expression> masks_i;
     unsigned idim = (i == 0) ? input_dim : hid;
-    if (dropout_rate > 0.f) {
+    if (dropout_rate > 0.f || dropout_rate_h > 0.f) {
       float retention_rate = 1.f - dropout_rate;
       float retention_rate_h = 1.f - dropout_rate_h;
       float scale = 1.f / retention_rate;
@@ -432,6 +391,9 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   }
 }
 
+ParameterCollection & VanillaLSTMBuilder::get_parameter_collection() {
+  return local_model;
+}
 
 // TODO - Make this correct
 // Copied c from the previous step (otherwise c.size()< h.size())
@@ -548,50 +510,6 @@ void VanillaLSTMBuilder::copy(const RNNBuilder & rnn) {
       ln_params[i][j] = rnn_lstm.ln_params[i][j];
 }
 
-void VanillaLSTMBuilder::save_parameters_pretraining(const string& fname) const {
-  cerr << "Writing VanillaLSTM parameters to " << fname << endl;
-  ofstream of(fname);
-  if (!of)
-    DYNET_INVALID_ARG("Couldn't write LSTM parameters to " << fname);
-  boost::archive::binary_oarchive oa(of);
-  std::string id = "VanillaLSTMBuilder:params";
-  oa << id;
-  oa << layers;
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      oa << p.get()->values;
-    }
-    for (auto p : ln_params[i]) {
-      oa << p.get()->values;
-    }
-  }
-}
-
-void VanillaLSTMBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "Loading VanillaLSTM parameters from " << fname << endl;
-  ifstream of(fname);
-  if (!of)
-    DYNET_INVALID_ARG("Couldn't read LSTM parameters from " << fname);
-  boost::archive::binary_iarchive ia(of);
-  std::string id;
-  ia >> id;
-  if (id != "VanillaLSTMBuilder:params")
-    DYNET_INVALID_ARG("Bad id read in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
-  unsigned l = 0;
-  ia >> l;
-  if (l != layers)
-    DYNET_INVALID_ARG("Bad number of layers in VanillaLSTMBuilder::load_parameters_pretraining. Bad model format?");
-  // TODO check other dimensions
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      ia >> p.get()->values;
-    }
-    for (auto p : ln_params[i]) {
-      ia >> p.get()->values;
-    }
-  }
-}
-
 void VanillaLSTMBuilder::set_dropout(float d) {
   DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
                           "dropout rate must be a probability (>=0 and <=1)");
@@ -610,10 +528,5 @@ void VanillaLSTMBuilder::disable_dropout() {
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
 }
-
-DYNET_SERIALIZE_COMMIT(VanillaLSTMBuilder,
-  DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, dropout_rate, dropout_rate_h, hid, input_dim),
-  DYNET_VERSION_SERIALIZE_DEFINE(1, MAX_SERIALIZE_VERSION, ln_params, ln_lstm))
-DYNET_SERIALIZE_IMPL(VanillaLSTMBuilder);
 
 } // namespace dynet

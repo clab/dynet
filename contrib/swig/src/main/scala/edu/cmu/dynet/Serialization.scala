@@ -1,56 +1,23 @@
 package edu.cmu.dynet
 
-/** Class for persisting models and parameters to disk */
-class ModelSaver private[dynet](saver: internal.ModelSaver) {
-  def this(filename: String) { this(new internal.ModelSaver(filename)) }
+/** New serialization, much less featureful than old serialization. */
 
-  def addModel(model: Model): Unit = saver.add_model(model.model)
-  def addParameter(p: Parameter): Unit = saver.add_parameter(p.parameter)
-  def addLookupParameter(p: LookupParameter): Unit = saver.add_lookup_parameter(p.lookupParameter)
-  def addLstmBuilder(p: LstmBuilder): Unit = saver.add_lstm_builder(p.builder)
-  def addVanillaLstmBuilder(p: VanillaLstmBuilder): Unit = saver.add_vanilla_lstm_builder(p.builder)
-  def addSRnnBuilder(p: SimpleRnnBuilder): Unit = saver.add_srnn_builder(p.builder)
-  def addGruBuilder(p: GruBuilder): Unit = saver.add_gru_builder(p.builder)
-  // def addFastLSTMBuilder
+class ModelSaver private[dynet](saver: internal.TextFileSaver) {
+  def this(filename: String) { this(new internal.TextFileSaver(filename))}
 
-  def addSize(len: Long): Unit = saver.add_size(len)
-  def addByteArray(bytes: Array[Byte]): Unit = saver.add_byte_array(bytes)
+  def addModel(model: ParameterCollection, key: String = ""): Unit = saver.save(model.model, key)
+  def addParameter(p: Parameter, key: String = ""): Unit = saver.save(p.parameter, key)
+  def addLookupParameter(p: LookupParameter, key: String = ""): Unit = saver.save(p.lookupParameter, key)
 
-  def addInt(x: Int): Unit = saver.add_int(x)
-  def addLong(x: Long): Unit = saver.add_long(x)
-  def addFloat(x: Float): Unit = saver.add_float(x)
-  def addDouble(x: Double): Unit = saver.add_double(x)
-  def addBoolean(x: Boolean): Unit = saver.add_boolean(x)
-
-  def addObject(x: java.io.Serializable) = saver.add_object(x)
-
-  def done(): Unit = saver.done()
+  def done(): Unit = saver.delete()
 }
 
-/** Class for loading persisted models from disk */
-class ModelLoader private[dynet](loader: internal.ModelLoader) {
-  def this(filename: String) { this(new internal.ModelLoader(filename)) }
+class ModelLoader private[dynet](loader: internal.TextFileLoader) {
+  def this(filename: String) { this(new internal.TextFileLoader(filename))}
 
-  def loadModel(): Model = new Model(loader.load_model())
-  def loadParameter(): Parameter = new Parameter(loader.load_parameter())
-  def loadLookupParameter(): LookupParameter = new LookupParameter(loader.load_lookup_parameter())
-  def loadLstmBuilder(): LstmBuilder = new LstmBuilder(loader.load_lstm_builder())
-  def loadVanillaLstmBuilder(): VanillaLstmBuilder =
-    new VanillaLstmBuilder(loader.load_vanilla_lstm_builder())
-  def loadSRnnBuilder(): SimpleRnnBuilder = new SimpleRnnBuilder(loader.load_srnn_builder())
-  def loadGruBuilder(): GruBuilder = new GruBuilder(loader.load_gru_builder())
+  def populateModel(model: ParameterCollection, key: String = ""): Unit = loader.populate(model.model, key)
+  def populateParameter(p: Parameter, key: String = ""): Unit = loader.populate(p.parameter, key)
+  def populateLookupParameter(p: LookupParameter, key: String = ""): Unit = loader.populate(p.lookupParameter, key)
 
-  def loadSize(): Long = loader.load_size()
-  def loadByteArray(buffer: Array[Byte]): Unit = loader.load_byte_array(buffer)
-
-  def loadInt(): Int = loader.load_int()
-  def loadLong(): Long = loader.load_long()
-  def loadFloat(): Float = loader.load_float()
-  def loadDouble(): Double = loader.load_double()
-  def loadBoolean(): Boolean = loader.load_boolean()
-
-  def loadObject[T](clazz: Class[T]): T = loader.load_object(clazz)
-
-  def done(): Unit = loader.done()
+  def done(): Unit = loader.delete()
 }
-

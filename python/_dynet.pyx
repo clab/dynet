@@ -12,33 +12,12 @@ except ImportError:
     import pickle
     
 import os.path
-# TODO:
-#  - set random seed (in DYNET)
-#  - better input / output support
-#    WORKS, but need to be unified? for example, why "pick" takes a pointer to int, and "squared_distance" takes an expression?
-#  - load embeddings file
-#  - load/save models
-#  - NOTE: why do we need to filter short sentences in rnnlm.py or crash??
-
-# TODO:
-#  c2w.h   (build a word-from-letters encoder)
-#  dict.h : do we even need it?
-
-# Examples:
-#  V xor  
-#  V xor-xent
-#  - textcat
-#  - tag-bilstm
-#  - rnnlm
-#  V nlm
-#  - encdec
-#  - embedcl
-#  - embed/nlm: negative sampling?
 
 from _dynet cimport *
 cimport _dynet as dynet
 
-cdef class DynetParams:
+
+cdef class DynetParams: # {{{
     """This object holds the global parameters of Dynet
 
     You should only need to use this after importing dynet as :
@@ -100,6 +79,28 @@ cdef class DynetParams:
         """
         self.cparams.random_seed = random_seed
 
+    cpdef set_autobatch(self, bool autobatch):
+        """Activate autobatching
+        
+        Args:
+            autobatch(bool): Set to :code:`True` to activate autobatching
+        """
+        if autobatch:
+            self.cparams.autobatch = 1
+        else:
+            self.cparams.autobatch = 0
+
+    cpdef set_autobatch_debug(self, bool autobatch_debug):
+        """Activate autobatching debug
+        
+        Args:
+            autobatch(bool): Set to :code:`True` to activate autobatching debug
+        """
+        if autobatch_debug:
+            self.cparams.autobatch_debug = 1
+        else:
+            self.cparams.autobatch_debug = 0
+
     cpdef set_weight_decay(self, float weight_decay):
         """Set weight decay parameter
         
@@ -137,7 +138,9 @@ cdef class DynetParams:
         self.cparams.gpu_mask = cgpu_mask
         self.cparams.ngpus_requested = False
         self.cparams.ids_requested = True
+# DynetParams }}}
 
+# Initialization {{{
 def init(shared_parameters=None):
     """Initialize dynet
     
@@ -167,7 +170,9 @@ def init_from_params(DynetParams params):
         params(DynetParams): dynet parameters
     """
     params.init()
+# }}}
 
+# Dimensions {{{
 cdef CDim Dim(dim, unsigned int batch_size=1):
     """Get dynet Dim from tuple
     
@@ -213,6 +218,127 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
         dim = d
         batch_size = 1
     return Dim(dim,batch_size=batch_size)
+# }}}
+
+# IO {{{
+
+cdef _save_one(datafname, fh, obj):
+    if isinstance(obj, Parameters):
+        pickle.dump(("Parameters", obj.name()), fh)
+        obj.save(datafname,append=True)
+    elif isinstance(obj, LookupParameters):
+        pickle.dump(("LookupParameters", obj.name()), fh)
+        obj.save(datafname,append=True)
+    else:
+        pickle.dump((obj.__class__, obj.spec, obj.param_collection().name()), fh)
+        obj.param_collection().save(datafname,append=True)
+
+cdef _load_one(datafname, fh, model):
+    o = pickle.load(fh)
+    if o[0] == 'Parameters':
+        p = model.load_param(datafname, o[1])
+        return p
+    if o[0] == 'LookupParameters':
+        p = model.load_lookup_param(datafname, o[1])
+        return p
+    else:
+        cls, spec, name = o
+        obj = cls.from_spec(spec, model)
+        obj.param_collection().populate(datafname, name)
+        return obj
+
+cpdef save(basename, lst):
+    """Saves a list of parameters, lookup parameters and builder objects to disk.
+
+    Args:
+        basename (string): The base-name of the files to save. 
+                           Two files will be created: `basename.data` and `basename.meta`.
+        lst      (list):  A list of objects to save (see below).
+
+
+    Example:
+        import dynet as dy
+
+        pc = dy.ParameterCollection()
+        W = pc.add_parameters((100,50))
+        E = pc.add_lookup_parameters((1000,50))
+        builder = dy.LSTMBuilder(2, 50, 50, pc)
+
+        dy.save("model", [E, builder, W])
+
+        # then, when loading:
+        pc = dy.ParameterCollection()
+        E2, builder2, W2 = dy.load("model", pc)
+
+    
+    What can be saved:
+        Each object in `lst` must be one of the following:
+        (1) Parameter
+        (2) LookupParameter
+        (3) one of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder,
+                                       SimpleRNNBuilder, BiRNNBuilder)
+        (4) a type adhering to the following interface:
+            - has a `param_collection()` method returning a ParameterCollection object with the
+              parameters in the object.
+            - has a `.spec` property with picklable items describing the object
+            - has a `.from_spec(spec, model)` static method that will create and return a
+              new instane with the needed parameters/etc in the model.
+
+        Note, the built-in types in (3) above can be saved/loaded this way simply because 
+        they support this interface.
+
+        behind the scenes:
+        - for each item, we write to `.meta`:
+            if its a Parameters/ParameterCollection: 
+                its type and full name.
+            if its a builder:
+                its class, its spec, the full name of its parameters collection.
+        - the associated parameters/sub-collection is then saved to `.data`
+    """
+    open(basename+".data","w").close() # delete current
+    fh = open(basename+".meta","wb")
+    for item in lst:
+        _save_one(basename+".data", fh, item)
+    fh.close()
+
+cpdef load(basename, params):
+    """Loads a list of parameters, lookup parameters and builder objects from disk.
+    The loaded objects are added to the supplied params collection, and returned.
+
+    Args:
+        basename (string):  The basename to read from. 
+                            This is the same string that was used when saving the objects.
+        params   (dynet.ParameterCollection): A ParameterCollection to add the loaded objects to.
+
+    Returns:
+        A list of parameters, lookup parameters and builder objects, in the same order they
+        were passed to the save function.
+
+
+    Example:
+        import dynet as dy
+
+        pc = dy.ParameterCollection()
+        W = pc.add_parameters((100,50))
+        E = pc.add_lookup_parameters((1000,50))
+        builder = dy.LSTMBuilder(2, 50, 50, pc)
+
+        dy.save("model", [E, builder, W])
+
+        # then, when loading:
+        pc = dy.ParameterCollection()
+        E2, builder2, W2 = dy.load("model", pc)
+    """
+    fh = open(basename+".meta","rb")
+    res = []
+    while True:
+        try:
+            obj = _load_one(basename+".data", fh, params)
+        except EOFError: break
+        res.append(obj)
+    fh.close()
+    return res
+# }}}
 
 cdef c_tensor_as_np(CTensor &t):
     # TODO: make more efficient, with less copy
@@ -226,261 +352,8 @@ cdef c_index_tensor_as_np(CIndexTensor &t):
     dim = c_dim_as_shape(t.d)
     return arr.reshape(dim,order='F')
 
-# ((( Model / Parameters 
-cdef class Parameters:
-    """Parameters class
-    
-    Parameters are things that are optimized. in contrast to a system like Torch where computational modules may have their own parameters, in DyNet parameters are just parameters.
-    """
-    cdef CParameters thisptr # TODO: no longer pointer
-    cdef int _version
-    cdef Expression _expr
-    cdef int _const_version
-    cdef Expression _const_expr
-    def __cinit__(self):
-        self._version = -1
-    @staticmethod
-    cdef wrap_ptr(CParameters ptr):
-        self = Parameters()
-        self.thisptr = ptr
-        return self
 
-    cpdef shape(self):
-        """[summary]
-        
-        [description]
-        
-        Returns:
-            [type]: [description]
-        """
-        return c_dim_as_shape(self.thisptr.get().dim)
-
-    cpdef as_array(self):
-        """Return as a numpy array.
-        
-        Returns:
-            np.ndarray: values of the parameter
-        """
-        cdef CTensor t
-        return c_tensor_as_np(self.thisptr.get().values)
-
-    cpdef grad_as_array(self):
-        """Return gradient as a numpy array.
-        
-        Returns:
-            np.ndarray: values of the gradient w.r.t. this parameter
-        """
-        cdef CTensor t
-        return c_tensor_as_np(self.thisptr.get().g)
-    
-    cpdef clip_inplace(self, float left, float right):
-        """Clip the values in the parameter to a fixed range [left, right] (in place)
-        
-        Returns:
-            None
-        """
-        self.thisptr.clip_inplace(left, right)
-        
-    # TODO: make more efficient
-    cpdef load_array(self, arr):
-        """Deprecated
-        """
-        assert(False),"This method is depracated. Use instead model.parameters_from_numpy(arr)."
-        cdef CTensor t
-        cdef float* vals
-        t = self.thisptr.get().values
-        shape = arr.shape
-        if len(shape) == 1:
-            assert(t.d.ndims() == 1)
-            assert(t.d.size() == arr.size)
-        if len(shape) == 2:
-            assert(t.d.rows() == shape[0] and t.d.cols() == shape[1])
-        vals = t.v
-        arr = arr.flatten()
-        for i in xrange(arr.size):
-            vals[i] = arr[i]
-
-    cpdef zero(self):
-        """Set the parameter to zero
-
-        """
-        self.thisptr.zero()
-
-    cpdef scale(self,float s):
-        """Scales the parameter
-
-        Args:
-            s(float): Scale
-
-        """
-        self.thisptr.scale(s)
-
-    cpdef scale_gradient(self,float s):
-        """Scales the gradient
-
-        Args:
-            s(float): Scale
-
-        """
-        self.thisptr.scale_gradient(s)
-
-
-    cpdef bool is_updated(self):
-        """check whether the parameter is updated or not
-        
-        Returns:
-            bool: Update status
-        """
-        return self.thisptr.is_updated()
-
-    cpdef set_updated(self, bool b):
-        """Set parameter as "updated"
-        
-        Args:
-            b(bool): updated status
-        """
-        self.thisptr.set_updated(b)
-
-    cpdef unsigned get_index(self):
-        """Get parameter index
-        
-        Returns:
-            unsigned: Index of the parameter
-        """
-        return self.thisptr.index
-
-    cpdef Expression expr(self, bool update=True):
-        """Returns the parameter as an expression
-
-        This is the same as calling
-
-            dy.parameter(param)
-        
-        Args:
-            update(bool): If this is set to False, the parameter won't be updated during the backward pass
-        Returns:
-            Expression: Expression of the parameter
-        """
-        if update:
-            if cg_version() != self._version:
-                self._version = cg_version()
-                self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
-            return self._expr
-        else:
-            if cg_version() != self._const_version:
-                self._const_version = cg_version()
-                self._const_expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
-            return self._const_expr
-
-
-
-cdef class LookupParameters:
-    cdef CLookupParameters thisptr # TODO: no longer pointer
-    cdef int _version
-    cdef Expression _expr
-    def __cinit__(self):
-        self._version = -1
-    @staticmethod
-    cdef wrap_ptr(CLookupParameters ptr):
-        self = LookupParameters()
-        self.thisptr = ptr
-        return self
-
-    cpdef init_from_array(self, arr):
-        if len(arr) > self.thisptr.get().values.size():
-            raise Exception("too many rows")
-        if arr.shape[1] != self.thisptr.get().values[0].d.rows():
-            raise Exception("dim mismatch")
-        cdef vector[float] r
-        for i,row in enumerate(arr):
-            self.init_row(i, row)
-
-    cpdef shape(self):
-        return c_dim_as_shape(self.thisptr.get().all_dim)
-
-    def __getitem__(self, int i):
-        return lookup(self, i)
-
-    cpdef batch(self, vector[unsigned] i):
-        return lookup_batch(self, i)
-
-    cpdef init_row(self, unsigned i, vector[float] row):
-        self.thisptr.initialize(i, row)
-
-    cpdef as_array(self):
-        """
-        Return as a numpy array.
-        """
-        cdef vector[CTensor] vals
-        vals = self.thisptr.get().values
-        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
-
-    cpdef grad_as_array(self):
-        """
-        Return gradients as a numpy array.
-        """
-        cdef vector[CTensor] grads
-        grads = self.thisptr.get().grads
-        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
-    
-    cpdef scale(self,float s):
-        """Scales the parameter
-
-        Args:
-            s(float): Scale
-
-        """
-        self.thisptr.scale(s)
-
-    cpdef scale_gradient(self,float s):
-        """Scales the gradient
-
-        Args:
-            s(float): Scale
-
-        """
-        self.thisptr.scale_gradient(s)
-        
-    cpdef Expression expr(self,bool update=True):
-        if cg_version() != self._version:
-            self._version = cg_version()
-            if update:
-                self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
-            else:
-                self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
-        return self._expr
-
-    cpdef zero(self): self.thisptr.zero()
-
-    cpdef bool is_updated(self): return self.thisptr.is_updated()
-    cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
-    cpdef unsigned get_index(self): return self.thisptr.index
-
-# TODO document this
-class Saveable(object):
-    def __init__(self):
-        pass
-
-    def __getstate__(self):
-        odict = dict()
-        params = self.get_components()
-        for k,v in self.__dict__.items(): # remove unpicklable things which we save otherwise
-            if v not in params:
-                odict[k] = v
-        return odict
-
-    def get_components(self):
-        """
-        List of parameter-containing components that are
-        members of this object and are created by it.
-        """
-        return NotImplemented
-
-    def restore_components(self, components):
-        return NotImplemented
-
-
-# Initializers
+# Initializers {{{
 cdef class PyInitializer:
     """
     Base class for parameter initializer
@@ -568,7 +441,7 @@ cdef class FromFileInitializer(PyInitializer):
 cdef class NumpyInitializer(PyInitializer):
     """Initialize from numpy array
 
-    Alternatively, use :code:`Model.parameters_from_numpy()`
+    Alternatively, use :code:`ParameterCollection.parameters_from_numpy()`
     
     Args:
         array (np.ndarray): Numpy array
@@ -583,61 +456,472 @@ cdef class NumpyInitializer(PyInitializer):
         for i in xrange(arr.size):
             vals.push_back(arr[i])
         return vals
+# }}}
 
-
-cdef class Model: # (((
+# {{{ ParameterCollection / Parameters 
+cdef class Parameters: # {{{
+    """Parameters class
+    
+    Parameters are things that are optimized. in contrast to a system like Torch where computational modules may have their own parameters, in DyNet parameters are just parameters.
     """
-    A model holds Parameters. Use it to create, load and save parameters.
-    """
-    cdef CModel *thisptr
+    cdef CParameters thisptr # TODO: no longer pointer
+    cdef int _version
+    cdef Expression _expr
+    cdef int _const_version
+    cdef Expression _const_expr
     def __cinit__(self):
-        self.thisptr = new CModel()
+        self._version = -1
+    @staticmethod
+    cdef wrap_ptr(CParameters ptr):
+        self = Parameters()
+        self.thisptr = ptr
+        return self
+
+    # TODO docs
+    def save(self, fname, key="",append=False):
+        self.write_to_textfile(fname, key,append)
+
+    # TODO docs
+    def populate(self, fname, key):
+        """Populate the values of this Parameters object from
+        the parameter named `key` in the file `fname`.
+        The sizes of saved parameters and this object must match.
+
+        Args:
+            fname (string): the name of a file to load from.
+            key   (string): the parameter to read from the file.
+        """
+        self.populate_from_textfile(fname, key)
+
+    # TODO docs
+    def write_to_textfile(self, fname, key="", bool append=False):
+        cdef CTextFileSaver *saver
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        saver = new CTextFileSaver(_fname, append=append)
+        saver.save(self.thisptr,_key)
+        del saver
+
+    # TODO docs
+    def populate_from_textfile(self, string fname, string key=""):
+        cdef CTextFileLoader *loader
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        loader.populate(self.thisptr, _key)
+        del loader
+
+    cpdef shape(self):
+        """Returns shape of the parameter
+        
+        Returns:
+            tuple: Shape of the parameter
+        """
+        return c_dim_as_shape(self.thisptr.get_storage().dim)
+
+    cpdef as_array(self):
+        """Return as a numpy array.
+        
+        Returns:
+            np.ndarray: values of the parameter
+        """
+        cdef CTensor t
+        return c_tensor_as_np(self.thisptr.get_storage().values)
+
+    cpdef grad_as_array(self):
+        """Return gradient as a numpy array.
+        
+        Returns:
+            np.ndarray: values of the gradient w.r.t. this parameter
+        """
+        cdef CTensor t
+        return c_tensor_as_np(self.thisptr.get_storage().g)
+    
+    cpdef clip_inplace(self, float left, float right):
+        """Clip the values in the parameter to a fixed range [left, right] (in place)
+        
+        Args:
+            arr(np.ndarray): Scale
+        """
+        self.thisptr.clip_inplace(left, right)
+        
+    # TODO: make more efficient
+    cpdef set_value(self, arr):
+        """Set value of the parameter
+
+        """
+        cdef CTensor t
+        cdef float* vals
+        t = self.thisptr.get_storage().values
+        shape = arr.shape
+        if self.shape() != shape:
+            raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
+        vals = t.v
+        arr = arr.flatten(order='F')
+        for i in xrange(arr.size):
+            vals[i] = arr[i]
+
+    cpdef zero(self):
+        """Set the parameter to zero
+
+        """
+        self.thisptr.zero()
+
+    cpdef scale(self,float s):
+        """Scales the parameter
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale(s)
+
+    cpdef scale_gradient(self,float s):
+        """Scales the gradient
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale_gradient(s)
+
+
+    cpdef bool is_updated(self):
+        """check whether the parameter is updated or not
+        
+        Returns:
+            bool: Update status
+        """
+        return self.thisptr.is_updated()
+
+    cpdef set_updated(self, bool b):
+        """Set parameter as "updated"
+        
+        Args:
+            b(bool): updated status
+        """
+        self.thisptr.set_updated(b)
+
+    cpdef name(self):
+        """
+        Return the full name of this parameter.
+        """
+        return self.thisptr.get_fullname().decode("utf8")
+
+    cpdef Expression expr(self, bool update=True):
+        """Returns the parameter as an expression
+
+        This is the same as calling
+
+            dy.parameter(param)
+        
+        Args:
+            update(bool): If this is set to False, the parameter won't be updated during the backward pass
+        Returns:
+            Expression: Expression of the parameter
+        """
+        if update:
+            if cg_version() != self._version:
+                self._version = cg_version()
+                self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+            return self._expr
+        else:
+            if cg_version() != self._const_version:
+                self._const_version = cg_version()
+                self._const_expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
+            return self._const_expr
+
+# Parameters }}}
+
+cdef class LookupParameters: # {{{
+    cdef CLookupParameters thisptr # TODO: no longer pointer
+    cdef int _version
+    cdef Expression _expr
+    def __cinit__(self):
+        self._version = -1
+    @staticmethod
+    cdef wrap_ptr(CLookupParameters ptr):
+        self = LookupParameters()
+        self.thisptr = ptr
+        return self
+
+    # TODO docs
+    def save(self, fname, key="", append=False):
+        self.write_to_textfile(fname, key, append)
+    def populate(self, fname, key=""):
+        """Populate the values of this LookupParameters object from
+        the parameter named `key` in the file `fname`.
+        The sizes of saved parameters and this object must match.
+
+        Args:
+            fname (string): the name of a file to load from.
+            key   (string): the parameter to read from the file.
+        """
+        self.populate_from_textfile(fname, key)
+
+    def write_to_textfile(self, fname, key="", bool append=False):
+        cdef CTextFileSaver *saver
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        saver = new CTextFileSaver(_fname, append=append)
+        saver.save(self.thisptr,_key)
+        del saver
+
+    def populate_from_textfile(self, fname, key=""):
+        cdef CTextFileLoader *loader
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        loader.populate(self.thisptr, _key)
+        del loader
+
+    cpdef init_from_array(self, arr):
+        if len(arr) > self.thisptr.get_storage().values.size():
+            raise Exception("too many rows")
+        if arr.shape[1] != self.thisptr.get_storage().values[0].d.rows():
+            raise Exception("dim mismatch")
+        cdef vector[float] r
+        for i,row in enumerate(arr):
+            self.init_row(i, row)
+
+    cpdef shape(self):
+        return c_dim_as_shape(self.thisptr.get_storage().all_dim)
+
+    def __getitem__(self, int i):
+        return lookup(self, i)
+
+    cpdef batch(self, vector[unsigned] i):
+        return lookup_batch(self, i)
+
+    cpdef init_row(self, unsigned i, vector[float] row):
+        self.thisptr.initialize(i, row)
+
+    cpdef as_array(self):
+        """
+        Return as a numpy array.
+        """
+        cdef vector[CTensor] vals
+        vals = self.thisptr.get_storage().values
+        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
+
+    cpdef grad_as_array(self):
+        """
+        Return gradients as a numpy array.
+        """
+        cdef vector[CTensor] grads
+        grads = self.thisptr.get_storage().grads
+        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
+    
+    cpdef scale(self,float s):
+        """Scales the parameter
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale(s)
+
+    cpdef scale_gradient(self,float s):
+        """Scales the gradient
+
+        Args:
+            s(float): Scale
+
+        """
+        self.thisptr.scale_gradient(s)
+        
+    cpdef Expression expr(self,bool update=True):
+        if cg_version() != self._version:
+            self._version = cg_version()
+            if update:
+                self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+            else:
+                self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
+        return self._expr
+
+    cpdef zero(self): self.thisptr.zero()
+
+    cpdef bool is_updated(self): return self.thisptr.is_updated()
+    cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
+
+    cpdef name(self):
+        """
+        Return the full name of this lookup parameter.
+        """
+        return self.thisptr.get_fullname().decode("utf8")
+# }}}
+
+cdef class ParameterCollection: # {{{
+    """
+    A ParameterCollection holds Parameters. Use it to create, load and save parameters.
+
+    (It used to be called Model in previous versions of DyNet, and Model is still an alias for ParameterCollection.)
+
+    A ParameterCollection is a container for Parameters and LookupParameters.
+
+    dynet.Trainer objects take ParameterCollection objects that define which parameters
+    are being trained.
+    
+    The values of the parameters in a collection can be persisted to and loaded from files.
+
+    Hierarchy:
+        The parameter collections can be nested, where each collection can hold zero or more
+        sub-collection, which are also ParameterCollection objects. Each (sub-)collection contains
+        the parameters in it and in all the (sub-)collections below it.
+
+    Naming:
+        Parameters, LookupParameters and ParameterCollections have associated string names.
+        The names can be accessed using the `.name()` method. 
+        
+        The names are used for identifying the parameters and the collection hierarchy 
+        when loading from disk, and in particular when loading only a subset of the objects 
+        in a saved file.
+
+        The name of a parameter, lookup parameter or sub-collection is unique within
+        a ParameterCollection, and reflects the hierarchy structure.
+
+        One can supply an optional informative name when creating the parameter or
+        sub-collection.  The supplied names are then appended with running index to
+        avoid name clashes. The `.name()` method returns the full name of an object,
+        including the appended index and its location within the collection hierarchy.
+        The user-supplied names cannot inclue the characters `/` (which is used as a hierarchy
+        separator) or `_` (which is used as an index separator).
+    """
+    cdef CModel thisptr  # Not a pointer...
+    def __cinit__(self, ):
+        pass
+
     def __init__(self):
         pass
 
-    def __dealloc__(self): del self.thisptr
-
     @staticmethod
-    def from_file(fname):
-        """Create model from file
-        
-        Loads all parameters in file and returns model holding them
-        
+    cdef wrap(CModel m):
+        self = ParameterCollection()
+        self.thisptr = m
+        return self
+
+    def save(self, fname, name="",append=False):
+        """Save the values of all parameters in this collection to file.
+
         Args:
-            fname (str): File name
-        
-        Returns:
-            (dynet.Model): Created model
+            fname (string): file name to save into.
         """
-        model = Model()
-        res = model.load(fname)
-        return model, res
+        self.write_to_textfile(fname, name ,append)
+
+    def populate(self, fname, key=""):
+        """Populate the values of all parameters in this collection from file.
+
+        This only populates the values of existing parameters, and does not add parameters to the collection.
+        Thus, the content of the file and the parameters in this collection must match.
+        One should make sure to add to the collection the same parameters (and in the same order) before calling
+        populate, as the ones that were added before calling save.
+
+        Args:
+            fname (string): file name to read parameter values from.
+        """
+        self.populate_from_textfile(fname, key)
+
+    cpdef load_param(self, fname, key):
+        """Loads a named parameter from a file, adds it to the collection,
+        and returns the loaded parameter.
+
+        Args:
+            fname (string): the file name to read from.
+            key   (string): the full-name of the parameter to read.
+
+        Returns:
+            (dynet.Parameters) The Parameters object.
+        """
+        cdef CTextFileLoader *loader
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        p = Parameters.wrap_ptr(loader.load_param(self.thisptr, _key))
+        del loader
+        return p
+
+    cpdef load_lookup_param(self, fname, key):
+        """Loads a named lookup-parameter from a file, adds it to the collection,
+        and returns the loaded parameter.
+
+        Args:
+            fname (string): the file name to read from.
+            key   (string): the full-name of the lookup parameter to read.
+
+        Returns:
+            (dynet.LookupParameters) The LookupParameters object.
+        """
+        cdef CTextFileLoader *loader
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        p = LookupParameters.wrap_ptr(loader.load_lookup_param(self.thisptr, _key))
+        del loader
+        return p
+
+    # TODO docs
+    def write_to_textfile(self, fname, key="",append=False):
+        cdef CTextFileSaver *saver
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        saver = new CTextFileSaver(_fname, append=append)
+        saver.save(self.thisptr,_key)
+        del saver
+
+    # TODO docs
+    def populate_from_textfile(self, fname, key=""):
+        cdef CTextFileLoader *loader
+        cdef string _fname = <string> fname.encode("utf8")
+        cdef string _key = <string> key.encode("utf8")
+        loader = new CTextFileLoader(_fname)
+        loader.populate(self.thisptr, _key)
+        del loader
 
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
-    cpdef parameters_from_numpy(self, array):
+    cpdef parameters_from_numpy(self, array,string name=""):
         """Create parameter from numpy array
         
         Args:
             array (np.ndarray): Numpy array
+            name  (string): optional name for this parameter.
         
         Returns:
             (dynet.Parameters): Parameter
         """
         dim = array.shape
-        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer))
+        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None):
-        """Add a parameter to the model
+    # TODO this may fail with >2 dim arrays.
+    cpdef lookup_parameters_from_numpy(self, array, string name=""):
+        """Create LookupParameters from numpy array
+        
+        Args:
+            array (np.ndarray): Numpy array. rows: vocab_size, cols: dims.
+            name  (string): optional name for this parameter.
+        
+        Returns:
+            (dynet.LookupParameters): LookupParameter
+        """
+        vocab_size = array.shape[0]
+        emb_dim = array.shape[1:]
+        init = NumpyInitializer(array.T)
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name)
+        cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
+        return pp
+
+    cpdef add_parameters(self, dim, PyInitializer init=None, string name=""):
+        """Add a parameter to the ParameterCollection
         
         Args:
             dim (tuple): Shape of the parameter
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            name (string)             : Optional name for this parameter (default: "")
         
         Returns:
             (dynet.Parameters): Created Parameter
@@ -648,18 +932,19 @@ cdef class Model: # (((
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
-        p = self.thisptr.add_parameters(Dim(dim), deref(initializer))
+        p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None):
-        """Add a lookup parameter to the model
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name=""):
+        """Add a lookup parameter to the ParameterCollection
         
         Args:
-            dim (tuple): Shape of the parameter. The first dimension is the lookup dimension
+            dim (tuple): Shape of the parameter. The first dimension is the vocab size
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            name (string)             : Optional name for this parameter (default: "")
         
         Returns:
             (dynet.LookupParameters): Created LookupParameter
@@ -670,167 +955,55 @@ cdef class Model: # (((
         if init is None:
             init = GlorotInitializer(True)
         initializer = init.initializer
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    def save_all(self, fname):
-        """Save all parameters in model to file
+    cpdef add_subcollection(self, name=None):
+        """Creates a sub-collection of the current collection, and returns it.
         
-        Args:
-            fname (str): File name
-        """
-        save_dynet_model(fname.encode(), self.thisptr)
+        A sub-collection is simply a ParameterCollection object which is tied to a
+        parent collection. ParameterCollections can be nested to arbitraty depth.
 
-    def load_all(self, fname):
-        """Load all parameters in model from file
-        
-        Args:
-            fname (str): File name
-        """
-        load_dynet_model(fname.encode(), self.thisptr)
+        Sub-collections are used for grouping of parameters,
+        for example if one wants to train only a subset of the parameters, one
+        can add them in a subcollection and pass the subcollection to a trainer.
+        Similarly, for saving (or loading) only some of the parameters, one can save/populate
+        a sub-collection.
 
-    cdef _save_one(self, component, CModelSaver *saver, fh, pfh):
-        # would be nicer to have polymorphism/dispatch-by-type
-        # but we cannot because we need to bind to the c-type.
-        c = component
-        if isinstance(c, Parameters):
-            fh.write("param ")
-            saver.add_parameter((<Parameters>c).thisptr)
-        elif isinstance(c, LookupParameters):
-            fh.write("lookup ")
-            saver.add_lookup_parameter((<LookupParameters>c).thisptr)
-        elif isinstance(c, GRUBuilder):
-            fh.write("gru_builder ")
-            saver.add_gru_builder((<CGRUBuilder*>(<GRUBuilder>c).thisptr)[0])
-        elif isinstance(c, LSTMBuilder):
-            fh.write("lstm_builder ")
-            saver.add_lstm_builder((<CLSTMBuilder*>(<LSTMBuilder>c).thisptr)[0])
-        elif isinstance(c, VanillaLSTMBuilder):
-            fh.write("vanilla_lstm_builder ")
-            saver.add_vanilla_lstm_builder((<CVanillaLSTMBuilder*>(<VanillaLSTMBuilder>c).thisptr)[0])
-        elif isinstance(c, SimpleRNNBuilder):
-            saver.add_srnn_builder((<CSimpleRNNBuilder*>(<SimpleRNNBuilder>c).thisptr)[0])
-            fh.write("srnn_builder ")
-        elif isinstance(c, BiRNNBuilder):
-            fh.write("birnn_builder~%d " % (2 * len(c.builder_layers)))
-            for (f,b) in c.builder_layers:
-                self._save_one(f,saver,fh,pfh)
-                self._save_one(b,saver,fh,pfh)
-        elif isinstance(c, Saveable):
-            cs = c.get_components()
-            fh.write("user~%d " % len(cs))
-            pickle.dump(c,pfh)
-            for subc in cs:
-                self._save_one(subc,saver,fh,pfh)
-        else:
-            raise TypeError("Cannot save model component of type %s" % type(c))
+        Sub-collections are used inside builder objects (such as the LSTMBuilder):
+        The builder creates a local sub-collection and adds parameters to it instead
+        of to the global collection that is passed to it in the constructor.
+        This way, the parameters participating in the builder are logically grouped,
+        and can be saved/loaded/trained seperately if needed.
 
-    def save(self, fname, components=None):
-        """Save a list of parameters to file
-        
         Args:
-            fname (str): File name
-        
+            name (string): an optional name for the sub-collection.
+
         Keyword Arguments:
-            components (list): List of parameters to save (default: None)
-        """
-        if not components:
-            self.save_all(fname)
-            return
-        fh = open(fname+".pym","w")
-        pfh = open(fname+".pyk","wb")
-        cdef CModelSaver *saver = new CModelSaver(fname.encode(), self.thisptr)
-        for c in components:
-            self._save_one(c,saver,fh,pfh)
-        saver.done()
-        fh.close()
-        pfh.close()
-        del saver
-
-    cdef _load_one(self, itypes, CModelLoader *loader, pfh):
-        cdef CParameters p
-        cdef CLookupParameters lp
-        cdef GRUBuilder gb_
-        cdef LSTMBuilder lb_
-        cdef VanillaLSTMBuilder vlb_
-        cdef SimpleRNNBuilder sb_
-        tp = next(itypes)
-        if tp == "param":
-            loader.fill_parameter(p)
-            param = Parameters.wrap_ptr(p)
-            return param
-        elif tp == "lookup":
-            loader.fill_lookup_parameter(lp)
-            param = LookupParameters.wrap_ptr(lp)
-            return param
-        elif tp == "gru_builder":
-            gb_ = GRUBuilder(0,0,0,self) # empty builder
-            loader.fill_gru_builder((<CGRUBuilder *>gb_.thisptr)[0])
-            return gb_
-        elif tp == "lstm_builder":
-            lb_ = LSTMBuilder(0,0,0,self) # empty builder
-            loader.fill_lstm_builder((<CLSTMBuilder *>lb_.thisptr)[0])
-            return lb_
-        elif tp == "vanilla_lstm_builder":
-            vlb_ = VanillaLSTMBuilder(0,0,0,self) # empty builder
-            loader.fill_vanilla_lstm_builder((<CVanillaLSTMBuilder *>vlb_.thisptr)[0])
-            return vlb_
-        elif tp == "srnn_builder":
-            sb_ = SimpleRNNBuilder(0,0,0,self) # empty builder
-            loader.fill_srnn_builder((<CSimpleRNNBuilder *>sb_.thisptr)[0])
-            return sb_
-        elif tp.startswith("birnn_builder~"):
-            tp,num = tp.split("~",1)
-            num = int(num)
-            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
-            return BiRNNBuilder(None, None, None, None, None, list(zip(items[0::2], items[1::2])))
-        elif tp.startswith("user~"):
-            # user defiend type
-            tp,num = tp.split("~",1)
-            saveable = pickle.load(pfh)
-            num = int(num)
-            items = [self._load_one(itypes, loader, pfh) for _ in xrange(num)]
-            saveable.restore_components(items)
-            return saveable
-        else:
-            print("Huh?")
-            assert False,"unsupported type " + tp
-
-    cpdef load(self, fname):
-        """Load a list of parameters from file
-        
-        Args:
-            fname (str): File name
+            name (string)             : Optional name for this sub-collection (default: "")
 
         Returns:
-            (list): List of parameters loaded from file
+            (dynet.ParameterCollection) a parameter collection.
         """
-        if not os.path.isfile(fname+".pym"):
-            self.load_all(fname)
-            return
-        with open(fname+".pym","r") as fh:
-            types = fh.read().strip().split()
+        if name is None: return ParameterCollection.wrap(self.thisptr.add_subcollection("".encode()))
+        else: return ParameterCollection.wrap(self.thisptr.add_subcollection(name.encode()))
 
-        cdef CModelLoader *loader = new CModelLoader(fname.encode(), self.thisptr)
-        with open(fname+".pyk","rb") as pfh:
-            params = []
-            itypes = iter(types)
-            while True: # until iterator is done
-                try:
-                    param = self._load_one(itypes,loader,pfh)
-                except StopIteration: break
-                params.append(param)
-        loader.done()
-        del loader
-        return params
-    #)
+    cpdef name(self):
+        """
+        Return the full name of this collection.
+        """
+        return self.thisptr.get_fullname().decode("utf8")
 
-# )
+# Alias Model and ParameterCollection
+Model=ParameterCollection
 
-# ((( Computation Graph 
+# }}}
 
-# ((( "Pointers"
+# }}}
+
+
+# {{{ "Pointers"
 
 cdef class UnsignedValue:
     cdef unsigned val
@@ -874,8 +1047,9 @@ cdef class FloatVectorValue:
     def size(self): return len(deref(self.vals))
     cdef vector[float]* addr(self): return self.vals
 
-# )
+# }}}
 
+# {{{ Computation Graph 
 cdef int SECRET = 923148
 cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
@@ -958,14 +1132,6 @@ cdef class ComputationGraph:
         result = Expression.from_cexpr(self._cg_version, c_parameter(self.thisptr[0], params.thisptr))
         return result
 
-    #def params_from_model(self, model):
-    #    results = ()
-    #    for name in model.regular_parameters():
-    #        results[name] = self.parameters(model[name])
-    #    for name in model.lookup_parameters():
-    #        results[name] = self.lookup(model[name])
-    #    return results
-
     cpdef forward_scalar(self, VariableIndex index):
         return c_as_scalar(self.thisptr.forward(index))
 
@@ -1017,6 +1183,8 @@ cdef class ComputationGraph:
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
     def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1):
         return _vecInputExpression(self, v, d,batch_size)
+    def inputSparseTensor(self, vector[unsigned] idxs, vector[float] v, tuple dim, int batch_size=1, float defval=0):
+        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -1027,12 +1195,9 @@ cdef class ComputationGraph:
     cdef outputBatchPicker(self, Expression e, vector[unsigned] vs, unsigned dim=0):
         r = _pickerBatchExpression(self, e, vs, dim)
         return r
+# }}}
 
-
-
-# )
-
-cdef class Tensor:
+cdef class Tensor: #{{{
     """Tensor class
 
     A Tensor is a value object that is kept on the computation device (GPU or CPU).
@@ -1104,8 +1269,9 @@ cdef class Tensor:
             dimension "dim" will be "num", consisting of the appropriate IDs.
         """
         return Tensor.wrap_cindextensor(CTensorTools.categorical_sample_log_prob(self.t, dim, num))
+# Tensor }}}
 
-#((( Expressions
+#{{{ Expressions
 cdef ensure_freshness(Expression a):
     if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
 
@@ -1117,7 +1283,7 @@ cdef _cadd(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_
 cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_mul(a.c(), b))
 cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
 
-cdef class Expression: #(((
+cdef class Expression: #{{{
     """Expressions are the building block of a Dynet computation graph.
     
     Expressions are the main data types being manipulated in a DyNet program. Each expression represents a sub-computation in a computation graph.
@@ -1407,7 +1573,7 @@ cdef class Expression: #(((
         elif isinstance(self,Expression) and isinstance(other,(int, float)):
             return _neg(_scalarsub(other, self))
         else: raise NotImplementedError()
-#)))
+#}}}
 
 cpdef forward(list exps, recalculate=False):
     cdef Expression maxe = exps[0]
@@ -1449,7 +1615,7 @@ def parameter(p, update=True):
     else:
         raise NotImplementedError("Cannot call parameter() on anything other than Parameters or LookupParameters")
 
-# ((( Mutable Expressions
+# {{{ Mutable Expressions
 #     These depend values that can be set by the caller
 
 cdef class _inputExpression(Expression):
@@ -1509,6 +1675,32 @@ cdef class _vecInputExpression(Expression):
         self.cgp().invalidate()
         self.val.set(data)
 
+cdef class _sparseInputExpression(Expression):
+    """Subclass of Expression corresponding to any non-scalar input expressions
+    
+    Despite the name, this also represents tensors (in column major format).
+    TODO : change this
+    """
+    def __cinit__(self, ComputationGraph g, vector[unsigned] idxs, vector[float] val, dim ,batch_size=1, defval=0):
+        #self.cg = g.thisptr
+        self.cg_version = g.version()
+        cdef CExpression e
+        e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval)
+        self.vindex = e.i
+        g._inputs.append(self)
+
+    def set(self, vector[float] data):
+        """Change the value of the expression
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
+        This allows you to use dynet as a static framework.
+        For now this only accepts new values as flattened arrays (column majors). TODO : change this
+
+        Args:
+            data(vector[float]): New value
+        """
+        raise ValueError('Can\'t set value of sparse input vector for now')
+
 def vecInput(int dim):
     """Input an empty vector
     
@@ -1543,7 +1735,7 @@ def matInput(int d1, int d2):
     Returns:
         dynet.Expression: [description]
     """
-    return _cg.inputMatrix(d1, d2)
+    raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
 def inputMatrix(vector[float] v, tuple d):
     """DEPRECATED : use inputTensor
@@ -1564,7 +1756,7 @@ def inputMatrix(vector[float] v, tuple d):
         array([[ 1.,  3.,  5.],
                [ 2.,  4.,  6.]])
     """
-    return _cg.inputMatrixLiteral(v, d)
+    raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
 def inputTensor(arr,batched=False):
     """Creates a tensor expression based on a numpy array or a list.
@@ -1592,7 +1784,7 @@ def inputTensor(arr,batched=False):
         else:
             arr=np.asarray(arr,dtype=float)
     if not isinstance(arr,np.ndarray):
-        raise TypeError("Input Tensor should be a numpy.ndarray or a valid list pf floats")
+        raise TypeError("Input Tensor should be a numpy.ndarray or a valid list of floats")
     if batched:
         dim = arr.shape[:-1] if len(arr.shape) > 1 else (1,)
         batch_size= arr.shape[-1]
@@ -1601,6 +1793,44 @@ def inputTensor(arr,batched=False):
         batch_size= 1
     arr = arr.flatten(order='F')
     return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
+
+
+def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
+    """Creates a tensor expression based on indices and values
+    
+    The dimension is inferred from the shape of the input.
+    if batched=True, the last dimension is used as a batch dimension
+    if arr is a list of numpy ndarrays, this returns a batched expression where the batch elements are the elements of the list
+    
+    Args:
+        idxs(tuple, list): A tuple/list of integer arrays, one array for each dimension (including the batch dimension)
+        values(list,np.ndarray): A 1D array/list of values
+        shape: The desired shape
+    Keyword Args:
+        batched(bool): Whether to use the last dimension as a batch dimension (default: False). For example if :code:`shape=(3, 3, 3)` and :code:`batched=True` the resulting expression will be a batch of 3 3x3 matrices
+        defval(number): The default value for all non specified coordinates (default: 0)
+    
+    Returns:
+        _vecInputExpression: Input expression
+    
+    Raises:
+        TypeError: If the type is not respected
+        ValueError: If the number of dimensions don't match
+    """
+    if isinstance(values, list):
+        values = np.asarray(values, dtype=float)
+    if not len(values.shape) == 1:
+        raise TypeError("values should be a 1d array")
+    if not len(idxs) == len(shape):
+        raise ValueError("Number of indices doesn't match shape")
+    if batched:
+        dim = shape[:-1] if len(shape) > 1 else (1,)
+        batch_size= shape[-1]
+    else:
+        dim = shape
+        batch_size = 1
+    idxs = np.ravel_multi_index(idxs, shape, order='F')
+    return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval)
 
 cdef class _lookupExpression(Expression):
     """Expression corresponding to a lookup from lookup parameter
@@ -1774,49 +2004,7 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
     """
     return _cg.outputBatchPicker(e, indices, dim)
 
-cdef class _hingeExpression(Expression):
-    """Expression representing the output of the hinge operation
-    
-    """
-    cdef UnsignedValue val
-    def __cinit__(self, ComputationGraph g, Expression x, unsigned index, float m=1.0):
-        self.val = UnsignedValue(index)
-        #self.cg = x.cg
-        self.cg_version = g.version()
-        cdef CExpression e
-        e = c_hinge(x.c(), self.val.addr(), m)
-        self.vindex = e.i
-        g._inputs.append(self)
-    def set_index(self, unsigned i):
-        """Change the correct candidate index
-        
-        This is useful if you want to to change the target and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
-        This allows you to use dynet as a static framework.
-        
-        Args:
-            i(number): New correct index
-        """
-        self.cgp().invalidate()
-        self.val.set(i)
-
-def hinge(Expression x, unsigned index, float m=1.0):
-    """Hinge loss.
-
-    This expression calculates the hinge loss, formally expressed as: 
-    
-    Args:
-        x (Expression): A vector of scores
-        index (number): The index of the correct candidate
-    
-    Keyword Args:
-        m(number): Margin (default: 1.0)
-    
-    Returns:
-        _hingeExpression: The hinge loss of candidate index with respect to margin m
-    """
-    return _hingeExpression(_cg, x, index, m)
-
-# )
+# }}}
 
 cpdef Expression zeroes(dim, int batch_size=1): 
     """Create an input full of zeros
@@ -2033,6 +2221,18 @@ cpdef Expression squared_norm(Expression x):
         dynet.Expression: :math:`\Vert x\Vert_2^2=\sum_i x_i^2`
     """
     return Expression.from_cexpr(x.cg_version, c_squared_norm(x.c()))
+cpdef Expression l2_norm(Expression x):
+    """L2 norm
+
+    The l2 norm of the values of :code:`x`: :math:`\Vert x\Vert_2=\sqrt{\sum_i x_i^2}`.
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\Vert x\Vert_2=\sqrt{\sum_i x_i^2}`
+    """
+    return Expression.from_cexpr(x.cg_version, c_l2_norm(x.c()))
 cpdef Expression squared_distance(Expression x, Expression y):
     """Squared distance
     
@@ -2339,6 +2539,7 @@ cpdef Expression logistic(Expression x):
         dynet.Expression: :math:`y_i = \\frac{1}{1+e^{-x_i}}`
     """
     return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
+
 cpdef Expression rectify(Expression x): 
     """Rectifier (or ReLU, Rectified Linear Unit)
     
@@ -2351,6 +2552,59 @@ cpdef Expression rectify(Expression x):
         dynet.Expression: :math:`y_i = \max(x_i,0)`
     """
     return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
+
+cpdef Expression elu(Expression x, float alpha=1.0): 
+    """Exponential Linear Unit (ELU)
+
+    Calculate elementwise the function 
+
+    .. math::
+        y_i = \left\{\\begin{array}{lr}
+                   x_i, & \\text{if } x>0\\\\
+                   \\alpha\\times(e^{x_i} - 1), & \\text{if }x\leqslant 0
+                 \end{array}\\right.
+        
+    Reference: `Clevert et al., 2015 <https://arxiv.org/abs/1511.07289v5>`_
+ 
+    Args:
+        x (dynet.Expression): Input expression
+        alpha (number): :math:`\\alpha` parameter
+    
+    Returns:
+        dynet.Expression: :math:`\\text{ELU}(x_i, \\alpha)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_elu(x.c(), alpha))
+
+cpdef Expression selu(Expression x): 
+    """Scaled Exponential Linear Unit (SELU)
+
+    Calculate elementwise the function 
+
+    .. math::
+        y_i = \lambda\\times\left\{
+        \\begin{array}{lr}
+           x_i, & \\text{if } x>0\\\\
+           \\alpha\\times(e^{x_i} - 1), & \\text{if }x\leqslant 0\\\\
+        \end{array}\\right.
+
+    With
+
+    .. math::
+        \\begin{split}
+            \lambda &=\\texttt{1.0507009873554804934193349852946}\\\\
+            \\alpha &=\\texttt{1.6732632423543772848170429916717}\\\\
+        \end{split}
+
+    Reference: `Klambaouer et al., 2017 <https://arxiv.org/abs/1706.02515>`_
+ 
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`\\text{SELU}(x_i)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_selu(x.c()))
+
 cpdef Expression log_softmax(Expression x, list restrict=None):
     """Restricted log softmax
     
@@ -2774,6 +3028,35 @@ cpdef Expression pickneglogsoftmax_batch(Expression x, vector[unsigned] vs):
         dynet.Expression: :math:`-\sum_{v\in \\texttt{vs}}\log\left(\\frac{e^{x_v}}{\sum_j e^{x_j}}\\right)`
     """
     return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), vs))
+cpdef Expression hinge(Expression x, unsigned v, float m=1.0):
+    """Hinge loss
+    
+    This function takes in a vector of scores  :code:`x`, and calculates a hinge loss such that the element :code:`v` must be greater than all other elements by at least :code:`m`, otherwise a loss is incurred.
+
+    Args:
+        x (dynet.Expression): Input scores
+        v (int): True class
+        m (float): The margin
+    
+    Returns:
+        dynet.Expression: :math:`\\sum_{\\tilde{v} != v} max(x_{\\tilde{v}} - x_v + m, 0)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), v, m))
+cpdef Expression hinge_batch(Expression x, vector[unsigned] vs, float m=1.0):
+    """Hinge loss on a batch
+    
+    This function takes in a batched vector of scores  :code:`xs`, and calculates a hinge loss such that the elements :code:`vs` must be greater than all other elements by at least :code:`m`, otherwise a loss is incurred.
+    
+    Args:
+        x (dynet.Expression): Input scores
+        v (list): True classes
+        m (float): The margin
+    
+    Returns:
+        dynet.Expression: The batched hinge loss function
+    """
+    return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), vs, m))
+
 
 cpdef Expression kmh_ngram(Expression x, unsigned v):
     """[summary]
@@ -3324,12 +3607,12 @@ cpdef Expression weight_norm(Expression w, Expression g):
     ensure_freshness(g)
     return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
 
-# )
+# }}}
     
-# ((( RNNS / Builders
+# {{{ RNNS / Builders
 # TODO: unify these with inheritance
 
-cdef class _RNNBuilder: # (((
+cdef class _RNNBuilder: # {{{
     """
     """
     cdef CRNNBuilder *thisptr
@@ -3493,21 +3776,33 @@ cdef class _RNNBuilder: # (((
                 self.start_new_sequence()
             self._init_state = RNNState(self, -1)
         return self._init_state
-#)
 
-cdef class SimpleRNNBuilder(_RNNBuilder): # (((
+    cpdef ParameterCollection param_collection(self):
+        return ParameterCollection.wrap(self.thisptr.get_parameter_collection())
+# _RNNBuilder }}}
+
+cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     """[summary]
     
     [description]
     """
     cdef CSimpleRNNBuilder* thissimpleptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    cdef tuple _spec
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
+        self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
-            self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thissimpleptr = self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
 
+    @property
+    def spec(self): return self._spec
+    @classmethod
+    def from_spec(cls, spec, model):
+        return SimpleRNNBuilder(*spec, model)
+
+# TODO rename to parameters()?
     cpdef get_parameters(self):
         """Retrieve the internal parameters of the RNN
         
@@ -3525,7 +3820,7 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # (((
             params.append(layer_params)
         return params
 
-
+# TODO rename to parameter_expressions()?
     cpdef get_parameter_expressions(self):
         """Retrieve the internal parameters expressions of the RNN
         
@@ -3550,21 +3845,30 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # (((
         return exprs
 
     def whoami(self): return "SimpleRNNBuilder"
-#)
+# SimpleRNNBuilder }}}
     
-cdef class GRUBuilder(_RNNBuilder): # (((
+cdef class GRUBuilder(_RNNBuilder): # {{{
     """[summary]
     
     [description]
     """
     cdef CGRUBuilder* thisgruptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    cdef tuple _spec
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
+        _spec = (layers, input_dim, hidden_dim)
         if layers > 0:
-            self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thisgruptr = self.thisptr = new CGRUBuilder()
         self.cg_version = -1
 
+    @property
+    def spec(self): return self._spec
+    @classmethod
+    def from_spec(cls, spec, model):
+        return GRUBuilder(*spec, model)
+
+# TODO rename to parameters()?
     cpdef get_parameters(self):
         """Retrieve the internal parameters of the GRU
         
@@ -3582,7 +3886,7 @@ cdef class GRUBuilder(_RNNBuilder): # (((
             params.append(layer_params)
         return params
 
-
+# TODO rename to parameter_expressions()?
     cpdef get_parameter_expressions(self):
         """Retrieve the internal parameters expressions of the GRU
         
@@ -3607,21 +3911,30 @@ cdef class GRUBuilder(_RNNBuilder): # (((
         return exprs
 
     def whoami(self): return "GRUBuilder"
-# )
+# GRUBuilder }}}
 
-cdef class LSTMBuilder(_RNNBuilder): # (((
+cdef class LSTMBuilder(_RNNBuilder): # {{{
     """[summary]
     
     [description]
     """
     cdef CLSTMBuilder* thislstmptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
+    cdef tuple _spec
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
+        self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
-            self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+            self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
             self.thislstmptr = self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
 
+    @property
+    def spec(self): return self._spec
+    @classmethod
+    def from_spec(cls, spec, model):
+        return LSTMBuilder(*spec, model)
+
+# TODO rename to parameters()?
     cpdef get_parameters(self):
         """Retrieve the internal parameters of the LSTM
         
@@ -3640,6 +3953,7 @@ cdef class LSTMBuilder(_RNNBuilder): # (((
         return params
 
 
+# TODO rename to parameter_expressions()?
     cpdef get_parameter_expressions(self):
         """Retrieve the internal parameters expressions of the LSTM
         
@@ -3664,9 +3978,9 @@ cdef class LSTMBuilder(_RNNBuilder): # (((
         return exprs
 
     def whoami(self): return "LSTMBuilder"
-# )
+# LSTMBuilder }}}
 
-cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
+cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
     """VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
     
     This cell runs according to the following dynamics :
@@ -3686,24 +4000,36 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         layers (int): Number of layers
         input_dim (int): Dimension of the input
         hidden_dim (int): Dimension of the recurrent units
-        model (dynet.Model): Model to hold the parameters
+        model (dynet.ParameterCollection): ParameterCollection to hold the parameters
         ln_lstm (bool): Whether to use layer normalization
 
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model, ln_lstm=False):
+    cdef tuple _spec
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False):
+        self._spec = (layers, input_dim, hidden_dim, ln_lstm)
         if layers > 0:
-            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0], ln_lstm)
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm)
         else:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
 
+    @property
+    def spec(self): return self._spec
+
+    @classmethod
+    def from_spec(cls, spec, model):
+        layers, input_dim, hidden_dim, ln_lstm = spec
+        return VanillaLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm)
+
+
+# TODO rename to parameters()?
     cpdef get_parameters(self):
         """Retrieve the internal parameters of the VanillaLSTM
         
         The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
 
-        .. code::
+        .. code-block:: text
 
                   h/x   
                 +------+
@@ -3732,13 +4058,13 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
             params.append(layer_params)
         return params
 
-
+# TODO rename to parameter_expressions()?
     cpdef get_parameter_expressions(self):
         """Retrieve the internal parameters expressions of the VanillaLSTM
         
         The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
 
-        .. code::
+        .. code-block:: text
 
                   h/x   
                 +------+
@@ -3815,18 +4141,19 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # (((
         self.thisvanillaptr.set_dropout_masks(batch_size)
 
     def whoami(self): return "VanillaLSTMBuilder"
-# )
+# VanillaLSTMBuilder }}}
 
-cdef class FastLSTMBuilder(_RNNBuilder): # (((
+cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     """[summary]
     
     [description]
     """
     cdef CFastLSTMBuilder* thisfastptr
-    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisfastptr = self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
+    def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
+        self.thisfastptr = self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         self.cg_version = -1
 
+# TODO rename to parameters()?
     cpdef get_parameters(self):
         """Retrieve the internal parameters of the FastLSTM
         
@@ -3844,12 +4171,12 @@ cdef class FastLSTMBuilder(_RNNBuilder): # (((
             params.append(layer_params)
         return params
 
-
+# TODO rename to parameter_expressions()?
     cpdef get_parameter_expressions(self):
         """Retrieve the internal parameters expressions of the FastLSTM
         
         The output is a list with one item per layer. Each item is a list containing :math:`W_{ix},W_{ih},W_{ic},b_i,W_{ox},W_{oh},W_{oc},b_o,W_{cx},W_{ch},b_c`
-        
+       
         Returns:
             List of parameter expressions for each layer
             list
@@ -3868,11 +4195,10 @@ cdef class FastLSTMBuilder(_RNNBuilder): # (((
             exprs.append(layer_exprs)
         return exprs
 
-
     def whoami(self): return "FastLSTMBuilder"
-# )
+# }}}
 
-class BiRNNBuilder(object):
+class BiRNNBuilder(object): # {{{
     """
     Builder for BiRNNs that delegates to regular RNNs and wires them together.  
     
@@ -3888,6 +4214,8 @@ class BiRNNBuilder(object):
             rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
             builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
         """
+        self.spec = num_layers, input_dim, hidden_dim, rnn_builder_factory, builder_layers
+        model = self.model = model.add_subcollection("birnn")
         if builder_layers is None:
             assert num_layers > 0
             assert hidden_dim % 2 == 0
@@ -3901,6 +4229,13 @@ class BiRNNBuilder(object):
                 self.builder_layers.append((f,b))
         else:
             self.builder_layers = builder_layers
+
+    @classmethod
+    def from_spec(cls, spec, model):
+        num_layers, input_dim, hidden_dim, rnn_builder_factory, builder_layers = spec
+        return cls(num_layers, input_dim, hidden_dim, model, rnn_builder_factory, builder_layers)
+
+    def param_collection(self): return self.model
 
     def whoami(self): return "BiRNNBuilder"
 
@@ -3970,8 +4305,9 @@ class BiRNNBuilder(object):
             bs = bb.initial_state().transduce(reversed(es))
             es = [concatenate([f,b]) for f,b in zip(fs, reversed(bs))]
         return es
+# BiRNNBuilder }}}
 
-cdef class RNNState: # (((
+cdef class RNNState: # {{{
     """
     This is the main class for working with RNNs / LSTMs / GRUs.
     Request an RNNState initial_state() from a builder, and then progress from there.
@@ -4135,9 +4471,9 @@ cdef class RNNState: # (((
             dynet.RNNBuilder
         """
         return self.builder
-    #)
+# RNNState }}}
 
-# StackedRNNState   TODO: do at least minimal testing for this #(((
+# StackedRNNState   TODO: do at least minimal testing for this #{{{
 cdef class StackedRNNState:
     cdef list states
     cdef StackedRNNState prev
@@ -4170,11 +4506,11 @@ cdef class StackedRNNState:
             cur = cur.add_input(x)
             states.append(cur)
         return states
-#)
+#}}}
 
-# )
+# RNNS / Builders }}}
 
-# ((( Training 
+# {{{ Trainers
 cdef class Trainer:
     """
     Generic trainer
@@ -4191,6 +4527,7 @@ cdef class Trainer:
             s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
         self.thisptr.update(s)
+
     cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
         """Update a subset of parameters
         
@@ -4207,7 +4544,7 @@ cdef class Trainer:
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec
         for i in updated_lookups: ulookupvec.push_back(i)
-        self.thisptr.update(uparamvec, ulookupvec, s)
+        #self.thisptr.update(uparamvec, ulookupvec, s)
     cpdef update_epoch(self, float r = 1.0):
         """Update trainers hyper-parameters that depend on epochs
         
@@ -4259,14 +4596,14 @@ cdef class SimpleSGDTrainer(Trainer):
     This trainer performs stochastic gradient descent, the goto optimization procedure for neural networks.
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0(number): Initial learning rate (default: 0.1)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
+    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float edecay = 0.0):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
     def whoami(self):
         return "SimpleSGDTrainer"
 
@@ -4286,7 +4623,7 @@ cdef class CyclicalSGDTrainer(Trainer):
        \end{split}
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0_min (number): Lower learning rate (default: {0.01})
@@ -4296,8 +4633,8 @@ cdef class CyclicalSGDTrainer(Trainer):
         edecay (number): Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by :math:`\gamma` (default: {0.0})
     """
     cdef CCyclicalSGDTrainer *thischildptr
-    def __cinit__(self, Model m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
-        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr[0], e0_min, e0_max, step_size, gamma, edecay)
+    def __cinit__(self, ParameterCollection m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
+        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, e0_min, e0_max, step_size, gamma, edecay)
     cpdef update(self, float s=1.0):
         self.thischildptr.update(s)
     def whoami(self):
@@ -4309,7 +4646,7 @@ cdef class MomentumSGDTrainer(Trainer):
     This is a modified version of the SGD algorithm with momentum to stablize the gradient trajectory. 
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0(number): Initial learning rate (default: 0.1)
@@ -4317,8 +4654,8 @@ cdef class MomentumSGDTrainer(Trainer):
         edecay(number): Learning rate decay parameter (default: 0.0)
 
     """
-    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
+    def __cinit__(self, ParameterCollection m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
     def whoami(self):
         return "MomentumSGDTrainer"
 
@@ -4329,15 +4666,15 @@ cdef class AdagradTrainer(Trainer):
     The adagrad algorithm assigns a different learning rate to each parameter.
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0(number): Initial learning rate (default: 0.1)
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-20)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-        self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
+    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
+        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
     def whoami(self):
         return "AdagradTrainer"
 
@@ -4348,15 +4685,15 @@ cdef class AdadeltaTrainer(Trainer):
     The AdaDelta optimizer is a variant of Adagrad aiming to prevent vanishing learning rates.
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-6)
         rho(number): Update parameter for the moving average of updates in the numerator (default: 0.95)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
+    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
     def whoami(self):
         return "AdadeltaTrainer"
 
@@ -4366,7 +4703,7 @@ cdef class RMSPropTrainer(Trainer):
     The RMSProp optimizer is a variant of Adagrad where the squared sum of previous gradients is replaced with a moving average with parameter rho.
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         e0(number): Initial learning rate (default: 0.001)
@@ -4374,8 +4711,8 @@ cdef class RMSPropTrainer(Trainer):
         rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: 0.9)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
-        self.thisptr = new CRMSPropTrainer(m.thisptr[0], e0, eps, rho, edecay)
+    def __cinit__(self, ParameterCollection m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
+        self.thisptr = new CRMSPropTrainer(m.thisptr, e0, eps, rho, edecay)
     def whoami(self):
         return "RMSPropTrainer"
 
@@ -4385,7 +4722,7 @@ cdef class AdamTrainer(Trainer):
     The Adam optimizer is similar to RMSProp but uses unbiased estimates of the first and second moments of the gradient
     
     Args:
-        m(dynet.Model): Model to be trained
+        m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
         alpha(number): Initial learning rate (default: 0.001)
@@ -4394,9 +4731,245 @@ cdef class AdamTrainer(Trainer):
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
-        self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
+    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
+        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
     def whoami(self):
         return "AdamTrainer"
 
-#)
+# Trainers }}}
+
+
+# {{{ Softmax Builders
+cdef class SoftmaxBuilder:
+    """Interface for building softmax layers
+
+    A softmax layer returns a probability distribution over :math:`C` classes given a vector :math:`h\in\mathbb R^d`, with
+
+    .. math::
+        p(c)\propto \exp(W_i^Th + b_i)\ \\forall i\in\{1\ldots C\}
+
+    Where :math:`W\in \mathbb R^{C\\times d}, b \in \mathbb R^C`
+    """
+
+    cdef CSoftmaxBuilder *thisptr
+    cdef int cg_version
+    cdef int const_cg_version
+    def __dealloc__(self):
+        del self.thisptr
+
+    cdef check_and_renew_graph(self, bool update):
+        if update:
+            if self.cg_version != cg_version():
+                self.cg_version = cg_version()
+                self.thisptr.new_graph(cg().thisptr[0], update)
+        else:
+            if self.const_cg_version != cg_version():
+                self.const_cg_version = cg_version()
+                self.thisptr.new_graph(cg().thisptr[0], update)
+
+    cpdef neg_log_softmax(self, Expression x, unsigned c, bool update=True):
+        """Negative log probability of a class
+        
+        Given class :math:`c` and vector :math:`x`, this returns :math:`-\log(p(c \mid x))`
+        
+        Args:
+            x(dynet.Expression): Input vector
+            c(unsigned): Class id
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Log probability of given class
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.neg_log_softmax(x.c(), c))
+
+    cpdef neg_log_softmax_batch(self, Expression x, vector[unsigned] c, bool update=True):
+        """Batched version of :code:`neg_log_softmax`
+        
+        Args:
+            x(dynet.Expression): Input vector (batched)
+            c(list): list of class ids (one per batch element)
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Log probability of given class
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.neg_log_softmax(x.c(), c))
+
+    cpdef sample(self, Expression x):
+        """Sample from the softmax distribution
+        
+        Args:
+            x(dynet.Expression): Input vector
+        
+        Returns:
+            Sampled class
+            int
+        """
+        self.check_and_renew_graph(True)
+        return self.thisptr.sample(x.c())
+
+    cpdef full_log_distribution(self, Expression x, bool update=True):
+        """Returns an Expression representing a vector the size of the number of classes.
+        
+        The ith dimension gives :math:`\log p(c_i | x)`. This function may be SLOW. Avoid if possible.
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(c\mid x)`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.full_log_distribution(x.c()))
+
+    cpdef full_logits(self, Expression x, bool update=True):
+        """Returns the logits (before application of the softmax)
+        
+        The ith dimension gives :math:`W_i^Tx + b_i`
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.full_logits(x.c()))
+
+    cpdef ParameterCollection param_collection(self):
+        """Returns the ParameterCollection containing the softmax parameters
+        
+        The first parameter in the parametercollection is the weight matrix, the second is the biases (if any)
+        
+        Returns:
+            Subcollection holding the parameters
+            ParameterCollection
+        """
+        return ParameterCollection.wrap(self.thisptr.get_parameter_collection())
+
+
+
+cdef class StandardSoftmaxBuilder(SoftmaxBuilder):
+    """
+    This class implements the standard Softmax
+    """
+
+    def __cinit__(self, unsigned input_dim, unsigned num_classes, ParameterCollection pc, bool bias=True):
+        """Constructs a softmaxbuilder
+
+        Args:
+            rep_dim(unsigned): Dimension of the input vectors
+            num_classes(unsigned): Number of classes
+            pc(dynet.ParameterCollection): Parameter collection
+            bias(bool): Whether to use a bias vector or not
+        """
+        self.thisptr = new CStandardSoftmaxBuilder(input_dim, num_classes, pc.thisptr, bias)
+
+
+cdef class ClassFactoredSoftmaxBuilder(SoftmaxBuilder):
+    """Class factored softmax
+
+    Each class is separated into a subclass, ie :math:`p(i\mid h)=p(i\mid h, c) p(c\mid h)` where :math:`c` is a class and :math:`i` a subclass
+
+    """
+    cdef CClassFactoredSoftmaxBuilder *thiscfptr
+    cdef CDict cdic
+
+    cdef dict_to_cdict(self, dict dic):
+        words = sorted(dic.keys(), key=lambda x: dic[x])
+        for w in words:
+            i = self.cdic.convert(w.encode('utf8'))
+            if i != dic[w]:
+                raise ValueError('Dictionary should have unique ids from 0 to num_classes')
+        self.cdic.freeze()
+
+    def __cinit__(self, unsigned input_dim, str cluster_file, dict dic, ParameterCollection pc, bool bias=True):
+        """Constructor from file
+
+        This constructs the CFSM from a file with lines of the following format
+
+        .. code::
+
+            CLASSID   word    [freq]
+
+        For words for instance
+
+        Args:
+            input_dim (unsigned): Dimension of the input vectors
+            cluster_file (str): File containing classes
+            dic (dict): A python dictionary converting words to indices. The dict should be one to one with :math:`\{0,\ldots,\\texttt{num_classes}-1\}` and cover all the words in the :code:`cluster_file`
+            pc(dynet.ParameterCollection): Parameter collection
+            bias(bool): Whether to use a bias vector or not
+        """
+        self.dict_to_cdict(dic)
+        cdef string _fname = <string> cluster_file.encode("utf8")
+        self.thiscfptr = self.thisptr = new CClassFactoredSoftmaxBuilder(input_dim, _fname, self.cdic, pc.thisptr, bias)
+
+
+    cpdef class_log_distribution(self, Expression x, bool update=True):
+        """Get log distribution over classes
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(c\mid x)`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.class_log_distribution(x.c()))
+
+    cpdef class_logits(self, Expression x, bool update=True):
+        """Returns the logits over classes
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.class_logits(x.c()))
+
+    cpdef subclass_log_distribution(self, Expression x, unsigned classid, bool update=True):
+        """ Get log distribution over subclasses of class
+        
+        Args:
+            x(dynet.Expression): Input vector
+            classid(int): class index
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(i\mid x, \\texttt{classid})`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.subclass_log_distribution(x.c(), classid))
+
+    cpdef subclass_logits(self, Expression x, unsigned classid, bool update=True):
+        """Logits over subclasses of class
+        
+        Args:
+            x(dynet.Expression): Input vector
+            classid(int): class index
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.subclass_logits(x.c(), classid))
+
+# Softmax Builders }}}

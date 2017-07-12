@@ -16,9 +16,6 @@
 #include <sstream>
 #include <tuple>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 using namespace std;
 using namespace dynet;
 
@@ -46,7 +43,7 @@ struct RNNSkipLM {
     Parameter p_R;
     Parameter p_bias;
     SimpleRNNBuilder builder;
-    explicit RNNSkipLM(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model, true) {
+    explicit RNNSkipLM(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model, true) {
         p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
         p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
         p_bias = model.add_parameters({VOCAB_SIZE});
@@ -102,7 +99,7 @@ int main(int argc, char** argv) {
 
     dynet::initialize(argc, argv);
     if (argc != 3 && argc != 4) {
-        LOG(INFO) << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+        LOG(INFO) << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
         return 1;
     }
     kSOS = d.convert("<s>");
@@ -127,7 +124,7 @@ int main(int argc, char** argv) {
     LOG(INFO) << "Parameters will be written to: " << fname << endl;
     double best = 9e+99;
 
-    Model model;
+    ParameterCollection model;
     bool use_momentum = false;
     Trainer* sgd = nullptr;
     if (use_momentum)
@@ -137,10 +134,8 @@ int main(int argc, char** argv) {
 
     RNNSkipLM lm(model);
     if (argc == 4) {
-        string fname = argv[3];
-        ifstream in(fname);
-        boost::archive::text_iarchive ia(in);
-        ia >> model;
+        TextfileLoader loader(argv[3]);
+        loader.populate(model);'
     }
 
     unsigned report_every_i = 50;
@@ -196,9 +191,8 @@ int main(int argc, char** argv) {
             }
             if (dloss < best) {
                 best = dloss;
-                ofstream out(fname);
-                boost::archive::text_oarchive oa(out);
-                oa << model;
+                TextFileSaver saver(fname);
+                saver.save(model);
             }
             LOG(INFO) << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
         }

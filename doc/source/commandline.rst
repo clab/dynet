@@ -22,6 +22,10 @@ options.
    every update. This is similar to L2 regularization, but different in a
    couple ways, which are noted in detail in the "Unorthodox Design"
    section.
+-  ``--dynet-autobatch NUMBER``: Turns on DyNet's automatic operation
+   batching capability. This makes it possible to speed up computation with
+   a minimum of work. More information about this functionality can be found
+   `here <http://dynet.readthedocs.io/en/latest/minibatch.html>`_.
 -  ``--dynet-gpus NUMBER``: Specify how many GPUs you want to use, if
    DyNet is compiled with CUDA. Currently, only one GPU is supported.
 -  ``--dynet-gpu-ids X,Y,Z``: Specify the GPUs that you want to use by

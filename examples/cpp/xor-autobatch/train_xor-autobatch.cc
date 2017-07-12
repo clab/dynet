@@ -4,8 +4,6 @@
 #include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
 #include "dynet/grad-check.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -18,7 +16,7 @@ int main(int argc, char** argv) {
 
   // parameters
   const unsigned ITERATIONS = 30;
-  Model m;
+  ParameterCollection m;
   SimpleSGDTrainer sgd(m);
   //MomentumSGDTrainer sgd(m);
 
