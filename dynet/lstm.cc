@@ -118,7 +118,7 @@ void CoupledLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   for (unsigned i = 0; i < layers; ++i) {
     std::vector<Expression> masks_i;
     unsigned idim = (i == 0) ? input_dim : hid;
-    if (dropout_rate > 0.f) {
+    if (dropout_rate > 0.f || dropout_rate_h > 0.f || dropout_rate_c > 0.f) {
       float retention_rate = 1.f - dropout_rate;
       float retention_rate_h = 1.f - dropout_rate_h;
       float retention_rate_c = 1.f - dropout_rate_c;
@@ -377,7 +377,7 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
   for (unsigned i = 0; i < layers; ++i) {
     std::vector<Expression> masks_i;
     unsigned idim = (i == 0) ? input_dim : hid;
-    if (dropout_rate > 0.f) {
+    if (dropout_rate > 0.f || dropout_rate_h > 0.f) {
       float retention_rate = 1.f - dropout_rate;
       float retention_rate_h = 1.f - dropout_rate_h;
       float scale = 1.f / retention_rate;
