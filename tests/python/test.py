@@ -420,15 +420,15 @@ class TestStandardSoftmax(unittest.TestCase):
     def setUp(self):
         # create model
         self.pc = dy.ParameterCollection()
-        self.sm = dy.StandardsoftmaxBuilder(3, 10, self.pc, True)
+        self.sm = dy.StandardSoftmaxBuilder(3, 10, self.pc, True)
 
     def test_sanity(self):
         for i in range(3):
             dy.renew_cg()
-            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), update=False)
-            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 4, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 5, update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 6, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 7, update=False)
             nll.value()
             nll_const.value()
 
@@ -440,20 +440,20 @@ class TestClassFactoredSoftmax(unittest.TestCase):
         self.pc = dy.ParameterCollection()
         dic = dict()
         with open('cluster_file.txt', 'w+') as f:
-            for i in range(50):
-                f.write(str(i) + " " + str(i))
-                f.write(str(i) + " " + str(i + 1))
-                dic[str(i)] = len(dic)
-                dic[str(i + 1)] = len(dic)
-        self.sm = dy.ClassFactoredsoftmaxBuilder(3, 'cluster_file.txt', dic, self.pc, True)
+            for i in range(5):
+                f.write(str(i) + " " + str(2 * i) + "\n")
+                f.write(str(i) + " " + str(2 * i + 1) + "\n")
+                dic[str(2 * i)] = len(dic)
+                dic[str(2 * i + 1)] = len(dic)
+        self.sm = dy.ClassFactoredSoftmaxBuilder(3, 'cluster_file.txt', dic, self.pc, True)
 
     def test_sanity(self):
         for i in range(3):
             dy.renew_cg()
-            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), update=False)
-            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 4, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 5, update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 6, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(range(3)), 7, update=False)
             nll.value()
             nll_const.value()
 
