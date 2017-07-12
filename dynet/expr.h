@@ -2093,22 +2093,30 @@ Expression weight_norm(const Expression& w, const Expression& g);
 
 /**
  * \ingroup normoperations
- * \brief Weight normalization
- * \details Performs weight normalization :
+ * \brief Vanilla LSTM node
+ * \details LSTM block as one operation; because the memory layout of the hc_tm1 parameter does not match dynet conventions,
+ *          this node should not be used directly, but only via the appropriate LSTM builder
  *
- * \f$
- * \begin{split}
- *    \hat{w} &= g\frac{w}{\Vert w\Vert}\\
- * \end{split}
- * \f$
- *
- * Reference : [Salimans, Kingma 2016](https://arxiv.org/abs/1602.07868)
- *
- * \param w Input expression (weight parameter)
- * \param g Gain (scalar expression, usually also a parameter)
- * \return An expression of the same dimension as `w`
+ * \param x_t Current input
+ * \param hc_tm1 h and c of previous timestep, arranged so it can be indexed as {hidden_dim_size, batch_size, h_or_c}
+ * \param Wx_i
+ * \param Wx_f
+ * \param Wx_o
+ * \param Wx_g
+ * \param Wh_i
+ * \param Wh_f
+ * \param Wh_o
+ * \param Wh_g
+ * \param b_i
+ * \param b_f
+ * \param b_o
+ * \param b_g
+ * \return An expression corresponding to `hc_t`, with same size / conventions as hc_tm1
  */
-Expression vanilla_lstm(const Expression& x, const Expression& hc);
+Expression vanilla_lstm(const Expression& x_t,  const Expression& hc_tm1,
+			const Expression& Wx_i, const Expression& Wx_f, const Expression& Wx_o, const Expression& Wx_g,
+			const Expression& Wh_i, const Expression& Wh_f, const Expression& Wh_o, const Expression& Wh_g,
+			const Expression& b_i,  const Expression& b_f,  const Expression& b_o,  const Expression& b_g);
 
 }  // namespace dynet
 

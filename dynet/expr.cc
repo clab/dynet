@@ -197,6 +197,14 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
-Expression vanilla_lstm(const Expression& x, const Expression& hc){return Expression(x.pg, x.pg->add_function<VanillaLSTM>({x.i,hc.i}));}
+Expression vanilla_lstm(const Expression& x_t, const Expression& hc_tm1,
+			const Expression& Wx_i, const Expression& Wx_f, const Expression& Wx_o, const Expression& Wx_g,
+			const Expression& Wh_i, const Expression& Wh_f, const Expression& Wh_o, const Expression& Wh_g,
+			const Expression& b_i, const Expression& b_f, const Expression& b_o, const Expression& b_g){
+  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTM>({x_t.i,hc_tm1.i,
+                                                               Wx_i.i, Wx_f.i, Wx_o.i, Wx_g.i,
+							       Wh_i.i, Wh_f.i, Wh_o.i, Wh_g.i,
+							        b_i.i,  b_f.i,  b_o.i,  b_g.i  }));
+}
 
 }  // namespace dynet
