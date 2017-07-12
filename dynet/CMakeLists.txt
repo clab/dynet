@@ -122,46 +122,51 @@ set(dynet_library_HDRS
 if(ENABLE_BOOST)
   list(APPEND dynet_library_HDRS mp.h)
 endif()
+  
+set(dynet_gen_file_prefix_SRCS
+    nodes-activations
+    nodes-affinetransform
+    nodes-arith-const
+    nodes-arith-cwise
+    nodes-arith-scalar
+    nodes-arith-sum
+    nodes-arith-unary
+    nodes-concat
+    nodes-const
+    nodes-contract
+    nodes-conv2d
+    nodes-conv
+    nodes-dropout
+    nodes-flow
+    nodes-hinge
+    nodes-linalg
+    nodes-logsumexp
+    nodes-losses
+    nodes-matrixmultiply
+    nodes-maxpooling2d
+    nodes-minmax
+    nodes-moments
+    nodes-normalization
+    nodes-norms
+    nodes-pickneglogsoftmax
+    nodes-random
+    nodes-select
+    nodes-similarities
+    nodes-softmaxes
+    nodes-trig
+    param-nodes
+    tensor
+    training
+    model)
 
 set(dynet_gpu_SRCS
     cuda.cc
     cudnn-ops.cu
-    gpu-ops.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-activations.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-affinetransform.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-const.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-cwise.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-scalar.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-sum.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-arith-unary.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-concat.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-const.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-contract.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-conv2d.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-conv.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-dropout.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-flow.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-hinge.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-linalg.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-logsumexp.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-losses.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-matrixmultiply.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-maxpooling2d.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-minmax.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-moments.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-normalization.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-norms.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-pickneglogsoftmax.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-random.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-select.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-similarities.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-softmaxes.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-nodes-trig.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-param-nodes.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-tensor.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-training.cu
-    ${PROJECT_BINARY_DIR}/dynet/gpu-model.cu
-)
+    gpu-ops.cu)
+
+foreach(FILENAME ${dynet_gen_file_prefix_SRCS})
+    list(APPEND dynet_gpu_SRCS ${PROJECT_BINARY_DIR}/dynet/gpu-${FILENAME}.cu)
+endforeach()
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 if (NOT MSVC)
@@ -192,7 +197,7 @@ endif()
 add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
 target_link_libraries(dynet ${LIBS})
 if(WITH_CUDA_BACKEND)
-  foreach(FILENAME nodes-activations nodes-affinetransform nodes-arith-const nodes-arith-cwise nodes-arith-scalar nodes-arith-sum nodes-arith-unary nodes-concat  nodes-const nodes-contract nodes-conv2d nodes-conv nodes-dropout nodes-flow nodes-hinge nodes-linalg nodes-logsumexp nodes-losses nodes-matrixmultiply nodes-maxpooling2d nodes-minmax nodes-moments nodes-normalization nodes-norms nodes-pickneglogsoftmax nodes-random nodes-select nodes-similarities nodes-softmaxes nodes-trig param-nodes tensor training model)
+  foreach(FILENAME ${dynet_gen_file_prefix_SRCS})
     set(FILEPREFIX ${FILENAME})
     configure_file(gpu-file-template.cu.in gpu-${FILENAME}.cu)
   endforeach()
