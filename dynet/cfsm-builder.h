@@ -147,7 +147,7 @@ private:
 /**
  * \ingroup softmaxbuilders
  * \brief Class factored softmax
- * \details Each class is separated into a subclass, ie $\f$p(i\mid h)=p(i\mid h, c) p(c\mid h)\f where \f$c\f$ is a class and \f$i\f$ a subclass
+ * \details Each class is separated into a subclass, ie \f$p(i\mid h)=p(i\mid h, c) p(c\mid h)\f$ where \f$c\f$ is a class and \f$i\f$ a subclass
  * 
  */
 class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
@@ -202,7 +202,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
    */
   Expression subclass_log_distribution(const Expression& rep, unsigned clusteridx);
   /**
-   * @brief Logits of class
+   * @brief Logits over subclasses of class
    * 
    * @param rep Input vector
    * @param clusteridx Class index
