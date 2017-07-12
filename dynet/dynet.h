@@ -637,10 +637,10 @@ struct Node {
   Device* device; /**< pointer to the node, or null to inherit device from first input, or default when there is no input */
 
 protected:
-  Node() : args(), device(default_device) {}
-  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
+  Node() : args(), device(default_device), scratch_allocator(default_device->pools[(int)DeviceMempool::SCS]) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device), scratch_allocator(default_device->pools[(int)DeviceMempool::SCS]) {}
   template <typename T>
-  explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
+  explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device), scratch_allocator(default_device->pools[(int)DeviceMempool::SCS]) {}
 
 private:
   ComputationGraph* cg_;  // pointer to the computation graph
@@ -648,6 +648,9 @@ private:
 public:
   // auxiliary memory
   mutable void* aux_mem; /**< this will usually be null. but, if your node needs to store intermediate values between forward and backward, you can use store it here. request the number of bytes you need from aux_storage_size(). Note: this memory will be on the CPU or GPU, depending on your computation backend*/
+  
+  //scratch memory
+  AlignedMemoryPool* scratch_allocator;
 };
 
 template <class Function>
