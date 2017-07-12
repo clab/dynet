@@ -2198,68 +2198,62 @@ void WeightNormalization::backward_dev_impl(const MyDevice & dev,
 
 DYNET_NODE_INST_DEV_IMPL(WeightNormalization)
 
-//size_t VanillaLSTM::aux_storage_size() const {
-//  return dim.size() * sizeof(float);
-//}
+size_t VanillaLSTM::aux_storage_size() const {
+  return dim.size() * 2 * sizeof(float); // dim.size() == hidden_dim*batch_dim/2
+}
 
 template<class MyDevice>
 void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 14, "Failed dimension check in VanillaLSTM::forward");
-  cout << "-3\n";
+  DYNET_ASSERT(xs.size() == 5, "Failed dimension check in VanillaLSTM::forward");
 
   const Tensor *x_t = xs[0];
-  cout << "-2\n";
+  const Tensor *Wx = xs[2];
+  const Tensor *Wh = xs[3];
+  const Tensor *b  = xs[4];
 
-  unsigned hidden_dim_size = x_t->d[0];
+  unsigned input_dim = x_t->d[0];
+  unsigned hidden_dim = b->d[0] / 4;
   unsigned batch_size = x_t->d.bd;
-  cout << "-1\n";
+  cout << "input_dim " << input_dim << "\n";
+  cout << "hidden_dim " << hidden_dim << "\n";
+  cout << "batch_size " << batch_size << "\n";
 
   // xs[1] = [h_tm1,c_tm1] (TODO: device & mempool correct?)
   // un-convention: xs[1] stores h and c such that both are separate in memory: {hidden_dim_size, batch_size, h_or_c}
   // in this way we can return 2 vectors, but still have them separate in memory; the caller is responsible for separating the outputs properly
-  Tensor h_tm1(Dim({hidden_dim_size}, batch_size), xs[1]->v, fx.device, DeviceMempool::FXS);
-  Tensor c_tm1(Dim({hidden_dim_size}, batch_size), xs[1]->v + hidden_dim_size * batch_size, fx.device, DeviceMempool::FXS);
-  cout << "0\n";
+  Tensor h_tm1(Dim({hidden_dim}, batch_size), xs[1]->v, fx.device, DeviceMempool::FXS);
+  Tensor c_tm1(Dim({hidden_dim}, batch_size), xs[1]->v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
 
-  // TODO: might later put these into one matrix- + one bias-tensor (for separate initialization), but let's first see how things tie in with the LSTMBuilder
-  const Tensor *Wx_i = xs[2];
-  const Tensor *Wx_f = xs[3];
-  const Tensor *Wx_o = xs[4];
-  const Tensor *Wx_g = xs[5];
-  const Tensor *Wh_i = xs[6];
-  const Tensor *Wh_f = xs[7];
-  const Tensor *Wh_o = xs[8];
-  const Tensor *Wh_g = xs[9];
-  const Tensor *b_i = xs[10];
-  const Tensor *b_f = xs[11];
-  const Tensor *b_o = xs[12];
-  const Tensor *b_g = xs[13];
 
-  cout << "1\n";
+  Tensor aux_all (Dim({hidden_dim * 4}, batch_size), (float*)aux_mem,                  fx.device, DeviceMempool::FXS);
+  Tensor aux_i   (Dim({hidden_dim},     batch_size), (float*)aux_mem,                  fx.device, DeviceMempool::FXS);
+  Tensor aux_o   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + dim.size(),   fx.device, DeviceMempool::FXS);
+  Tensor aux_f   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 2*dim.size(), fx.device, DeviceMempool::FXS);
+  Tensor aux_g   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 3*dim.size(), fx.device, DeviceMempool::FXS);
 
-  array<Eigen::IndexPair<int>, 1> product_dims = { Eigen::IndexPair<int>(1, 0) }; // traditional matrix product according to https://github.com/RLovelett/eigen/tree/master/unsupported/Eigen/CXX11/src/Tensor#contraction
-
-  cout << "2\n";
   // separated outputs (TODO: device & mempool correct?)
-  Tensor h_t(Dim({hidden_dim_size}, batch_size), fx.v, fx.device, DeviceMempool::FXS);
-  Tensor c_t(Dim({hidden_dim_size}, batch_size), fx.v + hidden_dim_size * batch_size, fx.device, DeviceMempool::FXS);
-  cout << "3\n";
+  Tensor h_t(Dim({hidden_dim}, batch_size), fx.v, fx.device, DeviceMempool::FXS);
+  Tensor c_t(Dim({hidden_dim}, batch_size), fx.v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
 
-  // TODO: we should put all matrix multiplications into one operation, but will probably have to allocate auxiliary memory for that
+  cout << "before prod\n";
+  aux_all.colbatch_matrix() = **Wx * x_t->colbatch_matrix() + **Wh * h_tm1.colbatch_matrix() + **b; // TODO: don't need .device(*dev.edevice) here?
+  cout << "after prod\n";
+
   // c_t = sigmoid(x_t*W_i + h_tm1*R_i + b_i)
   //       * tanh(x_t*W_g + h_tm1*R_g + b_g)
   //       + sigmoid(x_t*W_f + h_tm1*R_f + b_f + 1)
   //       * c_tm1
-  c_t.tb<2>().device(*dev.edevice) = ( (x_t->tb<2>().contract(Wx_i->tb<1>(), product_dims) + h_tm1.tb<2>().contract(Wh_i->tb<1>(), product_dims) + b_i->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>())
-                                     * (x_t->tb<2>().contract(Wx_g->tb<1>(), product_dims) + h_tm1.tb<2>().contract(Wh_g->tb<1>(), product_dims) + b_g->tb<1>()).tanh())
-				     + (x_t->tb<2>().contract(Wx_f->tb<1>(), product_dims) + h_tm1.tb<2>().contract(Wh_f->tb<1>(), product_dims) + b_f->tb<1>() + xs[5]->tb<1>().constant(1)).unaryExpr(scalar_logistic_sigmoid_op<float>())
-				     * c_tm1.tb<2>();
-  cout << "4\n";
+  c_t.tbvec().device(*dev.edevice) =
+      ( aux_i.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>())
+                                     * aux_g.tbvec().tanh())
+				     + aux_f.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>())
+				     * c_tm1.tbvec();
+  cout << "after c\n";
   // h_t = sigmoid(x_t*W_o + h_tm1*R_o + b_o)
   //       * tanh(c_t)
-  h_t.tb<2>().device(*dev.edevice) = (x_t->tb<2>().contract(Wx_o->tb<1>(), product_dims) + h_tm1.tb<2>().contract(Wh_o->tb<1>(), product_dims) + b_o->tb<1>()).unaryExpr(scalar_logistic_sigmoid_op<float>())
-                                     * c_t.tb<2>().tanh();
-  cout << "5\n";
+  h_t.tbvec().device(*dev.edevice) = aux_o.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>())
+                                     * c_t.tbvec().tanh();
+  cout << "after h\n";
 }
 
 template<class MyDevice>

@@ -861,7 +861,7 @@ struct WeightNormalization : public Node {
 struct VanillaLSTM : public Node {
   explicit VanillaLSTM(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
-//  size_t aux_storage_size() const override;
+  size_t aux_storage_size() const override;
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 

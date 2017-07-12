@@ -93,7 +93,6 @@ BOOST_AUTO_TEST_CASE( vanilla_lstm_ln_gradient ) {
 }
 
 BOOST_AUTO_TEST_CASE( lstm_node_forward ) {
-  cout << "z\n";
   dynet::ParameterCollection mod;
   unsigned input_dim = 3;
   unsigned hidden_dim = 5;
@@ -102,37 +101,16 @@ BOOST_AUTO_TEST_CASE( lstm_node_forward ) {
   vanilla_lstm_builder.new_graph(cg);
   vanilla_lstm_builder.start_new_sequence();
 
-  cout << "a\n";
-  enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
-  cout << "b\n";
-
-  Expression Wx_i = parameter(cg, vanilla_lstm_builder.params[0][_X2I]);
-  cout << vanilla_lstm_builder.params[0].size() << " - c\n";
-  Expression Wx_f = parameter(cg, vanilla_lstm_builder.params[0][_X2F]);
-  cout << "d\n";
-  Expression Wx_o = parameter(cg, vanilla_lstm_builder.params[0][_X2O]);
-      cout << "e\n";
-  Expression Wx_g = parameter(cg, vanilla_lstm_builder.params[0][_X2G]);
-    cout << "f\n";
-
-  Expression Wh_i = parameter(cg, vanilla_lstm_builder.params[0][_H2I]);
-  Expression Wh_f = parameter(cg, vanilla_lstm_builder.params[0][_H2F]);
-  Expression Wh_o = parameter(cg, vanilla_lstm_builder.params[0][_H2O]);
-  Expression Wh_g = parameter(cg, vanilla_lstm_builder.params[0][_H2G]);
-
-  Expression b_i = parameter(cg, vanilla_lstm_builder.params[0][_BI]);
-  Expression b_f = parameter(cg, vanilla_lstm_builder.params[0][_BF]);
-  Expression b_o = parameter(cg, vanilla_lstm_builder.params[0][_BO]);
-  Expression b_g = parameter(cg, vanilla_lstm_builder.params[0][_BG]);
-
-    cout << "g\n";
+  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
+  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
+  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]);
 
   Expression hc_tm1 = dynet::input(cg, Dim({hidden_dim*2}), {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f});
   for (unsigned i = 0; i < 1; i++) { // TODO: more inputs
     Expression x = dynet::input(cg, Dim({input_dim}), ones_vals);
     vanilla_lstm_builder.add_input(x);
-    Expression hc_t = dynet::vanilla_lstm(x, hc_tm1, Wx_i, Wx_f, Wx_o, Wx_g, Wh_i, Wh_f, Wh_o, Wh_g, b_i, b_f, b_o, b_g);
-    cout << "h\n";
+    Expression hc_t = dynet::vanilla_lstm(x, hc_tm1, Wx, Wh, b);
+    const Tensor& lstm_node_val = hc_t.value();
   }
 //  BOOST_CHECK(check_grad(mod, z, 0));
 }

@@ -2099,24 +2099,12 @@ Expression weight_norm(const Expression& w, const Expression& g);
  *
  * \param x_t Current input
  * \param hc_tm1 h and c of previous timestep, arranged so it can be indexed as {hidden_dim_size, batch_size, h_or_c}
- * \param Wx_i
- * \param Wx_f
- * \param Wx_o
- * \param Wx_g
- * \param Wh_i
- * \param Wh_f
- * \param Wh_o
- * \param Wh_g
- * \param b_i
- * \param b_f
- * \param b_o
- * \param b_g
+ * \param Wx (combined weight matrices Wx_i, Wx_o, Wx_f, Wx_g)
+ * \param Wh (Wh_i, Wh_o, Wh_f, Wh_g)
+ * \param b (b_i, b_o, b_f, b_g)
  * \return An expression corresponding to `hc_t`, with same size / conventions as hc_tm1
  */
-Expression vanilla_lstm(const Expression& x_t,  const Expression& hc_tm1,
-			const Expression& Wx_i, const Expression& Wx_f, const Expression& Wx_o, const Expression& Wx_g,
-			const Expression& Wh_i, const Expression& Wh_f, const Expression& Wh_o, const Expression& Wh_g,
-			const Expression& b_i,  const Expression& b_f,  const Expression& b_o,  const Expression& b_g);
+Expression vanilla_lstm(const Expression& x_t,  const Expression& hc_tm1, const Expression& Wx, const Expression& Wh, const Expression& b);
 
 }  // namespace dynet
 
