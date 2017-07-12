@@ -2214,9 +2214,6 @@ void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   unsigned input_dim = x_t->d[0];
   unsigned hidden_dim = b->d[0] / 4;
   unsigned batch_size = x_t->d.bd;
-  cout << "input_dim " << input_dim << "\n";
-  cout << "hidden_dim " << hidden_dim << "\n";
-  cout << "batch_size " << batch_size << "\n";
 
   // xs[1] = [h_tm1,c_tm1] (TODO: device & mempool correct?)
   // un-convention: xs[1] stores h and c such that both are separate in memory: {hidden_dim_size, batch_size, h_or_c}
@@ -2224,36 +2221,31 @@ void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   Tensor h_tm1(Dim({hidden_dim}, batch_size), xs[1]->v, fx.device, DeviceMempool::FXS);
   Tensor c_tm1(Dim({hidden_dim}, batch_size), xs[1]->v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
 
-
   Tensor aux_all (Dim({hidden_dim * 4}, batch_size), (float*)aux_mem,                  fx.device, DeviceMempool::FXS);
   Tensor aux_i   (Dim({hidden_dim},     batch_size), (float*)aux_mem,                  fx.device, DeviceMempool::FXS);
-  Tensor aux_o   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + dim.size(),   fx.device, DeviceMempool::FXS);
-  Tensor aux_f   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 2*dim.size(), fx.device, DeviceMempool::FXS);
-  Tensor aux_g   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 3*dim.size(), fx.device, DeviceMempool::FXS);
+  Tensor aux_f   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + hidden_dim,   fx.device, DeviceMempool::FXS);
+  Tensor aux_o   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 2*hidden_dim, fx.device, DeviceMempool::FXS);
+  Tensor aux_g   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 3*hidden_dim, fx.device, DeviceMempool::FXS);
 
   // separated outputs (TODO: device & mempool correct?)
   Tensor h_t(Dim({hidden_dim}, batch_size), fx.v, fx.device, DeviceMempool::FXS);
   Tensor c_t(Dim({hidden_dim}, batch_size), fx.v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
 
-  cout << "before prod\n";
   aux_all.colbatch_matrix() = **Wx * x_t->colbatch_matrix() + **Wh * h_tm1.colbatch_matrix() + **b; // TODO: don't need .device(*dev.edevice) here?
-  cout << "after prod\n";
 
   // c_t = sigmoid(x_t*W_i + h_tm1*R_i + b_i)
   //       * tanh(x_t*W_g + h_tm1*R_g + b_g)
   //       + sigmoid(x_t*W_f + h_tm1*R_f + b_f + 1)
   //       * c_tm1
-  c_t.tbvec().device(*dev.edevice) =
-      ( aux_i.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>())
-                                     * aux_g.tbvec().tanh())
-				     + aux_f.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>())
-				     * c_tm1.tbvec();
-  cout << "after c\n";
+  c_t.tbvec().device(*dev.edevice) = ( aux_i.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>())
+                                       * aux_g.tbvec().tanh())
+				   + ( (aux_f.tbvec() + aux_f.tbvec().constant(1)).unaryExpr(scalar_logistic_sigmoid_op<float>())
+				       * c_tm1.tbvec() );
   // h_t = sigmoid(x_t*W_o + h_tm1*R_o + b_o)
   //       * tanh(c_t)
   h_t.tbvec().device(*dev.edevice) = aux_o.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>())
                                      * c_t.tbvec().tanh();
-  cout << "after h\n";
+
 }
 
 template<class MyDevice>

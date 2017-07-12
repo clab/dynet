@@ -2099,9 +2099,9 @@ Expression weight_norm(const Expression& w, const Expression& g);
  *
  * \param x_t Current input
  * \param hc_tm1 h and c of previous timestep, arranged so it can be indexed as {hidden_dim_size, batch_size, h_or_c}
- * \param Wx (combined weight matrices Wx_i, Wx_o, Wx_f, Wx_g)
- * \param Wh (Wh_i, Wh_o, Wh_f, Wh_g)
- * \param b (b_i, b_o, b_f, b_g)
+ * \param Wx (combined weight matrices Wx_i, Wx_f, Wx_o, Wx_g)
+ * \param Wh (Wh_i, Wh_f, Wh_o, Wh_g)
+ * \param b (b_i, b_f, b_o, b_g)
  * \return An expression corresponding to `hc_t`, with same size / conventions as hc_tm1
  */
 Expression vanilla_lstm(const Expression& x_t,  const Expression& hc_tm1, const Expression& Wx, const Expression& Wh, const Expression& b);
