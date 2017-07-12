@@ -55,7 +55,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 
     // Memory
     if (arg == "--dynet-mem" || arg == "--dynet_mem") {
-      if ((argi + 1) > argc) {
+      if ((argi + 1) >= argc) {
         throw std::invalid_argument("[dynet] --dynet-mem expects an argument (the memory, in megabytes, to reserve)");
       } else {
         params.mem_descriptor = argv[argi + 1];
@@ -65,7 +65,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 
     // Weight decay
     else if (arg == "--dynet-weight-decay" || arg == "--dynet_weight_decay") {
-      if ((argi + 1) > argc) {
+      if ((argi + 1) >= argc) {
         throw std::invalid_argument("[dynet] --dynet-weight-decay requires an argument (the weight decay per update)");
       } else {
         string a2 = argv[argi + 1];
@@ -76,7 +76,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 
     // Random seed
     else if (arg == "--dynet-seed" || arg == "--dynet_seed") {
-      if ((argi + 1) > argc) {
+      if ((argi + 1) >= argc) {
         throw std::invalid_argument("[dynet] --dynet-seed expects an argument (the random number seed)");
       } else {
         string a2 = argv[argi + 1];
@@ -87,7 +87,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 
     // Memory
     else if (arg == "--dynet-autobatch" || arg == "--dynet_autobatch") {
-      if ((argi + 1) > argc) {
+      if ((argi + 1) >= argc) {
         throw std::invalid_argument("[dynet] --dynet-autobatch expects an argument (0 for none 1 for on)");
       } else {
         string a2 = argv[argi + 1];
@@ -103,7 +103,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 #if HAVE_CUDA
     // Number of GPUs
     else if (arg == "--dynet_gpus" || arg == "--dynet-gpus") {
-      if ((argi + 1) > argc) {
+      if ((argi + 1) >= argc) {
         throw std::invalid_argument("[dynet] --dynet-gpus expects an argument (number of GPUs to use)");
       } else {
         if (params.ngpus_requested)
@@ -117,7 +117,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 
     // GPU ids
     else if (arg == "--dynet_gpu_ids" || arg == "--dynet-gpu-ids") {
-      if ((argi + 1) > argc) {
+      if ((argi + 1) >= argc) {
         throw std::invalid_argument("[dynet] --dynet-gpu-ids expects an argument (comma separated list of physical GPU ids to use)");
       } else {
         string a2 = argv[argi + 1];
