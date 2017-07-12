@@ -11,6 +11,11 @@
 
 namespace dynet {
 
+/**
+ * @brief Cluster softmax
+ * @details This is used in the hierarchical softmax
+ * 
+ */
 class Cluster {
 private:
   std::vector<Cluster*> children;
@@ -23,6 +28,7 @@ private:
   mutable Expression bias;
   unsigned rep_dim;
   unsigned output_size;
+  bool update;
 
   Expression predict(Expression h, ComputationGraph& cg) const;
 
@@ -33,7 +39,7 @@ public:
   void initialize(ParameterCollection& model);
   void initialize(unsigned rep_dim, ParameterCollection& model);
 
-  void new_graph(ComputationGraph& cg);
+  void new_graph(ComputationGraph& cg, bool update=true);
   unsigned sample(Expression h, ComputationGraph& cg) const;
   Expression neg_log_softmax(Expression h, unsigned r, ComputationGraph& cg) const;
 
@@ -62,15 +68,19 @@ class HierarchicalSoftmaxBuilder : public SoftmaxBuilder {
   void initialize(ParameterCollection& model);
 
   // call this once per ComputationGraph
-  void new_graph(ComputationGraph& cg);
+  void new_graph(ComputationGraph& cg, bool update=true);
 
   // -log(p(c | rep) * p(w | c, rep))
   Expression neg_log_softmax(const Expression& rep, unsigned wordidx);
+  Expression neg_log_softmax(const Expression& rep, const std::vector<unsigned>& classidxs){return Expression();}
 
   // samples a word from p(w,c | rep)
   unsigned sample(const Expression& rep);
 
   Expression full_log_distribution(const Expression& rep);
+  Expression full_logits(const Expression& rep);
+  
+  ParameterCollection & get_parameter_collection() { return local_model; }
 
  private:
   ParameterCollection local_model;
