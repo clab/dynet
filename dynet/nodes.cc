@@ -2211,7 +2211,6 @@ void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   const Tensor *Wh = xs[3];
   const Tensor *b  = xs[4];
 
-  unsigned input_dim = x_t->d[0];
   unsigned hidden_dim = b->d[0] / 4;
   unsigned batch_size = x_t->d.bd;
 
@@ -2231,7 +2230,9 @@ void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   Tensor h_t(Dim({hidden_dim}, batch_size), fx.v, fx.device, DeviceMempool::FXS);
   Tensor c_t(Dim({hidden_dim}, batch_size), fx.v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
 
-  aux_all.colbatch_matrix() = **Wx * x_t->colbatch_matrix() + **Wh * h_tm1.colbatch_matrix() + **b; // TODO: don't need .device(*dev.edevice) here?
+  Eigen::array<int, 2> bcast = {(int)1, (int)batch_size};
+  aux_all.tbvec().device(*dev.edevice) = b->tbvec().broadcast(bcast);
+  aux_all.colbatch_matrix() += **Wx * x_t->colbatch_matrix() + **Wh * h_tm1.colbatch_matrix() ;//+ **b; // TODO: don't need .device(*dev.edevice) here?
 
   // c_t = sigmoid(x_t*W_i + h_tm1*R_i + b_i)
   //       * tanh(x_t*W_g + h_tm1*R_g + b_g)
