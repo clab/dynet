@@ -70,22 +70,22 @@ Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
   return Dim(output_shape, bs);
 }
 
-size_t Conv2D::aux_storage_size() const {
-  vector<unsigned> input_size(arity());
-  for (unsigned i = 0; i < arity(); ++i) {
-    input_size[i] = get_cg()->nodes[args[i]]->dim.size();
-  }
-  size_t nbytes = 0;
-#if HAVE_CUDNN
-  nbytes += CudnnConvOp::workspace_size_limit_bytes;
-  nbytes += 3 * input_size[0] * sizeof(float);
-#else
-  nbytes += sizeof(float) * (input_size[0] + input_size[1] + 
-      dim.size() + std::max(input_size[0], input_size[1]));
-#endif
-  return nbytes;
-  // return 0;
-}
+// size_t Conv2D::aux_storage_size() const {
+//   vector<unsigned> input_size(arity());
+//   for (unsigned i = 0; i < arity(); ++i) {
+//     input_size[i] = get_cg()->nodes[args[i]]->dim.size();
+//   }
+//   size_t nbytes = 0;
+// #if HAVE_CUDNN
+//   nbytes += CudnnConvOp::workspace_size_limit_bytes;
+//   nbytes += 3 * input_size[0] * sizeof(float);
+// #else
+//   nbytes += sizeof(float) * (input_size[0] + input_size[1] + 
+//       dim.size() + std::max(input_size[0], input_size[1]));
+// #endif
+//   return nbytes;
+//   // return 0;
+// }
 #endif
 
 template<class MyDevice>
