@@ -64,6 +64,12 @@ if (MKL OR MKL_ROOT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
 endif()
 
+# There are about 30 files compiled for GPU. We merge them into less
+# for faster compilation. Set to 0 to mean no merging, or k to merge into k files. 
+if(NOT DEFINED GPU_NUMFILES)
+  set(GPU_NUMFILES 4)
+endif()
+
 
 ######## Platform-specific options
 if(WIN32)
