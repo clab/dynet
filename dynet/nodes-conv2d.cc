@@ -70,22 +70,22 @@ Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
   return Dim(output_shape, bs);
 }
 
-size_t Conv2D::aux_storage_size() const {
-  vector<unsigned> input_size(arity());
-  for (unsigned i = 0; i < arity(); ++i) {
-    input_size[i] = get_cg()->nodes[args[i]]->dim.size();
-  }
-  size_t nbytes = 0;
-#if HAVE_CUDNN
-  nbytes += CudnnConvOp::workspace_size_limit_bytes;
-  nbytes += 3 * input_size[0] * sizeof(float);
-#else
-  nbytes += sizeof(float) * (input_size[0] + input_size[1] + 
-      dim.size() + std::max(input_size[0], input_size[1]));
-#endif
-  return nbytes;
-  // return 0;
-}
+// size_t Conv2D::aux_storage_size() const {
+//   vector<unsigned> input_size(arity());
+//   for (unsigned i = 0; i < arity(); ++i) {
+//     input_size[i] = get_cg()->nodes[args[i]]->dim.size();
+//   }
+//   size_t nbytes = 0;
+// #if HAVE_CUDNN
+//   nbytes += CudnnConvOp::workspace_size_limit_bytes;
+//   nbytes += 3 * input_size[0] * sizeof(float);
+// #else
+//   nbytes += sizeof(float) * (input_size[0] + input_size[1] + 
+//       dim.size() + std::max(input_size[0], input_size[1]));
+// #endif
+//   return nbytes;
+//   // return 0;
+// }
 #endif
 
 template<class MyDevice>
@@ -93,13 +93,11 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   DYNET_ASSERT(xs.size() == 2 || xs.size() == 3, "Failed dimension check in Conv2D::forward, at least 2 inputs");
   DYNET_ASSERT(fx.d.bd == xs[0]->d.bd, "Failed dimension check in Conv2D::forward, batchsize not match");
   DYNET_ASSERT(fx.d[2] == xs[1]->d[3], "Failed dimension check in Conv2D::forward, #channel not match");
+  AlignedMemoryPool* scratch_allocator = default_device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
-  if (cudnn_conv_op_ == NULL) {
+  if (cudnn_conv_op_ == NULL)
     cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
-  }
-  cudnn_conv_op_->set_pool(&aux_mem_pool);
   cudnn_conv_op_->forward_impl(dev, xs, fx);
 #else
   throw std::runtime_error("Conv2D::forward_dev_impl not supported without CUDNN");
@@ -130,8 +128,8 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
       fx.tb<3>().chip<2>(i).device(*dev.edevice) += bias.t<3>(); 
     }
   }
-  scratch_allocator->free();
 #endif
+  scratch_allocator->free();
 }
 
 template<class MyDevice>
@@ -145,13 +143,11 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in Conv2D::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in Conv2D::backward");
   DYNET_ASSERT(i <= 2, "Failed dimension check in Conv2D::backward");
+  AlignedMemoryPool* scratch_allocator = default_device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
-  if (cudnn_conv_op_ == NULL) {
+  if (cudnn_conv_op_ == NULL)
     cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
-  }
-  cudnn_conv_op_->set_pool(&aux_mem_pool);
   cudnn_conv_op_->backward_impl(dev, xs, fx, dEdf, i, dEdxi);
 #else
   throw std::runtime_error("Conv2D::backward_dev_impl not supported without CUDNN");
@@ -199,8 +195,8 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
     Eigen::array<int, 3> red_axis = {0, 1, 3};
     dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<3>().sum(red_axis);
   }
-  scratch_allocator->free();
 #endif
+  scratch_allocator->free();
 }
 DYNET_NODE_INST_DEV_IMPL(Conv2D)
 
