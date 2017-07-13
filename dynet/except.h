@@ -64,7 +64,7 @@ class cuda_exception : public std::runtime_error {
   while (0);
 
 #define DYNET_NO_CUDA_IMPL_WARNING(op)																\
-    std::cerr << "Warning: " << op << "not implemented for CUDA yet."	\
+    std::cerr << "Warning: " << op << " not implemented for CUDA yet."	\
     << " DyNet will use CPU implementation instead." << std::endl;
 
 #endif

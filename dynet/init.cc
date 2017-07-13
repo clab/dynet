@@ -21,7 +21,7 @@ namespace dynet {
 DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
   shared_parameters(false)
 #if HAVE_CUDA
-  , ngpus_rqeuested(false), ids_requested(false), requested_gpus(-1), cpu_requested(false),
+  , ngpus_requested(false), ids_requested(false), requested_gpus(-1), cpu_requested(false)
 #endif
 {
 #if HAVE_CUDA
@@ -121,7 +121,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
         string devices_str = argv[argi + 1];
         if (params.ids_requested)
            throw std::invalid_argument("Multiple instances of --dynet-devices");
-        params.id_requested = true;
+        params.ids_requested = true;
         auto devices_info_lst = str_split(devices_str, ',');
         for (auto & devices_info : devices_info_lst) {
           if (startswith(devices_info, "CPU:")) {
@@ -129,13 +129,13 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
           } else if (startswith(devices_info, "CPU")) {
             if (params.cpu_requested)
               throw std::invalid_argument("Bad argument to --dynet-devices");
-            params.cpu_rquested = true;
+            params.cpu_requested = true;
           } else if (startswith(devices_info, "GPU:")) {
             int gpu_id = std::stoi(devices_info.substr(4, devices_info.size() - 4));
             if (gpu_id >= MAX_GPUS)
               throw std::runtime_error("DyNet hard limit on maximum number of GPUs (MAX_GPUS) exceeded. If you need more, modify the code to raise this hard limit.");
             params.gpu_mask[gpu_id] ++;
-            params.requestd_gpus++;
+            params.requested_gpus++;
             if (params.gpu_mask[gpu_id] != 1) {
               ostringstream oss; oss << "Bad argument to --dynet-devices: " << devices_info;
               throw std::invalid_argument(oss.str());

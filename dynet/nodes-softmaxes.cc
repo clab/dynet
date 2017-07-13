@@ -195,7 +195,7 @@ void RestrictedLogSoftmax::backward_dev_impl(const MyDevice & dev,
     (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - expf((*fx)(ind, 0)) * z;
 #endif
 }
-DYNET_NODE_INST_DEV_IMPL_CPU_TMP(RestrictedLogSoftmax, "RestrictedLogSoftmax,")
+DYNET_NODE_INST_DEV_IMPL_CPU_TMP(RestrictedLogSoftmax, "RestrictedLogSoftmax")
 
 // ************* Sparsemax *************
 
