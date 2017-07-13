@@ -14,10 +14,6 @@ class CudnnConvOp {
   explicit CudnnConvOp(const std::vector<unsigned>& s, const bool padding_type);
   ~CudnnConvOp() noexcept(false);
   /* call this function before using the CudnnConvOp */
-  void set_pool(NodeMemPool* mempool) {
-    DYNET_ASSERT(mempool->used() == 0, "mempool must have been reset");
-    mempool_ = mempool;
-  }
   void forward_impl(const Device_GPU & dev,
                     const std::vector<const Tensor*>& xs, Tensor& fx);
   void backward_impl(const Device_GPU & dev,
@@ -48,9 +44,6 @@ class CudnnConvOp {
   void* fwd_workspace;
   void* bwd_filter_workspace;
   void* bwd_data_workspace;
-
- private:
-  NodeMemPool* mempool_;
 };
 
 
