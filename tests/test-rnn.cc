@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE( lstm_modular_node ) {
 }
 
 
-BOOST_AUTO_TEST_CASE( lstm_modular_node_batched ) {
+BOOST_AUTO_TEST_CASE( lstm_modular_node_batched_forward ) {
   dynet::ParameterCollection mod;
   unsigned input_dim = 3;
   unsigned hidden_dim = 5;
@@ -191,10 +191,39 @@ BOOST_AUTO_TEST_CASE( lstm_modular_node_batched ) {
   }
 //  Expression z = squared_norm(sum_batches(vanilla_lstm_builder.final_h()[1]));
 //  BOOST_CHECK(check_grad(mod, z, 0));
-//  Expression z = squared_norm(sum_batches(hc_tm1));
-//  BOOST_CHECK(check_grad(mod, z, 0)); // will fail: backward not implemented yet
+  Expression z = squared_norm(sum_batches(h_tm1));
+  BOOST_CHECK(check_grad(mod, z, 0)); // will fail: backward not implemented yet
+  Expression z2 = squared_norm(sum_batches(c_tm1));
+  BOOST_CHECK(check_grad(mod, z2, 0)); // will fail: backward not implemented yet
 }
 
+BOOST_AUTO_TEST_CASE( vanilla_lstm_h_gradient ) {
+  dynet::ParameterCollection mod;
+  unsigned hidden_dim = 3;
+  unsigned batch_size = 2;
+  dynet::ComputationGraph cg;
+
+  Expression c_t = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression h_t = vanilla_lstm_h(c_t, gates_t);
+  Expression z = squared_norm(sum_batches(h_t));
+  BOOST_CHECK(check_grad(mod, z, 0));
+  // TODO: seems this is working even if the backward pass is not even implemented?
+}
+
+BOOST_AUTO_TEST_CASE( vanilla_lstm_c_gradient ) {
+  dynet::ParameterCollection mod;
+  unsigned hidden_dim = 3;
+  unsigned batch_size = 2;
+  dynet::ComputationGraph cg;
+
+  Expression c_tm1 = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression c_t = vanilla_lstm_c(c_tm1, gates_t);
+  Expression z = squared_norm(sum_batches(c_t));
+  BOOST_CHECK(check_grad(mod, z, 0));
+  // TODO: seems this is working even if the backward pass is not even implemented?
+}
 
 
 

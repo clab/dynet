@@ -2295,6 +2295,12 @@ DYNET_NODE_INST_DEV_IMPL(VanillaLSTM)
 
 template<class MyDevice>
 void VanillaLSTMGates::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // computes affine transforms + nonlinearity
+  // gates_i = sigmoid (Wx_i * x_t + Wh_i * h_tm1 + b_i)
+  // gates_f = sigmoid (Wx_f * x_t + Wh_f * h_tm1 + b_f + 1)
+  // gates_o = sigmoid (Wx_o * x_t + Wh_o * h_tm1 + b_o)
+  // gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
+
   DYNET_ASSERT(xs.size() == 5, "Failed dimension check in VanillaLSTMGates::forward");
 
   const Tensor *x_t = xs[0];
@@ -2332,13 +2338,26 @@ void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+  if(i==0){ // dx_t =
 
+  } else if(i==1){ // dh_tm1
+
+  } else if(i==2){ // dWx
+
+  } else if(i==3){ // dWh
+
+  } else if(i==4){ // db
+
+  }
 }
 
 DYNET_NODE_INST_DEV_IMPL(VanillaLSTMGates)
 
 template<class MyDevice>
 void VanillaLSTMC::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // computes cell state (elementwise multiplication)
+  // c_t = gates_i * gates_g + gates_f * c_tm1
+
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in VanillaLSTMC::forward");
 
   const Tensor *c_tm1 = xs[0];
@@ -2363,13 +2382,32 @@ void VanillaLSTMC::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+  unsigned hidden_dim = fx.d[0];
 
+  Eigen::DSizes<ptrdiff_t, 2> indices_i(0,0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_f(hidden_dim,0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_g(hidden_dim*3,0);
+  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
+
+  if(i==0){ // dc_tm1 = dc_t * f_t
+    dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_f, sizes_1);
+  } else if(i==1){
+    // di_t = dc_t * g_t
+    dEdxi.tbvec().slice(indices_i, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_g, sizes_1);
+    // df_t = dc_t * c_tm1
+    dEdxi.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[0]->tbvec();
+    // dg_t = dc_t * i_t
+    dEdxi.tbvec().slice(indices_g, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_i, sizes_1);
+  }
 }
 
 DYNET_NODE_INST_DEV_IMPL(VanillaLSTMC)
 
 template<class MyDevice>
 void VanillaLSTMH::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // computes output state (elementwise multiplication)
+  // h_t = gates_o * tanh(c_t)
+
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in VanillaLSTMH::forward");
 
   const Tensor *c_t = xs[0];
@@ -2391,7 +2429,15 @@ void VanillaLSTMH::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+  unsigned hidden_dim = fx.d[0];
+  Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
+  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
 
+  if(i==0){ // dc_t = dh_t * o_t * (1 - tanh(tanh(c_t)))
+    dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_o, sizes_1) * (xs[0]->tbvec().constant(1) - xs[0]->tbvec().tanh().tanh());
+  } else if(i==1){ // do_t = dh_t * tanh(c_t)
+    dEdxi.tbvec().slice(indices_o, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[0]->tbvec().tanh();
+  }
 }
 
 DYNET_NODE_INST_DEV_IMPL(VanillaLSTMH)
