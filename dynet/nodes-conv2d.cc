@@ -83,8 +83,8 @@ size_t Conv2D::aux_storage_size() const {
   nbytes += sizeof(float) * (input_size[0] + input_size[1] + 
       dim.size() + std::max(input_size[0], input_size[1]));
 #endif
-  //return nbytes;
-  return 0;
+  return nbytes;
+  // return 0;
 }
 #endif
 
@@ -93,9 +93,9 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   DYNET_ASSERT(xs.size() == 2 || xs.size() == 3, "Failed dimension check in Conv2D::forward, at least 2 inputs");
   DYNET_ASSERT(fx.d.bd == xs[0]->d.bd, "Failed dimension check in Conv2D::forward, batchsize not match");
   DYNET_ASSERT(fx.d[2] == xs[1]->d[3], "Failed dimension check in Conv2D::forward, #channel not match");
-  //NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
 #ifdef __CUDACC__
 #if HAVE_CUDNN
+  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
   if (cudnn_conv_op_ == NULL) {
     cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
   }
@@ -145,9 +145,9 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in Conv2D::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in Conv2D::backward");
   DYNET_ASSERT(i <= 2, "Failed dimension check in Conv2D::backward");
-  //NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
 #ifdef __CUDACC__
 #if HAVE_CUDNN
+  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
   if (cudnn_conv_op_ == NULL) {
     cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
   }

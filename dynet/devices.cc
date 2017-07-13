@@ -103,7 +103,7 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   pools[0] = new AlignedMemoryPool("GPU forward memory", (mbs.used[0] << 20), &gpu_mem);
   pools[1] = new AlignedMemoryPool("GPU backward memory", (mbs.used[1] << 20), &gpu_mem);
   pools[2] = new AlignedMemoryPool("GPU parameter memory", (mbs.used[2] << 20), &gpu_mem);
-  pools[3] = new AllignedMemoryPool("GPU scratch memory", (mbs.used[3] << 20), &gpu_mem);
+  pools[3] = new AlignedMemoryPool("GPU scratch memory", (mbs.used[3] << 20), &gpu_mem);
 }
 
 Device_GPU::~Device_GPU() {}
