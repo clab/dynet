@@ -4516,7 +4516,11 @@ cdef class RNNState: # {{{
         step.
 
         For SimpleRNN, s() is the same as h()
-        For LSTM, s() is a series of of memory vectors, followed the series followed by the series returned by h().
+        For LSTM, s() is a series of of memory vectors, followed the series followed by the series returned by h():
+
+        .. code::
+
+            (c[1],...,c[num_layers], h[1],...,h[num_layers])
         """
         return tuple(self.builder.get_s(CRNNPointer(self.state_idx)))
 

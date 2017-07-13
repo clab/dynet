@@ -78,6 +78,13 @@ Parameters initializers
    :members:
    :show-inheritance:
 
+High level saving/loading
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: dynet.save
+
+.. autofunction:: dynet.load
+
 Computation Graph
 -----------------
 
