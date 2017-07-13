@@ -3,6 +3,7 @@
 #include "dynet/dynet.h"
 #include "dynet/weight-decay.h"
 #include "dynet/globals.h"
+#include "dynet/str-util.h"
 
 #include <iostream>
 #include <random>
@@ -20,7 +21,7 @@ namespace dynet {
 DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
   shared_parameters(false)
 #if HAVE_CUDA
-  , ngpus_requested(false), ids_requested(false), requested_gpus(-1)
+  , ngpus_rqeuested(false), ids_requested(false), requested_gpus(-1), cpu_requested(false),
 #endif
 {
 #if HAVE_CUDA
@@ -101,9 +102,8 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     }
 
 #if HAVE_CUDA
-    // Number of GPUs
-    else if (arg == "--dynet_gpus" || arg == "--dynet-gpus") {
-      if ((argi + 1) >= argc) {
+    else if (arg == "--dynet-gpus" || arg == "--dynet_gpus") {
+      if ((argi + 1) > argc) {
         throw std::invalid_argument("[dynet] --dynet-gpus expects an argument (number of GPUs to use)");
       } else {
         if (params.ngpus_requested)
@@ -114,34 +114,34 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
         remove_args(argc, argv, argi, 2);
       }
     }
-
-    // GPU ids
-    else if (arg == "--dynet_gpu_ids" || arg == "--dynet-gpu-ids") {
+    else if (arg == "--dynet-devices" || arg == "--dynet_devices") {
       if ((argi + 1) >= argc) {
-        throw std::invalid_argument("[dynet] --dynet-gpu-ids expects an argument (comma separated list of physical GPU ids to use)");
+        throw std::invalid_argument("[dynet] --dynet-devices expects an argument (comma separated list of CPU and physical GPU ids to use)");
       } else {
-        string a2 = argv[argi + 1];
+        string devices_str = argv[argi + 1];
         if (params.ids_requested)
-          throw std::invalid_argument("Multiple instances of --dynet-gpu-ids");
-        params.ids_requested = true;
-        if (a2.size() % 2 != 1) {
-          ostringstream oss; oss << "Bad argument to --dynet-gpu-ids: " << a2; throw std::invalid_argument(oss.str());
-        }
-        for (unsigned i = 0; i < a2.size(); ++i) {
-          if ((i % 2 == 0 && (a2[i] < '0' || a2[i] > '9')) ||
-              (i % 2 == 1 && a2[i] != ',')) {
-            ostringstream oss; oss << "Bad argument to --dynet-gpu-ids: " << a2;
-            throw std::invalid_argument(oss.str());
-          }
-          if (i % 2 == 0) {
-            int gpu_id = a2[i] - '0';
-            if (gpu_id >= MAX_GPUS) { throw std::runtime_error("DyNet hard limit on maximum number of GPUs (MAX_GPUS) exceeded. If you need more, modify the code to raise this hard limit."); }
-            params.gpu_mask[gpu_id]++;
-            params.requested_gpus++;
+           throw std::invalid_argument("Multiple instances of --dynet-devices");
+        params.id_requested = true;
+        auto devices_info_lst = str_split(devices_str, ',');
+        for (auto & devices_info : devices_info_lst) {
+          if (startswith(devices_info, "CPU:")) {
+            throw std::invalid_argument("DyNet doesn't support specifying CPU id");
+          } else if (startswith(devices_info, "CPU")) {
+            if (params.cpu_requested)
+              throw std::invalid_argument("Bad argument to --dynet-devices");
+            params.cpu_rquested = true;
+          } else if (startswith(devices_info, "GPU:")) {
+            int gpu_id = std::stoi(devices_info.substr(4, devices_info.size() - 4));
+            if (gpu_id >= MAX_GPUS)
+              throw std::runtime_error("DyNet hard limit on maximum number of GPUs (MAX_GPUS) exceeded. If you need more, modify the code to raise this hard limit.");
+            params.gpu_mask[gpu_id] ++;
+            params.requestd_gpus++;
             if (params.gpu_mask[gpu_id] != 1) {
-              ostringstream oss; oss << "Bad argument to --dynet-gpu-ids: " << a2;
+              ostringstream oss; oss << "Bad argument to --dynet-devices: " << devices_info;
               throw std::invalid_argument(oss.str());
             }
+          } else {
+            throw std::invalid_argument("Bad argument to --dynet-devices");
           }
         }
         remove_args(argc, argv, argi, 2);
@@ -153,7 +153,6 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     else {
       argi++;
     }
-
   }
 
 #if HAVE_CUDA
@@ -202,12 +201,12 @@ void initialize(DynetParams& params) {
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
-  // TODO: Once multi-device support is added, we will potentially allocate both CPU
-  //       and GPU, not either-or
   int default_index = 0;
   if (gpudevices.size() > 0) {
     for (auto gpu : gpudevices)
       devices.push_back(gpu);
+    if (params.cpu_requested)
+      devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
   } else {
     devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
   }

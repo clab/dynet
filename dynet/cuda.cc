@@ -30,7 +30,7 @@ vector<Device*> initialize_gpu(DynetParams& params) {
     cerr << "Request for " << params.requested_gpus << " GPU" << (params.requested_gpus == 1 ? "" : "s") << " ...\n";
     for (int i = 0; i < MAX_GPUS; ++i) params.gpu_mask[i] = 1;
   } else if (params.ids_requested) {
-    params.requested_gpus++;
+    params.requested_gpus++; // since start from -1
     cerr << "[dynet] Request for " << params.requested_gpus << " specific GPU" << (params.requested_gpus == 1 ? "" : "s") << " ...\n";
   }
 
