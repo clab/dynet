@@ -63,6 +63,102 @@ struct NodeMemPool {
   void* mem_;
 };
 
+/* layout transformation functionsi (ColMajor) */
+//shuffle is not supported by ThreadPool device
+struct HWCNToCHWN {
+  void operator()(const Tensor* in, Tensor& out) {
+    if (in->device->type == DeviceType::ThreadPool) {
+      const unsigned N = in->d.nd == 4 ? in->d[3] : in->d.bd; 
+      const unsigned C = in->d[2];
+      const unsigned H = in->d[0];
+      const unsigned W = in->d[1];
+      for (unsigned n = 0; n < N; ++n)
+        for (unsigned c = 0; c < C; ++c)
+          for (unsigned h = 0; h < H; ++h)
+            for (unsigned w = 0; w < W; ++w)
+              out.v[n*H*W*C+w*H*C+h*C+c] = in->v[n*H*W*C+c*H*W+w*H+h];
+    } else {
+      Eigen::array<ptrdiff_t, 4> shuffles = {2, 0, 1, 3};
+      //shuffles[0] = 2; shuffles[1] = 0; shuffles[2] = 1; shuffles[3] = 3;
+      if (in->d.nd == 4) {
+        out.t<4>().device(*out.device->edevice) = in->t<4>().shuffle(shuffles);
+      } else {
+        out.tb<3>().device(*out.device->edevice) = in->tb<3>().shuffle(shuffles);
+      }
+    }
+  }
+};
+
+struct HWCNToNCHW {
+  void operator()(const Tensor* in, Tensor& out) {
+    if (in->device->type == DeviceType::ThreadPool) {
+      const unsigned N = in->d.nd == 4 ? in->d[3] : in->d.bd; 
+      const unsigned C = in->d[2];
+      const unsigned H = in->d[0];
+      const unsigned W = in->d[1];
+      for (unsigned n = 0; n < N; ++n)
+        for (unsigned c = 0; c < C; ++c)
+          for (unsigned h = 0; h < H; ++h)
+            for (unsigned w = 0; w < W; ++w)
+              out.v[w*H*C*N+h*C*N+c*N+n] = in->v[n*H*W*C+c*H*W+w*H+h];
+    } else {
+      Eigen::array<ptrdiff_t, 4> shuffles = {3, 2, 0, 1};
+      //shuffles[0] = 2; shuffles[1] = 0; shuffles[2] = 1; shuffles[3] = 3;
+      if (in->d.nd == 4) {
+        out.t<4>().device(*out.device->edevice) = in->t<4>().shuffle(shuffles);
+      } else {
+        out.tb<3>().device(*out.device->edevice) = in->tb<3>().shuffle(shuffles);
+      }
+    }
+  }
+};
+
+struct CHWNToHWCN {
+  void operator()(const Tensor* in, Tensor& out) {
+    if (in->device->type == DeviceType::ThreadPool) {
+      const unsigned N = in->d.nd == 4 ? in->d[3] : in->d.bd; 
+      const unsigned C = in->d[0];
+      const unsigned H = in->d[1];
+      const unsigned W = in->d[2];
+      for (unsigned n = 0; n < N; ++n)
+        for (unsigned c = 0; c < C; ++c)
+          for (unsigned h = 0; h < H; ++h)
+            for (unsigned w = 0; w < W; ++w)
+              out.v[n*H*W*C+c*H*W+w*H+h] = in->v[n*H*W*C+w*H*C+h*C+c];
+    } else {
+      Eigen::array<ptrdiff_t, 4> shuffles = {1, 2, 0, 3};
+      if (in->d.nd == 4) {
+        out.t<4>().device(*out.device->edevice) = in->t<4>().shuffle(shuffles);
+      } else {
+        out.tb<3>().device(*out.device->edevice) = in->tb<3>().shuffle(shuffles);
+      }
+    }
+  }
+};
+
+struct NCHWToHWCN {
+  void operator()(const Tensor* in, Tensor& out) {
+    if (in->device->type == DeviceType::ThreadPool) {
+      const unsigned N = in->d[0];
+      const unsigned C = in->d[1];
+      const unsigned H = in->d[2];
+      const unsigned W = in->d.bd == 4 ? in->d[3] : in->d.bd;
+      for (unsigned n = 0; n < N; ++n)
+        for (unsigned c = 0; c < C; ++c)
+          for (unsigned h = 0; h < H; ++h)
+            for (unsigned w = 0; w < W; ++w)
+              out.v[n*H*W*C+c*H*W+w*H+h] = in->v[w*H*C*N+h*C*N+c*N+n];
+    } else {
+      Eigen::array<ptrdiff_t, 4> shuffles = {2, 3, 1, 0};
+      if (in->d.nd == 4) {
+        out.t<4>.device(*out.device->edevice) = in->t<4>().shuffle(shuffles);
+      } else {
+        out.tb<3>().device(*out.device->edevice) = in->tb<3>().shuffle(shuffles);
+      }
+    }
+  }
+};
+
 } // namespace dynet
 
 #endif
