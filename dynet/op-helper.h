@@ -65,8 +65,9 @@ struct NodeMemPool {
 
 /* layout transformation functionsi (ColMajor) */
 //shuffle is not supported by ThreadPool device
+template<class MyDevice>
 struct HWCNToCHWN {
-  void operator()(const Tensor* in, Tensor& out) {
+  void operator()(const Tensor* in, Tensor& out, const MyDevice & dev) {
     if (in->device->type == DeviceType::ThreadPool) {
       const unsigned N = in->d.nd == 4 ? in->d[3] : in->d.bd; 
       const unsigned C = in->d[2];
@@ -81,16 +82,17 @@ struct HWCNToCHWN {
       Eigen::array<ptrdiff_t, 4> shuffles = {2, 0, 1, 3};
       //shuffles[0] = 2; shuffles[1] = 0; shuffles[2] = 1; shuffles[3] = 3;
       if (in->d.nd == 4) {
-        out.t<4>().device(*out.device->edevice) = in->t<4>().shuffle(shuffles);
+        out.t<4>().device(*dev.edevice) = in->t<4>().shuffle(shuffles);
       } else {
-        out.tb<3>().device(*out.device->edevice) = in->tb<3>().shuffle(shuffles);
+        out.tb<3>().device(*dev.edevice) = in->tb<3>().shuffle(shuffles);
       }
     }
   }
 };
 
+template<class MyDevice>
 struct HWCNToNCHW {
-  void operator()(const Tensor* in, Tensor& out) {
+  void operator()(const Tensor* in, Tensor& out, const MyDevice & dev) {
     if (in->device->type == DeviceType::ThreadPool) {
       const unsigned N = in->d.nd == 4 ? in->d[3] : in->d.bd; 
       const unsigned C = in->d[2];
@@ -105,16 +107,17 @@ struct HWCNToNCHW {
       Eigen::array<ptrdiff_t, 4> shuffles = {3, 2, 0, 1};
       //shuffles[0] = 2; shuffles[1] = 0; shuffles[2] = 1; shuffles[3] = 3;
       if (in->d.nd == 4) {
-        out.t<4>().device(*out.device->edevice) = in->t<4>().shuffle(shuffles);
+        out.t<4>().device(*dev.edevice) = in->t<4>().shuffle(shuffles);
       } else {
-        out.tb<3>().device(*out.device->edevice) = in->tb<3>().shuffle(shuffles);
+        out.tb<3>().device(*dev.edevice) = in->tb<3>().shuffle(shuffles);
       }
     }
   }
 };
 
+template<class MyDevice>
 struct CHWNToHWCN {
-  void operator()(const Tensor* in, Tensor& out) {
+  void operator()(const Tensor* in, Tensor& out, const MyDevice & dev) {
     if (in->device->type == DeviceType::ThreadPool) {
       const unsigned N = in->d.nd == 4 ? in->d[3] : in->d.bd; 
       const unsigned C = in->d[0];
@@ -128,16 +131,17 @@ struct CHWNToHWCN {
     } else {
       Eigen::array<ptrdiff_t, 4> shuffles = {1, 2, 0, 3};
       if (in->d.nd == 4) {
-        out.t<4>().device(*out.device->edevice) = in->t<4>().shuffle(shuffles);
+        out.t<4>().device(*dev.edevice) = in->t<4>().shuffle(shuffles);
       } else {
-        out.tb<3>().device(*out.device->edevice) = in->tb<3>().shuffle(shuffles);
+        out.tb<3>().device(*dev.edevice) = in->tb<3>().shuffle(shuffles);
       }
     }
   }
 };
 
+template<class MyDevice>
 struct NCHWToHWCN {
-  void operator()(const Tensor* in, Tensor& out) {
+  void operator()(const Tensor* in, Tensor& out, const MyDevice & dev) {
     if (in->device->type == DeviceType::ThreadPool) {
       const unsigned N = in->d[0];
       const unsigned C = in->d[1];
@@ -151,9 +155,9 @@ struct NCHWToHWCN {
     } else {
       Eigen::array<ptrdiff_t, 4> shuffles = {2, 3, 1, 0};
       if (in->d.nd == 4) {
-        out.t<4>.device(*out.device->edevice) = in->t<4>().shuffle(shuffles);
+        out.t<4>().device(*dev.edevice) = in->t<4>().shuffle(shuffles);
       } else {
-        out.tb<3>().device(*out.device->edevice) = in->tb<3>().shuffle(shuffles);
+        out.tb<3>().device(*dev.edevice) = in->tb<3>().shuffle(shuffles);
       }
     }
   }
