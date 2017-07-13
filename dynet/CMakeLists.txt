@@ -123,7 +123,7 @@ if(ENABLE_BOOST)
   list(APPEND dynet_library_HDRS mp.h)
 endif()
   
-set(dynet_gen_file_prefix_SRCS
+set(dynet_gpu_mergeable_SRCS
     nodes-activations
     nodes-affinetransform
     nodes-arith-const
@@ -195,7 +195,7 @@ target_link_libraries(dynet ${LIBS})
 
 if(WITH_CUDA_BACKEND)
   if(${GPU_NUMFILES} EQUAL 0)
-    foreach(FILENAME ${dynet_gen_file_prefix_SRCS})
+    foreach(FILENAME ${dynet_gpu_mergeable_SRCS})
       set(MERGEFILE ${PROJECT_BINARY_DIR}/dynet/gpu-${FILENAME}.cu)
       file(WRITE ${MERGEFILE} "#include \"${PROJECT_SOURCE_DIR}/dynet/${FILENAME}.cc\"\n")
       list(APPEND dynet_gpu_SRCS ${MERGEFILE})
@@ -203,7 +203,7 @@ if(WITH_CUDA_BACKEND)
   else()
     # merge into k merge files
     set(COUNTER 0)
-    foreach(FILENAME ${dynet_gen_file_prefix_SRCS})
+    foreach(FILENAME ${dynet_gpu_mergeable_SRCS})
       math(EXPR MERGENUM "${COUNTER} % ${GPU_NUMFILES}")
       set(MERGEFILE ${PROJECT_BINARY_DIR}/dynet/gpu-merge${MERGENUM}.cu)
       if(${COUNTER} EQUAL ${MERGENUM})   # This is the first line of this merge file
