@@ -634,6 +634,11 @@ cdef class Parameters: # {{{
 # Parameters }}}
 
 cdef class LookupParameters: # {{{
+    """LookupParameters represents a table of parameters.
+
+    They are used to embed a set of discrete objects (e.g. word embeddings). These are sparsely updated.
+
+    """
     cdef CLookupParameters thisptr # TODO: no longer pointer
     cdef int _version
     cdef Expression _expr
@@ -647,6 +652,14 @@ cdef class LookupParameters: # {{{
 
     # TODO docs
     def save(self, fname, key="", append=False):
+        """Save the values of this LookupParameters object to a particular file.
+
+        TODO: more docs. Refer to the tutorial for more info for now
+
+        Args:
+            fname (string): the name of a file to save to.
+            key   (string): TODO
+        """
         self.write_to_textfile(fname, key, append)
     def populate(self, fname, key=""):
         """Populate the values of this LookupParameters object from
@@ -676,6 +689,13 @@ cdef class LookupParameters: # {{{
         del loader
 
     cpdef init_from_array(self, arr):
+        """Initializes the values according to a numpy array
+
+        Preferably uses ParameterCollection.lookup_parameter_from_numpy when possible
+
+        Args:
+            arr (np.array): numpy array of shape (num_)
+        """
         if len(arr) > self.thisptr.get_storage().values.size():
             raise Exception("too many rows")
         if arr.shape[1] != self.thisptr.get_storage().values[0].d.rows():
@@ -685,28 +705,62 @@ cdef class LookupParameters: # {{{
             self.init_row(i, row)
 
     cpdef shape(self):
+        """Returns shape of the lookup parameter
+
+        The first dimension is the lookup dimension
+
+        Returns:
+            tuple: Shape of the parameter
+        """
         return c_dim_as_shape(self.thisptr.get_storage().all_dim)
 
     def __getitem__(self, int i):
+        """
+        Same as :code:`dynet.lookup`
+        """
         return lookup(self, i)
 
     cpdef batch(self, vector[unsigned] i):
+        """Returns a batched expression based on looked up indices
+
+        This does the same as :code:`dynet.lookup_batch`
+        
+        Args:
+            i (list): list of indices
+
+        Returns:
+            dynet.Expression: Batched expression fo batch dimension :code:`len(i)`
+        """
         return lookup_batch(self, i)
 
     cpdef init_row(self, unsigned i, vector[float] row):
+        """Initialize one row with values
+        
+        Args:
+            i    (int): index
+            row (list): values
+        """
         self.thisptr.initialize(i, row)
 
     cpdef as_array(self):
-        """
-        Return as a numpy array.
+        """Return as a numpy array.
+
+        The first dimension is the lookup dimension
+
+        Returns:
+            np.array: Values
         """
         cdef vector[CTensor] vals
         vals = self.thisptr.get_storage().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
     cpdef grad_as_array(self):
-        """
-        Return gradients as a numpy array.
+        """Return gradients as a numpy array.
+
+        The first dimension is the lookup dimension
+
+        Returns:
+            np.array: gradient values
         """
         cdef vector[CTensor] grads
         grads = self.thisptr.get_storage().grads
@@ -731,6 +785,15 @@ cdef class LookupParameters: # {{{
         self.thisptr.scale_gradient(s)
         
     cpdef Expression expr(self,bool update=True):
+        """Returns an expression for the whole parameter
+
+        Same as :code:`dynet.parameter`
+
+        Args:
+            update(bool): If this is set to False, the parameter won't be updated during the backward pass
+        Returns:
+            Expression: Expression of the parameter
+        """
         if cg_version() != self._version:
             self._version = cg_version()
             if update:
@@ -739,7 +802,10 @@ cdef class LookupParameters: # {{{
                 self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
         return self._expr
 
-    cpdef zero(self): self.thisptr.zero()
+    cpdef zero(self):
+        """Set all values to zero
+        """
+        self.thisptr.zero()
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
