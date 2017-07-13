@@ -995,7 +995,7 @@ Dim WeightNormalization::dim_forward(const vector<Dim>& xs) const {
 
 string VanillaLSTM::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "vanilla_lstm(" << arg_names[0] << ", " << arg_names[1] << ')';
+  s << "vanilla_lstm(" << arg_names[0] << ", " << arg_names[1] << ", " << arg_names[2] << ", " << arg_names[3] << ", " << arg_names[4] << ')';
   return s.str();
 }
 
@@ -1015,5 +1015,59 @@ Dim VanillaLSTM::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs[4][0] == hidden_dim * 4, "VanillaLSTM: b dim expected " << hidden_dim * 4 << ", was " << xs[4][0]);
   return xs[1];
 }
+
+string VanillaLSTMGates::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "vanilla_lstm_gates(" << arg_names[0] << ", " << arg_names[1] << ", " << arg_names[2] << ", " << arg_names[3] << ", " << arg_names[4] << ')';
+  return s.str();
+}
+
+Dim VanillaLSTMGates::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 5, "Failed input count check in VanillaLSTMGates");
+  DYNET_ARG_CHECK(xs[0].ndims() == 1, "VanillaLSTMGates: x_t expected to be a vector");
+  DYNET_ARG_CHECK(xs[1].ndims() == 1, "VanillaLSTMGates: h_tm1 expected to be a vector");
+  DYNET_ARG_CHECK(xs[2].ndims() == 2, "VanillaLSTMGates: Wx expected to be a matrix");
+  DYNET_ARG_CHECK(xs[3].ndims() == 2, "VanillaLSTMGates: Wh expected to be a matrix");
+  DYNET_ARG_CHECK(xs[4].ndims() == 1, "VanillaLSTMGates: b expected to be a vector");
+  unsigned hidden_dim=xs[1][0];
+  unsigned input_dim=xs[0][0];
+  unsigned batch_size=xs[0].bd;
+  DYNET_ARG_CHECK(xs[2][0] == hidden_dim * 4, "VanillaLSTMGates: Wx dim 0 expected " << hidden_dim * 4 << ", was " << xs[2][0]);
+  DYNET_ARG_CHECK(xs[2][1] == input_dim, "VanillaLSTMGates: Wx dim 1 expected " << input_dim << ", was " << xs[2][1]);
+  DYNET_ARG_CHECK(xs[3][0] == hidden_dim * 4, "VanillaLSTMGates: Wh dim 0 expected " << hidden_dim * 4 << ", was " << xs[3][0]);
+  DYNET_ARG_CHECK(xs[3][1] == hidden_dim, "VanillaLSTMGates: Wh dim 1 expected " << hidden_dim << ", was " << xs[3][1]);
+  DYNET_ARG_CHECK(xs[4][0] == hidden_dim * 4, "VanillaLSTMGates: b dim expected " << hidden_dim * 4 << ", was " << xs[4][0]);
+  return Dim({hidden_dim*4}, batch_size);
+}
+
+string VanillaLSTMC::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "vanilla_lstm_c(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return s.str();
+}
+
+Dim VanillaLSTMC::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in VanillaLSTMC");
+  DYNET_ARG_CHECK(xs[0].ndims() == 1, "VanillaLSTMC: c_tm1 expected to be a vector");
+  DYNET_ARG_CHECK(xs[1].ndims() == 1, "VanillaLSTMC: gates_t expected to be a vector");
+  DYNET_ARG_CHECK(xs[0].size()*4 == xs[1].size(), "VanillaLSTMC: gates_t expected 4 times as big as c_t, but " << xs[0].size() << "*4 != " << xs[1].size());
+  return xs[0];
+}
+
+string VanillaLSTMH::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "vanilla_lstm_h(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return s.str();
+}
+
+Dim VanillaLSTMH::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in VanillaLSTMH");
+  DYNET_ARG_CHECK(xs[0].ndims() == 1, "VanillaLSTMH: c_t expected to be a vector");
+  DYNET_ARG_CHECK(xs[1].ndims() == 1, "VanillaLSTMH: gates_t expected to be a vector");
+  DYNET_ARG_CHECK(xs[0].size()*4 == xs[1].size(), "VanillaLSTMH: gates_t expected 4 times as big as c_t, but " << xs[0].size() << "*4 != " << xs[1].size());
+  return xs[0];
+}
+
+
 
 } // namespace dynet

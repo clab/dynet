@@ -200,5 +200,14 @@ Expression weight_norm(const Expression& w, const Expression& g){return Expressi
 Expression vanilla_lstm(const Expression& x_t, const Expression& hc_tm1, const Expression& Wx, const Expression& Wh, const Expression& b){
   return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTM>({x_t.i, hc_tm1.i, Wx.i, Wh.i, b.i}));
 }
+Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b){
+  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i}));
+}
+Expression vanilla_lstm_c(const Expression& c_tm1, const Expression& gates_t){
+  return Expression(c_tm1.pg, c_tm1.pg->add_function<VanillaLSTMC>({c_tm1.i, gates_t.i}));
+}
+Expression vanilla_lstm_h(const Expression& c_t, const Expression& gates_t){
+  return Expression(c_t.pg, c_t.pg->add_function<VanillaLSTMH>({c_t.i, gates_t.i}));
+}
 
 }  // namespace dynet

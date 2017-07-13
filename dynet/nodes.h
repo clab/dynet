@@ -865,6 +865,22 @@ struct VanillaLSTM : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+struct VanillaLSTMGates : public Node {
+  explicit VanillaLSTMGates(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+struct VanillaLSTMC : public Node {
+  explicit VanillaLSTMC(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+struct VanillaLSTMH : public Node {
+  explicit VanillaLSTMH(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 } // namespace dynet
 
 #endif

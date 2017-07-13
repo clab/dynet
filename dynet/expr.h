@@ -2106,6 +2106,10 @@ Expression weight_norm(const Expression& w, const Expression& g);
  */
 Expression vanilla_lstm(const Expression& x_t,  const Expression& hc_tm1, const Expression& Wx, const Expression& Wh, const Expression& b);
 
+Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b);
+Expression vanilla_lstm_c(const Expression& c_tm1, const Expression& gates_t);
+Expression vanilla_lstm_h(const Expression& c_t, const Expression& gates_t);
+
 }  // namespace dynet
 
 #endif

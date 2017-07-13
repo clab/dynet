@@ -2214,7 +2214,6 @@ void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   unsigned hidden_dim = b->d[0] / 4;
   unsigned batch_size = x_t->d.bd;
 
-  // xs[1] = [h_tm1,c_tm1] (TODO: device & mempool correct?)
   // un-convention: xs[1] stores h and c such that both are separate in memory: {hidden_dim_size, batch_size, h_or_c}
   // in this way we can return 2 vectors, but still have them separate in memory; the caller is responsible for separating the outputs properly
   Tensor h_tm1(Dim({hidden_dim}, batch_size), xs[1]->v, fx.device, DeviceMempool::FXS);
@@ -2226,13 +2225,12 @@ void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   Tensor aux_o   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 2*hidden_dim, fx.device, DeviceMempool::FXS);
   Tensor aux_g   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 3*hidden_dim, fx.device, DeviceMempool::FXS);
 
-  // separated outputs (TODO: device & mempool correct?)
   Tensor h_t(Dim({hidden_dim}, batch_size), fx.v, fx.device, DeviceMempool::FXS);
   Tensor c_t(Dim({hidden_dim}, batch_size), fx.v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
 
   Eigen::array<int, 2> bcast = {(int)1, (int)batch_size};
   aux_all.tbvec().device(*dev.edevice) = b->tbvec().broadcast(bcast);
-  aux_all.colbatch_matrix() += **Wx * x_t->colbatch_matrix() + **Wh * h_tm1.colbatch_matrix() ;//+ **b; // TODO: don't need .device(*dev.edevice) here?
+  aux_all.colbatch_matrix() += **Wx * x_t->colbatch_matrix() + **Wh * h_tm1.colbatch_matrix() ; // TODO: this line will need special treatment on GPU
 
   // c_t = sigmoid(x_t*W_i + h_tm1*R_i + b_i)
   //       * tanh(x_t*W_g + h_tm1*R_g + b_g)
@@ -2246,7 +2244,6 @@ void VanillaLSTM::forward_dev_impl(const MyDevice & dev, const vector<const Tens
   //       * tanh(c_t)
   h_t.tbvec().device(*dev.edevice) = aux_o.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>())
                                      * c_t.tbvec().tanh();
-
 }
 
 template<class MyDevice>
@@ -2256,9 +2253,152 @@ void VanillaLSTM::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+
+  const Tensor *x_t = xs[0];
+  const Tensor *Wx = xs[2];
+  const Tensor *Wh = xs[3];
+  const Tensor *b  = xs[4];
+
+  unsigned hidden_dim = b->d[0] / 4;
+  unsigned batch_size = x_t->d.bd;
+
+  // un-convention: xs[1] stores h and c such that both are separate in memory: {hidden_dim_size, batch_size, h_or_c}
+  // in this way we can return 2 vectors, but still have them separate in memory; the caller is responsible for separating the outputs properly
+  Tensor h_tm1(Dim({hidden_dim}, batch_size), xs[1]->v, fx.device, DeviceMempool::FXS);
+  Tensor c_tm1(Dim({hidden_dim}, batch_size), xs[1]->v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
+  Tensor dEdh_tp1(Dim({hidden_dim}, batch_size), dEdf.v, fx.device, DeviceMempool::FXS);
+  Tensor dEdc_tp1(Dim({hidden_dim}, batch_size), dEdf.v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
+
+  Tensor aux_all (Dim({hidden_dim * 4}, batch_size), (float*)aux_mem,                  fx.device, DeviceMempool::FXS);
+  Tensor aux_i   (Dim({hidden_dim},     batch_size), (float*)aux_mem,                  fx.device, DeviceMempool::FXS);
+  Tensor aux_f   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + hidden_dim,   fx.device, DeviceMempool::FXS);
+  Tensor aux_o   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 2*hidden_dim, fx.device, DeviceMempool::FXS);
+  Tensor aux_g   (Dim({hidden_dim},     batch_size), ((float*)aux_mem) + 3*hidden_dim, fx.device, DeviceMempool::FXS);
+
+  Tensor h_t(Dim({hidden_dim}, batch_size), fx.v, fx.device, DeviceMempool::FXS);
+  Tensor c_t(Dim({hidden_dim}, batch_size), fx.v + hidden_dim * batch_size, fx.device, DeviceMempool::FXS);
+
+  if(i==0){ // x_t
+
+  } else if(i==1) { // h_t & c_t
+    // TODO: need forget gate value and gradient c of the next timestep!
+  } else if(i==2) { // Wx
+
+  } else if(i==3) { // Wh
+
+  } else if(i==4) { // b
+
+  }
 }
 
 DYNET_NODE_INST_DEV_IMPL(VanillaLSTM)
+
+template<class MyDevice>
+void VanillaLSTMGates::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 5, "Failed dimension check in VanillaLSTMGates::forward");
+
+  const Tensor *x_t = xs[0];
+  const Tensor *h_tm1 = xs[1];
+  const Tensor *Wx = xs[2];
+  const Tensor *Wh = xs[3];
+  const Tensor *b  = xs[4];
+
+  unsigned hidden_dim = b->d[0] / 4;
+  unsigned batch_size = x_t->d.bd;
+
+  Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_f(hidden_dim,0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_g(hidden_dim*3,0);
+  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
+  Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
+
+  //bias
+  Eigen::array<int, 2> bcast = {(int)1, (int)batch_size};
+  fx.tbvec().device(*dev.edevice) = b->tbvec().broadcast(bcast);
+  fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += h_tm1->tbvec().constant(1);
+
+  //matrix mult
+  fx.colbatch_matrix() += **Wx * x_t->colbatch_matrix() + **Wh * h_tm1->colbatch_matrix() ; // TODO: this line will need special treatment on GPU
+
+  // non-linearities
+  fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3).unaryExpr(scalar_logistic_sigmoid_op<float>());
+  fx.tbvec().slice(indices_g, sizes_1).device(*dev.edevice) = fx.tbvec().slice(indices_g, sizes_1).tanh();
+}
+
+template<class MyDevice>
+void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+
+}
+
+DYNET_NODE_INST_DEV_IMPL(VanillaLSTMGates)
+
+template<class MyDevice>
+void VanillaLSTMC::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in VanillaLSTMC::forward");
+
+  const Tensor *c_tm1 = xs[0];
+  const Tensor *gates_t = xs[1];
+
+  unsigned hidden_dim = c_tm1->d[0];
+  unsigned batch_size = c_tm1->d.bd;
+
+  Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_f(hidden_dim,0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_g(hidden_dim*3,0);
+  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
+
+  fx.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_i, sizes_1) * gates_t->tbvec().slice(indices_g, sizes_1) + gates_t->tbvec().slice(indices_f, sizes_1) * c_tm1->tbvec();
+
+}
+
+template<class MyDevice>
+void VanillaLSTMC::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+
+}
+
+DYNET_NODE_INST_DEV_IMPL(VanillaLSTMC)
+
+template<class MyDevice>
+void VanillaLSTMH::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in VanillaLSTMH::forward");
+
+  const Tensor *c_t = xs[0];
+  const Tensor *gates_t = xs[1];
+
+  unsigned hidden_dim = c_t->d[0];
+  unsigned batch_size = c_t->d.bd;
+
+  Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
+  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
+
+  fx.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_o, sizes_1) * c_t->tbvec().tanh();
+}
+
+template<class MyDevice>
+void VanillaLSTMH::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+
+}
+
+DYNET_NODE_INST_DEV_IMPL(VanillaLSTMH)
+
+
+
+
 
 
 
