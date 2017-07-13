@@ -164,10 +164,6 @@ set(dynet_gpu_SRCS
     cudnn-ops.cu
     gpu-ops.cu)
 
-foreach(FILENAME ${dynet_gen_file_prefix_SRCS})
-    list(APPEND dynet_gpu_SRCS ${PROJECT_BINARY_DIR}/dynet/gpu-${FILENAME}.cu)
-endforeach()
-
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 if (NOT MSVC)
   set(BUILD_SHARED_LIBS ON)
@@ -196,11 +192,28 @@ endif()
 # Build cpu library
 add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
 target_link_libraries(dynet ${LIBS})
+
 if(WITH_CUDA_BACKEND)
-  foreach(FILENAME ${dynet_gen_file_prefix_SRCS})
-    set(FILEPREFIX ${FILENAME})
-    configure_file(gpu-file-template.cu.in gpu-${FILENAME}.cu)
-  endforeach()
+  if(${GPU_NUMFILES} EQUAL 0)
+    foreach(FILENAME ${dynet_gen_file_prefix_SRCS})
+      set(MERGEFILE ${PROJECT_BINARY_DIR}/dynet/gpu-${FILENAME}.cu)
+      file(WRITE ${MERGEFILE} "#include \"${PROJECT_SOURCE_DIR}/dynet/${FILENAME}.cc\"\n")
+      list(APPEND dynet_gpu_SRCS ${MERGEFILE})
+    endforeach()
+  else()
+    # merge into k merge files
+    set(COUNTER 0)
+    foreach(FILENAME ${dynet_gen_file_prefix_SRCS})
+      math(EXPR MERGENUM "${COUNTER} % ${GPU_NUMFILES}")
+      set(MERGEFILE ${PROJECT_BINARY_DIR}/dynet/gpu-merge${MERGENUM}.cu)
+      if(${COUNTER} EQUAL ${MERGENUM})   # This is the first line of this merge file
+        file(REMOVE ${MERGEFILE})        # Start with an empty file
+        list(APPEND dynet_gpu_SRCS ${MERGEFILE})
+      endif()
+      file(APPEND ${MERGEFILE} "#include \"${PROJECT_SOURCE_DIR}/dynet/${FILENAME}.cc\"\n")
+      math(EXPR COUNTER ${COUNTER}+1)
+    endforeach()
+  endif()
 
   # cuda flags
   set(CUDA_SEPARABLE_COMPILATION ON)
