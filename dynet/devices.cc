@@ -39,7 +39,7 @@ DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
     used[0] = stoi(strs[0]);
     used[1] = stoi(strs[1]);
     used[2] = stoi(strs[2]);
-    used[4] = stoi(strs[3]);
+    used[3] = stoi(strs[3]);
   } else {
     DYNET_INVALID_ARG("the format of --dynet-mem is invalid: " << descriptor);
   }
