@@ -2356,35 +2356,58 @@ void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
   Eigen::DSizes<ptrdiff_t, 3> sizes_mat_3(hidden_dim*3, 1, static_cast<ptrdiff_t>(fx.d.bd));
   Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
   Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
-  Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
-  Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
-  Eigen::DSizes<ptrdiff_t, 2> sizes_mat_3_nobatch(hidden_dim*3, input_dim);
-  Eigen::DSizes<ptrdiff_t, 2> sizes_mat_1_nobatch(hidden_dim, input_dim);
   Eigen::array<int, 1> vec_batch_axis; vec_batch_axis[0] = 1;
   Eigen::array<int, 2> mat_batch_axis; mat_batch_axis[0] = 1; mat_batch_axis[1] = 3;  // TODO: not sure why we have the extra dimension "1" after the outer product..
 
   Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
 
-  array<Eigen::IndexPair<int>, 1> product_mat_by_transp = { Eigen::IndexPair<int>(1, 0) }; // following https://stackoverflow.com/questions/39815869/how-to-transpose-tensor-in-eigen
-//  array<Eigen::IndexPair<int>, 1> transp_product_dims = { Eigen::IndexPair<int>(0, 1) };
+  array<Eigen::IndexPair<int>, 1> product_mat = { Eigen::IndexPair<int>(1, 0) }; // following https://stackoverflow.com/questions/39815869/how-to-transpose-tensor-in-eigen
   if(i==0){ // dx_t =
+    Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(input_dim);
+    Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(input_dim*3);
+
+    // TODO: fix math, then implement
+    // dx_t_i = Wx_i^T * [di . i_t . (1-i_t)]
+    // dx_f = Wx_f^T * [df . f_t . (1-f_t)]
+    // dx_o = Wx_o^T * [do . o_t . (1-o_t)]
+
+    // dWx_g = Wx_g^T * [dg . (1-tanh(g_t))]
   } else if(i==1){ // dh_tm1
+    // TODO: implement
+    Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
+    Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
 
   } else if(i==2){
     // dWx_i = [di . i_t . (1-i_t)] * x_t (here * is outer product), then sum over batches
     // dWx_f = [di . f_t . (1-f_t)] * x_t (here * is outer product), then sum over batches
     // dWx_o = [di . o_t . (1-o_t)] * x_t (here * is outer product), then sum over batches
-    dEdxi.t<2>().slice(indices_mat_i_nobatch, sizes_mat_3_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[0]->tb<2>().shuffle(transp_order), product_mat_by_transp).sum(mat_batch_axis);
-    // dWx_g = [di . (1-tanh(o_t))] * x_t (here * is outer product), then sum over batches
-    dEdxi.t<2>().slice(indices_mat_g_nobatch, sizes_mat_1_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1).contract(xs[0]->tb<2>().shuffle(transp_order), product_mat_by_transp).sum(mat_batch_axis);
+    Eigen::DSizes<ptrdiff_t, 2> sizes_mat_3_nobatch(hidden_dim*3, input_dim);
+    dEdxi.t<2>().slice(indices_mat_i_nobatch, sizes_mat_3_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[0]->tb<2>().shuffle(transp_order), product_mat).sum(mat_batch_axis);
+
+    // dWx_g = [dg . (1-tanh(g_t))] * x_t (here * is outer product), then sum over batches
+    Eigen::DSizes<ptrdiff_t, 2> sizes_mat_1_nobatch(hidden_dim, input_dim);
+    dEdxi.t<2>().slice(indices_mat_g_nobatch, sizes_mat_1_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1).contract(xs[0]->tb<2>().shuffle(transp_order), product_mat).sum(mat_batch_axis);
 
   } else if(i==3){ // dWh
+    // dWh_i = [di . i_t . (1-i_t)] * h_tm1 (here * is outer product), then sum over batches
+    // dWh_f = [df . f_t . (1-f_t)] * h_tm1 (here * is outer product), then sum over batches
+    // dWh_o = [do . o_t . (1-o_t)] * h_tm1 (here * is outer product), then sum over batches
+    Eigen::DSizes<ptrdiff_t, 2> sizes_mat_3_nobatch(hidden_dim*3, hidden_dim);
+    dEdxi.t<2>().slice(indices_mat_i_nobatch, sizes_mat_3_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[1]->tb<2>().shuffle(transp_order), product_mat).sum(mat_batch_axis);
+
+    // dWh_g = [dg . (1-tanh(g_t))] * h_tm1 (here * is outer product), then sum over batches
+    Eigen::DSizes<ptrdiff_t, 2> sizes_mat_1_nobatch(hidden_dim, hidden_dim);
+    dEdxi.t<2>().slice(indices_mat_g_nobatch, sizes_mat_1_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1).contract(xs[1]->tb<2>().shuffle(transp_order), product_mat).sum(mat_batch_axis);
 
   } else if(i==4){
+    Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
+    Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
+
     // db_i = di . i_t . (1-i_t), then sum over batches
     // db_f = df . f_t . (1-f_t), then sum over batches
     // db_o = do . f_t . (1-o_t), then sum over batches
     dEdxi.tvec().slice(indices_i_nobatch, sizes_3_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_i, sizes_3) * fx.tbvec().slice(indices_i, sizes_3) * (fx.tbvec().slice(indices_i, sizes_3).constant(1) - fx.tbvec().slice(indices_i, sizes_3))).sum(vec_batch_axis);
+
     // db_g = dg . (1 - tanh(g_t), then sum over batches
     dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_g, sizes_1) * (fx.tbvec().slice(indices_i, sizes_1).constant(1) - fx.tbvec().slice(indices_g, sizes_1).tanh())).sum(vec_batch_axis);
   }
