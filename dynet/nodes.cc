@@ -2338,16 +2338,55 @@ void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  if(i==0){ // dx_t =
+  unsigned hidden_dim = fx.d[0] / 4;
+  unsigned input_dim = xs[0]->d[0];
+  Eigen::DSizes<ptrdiff_t, 3> indices_mat_i(0, 0, 0);
+  Eigen::DSizes<ptrdiff_t, 3> indices_mat_g(hidden_dim*3, 0, 0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_f(hidden_dim,0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_g(hidden_dim*3,0);
+  Eigen::DSizes<ptrdiff_t, 1> indices_i_nobatch(0);
+  Eigen::DSizes<ptrdiff_t, 2> indices_mat_i_nobatch(0,0);
+  Eigen::DSizes<ptrdiff_t, 1> indices_f_nobatch(hidden_dim);
+  Eigen::DSizes<ptrdiff_t, 1> indices_o_nobatch(hidden_dim*2);
+  Eigen::DSizes<ptrdiff_t, 1> indices_g_nobatch(hidden_dim*3);
+  Eigen::DSizes<ptrdiff_t, 2> indices_mat_g_nobatch(hidden_dim*3, 0);
+  Eigen::DSizes<ptrdiff_t, 3> sizes_mat_1(hidden_dim, 1, static_cast<ptrdiff_t>(fx.d.bd));
+  Eigen::DSizes<ptrdiff_t, 3> sizes_mat_3(hidden_dim*3, 1, static_cast<ptrdiff_t>(fx.d.bd));
+  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
+  Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
+  Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
+  Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
+  Eigen::DSizes<ptrdiff_t, 2> sizes_mat_3_nobatch(hidden_dim*3, input_dim);
+  Eigen::DSizes<ptrdiff_t, 2> sizes_mat_1_nobatch(hidden_dim, input_dim);
+  Eigen::array<int, 1> vec_batch_axis; vec_batch_axis[0] = 1;
+  Eigen::array<int, 2> mat_batch_axis; mat_batch_axis[0] = 1; mat_batch_axis[1] = 3;  // TODO: not sure why we have the extra dimension "1" after the outer product..
 
+  Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
+
+  array<Eigen::IndexPair<int>, 1> product_mat_by_transp = { Eigen::IndexPair<int>(1, 0) }; // following https://stackoverflow.com/questions/39815869/how-to-transpose-tensor-in-eigen
+//  array<Eigen::IndexPair<int>, 1> transp_product_dims = { Eigen::IndexPair<int>(0, 1) };
+  if(i==0){ // dx_t =
   } else if(i==1){ // dh_tm1
 
-  } else if(i==2){ // dWx
+  } else if(i==2){
+    // dWx_i = [di . i_t . (1-i_t)] * x_t (here * is outer product), then sum over batches
+    // dWx_f = [di . f_t . (1-f_t)] * x_t (here * is outer product), then sum over batches
+    // dWx_o = [di . o_t . (1-o_t)] * x_t (here * is outer product), then sum over batches
+    dEdxi.t<2>().slice(indices_mat_i_nobatch, sizes_mat_3_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[0]->tb<2>().shuffle(transp_order), product_mat_by_transp).sum(mat_batch_axis);
+    // dWx_g = [di . (1-tanh(o_t))] * x_t (here * is outer product), then sum over batches
+    dEdxi.t<2>().slice(indices_mat_g_nobatch, sizes_mat_1_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1).contract(xs[0]->tb<2>().shuffle(transp_order), product_mat_by_transp).sum(mat_batch_axis);
 
   } else if(i==3){ // dWh
 
-  } else if(i==4){ // db
-
+  } else if(i==4){
+    // db_i = di . i_t . (1-i_t), then sum over batches
+    // db_f = df . f_t . (1-f_t), then sum over batches
+    // db_o = do . f_t . (1-o_t), then sum over batches
+    dEdxi.tvec().slice(indices_i_nobatch, sizes_3_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_i, sizes_3) * fx.tbvec().slice(indices_i, sizes_3) * (fx.tbvec().slice(indices_i, sizes_3).constant(1) - fx.tbvec().slice(indices_i, sizes_3))).sum(vec_batch_axis);
+    // db_g = dg . (1 - tanh(g_t), then sum over batches
+    dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_g, sizes_1) * (fx.tbvec().slice(indices_i, sizes_1).constant(1) - fx.tbvec().slice(indices_g, sizes_1).tanh())).sum(vec_batch_axis);
   }
 }
 
@@ -2356,7 +2395,7 @@ DYNET_NODE_INST_DEV_IMPL(VanillaLSTMGates)
 template<class MyDevice>
 void VanillaLSTMC::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // computes cell state (elementwise multiplication)
-  // c_t = gates_i * gates_g + gates_f * c_tm1
+  // c_t = gates_i . gates_g + gates_f . c_tm1
 
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in VanillaLSTMC::forward");
 
@@ -2389,14 +2428,14 @@ void VanillaLSTMC::backward_dev_impl(const MyDevice & dev,
   Eigen::DSizes<ptrdiff_t, 2> indices_g(hidden_dim*3,0);
   Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
 
-  if(i==0){ // dc_tm1 = dc_t * f_t
+  if(i==0){ // dc_tm1 = dc_t . f_t
     dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_f, sizes_1);
   } else if(i==1){
-    // di_t = dc_t * g_t
+    // di_t = dc_t . g_t
     dEdxi.tbvec().slice(indices_i, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_g, sizes_1);
-    // df_t = dc_t * c_tm1
+    // df_t = dc_t . c_tm1
     dEdxi.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[0]->tbvec();
-    // dg_t = dc_t * i_t
+    // dg_t = dc_t . i_t
     dEdxi.tbvec().slice(indices_g, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_i, sizes_1);
   }
 }
@@ -2406,7 +2445,7 @@ DYNET_NODE_INST_DEV_IMPL(VanillaLSTMC)
 template<class MyDevice>
 void VanillaLSTMH::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // computes output state (elementwise multiplication)
-  // h_t = gates_o * tanh(c_t)
+  // h_t = gates_o . tanh(c_t)
 
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in VanillaLSTMH::forward");
 
@@ -2433,9 +2472,9 @@ void VanillaLSTMH::backward_dev_impl(const MyDevice & dev,
   Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
   Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
 
-  if(i==0){ // dc_t = dh_t * o_t * (1 - tanh(tanh(c_t)))
+  if(i==0){ // dc_t = dh_t . o_t . (1 - tanh(tanh(c_t)))
     dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_o, sizes_1) * (xs[0]->tbvec().constant(1) - xs[0]->tbvec().tanh().tanh());
-  } else if(i==1){ // do_t = dh_t * tanh(c_t)
+  } else if(i==1){ // do_t = dh_t . tanh(c_t)
     dEdxi.tbvec().slice(indices_o, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[0]->tbvec().tanh();
   }
 }
