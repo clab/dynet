@@ -187,36 +187,36 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CTrainer "dynet::Trainer":
-        CTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        CTrainer(CModel& m, float learning_rate) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
-        void update(float s) except +
+        void update() except +
         #void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s) except +
         void update_epoch(float r)
         void status()
 
 
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer" (CTrainer):
-        CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        CSimpleSGDTrainer(CModel& m, float learning_rate) # TODO removed lam, update docs.
 
     cdef cppclass CCyclicalSGDTrainer "dynet::CyclicalSGDTrainer" (CTrainer):
-        CCyclicalSGDTrainer(CModel& m, float e0_min, float e0_max, float step_size, float gamma, float edecay) # TODO removed lam, update docs.
+        CCyclicalSGDTrainer(CModel& m, float learning_rate_min, float learning_rate_max, float step_size, float gamma) # TODO removed lam, update docs.
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer" (CTrainer):
-        CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
+        CMomentumSGDTrainer(CModel& m, float learning_rate, float mom) # TODO removed lam, update docs
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer" (CTrainer):
-        CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
+        CAdagradTrainer(CModel& m, float learning_rate, float eps) # TODO removed lam, update docs
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer" (CTrainer):
-        CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
+        CAdadeltaTrainer(CModel& m, float eps, float rho) # TODO removed lam, update docs
 
     cdef cppclass CRMSPropTrainer "dynet::RMSPropTrainer" (CTrainer):
-        CRMSPropTrainer(CModel& m, float e0, float eps, float rho, float edecay) # TODO removed lam, update docs
+        CRMSPropTrainer(CModel& m, float learning_rate, float eps, float rho) # TODO removed lam, update docs
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
-        CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
+        CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
 
 
 cdef extern from "dynet/expr.h" namespace "dynet":
