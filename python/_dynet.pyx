@@ -4316,8 +4316,9 @@ class BiRNNBuilder(object): # {{{
 
     def add_inputs(self, es):
         """
-        returns the list of state pairs (stateF, stateB) obtained by adding 
-        inputs to both forward (stateF) and backward (stateB) RNNs.  
+        returns the list of state pairs (stateF, stateB) obtained by adding
+        inputs to both forward (stateF) and backward (stateB) RNNs.
+        Does not preserve the internal state after adding the inputs.
         Args:
             es (list): a list of Expression
 
@@ -4330,8 +4331,8 @@ class BiRNNBuilder(object): # {{{
              state, as well as to the state-vectors (h() and s() )
 
         - :code:`.transduce(xs)` returns a list of Expression. These are just the output
-             expressions. For many cases, this suffices. 
-             transduce is much more memory efficient than add_inputs. 
+             expressions. For many cases, this suffices.
+             transduce is much more memory efficient than add_inputs.
         """
         for e in es:
             ensure_freshness(e)
