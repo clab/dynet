@@ -155,9 +155,11 @@ void LookupParameterStorage::clear() {
   nonzero_grad = false;
 }
 
-Parameter::Parameter() : p(nullptr) {}
+Parameter::Parameter() : p(nullptr), avg_p(nullptr) {}
 
-Parameter::Parameter(ParameterStorage* p) : p(p) {}
+Parameter::Parameter(ParameterStorage* p) : p(p), avg_p(nullptr) {}
+
+Parameter::Parameter(ParameterStorage* p, ParameterStorage* avg_p) : p(p), avg_p(avg_p) {}
 
 ParameterStorage& Parameter::get_storage() const {
   DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null parameter");
@@ -190,9 +192,12 @@ float Parameter::current_weight_decay() const {
   return get_storage().owner->get_weight_decay().current_weight_decay();
 }
 
-LookupParameter::LookupParameter() : p(nullptr) { }
+LookupParameter::LookupParameter() : p(nullptr), avg_p(nullptr) { }
 
-LookupParameter::LookupParameter(LookupParameterStorage* p) : p(p) {}
+LookupParameter::LookupParameter(LookupParameterStorage* p) : p(p), avg_p(nullptr) {}
+
+LookupParameter::LookupParameter(LookupParameterStorage* p, LookupParameterStorage* avg_p) : p(p), avg_p(avg_p) {}
+
 
 LookupParameterStorage& LookupParameter::get_storage() const {
   DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null LookupParameter");
@@ -278,18 +283,18 @@ void ParameterCollection::project_weights(float radius) {
   get_storage().project_weights(radius);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name) {
-  return add_parameters(d, ParameterInitGlorot(), p_name);
+Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name, bool maintain_average) {
+  return add_parameters(d, ParameterInitGlorot(), p_name, maintain_average);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const std::string & p_name) {
+Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const std::string & p_name, bool maintain_average) {
   if(scale == 0.0f)
-    return add_parameters(d, ParameterInitGlorot(), p_name);
+    return add_parameters(d, ParameterInitGlorot(), p_name, maintain_average);
   else
-    return add_parameters(d, ParameterInitUniform(scale), p_name);
+    return add_parameters(d, ParameterInitUniform(scale), p_name, maintain_average);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
+Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name, bool maintain_average) {
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
@@ -297,6 +302,15 @@ Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit 
 
     ParameterStorage* p = new ParameterStorage(d, init, oss.str());
     add_parameters_to_storage(p);
+    if (maintain_average) {
+      ParameterStorage* avg_p = new ParameterStorage(d, init, oss.str());
+      avg_p->copy(*p);
+      add_parameters_to_storage(avg_p);
+      ParameterCollection *t = this;
+      while (t->parent != nullptr) { t = t->parent; }
+      t->get_storage().avg_params_map[p] = avg_p;
+      return Parameter(p, avg_p);
+    }
     return Parameter(p);
   } else {
     throw std::runtime_error("Parameter name could not include '/' and '_'");
@@ -364,11 +378,11 @@ std::vector<ParameterStorage*> ParameterCollection::get_parameter_storages() con
   return params;
 }
 
-LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const std::string & p_name) {
-  return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name);
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const std::string & p_name, bool maintain_average) {
+  return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name, maintain_average);
 }
 
-LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name, bool maintain_average) {
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
@@ -376,6 +390,15 @@ LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim
 
     LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
     add_lookup_parameters_to_storage(p);
+    if (maintain_average) {
+      LookupParameterStorage* avg_p = new LookupParameterStorage(n, d, init, oss.str());
+      avg_p->copy(*p);
+      add_lookup_parameters_to_storage(avg_p);
+      ParameterCollection *t = this;
+      while (t->parent != nullptr) { t = t->parent; }
+      t->get_storage().avg_lookup_params_map[p] = avg_p;
+      return LookupParameter(p, avg_p);
+    }
     return LookupParameter(p);
   } else {
     throw std::runtime_error("LookupParameter name could not include '/' and '_'");

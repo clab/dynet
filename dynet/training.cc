@@ -88,6 +88,7 @@ void Trainer::update(real scale) {
   for(size_t i = 0; i < params.size(); ++i) {
     if(params[i]->updated) {
       update_params(scale, gscale, i);
+      update_average_params(i);
       params[i]->clear();
     }
   }
@@ -95,10 +96,13 @@ void Trainer::update(real scale) {
   for(size_t i = 0; i < lparams.size(); ++i) {
     auto &p = lparams[i];
     if(sparse_updates_enabled && p->updated && !p->all_updated) {
-      for (auto j : p->non_zero_grads)
+      for (auto j : p->non_zero_grads) {
         update_lookup_params(scale, gscale, i, j);
+        update_average_lookup_params(i ,j);
+      }
     } else {
       update_lookup_params(scale, gscale, i);
+      update_average_lookup_params(i);
     }
     p->clear();
   }
@@ -111,7 +115,59 @@ void Trainer::update(real scale) {
     rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
 }
 
+void Trainer::update_average_params(size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  auto iter = model->average_parameters_map().find(p);
+  if(iter != model->average_parameters_map().end()) {
+    auto & avg_p = iter->second;
+    update_average({&p->values, &avg_p->values});
+  }
+}
+
+void Trainer::update_average_lookup_params(size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  auto iter = model->average_lookup_parameters_map().find(p);
+  if(iter != model->average_lookup_parameters_map().end()) {
+    auto & avg_p = iter->second;
+    update_average({&p->values[lidx], &avg_p->values[lidx]});
+  }
+}
+
+void Trainer::update_average_lookup_params(size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  auto iter = model->average_lookup_parameters_map().find(p);
+  if(iter != model->average_lookup_parameters_map().end()) {
+    auto & avg_p = iter->second;
+    update_average({&p->all_values, &avg_p->all_values});
+  }
+}
+
 #endif
+
+#ifdef __CUDACC__
+template void Trainer::update_average_dev<Device_GPU>(const Device_GPU & dev, const std::vector<Tensor*> & values);
+#elif defined(HAVE_CUDA)
+extern template void Trainer::update_average_dev<Device_GPU>(const Device_GPU & dev, const std::vector<Tensor*> & values);
+template void Trainer::update_average_dev<Device_CPU>(const Device_CPU & dev, const std::vector<Tensor*> & values);
+void Trainer::update_average(const std::vector<Tensor*> & values) {
+  if(default_device->type == DeviceType::CPU) { update_average_dev(*(Device_CPU*)default_device,values); }
+  else if(default_device->type == DeviceType::GPU) { update_average_dev(*(Device_GPU*)default_device,values); }
+  else { throw std::runtime_error("Bad device in Trainer::update_average"); }
+}
+#else
+template void Trainer::update_average_dev<Device_CPU>(const Device_CPU & dev, const std::vector<Tensor*> & values);
+void Trainer::update_average(const std::vector<Tensor*> & values) {
+  if(default_device->type == DeviceType::CPU) { update_average_dev(*(Device_CPU*)default_device,values); }
+  else { throw std::runtime_error("Bad device in Trainer::update_average"); }
+}
+#endif
+
+// Perform average parameter's update of ts[0]=parameters, ts[1]=average_parameters
+// Update rule: average_parameters -= (1 - ema_decay) * (average_parameters - parameters)
+template <class MyDevice>
+void Trainer::update_average_dev(const MyDevice & dev, const std::vector<Tensor*> & ts) {
+  ts[1]->tvec().device(*dev.edevice) -= (ts[1]->tvec() - ts[0]->tvec()) * (1 - ema_decay);
+}
 
 // --- SimpleSGDTrainer
 
