@@ -282,7 +282,7 @@ int main(int argc, char** argv) {
       Expression loss_expr = engine.objective(cg, inst, logits);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update(1.0);
+      sgd->update();
       ++lines;
       ++ttags;
     }
