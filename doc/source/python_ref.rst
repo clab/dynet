@@ -78,6 +78,13 @@ Parameters initializers
    :members:
    :show-inheritance:
 
+High level saving/loading
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: dynet.save
+
+.. autofunction:: dynet.load
+
 Computation Graph
 -----------------
 
@@ -400,6 +407,26 @@ RNN state
 .. autoclass:: dynet.StackedRNNState
    :members:
    :show-inheritance:
+
+Softmax Builders
+----------------
+
+
+.. autoclass:: dynet.SoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
+.. autoclass:: dynet.StandardSoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
+.. autoclass:: dynet.ClassFactoredSoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
 
 Optimizers
 ----------

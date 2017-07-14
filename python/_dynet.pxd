@@ -437,3 +437,34 @@ cdef extern from "dynet/fast-lstm.h" namespace "dynet":
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
 
+cdef extern from "dynet/dict.h" namespace "dynet":
+    cdef cppclass CDict "dynet::Dict":
+        CDict()
+        void freeze()
+        int convert(string& word) except +
+
+
+cdef extern from "dynet/cfsm-builder.h" namespace "dynet":
+    cdef cppclass CSoftmaxBuilder "dynet::SoftmaxBuilder":
+        void new_graph(CComputationGraph &cg, bool update)
+        CExpression neg_log_softmax(CExpression &rep, unsigned classidx) except +
+        CExpression neg_log_softmax(CExpression &rep, vector[unsigned]& classidxs) except +
+        unsigned sample(CExpression &rep) except +
+        CExpression full_log_distribution(CExpression &rep) except +
+        CExpression full_logits(CExpression &rep) except +
+        CModel get_parameter_collection()
+
+cdef extern from "dynet/cfsm-builder.h" namespace "dynet":
+    cdef cppclass CStandardSoftmaxBuilder  "dynet::StandardSoftmaxBuilder" (CSoftmaxBuilder):
+        CStandardSoftmaxBuilder(unsigned rep_dim, unsigned num_classes, CModel& pc, bool bias)
+
+cdef extern from "dynet/cfsm-builder.h" namespace "dynet":
+    cdef cppclass CClassFactoredSoftmaxBuilder  "dynet::ClassFactoredSoftmaxBuilder" (CSoftmaxBuilder):
+        CClassFactoredSoftmaxBuilder(unsigned rep_dim, string cluster_file, CDict& dic, CModel& pc, bool bias)
+
+        CExpression class_log_distribution(CExpression &rep) except +
+        CExpression class_logits(CExpression &rep) except +
+
+        CExpression subclass_log_distribution(CExpression &rep, unsigned classid) except +
+        CExpression subclass_logits(CExpression &rep, unsigned classid) except +
+
