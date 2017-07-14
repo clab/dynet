@@ -191,6 +191,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
+        float learning_rate
         void update() except +
         #void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s) except +
         void update_epoch(float r)

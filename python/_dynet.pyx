@@ -4584,6 +4584,9 @@ cdef class StackedRNNState:
 cdef class Trainer:
     """
     Generic trainer
+
+    Attributes:
+        learning_rate(number): Global learning rate for all parameters 
     """
     cdef CTrainer *thisptr
     def __dealloc__(self):
@@ -4648,6 +4651,14 @@ cdef class Trainer:
             number: Gradient clipping threshold
         """
         return self.thisptr.clip_threshold
+
+    @property
+    def learning_rate(self):
+        return self.thisptr.learning_rate
+
+    @learning_rate.setter
+    def learning_rate(self, value):
+        self.thisptr.learning_rate = value
 
 cdef class SimpleSGDTrainer(Trainer):
     """Stochastic gradient descent trainer
