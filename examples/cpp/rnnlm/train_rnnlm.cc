@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
   }
 
   Trainer* sgd = new SimpleSGDTrainer(model);
-  sgd->eta0 = sgd->eta = params.eta0;
+  sgd->learning_rate = params.eta0;
   RNNLanguageModel<LSTMBuilder> lm(model);
 
   bool has_model_to_load = params.model_file != "";
@@ -269,7 +269,7 @@ int main(int argc, char** argv) {
           cerr << "**SHUFFLE\n";
           completed_epoch++;
           if (eta_decay_onset_epoch && completed_epoch >= (int)eta_decay_onset_epoch)
-            sgd->eta *= eta_decay_rate;
+            sgd->learning_rate *= eta_decay_rate;
           shuffle(order.begin(), order.end(), *rndeng);
         }
 
@@ -285,7 +285,7 @@ int main(int argc, char** argv) {
         ++lines;
       }
       report++;
-      cerr << '#' << report << " [epoch=" << (lines / training.size()) << " eta=" << sgd->eta << "] E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
+      cerr << '#' << report << " [epoch=" << (lines / training.size()) << " lr=" << sgd->learning_rate << "] E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 
       // show score on dev data?
       if (report % dev_every_i_reports == 0) {

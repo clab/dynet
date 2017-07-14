@@ -59,8 +59,7 @@ int main(int argc, char** argv) {
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
     float my_loss = as_scalar(cg.forward(sum_loss)) / 4;
     cg.backward(sum_loss);
-    sgd.update(0.25);
-    sgd.update_epoch();
+    sgd.update();
     cerr << "E = " << my_loss << endl;
   }
 

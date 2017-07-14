@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
       ttags += 1;
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update(1.0);
+      sgd->update();
       ++lines;
     }
     sgd->status();

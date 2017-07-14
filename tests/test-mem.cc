@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE( expand_test ) {
     Expression z = sum_rows(sum_cols(x));
     cg.forward(z);
     cg.backward(z);
-    trainer.update(0.1);
+    trainer.update();
   }
 }
 

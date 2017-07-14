@@ -58,7 +58,7 @@ public:
 
     float return_loss = as_scalar(cg.forward(loss));
     cg.backward(loss);
-    sgd.update(1.0);
+    sgd.update();
     return return_loss;
   }
 

@@ -4584,21 +4584,21 @@ cdef class StackedRNNState:
 cdef class Trainer:
     """
     Generic trainer
+
+    Attributes:
+        learning_rate(number): Global learning rate for all parameters 
     """
     cdef CTrainer *thisptr
     def __dealloc__(self):
         del self.thisptr
-    cpdef update(self, float s=1.0):
+    cpdef update(self):
         """Update the parameters
         
         The update equation is different for each trainer, check the online c++ documentation for more details on what each trainer does
-        
-        Keyword Args:
-            s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
-        self.thisptr.update(s)
+        self.thisptr.update()
 
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
+    cpdef update_subset(self, updated_params, updated_lookups):
         """Update a subset of parameters
         
         Only use this in last resort, a more elegant way to update only a subset of parameters is to use the "update" keyword in dy.parameter or Parameter.expr() to specify which parameters need to be updated __during the creation of the computation graph__
@@ -4606,22 +4606,14 @@ cdef class Trainer:
         Args:
             updated_params(list): Indices of parameters to update
             updated_lookups(list): Indices of lookup parameters to update
-        
-        Keyword Args:
-            s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec
         for i in updated_lookups: ulookupvec.push_back(i)
-        #self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        """Update trainers hyper-parameters that depend on epochs
-        
-        Basically learning rate decay.
-        
-        Keyword Args:
-            r(number): Number of epoch that passed (default: 1.0)
+        # self.thisptr.update(uparamvec, ulookupvec)
+    cpdef update_epoch(self, r):
+        """DEPRECATED: do not use.
         """
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -4660,6 +4652,14 @@ cdef class Trainer:
         """
         return self.thisptr.clip_threshold
 
+    @property
+    def learning_rate(self):
+        return self.thisptr.learning_rate
+
+    @learning_rate.setter
+    def learning_rate(self, value):
+        self.thisptr.learning_rate = value
+
 cdef class SimpleSGDTrainer(Trainer):
     """Stochastic gradient descent trainer
     
@@ -4669,11 +4669,10 @@ cdef class SimpleSGDTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: 0.1)
-        edecay(number): Learning rate decay parameter (default: 0.0)
+        learning_rate(number): Initial learning rate (default: 0.1)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
+    def __cinit__(self, ParameterCollection m, float learning_rate = 0.1):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr, learning_rate)
     def whoami(self):
         return "SimpleSGDTrainer"
 
@@ -4696,17 +4695,16 @@ cdef class CyclicalSGDTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0_min (number): Lower learning rate (default: {0.01})
-        e0_max (number): Upper learning rate (default: {0.1})
+        learning_rate_min (number): Lower learning rate (default: {0.01})
+        learning_rate_max (number): Upper learning rate (default: {0.1})
         step_size (number): Period of the triangular function in number of iterations (__not__ epochs). According to the original paper, this should be set around (2-8) x (training iterations in epoch) (default: {2000})
         gamma (number): Learning rate upper bound decay parameter (default: {0.0})
-        edecay (number): Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by :math:`\gamma` (default: {0.0})
     """
     cdef CCyclicalSGDTrainer *thischildptr
-    def __cinit__(self, ParameterCollection m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
-        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, e0_min, e0_max, step_size, gamma, edecay)
-    cpdef update(self, float s=1.0):
-        self.thischildptr.update(s)
+    def __cinit__(self, ParameterCollection m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0):
+        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, learning_rate_min, learning_rate_max, step_size, gamma)
+    cpdef update(self):
+        self.thischildptr.update()
     def whoami(self):
         return "CyclicalSGDTrainer"
 
@@ -4719,13 +4717,12 @@ cdef class MomentumSGDTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: 0.1)
+        learning_rate(number): Initial learning rate (default: 0.1)
         mom(number): Momentum (default: 0.9)
-        edecay(number): Learning rate decay parameter (default: 0.0)
 
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
+    def __cinit__(self, ParameterCollection m, float learning_rate = 0.01, float mom = 0.9):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, learning_rate, mom)
     def whoami(self):
         return "MomentumSGDTrainer"
 
@@ -4739,12 +4736,11 @@ cdef class AdagradTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: 0.1)
+        learning_rate(number): Initial learning rate (default: 0.1)
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-20)
-        edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
+    def __cinit__(self, ParameterCollection m, float learning_rate = 0.1, float eps = 1e-20):
+        self.thisptr = new CAdagradTrainer(m.thisptr, learning_rate, eps)
     def whoami(self):
         return "AdagradTrainer"
 
@@ -4760,10 +4756,9 @@ cdef class AdadeltaTrainer(Trainer):
     Keyword Args:
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-6)
         rho(number): Update parameter for the moving average of updates in the numerator (default: 0.95)
-        edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
+    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho)
     def whoami(self):
         return "AdadeltaTrainer"
 
@@ -4776,13 +4771,12 @@ cdef class RMSPropTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: 0.001)
+        learning_rate(number): Initial learning rate (default: 0.001)
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
         rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: 0.9)
-        edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
-        self.thisptr = new CRMSPropTrainer(m.thisptr, e0, eps, rho, edecay)
+    def __cinit__(self, ParameterCollection m, float learning_rate = 0.001,float eps = 1e-8, float rho = 0.9):
+        self.thisptr = new CRMSPropTrainer(m.thisptr, learning_rate, eps, rho)
     def whoami(self):
         return "RMSPropTrainer"
 
@@ -4799,10 +4793,9 @@ cdef class AdamTrainer(Trainer):
         beta_1(number): Moving average parameter for the mean (default: 0.9)
         beta_2(number): Moving average parameter for the variance (default: 0.999)
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
-        edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
-        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
+    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8 ):
+        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps)
     def whoami(self):
         return "AdamTrainer"
 
