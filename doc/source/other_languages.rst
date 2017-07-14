@@ -7,6 +7,6 @@ other languages that have been contributed by the community.
 Scala/Java
 ----------
 
-DyNet has `Scala/Java Bindings <https://github.com/clab/dynet/tree/master/contrib/swig>`
+DyNet has `Scala/Java Bindings <https://github.com/clab/dynet/tree/master/contrib/swig>`_
 developed by Joel Grus at the Allen Institute for Artificial Intelligence. Please see
 the README linked above for details.
