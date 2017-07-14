@@ -251,12 +251,12 @@ cpdef save(basename, lst):
     """Saves a list of parameters, lookup parameters and builder objects to disk.
 
     Args:
-        basename (string): The base-name of the files to save. 
-                           Two files will be created: `basename.data` and `basename.meta`.
+        basename (string): The base-name of the files to save. Two files will be created: `basename.data` and `basename.meta`.
         lst      (list):  A list of objects to save (see below).
 
 
     Example:
+
         import dynet as dy
 
         pc = dy.ParameterCollection()
@@ -273,11 +273,13 @@ cpdef save(basename, lst):
     
     What can be saved:
         Each object in `lst` must be one of the following:
+        
         (1) Parameter
         (2) LookupParameter
         (3) one of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder,
                                        SimpleRNNBuilder, BiRNNBuilder)
         (4) a type adhering to the following interface:
+            
             - has a `param_collection()` method returning a ParameterCollection object with the
               parameters in the object.
             - has a `.spec` property with picklable items describing the object
@@ -288,6 +290,7 @@ cpdef save(basename, lst):
         they support this interface.
 
         behind the scenes:
+        
         - for each item, we write to `.meta`:
             if its a Parameters/ParameterCollection: 
                 its type and full name.
@@ -694,7 +697,7 @@ cdef class LookupParameters: # {{{
         Preferably uses ParameterCollection.lookup_parameter_from_numpy when possible
 
         Args:
-            arr (np.array): numpy array of shape (num_)
+            arr (np.array): numpy array of shape :code:`(num_lookups,...)`
         """
         if len(arr) > self.thisptr.get_storage().values.size():
             raise Exception("too many rows")
@@ -851,7 +854,7 @@ cdef class ParameterCollection: # {{{
         avoid name clashes. The `.name()` method returns the full name of an object,
         including the appended index and its location within the collection hierarchy.
         The user-supplied names cannot inclue the characters `/` (which is used as a hierarchy
-        separator) or `_` (which is used as an index separator).
+        separator) or :code:`_` (which is used as an index separator).
     """
     cdef CModel thisptr  # Not a pointer...
     def __cinit__(self, ):
@@ -2877,7 +2880,7 @@ cpdef Expression mean_batches(Expression x):
 cpdef Expression std_elems(Expression x):
     """Standard deviation of elements of the tensor
     
-    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}`of all the elements of each minibatch.
+    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` of all the elements of each minibatch.
 
     Args:
         x (dynet.Expression): Input expression
@@ -4519,7 +4522,7 @@ cdef class RNNState: # {{{
         For SimpleRNN, s() is the same as h()
         For LSTM, s() is a series of of memory vectors, followed the series followed by the series returned by h():
 
-        .. code::
+        .. code:: none
 
             (c[1],...,c[num_layers], h[1],...,h[num_layers])
         """
