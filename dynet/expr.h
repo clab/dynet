@@ -2104,7 +2104,6 @@ Expression weight_norm(const Expression& w, const Expression& g);
  * \param b (b_i, b_f, b_o, b_g)
  * \return An expression corresponding to `hc_t`, with same size / conventions as hc_tm1
  */
-Expression vanilla_lstm(const Expression& x_t,  const Expression& hc_tm1, const Expression& Wx, const Expression& Wh, const Expression& b);
 
 Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b);
 Expression vanilla_lstm_c(const Expression& c_tm1, const Expression& gates_t);

@@ -92,75 +92,40 @@ BOOST_AUTO_TEST_CASE( vanilla_lstm_ln_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-//BOOST_AUTO_TEST_CASE( lstm_node_forward ) {
-//  dynet::ParameterCollection mod;
-//  unsigned input_dim = 3;
-//  unsigned hidden_dim = 5;
-//  unsigned batch_size = 2;
-//  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
-//  dynet::ComputationGraph cg;
-//  vanilla_lstm_builder.new_graph(cg);
-//  // TODO: test with different values in both batches
-//  vanilla_lstm_builder.start_new_sequence({dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f}),
-//					   dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f})});
-//
-//  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
-//  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
-//  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]);
-//
-//  Expression hc_tm1 = dynet::input(cg, Dim({hidden_dim*2}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f});
-//  Expression x = dynet::input(cg, Dim({input_dim}, batch_size), {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
-//  for (unsigned i = 0; i < 2; i++) {
-//    const Tensor& builder_h = vanilla_lstm_builder.add_input(x).value();
-//    Expression hc_t = dynet::vanilla_lstm(x, hc_tm1, Wx, Wh, b);
-//    const Tensor& lstm_node_hc = hc_t.value();
-//    Tensor lstm_node_h(Dim({hidden_dim}, batch_size), lstm_node_hc.v, lstm_node_hc.device, DeviceMempool::FXS);
-//    Tensor lstm_node_c(Dim({hidden_dim}, batch_size), lstm_node_hc.v + hidden_dim * batch_size, lstm_node_hc.device, DeviceMempool::FXS);
-//    for(unsigned i=0; i < hidden_dim; i++){
-//      BOOST_CHECK_CLOSE(as_vector(lstm_node_h)[i], as_vector(builder_h)[i], 0.001);
-//    }
-//    hc_tm1 = hc_t;
-//  }
-////  Expression z = squared_norm(sum_batches(vanilla_lstm_builder.final_h()[1]));
-////  BOOST_CHECK(check_grad(mod, z, 0));
-////  Expression z = squared_norm(sum_batches(hc_tm1));
-////  BOOST_CHECK(check_grad(mod, z, 0)); // will fail: backward not implemented yet
-//}
-//
-//BOOST_AUTO_TEST_CASE( lstm_modular_node ) {
-//  dynet::ParameterCollection mod;
-//  unsigned input_dim = 3;
-//  unsigned hidden_dim = 5;
-//  unsigned batch_size = 1;
-//  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
-//  dynet::ComputationGraph cg;
-//  vanilla_lstm_builder.new_graph(cg);
-//  // TODO: test with different values in both batches
-//  vanilla_lstm_builder.start_new_sequence({dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f}),
-//					   dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f})});
-//
-//  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
-//  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
-//  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]);
-//
-//  Expression c_tm1 = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f});
-//  Expression h_tm1 = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f});
-//  Expression x = dynet::input(cg, Dim({input_dim}, batch_size), {1.f, 1.f, 1.f});
-//  for (unsigned i = 0; i < 3; i++) {
-//    const Tensor& builder_h = vanilla_lstm_builder.add_input(x).value();
-//    Expression gates_t = dynet::vanilla_lstm_gates(x, h_tm1, Wx, Wh, b);
-//    Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
-//    Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
-//    for(unsigned i=0; i < hidden_dim; i++){
-//      BOOST_CHECK_CLOSE(as_vector(h_t.value())[i], as_vector(builder_h)[i], 0.001);
-//    }
-//    c_tm1 = c_t;
-//    h_tm1 = h_t;
-//  }
-//}
-//
-//
-BOOST_AUTO_TEST_CASE( lstm_modular_node_batched_forward ) {
+BOOST_AUTO_TEST_CASE( lstm_node ) {
+  dynet::ParameterCollection mod;
+  unsigned input_dim = 3;
+  unsigned hidden_dim = 5;
+  unsigned batch_size = 1;
+  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
+  dynet::ComputationGraph cg;
+  vanilla_lstm_builder.new_graph(cg);
+  // TODO: test with different values in both batches
+  vanilla_lstm_builder.start_new_sequence({dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f}),
+					   dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f})});
+
+  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
+  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
+  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]);
+
+  Expression c_tm1 = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f});
+  Expression h_tm1 = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.f, 0.f, 0.f, 0.f});
+  Expression x = dynet::input(cg, Dim({input_dim}, batch_size), {1.f, 1.f, 1.f});
+  for (unsigned i = 0; i < 3; i++) {
+    const Tensor& builder_h = vanilla_lstm_builder.add_input(x).value();
+    Expression gates_t = dynet::vanilla_lstm_gates(x, h_tm1, Wx, Wh, b);
+    Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
+    Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
+    for(unsigned i=0; i < hidden_dim; i++){
+      BOOST_CHECK_CLOSE(as_vector(h_t.value())[i], as_vector(builder_h)[i], 0.001);
+    }
+    c_tm1 = c_t;
+    h_tm1 = h_t;
+  }
+}
+
+
+BOOST_AUTO_TEST_CASE( lstm_node_batched_forward ) {
   dynet::ParameterCollection mod;
   unsigned input_dim = 3;
   unsigned hidden_dim = 5;
@@ -189,41 +154,39 @@ BOOST_AUTO_TEST_CASE( lstm_modular_node_batched_forward ) {
     c_tm1 = c_t;
     h_tm1 = h_t;
   }
-//  Expression z = squared_norm(sum_batches(vanilla_lstm_builder.final_h()[1]));
-//  BOOST_CHECK(check_grad(mod, z, 0));
   Expression z = squared_norm(sum_batches(h_tm1));
-  BOOST_CHECK(check_grad(mod, z, 0)); // will fail: backward not implemented yet
+  BOOST_CHECK(check_grad(mod, z, 0));
   Expression z2 = squared_norm(sum_batches(c_tm1));
-  BOOST_CHECK(check_grad(mod, z2, 0)); // will fail: backward not implemented yet
+  BOOST_CHECK(check_grad(mod, z2, 0));
 }
 //
-//BOOST_AUTO_TEST_CASE( vanilla_lstm_h_gradient ) {
-//  dynet::ParameterCollection mod;
-//  unsigned hidden_dim = 3;
-//  unsigned batch_size = 2;
-//  dynet::ComputationGraph cg;
-//
-//  Expression c_t = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
-//  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
-//  Expression h_t = vanilla_lstm_h(c_t, gates_t);
-//  Expression z = squared_norm(sum_batches(h_t));
-//  BOOST_CHECK(check_grad(mod, z, 0));
-//  // TODO: seems this is working even if the backward pass is not even implemented?
-//}
+BOOST_AUTO_TEST_CASE( lstm_node_h_gradient ) {
+  dynet::ParameterCollection mod;
+  unsigned hidden_dim = 3;
+  unsigned batch_size = 2;
+  dynet::ComputationGraph cg;
 
-//BOOST_AUTO_TEST_CASE( vanilla_lstm_c_gradient ) {
-//  dynet::ParameterCollection mod;
-//  unsigned hidden_dim = 3;
-//  unsigned batch_size = 2;
-//  dynet::ComputationGraph cg;
-//
-//  Expression c_tm1 = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
-//  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
-//  Expression c_t = vanilla_lstm_c(c_tm1, gates_t);
-//  Expression z = squared_norm(sum_batches(c_t));
-//  BOOST_CHECK(check_grad(mod, z, 0));
-//  // TODO: seems this is working even if the backward pass is not even implemented?
-//}
+  Expression c_t = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression h_t = vanilla_lstm_h(c_t, gates_t);
+  Expression z = squared_norm(sum_batches(h_t));
+  BOOST_CHECK(check_grad(mod, z, 0));
+  // TODO: seems this is working even if the backward pass is not even implemented?
+}
+
+BOOST_AUTO_TEST_CASE( lstm_node_c_gradient ) {
+  dynet::ParameterCollection mod;
+  unsigned hidden_dim = 3;
+  unsigned batch_size = 2;
+  dynet::ComputationGraph cg;
+
+  Expression c_tm1 = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression c_t = vanilla_lstm_c(c_tm1, gates_t);
+  Expression z = squared_norm(sum_batches(c_t));
+  BOOST_CHECK(check_grad(mod, z, 0));
+  // TODO: seems this is working even if the backward pass is not even implemented?
+}
 
 
 

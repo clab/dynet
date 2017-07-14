@@ -197,9 +197,6 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
-Expression vanilla_lstm(const Expression& x_t, const Expression& hc_tm1, const Expression& Wx, const Expression& Wh, const Expression& b){
-  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTM>({x_t.i, hc_tm1.i, Wx.i, Wh.i, b.i}));
-}
 Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b){
   return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i}));
 }
