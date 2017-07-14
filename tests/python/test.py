@@ -93,7 +93,7 @@ class TestParameters(unittest.TestCase):
         self.lp1 = self.m.add_lookup_parameters((10, 10), init=dy.ConstInitializer(1))
         self.lp2 = self.m.add_lookup_parameters((10, 10), init=dy.ConstInitializer(1))
         # Trainer
-        self.trainer = dy.SimpleSGDTrainer(self.m, e0=0.1)
+        self.trainer = dy.SimpleSGDTrainer(self.m, learning_rate=0.1)
         self.trainer.set_clip_threshold(-1)
 
     def test_grad(self):
