@@ -86,7 +86,7 @@ class TestParameters(unittest.TestCase):
 
     def setUp(self):
         # Create model
-        self.m = dy.Model()
+        self.m = dy.ParameterCollection()
         # Parameters
         self.p1 = self.m.add_parameters((10, 10), init=dy.ConstInitializer(1))
         self.p2 = self.m.add_parameters((10, 10), init=dy.ConstInitializer(1))
@@ -188,7 +188,7 @@ class TestBatchManipulation(unittest.TestCase):
 
     def setUp(self):
         # create model
-        self.m = dy.Model()
+        self.m = dy.ParameterCollection()
         # Parameter
         self.p = self.m.add_lookup_parameters((2, 3))
         # Values
@@ -228,8 +228,8 @@ class TestIO_1(unittest.TestCase):
     def setUp(self):
         self.file = "bilstm.model"
         # create models
-        self.m = dy.Model()
-        self.m2 = dy.Model()
+        self.m = dy.ParameterCollection()
+        self.m2 = dy.ParameterCollection()
         # Create birnn
         self.b = dy.BiRNNBuilder(2, 10, 10, self.m, dy.LSTMBuilder)
 
@@ -244,8 +244,8 @@ class TestIO_2(unittest.TestCase):
     def setUp(self):
         self.file = "bilstm.model"
         # create models
-        self.m = dy.Model()
-        self.m2 = dy.Model()
+        self.m = dy.ParameterCollection()
+        self.m2 = dy.ParameterCollection()
         # Create birnn
         self.b = dy.BiRNNBuilder(2, 10, 10, self.m, dy.LSTMBuilder)
 
@@ -295,7 +295,7 @@ class TestOperations(unittest.TestCase):
 
     def setUp(self):
         # create model
-        self.m = dy.Model()
+        self.m = dy.ParameterCollection()
         self.v1 = np.arange(10)
         self.v2 = np.arange(10)
         self.v3 = np.arange(10)
@@ -319,7 +319,7 @@ class TestSimpleRNN(unittest.TestCase):
 
     def setUp(self):
         # create model
-        self.m = dy.Model()
+        self.m = dy.ParameterCollection()
         self.rnn = dy.SimpleRNNBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
@@ -339,7 +339,7 @@ class TestGRU(unittest.TestCase):
 
     def setUp(self):
         # create model
-        self.m = dy.Model()
+        self.m = dy.ParameterCollection()
         self.rnn = dy.GRUBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
@@ -359,7 +359,7 @@ class TestLSTM(unittest.TestCase):
 
     def setUp(self):
         # create model
-        self.m = dy.Model()
+        self.m = dy.ParameterCollection()
         self.rnn = dy.LSTMBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
@@ -379,7 +379,7 @@ class TestVanillaLSTM(unittest.TestCase):
 
     def setUp(self):
         # create model
-        self.m = dy.Model()
+        self.m = dy.ParameterCollection()
         self.rnn = dy.VanillaLSTMBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
@@ -399,7 +399,7 @@ class TestFastLSTM(unittest.TestCase):
 
     def setUp(self):
         # create model
-        self.m = dy.Model()
+        self.m = dy.ParameterCollection()
         self.rnn = dy.FastLSTMBuilder(2, 10, 10, self.m)
 
     def test_get_parameters(self):
@@ -414,6 +414,48 @@ class TestFastLSTM(unittest.TestCase):
     def test_get_parameters_sanity(self):
         self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
+
+class TestStandardSoftmax(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.pc = dy.ParameterCollection()
+        self.sm = dy.StandardSoftmaxBuilder(3, 10, self.pc, True)
+
+    def test_sanity(self):
+        for i in range(3):
+            dy.renew_cg()
+            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 4, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 5, update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 6, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 7, update=False)
+            nll.value()
+            nll_const.value()
+
+
+class TestClassFactoredSoftmax(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.pc = dy.ParameterCollection()
+        dic = dict()
+        with open('cluster_file.txt', 'w+') as f:
+            for i in range(5):
+                f.write(str(i) + " " + str(2 * i) + "\n")
+                f.write(str(i) + " " + str(2 * i + 1) + "\n")
+                dic[str(2 * i)] = len(dic)
+                dic[str(2 * i + 1)] = len(dic)
+        self.sm = dy.ClassFactoredSoftmaxBuilder(3, 'cluster_file.txt', dic, self.pc, True)
+
+    def test_sanity(self):
+        for i in range(3):
+            dy.renew_cg()
+            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 4, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 5, update=False)
+            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 6, update=True)
+            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 7, update=False)
+            nll.value()
+            nll_const.value()
 
 if __name__ == '__main__':
     unittest.main()

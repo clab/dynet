@@ -11,9 +11,10 @@ using namespace std;
 namespace dynet {
 
 Cluster::Cluster() {}
-void Cluster::new_graph(ComputationGraph& cg) {
+void Cluster::new_graph(ComputationGraph& cg, bool update) {
+  this->update=update;
   for (Cluster* child : children) {
-    child->new_graph(cg);
+    child->new_graph(cg, update);
   }
   bias.pg = NULL;
   weights.pg = NULL;
@@ -139,14 +140,14 @@ unsigned Cluster::sample(Expression h, ComputationGraph& cg) const {
 
 Expression Cluster::get_weights(ComputationGraph& cg) const {
   if (weights.pg != &cg) {
-    weights = parameter(cg, p_weights);
+    weights = this->update ? parameter(cg, p_weights) : const_parameter(cg, p_weights);
   }
   return weights;
 }
 
 Expression Cluster::get_bias(ComputationGraph& cg) const {
   if (bias.pg != &cg) {
-    bias = parameter(cg, p_bias);
+    bias = this->update ? parameter(cg, p_bias) : const_parameter(cg, p_bias);
   }
   return bias;
 }
@@ -178,9 +179,9 @@ void HierarchicalSoftmaxBuilder::initialize(ParameterCollection& model) {
  root->initialize(model);
 }
 
-void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
+void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg, bool update) {
   pcg = &cg;
-  root->new_graph(cg);
+  root->new_graph(cg, update);
 }
 
 Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
@@ -227,7 +228,12 @@ unsigned HierarchicalSoftmaxBuilder::sample(const Expression& rep) {
 }
 
 Expression HierarchicalSoftmaxBuilder::full_log_distribution(const Expression& rep) {
-  DYNET_RUNTIME_ERR("full_distribution not implemented for HierarchicalSoftmaxBuilder");
+  DYNET_RUNTIME_ERR("full_log_distribution not implemented for HierarchicalSoftmaxBuilder");
+  return dynet::Expression();
+}
+
+Expression HierarchicalSoftmaxBuilder::full_logits(const Expression& rep) {
+  DYNET_RUNTIME_ERR("full_logits not implemented for HierarchicalSoftmaxBuilder");
   return dynet::Expression();
 }
 

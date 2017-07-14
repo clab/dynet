@@ -23,7 +23,6 @@ struct Conv2D: public Node {
       : Node(a), stride(s), is_valid(padding_type) {}
   virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
-  size_t aux_storage_size() const override;
   const std::vector<unsigned> stride;
   const bool is_valid;
 
