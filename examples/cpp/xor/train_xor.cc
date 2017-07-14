@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
       y_value = (x1 != x2) ? 1 : -1;
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update(1.0);  // 1.0 means don't scale the gradient.
+      sgd.update();
     }
     loss /= 4;
     cerr << "E = " << loss << endl;
