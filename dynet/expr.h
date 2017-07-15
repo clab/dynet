@@ -623,7 +623,7 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
  *
  * \return An expression equal to: xs[0] + xs[1]*xs[2] + xs[3]*xs[4] + ...
  */
-Expression affine_transform(const std::initializer_list<Expression>& xs,
+inline Expression affine_transform(const std::initializer_list<Expression>& xs,
                             Device *device = nullptr) {
   if (device == nullptr) device = xs.begin()->pg->expr_device;
   return detail::foo<AffineTransform>(xs, device);
