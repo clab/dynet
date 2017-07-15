@@ -428,15 +428,14 @@ IndexTensor TensorTools::categorical_sample_log_prob_dev(const MyDevice & dev, c
   DYNET_ARG_CHECK(v.mem_pool != DeviceMempool::NONE, "Input Tensor to TensorTools::argmax must be associated with a memory pool.");
   Dim ids_dim = v.d; ids_dim.d[dim] = num;
   IndexTensor ids(ids_dim, nullptr, v.device, v.mem_pool);
-  AlignedMemoryPool* pool = v.device->pools[(int)v.mem_pool];
-  ids.v = static_cast<Eigen::DenseIndex*>(pool->allocate(ids_dim.size() * sizeof(Eigen::DenseIndex)));
-  size_t used = pool->used();
+  AlignedMemoryPool* scratch_allocator = v.device->pools[(int)DeviceMempool::SCS];
+  ids.v = static_cast<Eigen::DenseIndex*>(scratch_allocator->allocate(ids_dim.size() * sizeof(Eigen::DenseIndex)));
   Dim copy_dim = v.d; // TODO: make this match num to enable num
   Tensor copy(copy_dim, nullptr, v.device, v.mem_pool);
-  copy.v = static_cast<float*>(pool->allocate(v.d.size() * sizeof(float)));
+  copy.v = static_cast<float*>(scratch_allocator->allocate(v.d.size() * sizeof(float)));
   TensorTools::randomize_uniform(copy);
   ids.tb<3>().device(*dev.edevice) = (v.tb<4>() - (-copy.tb<4>().log()).log()).argmax(dim);
-  pool->set_used(used);
+  scratch_allocator->free();
   return ids;
 }
 #ifdef __CUDACC__
