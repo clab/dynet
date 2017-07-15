@@ -21,6 +21,8 @@
 #include "dynet/dynet.h"
 #include "dynet/nodes.h"
 #include "dynet/nodes-contract.h"
+#include "dynet/devices.h"
+#include "dynet/globals.h"
 #include <stdexcept>
 
 
@@ -34,18 +36,37 @@ struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
   unsigned graph_id;
+  Device *assign_device;
 
-  Expression() : pg(nullptr), i(0), graph_id(0) { }
-  const bool is_stale() const {return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());}
+  Expression() : pg(nullptr), i(0), graph_id(0), assign_device(dynet::default_device) {} 
+
+  Expression(Device *device) : pg(nullptr), i(0), graph_id(0), assign_device(device) { }
   /**
    * \brief Base expression constructor
    * \details Used when creating operations
    *
    * \param pg Pointer to the computation graph
    * \param i Variable index
-   * \param name Name of the expression
    */
-  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i), graph_id(pg->get_id()) { }
+  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg),
+    i(i), graph_id(pg->get_id()), assign_device(dynet::default_device) {}
+  /**
+   * \brief Base expression constructor
+   * \details Used when creating operations
+   *
+   * \param pg Pointer to the computation graph
+   * \param i Variable index
+   * \param device Device placement for the Expression
+   */
+  Expression(ComputationGraph *pg, VariableIndex i, Device *device) : pg(pg),
+    i(i), graph_id(pg->get_id()), assign_device(device) {}
+
+  inline std::string get_device() const { return assign_device->name; }
+
+  const bool is_stale() const {
+    return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());
+  }
+
   /**
    * \brief Get value of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
@@ -103,7 +124,23 @@ Expression f(const T& xs, const T1& arg1) {
   for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
   return Expression(pg, pg->add_function<F>(xis, arg1));
 }
+template <typename F, typename T>
+Expression foo(const T& xs, Device *device) {
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  int i = 0;
+  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+  return Expression(pg, pg->add_function<F>(xis, device), device);
 }
+template <typename F, typename T, typename T1>
+Expression foo(const T& xs, Device *device, const T1& arg1) {
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  int i = 0;
+  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+  return Expression(pg, pg->add_function<F>(xis, device, arg1), device);
+}
+} // namespace detail
 
 ////////////////////////////////////////////////
 // Input operations                           //
@@ -582,12 +619,20 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
  *          input. In this case xs[0] = b, xs[1] = W, and xs[2] = z.
  *
  * \param xs An initializer list containing an odd number of expressions
+ * \param device The place device for this affine transform
  *
  * \return An expression equal to: xs[0] + xs[1]*xs[2] + xs[3]*xs[4] + ...
  */
-inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
+Expression affine_transform(const std::initializer_list<Expression>& xs,
+                            Device *device = nullptr) {
+  if (device == nullptr) device = xs.begin()->pg->expr_device;
+  return detail::foo<AffineTransform>(xs, device);
+}
 template <typename T>
-inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
+inline Expression affine_transform(const T& xs, Device *device = nullptr) {
+  if (device == nullptr) device = xs.begin()->pg->expr_device;
+  return detail::foo<AffineTransform>(xs, device);
+}
 
 /**
  * \ingroup arithmeticoperations
@@ -700,10 +745,11 @@ Expression erf(const Expression& x);
  * \details Elementwise calculation of the hyperbolic tangent
  *
  * \param x The input expression
+ * \param device The place device for this affine transform 
  *
  * \return An expression where the ith element is equal to tanh(x_i)
  */
-Expression tanh(const Expression& x);
+Expression tanh(const Expression& x, Device *device = nullptr);
 
 /**
  * \ingroup arithmeticoperations

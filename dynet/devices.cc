@@ -1,6 +1,7 @@
 #include "dynet/devices.h"
 
 #include <iostream>
+#include <string>
 #include <unsupported/Eigen/CXX11/Tensor>
 
 #include "dynet/cuda.h"
@@ -96,6 +97,8 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   pools[0] = new AlignedMemoryPool("GPU forward memory", (mbs.used[0] << 20), &gpu_mem);
   pools[1] = new AlignedMemoryPool("GPU backward memory", (mbs.used[1] << 20), &gpu_mem);
   pools[2] = new AlignedMemoryPool("GPU parameter memory", (mbs.used[2] << 20), &gpu_mem);
+
+  name = "GPU:" + std::to_string(device_id);
 }
 
 Device_GPU::~Device_GPU() {}
@@ -118,6 +121,8 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
   pools[0] = new AlignedMemoryPool("CPU forward memory", (mbs.used[0] << 20), &cpu_mem);
   pools[1] = new AlignedMemoryPool("CPU backward memory", (mbs.used[1] << 20), &cpu_mem);
   pools[2] = new AlignedMemoryPool("CPU parameter memory", (mbs.used[2] << 20), shmem);
+
+  name = "CPU";
 }
 
 Device_CPU::~Device_CPU() {}

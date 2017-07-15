@@ -40,19 +40,23 @@ Expression flip_gradient(const Expression& x) { return Expression(x.pg, x.pg->ad
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
 Expression operator+(const Expression& x, const Expression& y) {
     if (x.dim().batch_size() == 1)
-        return Expression(x.pg, x.pg->add_function<ScalarAdd>({y.i, x.i}));
+        return Expression(x.pg, x.pg->add_function<ScalarAdd>({y.i, x.i}), x.pg->expr_device);
     else if (y.dim().batch_size() == 1)
-        return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}));
+        return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}), x.pg->expr_device);
     else
-        return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}));
+        return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}, x.pg->expr_device), x.pg->expr_device);
 }
 Expression operator+(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantPlusX>({y.i}, x)); }
 Expression operator+(const Expression& x, real y) { return y + x; }
 Expression operator-(const Expression& x, const Expression& y) { return x + (-y); }
 Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantMinusX>({y.i}, x)); }
 Expression operator-(const Expression& x, real y) { return -(y - x); }
-Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
-Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
+Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg,
+                                                                                   x.pg->add_function<MatrixMultiply>({x.i, y.i}, x.pg->expr_device),
+                                                                                   x.pg->expr_device); }
+Expression operator*(const Expression& x, float y) { return Expression(x.pg,
+                                                                       x.pg->add_function<ConstScalarMultiply>({x.i}, y),
+                                                                       x.pg->expr_device); }
 Expression cmult(const Expression& x, const Expression& y) { 
     if (x.dim().batch_size() == 1) 
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 
@@ -76,7 +80,10 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 Expression sqrt(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sqrt>({x.i})); }
 Expression abs(const Expression& x) { return Expression(x.pg, x.pg->add_function<Abs>({x.i})); }
 Expression erf(const Expression& x) { return Expression(x.pg, x.pg->add_function<Erf>({x.i})); }
-Expression tanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tanh>({x.i})); }
+Expression tanh(const Expression& x, Device *device) {
+  if (device == nullptr) device = x.pg->expr_device;
+  return Expression(x.pg, x.pg->add_function<Tanh>({x.i}, device), device);
+}
 Expression lgamma(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogGamma>({x.i})); }
 Expression log(const Expression& x) { return Expression(x.pg, x.pg->add_function<Log>({x.i})); }
 Expression exp(const Expression& x) { return Expression(x.pg, x.pg->add_function<Exp>({x.i})); }
