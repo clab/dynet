@@ -70,7 +70,7 @@ if(NOT DEFINED GPU_NUMFILES)
   if(MSVC)
     set(GPU_NUMFILES 1)   # MSVC does serial compilation of CUDA, so minimize overhead
   else()
-    set(GPU_NUMFILES 4)   # Should probably be set to number of jobs in parallel make
+    set(GPU_NUMFILES 0)   # Should probably be set to number of jobs in parallel make
   endif()
 endif()
 
