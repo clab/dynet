@@ -221,9 +221,6 @@ object Expression {
     unary(x, x => dn.pick(x, v.vector, d))
   def pick(x: Expression, v: UnsignedPointer, d: Long): Expression =
     unary(x, x => dn.pick(x, v.uintp, d))
-  def pickRange(x: Expression, v: Long, u: Long, d: Long = 0l): Expression =
-    unary(x, x => dn.pick_range(x, v, u, d))
-  // kept for backward compatibility
   def pickrange(x: Expression, v: Long, u: Long, d: Long = 0l): Expression =
     unary(x, x => dn.pick_range(x, v, u, d))
 
