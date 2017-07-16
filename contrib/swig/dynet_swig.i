@@ -559,7 +559,6 @@ Expression pick(const Expression& x, unsigned v, unsigned d = 0);
 Expression pick(const Expression& x, const std::vector<unsigned>& v, unsigned d = 0);
 Expression pick(const Expression& x, const unsigned* v, unsigned d = 0);
 Expression pick_range(const Expression& x, unsigned s, unsigned e, unsigned d = 0);
-Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
 // Concatenate and ConcatenateCols got changed around, need to implement
 // explicitly now.
