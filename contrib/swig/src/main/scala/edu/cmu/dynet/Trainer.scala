@@ -17,7 +17,7 @@ class Trainer private[dynet](_trainer: internal.Trainer) {
   def clipThreshold_=(x: Float): Unit = _trainer.setClip_threshold(x)
 
   def learningRate:Float = _trainer.getLearning_rate()
-  def eta_=(x:Float): Unit = _trainer.setLearning_rate(x)
+  def learningRate_=(x:Float): Unit = _trainer.setLearning_rate(x)
 }
 
 class SimpleSGDTrainer private[dynet] (private[dynet] val trainer: internal.SimpleSGDTrainer)
