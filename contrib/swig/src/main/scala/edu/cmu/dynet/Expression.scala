@@ -79,7 +79,9 @@ object Expression {
   def lookup(p: LookupParameter, pindex: UnsignedPointer) =
     makeExpr(cg => dn.lookup(cg, p.lookupParameter, pindex.uintp), Seq(p, pindex))
   def constLookup(p: LookupParameter, index: Long) =
-    makeExpr(cg => dn.lookup(cg, p.lookupParameter, index), Seq(p))
+    makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, index), Seq(p))
+  def constLookup(p: LookupParameter, pindex: UnsignedPointer) =
+    makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, pindex.uintp), Seq(p, pindex))
   // def constLookup
   def lookup(p: LookupParameter, indices: UnsignedVector) =
     makeExpr(cg => dn.lookup(cg, p.lookupParameter, indices.vector), Seq(p, indices))
@@ -219,8 +221,11 @@ object Expression {
     unary(x, x => dn.pick(x, v.vector, d))
   def pick(x: Expression, v: UnsignedPointer, d: Long): Expression =
     unary(x, x => dn.pick(x, v.uintp, d))
-  def pickrange(x: Expression, v: Long, u: Long): Expression =
-    unary(x, x => dn.pickrange(x, v, u))
+  def pickRange(x: Expression, v: Long, u: Long, d: Long = 0l): Expression =
+    unary(x, x => dn.pick_range(x, v, u, d))
+  // kept for backward compatibility
+  def pickrange(x: Expression, v: Long, u: Long, d: Long = 0l): Expression =
+    unary(x, x => dn.pick_range(x, v, u, d))
 
   def concatenateCols(v: ExpressionVector): Expression = vectory(v, dn.concatenate_cols)
   def concatenateCols(exprs: Expression*): Expression = concatenateCols(new ExpressionVector(exprs))
