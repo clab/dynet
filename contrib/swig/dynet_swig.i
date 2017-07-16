@@ -692,16 +692,13 @@ struct ComputationGraph {
 // Need to disable constructor as SWIG gets confused otherwise
 %nodefaultctor Trainer;
 struct Trainer {
-  void update(real scale = 1.0);
-  void update_epoch(real r = 1);
+  virtual void update();
+  void update_epoch(real r = 1.0);
 
-  float clip_gradients(real scale);
+  float clip_gradients();
   void rescale_and_reset_weight_decay();
 
-  real eta0;
-  real eta;
-  real eta_decay;
-  real epoch;
+  real learning_rate;
 
   bool clipping_enabled;
   real clip_threshold;
@@ -720,32 +717,32 @@ struct Trainer {
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(ParameterCollection& m, real e0 = 0.1, real edecay = 0.0);
+  explicit SimpleSGDTrainer(ParameterCollection& m, real learning_rate = 0.1);
 };
 
 struct CyclicalSGDTrainer : public Trainer {
-  explicit CyclicalSGDTrainer(ParameterCollection& m, real e0_min = 0.01, real e0_max = 0.1, real step_size = 2000, real gamma = 0.0, real edecay = 0.0);
-  void update(real scale = 1.0);
+  explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0);
+  void update() override;
 };
 
 struct MomentumSGDTrainer : public Trainer {
-  explicit MomentumSGDTrainer(ParameterCollection& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0);
+  explicit MomentumSGDTrainer(ParameterCollection& m, real learning_rate = 0.01, real mom = 0.9);
 };
 
 struct AdagradTrainer : public Trainer {
-  explicit AdagradTrainer(ParameterCollection& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0);
+  explicit AdagradTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20);
 };
 
 struct AdadeltaTrainer : public Trainer {
-  explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0);
+  explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95);
 };
 
 struct RMSPropTrainer : public Trainer {
-   explicit RMSPropTrainer(ParameterCollection& m, real e0 = 0.001, real eps = 1e-08, real rho = 0.9, real edecay = 0.0);
+   explicit RMSPropTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20, real rho = 0.95);
 };
 
 struct AdamTrainer : public Trainer {
-  explicit AdamTrainer(ParameterCollection& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0);
+  explicit AdamTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8);
 };
 
 ///////////////////////////////////

@@ -76,7 +76,7 @@ public class XorExample {
         floatp_assign(y_value, (x1 != x2) ? 1 : -1);
         loss += as_scalar(cg.forward(loss_expr));
         cg.backward(loss_expr);
-        sgd.update(1.0f);
+        sgd.update();
       }
       sgd.update_epoch();
       loss /= 4;
