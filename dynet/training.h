@@ -40,7 +40,6 @@ struct Trainer {
    * 
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
-   * \param edecay Learning rate decay
    */
   explicit Trainer(ParameterCollection& m, real learning_rate) :
     learning_rate(learning_rate), clipping_enabled(true), clip_threshold(5),
@@ -172,7 +171,6 @@ struct SimpleSGDTrainer : public Trainer {
    * 
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
-   * \param edecay Learning rate decay parameter.
    */
   explicit SimpleSGDTrainer(ParameterCollection& m, real learning_rate = 0.1) : Trainer(m, learning_rate) {}
  protected:
@@ -254,7 +252,6 @@ struct MomentumSGDTrainer : public Trainer {
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
    * \param mom Momentum
-   * \param edecay Learning rate decay parameter
    */
   explicit MomentumSGDTrainer(ParameterCollection& m, real learning_rate = 0.01, real mom = 0.9) :
     Trainer(m, learning_rate), momentum(mom) {}
@@ -291,7 +288,6 @@ struct AdagradTrainer : public Trainer {
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
-   * \param edecay Learning rate decay parameter
    */
   explicit AdagradTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20) :
     Trainer(m, learning_rate), epsilon(eps) {}
@@ -325,7 +321,6 @@ struct AdadeltaTrainer : public Trainer {
    * \param m ParameterCollection to be trained
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average of updates in the numerator
-   * \param edecay Learning rate decay parameter
    */
   explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95) :
     Trainer(m, 1.0), epsilon(eps), rho(rho) {}
@@ -360,7 +355,6 @@ struct RMSPropTrainer : public Trainer {
    * \param learning_rate Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad)
-   * \param edecay Learning rate decay parameter
    */
   explicit RMSPropTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20, real rho = 0.95) :
     Trainer(m, learning_rate), epsilon(eps), rho(rho) {}
@@ -395,7 +389,6 @@ struct AdamTrainer : public Trainer {
    * \param beta_1 Moving average parameter for the mean
    * \param beta_2 Moving average parameter for the variance
    * \param eps Bias parameter \f$\epsilon\f$
-   * \param edecay Learning rate decay parameter
    */
   explicit AdamTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
     Trainer(m, learning_rate), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
