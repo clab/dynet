@@ -2245,6 +2245,7 @@ void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   unsigned hidden_dim = fx.d[0] / 4;
   unsigned input_dim = xs[0]->d[0];
+  unsigned batch_size = xs[0]->d.bd;
   Eigen::DSizes<ptrdiff_t, 3> indices_mat_i(0, 0, 0);
   Eigen::DSizes<ptrdiff_t, 3> indices_mat_g(hidden_dim*3, 0, 0);
   Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
@@ -2259,24 +2260,34 @@ void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
   Eigen::DSizes<ptrdiff_t, 2> indices_mat_g_nobatch(hidden_dim*3, 0);
   Eigen::DSizes<ptrdiff_t, 3> sizes_mat_1(hidden_dim, 1, static_cast<ptrdiff_t>(fx.d.bd));
   Eigen::DSizes<ptrdiff_t, 3> sizes_mat_3(hidden_dim*3, 1, static_cast<ptrdiff_t>(fx.d.bd));
-  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
-  Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
   Eigen::array<int, 1> vec_batch_axis; vec_batch_axis[0] = 1;
   Eigen::array<int, 2> mat_batch_axis; mat_batch_axis[0] = 1; mat_batch_axis[1] = 3;  // TODO: not sure why we have the extra dimension "1" after the outer product..
 
   Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
 
   array<Eigen::IndexPair<int>, 1> product_mat = { Eigen::IndexPair<int>(1, 0) }; // following https://stackoverflow.com/questions/39815869/how-to-transpose-tensor-in-eigen
-  if(i==0){ // dx_t =
+  cout << "doing anythin?\n";
+  if(i==0){
     Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(input_dim);
     Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(input_dim*3);
+    Eigen::DSizes<ptrdiff_t, 2> sizes_1(input_dim, static_cast<ptrdiff_t>(fx.d.bd));
+    Eigen::DSizes<ptrdiff_t, 2> sizes_3(input_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
+
+    Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = 1; bcast[2] = batch_size;
 
     // TODO: fix math, then implement
-    // dx_t_i = Wx_i^T * [di . i_t . (1-i_t)]
-    // dx_f = Wx_f^T * [df . f_t . (1-f_t)]
-    // dx_o = Wx_o^T * [do . o_t . (1-o_t)]
+    // dx_t = Wx_i^T * [di . i_t . (1-i_t)]
+    //      + Wx_f^T * [df . f_t . (1-f_t)]
+    //      + Wx_o^T * [do . o_t . (1-o_t)]
+    //      + Wx_g^T * [dg . (1-tanh(g_t))]
+    // note: here Wx is broadcasted over batches
 
-    // dWx_g = Wx_g^T * [dg . (1-tanh(g_t))]
+    // first handle the sigmoids
+    dEdxi.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[2]->tb<2>().broadcast(bcast).shuffle(transp_order), product_mat);
+    cout << "worked!\n";
+
+    // finally, the tanh
+    // TODO
   } else if(i==1){ // dh_tm1
     // TODO: implement
     Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
@@ -2307,6 +2318,8 @@ void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
   } else if(i==4){
     Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
     Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
+    Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
+    Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
 
     // db_i = di . i_t . (1-i_t), then sum over batches
     // db_f = df . f_t . (1-f_t), then sum over batches
