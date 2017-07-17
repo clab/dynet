@@ -27,20 +27,21 @@ size_t Node::aux_storage_size() const { return 0; }
 void Node::forward(const std::vector<const Tensor*>& xs,
                    Tensor& fx) const {
   if (this->supports_multibatch() || fx.d.batch_elems() == 1) {
-    std::vector<const Tensor*> xsxs;
+    std::vector<const Tensor*> xsxs(xs.size(), nullptr);
+    std::vector<Tensor> args_buffer;
+    args_buffer.resize(xs.size());
     for (size_t k = 0; k < xs.size(); ++k) {
       auto x = xs[k];
       if (x->device == fx.device) {
-        xsxs.push_back(x);
+        xsxs[k] = x;
       } else {
-        Tensor *xx = nullptr;
-        xx->d = x->d;
-        xx->device = fx.device;
-        xx->mem_pool = DeviceMempool::FXS;
-        xx->v = static_cast<float*>(xx->device->pools[(int)DeviceMempool::FXS]->
-                                    allocate(x->d.size() * sizeof(float)));
-        TensorTools::copy_elements(*xx, *x);
-        xsxs.push_back(xx);
+        args_buffer[k].d = x->d;
+        args_buffer[k].device = fx.device;
+        args_buffer[k].mem_pool = DeviceMempool::FXS;
+        args_buffer[k].v = static_cast<float*>(args_buffer[k].device->pools[(int)DeviceMempool::FXS]->
+                                               allocate(x->d.size() * sizeof(float)));
+        TensorTools::copy_elements(args_buffer[k], *x);
+        xsxs[k] = &args_buffer[k];
       }
     }
     forward_impl(xsxs, fx);

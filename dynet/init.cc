@@ -205,10 +205,16 @@ void initialize(DynetParams& params) {
   if (gpudevices.size() > 0) {
     for (auto gpu : gpudevices)
       devices.push_back(gpu);
-    if (params.cpu_requested)
-      devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
+    if (params.cpu_requested) {
+      Device *d = new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters);
+      devices.push_back(d);
+      dynet::devices_map[d->name] = d;
+    }
   } else {
-    devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
+    Device *d = new Device_CPU(devices.size(), params.mem_descriptor,
+                               params.shared_parameters);
+    devices.push_back(d);
+    dynet::devices_map[d->name] = d;
   }
   default_device = devices[default_index];
 
