@@ -146,7 +146,7 @@ struct NCHWToHWCN {
       const unsigned N = in->d[0];
       const unsigned C = in->d[1];
       const unsigned H = in->d[2];
-      const unsigned W = in->d.bd == 4 ? in->d[3] : in->d.bd;
+      const unsigned W = in->d.nd == 4 ? in->d[3] : in->d.bd;
       for (unsigned n = 0; n < N; ++n)
         for (unsigned c = 0; c < C; ++c)
           for (unsigned h = 0; h < H; ++h)
