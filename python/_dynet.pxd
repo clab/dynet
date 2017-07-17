@@ -187,36 +187,37 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CTrainer "dynet::Trainer":
-        CTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        CTrainer(CModel& m, float learning_rate) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled
-        void update(float s) except +
+        float learning_rate
+        void update() except +
         #void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s) except +
         void update_epoch(float r)
         void status()
 
 
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer" (CTrainer):
-        CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        CSimpleSGDTrainer(CModel& m, float learning_rate) # TODO removed lam, update docs.
 
     cdef cppclass CCyclicalSGDTrainer "dynet::CyclicalSGDTrainer" (CTrainer):
-        CCyclicalSGDTrainer(CModel& m, float e0_min, float e0_max, float step_size, float gamma, float edecay) # TODO removed lam, update docs.
+        CCyclicalSGDTrainer(CModel& m, float learning_rate_min, float learning_rate_max, float step_size, float gamma) # TODO removed lam, update docs.
 
     cdef cppclass CMomentumSGDTrainer "dynet::MomentumSGDTrainer" (CTrainer):
-        CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
+        CMomentumSGDTrainer(CModel& m, float learning_rate, float mom) # TODO removed lam, update docs
 
     cdef cppclass CAdagradTrainer "dynet::AdagradTrainer" (CTrainer):
-        CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
+        CAdagradTrainer(CModel& m, float learning_rate, float eps) # TODO removed lam, update docs
 
     cdef cppclass CAdadeltaTrainer "dynet::AdadeltaTrainer" (CTrainer):
-        CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
+        CAdadeltaTrainer(CModel& m, float eps, float rho) # TODO removed lam, update docs
 
     cdef cppclass CRMSPropTrainer "dynet::RMSPropTrainer" (CTrainer):
-        CRMSPropTrainer(CModel& m, float e0, float eps, float rho, float edecay) # TODO removed lam, update docs
+        CRMSPropTrainer(CModel& m, float learning_rate, float eps, float rho) # TODO removed lam, update docs
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
-        CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
+        CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
 
 
 cdef extern from "dynet/expr.h" namespace "dynet":
@@ -231,6 +232,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     #CExpression c_input "dynet::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::input" (CComputationGraph& g, float *ps) except + #
     CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
+    CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[unsigned]& ids, vector[float]& data, float defdata) except +
     CExpression c_parameter "dynet::parameter" (CComputationGraph& g, CParameters p) except + #
     CExpression c_parameter "dynet::parameter" (CComputationGraph& g, CLookupParameters p) except + #
     CExpression c_const_parameter "dynet::const_parameter" (CComputationGraph& g, CParameters p) except + #
@@ -278,8 +280,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_lgamma "dynet::lgamma" (CExpression& x) except + #
     CExpression c_logistic "dynet::logistic" (CExpression& x) except + #
     CExpression c_rectify "dynet::rectify" (CExpression& x) except + #
-    #CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m=?) except + #
-    CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned* pindex, float m) except + #
+    CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m) except + #
+    CExpression c_hinge "dynet::hinge" (CExpression& x, vector[unsigned] vs, float m) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x, vector[unsigned]& restriction) except + #?
     CExpression c_softmax "dynet::softmax" (CExpression& x) except + #
@@ -435,4 +437,35 @@ cdef extern from "dynet/fast-lstm.h" namespace "dynet":
 
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
+
+cdef extern from "dynet/dict.h" namespace "dynet":
+    cdef cppclass CDict "dynet::Dict":
+        CDict()
+        void freeze()
+        int convert(string& word) except +
+
+
+cdef extern from "dynet/cfsm-builder.h" namespace "dynet":
+    cdef cppclass CSoftmaxBuilder "dynet::SoftmaxBuilder":
+        void new_graph(CComputationGraph &cg, bool update)
+        CExpression neg_log_softmax(CExpression &rep, unsigned classidx) except +
+        CExpression neg_log_softmax(CExpression &rep, vector[unsigned]& classidxs) except +
+        unsigned sample(CExpression &rep) except +
+        CExpression full_log_distribution(CExpression &rep) except +
+        CExpression full_logits(CExpression &rep) except +
+        CModel get_parameter_collection()
+
+cdef extern from "dynet/cfsm-builder.h" namespace "dynet":
+    cdef cppclass CStandardSoftmaxBuilder  "dynet::StandardSoftmaxBuilder" (CSoftmaxBuilder):
+        CStandardSoftmaxBuilder(unsigned rep_dim, unsigned num_classes, CModel& pc, bool bias)
+
+cdef extern from "dynet/cfsm-builder.h" namespace "dynet":
+    cdef cppclass CClassFactoredSoftmaxBuilder  "dynet::ClassFactoredSoftmaxBuilder" (CSoftmaxBuilder):
+        CClassFactoredSoftmaxBuilder(unsigned rep_dim, string cluster_file, CDict& dic, CModel& pc, bool bias)
+
+        CExpression class_log_distribution(CExpression &rep) except +
+        CExpression class_logits(CExpression &rep) except +
+
+        CExpression subclass_log_distribution(CExpression &rep, unsigned classid) except +
+        CExpression subclass_logits(CExpression &rep, unsigned classid) except +
 

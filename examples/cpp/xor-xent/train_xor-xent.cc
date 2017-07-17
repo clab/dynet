@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
       y_value = (x1 != x2) ? 1 : 0;
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update(1.0);
+      sgd.update();
     }
     sgd.update_epoch();
     loss /= 4;

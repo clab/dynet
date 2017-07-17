@@ -646,6 +646,7 @@ private:
 public:
   // auxiliary memory
   mutable void* aux_mem; /**< this will usually be null. but, if your node needs to store intermediate values between forward and backward, you can use store it here. request the number of bytes you need from aux_storage_size(). Note: this memory will be on the CPU or GPU, depending on your computation backend*/
+  
 };
 
 template <class Function>

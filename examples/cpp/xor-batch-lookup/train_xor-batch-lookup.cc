@@ -65,8 +65,7 @@ int main(int argc, char** argv) {
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
     vector<float> losses = as_vector(cg.forward(sum_loss));
     cg.backward(sum_loss);
-    sgd.update(0.25);
-    sgd.update_epoch();
+    sgd.update();
     float loss = 0;
     for(auto l : losses)
       loss += l;

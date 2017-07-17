@@ -2,5 +2,6 @@
 // 
 #if _WINDOWS
     #include <process.h>
+#else
+	#include <unistd.h>
 #endif
-#include <unistd.h>

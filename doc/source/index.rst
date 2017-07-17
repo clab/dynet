@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 DyNet documentation
-=================================
+===================
 
 **News!** The master branch is now DyNet version 2.0 (as of 6/28/2017), which contains a number of changes including a new model format, etc. If you're looking for the old version, check out the `v1.1 branch <https://github.com/clab/dynet/tree/v1.1>`_.
 
@@ -28,6 +28,7 @@ DyNet can be installed according to the instructions below:
 
    install
    python
+   other_languages
 
 And get the basic information to create programs and use models:
 
@@ -56,6 +57,7 @@ And we welcome your contributions!
    :maxdepth: 2
 
    contributing
+   citing
 
 
 

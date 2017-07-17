@@ -3,11 +3,11 @@
 set(dynet_library_SRCS
     aligned-mem-pool.cc
     cfsm-builder.cc
-    dynet.cc
     deep-lstm.cc
     devices.cc
     dict.cc
     dim.cc
+    dynet.cc
     exec.cc
     expr.cc
     fast-lstm.cc
@@ -17,27 +17,51 @@ set(dynet_library_SRCS
     gru.cc
     hsm-builder.cc
     init.cc
+    io.cc
     lstm.cc
     mem.cc
     model.cc
-    nodes.cc
-    nodes-common.cc
+    nodes-activations.cc
+    nodes-affinetransform.cc
+    nodes-arith-const.cc
+    nodes-arith-cwise.cc
+    nodes-arith-scalar.cc
+    nodes-arith-sum.cc
+    nodes-arith-unary.cc
+    nodes-concat.cc
+    nodes-const.cc
     nodes-contract.cc
     nodes-conv.cc
     nodes-conv2d.cc
+    nodes-dropout.cc
+    nodes-flow.cc
+    nodes-hinge.cc
+    nodes-linalg.cc
+    nodes-logsumexp.cc
+    nodes-losses.cc
+    nodes-matrixmultiply.cc
     nodes-maxpooling2d.cc
+    nodes-minmax.cc
+    nodes-moments.cc
+    nodes-normalization.cc
+    nodes-norms.cc
+    nodes-pickneglogsoftmax.cc
+    nodes-random.cc
+    nodes-select.cc
+    nodes-similarities.cc
+    nodes-softmaxes.cc
+    nodes-trig.cc
     param-init.cc
     param-nodes.cc
     pretrain.cc
-    rnn.cc
     rnn-state-machine.cc
+    rnn.cc
     saxe-init.cc
     shadow-params.cc
     tensor.cc
     training.cc
     treelstm.cc
     weight-decay.cc
-    io.cc
 )
 if(ENABLE_BOOST)
   list(APPEND dynet_library_SRCS mp.cc)
@@ -46,14 +70,18 @@ endif()
 # Headers:
 set(dynet_library_HDRS
     aligned-mem-pool.h
-    cfsm-builder.h
-    cudnn-ops.h
     c2w.h
-    dynet.h
+    cfsm-builder.h
+    cuda-matrix-multiply.h
     cuda.h
+    cudnn-ops.h
+    deep-lstm.h
     devices.h
     dict.h
     dim.h
+    dynet-helper.h
+    dynet.h
+    except.h
     exec.h
     expr.h
     fast-lstm.h
@@ -61,35 +89,80 @@ set(dynet_library_HDRS
     globals.h
     gpu-kernels.h
     gpu-ops.h
+    grad-check.h
     graph.h
     gru.h
     hsm-builder.h
     init.h
+    io.h
     lstm.h
     mem.h
     model.h
-    nodes.h
     nodes-contract.h
     nodes-conv.h
+    nodes-macros.h
+    nodes.h
     op-helper.h
+    param-init.h
     param-nodes.h
+    pretrain.h
     rnn-state-machine.h
     rnn.h
     saxe-init.h
     shadow-params.h
+    sig.h
     simd-functors.h
+    str-util.h
     tensor.h
     timing.h
     training.h
     treelstm.h
-    except.h
-    nodes-macros.h
     weight-decay.h
-    io.h
 )
 if(ENABLE_BOOST)
   list(APPEND dynet_library_HDRS mp.h)
 endif()
+  
+set(dynet_gpu_mergeable_SRCS
+    nodes-activations
+    nodes-affinetransform
+    nodes-arith-const
+    nodes-arith-cwise
+    nodes-arith-scalar
+    nodes-arith-sum
+    nodes-arith-unary
+    nodes-concat
+    nodes-const
+    nodes-contract
+    nodes-conv2d
+    nodes-conv
+    nodes-dropout
+    nodes-flow
+    nodes-hinge
+    nodes-linalg
+    nodes-logsumexp
+    nodes-losses
+    nodes-matrixmultiply
+    nodes-maxpooling2d
+    nodes-minmax
+    nodes-moments
+    nodes-normalization
+    nodes-norms
+    nodes-pickneglogsoftmax
+    nodes-random
+    nodes-select
+    nodes-similarities
+    nodes-softmaxes
+    nodes-trig
+    param-nodes
+    tensor
+    training
+    model)
+
+set(dynet_gpu_SRCS
+    cuda.cc
+    cudnn-ops.cu
+    gpu-ops.cu)
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tests/*.cc)
 if (NOT MSVC)
@@ -119,7 +192,29 @@ endif()
 # Build cpu library
 add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
 target_link_libraries(dynet ${LIBS})
+
 if(WITH_CUDA_BACKEND)
+  if(${GPU_NUMFILES} EQUAL 0)
+    foreach(FILENAME ${dynet_gpu_mergeable_SRCS})
+      set(MERGEFILE ${PROJECT_BINARY_DIR}/dynet/gpu-${FILENAME}.cu)
+      file(WRITE ${MERGEFILE} "#include \"${PROJECT_SOURCE_DIR}/dynet/${FILENAME}.cc\"\n")
+      list(APPEND dynet_gpu_SRCS ${MERGEFILE})
+    endforeach()
+  else()
+    # merge into k merge files
+    set(COUNTER 0)
+    foreach(FILENAME ${dynet_gpu_mergeable_SRCS})
+      math(EXPR MERGENUM "${COUNTER} % ${GPU_NUMFILES}")
+      set(MERGEFILE ${PROJECT_BINARY_DIR}/dynet/gpu-merge${MERGENUM}.cu)
+      if(${COUNTER} EQUAL ${MERGENUM})   # This is the first line of this merge file
+        file(REMOVE ${MERGEFILE})        # Start with an empty file
+        list(APPEND dynet_gpu_SRCS ${MERGEFILE})
+      endif()
+      file(APPEND ${MERGEFILE} "#include \"${PROJECT_SOURCE_DIR}/dynet/${FILENAME}.cc\"\n")
+      math(EXPR COUNTER ${COUNTER}+1)
+    endforeach()
+  endif()
+
   # cuda flags
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS "-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_52,code=sm_52;-gencode;arch=compute_52,code=compute_52;-std=c++11;-DVERBOSE;-DEIGEN_USE_GPU;-DHAVE_CUDA;")
@@ -143,10 +238,10 @@ if(WITH_CUDA_BACKEND)
     list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-nodes-maxpooling2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu)
+    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} ${dynet_gpu_SRCS})
   else()
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} cuda.cc cudnn-ops.cu gpu-ops.cu gpu-nodes.cu gpu-nodes-contract.cu gpu-nodes-conv.cu gpu-nodes-conv2d.cu gpu-nodes-maxpooling2d.cu gpu-param-nodes.cu gpu-tensor.cu gpu-training.cu gpu-model.cu OPTIONS --compiler-options "-fPIC")
+    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} ${dynet_gpu_SRCS} OPTIONS --compiler-options "-fPIC")
   endif()
   set_target_properties(gdynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
@@ -165,4 +260,3 @@ if(WITH_CUDA_BACKEND)
 endif(WITH_CUDA_BACKEND)
 
 # target_compile_features(dynet PRIVATE cxx_range_for)
-
