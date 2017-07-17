@@ -200,8 +200,8 @@ Expression CoupledLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     // x
     if (dropout_rate > 0.f) {
       in = cmult(in, masks[i][0]);
-
     }
+
     // h
     if (has_prev_state && dropout_rate_h > 0.f)
       i_h_tm1 = cmult(i_h_tm1, masks[i][1]);

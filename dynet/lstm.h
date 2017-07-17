@@ -136,14 +136,17 @@ protected:
 public:
   ParameterCollection local_model;
 
-  // first index is layer, then ...
+  // first index is layer, then each vector contains Parameters for:
+  // x2i, h2i, c2i, bi, x2o, h2o, c2o, bo, x2c, h2c, bc
   std::vector<std::vector<Parameter>> params;
 
-  // first index is layer, then ...
+  // first index is layer, then each vector contains Expressions for:
+  // x2i, h2i, c2i, bi, x2o, h2o, c2o, bo, x2c, h2c, bc
   std::vector<std::vector<Expression>> param_vars;
 
-  // first index is layer, then ...
   // masks for Gal dropout
+  // first index is layer, then each vector contains Expressions for:
+  // input mask, hidden mask, and memory mask.
   std::vector<std::vector<Expression>> masks;
 
   // first index is time, second is layer
@@ -167,7 +170,7 @@ private:
 
 /**
  * \ingroup rnnbuilders
- * @brief VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
+ * @brief VanillaLSTM allows the creation of a "standard" LSTM, ie with decoupled input and forget gates and no peephole connections
  * @details This cell runs according to the following dynamics :
  *
  * \f$
