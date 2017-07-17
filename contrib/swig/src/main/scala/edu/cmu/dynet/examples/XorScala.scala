@@ -52,7 +52,7 @@ object XorScala {
         y_value.set(if (x1 != x2) 1 else -1)
         loss += ComputationGraph.forward(loss_expr).toFloat
         ComputationGraph.backward(loss_expr)
-        sgd.update(1.0f)
+        sgd.update()
       }
       sgd.updateEpoch()
       loss /= 4

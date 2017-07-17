@@ -66,6 +66,7 @@ class SerializationSpec extends FlatSpec with Matchers {
 
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
+    saver.done()
 
     val loader = new ModelLoader(path)
     val mod2 = new ParameterCollection()
@@ -85,6 +86,7 @@ class SerializationSpec extends FlatSpec with Matchers {
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
+    saver.done()
 
     val loader = new ModelLoader(path)
     val mod2 = new ParameterCollection()
