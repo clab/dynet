@@ -105,6 +105,7 @@ of the objects are added to the model.
 Notice that you do not need to specify sizes when loading.
 
 .. code:: python
+
     import dynet as dy
 
     pc = dy.ParameterCollection()

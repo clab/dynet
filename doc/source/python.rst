@@ -190,7 +190,7 @@ then you may need to run the following (and add it to your shell init files):
 
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
 
-
+# /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
 
 Anaconda Support
 ----------------

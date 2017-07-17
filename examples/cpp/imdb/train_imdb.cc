@@ -14,7 +14,6 @@
  * On a small proportion of the IMDB data (2500 for training, 500 for dev.), this
  * model achieves 80% accuracy on two-way classification.
  */
-#include <unistd.h>
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
 #include "dynet/training.h"
@@ -283,7 +282,7 @@ int main(int argc, char** argv) {
       Expression loss_expr = engine.objective(cg, inst, logits);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update(1.0);
+      sgd->update();
       ++lines;
       ++ttags;
     }

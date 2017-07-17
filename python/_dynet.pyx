@@ -251,12 +251,12 @@ cpdef save(basename, lst):
     """Saves a list of parameters, lookup parameters and builder objects to disk.
 
     Args:
-        basename (string): The base-name of the files to save. 
-                           Two files will be created: `basename.data` and `basename.meta`.
+        basename (string): The base-name of the files to save. Two files will be created: `basename.data` and `basename.meta`.
         lst      (list):  A list of objects to save (see below).
 
 
     Example:
+
         import dynet as dy
 
         pc = dy.ParameterCollection()
@@ -273,11 +273,13 @@ cpdef save(basename, lst):
     
     What can be saved:
         Each object in `lst` must be one of the following:
+        
         (1) Parameter
         (2) LookupParameter
         (3) one of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder,
                                        SimpleRNNBuilder, BiRNNBuilder)
         (4) a type adhering to the following interface:
+            
             - has a `param_collection()` method returning a ParameterCollection object with the
               parameters in the object.
             - has a `.spec` property with picklable items describing the object
@@ -288,6 +290,7 @@ cpdef save(basename, lst):
         they support this interface.
 
         behind the scenes:
+        
         - for each item, we write to `.meta`:
             if its a Parameters/ParameterCollection: 
                 its type and full name.
@@ -634,6 +637,11 @@ cdef class Parameters: # {{{
 # Parameters }}}
 
 cdef class LookupParameters: # {{{
+    """LookupParameters represents a table of parameters.
+
+    They are used to embed a set of discrete objects (e.g. word embeddings). These are sparsely updated.
+
+    """
     cdef CLookupParameters thisptr # TODO: no longer pointer
     cdef int _version
     cdef Expression _expr
@@ -647,6 +655,14 @@ cdef class LookupParameters: # {{{
 
     # TODO docs
     def save(self, fname, key="", append=False):
+        """Save the values of this LookupParameters object to a particular file.
+
+        TODO: more docs. Refer to the tutorial for more info for now
+
+        Args:
+            fname (string): the name of a file to save to.
+            key   (string): TODO
+        """
         self.write_to_textfile(fname, key, append)
     def populate(self, fname, key=""):
         """Populate the values of this LookupParameters object from
@@ -676,6 +692,13 @@ cdef class LookupParameters: # {{{
         del loader
 
     cpdef init_from_array(self, arr):
+        """Initializes the values according to a numpy array
+
+        Preferably uses ParameterCollection.lookup_parameter_from_numpy when possible
+
+        Args:
+            arr (np.array): numpy array of shape :code:`(num_lookups,...)`
+        """
         if len(arr) > self.thisptr.get_storage().values.size():
             raise Exception("too many rows")
         if arr.shape[1] != self.thisptr.get_storage().values[0].d.rows():
@@ -685,28 +708,62 @@ cdef class LookupParameters: # {{{
             self.init_row(i, row)
 
     cpdef shape(self):
+        """Returns shape of the lookup parameter
+
+        The first dimension is the lookup dimension
+
+        Returns:
+            tuple: Shape of the parameter
+        """
         return c_dim_as_shape(self.thisptr.get_storage().all_dim)
 
     def __getitem__(self, int i):
+        """
+        Same as :code:`dynet.lookup`
+        """
         return lookup(self, i)
 
     cpdef batch(self, vector[unsigned] i):
+        """Returns a batched expression based on looked up indices
+
+        This does the same as :code:`dynet.lookup_batch`
+        
+        Args:
+            i (list): list of indices
+
+        Returns:
+            dynet.Expression: Batched expression fo batch dimension :code:`len(i)`
+        """
         return lookup_batch(self, i)
 
     cpdef init_row(self, unsigned i, vector[float] row):
+        """Initialize one row with values
+        
+        Args:
+            i    (int): index
+            row (list): values
+        """
         self.thisptr.initialize(i, row)
 
     cpdef as_array(self):
-        """
-        Return as a numpy array.
+        """Return as a numpy array.
+
+        The first dimension is the lookup dimension
+
+        Returns:
+            np.array: Values
         """
         cdef vector[CTensor] vals
         vals = self.thisptr.get_storage().values
         return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
 
     cpdef grad_as_array(self):
-        """
-        Return gradients as a numpy array.
+        """Return gradients as a numpy array.
+
+        The first dimension is the lookup dimension
+
+        Returns:
+            np.array: gradient values
         """
         cdef vector[CTensor] grads
         grads = self.thisptr.get_storage().grads
@@ -731,6 +788,15 @@ cdef class LookupParameters: # {{{
         self.thisptr.scale_gradient(s)
         
     cpdef Expression expr(self,bool update=True):
+        """Returns an expression for the whole parameter
+
+        Same as :code:`dynet.parameter`
+
+        Args:
+            update(bool): If this is set to False, the parameter won't be updated during the backward pass
+        Returns:
+            Expression: Expression of the parameter
+        """
         if cg_version() != self._version:
             self._version = cg_version()
             if update:
@@ -739,7 +805,10 @@ cdef class LookupParameters: # {{{
                 self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
         return self._expr
 
-    cpdef zero(self): self.thisptr.zero()
+    cpdef zero(self):
+        """Set all values to zero
+        """
+        self.thisptr.zero()
 
     cpdef bool is_updated(self): return self.thisptr.is_updated()
     cpdef set_updated(self, bool b): self.thisptr.set_updated(b)
@@ -785,7 +854,7 @@ cdef class ParameterCollection: # {{{
         avoid name clashes. The `.name()` method returns the full name of an object,
         including the appended index and its location within the collection hierarchy.
         The user-supplied names cannot inclue the characters `/` (which is used as a hierarchy
-        separator) or `_` (which is used as an index separator).
+        separator) or :code:`_` (which is used as an index separator).
     """
     cdef CModel thisptr  # Not a pointer...
     def __cinit__(self, ):
@@ -1183,6 +1252,8 @@ cdef class ComputationGraph:
         return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
     def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1):
         return _vecInputExpression(self, v, d,batch_size)
+    def inputSparseTensor(self, vector[unsigned] idxs, vector[float] v, tuple dim, int batch_size=1, float defval=0):
+        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -1673,6 +1744,32 @@ cdef class _vecInputExpression(Expression):
         self.cgp().invalidate()
         self.val.set(data)
 
+cdef class _sparseInputExpression(Expression):
+    """Subclass of Expression corresponding to any non-scalar input expressions
+    
+    Despite the name, this also represents tensors (in column major format).
+    TODO : change this
+    """
+    def __cinit__(self, ComputationGraph g, vector[unsigned] idxs, vector[float] val, dim ,batch_size=1, defval=0):
+        #self.cg = g.thisptr
+        self.cg_version = g.version()
+        cdef CExpression e
+        e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval)
+        self.vindex = e.i
+        g._inputs.append(self)
+
+    def set(self, vector[float] data):
+        """Change the value of the expression
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
+        This allows you to use dynet as a static framework.
+        For now this only accepts new values as flattened arrays (column majors). TODO : change this
+
+        Args:
+            data(vector[float]): New value
+        """
+        raise ValueError('Can\'t set value of sparse input vector for now')
+
 def vecInput(int dim):
     """Input an empty vector
     
@@ -1756,7 +1853,7 @@ def inputTensor(arr,batched=False):
         else:
             arr=np.asarray(arr,dtype=float)
     if not isinstance(arr,np.ndarray):
-        raise TypeError("Input Tensor should be a numpy.ndarray or a valid list pf floats")
+        raise TypeError("Input Tensor should be a numpy.ndarray or a valid list of floats")
     if batched:
         dim = arr.shape[:-1] if len(arr.shape) > 1 else (1,)
         batch_size= arr.shape[-1]
@@ -1765,6 +1862,44 @@ def inputTensor(arr,batched=False):
         batch_size= 1
     arr = arr.flatten(order='F')
     return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
+
+
+def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
+    """Creates a tensor expression based on indices and values
+    
+    The dimension is inferred from the shape of the input.
+    if batched=True, the last dimension is used as a batch dimension
+    if arr is a list of numpy ndarrays, this returns a batched expression where the batch elements are the elements of the list
+    
+    Args:
+        idxs(tuple, list): A tuple/list of integer arrays, one array for each dimension (including the batch dimension)
+        values(list,np.ndarray): A 1D array/list of values
+        shape: The desired shape
+    Keyword Args:
+        batched(bool): Whether to use the last dimension as a batch dimension (default: False). For example if :code:`shape=(3, 3, 3)` and :code:`batched=True` the resulting expression will be a batch of 3 3x3 matrices
+        defval(number): The default value for all non specified coordinates (default: 0)
+    
+    Returns:
+        _vecInputExpression: Input expression
+    
+    Raises:
+        TypeError: If the type is not respected
+        ValueError: If the number of dimensions don't match
+    """
+    if isinstance(values, list):
+        values = np.asarray(values, dtype=float)
+    if not len(values.shape) == 1:
+        raise TypeError("values should be a 1d array")
+    if not len(idxs) == len(shape):
+        raise ValueError("Number of indices doesn't match shape")
+    if batched:
+        dim = shape[:-1] if len(shape) > 1 else (1,)
+        batch_size= shape[-1]
+    else:
+        dim = shape
+        batch_size = 1
+    idxs = np.ravel_multi_index(idxs, shape, order='F')
+    return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval)
 
 cdef class _lookupExpression(Expression):
     """Expression corresponding to a lookup from lookup parameter
@@ -1937,48 +2072,6 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
         _pickerBatchExpression: Picked expression
     """
     return _cg.outputBatchPicker(e, indices, dim)
-
-cdef class _hingeExpression(Expression):
-    """Expression representing the output of the hinge operation
-    
-    """
-    cdef UnsignedValue val
-    def __cinit__(self, ComputationGraph g, Expression x, unsigned index, float m=1.0):
-        self.val = UnsignedValue(index)
-        #self.cg = x.cg
-        self.cg_version = g.version()
-        cdef CExpression e
-        e = c_hinge(x.c(), self.val.addr(), m)
-        self.vindex = e.i
-        g._inputs.append(self)
-    def set_index(self, unsigned i):
-        """Change the correct candidate index
-        
-        This is useful if you want to to change the target and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
-        This allows you to use dynet as a static framework.
-        
-        Args:
-            i(number): New correct index
-        """
-        self.cgp().invalidate()
-        self.val.set(i)
-
-def hinge(Expression x, unsigned index, float m=1.0):
-    """Hinge loss.
-
-    This expression calculates the hinge loss, formally expressed as: 
-    
-    Args:
-        x (Expression): A vector of scores
-        index (number): The index of the correct candidate
-    
-    Keyword Args:
-        m(number): Margin (default: 1.0)
-    
-    Returns:
-        _hingeExpression: The hinge loss of candidate index with respect to margin m
-    """
-    return _hingeExpression(_cg, x, index, m)
 
 # }}}
 
@@ -2787,7 +2880,7 @@ cpdef Expression mean_batches(Expression x):
 cpdef Expression std_elems(Expression x):
     """Standard deviation of elements of the tensor
     
-    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}`of all the elements of each minibatch.
+    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` of all the elements of each minibatch.
 
     Args:
         x (dynet.Expression): Input expression
@@ -3004,6 +3097,35 @@ cpdef Expression pickneglogsoftmax_batch(Expression x, vector[unsigned] vs):
         dynet.Expression: :math:`-\sum_{v\in \\texttt{vs}}\log\left(\\frac{e^{x_v}}{\sum_j e^{x_j}}\\right)`
     """
     return Expression.from_cexpr(x.cg_version, c_pickneglogsoftmax(x.c(), vs))
+cpdef Expression hinge(Expression x, unsigned v, float m=1.0):
+    """Hinge loss
+    
+    This function takes in a vector of scores  :code:`x`, and calculates a hinge loss such that the element :code:`v` must be greater than all other elements by at least :code:`m`, otherwise a loss is incurred.
+
+    Args:
+        x (dynet.Expression): Input scores
+        v (int): True class
+        m (float): The margin
+    
+    Returns:
+        dynet.Expression: :math:`\\sum_{\\tilde{v} != v} max(x_{\\tilde{v}} - x_v + m, 0)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), v, m))
+cpdef Expression hinge_batch(Expression x, vector[unsigned] vs, float m=1.0):
+    """Hinge loss on a batch
+    
+    This function takes in a batched vector of scores  :code:`xs`, and calculates a hinge loss such that the elements :code:`vs` must be greater than all other elements by at least :code:`m`, otherwise a loss is incurred.
+    
+    Args:
+        x (dynet.Expression): Input scores
+        v (list): True classes
+        m (float): The margin
+    
+    Returns:
+        dynet.Expression: The batched hinge loss function
+    """
+    return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), vs, m))
+
 
 cpdef Expression kmh_ngram(Expression x, unsigned v):
     """[summary]
@@ -4197,8 +4319,9 @@ class BiRNNBuilder(object): # {{{
 
     def add_inputs(self, es):
         """
-        returns the list of state pairs (stateF, stateB) obtained by adding 
-        inputs to both forward (stateF) and backward (stateB) RNNs.  
+        returns the list of state pairs (stateF, stateB) obtained by adding
+        inputs to both forward (stateF) and backward (stateB) RNNs.
+        Does not preserve the internal state after adding the inputs.
         Args:
             es (list): a list of Expression
 
@@ -4211,8 +4334,8 @@ class BiRNNBuilder(object): # {{{
              state, as well as to the state-vectors (h() and s() )
 
         - :code:`.transduce(xs)` returns a list of Expression. These are just the output
-             expressions. For many cases, this suffices. 
-             transduce is much more memory efficient than add_inputs. 
+             expressions. For many cases, this suffices.
+             transduce is much more memory efficient than add_inputs.
         """
         for e in es:
             ensure_freshness(e)
@@ -4397,7 +4520,11 @@ cdef class RNNState: # {{{
         step.
 
         For SimpleRNN, s() is the same as h()
-        For LSTM, s() is a series of of memory vectors, followed the series followed by the series returned by h().
+        For LSTM, s() is a series of of memory vectors, followed the series followed by the series returned by h():
+
+        .. code:: none
+
+            (c[1],...,c[num_layers], h[1],...,h[num_layers])
         """
         return tuple(self.builder.get_s(CRNNPointer(self.state_idx)))
 
@@ -4461,21 +4588,21 @@ cdef class StackedRNNState:
 cdef class Trainer:
     """
     Generic trainer
+
+    Attributes:
+        learning_rate(number): Global learning rate for all parameters 
     """
     cdef CTrainer *thisptr
     def __dealloc__(self):
         del self.thisptr
-    cpdef update(self, float s=1.0):
+    cpdef update(self):
         """Update the parameters
         
         The update equation is different for each trainer, check the online c++ documentation for more details on what each trainer does
-        
-        Keyword Args:
-            s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
-        self.thisptr.update(s)
+        self.thisptr.update()
 
-    cpdef update_subset(self, updated_params, updated_lookups, float s=1.0):
+    cpdef update_subset(self, updated_params, updated_lookups):
         """Update a subset of parameters
         
         Only use this in last resort, a more elegant way to update only a subset of parameters is to use the "update" keyword in dy.parameter or Parameter.expr() to specify which parameters need to be updated __during the creation of the computation graph__
@@ -4483,22 +4610,14 @@ cdef class Trainer:
         Args:
             updated_params(list): Indices of parameters to update
             updated_lookups(list): Indices of lookup parameters to update
-        
-        Keyword Args:
-            s(number): Optional scaling factor to apply on the gradient. (default: 1.0)
         """
         cdef vector[unsigned] uparamvec
         for i in updated_params: uparamvec.push_back(i)
         cdef vector[unsigned] ulookupvec
         for i in updated_lookups: ulookupvec.push_back(i)
-        #self.thisptr.update(uparamvec, ulookupvec, s)
-    cpdef update_epoch(self, float r = 1.0):
-        """Update trainers hyper-parameters that depend on epochs
-        
-        Basically learning rate decay.
-        
-        Keyword Args:
-            r(number): Number of epoch that passed (default: 1.0)
+        # self.thisptr.update(uparamvec, ulookupvec)
+    cpdef update_epoch(self, r):
+        """DEPRECATED: do not use.
         """
         self.thisptr.update_epoch(r)
     cpdef status(self):
@@ -4537,6 +4656,14 @@ cdef class Trainer:
         """
         return self.thisptr.clip_threshold
 
+    @property
+    def learning_rate(self):
+        return self.thisptr.learning_rate
+
+    @learning_rate.setter
+    def learning_rate(self, value):
+        self.thisptr.learning_rate = value
+
 cdef class SimpleSGDTrainer(Trainer):
     """Stochastic gradient descent trainer
     
@@ -4546,11 +4673,10 @@ cdef class SimpleSGDTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: 0.1)
-        edecay(number): Learning rate decay parameter (default: 0.0)
+        learning_rate(number): Initial learning rate (default: 0.1)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
+    def __cinit__(self, ParameterCollection m, float learning_rate = 0.1):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr, learning_rate)
     def whoami(self):
         return "SimpleSGDTrainer"
 
@@ -4573,17 +4699,16 @@ cdef class CyclicalSGDTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0_min (number): Lower learning rate (default: {0.01})
-        e0_max (number): Upper learning rate (default: {0.1})
+        learning_rate_min (number): Lower learning rate (default: {0.01})
+        learning_rate_max (number): Upper learning rate (default: {0.1})
         step_size (number): Period of the triangular function in number of iterations (__not__ epochs). According to the original paper, this should be set around (2-8) x (training iterations in epoch) (default: {2000})
         gamma (number): Learning rate upper bound decay parameter (default: {0.0})
-        edecay (number): Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by :math:`\gamma` (default: {0.0})
     """
     cdef CCyclicalSGDTrainer *thischildptr
-    def __cinit__(self, ParameterCollection m, float e0_min = 0.01, float e0_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0):
-        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, e0_min, e0_max, step_size, gamma, edecay)
-    cpdef update(self, float s=1.0):
-        self.thischildptr.update(s)
+    def __cinit__(self, ParameterCollection m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0):
+        self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, learning_rate_min, learning_rate_max, step_size, gamma)
+    cpdef update(self):
+        self.thischildptr.update()
     def whoami(self):
         return "CyclicalSGDTrainer"
 
@@ -4596,13 +4721,12 @@ cdef class MomentumSGDTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: 0.1)
+        learning_rate(number): Initial learning rate (default: 0.1)
         mom(number): Momentum (default: 0.9)
-        edecay(number): Learning rate decay parameter (default: 0.0)
 
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
+    def __cinit__(self, ParameterCollection m, float learning_rate = 0.01, float mom = 0.9):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr, learning_rate, mom)
     def whoami(self):
         return "MomentumSGDTrainer"
 
@@ -4616,12 +4740,11 @@ cdef class AdagradTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: 0.1)
+        learning_rate(number): Initial learning rate (default: 0.1)
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-20)
-        edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
+    def __cinit__(self, ParameterCollection m, float learning_rate = 0.1, float eps = 1e-20):
+        self.thisptr = new CAdagradTrainer(m.thisptr, learning_rate, eps)
     def whoami(self):
         return "AdagradTrainer"
 
@@ -4637,10 +4760,9 @@ cdef class AdadeltaTrainer(Trainer):
     Keyword Args:
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-6)
         rho(number): Update parameter for the moving average of updates in the numerator (default: 0.95)
-        edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
+    def __cinit__(self, ParameterCollection m, float eps = 1e-6, float rho = 0.95):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho)
     def whoami(self):
         return "AdadeltaTrainer"
 
@@ -4653,13 +4775,12 @@ cdef class RMSPropTrainer(Trainer):
         m(dynet.ParameterCollection): ParameterCollection to be trained
     
     Keyword Args:
-        e0(number): Initial learning rate (default: 0.001)
+        learning_rate(number): Initial learning rate (default: 0.001)
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
         rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: 0.9)
-        edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
-        self.thisptr = new CRMSPropTrainer(m.thisptr, e0, eps, rho, edecay)
+    def __cinit__(self, ParameterCollection m, float learning_rate = 0.001,float eps = 1e-8, float rho = 0.9):
+        self.thisptr = new CRMSPropTrainer(m.thisptr, learning_rate, eps, rho)
     def whoami(self):
         return "RMSPropTrainer"
 
@@ -4676,11 +4797,246 @@ cdef class AdamTrainer(Trainer):
         beta_1(number): Moving average parameter for the mean (default: 0.9)
         beta_2(number): Moving average parameter for the variance (default: 0.999)
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
-        edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
-        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
+    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8 ):
+        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps)
     def whoami(self):
         return "AdamTrainer"
 
 # Trainers }}}
+
+
+# {{{ Softmax Builders
+cdef class SoftmaxBuilder:
+    """Interface for building softmax layers
+
+    A softmax layer returns a probability distribution over :math:`C` classes given a vector :math:`h\in\mathbb R^d`, with
+
+    .. math::
+        p(c)\propto \exp(W_i^Th + b_i)\ \\forall i\in\{1\ldots C\}
+
+    Where :math:`W\in \mathbb R^{C\\times d}, b \in \mathbb R^C`
+    """
+
+    cdef CSoftmaxBuilder *thisptr
+    cdef int cg_version
+    cdef int const_cg_version
+    def __dealloc__(self):
+        del self.thisptr
+
+    cdef check_and_renew_graph(self, bool update):
+        if update:
+            if self.cg_version != cg_version():
+                self.cg_version = cg_version()
+                self.thisptr.new_graph(cg().thisptr[0], update)
+        else:
+            if self.const_cg_version != cg_version():
+                self.const_cg_version = cg_version()
+                self.thisptr.new_graph(cg().thisptr[0], update)
+
+    cpdef neg_log_softmax(self, Expression x, unsigned c, bool update=True):
+        """Negative log probability of a class
+        
+        Given class :math:`c` and vector :math:`x`, this returns :math:`-\log(p(c \mid x))`
+        
+        Args:
+            x(dynet.Expression): Input vector
+            c(unsigned): Class id
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Log probability of given class
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.neg_log_softmax(x.c(), c))
+
+    cpdef neg_log_softmax_batch(self, Expression x, vector[unsigned] c, bool update=True):
+        """Batched version of :code:`neg_log_softmax`
+        
+        Args:
+            x(dynet.Expression): Input vector (batched)
+            c(list): list of class ids (one per batch element)
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Log probability of given class
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.neg_log_softmax(x.c(), c))
+
+    cpdef sample(self, Expression x):
+        """Sample from the softmax distribution
+        
+        Args:
+            x(dynet.Expression): Input vector
+        
+        Returns:
+            Sampled class
+            int
+        """
+        self.check_and_renew_graph(True)
+        return self.thisptr.sample(x.c())
+
+    cpdef full_log_distribution(self, Expression x, bool update=True):
+        """Returns an Expression representing a vector the size of the number of classes.
+        
+        The ith dimension gives :math:`\log p(c_i | x)`. This function may be SLOW. Avoid if possible.
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(c\mid x)`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.full_log_distribution(x.c()))
+
+    cpdef full_logits(self, Expression x, bool update=True):
+        """Returns the logits (before application of the softmax)
+        
+        The ith dimension gives :math:`W_i^Tx + b_i`
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thisptr.full_logits(x.c()))
+
+    cpdef ParameterCollection param_collection(self):
+        """Returns the ParameterCollection containing the softmax parameters
+        
+        The first parameter in the parametercollection is the weight matrix, the second is the biases (if any)
+        
+        Returns:
+            Subcollection holding the parameters
+            ParameterCollection
+        """
+        return ParameterCollection.wrap(self.thisptr.get_parameter_collection())
+
+
+
+cdef class StandardSoftmaxBuilder(SoftmaxBuilder):
+    """
+    This class implements the standard Softmax
+    """
+
+    def __cinit__(self, unsigned input_dim, unsigned num_classes, ParameterCollection pc, bool bias=True):
+        """Constructs a softmaxbuilder
+
+        Args:
+            rep_dim(unsigned): Dimension of the input vectors
+            num_classes(unsigned): Number of classes
+            pc(dynet.ParameterCollection): Parameter collection
+            bias(bool): Whether to use a bias vector or not
+        """
+        self.thisptr = new CStandardSoftmaxBuilder(input_dim, num_classes, pc.thisptr, bias)
+
+
+cdef class ClassFactoredSoftmaxBuilder(SoftmaxBuilder):
+    """Class factored softmax
+
+    Each class is separated into a subclass, ie :math:`p(i\mid h)=p(i\mid h, c) p(c\mid h)` where :math:`c` is a class and :math:`i` a subclass
+
+    """
+    cdef CClassFactoredSoftmaxBuilder *thiscfptr
+    cdef CDict cdic
+
+    cdef dict_to_cdict(self, dict dic):
+        words = sorted(dic.keys(), key=lambda x: dic[x])
+        for w in words:
+            i = self.cdic.convert(w.encode('utf8'))
+            if i != dic[w]:
+                raise ValueError('Dictionary should have unique ids from 0 to num_classes')
+        self.cdic.freeze()
+
+    def __cinit__(self, unsigned input_dim, str cluster_file, dict dic, ParameterCollection pc, bool bias=True):
+        """Constructor from file
+
+        This constructs the CFSM from a file with lines of the following format
+
+        .. code::
+
+            CLASSID   word    [freq]
+
+        For words for instance
+
+        Args:
+            input_dim (unsigned): Dimension of the input vectors
+            cluster_file (str): File containing classes
+            dic (dict): A python dictionary converting words to indices. The dict should be one to one with :math:`\{0,\ldots,\\texttt{num_classes}-1\}` and cover all the words in the :code:`cluster_file`
+            pc(dynet.ParameterCollection): Parameter collection
+            bias(bool): Whether to use a bias vector or not
+        """
+        self.dict_to_cdict(dic)
+        cdef string _fname = <string> cluster_file.encode("utf8")
+        self.thiscfptr = self.thisptr = new CClassFactoredSoftmaxBuilder(input_dim, _fname, self.cdic, pc.thisptr, bias)
+
+
+    cpdef class_log_distribution(self, Expression x, bool update=True):
+        """Get log distribution over classes
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(c\mid x)`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.class_log_distribution(x.c()))
+
+    cpdef class_logits(self, Expression x, bool update=True):
+        """Returns the logits over classes
+        
+        Args:
+            x(dynet.Expression): Input vector
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.class_logits(x.c()))
+
+    cpdef subclass_log_distribution(self, Expression x, unsigned classid, bool update=True):
+        """ Get log distribution over subclasses of class
+        
+        Args:
+            x(dynet.Expression): Input vector
+            classid(int): class index
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Vector of :math:`\log(p(i\mid x, \\texttt{classid})`
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.subclass_log_distribution(x.c(), classid))
+
+    cpdef subclass_logits(self, Expression x, unsigned classid, bool update=True):
+        """Logits over subclasses of class
+        
+        Args:
+            x(dynet.Expression): Input vector
+            classid(int): class index
+            update(bool): Whether to update the parameters or not (default: {True})
+        
+        Returns:
+            Expression for the logits
+            dynet.Expression
+        """
+        self.check_and_renew_graph(update)
+        return Expression.from_cexpr(self.cg_version, self.thiscfptr.subclass_logits(x.c(), classid))
+
+# Softmax Builders }}}

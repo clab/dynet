@@ -1,4 +1,5 @@
-# DyNet
+![DyNet](/doc/source/images/dynet_logo.png "DyNet")
+
 The Dynamic Neural Network Toolkit
 
 **News!** The master branch is now DyNet version 2.0 (as of 6/28/2017), which contains a number of changes including a new model format, etc. If you're looking for the old version, check out the [v1.1 branch](https://github.com/clab/dynet/tree/v1.1).
@@ -18,3 +19,4 @@ You can also read more technical details in our [technical report](https://arxiv
 
 [![Build Status](https://travis-ci.org/clab/dynet.svg?branch=master)](https://travis-ci.org/clab/dynet)
 [![Doc build Status](https://readthedocs.org/projects/dynet/badge/?version=latest)](http://dynet.readthedocs.io/en/latest/)
+[![PyPI version](https://badge.fury.io/py/dyNET.svg)](https://badge.fury.io/py/dyNET)
