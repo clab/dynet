@@ -14,7 +14,7 @@ The Dynamic Neural Network Toolkit
 
 - [General](#general)
 - [Installation](#installation)
-  - [C++](#c++-installation)
+  - [C++](#c-installation)
   - [Python](#python-installation)
 - [Getting Started](#getting-started)
 - [Citing](#citing)
