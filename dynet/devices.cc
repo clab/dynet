@@ -82,6 +82,7 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   kSCALAR_MINUSONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ZERO = (float*)gpu_mem.malloc(sizeof(float));
+  name = "GPU:" + std::to_string(device_id);
   float minusone = -1;
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_MINUSONE, &minusone, sizeof(float), cudaMemcpyHostToDevice));
   float one = 1;
@@ -97,8 +98,6 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   pools[0] = new AlignedMemoryPool("GPU forward memory", (mbs.used[0] << 20), &gpu_mem);
   pools[1] = new AlignedMemoryPool("GPU backward memory", (mbs.used[1] << 20), &gpu_mem);
   pools[2] = new AlignedMemoryPool("GPU parameter memory", (mbs.used[2] << 20), &gpu_mem);
-
-  name = "GPU:" + std::to_string(device_id);
 }
 
 Device_GPU::~Device_GPU() {}
@@ -113,6 +112,7 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
   *kSCALAR_ONE = 1;
   kSCALAR_ZERO = (float*) mem->malloc(sizeof(float));
   *kSCALAR_ZERO = 0;
+  name = "CPU";
 
   // Initialize the Eigen device
   edevice = new Eigen::DefaultDevice;
@@ -121,8 +121,6 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
   pools[0] = new AlignedMemoryPool("CPU forward memory", (mbs.used[0] << 20), &cpu_mem);
   pools[1] = new AlignedMemoryPool("CPU backward memory", (mbs.used[1] << 20), &cpu_mem);
   pools[2] = new AlignedMemoryPool("CPU parameter memory", (mbs.used[2] << 20), shmem);
-
-  name = "CPU";
 }
 
 Device_CPU::~Device_CPU() {}
