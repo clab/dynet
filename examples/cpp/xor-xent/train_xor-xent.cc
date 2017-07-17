@@ -2,9 +2,7 @@
 #include "dynet/dynet.h"
 #include "dynet/training.h"
 #include "dynet/expr.h"
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
+#include "dynet/io.h"
 
 #include <iostream>
 #include <fstream>
@@ -17,23 +15,20 @@ int main(int argc, char** argv) {
 
   // parameters
   const unsigned HIDDEN_SIZE = 8;
-  Model m;
+  ParameterCollection m;
   SimpleSGDTrainer sgd(m);
   //MomentumSGDTrainer sgd(m);
 
   ComputationGraph cg;
 
   Parameter p_W, p_b, p_V, p_a;
+  p_W = m.add_parameters({HIDDEN_SIZE, 2});
+  p_b = m.add_parameters({HIDDEN_SIZE});
+  p_V = m.add_parameters({1, HIDDEN_SIZE});
+  p_a = m.add_parameters({1});
   if (argc == 2) {
-    ifstream in(argv[1]);
-    boost::archive::text_iarchive ia(in);
-    ia >>  m >> p_W >> p_b >> p_V >> p_a;
-  }
-  else {
-    p_W = m.add_parameters({HIDDEN_SIZE, 2});
-    p_b = m.add_parameters({HIDDEN_SIZE});
-    p_V = m.add_parameters({1, HIDDEN_SIZE});
-    p_a = m.add_parameters({1});
+    TextFileLoader loader(argv[1]);
+    loader.populate(m);
   }
 
   Expression W = parameter(cg, p_W);
@@ -63,7 +58,7 @@ int main(int argc, char** argv) {
       y_value = (x1 != x2) ? 1 : 0;
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update(1.0);
+      sgd.update();
     }
     sgd.update_epoch();
     loss /= 4;
@@ -71,8 +66,7 @@ int main(int argc, char** argv) {
   }
 
   // Output the model and parameter objects
-  // to a cout.
-  boost::archive::text_oarchive oa(cout);
-  oa << m << p_W << p_b << p_V << p_a;
+  // to a file.
+  TextFileSaver saver("/tmp/xor-xent.model");
+  saver.save(m);
 }
-

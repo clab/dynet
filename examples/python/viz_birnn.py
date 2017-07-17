@@ -3,7 +3,7 @@ from dynet import *
 train_sentence = [('the','D'), ('dog','N'), ('walks','V')]
 
 i2w = dict(enumerate(set(w for w,t in train_sentence)))
-w2i = dict((w,i) for i,w in i2w.iteritems())
+w2i = dict((w,i) for i,w in i2w.items())
 t2i = dict((t,i) for i,t in enumerate(set(t for w,t in train_sentence)))
 num_words = len(w2i)
 num_tags = len(t2i)

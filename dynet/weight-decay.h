@@ -5,8 +5,6 @@
 #include <cmath>
 #include <iostream>
 
-namespace boost { namespace serialization { class access; } }
-
 namespace dynet {
 
 // I don't bother with learning rates when computing how much the weight
@@ -36,10 +34,6 @@ struct L2WeightDecay {
     weight_decay = 1.0f;
   }
  private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
-
   float weight_decay;
   float lambda;
 };

@@ -1,8 +1,6 @@
 #ifndef DYNET_RNN_STATE_MACHINE_H_
 #define DYNET_RNN_STATE_MACHINE_H_
 
-namespace boost { namespace serialization { class access; } }
-
 namespace dynet {
 
 // CURRENT STATE | ACTION              | NEXT STATE
@@ -38,10 +36,6 @@ class RNNStateMachine {
   }
  private:
   RNNState q_;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
 };
 
 } // namespace dynet

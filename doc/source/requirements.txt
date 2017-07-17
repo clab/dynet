@@ -1,4 +1,5 @@
 sphinx>=1.4
-breathe
+breathe>=4.5
 nbsphinx
 ipykernel
+sphinxcontrib-napoleon

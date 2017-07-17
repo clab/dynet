@@ -10,7 +10,7 @@
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 struct ParameterStorage;
 struct LookupParameterStorage;
 
@@ -18,10 +18,6 @@ struct ShadowParameters {
   ShadowParameters() {}
   explicit ShadowParameters(const ParameterStorage& p);
   Tensor h;
- private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
 };
 
 struct ShadowLookupParameters {
@@ -31,18 +27,12 @@ struct ShadowLookupParameters {
   std::vector<Tensor> h;
  private:
   void initialize_lookups();
-  friend class boost::serialization::access;
-  template<class Archive>
-  void save(Archive& ar, const unsigned int) const;
-  template<class Archive>
-  void load(Archive& ar, const unsigned int);
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 // one per element in model.parameters_list
-std::vector<ShadowParameters> allocate_shadow_parameters(const Model& model);
+std::vector<ShadowParameters> allocate_shadow_parameters(const ParameterCollection& model);
 // one per element in model.lookup_parameters_list
-std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Model& model);
+std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const ParameterCollection& model);
 
 } // namespace dynet
 

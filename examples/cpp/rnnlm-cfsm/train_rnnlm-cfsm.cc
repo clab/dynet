@@ -8,14 +8,13 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/cfsm-builder.h"
+#include "dynet/globals.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -34,7 +33,7 @@ struct RNNLanguageModel {
   LookupParameter p_c;
   Builder builder;
   ClassFactoredSoftmaxBuilder& cfsm;
-  explicit RNNLanguageModel(Model& model, ClassFactoredSoftmaxBuilder& h) :
+  explicit RNNLanguageModel(ParameterCollection& model, ClassFactoredSoftmaxBuilder& h) :
       p_c(model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
       builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
       cfsm(h) {}
@@ -84,12 +83,12 @@ struct RNNLanguageModel {
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 4 && argc != 5) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt clusters.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt clusters.txt [model.file]\n";
     return 1;
   }
   kSOS = d.convert("<s>");
   kEOS = d.convert("</s>");
-  Model model;
+  ParameterCollection model;
   ClassFactoredSoftmaxBuilder cfsm(HIDDEN_DIM, argv[3], d, model);
   vector<vector<int>> training, dev;
   string line;
@@ -124,7 +123,7 @@ int main(int argc, char** argv) {
       dev.push_back(read_sentence(line, d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
-        cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+        cerr << "Dev sentence in " << argv[2] << ":" << dlc << " didn't start or end with <s>, </s>\n";
         abort();
       }
     }
@@ -150,10 +149,8 @@ int main(int argc, char** argv) {
   RNNLanguageModel<LSTMBuilder> lm(model, cfsm);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model, cfsm);
   if (argc == 5) {
-    string fname = argv[4];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    TextFileLoader loader(argv[4]);
+    loader.populate(model);
   }
 
   unsigned report_every_i = 50;
@@ -208,9 +205,8 @@ int main(int argc, char** argv) {
 #if 1
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        TextFileSaver saver(fname);
+        saver.save(model);
       }
     }
 #endif

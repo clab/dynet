@@ -1,22 +1,24 @@
 #include <string>
-#include <cassert>
 #include <vector>
 #include <iostream>
 
 #include "dynet/nodes.h"
 #include "dynet/treelstm.h"
+#include "dynet/param-init.h"
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
-
-BOOST_CLASS_EXPORT_IMPLEMENT(TreeLSTMBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(NaryTreeLSTMBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(UnidirectionalTreeLSTMBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(BidirectionalTreeLSTMBuilder)
 
 enum { X2I, BI, X2F, BF, X2O, BO, X2C, BC };
 enum { H2I, H2F, H2O, H2C, C2I, C2F, C2O };
+
+Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) { throw std::runtime_error("add_input_impl() not a valid function for TreeLSTMBuilder"); }
+Expression TreeLSTMBuilder::back() const { throw std::runtime_error("back() not a valid function for TreeLSTMBuilder"); }
+std::vector<Expression> TreeLSTMBuilder::final_h() const { throw std::runtime_error("final_h() not a valid function for TreeLSTMBuilder"); }
+std::vector<Expression> TreeLSTMBuilder::final_s() const { throw std::runtime_error("final_s() not a valid function for TreeLSTMBuilder"); }
+unsigned TreeLSTMBuilder::num_h0_components() const { throw std::runtime_error("num_h0_components() not a valid function for TreeLSTMBuilder"); }
+void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy() not a valid function for TreeLSTMBuilder"); }
+
 // See "Improved Semantic Representations From Tree-Structured Long Short-Term Memory Networks"
 // by Tai, Nary, and Manning (2015), section 3.2, for details on this model.
 // http://arxiv.org/pdf/1503.00075v3.pdf
@@ -24,31 +26,33 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
                          unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) : layers(layers), N(N), cg(nullptr) {
+                         ParameterCollection& model) : layers(layers), N(N), cg(nullptr) {
   unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("nary-tree-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2i = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2i = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bi = model.add_parameters({hidden_dim});
+    Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2i = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2i = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bi = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // f
-    Parameter p_x2f = model.add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2f = model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2f = model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
-    Parameter p_bf = model.add_parameters({hidden_dim});
+    Parameter p_x2f = local_model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2f = local_model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2f = local_model.add_lookup_parameters(N*N, {hidden_dim, hidden_dim});
+    Parameter p_bf = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // o
-    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2o = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    LookupParameter p_c2o = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bo = model.add_parameters({hidden_dim});
+    Parameter p_x2o = local_model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2o = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    LookupParameter p_c2o = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bo = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // c (a.k.a. u)
-    Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
-    LookupParameter p_h2c = model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
-    Parameter p_bc = model.add_parameters({hidden_dim});
+    Parameter p_x2c = local_model.add_parameters({hidden_dim, layer_input_dim});
+    LookupParameter p_h2c = local_model.add_lookup_parameters(N, {hidden_dim, hidden_dim});
+    Parameter p_bc = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_bi, p_x2f, p_bf, p_x2o, p_bo, p_x2c, p_bc};
@@ -58,7 +62,7 @@ NaryTreeLSTMBuilder::NaryTreeLSTMBuilder(unsigned N,
   }  // layers
 }
 
-void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
+void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   this->cg = &cg;
   param_vars.clear();
   lparam_vars.clear();
@@ -70,27 +74,27 @@ void NaryTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
     auto& lp = lparams[i];
 
     //i
-    Expression i_x2i = parameter(cg, p[X2I]);
-    Expression i_bi = parameter(cg, p[BI]);
+    Expression i_x2i = update ? parameter(cg, p[X2I]) : const_parameter(cg, p[X2I]);
+    Expression i_bi = update ? parameter(cg, p[BI]) : const_parameter(cg, p[BI]);
     //f
-    Expression i_x2f = parameter(cg, p[X2F]);
-    Expression i_bf = parameter(cg, p[BF]);
+    Expression i_x2f = update ? parameter(cg, p[X2F]) : const_parameter(cg, p[X2F]);
+    Expression i_bf = update ? parameter(cg, p[BF]) : const_parameter(cg, p[BF]);
     //o
-    Expression i_x2o = parameter(cg, p[X2O]);
-    Expression i_bo = parameter(cg, p[BO]);
+    Expression i_x2o = update ? parameter(cg, p[X2O]) : const_parameter(cg, p[X2O]);
+    Expression i_bo = update ? parameter(cg, p[BO]) : const_parameter(cg, p[BO]);
     //c
-    Expression i_x2c = parameter(cg, p[X2C]);
-    Expression i_bc = parameter(cg, p[BC]);
+    Expression i_x2c = update ? parameter(cg, p[X2C]) : const_parameter(cg, p[X2C]);
+    Expression i_bc = update ? parameter(cg, p[BC]) : const_parameter(cg, p[BC]);
 
     vector<Expression> vars = {i_x2i, i_bi, i_x2f, i_bf, i_x2o, i_bo, i_x2c, i_bc};
     param_vars.push_back(vars);
 
-    assert (lp.size() == C2O + 1);
+    DYNET_ASSERT(lp.size() == C2O + 1, "Dimension mismatch in TreeLSTM");
     vector<vector<Expression>> lvars(lp.size());
     for (unsigned p_type = H2I; p_type <= C2O; p_type++) {
     LookupParameter p = lp[p_type];
-      vector<Expression> vals(p.get()->values.size());
-      for (unsigned k = 0; k < p.get()->values.size(); ++k) {
+      vector<Expression> vals(p.get_storage().values.size());
+      for (unsigned k = 0; k < p.get_storage().values.size(); ++k) {
         //vals[k] = lookup(cg, p, k);
         vals[k].i = 0;
       }
@@ -114,7 +118,9 @@ void NaryTreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hini
   h.clear();
   c.clear();
   if (hinit.size() > 0) {
-    assert(layers*2 == hinit.size());
+    DYNET_ARG_CHECK(layers*2 == hinit.size(),
+                            "Incorrectly sized initialization in TreeLSTM (" << hinit.size() << "). "
+                            "Must be twice the number of layers (which is " << layers<< ")");
     h0.resize(layers);
     c0.resize(layers);
     for (unsigned i = 0; i < layers; ++i) {
@@ -128,8 +134,8 @@ void NaryTreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hini
 }
 
 Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Expression& x) {
-  assert (id >= 0 && h.size() == (unsigned)id);
-  assert (id >= 0 && c.size() == (unsigned)id);
+  DYNET_ASSERT(id >= 0 && h.size() == (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
+  DYNET_ASSERT(id >= 0 && c.size() == (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   vector<Expression>& ht = h.back();
@@ -172,7 +178,7 @@ Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Ex
         xs.push_back(Lookup(i, C2I, ej));
         xs.push_back(i_c_children[j]);
       }
-      assert (xs.size() == 4 * children.size() + 3);
+      DYNET_ASSERT(xs.size() == 4 * children.size() + 3, "Failed dimension check in TreeLSTMBuilder");
       i_ait = affine_transform(xs);
     }
     else
@@ -194,12 +200,12 @@ Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Ex
           xs.push_back(Lookup(i, C2F, ej * N + ek));
           xs.push_back(i_c_children[j]);
         }
-        assert (xs.size() == 4 * children.size() + 3);
+        DYNET_ASSERT(xs.size() == 4 * children.size() + 3, "Failed dimension check in TreeLSTMBuilder");
         i_aft = affine_transform(xs);
       }
       else
-        i_ait = affine_transform({vars[BF], vars[X2F], in});
-      i_ft.push_back(logistic(i_aft));
+        i_aft = affine_transform({vars[BF], vars[X2F], in});
+      i_ft.push_back(logistic(i_aft + 1.f));
     }
 
     // write memory cell
@@ -214,7 +220,7 @@ Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Ex
         xs.push_back(Lookup(i, H2C, ej));
         xs.push_back(i_h_children[j]);
       }
-      assert (xs.size() == 2 * children.size() + 3);
+      DYNET_ASSERT(xs.size() == 2 * children.size() + 3, "Failed dimension check in TreeLSTMBuilder");
       i_awt = affine_transform(xs);
     }
     else
@@ -247,7 +253,7 @@ Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Ex
         xs.push_back(Lookup(i, C2O, ej));
         xs.push_back(i_c_children[j]);
       }
-      assert (xs.size() == 4 * children.size() + 3);
+      DYNET_ASSERT(xs.size() == 4 * children.size() + 3, "Failed dimension check in TreeLSTMBuilder");
       i_aot = affine_transform(xs);
     }
     else
@@ -263,7 +269,7 @@ Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Ex
 
 void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
   const NaryTreeLSTMBuilder & rnn_treelstm = (const NaryTreeLSTMBuilder&)rnn;
-  assert(params.size() == rnn_treelstm.params.size());
+  DYNET_ASSERT(params.size() == rnn_treelstm.params.size(), "Failed dimension check in TreeLSTMBuilder");
   for(size_t i = 0; i < params.size(); ++i) {
     for(size_t j = 0; j < params[i].size(); ++j) {
       params[i][j] = rnn_treelstm.params[i][j];
@@ -271,22 +277,20 @@ void NaryTreeLSTMBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
-Expression TreeLSTMBuilder::add_input_impl(int prev, const Expression& x) { throw std::runtime_error("add_input_impl() not a valid function for TreeLSTMBuilder"); }
-Expression TreeLSTMBuilder::back() const { throw std::runtime_error("back() not a valid function for TreeLSTMBuilder"); }
-std::vector<Expression> TreeLSTMBuilder::final_h() const { throw std::runtime_error("final_h() not a valid function for TreeLSTMBuilder"); }
-std::vector<Expression> TreeLSTMBuilder::final_s() const { throw std::runtime_error("final_s() not a valid function for TreeLSTMBuilder"); }
-unsigned TreeLSTMBuilder::num_h0_components() const { throw std::runtime_error("num_h0_components() not a valid function for TreeLSTMBuilder"); }
-void TreeLSTMBuilder::copy(const RNNBuilder&) { throw std::runtime_error("copy() not a valid function for TreeLSTMBuilder"); }
+ParameterCollection & NaryTreeLSTMBuilder::get_parameter_collection() {
+  return local_model;
+}
 
 UnidirectionalTreeLSTMBuilder::UnidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) {
-  node_builder = LSTMBuilder(layers, input_dim, hidden_dim, model);
+                         ParameterCollection& model) {
+  local_model = model.add_subcollection("unidirectional-tree-lstm-builder");
+  node_builder = LSTMBuilder(layers, input_dim, hidden_dim, local_model);
 }
 
-void UnidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
-  node_builder.new_graph(cg);
+void UnidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+   node_builder.new_graph(cg, update);
 }
 
 // layout: 0..layers = c
@@ -297,7 +301,7 @@ void UnidirectionalTreeLSTMBuilder::start_new_sequence_impl(const vector<Express
 }
 
 Expression UnidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children, const Expression& x) {
-  assert (id >= 0 && h.size() == (unsigned)id);
+  DYNET_ASSERT(id >= 0 && h.size() == (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
 
   RNNPointer prev = (RNNPointer)(-1);
   Expression embedding = node_builder.add_input(prev, x);
@@ -314,15 +318,16 @@ Expression UnidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children
 BidirectionalTreeLSTMBuilder::BidirectionalTreeLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model& model) {
-  assert (hidden_dim % 2 == 0);
-  fwd_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);
-  rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, model);
+                         ParameterCollection& model) {
+  DYNET_ASSERT(hidden_dim % 2 == 0, "Failed dimension check in TreeLSTMBuilder");
+  local_model = model.add_subcollection("bidirectional-tree-lstm-builder");
+  fwd_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, local_model);
+  rev_node_builder = LSTMBuilder(layers, input_dim, hidden_dim / 2, local_model);
 }
 
-void BidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
-  fwd_node_builder.new_graph(cg);
-  rev_node_builder.new_graph(cg);
+void BidirectionalTreeLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+   fwd_node_builder.new_graph(cg, update);
+   rev_node_builder.new_graph(cg, update);
 }
 
 // layout: 0..layers = c
@@ -334,7 +339,7 @@ void BidirectionalTreeLSTMBuilder::start_new_sequence_impl(const vector<Expressi
 }
 
 Expression BidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children, const Expression& x) {
-  assert (id >= 0 && h.size() == (unsigned)id);
+  DYNET_ASSERT(id >= 0 && h.size() == (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
 
   RNNPointer prev = (RNNPointer)(-1);
   Expression fwd_embedding = fwd_node_builder.add_input(prev, x);

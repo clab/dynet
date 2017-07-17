@@ -8,7 +8,6 @@
 #ifndef DYNET_DIM_H
 #define DYNET_DIM_H
 
-#include <cassert>
 #include <initializer_list>
 #include <type_traits>
 #include <stdexcept>
@@ -16,13 +15,13 @@
 #include <cstring>
 #include <vector>
 
+#include "dynet/except.h"
+
 /**
  * \ingroup dim
  * Maximum number of dimensions supported by dynet : 7
  */
 #define DYNET_MAX_TENSOR_DIM 7
-
-namespace boost { namespace serialization { class access; } }
 
 namespace dynet {
 
@@ -48,6 +47,10 @@ struct Dim {
    * \param x List of dimensions
    */
   Dim(std::initializer_list<unsigned int> x) : nd(0), bd(1) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with initializer_list of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -57,6 +60,10 @@ struct Dim {
    * \param b Batch size
    */
   Dim(std::initializer_list<unsigned int> x, unsigned int b) : nd(0), bd(b) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with initializer_list of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -66,6 +73,10 @@ struct Dim {
    * \param x Array of dimensions
    */
   Dim(const std::vector<long> & x) : nd(0), bd(1) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with vector of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -75,6 +86,10 @@ struct Dim {
      * \param b Batch size
      */
   Dim(const std::vector<long> & x, unsigned int b) : nd(0), bd(b) {
+    DYNET_ARG_CHECK(
+        x.size() <= DYNET_MAX_TENSOR_DIM,
+        "Out of bounds exception in Dim::Dim() with vector of size "
+        << x.size());
     for (auto v : x) d[nd++] = v;
   }
   /**
@@ -130,7 +145,11 @@ struct Dim {
    *
    * \param int New number of dimensions
    */
-  inline void resize(unsigned int i) { nd = i; }
+  inline void resize(unsigned int i) {
+    while(nd < i)
+      d[nd++] = 1;
+    nd = i;
+  }
   /**
    * \brief Get number of dimensions
    * \return Number of dimensions
@@ -141,6 +160,17 @@ struct Dim {
    * \return Size of the first dimension
    */
   inline unsigned int rows() const { return d[0]; }
+  /**
+   * \brief Number of non-one dimensions
+   * \return Number of non-one dimensions
+   */
+  inline unsigned int num_nonone_dims() const {
+    int ret = 0;
+    for(size_t i = 0; i < nd; ++i)
+      if(d[i] != 1)
+        ++ret;
+    return ret;
+  }
   /**
    * \brief Size of the second dimension (or 1 if only one dimension)
    * \return Size of the second dimension (or 1 if only one dimension)
@@ -158,7 +188,11 @@ struct Dim {
    * \param i Dimension index
    * \param s Dimension size
    */
-  inline void set(unsigned int i, unsigned int s) { assert(i < nd); assert(s > 0); d[i] = s; }
+  inline void set(unsigned int i, unsigned int s) {
+    DYNET_ARG_CHECK(i < nd || s == 1, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << d);
+    DYNET_ARG_CHECK(s != 0, "Attempt to set dimension size to zero in Dim::set(" << i << "," << s << ") for node of size " << d);
+    d[i] = s;
+  }
   /**
    * \brief Access a specific dimension as you would access an array element
    *
@@ -178,7 +212,57 @@ struct Dim {
    * \param i index of the dimension to be removed
    */
   inline void delete_dim(unsigned int i) {
-    assert(i < nd);
+    DYNET_ARG_CHECK(i < nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d );
+    if(i == nd-1){
+      if(nd == 1){
+        d[0] = 1;
+      }
+      else{
+        --nd;
+      }
+    }
+    else{
+      for(; i + 1 < nd; ++i){
+        d[i] = d[i + 1];
+      }
+      --nd;
+    }
+  }
+  /**
+   * \brief Remove multi-dimensions
+   * \param dims dimensions to be removed
+   * \param reduce_batch reduce the batch dimension or not
+   */
+  inline void delete_dims(std::vector<unsigned int> dims, bool reduce_batch){
+    std::vector<bool> deleted_dims(nd, false);
+
+    for(unsigned int i = 0; i < dims.size(); i++) {
+      DYNET_ARG_CHECK(dims[i] < nd, "Out of bounds exception in Dim::delete_dims");
+      deleted_dims[dims[i]] = true;
+    }
+
+    if(dims.size() == nd) {
+        nd = 1;
+        d[0] = 1;
+    } else {
+      int flag = 0;
+      for(unsigned int i = 0; i < nd; i++) {
+        if(!deleted_dims[i])
+          d[flag++] = d[i];
+      }
+      nd = flag;
+    }
+
+    if(reduce_batch)
+      bd = 1;
+  }
+  /**
+   * \brief Insert a dimension
+   * \param i the index before which to insert the new dimension
+   * \param n the size of the new dimension
+   */
+  inline void insert_dim(unsigned int i, unsigned int n) {
+    DYNET_ARG_CHECK(i <= nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d);
     if (nd == 1) {
       d[0] = 1;
     } else {
@@ -194,19 +278,20 @@ struct Dim {
   */
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
-    else if (nd == 2) { return Dim({d[1], d[0]}, bd); }
-    throw std::invalid_argument("Cannot transpose Dim object with more than 2 dimensions");
+    else {
+      DYNET_ARG_CHECK(nd == 2, "Cannot transpose Dim object with more than 2 dimensions, but got " << d);
+      return Dim({d[1], d[0]}, bd);
+    }
   }
+  /**
+  * \brief Print the unbatched profile as a string
+  **/
+  void print_profile(std::ostream & out) const;
 
   unsigned int d[DYNET_MAX_TENSOR_DIM]; /**< Array of dimension */
   unsigned int nd; /**< Number of dimensions */
   unsigned int bd; /**< Batch dimension */
-private:
-  friend class boost::serialization::access;
-  template<class Archive> void serialize(Archive& ar, const unsigned int);
 };
-
-//static_assert(std::is_trivially_copyable<Dim>::value, "Dim must be trivially copyable");
 
 /**
  * \brief Check for equality between two Dim
@@ -247,6 +332,8 @@ std::ostream& operator<<(std::ostream& os, const Dim& d);
  * \param ds vector of Dims
  */
 std::ostream& operator<<(std::ostream& os, const std::vector<Dim>& ds);
+
+std::istream& operator>>(std::istream& os, Dim& d);
 
 } // namespace dynet
 

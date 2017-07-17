@@ -1,16 +1,16 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-if (NOT MSVC)
-   set(MP_EXAMPLES rnnlm-mp xor-mp)
+if(ENABLE_BOOST)
+  if (NOT MSVC)
+    set(MP_EXAMPLES xor-mp xor-simple-mp rnnlm-mp)
+  endif()
 endif()
 
-foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-xent xor-batch xor-batch-lookup rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm textcat read-write segrnn-sup ${MP_EXAMPLES})
+foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-autobatch xor-xent xor-batch xor-batch-lookup rnn-autobatch rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm read-write attention imdb rnnlm-batch-nce ${MP_EXAMPLES})
   set(TARGET train_${FOLDER})
   ADD_EXECUTABLE(${TARGET} cpp/${FOLDER}/${TARGET}.cc)
   if (WITH_CUDA_BACKEND)
     target_link_libraries(${TARGET} gdynet ${LIBS})
-    add_dependencies(${TARGET} dynetcuda)
-    target_link_libraries(${TARGET} dynetcuda)
     CUDA_ADD_CUBLAS_TO_TARGET(${TARGET})
   else()
     target_link_libraries(${TARGET} dynet ${LIBS})
@@ -19,4 +19,3 @@ foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl
     target_link_libraries(${TARGET} rt)
   endif()
 endforeach()
-
