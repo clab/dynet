@@ -1616,13 +1616,17 @@ cdef class Expression: #{{{
     def __add__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
             return _add(self,other)
-        elif isinstance(self, (int,float)) or isinstance(other, (int,float)):
+        elif isinstance(self, (int,float)):
+            return _cadd(other, self)
+        elif isinstance(other, (int,float)):
             return _cadd(self, other)
         else: raise NotImplementedError()
     def __mul__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
             return _mul(self,other)
-        elif isinstance(self, (int,float)) or isinstance(other, (int,float)):
+        elif isinstance(self, (int,float)):
+            return _cmul(other, self)
+        elif isinstance(other, (int,float)):
             return _cmul(self, other)
         else: raise NotImplementedError()
     def __div__(self, other):
