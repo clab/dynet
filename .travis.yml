@@ -1,27 +1,93 @@
 language: cpp
+
+os:
+  - linux
+  - osx
 compiler:
   - gcc
-
-install:
-- if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+  - clang
+dist: trusty
 addons:
   apt:
     sources:
-    - ubuntu-toolchain-r-test
+      - ubuntu-toolchain-r-test
+      - boost-latest
     packages:
-    - gcc-4.8
-    - g++-4.8
+      - gcc-4.8
+      - g++-4.8
+      - libboost-filesystem1.55-dev
+      - libboost-program-options1.55-dev
+      - libboost-serialization1.55-dev
+      - libboost-test1.55-dev
+      - libboost-regex1.55-dev
+env:
+  global:
+    - PYTHON=python CONDA_PACKAGES="numpy cython"
+  matrix:
+    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip
+    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
+    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip
+matrix:
+  exclude:
+    - os: linux
+      compiler: clang
+    - os: osx
+      compiler: gcc
+    - os: osx
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip
+    - os: osx
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip
+
+before_install:
+  # We do this conditionally because it saves us some downloading if the
+  # version is the same.
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      export MINICONDA_OS_NAME=Linux CXX=g++-4.8 CC=gcc-4.8;
+    elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      export MINICONDA_OS_NAME=MacOSX;
+    fi
+  - wget https://repo.continuum.io/miniconda/Miniconda$PYNUM-latest-$MINICONDA_OS_NAME-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+install:
+  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
+      hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb || travis_terminate 1;
+      cd eigen;
+      mkdir build && cd build;
+      cmake .. || travis_terminate 1;
+      sudo make install || travis_terminate 1;
+      cd ../..;
+    fi'
 
 before_script:
-  - sudo add-apt-repository -y ppa:boost-latest/ppa
-  - sudo apt-get update -qq
-  - sudo apt-get install libboost-filesystem1.55-dev libboost-program-options1.55-dev libboost-serialization1.55-dev libboost-test1.55-dev libboost-regex1.55-dev
-  - hg clone https://bitbucket.org/eigen/eigen
-  - mkdir build
-  - cd build
-  - cmake .. -DEIGEN3_INCLUDE_DIR=eigen
+  - cd $TRAVIS_BUILD_DIR
+  - conda create -q -n dynet-environment python=$PYVER $CONDA_PACKAGES
+  - source activate dynet-environment
+  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
+      mkdir build;
+      cd build;
+      cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DENABLE_BOOST=ON -DPYTHON=`which python` || travis_terminate 1;
+    else
+      pip install -v . || travis_terminate 1;
+    fi'
+
+after_failure:
+  - cat $TRAVIS_BUILD_DIR/build/CMakeFiles/CMakeError.log
 
 script:
-  - make
-  - make test
-
+  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
+      if [[ $TRAVIS_OS_NAME == "linux" ]]; then make -j$(nproc); fi;
+      if [[ $TRAVIS_OS_NAME == "osx" ]]; then make -j$(sysctl -n hw.ncpu); fi;
+      make test || travis_terminate 1;
+      cd python;
+      python setup.py install --user || travis_terminate 1;
+    fi'
+  - cd $TRAVIS_BUILD_DIR/tests/python
+  - python test.py

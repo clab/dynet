@@ -4,13 +4,11 @@
 #include "dynet/timing.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/io.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/access.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -33,7 +31,7 @@ struct Encoder {
 
   Encoder() {}
 
-  explicit Encoder(Model& model) {
+  explicit Encoder(ParameterCollection& model) {
     p_s = model.add_lookup_parameters(INPUT_VOCAB_SIZE, {REP_DIM}); 
     p_t = model.add_lookup_parameters(OUTPUT_VOCAB_SIZE, {REP_DIM}); 
   }
@@ -67,18 +65,12 @@ struct Encoder {
 #endif
   }
 
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int) {
-    ar & p_s;
-    ar & p_t;
-  }
 };
 
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
     return 1;
   }
   vector<pair<vector<int>, vector<int>>> training, dev;
@@ -133,16 +125,13 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 #endif
-  Model model;
+  ParameterCollection model;
   Encoder emb;
+  emb = Encoder(model);
   if (argc == 4) {
     string fname = argv[3];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> emb;
-  }
-  else {
-    emb = Encoder(model);
+    TextFileLoader loader(fname);
+    loader.populate(model);
   }
 
   bool use_momentum = false;
@@ -217,9 +206,8 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << emb;
+	TextFileSaver saver("/tmp/embed-cl.model");
+	saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }

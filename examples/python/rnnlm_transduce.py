@@ -8,10 +8,13 @@ INPUT_DIM = 50  #256
 HIDDEN_DIM = 50  #1024
 VOCAB_SIZE = 0
 
-from collections import defaultdict
-from itertools import count, izip
+import argparse
 import sys
 import util
+try:
+    from itertools import izip as zip
+except ImportError:
+    pass
 
 class RNNLanguageModel:
     def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder):
@@ -35,7 +38,7 @@ class RNNLanguageModel:
         expected_outputs = [int(nw) for nw in sent[1:]]
         outputs = state.transduce(inputs)
         r_ts = ((bias + (R * y_t)) for y_t in outputs)
-        errs = [pickneglogsoftmax(r_t, eo) for r_t, eo in izip(r_ts, expected_outputs)]
+        errs = [pickneglogsoftmax(r_t, eo) for r_t, eo in zip(r_ts, expected_outputs)]
         nerr = esum(errs)
         return nerr
 
@@ -66,7 +69,11 @@ class RNNLanguageModel:
         return res
 
 if __name__ == '__main__':
-    train = util.CharsCorpusReader(sys.argv[1],begin="<s>")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('corpus', help='Path to the corpus file.')
+    args = parser.parse_args()
+
+    train = util.CharsCorpusReader(args.corpus, begin="<s>")
     vocab = util.Vocab.from_corpus(train)
     
     VOCAB_SIZE = vocab.size()

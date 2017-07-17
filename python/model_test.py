@@ -1,7 +1,8 @@
 """
 Tests for model saving and loading, including for user-defined models.
 """
-from pydynet import *
+from __future__ import print_function
+from dynet import *
 import numpy
 import os
 
@@ -46,7 +47,7 @@ class NoParameters(Saveable):
     def __init__(self, act):
         self.act = act
     def __call__(self, in_expr):
-        return self.act(cwise_multiply(in_expr))
+        return self.act(cmult(in_expr))
     def get_components(self): return []
     def restore_components(self,components):pass
 
@@ -186,7 +187,7 @@ def new_style_save_and_load():
 
 new_style_save_and_load()
 
-print "Model saving tests passed."
+print("Model saving tests passed.")
 
 
 

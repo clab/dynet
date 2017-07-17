@@ -20,10 +20,6 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -31,7 +27,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 int kSOS;
 int kEOS;
@@ -82,13 +77,13 @@ public:
   /**
    * \brief Constructor for the batched RNN language model
    *
-   * \param model Model to hold all parameters for training
+   * \param model ParameterCollection to hold all parameters for training
    * \param LAYERS Number of layers of the RNN
    * \param INPUT_DIM Embedding dimension for the words
    * \param HIDDEN_DIM Dimension of the hidden states
    * \param VOCAB_SIZE Size of the input vocabulary
    */
-  explicit RNNBatchLanguageModel(Model& model,
+  explicit RNNBatchLanguageModel(ParameterCollection& model,
                                  unsigned LAYERS,
                                  unsigned INPUT_DIM,
                                  unsigned HIDDEN_DIM,
@@ -220,15 +215,6 @@ public:
 
     }
     cerr << endl;
-  }
-
-private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int) {
-    ar & LAYERS & INPUT_DIM & HIDDEN_DIM;
-    ar & p_c & p_R & p_bias;
-    ar & rnn;
   }
 };
 

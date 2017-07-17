@@ -6,14 +6,14 @@
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 
 struct GRUBuilder : public RNNBuilder {
   GRUBuilder() = default;
   explicit GRUBuilder(unsigned layers,
                       unsigned input_dim,
                       unsigned hidden_dim,
-                      Model& model);
+                      ParameterCollection& model);
   Expression back() const override { return (cur == -1? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
   std::vector<Expression> final_s() const override { return final_h(); }
@@ -21,20 +21,22 @@ struct GRUBuilder : public RNNBuilder {
   std::vector<Expression> get_s(RNNPointer i) const override { return get_h(i); }
   unsigned num_h0_components() const override { return layers; }
   void copy(const RNNBuilder & params) override;
+  ParameterCollection & get_parameter_collection() override;
 
+
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> params;
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> param_vars;
 
  protected:
-  void new_graph_impl(ComputationGraph& cg) override;
+  void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
-  // first index is layer, then ...
-  std::vector<std::vector<Parameter>> params;
-
-  // first index is layer, then ...
-  std::vector<std::vector<Expression>> param_vars;
+  ParameterCollection local_model;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h;

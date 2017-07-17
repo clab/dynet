@@ -3,15 +3,15 @@
 #if HAVE_CUDA
 
 #include <vector>
-#include <cassert>
 #include <utility>
 #include <stdexcept>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
-
+#if HAVE_CUDNN
+#include <cudnn.h>
+#endif
 #include "dynet/except.h"
-
 
 #define MAX_GPUS 256
 
@@ -33,7 +33,17 @@
     }                                                      \
   } while(0)
 
-
+#if HAVE_CUDNN
+#define CUDNN_CHECK(stmt) do {                             \
+    cudnnStatus_t stat = (stmt);                           \
+    if (stat != CUDNN_STATUS_SUCCESS){                     \
+      std::cerr << "CUDNN failure in " << #stmt            \
+                << std::endl << cudnnGetErrorString(stat)       \
+                << std::endl;                              \
+      throw dynet::cuda_exception(#stmt);                  \
+    }                                                      \
+  } while(0)
+#endif
 
 namespace dynet {
 
@@ -43,11 +53,15 @@ struct DynetParams;
 class Device;
 
 inline std::pair<int, int> SizeToBlockThreadPair(int n) {
-  assert(n);
+  DYNET_ASSERT(n > 0, "Bad thread size in GPU code " << n);
   int logn;
-#ifdef _WIN32
-  // TODO: Write assembly for MSVC, remove the following line:
-  logn = log2(n);
+#if defined(_MSC_VER)
+  logn = 0;
+  if (n > 2) {
+    int localN = n - 1;
+    while (localN >>= 1) 
+      logn++;
+  }
 #else
   asm("\tbsr %1, %0\n"
       : "=r"(logn)
@@ -61,7 +75,7 @@ inline std::pair<int, int> SizeToBlockThreadPair(int n) {
   return std::make_pair(blocks, threads);
 }
 
-std::vector<Device*> initialize_gpu(dynet::DynetParams params);
+std::vector<Device*> initialize_gpu(dynet::DynetParams& params);
 std::vector<Device*> initialize_gpu(int& argc, char**& argv);
 
 } // namespace dynet

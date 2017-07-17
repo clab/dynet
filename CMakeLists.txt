@@ -57,8 +57,21 @@ endfunction()
 ######## Cross-compiler, cross-platform options
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
 if (MKL OR MKL_ROOT)
+  if (DEFINED ENV{MKL_ROOT} AND NOT DEFINED MKL_ROOT)  # use env variable if not defined
+    set(MKL_ROOT $ENV{MKL_ROOT})
+  endif()
   find_mkl()  # sets include/lib directories and sets ${LIBS} needed for linking
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
+endif()
+
+# There are about 30 files compiled for GPU. We merge them into less
+# for faster compilation. Set to 0 to mean no merging, or k to merge into k files. 
+if(NOT DEFINED GPU_NUMFILES)
+  if(MSVC)
+    set(GPU_NUMFILES 1)   # MSVC does serial compilation of CUDA, so minimize overhead
+  else()
+    set(GPU_NUMFILES 4)   # Should probably be set to number of jobs in parallel make
+  endif()
 endif()
 
 
@@ -69,63 +82,55 @@ endif()
 
 ######## Compiler-specific options
 if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 -DEIGEN_HAS_C99_MATH /MP")   # -Wall produces 20k warnings
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 /MP")   # -Wall produces 20k warnings. Enable parallel compilation
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -fno-finite-math-only -Wall -Wno-missing-braces -std=c++11 -Ofast -g -march=native")
 endif()
-
-enable_testing()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
                     ${PROJECT_SOURCE_DIR}/external/easyloggingpp/src)
 
 function(find_cudnn)
-  set(CUDNN_ROOT "" CACHE PATH "CUDNN root path")
+  set(CUDNN_ROOT /usr/local/cuda CACHE PATH "CUDNN root path")
   find_path(CUDNN_INCLUDE_DIRS cudnn.h
-    PATHS ${CUDNN_ROOT}
+    HINTS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/include
     DOC "CUDNN include path")
-  find_library(CUDNN_LIBRARIES NAMES libcudnn.so
+  find_library(CUDNN_LIBRARIES NAMES libcudnn.so cudnn.lib
     PATHS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/lib
           ${CUDNN_ROOT}/lib64
+          ${CUDNN_ROOT}/lib/x64
     DOC "CUDNN library path")
   if(CUDNN_INCLUDE_DIRS AND CUDNN_LIBRARIES)
     set(CUDNN_FOUND TRUE PARENT_SCOPE)
     message(STATUS "Found CUDNN (include: ${CUDNN_INCLUDE_DIRS}, library: ${CUDNN_LIBRARIES})")
     mark_as_advanced(CUDNN_INCLUDE_DIRS CUDNN_LIBRARIES)
   else()
-    MESSAGE(FATAL_ERROR "Failed to find CUDNN in path: ${CUDNN_ROOT} (Did you set CUDNN_ROOT properly?)")
+    MESSAGE(STATUS "Failed to find CUDNN in path: ${CUDNN_ROOT} (Did you set CUDNN_ROOT properly?)")
   endif()
 endfunction()
 
 # look for Boost
-if(DEFINED ENV{BOOST_ROOT})
-  set(Boost_NO_SYSTEM_PATHS ON)
-  if(DEFINED ${Boost_INCLUDE_DIR})
-    get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+if(ENABLE_BOOST)
+  message("-- Enabling Boost")
+  if(DEFINED ENV{BOOST_ROOT})
+    set(Boost_NO_SYSTEM_PATHS ON)
+    if(DEFINED ${Boost_INCLUDE_DIR})
+      get_filename_component(Boost_INCLUDE_DIR "${Boost_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+    endif()
+  endif()
+  set(Boost_REALPATH ON)
+  find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
+  message("-- Boost dir is " ${Boost_INCLUDE_DIR})
+  include_directories(${Boost_INCLUDE_DIR})
+  if(MSVC)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
+  else()
+    set(LIBS ${LIBS} ${Boost_LIBRARIES})
   endif()
 endif()
-set(Boost_REALPATH ON)
-find_package(Boost COMPONENTS program_options regex serialization REQUIRED)
-message("-- Boost dir is " ${Boost_INCLUDE_DIR})
-include_directories(${Boost_INCLUDE_DIR})
-if(MSVC)
-  # Boost does auto-linking when using a compiler like Microsoft Visual C++, we just need to help it find the libraries
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
-else()
-  set(LIBS ${LIBS} ${Boost_LIBRARIES})
-endif()
-# trouble shooting:
-# if boost library cannot be found, in addition to install boost library
-# check if environment variables are set
-#
-# to set boost root and its library root in environment variable, use
-# for example
-# echo "export BOOST_LIBRARYDIR=/usr/local/lib" >> ~/.bashrc
-# echo "export BOOST_ROOT=/cygdrive/d/tools/boost_1_58_0/boost_1_58_0" >> ~/.bashrc
-# then run source ~/.bashrc to have those environment variable effective immediately
 
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
@@ -151,14 +156,23 @@ if (WITH_CUDA_BACKEND)
   list(REMOVE_ITEM CUDA_LIBRARIES -lpthread)
   set(LIBS ${LIBS} ${CUDA_LIBRARIES})
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_HAS_CUDA_FP16 -DEIGEN_USE_GPU")
-  #find_cudnn()
-  #include_directories(SYSTEM ${CUDNN_INCLUDE_DIRS})
+  find_cudnn()
+  if(CUDNN_FOUND)
+    include_directories(SYSTEM ${CUDNN_INCLUDE_DIRS})
+    list(APPEND CUDA_LIBRARIES ${CUDNN_LIBRARIES})
+    message("-- Successfully include CUDNN flags")
+  else()
+    message("-- CUDNN not found, some dependent functionalities will be disabled")
+  endif()
 endif()
 
 # look for Eigen
-find_package(Eigen3 REQUIRED)
+if (DEFINED ENV{EIGEN3_INCLUDE_DIR} AND NOT DEFINED EIGEN3_INCLUDE_DIR) # use env variable if not set
+  set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
+endif()
 get_filename_component(EIGEN3_INCLUDE_DIR "${EIGEN3_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
 message("-- Eigen dir is " ${EIGEN3_INCLUDE_DIR})
+find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 FIND_PACKAGE(Threads REQUIRED)
@@ -168,8 +182,16 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(dynet)
-add_subdirectory(tests)
 add_subdirectory(examples)
 add_subdirectory(tutorial)
 add_subdirectory(python)
-enable_testing()
+
+if(ENABLE_SWIG)
+  message("-- Enabling SWIG")
+  add_subdirectory(contrib/swig)
+endif(ENABLE_SWIG)
+
+if(ENABLE_BOOST)
+  add_subdirectory(tests)
+  enable_testing()
+endif()

@@ -13,7 +13,7 @@ MLP=True
 
 def read(fname):
     sent = []
-    for line in file(fname):
+    for line in open(fname):
         line = line.strip().split()
         if not line:
             if sent: yield sent
