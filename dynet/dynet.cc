@@ -27,7 +27,23 @@ size_t Node::aux_storage_size() const { return 0; }
 void Node::forward(const std::vector<const Tensor*>& xs,
                    Tensor& fx) const {
   if (this->supports_multibatch() || fx.d.batch_elems() == 1) {
-    forward_impl(xs, fx);
+    std::vector<const Tensor*> xsxs;
+    for (size_t k = 0; k < xs.size(); ++k) {
+      auto x = xs[k];
+      if (x->device == fx.device) {
+        xsxs.push_back(x);
+      } else {
+        Tensor *xx = nullptr;
+        xx->d = x->d;
+        xx->device = fx.device;
+        xx->mem_pool = DeviceMempool::FXS;
+        xx->v = static_cast<float*>(xx->device->pools[(int)DeviceMempool::FXS]->
+                                    allocate(x->d.size() * sizeof(float)));
+        TensorTools::copy_elements(*xx, *x);
+        xsxs.push_back(xx);
+      }
+    }
+    forward_impl(xsxs, fx);
   } else {
     size_t i;
     std::vector<Tensor> xs_elems(xs.size());
