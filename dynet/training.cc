@@ -24,6 +24,13 @@
     else if(default_device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)default_device,scale,gscale,values); } \
     else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
+#elif defined(THREAD_POOL)
+#define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
+  template void MyTrainer::update_rule_dev<Device_ThreadPool>(const Device_ThreadPool & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
+  void MyTrainer::update_rule(real scale, real gscale, const std::vector<Tensor*> & values) { \
+    if(default_device->type == DeviceType::ThreadPool) { update_rule_dev(*(Device_ThreadPool*)default_device,scale,gscale,values); } \
+    else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
+  }
 #else
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real scale, real gscale, const std::vector<Tensor*> & values); \
