@@ -1043,6 +1043,7 @@ Dim VanillaLSTMH::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs[0].ndims() == 1, "VanillaLSTMH: c_t expected to be a vector");
   DYNET_ARG_CHECK(xs[1].ndims() == 1, "VanillaLSTMH: gates_t expected to be a vector");
   DYNET_ARG_CHECK(xs[0].size()*4 == xs[1].size(), "VanillaLSTMH: gates_t expected 4 times as big as c_t, but " << xs[0].size() << "*4 != " << xs[1].size());
+  DYNET_ARG_CHECK(xs[0].bd == xs[1].bd, "VanillaLSTMH: gates_t and c_t expected to have equal batch size, but " << xs[0].bd << " != " << xs[1].bd);
   return xs[0];
 }
 

@@ -2226,11 +2226,13 @@ void VanillaLSTMGates::forward_dev_impl(const MyDevice & dev, const vector<const
   //bias
   Eigen::array<int, 2> bcast = {(int)1, (int)batch_size};
   fx.tbvec().device(*dev.edevice) = b->tbvec().broadcast(bcast);
-  fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += h_tm1->tbvec().constant(1);
+//  fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += h_tm1->tbvec().constant(1);
 
   //matrix mult
-  fx.colbatch_matrix() += **Wx * x_t->colbatch_matrix() + **Wh * h_tm1->colbatch_matrix() ; // TODO: this line will need special treatment on GPU
+  fx.colbatch_matrix() += **Wx * x_t->colbatch_matrix();
+  fx.colbatch_matrix() += **Wh * h_tm1->colbatch_matrix() ; // TODO: this line will need special treatment on GPU
 
+  cout << "fx:" << fx.tvec() << "\n";
   // non-linearities
   fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3).unaryExpr(scalar_logistic_sigmoid_op<float>());
   fx.tbvec().slice(indices_g, sizes_1).device(*dev.edevice) = fx.tbvec().slice(indices_g, sizes_1).tanh();
@@ -2351,7 +2353,8 @@ void VanillaLSTMC::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   Eigen::DSizes<ptrdiff_t, 2> indices_g(hidden_dim*3,0);
   Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
 
-  fx.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_i, sizes_1) * gates_t->tbvec().slice(indices_g, sizes_1) + gates_t->tbvec().slice(indices_f, sizes_1) * c_tm1->tbvec();
+  fx.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_i, sizes_1) * gates_t->tbvec().slice(indices_g, sizes_1)
+			          + gates_t->tbvec().slice(indices_f, sizes_1) * c_tm1->tbvec();
 
 }
 
@@ -2397,7 +2400,7 @@ void VanillaLSTMH::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   unsigned batch_size = c_t->d.bd;
 
   Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
-  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
+  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(batch_size));
 
   fx.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_o, sizes_1) * c_t->tbvec().tanh();
 }
@@ -2410,10 +2413,12 @@ void VanillaLSTMH::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   unsigned hidden_dim = fx.d[0];
+  unsigned batch_size = fx.d.bd;
   Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
-  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
+  Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(batch_size));
 
   if(i==0){ // dc_t = dh_t . o_t . (1 - tanh(tanh(c_t)))
+    // TODO: gradient checks not passing in case of multiple batches
     dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_o, sizes_1) * (xs[0]->tbvec().constant(1) - xs[0]->tbvec().tanh().tanh());
   } else if(i==1){ // do_t = dh_t . tanh(c_t)
     dEdxi.tbvec().slice(indices_o, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[0]->tbvec().tanh();
