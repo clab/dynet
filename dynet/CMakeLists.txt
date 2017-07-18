@@ -74,6 +74,7 @@ set(dynet_library_HDRS
     c2w.h
     cfsm-builder.h
     cuda-matrix-multiply.h
+    cpu-matrix-multiply.h
     cuda.h
     cudnn-ops.h
     deep-lstm.h
