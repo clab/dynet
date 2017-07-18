@@ -214,23 +214,23 @@ BOOST_FIXTURE_TEST_SUITE(rnn_test, RNNTest);
 //  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(h_t, (unsigned)1).value())[1], -0.04179438585, 0.001);
 //  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(h_t, (unsigned)1).value())[2], -0.09704460302, 0.001);
 //}
-//
-//BOOST_AUTO_TEST_CASE( lstm_node_h_gradient ) {
-//  unsigned hidden_dim = 3;
-//  unsigned batch_size = 2;
-//  dynet::ComputationGraph cg;
-//
-////  Expression c_t = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
-//  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
-//  Expression c_t = dynet::reshape(dynet::parameter(cg, param_6), Dim({hidden_dim},batch_size));
-////  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
-////  Expression c_t = dynet::reshape(dynet::parameter(cg, param_3), Dim({hidden_dim},batch_size));
-////  Expression gates_t = dynet::reshape(dynet::parameter(cg, param_24), Dim({hidden_dim*4},batch_size));
-//  Expression h_t = vanilla_lstm_h(c_t, gates_t);
-//  Expression z = squared_norm(sum_batches(h_t));
-//  BOOST_CHECK(check_grad(mod, z, 0)); // TODO: this fails (though only when batch_size>1)
-//}
-//
+
+BOOST_AUTO_TEST_CASE( lstm_node_h_gradient ) {
+  unsigned hidden_dim = 3;
+  unsigned batch_size = 2;
+  dynet::ComputationGraph cg;
+
+//  Expression c_t = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+  Expression c_t = dynet::reshape(dynet::parameter(cg, param_6), Dim({hidden_dim},batch_size));
+//  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
+//  Expression c_t = dynet::reshape(dynet::parameter(cg, param_3), Dim({hidden_dim},batch_size));
+//  Expression gates_t = dynet::reshape(dynet::parameter(cg, param_24), Dim({hidden_dim*4},batch_size));
+  Expression h_t = vanilla_lstm_h(c_t, gates_t);
+  Expression z = squared_norm(sum_batches(h_t));
+  BOOST_CHECK(check_grad(mod, z, 0)); // TODO: this fails (though only when batch_size>1)
+}
+
 //BOOST_AUTO_TEST_CASE( lstm_node_c_gradient ) {
 //  unsigned hidden_dim = 3;
 //  unsigned batch_size = 2;
@@ -262,57 +262,45 @@ BOOST_FIXTURE_TEST_SUITE(rnn_test, RNNTest);
 //  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(c_t, (unsigned)1).value())[1], 0.1189, 0.001);
 //  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(c_t, (unsigned)1).value())[2], 0.1479, 0.001);
 //}
-BOOST_AUTO_TEST_CASE( lstm_node_gates_fwd ) {
-  unsigned input_dim = 2;
-  unsigned hidden_dim = 2;
-  unsigned batch_size = 2;
-  dynet::ComputationGraph cg;
-
-  Expression x_t = dynet::input(cg, Dim({input_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f});
-    cout << "x_t: " << print_vec(as_vector(x_t.value())) << "\n";
-    cout << "x_t b0: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)0).value())) << "\n";
-    cout << "x_t b1: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)1).value())) << "\n";
-  Expression h_tm1 = dynet::input(cg, Dim({input_dim}, batch_size), {0.f, -0.1f, 0.2f, -0.3f});
-  Expression Wx = dynet::input(cg, Dim({hidden_dim*4, input_dim}, 1), {0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f});
-  Expression Wh = dynet::input(cg, Dim({hidden_dim*4, hidden_dim}, 1), {0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f});
-  Expression b = dynet::input(cg, Dim({hidden_dim*4}, 1), {0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f});
-  Expression gates = vanilla_lstm_gates(x_t, h_tm1, Wx, Wh, b);
-  // Wx*x = 0.11 0.33 / 0.33 1.43
-  // Wh*h = -0.12 -0.34 / -0.34 -0.56
-  // + b  = -0.01 0.09 / -0.01 0.97
-  // intermediate step:
-  // Wx*x + Wh*h + b =
-  // [-0.01 0.09 0.99 1.09 -0.01 0.09 -0.01 0.09]^T  (including forget bias + 1)
-  // [-0.01 0.53 1.87 2.41 -0.01 0.53 0.87 1.41]^T   (including forget bias + 1)
-
-
-
-
-
-
-
-
-
-
-
-
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[0], 0.497500021, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[1], 0.522484825, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[2], 0.729087922, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[3], 0.748381722, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[4], 0.497500021, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[5], 0.522484825, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[6], -0.009999656681, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[7], 0.08975778475, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[0], 0.497500021, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[1], 0.629483112, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[2], 0.866458277, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[3], 0.917586682, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[4], 0.497500021, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[5], 0.629483112, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[6], 0.7013741309, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[7], 0.8874941329, 0.001);
-}
+//BOOST_AUTO_TEST_CASE( lstm_node_gates_fwd ) {
+//  unsigned input_dim = 2;
+//  unsigned hidden_dim = 2;
+//  unsigned batch_size = 2;
+//  dynet::ComputationGraph cg;
+//
+//  Expression x_t = dynet::input(cg, Dim({input_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f});
+////    cout << "x_t: " << print_vec(as_vector(x_t.value())) << "\n";
+////    cout << "x_t b0: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)0).value())) << "\n";
+////    cout << "x_t b1: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)1).value())) << "\n";
+//  Expression h_tm1 = dynet::input(cg, Dim({input_dim}, batch_size), {0.f, -0.1f, 0.2f, -0.3f});
+//  Expression Wx = dynet::input(cg, Dim({hidden_dim*4, input_dim}, 1), {0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f});
+//  Expression Wh = dynet::input(cg, Dim({hidden_dim*4, hidden_dim}, 1), {0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f});
+//  Expression b = dynet::input(cg, Dim({hidden_dim*4}, 1), {0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f});
+//  Expression gates = vanilla_lstm_gates(x_t, h_tm1, Wx, Wh, b);
+//  // Wx*x = 0.11 0.33 / 0.33 1.43
+//  // Wh*h = -0.12 -0.34 / -0.34 -0.56
+//  // + b  = -0.01 0.09 / -0.01 0.97
+//  // intermediate step:
+//  // Wx*x + Wh*h + b =
+//  // [-0.01 0.09 0.99 1.09 -0.01 0.09 -0.01 0.09]^T  (including forget bias + 1)
+//  // [-0.01 0.53 1.87 2.41 -0.01 0.53 0.87 1.41]^T   (including forget bias + 1)
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[0], 0.497500021, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[1], 0.522484825, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[2], 0.729087922, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[3], 0.748381722, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[4], 0.497500021, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[5], 0.522484825, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[6], -0.009999656681, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)0).value())[7], 0.08975778475, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[0], 0.497500021, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[1], 0.629483112, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[2], 0.866458277, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[3], 0.917586682, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[4], 0.497500021, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[5], 0.629483112, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[6], 0.7013741309, 0.001);
+//  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[7], 0.8874941329, 0.001);
+//}
 
 
 
