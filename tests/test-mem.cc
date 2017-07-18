@@ -14,7 +14,7 @@ using namespace std;
 struct MemTest {
   MemTest() {
     // initialize if necessary
-    for (auto x : {"MemTest", "--dynet-mem", "3"}) {
+    for (auto x : {"MemTest", "--dynet-mem", "4"}) {
       av.push_back(strdup(x));
     }
     char **argv = &av[0];
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE( expand_test ) {
     Expression z = sum_rows(sum_cols(x));
     cg.forward(z);
     cg.backward(z);
-    trainer.update(0.1);
+    trainer.update();
   }
 }
 

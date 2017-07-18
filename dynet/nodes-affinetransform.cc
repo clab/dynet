@@ -1,4 +1,4 @@
-#include "dynet/nodes.h"
+#include "dynet/nodes-affinetransform.h"
 
 #include "dynet/nodes-macros.h"
 #include "dynet/cuda-matrix-multiply.h"
@@ -6,6 +6,8 @@
 using namespace std;
 
 namespace dynet {
+
+// ************* AffineTransform *************
 
 #ifndef __CUDACC__
 

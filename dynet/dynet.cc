@@ -1,7 +1,6 @@
 #include "dynet/dynet.h"
 
 #include "dynet/exec.h"
-#include "dynet/nodes.h"
 #include "dynet/param-nodes.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet-helper.h"

@@ -6,6 +6,7 @@
 #include <stdexcept>
 
 #include <boost/test/unit_test.hpp>
+#include <boost/version.hpp>
 
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
@@ -180,10 +181,18 @@ BOOST_AUTO_TEST_CASE ( test_save_load_parameter_nonzerograd ) {
   DYNET_CHECK_EQUAL(m2c, mc);
 }
 
-BOOST_AUTO_TEST_CASE ( test_save1_perf ) {
+#if BOOST_VERSION >= 105900
+#define BOOST_PERF_TEST_CASE(testname) \
+  BOOST_AUTO_TEST_CASE ( testname, *boost::unit_test::disabled() )
+#else
+#define BOOST_PERF_TEST_CASE(testname) \
+  BOOST_AUTO_TEST_CASE ( testname )
+#endif
+
+BOOST_PERF_TEST_CASE ( test_save1_perf ) {
   ParameterCollection m;
   for (int l = 0; l < 16; ++l)
-    auto param = m.add_parameters({1024, 1024});
+    m.add_parameters({1024, 1024});
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
   {
@@ -195,7 +204,7 @@ BOOST_AUTO_TEST_CASE ( test_save1_perf ) {
   std::cout << "elapsed time: " << elapsed_seconds.count() << "ms" << std::endl;
 }
 
-BOOST_AUTO_TEST_CASE ( test_load1_perf ) {
+BOOST_PERF_TEST_CASE ( test_load1_perf ) {
   ParameterCollection m, m_l;
   Parameter param;
   Parameter param_l = m_l.add_parameters({1024, 1024});
@@ -217,10 +226,10 @@ BOOST_AUTO_TEST_CASE ( test_load1_perf ) {
   DYNET_CHECK_EQUAL(param, param_l);
 }
 
-BOOST_AUTO_TEST_CASE ( test_save2_perf ) {
+BOOST_PERF_TEST_CASE ( test_save2_perf ) {
   ParameterCollection m;
   for (int l = 0; l < 512; ++l)
-    auto param = m.add_parameters({128, 128});
+    m.add_parameters({128, 128});
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
   {
@@ -232,7 +241,7 @@ BOOST_AUTO_TEST_CASE ( test_save2_perf ) {
   std::cout << "elapsed time: " << elapsed_seconds.count() << "ms" << std::endl;
 }
 
-BOOST_AUTO_TEST_CASE ( test_load2_perf ) {
+BOOST_PERF_TEST_CASE ( test_load2_perf ) {
   ParameterCollection m, m_l;
   Parameter param;
   Parameter param_l = m_l.add_parameters({128, 128});

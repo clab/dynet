@@ -259,7 +259,9 @@ namespace dynet {
           }
           if (do_update && trainer != nullptr) {
             shared_object->update_mutex.wait();
-            trainer->update(1.0 / counter); 
+            // TODO: The scaling was originally this
+            // trainer->update(1.0 / counter); 
+            trainer->update(); 
             shared_object->update_mutex.post();
           }
           if (batch_counter == header.report_frequency) {
@@ -334,7 +336,9 @@ namespace dynet {
             batch_loss += datum_loss;
             train_loss += datum_loss;
             if (++batch_counter == batch_size) {
-              trainer->update(1.0 / batch_size);
+              // TODO: The scaling was originally this
+              // trainer->update(1.0 / batch_size); 
+              trainer->update(); 
               batch_counter = 0;
             }
             data_processed++;

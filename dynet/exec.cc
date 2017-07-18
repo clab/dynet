@@ -368,6 +368,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
   // cerr << "running graph" << endl; cg.print_graphviz();
 
   if (upto >= num_nodes_evaluated) {
+    if (autobatch_strategy == 0) autobatch_strategy = 1;
     string current_batch_name;
 
     size_t uptop1 = upto + 1;
