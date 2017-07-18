@@ -2224,13 +2224,15 @@ void VanillaLSTMGates::forward_dev_impl(const MyDevice & dev, const vector<const
   Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
 
   //bias
-  Eigen::array<int, 2> bcast = {(int)1, (int)batch_size};
+  Eigen::array<int, 3> bcast = {1, 1, (int)batch_size};
   fx.tbvec().device(*dev.edevice) = b->tbvec().broadcast(bcast);
-//  fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += h_tm1->tbvec().constant(1);
+  fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += h_tm1->tbvec().constant(1); // TODO: remove
 
   //matrix mult
+  // TODO: this line will need special treatment on GPU
+  // TODO: this seems to misbehave when using minibatches..
   fx.colbatch_matrix() += **Wx * x_t->colbatch_matrix();
-  fx.colbatch_matrix() += **Wh * h_tm1->colbatch_matrix() ; // TODO: this line will need special treatment on GPU
+  fx.colbatch_matrix() += **Wh * h_tm1->colbatch_matrix() ;
 
   cout << "fx:" << fx.tvec() << "\n";
   // non-linearities
@@ -2277,13 +2279,13 @@ void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
 
     Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = 1; bcast[2] = batch_size;
 
-    // TODO: fix math, then implement
     // dx_t = Wx_i^T * [di . i_t . (1-i_t)]
     //      + Wx_f^T * [df . f_t . (1-f_t)]
     //      + Wx_o^T * [do . o_t . (1-o_t)]
     //      + Wx_g^T * [dg . (1-tanh(g_t))]
     // note: here Wx is broadcasted over batches
 
+    // TODO: fix/test
     // first handle the sigmoids
     dEdxi.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[2]->tb<2>().broadcast(bcast).shuffle(transp_order), product_mat);
     cout << "worked!\n";
@@ -2291,7 +2293,7 @@ void VanillaLSTMGates::backward_dev_impl(const MyDevice & dev,
     // finally, the tanh
     // TODO
   } else if(i==1){ // dh_tm1
-    // TODO: implement
+    // TODO: implement (math analogous to dx_t)
     Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
     Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
 
