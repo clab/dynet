@@ -75,7 +75,7 @@ float Trainer::clip_gradients() {
 }
 
 void Trainer::update_epoch(real r) {
-  cerr << "Trainer::update_epoch has been deprecated and doesn't do anything. Please remove it from your code, and control the learning rate of the trainer directly through the set_learning_rate() function." << endl;
+  cerr << "Trainer::update_epoch has been deprecated and doesn't do anything. Please remove it from your code, and control the learning rate of the trainer directly, for example by: 'trainer.learning_rate /= (1 - rate_decay)', see https://github.com/clab/dynet/pull/695 for details." << endl;
 }
 
 // this calls the rule-specific updates over all updated parameters
