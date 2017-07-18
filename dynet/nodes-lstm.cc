@@ -67,15 +67,15 @@ namespace dynet {
 
     //bias
     Eigen::array<int, 3> bcast = {1, 1, (int)batch_size};
-    fx.tbvec().device(*dev.edevice) = b->tbvec().broadcast(bcast);
+    fx.tb<2>().device(*dev.edevice) = b->tb<2>().broadcast(bcast);
+    // forget gate: bias + 1
+    fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(1);
 
     //matrix mult
     // TODO: this line will need special treatment on GPU
-    // TODO: this seems to misbehave when using minibatches..
     CPUMatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
     CPUMatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
 
-    cout << "fx:" << fx.tvec() << "\n";
     // non-linearities
     fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3).unaryExpr(scalar_logistic_sigmoid_op<float>());
     fx.tbvec().slice(indices_g, sizes_1).device(*dev.edevice) = fx.tbvec().slice(indices_g, sizes_1).tanh();
