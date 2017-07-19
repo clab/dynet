@@ -89,6 +89,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
   if (i >= num_nodes_evaluated) {
     string current_node_name;
     nfxs.resize(i + 1);
+    args_buffer.resize(i + 1);
 
     //vector<string> dummy(5, "x");
     vector<const Tensor*> xs(16);
@@ -122,7 +123,27 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       }
       node->aux_mem = aux_mem;
 
-      node->forward(xs, nfxs[num_nodes_evaluated]);
+      std::vector<const Tensor*> xsxs;
+      std::vector<Tensor> args_buffer_tmp;
+      args_buffer_tmp.resize(xs.size());
+      // TODO: combine allocate and memcpy
+      for (size_t k = 0; k < xs.size(); ++k) {
+        auto x = xs[k];
+        if (x->device == nfxs[num_nodes_evaluated].device) {
+          xsxs.push_back(x);
+        } else {
+          args_buffer_tmp[k].d = x->d;
+          args_buffer_tmp[k].device = nfxs[num_nodes_evaluated].device;
+          args_buffer_tmp[k].mem_pool = DeviceMempool::FXS;
+          args_buffer_tmp[k].v = static_cast<float*>(args_buffer_tmp[k].device->pools[(int)DeviceMempool::FXS]->
+                                                     allocate(x->d.size() * sizeof(float)));
+          TensorTools::copy_elements(args_buffer_tmp[k], *x);
+          xsxs.push_back(&args_buffer_tmp[k]);
+        }
+      }
+      args_buffer[num_nodes_evaluated] = args_buffer_tmp;
+
+      node->forward(xsxs, nfxs[num_nodes_evaluated]);
 
       if (autobatch_debug_flag) { timer.stop(current_node_name); }
     }
@@ -184,21 +205,29 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   // consider only nodes that participate in the computation.
   vector<bool> in_computation(num_nodes, false);
   in_computation[num_nodes - 1] = true;
-  vector<const Tensor*> xs;
   for (int i = num_nodes - 1; i >= 0; --i) {
     if (!in_computation[i]) continue;
     const Node* node = cg.nodes[i];
-    xs.resize(node->arity());
-    unsigned ai = 0;
     for (VariableIndex arg : node->args) {
       in_computation[arg] = true;
-      xs[ai] = &nfxs[arg];
-      ++ai;
     }
-    ai = 0;
+    unsigned ai = 0;
     for (VariableIndex arg : node->args) {
       if (needs_derivative[arg]) {
-        node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
+        std::vector<const Tensor*> xs;
+        for (auto & t : args_buffer[i]) xs.push_back(&t);
+        Tensor dEdf;
+        if (ndEdfs[i].device == ndEdfs[i].device) {
+          dEdf = ndEdfs[i];
+        } else {
+          dEdf.d = ndEdfs[i].d;
+          dEdf.device = ndEdfs[i].device;
+          dEdf.mem_pool = DeviceMempool::DEDFS;
+          dEdf.v = static_cast<float*>(dEdf.device->pools[(int)DeviceMempool::DEDFS]
+                                       ->allocate(dEdf.d.size() * sizeof(float)));
+          TensorTools::copy_elements(ndEdfs[i], dEdf);
+        }
+        node->backward(xs, nfxs[i], dEdf, ai, ndEdfs[arg]);
       }
       ++ai;
     }
