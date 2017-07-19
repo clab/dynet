@@ -24,7 +24,7 @@ cdef class DynetParams: # {{{
     
     In order to use this object, you will need to import a different package:
     
-    ..code-block:: python
+    .. code-block:: python
 
         import _dynet
         # or
@@ -32,7 +32,7 @@ cdef class DynetParams: # {{{
     
     You can then declare and use a :code:`DynetParams` object
     
-    ..code-block:: python
+    .. code-block:: python
         
         # Declare a DynetParams object
         dyparams = dy.DynetParams()
