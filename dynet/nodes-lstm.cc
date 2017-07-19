@@ -93,6 +93,10 @@ namespace dynet {
     unsigned batch_size = xs[0]->d.bd;
     Eigen::DSizes<ptrdiff_t, 3> indices_mat_i(0, 0, 0);
     Eigen::DSizes<ptrdiff_t, 3> indices_mat_g(hidden_dim*3, 0, 0);
+    Eigen::DSizes<ptrdiff_t, 3> indices_mat_i_inp(0, 0, 0);
+    Eigen::DSizes<ptrdiff_t, 3> indices_mat_f_inp(input_dim*1, 0, 0);
+    Eigen::DSizes<ptrdiff_t, 3> indices_mat_o_inp(input_dim*2, 0, 0);
+    Eigen::DSizes<ptrdiff_t, 3> indices_mat_g_inp(input_dim*3, 0, 0);
     Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
     Eigen::DSizes<ptrdiff_t, 2> indices_f(hidden_dim,0);
     Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
@@ -104,39 +108,69 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 1> indices_g_nobatch(hidden_dim*3);
     Eigen::DSizes<ptrdiff_t, 2> indices_mat_g_nobatch(hidden_dim*3, 0);
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_1(hidden_dim, 1, static_cast<ptrdiff_t>(fx.d.bd));
+    Eigen::DSizes<ptrdiff_t, 3> sizes_mat_1_inp(input_dim, 1, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_3(hidden_dim*3, 1, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::array<int, 1> vec_batch_axis; vec_batch_axis[0] = 1;
     Eigen::array<int, 1> mat_batch_axis; mat_batch_axis[0] = 2;
 
     Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
 
-    array<Eigen::IndexPair<int>, 1> product_mat = { Eigen::IndexPair<int>(1, 0) }; // following https://stackoverflow.com/questions/39815869/how-to-transpose-tensor-in-eigen
-    cout << "gates bwd start\n";
     if(i==0){
-//      Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(input_dim);
-//      Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(input_dim*3);
-//      Eigen::DSizes<ptrdiff_t, 2> sizes_1(input_dim, static_cast<ptrdiff_t>(fx.d.bd));
-//      Eigen::DSizes<ptrdiff_t, 2> sizes_3(input_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
-//
-//      Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = 1; bcast[2] = batch_size;
-//
-//      // dx_t = Wx_i^T * [di . i_t . (1-i_t)]
-//      //      + Wx_f^T * [df . f_t . (1-f_t)]
-//      //      + Wx_o^T * [do . o_t . (1-o_t)]
-//      //      + Wx_g^T * [dg . (1-tanh(g_t))]
-//      // note: here Wx is broadcasted over batches
-//
-//      // TODO: fix/test
-//      // first handle the sigmoids
-//      dEdxi.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[2]->tb<2>().broadcast(bcast).shuffle(transp_order), product_mat);
-//      cout << "worked!\n";
-//
-//      // finally, the tanh
-//      // TODO
+        // goal: dx_t = [Wx_i]^T   [di . i_t . (1-i_t)]
+        //              [Wx_f]   * [df . f_t . (1-f_t)]
+        //              [Wx_o]     [do . o_t . (1-o_t)]
+        //              [Wx_g]     [dg . (1-tanh(g_t))]
+        //       note: here Wx is broadcasted over batches
+	// allocate scratch mem mult_l, mult_r
+	AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+	Tensor mult_l(Dim({input_dim, hidden_dim*4},1), nullptr, fx.device, fx.mem_pool);
+	mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
+	Tensor mult_r(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+	mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
+
+	// mult_l = transpose(Wx)
+	mult_l.tb<2>() = xs[2]->tb<2>().shuffle(transp_order);
+
+	// mult_r = [di . i_t . (1-i_t)]
+	//          [df . f_t . (1-f_t)]
+	//          [do . o_t . (1-o_t)]
+	//          [dg . (1-tanh(g_t))]
+	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
+	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1);
+
+	// dx_t += mult_l * mult_r
+	CPUMatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
+
+	scratch_allocator->free();
+
     } else if(i==1){ // dh_tm1
-//      // TODO: implement (math analogous to dx_t)
-//      Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
-//      Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
+        // goal: dh_tm1 = [Wh_i]^T   [di . i_t . (1-i_t)]
+        //                [Wh_f]   * [df . f_t . (1-f_t)]
+        //                [Wh_o]     [do . o_t . (1-o_t)]
+        //                [Wh_g]     [dg . (1-tanh(g_t))]
+        //       note: here Wh is broadcasted over batches
+
+	// allocate scratch mem mult_l, mult_r
+	AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+	Tensor mult_l(Dim({hidden_dim, hidden_dim*4},1), nullptr, fx.device, fx.mem_pool);
+	mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
+	Tensor mult_r(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+	mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
+
+	// mult_l = transpose(Wh)
+	mult_l.tb<2>() = xs[3]->tb<2>().shuffle(transp_order);
+
+	// mult_r = [di . i_t . (1-i_t)]
+	//          [df . f_t . (1-f_t)]
+	//          [do . o_t . (1-o_t)]
+	//          [dg . (1-tanh(g_t))]
+	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
+	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1);
+
+	// dx_t += mult_l * mult_r
+	CPUMatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
+
+	scratch_allocator->free();
 
     } else if(i==2){ // dWx
       // goal: dWx_i = [di . i_t . (1-i_t)] * x_t (here * is outer product), then sum over batches
@@ -255,7 +289,6 @@ namespace dynet {
     const Tensor *gates_t = xs[1];
 
     unsigned hidden_dim = c_tm1->d[0];
-    unsigned batch_size = c_tm1->d.bd;
 
     Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
     Eigen::DSizes<ptrdiff_t, 2> indices_f(hidden_dim,0);
