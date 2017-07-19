@@ -131,6 +131,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
         auto x = xs[k];
         if (x->device == nfxs[num_nodes_evaluated].device) {
           xsxs.push_back(x);
+          args_buffer_tmp[k] = *x;
         } else {
           args_buffer_tmp[k].d = x->d;
           args_buffer_tmp[k].device = nfxs[num_nodes_evaluated].device;
@@ -180,6 +181,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
   // initialize dE/dE = 1
+  // TODO: specify device
   ndEdfs.back().v = kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
@@ -216,18 +218,19 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
       if (needs_derivative[arg]) {
         std::vector<const Tensor*> xs;
         for (auto & t : args_buffer[i]) xs.push_back(&t);
-        Tensor dEdf;
-        if (ndEdfs[i].device == ndEdfs[i].device) {
-          dEdf = ndEdfs[i];
+        if (ndEdfs[i].device == ndEdfs[arg].device) {
+          node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
         } else {
-          dEdf.d = ndEdfs[i].d;
-          dEdf.device = ndEdfs[i].device;
-          dEdf.mem_pool = DeviceMempool::DEDFS;
-          dEdf.v = static_cast<float*>(dEdf.device->pools[(int)DeviceMempool::DEDFS]
-                                       ->allocate(dEdf.d.size() * sizeof(float)));
-          TensorTools::copy_elements(ndEdfs[i], dEdf);
+          Tensor device_dEdf;
+          device_dEdf.d = ndEdfs[arg].d;
+          device_dEdf.device = ndEdfs[i].device;
+          device_dEdf.mem_pool = DeviceMempool::DEDFS;
+          device_dEdf.v = static_cast<float*>(device_dEdf.device->pools[(int)DeviceMempool::DEDFS]
+                                              ->allocate(device_dEdf.d.size() * sizeof(float)));
+          node->backward(xs, nfxs[i], ndEdfs[i], ai, device_dEdf);
+          // copy back to ndEdfs[arg]
+          TensorTools::copy_elements(ndEdfs[arg], device_dEdf);
         }
-        node->backward(xs, nfxs[i], dEdf, ai, ndEdfs[arg]);
       }
       ++ai;
     }
