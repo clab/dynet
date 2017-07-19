@@ -72,7 +72,7 @@ namespace dynet {
     fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(1);
 
     //matrix mult
-    // TODO: this line will need special treatment on GPU
+    // TODO: use CUDAMatrixMultiply on GPU
     CPUMatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
     CPUMatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
 
@@ -106,59 +106,103 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_1(hidden_dim, 1, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_3(hidden_dim*3, 1, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::array<int, 1> vec_batch_axis; vec_batch_axis[0] = 1;
-    Eigen::array<int, 2> mat_batch_axis; mat_batch_axis[0] = 1; mat_batch_axis[1] = 3;  // TODO: not sure why we have the extra dimension "1" after the outer product..
+    Eigen::array<int, 1> mat_batch_axis; mat_batch_axis[0] = 2;
 
     Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
 
     array<Eigen::IndexPair<int>, 1> product_mat = { Eigen::IndexPair<int>(1, 0) }; // following https://stackoverflow.com/questions/39815869/how-to-transpose-tensor-in-eigen
-    cout << "doing anythin?\n";
+    cout << "gates bwd start\n";
     if(i==0){
-      Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(input_dim);
-      Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(input_dim*3);
-      Eigen::DSizes<ptrdiff_t, 2> sizes_1(input_dim, static_cast<ptrdiff_t>(fx.d.bd));
-      Eigen::DSizes<ptrdiff_t, 2> sizes_3(input_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
-
-      Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = 1; bcast[2] = batch_size;
-
-      // dx_t = Wx_i^T * [di . i_t . (1-i_t)]
-      //      + Wx_f^T * [df . f_t . (1-f_t)]
-      //      + Wx_o^T * [do . o_t . (1-o_t)]
-      //      + Wx_g^T * [dg . (1-tanh(g_t))]
-      // note: here Wx is broadcasted over batches
-
-      // TODO: fix/test
-      // first handle the sigmoids
-      dEdxi.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[2]->tb<2>().broadcast(bcast).shuffle(transp_order), product_mat);
-      cout << "worked!\n";
-
-      // finally, the tanh
-      // TODO
+//      Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(input_dim);
+//      Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(input_dim*3);
+//      Eigen::DSizes<ptrdiff_t, 2> sizes_1(input_dim, static_cast<ptrdiff_t>(fx.d.bd));
+//      Eigen::DSizes<ptrdiff_t, 2> sizes_3(input_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
+//
+//      Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = 1; bcast[2] = batch_size;
+//
+//      // dx_t = Wx_i^T * [di . i_t . (1-i_t)]
+//      //      + Wx_f^T * [df . f_t . (1-f_t)]
+//      //      + Wx_o^T * [do . o_t . (1-o_t)]
+//      //      + Wx_g^T * [dg . (1-tanh(g_t))]
+//      // note: here Wx is broadcasted over batches
+//
+//      // TODO: fix/test
+//      // first handle the sigmoids
+//      dEdxi.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[2]->tb<2>().broadcast(bcast).shuffle(transp_order), product_mat);
+//      cout << "worked!\n";
+//
+//      // finally, the tanh
+//      // TODO
     } else if(i==1){ // dh_tm1
-      // TODO: implement (math analogous to dx_t)
-      Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
-      Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
+//      // TODO: implement (math analogous to dx_t)
+//      Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
+//      Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
 
-    } else if(i==2){
-      // dWx_i = [di . i_t . (1-i_t)] * x_t (here * is outer product), then sum over batches
-      // dWx_f = [di . f_t . (1-f_t)] * x_t (here * is outer product), then sum over batches
-      // dWx_o = [di . o_t . (1-o_t)] * x_t (here * is outer product), then sum over batches
-      Eigen::DSizes<ptrdiff_t, 2> sizes_mat_3_nobatch(hidden_dim*3, input_dim);
-      dEdxi.t<2>().slice(indices_mat_i_nobatch, sizes_mat_3_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[0]->tb<2>().shuffle(transp_order), product_mat).sum(mat_batch_axis);
+    } else if(i==2){ // dWx
+      // goal: dWx_i = [di . i_t . (1-i_t)] * x_t (here * is outer product), then sum over batches
+      //       dWx_f = [di . f_t . (1-f_t)] * x_t (here * is outer product), then sum over batches
+      //       dWx_o = [di . o_t . (1-o_t)] * x_t (here * is outer product), then sum over batches
+      //       dWx_g = [dg . (1-tanh(g_t))] * x_t (here * is outer product), then sum over batches
 
-      // dWx_g = [dg . (1-tanh(g_t))] * x_t (here * is outer product), then sum over batches
-      Eigen::DSizes<ptrdiff_t, 2> sizes_mat_1_nobatch(hidden_dim, input_dim);
-      dEdxi.t<2>().slice(indices_mat_g_nobatch, sizes_mat_1_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1).contract(xs[0]->tb<2>().shuffle(transp_order), product_mat).sum(mat_batch_axis);
+      // allocate scratch mem mult_l, mult_r, mult_y
+      AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+      Tensor mult_l(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
+      Tensor mult_r(Dim({1, input_dim},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
+      Tensor mult_y(Dim({hidden_dim*4, input_dim},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
+
+      // mult_l = [di . i_t . (1-i_t)]
+      //          [df . f_t . (1-f_t)]
+      //          [do . o_t . (1-o_t)]
+      //          [dg . (1-tanh(g_t))]
+      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
+      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1);
+
+      // mult_r = transpose(x_t)
+      mult_r.tb<2>() = xs[0]->tb<2>().shuffle(transp_order);
+
+      // mult_y = mult_l * mult_r
+      CPUMatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
+
+      // dWh += mult_y.sum(batches)
+      dEdxi.t<2>().device(*dev.edevice) += mult_y.tb<2>().sum(mat_batch_axis);
+
+      scratch_allocator->free();
 
     } else if(i==3){ // dWh
-      // dWh_i = [di . i_t . (1-i_t)] * h_tm1 (here * is outer product), then sum over batches
-      // dWh_f = [df . f_t . (1-f_t)] * h_tm1 (here * is outer product), then sum over batches
-      // dWh_o = [do . o_t . (1-o_t)] * h_tm1 (here * is outer product), then sum over batches
-      Eigen::DSizes<ptrdiff_t, 2> sizes_mat_3_nobatch(hidden_dim*3, hidden_dim);
-      dEdxi.t<2>().slice(indices_mat_i_nobatch, sizes_mat_3_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3).contract(xs[1]->tb<2>().shuffle(transp_order), product_mat).sum(mat_batch_axis);
+      // goal: dWh_i = [di . i_t . (1-i_t)] * h_tm1 (here * is outer product), then sum over batches
+      //       dWh_f = [df . f_t . (1-f_t)] * h_tm1 (here * is outer product), then sum over batches
+      //       dWh_o = [do . o_t . (1-o_t)] * h_tm1 (here * is outer product), then sum over batches
+      //       dWh_g = [dg . (1-tanh(g_t))] * h_tm1 (here * is outer product), then sum over batches
 
-      // dWh_g = [dg . (1-tanh(g_t))] * h_tm1 (here * is outer product), then sum over batches
-      Eigen::DSizes<ptrdiff_t, 2> sizes_mat_1_nobatch(hidden_dim, hidden_dim);
-      dEdxi.t<2>().slice(indices_mat_g_nobatch, sizes_mat_1_nobatch).device(*dev.edevice) += (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1).contract(xs[1]->tb<2>().shuffle(transp_order), product_mat).sum(mat_batch_axis);
+      // allocate scratch mem mult_l, mult_r, mult_y
+      AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+      Tensor mult_l(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
+      Tensor mult_r(Dim({1, hidden_dim},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
+      Tensor mult_y(Dim({hidden_dim*4, hidden_dim},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
+
+      // mult_l = [di . i_t . (1-i_t)]
+      //          [df . f_t . (1-f_t)]
+      //          [do . o_t . (1-o_t)]
+      //          [dg . (1-tanh(g_t))]
+      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
+      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1);
+
+      // mult_r = transpose(h_tm1)
+      mult_r.tb<2>() = xs[1]->tb<2>().shuffle(transp_order);
+
+      // mult_y = mult_l * mult_r
+      CPUMatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
+
+      // dWh += mult_y.sum(batches)
+      dEdxi.t<2>().device(*dev.edevice) += mult_y.tb<2>().sum(mat_batch_axis);
+
+      scratch_allocator->free();
 
     } else if(i==4){
       Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
