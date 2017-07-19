@@ -123,7 +123,7 @@ namespace dynet {
         // goal: dx_t = [Wx_i]^T   [di . i_t . (1-i_t)]
         //              [Wx_f]   * [df . f_t . (1-f_t)]
         //              [Wx_o]     [do . o_t . (1-o_t)]
-        //              [Wx_g]     [dg . (1-tanh(g_t))]
+        //              [Wx_g]     [dg . (1 - g_t^2)]
         //       note: here Wx is broadcasted over batches
 	// allocate scratch mem mult_l, mult_r
 	AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
@@ -138,9 +138,9 @@ namespace dynet {
 	// mult_r = [di . i_t . (1-i_t)]
 	//          [df . f_t . (1-f_t)]
 	//          [do . o_t . (1-o_t)]
-	//          [dg . (1-tanh(g_t))]
+	//          [dg . (1 - g_t^2)]
 	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
-	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1);
+	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
 
 	// dx_t += mult_l * mult_r
 	CPUMatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
@@ -151,7 +151,7 @@ namespace dynet {
         // goal: dh_tm1 = [Wh_i]^T   [di . i_t . (1-i_t)]
         //                [Wh_f]   * [df . f_t . (1-f_t)]
         //                [Wh_o]     [do . o_t . (1-o_t)]
-        //                [Wh_g]     [dg . (1-tanh(g_t))]
+        //                [Wh_g]     [dg . (1 - g_t^2)]
         //       note: here Wh is broadcasted over batches
 
 	// allocate scratch mem mult_l, mult_r
@@ -167,9 +167,9 @@ namespace dynet {
 	// mult_r = [di . i_t . (1-i_t)]
 	//          [df . f_t . (1-f_t)]
 	//          [do . o_t . (1-o_t)]
-	//          [dg . (1-tanh(g_t))]
+	//          [dg . (1 - g_t^2)]
 	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
-	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1);
+	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
 
 	// dx_t += mult_l * mult_r
 	CPUMatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
@@ -180,7 +180,7 @@ namespace dynet {
       // goal: dWx_i = [di . i_t . (1-i_t)] * x_t (here * is outer product), then sum over batches
       //       dWx_f = [di . f_t . (1-f_t)] * x_t (here * is outer product), then sum over batches
       //       dWx_o = [di . o_t . (1-o_t)] * x_t (here * is outer product), then sum over batches
-      //       dWx_g = [dg . (1-tanh(g_t))] * x_t (here * is outer product), then sum over batches
+      //       dWx_g = [dg . (1 - g_t^2)] * x_t (here * is outer product), then sum over batches
 
       // allocate scratch mem mult_l, mult_r, mult_y
       AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
@@ -194,9 +194,9 @@ namespace dynet {
       // mult_l = [di . i_t . (1-i_t)]
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
-      //          [dg . (1-tanh(g_t))]
+      //          [dg . (1 - g_t^2)]
       mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
-      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1);
+      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
 
       // mult_r = transpose(x_t)
       mult_r.tb<2>() = xs[0]->tb<2>().shuffle(transp_order);
@@ -213,7 +213,7 @@ namespace dynet {
       // goal: dWh_i = [di . i_t . (1-i_t)] * h_tm1 (here * is outer product), then sum over batches
       //       dWh_f = [df . f_t . (1-f_t)] * h_tm1 (here * is outer product), then sum over batches
       //       dWh_o = [do . o_t . (1-o_t)] * h_tm1 (here * is outer product), then sum over batches
-      //       dWh_g = [dg . (1-tanh(g_t))] * h_tm1 (here * is outer product), then sum over batches
+      //       dWh_g = [dg . (1 - g_t^2)] * h_tm1 (here * is outer product), then sum over batches
 
       // allocate scratch mem mult_l, mult_r, mult_y
       AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
@@ -227,9 +227,9 @@ namespace dynet {
       // mult_l = [di . i_t . (1-i_t)]
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
-      //          [dg . (1-tanh(g_t))]
+      //          [dg . (1 - g_t^2)]
       mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
-      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().tanh())).slice(indices_mat_g, sizes_mat_1);
+      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
 
       // mult_r = transpose(h_tm1)
       mult_r.tb<2>() = xs[1]->tb<2>().shuffle(transp_order);
@@ -253,8 +253,8 @@ namespace dynet {
       // db_o = do . f_t . (1-o_t), then sum over batches
       dEdxi.tvec().slice(indices_i_nobatch, sizes_3_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_i, sizes_3) * fx.tbvec().slice(indices_i, sizes_3) * (fx.tbvec().slice(indices_i, sizes_3).constant(1) - fx.tbvec().slice(indices_i, sizes_3))).sum(vec_batch_axis);
 
-      // db_g = dg . (1 - tanh(g_t), then sum over batches
-      dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_g, sizes_1) * (fx.tbvec().slice(indices_i, sizes_1).constant(1) - fx.tbvec().slice(indices_g, sizes_1).tanh())).sum(vec_batch_axis);
+      // db_g = dg . (1 - g_t^2), then sum over batches
+      dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_g, sizes_1) * (fx.tbvec().slice(indices_i, sizes_1).constant(1) - fx.tbvec().slice(indices_g, sizes_1).square())).sum(vec_batch_axis);
     }
 
 //    cout << "dEdxi:" << dEdxi.tvec() << "\n";
