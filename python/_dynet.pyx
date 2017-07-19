@@ -41,10 +41,6 @@ cdef class DynetParams: # {{{
         # Set some parameters manualy (see the command line arguments documentation)
         dyparams.set_mem(2048)
         dyparams.set_random_seed(666)
-        dyparams.set_weight_decay(1e-7)
-        dyparams.set_shared_parameters(False)
-        dyparams.set_requested_gpus(1)
-        dyparams.set_gpu_mask([0,1,1,0])
         # Initialize with the given parameters
         dyparams.init() # or init_from_params(dyparams)
         
