@@ -72,7 +72,7 @@ namespace dynet {
     fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(1);
 
     //matrix mult
-    // TODO: use CUDAMatrixMultiply on GPU
+    // TODO: use CUDAMatrixMultiply on GPU (same in the backward pass)
     CPUMatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
     CPUMatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
 
@@ -116,6 +116,10 @@ namespace dynet {
     Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
 
     if(i==0){
+//	cout << "i==0\n";
+//	cout << "dEdf:" << dEdf.tvec() << "\n";
+//	cout << "Wx:" << xs[2]->tvec() << "\n";
+//	cout << "fx:" << fx.tvec() << "\n";
         // goal: dx_t = [Wx_i]^T   [di . i_t . (1-i_t)]
         //              [Wx_f]   * [df . f_t . (1-f_t)]
         //              [Wx_o]     [do . o_t . (1-o_t)]
@@ -252,6 +256,8 @@ namespace dynet {
       // db_g = dg . (1 - tanh(g_t), then sum over batches
       dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_g, sizes_1) * (fx.tbvec().slice(indices_i, sizes_1).constant(1) - fx.tbvec().slice(indices_g, sizes_1).tanh())).sum(vec_batch_axis);
     }
+
+//    cout << "dEdxi:" << dEdxi.tvec() << "\n";
   }
 
   DYNET_NODE_INST_DEV_IMPL(VanillaLSTMGates)
@@ -381,17 +387,17 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 3> sizes_1(hidden_dim, 1, static_cast<ptrdiff_t>(batch_size));
 
     if(i==0){
-      // dc_t = dh_t . o_t . (1 - tanh(tanh(c_t)))
-      //      = dh_t . o_t . (1 - tanh(h_t cdiv o_t))
+      // dc_t = dh_t . o_t . (1 - tanh^2(c_t)))
+      //      = dh_t . o_t . (1 - (h_t cdiv o_t)^2)
       dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>()
 					    * xs[1]->tb<2>().slice(indices_o, sizes_1)
-					    * (xs[0]->tb<2>().constant(1) - xs[0]->tb<2>().tanh().tanh());
+					    * (xs[0]->tb<2>().constant(1) - xs[0]->tb<2>().tanh().square());
       // TODO: we could use the below..
       // - pro: potential speed up (replace tanh by cdiv)
       // - con: potential (though unlikely) division by 0
 //      dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>()
 //					    * xs[1]->tb<2>().slice(indices_o, sizes_1)
-//					    * (xs[0]->tb<2>().constant(1) - (fx.tb<2>() / xs[1]->tb<2>().slice(indices_o, sizes_1)).tanh());
+//					    * (xs[0]->tb<2>().constant(1) - (fx.tb<2>() / xs[1]->tb<2>().slice(indices_o, sizes_1)).square());
     } else if(i==1){
       // do_t = dh_t . tanh(c_t)
       dEdxi.tb<2>().slice(indices_o, sizes_1).device(*dev.edevice) += dEdf.tb<2>() * xs[0]->tb<2>().tanh();

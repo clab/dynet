@@ -30,20 +30,28 @@ struct RNNTest {
     seq_vals = {1.f, 0.f, 1.f, 1.f, 0.f, 1.f, 0.f, 1.f, 1.f, 1.f, 0.f, 1.f};
     ones_vals = {1.f, 1.f, 1.f};
     param_vals = {1.1f, -2.2f, 3.3f};
-    param2_vals = {1.1f, -2.2f, 3.3f};
+    param_1_vals = {1.1f};
+    param_2_vals = {-2.2f, 3.3f};
     param_3_vals = {0.f, 0.1f, 0.2f};
     param_4_vals = {1.f, 0.1f, 1.2f, -0.3f};
     param_6_vals = {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
+    param_8_vals = {0.1f, 0.1f, 0.2f, 0.3f, 0.2f, 0.3f, 0.4f, 0.5f};
     param_12_vals = {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f};
     param_24_vals = {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
     param_36_vals = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, -0.5};
 
+    param_1 = mod.add_parameters(Dim({1}));
+    TensorTools::set_elements(param_1.get_storage().values, param_1_vals);
+    param_2 = mod.add_parameters(Dim({2}));
+    TensorTools::set_elements(param_2.get_storage().values, param_2_vals);
     param_3 = mod.add_parameters(Dim({3}));
     TensorTools::set_elements(param_3.get_storage().values, param_3_vals);
     param_4 = mod.add_parameters(Dim({4}));
     TensorTools::set_elements(param_4.get_storage().values, param_4_vals);
     param_6 = mod.add_parameters(Dim({6}));
     TensorTools::set_elements(param_6.get_storage().values, param_6_vals);
+    param_8 = mod.add_parameters(Dim({8}));
+    TensorTools::set_elements(param_8.get_storage().values, param_8_vals);
     param_12 = mod.add_parameters(Dim({12}));
     TensorTools::set_elements(param_6.get_storage().values, param_12_vals);
     param_24 = mod.add_parameters(Dim({24}));
@@ -66,10 +74,10 @@ struct RNNTest {
     return oss.str();
   }
 
-  std::vector<float> ones_vals, param_vals, param2_vals, seq_vals, param_3_vals, param_4_vals, param_6_vals, param_12_vals, param_24_vals, param_36_vals;
+  std::vector<float> ones_vals, param_vals, param_1_vals, param_2_vals, seq_vals, param_3_vals, param_4_vals, param_6_vals, param_8_vals, param_12_vals, param_24_vals, param_36_vals;
   std::vector<char*> av;
   dynet::ParameterCollection mod;
-  dynet::Parameter param_3, param_4, param_6, param_12, param_24, param_36;
+  dynet::Parameter param_1, param_2, param_3, param_4, param_6, param_8, param_12, param_24, param_36;
 };
 
 // define the test suite
@@ -224,17 +232,17 @@ BOOST_FIXTURE_TEST_SUITE(rnn_test, RNNTest);
 //  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(h_t, (unsigned)1).value())[2], -0.1269172332, 0.001);
 //}
 //
-//BOOST_AUTO_TEST_CASE( lstm_node_h_gradient ) {
-//  unsigned hidden_dim = 3;
-//  unsigned batch_size = 2;
-//  dynet::ComputationGraph cg;
-//
-//  Expression c_t = dynet::reshape(dynet::parameter(cg, param_6), Dim({hidden_dim},batch_size));
-//  Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f});
-//  Expression h_t = vanilla_lstm_h(c_t, gates_t);
-//  Expression z = squared_norm(sum_batches(h_t));
-//  BOOST_CHECK(check_grad(mod, z, 0));
-//}
+BOOST_AUTO_TEST_CASE( lstm_node_h_gradient ) {
+  unsigned hidden_dim = 3;
+  unsigned batch_size = 2;
+  dynet::ComputationGraph cg;
+
+  Expression c_t = dynet::reshape(dynet::parameter(cg, param_6), Dim({hidden_dim},batch_size));
+  Expression gates_t = dynet::reshape(dynet::parameter(cg, param_24), Dim({hidden_dim*4},batch_size));
+  Expression h_t = vanilla_lstm_h(c_t, gates_t);
+  Expression z = squared_norm(sum_batches(h_t));
+  BOOST_CHECK(check_grad(mod, z, 1));
+}
 //
 //BOOST_AUTO_TEST_CASE( lstm_node_c_gradient ) {
 //  unsigned hidden_dim = 3;
@@ -307,27 +315,27 @@ BOOST_FIXTURE_TEST_SUITE(rnn_test, RNNTest);
 //  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates, (unsigned)1).value())[7], 0.8874941329, 0.001);
 //}
 
-
-BOOST_AUTO_TEST_CASE( lstm_node_gates_bwd ) {
-  unsigned input_dim = 2;
-  unsigned hidden_dim = 3;
-  unsigned batch_size = 2;
-  dynet::ComputationGraph cg;
-
-  Expression x_t = dynet::reshape(dynet::parameter(cg, param_4), Dim({input_dim},batch_size));
-//    cout << "x_t: " << print_vec(as_vector(x_t.value())) << "\n";
-//    cout << "x_t b0: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)0).value())) << "\n";
-//    cout << "x_t b1: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)1).value())) << "\n";
-  Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_6), Dim({hidden_dim},batch_size));
-  Expression Wx = dynet::reshape(dynet::parameter(cg, param_24), Dim({hidden_dim*4, input_dim},1));
-  Expression Wh = dynet::reshape(dynet::parameter(cg, param_36), Dim({hidden_dim*4, hidden_dim},1));
-  Expression b = dynet::reshape(dynet::parameter(cg, param_12), Dim({hidden_dim*4},1));
-
-  Expression gates = vanilla_lstm_gates(x_t, h_tm1, Wx, Wh, b);
-
-  Expression z = squared_norm(sum_batches(gates));
-  BOOST_CHECK(check_grad(mod, z, 0));
-
-}
+//
+//BOOST_AUTO_TEST_CASE( lstm_node_gates_bwd ) {
+//  unsigned input_dim = 1;
+//  unsigned hidden_dim = 3;
+//  unsigned batch_size = 1; // TODO: increase batch size
+//  dynet::ComputationGraph cg;
+//
+//  Expression x_t = dynet::reshape(dynet::parameter(cg, param_1), Dim({input_dim},batch_size));
+////    cout << "x_t: " << print_vec(as_vector(x_t.value())) << "\n";
+////    cout << "x_t b0: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)0).value())) << "\n";
+////    cout << "x_t b1: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)1).value())) << "\n";
+//  Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_3), Dim({hidden_dim},batch_size));
+//  Expression Wx = dynet::reshape(dynet::parameter(cg, param_12), Dim({hidden_dim*4, input_dim},1));
+//  Expression Wh = dynet::reshape(dynet::parameter(cg, param_36), Dim({hidden_dim*4, hidden_dim},1));
+//  Expression b = dynet::reshape(dynet::parameter(cg, param_12), Dim({hidden_dim*4},1));
+//
+//  Expression gates = vanilla_lstm_gates(x_t, h_tm1, Wx, Wh, b);
+//
+//  Expression z = squared_norm(sum_batches(gates));
+//  BOOST_CHECK(check_grad(mod, z, 1));
+//
+//}
 
 BOOST_AUTO_TEST_SUITE_END()
