@@ -4311,7 +4311,7 @@ class BiRNNBuilder(object): # {{{
         model = self.model = model.add_subcollection("birnn")
         if builder_layers is None:
             assert num_layers > 0
-            assert hidden_dim % 2 == 0
+            assert hidden_dim % 2 == 0, "BiRNN hidden dimension must be even."
             self.builder_layers = []
             f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
             b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
