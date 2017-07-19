@@ -19,12 +19,36 @@ cimport _dynet as dynet
 
 cdef class DynetParams: # {{{
     """This object holds the global parameters of Dynet
+    
+    This is useful if you want to specify the global dynet parameters (memory, random seed...) programmatically, for example in a notebook.
+    
+    In order to use this object, you will need to import a different package:
+    
+    ..code-block:: python
 
-    You should only need to use this after importing dynet as :
-
-        import _dynet / import _gdynet
-
-    See the documentation for more details
+        import _dynet
+        # or
+        import _gdynet # For GPU
+    
+    You can then declare and use a :code:`DynetParams` object
+    
+    ..code-block:: python
+        
+        # Declare a DynetParams object
+        dyparams = dy.DynetParams()
+        # Fetch the command line arguments (optional)
+        dyparams.from_args()
+        # Set some parameters manualy (see the command line arguments documentation)
+        dyparams.set_mem(2048)
+        dyparams.set_random_seed(666)
+        dyparams.set_weight_decay(1e-7)
+        dyparams.set_shared_parameters(False)
+        dyparams.set_requested_gpus(1)
+        dyparams.set_gpu_mask([0,1,1,0])
+        # Initialize with the given parameters
+        dyparams.init() # or init_from_params(dyparams)
+        
+    Don't forget to initialize with :code:`dyparams.init()`, otherwise dynet will raise an error.
     """
     cdef CDynetParams cparams
 
