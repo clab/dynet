@@ -73,8 +73,6 @@ set(dynet_library_HDRS
     aligned-mem-pool.h
     c2w.h
     cfsm-builder.h
-    cuda-matrix-multiply.h
-    cpu-matrix-multiply.h
     cuda.h
     cudnn-ops.h
     deep-lstm.h
@@ -98,6 +96,7 @@ set(dynet_library_HDRS
     init.h
     io.h
     lstm.h
+    matrix-multiply.h
     mem.h
     model.h
     nodes-contract.h

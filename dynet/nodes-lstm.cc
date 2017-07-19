@@ -1,5 +1,5 @@
 #include "dynet/nodes-lstm.h"
-#include "dynet/cpu-matrix-multiply.h"
+#include "dynet/matrix-multiply.h"
 
 #include "dynet/functors.h"
 #include "dynet/simd-functors.h"
@@ -72,9 +72,8 @@ namespace dynet {
     fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(1);
 
     //matrix mult
-    // TODO: use CUDAMatrixMultiply on GPU (same in the backward pass)
-    CPUMatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
-    CPUMatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
+    MatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
+    MatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
 
     // non-linearities
     fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3).unaryExpr(scalar_logistic_sigmoid_op<float>());
@@ -143,7 +142,7 @@ namespace dynet {
 	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
 
 	// dx_t += mult_l * mult_r
-	CPUMatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
+	MatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
 
 	scratch_allocator->free();
 
@@ -172,7 +171,7 @@ namespace dynet {
 	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
 
 	// dx_t += mult_l * mult_r
-	CPUMatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
+	MatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
 
 	scratch_allocator->free();
 
@@ -202,7 +201,7 @@ namespace dynet {
       mult_r.tb<2>() = xs[0]->tb<2>().shuffle(transp_order);
 
       // mult_y = mult_l * mult_r
-      CPUMatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
+      MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
 
       // dWh += mult_y.sum(batches)
       dEdxi.t<2>().device(*dev.edevice) += mult_y.tb<2>().sum(mat_batch_axis);
@@ -235,7 +234,7 @@ namespace dynet {
       mult_r.tb<2>() = xs[1]->tb<2>().shuffle(transp_order);
 
       // mult_y = mult_l * mult_r
-      CPUMatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
+      MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
 
       // dWh += mult_y.sum(batches)
       dEdxi.t<2>().device(*dev.edevice) += mult_y.tb<2>().sum(mat_batch_axis);

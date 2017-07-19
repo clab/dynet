@@ -12,7 +12,7 @@
 #if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
-#include "dynet/cuda-matrix-multiply.h"
+#include "dynet/matrix-multiply.h"
 #endif
 
 
@@ -74,7 +74,7 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
   Dim new_fx_d({fx.d[0] * fx.d[1]}, fx.d.bd);
   Tensor new_fx(new_fx_d, fx.v, fx.device, fx.mem_pool);
   // CUDA matrix multiply ftw
-  CUDAMatrixMultiply(dev, new_xs0, *xs[1], new_fx, kSCALAR_ONE);
+  MatrixMultiply(dev, new_xs0, *xs[1], new_fx, kSCALAR_ONE);
 #else
   // Otherwise use Eigen tensor contraction.
   // TODO : maybe on CPU broadcast is not as affective as looping?
