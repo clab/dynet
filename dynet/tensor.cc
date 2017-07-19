@@ -328,6 +328,7 @@ void TensorTools::accumulate_dev(MyDevice & dev, Tensor& v, const Tensor& v_src)
 template void TensorTools::accumulate_dev<Device_GPU>(Device_GPU & dev, Tensor& v, const Tensor& v_src);
 #else
 template void TensorTools::accumulate_dev<Device_CPU>(Device_CPU & dev, Tensor& v, const Tensor& v_src);
+template void TensorTools::accumulate_dev<Device_ThreadPool>(Device_ThreadPool & dev, Tensor& v, const Tensor& v_src);
 #ifdef HAVE_CUDA
 extern template void TensorTools::accumulate_dev<Device_GPU>(Device_GPU & dev, Tensor& v, const Tensor& v_src);
 void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
@@ -353,6 +354,7 @@ void TensorTools::constant_dev(MyDevice & dev, Tensor& d, float c) {
 template void TensorTools::constant_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float c);
 #else
 template void TensorTools::constant_dev<Device_CPU>(Device_CPU & dev, Tensor& d, float c);
+template void TensorTools::constant_dev<Device_ThreadPool>(Device_ThreadPool & dev, Tensor& d, float c);
 #ifdef HAVE_CUDA
 extern template void TensorTools::constant_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float c);
 void TensorTools::constant(Tensor& d, float c) {
@@ -378,6 +380,7 @@ void TensorTools::clip_dev(MyDevice & dev, Tensor& d, float left, float right) {
 template void TensorTools::clip_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float left, float right);
 #else
 template void TensorTools::clip_dev<Device_CPU>(Device_CPU & dev, Tensor& d, float left, float right);
+template void TensorTools::clip_dev<Device_ThreadPool>(Device_ThreadPool & dev, Tensor& d, float left, float right);
 #ifdef HAVE_CUDA
 extern template void TensorTools::clip_dev<Device_GPU>(Device_GPU & dev, Tensor& d, float left, float right);
 void TensorTools::clip(Tensor& d, float left, float right) {
@@ -411,6 +414,7 @@ IndexTensor TensorTools::argmax_dev(MyDevice & dev, const Tensor& v, unsigned di
 template IndexTensor TensorTools::argmax_dev<Device_GPU>(Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
 #else
 template IndexTensor TensorTools::argmax_dev<Device_CPU>(Device_CPU & dev, const Tensor& d, unsigned dim, unsigned num);
+template IndexTensor TensorTools::argmax_dev<Device_ThreadPool>(Device_ThreadPool & dev, const Tensor& d, unsigned dim, unsigned num);
 #ifdef HAVE_CUDA
 extern template IndexTensor TensorTools::argmax_dev<Device_GPU>(Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
 IndexTensor TensorTools::argmax(const Tensor& d, unsigned dim, unsigned num) {
@@ -450,6 +454,7 @@ IndexTensor TensorTools::categorical_sample_log_prob_dev(MyDevice & dev, const T
 template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_GPU>(Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
 #else
 template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_CPU>(Device_CPU & dev, const Tensor& d, unsigned dim, unsigned num);
+template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_ThreadPool>(Device_ThreadPool & dev, const Tensor& d, unsigned dim, unsigned num);
 #ifdef HAVE_CUDA
 extern template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_GPU>(Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
 IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned dim, unsigned num) {

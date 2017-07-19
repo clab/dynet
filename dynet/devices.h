@@ -1,17 +1,12 @@
 #ifndef DYNET_DEVICES_H
 #define DYNET_DEVICES_H
 
+#define EIGEN_USE_THREADS
 #include <string>
+#include <unsupported/Eigen/CXX11/Tensor>
+
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/cuda.h"
-#define EIGEN_USE_THREADS
-
-namespace Eigen {
-  struct DefaultDevice;
-  class CudaStreamDevice;
-  struct GpuDevice;
-  struct ThreadPoolDevice;
-}
 
 namespace dynet {
 
@@ -83,6 +78,7 @@ class Device_ThreadPool : public Device {
   explicit Device_ThreadPool(int my_id, const DeviceMempoolSizes &mb, bool shared, int num_cores);
   ~Device_ThreadPool();
   CPUAllocator cpu_mem;
+  Eigen::ThreadPool* tp;
   Eigen::ThreadPoolDevice* edevice;
   MemAllocator* shmem;
 };

@@ -2,10 +2,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <iostream>
-#include <unsupported/Eigen/CXX11/Tensor>
-
-#include <unsupported/Eigen/CXX11/ThreadPool>
-#include <unsupported/Eigen/CXX11/src/Tensor/TensorDeviceThreadPool.h>
 
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
@@ -136,9 +132,9 @@ Device_ThreadPool::Device_ThreadPool(int my_id, const DeviceMempoolSizes & mbs, 
   kSCALAR_ZERO = (float *) mem->malloc(sizeof(float));
   *kSCALAR_ZERO = 0;
   
-  //initialize the Eigen device
-  Eigen::ThreadPool tp(num_cores); // ?? num_cores-1 ?
-  edevice = new Eigen::ThreadPoolDevice(&tp, num_cores); // ?? same ??
+  //initialize the Eigen ThreadPool device
+  tp = new Eigen::ThreadPool(num_cores);
+  edevice = new Eigen::ThreadPoolDevice(tp, num_cores);
   
   // this is the big memory allocation 
   pools[0] = new AlignedMemoryPool("ThreadPool forward memory", (mbs.used[0] << 20), &cpu_mem);
