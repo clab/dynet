@@ -4302,7 +4302,7 @@ class BiRNNBuilder(object): # {{{
         """Args:
             num_layers: depth of the BiRNN
             input_dim: size of the inputs
-            hidden_dim: size of the outputs (and intermediate layer representations)
+            hidden_dim: size of the outputs (and intermediate layer representations.) This hidden dim is split evenly between the two constituent RNNs, and thus must be even. 
             model
             rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
             builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
@@ -4311,7 +4311,7 @@ class BiRNNBuilder(object): # {{{
         model = self.model = model.add_subcollection("birnn")
         if builder_layers is None:
             assert num_layers > 0
-            assert hidden_dim % 2 == 0
+            assert hidden_dim % 2 == 0, "BiRNN hidden dimension must be even."
             self.builder_layers = []
             f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
             b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
