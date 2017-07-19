@@ -1276,7 +1276,6 @@ BOOST_AUTO_TEST_CASE( maxpooling2d_same_gradient_two ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-
 // TODO: These are all unimplemented
 // Expression kmh_ngram(const Expression& x, unsigned n);
 
