@@ -275,7 +275,7 @@ namespace dynet {
   template<class MyDevice>
   void VanillaLSTMH::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
     // computes output state (elementwise multiplication)
-    // h_t = gates_o . tanh(c_t)
+    // h_t = o_t . tanh(c_t)
 
     DYNET_ASSERT(xs.size() == 2, "Failed dimension check in VanillaLSTMH::forward");
 
@@ -285,10 +285,10 @@ namespace dynet {
     unsigned hidden_dim = c_t->d[0];
     unsigned batch_size = c_t->d.bd;
 
-    Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
-    Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(batch_size));
+    Eigen::DSizes<ptrdiff_t, 3> indices_o(hidden_dim*2,0,0);
+    Eigen::DSizes<ptrdiff_t, 3> sizes_1(hidden_dim, 1, static_cast<ptrdiff_t>(batch_size));
 
-    fx.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_o, sizes_1) * c_t->tbvec().tanh();
+    fx.tb<2>().device(*dev.edevice) = gates_t->tb<2>().slice(indices_o, sizes_1) * c_t->tb<2>().tanh();
   }
 
   template<class MyDevice>
@@ -300,14 +300,24 @@ namespace dynet {
                                Tensor& dEdxi) const {
     unsigned hidden_dim = fx.d[0];
     unsigned batch_size = fx.d.bd;
-    Eigen::DSizes<ptrdiff_t, 2> indices_o(hidden_dim*2,0);
-    Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(batch_size));
+    Eigen::DSizes<ptrdiff_t, 3> indices_o(hidden_dim*2,0,0);
+    Eigen::DSizes<ptrdiff_t, 3> sizes_1(hidden_dim, 1, static_cast<ptrdiff_t>(batch_size));
 
-    if(i==0){ // dc_t = dh_t . o_t . (1 - tanh(tanh(c_t)))
-      // TODO: gradient checks not passing in case of multiple batches
-      dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1]->tbvec().slice(indices_o, sizes_1) * (xs[0]->tbvec().constant(1) - xs[0]->tbvec().tanh().tanh());
-    } else if(i==1){ // do_t = dh_t . tanh(c_t)
-      dEdxi.tbvec().slice(indices_o, sizes_1).device(*dev.edevice) += dEdf.tbvec() * xs[0]->tbvec().tanh();
+    if(i==0){
+      // dc_t = dh_t . o_t . (1 - tanh(tanh(c_t)))
+      //      = dh_t . o_t . (1 - tanh(h_t cdiv o_t))
+      dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>()
+					    * xs[1]->tb<2>().slice(indices_o, sizes_1)
+					    * (xs[0]->tb<2>().constant(1) - xs[0]->tb<2>().tanh().tanh());
+      // TODO: we could use the below..
+      // - pro: potential speed up (replace tanh by cdiv)
+      // - con: potential (though unlikely) division by 0
+//      dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>()
+//					    * xs[1]->tb<2>().slice(indices_o, sizes_1)
+//					    * (xs[0]->tb<2>().constant(1) - (fx.tb<2>() / xs[1]->tb<2>().slice(indices_o, sizes_1)).tanh());
+    } else if(i==1){
+      // do_t = dh_t . tanh(c_t)
+      dEdxi.tb<2>().slice(indices_o, sizes_1).device(*dev.edevice) += dEdf.tb<2>() * xs[0]->tb<2>().tanh();
     }
   }
 
