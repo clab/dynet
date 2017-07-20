@@ -3,6 +3,8 @@
 
 #include "dynet/tensor.h"
 #include "dynet/devices.h"
+#include "dynet/dynet.h"
+#include "dynet/nodes-macros.h"
 
 #ifdef __CUDACC__
 
@@ -67,5 +69,43 @@ inline void MatrixMultiply(const Device_CPU & dev, const Tensor& l, const Tensor
 }
 
 #endif
+
+#ifdef __CUDACC__
+inline void MatrixMultiplyBwd(const dynet::Device_GPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y, const float* acc_scalar) {
+  // computes l^T * r
+  int max_b = std::max(l.d.bd, r.d.bd);
+  // Do a single multiply if l has one batch
+  if(l.d.bd == 1 && y.d.bd == r.d.bd) {
+    CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+          y.d.rows(), y.d.cols()*y.d.batch_elems(), l.d.rows(),
+          kSCALAR_ONE,
+          l.v, l.d.rows(),
+          r.v, r.d.rows(),
+          kSCALAR_ONE, y.v, y.d.rows()));
+  } else {
+    for(int b = 0; b < max_b; ++b)
+      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+            y.d.rows(), y.d.cols(), l.d.rows(),
+            kSCALAR_ONE,
+            l.batch_ptr(b), l.d.rows(),
+            r.batch_ptr(b), r.d.rows(),
+            kSCALAR_ONE, y.batch_ptr(b), y.d.rows()));
+  }
+}
+
+# else
+inline void MatrixTranspMultiply(const dynet::Device_CPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y, const float* acc_scalar) {
+  // computes l^T * r
+  int max_b = std::max(l.d.bd, r.d.bd);
+  if(l.d.bd == 1 && y.d.bd == r.d.bd) {
+    y.colbatch_matrix().noalias() += (*l).transpose() * r.colbatch_matrix();
+  } else {
+    for(int b = 0; b < max_b; ++b)
+      y.batch_matrix(b).noalias() += l.batch_matrix(b).transpose() * r.batch_matrix(b);
+  }
+}
+#endif
+
+
 
 #endif

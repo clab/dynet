@@ -124,13 +124,8 @@ namespace dynet {
         //       note: here Wx is broadcasted over batches
 	// allocate scratch mem mult_l, mult_r
 	AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
-	Tensor mult_l(Dim({input_dim, hidden_dim*4},1), nullptr, fx.device, fx.mem_pool);
-	mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
 	Tensor mult_r(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
 	mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
-
-	// mult_l = transpose(Wx)
-	mult_l.tb<2>() = xs[2]->tb<2>().shuffle(transp_order);
 
 	// mult_r = [di . i_t . (1-i_t)]
 	//          [df . f_t . (1-f_t)]
@@ -139,8 +134,8 @@ namespace dynet {
 	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_i, sizes_mat_3) * fx.tb<2>().slice(indices_mat_i, sizes_mat_3) * (fx.tb<2>().slice(indices_mat_i, sizes_mat_3).constant(1) - fx.tb<2>().slice(indices_mat_i, sizes_mat_3));
 	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
-	// dx_t += mult_l * mult_r
-	MatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
+	// dx_t += mult_l^T * mult_r
+	MatrixTranspMultiply(dev, *xs[2], mult_r, dEdxi, kSCALAR_ONE);
 
 	scratch_allocator->free();
 
@@ -153,13 +148,8 @@ namespace dynet {
 
 	// allocate scratch mem mult_l, mult_r
 	AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
-	Tensor mult_l(Dim({hidden_dim, hidden_dim*4},1), nullptr, fx.device, fx.mem_pool);
-	mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
 	Tensor mult_r(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
 	mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
-
-	// mult_l = transpose(Wh)
-	mult_l.tb<2>() = xs[3]->tb<2>().shuffle(transp_order);
 
 	// mult_r = [di . i_t . (1-i_t)]
 	//          [df . f_t . (1-f_t)]
@@ -169,7 +159,7 @@ namespace dynet {
 	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
 	// dx_t += mult_l * mult_r
-	MatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
+	MatrixTranspMultiply(dev, *xs[3], mult_r, dEdxi, kSCALAR_ONE);
 
 	scratch_allocator->free();
 
