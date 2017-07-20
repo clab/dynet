@@ -2060,10 +2060,11 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
  *          source of stability problems sometimes.
  *
  * \param x A square matrix
+ * \param device The place device for inverse
  *
  * \return The inverse of the matrix
  */
-Expression inverse(const Expression& x);
+Expression inverse(const Expression& x, Device *device=nullptr);
 
 /**
  * \ingroup linalgoperations

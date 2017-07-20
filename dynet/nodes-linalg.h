@@ -3,6 +3,7 @@
 
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/devices.h"
 
 namespace dynet {
 
@@ -10,7 +11,8 @@ namespace dynet {
 // NOTE: if you have a column or row std::vector as input, runtime is constant
 // if you have a matrix as input, the runtime is O(mn) - try to avoid using this
 struct Transpose : public Node {
-  explicit Transpose(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned> & dims) : Node(a), dims(dims) {}
+  explicit Transpose(const std::initializer_list<VariableIndex>& a,
+                     const std::vector<unsigned> & dims) : Node(a), dims(dims) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   std::vector<unsigned> dims;
@@ -19,7 +21,7 @@ struct Transpose : public Node {
 // y = inv(x)
 // x = an invertible matrix
 struct MatrixInverse : public Node {
-  explicit MatrixInverse(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  explicit MatrixInverse(const std::initializer_list<VariableIndex>& a, Device *device) : Node(a, device) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
