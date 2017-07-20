@@ -19,7 +19,7 @@ inline void MatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor
     // -> [x, z*b] = [x, y], [y, z*b]
     CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
           y.d.rows(), y.d.cols() * y.d.batch_elems(), l.d.cols(),
-          kSCALAR_ONE,
+          dev.kSCALAR_ONE,
           l.v, l.d.rows(),
           r.v, r.d.rows(),
           acc_scalar, y.v, y.d.rows()));
@@ -30,7 +30,7 @@ inline void MatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor
     for(unsigned b = 0; b < y.d.bd; ++b) {
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
             y.d.rows(), y.d.cols(), l.d.cols(),
-            kSCALAR_ONE,
+            dev.kSCALAR_ONE,
             l.batch_ptr(b), l.d.rows(),
             r.batch_ptr(b), r.d.rows(),
             acc_scalar, y.batch_ptr(b), y.d.rows()));
@@ -78,18 +78,18 @@ inline void MatrixTranspMultiplyAcc(const dynet::Device_GPU & dev, const dynet::
   if(l.d.bd == 1 && y.d.bd == r.d.bd) {
     CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
           y.d.rows(), y.d.cols()*y.d.batch_elems(), l.d.rows(),
-          kSCALAR_ONE,
+          dev.kSCALAR_ONE,
           l.v, l.d.rows(),
           r.v, r.d.rows(),
-          kSCALAR_ONE, y.v, y.d.rows()));
+          dev.kSCALAR_ONE, y.v, y.d.rows()));
   } else {
     for(int b = 0; b < max_b; ++b)
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
             y.d.rows(), y.d.cols(), l.d.rows(),
-            kSCALAR_ONE,
+            dev.kSCALAR_ONE,
             l.batch_ptr(b), l.d.rows(),
             r.batch_ptr(b), r.d.rows(),
-            kSCALAR_ONE, y.batch_ptr(b), y.d.rows()));
+            dev.kSCALAR_ONE, y.batch_ptr(b), y.d.rows()));
   }
 }
 
@@ -112,18 +112,18 @@ inline void MatrixMultiplyTranspAcc(const dynet::Device_GPU & dev, const dynet::
   if(y.d.bd == 1 && (l.d.bd == r.d.bd)) {
     CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
           y.d.rows(), y.d.cols(), l.d.cols() * l.d.batch_elems(),
-          kSCALAR_ONE,
+          dev.kSCALAR_ONE,
           l.v, l.d.rows(),
           r.v, r.d.rows(),
-          kSCALAR_ONE, y.v, y.d.rows()));
+          dev.kSCALAR_ONE, y.v, y.d.rows()));
   } else {
     for(int b = 0; b < max_b; ++b)
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
             y.d.rows(), y.d.cols(), l.d.cols(),
-            kSCALAR_ONE,
+            dev.kSCALAR_ONE,
             l.batch_ptr(b), l.d.rows(),
             r.batch_ptr(b), r.d.rows(),
-            kSCALAR_ONE, y.batch_ptr(b), y.d.rows()));
+            dev.kSCALAR_ONE, y.batch_ptr(b), y.d.rows()));
   }
 }
 # else

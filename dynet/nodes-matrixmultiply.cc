@@ -50,7 +50,7 @@ void MatrixMultiply::forward_dev_impl(const MyDevice & dev, const vector<const T
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in MatrixMultiply::forward");
 #ifdef __CUDACC__
   // fx = 0*fx + xs[0] * xs[1]
-  MatrixMultiply(dev, *xs[0], *xs[1], fx, kSCALAR_ZERO);
+  dynet::MatrixMultiply(dev, *xs[0], *xs[1], fx, kSCALAR_ZERO);
 #else
   DYNET_ASSERT(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd), "Failed dimension check in MatrixMultiply::forward");
   if(xs[0]->d.bd == 1) {
