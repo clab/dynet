@@ -111,6 +111,8 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_3(hidden_dim*3, 1, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::array<int, 1> vec_batch_axis; vec_batch_axis[0] = 1;
     Eigen::array<int, 1> mat_batch_axis; mat_batch_axis[0] = 2;
+    Eigen::array<int, 3> reshape_inp_transp = {1, (int)input_dim, (int)batch_size};
+    Eigen::array<int, 3> reshape_hid_transp = {1, (int)hidden_dim, (int)batch_size};
 
     Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
 
@@ -194,7 +196,7 @@ namespace dynet {
       mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
       // mult_r = transpose(x_t)
-      mult_r.tb<2>() = xs[0]->tb<2>().shuffle(transp_order);
+      mult_r.tb<2>() = xs[0]->tb<2>().reshape(reshape_inp_transp);
 
       // mult_y = mult_l * mult_r
       MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
@@ -229,7 +231,7 @@ namespace dynet {
       mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
       // mult_r = transpose(h_tm1)
-      mult_r.tb<2>() = xs[1]->tb<2>().shuffle(transp_order);
+      mult_r.tb<2>() = xs[1]->tb<2>().reshape(reshape_hid_transp);
 
       // mult_y = mult_l * mult_r
       MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
