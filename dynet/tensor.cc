@@ -298,7 +298,7 @@ void TensorTools::constant_dev(const MyDevice & dev, Tensor& d, float c) {
 template void TensorTools::constant_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float c);
 #else
 template void TensorTools::constant_dev<Device_CPU>(const Device_CPU & dev, Tensor& d, float c);
-template void TensorTools::constant_dev<Devic`e_ThreadPool>(const Device_ThreadPool & dev, Tensor& d, float c);
+template void TensorTools::constant_dev<Device_ThreadPool>(const Device_ThreadPool & dev, Tensor& d, float c);
 #ifdef HAVE_CUDA
 extern template void TensorTools::constant_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float c);
 void TensorTools::constant(Tensor& d, float c) {
