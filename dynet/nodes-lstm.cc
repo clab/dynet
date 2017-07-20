@@ -200,7 +200,9 @@ namespace dynet {
       MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
 
       // dWh += mult_y.sum(batches)
-      dEdxi.t<2>().device(*dev.edevice) += mult_y.tb<2>().sum(mat_batch_axis);
+      for(int b = 0; b < batch_size; ++b)
+        dEdxi.batch_matrix(0).noalias() += mult_y.batch_matrix(b);
+      // TODO: on GPU, use something like in nodes-affinetransform.cc, line 200?
 
       scratch_allocator->free();
 
@@ -233,7 +235,9 @@ namespace dynet {
       MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
 
       // dWh += mult_y.sum(batches)
-      dEdxi.t<2>().device(*dev.edevice) += mult_y.tb<2>().sum(mat_batch_axis);
+      for(int b = 0; b < batch_size; ++b)
+        dEdxi.batch_matrix(0).noalias() += mult_y.batch_matrix(b);
+      // TODO: on GPU, use something like in nodes-affinetransform.cc, line 200?
 
       scratch_allocator->free();
 
