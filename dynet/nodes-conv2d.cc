@@ -1,4 +1,4 @@
-#include "dynet/nodes-conv.h"
+#include "dynet/nodes-conv2d.h"
 
 #include <algorithm>
 #include <sstream>
@@ -9,12 +9,14 @@
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/op-helper.h"
 #include "third_party/eigen_spatial_convolutions.h"
 #include "third_party/eigen_backward_spatial_convolutions.h"
 
 #if HAVE_CUDA
 #include "dynet/cuda.h"
 #include "dynet/gpu-ops.h"
+#include "dynet/cudnn-ops.h"
 #endif
 
 using namespace std;
@@ -68,21 +70,22 @@ Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
   return Dim(output_shape, bs);
 }
 
-size_t Conv2D::aux_storage_size() const {
-  vector<unsigned> input_size(arity());
-  for (unsigned i = 0; i < arity(); ++i) {
-    input_size[i] = get_cg()->nodes[args[i]]->dim.size();
-  }
-  size_t nbytes = 0;
-#if HAVE_CUDNN
-  nbytes += CudnnConvOp::workspace_size_limit_bytes;
-  nbytes += 3 * input_size[0] * sizeof(float);
-#else
-  nbytes += sizeof(float) * (input_size[0] + input_size[1] + 
-      dim.size() + std::max(input_size[0], input_size[1]));
-#endif
-  return nbytes;
-}
+// size_t Conv2D::aux_storage_size() const {
+//   vector<unsigned> input_size(arity());
+//   for (unsigned i = 0; i < arity(); ++i) {
+//     input_size[i] = get_cg()->nodes[args[i]]->dim.size();
+//   }
+//   size_t nbytes = 0;
+// #if HAVE_CUDNN
+//   nbytes += CudnnConvOp::workspace_size_limit_bytes;
+//   nbytes += 3 * input_size[0] * sizeof(float);
+// #else
+//   nbytes += sizeof(float) * (input_size[0] + input_size[1] + 
+//       dim.size() + std::max(input_size[0], input_size[1]));
+// #endif
+//   return nbytes;
+//   // return 0;
+// }
 #endif
 
 template<class MyDevice>
@@ -90,28 +93,29 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   DYNET_ASSERT(xs.size() == 2 || xs.size() == 3, "Failed dimension check in Conv2D::forward, at least 2 inputs");
   DYNET_ASSERT(fx.d.bd == xs[0]->d.bd, "Failed dimension check in Conv2D::forward, batchsize not match");
   DYNET_ASSERT(fx.d[2] == xs[1]->d[3], "Failed dimension check in Conv2D::forward, #channel not match");
-  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
+  AlignedMemoryPool* scratch_allocator = default_device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  if (cudnn_conv_op_ == NULL) {
+  if (cudnn_conv_op_ == NULL)
     cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
-  }
-  cudnn_conv_op_->set_pool(&aux_mem_pool);
   cudnn_conv_op_->forward_impl(dev, xs, fx);
 #else
   throw std::runtime_error("Conv2D::forward_dev_impl not supported without CUDNN");
 #endif
 #else
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
-  void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+  //void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+  void* CHWN_x_mem = scratch_allocator->allocate(xs[0]->d.size() * sizeof(float));
   Tensor CHWN_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_x_mem), xs[0]->device, DeviceMempool::FXS);
   Eigen::array<ptrdiff_t, 4> shuffles = {2, 0, 1, 3};
   CHWN_x.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().shuffle(shuffles);
-  void* NCHW_f_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+  //void* NCHW_f_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+  void* NCHW_f_mem = scratch_allocator->allocate(xs[1]->d.size() * sizeof(float));
   Tensor NCHW_f = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[0], xs[1]->d[1]}), static_cast<float*>(NCHW_f_mem), xs[1]->device, DeviceMempool::FXS);
   shuffles = {3, 2, 0, 1};
   NCHW_f.t<4>().device(*dev.edevice) = xs[1]->t<4>().shuffle(shuffles);
-  void* CHWN_y_mem = aux_mem_pool.allocate(fx.d.size() * sizeof(float));
+  //void* CHWN_y_mem = aux_mem_pool.allocate(fx.d.size() * sizeof(float));
+  void* CHWN_y_mem = scratch_allocator->allocate(fx.d.size() * sizeof(float));
   Tensor CHWN_y = Tensor(Dim({fx.d[2], fx.d[0], fx.d[1]}, fx.d.bd), static_cast<float*>(CHWN_y_mem), fx.device, DeviceMempool::FXS);
   CHWN_y.tb<3>().device(*dev.edevice) = Eigen::SpatialConvolution(CHWN_x.tb<3>(), NCHW_f.t<4>(), stride[0], stride[1], padding_type);
   shuffles = {1, 2, 0, 3};
@@ -124,6 +128,7 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
     }
   }
 #endif
+  scratch_allocator->free();
 }
 
 template<class MyDevice>
@@ -137,44 +142,49 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in Conv2D::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in Conv2D::backward");
   DYNET_ASSERT(i <= 2, "Failed dimension check in Conv2D::backward");
-  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
+  AlignedMemoryPool* scratch_allocator = default_device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  if (cudnn_conv_op_ == NULL) {
+  if (cudnn_conv_op_ == NULL)
     cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
-  }
-  cudnn_conv_op_->set_pool(&aux_mem_pool);
   cudnn_conv_op_->backward_impl(dev, xs, fx, dEdf, i, dEdxi);
 #else
   throw std::runtime_error("Conv2D::backward_dev_impl not supported without CUDNN");
 #endif
 #else
-  void* CHWN_dy_mem = aux_mem_pool.allocate(dEdf.d.size() * sizeof(float));
+  //void* CHWN_dy_mem = aux_mem_pool.allocate(dEdf.d.size() * sizeof(float));
+  void* CHWN_dy_mem = scratch_allocator->allocate(dEdf.d.size() * sizeof(float));
   Tensor CHWN_dy = Tensor(Dim({dEdf.d[2], dEdf.d[0], dEdf.d[1]}, dEdf.d.bd), static_cast<float*>(CHWN_dy_mem), dEdf.device, DeviceMempool::FXS);
   Eigen::array<ptrdiff_t, 4> shuffles = {2, 0, 1, 3};
   CHWN_dy.tb<3>().device(*dev.edevice) = dEdf.tb<3>().shuffle(shuffles);
   if (i == 0) { //backward w.r.t the input
-    void* NCHW_f_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+    //void* NCHW_f_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+    void* NCHW_f_mem = scratch_allocator->allocate(xs[1]->d.size() * sizeof(float));
     Tensor NCHW_f = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[0], xs[1]->d[1]}), static_cast<float*>(NCHW_f_mem), xs[1]->device, DeviceMempool::FXS);
     shuffles = {3, 2, 0, 1};
     NCHW_f.t<4>().device(*dev.edevice) = xs[1]->t<4>().shuffle(shuffles);
-    void* CHWN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    //void* CHWN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    void* CHWN_dEdxi_mem = scratch_allocator->allocate(xs[0]->d.size() * sizeof(float));
     Tensor CHWN_dEdxi = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
     CHWN_dEdxi.tb<3>().device(*dev.edevice) = Eigen::SpatialConvolutionBackwardInput(NCHW_f.t<4>(), CHWN_dy.tb<3>(), xs[0]->d[0], xs[0]->d[1], stride[0], stride[1]);
-    void* HWCN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    //void* HWCN_dEdxi_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    void* HWCN_dEdxi_mem = scratch_allocator->allocate(xs[0]->d.size() * sizeof(float));
     Tensor HWCN_dEdxi = Tensor(xs[0]->d, static_cast<float*>(HWCN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
     shuffles = {1, 2, 0, 3};
     HWCN_dEdxi.tb<3>().device(*dev.edevice) = CHWN_dEdxi.tb<3>().shuffle(shuffles);
     dEdxi.tb<3>().device(*dev.edevice) += HWCN_dEdxi.tb<3>();
   } else if (i == 1) { //backward w.r.t the kernel
-    void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    //void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+    void* CHWN_x_mem = scratch_allocator->allocate(xs[0]->d.size() * sizeof(float));
     Tensor CHWN_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_x_mem), xs[0]->device, DeviceMempool::FXS);
     shuffles = {2, 0, 1, 3};
     CHWN_x.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().shuffle(shuffles);
-    void* NCHW_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+    //void* NCHW_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+    void* NCHW_dEdxi_mem = scratch_allocator->allocate(xs[1]->d.size() * sizeof(float));
     Tensor NCHW_dEdxi = Tensor(Dim({xs[1]->d[3], xs[1]->d[2], xs[1]->d[0], xs[1]->d[1]}), static_cast<float*>(NCHW_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
     NCHW_dEdxi.t<4>().device(*dev.edevice) = Eigen::SpatialConvolutionBackwardKernel(CHWN_x.tb<3>(), CHWN_dy.tb<3>(), xs[1]->d[0], xs[1]->d[1], stride[0], stride[1], is_valid);
-    void* HWCN_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+    //void* HWCN_dEdxi_mem = aux_mem_pool.allocate(xs[1]->d.size() * sizeof(float));
+    void* HWCN_dEdxi_mem = scratch_allocator->allocate(xs[1]->d.size() * sizeof(float));
     Tensor HWCN_dEdxi = Tensor(xs[1]->d, static_cast<float*>(HWCN_dEdxi_mem), dEdxi.device, DeviceMempool::FXS);
     shuffles = {2, 3, 1, 0};
     HWCN_dEdxi.t<4>().device(*dev.edevice) = NCHW_dEdxi.t<4>().shuffle(shuffles);
@@ -184,6 +194,7 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
     dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<3>().sum(red_axis);
   }
 #endif
+  scratch_allocator->free();
 }
 DYNET_NODE_INST_DEV_IMPL(Conv2D)
 

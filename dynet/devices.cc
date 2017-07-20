@@ -1,41 +1,44 @@
 #include "dynet/devices.h"
 
-#include <boost/algorithm/string.hpp>
 #include <iostream>
 
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
 #include "dynet/except.h"
+#include "dynet/str-util.h"
 
 using namespace std;
 
 namespace dynet {
 
 DeviceMempoolSizes::DeviceMempoolSizes(size_t total_size) {
-  used[0] = total_size / 3;
-  used[1] = total_size / 3;
-  used[2] = total_size / 3;
+  used[0] = total_size / 4;
+  used[1] = total_size / 4;
+  used[2] = total_size / 4;
+  used[3] = total_size / 4;
 }
 
-DeviceMempoolSizes::DeviceMempoolSizes(size_t fx_s, size_t dEdfs_s, size_t ps_s) {
+DeviceMempoolSizes::DeviceMempoolSizes(size_t fx_s, size_t dEdfs_s, size_t ps_s, size_t sc_s) {
   used[0] = fx_s;
   used[1] = dEdfs_s;
   used[2] = ps_s;
+  used[3] = sc_s;
 }
 
 DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
-  vector<string> strs;
-  boost::algorithm::split(strs, descriptor, boost::is_any_of(","));
+  vector<string> strs = str_split(descriptor, ',');
   if (strs.size() == 1) {
     size_t total_size = stoi(strs[0]);
-    used[0] = total_size / 3;
-    used[1] = total_size / 3;
-    used[2] = total_size / 3;
-  } else if (strs.size() == 3) {
+    used[0] = total_size / 4;
+    used[1] = total_size / 4;
+    used[2] = total_size / 4;
+    used[3] = total_size / 4;
+  } else if (strs.size() == 4) {
     used[0] = stoi(strs[0]);
     used[1] = stoi(strs[1]);
     used[2] = stoi(strs[2]);
+    used[3] = stoi(strs[3]);
   } else {
     DYNET_INVALID_ARG("the format of --dynet-mem is invalid: " << descriptor);
   }
@@ -46,7 +49,7 @@ Device::~Device() {}
 DeviceMempoolSizes Device::mark(ComputationGraph *cg) {
   cg->incremental_forward({cg, (VariableIndex)(cg->nodes.size() - 1)}); // needed so that we actually allocate the needed memory
   // for all existing nodes.
-  return DeviceMempoolSizes(pools[0]->used(), pools[1]->used(), pools[2]->used());
+  return DeviceMempoolSizes(pools[0]->used(), pools[1]->used(), pools[2]->used(), pools[3]->used());
 }
 
 void Device::revert(const DeviceMempoolSizes & cp) {
@@ -59,6 +62,9 @@ void Device::revert(const DeviceMempoolSizes & cp) {
   if(cp.used[2] > pools[2]->used())
     DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[2] << " > " << pools[2]->used() << ")");
   pools[2]->set_used(cp.used[2]);
+  if(cp.used[3] > pools[3]->used())
+    DYNET_INVALID_ARG("Saved value greater than original value in Device::revert (" << cp.used[3] << " > " << pools[3]->used() << ")");
+  pools[3]->set_used(cp.used[3]);
 }
 
 void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
@@ -96,6 +102,7 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   pools[0] = new AlignedMemoryPool("GPU forward memory", (mbs.used[0] << 20), &gpu_mem);
   pools[1] = new AlignedMemoryPool("GPU backward memory", (mbs.used[1] << 20), &gpu_mem);
   pools[2] = new AlignedMemoryPool("GPU parameter memory", (mbs.used[2] << 20), &gpu_mem);
+  pools[3] = new AlignedMemoryPool("GPU scratch memory", (mbs.used[3] << 20), &gpu_mem);
 }
 
 Device_GPU::~Device_GPU() {}
@@ -118,6 +125,7 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
   pools[0] = new AlignedMemoryPool("CPU forward memory", (mbs.used[0] << 20), &cpu_mem);
   pools[1] = new AlignedMemoryPool("CPU backward memory", (mbs.used[1] << 20), &cpu_mem);
   pools[2] = new AlignedMemoryPool("CPU parameter memory", (mbs.used[2] << 20), shmem);
+  pools[3] = new AlignedMemoryPool("CPU scratch memory", (mbs.used[3] << 20), &cpu_mem);
 }
 
 Device_CPU::~Device_CPU() {}

@@ -1,4 +1,4 @@
-#include "dynet/nodes-conv.h"
+#include "dynet/nodes-maxpooling2d.h"
 
 #include <sstream>
 #include <limits>
@@ -8,6 +8,7 @@
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
+#include "dynet/op-helper.h"
 #include "third_party/eigen_pooling.h"
 
 #if HAVE_CUDA
@@ -57,9 +58,6 @@ Dim MaxPooling2D::dim_forward(const vector<Dim>& xs) const {
   return Dim(output_shape, bs);
 }
 
-size_t MaxPooling2D::aux_storage_size() const {
-  return sizeof(float) * (2 * get_cg()->nodes[args[0]]->dim.size() + dim.size());
-}
 #endif
 
 template<class MyDevice>
@@ -67,13 +65,11 @@ void MaxPooling2D::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in MaxPooling2D::forward, exactly one input");
   DYNET_ASSERT(fx.d.bd == xs[0]->d.bd, "Failed dimension check in MaxPooling2D::forward, batchsize not match");
   DYNET_ASSERT(fx.d[2] == xs[0]->d[2], "Failed dimension check in MaxPooling2D::forward, #channel not match");
-  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
+  AlignedMemoryPool* scratch_allocator = default_device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  if (cudnn_maxpool_op_ == NULL) {
+  if (cudnn_maxpool_op_ == NULL)
     cudnn_maxpool_op_ = new CudnnMaxPooling2DOp(ksize, stride, is_valid);
-  }
-  cudnn_maxpool_op_->set_pool(&aux_mem_pool);
   cudnn_maxpool_op_->forward_impl(dev, xs, fx);
 #else
   throw std::runtime_error("MaxPooling2D::forward_dev_impl not supported without CUDNN");
@@ -81,19 +77,20 @@ void MaxPooling2D::forward_dev_impl(const MyDevice & dev, const vector<const Ten
 #else
   Eigen::PaddingType padding_type = is_valid ? Eigen::PADDING_VALID : Eigen::PADDING_SAME;
   // convert x from HWCN to CHWN
-  void* CHWN_x_mem = aux_mem_pool.allocate(xs[0]->d.size() * sizeof(float));
+  void* CHWN_x_mem = scratch_allocator->allocate(xs[0]->d.size() * sizeof(float));
   Tensor CHWN_x = Tensor(Dim({xs[0]->d[2], xs[0]->d[0], xs[0]->d[1]}, xs[0]->d.bd), static_cast<float*>(CHWN_x_mem), xs[0]->device, DeviceMempool::FXS);
-  Eigen::array<ptrdiff_t, 4> shuffles; 
+  Eigen::array<ptrdiff_t, 4> shuffles;
   shuffles[0] = 2; shuffles[1] = 0; shuffles[2] = 1; shuffles[3] = 3;
   CHWN_x.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().shuffle(shuffles);
   // allocate temp memory and compute
-  void* CHWN_y_mem = aux_mem_pool.allocate(fx.d.size() * sizeof(float));
+  void* CHWN_y_mem = scratch_allocator->allocate(fx.d.size() * sizeof(float));
   Tensor CHWN_y = Tensor(Dim({fx.d[2], fx.d[0], fx.d[1]}, fx.d.bd), static_cast<float*>(CHWN_y_mem), fx.device, DeviceMempool::FXS);
   CHWN_y.tb<3>().device(*dev.edevice) = Eigen::SpatialMaxPooling(CHWN_x.tb<3>(), ksize[0], ksize[1], stride[0], stride[1], padding_type);
   // convert y from CHWN to HWCN
   shuffles[0] = 1; shuffles[1] = 2; shuffles[2] = 0; shuffles[3] = 3;
   fx.tb<3>().device(*dev.edevice) = CHWN_y.tb<3>().shuffle(shuffles);
 #endif
+  scratch_allocator->free();
 }
 
 template<class MyDevice>
@@ -106,13 +103,10 @@ void MaxPooling2D::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(dEdf.d == fx.d, "Failed dimension check in MaxPooling2D::backward");
   DYNET_ASSERT(dEdxi.d == xs[i]->d, "Failed dimension check in MaxPooling2D::backward");
   DYNET_ASSERT(i == 0, "Failed dimension check in MaxPooling2D::backward: i must be 0");
-  NodeMemPool aux_mem_pool = NodeMemPool(aux_storage_size(), aux_mem);
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  if (cudnn_maxpool_op_ == NULL) {
+  if (cudnn_maxpool_op_ == NULL)
     cudnn_maxpool_op_ = new CudnnMaxPooling2DOp(ksize, stride, is_valid);
-  }
-  cudnn_maxpool_op_->set_pool(&aux_mem_pool);
   cudnn_maxpool_op_->backward_impl(dev, xs, fx, dEdf, i, dEdxi);
 #else
   throw std::runtime_error("MaxPooling2D::backward_dev_impl not supported without CUDNN");
@@ -124,22 +118,22 @@ void MaxPooling2D::backward_dev_impl(const MyDevice & dev,
                  ksize[1] - xs[0]->d[1]);
   int pad_top = is_valid ? 0 : pad_along_height / 2;
   int pad_left = is_valid ? 0 : pad_along_width / 2;
-  for (int b = 0; b < fx.d.bd; ++b) {
-    for (int i = 0; i < fx.d[0]; ++i) {
-      for (int j = 0; j < fx.d[1]; ++j) {
-        for (int ch = 0; ch < fx.d[2]; ++ch) {    
+  for (unsigned b = 0; b < fx.d.bd; ++b) {
+    for (unsigned i = 0; i < fx.d[0]; ++i) {
+      for (unsigned j = 0; j < fx.d[1]; ++j) {
+        for (unsigned ch = 0; ch < fx.d[2]; ++ch) {
           int max_r = 0, max_c = 0;
           float max_val;
           bool is_feasible = false;
-          for (int r = 0; r < ksize[0]; ++r) {
-            for (int c = 0; c < ksize[1]; ++c) {
-              int row = stride[0] * i + r - pad_top;
-              int col = stride[1] * j + c - pad_left;
-              if (((col < xs[0]->d[1]) && (row < xs[0]->d[0])) && ((0 <= col) && (0 <= row))) {
+          for (unsigned r = 0; r < ksize[0]; ++r) {
+            for (unsigned c = 0; c < ksize[1]; ++c) {
+              unsigned row = stride[0] * i + r - pad_top;
+              unsigned col = stride[1] * j + c - pad_left;
+              if (((col < xs[0]->d[1]) && (row < xs[0]->d[0]))) {
                 if (!is_feasible) {
                   max_val = xs[0]->tb<3>()(row, col, ch, b);
                   max_r = row; max_c = col; is_feasible = true;
-		        } else if (xs[0]->tb<3>()(row, col, ch, b) > max_val) {
+                } else if (xs[0]->tb<3>()(row, col, ch, b) > max_val) {
                   max_val = xs[0]->tb<3>()(row, col, ch, b);
                   max_r = row; max_c = col;
                 }

@@ -10,7 +10,7 @@ object XorScala {
     println("Running XOR example")
     Initialize.initialize()
     println("Dynet initialized!")
-    val m = new Model
+    val m = new ParameterCollection
     val sgd = new SimpleSGDTrainer(m)
     ComputationGraph.renew()
 
@@ -52,7 +52,7 @@ object XorScala {
         y_value.set(if (x1 != x2) 1 else -1)
         loss += ComputationGraph.forward(loss_expr).toFloat
         ComputationGraph.backward(loss_expr)
-        sgd.update(1.0f)
+        sgd.update()
       }
       sgd.updateEpoch()
       loss /= 4

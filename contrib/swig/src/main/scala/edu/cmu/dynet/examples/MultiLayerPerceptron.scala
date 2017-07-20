@@ -18,7 +18,7 @@ case class Layer(
 
 case class LayerParams(w: Parameter, b: Parameter)
 
-class MultiLayerPerceptron(model: Model, layers: Seq[Layer]) {
+class MultiLayerPerceptron(model: ParameterCollection, layers: Seq[Layer]) {
   // check that layers are compatible
   layers.sliding(2).foreach(pair => assert(pair(0).outputDim == pair(1).inputDim))
 

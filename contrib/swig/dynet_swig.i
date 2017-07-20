@@ -51,8 +51,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include "param-init.h"
 #include "model.h"
 #include "tensor.h"
 #include "dynet.h"
@@ -62,6 +61,7 @@
 #include "lstm.h"
 #include "gru.h"
 #include "fast-lstm.h"
+#include "io.h"
 %}
 
 //
@@ -86,9 +86,9 @@ VECTORCONSTRUCTOR(float, Float, FloatVector)
 VECTORCONSTRUCTOR(double, Double, DoubleVector)
 VECTORCONSTRUCTOR(int, Integer, IntVector)
 VECTORCONSTRUCTOR(unsigned, Integer, UnsignedVector)
-VECTORCONSTRUCTOR(dynet::expr::Expression, Expression, ExpressionVector)
+VECTORCONSTRUCTOR(dynet::Expression, Expression, ExpressionVector)
 VECTORCONSTRUCTOR(dynet::Parameter, Parameter, ParameterVector)
-VECTORCONSTRUCTOR(std::vector<dynet::expr::Expression>, ExpressionVector, ExpressionVectorVector)
+VECTORCONSTRUCTOR(std::vector<dynet::Expression>, ExpressionVector, ExpressionVectorVector)
 VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVectorVector)
 
 
@@ -107,7 +107,7 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 %pointer_functions(int, intp);
 %pointer_functions(float, floatp);
 
-struct dynet::expr::Expression;
+struct dynet::Expression;
 
 // Declare explicit types for needed instantiations of generic types
 namespace std {
@@ -117,10 +117,10 @@ namespace std {
   %template(FloatVector)                  vector<float>;
   %template(LongVector)                   vector<long>;
   %template(StringVector)                 vector<std::string>;
-  %template(ExpressionVector)             vector<dynet::expr::Expression>;
+  %template(ExpressionVector)             vector<dynet::Expression>;
   %template(ParameterStorageVector)       vector<dynet::ParameterStorage*>;
   %template(LookupParameterStorageVector) vector<dynet::LookupParameterStorage*>;
-  %template(ExpressionVectorVector)       vector<vector<dynet::expr::Expression>>;
+  %template(ExpressionVectorVector)       vector<vector<dynet::Expression>>;
   %template(ParameterVector)              vector<dynet::Parameter>;
   %template(ParameterVectorVector)        vector<vector<dynet::Parameter>>;
 }
@@ -221,13 +221,10 @@ struct Dim {
 // declarations from dynet/model.h //
 /////////////////////////////////////
 
-class Model;
+class ParameterCollection;
 struct Parameter {
   Parameter();
-  Parameter(Model* mp, unsigned long index);
   void zero();
-  Model* mp;
-  unsigned long index;
 
   Dim dim();
   Tensor* values();
@@ -239,14 +236,10 @@ struct Parameter {
 
 struct LookupParameter {
   LookupParameter();
-  LookupParameter(Model* mp, unsigned long index);
-  LookupParameterStorage* get() const;
   void initialize(unsigned index, const std::vector<float>& val) const;
   void zero();
-  Model* mp;
-  unsigned long index;
-  Dim dim() { return get()->dim; }
-  std::vector<Tensor>* values() { return &(get()->values); }
+  Dim dim();
+  std::vector<Tensor>* values();
   void set_updated(bool b);
   bool is_updated();
 };
@@ -361,7 +354,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
 };
 
 // extra code for parameter lookup
-%extend Model {
+%extend ParameterCollection {
    // SWIG can't get the types right for `parameters_list`, so here are replacement methods
    // for which it can. (You might worry that these would cause infinite recursion, but
    // apparently they don't.
@@ -372,20 +365,12 @@ struct LookupParameterStorage : public ParameterStorageBase {
    std::vector<LookupParameterStorage*> lookup_parameters_list() const {
      return $self->lookup_parameters_list();
    }
-
-   std::vector<unsigned> updated_parameters_list() const {
-     return $self->updated_parameters_list();
-   }
-
-   std::vector<unsigned> updated_lookup_parameters_list() const {
-     return $self->updated_lookup_parameters_list();
-   }
 };
 
-class Model {
+class ParameterCollection {
  public:
-  Model();
-  ~Model();
+  ParameterCollection();
+  ~ParameterCollection();
   float gradient_l2_norm() const;
   void reset_gradient();
 
@@ -399,11 +384,6 @@ class Model {
 
   size_t parameter_count() const;
   size_t updated_parameter_count() const;
-
-  void set_updated_param(const Parameter *p, bool status);
-  void set_updated_lookup_param(const LookupParameter *p, bool status);
-  bool is_updated_param(const Parameter *p);
-  bool is_updated_lookup_param(const LookupParameter *p);
 };
 
 //////////////////////////////////////
@@ -439,7 +419,6 @@ struct Average;
 
 struct ComputationGraph;
 
-namespace expr {
 struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
@@ -463,7 +442,9 @@ Expression input(ComputationGraph& g, const real *ps);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
 Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
 Expression parameter(ComputationGraph& g, Parameter p);
+Expression parameter(ComputationGraph& g, LookupParameter lp);
 Expression const_parameter(ComputationGraph& g, Parameter p);
+Expression const_parameter(ComputationGraph& g, LookupParameter lp);
 Expression lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
@@ -512,6 +493,8 @@ Expression lgamma(const Expression& x);
 Expression log(const Expression& x);
 Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
+Expression elu(const Expression& x, float alpha=1.f);
+Expression selu(const Expression& x);
 Expression softsign(const Expression& x);
 Expression pow(const Expression& x, const Expression& y);
 
@@ -521,11 +504,11 @@ Expression min(const Expression& x, const Expression& y);
 // gets unhappy when you use it to overload a function, so we have to define
 // the `ExpressionVector` version of `max` explicitly.
 %{
-namespace dynet { namespace expr {
+namespace dynet {
 Expression max(const std::vector<Expression>& xs) {
   return detail::f<Max, std::vector<Expression>>(xs);
 };
-} }
+}
 %}
 
 Expression max(const Expression& x, const Expression& y);
@@ -575,12 +558,12 @@ Expression sum_batches(const Expression& x);
 Expression pick(const Expression& x, unsigned v, unsigned d = 0);
 Expression pick(const Expression& x, const std::vector<unsigned>& v, unsigned d = 0);
 Expression pick(const Expression& x, const unsigned* v, unsigned d = 0);
-Expression pickrange(const Expression& x, unsigned v, unsigned u);
+Expression pick_range(const Expression& x, unsigned s, unsigned e, unsigned d = 0);
 
 // Concatenate and ConcatenateCols got changed around, need to implement
 // explicitly now.
 %{
-namespace dynet { namespace expr {
+namespace dynet {
 inline Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0) {
   return detail::f<Concatenate>(xs, d);
 };
@@ -588,7 +571,7 @@ inline Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0)
 inline Expression concatenate_cols(const std::vector<Expression>& xs) {
   return detail::f<Concatenate>(xs, 1);
 };
-} }
+}
 %}
 
 Expression concatenate(const std::vector<Expression>& xs);
@@ -632,7 +615,10 @@ Expression inverse(const Expression& x);
 Expression logdet(const Expression& x);
 Expression trace_of_product(const Expression& x, const Expression& y);
 
-} // namespace expr
+/* NORMALIZATION OPERATIONS */
+
+Expression layer_norm(const Expression& x, const Expression& g, const Expression& b);
+Expression weight_norm(const Expression& w, const Expression& g);
 
 /////////////////////////////////////
 // declarations from dynet/dynet.h //
@@ -683,14 +669,14 @@ struct ComputationGraph {
 
   Dim& get_dimension(VariableIndex index) const;
 
-  const Tensor& forward(const expr::Expression& last);
+  const Tensor& forward(const Expression& last);
   //const Tensor& forward(VariableIndex i);
-  const Tensor& incremental_forward(const expr::Expression& last);
+  const Tensor& incremental_forward(const Expression& last);
   //const Tensor& incremental_forward(VariableIndex i);
   //const Tensor& get_value(VariableIndex i);
-  const Tensor& get_value(const expr::Expression& e);
+  const Tensor& get_value(const Expression& e);
   void invalidate();
-  void backward(const expr::Expression& last);
+  void backward(const Expression& last);
   //void backward(VariableIndex i);
 
   void print_graphviz() const;
@@ -706,16 +692,13 @@ struct ComputationGraph {
 // Need to disable constructor as SWIG gets confused otherwise
 %nodefaultctor Trainer;
 struct Trainer {
-  void update(real scale = 1.0);
-  void update_epoch(real r = 1);
+  virtual void update();
+  void update_epoch(real r = 1.0);
 
-  float clip_gradients(real scale);
+  float clip_gradients();
   void rescale_and_reset_weight_decay();
 
-  real eta0;
-  real eta;
-  real eta_decay;
-  real epoch;
+  real learning_rate;
 
   bool clipping_enabled;
   real clip_threshold;
@@ -730,31 +713,36 @@ struct Trainer {
 
   void status();
 
-  Model* model;
+  ParameterCollection* model;
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0);
+  explicit SimpleSGDTrainer(ParameterCollection& m, real learning_rate = 0.1);
+};
+
+struct CyclicalSGDTrainer : public Trainer {
+  explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0);
+  void update() override;
 };
 
 struct MomentumSGDTrainer : public Trainer {
-  explicit MomentumSGDTrainer(Model& m, real e0 = 0.01, real mom = 0.9, real edecay = 0.0);
+  explicit MomentumSGDTrainer(ParameterCollection& m, real learning_rate = 0.01, real mom = 0.9);
 };
 
 struct AdagradTrainer : public Trainer {
-  explicit AdagradTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real edecay = 0.0);
+  explicit AdagradTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20);
 };
 
 struct AdadeltaTrainer : public Trainer {
-  explicit AdadeltaTrainer(Model& m, real eps = 1e-6, real rho = 0.95, real edecay = 0.0);
+  explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95);
 };
 
 struct RMSPropTrainer : public Trainer {
-   explicit RMSPropTrainer(Model& m, real e0 = 0.1, real eps = 1e-20, real rho = 0.95, real edecay = 0.0);
+   explicit RMSPropTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20, real rho = 0.95);
 };
 
 struct AdamTrainer : public Trainer {
-  explicit AdamTrainer(Model& m, float e0 = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, real edecay = 0.0);
+  explicit AdamTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8);
 };
 
 ///////////////////////////////////
@@ -763,8 +751,6 @@ struct AdamTrainer : public Trainer {
 
 %nodefaultctor RNNBuilder;
 struct RNNBuilder {
-  using namespace dynet::expr;
-
   RNNPointer state() const;
   void new_graph(ComputationGraph& cg);
   void start_new_sequence(const std::vector<Expression>& h_0 = {});
@@ -786,18 +772,15 @@ struct RNNBuilder {
 
   virtual unsigned num_h0_components() const = 0;
   virtual void copy(const RNNBuilder& params) = 0;
-  virtual void save_parameters_pretraining(const std::string& fname) const;
-  virtual void load_parameters_pretraining(const std::string& fname);
 };
 
 struct SimpleRNNBuilder : public RNNBuilder {
-  using namespace dynet::expr;
   SimpleRNNBuilder() = default;
 
   explicit SimpleRNNBuilder(unsigned layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
-                            Model& model,
+                            ParameterCollection& model,
                             bool support_lags = false);
 
   Expression add_auxiliary_input(const Expression& x, const Expression& aux);
@@ -811,23 +794,18 @@ struct SimpleRNNBuilder : public RNNBuilder {
   void copy(const RNNBuilder& params) override;
 
   unsigned num_h0_components() const override;
-
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
 };
 
 ////////////////////////////////////
 // declarations from dynet/lstm.h //
 ////////////////////////////////////
 
-struct LSTMBuilder : public RNNBuilder {
-  using namespace dynet::expr;
-
-  LSTMBuilder() = default;
-  explicit LSTMBuilder(unsigned layers,
+struct CoupledLSTMBuilder : public RNNBuilder {
+  CoupledLSTMBuilder() = default;
+  explicit CoupledLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       ParameterCollection& model);
   Expression back() const override;
   std::vector<Expression> final_h() const override;
   std::vector<Expression> final_s() const override;
@@ -838,8 +816,9 @@ struct LSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder& params) override;
 
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
+  void set_dropout(float d);
+  void set_dropout(float d, float d_h, float d_c);
+  void disable_dropout();
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
@@ -849,6 +828,10 @@ struct LSTMBuilder : public RNNBuilder {
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
+
+  // first index is layer, then ...
+  // masks for Gal dropout
+  std::vector<std::vector<Expression>> masks;
 
   // initial values of h and c at each layer
   // - both default to zero matrix input
@@ -863,7 +846,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   explicit VanillaLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       ParameterCollection& model,
+                       bool ln_lstm = false);
 
   Expression back() const override;
   std::vector<Expression> final_h() const override;
@@ -875,14 +859,19 @@ struct VanillaLSTMBuilder : public RNNBuilder {
 
   void copy(const RNNBuilder & params) override;
 
-  void save_parameters_pretraining(const std::string& fname) const override;
-  void load_parameters_pretraining(const std::string& fname) override;
+  void set_dropout(float d);
+  void set_dropout(float d, float d_r);
+  void disable_dropout();
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> ln_params;
 
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> ln_param_vars;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
@@ -896,6 +885,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   unsigned hid;
 };
 
+typedef VanillaLSTMBuilder LSTMBuilder;
+
 ///////////////////////////////////
 // declarations from dynet/gru.h //
 ///////////////////////////////////
@@ -905,7 +896,7 @@ struct GRUBuilder : public RNNBuilder {
   explicit GRUBuilder(unsigned layers,
                       unsigned input_dim,
                       unsigned hidden_dim,
-                      Model& model);
+                      ParameterCollection& model);
   Expression back() const override;
   std::vector<Expression> final_h() const override;
   std::vector<Expression> final_s() const override;
@@ -925,7 +916,7 @@ struct FastLSTMBuilder : public RNNBuilder {
   explicit FastLSTMBuilder(unsigned layers,
                            unsigned input_dim,
                            unsigned hidden_dim,
-                           Model& model);
+                           ParameterCollection& model);
 
   Expression back() const override;
   std::vector<Expression> final_h() const override;
@@ -956,6 +947,8 @@ struct DynetParams {
   unsigned random_seed = 0; /**< The seed for random number generation */
   std::string mem_descriptor = "512"; /**< Total memory to be allocated for Dynet */
   float weight_decay = 0; /**< Weight decay rate for L2 regularization */
+  int autobatch = 0; /**< Whether to autobatch or not */
+  int autobatch_debug = 0; /**< Whether to show autobatch debug info or not */
   bool shared_parameters = false; /**< TO DOCUMENT */
 
 #ifdef SWIG_USE_CUDA
@@ -972,226 +965,55 @@ void initialize(int& argc, char**& argv, bool shared_parameters = false);
 void cleanup();
 
 
-//////////////////////////////////////////////////
-// serialization logic (from python/pybridge.h) //
-//////////////////////////////////////////////////
+//////////////////////////
+// serialization logic  //
+//////////////////////////
 
-// Add Java method to ModelSaver for serializing java objects.
-%typemap(javaimports) ModelSaver %{
-  import java.io.ByteArrayOutputStream;
-  import java.io.ObjectOutputStream;
-  import java.io.IOException;
-%}
+class Saver {
+ public:
+  Saver() { }
+  virtual ~Saver() { }
+  virtual void save(const ParameterCollection & model,
+                    const std::string & key = "") = 0;
+  virtual void save(const Parameter & param, const std::string & key = "") = 0;
+  virtual void save(const LookupParameter & param, const std::string & key = "") = 0;
+}; // class Saver
 
-%typemap(javacode) ModelSaver %{
-  public void add_object(Object o) {
-    try {
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      ObjectOutputStream objOut = new ObjectOutputStream(out);
-      objOut.writeObject(o);
-      objOut.close();
-
-      byte[] bytes = out.toByteArray();
-
-      add_size(bytes.length);
-      add_byte_array(bytes);
-    } catch (IOException e) {
-      // This shouldn't ever happen.
-      throw new RuntimeException(e);
-    }
-  }
-%}
-
-// Add Java method to ModelLoader for loading java objects.
-%typemap(javaimports) ModelLoader %{
-  import java.io.ByteArrayInputStream;
-  import java.io.ObjectInputStream;
-  import java.io.IOException;
-%}
-
-%typemap(javacode) ModelLoader %{
-  public <T> T load_object(Class<T> clazz) {
-    long size = load_size();
-    byte[] bytes = new byte[(int) size];
-    load_byte_array(bytes);
-
-    Object obj = null;
-    try {
-      ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-      ObjectInputStream objIn = new ObjectInputStream(in);
-      obj = objIn.readObject();
-      objIn.close();
-    } catch (IOException e) {
-      // This shouldn't ever happen.
-      throw new RuntimeException(e);
-    } catch (ClassNotFoundException e) {
-      // This also shouldn't happen (because the class is an argument).
-      throw new RuntimeException(e);
-    }
-
-    return clazz.cast(obj);
-  }
-%}
+class Loader {
+ public:
+  Loader() { }
+  virtual ~Loader() { }
+  virtual void populate(ParameterCollection & model, const std::string & key = "") = 0;
+  virtual void populate(Parameter & param, const std::string & key = "") = 0;
+  virtual void populate(LookupParameter & lookup_param,
+                        const std::string & key = "") = 0;
+  virtual Parameter load_param(ParameterCollection & model,
+                               const std::string & key) = 0;
+  virtual LookupParameter load_lookup_param(ParameterCollection & model,
+                                            const std::string & key) = 0;
+}; // class Loader
 
 
-%{
+class TextFileSaver : public Saver {
+ public:
+  TextFileSaver(const std::string & filename, bool append = false);
+  virtual ~TextFileSaver() { }
+  void save(const ParameterCollection & model,
+            const std::string & key = "") override;
+  void save(const Parameter & param, const std::string & key = "") override;
+  void save(const LookupParameter & param, const std::string & key = "") override;
+}; // class TextFileSaver
 
-namespace dynet {
-
-struct ModelSaver {
-    ModelSaver(std::string filename) : ofs(filename), oa(ofs) {}
-
-    void add_model(Model& model) { oa << model; }
-    void add_parameter(Parameter &p) { oa << p; }
-    void add_lookup_parameter(LookupParameter &p) { oa << p; }
-    void add_rnn_builder(RNNBuilder &p) { oa << p; }
-    void add_lstm_builder(LSTMBuilder &p) { oa << p; }
-    void add_vanilla_lstm_builder(VanillaLSTMBuilder &p) { oa << p; }
-    void add_srnn_builder(SimpleRNNBuilder &p) { oa << p; }
-    void add_gru_builder(GRUBuilder &p) { oa << p; }
-    void add_fast_lstm_builder(FastLSTMBuilder &p) { oa << p; }
-    void add_size(size_t len) { oa << len; }
-    void add_byte_array(char *str, size_t len) {
-      oa << boost::serialization::make_array(str, len);
-    }
-
-    // primitive types
-    void add_int(int x) { oa << x; }
-    void add_long(jlong x) { oa << x; }
-    void add_float(float x) { oa << x; }
-    void add_double(double x) { oa << x; }
-    void add_boolean(jboolean x) { oa << x; }
-
-    void done() { ofs.close(); }
-
-    private:
-        std::ofstream ofs;
-        boost::archive::text_oarchive oa;
-
-};
-
-struct ModelLoader {
-    ModelLoader(std::string filename) : ifs(filename), ia(ifs) {}
-
-    Model* load_model() {
-      Model* model = new Model(); ia >> *model; return model;
-    }
-
-    Parameter* load_parameter() {
-      Parameter* p = new Parameter(); ia >> *p; return p;
-    }
-
-    LookupParameter* load_lookup_parameter() {
-      LookupParameter* p = new LookupParameter(); ia >> *p; return p;
-    }
-
-    LSTMBuilder* load_lstm_builder() {
-      LSTMBuilder* p = new LSTMBuilder(); ia >> *p; return p;
-    }
-
-    VanillaLSTMBuilder* load_vanilla_lstm_builder() {
-      VanillaLSTMBuilder* p = new VanillaLSTMBuilder() ; ia >> *p; return p;
-    }
-
-    SimpleRNNBuilder* load_srnn_builder() {
-      SimpleRNNBuilder* p = new SimpleRNNBuilder(); ia >> *p; return p;
-    }
-
-    GRUBuilder* load_gru_builder() {
-      GRUBuilder* p = new GRUBuilder(); ia >> *p; return p;
-    }
-
-    FastLSTMBuilder* load_fast_lstm_builder() {
-      FastLSTMBuilder* p = new FastLSTMBuilder(); ia >> *p; return p;
-    }
-
-    size_t load_size() {
-      size_t len;
-      ia >> len;
-      return len;
-    }
-
-    void load_byte_array(char *str, size_t len) {
-      ia >> boost::serialization::make_array(str, len);
-    }
-
-    int load_int() { int x; ia >> x; return x; }
-    jlong load_long() { long x; ia >> x; return x; }
-    float load_float() { float x; ia >> x; return x; }
-    double load_double() { double x; ia >> x; return x; }
-    jboolean load_boolean() { bool x; ia >> x; return x; }
-
-    void done() { ifs.close(); }
-
-    private:
-        std::ifstream ifs;
-        boost::archive::text_iarchive ia;
-
-};
-
-}
-%}
-
-// Convert methods whose arguments are (char *str, size_t len)
-// to byte[] in Java. Note that the *argument names must match*,
-// not just the types.
-%apply(char *STRING, size_t LENGTH) { (char *str, size_t len) }
-
-%nodefaultctor ModelSaver;
-struct ModelSaver {
-    ModelSaver(std::string filename);
-    void add_model(Model& model);
-    void add_parameter(Parameter &p);
-    void add_lookup_parameter(LookupParameter &p);
-    void add_lstm_builder(LSTMBuilder &p);
-    void add_vanilla_lstm_builder(VanillaLSTMBuilder &p);
-    void add_srnn_builder(SimpleRNNBuilder &p);
-    void add_gru_builder(GRUBuilder &p);
-    void add_fast_lstm_builder(FastLSTMBuilder &p);
-    void add_size(size_t len) { oa << len; }
-    void add_byte_array(char *str, size_t len);
-
-    void add_int(int x);
-    void add_long(jlong x);
-    void add_float(float x);
-    void add_double(double x);
-    void add_boolean(jboolean x);
-
-    void done();
-};
-
-%newobject ModelLoader::load_model();
-%newobject ModelLoader::load_parameter();
-%newobject ModelLoader::load_lookup_parameter();
-%newobject ModelLoader::load_rnn_builder();
-%newobject ModelLoader::load_lstm_builder();
-%newobject ModelLoader::load_vanilla_lstm_builder();
-%newobject ModelLoader::load_srnn_builder();
-%newobject ModelLoader::load_gru_builder();
-%newobject ModelLoader::load_fast_lstm_builder();
-
-
-%nodefaultctor ModelLoader;
-struct ModelLoader {
-    ModelLoader(std::string filename);
-    Model* load_model();
-    Parameter* load_parameter();
-    LookupParameter* load_lookup_parameter();
-    LSTMBuilder* load_lstm_builder();
-    VanillaLSTMBuilder* load_vanilla_lstm_builder();
-    SimpleRNNBuilder* load_srnn_builder();
-    GRUBuilder* load_gru_builder();
-    FastLSTMBuilder* load_fast_lstm_builder();
-    size_t load_size();
-    void load_byte_array(char *str, size_t len);
-
-    int load_int();
-    jlong load_long();
-    float load_float();
-    double load_double();
-    jboolean load_boolean();
-
-    void done();
-};
+class TextFileLoader : public Loader {
+ public:
+  TextFileLoader(const std::string & filename);
+  virtual ~TextFileLoader() { }
+  void populate(ParameterCollection & model, const std::string & key = "") override;
+  void populate(Parameter & param, const std::string & key = "") override;
+  void populate(LookupParameter & lookup_param,
+                const std::string & key = "") override;
+  Parameter load_param(ParameterCollection & model, const std::string & key) override;
+  LookupParameter load_lookup_param(ParameterCollection & model, const std::string & key) override;
+}; // class TextFileLoader
 
 }

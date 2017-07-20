@@ -4,9 +4,9 @@
  * This provide an example of usage of the rnnlm-batch.h model
  */
 #include "rnnlm-batch.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 #include "../utils/cl-args.h"
-
 
 using namespace std;
 using namespace dynet;
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
 
   // Initialize model and trainer ------------------------------------------------------------------
-  Model model;
+  ParameterCollection model;
   // Use Adam optimizer
   Trainer* adam = new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8);
   adam->clip_threshold *= params.BATCH_SIZE;
@@ -134,9 +134,8 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    ifstream in(params.model_file);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> lm;
+    TextFileLoader loader(params.model_file);
+    loader.populate(model);
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -215,12 +214,11 @@ int main(int argc, char** argv) {
         // Add loss
         dloss += as_scalar(cg.forward(loss_expr));
       }
-      // If the dev loss is lower than the previous ones, save the ,odel
+      // If the dev loss is lower than the previous ones, save the model
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << lm;
+        TextFileSaver saver("/tmp/rnnlm-batch.model");
+        saver.save(model);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)
@@ -238,11 +236,6 @@ int main(int argc, char** argv) {
 
     // Increment epoch
     ++epoch;
-
   }
-
   delete adam;
-
-
 }
-

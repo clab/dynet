@@ -12,14 +12,11 @@ class CudnnConvOp {
  public:
   explicit CudnnConvOp() {}
   explicit CudnnConvOp(const std::vector<unsigned>& s, const bool padding_type);
-  ~CudnnConvOp();
+  ~CudnnConvOp() noexcept(false);
   /* call this function before using the CudnnConvOp */
-  void set_pool(NodeMemPool* mempool) {
-    DYNET_ASSERT(mempool->used() == 0, "mempool must have been reset");
-    mempool_ = mempool;
-  }
-  void forward_impl(const Device_GPU & dev, const std::vector<const Tensor*>& xs, Tensor& fx);
-  void backward_impl(const Device_GPU & dev, 
+  void forward_impl(const Device_GPU & dev,
+                    const std::vector<const Tensor*>& xs, Tensor& fx);
+  void backward_impl(const Device_GPU & dev,
                const std::vector<const Tensor*>& xs,
                const Tensor& fx,
                const Tensor& dEdf,
@@ -47,24 +44,18 @@ class CudnnConvOp {
   void* fwd_workspace;
   void* bwd_filter_workspace;
   void* bwd_data_workspace;
-
- private:
-  NodeMemPool* mempool_;
 };
 
 
 class CudnnMaxPooling2DOp {
  public: 
   explicit CudnnMaxPooling2DOp() {}
-  explicit CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride,
-      const bool padding_type);
-  ~CudnnMaxPooling2DOp();
-  /* call this function before using the CudnnMaxPooling2DOp */
-  void set_pool(NodeMemPool* mempool) {
-    DYNET_ASSERT(mempool->used() == 0, "mempool must have been reset");
-    mempool_ = mempool;
-  }
-  void forward_impl(const Device_GPU & dev, const std::vector<const Tensor*>& xs, Tensor& fx);
+  explicit CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize,
+                               const std::vector<unsigned>& stride,
+                               const bool padding_type);
+  ~CudnnMaxPooling2DOp() noexcept(false);
+  void forward_impl(const Device_GPU & dev,
+                    const std::vector<const Tensor*>& xs, Tensor& fx);
   void backward_impl(const Device_GPU & dev,
                 const std::vector<const Tensor*>& xs,
                 const Tensor& fx,
@@ -80,9 +71,6 @@ class CudnnMaxPooling2DOp {
   /* cuDNN resource */
   cudnnTensorDescriptor_t x_desc_, y_desc_;
   cudnnPoolingDescriptor_t pooling_desc_;
-
- private:
-  NodeMemPool* mempool_;
 };
 
 } // namespace dynet

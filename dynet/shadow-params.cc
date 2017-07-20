@@ -33,7 +33,7 @@ void ShadowLookupParameters::initialize_lookups() {
   }
 }
 
-vector<ShadowParameters> allocate_shadow_parameters(const Model& m) {
+vector<ShadowParameters> allocate_shadow_parameters(const ParameterCollection& m) {
   vector<ShadowParameters> v;
   v.reserve(m.parameters_list().size());
   for (auto& p : m.parameters_list())
@@ -41,20 +41,13 @@ vector<ShadowParameters> allocate_shadow_parameters(const Model& m) {
   return v;
 }
 
-vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Model& m) {
+vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const ParameterCollection& m) {
   vector<ShadowLookupParameters> v;
   v.reserve(m.lookup_parameters_list().size());
   for (auto& p : m.lookup_parameters_list())
     v.emplace_back(*p);
   return v;
 }
-
-DYNET_SERIALIZE_COMMIT(ShadowParameters, DYNET_SERIALIZE_DEFINE(h))
-DYNET_SERIALIZE_IMPL(ShadowParameters)
-
-DYNET_SERIALIZE_SAVE_COMMIT(ShadowLookupParameters, DYNET_SERIALIZE_DEFINE(h))
-DYNET_SERIALIZE_LOAD_COMMIT(ShadowLookupParameters, LOAD_INIT_FUNC(), DYNET_SERIALIZE_DEFINE(h))
-DYNET_SAVELOAD_IMPL(ShadowLookupParameters)
 
 } // namespace dynet
 

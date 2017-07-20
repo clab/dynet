@@ -86,14 +86,16 @@ namespace dynet {
     T read_data(int pipe) {
       T v;
       int err = read(pipe, (void*)&v, sizeof(T));
-      DYNET_ASSERT(err != -1, "Failed to read data from pipe in multi-processing");
+      if(err == -1)
+        DYNET_RUNTIME_ERR("Failed to read data from pipe in multi-processing");
       return v;
     }
 
     template <class T>
     void write_data(int pipe, const T& v) {
       int err = write(pipe, (void*)&v, sizeof(T));
-      DYNET_ASSERT(err != -1, "Failed to write data to pipe in multi-processing");
+      if(err == -1)
+        DYNET_RUNTIME_ERR("Failed to write data to pipe in multi-processing");
     }
 
     std::string generate_queue_name();
@@ -215,8 +217,7 @@ namespace dynet {
     int run_child(unsigned cid, ILearner<D, S>* learner, Trainer* trainer,
         std::vector<Workload>& workloads, const std::vector<D>& train_data,
         const std::vector<D>& dev_data) {
-      const unsigned num_children = workloads.size();
-      DYNET_ASSERT(cid >= 0 && cid < num_children, "Bad child ID " << cid << " in run_child()");
+      DYNET_ASSERT(cid >= 0 && cid < workloads.size(), "Bad child ID " << cid << " in run_child()");
       unsigned i;
       unsigned priority;
       boost::interprocess::message_queue::size_type recvd_size;
@@ -258,7 +259,9 @@ namespace dynet {
           }
           if (do_update && trainer != nullptr) {
             shared_object->update_mutex.wait();
-            trainer->update(1.0 / counter); 
+            // TODO: The scaling was originally this
+            // trainer->update(1.0 / counter); 
+            trainer->update(); 
             shared_object->update_mutex.post();
           }
           if (batch_counter == header.report_frequency) {
@@ -333,7 +336,9 @@ namespace dynet {
             batch_loss += datum_loss;
             train_loss += datum_loss;
             if (++batch_counter == batch_size) {
-              trainer->update(1.0 / batch_size);
+              // TODO: The scaling was originally this
+              // trainer->update(1.0 / batch_size); 
+              trainer->update(); 
               batch_counter = 0;
             }
             data_processed++;

@@ -22,10 +22,10 @@ class RNNLanguageModel:
         self.bias = model.add_parameters((VOCAB_SIZE))
 
     def save_to_disk(self, filename):
-        model.save(filename, [self.builder, self.lookup, self.R, self.bias])
+        save(filename, [self.builder, self.lookup, self.R, self.bias])
 
     def load_from_disk(self, filename):
-        (self.builder, self.lookup, self.R, self.bias) = model.load(filename)
+        (self.builder, self.lookup, self.R, self.bias) = load(filename, model)
         
     def build_lm_graph(self, sent):
         renew_cg()
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     VOCAB_SIZE = vocab.size()
 
     model = Model()
-    sgd = SimpleSGDTrainer(model)
+    sgd = SimpleSGDTrainer(model, learning_rate=1.0)
 
     #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
     lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=LSTMBuilder)
@@ -124,8 +124,15 @@ if __name__ == '__main__':
             errs = lm.build_lm_graph(isent)
             loss += errs.scalar_value()
             errs.backward()
-            sgd.update(1.0)
+            sgd.update()
             #print "TM:",(time.time() - _start)/len(sent)
         print("ITER {}, loss={}".format(ITER, loss))
         sgd.status()
-        sgd.update_epoch(1.0)
+
+    lm.save_to_disk("RNNLanguageModel.model")
+
+    print("loading the saved model...")
+    lm.load_from_disk("RNNLanguageModel.model")
+    samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["\n"])
+    print("".join([vocab.i2w[c] for c in samp]).strip())
+ 
