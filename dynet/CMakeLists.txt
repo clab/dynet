@@ -118,6 +118,7 @@ set(dynet_library_HDRS
     training.h
     treelstm.h
     weight-decay.h
+    cuDNN.h
 )
 if(ENABLE_BOOST)
   list(APPEND dynet_library_HDRS mp.h)
