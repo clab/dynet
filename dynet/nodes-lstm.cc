@@ -135,7 +135,7 @@ namespace dynet {
 	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
 	// dx_t += mult_l^T * mult_r
-	MatrixTranspMultiply(dev, *xs[2], mult_r, dEdxi, kSCALAR_ONE);
+	MatrixTranspMultiplyAcc(dev, *xs[2], mult_r, dEdxi);
 
 	scratch_allocator->free();
 
@@ -159,7 +159,7 @@ namespace dynet {
 	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
 	// dx_t += mult_l * mult_r
-	MatrixTranspMultiply(dev, *xs[3], mult_r, dEdxi, kSCALAR_ONE);
+	MatrixTranspMultiplyAcc(dev, *xs[3], mult_r, dEdxi);
 
 	scratch_allocator->free();
 
@@ -173,10 +173,6 @@ namespace dynet {
       AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
       Tensor mult_l(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
       mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
-      Tensor mult_r(Dim({1, input_dim},batch_size), nullptr, fx.device, fx.mem_pool);
-      mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
-      Tensor mult_y(Dim({hidden_dim*4, input_dim},batch_size), nullptr, fx.device, fx.mem_pool);
-      mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
 
       // mult_l = [di . i_t . (1-i_t)]
       //          [df . f_t . (1-f_t)]
@@ -185,16 +181,8 @@ namespace dynet {
       mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_i, sizes_mat_3) * fx.tb<2>().slice(indices_mat_i, sizes_mat_3) * (fx.tb<2>().slice(indices_mat_i, sizes_mat_3).constant(1) - fx.tb<2>().slice(indices_mat_i, sizes_mat_3));
       mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
-      // mult_r = transpose(x_t)
-      mult_r.tb<2>() = xs[0]->tb<2>().reshape(reshape_inp_transp);
-
-      // mult_y = mult_l * mult_r
-      MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO); // TODO: bottleneck, need speed up
-
-      // dWh += mult_y.sum(batches)
-      for(int b = 0; b < batch_size; ++b)
-        dEdxi.batch_matrix(0).noalias() += mult_y.batch_matrix(b);
-      // TODO: on GPU, use something like in nodes-affinetransform.cc, line 200?
+      // dWh += (mult_l * mult_r).sum_batches()
+      MatrixMultiplyTranspAcc(dev, mult_l, *xs[0], dEdxi);
 
       scratch_allocator->free();
 
@@ -208,8 +196,6 @@ namespace dynet {
       AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
       Tensor mult_l(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
       mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
-      Tensor mult_r(Dim({1, hidden_dim},batch_size), nullptr, fx.device, fx.mem_pool);
-      mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
       Tensor mult_y(Dim({hidden_dim*4, hidden_dim},batch_size), nullptr, fx.device, fx.mem_pool);
       mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
 
@@ -220,16 +206,8 @@ namespace dynet {
       mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_i, sizes_mat_3) * fx.tb<2>().slice(indices_mat_i, sizes_mat_3) * (fx.tb<2>().slice(indices_mat_i, sizes_mat_3).constant(1) - fx.tb<2>().slice(indices_mat_i, sizes_mat_3));
       mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
-      // mult_r = transpose(h_tm1)
-      mult_r.tb<2>() = xs[1]->tb<2>().reshape(reshape_hid_transp);
-
-      // mult_y = mult_l * mult_r
-      MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO); // TODO: bottleneck, need speed up
-
-      // dWh += mult_y.sum(batches)
-      for(int b = 0; b < batch_size; ++b)
-        dEdxi.batch_matrix(0).noalias() += mult_y.batch_matrix(b);
-      // TODO: on GPU, use something like in nodes-affinetransform.cc, line 200?
+      // dWh += (mult_l * mult_r).sum(batches)
+      MatrixMultiplyTranspAcc(dev, mult_l, *xs[1], dEdxi);
 
       scratch_allocator->free();
 

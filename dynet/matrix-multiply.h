@@ -71,7 +71,7 @@ inline void MatrixMultiply(const Device_CPU & dev, const Tensor& l, const Tensor
 #endif
 
 #ifdef __CUDACC__
-inline void MatrixMultiplyBwd(const dynet::Device_GPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y, const float* acc_scalar) {
+inline void MatrixTranspMultiplyAcc(const dynet::Device_GPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y) {
   // computes l^T * r
   int max_b = std::max(l.d.bd, r.d.bd);
   // Do a single multiply if l has one batch
@@ -94,7 +94,7 @@ inline void MatrixMultiplyBwd(const dynet::Device_GPU & dev, const dynet::Tensor
 }
 
 # else
-inline void MatrixTranspMultiply(const dynet::Device_CPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y, const float* acc_scalar) {
+inline void MatrixTranspMultiplyAcc(const dynet::Device_CPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y) {
   // computes l^T * r
   int max_b = std::max(l.d.bd, r.d.bd);
   if(l.d.bd == 1 && y.d.bd == r.d.bd) {
@@ -106,6 +106,37 @@ inline void MatrixTranspMultiply(const dynet::Device_CPU & dev, const dynet::Ten
 }
 #endif
 
+#ifdef __CUDACC__
+inline void MatrixMultiplyTranspAcc(const dynet::Device_GPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y) {
+  int max_b = std::max(l.d.bd, r.d.bd);
+  if(y.d.bd == 1 && (l.d.bd == r.d.bd)) {
+    CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+          y.d.rows(), y.d.cols(), l.d.cols() * l.d.batch_elems(),
+          kSCALAR_ONE,
+          l.v, l.d.rows(),
+          r.v, r.d.rows(),
+          kSCALAR_ONE, y.v, y.d.rows()));
+  } else {
+    for(int b = 0; b < max_b; ++b)
+      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+            y.d.rows(), y.d.cols(), l.d.cols(),
+            kSCALAR_ONE,
+            l.batch_ptr(b), l.d.rows(),
+            r.batch_ptr(b), r.d.rows(),
+            kSCALAR_ONE, y.batch_ptr(b), y.d.rows()));
+  }
+}
+# else
+inline void MatrixMultiplyTranspAcc(const dynet::Device_CPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y) {
+  int max_b = std::max(l.d.bd, r.d.bd);
+  if(y.d.bd == 1 && (l.d.bd == r.d.bd)) {
+    (*y).noalias() += l.colbatch_matrix() * r.colbatch_matrix().transpose();
+  } else {
+    for(int b = 0; b < max_b; ++b)
+      y.batch_matrix(b).noalias() += l.batch_matrix(b) * r.batch_matrix(b).transpose();
+  }
+}
+#endif
 
 
 #endif
