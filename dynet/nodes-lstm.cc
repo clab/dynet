@@ -134,8 +134,8 @@ namespace dynet {
 	//          [df . f_t . (1-f_t)]
 	//          [do . o_t . (1-o_t)]
 	//          [dg . (1 - g_t^2)]
-	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
-	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
+	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_i, sizes_mat_3) * fx.tb<2>().slice(indices_mat_i, sizes_mat_3) * (fx.tb<2>().slice(indices_mat_i, sizes_mat_3).constant(1) - fx.tb<2>().slice(indices_mat_i, sizes_mat_3));
+	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
 	// dx_t += mult_l * mult_r
 	MatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
@@ -163,8 +163,8 @@ namespace dynet {
 	//          [df . f_t . (1-f_t)]
 	//          [do . o_t . (1-o_t)]
 	//          [dg . (1 - g_t^2)]
-	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
-	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
+	mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_i, sizes_mat_3) * fx.tb<2>().slice(indices_mat_i, sizes_mat_3) * (fx.tb<2>().slice(indices_mat_i, sizes_mat_3).constant(1) - fx.tb<2>().slice(indices_mat_i, sizes_mat_3));
+	mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
 	// dx_t += mult_l * mult_r
 	MatrixMultiply(dev, mult_l, mult_r, dEdxi, kSCALAR_ONE);
@@ -190,8 +190,8 @@ namespace dynet {
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
       //          [dg . (1 - g_t^2)]
-      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
-      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
+      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_i, sizes_mat_3) * fx.tb<2>().slice(indices_mat_i, sizes_mat_3) * (fx.tb<2>().slice(indices_mat_i, sizes_mat_3).constant(1) - fx.tb<2>().slice(indices_mat_i, sizes_mat_3));
+      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
       // mult_r = transpose(x_t)
       mult_r.tb<2>() = xs[0]->tb<2>().shuffle(transp_order);
@@ -223,8 +223,8 @@ namespace dynet {
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
       //          [dg . (1 - g_t^2)]
-      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = (dEdf.tb<2>() * fx.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>())).slice(indices_mat_i, sizes_mat_3);
-      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = (dEdf.tb<2>() * (fx.tb<2>().constant(1) - fx.tb<2>().square())).slice(indices_mat_g, sizes_mat_1);
+      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_i, sizes_mat_3) * fx.tb<2>().slice(indices_mat_i, sizes_mat_3) * (fx.tb<2>().slice(indices_mat_i, sizes_mat_3).constant(1) - fx.tb<2>().slice(indices_mat_i, sizes_mat_3));
+      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf.tb<2>().slice(indices_mat_g, sizes_mat_1) * (fx.tb<2>().slice(indices_mat_g, sizes_mat_1).constant(1) - fx.tb<2>().slice(indices_mat_g, sizes_mat_1).square());
 
       // mult_r = transpose(h_tm1)
       mult_r.tb<2>() = xs[1]->tb<2>().shuffle(transp_order);
