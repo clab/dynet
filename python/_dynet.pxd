@@ -374,6 +374,10 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_layer_norm "dynet::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
     CExpression c_weight_norm "dynet::weight_norm" (CExpression& w, CExpression& g) except + #
 
+    CExpression c_vanilla_lstm_gates "dynet::vanilla_lstm_gates" (CExpression& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b) except + #
+    CExpression c_vanilla_lstm_c "dynet::vanilla_lstm_c" (CExpression& c_tm1, CExpression& gates_t) except + #
+    CExpression c_vanilla_lstm_h "dynet::vanilla_lstm_h" (CExpression& c_t, CExpression& gates_t) except + #
+
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNPointer "dynet::RNNPointer":
         CRNNPointer()

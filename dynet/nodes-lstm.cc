@@ -115,10 +115,6 @@ namespace dynet {
     Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
 
     if(i==0){
-//	cout << "i==0\n";
-//	cout << "dEdf:" << dEdf.tvec() << "\n";
-//	cout << "Wx:" << xs[2]->tvec() << "\n";
-//	cout << "fx:" << fx.tvec() << "\n";
         // goal: dx_t = [Wx_i]^T   [di . i_t . (1-i_t)]
         //              [Wx_f]   * [df . f_t . (1-f_t)]
         //              [Wx_o]     [do . o_t . (1-o_t)]
@@ -256,7 +252,6 @@ namespace dynet {
       dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += (dEdf.tbvec().slice(indices_g, sizes_1) * (fx.tbvec().slice(indices_i, sizes_1).constant(1) - fx.tbvec().slice(indices_g, sizes_1).square())).sum(vec_batch_axis);
     }
 
-//    cout << "dEdxi:" << dEdxi.tvec() << "\n";
   }
 
   DYNET_NODE_INST_DEV_IMPL(VanillaLSTMGates)

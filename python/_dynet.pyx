@@ -3680,6 +3680,64 @@ cpdef Expression weight_norm(Expression w, Expression g):
     ensure_freshness(g)
     return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
 
+cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b):
+    """Computes LSTM gates (matrix multiply + nonlinearities):
+    
+       gates_i = sigmoid (Wx_i * x_t + Wh_i * h_tm1 + b_i)
+       gates_f = sigmoid (Wx_f * x_t + Wh_f * h_tm1 + b_f + 1)
+       gates_o = sigmoid (Wx_o * x_t + Wh_o * h_tm1 + b_o)
+       gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
+       
+       returns [gates_i]
+               [gates_f]
+               [gates_o]
+               [gates_g]
+
+    Args:
+        x_t (dynet.Expression): Input at current timestep (vector size I)
+        h_tm1 (dynet.Expression): State previous timestep (vector size H)
+        Wx (dynet.Expression): Parameter matrix size 4H x I
+        Wh (dynet.Expression): Parameter matrix size 4H x H
+        b (dynet.Expression): Bias parameter size 4H
+    
+    Returns:
+        Vector size 4H
+        dynet.Expression
+    """
+    ensure_freshness(x_t)
+    ensure_freshness(h_tm1)
+    return Expression.from_cexpr(x_t.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c()))
+
+cpdef Expression vanilla_lstm_c(Expression c_tm1, Expression gates_t):
+    """Computes LSTM cell: c_t = gates_i . gates_g + gates_f . c_tm1
+
+    Args:
+        c_tm1 (dynet.Expression): Cell at previous timestep (vector size H)
+        gates_t (dynet.Expression): Gates at current timestep as computed by vanilla_lstm_gates (vector size 4H)
+    
+    Returns:
+        Vector size H
+        dynet.Expression
+    """
+    ensure_freshness(c_tm1)
+    ensure_freshness(gates_t)
+    return Expression.from_cexpr(c_tm1.cg_version, c_vanilla_lstm_c(c_tm1.c(),gates_t.c()))
+
+cpdef Expression vanilla_lstm_h(Expression c_t, Expression gates_t):
+    """Computes LSTM output: h_t = o_t . tanh(c_t)
+
+    Args:
+        c_t (dynet.Expression): Cell at current timestep (vector size H)
+        gates_t (dynet.Expression): Gates at current timestep as computed by vanilla_lstm_gates (vector size 4H)
+    
+    Returns:
+        Vector size H
+        dynet.Expression
+    """
+    ensure_freshness(c_t)
+    ensure_freshness(gates_t)
+    return Expression.from_cexpr(c_t.cg_version, c_vanilla_lstm_h(c_t.c(),gates_t.c()))
+
 # }}}
     
 # {{{ RNNS / Builders
