@@ -4,6 +4,7 @@
 #include "dynet/dynet.h"
 #include "dynet/param-init.h"
 #include "dynet/io.h"
+#include "dynet/globals.h"
 
 #include <unordered_set>
 #include <iostream>
@@ -50,11 +51,13 @@ namespace dynet {
 
 ParameterStorageBase::~ParameterStorageBase() {}
 
-ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name) : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
+ParameterStorage::ParameterStorage(const Dim& d, float scale,
+                                   const std::string & name, Device *device)
+    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
   values.d = g.d = d;
-  values.device = g.device = default_device;
-  default_device->allocate_tensor(DeviceMempool::PS, values);
-  default_device->allocate_tensor(DeviceMempool::PS, g);
+  values.device = g.device = device;
+  device->allocate_tensor(DeviceMempool::PS, values);
+  device->allocate_tensor(DeviceMempool::PS, g);
   TensorTools::zero(g);
   if (scale == 0.0f) {
     ParameterInitGlorot init;
@@ -65,11 +68,13 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string 
   }
 }
 
-ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
+ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init,
+                                   const std::string & name, Device *device)
+    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
   values.d = g.d = d;
-  values.device = g.device = default_device;
-  default_device->allocate_tensor(DeviceMempool::PS, values);
-  default_device->allocate_tensor(DeviceMempool::PS, g);
+  values.device = g.device = device;
+  device->allocate_tensor(DeviceMempool::PS, values);
+  device->allocate_tensor(DeviceMempool::PS, g);
   TensorTools::zero(g);
   init.initialize_params(values);
 }
@@ -102,12 +107,14 @@ bool valid_parameter(const std::string & s) {
   return it == s.end();
 }
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), all_updated(false), nonzero_grad(false), owner(nullptr) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
+                                               const std::string & name, Device *device) 
+    : name(name), dim(d), updated(true), all_updated(false), nonzero_grad(false), owner(nullptr) {
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
-  all_grads.device = all_values.device = default_device;
-  default_device->allocate_tensor(DeviceMempool::PS, all_values);
-  default_device->allocate_tensor(DeviceMempool::PS, all_grads);
+  all_grads.device = all_values.device = device;
+  device->allocate_tensor(DeviceMempool::PS, all_values);
+  device->allocate_tensor(DeviceMempool::PS, all_grads);
   init.initialize_params(all_values);
   initialize_lookups();
 }
@@ -278,24 +285,29 @@ void ParameterCollection::project_weights(float radius) {
   get_storage().project_weights(radius);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name) {
-  return add_parameters(d, ParameterInitGlorot(), p_name);
+Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name, Device *device) {
+  if (device == nullptr) device = dynet::default_device;
+  return add_parameters(d, ParameterInitGlorot(), p_name, device);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const std::string & p_name) {
+Parameter ParameterCollection::add_parameters(const Dim& d, float scale,
+                                              const std::string & p_name, Device *device) {
+  if (device == nullptr) device = dynet::default_device;
   if(scale == 0.0f)
-    return add_parameters(d, ParameterInitGlorot(), p_name);
+    return add_parameters(d, ParameterInitGlorot(), p_name, device);
   else
-    return add_parameters(d, ParameterInitUniform(scale), p_name);
+    return add_parameters(d, ParameterInitUniform(scale), p_name, device);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
+Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init,
+                                              const std::string & p_name, Device *device) {
+  if (device == nullptr) device = dynet::default_device;
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
     if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
 
-    ParameterStorage* p = new ParameterStorage(d, init, oss.str());
+    ParameterStorage* p = new ParameterStorage(d, init, oss.str(), device);
     add_parameters_to_storage(p);
     return Parameter(p);
   } else {
@@ -364,17 +376,21 @@ std::vector<ParameterStorage*> ParameterCollection::get_parameter_storages() con
   return params;
 }
 
-LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const std::string & p_name) {
-  return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name);
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d,
+                                                           const std::string & p_name,
+                                                           Device *device) {
+  return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name, device);
 }
 
-LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init,
+                                                           const std::string & p_name,
+                                                           Device *device) {
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
     if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
 
-    LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
+    LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str(), device);
     add_lookup_parameters_to_storage(p);
     return LookupParameter(p);
   } else {

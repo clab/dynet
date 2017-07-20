@@ -16,6 +16,7 @@
 
 #include "dynet/weight-decay.h"
 #include "dynet/tensor.h"
+#include "dynet/devices.h"
 
 namespace dynet {
 
@@ -143,8 +144,10 @@ struct ParameterStorage : public ParameterStorageBase {
 
 private:
   ParameterStorage() : updated(true), owner(nullptr) {}
-  explicit ParameterStorage(const Dim& d, float scale, const std::string & name); // initialize with a scale
-  explicit ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name); // initialize with custom initializer
+  explicit ParameterStorage(const Dim& d, float scale,
+                            const std::string & name, Device *device); // initialize with a scale
+  explicit ParameterStorage(const Dim& d, const ParameterInit & init,
+                            const std::string & name, Device *device); // initialize with custom initializer
 }; // struct ParameterStorage
 
 // represents a matrix/vector embedding of a discrete set
@@ -243,7 +246,8 @@ struct LookupParameterStorage : public ParameterStorageBase {
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
 private:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
-  LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name);
+  LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
+                         const std::string & name, Device *device);
 }; // // struct LookupParameterStorage
 
 /**
@@ -480,10 +484,11 @@ public:
    *
    * \param d Shape of the parameter
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, const std::string & name);
+  Parameter add_parameters(const Dim& d, const std::string & name, Device *device = nullptr);
   // set scale to use custom initialization
   /**
    * \brief Add parameters to model and returns Parameter object
@@ -492,20 +497,24 @@ public:
    * \param d Shape of the parameter
    * \param scale If scale is non-zero, initializes according to \f$mathcal U([-\mathrm{scale},+\mathrm{scale}]\f$, otherwise uses Glorot initialization
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, float scale = 0.0f, const std::string & name = "");
+  Parameter add_parameters(const Dim& d, float scale = 0.0f,
+                           const std::string & name = "", Device *device = nullptr);
   /**
    * \brief Add parameters with custom initializer
    *
    * \param d Shape of the parameter
    * \param init Custom initializer
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, const ParameterInit & init, const std::string & name = "");
+  Parameter add_parameters(const Dim& d, const ParameterInit & init,
+                           const std::string & name = "", Device *device = nullptr);
   /**
    * \brief Get parameters base in current model
    *
@@ -531,10 +540,12 @@ public:
    * \param n Number of lookup indices
    * \param d Dimension of each embedding
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
    *
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const std::string & name = "");
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d,
+                                        const std::string & name = "", Device *device = nullptr);
   /**
    * \brief Add lookup parameter with custom initializer
    *
@@ -542,9 +553,12 @@ public:
    * \param d Dimension of each embedding
    * \param init Custom initializer
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
+   *
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name = "");
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init,
+                                        const std::string & name = "", Device *device = nullptr);
   /**
    * \brief Get lookup parameter in current model
    * \details It is not recommended to use this
