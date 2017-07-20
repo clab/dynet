@@ -189,7 +189,7 @@ namespace dynet {
       mult_r.tb<2>() = xs[0]->tb<2>().reshape(reshape_inp_transp);
 
       // mult_y = mult_l * mult_r
-      MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
+      MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO); // TODO: bottleneck, need speed up
 
       // dWh += mult_y.sum(batches)
       for(int b = 0; b < batch_size; ++b)
@@ -224,7 +224,7 @@ namespace dynet {
       mult_r.tb<2>() = xs[1]->tb<2>().reshape(reshape_hid_transp);
 
       // mult_y = mult_l * mult_r
-      MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO);
+      MatrixMultiply(dev, mult_l, mult_r, mult_y, kSCALAR_ZERO); // TODO: bottleneck, need speed up
 
       // dWh += mult_y.sum(batches)
       for(int b = 0; b < batch_size; ++b)
