@@ -152,11 +152,6 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_3(hidden_dim*3, 1, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::array<int, 1> vec_batch_axis; vec_batch_axis[0] = 1;
     Eigen::array<int, 1> mat_batch_axis; mat_batch_axis[0] = 2;
-    Eigen::array<int, 3> reshape_inp_transp = {1, (int)input_dim, (int)batch_size};
-    Eigen::array<int, 3> reshape_hid_transp = {1, (int)hidden_dim, (int)batch_size};
-
-    Eigen::array<ptrdiff_t, 3> transp_order = {1,0,2};
-
 
     AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
 
