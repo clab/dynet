@@ -572,6 +572,19 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Expression addition
+ * \details Add two expressions, broadcasting dimensions if necessary.
+ *
+ * \param x The first input
+ * \param y The second input
+ *
+ * \return The sum of x and y
+ */
+Expression cadd(const Expression& x, const Expression& y);
+
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Affine transform
  * \details This performs an affine transform over an arbitrary (odd) number of expressions
  *          held in the input initializer list xs.
@@ -1469,11 +1482,12 @@ Expression std_batches(const Expression& x);
  * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along an arbitrary dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return A scalar expression (with a potential batch dimension)
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression std_dim(const Expression& x, unsigned d);
+Expression std_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
 
 /**
  * \ingroup flowoperations
@@ -1481,23 +1495,25 @@ Expression std_dim(const Expression& x, unsigned d);
  * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along a specific dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
  * \param r Order of the moment
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return An expression with one less dimension
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression moment_dim(const Expression& x, unsigned d, unsigned r);
+Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, unsigned r, bool b=false);
 /**
  * \ingroup flowoperations
  * \brief Compute mean along  a specific dimension
  * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along a specific dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return An expression with one less dimension
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression mean_dim(const Expression& x, unsigned d);
+Expression mean_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
 
 
 /**

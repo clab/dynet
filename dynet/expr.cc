@@ -46,6 +46,7 @@ Expression operator+(const Expression& x, const Expression& y) {
     else
         return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}));
 }
+
 Expression operator+(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantPlusX>({y.i}, x)); }
 Expression operator+(const Expression& x, real y) { return y + x; }
 Expression operator-(const Expression& x, const Expression& y) { return x + (-y); }
@@ -53,13 +54,45 @@ Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg
 Expression operator-(const Expression& x, real y) { return -(y - x); }
 Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
 Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
+Expression cadd(const Expression& x, const Expression& y) {
+    if (x.dim().batch_size() == 1){
+        return Expression(x.pg, x.pg->add_function<ScalarAdd>({y.i, x.i}));
+    } else if (y.dim().batch_size() == 1){
+        return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}));
+    } else {
+        bool flip = false;
+        for(int i=0; i<x.dim().nd; i++){
+            if(y.dim().nd > i && x.dim()[i] > y.dim()[i]){
+        	flip = true;
+        	break;
+            }
+        }
+        if(x.dim().bd > y.dim().bd){
+            flip = true;
+        }
+        if(flip) return Expression(x.pg, x.pg->add_function<CwiseSum>({y.i, x.i}));
+        else     return Expression(x.pg, x.pg->add_function<CwiseSum>({x.i, y.i}));
+    }
+}
 Expression cmult(const Expression& x, const Expression& y) { 
     if (x.dim().batch_size() == 1) 
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 
     else if(y.dim().batch_size() == 1)
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({y.i, x.i})); 
-    else 
-        return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));
+    else {
+        bool flip = false;
+        for(int i=0; i<x.dim().nd; i++){
+            if(y.dim().nd > i && x.dim()[i] > y.dim()[i]){
+        	flip = true;
+        	break;
+            }
+        }
+        if(x.dim().bd > y.dim().bd){
+            flip = true;
+        }
+        if(flip) return Expression(x.pg, x.pg->add_function<CwiseMultiply>({y.i, x.i}));
+        else return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));
+    }
 }
 Expression cdiv(const Expression& x, const Expression& y) { 
     if(y.dim().batch_size()==1)
@@ -175,13 +208,13 @@ Expression moment_elems(const Expression& x, unsigned r) { return Expression(x.p
 Expression std_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdElements>({x.i})); }
 
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
-Expression moment_batches(const Expression& x, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentBatches>({x.i}, r)); }
-Expression mean_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<MomentBatches>({x.i}, 1)); }
-Expression std_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdBatches>({x.i})); }
+Expression moment_batches(const Expression& x, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, vector<unsigned>({}), r, true)); }
+Expression mean_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, vector<unsigned>({}), 1, true)); }
+Expression std_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, vector<unsigned>({}), true)); }
 
-Expression mean_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, d, 1)); }
-Expression moment_dim(const Expression& x, unsigned d, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, d, r)); }
-Expression std_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, d)); }
+Expression mean_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, 1, b)); }
+Expression moment_dim(const Expression& x, const vector<unsigned>& dims, unsigned r, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, r, b)); }
+Expression std_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, dims, b)); }
 
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 

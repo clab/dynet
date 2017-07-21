@@ -163,6 +163,8 @@ Arithmetic operations
 
 .. autofunction:: dynet.cmult
 
+.. autofunction:: dynet.cadd
+
 .. autofunction:: dynet.colwise_add
 
 .. autofunction:: dynet.squared_norm

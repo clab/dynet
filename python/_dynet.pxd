@@ -261,12 +261,14 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_op_scalar_mul "dynet::operator*" (CExpression& x, float y) except + #
     CExpression c_op_scalar_div "dynet::operator/" (CExpression& x, float y) except + #
     CExpression c_op_scalar_sub "dynet::operator-" (float y, CExpression& x) except + #
-
+    
     CExpression c_bmax "dynet::max" (CExpression& x, CExpression& y) except + #
     CExpression c_bmin "dynet::min" (CExpression& x, CExpression& y) except + #
 
     CExpression c_cdiv "dynet::cdiv" (CExpression& x, CExpression& y) except + #
     CExpression c_cmult "dynet::cmult" (CExpression& x, CExpression& y) except + #
+
+    CExpression c_cadd "dynet::cadd" (CExpression& x, CExpression& y) except + #    
     CExpression c_colwise_add "dynet::colwise_add" (CExpression& x, CExpression& bias) except + #
 
     CExpression c_tanh "dynet::tanh" (CExpression& x) except + #
@@ -279,7 +281,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_log "dynet::log" (CExpression& x) except + #
     CExpression c_lgamma "dynet::lgamma" (CExpression& x) except + #
     CExpression c_logistic "dynet::logistic" (CExpression& x) except + #
-    CExpression c_rectify "dynet::rectify" (CExpression& x) except + #
+    CExpression c_rectify "dynet::rectify" (CExpression& x) except + #        
     CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m) except + #
     CExpression c_hinge "dynet::hinge" (CExpression& x, vector[unsigned] vs, float m) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x) except + #
@@ -330,11 +332,11 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_sum_elems "dynet::sum_elems" (CExpression& x) except +
     CExpression c_moment_batches "dynet::moment_batches" (CExpression& x, unsigned r) except +
     CExpression c_moment_elems "dynet::moment_elems" (CExpression& x, unsigned r) except +
-    CExpression c_moment_dim "dynet::moment_dim" (CExpression& x, unsigned d, unsigned r) except +
+    CExpression c_moment_dim "dynet::moment_dim" (CExpression& x, vector[unsigned] dims, unsigned r, bool b) except +
     CExpression c_mean_elems "dynet::mean_elems" (CExpression& x) except +
     CExpression c_mean_batches "dynet::mean_batches" (CExpression& x) except +
-    CExpression c_mean_dim "dynet::mean_dim" (CExpression& x, unsigned d) except +
-    CExpression c_std_dim "dynet::std_dim" (CExpression& x, unsigned d) except +
+    CExpression c_mean_dim "dynet::mean_dim" (CExpression& x, vector[unsigned] dims, bool b) except +
+    CExpression c_std_dim "dynet::std_dim" (CExpression& x, vector[unsigned] dims, bool b) except +
     CExpression c_std_elems "dynet::std_elems" (CExpression& x) except +
     CExpression c_std_batches "dynet::std_batches" (CExpression& x) except +
 
@@ -399,6 +401,8 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
         CRNNPointer state()
         void set_dropout(float f)
         void disable_dropout()
+        void set_weight_noise(float f)
+        void disable_weight_noise()
         CModel get_parameter_collection()
 
 cdef extern from "dynet/rnn.h" namespace "dynet":

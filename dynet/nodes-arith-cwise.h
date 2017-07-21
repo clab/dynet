@@ -12,6 +12,13 @@ struct CwiseMultiply : public Node {
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;
+  template<class MyDevice, int ReductionOrder>
+  void backward_helper(const MyDevice & dev,
+		                             const std::vector<const Tensor*>& xs,
+		                             const Tensor& fx,
+		                             const Tensor& dEdf,
+		                             unsigned i,
+		                             Tensor& dEdxi) const;
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -19,6 +26,13 @@ struct CwiseMultiply : public Node {
 struct CwiseQuotient : public Node {
   explicit CwiseQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
+  template<class MyDevice, int ReductionOrder>
+  void backward_helper(const MyDevice & dev,
+		       const std::vector<const Tensor*>& xs,
+		       const Tensor& fx,
+		       const Tensor& dEdf,
+		       unsigned i,
+		       Tensor& dEdxi) const;
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
