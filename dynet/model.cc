@@ -183,7 +183,7 @@ void Parameter::clip_inplace(float left, float right){
 }
 
 void Parameter::set_value(const std::vector<float>& val){
-  get_storage().set_value(val)
+  get_storage().set_value(val);
 }
 
 void Parameter::set_updated(bool b) {
