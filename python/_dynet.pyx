@@ -16,7 +16,8 @@ import os.path
 from _dynet cimport *
 cimport _dynet as dynet
 
-
+# TODO: make this class hidden from users?
+#       (by prepending with _, and removing from docs)
 cdef class DynetParams: # {{{
     """This object holds the global parameters of Dynet
 
@@ -31,6 +32,22 @@ cdef class DynetParams: # {{{
     def __init__(self):
         pass
 
+    # TODO conf, defined in dynet_config, can be
+    #      made much more "pythonic" and then this
+    #      should be adapted.
+    cpdef from_config(self, conf):
+        """TODO
+        """
+        self.cparams.mem_descriptor = str(conf["mem"]).encode()
+        self.cparams.random_seed=conf["seed"]
+        self.cparams.autobatch = conf["autobatch"]
+        self.cparams.autobatch_debug = conf["autobatch_debug"]
+        self.cparams.weight_decay = conf["weight_decay"]
+        self.cparams.shared_parameters = conf["shared_params"]
+        self.set_requested_gpus(conf["requested_gpus"])
+        self.set_gpu_mask(conf["gpu_mask"])
+
+    # TODO can this be removed?
     cpdef from_args(self, shared_parameters=None):
         """Gets parameters from the command line arguments
         
@@ -171,6 +188,7 @@ def init_from_params(DynetParams params):
     """
     params.init()
 # }}}
+
 
 # Dimensions {{{
 cdef CDim Dim(dim, unsigned int batch_size=1):
