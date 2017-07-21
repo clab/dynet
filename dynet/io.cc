@@ -47,6 +47,8 @@ TextFileSaver::TextFileSaver(const string & filename, bool append) :
         datastream(filename, append ? ofstream::app : ofstream::out) {
   if(!datastream)
     DYNET_RUNTIME_ERR("Could not write model to " << filename);
+  datastream.precision(FLOAT32_PRECISION);
+  datastream << std::scientific << std::showpos;
 }
 
 void TextFileSaver::save(const ParameterCollection & model,
@@ -84,37 +86,30 @@ void TextFileSaver::save(const LookupParameter & param,
 
 void TextFileSaver::save(const ParameterStorage & p,
                          const string & key) {
-  std::ostringstream buffer;
-  buffer.precision(FLOAT32_PRECISION);
-  buffer << dynet::as_vector(p.values) << endl;
+  datastream << "#Parameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.dim << ' ';
+  size_t strsize = p.dim.size() * (FLOAT32_PRECISION + 8) + 1;
   bool zero_grad = grad_is_zero(p);
-  if(!zero_grad)
-    buffer << dynet::as_vector(p.g) << endl;
-  datastream << "#Parameter# " << (key.size() > 0 ? key : p.name) << ' '
-    << p.dim << ' ' << buffer.str().size();
   if(zero_grad)
-    datastream << " ZERO_GRAD";
+    datastream << strsize << " ZERO_GRAD";
   else
-    datastream << " FULL_GRAD";
-  datastream << endl;
-  datastream.write(buffer.str().c_str(), buffer.str().size());
+    datastream << strsize*2 << " FULL_GRAD";
+  datastream << endl << dynet::as_vector(p.values) << endl;
+  if(!zero_grad)
+    datastream << dynet::as_vector(p.g) << endl;
 }
 
 void TextFileSaver::save(const LookupParameterStorage & p,
                          const string & key) {
-  std::ostringstream buffer;
-  buffer.precision(FLOAT32_PRECISION);
-  buffer << dynet::as_vector(p.all_values) << endl;
+  datastream << "#LookupParameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.all_dim << ' ';
+  size_t strsize = p.all_dim.size() * (FLOAT32_PRECISION + 8) + 1;
   bool zero_grad = grad_is_zero(p);
-  if(!zero_grad)
-    buffer << dynet::as_vector(p.all_grads) << endl;
-  datastream << "#LookupParameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.all_dim << ' ' << buffer.str().size();
   if(zero_grad)
-    datastream << " ZERO_GRAD";
+    datastream << strsize << " ZERO_GRAD";
   else
-    datastream << " FULL_GRAD";
-  datastream << endl;
-  datastream.write(buffer.str().c_str(), buffer.str().size());
+    datastream << strsize*2 << " FULL_GRAD";
+  datastream << endl << dynet::as_vector(p.all_values) << endl;
+  if(!zero_grad)
+    datastream << dynet::as_vector(p.all_grads) << endl;
 }
 
 TextFileLoader::TextFileLoader(const string & filename) :
