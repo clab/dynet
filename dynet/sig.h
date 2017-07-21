@@ -151,7 +151,7 @@ struct SigLinearSortedMap {
     sorted=false;
     sigs.push_back(std::pair<Sig, int>(s, (int)sigs.size()));
     whiches.push_back(s.which);
-    return sigs.size()-1;
+    return (int)sigs.size()-1;
   }
   void clear() {
     sigs.clear(); whiches.clear(); sorted=false;

@@ -19,12 +19,32 @@ cimport _dynet as dynet
 
 cdef class DynetParams: # {{{
     """This object holds the global parameters of Dynet
+    
+    This is useful if you want to specify the global dynet parameters (memory, random seed...) programmatically, for example in a notebook.
+    
+    In order to use this object, you will need to import a different package:
+    
+    .. code-block:: python
 
-    You should only need to use this after importing dynet as :
-
-        import _dynet / import _gdynet
-
-    See the documentation for more details
+        import _dynet
+        # or
+        import _gdynet # For GPU
+    
+    You can then declare and use a :code:`DynetParams` object
+    
+    .. code-block:: python
+        
+        # Declare a DynetParams object
+        dyparams = dy.DynetParams()
+        # Fetch the command line arguments (optional)
+        dyparams.from_args()
+        # Set some parameters manualy (see the command line arguments documentation)
+        dyparams.set_mem(2048)
+        dyparams.set_random_seed(666)
+        # Initialize with the given parameters
+        dyparams.init() # or init_from_params(dyparams)
+        
+    Don't forget to initialize with :code:`dyparams.init()`, otherwise dynet will raise an error.
     """
     cdef CDynetParams cparams
 
@@ -4516,7 +4536,7 @@ class BiRNNBuilder(object): # {{{
         """Args:
             num_layers: depth of the BiRNN
             input_dim: size of the inputs
-            hidden_dim: size of the outputs (and intermediate layer representations)
+            hidden_dim: size of the outputs (and intermediate layer representations.) This hidden dim is split evenly between the two constituent RNNs, and thus must be even. 
             model
             rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
             builder_layers: list of (forward, backward) pairs of RNNBuilder instances to directly initialize layers
@@ -4525,7 +4545,7 @@ class BiRNNBuilder(object): # {{{
         model = self.model = model.add_subcollection("birnn")
         if builder_layers is None:
             assert num_layers > 0
-            assert hidden_dim % 2 == 0
+            assert hidden_dim % 2 == 0, "BiRNN hidden dimension must be even."
             self.builder_layers = []
             f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
             b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
