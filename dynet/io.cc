@@ -10,6 +10,7 @@ using namespace dynet;
 // We should probably use std::hexfloat, but it's not supported by some
 // older incomplete implementations of C++11.
 static const int FLOAT32_PRECISION = 8;
+static const int FLOAT32_EXPONENT = 2;
 
 bool valid_key(const std::string & s) {
   if (s.size() == 0) return true;
@@ -87,7 +88,10 @@ void TextFileSaver::save(const LookupParameter & param,
 void TextFileSaver::save(const ParameterStorage & p,
                          const string & key) {
   datastream << "#Parameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.dim << ' ';
-  size_t strsize = p.dim.size() * (FLOAT32_PRECISION + 8) + 1;
+  // A single float is "[+-]X.YYYe[+-]ZZZ " where the length of YYY is
+  // FLOAT32_PRECISION, and length of ZZZ is FLOAT32_EXPONENT. We additionally
+  // add a newline at the end of the line, so the total size is as below.
+  size_t strsize = p.dim.size() * (FLOAT32_PRECISION + FLOAT32_EXPONENT + 6) + 1;
   bool zero_grad = grad_is_zero(p);
   if(zero_grad)
     datastream << strsize << " ZERO_GRAD";
