@@ -68,8 +68,15 @@ inline void createFilterDesc(cudnnFilterDescriptor_t* desc) {
 
 
 inline void setFilterDesc(cudnnFilterDescriptor_t* desc, int n, int c, int h, int w) {
-  CUDNN_CHECK(cudnnSetFilter4dDescriptor(*desc, CUDNN_DATA_FLOAT,
-      CUDNN_TENSOR_NCHW, n, c, h, w));
+  #if CUDNN_VERSION_MIN(5, 0, 0)
+  CUDNN_CHECK(cudnnSetFilter4dDescriptor(*desc, 
+              CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW,
+              n, c, h, w));
+#else
+  CUDNN_CHECK(cudnnSetFilter4dDescriptor_v4(filter_desc_, 
+              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
+              FYC, FXC, FW, FH));
+#endif
 }
 
 
@@ -101,21 +108,23 @@ inline void setConvolutionDesc(cudnnConvolutionDescriptor_t* conv,
 }
 
 
-inline void createPoolingDesc(cudnnPoolingDescriptor_t* pool_desc, 
-    cudnnPoolingMode_t* mode, int h, int w, int pad_h, int pad_w, 
-    int stride_h, int stride_w) {
-    *mode = CUDNN_POOLING_MAX;
+inline void createPoolingDesc(cudnnPoolingDescriptor_t* pool_desc) {
   CUDNN_CHECK(cudnnCreatePoolingDescriptor(pool_desc));
+}
+
+inline void setPoolingDesc(cudnnPoolingDescriptor_t* pool_desc, 
+                           cudnnPoolingMode_t mode, int h, int w, int pad_h,
+                           int pad_w, int stride_h, int stride_w) {
 #if CUDNN_VERSION_MIN(5, 0, 0)
-  CUDNN_CHECK(cudnnSetPooling2dDescriptor(*pool_desc, *mode,
+  CUDNN_CHECK(cudnnSetPooling2dDescriptor(*pool_desc, mode,
         CUDNN_PROPAGATE_NAN, h, w, pad_h, pad_w, stride_h, stride_w));
 #else
-  CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(*pool_desc, *mode,
+  CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(*pool_desc, mode,
         CUDNN_PROPAGATE_NAN, h, w, pad_h, pad_w, stride_h, stride_w));
 #endif
 }
 
-inline void destroyTensorDescriptor(cudnnPoolingDescriptor_t poolingDesc) {
+inline void destroyPoolingDesc(cudnnPoolingDescriptor_t poolingDesc) {
   CUDNN_CHECK(cudnnDestroyPoolingDescriptor(poolingDesc));
 }
 
