@@ -112,6 +112,14 @@ class TestParameters(unittest.TestCase):
         res.backward()
         # Should print the value of x
         self.assertTrue(np.allclose(p.grad_as_array(), x.npvalue()), msg="Gradient is wrong")
+    
+    def test_set_value(self):
+        # add parameter
+        p = self.m.add_parameters((2, 3), init=dy.ConstInitializer(1))
+        value_to_set = np.arange(6).reshape(2,3)
+        # set the value
+        p.set_value(value_to_set)
+        self.assertTrue(np.allclose(p.as_array(), value_to_set))
 
     def test_is_updated(self):
         self.assertTrue(self.p1.is_updated())
