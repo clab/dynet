@@ -56,7 +56,8 @@ namespace dynet {
     const Tensor *Wh = xs[3];
     const Tensor *b  = xs[4];
 
-    unsigned hidden_dim = b->d[0] / 4;
+    unsigned hidden_dim = h_tm1->d[0];
+    unsigned input_dim = x_t->d[0];
     unsigned batch_size = x_t->d.bd;
 
     Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
@@ -72,8 +73,26 @@ namespace dynet {
     fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(1);
 
     //matrix mult
-    MatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
-    MatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
+    if(weightnoise_std > 0.f){
+      AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+      Tensor Wx_noisy(Dim({hidden_dim*4, input_dim},1), nullptr, fx.device, fx.mem_pool);
+      Wx_noisy.v = static_cast<float*>(scratch_allocator->allocate(Wx_noisy.d.size() * sizeof(float)));
+      TensorTools::randomize_normal(Wx_noisy, 0, weightnoise_std);
+      Wx_noisy.tvec().device(*dev.edevice) += Wx->tvec();
+
+      Tensor Wh_noisy(Dim({hidden_dim*4, hidden_dim},1), nullptr, fx.device, fx.mem_pool);
+      Wh_noisy.v = static_cast<float*>(scratch_allocator->allocate(Wh_noisy.d.size() * sizeof(float)));
+      TensorTools::randomize_normal(Wh_noisy, 0, weightnoise_std);
+      Wh_noisy.tvec().device(*dev.edevice) += Wh->tvec();
+
+      Tensor b_noisy(Dim({hidden_dim*4, 1},1), nullptr, fx.device, fx.mem_pool);
+      b_noisy.v = static_cast<float*>(scratch_allocator->allocate(b_noisy.d.size() * sizeof(float)));
+      TensorTools::randomize_normal(b_noisy, 0, weightnoise_std);
+      b_noisy.tvec().device(*dev.edevice) += b->tvec();
+    } else {
+      MatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
+      MatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
+    }
 
     // non-linearities
     fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3).unaryExpr(scalar_logistic_sigmoid_op<float>());

@@ -7,8 +7,9 @@
 namespace dynet {
 
 struct VanillaLSTMGates : public Node {
-  explicit VanillaLSTMGates(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  explicit VanillaLSTMGates(const std::initializer_list<VariableIndex>& a, real weightnoise_std) : Node(a), weightnoise_std(weightnoise_std) {}
   virtual bool supports_multibatch() const override { return true; }
+  real weightnoise_std;
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 struct VanillaLSTMC : public Node {
