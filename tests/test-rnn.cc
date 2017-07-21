@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_h_fwd ) {
   Expression c_t = dynet::input(cg, Dim({hidden_dim}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.7f});
   Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, -0.1f, -0.2f, -0.3f, -0.4f, -0.5f, 0.01f, 0.11f, 0.21f, 0.31f, 0.41f, 0.51f, -0.01f, -0.11f, -0.21f, -0.31f, -0.41f, -0.51f});
   Expression h_t = vanilla_lstm_h(c_t, gates_t);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(h_t, (unsigned)0).value())[0], 0.0, 0.001);
+  BOOST_CHECK_SMALL(as_vector(pick_batch_elem(h_t, (unsigned)0).value())[0], (float)1.0e-6);
   BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(h_t, (unsigned)0).value())[1], -0.009966799462, 0.001);
   BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(h_t, (unsigned)0).value())[2], -0.03947506404, 0.001);
   BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(h_t, (unsigned)1).value())[0], -0.002913126125, 0.001);
@@ -270,9 +270,9 @@ BOOST_AUTO_TEST_CASE( lstm_node_c_fwd ) {
   Expression gates_t = dynet::input(cg, Dim({hidden_dim*4}, batch_size), {0.f, 0.1f, 0.2f,         0.3f, 0.4f, 0.5f,        0.f, -0.1f, -0.2f,        -0.3f, -0.4f, -0.5f,
 									  0.01f, 0.11f, 0.21f,     0.31f, 0.41f, 0.51f,    -0.01f, -0.11f, -0.21f,    -0.31f, -0.41f, -0.51f});
   Expression c_t = vanilla_lstm_c(c_tm1, gates_t);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(c_t, (unsigned)0).value())[0], 0, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(c_t, (unsigned)0).value())[1], 0, 0.001);
-  BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(c_t, (unsigned)0).value())[2], 0, 0.001);
+  BOOST_CHECK_SMALL(as_vector(pick_batch_elem(c_t, (unsigned)0).value())[0], (float)1.0e-6);
+  BOOST_CHECK_SMALL(as_vector(pick_batch_elem(c_t, (unsigned)0).value())[1], (float)1.0e-6);
+  BOOST_CHECK_SMALL(as_vector(pick_batch_elem(c_t, (unsigned)0).value())[2], (float)1.0e-6);
   BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(c_t, (unsigned)1).value())[0], 0.0899, 0.001);
   BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(c_t, (unsigned)1).value())[1], 0.1189, 0.001);
   BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(c_t, (unsigned)1).value())[2], 0.1479, 0.001);
