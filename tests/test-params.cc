@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE( set_value ) {
     // New value
     std::vector<float> parameter_after = as_vector(w_p.get_storage().values);
     for(unsigned i=0; i<3; i++){
-      BOOST_CHECK_EQUAL(value_to_set[i], parameter_after_set[i]);
+      BOOST_CHECK_EQUAL(value_to_set[i], parameter_after[i]);
     }
 }
 
