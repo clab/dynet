@@ -7,6 +7,9 @@
 #include "dynet/cuDNN.h"
 #include "dynet/cudnn-ops.h"
 
+#define CUDNN_VERSION_MIN(major, minor, patch) \
+        (CUDNN_VERSION >= (major * 1000 + minor * 100 + patch))
+
 using namespace cudnn;
 
 namespace dynet {
@@ -23,20 +26,19 @@ CudnnConvOp::CudnnConvOp(const std::vector<unsigned>& s, const bool padding_type
   workspace_fwd_size_ = 0;
   workspace_bwd_data_size_ = 0;
   workspace_bwd_filter_size_ = 0;
-  mempool_ = NULL;
   //CUDNN_CHECK(cudnnCreateTensorDescriptor(&x_desc_));
   createTensor4dDesc(&x_desc_);
   //CUDNN_CHECK(cudnnCreateTensorDescriptor(&y_desc_));
-  createTensor4dDesc(&y_desc_);
+  createTensor4dDesc(&y_desc_); 
   //CUDNN_CHECK(cudnnCreateTensorDescriptor(&bias_desc_));
-  createTensor4dDesc(&bias_desc_);
+  createTensor4dDesc(&bias_desc_); 
   //CUDNN_CHECK(cudnnCreateFilterDescriptor(&filter_desc_));
-  createFilterDesc(&filter_desc_);
+  createFilterDesc(&filter_desc_); 
   //CUDNN_CHECK(cudnnCreateConvolutionDescriptor(&conv_desc_));
-  createConvolutionDesc(&conv_desc_);
+  createConvolutionDesc(&conv_desc_); 
 }
 
-CudnnConvOp::~CudnnConvOp() {
+CudnnConvOp::~CudnnConvOp() noexcept(false) {
   //CUDNN_CHECK(cudnnDestroyTensorDescriptor(x_desc_));
   destroyTensorDesc(x_desc_);
   //CUDNN_CHECK(cudnnDestroyTensorDescriptor(y_desc_));
@@ -50,9 +52,7 @@ CudnnConvOp::~CudnnConvOp() {
 }
 
 void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Tensor*>& xs, Tensor& fx) {
-  if (mempool_ == NULL)
-    throw std::runtime_error("dynet::CudnnConvOp::mempool_ not set");
-
+  AlignedMemoryPool* scratch_allocator = dev.pools[(int)DeviceMempool::SCS];
   const Tensor* x = xs[0]; 
   const Tensor* filter = xs[1];
   Tensor* y = &fx;
@@ -86,7 +86,7 @@ void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Te
     if (h_odd || w_odd) { // then we need to pad one row/col on the bottom/right
       unsigned new_XH = XH + h_odd;
       unsigned new_XW = XW + w_odd;
-      void* temp = mempool_->allocate(sizeof(float) * new_XW * new_XH * XC * XN);
+      void* temp = scratch_allocator->allocate(sizeof(float) * new_XW * new_XH * XC * XN);
       Tensor padded_x = Tensor(Dim({new_XH, new_XW, XC}, XN), static_cast<float*>(temp), xs[0]->device, DeviceMempool::FXS);
       Eigen::array<std::pair<int, int>, 4> paddings;
       paddings[0] = std::make_pair(0, static_cast<int>(h_odd));
@@ -101,7 +101,7 @@ void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Te
     }
   }
 
-  // set cudnn descriptors
+  //set cudnn descriptors
   //CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_, 
   //            CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
   //            XN, XC, XW, XH));
@@ -139,23 +139,23 @@ void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Te
   //            x_desc_, filter_desc_, conv_desc_, y_desc_,
   //            fwd_algo_, &workspace_fwd_size_));
   getConvolutionForwardWorkspaceSize(dev.cudnnHandle,
-              x_desc_, filter_desc_, conv_desc_, y_desc_,
-              fwd_algo_, &workspace_fwd_size_);
-  fwd_workspace = mempool_->allocate(workspace_fwd_size_);
+                                     x_desc_, filter_desc_, conv_desc_, y_desc_,
+                                     fwd_algo_, &workspace_fwd_size_);
+  fwd_workspace = scratch_allocator->allocate(workspace_fwd_size_);
   float alpha = 1.f, beta = 0.f;
   //CUDNN_CHECK(cudnnConvolutionForward(dev.cudnnHandle,
   //            &alpha, x_desc_, x->v, filter_desc_, filter->v,
   //            conv_desc_, fwd_algo_, fwd_workspace, workspace_fwd_size_,
   //            &beta, y_desc_, y->v));
   convolutionForward(dev.cudnnHandle,
-              &alpha, x_desc_, x->v, filter_desc_, filter->v,
-              conv_desc_, fwd_algo_, fwd_workspace, workspace_fwd_size_,
-              &beta, y_desc_, y->v);
+                &alpha, x_desc_, x->v, filter_desc_, filter->v, 
+                conv_desc_, fwd_algo_, fwd_workspace, workspace_fwd_size_,
+                &beta, y_desc_, y->v);
   if (xs.size() == 3) {
     //CUDNN_CHECK(cudnnAddTensor(dev.cudnnHandle, &alpha, 
     //            bias_desc_, xs[2]->v, &alpha, y_desc_, y->v));
     addTensor(dev.cudnnHandle, &alpha, 
-                bias_desc_, xs[2]->v, &alpha, y_desc_, y->v);
+              bias_desc_, xs[2]->v, &alpha, y_desc_, y->v);
   }
 }
 
@@ -167,9 +167,10 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
              const Tensor& dEdf,
              unsigned i,
              Tensor& dEdxi) {
-  if (mempool_ == NULL)
-    throw std::runtime_error("dynet::CudnnConvOp::mempool_ not set");
+  // if (scratch_allocator == NULL)
+  //   throw std::runtime_error("dynet::CudnnConvOp::scratch_allocator not set");
 
+  AlignedMemoryPool* scratch_allocator = dev.pools[(int)DeviceMempool::SCS];
   const Tensor* x = xs[0]; 
   const Tensor* filter = xs[1];
   const Tensor* dy = &dEdf;
@@ -199,7 +200,7 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
     if (h_odd || w_odd) {
       unsigned new_XH = XH + h_odd;
       unsigned new_XW = XW + w_odd;
-      void* temp = mempool_->allocate(sizeof(float) * new_XW * new_XH * XC * XN);
+      void* temp = scratch_allocator->allocate(sizeof(float) * new_XW * new_XH * XC * XN);
       Tensor padded_x = Tensor(Dim({new_XH, new_XW, XC}, XN), static_cast<float*>(temp), xs[0]->device, DeviceMempool::FXS);
       Eigen::array<std::pair<int, int>, 4> paddings;
       paddings[0] = std::make_pair(0, static_cast<int>(h_odd));
@@ -222,13 +223,25 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
   //            CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
   //            YN, YC, YW, YH));
   setTensor4dDescriptor(y_desc_, YN, YC, YW, YH);
-  //CUDNN_CHECK(cudnnSetFilter4dDescriptor(filter_desc_,
-  //            DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
-  //            FYC, FXC, FW, FH));
+//#if CUDNN_VERSION_MIN(5, 0, 0)
+//  CUDNN_CHECK(cudnnSetFilter4dDescriptor(filter_desc_, 
+//              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
+//              FYC, FXC, FW, FH));
+//#else
+//  CUDNN_CHECK(cudnnSetFilter4dDescriptor_v4(filter_desc_, 
+//              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
+//              FYC, FXC, FW, FH));
+//#endif
   setFilterDesc(&filter_desc_, FYC, FXC, FW, FH);
-  //CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
-  //            pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
-  //            CUDNN_CROSS_CORRELATION));
+//#if CUDNN_VERSION_MIN(6, 0, 0)
+//  CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
+//              pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
+//              CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT));
+//#else
+//  CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
+//              pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
+//              CUDNN_CROSS_CORRELATION));
+//#endif
   setConvolutionDesc(&conv_desc_, pad_w/2, pad_h/2, stride_[1], stride_[0]);
   if (i == 2) {
     //CUDNN_CHECK(cudnnSetTensor4dDescriptor(bias_desc_,
@@ -239,7 +252,7 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
   float alpha = 1.f, beta = 0.f;
   switch(i) {
     case 0: { // grad w.r.t. feature maps
-      dxi = mempool_->allocate(sizeof(float) * XH * XW * XC * XN);
+      dxi = scratch_allocator->allocate(sizeof(float) * XH * XW * XC * XN);
       //CUDNN_CHECK(cudnnGetConvolutionBackwardDataAlgorithm(dev.cudnnHandle,
       //            filter_desc_, y_desc_, conv_desc_, x_desc_,
       //            CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
@@ -249,54 +262,51 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
                   workspace_size_limit_bytes, &bwd_d_algo_);
       //CUDNN_CHECK(cudnnGetConvolutionBackwardDataWorkspaceSize(dev.cudnnHandle,
       //            filter_desc_, y_desc_, conv_desc_, x_desc_,
-       //           bwd_d_algo_, &workspace_bwd_data_size_));
+      //            bwd_d_algo_, &workspace_bwd_data_size_));
       getConvolutionBackwardDataWorkspaceSize(dev.cudnnHandle,
-                  filter_desc_, y_desc_, conv_desc_, x_desc_,
-                  bwd_d_algo_, &workspace_bwd_data_size_);
-      bwd_data_workspace = mempool_->allocate(workspace_bwd_data_size_);
+                    filter_desc_, y_desc_, conv_desc_, x_desc_,		                            bwd_d_algo_, &workspace_bwd_data_size_);
+      bwd_data_workspace = scratch_allocator->allocate(workspace_bwd_data_size_);
       //CUDNN_CHECK(cudnnConvolutionBackwardData(dev.cudnnHandle,
       //            &alpha, filter_desc_, filter->v, y_desc_, dy->v,
-      //            conv_desc_, bwd_d_algo_, bwd_data_workspace, workspace_bwd_data_size_, &beta, x_desc_, dxi));
+      //            conv_desc_, bwd_d_algo_, bwd_data_workspace, workspace_bwd_data_size_,
+      //            &beta, x_desc_, dxi));
       convolutionBackwardData(dev.cudnnHandle,
-                  &alpha, filter_desc_, filter->v, y_desc_, dy->v,
-                  conv_desc_, bwd_d_algo_, bwd_data_workspace, 
-                  workspace_bwd_data_size_, &beta, x_desc_, dxi);
+                              &alpha, filter_desc_, filter->v, y_desc_, dy->v,
+                              conv_desc_, bwd_d_algo_, bwd_data_workspace,
+                              workspace_bwd_data_size_, &beta, x_desc_, dxi);
       Tensor padded_dx = Tensor(Dim({XH, XW, XC}, XN), static_cast<float*>(dxi), xs[0]->device, DeviceMempool::FXS);
-      std::cout << padded_dx.d << " " << dEdxi.d << std::endl;
+      //std::cout << padded_dx.d << " " << dEdxi.d << std::endl;
       Eigen::array<int, 4> offsets = {0, 0, 0, 0};
       Eigen::array<int, 4> extents = {static_cast<int>(XH - h_odd), static_cast<int>(XW - w_odd), static_cast<int>(XC), static_cast<int>(XN)};
       dEdxi.tb<3>().device(*dev.edevice) += padded_dx.tb<3>().slice(offsets, extents);
     } break;
     case 1: {// grad w.r.t. filters
-      dxi = mempool_->allocate(sizeof(float) * FYC * FXC * FW * FH);
+      dxi = scratch_allocator->allocate(sizeof(float) * FYC * FXC * FW * FH);
       //CUDNN_CHECK(cudnnGetConvolutionBackwardFilterAlgorithm(dev.cudnnHandle,
       //            x_desc_, y_desc_, conv_desc_, filter_desc_,
       //            CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST,
       //            workspace_size_limit_bytes, &bwd_f_algo_));
       getConvolutionBackwardFilterAlgorithm(dev.cudnnHandle,
-                  x_desc_, y_desc_, conv_desc_, filter_desc_,
-                  workspace_size_limit_bytes, &bwd_f_algo_);
+                    x_desc_, y_desc_, conv_desc_, filter_desc_,		                            workspace_size_limit_bytes, &bwd_f_algo_);
       //CUDNN_CHECK(cudnnGetConvolutionBackwardFilterWorkspaceSize(dev.cudnnHandle,
       //            x_desc_, y_desc_, conv_desc_, filter_desc_,
       //            bwd_f_algo_, &workspace_bwd_filter_size_));
+      bwd_filter_workspace = scratch_allocator->allocate(workspace_bwd_filter_size_);
       getConvolutionBackwardFilterWorkspaceSize(dev.cudnnHandle,
-                  x_desc_, y_desc_, conv_desc_, filter_desc_,
-                  bwd_f_algo_, &workspace_bwd_filter_size_);
-      bwd_filter_workspace = mempool_->allocate(workspace_bwd_filter_size_);
+                    x_desc_, y_desc_, conv_desc_, filter_desc_,		                            bwd_f_algo_, &workspace_bwd_filter_size_);
       //CUDNN_CHECK(cudnnConvolutionBackwardFilter(dev.cudnnHandle,
       //            &alpha, x_desc_, x->v, y_desc_, dy->v,
       //            conv_desc_, bwd_f_algo_, bwd_filter_workspace, workspace_bwd_filter_size_,
       //            &beta, filter_desc_, dxi));
       convolutionBackwardFilter(dev.cudnnHandle,
-                  &alpha, x_desc_, x->v, y_desc_, dy->v,
-                  conv_desc_, bwd_f_algo_, bwd_filter_workspace, 
-                  workspace_bwd_filter_size_, &beta, filter_desc_, dxi);
+                    &alpha, x_desc_, x->v, y_desc_, dy->v,		                            conv_desc_, bwd_f_algo_, bwd_filter_workspace,
+                    workspace_bwd_filter_size_, &beta, filter_desc_, dxi);
       //accumlate the gradient
       Tensor dxi_tensor = Tensor(Dim({FH, FW, FXC}, FYC), static_cast<float*>(dxi), xs[1]->device, DeviceMempool::FXS);
       dEdxi.t<4>().device(*dev.edevice) += dxi_tensor.t<4>();
     } break;
     case 2: {// grad w.r.t. bias
-      dxi = mempool_->allocate(sizeof(float) * FYC);
+      dxi = scratch_allocator->allocate(sizeof(float) * FYC);
       //CUDNN_CHECK(cudnnConvolutionBackwardBias(dev.cudnnHandle,
       //            &alpha, y_desc_, dy->v,
       //            &beta, bias_desc_, dxi));
@@ -307,15 +317,15 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
       //            bias_desc_, dxi, &alpha, bias_desc_, dEdxi.v));
       addTensor(dev.cudnnHandle, &alpha,
                   bias_desc_, dxi, &alpha, bias_desc_, dEdxi.v);
-
     } break;
     default:
       throw std::runtime_error("dynet::CudnnConvOp::backward_impl, conv2d have at most 3 inputs");
   }
 }
 
-CudnnMaxPooling2DOp::CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride,
-      const bool padding_type) {
+CudnnMaxPooling2DOp::CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize,
+                                         const std::vector<unsigned>& stride,
+                                         const bool padding_type) {
   ksize_.resize(ksize.size());
   stride_.resize(stride.size());
   for (unsigned i = 0; i < ksize.size(); ++i) {
@@ -323,22 +333,30 @@ CudnnMaxPooling2DOp::CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize, con
     stride_[i] = static_cast<int>(stride[i]);
   }
   is_valid_ = padding_type;
-  mempool_ = NULL;
-  CUDNN_CHECK(cudnnCreateTensorDescriptor(&x_desc_));
-  CUDNN_CHECK(cudnnCreateTensorDescriptor(&y_desc_));
-  CUDNN_CHECK(cudnnCreatePoolingDescriptor(&pooling_desc_));
+  //CUDNN_CHECK(cudnnCreateTensorDescriptor(&x_desc_));
+  createTensor4dDesc(&x_desc_);
+  //CUDNN_CHECK(cudnnCreateTensorDescriptor(&y_desc_));
+  createTensor4dDesc(&y_desc_);
+  //CUDNN_CHECK(cudnnCreatePoolingDescriptor(&pooling_desc_));
+  createPoolingDesc(&pooling_desc_);
 }
 
-CudnnMaxPooling2DOp::~CudnnMaxPooling2DOp() {
-  CUDNN_CHECK(cudnnDestroyTensorDescriptor(x_desc_));
-  CUDNN_CHECK(cudnnDestroyTensorDescriptor(y_desc_));
-  CUDNN_CHECK(cudnnDestroyPoolingDescriptor(pooling_desc_));
+CudnnMaxPooling2DOp::~CudnnMaxPooling2DOp() noexcept(false) {
+  //CUDNN_CHECK(cudnnDestroyTensorDescriptor(x_desc_));
+  destroyTensorDesc(x_desc_);
+  //CUDNN_CHECK(cudnnDestroyTensorDescriptor(y_desc_));
+  destroyTensorDesc(y_desc_);
+  //CUDNN_CHECK(cudnnDestroyPoolingDescriptor(pooling_desc_));
+  destroyPoolingDesc(pooling_desc_);
 }
 
-void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev, const std::vector<const Tensor*>& xs, Tensor& fx) {
-  const Tensor* x = xs[0]; 
+void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev,
+                                       const std::vector<const Tensor*>& xs,
+                                       Tensor& fx) {
+  const Tensor* x = xs[0];
   Tensor* y = &fx;
- 
+
+  AlignedMemoryPool* scratch_allocator = dev.pools[(int)DeviceMempool::SCS];
   unsigned XN = x->d.bd;
   unsigned XC = x->d[2];
   unsigned XH = x->d[0];
@@ -355,19 +373,32 @@ void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev, const std::vector
     pad_w = std::max<int>(0, (YW - 1) * stride_[1] + ksize_[1] - XW) / 2;
   }
 
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              XN, XC, XW, XH));
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              YN, YC, YW, YH));
-  CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
-              CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
-              ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  //CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_,
+  //            CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
+  //            XN, XC, XW, XH));
+  setTensor4dDescriptor(x_desc_, XN, XC, XW, XH);
+  //CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
+  //            CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
+  //            YN, YC, YW, YH));
+  setTensor4dDescriptor(y_desc_, YN, YC, YW, YH);
+//  #if CUDNN_VERSION_MIN(5, 0, 0)
+//    CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
+//                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+//                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+//  #else
+//    CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(pooling_desc_,
+//                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+//                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+//  #endif
+  setPoolingDesc(&pooling_desc_, CUDNN_POOLING_MAX, ksize_[1], ksize_[0],
+                  pad_w, pad_h, stride_[1], stride_[0]);
   float alpha = 1.f, beta = 0.f;
-  CUDNN_CHECK(cudnnPoolingForward(dev.cudnnHandle, pooling_desc_, 
-              &alpha, x_desc_, x->v,
-              &beta, y_desc_, y->v));
+  //CUDNN_CHECK(cudnnPoolingForward(dev.cudnnHandle, pooling_desc_, 
+  //            &alpha, x_desc_, x->v,
+  //            &beta, y_desc_, y->v));
+  poolingForward(dev.cudnnHandle, pooling_desc_, 
+                 &alpha, x_desc_, x->v,
+                 &beta, y_desc_, y->v);
 }
 
 void CudnnMaxPooling2DOp::backward_impl(const Device_GPU & dev,
@@ -376,13 +407,14 @@ void CudnnMaxPooling2DOp::backward_impl(const Device_GPU & dev,
               const Tensor& dEdf,
               unsigned i,
               Tensor& dEdxi) {
-  if (mempool_ == NULL)
-    throw std::runtime_error("dynet::CudnnMaxPooling2DOp::mempool_ not set");
+  // if (scratch_allocator == NULL)
+  //   throw std::runtime_error("dynet::CudnnMaxPooling2DOp::scratch_allocator not set");
   const Tensor* x = xs[0]; 
   const Tensor* y = &fx; 
   const Tensor* dy = &dEdf;
   void* dxi = NULL;
 
+  AlignedMemoryPool* scratch_allocator = dev.pools[(int)DeviceMempool::SCS];
   unsigned XN = x->d.bd;
   unsigned XC = x->d[2];
   unsigned XH = x->d[0];
@@ -399,25 +431,39 @@ void CudnnMaxPooling2DOp::backward_impl(const Device_GPU & dev,
     pad_w = std::max<int>(0, (YW - 1) * stride_[1] + ksize_[1] - XW) / 2;
   }
 
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              XN, XC, XW, XH));
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              YN, YC, YW, YH));
-  CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
-              CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
-              ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  //CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_,
+  //            CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
+  //            XN, XC, XW, XH));
+  setTensor4dDescriptor(x_desc_, XN, XC, XW, XH);
+  //CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
+  //            CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
+  //            YN, YC, YW, YH));
+  setTensor4dDescriptor(y_desc_, YN, YC, YW, YH);
+  //#if CUDNN_VERSION_MIN(5, 0, 0)
+  //  CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
+  //              CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+  //              ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  //#else
+  //  CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(pooling_desc_,
+  //              CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
+  //              ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
+  //#endif
+  setPoolingDesc(&pooling_desc_, CUDNN_POOLING_MAX, ksize_[1], ksize_[0],
+                  pad_w, pad_h, stride_[1], stride_[0]);
 
-  // here we could reuse the descriptor we created for forward, because 
+  // here we could reuse the descriptor we created for forward, because
   // they share the same size
   float alpha = 1.f, beta = 0.f;
-  dxi = mempool_->allocate(sizeof(float) * XN * XC * XH * XW);
-  CUDNN_CHECK(cudnnPoolingBackward(dev.cudnnHandle, pooling_desc_,
-              &alpha, y_desc_, y->v, y_desc_, dy->v,
-              x_desc_, x->v, &beta, x_desc_, dxi));
-  CUDNN_CHECK(cudnnAddTensor(dev.cudnnHandle, &alpha,
-              x_desc_, dxi, &alpha, x_desc_, dEdxi.v));
+  dxi = scratch_allocator->allocate(sizeof(float) * XN * XC * XH * XW);
+  //CUDNN_CHECK(cudnnPoolingBackward(dev.cudnnHandle, pooling_desc_,
+  //            &alpha, y_desc_, y->v, y_desc_, dy->v,
+  //            x_desc_, x->v, &beta, x_desc_, dxi));
+  poolingBackward(dev.cudnnHandle, pooling_desc_, &alpha, y_desc_, y->v, 
+                  y_desc_, dy->v, x_desc_, x->v, &beta, x_desc_, dxi);
+  //CUDNN_CHECK(cudnnAddTensor(dev.cudnnHandle, &alpha,
+  //            x_desc_, dxi, &alpha, x_desc_, dEdxi.v));
+  addTensor(dev.cudnnHandle, &alpha,
+              x_desc_, dxi, &alpha, x_desc_, dEdxi.v);
 }
 
 } // namespace dynet
