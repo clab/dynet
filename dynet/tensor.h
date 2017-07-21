@@ -608,7 +608,7 @@ struct TensorTools {
    * \param left Left bound of the interval
    * \param right Right bound of the interval
    */
-  static void randomize_uniform(Tensor& val, real left = 0.0f, real right = 0.0f);
+  static void randomize_uniform(Tensor& val, real left = 0.0f, real right = 1.0f);
   /**
    * \brief Takes a square matrix tensor and sets it as a random orthonormal matrix
    * \details More specifically this samples a random matrix with RandomizeUniform and then performs SVD and returns the left orthonormal matrix in the decomposition, scaled by `scale`
