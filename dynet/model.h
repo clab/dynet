@@ -132,6 +132,7 @@ struct ParameterStorage : public ParameterStorageBase {
    * @brief Clip the values to the range [left, right]
    */
   void clip(float left, float right);
+  void set_value(const std::vector<float>& val);
   
 
   Dim dim; /**< Dimensions of the parameter tensor*/
@@ -340,6 +341,11 @@ struct Parameter {
    * @brief Clip the values of the parameter to the range [left, right] (in place)
    */
   void clip_inplace(float left, float right);
+  
+  /**
+  * @brief set the values of the parameter
+  */
+  void set_value(const std::vector<float>& val);
 
 }; // struct Parameter
 

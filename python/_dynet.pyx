@@ -573,16 +573,11 @@ cdef class Parameters: # {{{
         """Set value of the parameter
 
         """
-        cdef CTensor t
-        cdef float* vals
-        t = self.thisptr.get_storage().values
         shape = arr.shape
         if self.shape() != shape:
             raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
-        vals = t.v
         arr = arr.flatten(order='F')
-        for i in xrange(arr.size):
-            vals[i] = arr[i]
+        self.thisptr.set_value(arr)
 
     cpdef zero(self):
         """Set the parameter to zero

@@ -81,6 +81,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void scale(float s)
         void scale_gradient(float s)
         void clip_inplace(float left, float right)
+        void set_value(const vector[float]& val)
         string get_fullname()
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
