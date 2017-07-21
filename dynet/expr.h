@@ -2117,7 +2117,7 @@ Expression weight_norm(const Expression& w, const Expression& g);
  * \param weightnoise_std: apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
  * \return An expression with dimensions 4H
  */
-Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std=0.f);
+Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std=0.f, Tensor* dropout_mask_h=NULL);
 
 /**
  * \ingroup lstm

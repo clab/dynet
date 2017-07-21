@@ -197,8 +197,8 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
-Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std){
-  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i}, weightnoise_std));
+Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std, Tensor* dropout_mask_h){
+  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i}, weightnoise_std, dropout_mask_h));
 }
 Expression vanilla_lstm_c(const Expression& c_tm1, const Expression& gates_t){
   return Expression(c_tm1.pg, c_tm1.pg->add_function<VanillaLSTMC>({c_tm1.i, gates_t.i}));

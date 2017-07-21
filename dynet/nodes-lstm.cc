@@ -51,7 +51,7 @@ namespace dynet {
     DYNET_ASSERT(xs.size() == 5, "Failed dimension check in VanillaLSTMGates::forward");
 
     const Tensor *x_t = xs[0];
-    const Tensor *h_tm1 = xs[1];
+    Tensor *h_tm1 = (Tensor*)xs[1];
     const Tensor *Wx = xs[2];
     const Tensor *Wh = xs[3];
     const Tensor *b  = xs[4];
@@ -66,15 +66,23 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
 
+    AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+
     //bias
     Eigen::array<int, 3> bcast = {1, 1, (int)batch_size};
     fx.tb<2>().device(*dev.edevice) = b->tb<2>().broadcast(bcast);
     // forget gate: bias + 1
     fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(1);
 
+    if(dropout_mask_h){
+      dropout_mask_h->tvec().device(*dev.edevice) += dropout_mask_h->tvec(); // TODO: replace by something sensible
+      Tensor h_tm1_dropped(Dim({hidden_dim*4, input_dim},1), nullptr, fx.device, fx.mem_pool);
+      h_tm1_dropped.v = static_cast<float*>(scratch_allocator->allocate(h_tm1_dropped.d.size() * sizeof(float)));
+      h_tm1_dropped.tvec().device(*dev.edevice) = x_t->tvec() * dropout_mask_h->tvec();
+      h_tm1 = &h_tm1_dropped;
+    }
     //matrix mult
     if(weightnoise_std > 0.f){
-      AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
       Tensor Wx_noisy(Dim({hidden_dim*4, input_dim},1), nullptr, fx.device, fx.mem_pool);
       Wx_noisy.v = static_cast<float*>(scratch_allocator->allocate(Wx_noisy.d.size() * sizeof(float)));
       TensorTools::randomize_normal(Wx_noisy, 0, weightnoise_std);
@@ -90,16 +98,16 @@ namespace dynet {
       TensorTools::randomize_normal(b_noisy, 0, weightnoise_std);
       b_noisy.tvec().device(*dev.edevice) += b->tvec();
 
-      scratch_allocator->free();
     } else {
       MatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
       MatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
     }
 
-
     // non-linearities
     fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3).unaryExpr(scalar_logistic_sigmoid_op<float>());
     fx.tbvec().slice(indices_g, sizes_1).device(*dev.edevice) = fx.tbvec().slice(indices_g, sizes_1).tanh();
+
+    scratch_allocator->free();
   }
 
   template<class MyDevice>
