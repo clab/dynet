@@ -17,7 +17,7 @@ public:
   Dict() : frozen(false), map_unk(false), unk_id(-1) {
   }
 
-  inline unsigned size() const { return words_.size(); }
+  inline unsigned size() const { return (unsigned)words_.size(); }
 
   inline bool contains(const std::string& words) {
     return !(d_.find(words) == d_.end());
@@ -36,7 +36,7 @@ public:
           DYNET_RUNTIME_ERR("Unknown word encountered in frozen dictionary: " << word);
       }
       words_.push_back(word);
-      return d_[word] = words_.size() - 1;
+      return d_[word] = (int)words_.size() - 1;
     } else {
       return i->second;
     }
