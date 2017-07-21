@@ -698,7 +698,6 @@ Expression CompactVanillaLSTMBuilder::add_input_impl(int prev, const Expression&
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
     Expression i_h_tm1, i_c_tm1;
-    bool has_prev_state = (prev >= 0 || has_initial_state);
     if (prev < 0) {
       if (has_initial_state) {
         // initial value for h and c at timestep 0 in layer i
