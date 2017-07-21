@@ -89,10 +89,13 @@ namespace dynet {
       b_noisy.v = static_cast<float*>(scratch_allocator->allocate(b_noisy.d.size() * sizeof(float)));
       TensorTools::randomize_normal(b_noisy, 0, weightnoise_std);
       b_noisy.tvec().device(*dev.edevice) += b->tvec();
+
+      scratch_allocator->free();
     } else {
       MatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
       MatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
     }
+
 
     // non-linearities
     fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3).unaryExpr(scalar_logistic_sigmoid_op<float>());
