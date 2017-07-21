@@ -7,10 +7,9 @@
 namespace dynet {
 
 struct VanillaLSTMGates : public Node {
-  explicit VanillaLSTMGates(const std::initializer_list<VariableIndex>& a, real weightnoise_std, Tensor* dropout_mask_h=NULL) : Node(a), weightnoise_std(weightnoise_std), dropout_mask_h(dropout_mask_h) {}
+  explicit VanillaLSTMGates(const std::initializer_list<VariableIndex>& a, real weightnoise_std) : Node(a), weightnoise_std(weightnoise_std) {}
   virtual bool supports_multibatch() const override { return true; }
   real weightnoise_std;
-  Tensor* dropout_mask_h;
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 struct VanillaLSTMC : public Node {
