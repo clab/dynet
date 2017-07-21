@@ -3680,13 +3680,15 @@ cpdef Expression weight_norm(Expression w, Expression g):
     ensure_freshness(g)
     return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
 
-cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b):
+cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, weightnoise_std=0.0):
     """Computes LSTM gates (matrix multiply + nonlinearities):
     
        gates_i = sigmoid (Wx_i * x_t + Wh_i * h_tm1 + b_i)
        gates_f = sigmoid (Wx_f * x_t + Wh_f * h_tm1 + b_f + 1)
        gates_o = sigmoid (Wx_o * x_t + Wh_o * h_tm1 + b_o)
        gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
+       
+       Where optionally gaussian noise with the given standard deviation is applied to Wx, Wh, b parameters. 
        
        returns [gates_i]
                [gates_f]
@@ -3699,6 +3701,7 @@ cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression
         Wx (dynet.Expression): Parameter matrix size 4H x I
         Wh (dynet.Expression): Parameter matrix size 4H x H
         b (dynet.Expression): Bias parameter size 4H
+        weightnoise_std (real): apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
     
     Returns:
         Vector size 4H
@@ -3706,7 +3709,7 @@ cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression
     """
     ensure_freshness(x_t)
     ensure_freshness(h_tm1)
-    return Expression.from_cexpr(x_t.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c()))
+    return Expression.from_cexpr(x_t.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
 
 cpdef Expression vanilla_lstm_c(Expression c_tm1, Expression gates_t):
     """Computes LSTM cell: c_t = gates_i . gates_g + gates_f . c_tm1

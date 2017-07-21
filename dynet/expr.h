@@ -2093,19 +2093,53 @@ Expression weight_norm(const Expression& w, const Expression& g);
 
 /**
  * \ingroup lstm
- * \brief Vanilla LSTM node
- * \details LSTM block as one operation; because the memory layout of the hc_tm1 parameter does not match dynet conventions,
- *          this node should not be used directly, but only via the appropriate LSTM builder
+ * \brief Computes LSTM matrix multiplies plus nonlinearities
+ * \details Computes LSTM gates (matrix multiply + nonlinearities) as follows:
  *
- * \param x_t Current input
- * \param hc_tm1 h and c of previous timestep, arranged so it can be indexed as {hidden_dim_size, batch_size, h_or_c}
- * \param Wx (combined weight matrices Wx_i, Wx_f, Wx_o, Wx_g)
- * \param Wh (Wh_i, Wh_f, Wh_o, Wh_g)
- * \param b (b_i, b_f, b_o, b_g)
- * \return An expression corresponding to `hc_t`, with same size / conventions as hc_tm1
+ *     gates_i = sigmoid (Wx_i * x_t + Wh_i * h_tm1 + b_i)
+ *     gates_f = sigmoid (Wx_f * x_t + Wh_f * h_tm1 + b_f + 1)
+ *     gates_o = sigmoid (Wx_o * x_t + Wh_o * h_tm1 + b_o)
+ *     gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
+ *
+ *     Where optionally gaussian noise with the given standard deviation is applied to Wx, Wh, b parameters.
+ *
+ *     returns [gates_i]
+ *             [gates_f]
+ *             [gates_o]
+ *             [gates_g]
+ *
+ *
+ * \param x_t Input at current timestep (vector size I)
+ * \param h_tm1 h of previous timestep
+ * \param Wx State previous timestep (vector size H)
+ * \param Wh Parameter matrix size 4H x I
+ * \param b Bias parameter size 4H
+ * \param weightnoise_std: apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
+ * \return An expression with dimensions 4H
  */
 Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std=0.f);
+
+/**
+ * \ingroup lstm
+ * \brief Computes LSTM cell state
+ * \details Computes LSTM cell: c_t = gates_i . gates_g + gates_f . c_tm1
+ *
+ * \param c_tm1 Cell at previous timestep (vector size H)
+ * \param gates_t Gates at current timestep as computed by vanilla_lstm_gates (vector size 4H)
+ * \return Vector size H
+ */
 Expression vanilla_lstm_c(const Expression& c_tm1, const Expression& gates_t);
+
+/**
+ * \ingroup lstm
+ * \brief Computes LSTM hidden state
+ * \details Computes LSTM output: h_t = o_t . tanh(c_t)
+ *
+ * \param c_t Cell at current timestep (vector size H)
+ * \param gates_t Gates at current timestep as computed by vanilla_lstm_gates (vector size 4H)
+ * \return Vector size H
+ */
+
 Expression vanilla_lstm_h(const Expression& c_t, const Expression& gates_t);
 
 }  // namespace dynet
