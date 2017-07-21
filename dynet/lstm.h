@@ -410,6 +410,7 @@ struct CompactVanillaLSTMBuilder : public RNNBuilder {
    * \brief Get parameters in CompactVanillaLSTMBuilder
    * \return list of points to ParameterStorage objects
    */
+  void set_weightnoise(float std);
   ParameterCollection & get_parameter_collection() override;
 protected:
   void new_graph_impl(ComputationGraph& cg, bool update) override;
@@ -440,6 +441,7 @@ public:
   unsigned layers;
   unsigned input_dim, hid;
   float dropout_rate_h;
+  float weightnoise_std;
 
 private:
   ComputationGraph* _cg; // Pointer to current cg

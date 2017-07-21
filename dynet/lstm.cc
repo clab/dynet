@@ -530,13 +530,13 @@ void VanillaLSTMBuilder::disable_dropout() {
 }
 
 
-CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0) { }
+CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), weightnoise_std(0) { }
 
 CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder(unsigned layers,
 						     unsigned input_dim,
 						     unsigned hidden_dim,
 						     ParameterCollection& model)
-	    : layers(layers), input_dim(input_dim), hid(hidden_dim){
+	    : layers(layers), input_dim(input_dim), hid(hidden_dim), weightnoise_std(0){
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("compact-vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -686,7 +686,7 @@ Expression CompactVanillaLSTMBuilder::add_input_impl(int prev, const Expression&
 
     // TODO: could extend lstm nodes to takes several inputs that will be concatenated internally, would save memory by avoiding concatenate() operation for bidirectional LSTMs
     // TODO: smaller speed / memory gains by making a version of the lstm gates that assume c or h inputs to be zero (for beginning of sequence)
-    Expression gates_t = vanilla_lstm_gates(in, i_h_tm1, vars[_X2I], vars[_H2I], vars[_BI]);
+    Expression gates_t = vanilla_lstm_gates(in, i_h_tm1, vars[_X2I], vars[_H2I], vars[_BI], weightnoise_std);
     ct[i] = vanilla_lstm_c(i_c_tm1, gates_t);
     in = ht[i] = vanilla_lstm_h(ct[i], gates_t);
   }
@@ -721,6 +721,11 @@ void CompactVanillaLSTMBuilder::disable_dropout() {
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
 }
+void CompactVanillaLSTMBuilder::set_weightnoise(float std) {
+  DYNET_ARG_CHECK(std >= 0.f, "weight noise must have standard deviation >=0");
+  weightnoise_std = std;
+}
+
 
 
 } // namespace dynet

@@ -4299,13 +4299,12 @@ cdef class CompactVanillaLSTMBuilder(_RNNBuilder): # {{{
         input_dim (int): Dimension of the input
         hidden_dim (int): Dimension of the recurrent units
         model (dynet.ParameterCollection): ParameterCollection to hold the parameters
-        ln_lstm (bool): Whether to use layer normalization
 
     """
     cdef CCompactVanillaLSTMBuilder* thiscompvanillaptr
     cdef tuple _spec
-    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False):
-        self._spec = (layers, input_dim, hidden_dim, ln_lstm)
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
+        self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thiscompvanillaptr = self.thisptr = new CCompactVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
@@ -4317,8 +4316,8 @@ cdef class CompactVanillaLSTMBuilder(_RNNBuilder): # {{{
 
     @classmethod
     def from_spec(cls, spec, model):
-        layers, input_dim, hidden_dim, ln_lstm = spec
-        return CompactVanillaLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm)
+        layers, input_dim, hidden_dim = spec
+        return CompactVanillaLSTMBuilder(layers, input_dim, hidden_dim, model)
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
@@ -4436,6 +4435,14 @@ cdef class CompactVanillaLSTMBuilder(_RNNBuilder): # {{{
             batch_size (int): Batch size (default: {1})
         """
         self.thiscompvanillaptr.set_dropout_masks(batch_size)
+
+    cpdef void set_weightnoise(self, float std):
+        """Set the gaussian weight noise
+
+        Args:
+            std (number): Standard deviation of weight noise
+        """
+        self.thiscompvanillaptr.set_weightnoise(std)
 
     def whoami(self): return "CompactVanillaLSTMBuilder"
 # CompactVanillaLSTMBuilder }}}

@@ -440,6 +440,7 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
         CCompactVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
+        void set_weightnoise(float std)
 
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
