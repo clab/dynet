@@ -69,9 +69,8 @@ int main(int argc, char** argv) {
     // Calculate the loss. Batching will automatically be done here.
     float loss = as_scalar(cg.forward(loss_expr)) / 4;
     cg.backward(loss_expr);
-    sgd.update(1.0);
+    sgd.update();
 
-    sgd.update_epoch();
     cerr << "E = " << loss << endl;
   }
 

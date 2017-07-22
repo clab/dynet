@@ -618,7 +618,7 @@ struct Node {
    * \brief Number of arguments to the function
    * \return Arity of the function
    */
-  inline unsigned arity() const { return args.size(); }
+  inline unsigned arity() const { return (unsigned)args.size(); }
 
   inline void set_cg(ComputationGraph* cg) { cg_ = cg; }
 
@@ -651,6 +651,7 @@ private:
 public:
   // auxiliary memory
   mutable void* aux_mem; /**< this will usually be null. but, if your node needs to store intermediate values between forward and backward, you can use store it here. request the number of bytes you need from aux_storage_size(). Note: this memory will be on the CPU or GPU, depending on your computation backend*/
+  
 };
 
 template <class Function>
@@ -673,7 +674,7 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
 
 template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
-  VariableIndex new_node_index(nodes.size());
+  VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -683,7 +684,7 @@ inline VariableIndex ComputationGraph::add_function(const T& arguments) {
 template <class Function, typename T, typename... Args>
 inline VariableIndex ComputationGraph::add_function(const T& arguments,
     Args&&... side_information) {
-  VariableIndex new_node_index(nodes.size());
+  VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
   set_dim_for_new_node(new_node_index);
   return new_node_index;

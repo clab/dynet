@@ -64,6 +64,16 @@ if (MKL OR MKL_ROOT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
 endif()
 
+# There are about 30 files compiled for GPU. We merge them into less
+# for faster compilation. Set to 0 to mean no merging, or k to merge into k files. 
+if(NOT DEFINED GPU_NUMFILES)
+  if(MSVC)
+    set(GPU_NUMFILES 1)   # MSVC does serial compilation of CUDA, so minimize overhead
+  else()
+    set(GPU_NUMFILES 4)   # Should probably be set to number of jobs in parallel make
+  endif()
+endif()
+
 
 ######## Platform-specific options
 if(WIN32)
@@ -172,9 +182,15 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(dynet)
-add_subdirectory(examples)
-add_subdirectory(tutorial)
-add_subdirectory(python)
+
+if(ENABLE_CPP_EXAMPLES)
+  add_subdirectory(tutorial)
+  add_subdirectory(examples)
+endif(ENABLE_CPP_EXAMPLES)
+
+if(PYTHON)
+  add_subdirectory(python)
+endif(PYTHON)
 
 if(ENABLE_SWIG)
   message("-- Enabling SWIG")

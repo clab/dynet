@@ -130,8 +130,7 @@ int main(int argc, char** argv) {
 
   //AdadeltaTrainer sgd(m);
   SimpleSGDTrainer sgd(m);
-  sgd.eta0 = 0.001;
-  sgd.eta = 0.001;
+  sgd.learning_rate = 0.001;
 
   unsigned report_every_i = 50;
   unsigned si = train.size();
@@ -171,7 +170,7 @@ int main(int argc, char** argv) {
       Expression loss_expr = sparsemax_loss(u, &xy.labels);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update(1.0);
+      sgd.update();
     }
     cerr << "[epoch=" << (ti / train.size()) << "] E=" << (loss / instances) << ' ';
   }

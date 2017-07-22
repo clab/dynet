@@ -73,7 +73,7 @@ before_script:
   - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
       mkdir build;
       cd build;
-      cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DENABLE_BOOST=ON -DPYTHON=`which python` || travis_terminate 1;
+      cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DENABLE_BOOST=ON -DENABLE_CPP_EXAMPLES=ON -DPYTHON=`which python` || travis_terminate 1;
     else
       pip install -v . || travis_terminate 1;
     fi'

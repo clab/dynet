@@ -215,6 +215,5 @@ int main(int argc, char** argv) {
       cg.backward(loss_exp);
       trainer.update();
     }
-    trainer.update_epoch(1.0);
   }
 }

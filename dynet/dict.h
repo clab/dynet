@@ -17,7 +17,7 @@ public:
   Dict() : frozen(false), map_unk(false), unk_id(-1) {
   }
 
-  inline unsigned size() const { return words_.size(); }
+  inline unsigned size() const { return (unsigned)words_.size(); }
 
   inline bool contains(const std::string& words) {
     return !(d_.find(words) == d_.end());
@@ -36,7 +36,7 @@ public:
           DYNET_RUNTIME_ERR("Unknown word encountered in frozen dictionary: " << word);
       }
       words_.push_back(word);
-      return d_[word] = words_.size() - 1;
+      return d_[word] = (int)words_.size() - 1;
     } else {
       return i->second;
     }
@@ -55,7 +55,7 @@ public:
     if (map_unk)
       DYNET_RUNTIME_ERR("Set UNK more than one time");
   
-    // temporarily unfrozen the dictionary to allow the add of the UNK
+    // temporarily unfreeze the dictionary to allow the addition of the UNK
     frozen = false;
     unk_id = convert(word);
     frozen = true;
