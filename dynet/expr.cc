@@ -40,11 +40,11 @@ Expression flip_gradient(const Expression& x) { return Expression(x.pg, x.pg->ad
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
 Expression operator+(const Expression& x, const Expression& y) {
     if (x.dim().batch_size() == 1)
-        return Expression(x.pg, x.pg->add_function<ScalarAdd>({y.i, x.i}), x.pg->expr_device);
+        return Expression(x.pg, x.pg->add_function<ScalarAdd>({y.i, x.i}));
     else if (y.dim().batch_size() == 1)
-        return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}), x.pg->expr_device);
+        return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}));
     else
-        return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}, x.pg->expr_device), x.pg->expr_device);
+        return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}, x.pg->nodes[x.i]->device));
 }
 Expression operator+(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantPlusX>({y.i}, x)); }
 Expression operator+(const Expression& x, real y) { return y + x; }
@@ -52,11 +52,9 @@ Expression operator-(const Expression& x, const Expression& y) { return x + (-y)
 Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantMinusX>({y.i}, x)); }
 Expression operator-(const Expression& x, real y) { return -(y - x); }
 Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg,
-                                                                                   x.pg->add_function<MatrixMultiply>({x.i, y.i}, x.pg->expr_device),
-                                                                                   x.pg->expr_device); }
+                                                                                   x.pg->add_function<MatrixMultiply>({x.i, y.i}, x.pg->nodes[x.i]->device)); }
 Expression operator*(const Expression& x, float y) { return Expression(x.pg,
-                                                                       x.pg->add_function<ConstScalarMultiply>({x.i}, y),
-                                                                       x.pg->expr_device); }
+                                                                       x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
 Expression cmult(const Expression& x, const Expression& y) { 
     if (x.dim().batch_size() == 1) 
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 
@@ -81,8 +79,8 @@ Expression sqrt(const Expression& x) { return Expression(x.pg, x.pg->add_functio
 Expression abs(const Expression& x) { return Expression(x.pg, x.pg->add_function<Abs>({x.i})); }
 Expression erf(const Expression& x) { return Expression(x.pg, x.pg->add_function<Erf>({x.i})); }
 Expression tanh(const Expression& x, Device *device) {
-  if (device == nullptr) device = x.pg->expr_device;
-  return Expression(x.pg, x.pg->add_function<Tanh>({x.i}, device), device);
+  if (device == nullptr) device = x.pg->nodes[x.i]->device;
+  return Expression(x.pg, x.pg->add_function<Tanh>({x.i}, device));
 }
 Expression lgamma(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogGamma>({x.i})); }
 Expression log(const Expression& x) { return Expression(x.pg, x.pg->add_function<Log>({x.i})); }
@@ -120,8 +118,8 @@ Expression select_rows(const Expression& x, const vector<unsigned>* prows) { ret
 Expression select_cols(const Expression& x, const vector<unsigned>& cols) { return Expression(x.pg, x.pg->add_function<SelectCols>({x.i}, cols)); }
 Expression select_cols(const Expression& x, const vector<unsigned>* pcols) { return Expression(x.pg, x.pg->add_function<SelectCols>({x.i}, pcols)); }
 Expression inverse(const Expression& x, Device *device) {
-  if (device == nullptr) device = x.pg->expr_device;
-  return Expression(x.pg, x.pg->add_function<MatrixInverse>({x.i}, device), device);
+  if (device == nullptr) device = x.pg->nodes[x.i]->device;
+  return Expression(x.pg, x.pg->add_function<MatrixInverse>({x.i}, device));
 }
 Expression logdet(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogDet>({x.i})); }
 

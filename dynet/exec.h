@@ -41,7 +41,6 @@ class SimpleExecutionEngine : public ExecutionEngine {
  private:
   std::vector<Tensor> nfxs;
   std::vector<Tensor> ndEdfs;
-  std::vector<std::vector<Tensor>> args_buffer;
   VariableIndex num_nodes_evaluated;
 };
 

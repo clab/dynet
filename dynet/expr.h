@@ -36,11 +36,10 @@ struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
   unsigned graph_id;
-  Device *assign_device;
 
-  Expression() : pg(nullptr), i(0), graph_id(0), assign_device(dynet::default_device) {} 
+  Expression() : pg(nullptr), i(0), graph_id(0) {}
 
-  Expression(Device *device) : pg(nullptr), i(0), graph_id(0), assign_device(device) { }
+  Expression(Device *device) : pg(nullptr), i(0), graph_id(0) {}
   /**
    * \brief Base expression constructor
    * \details Used when creating operations
@@ -49,7 +48,7 @@ struct Expression {
    * \param i Variable index
    */
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg),
-    i(i), graph_id(pg->get_id()), assign_device(dynet::default_device) {}
+    i(i), graph_id(pg->get_id()) {}
   /**
    * \brief Base expression constructor
    * \details Used when creating operations
@@ -59,13 +58,22 @@ struct Expression {
    * \param device Device placement for the Expression
    */
   Expression(ComputationGraph *pg, VariableIndex i, Device *device) : pg(pg),
-    i(i), graph_id(pg->get_id()), assign_device(device) {}
+    i(i), graph_id(pg->get_id()) {}
 
-  inline std::string get_device() const { return assign_device->name; }
+  inline std::string get_device() const { return pg->nodes[i]->device->name; }
 
   const bool is_stale() const {
     return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());
   }
+
+  void change_device(Device *device) {
+    Node *node = pg->nodes[i];
+    DYNET_ASSERT(node->device != nullptr, "Attemp to change device for an uninitialized expression");
+    node->device = device;
+  }
+
+  // TODO
+  //Expression to_device(Device *device) {}
 
   /**
    * \brief Get value of the expression
@@ -625,12 +633,12 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
  */
 inline Expression affine_transform(const std::initializer_list<Expression>& xs,
                             Device *device = nullptr) {
-  if (device == nullptr) device = xs.begin()->pg->expr_device;
+  if (device == nullptr) device = xs.begin()->pg->nodes[xs.begin()->i]->device;
   return detail::foo<AffineTransform>(xs, device);
 }
 template <typename T>
 inline Expression affine_transform(const T& xs, Device *device = nullptr) {
-  if (device == nullptr) device = xs.begin()->pg->expr_device;
+  if (device == nullptr) device = xs.begin()->pg->nodes[xs.begin()->i]->device;
   return detail::foo<AffineTransform>(xs, device);
 }
 

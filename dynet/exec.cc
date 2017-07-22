@@ -89,13 +89,12 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
   if (i >= num_nodes_evaluated) {
     string current_node_name;
     nfxs.resize(i + 1);
-    args_buffer.resize(i + 1);
 
     //vector<string> dummy(5, "x");
     vector<const Tensor*> xs(16);
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
-      if (autobatch_debug_flag) { 
+      if (autobatch_debug_flag) {
         current_node_name = node->as_dummy_string();
         timer.start(current_node_name);
       }
@@ -123,28 +122,11 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       }
       node->aux_mem = aux_mem;
 
-      std::vector<const Tensor*> xsxs;
-      std::vector<Tensor> args_buffer_tmp;
-      args_buffer_tmp.resize(xs.size());
-      // TODO: combine allocate and memcpy
-      for (size_t k = 0; k < xs.size(); ++k) {
-        auto x = xs[k];
-        if (x->device == nfxs[num_nodes_evaluated].device) {
-          xsxs.push_back(x);
-          args_buffer_tmp[k] = *x;
-        } else {
-          args_buffer_tmp[k].d = x->d;
-          args_buffer_tmp[k].device = nfxs[num_nodes_evaluated].device;
-          args_buffer_tmp[k].mem_pool = DeviceMempool::FXS;
-          args_buffer_tmp[k].v = static_cast<float*>(args_buffer_tmp[k].device->pools[(int)DeviceMempool::FXS]->
-                                                     allocate(x->d.size() * sizeof(float)));
-          TensorTools::copy_elements(args_buffer_tmp[k], *x);
-          xsxs.push_back(&args_buffer_tmp[k]);
-        }
+      // check consistent device
+      for (auto & xs_v : xs) {
+        DYNET_ASSERT(xs_v->device == nfxs[num_nodes_evaluated].device, "Attemp to do tensor forward in different devices");
       }
-      args_buffer[num_nodes_evaluated] = args_buffer_tmp;
-
-      node->forward(xsxs, nfxs[num_nodes_evaluated]);
+      node->forward(xs, nfxs[num_nodes_evaluated]);
 
       if (autobatch_debug_flag) { timer.stop(current_node_name); }
     }
@@ -181,7 +163,6 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
   // initialize dE/dE = 1
-  // TODO: specify device
   ndEdfs.back().v = kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
@@ -207,30 +188,27 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   // consider only nodes that participate in the computation.
   vector<bool> in_computation(num_nodes, false);
   in_computation[num_nodes - 1] = true;
+  vector<const Tensor*> xs;
   for (int i = num_nodes - 1; i >= 0; --i) {
     if (!in_computation[i]) continue;
     const Node* node = cg.nodes[i];
-    for (VariableIndex arg : node->args) {
-      in_computation[arg] = true;
-    }
+    xs.resize(node->arity());
     unsigned ai = 0;
     for (VariableIndex arg : node->args) {
+      in_computation[arg] = true;
+      xs[ai] = &nfxs[arg];
+      ++ai;
+    }
+    ai = 0;
+    for (VariableIndex arg : node->args) {
       if (needs_derivative[arg]) {
-        std::vector<const Tensor*> xs;
-        for (auto & t : args_buffer[i]) xs.push_back(&t);
-        if (ndEdfs[i].device == ndEdfs[arg].device) {
-          node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
-        } else {
-          Tensor device_dEdf;
-          device_dEdf.d = ndEdfs[arg].d;
-          device_dEdf.device = ndEdfs[i].device;
-          device_dEdf.mem_pool = DeviceMempool::DEDFS;
-          device_dEdf.v = static_cast<float*>(device_dEdf.device->pools[(int)DeviceMempool::DEDFS]
-                                              ->allocate(device_dEdf.d.size() * sizeof(float)));
-          node->backward(xs, nfxs[i], ndEdfs[i], ai, device_dEdf);
-          // copy back to ndEdfs[arg]
-          TensorTools::copy_elements(ndEdfs[arg], device_dEdf);
+        DYNET_ASSERT(nfxs[i].device == ndEdfs[i].device, "Attemp to do tensor backward in different devices");
+        DYNET_ASSERT(nfxs[i].device == ndEdfs[arg].device, "Attemp to do tensor backward in different devices");
+        for (auto & xs_v : xs) {
+          DYNET_ASSERT(xs_v->device == nfxs[i].device.device,
+                       "Attemp to do tensor backward in different devices");
         }
+        node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
       }
       ++ai;
     }
@@ -245,7 +223,6 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
       static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
   // for(VariableIndex vi = (VariableIndex)0; vi <= backward_computed; ++vi) cerr << "ndEdfs[" << vi << "] == " << print_vec(as_vector(ndEdfs[vi])) << endl;
-
 }
 
 // copies the list of tensors into a single contig tensor (tout).
