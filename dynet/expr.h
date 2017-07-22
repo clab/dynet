@@ -22,7 +22,6 @@
 #include "dynet/nodes.h"
 #include "dynet/nodes-contract.h"
 #include "dynet/devices.h"
-#include "dynet/globals.h"
 #include <stdexcept>
 
 
@@ -64,12 +63,6 @@ struct Expression {
 
   const bool is_stale() const {
     return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());
-  }
-
-  void change_device(Device *device) {
-    Node *node = pg->nodes[i];
-    DYNET_ASSERT(node->device != nullptr, "Attemp to change device for an uninitialized expression");
-    node->device = device;
   }
 
   // TODO
@@ -2145,6 +2138,17 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
  * \return An expression of the same dimension as `w`
  */
 Expression weight_norm(const Expression& w, const Expression& g);
+
+/**
+ * \ingroup change device operation
+ * \brief Copy tensor between devices
+ * \details Copy tensor from x's device to device 
+ *
+ * \param x Input expression
+ * \device Device to place return tensor
+ * \return An expression of x's tensor in device
+ */
+Expression to_device(const Expression & x, Device *device);
 
 }  // namespace dynet
 

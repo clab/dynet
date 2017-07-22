@@ -3,7 +3,6 @@
 #include <initializer_list>
 
 #include "dynet/nodes.h"
-#include "dynet/nodes-conv.h"
 
 namespace dynet {
 
@@ -204,5 +203,10 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 }
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
+
+Expression to_device(const Expression & x, Device *device) {
+  DYNET_ASSERT(x.pg->nodes[x.i]->device != device, "It is unnecessary to peform to_device operation in the same devices");
+  return Expression(x.pg, x.pg->add_function<ToDevice>(device));
+}
 
 }  // namespace dynet
