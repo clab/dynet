@@ -105,7 +105,7 @@ void Node::autobatch_reshape_concatonly(const ComputationGraph & cg,
   }
 }
 
-ComputationGraph::ComputationGraph(Device *device) {
+ComputationGraph::ComputationGraph() {
   if(autobatch_flag) {
     ee = new BatchedExecutionEngine(*this);
   } else {
@@ -120,10 +120,9 @@ ComputationGraph::ComputationGraph(Device *device) {
   check_validity = false;
   ++n_cumul_hgs;
   graph_id = n_cumul_hgs;
-  expr_device = device;
 }
 
-ComputationGraph::ComputationGraph(bool batched, Device *device) {
+ComputationGraph::ComputationGraph(bool batched) {
   if(batched) {
     ee = new BatchedExecutionEngine(*this);
   } else {
@@ -138,7 +137,6 @@ ComputationGraph::ComputationGraph(bool batched, Device *device) {
   check_validity = false;
   ++n_cumul_hgs;
   graph_id = n_cumul_hgs;
-  expr_device = device;
 }
 
 ComputationGraph::~ComputationGraph() {

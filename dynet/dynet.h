@@ -18,8 +18,6 @@
 #include "dynet/model.h"
 #include "dynet/devices.h"
 #include "dynet/sig.h"
-#include "dynet/globals.h"
-
 
 namespace dynet {
 
@@ -80,8 +78,8 @@ struct ComputationGraph {
   /**
    * \brief Default constructor
    */
-  ComputationGraph(Device *device = dynet::default_device);
-  ComputationGraph(bool batched, Device *device = dynet::default_device);
+  ComputationGraph();
+  ComputationGraph(bool batched);
   ~ComputationGraph();
 
   // INPUTS
@@ -420,17 +418,12 @@ struct ComputationGraph {
    */
   unsigned get_id() const {return graph_id;};
 
-  // TODO: check valid device
-  void change_expr_device(Device *device) { expr_device = device; }
-
-  inline std::string get_expr_device() const { return expr_device->name; }
-
   // data
   std::vector<Node*> nodes;       // **stored in topological order**
   std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
 
   ExecutionEngine* ee;  // handles the execution
-  Device *expr_device; // device pointer for coming adding expression
+
 private:
   unsigned graph_id;
   // flag of whether to compute immediately for each expression, i.e., an imperative execution style to help debug.
