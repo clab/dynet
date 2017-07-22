@@ -51,10 +51,8 @@ namespace dynet {
 
 ParameterStorageBase::~ParameterStorageBase() {}
 
-ParameterStorage::ParameterStorage(const Dim& d, float scale,
-                                   const std::string & name, Device *device)
+ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name, Device *device)
     : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
-ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name) : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   values.d = g.d = d;
@@ -74,7 +72,6 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string 
 ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init,
                                    const std::string & name, Device *device)
     : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
-ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   values.d = g.d = d;
@@ -116,7 +113,6 @@ bool valid_parameter(const std::string & s) {
 LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
                                                const std::string & name, Device *device) 
     : name(name), dim(d), updated(true), all_updated(false), nonzero_grad(false), owner(nullptr) {
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), all_updated(false), nonzero_grad(false), owner(nullptr) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
