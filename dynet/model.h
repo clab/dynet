@@ -17,6 +17,7 @@
 #include "dynet/weight-decay.h"
 #include "dynet/tensor.h"
 #include "dynet/devices.h"
+#include "dynet/globals.h"
 
 namespace dynet {
 
@@ -141,6 +142,7 @@ struct ParameterStorage : public ParameterStorageBase {
   bool updated; /**< Whether this is updated */
   bool nonzero_grad; /**< Whether the gradient is zero */
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
+  Device *device;
 
 private:
   ParameterStorage() : updated(true), owner(nullptr) {}
@@ -244,6 +246,7 @@ struct LookupParameterStorage : public ParameterStorageBase {
   bool all_updated; /** Whether all of the gradients have been updated. */
   bool nonzero_grad; /**< Whether the gradient is zero */
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
+  Device *device;
 private:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
   LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
@@ -488,7 +491,7 @@ public:
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, const std::string & name, Device *device = nullptr);
+  Parameter add_parameters(const Dim& d, const std::string & name, Device *device = dynet::default_device);
   // set scale to use custom initialization
   /**
    * \brief Add parameters to model and returns Parameter object
@@ -502,7 +505,7 @@ public:
    * \return Parameter object to be used in the computation graph
    */
   Parameter add_parameters(const Dim& d, float scale = 0.0f,
-                           const std::string & name = "", Device *device = nullptr);
+                           const std::string & name = "", Device *device = dynet::default_device);
   /**
    * \brief Add parameters with custom initializer
    *
@@ -514,7 +517,7 @@ public:
    * \return Parameter object to be used in the computation graph
    */
   Parameter add_parameters(const Dim& d, const ParameterInit & init,
-                           const std::string & name = "", Device *device = nullptr);
+                           const std::string & name = "", Device *device = dynet::default_device);
   /**
    * \brief Get parameters base in current model
    *
@@ -545,7 +548,7 @@ public:
    * \return LookupParameter object to be used in the computation graph
    */
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d,
-                                        const std::string & name = "", Device *device = nullptr);
+                                        const std::string & name = "", Device *device = dynet::default_device);
   /**
    * \brief Add lookup parameter with custom initializer
    *
@@ -558,7 +561,7 @@ public:
    * \return LookupParameter object to be used in the computation graph
    */
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init,
-                                        const std::string & name = "", Device *device = nullptr);
+                                        const std::string & name = "", Device *device = dynet::default_device);
   /**
    * \brief Get lookup parameter in current model
    * \details It is not recommended to use this

@@ -4,7 +4,6 @@
 #include "dynet/dynet.h"
 #include "dynet/param-init.h"
 #include "dynet/io.h"
-#include "dynet/globals.h"
 
 #include <unordered_set>
 #include <iostream>
@@ -29,15 +28,15 @@
   extern template void MyParam::dev_func<Device_GPU>(Device_GPU & dev, float *sqnorm) const; \
   template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \
   void MyParam::regular_func(float *sqnorm) const { \
-    if(default_device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)default_device,sqnorm); } \
-    else if(default_device->type == DeviceType::GPU) { dev_func(*(Device_GPU*)default_device,sqnorm); } \
+    if(device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)device,sqnorm); } \
+    else if(device->type == DeviceType::GPU) { dev_func(*(Device_GPU*)device,sqnorm); } \
     else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
 #else
 #define DYNET_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
   template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \
   void MyParam::regular_func(float *sqnorm) const { \
-    if(default_device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)default_device,sqnorm); } \
+    if(device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)device,sqnorm); } \
     else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
 #endif
@@ -51,8 +50,8 @@ namespace dynet {
 
 ParameterStorageBase::~ParameterStorageBase() {}
 
-ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name, Device *device)
-    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
+ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name, Device *dev)
+    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   values.d = g.d = d;
@@ -70,8 +69,8 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string 
 }
 
 ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init,
-                                   const std::string & name, Device *device)
-    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
+                                   const std::string & name, Device *dev)
+    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   values.d = g.d = d;
@@ -111,8 +110,9 @@ bool valid_parameter(const std::string & s) {
 }
 
 LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
-                                               const std::string & name, Device *device) 
-    : name(name), dim(d), updated(true), all_updated(false), nonzero_grad(false), owner(nullptr) {
+                                               const std::string & name, Device *dev)
+    : name(name), dim(d), updated(true), all_updated(false),
+    nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
@@ -291,13 +291,11 @@ void ParameterCollection::project_weights(float radius) {
 }
 
 Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name, Device *device) {
-  if (device == nullptr) device = dynet::default_device;
   return add_parameters(d, ParameterInitGlorot(), p_name, device);
 }
 
 Parameter ParameterCollection::add_parameters(const Dim& d, float scale,
                                               const std::string & p_name, Device *device) {
-  if (device == nullptr) device = dynet::default_device;
   if(scale == 0.0f)
     return add_parameters(d, ParameterInitGlorot(), p_name, device);
   else
@@ -306,7 +304,6 @@ Parameter ParameterCollection::add_parameters(const Dim& d, float scale,
 
 Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init,
                                               const std::string & p_name, Device *device) {
-  if (device == nullptr) device = dynet::default_device;
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
@@ -771,6 +768,7 @@ void LookupParameterStorage::scale_gradient(float a) {
 }
 #endif
 
+// TODO: support multi-device
 template <class MyDevice>
 float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice & dev) const {
   if (gradient_norm_scratch == nullptr)
