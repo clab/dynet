@@ -190,37 +190,38 @@ Dim& ComputationGraph::get_dimension(VariableIndex index) const {
 
 
 
-VariableIndex ComputationGraph::add_input(real s) {
+VariableIndex ComputationGraph::add_input(real s, Device *device) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new ScalarInputNode(s));
+  nodes.push_back(new ScalarInputNode(s, device));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_input(const real* ps) {
+VariableIndex ComputationGraph::add_input(const real* ps, Device *device) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new ScalarInputNode(ps));
+  nodes.push_back(new ScalarInputNode(ps, device));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>& pm) {
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>& pm, Device *device) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new InputNode(d, pm));
+  nodes.push_back(new InputNode(d, pm, device));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm) {
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm, Device *device) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new InputNode(d, pm));
+  nodes.push_back(new InputNode(d, pm, device));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_input(const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata) {
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<unsigned int>& ids,
+                                          const vector<float>& data, Device *device, float defdata) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new SparseInputNode(d, ids, data, defdata));
+  nodes.push_back(new SparseInputNode(d, ids, data, device, defdata));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }

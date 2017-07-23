@@ -154,10 +154,11 @@ Expression foo(const T& xs, Device *device, const T1& arg1) {
  *
  * \param g Computation graph
  * \param s Real number
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing s
  */
-Expression input(ComputationGraph& g, real s);
+Expression input(ComputationGraph& g, real s, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -168,10 +169,11 @@ Expression input(ComputationGraph& g, real s);
  *
  * \param g Computation graph
  * \param ps Real number pointer
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing *ps
  */
-Expression input(ComputationGraph& g, const real *ps);
+Expression input(ComputationGraph& g, const real *ps, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -191,10 +193,11 @@ Expression input(ComputationGraph& g, const real *ps);
  * \param g Computation graph
  * \param d Dimension of the input matrix
  * \param data A vector of data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing data
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -205,10 +208,11 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& da
  * \param g Computation graph
  * \param d Dimension of the input matrix
  * \param pdata A pointer to an (updatable) vector of data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing *pdata
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -223,10 +227,13 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
  * \param ids The indexes of the data points to update
  * \param data The data points corresponding to each index
  * \param defdata The default data with which to set the unspecified data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing data
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
+Expression input(ComputationGraph& g, const Dim& d,
+                 const std::vector<unsigned int>& ids, const std::vector<float>& data,
+                 float defdata = 0.f, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -746,7 +753,7 @@ Expression erf(const Expression& x);
  * \details Elementwise calculation of the hyperbolic tangent
  *
  * \param x The input expression
- * \param device The place device for this affine transform 
+ * \param device The place device for the affine transform 
  *
  * \return An expression where the ith element is equal to tanh(x_i)
  */
