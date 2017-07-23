@@ -7,7 +7,7 @@
 namespace dynet {
 
 struct ToDevice : public Node {
-  explicit ToDevice(Device *device) : Node(device) {}
+  explicit ToDevice(const std::initializer_list<VariableIndex>& a, Device *device) : Node(a, device) {}
   virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL();
 };

@@ -674,7 +674,7 @@ struct TensorTools {
    * \param v Target tensor
    * \param v_src Source tensor
    */
-  static void copy_elements(const Tensor& v, const Tensor& v_src);
+  static void copy_elements(Tensor& v, const Tensor& v_src);
 
   /**
    * \brief Accumulate the values of one tensor into another

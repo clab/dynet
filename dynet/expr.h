@@ -226,14 +226,14 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
  * \param d Dimension of the input matrix
  * \param ids The indexes of the data points to update
  * \param data The data points corresponding to each index
- * \param defdata The default data with which to set the unspecified data points
  * \param device The place device for the input value, default_device by default
+ * \param defdata The default data with which to set the unspecified data points
  *
  * \return An expression representing data
  */
 Expression input(ComputationGraph& g, const Dim& d,
                  const std::vector<unsigned int>& ids, const std::vector<float>& data,
-                 float defdata = 0.f, Device *device = dynet::default_device);
+                 Device *device = dynet::default_device, float defdata = 0.f);
 
 /**
  * \ingroup inputoperations

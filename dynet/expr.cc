@@ -206,7 +206,7 @@ Expression weight_norm(const Expression& w, const Expression& g){return Expressi
 
 Expression to_device(const Expression & x, Device *device) {
   DYNET_ASSERT(x.pg->nodes[x.i]->device != device, "It is unnecessary to peform to_device operation in the same devices");
-  return Expression(x.pg, x.pg->add_function<ToDevice>(device));
+  return Expression(x.pg, x.pg->add_function<ToDevice>({x.i}, device));
 }
 
 }  // namespace dynet

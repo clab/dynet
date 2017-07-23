@@ -159,7 +159,7 @@ void TensorTools::copy_elements(const Tensor& v, const Tensor& v_src) {
 }
 */
 
-void TensorTools::copy_elements(const Tensor& v, const Tensor& v_src) {
+void TensorTools::copy_elements(Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) {
     if (v_src.device->type == DeviceType::CPU) {
       memcpy(v.v, v_src.v, sizeof(real) * v.d.size());
