@@ -4168,6 +4168,12 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
 
+    def transduce(self, inputs):
+      return self.initial_state().transduce(inputs)
+
+    def add_inputs(self, inputs):
+      return self.initial_state().add_inputs(inputs)
+
     @property
     def spec(self): return self._spec
 
