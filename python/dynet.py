@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import dynet_config
 
@@ -20,7 +21,7 @@ if '--dynet-viz' in sys.argv:
 elif _GPU:
     def print_graphviz(**kwarge):
         print("Run with --dynet-viz to get the visualization behavior.")
-    print "importing gdy"
+    print("importing gdy")
     from _gdynet import *
 else:
     def print_graphviz(**kwarge):
