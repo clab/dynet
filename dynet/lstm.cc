@@ -440,7 +440,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   Expression in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
-    const vector<Expression>& ln_vars = ln_param_vars[i];
+    
     Expression i_h_tm1, i_c_tm1;
     bool has_prev_state = (prev >= 0 || has_initial_state);
     if (prev < 0) {
@@ -468,6 +468,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_aot;
     Expression i_agt;
     if (ln_lstm){
+      const vector<Expression>& ln_vars = ln_param_vars[i];
       if (has_prev_state)
         tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
       else
@@ -489,9 +490,10 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_gt = tanh(i_agt);
 
     ct[i] = has_prev_state ? (cmult(i_ft, i_c_tm1) + cmult(i_it, i_gt)) :  cmult(i_it, i_gt);
-    if (ln_lstm)
-      in = ht[i] = cmult(i_ot, tanh(layer_norm(ct[i],ln_vars[LN_GC],ln_vars[LN_BC])));
-    else
+    if (ln_lstm) {
+      const vector<Expression>& ln_vars = ln_param_vars[i];
+      in = ht[i] = cmult(i_ot, tanh(layer_norm(ct[i], ln_vars[LN_GC], ln_vars[LN_BC])));
+    } else
       in = ht[i] = cmult(i_ot, tanh(ct[i]));
   }
   return ht.back();
