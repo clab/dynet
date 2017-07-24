@@ -297,9 +297,7 @@ Dim KMHNGram::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void KMHNGram::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-#ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("KMHNGram not implemented for CUDA");
-#else
+#ifndef __CUDACC__
   auto x = **xs[0];
   const int new_cols = x.cols() - n + 1;
   DYNET_ASSERT(new_cols > 0, "Failed dimension check in KMHNGram");
@@ -320,15 +318,13 @@ void KMHNGram::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-#ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("KMHNGram not implemented for CUDA");
-#else
+#ifndef __CUDACC__
   const int c = dEdf.d.cols();
   for (int j = 0; j < c; ++j)
     for (unsigned k = 0; k < n; ++k)
       (*dEdxi).col(j+k) += (*dEdf).col(j);
 #endif
 }
-DYNET_NODE_INST_DEV_IMPL(KMHNGram)
+DYNET_NODE_INST_DEV_IMPL_CPU_TMP(KMHNGram, "KMHNGram")
 
 } // namespace dynet

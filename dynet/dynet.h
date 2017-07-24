@@ -19,7 +19,6 @@
 #include "dynet/devices.h"
 #include "dynet/sig.h"
 
-
 namespace dynet {
 
 extern float* kSCALAR_MINUSONE;
@@ -89,46 +88,54 @@ struct ComputationGraph {
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation
    *
    * \param s Real number
+   * \param device The device to place input value
    * \return The index of the created variable
    */
-  VariableIndex add_input(real s);  //
+  VariableIndex add_input(real s, Device *device);  //
   /**
    * \brief Add scalar input by pointer
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation
    *
    * \param ps Pointer to a real number
+   * \param device The device to place input value
    * \return The index of the created variable
    */
-  VariableIndex add_input(const real* ps);  // add pointer to scalar
+  VariableIndex add_input(const real* ps, Device *device);  // add pointer to scalar
   /**
    * \brief Add multidimentsional input
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation
    *
    * \param d Desired shape of the input
    * \param data Input data (as a 1 dimensional array)
+   * \param data The data points corresponding to each index
+   * \param device The device to place input value
    * \return The index of the created variable
    */
-  VariableIndex add_input(const Dim& d, const std::vector<float>& data);
+  VariableIndex add_input(const Dim& d, const std::vector<float>& data, Device *device);
   /**
    * \brief Add multidimentsional input by pointer
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation
    *
    * \param d Desired shape of the input
    * \param pdata Pointer to the input data (as a 1 dimensional array)
+   * \param device The device to place input value
    * \return The index of the created variable
    */
-  VariableIndex add_input(const Dim& d, const std::vector<float>* pdata);
+  VariableIndex add_input(const Dim& d, const std::vector<float>* pdata, Device *device);
   /**
    * \brief Add sparse input
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation. Represents specified (not learned) inputs to the network in sparse array format, with an optional default value.
    *
    * \param d Desired shape of the input
    * \param ids The indexes of the data points to update
-   * \param data  The data points corresponding to each index
+   * \param data The data points corresponding to each index
+   * \param device The device to place input value
    * \param defdata The default data with which to set the unspecified data points
    * \return The index of the created variable
    */
-  VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
+  VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids,
+                          const std::vector<float>& data, Device *device,
+                          float defdata = 0.f);
 
   // PARAMETERS
   // parameters are things that are optimized. in contrast to a system like
@@ -424,6 +431,7 @@ struct ComputationGraph {
   std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
 
   ExecutionEngine* ee;  // handles the execution
+
 private:
   unsigned graph_id;
   // flag of whether to compute immediately for each expression, i.e., an imperative execution style to help debug.
@@ -639,6 +647,11 @@ protected:
   explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
   template <typename T>
   explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
+
+  explicit Node(Device *d) : args(), device(d) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a, Device *d) : args(a), device(d) {}
+  template <typename T>
+  explicit Node(const T&c, Device *d) : args(c.begin(), c.end()), device(d) {}
 
 private:
   ComputationGraph* cg_;  // pointer to the computation graph

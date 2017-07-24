@@ -28,15 +28,15 @@
   extern template void MyParam::dev_func<Device_GPU>(Device_GPU & dev, float *sqnorm) const; \
   template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \
   void MyParam::regular_func(float *sqnorm) const { \
-    if(default_device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)default_device,sqnorm); } \
-    else if(default_device->type == DeviceType::GPU) { dev_func(*(Device_GPU*)default_device,sqnorm); } \
+    if(device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)device,sqnorm); } \
+    else if(device->type == DeviceType::GPU) { dev_func(*(Device_GPU*)device,sqnorm); } \
     else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
 #else
 #define DYNET_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
   template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \
   void MyParam::regular_func(float *sqnorm) const { \
-    if(default_device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)default_device,sqnorm); } \
+    if(device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)device,sqnorm); } \
     else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
 #endif
@@ -50,13 +50,14 @@ namespace dynet {
 
 ParameterStorageBase::~ParameterStorageBase() {}
 
-ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name) : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
+ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name, Device *dev)
+    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   values.d = g.d = d;
-  values.device = g.device = default_device;
-  default_device->allocate_tensor(DeviceMempool::PS, values);
-  default_device->allocate_tensor(DeviceMempool::PS, g);
+  values.device = g.device = device;
+  device->allocate_tensor(DeviceMempool::PS, values);
+  device->allocate_tensor(DeviceMempool::PS, g);
   TensorTools::zero(g);
   if (scale == 0.0f) {
     ParameterInitGlorot init;
@@ -67,13 +68,15 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string 
   }
 }
 
-ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr) {
+ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init,
+                                   const std::string & name, Device *dev)
+    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   values.d = g.d = d;
-  values.device = g.device = default_device;
-  default_device->allocate_tensor(DeviceMempool::PS, values);
-  default_device->allocate_tensor(DeviceMempool::PS, g);
+  values.device = g.device = device;
+  device->allocate_tensor(DeviceMempool::PS, values);
+  device->allocate_tensor(DeviceMempool::PS, g);
   TensorTools::zero(g);
   init.initialize_params(values);
 }
@@ -106,14 +109,17 @@ bool valid_parameter(const std::string & s) {
   return it == s.end();
 }
 
-LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name) : name(name), dim(d), updated(true), all_updated(false), nonzero_grad(false), owner(nullptr) {
+LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
+                                               const std::string & name, Device *dev)
+    : name(name), dim(d), updated(true), all_updated(false),
+    nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
   all_grads.d = all_values.d = all_dim;
-  all_grads.device = all_values.device = default_device;
-  default_device->allocate_tensor(DeviceMempool::PS, all_values);
-  default_device->allocate_tensor(DeviceMempool::PS, all_grads);
+  all_grads.device = all_values.device = device;
+  device->allocate_tensor(DeviceMempool::PS, all_values);
+  device->allocate_tensor(DeviceMempool::PS, all_grads);
   init.initialize_params(all_values);
   initialize_lookups();
 }
@@ -284,24 +290,26 @@ void ParameterCollection::project_weights(float radius) {
   get_storage().project_weights(radius);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name) {
-  return add_parameters(d, ParameterInitGlorot(), p_name);
+Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name, Device *device) {
+  return add_parameters(d, ParameterInitGlorot(), p_name, device);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim& d, float scale, const std::string & p_name) {
+Parameter ParameterCollection::add_parameters(const Dim& d, float scale,
+                                              const std::string & p_name, Device *device) {
   if(scale == 0.0f)
-    return add_parameters(d, ParameterInitGlorot(), p_name);
+    return add_parameters(d, ParameterInitGlorot(), p_name, device);
   else
-    return add_parameters(d, ParameterInitUniform(scale), p_name);
+    return add_parameters(d, ParameterInitUniform(scale), p_name, device);
 }
 
-Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init, const std::string & p_name) {
+Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init,
+                                              const std::string & p_name, Device *device) {
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
     if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
 
-    ParameterStorage* p = new ParameterStorage(d, init, oss.str());
+    ParameterStorage* p = new ParameterStorage(d, init, oss.str(), device);
     add_parameters_to_storage(p);
     return Parameter(p);
   } else {
@@ -370,17 +378,21 @@ std::vector<ParameterStorage*> ParameterCollection::get_parameter_storages() con
   return params;
 }
 
-LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const std::string & p_name) {
-  return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name);
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d,
+                                                           const std::string & p_name,
+                                                           Device *device) {
+  return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name, device);
 }
 
-LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & p_name) {
+LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init,
+                                                           const std::string & p_name,
+                                                           Device *device) {
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
     if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
 
-    LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str());
+    LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str(), device);
     add_lookup_parameters_to_storage(p);
     return LookupParameter(p);
   } else {
@@ -756,6 +768,7 @@ void LookupParameterStorage::scale_gradient(float a) {
 }
 #endif
 
+// TODO: support multi-device
 template <class MyDevice>
 float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice & dev) const {
   if (gradient_norm_scratch == nullptr)

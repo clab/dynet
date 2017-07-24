@@ -80,7 +80,7 @@ Node* InputNode::autobatch_pseudo_node(const ComputationGraph & cg,
     curr_pos += sin->pdata->size();
   }
   DYNET_ASSERT(curr_pos == values.size(), "current position and size of values does not match");
-  return new InputNode(Dim({(unsigned int)my_size}), values);
+  return new InputNode(Dim({(unsigned int)my_size}), values, device);
 }
 
 string SparseInputNode::as_string(const vector<string>& arg_names) const {
@@ -123,7 +123,7 @@ Node* ScalarInputNode::autobatch_pseudo_node(const ComputationGraph & cg,
     sin = static_cast<ScalarInputNode*>(cg.nodes[batch_ids[i]]);
     values[i] = *sin->pdata;
   }
-  return new InputNode(Dim({1}, batch_ids.size()), values);
+  return new InputNode(Dim({1}, batch_ids.size()), values, device);
 }
 
 int LookupNode::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {

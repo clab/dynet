@@ -3,17 +3,16 @@
 #include <initializer_list>
 
 #include "dynet/nodes.h"
-#include "dynet/nodes-conv.h"
 
 namespace dynet {
 
 using std::vector;
 
-Expression input(ComputationGraph& g, real s) { return Expression(&g, g.add_input(s)); }
-Expression input(ComputationGraph& g, const real *ps) { return Expression(&g, g.add_input(ps)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data) { return Expression(&g, g.add_input(d, data)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata) { return Expression(&g, g.add_input(d, pdata)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata) { return Expression(&g, g.add_input(d, ids, data, defdata)); }
+Expression input(ComputationGraph& g, real s, Device *device) { return Expression(&g, g.add_input(s, device)); }
+Expression input(ComputationGraph& g, const real *ps, Device *device) { return Expression(&g, g.add_input(ps, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data, Device *device) { return Expression(&g, g.add_input(d, data, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata, Device *device) { return Expression(&g, g.add_input(d, pdata, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata, Device *device) { return Expression(&g, g.add_input(d, ids, data, device, defdata)); }
 Expression const_parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression const_parameter(ComputationGraph& g, LookupParameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_parameters(p)); }
@@ -44,15 +43,17 @@ Expression operator+(const Expression& x, const Expression& y) {
     else if (y.dim().batch_size() == 1)
         return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}));
     else
-        return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}));
+        return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}, x.pg->nodes[x.i]->device));
 }
 Expression operator+(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantPlusX>({y.i}, x)); }
 Expression operator+(const Expression& x, real y) { return y + x; }
 Expression operator-(const Expression& x, const Expression& y) { return x + (-y); }
 Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantMinusX>({y.i}, x)); }
 Expression operator-(const Expression& x, real y) { return -(y - x); }
-Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
-Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
+Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg,
+                                                                                   x.pg->add_function<MatrixMultiply>({x.i, y.i}, x.pg->nodes[x.i]->device)); }
+Expression operator*(const Expression& x, float y) { return Expression(x.pg,
+                                                                       x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
 Expression cmult(const Expression& x, const Expression& y) { 
     if (x.dim().batch_size() == 1) 
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 
@@ -76,7 +77,10 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 Expression sqrt(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sqrt>({x.i})); }
 Expression abs(const Expression& x) { return Expression(x.pg, x.pg->add_function<Abs>({x.i})); }
 Expression erf(const Expression& x) { return Expression(x.pg, x.pg->add_function<Erf>({x.i})); }
-Expression tanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tanh>({x.i})); }
+Expression tanh(const Expression& x, Device *device) {
+  if (device == nullptr) device = x.pg->nodes[x.i]->device;
+  return Expression(x.pg, x.pg->add_function<Tanh>({x.i}, device));
+}
 Expression lgamma(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogGamma>({x.i})); }
 Expression log(const Expression& x) { return Expression(x.pg, x.pg->add_function<Log>({x.i})); }
 Expression exp(const Expression& x) { return Expression(x.pg, x.pg->add_function<Exp>({x.i})); }
@@ -112,7 +116,10 @@ Expression select_rows(const Expression& x, const vector<unsigned>& rows) { retu
 Expression select_rows(const Expression& x, const vector<unsigned>* prows) { return Expression(x.pg, x.pg->add_function<SelectRows>({x.i}, prows)); }
 Expression select_cols(const Expression& x, const vector<unsigned>& cols) { return Expression(x.pg, x.pg->add_function<SelectCols>({x.i}, cols)); }
 Expression select_cols(const Expression& x, const vector<unsigned>* pcols) { return Expression(x.pg, x.pg->add_function<SelectCols>({x.i}, pcols)); }
-Expression inverse(const Expression& x) { return Expression(x.pg, x.pg->add_function<MatrixInverse>({x.i})); }
+Expression inverse(const Expression& x, Device *device) {
+  if (device == nullptr) device = x.pg->nodes[x.i]->device;
+  return Expression(x.pg, x.pg->add_function<MatrixInverse>({x.i}, device));
+}
 Expression logdet(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogDet>({x.i})); }
 
 Expression trace_of_product(const Expression& x, const Expression& y) {return Expression(x.pg, x.pg->add_function<TraceOfProduct>({x.i, y.i}));}
@@ -197,6 +204,10 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
+Expression to_device(const Expression & x, Device *device) {
+  DYNET_ASSERT(x.pg->nodes[x.i]->device != device, "It is unnecessary to peform to_device operation in the same devices");
+  return Expression(x.pg, x.pg->add_function<ToDevice>({x.i}, device));
+}
 Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std){
   return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i}, weightnoise_std));
 }

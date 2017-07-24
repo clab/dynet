@@ -29,4 +29,5 @@
 #include "dynet/nodes-similarities.h"
 #include "dynet/nodes-softmaxes.h"
 #include "dynet/nodes-trig.h"
+#include "dynet/nodes-change-devices.h"
 #include "dynet/nodes-lstm.h"
