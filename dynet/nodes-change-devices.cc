@@ -40,7 +40,7 @@ void ToDevice::backward_dev_impl(const MyDevice & dev,
                                  unsigned i,
                                  Tensor & dEdxi) const {
 #ifdef HAVE_CUDA
-  TensorTools::copy_elements(dEdxi, fx);
+  TensorTools::copy_elements(dEdxi, dEdf);
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(ToDevice)
