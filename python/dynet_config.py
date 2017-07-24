@@ -14,7 +14,10 @@ def set(mem="0", random_seed=0, autobatch=0,
 def set_gpu(flag=True):
     __builtins__["__DYNET_GPU"]=flag
 
-def gpu(): return __builtins__["__DYNET_GPU"]
+def gpu():
+    if "__DYNET_GPU" in __builtins__:
+        return __builtins__["__DYNET_GPU"]
+    return None
 
 def get():
     if "__DYNET_CONFIG" in __builtins__:
