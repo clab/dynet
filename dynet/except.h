@@ -63,8 +63,10 @@ class cuda_exception : public std::runtime_error {
     throw std::runtime_error(oss.str()); }      \
   while (0);
 
-#define DYNET_NO_CUDA_IMPL_WARNING(op)																\
-    std::cerr << "Warning: " << op << " not implemented for CUDA yet."	\
-    << " DyNet will use CPU implementation instead." << std::endl;
+#define DYNET_NO_CUDA_IMPL_ERROR(op) do {															                                               \
+    std::ostringstream oss;                                                                                          \
+    oss << op << " not implemented for CUDA yet. You can use CPU implementation with to_device operation instead.";  \
+    throw std::runtime_error(oss.str()); }                                                                           \
+  while (0);
 
 #endif

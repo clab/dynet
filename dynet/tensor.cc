@@ -99,8 +99,7 @@ float TensorTools::access_element(const Tensor& v, const Dim& index) {
     return (*v)(index[0], index[1]);
   } else {
 #if HAVE_CUDA
-    DYNET_NO_CUDA_IMPL_WARNING("TensorTools::access_element(Tensor, Dim)");
-    return (*v)(index[0], index[1]);
+    DYNET_NO_CUDA_IMPL_ERROR("TensorTools::access_element(Tensor,Dim)");
 #endif
   }
 }
@@ -214,10 +213,7 @@ void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
   } else {
 #if HAVE_CUDA
     if (val.device->type == DeviceType::GPU) {
-      float* t = new float[val.d.size()];
-      generate(t, t + val.d.size(), b);
-      CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-      delete[] t;
+      DYNET_NO_CUDA_IMPL_ERROR("Orthonormal initialization");
     }
 #endif
   }
@@ -266,7 +262,7 @@ void TensorTools::randomize_orthonormal(Tensor& val, real scale) {
     *val = scale * svd.matrixU();
   } else {
 #ifdef HAVE_CUDA
-    DYNET_NO_CUDA_IMPL_WARNING("Orthonormal initialization"); 
+    DYNET_NO_CUDA_IMPL_ERROR("Orthonormal initialization"); 
     randomize_uniform(val, -1.0, 1.0);
     Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
     *val = scale * svd.matrixU();

@@ -31,12 +31,10 @@ void ParameterInitGlorot::initialize_params(Tensor & values) const {
 }
 
 void ParameterInitSaxe::initialize_params(Tensor & values) const {
-  if (values.device->type == DeviceType::GPU) {
-    DYNET_NO_CUDA_IMPL_WARNING("Saxe")
+  if (values.device->type == DeviceType::GPU)
+    DYNET_NO_CUDA_IMPL_ERROR("Saxe init")
+  else
     TensorTools::randomize_orthonormal(values, gain);
-  } else {
-    TensorTools::randomize_orthonormal(values, gain);
-  }
 }
 
 

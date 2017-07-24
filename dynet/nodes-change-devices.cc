@@ -13,7 +13,7 @@ namespace dynet {
 
 #ifndef __CUDACC__
 string ToDevice::as_string(const vector<string>& arg_names) const {
-  return "copy tensor between devices";
+  return "copy " + arg_names[0] + " between devices";
 }
 
 Dim ToDevice::dim_forward(const vector<Dim> & xs) const {
