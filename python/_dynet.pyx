@@ -296,7 +296,7 @@ cpdef save(basename, lst):
         
         (1) Parameter
         (2) LookupParameter
-        (3) one of the built-in types (VanillaLSTMBuilder, LSTMBuilder, GRUBuilder,
+        (3) one of the built-in types (CompactVanillaLSTMBuilder, VanillaLSTMBuilder, LSTMBuilder, GRUBuilder,
                                        SimpleRNNBuilder, BiRNNBuilder)
         (4) a type adhering to the following interface:
             
@@ -3700,6 +3700,67 @@ cpdef Expression weight_norm(Expression w, Expression g):
     ensure_freshness(g)
     return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
 
+cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, weightnoise_std=0.0):
+    """Computes LSTM gates (matrix multiply + nonlinearities):
+    
+       gates_i = sigmoid (Wx_i * x_t + Wh_i * h_tm1 + b_i)
+       gates_f = sigmoid (Wx_f * x_t + Wh_f * h_tm1 + b_f + 1)
+       gates_o = sigmoid (Wx_o * x_t + Wh_o * h_tm1 + b_o)
+       gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
+       
+       Where optionally gaussian noise with the given standard deviation is applied to Wx, Wh, b parameters. 
+       
+       returns [gates_i]
+               [gates_f]
+               [gates_o]
+               [gates_g]
+
+    Args:
+        x_t (dynet.Expression): Input at current timestep (vector size I)
+        h_tm1 (dynet.Expression): State previous timestep (vector size H)
+        Wx (dynet.Expression): Parameter matrix size 4H x I
+        Wh (dynet.Expression): Parameter matrix size 4H x H
+        b (dynet.Expression): Bias parameter size 4H
+        weightnoise_std (real): apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
+    
+    Returns:
+        Vector size 4H
+        dynet.Expression
+    """
+    ensure_freshness(x_t)
+    ensure_freshness(h_tm1)
+    return Expression.from_cexpr(x_t.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
+cpdef Expression vanilla_lstm_c(Expression c_tm1, Expression gates_t):
+    """Computes LSTM cell: c_t = gates_i . gates_g + gates_f . c_tm1
+
+    Args:
+        c_tm1 (dynet.Expression): Cell at previous timestep (vector size H)
+        gates_t (dynet.Expression): Gates at current timestep as computed by vanilla_lstm_gates (vector size 4H)
+    
+    Returns:
+        Vector size H
+        dynet.Expression
+    """
+    ensure_freshness(c_tm1)
+    ensure_freshness(gates_t)
+    return Expression.from_cexpr(c_tm1.cg_version, c_vanilla_lstm_c(c_tm1.c(),gates_t.c()))
+
+cpdef Expression vanilla_lstm_h(Expression c_t, Expression gates_t):
+    """Computes LSTM output: h_t = o_t . tanh(c_t)
+
+    Args:
+        c_t (dynet.Expression): Cell at current timestep (vector size H)
+        gates_t (dynet.Expression): Gates at current timestep as computed by vanilla_lstm_gates (vector size 4H)
+    
+    Returns:
+        Vector size H
+        dynet.Expression
+    """
+    ensure_freshness(c_t)
+    ensure_freshness(gates_t)
+    return Expression.from_cexpr(c_t.cg_version, c_vanilla_lstm_h(c_t.c(),gates_t.c()))
+
 # }}}
     
 # {{{ RNNS / Builders
@@ -4115,7 +4176,6 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         layers, input_dim, hidden_dim, ln_lstm = spec
         return VanillaLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm)
 
-
 # TODO rename to parameters()?
     cpdef get_parameters(self):
         """Retrieve the internal parameters of the VanillaLSTM
@@ -4235,6 +4295,180 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 
     def whoami(self): return "VanillaLSTMBuilder"
 # VanillaLSTMBuilder }}}
+
+
+
+cdef class CompactVanillaLSTMBuilder(_RNNBuilder): # {{{
+    """CompactVanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
+    
+    This cell runs according to the following dynamics :
+
+    .. math::
+
+        \\begin{split}
+            i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+b_i)\\\\
+            f_t & = \sigma(W_{fx}x_t+W_{fh}h_{t-1}+b_f+1)\\\\
+            o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+b_o)\\\\
+            \\tilde{c_t} & = \\tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\\\
+            c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
+            h_t & = \\tanh(c_t)\circ o_t\\\\
+        \end{split}
+
+    Args:
+        layers (int): Number of layers
+        input_dim (int): Dimension of the input
+        hidden_dim (int): Dimension of the recurrent units
+        model (dynet.ParameterCollection): ParameterCollection to hold the parameters
+
+    """
+    cdef CCompactVanillaLSTMBuilder* thiscompvanillaptr
+    cdef tuple _spec
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
+        self._spec = (layers, input_dim, hidden_dim)
+        if layers > 0:
+            self.thiscompvanillaptr = self.thisptr = new CCompactVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        else:
+            self.thiscompvanillaptr = self.thisptr = new CCompactVanillaLSTMBuilder()
+        self.cg_version = -1
+
+    @property
+    def spec(self): return self._spec
+
+    @classmethod
+    def from_spec(cls, spec, model):
+        layers, input_dim, hidden_dim = spec
+        return CompactVanillaLSTMBuilder(layers, input_dim, hidden_dim, model)
+
+# TODO rename to parameters()?
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the CompactVanillaLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+
+        .. code-block:: text
+
+                  h/x   
+                +------+
+                |      |
+            i   |      |
+                +------+
+                |      |
+            f   |      |
+                +------+
+                |      |
+            o   |      |
+                +------+
+                |      |
+            c   |      |
+                +------+
+
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thiscompvanillaptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
+
+# TODO rename to parameter_expressions()?
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the CompactVanillaLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+
+        .. code-block:: text
+
+                  h/x   
+                +------+
+                |      |
+            i   |      |
+                +------+
+                |      |
+            f   |      |
+                +------+
+                |      |
+            o   |      |
+                +------+
+                |      |
+            c   |      |
+                +------+
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thiscompvanillaptr.param_vars.size() == 0 or self.thiscompvanillaptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing CompactVanillaLSTMBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thiscompvanillaptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
+
+
+    cpdef void set_dropouts(self, float d, float d_r):
+        """Set the dropout rates
+        
+        The dropout implemented here is the variational dropout with tied weights introduced in `Gal, 2016 <http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks>`_
+
+        More specifically, dropout masks :math:`\mathbf{z_x}\sim \\text(1-d_x)`, :math:`\mathbf{z_h}\sim \\text{Bernoulli}(1-d_h)` are sampled at the start of each sequence.
+
+        The dynamics of the cell are then modified to :
+
+        .. math::
+
+            \\begin{split}
+                i_t & =\sigma(W_{ix}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ih}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_i)\\\\
+                f_t & = \sigma(W_{fx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{fh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_f)\\\\
+                o_t & = \sigma(W_{ox}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{oh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_o)\\\\
+                \\tilde{c_t} & = \tanh(W_{cx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\\\
+                c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
+                h_t & = \\tanh(c_t)\circ o_t\\\\
+            \end{split}
+
+        For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+
+        Args:
+            d (number): Dropout rate :math:`d_x` for the input :math:`x_t`
+            d_r (number): Dropout rate :math:`d_x` for the output :math:`h_t`
+        """
+        self.thiscompvanillaptr.set_dropout(d, d_r)
+
+    cpdef void set_dropout_masks(self, unsigned batch_size=1):
+        """Set dropout masks at the beginning of a sequence for a specific batch size
+        
+        If this function is not called on batched input, the same mask will be applied across all batch elements. Use this to apply different masks to each batch element
+
+        You need to call this __AFTER__ calling `initial_state`
+        
+        Args:
+            batch_size (int): Batch size (default: {1})
+        """
+        self.thiscompvanillaptr.set_dropout_masks(batch_size)
+
+    cpdef void set_weightnoise(self, float std):
+        """Set the gaussian weight noise
+
+        Args:
+            std (number): Standard deviation of weight noise
+        """
+        self.thiscompvanillaptr.set_weightnoise(std)
+
+    def whoami(self): return "CompactVanillaLSTMBuilder"
+# CompactVanillaLSTMBuilder }}}
+
+
+
 
 cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     """[summary]
