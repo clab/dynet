@@ -1,7 +1,7 @@
 #include "dynet/nodes-affinetransform.h"
 
 #include "dynet/nodes-macros.h"
-#include "dynet/cuda-matrix-multiply.h"
+#include "dynet/matrix-multiply.h"
 
 using namespace std;
 
@@ -102,7 +102,7 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
 #ifdef __CUDACC__
     for (unsigned i = 1; i < xs.size(); i += 2)
       // fx = (acc_sclar)*fx + xs[0] * xs[1]
-      CUDAMatrixMultiply(dev, *xs[i], *xs[i + 1], fx, kSCALAR_ONE);
+      MatrixMultiply(dev, *xs[i], *xs[i + 1], fx, kSCALAR_ONE);
 #else
     // Multiply
     for (unsigned i = 1; i < xs.size(); i += 2) {
