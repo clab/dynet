@@ -197,4 +197,17 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
+Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std){
+  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i}, weightnoise_std));
+}
+Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std){
+  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i, dropout_mask_x.i, dropout_mask_h.i}, weightnoise_std));
+}
+Expression vanilla_lstm_c(const Expression& c_tm1, const Expression& gates_t){
+  return Expression(c_tm1.pg, c_tm1.pg->add_function<VanillaLSTMC>({c_tm1.i, gates_t.i}));
+}
+Expression vanilla_lstm_h(const Expression& c_t, const Expression& gates_t){
+  return Expression(c_t.pg, c_t.pg->add_function<VanillaLSTMH>({c_t.i, gates_t.i}));
+}
+
 }  // namespace dynet

@@ -618,7 +618,7 @@ struct Node {
    * \brief Number of arguments to the function
    * \return Arity of the function
    */
-  inline unsigned arity() const { return args.size(); }
+  inline unsigned arity() const { return (unsigned)args.size(); }
 
   inline void set_cg(ComputationGraph* cg) { cg_ = cg; }
 
@@ -669,7 +669,7 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
 
 template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
-  VariableIndex new_node_index(nodes.size());
+  VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments));
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -679,7 +679,7 @@ inline VariableIndex ComputationGraph::add_function(const T& arguments) {
 template <class Function, typename T, typename... Args>
 inline VariableIndex ComputationGraph::add_function(const T& arguments,
     Args&&... side_information) {
-  VariableIndex new_node_index(nodes.size());
+  VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
   set_dim_for_new_node(new_node_index);
   return new_node_index;

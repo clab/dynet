@@ -8,13 +8,13 @@ specified at the very beginning of the command line, before other
 options.
 
 -  ``--dynet-mem NUMBER``: DyNet runs by default with 512MB of memory,
-   which is split evenly for the forward and backward steps, as well
-   as parameter storage. This will be expanded automatically every time
-   one of the pools runs out of memory. By setting NUMBER here, DyNet
+   which is split evenly for the forward and backward steps, parameter
+   storage as well as scratch use. This will be expanded automatically every
+   time one of the pools runs out of memory. By setting NUMBER here, DyNet
    will allocate more memory immediately at the initialization stage.
    Note that you can also individually set the amount of memory for
-   forward calculation, backward calculation, and parameters by using
-   comma separated variables ``--dynet-mem FOR,BACK,PARAM``. This is
+   forward calculation, backward calculation, parameters, and scratch use by 
+   using comma separated variables ``--dynet-mem FOR,BACK,PARAM,SCRATCH``. This is
    useful if, for example, you are performing testing and don't need to
    allocate any memory for backward calculation.
 -  ``--dynet-weight-decay NUMBER``: Adds weight decay to the parameters,

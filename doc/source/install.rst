@@ -56,14 +56,16 @@ To get and build DyNet, clone the repository
     git clone https://github.com/clab/dynet.git
 
 then enter the directory and use ```cmake`` <http://www.cmake.org/>`__
-to generate the makefiles
+to generate the makefiles. When you run ``cmake``, you will need to specify
+the path to Eigen, and will probably want to specify ``ENABLE_CPP_EXAMPLES``
+to compile the C++ examples.
 
 ::
 
     cd dynet
     mkdir build
     cd build
-    cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen
+    cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DENABLE_CPP_EXAMPLES=ON
 
 
 Then compile, where "2" can be replaced by the number of cores on your
