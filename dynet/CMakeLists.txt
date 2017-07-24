@@ -39,6 +39,7 @@ set(dynet_library_SRCS
     nodes-linalg.cc
     nodes-logsumexp.cc
     nodes-losses.cc
+    nodes-lstm.cc
     nodes-matrixmultiply.cc
     nodes-maxpooling2d.cc
     nodes-minmax.cc
@@ -73,7 +74,6 @@ set(dynet_library_HDRS
     aligned-mem-pool.h
     c2w.h
     cfsm-builder.h
-    cuda-matrix-multiply.h
     cuda.h
     cudnn-ops.h
     deep-lstm.h
@@ -97,6 +97,7 @@ set(dynet_library_HDRS
     init.h
     io.h
     lstm.h
+    matrix-multiply.h
     mem.h
     model.h
     nodes-contract.h
@@ -143,6 +144,7 @@ set(dynet_gpu_mergeable_SRCS
     nodes-linalg
     nodes-logsumexp
     nodes-losses
+    nodes-lstm
     nodes-matrixmultiply
     nodes-maxpooling2d
     nodes-minmax

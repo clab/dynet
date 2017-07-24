@@ -440,7 +440,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   Expression in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
-    const vector<Expression>& ln_vars = ln_param_vars[i];
+    
     Expression i_h_tm1, i_c_tm1;
     bool has_prev_state = (prev >= 0 || has_initial_state);
     if (prev < 0) {
@@ -468,6 +468,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_aot;
     Expression i_agt;
     if (ln_lstm){
+      const vector<Expression>& ln_vars = ln_param_vars[i];
       if (has_prev_state)
         tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
       else
@@ -489,9 +490,10 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_gt = tanh(i_agt);
 
     ct[i] = has_prev_state ? (cmult(i_ft, i_c_tm1) + cmult(i_it, i_gt)) :  cmult(i_it, i_gt);
-    if (ln_lstm)
-      in = ht[i] = cmult(i_ot, tanh(layer_norm(ct[i],ln_vars[LN_GC],ln_vars[LN_BC])));
-    else
+    if (ln_lstm) {
+      const vector<Expression>& ln_vars = ln_param_vars[i];
+      in = ht[i] = cmult(i_ot, tanh(layer_norm(ct[i], ln_vars[LN_GC], ln_vars[LN_BC])));
+    } else
       in = ht[i] = cmult(i_ot, tanh(ct[i]));
   }
   return ht.back();
@@ -528,5 +530,202 @@ void VanillaLSTMBuilder::disable_dropout() {
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
 }
+
+
+CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), weightnoise_std(0) { }
+
+CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder(unsigned layers,
+						     unsigned input_dim,
+						     unsigned hidden_dim,
+						     ParameterCollection& model)
+	    : layers(layers), input_dim(input_dim), hid(hidden_dim), weightnoise_std(0){
+  unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("compact-vanilla-lstm-builder");
+  for (unsigned i = 0; i < layers; ++i) {
+    // i
+    Parameter p_Wx = local_model.add_parameters({hidden_dim * 4, layer_input_dim});
+    Parameter p_Wh = local_model.add_parameters({hidden_dim * 4, hidden_dim});
+    Parameter p_b = local_model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
+
+    layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
+
+    vector<Parameter> ps = {p_Wx, p_Wh, p_b};
+    params.push_back(ps);
+
+  }  // layers
+  dropout_rate = 0.f;
+  dropout_rate_h = 0.f;
+}
+
+void CompactVanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+  param_vars.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    auto& p = params[i];
+    vector<Expression> vars;
+    for (unsigned j = 0; j < p.size(); ++j) { vars.push_back(update ? parameter(cg, p[j]) : const_parameter(cg, p[j])); }
+    param_vars.push_back(vars);
+  }
+
+  _cg = &cg;
+}
+// layout: 0..layers = c
+//         layers+1..2*layers = h
+void CompactVanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
+  h.clear();
+  c.clear();
+
+  if (hinit.size() > 0) {
+    DYNET_ARG_CHECK(layers * 2 == hinit.size(),
+                            "CompactVanillaLSTMBuilder must be initialized with 2 times as many expressions as layers "
+                            "(hidden state, and cell for each layer). However, for " << layers << " layers, " <<
+                            hinit.size() << " expressions were passed in");
+    h0.resize(layers);
+    c0.resize(layers);
+    for (unsigned i = 0; i < layers; ++i) {
+      c0[i] = hinit[i];
+      h0[i] = hinit[i + layers];
+    }
+    has_initial_state = true;
+  } else {
+    has_initial_state = false;
+  }
+
+  // Init droupout masks
+  set_dropout_masks();
+}
+
+void CompactVanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
+  masks.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    std::vector<Expression> masks_i;
+    unsigned idim = (i == 0) ? input_dim : hid;
+    if (dropout_rate > 0.f || dropout_rate_h > 0.f) {
+      float retention_rate = 1.f - dropout_rate;
+      float retention_rate_h = 1.f - dropout_rate_h;
+      float scale = 1.f / retention_rate;
+      float scale_h = 1.f / retention_rate_h;
+      // in
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ idim}, batch_size), retention_rate, scale));
+      // h
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_h, scale_h));
+      masks.push_back(masks_i);
+    }
+  }
+}
+
+ParameterCollection & CompactVanillaLSTMBuilder::get_parameter_collection() {
+  return local_model;
+}
+
+// TODO - Make this correct
+// Copied c from the previous step (otherwise c.size()< h.size())
+// Also is creating a new step something we want?
+// wouldn't overwriting the current one be better?
+Expression CompactVanillaLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "CompactVanillaLSTMBuilder::set_h expects as many inputs as layers, but got " <<
+                          h_new.size() << " inputs for " << layers << " layers");
+  const unsigned t = h.size();
+  h.push_back(vector<Expression>(layers));
+  c.push_back(vector<Expression>(layers));
+  for (unsigned i = 0; i < layers; ++i) {
+    Expression h_i = h_new[i];
+    Expression c_i = c[t - 1][i];
+    h[t][i] = h_i;
+    c[t][i] = c_i;
+  }
+  return h[t].back();
+}
+// Current implementation : s_new is either {new_c[0],...,new_c[n]}
+// or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
+Expression CompactVanillaLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
+  DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
+                          "CompactVanillaLSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
+  bool only_c = s_new.size() == layers;
+  const unsigned t = c.size();
+  h.push_back(vector<Expression>(layers));
+  c.push_back(vector<Expression>(layers));
+  for (unsigned i = 0; i < layers; ++i) {
+    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    Expression c_i = s_new[i];
+    h[t][i] = h_i;
+    c[t][i] = c_i;
+  }
+  return h[t].back();
+}
+
+Expression CompactVanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
+  h.push_back(vector<Expression>(layers));
+  c.push_back(vector<Expression>(layers));
+  vector<Expression>& ht = h.back();
+  vector<Expression>& ct = c.back();
+  Expression in = x;
+  for (unsigned i = 0; i < layers; ++i) {
+    const vector<Expression>& vars = param_vars[i];
+    Expression i_h_tm1, i_c_tm1;
+    if (prev < 0) {
+      if (has_initial_state) {
+        // initial value for h and c at timestep 0 in layer i
+        // defaults to zero matrix input if not set in add_parameter_edges
+        i_h_tm1 = h0[i];
+        i_c_tm1 = c0[i];
+      } else {
+	i_h_tm1 = zeroes(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
+	i_c_tm1 = i_h_tm1;
+      }
+    } else {  // t > 0
+      i_h_tm1 = h[prev][i];
+      i_c_tm1 = c[prev][i];
+    }
+    // TODO: could extend lstm nodes to takes several inputs that will be concatenated internally, would save memory by avoiding concatenate() operation for bidirectional LSTMs
+    // TODO: smaller speed / memory gains by making a version of the lstm gates that assume c or h inputs to be zero (for beginning of sequence)
+    if (dropout_rate_h > 0.f){
+      // apply dropout according to https://arxiv.org/abs/1512.05287 (tied weights)
+      Expression gates_t = vanilla_lstm_gates(in, i_h_tm1, vars[_X2I], vars[_H2I], vars[_BI], masks[i][0], masks[i][1], weightnoise_std);
+      ct[i] = vanilla_lstm_c(i_c_tm1, gates_t);
+      in = ht[i] = vanilla_lstm_h(ct[i], gates_t);
+    } else {
+      Expression gates_t = vanilla_lstm_gates(in, i_h_tm1, vars[_X2I], vars[_H2I], vars[_BI], weightnoise_std);
+      ct[i] = vanilla_lstm_c(i_c_tm1, gates_t);
+      in = ht[i] = vanilla_lstm_h(ct[i], gates_t);
+    }
+  }
+  return ht.back();
+}
+
+void CompactVanillaLSTMBuilder::copy(const RNNBuilder & rnn) {
+  const CompactVanillaLSTMBuilder & rnn_lstm = (const CompactVanillaLSTMBuilder&)rnn;
+  DYNET_ARG_CHECK(params.size() == rnn_lstm.params.size(),
+                          "Attempt to copy CompactVanillaLSTMBuilder with different number of parameters "
+                          "(" << params.size() << " != " << rnn_lstm.params.size() << ")");
+  for (size_t i = 0; i < params.size(); ++i)
+    for (size_t j = 0; j < params[i].size(); ++j)
+      params[i][j] = rnn_lstm.params[i][j];
+}
+
+void CompactVanillaLSTMBuilder::set_dropout(float d) {
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_rate_h = d;
+}
+
+void CompactVanillaLSTMBuilder::set_dropout(float d, float d_h) {
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_rate_h = d_h;
+}
+
+void CompactVanillaLSTMBuilder::disable_dropout() {
+  dropout_rate = 0.f;
+  dropout_rate_h = 0.f;
+}
+void CompactVanillaLSTMBuilder::set_weightnoise(float std) {
+  DYNET_ARG_CHECK(std >= 0.f, "weight noise must have standard deviation >=0");
+  weightnoise_std = std;
+}
+
+
 
 } // namespace dynet

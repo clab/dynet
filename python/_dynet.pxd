@@ -374,6 +374,10 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_layer_norm "dynet::layer_norm" (CExpression& x, CExpression& g, CExpression& b) except + #
     CExpression c_weight_norm "dynet::weight_norm" (CExpression& w, CExpression& g) except + #
 
+    CExpression c_vanilla_lstm_gates "dynet::vanilla_lstm_gates" (CExpression& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, float weightnoise_std) except + #
+    CExpression c_vanilla_lstm_c "dynet::vanilla_lstm_c" (CExpression& c_tm1, CExpression& gates_t) except + #
+    CExpression c_vanilla_lstm_h "dynet::vanilla_lstm_h" (CExpression& c_t, CExpression& gates_t) except + #
+
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNPointer "dynet::RNNPointer":
         CRNNPointer()
@@ -427,6 +431,16 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
         CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
+
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
+
+    cdef cppclass CCompactVanillaLSTMBuilder "dynet::CompactVanillaLSTMBuilder" (CRNNBuilder):
+        CCompactVanillaLSTMBuilder()
+        CCompactVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        void set_dropout(float d, float d_r)
+        void set_dropout_masks(unsigned batch_size)
+        void set_weightnoise(float std)
 
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
