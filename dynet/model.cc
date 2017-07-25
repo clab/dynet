@@ -469,12 +469,12 @@ const ParameterCollectionStorage& ParameterCollection::get_storage() const {
 
 void save_dynet_model(std::string filename, ParameterCollection* model) {
   TextFileSaver saver(filename);
-  saver.save(*model, "model");
+  saver.save(*model, "/model");
 };
 
 void load_dynet_model(std::string filename, ParameterCollection* model) {
   TextFileLoader loader(filename);
-  loader.populate(*model, "model");
+  loader.populate(*model, "/model");
 };
 
 Model::Model() : ParameterCollection() {
