@@ -46,6 +46,42 @@ namespace dynet {
     return Dim({hidden_dim*4}, batch_size);
   }
 
+  int VanillaLSTMGates::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+    Sig s(nt::vanilla_lstm_gates);
+    // Assume parameter vectors must be same
+    if(dim.bd == 1) {
+      s.add_dim(cg.nodes[args[0]]->dim);
+      // s.add_dim(cg.nodes[args[1]]->dim); // not necessary, as will be the same
+      s.add_node(args[2]);
+      s.add_node(args[3]);
+      s.add_node(args[4]);
+      if(args.size() == 7) {
+        s.add_node(args[5]);
+        s.add_node(args[6]);
+      }
+    } else {
+      for(auto nid : args) {
+        const Dim & d = cg.nodes[nid]->dim;
+        if(d.bd == 1)
+          s.add_node(nid);
+        else
+          s.add_dim(d);
+      }
+    }
+    return sm.get_idx(s);
+  }
+  
+  std::vector<int> VanillaLSTMGates::autobatch_concat(const ComputationGraph & cg) const {
+    vector<int> ret(args.size(), 0);
+    if(dim.bd == 1) {
+      ret[0] = ret[1] = 1;
+    } else {
+      for(size_t i = 0; i < ret.size(); ++i)
+        ret[i] = (cg.nodes[args[i]]->dim.bd > 1);
+    }
+    return ret;
+  }
+
 #endif
 
   template<class MyDevice>
