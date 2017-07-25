@@ -1,5 +1,5 @@
-#ifndef DYNET_CUDNN_H
-#define DYNET_CUDNN_H
+#ifndef DYNET_VIRTUAL_CUDNN_H
+#define DYNET_VIRTUAL_CUDNN_H
 #if HAVE_CUDNN
 
 #include "dynet/cuda.h"

@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "dynet/dynet.h"
-#include "dynet/cuDNN.h"
+#include "dynet/virtual-cudnn.h"
 #include "dynet/cudnn-ops.h"
 
 #define CUDNN_VERSION_MIN(major, minor, patch) \
