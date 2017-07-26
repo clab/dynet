@@ -27,13 +27,13 @@ DyNet is a neural network library developed by Carnegie Mellon University and ma
 
 Read the [documentation](http://dynet.readthedocs.io/en/latest/) to get started, and feel free to contact the [dynet-users group](https://groups.google.com/forum/#!forum/dynet-users) group with any questions (if you want to receive email make sure to select "all email" when you sign up). We greatly appreciate any bug reports and contributions, which can be made by filing an issue or making a pull request through the [github page](http://github.com/clab/dynet).
 
-You can also read more technical details in our [technical report](https://arxiv.org/abs/1701.03980). 
+You can also read more technical details in our [technical report](https://arxiv.org/abs/1701.03980).
 
 ## Installation
 
 DyNet relies on a number of external programs/libraries including CMake,
 Eigen, and Mercurial (to install Eigen). CMake, and Mercurial can
-be installed from standard repositories. 
+be installed from standard repositories.
 
 For example on **Ubuntu Linux**:
 
@@ -55,7 +55,7 @@ If you don't have Eigen already, you can get it easily using the
 following command:
 
     hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
-    
+
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code
 breaking / not compiling. On macOS, you can install the latest development
@@ -71,10 +71,12 @@ You can install dynet for C++ with the following commands
     # Clone the github repository
     git clone https://github.com/clab/dynet.git
     cd dynet
+    # Checkout the latest release
+    git checkout tags/v2.0
     mkdir build
     cd build
     # Run CMake
-    cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen
+    cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DENABLE_CPP_EXAMPLES=ON
     # Compile using 2 processes
     make -j 2
     # Test with an example
