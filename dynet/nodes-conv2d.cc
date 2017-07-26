@@ -9,7 +9,6 @@
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/op-helper.h"
 #include "third_party/eigen_spatial_convolutions.h"
 #include "third_party/eigen_backward_spatial_convolutions.h"
 
