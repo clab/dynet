@@ -60,7 +60,7 @@ const Tensor& SimpleExecutionEngine::forward(VariableIndex i) {
 const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
   DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in SimpleExecutionEngine::get_value()");
   if (i >= num_nodes_evaluated) {
-    incremental_forward();
+    incremental_forward(i);
   }
   return nfxs[i];
 }
@@ -332,7 +332,7 @@ const Tensor& BatchedExecutionEngine::forward(VariableIndex i) {
 const Tensor& BatchedExecutionEngine::get_value(VariableIndex i) {
   DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::get_value()");
   if (i >= num_nodes_evaluated) {
-    incremental_forward();
+    incremental_forward(i);
   }
   return get_nfx(i);
 }
@@ -779,7 +779,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     incremental_forward_no_update(i, autobatch_flag);
   }
 
-  num_nodes_evaluated = i+1;
+  num_nodes_evaluated = max(i + 1, num_nodes_evaluated);	
   return get_nfx(i);
 }
 
