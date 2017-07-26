@@ -102,7 +102,6 @@ set(dynet_library_HDRS
     nodes-conv.h
     nodes-macros.h
     nodes.h
-    op-helper.h
     param-init.h
     param-nodes.h
     pretrain.h
