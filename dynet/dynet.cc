@@ -165,7 +165,9 @@ void ComputationGraph::_revert(CGCheckpoint p) {
   default_device->revert(p.device_mem_checkpoint);
   // clear all nodes at position >= p.node_idx
   if ((int)nodes.size() > p.node_idx) {
-    nodes.resize(p.node_idx); // TODO verify deletion of nodes.
+    for(int i = p.node_idx; i < (int)nodes.size(); i++)
+      delete nodes[i]; // the deletion of nodes.
+    nodes.resize(p.node_idx);
     ee->invalidate(p.node_idx - 1); // clear precomputed forward values
   }
   // clear all parameter nodes at position >= p.par_node_idx
