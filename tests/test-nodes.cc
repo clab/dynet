@@ -1292,6 +1292,26 @@ BOOST_AUTO_TEST_CASE( conv2d_valid_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression conv2d(const Expression& x ,const Expression& f, const std::vector<unsigned>& stride, bool is_valid);
+BOOST_AUTO_TEST_CASE( conv2d_valid_singlefilter_gradient ) {
+  dynet::ComputationGraph cg;
+  Parameter param_kernel = mod.add_parameters({2, 4, 1, 3});
+  std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
+                                         .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
+                                         .211f, .222f, .233f, .212f, .222f, .232f};
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
+  std::vector<float> conv2d_batch_vals(50 * 100 * 1 * 2);
+  for (unsigned i = 0; i < conv2d_batch_vals.size(); ++i) {
+    conv2d_batch_vals[i] = i * 0.011f + (i+1) * 0.001f;
+  }
+  Expression x = input(cg, Dim({50, 100}, 2), conv2d_batch_vals);
+  Expression kernel = parameter(cg, param_kernel);
+  vector<unsigned> stride = {3, 3}; bool is_valid = true;
+  Expression y = conv2d(x, kernel, stride, is_valid);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 BOOST_AUTO_TEST_CASE( conv2d_same_gradient ) {
   dynet::ComputationGraph cg;
   Parameter param_kernel = mod.add_parameters({2, 2, 2, 3});
