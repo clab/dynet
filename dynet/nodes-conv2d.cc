@@ -39,17 +39,17 @@ Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
     ostringstream s; s << "Conv2D requires either two or three inputs: " << xs;
     throw std::invalid_argument(s.str());
   }
-  if (xs[0].ndims() != 3 || xs[1].ndims() != 4 ||
-      xs[1].d[2] != xs[0].d[2]) {
+  if ((xs[0].ndims() != 2 && xs[0].ndims() != 3) || xs[1].ndims() != 4 ||
+      xs[1][2] != xs[0][2]) {
     ostringstream s; s << "Bad input dimensions in Conv2D: " << xs;
     throw std::invalid_argument(s.str());
   }
-  if (is_valid && (xs[0].d[0] < xs[1].d[0] || xs[0].d[1] < xs[1].d[1])) {
+  if (is_valid && (xs[0][0] < xs[1][0] || xs[0][1] < xs[1][1])) {
     ostringstream s; s << "Bad input dimensions in Conv2D: in VALID convolution, the filter size must not be greater than the feature map size" << xs;
     throw std::invalid_argument(s.str());
   }
   if (xs.size() == 3) { //has bias term
-    if (xs[2].d[0] != xs[1].d[3] || xs[2].ndims() != 1) {
+    if (xs[2][0] != xs[1][3] || xs[2].ndims() != 1) {
       ostringstream s; s << "Bad input dimensions in Conv2D: " << xs;
       throw std::invalid_argument(s.str());
     }
