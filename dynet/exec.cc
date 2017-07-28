@@ -353,11 +353,16 @@ const Tensor& BatchedExecutionEngine::incremental_forward() {
 void BatchedExecutionEngine::garbage_collect() {
   // free any old memory if this is a new CG
   for(auto & batch : batches) {
-    if(batch.pseudo_node != nullptr)
+    if(batch.pseudo_node != nullptr) {
       delete batch.pseudo_node;
-    for(size_t i = 0; i < batch.arg_nfxs.size(); ++i)
-      if(batch.concat[i])
+      batch.pseudo_node = nullptr;
+    }
+    for(size_t i = 0; i < batch.arg_nfxs.size(); ++i) {
+      if(batch.concat[i] != 0) {
         delete batch.arg_nfxs[i];
+        batch.arg_nfxs[i] = nullptr;
+      }
+    }
   }
   for(Device* dev : dynet::devices)
     dev->pools[(int)DeviceMempool::FXS]->free();
@@ -392,7 +397,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     int* active_un_begin = node2depth + uptop1;
     int* active_un_end = active_un_begin;
     float* prof2avg = (float*)(active_un_begin + uptop1);
-    float* prof2cnt = prof2avg + upto - node_id + 2;
+    float* prof2cnt = prof2avg + uptop1;
 
     // More intelligent batching?
     if(autobatch_strategy == 1 || autobatch_strategy == 3) {
