@@ -50,12 +50,8 @@ Expression operator+(const Expression& x, real y) { return y + x; }
 Expression operator-(const Expression& x, const Expression& y) { return x + (-y); }
 Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantMinusX>({y.i}, x)); }
 Expression operator-(const Expression& x, real y) { return -(y - x); }
-Expression operator*(const Expression& x, const Expression& y) {
-  return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i}));
-}
-Expression operator*(const Expression& x, float y) {
-  return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y));
-}
+Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
+Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
 Expression cmult(const Expression& x, const Expression& y) { 
     if (x.dim().batch_size() == 1) 
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 

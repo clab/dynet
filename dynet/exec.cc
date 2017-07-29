@@ -264,9 +264,7 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
         if (max_length < sz) max_length=sz;
         i++;
 #endif
-    } else {
-      throw std::runtime_error("Bad device type");
-    }
+    } else { throw std::runtime_error("Bad device type"); }
     dest += sz; // pointer arith
   }
 #if HAVE_CUDA
