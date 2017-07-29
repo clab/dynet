@@ -665,7 +665,11 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments));
   if (nodes.back()->device == nullptr) {
-    nodes.back()->device = nodes[*arguments.begin()]->device;
+    if (arguments.size()) {
+      nodes.back()->device = nodes[*arguments.begin()]->device;
+    } else {
+      nodes.back()->device = dynet::default_device;
+    }
   }
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -678,7 +682,11 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
   if (nodes.back()->device == nullptr) {
-    nodes.back()->device = nodes[*arguments.begin()]->device;
+    if (arguments.size()) {
+      nodes.back()->device = nodes[*arguments.begin()]->device;
+    } else {
+      nodes.back()->device = dynet::default_device;
+    }
   }
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -688,6 +696,7 @@ template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments));
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -698,6 +707,7 @@ inline VariableIndex ComputationGraph::add_function(const T& arguments,
     Args&&... side_information) {
   VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }

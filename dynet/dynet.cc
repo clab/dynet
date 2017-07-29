@@ -273,6 +273,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, const unsigned* pi
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, pindex);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -282,6 +283,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -291,6 +293,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, const std::vector<
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -300,6 +303,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, const std::vector<
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -312,6 +316,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const unsign
   // get rid of the following in favor of using parameter_nodes to see the needs_derivative
   // expression
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -320,6 +325,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, unsigned ind
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -328,6 +334,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const std::v
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -336,6 +343,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const std::v
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }

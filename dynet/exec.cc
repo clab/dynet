@@ -256,16 +256,16 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
     float* my_src = batches[node2batch[id]].nfx.v + node2offset[id];
     if (tout.device->type == DeviceType::CPU) {
       memcpy(dest, my_src, sz * sizeof(float));
-    } else {
+    } else if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
-      if (tout.device->type == DeviceType::GPU) {
         locs[i] = my_src; // src
         locs[i+TRG] = dest;
         locs[i+LEN] = (float*)sz;
         if (max_length < sz) max_length=sz;
         i++;
-      }
 #endif
+    } else {
+      throw std::runtime_error("Bad device type");
     }
     dest += sz; // pointer arith
   }
@@ -945,7 +945,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
               my_ndEdf.mem_pool = DeviceMempool::DEDFS;
               TensorTools::zero(my_ndEdf);
               node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, my_ndEdf);
-              //  err << "noncontig backward[" << i << "](" << ai << ")->" << node2batch[arg] << " == "; for(auto id : my_batch.ids) cerr << " ndEdfs[" << cg.nodes[id]->args[ai] << "] == " << print_vec(as_vector(ndEdfs[cg.nodes[id]->args[ai]])); cerr << " + " << print_vec(as_vector(my_ndEdf)) << " == ";
+              // cerr << "noncontig backward[" << i << "](" << ai << ")->" << node2batch[arg] << " == "; for(auto id : my_batch.ids) cerr << " ndEdfs[" << cg.nodes[id]->args[ai] << "] == " << print_vec(as_vector(ndEdfs[cg.nodes[id]->args[ai]])); cerr << " + " << print_vec(as_vector(my_ndEdf)) << " == ";
               accumulate_tensors(my_ndEdf, my_batch.ids, ai);
               // for(auto id : my_batch.ids) cerr << " ndEdfs[" << cg.nodes[id]->args[ai] << "] == " << print_vec(as_vector(ndEdfs[cg.nodes[id]->args[ai]])); cerr << endl;
               node->device->pools[(int)DeviceMempool::DEDFS]->set_used(used);

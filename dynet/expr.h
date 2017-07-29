@@ -35,9 +35,8 @@ struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
   unsigned graph_id;
-  Device *device;
 
-  Expression() : pg(nullptr), i(0), graph_id(0), device(nullptr) {}
+  Expression() : pg(nullptr), i(0), graph_id(0) {}
 
   /**
    * \brief Base expression constructor
