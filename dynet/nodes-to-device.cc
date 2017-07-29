@@ -1,7 +1,7 @@
 #include <vector>
 #include <string>
 
-#include "dynet/nodes-change-devices.h"
+#include "dynet/nodes-to-device.h"
 #include "dynet/tensor.h"
 #include "dynet/dim.h"
 #include "dynet/nodes-macros.h"

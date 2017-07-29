@@ -3,14 +3,12 @@
 
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/devices.h"
 
 namespace dynet {
 
 // y = x_1 * x_2
 struct MatrixMultiply : public Node {
-  explicit MatrixMultiply(const std::initializer_list<VariableIndex>& a,
-                          Device *device) : Node(a, device) {}
+  explicit MatrixMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;

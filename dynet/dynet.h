@@ -640,18 +640,16 @@ struct Node {
   // memory size
   Dim dim; /**< Will be .size() = 0 initially filled in by forward() -- TODO fix this */
 
-  Device* device; /**< pointer to the node, or null to inherit device from first input, or default when there is no input */
+  // pointer to the node, or nullptr to inherit device from first input, or default when there is no input
+  Device* device;
 
 protected:
-  Node() : args(), device(default_device) {}
-  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
+  Node() : args(), device(nullptr) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(nullptr) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a, Device *_device)
+      : args(a), device(_device) {}
   template <typename T>
-  explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
-
-  explicit Node(Device *d) : args(), device(d) {}
-  explicit Node(const std::initializer_list<VariableIndex>& a, Device *d) : args(a), device(d) {}
-  template <typename T>
-  explicit Node(const T&c, Device *d) : args(c.begin(), c.end()), device(d) {}
+  explicit Node(const T&c) : args(c.begin(), c.end()), device(nullptr) {}
 
 private:
   ComputationGraph* cg_;  // pointer to the computation graph
@@ -666,6 +664,9 @@ template <class Function>
 inline VariableIndex ComputationGraph::add_function(const std::initializer_list<VariableIndex>& arguments) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments));
+  if (nodes.back()->device == nullptr) {
+    nodes.back()->device = nodes[*arguments.begin()]->device;
+  }
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -676,6 +677,9 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
     Args&&... side_information) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
+  if (nodes.back()->device == nullptr) {
+    nodes.back()->device = nodes[*arguments.begin()]->device;
+  }
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }

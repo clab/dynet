@@ -192,28 +192,32 @@ Dim& ComputationGraph::get_dimension(VariableIndex index) const {
 
 VariableIndex ComputationGraph::add_input(real s, Device *device) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new ScalarInputNode(s, device));
+  nodes.push_back(new ScalarInputNode(s));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
 VariableIndex ComputationGraph::add_input(const real* ps, Device *device) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new ScalarInputNode(ps, device));
+  nodes.push_back(new ScalarInputNode(ps));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
 VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>& pm, Device *device) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new InputNode(d, pm, device));
+  nodes.push_back(new InputNode(d, pm));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
 VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm, Device *device) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new InputNode(d, pm, device));
+  nodes.push_back(new InputNode(d, pm));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -221,7 +225,8 @@ VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm,
 VariableIndex ComputationGraph::add_input(const Dim& d, const vector<unsigned int>& ids,
                                           const vector<float>& data, Device *device, float defdata) {
   VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new SparseInputNode(d, ids, data, device, defdata));
+  nodes.push_back(new SparseInputNode(d, ids, data, defdata));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -230,6 +235,7 @@ VariableIndex ComputationGraph::add_parameters(Parameter p) {
   VariableIndex new_node_index(nodes.size());
   ParameterNode* new_node = new ParameterNode(p);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -239,6 +245,7 @@ VariableIndex ComputationGraph::add_parameters(LookupParameter p) {
   VariableIndex new_node_index(nodes.size());
   ParameterNode* new_node = new ParameterNode(p);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -248,6 +255,7 @@ VariableIndex ComputationGraph::add_const_parameters(Parameter p) {
   VariableIndex new_node_index(nodes.size());
   ConstParameterNode* new_node = new ConstParameterNode(p);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -256,6 +264,7 @@ VariableIndex ComputationGraph::add_const_parameters(LookupParameter p) {
   VariableIndex new_node_index(nodes.size());
   ConstParameterNode* new_node = new ConstParameterNode(p);
   nodes.push_back(new_node);
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }

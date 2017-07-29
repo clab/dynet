@@ -3,14 +3,12 @@
 
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/devices.h"
 
 namespace dynet {
 
 // y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
 struct AffineTransform : public Node {
   template <typename T> explicit AffineTransform(const T& a) : Node(a) {}
-  template <typename T> explicit AffineTransform(const T& a, Device *device) : Node(a, device) {}
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;

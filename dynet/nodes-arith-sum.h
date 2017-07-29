@@ -3,14 +3,12 @@
 
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/devices.h"
 
 namespace dynet {
 
 // y = \sum_i x_i
 struct Sum : public Node {
   template <typename T> explicit Sum(const T& a) : Node(a) {}
-  template <typename T> explicit Sum(const T& a, Device *device) : Node(a, device) {}
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;
   virtual void autobatch_reshape(const ComputationGraph & cg,

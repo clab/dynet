@@ -3,7 +3,6 @@
 
 #include "dynet/dynet.h"
 #include "dynet/model.h"
-#include "dynet/devices.h"
 #include "dynet/nodes-macros.h"
 
 namespace dynet {
@@ -35,8 +34,8 @@ struct ConstParameterNode : public Node {
 
 // represents specified (not learned) inputs to the network
 struct InputNode : public Node {
-  explicit InputNode(const Dim& d, const std::vector<float>& dat, Device *device) : Node(device), dim(d), data(dat), pdata(&data) {}
-  explicit InputNode(const Dim& d, const std::vector<float>* pdat, Device *device) : Node(device), dim(d), data(), pdata(pdat) {}
+  explicit InputNode(const Dim& d, const std::vector<float>& dat) : dim(d), data(dat), pdata(&data) {}
+  explicit InputNode(const Dim& d, const std::vector<float>* pdat) : dim(d), data(), pdata(pdat) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
@@ -56,8 +55,8 @@ struct InputNode : public Node {
 // be fixed in the future.
 struct SparseInputNode : public Node {
   explicit SparseInputNode(const Dim& d, const std::vector<unsigned int>& id,
-                           const std::vector<float>& dat, Device *device, float defdat = 0.f)
-      : Node(device), dim(d), ids(id), data(dat), defdata(defdat) {}
+                           const std::vector<float>& dat, float defdat = 0.f)
+      : dim(d), ids(id), data(dat), defdata(defdat) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   size_t aux_storage_size() const override;
@@ -69,8 +68,8 @@ struct SparseInputNode : public Node {
 
 // represents specified (not learned) scalar inputs to the network
 struct ScalarInputNode : public Node {
-  explicit ScalarInputNode(real s, Device *device) : Node(device), data(s), pdata(&data) {}
-  explicit ScalarInputNode(const real* ps, Device *device) : Node(device), data(), pdata(ps) {}
+  explicit ScalarInputNode(real s) : data(s), pdata(&data) {}
+  explicit ScalarInputNode(const real* ps) : data(), pdata(ps) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;

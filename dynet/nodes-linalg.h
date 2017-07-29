@@ -3,7 +3,6 @@
 
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/devices.h"
 
 namespace dynet {
 
@@ -21,7 +20,7 @@ struct Transpose : public Node {
 // y = inv(x)
 // x = an invertible matrix
 struct MatrixInverse : public Node {
-  explicit MatrixInverse(const std::initializer_list<VariableIndex>& a, Device *device) : Node(a, device) {}
+  explicit MatrixInverse(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
