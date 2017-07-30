@@ -377,6 +377,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     string current_batch_name;
 
     size_t uptop1 = upto + 1;
+    size_t uptop1psig = uptop1 + sigmap.size();
 
     nfx_cache.resize(uptop1);
     node2batch.resize(uptop1);
@@ -389,15 +390,15 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
     batches.resize(upto - num_nodes_evaluated + num_batches_evaluated + 1);
 
     // Allocate temporary memory for bookkeeping
-    size_t temp_data_size = (uptop1)*4*sizeof(int) + (upto+2)*2*sizeof(float);
+    size_t temp_data_size = (uptop1)*4*sizeof(int) + (uptop1psig)*2*sizeof(float);
     int* node2profid = (int*)malloc(temp_data_size);
     memset(node2profid, 0, temp_data_size);
     int* node2left = node2profid + uptop1;
     int* node2depth = node2left + uptop1;
     int* active_un_begin = node2depth + uptop1;
     int* active_un_end = active_un_begin;
-    float* prof2avg = (float*)(active_un_begin + uptop1);
-    float* prof2cnt = prof2avg + uptop1;
+    float* prof2avg = (float*)(active_un_begin + uptop1psig);
+    float* prof2cnt = prof2avg + uptop1psig;
 
     // More intelligent batching?
     if(autobatch_strategy == 1 || autobatch_strategy == 3) {
