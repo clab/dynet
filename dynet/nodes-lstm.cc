@@ -344,6 +344,16 @@ namespace dynet {
     return xs[0];
   }
 
+  int VanillaLSTMC::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+    Sig s(nt::vanilla_lstm_h);
+    s.add_dim(cg.nodes[args[0]]->dim);
+    return sm.get_idx(s);
+  }
+  
+  std::vector<int> VanillaLSTMC::autobatch_concat(const ComputationGraph & cg) const {
+    return vector<int>(2, 1);
+  }
+
 #endif
 
   template<class MyDevice>
@@ -413,6 +423,16 @@ namespace dynet {
     DYNET_ARG_CHECK(xs[0].size()*4 == xs[1].size(), "VanillaLSTMH: gates_t expected 4 times as big as c_t, but " << xs[0].size() << "*4 != " << xs[1].size());
     DYNET_ARG_CHECK(xs[0].bd == xs[1].bd, "VanillaLSTMH: gates_t and c_t expected to have equal batch size, but " << xs[0].bd << " != " << xs[1].bd);
     return xs[0];
+  }
+
+  int VanillaLSTMH::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+    Sig s(nt::vanilla_lstm_h);
+    s.add_dim(cg.nodes[args[0]]->dim);
+    return sm.get_idx(s);
+  }
+  
+  std::vector<int> VanillaLSTMH::autobatch_concat(const ComputationGraph & cg) const {
+    return vector<int>(2, 1);
   }
 
 #endif
