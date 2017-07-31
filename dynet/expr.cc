@@ -90,6 +90,10 @@ Expression hinge(const Expression& x, unsigned index, float m) { return Expressi
 Expression hinge(const Expression& x, const unsigned* pindex, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, pindex, m)); }
 Expression hinge(const Expression& x, const std::vector<unsigned> & indices, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, indices, m)); }
 Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, pindices, m)); }
+Expression hinge_dim(const Expression& x, const std::vector<unsigned> & index, unsigned d, float m) { return Expression(x.pg, x.pg->add_function<HingeDim>({x.i}, index, d, m)); }
+Expression hinge_dim(const Expression& x, const std::vector<unsigned> * pindex, unsigned d, float m) { return Expression(x.pg, x.pg->add_function<HingeDim>({x.i}, pindex, d, m)); }
+Expression hinge_dim(const Expression& x, const std::vector<std::vector<unsigned> > & indices, unsigned d, float m) { return Expression(x.pg, x.pg->add_function<HingeDim>({x.i}, indices, d, m)); }
+Expression hinge_dim(const Expression& x, const std::vector<std::vector<unsigned> > * pindices, unsigned d, float m) { return Expression(x.pg, x.pg->add_function<HingeDim>({x.i}, pindices, d, m)); }
 Expression log_softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogSoftmax>({x.i})); }
 Expression log_softmax(const Expression& x, const vector<unsigned>& d) { return Expression(x.pg, x.pg->add_function<RestrictedLogSoftmax>({x.i}, d)); }
 Expression sparsemax(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sparsemax>({x.i})); }
