@@ -720,6 +720,17 @@ BOOST_AUTO_TEST_CASE( hinge_gradient ) {
 }
 
 // Expression hinge(const Expression& x, unsigned index, float m = 1.0);
+BOOST_AUTO_TEST_CASE( hinge_multiple_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  vector<Expression> exp;
+  for(unsigned index = 3; index > 0; --index)
+    exp.push_back(hinge(x1, index-1, 0.5));
+  Expression z = sum(exp);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 BOOST_AUTO_TEST_CASE( hinge_batch_gradient ) {
   std::vector<unsigned> idx = {1, 2};
   dynet::ComputationGraph cg;
@@ -735,6 +746,15 @@ BOOST_AUTO_TEST_CASE( hingeptr_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression z = hinge(x1, &index, 0.5);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression hinge_dim(const Expression& x, unsigned index, unsigned dim = 0, float m = 1.0);
+BOOST_AUTO_TEST_CASE( hinge_dim_gradient ) {
+  std::vector<unsigned> index = {0, 1, 2};
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param_square1);
+  Expression z = sum_elems(hinge_dim(x1, index, 0, 0.5) + hinge_dim(x1, index, 1, 0.5));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
