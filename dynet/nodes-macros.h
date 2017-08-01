@@ -3,6 +3,7 @@
 
 #include "dynet/dim.h"
 #include "dynet/except.h"
+#include <iostream>
 
 namespace dynet {
 
@@ -13,6 +14,28 @@ inline bool LooksLikeVector(const Dim& d) {
       if (d[i] != 1) return false;
   }
   return true;
+}
+
+template <class T>
+inline std::string print_vec(const std::vector<T> & vec) {
+  std::string sep = "[";
+  std::ostringstream oss;
+  for(auto f : vec) {
+    oss << sep << f; sep = ",";
+  }
+  oss << "]";
+  return oss.str();
+}
+
+template <class T>
+inline std::string print_vecs(const std::vector<std::vector<T> > & vec) {
+  std::string sep = "[";
+  std::ostringstream oss;
+  for(auto & f : vec) {
+    oss << sep << print_vec(f); sep = ",";
+  }
+  oss << "]";
+  return oss.str();
 }
 
 }
