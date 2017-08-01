@@ -42,18 +42,6 @@ struct HingeDim : public Node {
   size_t input_size;
 };
 
-// // x can be either a matrix (or a batch of vectors where the batch size is equal to the vector size).
-// // This will calculate a hinge loss in both directions: 
-// // y = \sum_i \sum_{j != i} max{0, margin - x_i,i + x_i,j} + max{0, margin - x_j,j + x_i,j}
-// struct BidirectionalHinge : public Node {
-//   explicit BidirectionalHinge(const std::initializer_list<VariableIndex>& a, real m = 1.0) : Node(a), margin(m), input_size(0) {}
-//   virtual bool supports_multibatch() const override { return true; }
-//   DYNET_NODE_DEFINE_DEV_IMPL()
-//   size_t aux_storage_size() const override;
-//   real margin;
-//   size_t input_size;
-// };
-
 } // namespace dynet
 
 #endif
