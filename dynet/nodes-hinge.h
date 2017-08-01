@@ -26,8 +26,8 @@ struct Hinge : public Node {
 
 // Let x be a matrix input. This will calculate the loss over all rows or columns.
 struct HingeDim : public Node {
-  explicit HingeDim(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& e, unsigned d = 0, real m = 1.0) : Node(a), element(e), pelement(&element), d(d), margin(m), input_size(0) {}
-  explicit HingeDim(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pe, unsigned d = 0, real m = 1.0) : Node(a), element(), pelement(pe), d(d), margin(m), input_size(0) {}
+  explicit HingeDim(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& e, unsigned d = 0, real m = 1.0) : Node(a), element(e), pelement(&element), pelements(nullptr), d(d), margin(m), input_size(0) {}
+  explicit HingeDim(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pe, unsigned d = 0, real m = 1.0) : Node(a), element(), pelement(pe), pelements(nullptr), d(d), margin(m), input_size(0) {}
   explicit HingeDim(const std::initializer_list<VariableIndex>& a, const std::vector<std::vector<unsigned> >& e, unsigned d = 0, real m = 1.0) : Node(a), element(), pelement(), elements(e), pelements(&elements), d(d), margin(m), input_size(0) {}
   explicit HingeDim(const std::initializer_list<VariableIndex>& a, const std::vector<std::vector<unsigned> >* pe, unsigned d = 0, real m = 1.0) : Node(a), element(), pelement(), elements(), pelements(pe), d(d), margin(m), input_size(0) {}
   virtual bool supports_multibatch() const override { return true; }
