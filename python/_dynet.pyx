@@ -3144,6 +3144,36 @@ cpdef Expression hinge_batch(Expression x, vector[unsigned] vs, float m=1.0):
         dynet.Expression: The batched hinge loss function
     """
     return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), vs, m))
+cpdef Expression hinge_dim(Expression x, vector[unsigned] v, unsigned d=0, float m=1.0):
+    """Dimensionwise hinge loss
+    
+    This function takes in a matrix of scores  :code:`x`, and calculates a hinge loss such that the elements :code:`v` must be greater than all other elements in dimension :code:`d` by at least :code:`m`, otherwise a loss is incurred.
+
+    Args:
+        x (dynet.Expression): Input scores
+        v (list): True classes (size of the non-:code:`d` dimension)
+        d (int): Dimension over which to perform the hinge loss
+        m (float): The margin
+    
+    Returns:
+        dynet.Expression: Containing a vector of losses the size of the non-:code:`d` dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_hinge_dim(x.c(), v, d, m))
+# cpdef Expression hinge_dim_batch(Expression x, vector[vector[unsigned]] vs, unsigned d=0, float m=1.0):
+#     """Dimensionwise hinge loss on a batch
+#     
+#     The batched version of :code:`hinge_dim`, where we pass in a list of lists of IDs :code:`v`, where each list corresponds to the IDs for one batch.
+#     
+#     Args:
+#         x (dynet.Expression): Input scores
+#         v (list[list]): True classes
+#         d (int): Dimension over which to perform the hinge loss
+#         m (float): The margin
+#     
+#     Returns:
+#         dynet.Expression: The batched hinge_dim loss function
+#     """
+#     return Expression.from_cexpr(x.cg_version, c_hinge_dim(x.c(), vs, d, m))
 
 
 cpdef Expression kmh_ngram(Expression x, unsigned v):

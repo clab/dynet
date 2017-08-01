@@ -1120,6 +1120,65 @@ Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, fl
 
 /**
  * \ingroup lossoperations
+ * \brief Dimensionwise hinge loss
+ * \details This expression calculates the hinge loss over a particular dimension ``d``.
+ *
+ * \param x A matrix of scores
+ * \param indices The indices of the correct candidate (equal in length to the
+ *                dimension not specified by "d")
+ * \param d The dimension over which to calculate the loss (0 or 1)
+ * \param m The margin
+ *
+ * \return A vector of hinge losses for each index in ``indices``.
+ */
+Expression hinge_dim(const Expression& x, const std::vector<unsigned>& indices, unsigned d = 0, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable dimensionwise hinge loss
+ * \details This function calculates the modifiable version of dimensionwise hinge loss.
+ *
+ * \param x A vector of scores
+ * \param pindex A pointer to the index of the correct candidate
+ * \param d The dimension over which to calculate the loss (0 or 1)
+ * \param m The margin
+ *
+ * \return A vector of hinge losses for each index in ``indices``.
+ */
+Expression hinge_dim(const Expression& x, const std::vector<unsigned>* pindex, unsigned d = 0, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Batched dimensionwise hinge loss
+ * \details The same as dimensionwise hinge loss, but for the case where ``x`` is a mini-batched tensor
+ *          with ``indices.size()`` batch elements.
+ *
+ * \param x A mini-batch of vectors with ``indices.size()`` batch elements
+ * \param indices The indices of the correct candidates for each batch element
+ * \param d The dimension over which to calculate the loss (0 or 1)
+ * \param m The margin
+ *
+ * \return A vector of hinge losses for each mini-batch
+ */
+Expression hinge_dim(const Expression& x, const std::vector<std::vector<unsigned> >& indices, unsigned d = 0, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Batched modifiable hinge loss
+ * \details A combination of the previous batched and modifiable hinge loss functions, where
+ *          vector ``*pindices`` can be modified.
+ *
+ * \param x A mini-batch of vectors with ``indices.size()`` batch elements
+ * \param pindices Pointer to the indices of the correct candidates for each batch element
+ * \param d The dimension over which to calculate the loss (0 or 1)
+ * \param m The margin
+ *
+ * \return The hinge loss of each mini-batch
+ */
+Expression hinge_dim(const Expression& x, const std::vector<std::vector<unsigned> >* pindices, unsigned d = 0, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
  * \brief Sparsemax
  * \details The sparsemax function (Martins et al. 2016), which is similar to softmax,
  *          but induces sparse solutions where most of the vector elements are zero.
