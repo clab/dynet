@@ -283,6 +283,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_rectify "dynet::rectify" (CExpression& x) except + #
     CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m) except + #
     CExpression c_hinge "dynet::hinge" (CExpression& x, vector[unsigned] vs, float m) except + #
+    CExpression c_hinge_dim "dynet::hinge_dim" (CExpression& x, vector[unsigned] index, unsigned d, float m) except + #
+    # CExpression c_hinge_dim "dynet::hinge_dim" (CExpression& x, vector[vector[unsigned]] indices, unsigned d, float m) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x, vector[unsigned]& restriction) except + #?
     CExpression c_softmax "dynet::softmax" (CExpression& x) except + #
