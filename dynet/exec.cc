@@ -15,16 +15,6 @@ using namespace std;
 
 namespace dynet {
 
-inline string print_vec(const std::vector<float> & vec) {
-  string sep = "[";
-  ostringstream oss;
-  for(auto f : vec) {
-    oss << sep << f; sep = ",";
-  }
-  oss << "]";
-  return oss.str();
-}
-
 ExecutionEngine::~ExecutionEngine() {}
 
 vector<const Tensor*> ExecutionEngine::forward(std::vector<VariableIndex> is) {
