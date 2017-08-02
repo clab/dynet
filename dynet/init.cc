@@ -173,8 +173,10 @@ void initialize(DynetParams& params) {
   // initialize CUDA
   vector<Device*> gpudevices;
 #if HAVE_CUDA
-  cerr << "[dynet] initializing CUDA\n";
-  gpudevices = initialize_gpu(params);
+  if (!(params.cpu_requested && (params.requested_gpus == -1))) {
+    cerr << "[dynet] initializing CUDA\n";
+    gpudevices = initialize_gpu(params);
+  }
 #endif
 
   // Set random seed
