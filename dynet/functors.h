@@ -243,7 +243,7 @@ struct FSoftSignBackward {
 
 struct FLogisticSigmoid {
   DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return 1.f / (1.f + expf(-x));
+    return 0.5 + 0.5 * tanh(x * 0.5);
   }
 };
 
