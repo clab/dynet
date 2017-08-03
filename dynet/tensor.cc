@@ -22,8 +22,8 @@ namespace dynet {
 ostream& operator<<(ostream& os, const Tensor& t) {
   if (t.device->type == DeviceType::CPU) {
     os << (*t);
-  } else if (t.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (t.device->type == DeviceType::GPU) {
     vector<real> vt = as_vector(t);
     Eigen::Map<Eigen::MatrixXf> m(&vt[0], t.d.rows(), t.d.cols());
     os << m;
@@ -38,8 +38,8 @@ real as_scalar(const Tensor& t) {
   real res = 0.;
   if (t.device->type == DeviceType::CPU) {
     return t.v[0];
-  } else if (t.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (t.device->type == DeviceType::GPU) {
     CUDA_CHECK(cudaMemcpy(&res, t.v, sizeof(float), cudaMemcpyDeviceToHost));
     return res;
 #endif
@@ -63,8 +63,8 @@ vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
   vector<Eigen::DenseIndex> res(v.d.size());
   if (v.device->type == DeviceType::CPU) {
     memcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size());
-  } else if (v.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (v.device->type == DeviceType::GPU) {
     CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size(), cudaMemcpyDeviceToHost));
 #endif
   } else { throw std::runtime_error("Bad device type"); }
@@ -75,8 +75,8 @@ float TensorTools::access_element(const Tensor& v, int index) {
   float ret = 0.;
   if (v.device->type == DeviceType::CPU) {
     return v.v[index];
-  } else if (v.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (v.device->type == DeviceType::GPU) {
     cudaMemcpy(&ret, &v.v[index], sizeof(real), cudaMemcpyDeviceToHost);
     return ret;
 #endif
@@ -87,18 +87,19 @@ float TensorTools::access_element(const Tensor& v, int index) {
 float TensorTools::access_element(const Tensor& v, const Dim& index) {
   if (v.device->type == DeviceType::CPU) {
     return (*v)(index[0], index[1]);
-  } else {
 #if HAVE_CUDA
-    DYNET_NO_CUDA_IMPL_ERROR("TensorTools::access_element(Tensor,Dim)");
+  } else if (v.device->type == DeviceType::GPU) {
+    DYNET_NO_CUDA_IMPL_ERROR("TensorTools::access_element(Tensor,Dim)")
 #endif
-  }
+  } else { throw std::runtime_error("Bad device type"); }
+  return 0;
 }
 
 void TensorTools::set_element(const Tensor& v, int index, float value) {
   if (v.device->type == DeviceType::CPU) {
     v.v[index] = value;
-  } else if (v.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (v.device->type == DeviceType::GPU) {
     cudaMemcpyAsync(&v.v[index], &value, sizeof(real), cudaMemcpyHostToDevice);
 #endif
   } else { throw std::runtime_error("Bad device type"); }
@@ -108,10 +109,10 @@ void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rinde
   if (l.device->type == DeviceType::CPU) {
     r.v[rindex] = l.v[lindex];
   } else {
-    if (l.device != r.device)
+    if (l.device != r.device) {
       throw std::invalid_argument("TensorTools::CopyElement doesn't support inter-device copy yet");
-    if (l.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+    } else if (l.device->type == DeviceType::GPU) {
       cudaMemcpyAsync(&r.v[rindex], &l.v[lindex], sizeof(real), cudaMemcpyDeviceToDevice);
 #endif
     } else { throw std::runtime_error("Bad device type"); }
@@ -121,8 +122,8 @@ void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rinde
 void TensorTools::set_elements(const Tensor& v, const vector<float>& vec) {
   if (v.device->type == DeviceType::CPU) {
     memcpy(v.v, &vec[0], sizeof(real) * vec.size());
-  } else if (v.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (v.device->type == DeviceType::GPU) {
     cudaMemcpyAsync(v.v, &vec[0], sizeof(real) * vec.size(), cudaMemcpyHostToDevice);
 #endif
   } else { throw std::runtime_error("Bad device type"); }
@@ -132,13 +133,13 @@ void TensorTools::copy_elements(Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) {
     if (v_src.device->type == DeviceType::CPU) {
       memcpy(v.v, v_src.v, sizeof(real) * v.d.size());
-    } else if (v_src.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+    } else if (v_src.device->type == DeviceType::GPU) {
       cudaMemcpyAsync(v.v, v_src.v, sizeof(real) * v.d.size(), cudaMemcpyDeviceToHost);
 #endif
     } else { throw std::runtime_error("Bad device type"); }
-  } else if (v.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (v.device->type == DeviceType::GPU) {
     if (v_src.device->type == DeviceType::CPU) {
       cudaMemcpyAsync(v.v, v_src.v, sizeof(real) * v.d.size(), cudaMemcpyHostToDevice);
     } else {
@@ -160,8 +161,8 @@ void TensorTools::identity(Tensor& val) {
     for (size_t i = 0; i < val.d[0]; ++i)
       for (size_t j = 0; j < val.d[1]; ++j)
         val.v[pos++] = (i == j ? 1 : 0);
-  } else if (val.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (val.device->type == DeviceType::GPU) {
     float* t = new float[val.d.size()];
     for (size_t i = 0; i < val.d[0]; ++i)
       for (size_t j = 0; j < val.d[1]; ++j)
@@ -177,9 +178,12 @@ void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
   auto b = [&] {return distribution(*rndeng) * scale;};
   if (val.device->type == DeviceType::CPU) {
     generate(val.v, val.v + val.d.size(), b);
-  } else if (val.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
-    DYNET_NO_CUDA_IMPL_ERROR("Orthonormal initialization");
+  } else if (val.device->type == DeviceType::GPU) {
+    float* t = new float[val.d.size()];
+    generate(t, t + val.d.size(), b);
+    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+    delete[] t;
 #endif
   } else { throw std::runtime_error("Bad device type"); }
 }
@@ -189,8 +193,8 @@ void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
   auto b = [&] {return distribution(*rndeng);};
   if (val.device->type == DeviceType::CPU) {
     generate(val.v, val.v + val.d.size(), b);
-  } else if (val.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (val.device->type == DeviceType::GPU) {
     float* t = new float[val.d.size()];
     generate(t, t + val.d.size(), b);
     CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
@@ -204,8 +208,8 @@ void TensorTools::randomize_uniform(Tensor& val, real left, real right) {
   auto b = [&] {return distribution(*rndeng);};
   if (val.device->type == DeviceType::CPU) {
     generate(val.v, val.v + val.d.size(), b);
-  } else if (val.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+  } else if (val.device->type == DeviceType::GPU) {
     float* t = new float[val.d.size()];
     generate(t, t + val.d.size(), b);
     CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
@@ -221,12 +225,18 @@ void TensorTools::randomize_orthonormal(Tensor& val, real scale) {
     randomize_uniform(val, -1.0, 1.0);
     Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
     *val = scale * svd.matrixU();
-  } else if (val.device->type == DeviceType::GPU) {
 #ifdef HAVE_CUDA
-    DYNET_NO_CUDA_IMPL_ERROR("Orthonormal initialization"); 
-    randomize_uniform(val, -1.0, 1.0);
-    Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
-    *val = scale * svd.matrixU();
+  } else if (val.device->type == DeviceType::GPU) {
+    DYNET_NO_CUDA_IMPL_ERROR("Orthonormal initialization");
+    // TODO: The following should work, but for some reason it isn't working
+    // float* t = new float[val.d.size()];
+    // Tensor tt(val);
+    // tt.v = t;
+    // randomize_uniform(tt, -1.0, 1.0);
+    // Eigen::JacobiSVD<Eigen::MatrixXf> svd(*tt, Eigen::ComputeFullU | Eigen::ComputeThinV);
+    // *tt = scale * svd.matrixU();
+    // CUDA_CHECK(cudaMemcpy(val.v, tt.v, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
+    // delete[] t;
 #endif
   } else { throw std::runtime_error("Bad device type"); }
 }
