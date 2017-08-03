@@ -153,7 +153,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
   // initialize dE/dE = 1
-  ndEdfs.back().v = kSCALAR_ONE;
+  ndEdfs.back().v = cg.nodes.back()->device->kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
   // by default, a node is constant unless
