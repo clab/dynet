@@ -801,7 +801,6 @@ float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
       cudaMemcpy(gradient_norm_scratch + pi, v, sizeof(float), cudaMemcpyDeviceToHost);
 #endif
     else { throw std::runtime_error("Bad device type"); }
-      gradient_norm_scratch[pi] = *v;
     dev_k->mem->free(v);
   }
   Tensor scratch_t({(unsigned int)all_params.size()}, gradient_norm_scratch, &dev, DeviceMempool::NONE);
