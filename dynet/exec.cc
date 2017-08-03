@@ -92,6 +92,8 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       unsigned ai = 0;
       for (VariableIndex arg : node->args) {
         xs[ai] = &nfxs[arg];
+        DYNET_ARG_CHECK(xs[ai]->device == node->device || node->supports_multidevice(),
+                        "Attempt to do tensor forward in different devices (nodes " << arg << " and " << num_nodes_evaluated << ")");
         ++ai;
       }
       nfxs[num_nodes_evaluated].d = node->dim;
@@ -111,11 +113,6 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
           DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node " << num_nodes_evaluated);
       }
       node->aux_mem = aux_mem;
-
-      // check consistent device
-      for (auto & xs_v : xs) {
-        DYNET_ASSERT(xs_v->device == nfxs[num_nodes_evaluated].device, "Attempt to do tensor forward in different devices");
-      }
       node->forward(xs, nfxs[num_nodes_evaluated]);
 
       if (autobatch_debug_flag) { timer.stop(current_node_name); }
@@ -194,10 +191,10 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
       if (needs_derivative[arg]) {
         DYNET_ASSERT(nfxs[i].device == ndEdfs[i].device, "Attempt to do tensor backward in different devices");
         DYNET_ASSERT(nfxs[i].device == ndEdfs[arg].device, "Attempt to do tensor backward in different devices");
-        for (auto & xs_v : xs) {
-          DYNET_ASSERT(xs_v->device == nfxs[i].device.device,
-                       "Attempt to do tensor backward in different devices");
-        }
+        // for (auto & xs_v : xs) {
+        //   DYNET_ASSERT(xs_v->device == nfxs[i].device.device,
+        //                "Attempt to do tensor backward in different devices");
+        // }
         node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
       }
       ++ai;

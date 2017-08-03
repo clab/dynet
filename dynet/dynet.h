@@ -546,6 +546,13 @@ struct Node {
    */
   virtual bool supports_multibatch() const { return false; }
 
+  /**
+   * \brief Whether this node supports processing inputs/outputs on multiple devices.
+   * \details DyNet will throw an error if you try to process inputs and outputs on different devices unless this is activated.
+   * \return Support for multi-device
+   */
+  virtual bool supports_multidevice() const { return false; }
+
   // perform the forward/backward passes in one or multiple calls
   /**
    * \brief perform the forward/backward passes in one or multiple calls
