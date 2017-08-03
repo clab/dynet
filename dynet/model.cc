@@ -250,7 +250,7 @@ ParameterCollectionStorage::ParameterCollectionStorage() : gradient_norm_scratch
 ParameterCollectionStorage::~ParameterCollectionStorage() {
   for (auto p : all_params) delete p;
   if (gradient_norm_scratch)
-    default_device->mem->free(gradient_norm_scratch);
+    dynet::get_global_device("CPU")->mem->free(gradient_norm_scratch);
 }
 
 void ParameterCollectionStorage::project_weights(float radius) {
@@ -779,24 +779,35 @@ void LookupParameterStorage::scale_gradient(float a) {
 }
 #endif
 
-// TODO: support multi-device
 template <class MyDevice>
-float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice & dev) const {
-  if (gradient_norm_scratch == nullptr)
-    gradient_norm_scratch = (float*)default_device->mem->malloc((all_params.size() + 1) * sizeof(float));
+float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
+  if (gradient_norm_scratch == nullptr) {
+    gradient_norm_scratch = (float*)dev.mem->malloc((all_params.size() + 1) * sizeof(float));
+  }
   size_t pi;
-  for (pi = 0; pi < all_params.size(); ++pi)
-    all_params[pi]->g_squared_l2norm(&gradient_norm_scratch[pi]);
+  for (pi = 0; pi < all_params.size(); ++pi) {
+    Device *dev_k;
+    if (all_params[pi] == params[pi]) {
+      dev_k = params[pi]->device;
+    } else {
+      dev_k = lookup_params[pi]->device; 
+    }
+    float *v = (float *)dev_k->mem->malloc(sizeof(float));
+    all_params[pi]->g_squared_l2norm(v);
+    if (dev_k->type == DeviceType::CPU)
+      gradient_norm_scratch[pi] = *v;
+#if HAVE_CUDA
+    else if (dev_k->type == DeviceType::GPU)
+      cudaMemcpy(gradient_norm_scratch + pi, v, sizeof(float), cudaMemcpyDeviceToHost);
+#endif
+    else { throw std::runtime_error("Bad device type"); }
+      gradient_norm_scratch[pi] = *v;
+    dev_k->mem->free(v);
+  }
   Tensor scratch_t({(unsigned int)all_params.size()}, gradient_norm_scratch, &dev, DeviceMempool::NONE);
   Tensor sum_t({1}, gradient_norm_scratch + pi, &dev, DeviceMempool::NONE);
   sum_t.t<0>().device(*dev.edevice) = scratch_t.t<1>().sum().sqrt();
-#ifdef __CUDACC__
-  float res = 0;
-  cudaMemcpy(&res, gradient_norm_scratch + pi, sizeof(float),  cudaMemcpyDeviceToHost);
-  return res;
-#else
   return gradient_norm_scratch[pi];
-#endif
 }
 
 #ifdef __CUDACC__
@@ -805,8 +816,7 @@ template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_GPU>(Devi
 extern template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
 template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float ParameterCollectionStorage::gradient_l2_norm() const {
-  if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
-  else if (default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_GPU*)default_device); }
+  if (default_device->type == DeviceType::CPU || default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_CPU*)dynet::get_global_device("CPU")); }
   else { throw std::runtime_error("Bad device type"); }
 }
 float ParameterCollection::gradient_l2_norm() const {
@@ -815,7 +825,7 @@ float ParameterCollection::gradient_l2_norm() const {
 #else
 template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float ParameterCollectionStorage::gradient_l2_norm() const {
-  if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)default_device); }
+  if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)dynet::get_global_device("CPU")); }
   else { throw std::runtime_error("Bad device type"); }
 }
 float ParameterCollection::gradient_l2_norm() const {

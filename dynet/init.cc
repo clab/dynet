@@ -144,6 +144,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
             throw std::invalid_argument("Bad argument to --dynet-devices");
           }
         }
+        params.cpu_requested = true;
         remove_args(argc, argv, argi, 2);
       }
     }
