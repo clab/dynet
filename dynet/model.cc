@@ -298,6 +298,9 @@ void ParameterCollection::project_weights(float radius) {
   get_storage().project_weights(radius);
 }
 
+Parameter ParameterCollection::add_parameters(const Dim & d, Device *device) {
+  return add_parameters(d, ParameterInitGlorot(), "", device);
+}
 Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name, Device *device) {
   return add_parameters(d, ParameterInitGlorot(), p_name, device);
 }

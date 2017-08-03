@@ -487,17 +487,6 @@ public:
    * \brief Sets all gradients to zero
    */
   void reset_gradient();
-  /**
-   * \brief Add parameters to model and returns Parameter object
-   * \details creates a ParameterStorage object holding a tensor of dimension `d` and returns a Parameter object (to be used as input in the computation graph).
-   *
-   * \param d Shape of the parameter
-   * \param name Name of the parameter
-   * \param device Device placement for the parameter
-   *
-   * \return Parameter object to be used in the computation graph
-   */
-  Parameter add_parameters(const Dim& d, const std::string & name, Device *device = dynet::default_device);
   // set scale to use custom initialization
   /**
    * \brief Add parameters to model and returns Parameter object
@@ -512,6 +501,27 @@ public:
    */
   Parameter add_parameters(const Dim& d, float scale = 0.0f,
                            const std::string & name = "", Device *device = dynet::default_device);
+  /**
+   * \brief Add parameters to model and returns Parameter object
+   * \details creates a ParameterStorage object holding a tensor of dimension `d` and returns a Parameter object (to be used as input in the computation graph).
+   *
+   * \param d Shape of the parameter
+   * \param device Device placement for the parameter
+   *
+   * \return Parameter object to be used in the computation graph
+   */
+  Parameter add_parameters(const Dim& d, Device *device);
+  /**
+   * \brief Add parameters to model and returns Parameter object
+   * \details creates a ParameterStorage object holding a tensor of dimension `d` and returns a Parameter object (to be used as input in the computation graph).
+   *
+   * \param d Shape of the parameter
+   * \param name Name of the parameter
+   * \param device Device placement for the parameter
+   *
+   * \return Parameter object to be used in the computation graph
+   */
+  Parameter add_parameters(const Dim& d, const std::string & name, Device *device = dynet::default_device);
   /**
    * \brief Add parameters with custom initializer
    *

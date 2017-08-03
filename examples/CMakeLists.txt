@@ -6,7 +6,7 @@ if(ENABLE_BOOST)
   endif()
 endif()
 
-foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-autobatch xor-xent xor-batch xor-batch-lookup rnn-autobatch rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm read-write attention imdb rnnlm-batch-nce ${MP_EXAMPLES})
+foreach(FOLDER encdec mlc mnist tok-embed poisson-regression tag-bilstm embed-cl xor xor-autobatch xor-xent xor-batch xor-batch-lookup xor-multidevice rnn-autobatch rnnlm rnnlm-aevb rnnlm-cfsm rnnlm-batch nlm read-write attention imdb rnnlm-batch-nce ${MP_EXAMPLES})
   set(TARGET train_${FOLDER})
   ADD_EXECUTABLE(${TARGET} cpp/${FOLDER}/${TARGET}.cc)
   if (WITH_CUDA_BACKEND)

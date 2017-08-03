@@ -135,6 +135,8 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
 Device_CPU::~Device_CPU() {}
 
 Device* get_global_device(const std::string & name) {
+  for(auto k : dynet::devices_map)
+    std::cerr << "devices: " << k.first << std::endl;
   auto it = dynet::devices_map.find(name);
   if (it == dynet::devices_map.end()) {
     throw std::runtime_error("Invalid device name: " + name);
