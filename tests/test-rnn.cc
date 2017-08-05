@@ -417,7 +417,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_dropout_bwd ) {
     h_tm1 = h_t;
   }
   Expression z = squared_norm(sum_batches(h_tm1 + c_tm1));
-  BOOST_CHECK(check_grad(mod, z, 1));
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 
