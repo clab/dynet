@@ -214,24 +214,25 @@ namespace dynet {
       //    where Wx is broadcasted over batches
 
       // scratch memory for the matrix multiplication
+      Tensor mult_r_ifo(Dim({hidden_dim*3, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_r_ifo.v = static_cast<float*>(scratch_allocator->allocate(mult_r_ifo.d.size() * sizeof(float)));
+      Tensor mult_r_g(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_r_g.v = static_cast<float*>(scratch_allocator->allocate(mult_r_g.d.size() * sizeof(float)));
       Tensor mult_r(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
       mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
-      Tensor mult_y(Dim({input_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
-      mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
 
       // mult_r = [di . i_t . (1-i_t)]
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
       //          [dg . (1 - g_t^2)]
-      // TODO: split into mult_r_ifo / mult_r_g?
-      mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf_ifo.tb<2>()
-									      * fx_ifo.tb<2>()
-									      * (fx_ifo.tb<2>().constant(1) - fx_ifo.tb<2>());
-      mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf_g.tb<2>()
-									      * (fx_g.tb<2>().constant(1) - fx_g.tb<2>().square());
-
+      mult_r_ifo.tb<2>().device(*dev.edevice) = dEdf_ifo.tb<2>() * fx_ifo.tb<2>() * (fx_ifo.tb<2>().constant(1) - fx_ifo.tb<2>());
+      mult_r_g.tb<2>().device(*dev.edevice) = dEdf_g.tb<2>() * (fx_g.tb<2>().constant(1) - fx_g.tb<2>().square());
+      mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = mult_r_ifo.tb<2>();
+      mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_r_g.tb<2>();
       // dx_t += mult_l^T * mult_r
       if(xs.size()==7){
+	Tensor mult_y(Dim({input_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+	mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
 	TensorTools::zero(mult_y);
 	MatrixTranspMultiplyAcc(dev, *xs[2], mult_r, mult_y);
 	dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[5]->tvec();
@@ -247,24 +248,26 @@ namespace dynet {
       //    where Wh is broadcasted over batches
 
       // scratch memory for the matrix multiplication
+      Tensor mult_r_ifo(Dim({hidden_dim*3, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_r_ifo.v = static_cast<float*>(scratch_allocator->allocate(mult_r_ifo.d.size() * sizeof(float)));
+      Tensor mult_r_g(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_r_g.v = static_cast<float*>(scratch_allocator->allocate(mult_r_g.d.size() * sizeof(float)));
       Tensor mult_r(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
       mult_r.v = static_cast<float*>(scratch_allocator->allocate(mult_r.d.size() * sizeof(float)));
-      Tensor mult_y(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
-      mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
 
       // mult_r = [di . i_t . (1-i_t)]
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
       //          [dg . (1 - g_t^2)]
-      // TODO: split into mult_r_ifo / mult_r_g?
-      mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf_ifo.tb<2>()
-									      * fx_ifo.tb<2>()
-									      * (fx_ifo.tb<2>().constant(1) - fx_ifo.tb<2>());
-      mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf_g.tb<2>()
-									      * (fx_g.tb<2>().constant(1) - fx_g.tb<2>().square());
+      mult_r_ifo.tb<2>().device(*dev.edevice) = dEdf_ifo.tb<2>() * fx_ifo.tb<2>() * (fx_ifo.tb<2>().constant(1) - fx_ifo.tb<2>());
+      mult_r_g.tb<2>().device(*dev.edevice) = dEdf_g.tb<2>() * (fx_g.tb<2>().constant(1) - fx_g.tb<2>().square());
+      mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = mult_r_ifo.tb<2>();
+      mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_r_g.tb<2>();
 
       // dx_t += mult_l * mult_r
       if(xs.size()==7){
+	Tensor mult_y(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+	mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
 	TensorTools::zero(mult_y);
 	MatrixTranspMultiplyAcc(dev, *xs[3], mult_r, mult_y);
 	dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[6]->tvec();
@@ -279,6 +282,10 @@ namespace dynet {
       //       dWx_g = [dg . (1 - g_t^2)] * x_t (here * is outer product), then sum over batches
 
       // scratch memory for the matrix multiplication
+      Tensor mult_l_ifo(Dim({hidden_dim*3, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_l_ifo.v = static_cast<float*>(scratch_allocator->allocate(mult_l_ifo.d.size() * sizeof(float)));
+      Tensor mult_l_g(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_l_g.v = static_cast<float*>(scratch_allocator->allocate(mult_l_g.d.size() * sizeof(float)));
       Tensor mult_l(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
       mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
 
@@ -286,11 +293,10 @@ namespace dynet {
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
       //          [dg . (1 - g_t^2)]
-      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf_ifo.tb<2>()
-									      * fx_ifo.tb<2>()
-									      * (fx_ifo.tb<2>().constant(1) - fx_ifo.tb<2>());
-      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf_g.tb<2>()
-									      * (fx_g.tb<2>().constant(1) - fx_g.tb<2>().square());
+      mult_l_ifo.tb<2>().device(*dev.edevice) = dEdf_ifo.tb<2>() * fx_ifo.tb<2>() * (fx_ifo.tb<2>().constant(1) - fx_ifo.tb<2>());
+      mult_l_g.tb<2>().device(*dev.edevice) = dEdf_g.tb<2>() * (fx_g.tb<2>().constant(1) - fx_g.tb<2>().square());
+      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = mult_l_ifo.tb<2>();
+      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_l_g.tb<2>();
 
       const Tensor *x_t = xs[0];
       if(xs.size()==7){
@@ -310,6 +316,10 @@ namespace dynet {
       //       dWh_g = [dg . (1 - g_t^2)] * h_tm1 (here * is outer product), then sum over batches
 
       // scratch memory for the matrix multiplication
+      Tensor mult_l_ifo(Dim({hidden_dim*3, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_l_ifo.v = static_cast<float*>(scratch_allocator->allocate(mult_l_ifo.d.size() * sizeof(float)));
+      Tensor mult_l_g(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+      mult_l_g.v = static_cast<float*>(scratch_allocator->allocate(mult_l_g.d.size() * sizeof(float)));
       Tensor mult_l(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
       mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
 
@@ -317,11 +327,10 @@ namespace dynet {
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
       //          [dg . (1 - g_t^2)]
-      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = dEdf_ifo.tb<2>()
-									      * fx_ifo.tb<2>()
-									      * (fx_ifo.tb<2>().constant(1) - fx_ifo.tb<2>());
-      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = dEdf_g.tb<2>()
-									      * (fx_g.tb<2>().constant(1) - fx_g.tb<2>().square());
+      mult_l_ifo.tb<2>().device(*dev.edevice) = dEdf_ifo.tb<2>() * fx_ifo.tb<2>() * (fx_ifo.tb<2>().constant(1) - fx_ifo.tb<2>());
+      mult_l_g.tb<2>().device(*dev.edevice) = dEdf_g.tb<2>() * (fx_g.tb<2>().constant(1) - fx_g.tb<2>().square());
+      mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = mult_l_ifo.tb<2>();
+      mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_l_g.tb<2>();
 
       const Tensor *h_tm1 = (Tensor*)xs[1];
       if(xs.size()==7){
@@ -339,17 +348,20 @@ namespace dynet {
       Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
       Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
       Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
+      Tensor dEdxi_ifo(Dim({hidden_dim*3},1), nullptr, fx.device, fx.mem_pool);
+      dEdxi_ifo.v = static_cast<float*>(scratch_allocator->allocate(dEdxi_ifo.d.size() * sizeof(float)));
+      Tensor dEdxi_g(Dim({hidden_dim},1), nullptr, fx.device, fx.mem_pool);
+      dEdxi_g.v = static_cast<float*>(scratch_allocator->allocate(dEdxi_g.d.size() * sizeof(float)));
 
       // db_i = di . i_t . (1-i_t), then sum over batches
       // db_f = df . f_t . (1-f_t), then sum over batches
       // db_o = do . f_t . (1-o_t), then sum over batches
-      dEdxi.tvec().slice(indices_i_nobatch, sizes_3_nobatch).device(*dev.edevice) += (dEdf_ifo.tbvec()
-										     * fx_ifo.tbvec()
-										     * (fx_ifo.tbvec().constant(1) - fx_ifo.tbvec())).sum(vec_batch_axis);
+      dEdxi_ifo.tvec().device(*dev.edevice) = (dEdf_ifo.tbvec() * fx_ifo.tbvec() * (fx_ifo.tbvec().constant(1) - fx_ifo.tbvec())).sum(vec_batch_axis);
+      dEdxi.tvec().slice(indices_i_nobatch, sizes_3_nobatch).device(*dev.edevice) += dEdxi_ifo.tvec();
 
       // db_g = dg . (1 - g_t^2), then sum over batches
-      dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += (dEdf_g.tbvec()
-										     * (fx_g.tbvec().constant(1) - fx_g.tbvec().square())).sum(vec_batch_axis);
+      dEdxi_g.tvec().device(*dev.edevice) = (dEdf_g.tbvec() * (fx_g.tbvec().constant(1) - fx_g.tbvec().square())).sum(vec_batch_axis);
+      dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += dEdxi_g.tvec();
     }
     scratch_allocator->free();
 
@@ -501,16 +513,27 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 3> indices_o(hidden_dim*2,0,0);
     Eigen::DSizes<ptrdiff_t, 3> sizes_1(hidden_dim, 1, static_cast<ptrdiff_t>(batch_size));
 
+    AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+
     if(i==0){
       // dc_t = dh_t . o_t . (1 - tanh^2(c_t)))
       //      = dh_t . o_t . (1 - (h_t cdiv o_t)^2)
+
+      Tensor o_t(Dim({hidden_dim,1},batch_size), nullptr, fx.device, fx.mem_pool);
+      o_t.v = static_cast<float*>(scratch_allocator->allocate(o_t.d.size() * sizeof(float)));
+
+      o_t.tb<2>().device(*dev.edevice) = xs[1]->tb<2>().slice(indices_o, sizes_1);
       dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>()
-                                            * xs[1]->tb<2>().slice(indices_o, sizes_1)
+                                            * o_t.tb<2>()
                                             * (xs[0]->tb<2>().constant(1) - xs[0]->tb<2>().tanh().square());
     } else if(i==1){
+      Tensor dEdxi_o(Dim({hidden_dim,1},batch_size), nullptr, fx.device, fx.mem_pool);
+      dEdxi_o.v = static_cast<float*>(scratch_allocator->allocate(dEdxi_o.d.size() * sizeof(float)));
       // do_t = dh_t . tanh(c_t)
-      dEdxi.tb<2>().slice(indices_o, sizes_1).device(*dev.edevice) += dEdf.tb<2>() * xs[0]->tb<2>().tanh();
+      dEdxi_o.tb<2>().device(*dev.edevice) = dEdf.tb<2>() * xs[0]->tb<2>().tanh();
+      dEdxi.tb<2>().slice(indices_o, sizes_1).device(*dev.edevice) += dEdxi_o.tb<2>();
     }
+    scratch_allocator->free();
   }
 
   DYNET_NODE_INST_DEV_IMPL(VanillaLSTMH)
