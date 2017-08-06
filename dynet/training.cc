@@ -194,6 +194,13 @@ void MomentumSGDTrainer::alloc_impl() {
 }
 #endif
 
+void MomentumSGDTrainer::restart() {
+  for (auto sp : vp)
+    TensorTools::zero(sp.h);
+  for (auto slp : vlp)
+    TensorTools::zero(slp.all_h);
+}
+
 // --- AdagradTrainer
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=stddev
@@ -223,6 +230,13 @@ void AdagradTrainer::alloc_impl() {
   vlp = allocate_shadow_lookup_parameters(*model);
 }
 #endif
+
+void AdagradTrainer::restart() {
+  for (auto sp : vp)
+    TensorTools::zero(sp.h);
+  for (auto slp : vlp)
+    TensorTools::zero(slp.all_h);
+}
 
 // --- AdadeltaTrainer
 
@@ -257,6 +271,17 @@ void AdadeltaTrainer::alloc_impl() {
   hld = allocate_shadow_lookup_parameters(*model);
 }
 #endif
+
+void AdadeltaTrainer::restart() {
+  for (auto sp : hg)
+    TensorTools::zero(sp.h);
+  for (auto sp : hd)
+    TensorTools::zero(sp.h);
+  for (auto slp : hlg)
+    TensorTools::zero(slp.all_h);
+  for (auto slp : hld)
+    TensorTools::zero(slp.all_h);
+}
 
 // --- RMSPropTrainer
 // TODO: This is not finished yet, because it memorizes a scalar for each set of parameters, not each parameter itself.
@@ -295,6 +320,14 @@ void RMSPropTrainer::alloc_impl() {
 }
 #endif
 
+
+void RMSPropTrainer::restart() {
+  for (auto sp : hsmg)
+    TensorTools::zero(sp.h);
+  for (auto slp : hlsmg)
+    TensorTools::zero(slp.all_h);
+}
+
 // --- AdamTrainer
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=mean, ts[3]=variance
@@ -329,6 +362,19 @@ void AdamTrainer::alloc_impl() {
 }
 #endif
 
+
+void AdamTrainer::restart() {
+  for (auto sp : m)
+    TensorTools::zero(sp.h);
+  for (auto sp : v)
+    TensorTools::zero(sp.h);
+  for (auto slp : lm)
+    TensorTools::zero(slp.all_h);
+  for (auto slp : lv)
+    TensorTools::zero(slp.all_h);
+}
+
+
 // --- EGTrainer
 template <class MyDevice>
 void EGTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
@@ -358,5 +404,13 @@ void EGTrainer::alloc_impl() {
   hlp = allocate_shadow_lookup_parameters(*model); 
 }
 #endif
+
+
+void EGTrainer::restart() {
+  for (auto sp : hp)
+    TensorTools::zero(sp.h);
+  for (auto slp : hlp)
+    TensorTools::zero(slp.all_h);
+}
 
 } // namespace dynet

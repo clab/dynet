@@ -68,6 +68,12 @@ struct Trainer {
   void update_epoch(real r = 1.0);
 
   /**
+   * @brief Restarts the optimizer
+   * @details Clears all momentum values and assimilate (if applicable)
+   */
+  void restart() {};
+
+  /**
    * \brief Clip gradient
    * \details If clipping is enabled and the gradient is too big, return the amount to
    *          scale the gradient by (otherwise 1)
@@ -256,6 +262,8 @@ struct MomentumSGDTrainer : public Trainer {
   explicit MomentumSGDTrainer(ParameterCollection& m, real learning_rate = 0.01, real mom = 0.9) :
     Trainer(m, learning_rate), momentum(mom) {}
 
+  void restart() override;
+
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -291,6 +299,8 @@ struct AdagradTrainer : public Trainer {
    */
   explicit AdagradTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20) :
     Trainer(m, learning_rate), epsilon(eps) {}
+
+  void restart() override;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -324,6 +334,8 @@ struct AdadeltaTrainer : public Trainer {
    */
   explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95) :
     Trainer(m, 1.0), epsilon(eps), rho(rho) {}
+
+  void restart() override;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -358,6 +370,8 @@ struct RMSPropTrainer : public Trainer {
    */
   explicit RMSPropTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20, real rho = 0.95) :
     Trainer(m, learning_rate), epsilon(eps), rho(rho) {}
+
+  void restart() override;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -392,6 +406,8 @@ struct AdamTrainer : public Trainer {
    */
   explicit AdamTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
     Trainer(m, learning_rate), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+
+  void restart() override;
 
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -442,6 +458,7 @@ struct EGTrainer : public Trainer {
   }
 //-----------------------------------------------------------------------------------------
 
+  void restart() override;
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
