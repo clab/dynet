@@ -24,19 +24,19 @@ CudnnConvOp::CudnnConvOp(const std::vector<unsigned>& s, const bool padding_type
   workspace_bwd_data_size_ = 0;
   workspace_bwd_filter_size_ = 0;
 
-  createTensor4dDesc(&x_desc_);
-  createTensor4dDesc(&y_desc_); 
-  createTensor4dDesc(&bias_desc_); 
-  createFilterDesc(&filter_desc_); 
-  createConvolutionDesc(&conv_desc_); 
+  createTensorDescriptor(&x_desc_);
+  createTensorDescriptor(&y_desc_);
+  createTensorDescriptor(&bias_desc_);
+  createFilterDescriptor(&filter_desc_);
+  createConvolutionDescriptor(&conv_desc_);
 }
 
 CudnnConvOp::~CudnnConvOp() noexcept(false) {
-  destroyTensorDesc(&x_desc_);
-  destroyTensorDesc(&y_desc_);
-  destroyTensorDesc(&bias_desc_);
-  destroyFilterDesc(&filter_desc_);
-  destroyConvolutionDesc(&conv_desc_);
+  destroyTensorDescriptor(&x_desc_);
+  destroyTensorDescriptor(&y_desc_);
+  destroyTensorDescriptor(&bias_desc_);
+  destroyFilterDescriptor(&filter_desc_);
+  destroyConvolutionDescriptor(&conv_desc_);
 }
 
 void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Tensor*>& xs, Tensor& fx) {
@@ -92,8 +92,8 @@ void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Te
   //set cudnn descriptors
   setTensor4dDescriptor(&x_desc_, XN, XC, XW, XH);
   setTensor4dDescriptor(&y_desc_, YN, YC, YW, YH);
-  setFilterDesc(&filter_desc_, FYC, FXC, FW, FH); 
-  setConvolutionDesc(&conv_desc_, pad_w/2, pad_h/2, stride_[1], stride_[0]);
+  setFilter4dDescriptor(&filter_desc_, FYC, FXC, FW, FH);
+  setConvolution2dDescriptor(&conv_desc_, pad_w/2, pad_h/2, stride_[1], stride_[0]);
   if (xs.size() == 3) {
     setTensor4dDescriptor(&bias_desc_, 1, FYC, 1, 1);
   }
@@ -177,8 +177,8 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
 
   setTensor4dDescriptor(&x_desc_, XN, XC, XW, XH);
   setTensor4dDescriptor(&y_desc_, YN, YC, YW, YH);
-  setFilterDesc(&filter_desc_, FYC, FXC, FW, FH);
-  setConvolutionDesc(&conv_desc_, pad_w/2, pad_h/2, stride_[1], stride_[0]);
+  setFilter4dDescriptor(&filter_desc_, FYC, FXC, FW, FH);
+  setConvolution2dDescriptor(&conv_desc_, pad_w/2, pad_h/2, stride_[1], stride_[0]);
   if (i == 2) {
     setTensor4dDescriptor(&bias_desc_, 1, FYC, 1, 1);
   }
@@ -244,15 +244,15 @@ CudnnMaxPooling2DOp::CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize,
     stride_[i] = static_cast<int>(stride[i]);
   }
   is_valid_ = padding_type;
-  createTensor4dDesc(&x_desc_);
-  createTensor4dDesc(&y_desc_);
-  createPoolingDesc(&pooling_desc_);
+  createTensorDescriptor(&x_desc_);
+  createTensorDescriptor(&y_desc_);
+  createPoolingDescriptor(&pooling_desc_);
 }
 
 CudnnMaxPooling2DOp::~CudnnMaxPooling2DOp() noexcept(false) {
-  destroyTensorDesc(&x_desc_);
-  destroyTensorDesc(&y_desc_);
-  destroyPoolingDesc(&pooling_desc_);
+  destroyTensorDescriptor(&x_desc_);
+  destroyTensorDescriptor(&y_desc_);
+  destroyPoolingDescriptor(&pooling_desc_);
 }
 
 void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev,
@@ -279,7 +279,7 @@ void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev,
   }
   setTensor4dDescriptor(&x_desc_, XN, XC, XW, XH);
   setTensor4dDescriptor(&y_desc_, YN, YC, YW, YH);
-  setPoolingDesc(&pooling_desc_, CUDNN_POOLING_MAX, ksize_[1], ksize_[0],
+  setPooling2dDescriptor(&pooling_desc_, CUDNN_POOLING_MAX, ksize_[1], ksize_[0],
                   pad_w, pad_h, stride_[1], stride_[0]);
   float alpha = 1.f, beta = 0.f;
   CUDNN_CHECK(cudnnPoolingForward(dev.cudnnHandle, pooling_desc_, 
@@ -316,7 +316,7 @@ void CudnnMaxPooling2DOp::backward_impl(const Device_GPU & dev,
   }
   setTensor4dDescriptor(&x_desc_, XN, XC, XW, XH);
   setTensor4dDescriptor(&y_desc_, YN, YC, YW, YH);
-  setPoolingDesc(&pooling_desc_, CUDNN_POOLING_MAX, ksize_[1], ksize_[0],
+  setPooling2dDescriptor(&pooling_desc_, CUDNN_POOLING_MAX, ksize_[1], ksize_[0],
                   pad_w, pad_h, stride_[1], stride_[0]);
 
   // here we could reuse the descriptor we created for forward, because
