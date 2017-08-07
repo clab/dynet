@@ -181,4 +181,19 @@ BOOST_AUTO_TEST_CASE( scale_grad ) {
     BOOST_CHECK_CLOSE(0.5, rescaled_grad, 0.001);
 }
 
+BOOST_AUTO_TEST_CASE( set_value ) {
+    dynet::ParameterCollection mod;
+    // Create parameter
+    dynet::Parameter w_p = mod.add_parameters({3}, ParameterInitConst(1));
+    // Initial parameter = {1., 1., 1.}
+    std::vector<float> value_to_set = {1.f, 2.f, 3.f};
+    // Set value
+    w_p.set_value(value_to_set);
+    // New value
+    std::vector<float> parameter_after = as_vector(w_p.get_storage().values);
+    for(unsigned i=0; i<3; i++){
+      BOOST_CHECK_EQUAL(value_to_set[i], parameter_after[i]);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
