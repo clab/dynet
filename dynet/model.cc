@@ -785,12 +785,15 @@ float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
     gradient_norm_scratch = (float*)dev.mem->malloc((all_params.size() + 1) * sizeof(float));
   }
   size_t pi;
+  size_t k1 = 0, k2 = 0;
   for (pi = 0; pi < all_params.size(); ++pi) {
     Device *dev_k;
-    if (all_params[pi] == params[pi]) {
-      dev_k = params[pi]->device;
+    if (all_params[pi] == params[k1]) {
+      dev_k = params[k1]->device;
+      ++k1;
     } else {
-      dev_k = lookup_params[pi]->device; 
+      dev_k = lookup_params[k2]->device; 
+      ++k2;
     }
     float *v = (float *)dev_k->mem->malloc(sizeof(float));
     all_params[pi]->g_squared_l2norm(v);
