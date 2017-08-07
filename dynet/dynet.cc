@@ -26,6 +26,7 @@ size_t Node::aux_storage_size() const { return 0; }
 // TODO: This is a lot of code for something simple. Can it be shortened?
 void Node::forward(const std::vector<const Tensor*>& xs,
                    Tensor& fx) const {
+  if(mem_test_flag) return;	// no real calculations for testing mode
   if (this->supports_multibatch() || fx.d.batch_elems() == 1) {
     forward_impl(xs, fx);
   } else {
@@ -56,6 +57,7 @@ void Node::backward(const std::vector<const Tensor*>& xs,
                     const Tensor& dEdf,
                     unsigned xs_i,
                     Tensor& dEdxi) const {
+  if(mem_test_flag) return;	// no real calculations for testing mode
   if (this->supports_multibatch() || fx.d.batch_elems() == 1) {
     backward_impl(xs, fx, dEdf, xs_i, dEdxi);
   } else {

@@ -58,6 +58,11 @@ class AlignedMemoryPool {
     size_t used();
     void set_used(size_t s);
 
+    void report_self(){
+      size_t cur_used = used();
+      std::cerr << "[dynet-mem-test] " << name << ", Previously (in MB): " << "#pools/#last-used/#peak-used/#last-cap = " << pools.size() << "/" << (cur_used>>20) << "/" << (peak_used>>20) << "/" << (cap>>20) << std::endl;
+    }
+
   private:
     std::string name;
     std::vector<InternalMemoryPool *> pools;
@@ -65,6 +70,9 @@ class AlignedMemoryPool {
     size_t cap;
     MemAllocator* a;
     size_t expanding_unit;
+
+    // recordings
+    size_t peak_used;	// maximum of used memory for all time
 };
 
 } // namespace dynet

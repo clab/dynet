@@ -22,6 +22,7 @@ DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay
 #if HAVE_CUDA
   , ngpus_requested(false), ids_requested(false), requested_gpus(-1)
 #endif
+  , mem_test(0)
 {
 #if HAVE_CUDA
   gpu_mask = std::vector<int>(MAX_GPUS, 0);
@@ -98,6 +99,11 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     else if (arg == "--dynet-autobatch-debug" || arg == "--dynet_autobatch_debug") {
       params.autobatch_debug = 1;
         remove_args(argc, argv, argi, 1);
+    }
+    // memory testing
+    else if (arg == "--dynet-mem-test" || arg == "--dynet_mem_test") {
+	params.mem_test = 1;
+	remove_args(argc, argv, argi, 1);
     }
 
 #if HAVE_CUDA
@@ -219,6 +225,9 @@ void initialize(DynetParams& params) {
   kSCALAR_ZERO = default_device->kSCALAR_ZERO;
   cerr << "[dynet] memory allocation done.\n";
 
+  // memory test
+  mem_test_flag = params.mem_test;
+  if(mem_test_flag) cerr << "[dynet] Entering mem-testing mode" << endl;
 }
 
 void initialize(int& argc, char**& argv, bool shared_parameters) {

@@ -1,8 +1,12 @@
 #include "aligned-mem-pool.h"
+#include "dynet/devices.h"
 
 #include <sstream>
 
 using namespace dynet;
+using namespace std;
+
+namespace dynet{
 
 void* InternalMemoryPool::allocate(size_t n) {
   auto rounded_n = a->round_up_align(n);
@@ -22,7 +26,7 @@ void InternalMemoryPool::sys_alloc(size_t cap) {
   used = 0;
 }
 
-AlignedMemoryPool::AlignedMemoryPool(const std::string &name, size_t initial_cap, MemAllocator *a, size_t expanding_unit) : name(name), cap(initial_cap), current(0), a(a), expanding_unit(expanding_unit) {
+AlignedMemoryPool::AlignedMemoryPool(const std::string &name, size_t initial_cap, MemAllocator *a, size_t expanding_unit) : name(name), current(0), cap(initial_cap), a(a), expanding_unit(expanding_unit), peak_used(0) {
   DYNET_ASSERT(cap > 0, "Attempt to allocate memory of size 0 in AlignedMemoryPool");
   pools.push_back(new InternalMemoryPool(name, cap, a));
 }
@@ -44,11 +48,18 @@ void* AlignedMemoryPool::allocate(size_t n) {
 }
 
 void AlignedMemoryPool::free() {
+  // mem-test
+  size_t cur_used = used();
+  peak_used = (peak_used > cur_used) ? peak_used : cur_used;
+  if(mem_test_flag)
+    default_device->report_mem_test();
+  // mem-test
   if (current > 0) {
     for (auto p : pools) { delete p; }
     pools.clear();
-    pools.push_back(new InternalMemoryPool(name, cap, a));
+    pools.push_back(new InternalMemoryPool(name, peak_used, a));
     current = 0;
+    cap = peak_used;
   }
   pools[0]->free();
 }
@@ -82,3 +93,5 @@ void AlignedMemoryPool::set_used(size_t s) {
   // pools[c]->used = s;
   // current = c;
 }
+
+} // namespace dynet
