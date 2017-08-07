@@ -322,9 +322,9 @@ void RMSPropTrainer::alloc_impl() {
 
 
 void RMSPropTrainer::restart() {
-  for (auto sp : hsmg)
+  for (auto sp : hmsg)
     TensorTools::zero(sp.h);
-  for (auto slp : hlsmg)
+  for (auto slp : hlmsg)
     TensorTools::zero(slp.all_h);
 }
 

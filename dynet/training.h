@@ -71,7 +71,7 @@ struct Trainer {
    * @brief Restarts the optimizer
    * @details Clears all momentum values and assimilate (if applicable)
    */
-  void restart() {};
+  virtual void restart() = 0;
 
   /**
    * \brief Clip gradient
@@ -179,6 +179,7 @@ struct SimpleSGDTrainer : public Trainer {
    * \param learning_rate Initial learning rate
    */
   explicit SimpleSGDTrainer(ParameterCollection& m, real learning_rate = 0.1) : Trainer(m, learning_rate) {}
+  void restart() override {};
  protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
 private:
@@ -219,6 +220,7 @@ struct CyclicalSGDTrainer : public Trainer {
    * \param edecay Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by \f$\gamma\f$
    */
   explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0) : Trainer(m, learning_rate_min), e_min(learning_rate_min), e_max(learning_rate_max), step_size(step_size), gamma(gamma), it(0) {}
+  void restart() override {};
   void update() override {
     Trainer::update();
     cyclic_update_eta();
