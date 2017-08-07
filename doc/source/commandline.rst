@@ -28,6 +28,8 @@ options.
    `here <http://dynet.readthedocs.io/en/latest/minibatch.html>`_.
 -  ``--dynet-gpus NUMBER``: Specify how many GPUs you want to use, if
    DyNet is compiled with CUDA. Currently, only one GPU is supported.
--  ``--dynet-gpu-ids X,Y,Z``: Specify the GPUs that you want to use by
-   device ID. Currently only one GPU is supported, but if you use this
-   command you can select which one to use.
+-  ``--dynet-devices CPU,GPU:1,GPU:3,GPU:0``: Specify the CPU/GPU devices that you
+   want to use. You can the physical ID for GPU and can not specify the ID for CPU.
+   This is an useful option working together with your multi-device code.
+   Currently, DyNet needs you to specify the device ID explictly.
+   The option ``--dynet-gpu-ids`` is deprecated.
