@@ -194,6 +194,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool sparse_updates_enabled
         float learning_rate
         void update() except +
+        void restart() except +
         #void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s) except +
         void update_epoch(float r)
         void status()
