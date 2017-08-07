@@ -115,6 +115,12 @@ void Trainer::update() {
     rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
 }
 
+void Trainer::restart(real lr) {
+    this->learning_rate = lr;
+    this->restart();
+}
+
+
 #endif
 
 // --- SimpleSGDTrainer

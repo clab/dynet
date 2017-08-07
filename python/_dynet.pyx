@@ -4906,12 +4906,18 @@ cdef class Trainer:
         self.thisptr.update_epoch(r)
 
 
-    cpdef restart(self):
+    cpdef restart(self, learning_rate=None):
         """Restarts the optimizer
         
         Clears all momentum values and assimilate (if applicable)
+
+        Args:
+            learning_rate (number): (Optional) resets the learning rate
         """
-        self.thisptr.restart()
+        if learning_rate is None:
+            self.thisptr.restart()
+        else:
+            self.thisptr.restart(learning_rate)
 
     cpdef status(self):
         """Outputs information about the trainer in the stderr 

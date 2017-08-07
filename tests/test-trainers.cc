@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE( name ) {                                      \
   cg.forward(z);                                                    \
   cg.backward(z);                                                   \
   trainer.update();                                                 \
-  trainer.restart();                                                \
+  trainer.restart(0.1);                                             \
 }                                                                   \
 
 DYNET_TRAINER_RESTART_TEST_CASE(simple_sgd_restart, dynet::SimpleSGDTrainer)
@@ -130,6 +130,29 @@ DYNET_TRAINER_RESTART_TEST_CASE(rmsprop_restart, dynet::RMSPropTrainer)
 DYNET_TRAINER_RESTART_TEST_CASE(adam_restart, dynet::AdamTrainer)
 
 DYNET_TRAINER_RESTART_TEST_CASE(eg_restart, dynet::EGTrainer)
+
+BOOST_AUTO_TEST_CASE( momentum_restart_correctness ) {
+  dynet::ParameterCollection pc;
+  dynet::Parameter param = pc.add_parameters({3});
+  MomentumSGDTrainer trainer(pc, 1.0);
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param);
+  Expression y = input(cg, {1,3}, ones_vals);
+  Expression z = y * x1;
+  cg.backward(z);
+  trainer.update();
+  vector<float> vp_val = as_vector(trainer.vp[0].h);
+  // Test that the velocity has been updated
+  for(size_t i = 0; i < vp_val.size(); ++i)
+    BOOST_CHECK_EQUAL(vp_val[i], -1.0);
+  trainer.restart(0.5);
+  vp_val = as_vector(trainer.vp[0].h);
+  // Test that the velocity has been reset to 0
+  for(size_t i = 0; i < vp_val.size(); ++i)
+    BOOST_CHECK_EQUAL(vp_val[i], 0);
+  // Test that the learning rate has been set to 0.5
+  BOOST_CHECK_EQUAL(trainer.learning_rate, 0.5);
+}
 
 // Test subset update
 
