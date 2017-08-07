@@ -21,43 +21,52 @@ namespace dynet {
   }
 
   Dim VanillaLSTMGates::dim_forward(const vector<Dim>& xs) const {
-    DYNET_ARG_CHECK(xs.size() == 5 || xs.size() == 7, "Failed input count check in VanillaLSTMGates");
-    DYNET_ARG_CHECK(xs[0].ndims() == 1, "VanillaLSTMGates: x_t expected to be a vector");
-    DYNET_ARG_CHECK(xs[1].ndims() == 1, "VanillaLSTMGates: h_tm1 expected to be a vector");
-    DYNET_ARG_CHECK(xs[2].ndims() == 2, "VanillaLSTMGates: Wx expected to be a matrix");
-    DYNET_ARG_CHECK(xs[3].ndims() == 2, "VanillaLSTMGates: Wh expected to be a matrix");
-    DYNET_ARG_CHECK(xs[4].ndims() == 1, "VanillaLSTMGates: b expected to be a vector");
-    unsigned hidden_dim=xs[1][0];
+    if(dropout){
+      DYNET_ARG_CHECK(xs.size() >= 7, "Failed input count check in VanillaLSTMGates");
+    }else{
+      DYNET_ARG_CHECK(xs.size() >= 5, "Failed input count check in VanillaLSTMGates");
+    }
+    unsigned num_inputs = dropout?xs.size()-6:xs.size()-4;
+    for(int i=0; i<num_inputs; i++)
+      DYNET_ARG_CHECK(xs[i].ndims() == 1, "VanillaLSTMGates: x_t[" << i << "] expected to be a vector");
+    DYNET_ARG_CHECK(xs[num_inputs].ndims() == 1, "VanillaLSTMGates: h_tm1 expected to be a vector");
+    DYNET_ARG_CHECK(xs[num_inputs+1].ndims() == 2, "VanillaLSTMGates: Wx expected to be a matrix");
+    DYNET_ARG_CHECK(xs[num_inputs+2].ndims() == 2, "VanillaLSTMGates: Wh expected to be a matrix");
+    DYNET_ARG_CHECK(xs[num_inputs+3].ndims() == 1, "VanillaLSTMGates: b expected to be a vector");
+    unsigned hidden_dim=xs[num_inputs][0];
     unsigned input_dim=xs[0][0];
     unsigned batch_size=xs[0].bd;
-    DYNET_ARG_CHECK(xs[2][0] == hidden_dim * 4, "VanillaLSTMGates: Wx dim 0 expected " << hidden_dim * 4 << ", was " << xs[2][0]);
-    DYNET_ARG_CHECK(xs[2][1] == input_dim, "VanillaLSTMGates: Wx dim 1 expected " << input_dim << ", was " << xs[2][1]);
-    DYNET_ARG_CHECK(xs[3][0] == hidden_dim * 4, "VanillaLSTMGates: Wh dim 0 expected " << hidden_dim * 4 << ", was " << xs[3][0]);
-    DYNET_ARG_CHECK(xs[3][1] == hidden_dim, "VanillaLSTMGates: Wh dim 1 expected " << hidden_dim << ", was " << xs[3][1]);
-    DYNET_ARG_CHECK(xs[4][0] == hidden_dim * 4, "VanillaLSTMGates: b dim expected " << hidden_dim * 4 << ", was " << xs[4][0]);
-    if(xs.size() == 7){
-      DYNET_ARG_CHECK(xs[5].ndims() == 1, "VanillaLSTMGates: dropout_mask_x expected to be a vector");
-      DYNET_ARG_CHECK(xs[6].ndims() == 1, "VanillaLSTMGates: dropout_mask_h expected to be a vector");
-      DYNET_ARG_CHECK(xs[5].bd == batch_size, "VanillaLSTMGates: dropout_mask_x expected to have batch size " << batch_size << ", was " << xs[5].bd);
-      DYNET_ARG_CHECK(xs[6].bd == batch_size, "VanillaLSTMGates: dropout_mask_h expected to have batch size " << batch_size << ", was " << xs[6].bd);
-      DYNET_ARG_CHECK(xs[5][0] == input_dim, "VanillaLSTMGates: dropout_mask_x dim 1 expected " << input_dim << ", was " << xs[5][0]);
-      DYNET_ARG_CHECK(xs[6][0] == hidden_dim, "VanillaLSTMGates: dropout_mask_h dim 1 expected " << hidden_dim << ", was " << xs[6][0]);
+    DYNET_ARG_CHECK(xs[num_inputs+1][0] == hidden_dim * 4, "VanillaLSTMGates: Wx dim 0 expected " << hidden_dim * 4 << ", was " << xs[2][0]);
+    DYNET_ARG_CHECK(xs[num_inputs+1][1] == input_dim, "VanillaLSTMGates: Wx dim 1 expected " << input_dim << ", was " << xs[2][1]);
+    DYNET_ARG_CHECK(xs[num_inputs+2][0] == hidden_dim * 4, "VanillaLSTMGates: Wh dim 0 expected " << hidden_dim * 4 << ", was " << xs[3][0]);
+    DYNET_ARG_CHECK(xs[num_inputs+2][1] == hidden_dim, "VanillaLSTMGates: Wh dim 1 expected " << hidden_dim << ", was " << xs[3][1]);
+    DYNET_ARG_CHECK(xs[num_inputs+3][0] == hidden_dim * 4, "VanillaLSTMGates: b dim expected " << hidden_dim * 4 << ", was " << xs[4][0]);
+    if(dropout){
+      DYNET_ARG_CHECK(xs[num_inputs+4].ndims() == 1, "VanillaLSTMGates: dropout_mask_x expected to be a vector");
+      DYNET_ARG_CHECK(xs[num_inputs+5].ndims() == 1, "VanillaLSTMGates: dropout_mask_h expected to be a vector");
+      DYNET_ARG_CHECK(xs[num_inputs+4].bd == batch_size, "VanillaLSTMGates: dropout_mask_x expected to have batch size " << batch_size << ", was " << xs[5].bd);
+      DYNET_ARG_CHECK(xs[num_inputs+5].bd == batch_size, "VanillaLSTMGates: dropout_mask_h expected to have batch size " << batch_size << ", was " << xs[6].bd);
+      DYNET_ARG_CHECK(xs[num_inputs+4][0] == input_dim, "VanillaLSTMGates: dropout_mask_x dim 1 expected " << input_dim << ", was " << xs[5][0]);
+      DYNET_ARG_CHECK(xs[num_inputs+5][0] == hidden_dim, "VanillaLSTMGates: dropout_mask_h dim 1 expected " << hidden_dim << ", was " << xs[6][0]);
     }
     return Dim({hidden_dim*4}, batch_size);
   }
 
   int VanillaLSTMGates::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
     Sig s(nt::vanilla_lstm_gates);
+    unsigned num_inputs = dropout?args.size()-6:args.size()-4;
     // Assume parameter vectors must be same
     if(dim.bd == 1) {
-      s.add_dim(cg.nodes[args[0]]->dim);
-      // s.add_dim(cg.nodes[args[1]]->dim); // not necessary, as will be the same
-      s.add_node(args[2]);
-      s.add_node(args[3]);
-      s.add_node(args[4]);
-      if(args.size() == 7) {
-        s.add_node(args[5]);
-        s.add_node(args[6]);
+      for(int i=0; i<num_inputs; i++)
+	s.add_dim(cg.nodes[args[i]]->dim);
+      // TODO: correct? parameter vectors would be args[num_inputs+1] .. args[num_inputs+3]
+      // s.add_dim(cg.nodes[args[num_inputs]]->dim); // not necessary, as will be the same
+      s.add_node(args[num_inputs+1]);
+      s.add_node(args[num_inputs+2]);
+      s.add_node(args[num_inputs+3]);
+      if(dropout) {
+        s.add_node(args[num_inputs+4]);
+        s.add_node(args[num_inputs+5]);
       }
     } else {
       for(auto nid : args) {
@@ -92,13 +101,12 @@ namespace dynet {
     // gates_o = sigmoid (Wx_o * x_t + Wh_o * h_tm1 + b_o)
     // gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
 
-    DYNET_ASSERT(xs.size() == 5, "Failed dimension check in VanillaLSTMGates::forward");
-
+    unsigned num_inputs = dropout?xs.size()-6:xs.size()-4;
     const Tensor *x_t = xs[0];
-    const Tensor *h_tm1 = (Tensor*)xs[1];
-    const Tensor *Wx = xs[2];
-    const Tensor *Wh = xs[3];
-    const Tensor *b  = xs[4];
+    const Tensor *h_tm1 = xs[num_inputs];
+    const Tensor *Wx = xs[num_inputs+1];
+    const Tensor *Wh = xs[num_inputs+2];
+    const Tensor *b  = xs[num_inputs+3];
 
     unsigned hidden_dim = h_tm1->d[0];
     unsigned input_dim = x_t->d[0];
@@ -125,14 +133,14 @@ namespace dynet {
 #endif
     fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(forget_gate_bias);
 
-    if(xs.size()==7){
+    if(dropout){
       Tensor x_t_dropped(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
       x_t_dropped.v = static_cast<float*>(scratch_allocator->allocate(x_t_dropped.d.size() * sizeof(float)));
-      x_t_dropped.tvec().device(*dev.edevice) = x_t->tvec() * xs[5]->tvec();
+      x_t_dropped.tvec().device(*dev.edevice) = x_t->tvec() * xs[num_inputs+4]->tvec();
       x_t = &x_t_dropped;
       Tensor h_tm1_dropped(Dim({hidden_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
       h_tm1_dropped.v = static_cast<float*>(scratch_allocator->allocate(h_tm1_dropped.d.size() * sizeof(float)));
-      h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1->tvec() * xs[6]->tvec();
+      h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1->tvec() * xs[num_inputs+5]->tvec();
       h_tm1 = &h_tm1_dropped;
     }
     //matrix mult
@@ -180,6 +188,13 @@ namespace dynet {
                                const Tensor& dEdf,
                                unsigned i,
                                Tensor& dEdxi) const {
+    unsigned num_inputs = dropout?xs.size()-6:xs.size()-4;
+    const Tensor *x_t = xs[0];
+    const Tensor *h_tm1 = xs[num_inputs];
+    const Tensor *Wx = xs[num_inputs+1];
+    const Tensor *Wh = xs[num_inputs+2];
+    const Tensor *b  = xs[num_inputs+3];
+
     unsigned hidden_dim = fx.d[0] / 4;
     unsigned input_dim = xs[0]->d[0];
     unsigned batch_size = xs[0]->d.bd;
@@ -246,17 +261,16 @@ namespace dynet {
       mult_r.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = mult_r_ifo.tb<2>();
       mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_r_g.tb<2>();
       // dx_t += mult_l^T * mult_r
-      if(xs.size()==7){
+      if(dropout){
 	Tensor mult_y(Dim({input_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
 	mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
 	TensorTools::zero(mult_y);
-	MatrixTranspMultiplyAcc(dev, *xs[2], mult_r, mult_y);
-	dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[5]->tvec();
+	MatrixTranspMultiplyAcc(dev, *Wx, mult_r, mult_y);
+	dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[num_inputs+4]->tvec();
       } else {
-	MatrixTranspMultiplyAcc(dev, *xs[2], mult_r, dEdxi);
+	MatrixTranspMultiplyAcc(dev, *Wx, mult_r, dEdxi);
       }
-
-    } else if(i==1){
+    } else if(i==num_inputs){
       // dh_tm1 = [Wh_i]^T   [di . i_t . (1-i_t)]
       //          [Wh_f]   * [df . f_t . (1-f_t)]
       //          [Wh_o]     [do . o_t . (1-o_t)]
@@ -281,17 +295,17 @@ namespace dynet {
       mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_r_g.tb<2>();
 
       // dx_t += mult_l * mult_r
-      if(xs.size()==7){
+      if(dropout){
 	Tensor mult_y(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
 	mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
 	TensorTools::zero(mult_y);
-	MatrixTranspMultiplyAcc(dev, *xs[3], mult_r, mult_y);
-	dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[6]->tvec();
+	MatrixTranspMultiplyAcc(dev, *Wh, mult_r, mult_y);
+	dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[num_inputs+5]->tvec();
       } else {
-	MatrixTranspMultiplyAcc(dev, *xs[3], mult_r, dEdxi);
+	MatrixTranspMultiplyAcc(dev, *Wh, mult_r, dEdxi);
       }
 
-    } else if(i==2){ // dWx
+    } else if(i==num_inputs+1){ // dWx
       // goal: dWx_i = [di . i_t . (1-i_t)] * x_t (here * is outer product), then sum over batches
       //       dWx_f = [di . f_t . (1-f_t)] * x_t (here * is outer product), then sum over batches
       //       dWx_o = [di . o_t . (1-o_t)] * x_t (here * is outer product), then sum over batches
@@ -314,18 +328,17 @@ namespace dynet {
       mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = mult_l_ifo.tb<2>();
       mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_l_g.tb<2>();
 
-      const Tensor *x_t = xs[0];
-      if(xs.size()==7){
+      if(dropout){
         Tensor x_t_dropped(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
         x_t_dropped.v = static_cast<float*>(scratch_allocator->allocate(x_t_dropped.d.size() * sizeof(float)));
-        x_t_dropped.tvec().device(*dev.edevice) = x_t->tvec() * xs[5]->tvec();
+        x_t_dropped.tvec().device(*dev.edevice) = x_t->tvec() * xs[num_inputs+4]->tvec();
         x_t = &x_t_dropped;
       }
 
       // dWh += (mult_l * mult_r).sum_batches()
       MatrixMultiplyTranspAcc(dev, mult_l, *x_t, dEdxi);
 
-    } else if(i==3){ // dWh
+    } else if(i==num_inputs+2){ // dWh
       // goal: dWh_i = [di . i_t . (1-i_t)] * h_tm1 (here * is outer product), then sum over batches
       //       dWh_f = [df . f_t . (1-f_t)] * h_tm1 (here * is outer product), then sum over batches
       //       dWh_o = [do . o_t . (1-o_t)] * h_tm1 (here * is outer product), then sum over batches
@@ -348,18 +361,17 @@ namespace dynet {
       mult_l.tb<2>().slice(indices_mat_i, sizes_mat_3).device(*dev.edevice) = mult_l_ifo.tb<2>();
       mult_l.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_l_g.tb<2>();
 
-      const Tensor *h_tm1 = (Tensor*)xs[1];
-      if(xs.size()==7){
+      if(dropout){
         Tensor h_tm1_dropped(Dim({hidden_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
         h_tm1_dropped.v = static_cast<float*>(scratch_allocator->allocate(h_tm1_dropped.d.size() * sizeof(float)));
-        h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1->tvec() * xs[6]->tvec();
+        h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1->tvec() * xs[num_inputs+5]->tvec();
         h_tm1 = &h_tm1_dropped;
       }
 
       // dWh += (mult_l * mult_r).sum(batches)
       MatrixMultiplyTranspAcc(dev, mult_l, *h_tm1, dEdxi);
 
-    } else if(i==4){
+    } else if(i==num_inputs+3){
       Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
       Eigen::DSizes<ptrdiff_t, 1> sizes_3_nobatch(hidden_dim*3);
       Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
@@ -379,6 +391,8 @@ namespace dynet {
       dEdxi_g.tvec().device(*dev.edevice) = (dEdf_g.tbvec() * (fx_g.tbvec().constant(1) - fx_g.tbvec().square())).sum(vec_batch_axis);
       dEdxi.tvec().slice(indices_g_nobatch, sizes_1_nobatch).device(*dev.edevice) += dEdxi_g.tvec();
     }
+    // no gradients for dropout masks computed
+
     scratch_allocator->free();
 
   }
