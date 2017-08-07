@@ -42,11 +42,11 @@ inline const char* cudnnGetErrorString(cudnnStatus_t status) {
 
 namespace cudnn {
 
-inline void createTensor4dDesc(cudnnTensorDescriptor_t* desc) {
+inline void createTensorDescriptor(cudnnTensorDescriptor_t* desc) {
   CUDNN_CHECK(cudnnCreateTensorDescriptor(desc));
 }
 
-inline void destroyTensorDesc(cudnnTensorDescriptor_t* desc) {
+inline void destroyTensorDescriptor(cudnnTensorDescriptor_t* desc) {
   CUDNN_CHECK(cudnnDestroyTensorDescriptor(*desc));
 }
 
@@ -57,11 +57,11 @@ inline void setTensor4dDescriptor(cudnnTensorDescriptor_t* desc,
               n, c, h, w));
 }
 
-inline void createFilterDesc(cudnnFilterDescriptor_t* desc) {
+inline void createFilterDescriptor(cudnnFilterDescriptor_t* desc) {
   CUDNN_CHECK(cudnnCreateFilterDescriptor(desc));
 }
 
-inline void setFilterDesc(cudnnFilterDescriptor_t* desc,
+inline void setFilter4dDescriptor(cudnnFilterDescriptor_t* desc,
     int n, int c, int h, int w) {
 #if CUDNN_VERSION_MIN(5, 0, 0)
   CUDNN_CHECK(cudnnSetFilter4dDescriptor(*desc, 
@@ -74,19 +74,19 @@ inline void setFilterDesc(cudnnFilterDescriptor_t* desc,
 #endif
 }
 
-inline void destroyFilterDesc(cudnnFilterDescriptor_t* desc) {
+inline void destroyFilterDescriptor(cudnnFilterDescriptor_t* desc) {
   CUDNN_CHECK(cudnnDestroyFilterDescriptor(*desc));
 }
 
-inline void createConvolutionDesc(cudnnConvolutionDescriptor_t* conv) {
+inline void createConvolutionDescriptor(cudnnConvolutionDescriptor_t* conv) {
   CUDNN_CHECK(cudnnCreateConvolutionDescriptor(conv));
 }
 
-inline void destroyConvolutionDesc(cudnnConvolutionDescriptor_t* conv) {
+inline void destroyConvolutionDescriptor(cudnnConvolutionDescriptor_t* conv) {
   CUDNN_CHECK(cudnnDestroyConvolutionDescriptor(*conv));
 }
 
-inline void setConvolutionDesc(cudnnConvolutionDescriptor_t* conv,
+inline void setConvolution2dDescriptor(cudnnConvolutionDescriptor_t* conv,
     int pad_h, int pad_w, int stride_h, int stride_w) {
 #if CUDNN_VERSION_MIN(6, 0, 0)
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(*conv,
@@ -98,11 +98,11 @@ inline void setConvolutionDesc(cudnnConvolutionDescriptor_t* conv,
 #endif
 }
 
-inline void createPoolingDesc(cudnnPoolingDescriptor_t* pool_desc) {
+inline void createPoolingDescriptor(cudnnPoolingDescriptor_t* pool_desc) {
   CUDNN_CHECK(cudnnCreatePoolingDescriptor(pool_desc));
 }
 
-inline void setPoolingDesc(cudnnPoolingDescriptor_t* pool_desc, 
+inline void setPooling2dDescriptor(cudnnPoolingDescriptor_t* pool_desc,
                            cudnnPoolingMode_t mode, int h, int w, int pad_h,
                            int pad_w, int stride_h, int stride_w) {
 #if CUDNN_VERSION_MIN(5, 0, 0)
@@ -114,7 +114,7 @@ inline void setPoolingDesc(cudnnPoolingDescriptor_t* pool_desc,
 #endif
 }
 
-inline void destroyPoolingDesc(cudnnPoolingDescriptor_t* poolingDesc) {
+inline void destroyPoolingDescriptor(cudnnPoolingDescriptor_t* poolingDesc) {
   CUDNN_CHECK(cudnnDestroyPoolingDescriptor(*poolingDesc));
 }
 
