@@ -1,12 +1,11 @@
 #include "dynet/lstm.h"
+
 #include "dynet/param-init.h"
 
 #include <fstream>
 #include <string>
 #include <vector>
 #include <iostream>
-
-#include "dynet/nodes.h"
 
 using namespace std;
 
