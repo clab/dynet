@@ -19,8 +19,16 @@
 #define DYNET_EXPR_H
 
 #include "dynet/dynet.h"
-#include "dynet/nodes.h"
-#include "dynet/nodes-contract.h"
+
+// TODO: Ideally, we would not include these, but these are inlined at the moment.
+// If we can figure out a way to move the inlined functions to expr.cc that would be better.
+#include "dynet/nodes-affinetransform.h"
+#include "dynet/nodes-arith-sum.h"
+#include "dynet/nodes-concat.h"
+#include "dynet/nodes-logsumexp.h"
+#include "dynet/nodes-minmax.h"
+#include "dynet/nodes-moments.h"
+
 #include <stdexcept>
 
 
