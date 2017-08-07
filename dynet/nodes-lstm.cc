@@ -113,10 +113,17 @@ namespace dynet {
     AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
 
     //bias
+#ifdef __CUDACC__
     Eigen::array<int, 3> bcast = {1, 1, (int)batch_size};
     fx.tb<2>().device(*dev.edevice) = b->tb<2>().broadcast(bcast);
-    // forget gate: bias + 1
-    fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(1);
+#else
+    float *curr_ptr = fx.v, *end_ptr = curr_ptr + fx.d.size(), *in_ptr = b->v;
+    do {
+      memcpy(curr_ptr, in_ptr, sizeof(float)*b->d[0]);
+      curr_ptr += b->d[0];
+    } while(curr_ptr != end_ptr);
+#endif
+    fx.tbvec().slice(indices_f, sizes_1).device(*dev.edevice) += fx.tbvec().slice(indices_f, sizes_1).constant(forget_gate_bias);
 
     if(xs.size()==7){
       Tensor x_t_dropped(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
@@ -151,8 +158,17 @@ namespace dynet {
     }
 
     // non-linearities
-    fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3).unaryExpr(scalar_logistic_sigmoid_op<float>());
-    fx.tbvec().slice(indices_g, sizes_1).device(*dev.edevice) = fx.tbvec().slice(indices_g, sizes_1).tanh();
+    Tensor fx_ifo(Dim({hidden_dim*3, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+    fx_ifo.v = static_cast<float*>(scratch_allocator->allocate(fx_ifo.d.size() * sizeof(float)));
+    fx_ifo.tbvec().device(*dev.edevice) = fx.tbvec().slice(indices_i, sizes_3);
+    fx_ifo.tbvec().device(*dev.edevice) = fx_ifo.tbvec().unaryExpr(scalar_logistic_sigmoid_op<float>());
+    fx.tbvec().slice(indices_i, sizes_3).device(*dev.edevice) = fx_ifo.tbvec();
+
+    Tensor fx_g(Dim({hidden_dim*1, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+    fx_g.v = static_cast<float*>(scratch_allocator->allocate(fx_g.d.size() * sizeof(float)));
+    fx_g.tbvec().device(*dev.edevice) = fx.tbvec().slice(indices_g, sizes_1);
+    fx_g.tbvec().device(*dev.edevice) = fx_g.tbvec().tanh();
+    fx.tbvec().slice(indices_g, sizes_1).device(*dev.edevice) = fx_g.tbvec();
 
     scratch_allocator->free();
   }
@@ -404,7 +420,7 @@ namespace dynet {
   template<class MyDevice>
   void VanillaLSTMC::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
     // computes cell state (elementwise multiplication)
-    // c_t = gates_i . gates_g + gates_f . c_tm1
+    // c_t = i_t . g_t + f_t . c_tm1
 
     DYNET_ASSERT(xs.size() == 2, "Failed dimension check in VanillaLSTMC::forward");
 
@@ -412,14 +428,21 @@ namespace dynet {
     const Tensor *gates_t = xs[1];
 
     unsigned hidden_dim = c_tm1->d[0];
+    unsigned batch_size = c_tm1->d.bd;
 
     Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
     Eigen::DSizes<ptrdiff_t, 2> indices_f(hidden_dim,0);
     Eigen::DSizes<ptrdiff_t, 2> indices_g(hidden_dim*3,0);
     Eigen::DSizes<ptrdiff_t, 2> sizes_1(hidden_dim, static_cast<ptrdiff_t>(fx.d.bd));
 
-    fx.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_i, sizes_1) * gates_t->tbvec().slice(indices_g, sizes_1)
-                                    + gates_t->tbvec().slice(indices_f, sizes_1) * c_tm1->tbvec();
+    AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+    Tensor f_t(Dim({hidden_dim,1},batch_size), nullptr, fx.device, fx.mem_pool);
+    f_t.v = static_cast<float*>(scratch_allocator->allocate(f_t.d.size() * sizeof(float)));
+    f_t.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_f, sizes_1);
+
+    fx.tbvec().device(*dev.edevice) = gates_t->tbvec().slice(indices_i, sizes_1);
+    fx.tbvec().device(*dev.edevice) = fx.tbvec() * gates_t->tbvec().slice(indices_g, sizes_1) + f_t.tbvec() * c_tm1->tbvec();
+    scratch_allocator->free();
 
   }
 
@@ -498,7 +521,8 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 3> indices_o(hidden_dim*2,0,0);
     Eigen::DSizes<ptrdiff_t, 3> sizes_1(hidden_dim, 1, static_cast<ptrdiff_t>(batch_size));
 
-    fx.tb<2>().device(*dev.edevice) = gates_t->tb<2>().slice(indices_o, sizes_1) * c_t->tb<2>().tanh();
+    fx.tb<2>().device(*dev.edevice) = gates_t->tb<2>().slice(indices_o, sizes_1);
+    fx.tb<2>().device(*dev.edevice) = fx.tb<2>() * c_t->tb<2>().tanh();
   }
 
   template<class MyDevice>

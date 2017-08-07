@@ -19,6 +19,7 @@ struct VanillaLSTMGates : public Node {
     autobatch_reshape_concatonly(cg, batch_ids, concat, xs, fx);
   }
   real weightnoise_std;
+  const real forget_gate_bias = 1.0;
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 struct VanillaLSTMC : public Node {
