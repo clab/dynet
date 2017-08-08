@@ -34,7 +34,7 @@ namespace dynet {
     DYNET_ARG_CHECK(xs[num_inputs+2].ndims() == 2, "VanillaLSTMGates: Wh expected to be a matrix");
     DYNET_ARG_CHECK(xs[num_inputs+3].ndims() == 1, "VanillaLSTMGates: b expected to be a vector");
     unsigned hidden_dim=xs[num_inputs][0];
-    unsigned input_dim=xs[0][0];
+    unsigned input_dim=xs[num_inputs+1][1];
     unsigned batch_size=xs[0].bd;
     DYNET_ARG_CHECK(xs[num_inputs+1][0] == hidden_dim * 4, "VanillaLSTMGates: Wx dim 0 expected " << hidden_dim * 4 << ", was " << xs[2][0]);
     DYNET_ARG_CHECK(xs[num_inputs+1][1] == input_dim, "VanillaLSTMGates: Wx dim 1 expected " << input_dim << ", was " << xs[2][1]);
@@ -102,15 +102,14 @@ namespace dynet {
     // gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
 
     unsigned num_inputs = dropout?xs.size()-6:xs.size()-4;
-    const Tensor *x_t = xs[0];
     const Tensor *h_tm1 = xs[num_inputs];
     const Tensor *Wx = xs[num_inputs+1];
     const Tensor *Wh = xs[num_inputs+2];
     const Tensor *b  = xs[num_inputs+3];
 
     unsigned hidden_dim = h_tm1->d[0];
-    unsigned input_dim = x_t->d[0];
-    unsigned batch_size = x_t->d.bd;
+    unsigned input_dim = Wx->d[1];
+    unsigned batch_size = xs[0]->d.bd;
 
     Eigen::DSizes<ptrdiff_t, 2> indices_i(0, 0);
     Eigen::DSizes<ptrdiff_t, 2> indices_f(hidden_dim,0);
@@ -119,6 +118,22 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 2> sizes_3(hidden_dim*3, static_cast<ptrdiff_t>(fx.d.bd));
 
     AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+
+    Tensor x_t(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
+    if(num_inputs==1){
+      x_t.v = xs[0]->v;
+    } else {
+      Tensor tmp(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
+      tmp.v = static_cast<float*>(scratch_allocator->allocate(tmp.d.size() * sizeof(float)));
+      Eigen::DSizes<ptrdiff_t, 2> indices_tmp(0, 0);
+      Eigen::DSizes<ptrdiff_t, 2> sizes_tmp(0, static_cast<ptrdiff_t>(fx.d.bd));
+      for(int i=0; i<num_inputs; i++){
+	sizes_tmp[0] = xs[i]->d[0];
+	tmp.tbvec().slice(indices_tmp, sizes_tmp).device(*dev.edevice) = xs[i]->tbvec();
+	indices_tmp[0] += xs[i]->d[0];
+      }
+      x_t.v = tmp.v;
+    }
 
     //bias
 #ifdef __CUDACC__
@@ -136,8 +151,8 @@ namespace dynet {
     if(dropout){
       Tensor x_t_dropped(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
       x_t_dropped.v = static_cast<float*>(scratch_allocator->allocate(x_t_dropped.d.size() * sizeof(float)));
-      x_t_dropped.tvec().device(*dev.edevice) = x_t->tvec() * xs[num_inputs+4]->tvec();
-      x_t = &x_t_dropped;
+      x_t_dropped.tvec().device(*dev.edevice) = x_t.tvec() * xs[num_inputs+4]->tvec();
+      x_t.v = x_t_dropped.v;
       Tensor h_tm1_dropped(Dim({hidden_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
       h_tm1_dropped.v = static_cast<float*>(scratch_allocator->allocate(h_tm1_dropped.d.size() * sizeof(float)));
       h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1->tvec() * xs[num_inputs+5]->tvec();
@@ -161,7 +176,7 @@ namespace dynet {
       b_noisy.tvec().device(*dev.edevice) += b->tvec();
 
     } else {
-      MatrixMultiply(dev, *Wx, *x_t, fx, kSCALAR_ONE);
+      MatrixMultiply(dev, *Wx, x_t, fx, kSCALAR_ONE);
       MatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
     }
 
@@ -196,7 +211,7 @@ namespace dynet {
     const Tensor *b  = xs[num_inputs+3];
 
     unsigned hidden_dim = fx.d[0] / 4;
-    unsigned input_dim = xs[0]->d[0];
+    unsigned input_dim = Wx->d[1];
     unsigned batch_size = xs[0]->d.bd;
     Eigen::DSizes<ptrdiff_t, 3> indices_mat_i(0, 0, 0);
     Eigen::DSizes<ptrdiff_t, 3> indices_mat_g(hidden_dim*3, 0, 0);
@@ -395,8 +410,8 @@ namespace dynet {
 
     scratch_allocator->free();
 
-  }
 
+  }
   DYNET_NODE_INST_DEV_IMPL(VanillaLSTMGates)
 
 

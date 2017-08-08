@@ -7,7 +7,7 @@
 namespace dynet {
 
 struct VanillaLSTMGates : public Node {
-  explicit VanillaLSTMGates(const std::initializer_list<VariableIndex>& a, bool dropout, real weightnoise_std)
+  explicit VanillaLSTMGates(const std::vector<VariableIndex>& a, bool dropout, real weightnoise_std)
 		: Node(a), dropout(dropout), weightnoise_std(weightnoise_std), forget_gate_bias(1.0) {}
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
