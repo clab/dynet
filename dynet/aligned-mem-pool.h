@@ -60,7 +60,10 @@ class AlignedMemoryPool {
 
     void report_self(){
       size_t cur_used = used();
-      std::cerr << "[dynet-mem-test] " << name << ", Previously (in MB): " << "#pools/#last-used/#peak-used/#last-cap = " << pools.size() << "/" << (cur_used>>20) << "/" << (peak_used>>20) << "/" << (cap>>20) << std::endl;
+      size_t suggesting = (peak_used>>20);
+      if(suggesting == 0) // never recorded (no clearing) before
+        suggesting = (cap>>20);
+      std::cerr << "[dynet-mem-test] " << name << ", Previously (in MB): " << "#pools/#last-used/#peak-used/#last-cap = " << pools.size() << "/" << (cur_used>>20) << "/" << (peak_used>>20) << "/" << (cap>>20) << "; suggesting " << suggesting << "MB." << std::endl;
     }
 
   private:

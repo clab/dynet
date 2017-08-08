@@ -51,8 +51,12 @@ void AlignedMemoryPool::free() {
   // mem-test
   size_t cur_used = used();
   peak_used = (peak_used > cur_used) ? peak_used : cur_used;
-  if(mem_test_flag)
-    default_device->report_mem_test();
+  if(mem_test_flag){
+    std::cerr << "[dynet-mem-test] Report when freeing " << name << std::endl;
+    for(auto d: devices){
+      d->report_mem_test();
+    }
+  }
   // mem-test
   if (current > 0) {
     for (auto p : pools) { delete p; }

@@ -49,6 +49,7 @@ class Device {
 
   // reporting for mem-test
   void report_mem_test(){
+    std::cerr << "[dynet-mem-test] Reporting for Device " << name << std::endl;
     for(auto p: pools)	p->report_self();
   }
 };
