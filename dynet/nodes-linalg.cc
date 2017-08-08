@@ -82,9 +82,9 @@ void MatrixInverse::forward_dev_impl(const MyDevice & dev, const vector<const Te
   auto x = **xs[0];
   auto y = *fx;
   y = x.inverse();
-#endif
   // TODO: Change into tensors after resolving test errors
-  // fx.t<2>().device(*dev.edevice) = xs[0]->t<2>().inverse();
+  //fx.t<2>().device(*dev.edevice) = xs[0]->t<2>().inverse();
+#endif
 }
 
 template<class MyDevice>
@@ -100,7 +100,7 @@ void MatrixInverse::backward_dev_impl(const MyDevice & dev,
 #else
   auto d = *dEdf;
   auto y = *fx;
-  (*dEdxi) -= y * d * y;
+  (*dEdxi).noalias() -= y.transpose() * d * y.transpose();
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(MatrixInverse)
