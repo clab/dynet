@@ -61,8 +61,8 @@ class AlignedMemoryPool {
   private:
     std::string name;
     std::vector<InternalMemoryPool *> pools;
-    int current;
     size_t cap;
+    int current;
     MemAllocator* a;
     size_t expanding_unit;
 };
