@@ -40,7 +40,15 @@ void ToDevice::backward_dev_impl(const MyDevice & dev,
                                  unsigned i,
                                  Tensor & dEdxi) const {
 #ifdef HAVE_CUDA
-  TensorTools::copy_elements(dEdxi, dEdf);
+  Tensor tmp;
+  tmp.d = dEdxi.d;
+  tmp.device = dEdxi.device;
+  tmp.mem_pool = dEdxi.mem_pool;
+  tmp.v = static_cast<float*>(dEdxi.device->pools[(int)dEdxi.mem_pool]
+                              ->allocate(dEdxi.d.size() * sizeof(float)));
+  if (!tmp.v) DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for aggregate_elements.");
+  TensorTools::copy_elements(tmp, dEdf);
+  TensorTools::accumulate(dEdxi, tmp);
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(ToDevice)
