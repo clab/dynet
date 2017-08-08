@@ -982,15 +982,14 @@ BOOST_AUTO_TEST_CASE( transpose_higherorder_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// inverse is too numerically unstable to test appropriately
-// // Expression inverse(const Expression& x);
-// BOOST_AUTO_TEST_CASE( inverse_gradient ) {
-//   dynet::ComputationGraph cg;
-//   Expression x = parameter(cg, param_square1);
-//   Expression y = inverse(x);
-//   Expression z = sum_elems(y);
-//   BOOST_CHECK(check_grad(mod, z, 0));
-// }
+// Expression inverse(const Expression& x);
+BOOST_AUTO_TEST_CASE( inverse_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param_square1);
+  Expression y = inverse(x);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
 
 // Expression trace_of_product(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( trace_of_product_gradient ) {
