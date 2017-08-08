@@ -2100,7 +2100,7 @@ cpdef Expression zeroes(dim, int batch_size=1):
     Create an input full of zeros, sized according to dimensions :code:`dim`
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         batch_size (number): Batch size of the tensor (default: (1))
@@ -2108,14 +2108,14 @@ cpdef Expression zeroes(dim, int batch_size=1):
     Returns:
         dynet.Expression: A "d" dimensioned zero tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], Dim(dim, batch_size)))
 cpdef Expression random_normal(dim, int batch_size=1): 
     """Create a random normal vector
     
     Create a vector distributed according to normal distribution with mean 0, variance 1.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         batch_size (number): Batch size of the tensor  (default: (1))
@@ -2123,14 +2123,14 @@ cpdef Expression random_normal(dim, int batch_size=1):
     Returns:
         dynet.Expression: A "d" dimensioned normally distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], Dim(dim, batch_size)))
 cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1):
     """Create a random bernoulli tensor
     
     Create a tensor distributed according to bernoulli distribution with parameter :math:`p`.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
         p (number): Parameter of the bernoulli distribution
     
     Keyword Arguments:
@@ -2140,14 +2140,14 @@ cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=
     Returns:
         dynet.Expression: A "d" dimensioned bernoulli distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p, scale))
+    return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], Dim(dim, batch_size), p, scale))
 cpdef Expression random_uniform(dim, float left, float right, int batch_size=1):
     """Create a random uniform tensor
     
     Create a tensor distributed according to uniform distribution with boundaries left and right.
 
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
         left (number): Lower bound of the uniform distribution
         right (number): Upper bound of the uniform distribution
     
@@ -2157,14 +2157,14 @@ cpdef Expression random_uniform(dim, float left, float right, int batch_size=1):
     Returns:
         dynet.Expression: A "d" dimensioned uniform distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
+    return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], Dim(dim, batch_size), left, right))
 cpdef Expression random_gumbel(dim, float mu = 0.0, float beta = 1.0, int batch_size=1):
     """Create a random Gumbel sampled vector
     
     Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         mu (number): The :math:`\mu` parameter (default: (0.0))
@@ -2174,7 +2174,7 @@ cpdef Expression random_gumbel(dim, float mu = 0.0, float beta = 1.0, int batch_
     Returns:
         dynet.Expression:  "d" dimensioned Gumbel distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_gumbel(_cg.thisptr[0], CDim(dim, batch_size), mu, beta))
+    return Expression.from_cexpr(_cg.version(), c_random_gumbel(_cg.thisptr[0], Dim(dim, batch_size), mu, beta))
 
 cpdef Expression nobackprop(Expression x):
     """Prevent backprop
