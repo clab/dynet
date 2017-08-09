@@ -110,13 +110,13 @@ cdef extern from "dynet/model.h" namespace "dynet":
 cdef extern from "dynet/io.h" namespace "dynet":
     cdef cppclass CTextFileSaver "dynet::TextFileSaver":
         CTextFileSaver(string filename, bool append)
-        void save(CModel model, string & key)
-        void save(CParameters param, string & key)
-        void save(CLookupParameters param, string & key)
+        void save(CModel model, string & key) except +
+        void save(CParameters param, string & key) except +
+        void save(CLookupParameters param, string & key) except +
 
     cdef cppclass CTextFileLoader "dynet::TextFileLoader":
         CTextFileLoader(string filename)
-        void populate(CModel & model, string key)
+        void populate(CModel & model, string key) except +
         void populate(CParameters & param, string key) except +
         void populate(CLookupParameters & param, string key) except +
         CParameters load_param(CModel & model, string key) except +
