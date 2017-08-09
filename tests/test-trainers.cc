@@ -46,11 +46,45 @@ struct TrainerTest {
 // define the test suite
 BOOST_FIXTURE_TEST_SUITE(trainer_test, TrainerTest);
 
-BOOST_AUTO_TEST_CASE( simple_sgd_direction ) {
+// Test direction (does updating reduce the objective value)
+
+#define DYNET_TRAINER_DIRECTION_TEST_CASE(name, TRAINER_TYPE)       \
+BOOST_AUTO_TEST_CASE( name ) {                                      \
+  dynet::ParameterCollection mod;                                   \
+  dynet::Parameter param = mod.add_parameters({3});                 \
+  TensorTools::set_elements(param.get_storage().values, param_vals);\
+  TRAINER_TYPE trainer(mod);                                        \
+  dynet::ComputationGraph cg;                                       \
+  Expression x = parameter(cg, param);                              \
+  Expression y = input(cg, {1, 3}, ones_vals);                      \
+  Expression z = y * x;                                             \
+  float before = as_scalar(cg.forward(z));                          \
+  cg.backward(z);                                                   \
+  trainer.update();                                                 \
+  float after = as_scalar(cg.forward(z));                           \
+  BOOST_CHECK_LT(after, before);                                    \
+}                                                                   \
+
+DYNET_TRAINER_DIRECTION_TEST_CASE(simple_sgd_direction, dynet::SimpleSGDTrainer)
+
+DYNET_TRAINER_DIRECTION_TEST_CASE(cyclical_sgd_direction, dynet::CyclicalSGDTrainer)
+
+DYNET_TRAINER_DIRECTION_TEST_CASE(momentum_sgd_direction, dynet::MomentumSGDTrainer)
+
+DYNET_TRAINER_DIRECTION_TEST_CASE(adagrad_direction, dynet::AdagradTrainer)
+
+DYNET_TRAINER_DIRECTION_TEST_CASE(adadelta_direction, dynet::AdadeltaTrainer)
+
+DYNET_TRAINER_DIRECTION_TEST_CASE(rmsprop_direction, dynet::RMSPropTrainer)
+
+DYNET_TRAINER_DIRECTION_TEST_CASE(adam_direction, dynet::AdamTrainer)
+
+BOOST_AUTO_TEST_CASE( eg_direction ) {
+  param_vals = {0.5f,0.1f,0.4f};// EGTrainer requires values belonging to simplex [0,1]
   dynet::ParameterCollection mod;
   dynet::Parameter param = mod.add_parameters({3});
   TensorTools::set_elements(param.get_storage().values,param_vals);
-  SimpleSGDTrainer trainer(mod);
+  EGTrainer trainer(mod);
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
@@ -59,8 +93,68 @@ BOOST_AUTO_TEST_CASE( simple_sgd_direction ) {
   cg.backward(z);
   trainer.update();
   float after = as_scalar(cg.forward(z));
-  BOOST_CHECK_LT(after, before);
+  BOOST_CHECK_EQUAL(after, before);
+  param_vals = {1.1f,-2.2f,3.3f};// revert back to original values
 }
+
+// Test the restart method (TODO: for now only checks for errors)
+
+#define DYNET_TRAINER_RESTART_TEST_CASE(name, TRAINER_TYPE)         \
+BOOST_AUTO_TEST_CASE( name ) {                                      \
+  dynet::ParameterCollection mod;                                   \
+  dynet::Parameter param = mod.add_parameters({3});                 \
+  TensorTools::set_elements(param.get_storage().values, param_vals);\
+  TRAINER_TYPE trainer(mod);                                        \
+  dynet::ComputationGraph cg;                                       \
+  Expression x = parameter(cg, param);                              \
+  Expression y = input(cg, {1, 3}, ones_vals);                      \
+  Expression z = y * x;                                             \
+  cg.forward(z);                                                    \
+  cg.backward(z);                                                   \
+  trainer.update();                                                 \
+  trainer.restart(0.1);                                             \
+}                                                                   \
+
+DYNET_TRAINER_RESTART_TEST_CASE(simple_sgd_restart, dynet::SimpleSGDTrainer)
+
+DYNET_TRAINER_RESTART_TEST_CASE(cyclical_sgd_restart, dynet::CyclicalSGDTrainer)
+
+DYNET_TRAINER_RESTART_TEST_CASE(momentum_sgd_restart, dynet::MomentumSGDTrainer)
+
+DYNET_TRAINER_RESTART_TEST_CASE(adagrad_restart, dynet::AdagradTrainer)
+
+DYNET_TRAINER_RESTART_TEST_CASE(adadelta_restart, dynet::AdadeltaTrainer)
+
+DYNET_TRAINER_RESTART_TEST_CASE(rmsprop_restart, dynet::RMSPropTrainer)
+
+DYNET_TRAINER_RESTART_TEST_CASE(adam_restart, dynet::AdamTrainer)
+
+DYNET_TRAINER_RESTART_TEST_CASE(eg_restart, dynet::EGTrainer)
+
+BOOST_AUTO_TEST_CASE( momentum_restart_correctness ) {
+  dynet::ParameterCollection pc;
+  dynet::Parameter param = pc.add_parameters({3});
+  MomentumSGDTrainer trainer(pc, 1.0);
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param);
+  Expression y = input(cg, {1,3}, ones_vals);
+  Expression z = y * x1;
+  cg.backward(z);
+  trainer.update();
+  vector<float> vp_val = as_vector(trainer.vp[0].h);
+  // Test that the velocity has been updated
+  for(size_t i = 0; i < vp_val.size(); ++i)
+    BOOST_CHECK_EQUAL(vp_val[i], -1.0);
+  trainer.restart(0.5);
+  vp_val = as_vector(trainer.vp[0].h);
+  // Test that the velocity has been reset to 0
+  for(size_t i = 0; i < vp_val.size(); ++i)
+    BOOST_CHECK_EQUAL(vp_val[i], 0);
+  // Test that the learning rate has been set to 0.5
+  BOOST_CHECK_EQUAL(trainer.learning_rate, 0.5);
+}
+
+// Test subset update
 
 BOOST_AUTO_TEST_CASE( simple_sgd_update_subset ) {
   dynet::ParameterCollection mod;
@@ -83,120 +177,6 @@ BOOST_AUTO_TEST_CASE( simple_sgd_update_subset ) {
     BOOST_CHECK_NE(param_vals[i], param_after[i]);
   for(size_t i = 0; i < param2_after.size(); ++i)
     BOOST_CHECK_EQUAL(param2_vals[i], param2_after[i]);
-}
-
-BOOST_AUTO_TEST_CASE( cyclical_sgd_direction ) {
-  dynet::ParameterCollection mod;
-  dynet::Parameter param = mod.add_parameters({3});
-  TensorTools::set_elements(param.get_storage().values,param_vals);
-  CyclicalSGDTrainer trainer(mod);
-  dynet::ComputationGraph cg;
-  Expression x = parameter(cg, param);
-  Expression y = input(cg, {1,3}, ones_vals);
-  Expression z = y*x;
-  float before = as_scalar(cg.forward(z));
-  cg.backward(z);
-  trainer.update();
-  float after = as_scalar(cg.forward(z));
-  BOOST_CHECK_LT(after, before);
-}
-
-BOOST_AUTO_TEST_CASE( momentum_sgd_direction ) {
-  dynet::ParameterCollection mod;
-  dynet::Parameter param = mod.add_parameters({3});
-  TensorTools::set_elements(param.get_storage().values,param_vals);
-  MomentumSGDTrainer trainer(mod);
-  dynet::ComputationGraph cg;
-  Expression x = parameter(cg, param);
-  Expression y = input(cg, {1,3}, ones_vals);
-  Expression z = y*x;
-  float before = as_scalar(cg.forward(z));
-  cg.backward(z);
-  trainer.update();
-  float after = as_scalar(cg.forward(z));
-  BOOST_CHECK_LT(after, before);
-}
-
-BOOST_AUTO_TEST_CASE( adagrad_direction ) {
-  dynet::ParameterCollection mod;
-  dynet::Parameter param = mod.add_parameters({3});
-  TensorTools::set_elements(param.get_storage().values,param_vals);
-  AdagradTrainer trainer(mod);
-  dynet::ComputationGraph cg;
-  Expression x = parameter(cg, param);
-  Expression y = input(cg, {1,3}, ones_vals);
-  Expression z = y*x;
-  float before = as_scalar(cg.forward(z));
-  cg.backward(z);
-  trainer.update();
-  float after = as_scalar(cg.forward(z));
-  BOOST_CHECK_LT(after, before);
-}
-
-BOOST_AUTO_TEST_CASE( adadelta_direction ) {
-  dynet::ParameterCollection mod;
-  dynet::Parameter param = mod.add_parameters({3});
-  TensorTools::set_elements(param.get_storage().values,param_vals);
-  AdadeltaTrainer trainer(mod);
-  dynet::ComputationGraph cg;
-  Expression x = parameter(cg, param);
-  Expression y = input(cg, {1,3}, ones_vals);
-  Expression z = y*x;
-  float before = as_scalar(cg.forward(z));
-  cg.backward(z);
-  trainer.update();
-  float after = as_scalar(cg.forward(z));
-  BOOST_CHECK_LT(after, before);
-}
-
-BOOST_AUTO_TEST_CASE( rmsprop_direction ) {
-  dynet::ParameterCollection mod;
-  dynet::Parameter param = mod.add_parameters({3});
-  TensorTools::set_elements(param.get_storage().values,param_vals);
-  RMSPropTrainer trainer(mod);
-  dynet::ComputationGraph cg;
-  Expression x = parameter(cg, param);
-  Expression y = input(cg, {1,3}, ones_vals);
-  Expression z = y*x;
-  float before = as_scalar(cg.forward(z));
-  cg.backward(z);
-  trainer.update();
-  float after = as_scalar(cg.forward(z));
-  BOOST_CHECK_LT(after, before);
-}
-
-BOOST_AUTO_TEST_CASE( adam_direction ) {
-  dynet::ParameterCollection mod;
-  dynet::Parameter param = mod.add_parameters({3});
-  TensorTools::set_elements(param.get_storage().values,param_vals);
-  AdamTrainer trainer(mod);
-  dynet::ComputationGraph cg;
-  Expression x = parameter(cg, param);
-  Expression y = input(cg, {1,3}, ones_vals);
-  Expression z = y*x;
-  float before = as_scalar(cg.forward(z));
-  cg.backward(z);
-  trainer.update();
-  float after = as_scalar(cg.forward(z));
-  BOOST_CHECK_LT(after, before);
-}
-
-BOOST_AUTO_TEST_CASE( eg_direction ) {
-  param_vals = {0.5f,0.1f,0.4f};// EGTrainer requires values belonging to simplex [0,1]
-  dynet::ParameterCollection mod;
-  dynet::Parameter param = mod.add_parameters({3});
-  TensorTools::set_elements(param.get_storage().values,param_vals);
-  EGTrainer trainer(mod);
-  dynet::ComputationGraph cg;
-  Expression x = parameter(cg, param);
-  Expression y = input(cg, {1,3}, ones_vals);
-  Expression z = y*x;
-  float before = as_scalar(cg.forward(z));
-  cg.backward(z);
-  trainer.update();
-  float after = as_scalar(cg.forward(z));
-  BOOST_CHECK_EQUAL(after, before);
-  param_vals = {1.1f,-2.2f,3.3f};// revert back to original values
 }
 
 BOOST_AUTO_TEST_SUITE_END()

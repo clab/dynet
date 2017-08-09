@@ -37,7 +37,7 @@ namespace dynet {
 struct Trainer {
   /**
    * \brief General constructor for a Trainer
-   * 
+   *
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
    */
@@ -66,6 +66,20 @@ struct Trainer {
   void update(const std::vector<unsigned> & updated_params, const std::vector<unsigned> & updated_lookup_params);
 
   void update_epoch(real r = 1.0);
+
+  /**
+   * @brief Restarts the optimizer
+   * @details Clears all momentum values and assimilate (if applicable)
+   */
+  virtual void restart() = 0;
+
+  /**
+   * @brief Restarts the optimizer with a new learning rate
+   * @details Clears all momentum values and assimilate (if applicable) and resets the learning rate
+   *
+   * \param learning_rate New learning rate
+   */
+  void restart(real lr);
 
   /**
    * \brief Clip gradient
@@ -168,12 +182,14 @@ protected:
 struct SimpleSGDTrainer : public Trainer {
   /**
    * \brief Constructor
-   * 
+   *
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
    */
   explicit SimpleSGDTrainer(ParameterCollection& m, real learning_rate = 0.1) : Trainer(m, learning_rate) {}
- protected:
+  void restart() override {};
+  using Trainer::restart;
+protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
 private:
   SimpleSGDTrainer() {}
@@ -213,6 +229,8 @@ struct CyclicalSGDTrainer : public Trainer {
    * \param edecay Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by \f$\gamma\f$
    */
   explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0) : Trainer(m, learning_rate_min), e_min(learning_rate_min), e_max(learning_rate_max), step_size(step_size), gamma(gamma), it(0) {}
+  void restart() override {};
+  using Trainer::restart;
   void update() override {
     Trainer::update();
     cyclic_update_eta();
@@ -248,7 +266,7 @@ private:
 struct MomentumSGDTrainer : public Trainer {
   /**
    * \brief Constructor
-   * 
+   *
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
    * \param mom Momentum
@@ -256,17 +274,19 @@ struct MomentumSGDTrainer : public Trainer {
   explicit MomentumSGDTrainer(ParameterCollection& m, real learning_rate = 0.01, real mom = 0.9) :
     Trainer(m, learning_rate), momentum(mom) {}
 
+  void restart() override;
+  using Trainer::restart;
+
+  // the following represent the current velocity
+  // The shadow parameters are made public for testing, ideally they shouldn't be
+  std::vector<ShadowParameters> vp;
+  std::vector<ShadowLookupParameters> vlp;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
 
   real momentum;
 
-  // the following represent the current velocity
-  std::vector<ShadowParameters> vp;
-  std::vector<ShadowLookupParameters> vlp;
-  //std::unordered_map<ParameterStorage*, Tensor> vp;
-  //std::unordered_map<LookupParameterStorage*, std::unordered_map<unsigned, Tensor>> vl;
 private:
   MomentumSGDTrainer() {}
 };
@@ -284,13 +304,16 @@ private:
 struct AdagradTrainer : public Trainer {
   /**
    * \brief Constructor
-   * 
+   *
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    */
   explicit AdagradTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20) :
     Trainer(m, learning_rate), epsilon(eps) {}
+
+  void restart() override;
+  using Trainer::restart;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -317,13 +340,16 @@ private:
 struct AdadeltaTrainer : public Trainer {
   /**
    * \brief Constructor
-   * 
+   *
    * \param m ParameterCollection to be trained
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
    * \param rho Update parameter for the moving average of updates in the numerator
    */
   explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95) :
     Trainer(m, 1.0), epsilon(eps), rho(rho) {}
+
+  void restart() override;
+  using Trainer::restart;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -350,7 +376,7 @@ private:
 struct RMSPropTrainer : public Trainer {
   /**
    * \brief Constructor
-   * 
+   *
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
    * \param eps Bias parameter \f$\epsilon\f$ in the adagrad formula
@@ -358,6 +384,9 @@ struct RMSPropTrainer : public Trainer {
    */
   explicit RMSPropTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20, real rho = 0.95) :
     Trainer(m, learning_rate), epsilon(eps), rho(rho) {}
+
+  void restart() override;
+  using Trainer::restart;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
@@ -383,7 +412,7 @@ private:
 struct AdamTrainer : public Trainer {
   /**
    * \brief Constructor
-   * 
+   *
    * \param m ParameterCollection to be trained
    * \param learning_rate Initial learning rate
    * \param beta_1 Moving average parameter for the mean
@@ -392,6 +421,9 @@ struct AdamTrainer : public Trainer {
    */
   explicit AdamTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
     Trainer(m, learning_rate), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+
+  void restart() override;
+  using Trainer::restart;
 
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -410,12 +442,12 @@ private:
 
 /**
  * \ingroup optimizers
- * 
+ *
  * \brief Exponentiated gradient optimizer with momentum and cyclical learning rate
  * \details FIXME
- *  
+ *
  * Reference : FIXME
- *   
+ *
 */
 struct EGTrainer : public Trainer {
   explicit EGTrainer(ParameterCollection& mod, real learning_rate = 0.1, real mom = 0.9, real ne = 0.0)
@@ -427,7 +459,7 @@ struct EGTrainer : public Trainer {
   }
 
 //-----------------------------------------------------------------------------------------
-  void enableCyclicalLR(float _learning_rate_min = 0.01, float _learning_rate_max = 0.1, float _step_size = 2000, float _gamma = 0.0){
+  void enableCyclicalLR(float _learning_rate_min = 0.01, float _learning_rate_max = 0.1, float _step_size = 2000, float _gamma = 0.0) {
     isCyclical = true;
     e_min = _learning_rate_min;
     e_max = _learning_rate_max;
@@ -436,13 +468,15 @@ struct EGTrainer : public Trainer {
     it = 0;
   }
 
-  virtual void update() override { 
-    Trainer::update(); 
+  virtual void update() override {
+    Trainer::update();
     if (isCyclical) cyclic_update_eta();
   }
 //-----------------------------------------------------------------------------------------
 
- protected:
+  void restart() override;
+  using Trainer::restart;
+protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual void alloc_impl() override;
 
@@ -473,7 +507,7 @@ struct EGTrainer : public Trainer {
   Tensor zeg, meg;
 //-----------------------------------------------------------------------------------------
 
- private:
+private:
   EGTrainer() {}
 };
 
