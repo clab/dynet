@@ -27,15 +27,20 @@ namespace dynet {
       DYNET_ARG_CHECK(xs.size() >= 5, "Failed input count check in VanillaLSTMGates");
     }
     unsigned num_inputs = dropout?xs.size()-6:xs.size()-4;
-    for(int i=0; i<num_inputs; i++)
-      DYNET_ARG_CHECK(xs[i].ndims() == 1, "VanillaLSTMGates: x_t[" << i << "] expected to be a vector");
+    unsigned hidden_dim=xs[num_inputs][0];
+    unsigned input_dim=xs[num_inputs+1][1];
+    unsigned batch_size=xs[0].bd;
+    unsigned inputs_dim_sum=0;
+    for(int i=0; i<num_inputs; i++){
+        DYNET_ARG_CHECK(xs[i].ndims() == 1, "VanillaLSTMGates: x_t[" << i << "] expected to be a vector");
+        DYNET_ARG_CHECK(xs[i].bd == batch_size, "VanillaLSTMGates: x_t has inconsistent batch size");
+        inputs_dim_sum += xs[i][0];
+    }
+    DYNET_ARG_CHECK(inputs_dim_sum == input_dim, "VanillaLSTMGates: x_t has inconsistent dimension");
     DYNET_ARG_CHECK(xs[num_inputs].ndims() == 1, "VanillaLSTMGates: h_tm1 expected to be a vector");
     DYNET_ARG_CHECK(xs[num_inputs+1].ndims() == 2, "VanillaLSTMGates: Wx expected to be a matrix");
     DYNET_ARG_CHECK(xs[num_inputs+2].ndims() == 2, "VanillaLSTMGates: Wh expected to be a matrix");
     DYNET_ARG_CHECK(xs[num_inputs+3].ndims() == 1, "VanillaLSTMGates: b expected to be a vector");
-    unsigned hidden_dim=xs[num_inputs][0];
-    unsigned input_dim=xs[num_inputs+1][1];
-    unsigned batch_size=xs[0].bd;
     DYNET_ARG_CHECK(xs[num_inputs+1][0] == hidden_dim * 4, "VanillaLSTMGates: Wx dim 0 expected " << hidden_dim * 4 << ", was " << xs[2][0]);
     DYNET_ARG_CHECK(xs[num_inputs+1][1] == input_dim, "VanillaLSTMGates: Wx dim 1 expected " << input_dim << ", was " << xs[2][1]);
     DYNET_ARG_CHECK(xs[num_inputs+2][0] == hidden_dim * 4, "VanillaLSTMGates: Wh dim 0 expected " << hidden_dim * 4 << ", was " << xs[3][0]);
