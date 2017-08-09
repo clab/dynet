@@ -58,7 +58,7 @@ namespace dynet {
     // Assume parameter vectors must be same
     if(dim.bd == 1) {
       for(int i=0; i<num_inputs; i++)
-	s.add_dim(cg.nodes[args[i]]->dim);
+        s.add_dim(cg.nodes[args[i]]->dim);
       // TODO: correct? parameter vectors would be args[num_inputs+1] .. args[num_inputs+3]
       // s.add_dim(cg.nodes[args[num_inputs]]->dim); // not necessary, as will be the same
       s.add_node(args[num_inputs+1]);
@@ -128,9 +128,9 @@ namespace dynet {
       Eigen::DSizes<ptrdiff_t, 2> indices_tmp(0, 0);
       Eigen::DSizes<ptrdiff_t, 2> sizes_tmp(0, static_cast<ptrdiff_t>(fx.d.bd));
       for(int i=0; i<num_inputs; i++){
-	sizes_tmp[0] = xs[i]->d[0];
-	tmp.tbvec().slice(indices_tmp, sizes_tmp).device(*dev.edevice) = xs[i]->tbvec();
-	indices_tmp[0] += xs[i]->d[0];
+        sizes_tmp[0] = xs[i]->d[0];
+        tmp.tbvec().slice(indices_tmp, sizes_tmp).device(*dev.edevice) = xs[i]->tbvec();
+        indices_tmp[0] += xs[i]->d[0];
       }
       x_t.v = tmp.v;
     }
@@ -204,7 +204,6 @@ namespace dynet {
                                unsigned i,
                                Tensor& dEdxi) const {
     unsigned num_inputs = dropout?xs.size()-6:xs.size()-4;
-    const Tensor *x_t = xs[0];
     const Tensor *h_tm1 = xs[num_inputs];
     const Tensor *Wx = xs[num_inputs+1];
     const Tensor *Wh = xs[num_inputs+2];
@@ -251,13 +250,25 @@ namespace dynet {
     fx_ifo.tb<2>().device(*dev.edevice) = fx.tb<2>().slice(indices_mat_i, sizes_mat_3);
     fx_g.tb<2>().device(*dev.edevice)   = fx.tb<2>().slice(indices_mat_g, sizes_mat_1);
 
-
-    if(i==0){
+    if(i < num_inputs){
       // dx_t = [Wx_i]^T   [di . i_t . (1-i_t)]
       //        [Wx_f]   * [df . f_t . (1-f_t)]
       //        [Wx_o]     [do . o_t . (1-o_t)]
       //        [Wx_g]     [dg . (1 - g_t^2)]
       //    where Wx is broadcasted over batches
+
+      // when using multiple inputs: slice out the one we're backpropagating to
+      Tensor Wx_slice(Dim({hidden_dim*4, xs[i]->d[0]},1), nullptr, fx.device, fx.mem_pool);
+      if(num_inputs==1){
+        Wx_slice.v = Wx->v;
+      } else {
+        unsigned offset=0;
+        for(int j=0; j<i; j++) offset += xs[j]->d[0];
+        Eigen::DSizes<ptrdiff_t, 3> indices_Wx(0, offset, 0);
+        Eigen::DSizes<ptrdiff_t, 3> sizes_Wx(hidden_dim*4, xs[i]->d[0], 1);
+        Wx_slice.v = static_cast<float*>(scratch_allocator->allocate(Wx_slice.d.size() * sizeof(float)));
+        Wx_slice.tb<2>().device(*dev.edevice) = Wx->tb<2>().slice(indices_Wx, sizes_Wx);
+      }
 
       // scratch memory for the matrix multiplication
       Tensor mult_r_ifo(Dim({hidden_dim*3, 1},batch_size), nullptr, fx.device, fx.mem_pool);
@@ -277,13 +288,25 @@ namespace dynet {
       mult_r.tb<2>().slice(indices_mat_g, sizes_mat_1).device(*dev.edevice) = mult_r_g.tb<2>();
       // dx_t += mult_l^T * mult_r
       if(dropout){
-	Tensor mult_y(Dim({input_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
-	mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
-	TensorTools::zero(mult_y);
-	MatrixTranspMultiplyAcc(dev, *Wx, mult_r, mult_y);
-	dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[num_inputs+4]->tvec();
+        Tensor mult_y(Dim({xs[i]->d[0], 1},batch_size), nullptr, fx.device, fx.mem_pool);
+        mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
+        TensorTools::zero(mult_y);
+        MatrixTranspMultiplyAcc(dev, Wx_slice, mult_r, mult_y);
+        // when using multiple inputs: slice out the appropriate dropout mask
+        Tensor dropout_mask(Dim({xs[i]->d[0]}, xs[num_inputs+4]->d.bd), nullptr, fx.device, fx.mem_pool);
+        if(num_inputs==1){
+          dropout_mask.v = xs[num_inputs+4]->v;
+        } else {
+          unsigned offset=0;
+          for(int j=0; j<i; j++) offset += xs[j]->d[0];
+          Eigen::DSizes<ptrdiff_t, 2> indices_dropout(offset, 0);
+          Eigen::DSizes<ptrdiff_t, 2> sizes_dropout(xs[i]->d[0], xs[num_inputs+4]->d.bd);
+          dropout_mask.v = static_cast<float*>(scratch_allocator->allocate(dropout_mask.d.size() * sizeof(float)));
+          dropout_mask.tbvec().device(*dev.edevice) = xs[num_inputs+4]->tbvec().slice(indices_dropout, sizes_dropout);
+        }
+        dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * dropout_mask.tvec();
       } else {
-	MatrixTranspMultiplyAcc(dev, *Wx, mult_r, dEdxi);
+		    MatrixTranspMultiplyAcc(dev, Wx_slice, mult_r, dEdxi);
       }
     } else if(i==num_inputs){
       // dh_tm1 = [Wh_i]^T   [di . i_t . (1-i_t)]
@@ -311,13 +334,13 @@ namespace dynet {
 
       // dx_t += mult_l * mult_r
       if(dropout){
-	Tensor mult_y(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
-	mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
-	TensorTools::zero(mult_y);
-	MatrixTranspMultiplyAcc(dev, *Wh, mult_r, mult_y);
-	dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[num_inputs+5]->tvec();
+        Tensor mult_y(Dim({hidden_dim, 1},batch_size), nullptr, fx.device, fx.mem_pool);
+        mult_y.v = static_cast<float*>(scratch_allocator->allocate(mult_y.d.size() * sizeof(float)));
+        TensorTools::zero(mult_y);
+        MatrixTranspMultiplyAcc(dev, *Wh, mult_r, mult_y);
+        dEdxi.tvec().device(*dev.edevice) += mult_y.tvec() * xs[num_inputs+5]->tvec();
       } else {
-	MatrixTranspMultiplyAcc(dev, *Wh, mult_r, dEdxi);
+        MatrixTranspMultiplyAcc(dev, *Wh, mult_r, dEdxi);
       }
 
     } else if(i==num_inputs+1){ // dWx
@@ -334,6 +357,23 @@ namespace dynet {
       Tensor mult_l(Dim({hidden_dim*4, 1},batch_size), nullptr, fx.device, fx.mem_pool);
       mult_l.v = static_cast<float*>(scratch_allocator->allocate(mult_l.d.size() * sizeof(float)));
 
+      Tensor x_t(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
+      if(num_inputs==1){
+        x_t.v = xs[0]->v;
+      } else {
+        Tensor tmp(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
+        tmp.v = static_cast<float*>(scratch_allocator->allocate(tmp.d.size() * sizeof(float)));
+        Eigen::DSizes<ptrdiff_t, 2> indices_tmp(0, 0);
+        Eigen::DSizes<ptrdiff_t, 2> sizes_tmp(0, static_cast<ptrdiff_t>(fx.d.bd));
+        for(int i=0; i<num_inputs; i++){
+          sizes_tmp[0] = xs[i]->d[0];
+          tmp.tbvec().slice(indices_tmp, sizes_tmp).device(*dev.edevice) = xs[i]->tbvec();
+          indices_tmp[0] += xs[i]->d[0];
+        }
+        x_t.v = tmp.v;
+      }
+
+
       // mult_l = [di . i_t . (1-i_t)]
       //          [df . f_t . (1-f_t)]
       //          [do . o_t . (1-o_t)]
@@ -346,12 +386,12 @@ namespace dynet {
       if(dropout){
         Tensor x_t_dropped(Dim({input_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
         x_t_dropped.v = static_cast<float*>(scratch_allocator->allocate(x_t_dropped.d.size() * sizeof(float)));
-        x_t_dropped.tvec().device(*dev.edevice) = x_t->tvec() * xs[num_inputs+4]->tvec();
-        x_t = &x_t_dropped;
+        x_t_dropped.tvec().device(*dev.edevice) = x_t.tvec() * xs[num_inputs+4]->tvec();
+        x_t.v = x_t_dropped.v;
       }
 
       // dWh += (mult_l * mult_r).sum_batches()
-      MatrixMultiplyTranspAcc(dev, mult_l, *x_t, dEdxi);
+      MatrixMultiplyTranspAcc(dev, mult_l, x_t, dEdxi);
 
     } else if(i==num_inputs+2){ // dWh
       // goal: dWh_i = [di . i_t . (1-i_t)] * h_tm1 (here * is outer product), then sum over batches
