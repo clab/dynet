@@ -1370,8 +1370,6 @@ BOOST_AUTO_TEST_CASE( maxpooling2d_same_gradient ) {
   std::vector<unsigned> stride = {2, 5};
   bool is_valid = false;
   Expression w = conv2d(x, kernel, stride, is_valid);
-  //Expression z = sum_batches(sum_elems(w));
-  //BOOST_CHECK(check_grad(mod, z, 0));
   is_valid = false;
   Expression y = maxpooling2d(w, ksize, stride, is_valid);
   Expression z = sum_batches(sum_elems(y));

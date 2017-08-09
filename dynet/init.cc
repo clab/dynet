@@ -209,7 +209,11 @@ void initialize(DynetParams& params) {
     for (auto gpu : gpudevices)
       devices.push_back(gpu);
   } else {
+#ifdef THREAD_POOL
+    devices.push_back(new Device_ThreadPool(devices.size(), params.mem_descriptor, params.shared_parameters, THREAD_POOL));
+#else
     devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
+#endif
   }
   default_device = devices[default_index];
 

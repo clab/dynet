@@ -132,6 +132,11 @@ if(ENABLE_BOOST)
   endif()
 endif()
 
+# if this flag is set, Eigen will use ThreadpoolDevice with the number of thread as specified
+if (THREADPOOL) 
+  add_definitions(-DTHREAD_POOL=${THREADPOOL})
+endif()
+
 if(BACKEND)
   message("-- BACKEND: ${BACKEND}")
 else()

@@ -1,7 +1,6 @@
 #include "dynet/devices.h"
 
 #include <iostream>
-#include <unsupported/Eigen/CXX11/Tensor>
 
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
@@ -130,5 +129,27 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
 }
 
 Device_CPU::~Device_CPU() {}
+
+Device_ThreadPool::Device_ThreadPool(int my_id, const DeviceMempoolSizes & mbs, bool shared, int num_cores) :
+    Device(my_id, DeviceType::ThreadPool, &cpu_mem), shmem(mem) {
+  if (shared) shmem = new SharedAllocator();
+  kSCALAR_MINUSONE = (float *) mem->malloc(sizeof(float));
+  *kSCALAR_MINUSONE = -1;
+  kSCALAR_ONE = (float *) mem->malloc(sizeof(float));
+  *kSCALAR_ONE = 1;
+  kSCALAR_ZERO = (float *) mem->malloc(sizeof(float));
+  *kSCALAR_ZERO = 0;
+  
+  //initialize the Eigen ThreadPool device
+  tp = new Eigen::ThreadPool(num_cores);
+  edevice = new Eigen::ThreadPoolDevice(tp, num_cores);
+  
+  // this is the big memory allocation 
+  pools[0] = new AlignedMemoryPool("ThreadPool forward memory", (mbs.used[0] << 20), &cpu_mem);
+  pools[1] = new AlignedMemoryPool("ThreadPool backward memory", (mbs.used[1] << 20), &cpu_mem);
+  pools[2] = new AlignedMemoryPool("ThreadPool parameter memory", (mbs.used[2] << 20), shmem);
+}
+
+Device_ThreadPool::~Device_ThreadPool() {};
 
 } // namespace dynet

@@ -19,7 +19,7 @@ namespace dynet {
 #ifndef __CUDACC__
 
 ostream& operator<<(ostream& os, const Tensor& t) {
-  if (t.device->type == DeviceType::CPU) {
+  if ((t.device->type == DeviceType::CPU) || (t.device->type == DeviceType::ThreadPool)) {
     os << (*t);
   } else {
 #if HAVE_CUDA
@@ -37,7 +37,7 @@ real as_scalar(const Tensor& t) {
   if (t.d.size() != 1)
     throw std::runtime_error("Input tensor has more than one element, cannot convert to scalar.");
   real res = 0.;
-  if (t.device->type == DeviceType::CPU) {
+  if ((t.device->type == DeviceType::CPU) || (t.device->type == DeviceType::ThreadPool)) {
     return t.v[0];
   } else {
 #if HAVE_CUDA
@@ -52,7 +52,7 @@ real as_scalar(const Tensor& t) {
 
 vector<real> as_vector(const Tensor& v) {
   vector<real> res(v.d.size());
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)) {
     memcpy(&res[0], v.v, sizeof(real) * res.size());
   } else {
 #if HAVE_CUDA
@@ -66,7 +66,7 @@ vector<real> as_vector(const Tensor& v) {
 
 vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
   vector<Eigen::DenseIndex> res(v.d.size());
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)) {
     memcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size());
   } else {
 #if HAVE_CUDA
@@ -80,7 +80,7 @@ vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
 
 float TensorTools::access_element(const Tensor& v, int index) {
   float ret = 0.;
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)) {
     return v.v[index];
   } else {
 #if HAVE_CUDA
@@ -102,7 +102,7 @@ float TensorTools::access_element(const Tensor& v, const Dim& index) {
 }
 
 void TensorTools::set_element(const Tensor& v, int index, float value) {
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)) {
     v.v[index] = value;
   } else {
 #if HAVE_CUDA
@@ -114,7 +114,7 @@ void TensorTools::set_element(const Tensor& v, int index, float value) {
 }
 
 void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rindex) {
-  if (l.device->type == DeviceType::CPU) {
+  if ((l.device->type == DeviceType::CPU) || (l.device->type == DeviceType::ThreadPool)) {
     r.v[rindex] = l.v[lindex];
   } else {
 #if HAVE_CUDA
@@ -128,7 +128,7 @@ void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rinde
 }
 
 void TensorTools::set_elements(const Tensor& v, const vector<float>& vec) {
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)){
     memcpy(v.v, &vec[0], sizeof(real) * vec.size());
   } else {
 #if HAVE_CUDA
@@ -140,7 +140,7 @@ void TensorTools::set_elements(const Tensor& v, const vector<float>& vec) {
 }
 
 void TensorTools::copy_elements(const Tensor& v, const Tensor& v_src) {
-  if (v.device->type == DeviceType::CPU) {
+  if ((v.device->type == DeviceType::CPU) || (v.device->type == DeviceType::ThreadPool)){
     memcpy(v.v, v_src.v, sizeof(real) * v.d.size());
   } else {
 #if HAVE_CUDA
@@ -161,7 +161,7 @@ void TensorTools::identity(Tensor& val) {
   if (val.d.nd != 2 || val.d[0] != val.d[1])
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to identity");
   size_t pos = 0;
-  if (val.device->type == DeviceType::CPU) {
+  if ((val.device->type == DeviceType::CPU) || (val.device->type == DeviceType::ThreadPool)){
     for (size_t i = 0; i < val.d[0]; ++i)
       for (size_t j = 0; j < val.d[1]; ++j)
         val.v[pos++] = (i == j ? 1 : 0);
@@ -182,7 +182,7 @@ void TensorTools::identity(Tensor& val) {
 void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
   bernoulli_distribution distribution(p);
   auto b = [&] {return distribution(*rndeng) * scale;};
-  if (val.device->type == DeviceType::CPU) {
+  if ((val.device->type == DeviceType::CPU) || (val.device->type == DeviceType::ThreadPool)) {
     generate(val.v, val.v + val.d.size(), b);
   } else {
 #if HAVE_CUDA
@@ -199,7 +199,7 @@ void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
 void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
   normal_distribution<real> distribution(mean, stddev);
   auto b = [&] {return distribution(*rndeng);};
-  if (val.device->type == DeviceType::CPU) {
+  if ((val.device->type == DeviceType::CPU) || (val.device->type == DeviceType::ThreadPool)) {
     generate(val.v, val.v + val.d.size(), b);
   } else {
 #if HAVE_CUDA
@@ -216,7 +216,7 @@ void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
 void TensorTools::randomize_uniform(Tensor& val, real left, real right) {
   uniform_real_distribution<real> distribution(left, right);
   auto b = [&] {return distribution(*rndeng);};
-  if (val.device->type == DeviceType::CPU) {
+  if ((val.device->type == DeviceType::CPU) || (val.device->type == DeviceType::ThreadPool)) {
     generate(val.v, val.v + val.d.size(), b);
   } else {
 #if HAVE_CUDA
@@ -272,17 +272,20 @@ void TensorTools::accumulate_dev(const MyDevice & dev, Tensor& v, const Tensor& 
 template void TensorTools::accumulate_dev<Device_GPU>(const Device_GPU & dev, Tensor& v, const Tensor& v_src);
 #else
 template void TensorTools::accumulate_dev<Device_CPU>(const Device_CPU & dev, Tensor& v, const Tensor& v_src);
+template void TensorTools::accumulate_dev<Device_ThreadPool>(const Device_ThreadPool & dev, Tensor& v, const Tensor& v_src);
 #ifdef HAVE_CUDA
 extern template void TensorTools::accumulate_dev<Device_GPU>(const Device_GPU & dev, Tensor& v, const Tensor& v_src);
 void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) { return accumulate_dev(*(const Device_CPU*)v.device, v, v_src); }
   else if (v.device->type == DeviceType::GPU) { return accumulate_dev(*(const Device_GPU*)v.device, v, v_src); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (v.device->type == DeviceType::ThreadPool) { return accumulate_dev(*(const Device_ThreadPool*)v.device, v, v_src); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) { return accumulate_dev(*(const Device_CPU*)v.device, v, v_src); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (v.device->type == DeviceType::ThreadPool) { return accumulate_dev(*(const Device_ThreadPool*)v.device, v, v_src); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif
@@ -295,17 +298,20 @@ void TensorTools::constant_dev(const MyDevice & dev, Tensor& d, float c) {
 template void TensorTools::constant_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float c);
 #else
 template void TensorTools::constant_dev<Device_CPU>(const Device_CPU & dev, Tensor& d, float c);
+template void TensorTools::constant_dev<Device_ThreadPool>(const Device_ThreadPool & dev, Tensor& d, float c);
 #ifdef HAVE_CUDA
 extern template void TensorTools::constant_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float c);
 void TensorTools::constant(Tensor& d, float c) {
   if (d.device->type == DeviceType::CPU) { return constant_dev(*(const Device_CPU*)d.device, d, c); }
   else if (d.device->type == DeviceType::GPU) { return constant_dev(*(const Device_GPU*)d.device, d, c); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return constant_dev(*(const Device_ThreadPool*)d.device, d, c); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 void TensorTools::constant(Tensor& d, float c) {
   if (d.device->type == DeviceType::CPU) { return constant_dev(*(const Device_CPU*)d.device, d, c); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return constant_dev(*(const Device_ThreadPool*)d.device, d, c); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif
@@ -318,17 +324,20 @@ void TensorTools::clip_dev(const MyDevice & dev, Tensor& d, float left, float ri
 template void TensorTools::clip_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float left, float right);
 #else
 template void TensorTools::clip_dev<Device_CPU>(const Device_CPU & dev, Tensor& d, float left, float right);
+template void TensorTools::clip_dev<Device_ThreadPool>(const Device_ThreadPool & dev, Tensor& d, float left, float right);
 #ifdef HAVE_CUDA
 extern template void TensorTools::clip_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float left, float right);
 void TensorTools::clip(Tensor& d, float left, float right) {
   if (d.device->type == DeviceType::CPU) { return clip_dev(*(const Device_CPU*)d.device, d, left, right); }
   else if (d.device->type == DeviceType::GPU) { return clip_dev(*(const Device_GPU*)d.device, d, left, right); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return clip_dev(*(const Device_ThreadPool*)d.device, d, left, right); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 void TensorTools::clip(Tensor& d, float left, float right) {
   if (d.device->type == DeviceType::CPU) { return clip_dev(*(const Device_CPU*)d.device, d, left, right); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return clip_dev(*(const Device_ThreadPool*)d.device, d, left, right); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif
@@ -406,17 +415,20 @@ IndexTensor TensorTools::argmax_dev(const MyDevice & dev, const Tensor& v, unsig
 template IndexTensor TensorTools::argmax_dev<Device_GPU>(const Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
 #else
 template IndexTensor TensorTools::argmax_dev<Device_CPU>(const Device_CPU & dev, const Tensor& d, unsigned dim, unsigned num);
+template IndexTensor TensorTools::argmax_dev<Device_ThreadPool>(const Device_ThreadPool & dev, const Tensor& d, unsigned dim, unsigned num);
 #ifdef HAVE_CUDA
 extern template IndexTensor TensorTools::argmax_dev<Device_GPU>(const Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
 IndexTensor TensorTools::argmax(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return argmax_dev(*(const Device_CPU*)d.device, d, dim, num); }
   else if (d.device->type == DeviceType::GPU) { return argmax_dev(*(const Device_GPU*)d.device, d, dim, num); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return argmax_dev(*(const Device_ThreadPool*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 IndexTensor TensorTools::argmax(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return argmax_dev(*(const Device_CPU*)d.device, d, dim, num); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) {return argmax_dev(*(const Device_ThreadPool*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif
@@ -442,17 +454,20 @@ IndexTensor TensorTools::categorical_sample_log_prob_dev(const MyDevice & dev, c
 template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_GPU>(const Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
 #else
 template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_CPU>(const Device_CPU & dev, const Tensor& d, unsigned dim, unsigned num);
+template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_ThreadPool>(const Device_ThreadPool & dev, const Tensor& d, unsigned dim, unsigned num);
 #ifdef HAVE_CUDA
 extern template IndexTensor TensorTools::categorical_sample_log_prob_dev<Device_GPU>(const Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
 IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return categorical_sample_log_prob_dev(*(const Device_CPU*)d.device, d, dim, num); }
   else if (d.device->type == DeviceType::GPU) { return categorical_sample_log_prob_dev(*(const Device_GPU*)d.device, d, dim, num); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return categorical_sample_log_prob_dev(*(const Device_ThreadPool*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #else
 IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return categorical_sample_log_prob_dev(*(const Device_CPU*)d.device, d, dim, num); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (d.device->type == DeviceType::ThreadPool) { return categorical_sample_log_prob_dev(*(const Device_ThreadPool*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type lol"); }
 }
 #endif
 #endif

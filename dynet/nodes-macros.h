@@ -5,7 +5,6 @@
 #include <iostream>
 
 namespace dynet {
-
 inline bool LooksLikeVector(const Dim& d) {
   if (d.ndims() == 1) return true;
   if (d.ndims() > 1) {
@@ -109,7 +108,30 @@ inline std::string print_vecs(const std::vector<std::vector<T> > & vec) {
     else if(fx.device->type == DeviceType::GPU) { backward_dev_impl<dynet::Device_GPU>(*(dynet::Device_GPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
     else { throw std::runtime_error("Invalid device in MyNode::backward_impl"); } \
   }
-#else
+#elif THREAD_POOL 
+#define DYNET_NODE_INST_DEV_IMPL(MyNode) \
+  template void MyNode::forward_dev_impl<Device_ThreadPool>(const Device_ThreadPool & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
+  template void MyNode::backward_dev_impl<Device_ThreadPool>(const Device_ThreadPool & dev, \
+                                           const vector<const Tensor*>& xs, \
+                                           const Tensor& fx, \
+                                           const Tensor& dEdf, \
+                                           unsigned i, \
+                                           Tensor& dEdxi) const; \
+  void MyNode::forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const { \
+    DYNET_ASSERT(fx.device, "Device not allocated for expression"); \
+    if(fx.device->type == DeviceType::ThreadPool) { forward_dev_impl<dynet::Device_ThreadPool>(*(dynet::Device_ThreadPool*)fx.device,xs,fx); } \
+    else { throw std::runtime_error("Invalid device in MyNode::forward_impl"); } \
+  } \
+  void MyNode::backward_impl(const std::vector<const Tensor*>& xs, \
+                const Tensor& fx, \
+                const Tensor& dEdf, \
+                unsigned i, \
+                Tensor& dEdxi) const { \
+    DYNET_ASSERT(fx.device, "Device not allocated for expression"); \
+    if(fx.device->type == DeviceType::ThreadPool) { backward_dev_impl<dynet::Device_ThreadPool>(*(dynet::Device_ThreadPool*)fx.device,xs,fx,dEdf,i,dEdxi); } \
+    else { throw std::runtime_error("Invalid device in MyNode::backward_impl"); } \
+  }
+#else 
 #define DYNET_NODE_INST_DEV_IMPL(MyNode) \
   template void MyNode::forward_dev_impl<Device_CPU>(const Device_CPU & dev, const vector<const Tensor*>& xs, Tensor& fx) const; \
   template void MyNode::backward_dev_impl<Device_CPU>(const Device_CPU & dev, \
