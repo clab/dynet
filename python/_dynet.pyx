@@ -4899,16 +4899,33 @@ cdef class Trainer:
         cdef vector[unsigned] ulookupvec
         for i in updated_lookups: ulookupvec.push_back(i)
         # self.thisptr.update(uparamvec, ulookupvec)
+
     cpdef update_epoch(self, r):
         """DEPRECATED: do not use.
         """
         self.thisptr.update_epoch(r)
+
+
+    cpdef restart(self, learning_rate=None):
+        """Restarts the optimizer
+        
+        Clears all momentum values and assimilate (if applicable)
+
+        Args:
+            learning_rate (number): (Optional) resets the learning rate
+        """
+        if learning_rate is None:
+            self.thisptr.restart()
+        else:
+            self.thisptr.restart(learning_rate)
+
     cpdef status(self):
         """Outputs information about the trainer in the stderr 
         
         (number of updates since last call, number of clipped gradients, learning rate, etc...)
         """
         self.thisptr.status()
+
     cpdef set_sparse_updates(self,bool su):
         """Sets updates to sparse updates
 
