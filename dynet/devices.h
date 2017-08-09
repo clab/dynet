@@ -46,6 +46,12 @@ class Device {
   virtual void revert(const DeviceMempoolSizes & cp);
   void allocate_tensor(DeviceMempool mem_pool, Tensor & tensor);
   std::vector<AlignedMemoryPool*> pools;
+
+  // reporting for mem-test
+  void report_mem_test(){
+    std::cerr << "[dynet-mem-test] Reporting for Device " << name << std::endl;
+    for(auto p: pools)	p->report_self();
+  }
 };
 
 #if HAVE_CUDA

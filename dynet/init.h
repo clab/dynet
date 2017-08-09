@@ -9,6 +9,7 @@ namespace dynet {
 extern float weight_decay_lambda;
 extern int autobatch_flag;
 extern int autobatch_debug_flag;
+extern int mem_test_flag;
 
 /**
  * \brief Represents general parameters for dynet
@@ -27,7 +28,7 @@ struct DynetParams {
   bool ids_requested; /**< GPUs requested by ids */
   int requested_gpus; /**< Number of requested GPUs */
   std::vector<int> gpu_mask; /**< List of required GPUs by ids */
-
+  int mem_test; /**< Enter the memory testing mode, no f/b calculations */
 
 };
 

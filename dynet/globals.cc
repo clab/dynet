@@ -11,5 +11,6 @@ float weight_decay_lambda;
 int autobatch_flag; 
 int autobatch_debug_flag = 0;
 NamedTimer timer;
+int mem_test_flag = 0;
 
 }
