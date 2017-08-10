@@ -51,6 +51,7 @@ set(dynet_library_SRCS
     nodes-select.cc
     nodes-similarities.cc
     nodes-softmaxes.cc
+    nodes-to-device.cc
     nodes-trig.cc
     param-init.cc
     param-nodes.cc
@@ -155,6 +156,7 @@ set(dynet_gpu_mergeable_SRCS
     nodes-select
     nodes-similarities
     nodes-softmaxes
+    nodes-to-device
     nodes-trig
     param-nodes
     tensor

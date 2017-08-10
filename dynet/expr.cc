@@ -3,17 +3,16 @@
 #include <initializer_list>
 
 #include "dynet/nodes.h"
-#include "dynet/nodes-conv.h"
 
 namespace dynet {
 
 using std::vector;
 
-Expression input(ComputationGraph& g, real s) { return Expression(&g, g.add_input(s)); }
-Expression input(ComputationGraph& g, const real *ps) { return Expression(&g, g.add_input(ps)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data) { return Expression(&g, g.add_input(d, data)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata) { return Expression(&g, g.add_input(d, pdata)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata) { return Expression(&g, g.add_input(d, ids, data, defdata)); }
+Expression input(ComputationGraph& g, real s, Device *device) { return Expression(&g, g.add_input(s, device)); }
+Expression input(ComputationGraph& g, const real *ps, Device *device) { return Expression(&g, g.add_input(ps, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data, Device *device) { return Expression(&g, g.add_input(d, data, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata, Device *device) { return Expression(&g, g.add_input(d, pdata, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata, Device *device) { return Expression(&g, g.add_input(d, ids, data, device, defdata)); }
 Expression const_parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression const_parameter(ComputationGraph& g, LookupParameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_parameters(p)); }
@@ -201,6 +200,10 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
+Expression to_device(const Expression & x, Device *device) {
+  DYNET_ASSERT(x.pg->nodes[x.i]->device != device, "It is unnecessary to peform to_device operation in the same devices");
+  return Expression(x.pg, x.pg->add_function<ToDevice>({x.i}, device));
+}
 Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std){
   return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i}, weightnoise_std));
 }

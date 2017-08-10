@@ -19,7 +19,6 @@
 #include "dynet/devices.h"
 #include "dynet/sig.h"
 
-
 namespace dynet {
 
 extern float* kSCALAR_MINUSONE;
@@ -89,46 +88,54 @@ struct ComputationGraph {
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation
    *
    * \param s Real number
+   * \param device The device to place input value
    * \return The index of the created variable
    */
-  VariableIndex add_input(real s);  //
+  VariableIndex add_input(real s, Device *device);  //
   /**
    * \brief Add scalar input by pointer
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation
    *
    * \param ps Pointer to a real number
+   * \param device The device to place input value
    * \return The index of the created variable
    */
-  VariableIndex add_input(const real* ps);  // add pointer to scalar
+  VariableIndex add_input(const real* ps, Device *device);  // add pointer to scalar
   /**
    * \brief Add multidimentsional input
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation
    *
    * \param d Desired shape of the input
    * \param data Input data (as a 1 dimensional array)
+   * \param data The data points corresponding to each index
+   * \param device The device to place input value
    * \return The index of the created variable
    */
-  VariableIndex add_input(const Dim& d, const std::vector<float>& data);
+  VariableIndex add_input(const Dim& d, const std::vector<float>& data, Device *device);
   /**
    * \brief Add multidimentsional input by pointer
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation
    *
    * \param d Desired shape of the input
    * \param pdata Pointer to the input data (as a 1 dimensional array)
+   * \param device The device to place input value
    * \return The index of the created variable
    */
-  VariableIndex add_input(const Dim& d, const std::vector<float>* pdata);
+  VariableIndex add_input(const Dim& d, const std::vector<float>* pdata, Device *device);
   /**
    * \brief Add sparse input
    * \details The computational network will pull inputs in from the user's data structures and make them available to the computation. Represents specified (not learned) inputs to the network in sparse array format, with an optional default value.
    *
    * \param d Desired shape of the input
    * \param ids The indexes of the data points to update
-   * \param data  The data points corresponding to each index
+   * \param data The data points corresponding to each index
+   * \param device The device to place input value
    * \param defdata The default data with which to set the unspecified data points
    * \return The index of the created variable
    */
-  VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
+  VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids,
+                          const std::vector<float>& data, Device *device,
+                          float defdata = 0.f);
 
   // PARAMETERS
   // parameters are things that are optimized. in contrast to a system like
@@ -424,6 +431,7 @@ struct ComputationGraph {
   std::vector<VariableIndex> parameter_nodes; // nodes that contain parameters that can be updated (subset of nodes)
 
   ExecutionEngine* ee;  // handles the execution
+
 private:
   unsigned graph_id;
   // flag of whether to compute immediately for each expression, i.e., an imperative execution style to help debug.
@@ -538,6 +546,13 @@ struct Node {
    */
   virtual bool supports_multibatch() const { return false; }
 
+  /**
+   * \brief Whether this node supports processing inputs/outputs on multiple devices.
+   * \details DyNet will throw an error if you try to process inputs and outputs on different devices unless this is activated.
+   * \return Support for multi-device
+   */
+  virtual bool supports_multidevice() const { return false; }
+
   // perform the forward/backward passes in one or multiple calls
   /**
    * \brief perform the forward/backward passes in one or multiple calls
@@ -632,13 +647,16 @@ struct Node {
   // memory size
   Dim dim; /**< Will be .size() = 0 initially filled in by forward() -- TODO fix this */
 
-  Device* device; /**< pointer to the node, or null to inherit device from first input, or default when there is no input */
+  // pointer to the node, or nullptr to inherit device from first input, or default when there is no input
+  Device* device;
 
 protected:
-  Node() : args(), device(default_device) {}
-  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(default_device) {}
+  Node() : args(), device(nullptr) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a) : args(a), device(nullptr) {}
+  explicit Node(const std::initializer_list<VariableIndex>& a, Device *_device)
+      : args(a), device(_device) {}
   template <typename T>
-  explicit Node(const T&c) : args(c.begin(), c.end()), device(default_device) {}
+  explicit Node(const T&c) : args(c.begin(), c.end()), device(nullptr) {}
 
 private:
   ComputationGraph* cg_;  // pointer to the computation graph
@@ -653,6 +671,13 @@ template <class Function>
 inline VariableIndex ComputationGraph::add_function(const std::initializer_list<VariableIndex>& arguments) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments));
+  if (nodes.back()->device == nullptr) {
+    if (arguments.size()) {
+      nodes.back()->device = nodes[*arguments.begin()]->device;
+    } else {
+      nodes.back()->device = dynet::default_device;
+    }
+  }
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -663,6 +688,13 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
     Args&&... side_information) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
+  if (nodes.back()->device == nullptr) {
+    if (arguments.size()) {
+      nodes.back()->device = nodes[*arguments.begin()]->device;
+    } else {
+      nodes.back()->device = dynet::default_device;
+    }
+  }
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -671,6 +703,7 @@ template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments));
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -681,6 +714,7 @@ inline VariableIndex ComputationGraph::add_function(const T& arguments,
     Args&&... side_information) {
   VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
+  nodes.back()->device = dynet::default_device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }

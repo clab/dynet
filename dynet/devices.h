@@ -2,8 +2,10 @@
 #define DYNET_DEVICES_H
 
 #include <string>
+#include <exception>
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/cuda.h"
+#include "dynet/globals.h"
 
 namespace Eigen {
   struct DefaultDevice;
@@ -74,6 +76,8 @@ class Device_CPU : public Device {
   Eigen::DefaultDevice* edevice;
   MemAllocator* shmem;
 };
+
+Device* get_global_device(const std::string & name);
 
 } // namespace dynet
 
