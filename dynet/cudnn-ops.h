@@ -4,7 +4,6 @@
 #if HAVE_CUDNN
 #include "dynet/dynet.h"
 #include "dynet/cuda.h"
-#include "dynet/op-helper.h"
 
 namespace dynet {
 
