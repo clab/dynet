@@ -95,10 +95,19 @@ BOOST_FIXTURE_TEST_SUITE(node_test, NodeTest);
 BOOST_AUTO_TEST_CASE( constant_value ) {
   dynet::ComputationGraph cg;
   float mystery_constant = 3.14159f;
-  Expression x = constant(cg, Dim({3}), 3.14159f);
+  Expression x = constant(cg, Dim({3}), mystery_constant);
   vector<float> z = as_vector(x.value());
   for (unsigned i = 0; i < 3; i++)
     BOOST_CHECK_EQUAL(z[i], mystery_constant);
+}
+
+// Expression zeros(const Dim d, float val);
+BOOST_AUTO_TEST_CASE( zeros_value ) {
+  dynet::ComputationGraph cg;
+  Expression x = zeros(cg, Dim({3}));
+  vector<float> z = as_vector(x.value());
+  for (unsigned i = 0; i < 3; i++)
+    BOOST_CHECK_EQUAL(z[i], 0.f);
 }
 
 // Expression operator-(const Expression& x);

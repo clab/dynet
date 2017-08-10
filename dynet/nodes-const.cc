@@ -6,7 +6,7 @@ using namespace std;
 
 namespace dynet {
 
-// ************* Zeroes *************
+// ************* Constant *************
 
 #ifndef __CUDACC__
 
@@ -25,7 +25,10 @@ Dim Constant::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void Constant::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in Constant::forward");
-  TensorTools::constant(fx, value);
+  if (value == 0.f)
+    TensorTools::zero(fx);
+  else
+    TensorTools::constant(fx, value);
 }
 
 template<class MyDevice>
