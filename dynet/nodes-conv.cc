@@ -298,7 +298,7 @@ Dim KMHNGram::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void KMHNGram::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("KMHNGram not implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("KMHNGram forward");
 #else
   auto x = **xs[0];
   const int new_cols = x.cols() - n + 1;
@@ -321,7 +321,7 @@ void KMHNGram::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("KMHNGram not implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("KMHNGram backward");
 #else
   const int c = dEdf.d.cols();
   for (int j = 0; j < c; ++j)

@@ -1,6 +1,6 @@
 #include "dynet/nodes-linalg.h"
-
 #include "dynet/nodes-macros.h"
+#include "dynet/except.h"
 
 using namespace std;
 
@@ -77,7 +77,7 @@ template<class MyDevice>
 void MatrixInverse::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in MatrixInverse::forward");
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("MatrixInverse not yet implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("MatrixInverse forward");
 #else
   auto x = **xs[0];
   auto y = *fx;
@@ -96,7 +96,7 @@ void MatrixInverse::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in MatrixInverse::backward");
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("MatrixInverse not yet implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("MatrixInverse backward");
 #else
   auto d = *dEdf;
   auto y = *fx;
@@ -153,7 +153,7 @@ inline typename MatrixType::Scalar logdet(const MatrixType& M, bool use_cholesky
 template<class MyDevice>
 void LogDet::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("LogDet not implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("LogDet forward");
 #else
   fx.v[0] = logdet(**xs[0], false);
 #endif
@@ -167,7 +167,7 @@ void LogDet::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("KMHNGram not implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("LogDet backward");
 #else
   auto trans = (**xs[0]).transpose();
   (*dEdxi) += (dEdf.v[0]) * trans.inverse();
@@ -195,7 +195,7 @@ Dim TraceOfProduct::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void TraceOfProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("TraceOfProduct not yet implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("TraceOfProduct forward");
 #else
   auto x1 = **xs[0];
   auto x2 = **xs[1];
@@ -212,7 +212,7 @@ void TraceOfProduct::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i < 2, "Failed dimension check in TraceOfProduce::backward");
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("TraceOfProduct not yet implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("TraceOfProduct backward");
 #else
   const float d = dEdf.v[0];
   auto xother = **xs[1 - i];

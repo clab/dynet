@@ -2,6 +2,7 @@
 #define DYNET_NODE_MACROS_H_
 
 #include "dynet/dim.h"
+#include "dynet/except.h"
 #include <iostream>
 
 namespace dynet {

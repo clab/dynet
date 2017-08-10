@@ -28,6 +28,9 @@
 #include "dynet/nodes-logsumexp.h"
 #include "dynet/nodes-minmax.h"
 #include "dynet/nodes-moments.h"
+#include "dynet/nodes-contract.h"
+
+#include "dynet/devices.h"
 
 #include <stdexcept>
 
@@ -43,17 +46,28 @@ struct Expression {
   VariableIndex i;
   unsigned graph_id;
 
-  Expression() : pg(nullptr), i(0), graph_id(0) { }
-  const bool is_stale() const {return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());}
+  Expression() : pg(nullptr), i(0), graph_id(0) {}
+
   /**
    * \brief Base expression constructor
    * \details Used when creating operations
    *
    * \param pg Pointer to the computation graph
    * \param i Variable index
-   * \param name Name of the expression
    */
-  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i), graph_id(pg->get_id()) { }
+  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg),
+    i(i), graph_id(pg->get_id()) {}
+
+  inline std::string get_device_name() const {
+    if (pg->nodes[i]->device == nullptr)
+      throw std::runtime_error("Unknown device for node:" + std::to_string(i));
+    return pg->nodes[i]->device->name;
+  }
+
+  const bool is_stale() const {
+    return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());
+  }
+
   /**
    * \brief Get value of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
@@ -111,7 +125,7 @@ Expression f(const T& xs, const T1& arg1) {
   for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
   return Expression(pg, pg->add_function<F>(xis, arg1));
 }
-}
+} // namespace detail
 
 ////////////////////////////////////////////////
 // Input operations                           //
@@ -124,10 +138,11 @@ Expression f(const T& xs, const T1& arg1) {
  *
  * \param g Computation graph
  * \param s Real number
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing s
  */
-Expression input(ComputationGraph& g, real s);
+Expression input(ComputationGraph& g, real s, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -138,10 +153,11 @@ Expression input(ComputationGraph& g, real s);
  *
  * \param g Computation graph
  * \param ps Real number pointer
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing *ps
  */
-Expression input(ComputationGraph& g, const real *ps);
+Expression input(ComputationGraph& g, const real *ps, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -161,10 +177,11 @@ Expression input(ComputationGraph& g, const real *ps);
  * \param g Computation graph
  * \param d Dimension of the input matrix
  * \param data A vector of data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing data
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -175,10 +192,11 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& da
  * \param g Computation graph
  * \param d Dimension of the input matrix
  * \param pdata A pointer to an (updatable) vector of data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing *pdata
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -193,10 +211,13 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
  * \param ids The indexes of the data points to update
  * \param data The data points corresponding to each index
  * \param defdata The default data with which to set the unspecified data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing data
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
+Expression input(ComputationGraph& g, const Dim& d,
+                 const std::vector<unsigned int>& ids, const std::vector<float>& data,
+                 float defdata = 0.f, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -2158,6 +2179,16 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
  */
 Expression weight_norm(const Expression& w, const Expression& g);
 
+/**
+ * \ingroup change device operation
+ * \brief Copy tensor between devices
+ * \details Copy tensor from x's device to device 
+ *
+ * \param x Input expression
+ * \param device Device to place return tensor
+ * \return An expression of x's tensor in device
+ */
+Expression to_device(const Expression & x, Device *device);
 /**
  * \ingroup lstm
  * \brief Computes LSTM matrix multiplies plus nonlinearities

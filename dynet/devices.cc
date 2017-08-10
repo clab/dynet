@@ -1,6 +1,7 @@
 #include "dynet/devices.h"
 
 #include <iostream>
+#include <string>
 #include <unsupported/Eigen/CXX11/Tensor>
 
 #include "dynet/cuda.h"
@@ -88,6 +89,7 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   kSCALAR_MINUSONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ZERO = (float*)gpu_mem.malloc(sizeof(float));
+  name = "GPU:" + std::to_string(device_id);
   float minusone = -1;
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_MINUSONE, &minusone, sizeof(float), cudaMemcpyHostToDevice));
   float one = 1;
@@ -118,6 +120,7 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
   *kSCALAR_ONE = 1;
   kSCALAR_ZERO = (float*) mem->malloc(sizeof(float));
   *kSCALAR_ZERO = 0;
+  name = "CPU";
 
   // Initialize the Eigen device
   edevice = new Eigen::DefaultDevice;
@@ -130,5 +133,13 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
 }
 
 Device_CPU::~Device_CPU() {}
+
+Device* get_global_device(const std::string & name) {
+  auto it = dynet::devices_map.find(name);
+  if (it == dynet::devices_map.end()) {
+    throw std::runtime_error("Invalid device name: " + name);
+  }
+  return it->second;
+}
 
 } // namespace dynet
