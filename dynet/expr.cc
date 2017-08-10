@@ -25,7 +25,10 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index) 
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
-Expression zeroes(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Zeroes>(d)); }
+Expression zeros(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Constant>(d, 0.f)); }
+// Expression zeroes(ComputationGraph& g, const Dim& d) {return zeros(g, d);}
+Expression ones(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Constant>(d, 1.f)); }
+Expression constant(ComputationGraph& g, const Dim& d, float val) { return Expression(&g, g.add_function<Constant>(d, val)); }
 Expression random_normal(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<RandomNormal>(d)); }
 Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale) { return Expression(&g, g.add_function<RandomBernoulli>({}, d, p, scale)); }
 Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right) { return Expression(&g, g.add_function<RandomUniform>({}, d, left, right)); }
