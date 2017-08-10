@@ -2094,7 +2094,7 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
 
 # }}}
 
-cpdef Expression zeroes(dim, int batch_size=1): 
+cpdef Expression zeros(dim, int batch_size=1): 
     """Create an input full of zeros
     
     Create an input full of zeros, sized according to dimensions :code:`dim`
@@ -2106,9 +2106,46 @@ cpdef Expression zeroes(dim, int batch_size=1):
         batch_size (number): Batch size of the tensor (default: (1))
     
     Returns:
-        dynet.Expression: A "d" dimensioned zero tensor
+        dynet.Expression: A :code:`d` dimensioned zero tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], Dim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_zeros(_cg.thisptr[0], Dim(dim, batch_size)))
+# Backward compatibility
+cpdef Expression zeroes(dim, int batch_size=1):
+    return zeros(dim, batch_size)
+
+cpdef Expression ones(dim, int batch_size=1): 
+    """Create an input full of ones
+    
+    Create an input full of ones, sized according to dimensions :code:`dim`
+    
+    Args:
+        dim (tuple, int): Dimension of the tensor
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A :code:`d` dimensioned zero tensor
+    """
+    return Expression.from_cexpr(_cg.version(), c_ones(_cg.thisptr[0], Dim(dim, batch_size)))
+
+cpdef Expression constant(dim, float val, int batch_size=1): 
+    """Create an input full of :code:`val`
+    
+    Create an input full of :code:`val`, sized according to dimensions :code:`dim`
+    
+    Args:
+        dim (tuple, int): Dimension of the tensor
+        val (number): Value
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A :code:`d` dimensioned tensor filled with value :code:`val`
+    """
+    return Expression.from_cexpr(_cg.version(), c_constant(_cg.thisptr[0], Dim(dim, batch_size), val))
+
 cpdef Expression random_normal(dim, int batch_size=1): 
     """Create a random normal vector
     
