@@ -195,7 +195,6 @@ void MomentumSGDTrainer::alloc_impl() {
   vp = allocate_shadow_parameters(*model);
   vlp = allocate_shadow_lookup_parameters(*model);
 }
-#endif
 
 void MomentumSGDTrainer::restart() {
   for (auto sp : vp)
@@ -203,6 +202,8 @@ void MomentumSGDTrainer::restart() {
   for (auto slp : vlp)
     TensorTools::zero(slp.all_h);
 }
+
+#endif
 
 // --- AdagradTrainer
 
@@ -232,7 +233,6 @@ void AdagradTrainer::alloc_impl() {
   vp = allocate_shadow_parameters(*model);
   vlp = allocate_shadow_lookup_parameters(*model);
 }
-#endif
 
 void AdagradTrainer::restart() {
   for (auto sp : vp)
@@ -240,6 +240,8 @@ void AdagradTrainer::restart() {
   for (auto slp : vlp)
     TensorTools::zero(slp.all_h);
 }
+
+#endif
 
 // --- AdadeltaTrainer
 
@@ -273,7 +275,6 @@ void AdadeltaTrainer::alloc_impl() {
   hd = allocate_shadow_parameters(*model);
   hld = allocate_shadow_lookup_parameters(*model);
 }
-#endif
 
 void AdadeltaTrainer::restart() {
   for (auto sp : hg)
@@ -285,6 +286,8 @@ void AdadeltaTrainer::restart() {
   for (auto slp : hld)
     TensorTools::zero(slp.all_h);
 }
+
+#endif
 
 // --- RMSPropTrainer
 // TODO: This is not finished yet, because it memorizes a scalar for each set of parameters, not each parameter itself.
@@ -321,8 +324,6 @@ void RMSPropTrainer::alloc_impl() {
   hmsg = allocate_shadow_parameters(*model);
   hlmsg = allocate_shadow_lookup_parameters(*model);
 }
-#endif
-
 
 void RMSPropTrainer::restart() {
   for (auto sp : hmsg)
@@ -330,6 +331,8 @@ void RMSPropTrainer::restart() {
   for (auto slp : hlmsg)
     TensorTools::zero(slp.all_h);
 }
+
+#endif
 
 // --- AdamTrainer
 
@@ -363,8 +366,6 @@ void AdamTrainer::alloc_impl() {
   v = allocate_shadow_parameters(*model);
   lv = allocate_shadow_lookup_parameters(*model);
 }
-#endif
-
 
 void AdamTrainer::restart() {
   for (auto sp : m)
@@ -377,6 +378,7 @@ void AdamTrainer::restart() {
     TensorTools::zero(slp.all_h);
 }
 
+#endif
 
 // --- EGTrainer
 template <class MyDevice>
@@ -406,8 +408,6 @@ void EGTrainer::alloc_impl() {
   hp = allocate_shadow_parameters(*model);
   hlp = allocate_shadow_lookup_parameters(*model); 
 }
-#endif
-
 
 void EGTrainer::restart() {
   for (auto sp : hp)
@@ -415,5 +415,7 @@ void EGTrainer::restart() {
   for (auto slp : hlp)
     TensorTools::zero(slp.all_h);
 }
+
+#endif
 
 } // namespace dynet
