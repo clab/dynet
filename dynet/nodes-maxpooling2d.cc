@@ -8,7 +8,6 @@
 
 #include "dynet/functors.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/op-helper.h"
 #include "third_party/eigen_pooling.h"
 
 #if HAVE_CUDA
