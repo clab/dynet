@@ -47,8 +47,7 @@ for iter in range(ITERATIONS):
         y.set(T if x1 != x2 else F)
         mloss += loss.scalar_value()
         loss.backward()
-        sgd.update(1.0)
-    sgd.update_epoch()
+        sgd.update()
     mloss /= 4.
     print("loss: %0.9f" % mloss)
 
