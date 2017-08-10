@@ -6,30 +6,33 @@ using namespace std;
 
 namespace dynet {
 
-// ************* Zeroes *************
+// ************* Constant *************
 
 #ifndef __CUDACC__
 
-string Zeroes::as_string(const vector<string>& arg_names) const {
+string Constant::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "zeroes(" << dim << ')';
+  s << "constant(" << dim << ',' << value << ')';
   return s.str();
 }
 
-Dim Zeroes::dim_forward(const vector<Dim>& xs) const {
+Dim Constant::dim_forward(const vector<Dim>& xs) const {
   return dim;
 }
 
 #endif
 
 template<class MyDevice>
-void Zeroes::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in Zeroes::forward");
-  TensorTools::zero(fx);
+void Constant::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 0, "Failed dimension check in Constant::forward");
+  if (value == 0.f)
+    TensorTools::zero(fx);
+  else
+    TensorTools::constant(fx, value);
 }
 
 template<class MyDevice>
-void Zeroes::backward_dev_impl(const MyDevice & dev,
+void Constant::backward_dev_impl(const MyDevice & dev,
                              const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
@@ -37,6 +40,6 @@ void Zeroes::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_RUNTIME_ERR("Called backward() on an arity 0 node");
 }
-DYNET_NODE_INST_DEV_IMPL(Zeroes)
+DYNET_NODE_INST_DEV_IMPL(Constant)
 
 }
