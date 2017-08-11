@@ -45,7 +45,7 @@ void ParameterNode::accumulate_grad(const Tensor& g) {
   else if(lparams.p != nullptr)
     lparams.get_storage().accumulate_grad(g);
   else
-    DYNET_RUNTIME_ERR("ConstParameterNode has neither Parameter nor LookupParameter");
+    DYNET_RUNTIME_ERR("ParameterNode has neither Parameter nor LookupParameter");
 }
 
 string InputNode::as_string(const vector<string>& arg_names) const {
