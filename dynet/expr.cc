@@ -201,10 +201,11 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
-Expression vanilla_lstm_gates(const std::initializer_list<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std){
+Expression vanilla_lstm_gates(const std::vector<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std){
   std::vector<VariableIndex> xis(x_t.size() + 4);
   unsigned i=0;
-  for ( Expression *it=(Expression*)x_t.begin(); it!=x_t.end(); ++it){
+  std::vector<Expression>::const_iterator it;
+  for ( it=x_t.begin(); it!=x_t.end(); ++it){
     xis[i] = it->i;
     i++;
   }
@@ -214,10 +215,11 @@ Expression vanilla_lstm_gates(const std::initializer_list<Expression>& x_t, cons
   xis[x_t.size()+3] = b.i;
   return Expression(h_tm1.pg, h_tm1.pg->add_function<VanillaLSTMGates>(xis, false, weightnoise_std));
 }
-Expression vanilla_lstm_gates(const std::initializer_list<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std){
+Expression vanilla_lstm_gates_dropout(const std::vector<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std){
   std::vector<VariableIndex> xis(x_t.size() + 6);
   unsigned i=0;
-  for ( Expression *it=(Expression*)x_t.begin(); it!=x_t.end(); ++it){
+  std::vector<Expression>::const_iterator it;
+  for ( it=x_t.begin(); it!=x_t.end(); ++it){
     xis[i] = it->i;
     i++;
   }

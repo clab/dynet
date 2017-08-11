@@ -2168,7 +2168,7 @@ Expression weight_norm(const Expression& w, const Expression& g);
  *             [gates_g]
  *
  *
- * \param x_t Input at current timestep (vector size I)
+ * \param x_t Inputs at current timestep (if more than 1 input will be concatenated; summed vector size I)
  * \param h_tm1 h of previous timestep
  * \param Wx State previous timestep (vector size H)
  * \param Wh Parameter matrix size 4H x I
@@ -2176,12 +2176,12 @@ Expression weight_norm(const Expression& w, const Expression& g);
  * \param weightnoise_std: apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
  * \return An expression with dimensions 4H
  */
-Expression vanilla_lstm_gates(const std::initializer_list<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std=0.f);
+Expression vanilla_lstm_gates(const std::vector<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std=0.f);
 
 /**
  * \ingroup lstm
  * \brief Computes LSTM matrix multiplies plus nonlinearities, while applying a dropout mask to input and previous state
- * \param x_t Input at current timestep (vector size I)
+ * \param x_t Inputs at current timestep (if more than 1 input will be concatenated; summed vector size I)
  * \param h_tm1 h of previous timestep
  * \param Wx State previous timestep (vector size H)
  * \param Wh Parameter matrix size 4H x I
@@ -2191,7 +2191,7 @@ Expression vanilla_lstm_gates(const std::initializer_list<Expression>& x_t, cons
  * \param weightnoise_std: apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
  * \return An expression with dimensions 4H
  */
-Expression vanilla_lstm_gates(const std::initializer_list<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std=0.f);
+Expression vanilla_lstm_gates_dropout(const std::vector<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std=0.f);
 
 /**
  * \ingroup lstm
