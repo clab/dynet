@@ -3,17 +3,16 @@
 #include <initializer_list>
 
 #include "dynet/nodes.h"
-#include "dynet/nodes-conv.h"
 
 namespace dynet {
 
 using std::vector;
 
-Expression input(ComputationGraph& g, real s) { return Expression(&g, g.add_input(s)); }
-Expression input(ComputationGraph& g, const real *ps) { return Expression(&g, g.add_input(ps)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data) { return Expression(&g, g.add_input(d, data)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata) { return Expression(&g, g.add_input(d, pdata)); }
-Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata) { return Expression(&g, g.add_input(d, ids, data, defdata)); }
+Expression input(ComputationGraph& g, real s, Device *device) { return Expression(&g, g.add_input(s, device)); }
+Expression input(ComputationGraph& g, const real *ps, Device *device) { return Expression(&g, g.add_input(ps, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data, Device *device) { return Expression(&g, g.add_input(d, data, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata, Device *device) { return Expression(&g, g.add_input(d, pdata, device)); }
+Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata, Device *device) { return Expression(&g, g.add_input(d, ids, data, device, defdata)); }
 Expression const_parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression const_parameter(ComputationGraph& g, LookupParameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_parameters(p)); }
@@ -26,7 +25,10 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index) 
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
-Expression zeroes(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Zeroes>(d)); }
+Expression zeros(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Constant>(d, 0.f)); }
+// Expression zeroes(ComputationGraph& g, const Dim& d) {return zeros(g, d);}
+Expression ones(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Constant>(d, 1.f)); }
+Expression constant(ComputationGraph& g, const Dim& d, float val) { return Expression(&g, g.add_function<Constant>(d, val)); }
 Expression random_normal(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<RandomNormal>(d)); }
 Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale) { return Expression(&g, g.add_function<RandomBernoulli>({}, d, p, scale)); }
 Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right) { return Expression(&g, g.add_function<RandomUniform>({}, d, left, right)); }
@@ -236,6 +238,11 @@ Expression vanilla_lstm_c(const Expression& c_tm1, const Expression& gates_t){
 }
 Expression vanilla_lstm_h(const Expression& c_t, const Expression& gates_t){
   return Expression(c_t.pg, c_t.pg->add_function<VanillaLSTMH>({c_t.i, gates_t.i}));
+}
+
+Expression to_device(const Expression & x, Device *device) {
+  DYNET_ASSERT(x.pg->nodes[x.i]->device != device, "It is unnecessary to perform to_device operation in the same devices");
+  return Expression(x.pg, x.pg->add_function<ToDevice>({x.i}, device));
 }
 
 }  // namespace dynet

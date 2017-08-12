@@ -212,7 +212,7 @@ namespace dynet {
     const Tensor *h_tm1 = xs[num_inputs];
     const Tensor *Wx = xs[num_inputs+1];
     const Tensor *Wh = xs[num_inputs+2];
-    const Tensor *b  = xs[num_inputs+3];
+//    const Tensor *b  = xs[num_inputs+3];
 
     unsigned hidden_dim = fx.d[0] / 4;
     unsigned input_dim = Wx->d[1];

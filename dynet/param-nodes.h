@@ -54,11 +54,13 @@ struct InputNode : public Node {
 // dynamic changing of the size of auxiliary memory on GPUs, although this could possibly
 // be fixed in the future.
 struct SparseInputNode : public Node {
-  explicit SparseInputNode(const Dim& d, const std::vector<unsigned int>& id, const std::vector<float>& dat, float defdat = 0.f) : dim(d), ids(id), data(dat), defdata(defdat) {}
+  explicit SparseInputNode(const Dim& d, const std::vector<unsigned int>& id,
+                           const std::vector<float>& dat, float defdat = 0.f)
+      : dim(d), ids(id), data(dat), defdata(defdat) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
-  size_t aux_storage_size() const override;
   Dim dim;
+  size_t aux_storage_size() const override;
   const std::vector<unsigned int> ids;
   const std::vector<float> data;
   float defdata;
@@ -73,6 +75,7 @@ struct ScalarInputNode : public Node {
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;
   virtual Node* autobatch_pseudo_node(const ComputationGraph & cg,
                                       const std::vector<VariableIndex> & batch_ids) const override;
+  Dim dim;
   const dynet::real data;
   const dynet::real* pdata;
 };

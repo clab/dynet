@@ -192,7 +192,7 @@ struct Tensor {
     } else {
 #if HAVE_CUDA
       if (device->type == DeviceType::GPU) {
-        throw std::runtime_error("is_valid() not implemented on GPU");
+        DYNET_NO_CUDA_IMPL_ERROR("is_valid()");
       }
 #endif
     }
@@ -670,7 +670,7 @@ struct TensorTools {
    * \param v Target tensor
    * \param v_src Source tensor
    */
-  static void copy_elements(const Tensor& v, const Tensor& v_src);
+  static void copy_elements(Tensor& v, const Tensor& v_src);
 
   /**
    * \brief Accumulate the values of one tensor into another

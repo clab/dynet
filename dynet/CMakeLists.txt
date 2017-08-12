@@ -51,6 +51,7 @@ set(dynet_library_SRCS
     nodes-select.cc
     nodes-similarities.cc
     nodes-softmaxes.cc
+    nodes-to-device.cc
     nodes-trig.cc
     param-init.cc
     param-nodes.cc
@@ -103,7 +104,6 @@ set(dynet_library_HDRS
     nodes-conv.h
     nodes-macros.h
     nodes.h
-    op-helper.h
     param-init.h
     param-nodes.h
     pretrain.h
@@ -118,6 +118,7 @@ set(dynet_library_HDRS
     timing.h
     training.h
     treelstm.h
+    virtual-cudnn.h
     weight-decay.h
 )
 if(ENABLE_BOOST)
@@ -155,6 +156,7 @@ set(dynet_gpu_mergeable_SRCS
     nodes-select
     nodes-similarities
     nodes-softmaxes
+    nodes-to-device
     nodes-trig
     param-nodes
     tensor

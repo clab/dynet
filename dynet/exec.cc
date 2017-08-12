@@ -84,7 +84,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
     vector<const Tensor*> xs(16);
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
-      if (autobatch_debug_flag) { 
+      if (autobatch_debug_flag) {
         current_node_name = node->as_dummy_string();
         timer.start(current_node_name);
       }
@@ -92,6 +92,8 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       unsigned ai = 0;
       for (VariableIndex arg : node->args) {
         xs[ai] = &nfxs[arg];
+        DYNET_ARG_CHECK(xs[ai]->device == node->device || node->supports_multidevice(),
+                        "Attempt to do tensor forward in different devices (nodes " << arg << " and " << num_nodes_evaluated << ")");
         ++ai;
       }
       nfxs[num_nodes_evaluated].d = node->dim;
@@ -111,7 +113,6 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
           DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node " << num_nodes_evaluated);
       }
       node->aux_mem = aux_mem;
-
       node->forward(xs, nfxs[num_nodes_evaluated]);
 
       if (autobatch_debug_flag) { timer.stop(current_node_name); }
@@ -149,7 +150,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
   // initialize dE/dE = 1
-  ndEdfs.back().v = kSCALAR_ONE;
+  ndEdfs.back().v = cg.nodes.back()->device->kSCALAR_ONE;
 
   // here we find constant paths to avoid doing extra work
   // by default, a node is constant unless
@@ -188,6 +189,12 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     ai = 0;
     for (VariableIndex arg : node->args) {
       if (needs_derivative[arg]) {
+        DYNET_ASSERT(nfxs[i].device == ndEdfs[i].device, "Attempt to do tensor backward in different devices");
+        DYNET_ASSERT(nfxs[i].device == ndEdfs[arg].device, "Attempt to do tensor backward in different devices");
+        // for (auto & xs_v : xs) {
+        //   DYNET_ASSERT(xs_v->device == nfxs[i].device.device,
+        //                "Attempt to do tensor backward in different devices");
+        // }
         node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
       }
       ++ai;
@@ -203,7 +210,6 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
       static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
   // for(VariableIndex vi = (VariableIndex)0; vi <= backward_computed; ++vi) cerr << "ndEdfs[" << vi << "] == " << print_vec(as_vector(ndEdfs[vi])) << endl;
-
 }
 
 // copies the list of tensors into a single contig tensor (tout).
@@ -235,15 +241,17 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
     const size_t sz = node2size[id];
 
     float* my_src = batches[node2batch[id]].nfx.v + node2offset[id];
+    if (tout.device->type == DeviceType::CPU) {
+      memcpy(dest, my_src, sz * sizeof(float));
+    } else if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
-    locs[i] = my_src; // src
-    locs[i+TRG] = dest;
-    locs[i+LEN] = (float*)sz;
-    if (max_length < sz) max_length=sz;
-    i++;
-#else
-    memcpy(dest, my_src, sz*sizeof(float));
+        locs[i] = my_src; // src
+        locs[i+TRG] = dest;
+        locs[i+LEN] = (float*)sz;
+        if (max_length < sz) max_length=sz;
+        i++;
 #endif
+    } else { throw std::runtime_error("Bad device type"); }
     dest += sz; // pointer arith
   }
 #if HAVE_CUDA
@@ -257,44 +265,44 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
 }
 
 void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<VariableIndex> batch_ids, int ai) {
-
+  if (tin.device->type == DeviceType::CPU) {
+    size_t tot_arg = 0;
+    Tensor temp_ndEdf;
+    for(auto curr_node : batch_ids) {
+      VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
+      temp_ndEdf = ndEdfs[my_aid];
+      temp_ndEdf.v = tin.v + tot_arg;
+      TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
+      tot_arg += node2size[my_aid];
+    }
+  } else {
 #if HAVE_CUDA
-  vector<float*> locs(batch_ids.size()*3);
-  unsigned i = 0;
-  unsigned max_length = 0;
-  const int TRG = batch_ids.size();
-  const int LEN = batch_ids.size()*2;
-  float* src = tin.v;
-  // copy
-  for (auto id : batch_ids) {
-    const size_t sz = node2size[cg.nodes[id]->args[ai]];
+    vector<float*> locs(batch_ids.size()*3);
+    unsigned i = 0;
+    unsigned max_length = 0;
+    const int TRG = batch_ids.size();
+    const int LEN = batch_ids.size()*2;
+    float* src = tin.v;
+    // copy
+    for (auto id : batch_ids) {
+      const size_t sz = node2size[cg.nodes[id]->args[ai]];
 
-    locs[i] = src; // src
-    locs[i+TRG] = ndEdfs[cg.nodes[id]->args[ai]].v;
-    locs[i+LEN] = (float*)sz;
-    if (max_length < sz) max_length = sz;
-    i++;
-    src += sz; // pointer arith
-  }
-  size_t req_sz = batch_ids.size()*3*sizeof(float*);
-  AlignedMemoryPool *mempool = tin.device->pools[(int)DeviceMempool::DEDFS];
-  float** srcs = static_cast<float**>(mempool->allocate(req_sz));
-  float** trgs = srcs + TRG;
-  float** lens = srcs + LEN;
-  CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
-  gpu::parallel_accumulate(batch_ids.size(), max_length, srcs, trgs, lens);
-#else
-  size_t tot_arg = 0;
-  Tensor temp_ndEdf;
-  for(auto curr_node : batch_ids) {
-    VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
-    temp_ndEdf = ndEdfs[my_aid];
-    temp_ndEdf.v = tin.v + tot_arg;
-    TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
-    tot_arg += node2size[my_aid];
-  }
+      locs[i] = src; // src
+      locs[i+TRG] = ndEdfs[cg.nodes[id]->args[ai]].v;
+      locs[i+LEN] = (float*)sz;
+      if (max_length < sz) max_length = sz;
+      i++;
+      src += sz; // pointer arith
+    }
+    size_t req_sz = batch_ids.size()*3*sizeof(float*);
+    AlignedMemoryPool *mempool = tin.device->pools[(int)DeviceMempool::DEDFS];
+    float** srcs = static_cast<float**>(mempool->allocate(req_sz));
+    float** trgs = srcs + TRG;
+    float** lens = srcs + LEN;
+    CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
+    gpu::parallel_accumulate(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
-
+  }
 }
 
 void BatchedExecutionEngine::invalidate() {

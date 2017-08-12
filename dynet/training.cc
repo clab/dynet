@@ -10,22 +10,19 @@
   template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real gscale, const std::vector<Tensor*> & values);
 #elif defined(HAVE_CUDA)
 // This is correct, but dying when models are read and written.
-// if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values); } 
-// else if(values[0]->device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)values[0]->device,gscale,values); } 
-// else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); }
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
   extern template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real gscale, const std::vector<Tensor*> & values); \
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real gscale, const std::vector<Tensor*> & values); \
   void MyTrainer::update_rule(real gscale, const std::vector<Tensor*> & values) { \
-    if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,gscale,values); } \
-    else if(default_device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)default_device,gscale,values); } \
+    if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values); } \
+    else if(values[0]->device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)values[0]->device,gscale,values); } \
     else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #else
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real gscale, const std::vector<Tensor*> & values); \
   void MyTrainer::update_rule(real gscale, const std::vector<Tensor*> & values) { \
-    if(default_device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)default_device,gscale,values); } \
+    if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values); } \
     else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #endif
@@ -115,6 +112,12 @@ void Trainer::update() {
     rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
 }
 
+void Trainer::restart(real lr) {
+    this->learning_rate = lr;
+    this->restart();
+}
+
+
 #endif
 
 // --- SimpleSGDTrainer
@@ -192,6 +195,14 @@ void MomentumSGDTrainer::alloc_impl() {
   vp = allocate_shadow_parameters(*model);
   vlp = allocate_shadow_lookup_parameters(*model);
 }
+
+void MomentumSGDTrainer::restart() {
+  for (auto sp : vp)
+    TensorTools::zero(sp.h);
+  for (auto slp : vlp)
+    TensorTools::zero(slp.all_h);
+}
+
 #endif
 
 // --- AdagradTrainer
@@ -222,6 +233,14 @@ void AdagradTrainer::alloc_impl() {
   vp = allocate_shadow_parameters(*model);
   vlp = allocate_shadow_lookup_parameters(*model);
 }
+
+void AdagradTrainer::restart() {
+  for (auto sp : vp)
+    TensorTools::zero(sp.h);
+  for (auto slp : vlp)
+    TensorTools::zero(slp.all_h);
+}
+
 #endif
 
 // --- AdadeltaTrainer
@@ -256,6 +275,18 @@ void AdadeltaTrainer::alloc_impl() {
   hd = allocate_shadow_parameters(*model);
   hld = allocate_shadow_lookup_parameters(*model);
 }
+
+void AdadeltaTrainer::restart() {
+  for (auto sp : hg)
+    TensorTools::zero(sp.h);
+  for (auto sp : hd)
+    TensorTools::zero(sp.h);
+  for (auto slp : hlg)
+    TensorTools::zero(slp.all_h);
+  for (auto slp : hld)
+    TensorTools::zero(slp.all_h);
+}
+
 #endif
 
 // --- RMSPropTrainer
@@ -293,6 +324,14 @@ void RMSPropTrainer::alloc_impl() {
   hmsg = allocate_shadow_parameters(*model);
   hlmsg = allocate_shadow_lookup_parameters(*model);
 }
+
+void RMSPropTrainer::restart() {
+  for (auto sp : hmsg)
+    TensorTools::zero(sp.h);
+  for (auto slp : hlmsg)
+    TensorTools::zero(slp.all_h);
+}
+
 #endif
 
 // --- AdamTrainer
@@ -327,6 +366,18 @@ void AdamTrainer::alloc_impl() {
   v = allocate_shadow_parameters(*model);
   lv = allocate_shadow_lookup_parameters(*model);
 }
+
+void AdamTrainer::restart() {
+  for (auto sp : m)
+    TensorTools::zero(sp.h);
+  for (auto sp : v)
+    TensorTools::zero(sp.h);
+  for (auto slp : lm)
+    TensorTools::zero(slp.all_h);
+  for (auto slp : lv)
+    TensorTools::zero(slp.all_h);
+}
+
 #endif
 
 // --- EGTrainer
@@ -357,6 +408,14 @@ void EGTrainer::alloc_impl() {
   hp = allocate_shadow_parameters(*model);
   hlp = allocate_shadow_lookup_parameters(*model); 
 }
+
+void EGTrainer::restart() {
+  for (auto sp : hp)
+    TensorTools::zero(sp.h);
+  for (auto slp : hlp)
+    TensorTools::zero(slp.all_h);
+}
+
 #endif
 
 } // namespace dynet

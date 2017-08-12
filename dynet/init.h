@@ -25,10 +25,9 @@ struct DynetParams {
   bool shared_parameters; /**< TO DOCUMENT */
   bool ngpus_requested; /**< GPUs requested by number */
   bool ids_requested; /**< GPUs requested by ids */
+  bool cpu_requested; /**< CPU requested in multi-device case */
   int requested_gpus; /**< Number of requested GPUs */
   std::vector<int> gpu_mask; /**< List of required GPUs by ids */
-
-
 };
 
 DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters = false);

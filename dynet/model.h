@@ -16,6 +16,8 @@
 
 #include "dynet/weight-decay.h"
 #include "dynet/tensor.h"
+#include "dynet/devices.h"
+#include "dynet/globals.h"
 
 namespace dynet {
 
@@ -141,11 +143,14 @@ struct ParameterStorage : public ParameterStorageBase {
   bool updated; /**< Whether this is updated */
   bool nonzero_grad; /**< Whether the gradient is zero */
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
+  Device *device;
 
 private:
   ParameterStorage() : updated(true), owner(nullptr) {}
-  explicit ParameterStorage(const Dim& d, float scale, const std::string & name); // initialize with a scale
-  explicit ParameterStorage(const Dim& d, const ParameterInit & init, const std::string & name); // initialize with custom initializer
+  explicit ParameterStorage(const Dim& d, float scale,
+                            const std::string & name, Device *device); // initialize with a scale
+  explicit ParameterStorage(const Dim& d, const ParameterInit & init,
+                            const std::string & name, Device *device); // initialize with custom initializer
 }; // struct ParameterStorage
 
 // represents a matrix/vector embedding of a discrete set
@@ -242,9 +247,11 @@ struct LookupParameterStorage : public ParameterStorageBase {
   bool all_updated; /** Whether all of the gradients have been updated. */
   bool nonzero_grad; /**< Whether the gradient is zero */
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
+  Device *device;
 private:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
-  LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name);
+  LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
+                         const std::string & name, Device *device);
 }; // // struct LookupParameterStorage
 
 /**
@@ -480,16 +487,6 @@ public:
    * \brief Sets all gradients to zero
    */
   void reset_gradient();
-  /**
-   * \brief Add parameters to model and returns Parameter object
-   * \details creates a ParameterStorage object holding a tensor of dimension `d` and returns a Parameter object (to be used as input in the computation graph).
-   *
-   * \param d Shape of the parameter
-   * \param name Name of the parameter
-   *
-   * \return Parameter object to be used in the computation graph
-   */
-  Parameter add_parameters(const Dim& d, const std::string & name);
   // set scale to use custom initialization
   /**
    * \brief Add parameters to model and returns Parameter object
@@ -498,20 +495,45 @@ public:
    * \param d Shape of the parameter
    * \param scale If scale is non-zero, initializes according to \f$mathcal U([-\mathrm{scale},+\mathrm{scale}]\f$, otherwise uses Glorot initialization
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, float scale = 0.0f, const std::string & name = "");
+  Parameter add_parameters(const Dim& d, float scale = 0.0f,
+                           const std::string & name = "", Device *device = dynet::default_device);
+  /**
+   * \brief Add parameters to model and returns Parameter object
+   * \details creates a ParameterStorage object holding a tensor of dimension `d` and returns a Parameter object (to be used as input in the computation graph).
+   *
+   * \param d Shape of the parameter
+   * \param device Device placement for the parameter
+   *
+   * \return Parameter object to be used in the computation graph
+   */
+  Parameter add_parameters(const Dim& d, Device *device);
+  /**
+   * \brief Add parameters to model and returns Parameter object
+   * \details creates a ParameterStorage object holding a tensor of dimension `d` and returns a Parameter object (to be used as input in the computation graph).
+   *
+   * \param d Shape of the parameter
+   * \param name Name of the parameter
+   * \param device Device placement for the parameter
+   *
+   * \return Parameter object to be used in the computation graph
+   */
+  Parameter add_parameters(const Dim& d, const std::string & name, Device *device = dynet::default_device);
   /**
    * \brief Add parameters with custom initializer
    *
    * \param d Shape of the parameter
    * \param init Custom initializer
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, const ParameterInit & init, const std::string & name = "");
+  Parameter add_parameters(const Dim& d, const ParameterInit & init,
+                           const std::string & name = "", Device *device = dynet::default_device);
   /**
    * \brief Get parameters base in current model
    *
@@ -537,10 +559,12 @@ public:
    * \param n Number of lookup indices
    * \param d Dimension of each embedding
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
    *
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const std::string & name = "");
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d,
+                                        const std::string & name = "", Device *device = dynet::default_device);
   /**
    * \brief Add lookup parameter with custom initializer
    *
@@ -548,9 +572,12 @@ public:
    * \param d Dimension of each embedding
    * \param init Custom initializer
    * \param name Name of the parameter
+   * \param device Device placement for the parameter
+   *
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, const std::string & name = "");
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init,
+                                        const std::string & name = "", Device *device = dynet::default_device);
   /**
    * \brief Get lookup parameter in current model
    * \details It is not recommended to use this

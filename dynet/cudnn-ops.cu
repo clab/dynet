@@ -4,10 +4,10 @@
 #include <algorithm>
 
 #include "dynet/dynet.h"
+#include "dynet/virtual-cudnn.h"
 #include "dynet/cudnn-ops.h"
 
-#define CUDNN_VERSION_MIN(major, minor, patch) \
-        (CUDNN_VERSION >= (major * 1000 + minor * 100 + patch))
+using namespace cudnn;
 
 namespace dynet {
 
@@ -23,19 +23,20 @@ CudnnConvOp::CudnnConvOp(const std::vector<unsigned>& s, const bool padding_type
   workspace_fwd_size_ = 0;
   workspace_bwd_data_size_ = 0;
   workspace_bwd_filter_size_ = 0;
-  CUDNN_CHECK(cudnnCreateTensorDescriptor(&x_desc_));
-  CUDNN_CHECK(cudnnCreateTensorDescriptor(&y_desc_));
-  CUDNN_CHECK(cudnnCreateTensorDescriptor(&bias_desc_));
-  CUDNN_CHECK(cudnnCreateFilterDescriptor(&filter_desc_));
-  CUDNN_CHECK(cudnnCreateConvolutionDescriptor(&conv_desc_));
+
+  createTensorDescriptor(&x_desc_);
+  createTensorDescriptor(&y_desc_);
+  createTensorDescriptor(&bias_desc_);
+  createFilterDescriptor(&filter_desc_);
+  createConvolutionDescriptor(&conv_desc_);
 }
 
 CudnnConvOp::~CudnnConvOp() noexcept(false) {
-  CUDNN_CHECK(cudnnDestroyTensorDescriptor(x_desc_));
-  CUDNN_CHECK(cudnnDestroyTensorDescriptor(y_desc_));
-  CUDNN_CHECK(cudnnDestroyTensorDescriptor(bias_desc_));
-  CUDNN_CHECK(cudnnDestroyFilterDescriptor(filter_desc_));
-  CUDNN_CHECK(cudnnDestroyConvolutionDescriptor(conv_desc_));
+  destroyTensorDescriptor(&x_desc_);
+  destroyTensorDescriptor(&y_desc_);
+  destroyTensorDescriptor(&bias_desc_);
+  destroyFilterDescriptor(&filter_desc_);
+  destroyConvolutionDescriptor(&conv_desc_);
 }
 
 void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Tensor*>& xs, Tensor& fx) {
@@ -88,35 +89,13 @@ void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Te
     }
   }
 
-  // set cudnn descriptors
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_, 
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              XN, XC, XW, XH));
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_, 
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              YN, YC, YW, YH));
-#if CUDNN_VERSION_MIN(5, 0, 0)
-  CUDNN_CHECK(cudnnSetFilter4dDescriptor(filter_desc_, 
-              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
-              FYC, FXC, FW, FH));
-#else
-  CUDNN_CHECK(cudnnSetFilter4dDescriptor_v4(filter_desc_, 
-              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
-              FYC, FXC, FW, FH));
-#endif
-#if CUDNN_VERSION_MIN(6, 0, 0)
-  CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
-              pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
-              CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT));
-#else
-  CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
-              pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
-              CUDNN_CROSS_CORRELATION));
-#endif
+  //set cudnn descriptors
+  setTensor4dDescriptor(&x_desc_, XN, XC, XW, XH);
+  setTensor4dDescriptor(&y_desc_, YN, YC, YW, YH);
+  setFilter4dDescriptor(&filter_desc_, FYC, FXC, FW, FH);
+  setConvolution2dDescriptor(&conv_desc_, pad_w/2, pad_h/2, stride_[1], stride_[0]);
   if (xs.size() == 3) {
-    CUDNN_CHECK(cudnnSetTensor4dDescriptor(bias_desc_,
-                CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-                1, FYC, 1, 1));
+    setTensor4dDescriptor(&bias_desc_, 1, FYC, 1, 1);
   }
 
   // TODO(Hao Zhang): there should be an autotune function to determine
@@ -151,9 +130,6 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
              const Tensor& dEdf,
              unsigned i,
              Tensor& dEdxi) {
-  // if (scratch_allocator == NULL)
-  //   throw std::runtime_error("dynet::CudnnConvOp::scratch_allocator not set");
-
   AlignedMemoryPool* scratch_allocator = dev.pools[(int)DeviceMempool::SCS];
   const Tensor* x = xs[0]; 
   const Tensor* filter = xs[1];
@@ -199,34 +175,12 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
     }
   }
 
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              XN, XC, XW, XH));
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              YN, YC, YW, YH));
-#if CUDNN_VERSION_MIN(5, 0, 0)
-  CUDNN_CHECK(cudnnSetFilter4dDescriptor(filter_desc_, 
-              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
-              FYC, FXC, FW, FH));
-#else
-  CUDNN_CHECK(cudnnSetFilter4dDescriptor_v4(filter_desc_, 
-              DataTypeToCudnnType<float>::value, CUDNN_TENSOR_NCHW,
-              FYC, FXC, FW, FH));
-#endif
-#if CUDNN_VERSION_MIN(6, 0, 0)
-  CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
-              pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
-              CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT));
-#else
-  CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc_,
-              pad_w/2, pad_h/2, stride_[1], stride_[0], 1, 1,
-              CUDNN_CROSS_CORRELATION));
-#endif
+  setTensor4dDescriptor(&x_desc_, XN, XC, XW, XH);
+  setTensor4dDescriptor(&y_desc_, YN, YC, YW, YH);
+  setFilter4dDescriptor(&filter_desc_, FYC, FXC, FW, FH);
+  setConvolution2dDescriptor(&conv_desc_, pad_w/2, pad_h/2, stride_[1], stride_[0]);
   if (i == 2) {
-    CUDNN_CHECK(cudnnSetTensor4dDescriptor(bias_desc_,
-                CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-                1, FYC, 1, 1));
+    setTensor4dDescriptor(&bias_desc_, 1, FYC, 1, 1);
   }
   float alpha = 1.f, beta = 0.f;
   switch(i) {
@@ -245,7 +199,6 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
                   conv_desc_, bwd_d_algo_, bwd_data_workspace, workspace_bwd_data_size_,
                   &beta, x_desc_, dxi));
       Tensor padded_dx = Tensor(Dim({XH, XW, XC}, XN), static_cast<float*>(dxi), xs[0]->device, DeviceMempool::FXS);
-      //std::cout << padded_dx.d << " " << dEdxi.d << std::endl;
       Eigen::array<int, 4> offsets = {0, 0, 0, 0};
       Eigen::array<int, 4> extents = {static_cast<int>(XH - h_odd), static_cast<int>(XW - w_odd), static_cast<int>(XC), static_cast<int>(XN)};
       dEdxi.tb<3>().device(*dev.edevice) += padded_dx.tb<3>().slice(offsets, extents);
@@ -291,15 +244,15 @@ CudnnMaxPooling2DOp::CudnnMaxPooling2DOp(const std::vector<unsigned>& ksize,
     stride_[i] = static_cast<int>(stride[i]);
   }
   is_valid_ = padding_type;
-  CUDNN_CHECK(cudnnCreateTensorDescriptor(&x_desc_));
-  CUDNN_CHECK(cudnnCreateTensorDescriptor(&y_desc_));
-  CUDNN_CHECK(cudnnCreatePoolingDescriptor(&pooling_desc_));
+  createTensorDescriptor(&x_desc_);
+  createTensorDescriptor(&y_desc_);
+  createPoolingDescriptor(&pooling_desc_);
 }
 
 CudnnMaxPooling2DOp::~CudnnMaxPooling2DOp() noexcept(false) {
-  CUDNN_CHECK(cudnnDestroyTensorDescriptor(x_desc_));
-  CUDNN_CHECK(cudnnDestroyTensorDescriptor(y_desc_));
-  CUDNN_CHECK(cudnnDestroyPoolingDescriptor(pooling_desc_));
+  destroyTensorDescriptor(&x_desc_);
+  destroyTensorDescriptor(&y_desc_);
+  destroyPoolingDescriptor(&pooling_desc_);
 }
 
 void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev,
@@ -324,22 +277,10 @@ void CudnnMaxPooling2DOp::forward_impl(const Device_GPU & dev,
     pad_h = std::max<int>(0, (YH - 1) * stride_[0] + ksize_[0] - XH) / 2;
     pad_w = std::max<int>(0, (YW - 1) * stride_[1] + ksize_[1] - XW) / 2;
   }
-
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              XN, XC, XW, XH));
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              YN, YC, YW, YH));
-  #if CUDNN_VERSION_MIN(5, 0, 0)
-    CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
-                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
-                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
-  #else
-    CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(pooling_desc_,
-                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
-                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
-  #endif
+  setTensor4dDescriptor(&x_desc_, XN, XC, XW, XH);
+  setTensor4dDescriptor(&y_desc_, YN, YC, YW, YH);
+  setPooling2dDescriptor(&pooling_desc_, CUDNN_POOLING_MAX, ksize_[1], ksize_[0],
+                  pad_w, pad_h, stride_[1], stride_[0]);
   float alpha = 1.f, beta = 0.f;
   CUDNN_CHECK(cudnnPoolingForward(dev.cudnnHandle, pooling_desc_, 
               &alpha, x_desc_, x->v,
@@ -352,8 +293,6 @@ void CudnnMaxPooling2DOp::backward_impl(const Device_GPU & dev,
               const Tensor& dEdf,
               unsigned i,
               Tensor& dEdxi) {
-  // if (scratch_allocator == NULL)
-  //   throw std::runtime_error("dynet::CudnnMaxPooling2DOp::scratch_allocator not set");
   const Tensor* x = xs[0]; 
   const Tensor* y = &fx; 
   const Tensor* dy = &dEdf;
@@ -375,22 +314,10 @@ void CudnnMaxPooling2DOp::backward_impl(const Device_GPU & dev,
     pad_h = std::max<int>(0, (YH - 1) * stride_[0] + ksize_[0] - XH) / 2;
     pad_w = std::max<int>(0, (YW - 1) * stride_[1] + ksize_[1] - XW) / 2;
   }
-
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(x_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              XN, XC, XW, XH));
-  CUDNN_CHECK(cudnnSetTensor4dDescriptor(y_desc_,
-              CUDNN_TENSOR_NCHW, DataTypeToCudnnType<float>::value,
-              YN, YC, YW, YH));
-  #if CUDNN_VERSION_MIN(5, 0, 0)
-    CUDNN_CHECK(cudnnSetPooling2dDescriptor(pooling_desc_,
-                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
-                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
-  #else
-    CUDNN_CHECK(cudnnSetPooling2dDescriptor_v4(pooling_desc_,
-                CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN,
-                ksize_[1], ksize_[0], pad_w, pad_h, stride_[1], stride_[0]));
-  #endif
+  setTensor4dDescriptor(&x_desc_, XN, XC, XW, XH);
+  setTensor4dDescriptor(&y_desc_, YN, YC, YW, YH);
+  setPooling2dDescriptor(&pooling_desc_, CUDNN_POOLING_MAX, ksize_[1], ksize_[0],
+                  pad_w, pad_h, stride_[1], stride_[0]);
 
   // here we could reuse the descriptor we created for forward, because
   // they share the same size

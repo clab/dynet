@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <sstream>
+#include <iostream>
 
 namespace dynet {
 
@@ -60,6 +61,12 @@ class cuda_exception : public std::runtime_error {
     std::ostringstream oss;                     \
     oss << msg;                                 \
     throw std::runtime_error(oss.str()); }      \
+  while (0);
+
+#define DYNET_NO_CUDA_IMPL_ERROR(op) do {															                                               \
+    std::ostringstream oss;                                                                                          \
+    oss << op << " not implemented for CUDA yet. You can use CPU implementation with to_device operation instead.";  \
+    throw std::runtime_error(oss.str()); }                                                                           \
   while (0);
 
 #endif

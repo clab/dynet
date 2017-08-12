@@ -1,13 +1,12 @@
 #include "dynet/rnn.h"
 
+#include "dynet/expr.h"
+#include "dynet/param-init.h"
+
 #include <string>
 #include <vector>
 #include <fstream>
 #include <iostream>
-
-#include "dynet/nodes.h"
-#include "dynet/expr.h"
-#include "dynet/param-init.h"
 
 using namespace std;
 using namespace dynet;

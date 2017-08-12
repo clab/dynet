@@ -164,7 +164,7 @@ template<class MyDevice>
 void RestrictedLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in RestrictedLogSoftmax");
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("RestrictedLogSoftmax not yet implemented for CUDA (contributions welcome!)");
+  DYNET_NO_CUDA_IMPL_ERROR("RestrictedLogSoftmax forward");
 #else
   // TODO create auxiliary mask with -infty's
   // and do usual LogSoftmax stuff
@@ -190,7 +190,7 @@ void RestrictedLogSoftmax::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i == 0, "Failed dimension check in RestrictedLogSoftmax");
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("RestrictedLogSoftmax not yet implemented for CUDA (contributions welcome!)");
+  DYNET_NO_CUDA_IMPL_ERROR("RestrictedLogSoftmax backward");
 #else
   float z = 0;
   for (auto ind : denom)
@@ -228,7 +228,7 @@ template<class MyDevice>
 void Sparsemax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
 #ifdef __CUDACC__
-    DYNET_RUNTIME_ERR("Sparsemax not implemented for CUDA");
+    DYNET_NO_CUDA_IMPL_ERROR("Sparsemax forward");
 #else
     const unsigned rows = xs[0]->d.rows();
     float *zs = static_cast<float*>(aux_mem);
@@ -263,7 +263,7 @@ void Sparsemax::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("Sparsemax not implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("Sparsemax backward");
 #else
   const int ssize = static_cast<int*>(aux_mem)[0];
   int *support = static_cast<int*>(aux_mem) + 1;
@@ -305,7 +305,7 @@ template<class MyDevice>
 void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs[0]->d.cols() == 1) {
 #ifdef __CUDACC__
-    DYNET_RUNTIME_ERR("SparsemaxLoss not implemented for CUDA");
+    DYNET_NO_CUDA_IMPL_ERROR("SparsemaxLoss forward");
 #else
     const int rows = xs[0]->d.rows();
     if (rows > MAX_SPARSEMAX_LOSS_ROWS)
@@ -345,7 +345,7 @@ void SparsemaxLoss::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
 #ifdef __CUDACC__
-  DYNET_RUNTIME_ERR("SparsemaxLoss not implemented for CUDA");
+  DYNET_NO_CUDA_IMPL_ERROR("SparsemaxLoss backward");
 #else
   const float d = dEdf.v[0];
   float* psm = static_cast<float*>(aux_mem);

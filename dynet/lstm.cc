@@ -1,12 +1,11 @@
 #include "dynet/lstm.h"
+
 #include "dynet/param-init.h"
 
 #include <fstream>
 #include <string>
 #include <vector>
 #include <iostream>
-
-#include "dynet/nodes.h"
 
 using namespace std;
 
@@ -670,7 +669,7 @@ Expression CompactVanillaLSTMBuilder::add_input_impl(int prev, const Expression&
         i_h_tm1 = h0[i];
         i_c_tm1 = c0[i];
       } else {
-	i_h_tm1 = zeroes(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
+	i_h_tm1 = zeros(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
 	i_c_tm1 = i_h_tm1;
       }
     } else {  // t > 0

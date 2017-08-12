@@ -5,6 +5,7 @@
 #include "dynet/dynet.h"
 #include "dynet/cuda.h"
 #include "dynet/init.h"
+#include "dynet/globals.h"
 
 using namespace std;
 
@@ -30,7 +31,7 @@ vector<Device*> initialize_gpu(DynetParams& params) {
     cerr << "Request for " << params.requested_gpus << " GPU" << (params.requested_gpus == 1 ? "" : "s") << " ...\n";
     for (int i = 0; i < MAX_GPUS; ++i) params.gpu_mask[i] = 1;
   } else if (params.ids_requested) {
-    params.requested_gpus++;
+    params.requested_gpus++; // since start from -1
     cerr << "[dynet] Request for " << params.requested_gpus << " specific GPU" << (params.requested_gpus == 1 ? "" : "s") << " ...\n";
   }
 
@@ -79,6 +80,7 @@ vector<Device*> initialize_gpu(DynetParams& params) {
   for (int i = 0; i < params.requested_gpus; ++i) {
     cerr << ' ' << gpus[i];
     Device* d = new Device_GPU(gpudevices.size(), params.mem_descriptor, gpus[i]);
+    dynet::devices_map[d->name] = d;
     gpudevices.push_back(d);
   }
   cerr << endl;
