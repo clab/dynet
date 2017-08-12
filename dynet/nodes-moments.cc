@@ -475,33 +475,50 @@ void StdDimension::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
   if(include_batch_dim) n *= xs[0]->d.bd;
 
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+
   if(dims.size()==0 && include_batch_dim){
     Eigen::array<ptrdiff_t, 1> red_axis = {1};
-    Eigen::array<ptrdiff_t, 2> newaxis = {xs[0]->d.batch_size(), 1};
+    Eigen::array<ptrdiff_t, 2> morph = {xs[0]->d.batch_size(), 1};
     Eigen::array<ptrdiff_t, 2> bcast = {1, xs[0]->d.bd};
-    fx.tvec().device(*dev.edevice) = ((xs[0]->tbvec() - (xs[0]->tbvec().sum(red_axis).reshape(newaxis) / n).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
+    Tensor mean(Dim({xs[0]->d.batch_size()}, 1), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tbvec().device(*dev.edevice) = (xs[0]->tbvec().sum(red_axis).reshape(morph) / n);
+    fx.tvec().device(*dev.edevice) = ((xs[0]->tbvec() - mean.tbvec().broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   } else if(dims.size()==1 && !include_batch_dim){
     Eigen::array<int, 1> red_axis = {(int)dims[0]};
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1;
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
-    fx.tb<2>().device(*dev.edevice) = ((xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
+    Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tb<3>().device(*dev.edevice) = (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n);
+    fx.tb<2>().device(*dev.edevice) = ((xs[0]->tb<3>() - mean.tb<3>().broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   } else if(dims.size()==1 && include_batch_dim){
     Eigen::array<int, 2> red_axis = {(int)dims[0], (int)3};
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1;
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
-    fx.t<2>().device(*dev.edevice) = ((xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
+    Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tb<3>().device(*dev.edevice) = (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n);
+    fx.t<2>().device(*dev.edevice) = ((xs[0]->tb<3>() - mean.tb<3>().broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   } else if(dims.size()==2 && !include_batch_dim){
     Eigen::array<int, 2> red_axis = {(int)dims[0], (int)dims[1]};
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
-    fx.tb<1>().device(*dev.edevice) = ((xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
+    Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tb<3>().device(*dev.edevice) = (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n);
+    fx.tb<1>().device(*dev.edevice) = ((xs[0]->tb<3>() - mean.tb<3>().broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   } else if(dims.size()==2 && include_batch_dim){
     Eigen::array<int, 3> red_axis = {(int)dims[0], (int)dims[1], (int)3};
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];  bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
-    fx.t<1>().device(*dev.edevice) = ((xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
-    // TODO: use eval(), something like    fx.t<1>().device(*dev.edevice) = ((xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).eval().broadcast(bcast)).square().sum(red_axis) / n).sqrt();
+    Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tb<3>().device(*dev.edevice) = (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n);
+    fx.t<1>().device(*dev.edevice) = ((xs[0]->tb<3>() - mean.tb<3>().broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   }
+  scratch_allocator->free();
 
 }
 
@@ -518,34 +535,50 @@ void StdDimension::backward_dev_impl(const MyDevice & dev,
   for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
   if(include_batch_dim) n *= xs[0]->d.bd;
 
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+
   if(dims.size()==0 && include_batch_dim){
     Eigen::array<ptrdiff_t, 1> red_axis = {1};
     Eigen::array<ptrdiff_t, 2> bcast = {1, xs[0]->d.bd};
-    Eigen::array<ptrdiff_t, 2> newaxis = {xs[0]->d.batch_size(), 1};
-    dEdxi.tbvec().device(*dev.edevice) +=  (2 / n) * (xs[0]->tbvec() - (xs[0]->tbvec().sum(red_axis).reshape(newaxis) / n).broadcast(bcast)) * (fx.tbvec().binaryExpr(dEdf.tbvec(), FSqrtBackward())).broadcast(bcast);
+    Eigen::array<ptrdiff_t, 2> morph = {xs[0]->d.batch_size(), 1};
+    Tensor mean(Dim({xs[0]->d.batch_size()}, 1), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tbvec().device(*dev.edevice) = (xs[0]->tbvec().sum(red_axis).reshape(morph) / n);
+    dEdxi.tbvec().device(*dev.edevice) +=  (2 / n) * (xs[0]->tbvec() - mean.tbvec().broadcast(bcast)) * (fx.tbvec().binaryExpr(dEdf.tbvec(), FSqrtBackward())).broadcast(bcast);
   } else if(dims.size()==1 && !include_batch_dim){
-    // original code:
     Eigen::array<int, 1> red_axis = {(int)dims[0]};
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1;
-    // TODO: this is very slow; the mean subtraction should be done via scratch memory
-    dEdxi.tb<3>().device(*dev.edevice) +=  (2 / n) * (xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)) * (fx.tb<2>().binaryExpr(dEdf.tb<2>(), FSqrtBackward())).reshape(morph).broadcast(bcast);
+    Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tb<3>().device(*dev.edevice) = (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n);
+    dEdxi.tb<3>().device(*dev.edevice) +=  (2 / n) * (xs[0]->tb<3>() - mean.tb<3>().broadcast(bcast)) * (fx.tb<2>().binaryExpr(dEdf.tb<2>(), FSqrtBackward())).reshape(morph).broadcast(bcast);
   } else if(dims.size()==1 && include_batch_dim){
     Eigen::array<int, 2> red_axis = {(int)dims[0], 3};
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1;
-    dEdxi.tb<3>().device(*dev.edevice) +=  (2 / n) * (xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)) * (fx.t<2>().binaryExpr(dEdf.t<2>(), FSqrtBackward())).reshape(morph).broadcast(bcast);
+    Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tb<3>().device(*dev.edevice) = (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n);
+    dEdxi.tb<3>().device(*dev.edevice) +=  (2 / n) * (xs[0]->tb<3>() - mean.tb<3>().broadcast(bcast)) * (fx.t<2>().binaryExpr(dEdf.t<2>(), FSqrtBackward())).reshape(morph).broadcast(bcast);
   } else if(dims.size()==2 && !include_batch_dim){
     Eigen::array<int, 2> red_axis = {(int)dims[0], (int)dims[1]};
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
-    dEdxi.tb<3>().device(*dev.edevice) +=  (2 / n) * (xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)) * (fx.tb<1>().binaryExpr(dEdf.tb<1>(), FSqrtBackward())).reshape(morph).broadcast(bcast);
+    Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tb<3>().device(*dev.edevice) = (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n);
+    dEdxi.tb<3>().device(*dev.edevice) +=  (2 / n) * (xs[0]->tb<3>() - mean.tb<3>().broadcast(bcast)) * (fx.tb<1>().binaryExpr(dEdf.tb<1>(), FSqrtBackward())).reshape(morph).broadcast(bcast);
   } else if(dims.size()==2 && include_batch_dim){
     Eigen::array<int, 3> red_axis = {(int)dims[0], (int)dims[1], 3};
     Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
     Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
-    dEdxi.tb<3>().device(*dev.edevice) +=  (2 / n) * (xs[0]->tb<3>() - (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n).broadcast(bcast)) * (fx.t<1>().binaryExpr(dEdf.t<1>(), FSqrtBackward())).reshape(morph).broadcast(bcast);
+    Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
+    mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
+    mean.tb<3>().device(*dev.edevice) = (xs[0]->tb<3>().sum(red_axis).reshape(morph) / n);
+    dEdxi.tb<3>().device(*dev.edevice) +=  (2 / n) * (xs[0]->tb<3>() - mean.tb<3>().broadcast(bcast)) * (fx.t<1>().binaryExpr(dEdf.t<1>(), FSqrtBackward())).reshape(morph).broadcast(bcast);
   }
+  scratch_allocator->free();
 
 }
 DYNET_NODE_INST_DEV_IMPL(StdDimension)
