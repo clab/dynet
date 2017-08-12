@@ -1,12 +1,11 @@
 #include "dynet/lstm.h"
+
 #include "dynet/param-init.h"
 
 #include <fstream>
 #include <string>
 #include <vector>
 #include <iostream>
-
-#include "dynet/nodes.h"
 
 using namespace std;
 
@@ -46,7 +45,6 @@ CoupledLSTMBuilder::CoupledLSTMBuilder(unsigned layers,
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
   dropout_rate_c = 0.f;
-  weight_noise = 0.f;
 }
 
 void CoupledLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
@@ -216,33 +214,19 @@ Expression CoupledLSTMBuilder::add_input_impl(int prev, const Expression& x) {
 
     // input
     Expression i_ait;
-    if (has_prev_state){
-      if(weight_noise > 0.f)
-	i_ait = affine_transform({noise(vars[BI], weight_noise), noise(vars[X2I], weight_noise), in, noise(vars[H2I], weight_noise), i_h_tm1, noise(vars[C2I], weight_noise), i_dropped_c_tm1});
-      else
-	i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_dropped_c_tm1});
-    } else {
-      if(weight_noise > 0.f)
-	i_ait = affine_transform({noise(vars[BI], weight_noise), noise(vars[X2I], weight_noise), in});
-      else
-	i_ait = affine_transform({vars[BI], vars[X2I], in});
-    }
+    if (has_prev_state)
+      i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1, vars[C2I], i_dropped_c_tm1});
+    else
+      i_ait = affine_transform({vars[BI], vars[X2I], in});
     Expression i_it = logistic(i_ait);
     // forget
     Expression i_ft = 1.f - i_it;
     // write memory cell
     Expression i_awt;
-    if (has_prev_state) {
-      if(weight_noise > 0.f)
-	i_awt = affine_transform({noise(vars[BC], weight_noise), noise(vars[X2C], weight_noise), in, noise(vars[H2C], weight_noise), i_h_tm1});
-      else
-	i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
-    } else {
-      if(weight_noise > 0.f)
-	i_awt = affine_transform({noise(vars[BC], weight_noise), noise(vars[X2C], weight_noise), in});
-      else
-	i_awt = affine_transform({vars[BC], vars[X2C], in});
-    }
+    if (has_prev_state)
+      i_awt = affine_transform({vars[BC], vars[X2C], in, vars[H2C], i_h_tm1});
+    else
+      i_awt = affine_transform({vars[BC], vars[X2C], in});
     Expression i_wt = tanh(i_awt);
     // output
     if (has_prev_state) {
@@ -258,17 +242,10 @@ Expression CoupledLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression dropped_c = ct[i];
     if (dropout_rate_c > 0.f)
       dropped_c = cmult(dropped_c, masks[i][2]);
-    if (has_prev_state) {
-      if(weight_noise > 0.f)
-	i_aot = affine_transform({noise(vars[BO], weight_noise), noise(vars[X2O], weight_noise), in, noise(vars[H2O], weight_noise), i_h_tm1, noise(vars[C2O], weight_noise), dropped_c});
-      else
-	i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], dropped_c});
-    } else {
-      if(weight_noise > 0.f)
-        i_aot = affine_transform({noise(vars[BO], weight_noise), noise(vars[X2O], weight_noise), in, noise(vars[C2O], weight_noise), dropped_c});
-      else
-        i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], dropped_c});
-    }
+    if (has_prev_state)
+      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1, vars[C2O], dropped_c});
+    else
+      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[C2O], dropped_c});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
     in = ht[i] = cmult(i_ot, ph_t);
@@ -348,7 +325,6 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
   }  // layers
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
-  weight_noise = 0.f;
 }
 
 void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
@@ -463,7 +439,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   Expression in = x;
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
-    const vector<Expression>& ln_vars = ln_param_vars[i];
+    
     Expression i_h_tm1, i_c_tm1;
     bool has_prev_state = (prev >= 0 || has_initial_state);
     if (prev < 0) {
@@ -491,29 +467,16 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_aot;
     Expression i_agt;
     if (ln_lstm){
-      if (has_prev_state){
-	if(weight_noise)
-	  tmp = noise(vars[_BI], weight_noise) + layer_norm(noise(vars[_X2I], weight_noise) * in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(noise(vars[_H2I], weight_noise) * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
-	else
-	  tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
-      } else {
-	if(weight_noise)
-          tmp = noise(vars[_BI], weight_noise) + layer_norm(noise(vars[_X2I], weight_noise) * in, ln_vars[LN_GX], ln_vars[LN_BX]);
-	else
-	  tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]);
-      }
-    } else{
-      if (has_prev_state) {
-	if(weight_noise)
-          tmp = affine_transform({noise(vars[_BI], weight_noise), noise(vars[_X2I], weight_noise), in, noise(vars[_H2I], weight_noise), i_h_tm1});
-	else
-	  tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
-      } else {
-	if(weight_noise)
-          tmp = affine_transform({noise(vars[_BI], weight_noise), noise(vars[_X2I], weight_noise), in});
-	else
-	  tmp = affine_transform({vars[_BI], vars[_X2I], in});
-      }
+      const vector<Expression>& ln_vars = ln_param_vars[i];
+      if (has_prev_state)
+        tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
+      else
+        tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]);
+    }else{
+      if (has_prev_state)
+        tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
+      else
+        tmp = affine_transform({vars[_BI], vars[_X2I], in});
     }
     i_ait = pick_range(tmp, 0, hid);
     i_aft = pick_range(tmp, hid, hid * 2);
@@ -526,9 +489,10 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_gt = tanh(i_agt);
 
     ct[i] = has_prev_state ? (cmult(i_ft, i_c_tm1) + cmult(i_it, i_gt)) :  cmult(i_it, i_gt);
-    if (ln_lstm)
-      in = ht[i] = cmult(i_ot, tanh(layer_norm(ct[i],ln_vars[LN_GC],ln_vars[LN_BC])));
-    else
+    if (ln_lstm) {
+      const vector<Expression>& ln_vars = ln_param_vars[i];
+      in = ht[i] = cmult(i_ot, tanh(layer_norm(ct[i], ln_vars[LN_GC], ln_vars[LN_BC])));
+    } else
       in = ht[i] = cmult(i_ot, tanh(ct[i]));
   }
   return ht.back();
@@ -570,10 +534,10 @@ void VanillaLSTMBuilder::disable_dropout() {
 CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), weightnoise_std(0) { }
 
 CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder(unsigned layers,
-						     unsigned input_dim,
-						     unsigned hidden_dim,
-						     ParameterCollection& model)
-	    : layers(layers), input_dim(input_dim), hid(hidden_dim), weightnoise_std(0){
+                 unsigned input_dim,
+                 unsigned hidden_dim,
+                 ParameterCollection& model)
+      : layers(layers), input_dim(input_dim), hid(hidden_dim), weightnoise_std(0){
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("compact-vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -705,8 +669,8 @@ Expression CompactVanillaLSTMBuilder::add_input_impl(int prev, const Expression&
         i_h_tm1 = h0[i];
         i_c_tm1 = c0[i];
       } else {
-	i_h_tm1 = zeroes(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
-	i_c_tm1 = i_h_tm1;
+  i_h_tm1 = zeros(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
+  i_c_tm1 = i_h_tm1;
       }
     } else {  // t > 0
       i_h_tm1 = h[prev][i];

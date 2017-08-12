@@ -19,8 +19,19 @@
 #define DYNET_EXPR_H
 
 #include "dynet/dynet.h"
-#include "dynet/nodes.h"
+
+// TODO: Ideally, we would not include these, but these are inlined at the moment.
+// If we can figure out a way to move the inlined functions to expr.cc that would be better.
+#include "dynet/nodes-affinetransform.h"
+#include "dynet/nodes-arith-sum.h"
+#include "dynet/nodes-concat.h"
+#include "dynet/nodes-logsumexp.h"
+#include "dynet/nodes-minmax.h"
+#include "dynet/nodes-moments.h"
 #include "dynet/nodes-contract.h"
+
+#include "dynet/devices.h"
+
 #include <stdexcept>
 
 
@@ -35,17 +46,28 @@ struct Expression {
   VariableIndex i;
   unsigned graph_id;
 
-  Expression() : pg(nullptr), i(0), graph_id(0) { }
-  const bool is_stale() const {return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());}
+  Expression() : pg(nullptr), i(0), graph_id(0) {}
+
   /**
    * \brief Base expression constructor
    * \details Used when creating operations
    *
    * \param pg Pointer to the computation graph
    * \param i Variable index
-   * \param name Name of the expression
    */
-  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i), graph_id(pg->get_id()) { }
+  Expression(ComputationGraph *pg, VariableIndex i) : pg(pg),
+    i(i), graph_id(pg->get_id()) {}
+
+  inline std::string get_device_name() const {
+    if (pg->nodes[i]->device == nullptr)
+      throw std::runtime_error("Unknown device for node:" + std::to_string(i));
+    return pg->nodes[i]->device->name;
+  }
+
+  const bool is_stale() const {
+    return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());
+  }
+
   /**
    * \brief Get value of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
@@ -60,11 +82,11 @@ struct Expression {
   /**
    * \brief Get gradient of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
-   * 
+   *
    * Make sure to call `backward` on a downstream expression before calling this.
-   * 
+   *
    * If the expression is a constant expression (meaning it's not a function of a parameter), dynet won't compute it's gradient for the sake of efficiency. You need to manually force the gradient computation by adding the agument `full=true` to `backward`
-        
+
    * \return Value of the expression as a tensor
    */
   const Tensor& gradient() const {
@@ -103,7 +125,7 @@ Expression f(const T& xs, const T1& arg1) {
   for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
   return Expression(pg, pg->add_function<F>(xis, arg1));
 }
-}
+} // namespace detail
 
 ////////////////////////////////////////////////
 // Input operations                           //
@@ -116,10 +138,11 @@ Expression f(const T& xs, const T1& arg1) {
  *
  * \param g Computation graph
  * \param s Real number
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing s
  */
-Expression input(ComputationGraph& g, real s);
+Expression input(ComputationGraph& g, real s, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -130,10 +153,11 @@ Expression input(ComputationGraph& g, real s);
  *
  * \param g Computation graph
  * \param ps Real number pointer
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing *ps
  */
-Expression input(ComputationGraph& g, const real *ps);
+Expression input(ComputationGraph& g, const real *ps, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -153,10 +177,11 @@ Expression input(ComputationGraph& g, const real *ps);
  * \param g Computation graph
  * \param d Dimension of the input matrix
  * \param data A vector of data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing data
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -167,10 +192,11 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& da
  * \param g Computation graph
  * \param d Dimension of the input matrix
  * \param pdata A pointer to an (updatable) vector of data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing *pdata
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -185,10 +211,13 @@ Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pd
  * \param ids The indexes of the data points to update
  * \param data The data points corresponding to each index
  * \param defdata The default data with which to set the unspecified data points
+ * \param device The place device for the input value, default_device by default
  *
  * \return An expression representing data
  */
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
+Expression input(ComputationGraph& g, const Dim& d,
+                 const std::vector<unsigned int>& ids, const std::vector<float>& data,
+                 float defdata = 0.f, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -374,9 +403,36 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vecto
  * \param g Computation graph
  * \param d The dimensions of the input
  *
- * \return A "d" dimensioned zero vector
+ * \return A `d` dimensioned zero tensor
  */
-Expression zeroes(ComputationGraph& g, const Dim& d);
+Expression zeros(ComputationGraph& g, const Dim& d);
+// For backward compatibility
+inline Expression zeroes(ComputationGraph& g, const Dim& d) {return zeros(g, d);}
+
+/**
+ * \ingroup inputoperations
+ * \brief Create an input full of ones
+ * \details Create an input full of ones, sized according to dimensions d.
+ *
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ *
+ * \return A `d` dimensioned tensor of ones
+ */
+Expression ones(ComputationGraph& g, const Dim& d);
+
+/**
+ * \ingroup inputoperations
+ * \brief Create an input with one constant value
+ * \details Create an input full of `val`, sized according to dimensions d.
+ *
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ * \param val The value of the input
+ *
+ * \return A `d` dimensioned tensor filled with value `val`
+ */
+Expression constant(ComputationGraph& g, const Dim& d, float val);
 
 /**
  * \ingroup inputoperations
@@ -799,43 +855,43 @@ Expression rectify(const Expression& x);
 /**
  * \ingroup arithmeticoperations
  * \brief Exponential Linear Unit
- * \details Calculate elementwise the function 
- * 
+ * \details Calculate elementwise the function
+ *
  * \f$
  * y_i = \left\{\begin{array}{lr}
  *            x_i, & \text{if } x>0\\
  *            \alpha\times(e^{x_i} - 1), & \text{if }x\leqslant 0\\
  *          \end{array}\right.
  * \f$
- * 
+ *
  * Reference: [Clevert et al., 2015](https://arxiv.org/abs/1511.07289v5)
  *
  * \param x The input expression
  *
  * \return An expression where the ith element is equal to \f$\text{ELU}(x_i, \alpha)\f$
  */
-Expression elu(const Expression& x, float alpha=1.f);
+Expression elu(const Expression& x, float alpha = 1.f);
 
 /**
  * \ingroup arithmeticoperations
  * \brief Scaled Exponential Linear Unit (SELU)
- * \details Calculate elementwise the function 
- * 
+ * \details Calculate elementwise the function
+ *
  * \f$
  * y_i = \lambda\times\left\{\begin{array}{lr}
  *            x_i, & \text{if } x>0\\
  *            \alpha\times(e^{x_i} - 1), & \text{if }x\leqslant 0\\
  *          \end{array}\right.
  * \f$
- * 
- * With 
+ *
+ * With
  * \f$
  * \begin{split}
  * \lambda &=\texttt{1.0507009873554804934193349852946}\\
  * \alpha &=\texttt{1.6732632423543772848170429916717}\\
  * \end{split}
  * \f$
- * 
+ *
  * Reference: [Klambaouer et al., 2017](https://arxiv.org/abs/1706.02515)
  *
  * \param x The input expression
@@ -1133,6 +1189,65 @@ Expression hinge(const Expression& x, const std::vector<unsigned> * pindices, fl
 
 /**
  * \ingroup lossoperations
+ * \brief Dimensionwise hinge loss
+ * \details This expression calculates the hinge loss over a particular dimension ``d``.
+ *
+ * \param x A matrix of scores
+ * \param indices The indices of the correct candidate (equal in length to the
+ *                dimension not specified by "d")
+ * \param d The dimension over which to calculate the loss (0 or 1)
+ * \param m The margin
+ *
+ * \return A vector of hinge losses for each index in ``indices``.
+ */
+Expression hinge_dim(const Expression& x, const std::vector<unsigned>& indices, unsigned d = 0, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Modifiable dimensionwise hinge loss
+ * \details This function calculates the modifiable version of dimensionwise hinge loss.
+ *
+ * \param x A vector of scores
+ * \param pindex A pointer to the index of the correct candidate
+ * \param d The dimension over which to calculate the loss (0 or 1)
+ * \param m The margin
+ *
+ * \return A vector of hinge losses for each index in ``indices``.
+ */
+Expression hinge_dim(const Expression& x, const std::vector<unsigned>* pindex, unsigned d = 0, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Batched dimensionwise hinge loss
+ * \details The same as dimensionwise hinge loss, but for the case where ``x`` is a mini-batched tensor
+ *          with ``indices.size()`` batch elements.
+ *
+ * \param x A mini-batch of vectors with ``indices.size()`` batch elements
+ * \param indices The indices of the correct candidates for each batch element
+ * \param d The dimension over which to calculate the loss (0 or 1)
+ * \param m The margin
+ *
+ * \return A vector of hinge losses for each mini-batch
+ */
+Expression hinge_dim(const Expression& x, const std::vector<std::vector<unsigned> >& indices, unsigned d = 0, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
+ * \brief Batched modifiable hinge loss
+ * \details A combination of the previous batched and modifiable hinge loss functions, where
+ *          vector ``*pindices`` can be modified.
+ *
+ * \param x A mini-batch of vectors with ``indices.size()`` batch elements
+ * \param pindices Pointer to the indices of the correct candidates for each batch element
+ * \param d The dimension over which to calculate the loss (0 or 1)
+ * \param m The margin
+ *
+ * \return The hinge loss of each mini-batch
+ */
+Expression hinge_dim(const Expression& x, const std::vector<std::vector<unsigned> >* pindices, unsigned d = 0, float m = 1.0);
+
+/**
+ * \ingroup lossoperations
  * \brief Sparsemax
  * \details The sparsemax function (Martins et al. 2016), which is similar to softmax,
  *          but induces sparse solutions where most of the vector elements are zero.
@@ -1375,7 +1490,7 @@ Expression reshape(const Expression& x, const Dim& d);
  *
  * \return The transposed/shuffled expression
  */
-Expression transpose(const Expression& x, const std::vector<unsigned> & dims = {1,0});
+Expression transpose(const Expression& x, const std::vector<unsigned> & dims = {1, 0});
 
 /**
  * \ingroup flowoperations
@@ -1444,7 +1559,7 @@ Expression sum_batches(const Expression& x);
 /**
  * \ingroup flowoperations
  * \brief Compute moment over minibatches
- * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along the batch dimension 
+ * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along the batch dimension
  *
  * \param x The input mini-batched expression
  * \param r Order of the moment
@@ -1457,7 +1572,7 @@ Expression moment_batches(const Expression& x, unsigned r);
 /**
  * \ingroup flowoperations
  * \brief Compute mean over minibatches
- * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension 
+ * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension
  *
  * \param x The input mini-batched expression
  *
@@ -1468,7 +1583,7 @@ Expression mean_batches(const Expression& x);
 /**
  * \ingroup flowoperations
  * \brief Compute standard deviation over minibatches
- * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension 
+ * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension
  *
  * \param x The input mini-batched expression
  *
@@ -1610,12 +1725,12 @@ Expression pickrange(const Expression& x, unsigned s, unsigned e);
  *        x_{3,2,1} & x_{3,2,2} \\
  *      \end{pmatrix}
  *    \f$
- * 
+ *
  * pick_batch_elem(t, 1) will return a Tensor of
- * 
+ *
  *    \f$
  *      \begin{pmatrix}
- *        x_{2,1,1} & x_{2,1,2} \\ 
+ *        x_{2,1,1} & x_{2,1,2} \\
  *        x_{2,2,1} & x_{2,2,2} \\
  *      \end{pmatrix}
  *    \f$
@@ -1647,12 +1762,12 @@ Expression pick_batch_elem(const Expression& x, unsigned v);
  *        x_{3,2,1} & x_{3,2,2} \\
  *      \end{pmatrix}
  *    \f$
- * 
+ *
  * pick_batch_elems(t, {2, 3}) will return a Tensor of with 2 batch elements:
- * 
+ *
  *    \f$
  *      \begin{pmatrix}
- *        x_{2,1,1} & x_{2,1,2} \\ 
+ *        x_{2,1,1} & x_{2,1,2} \\
  *        x_{2,2,1} & x_{2,2,2} \\
  *      \end{pmatrix}
  *      \begin{pmatrix}
@@ -1672,7 +1787,7 @@ Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> & v
 /**
  * \ingroup flowoperations
  * \brief Pick batch element.
- * \details Pick batch element from a batched expression. 
+ * \details Pick batch element from a batched expression.
  * \param x The input expression
  * \param v A pointer to the index of the correct element to be picked.
  *
@@ -1684,7 +1799,7 @@ Expression pick_batch_elem(const Expression& x, const unsigned* v);
 /**
  * \ingroup flowoperations
  * \brief Pick batch elements.
- * \details Pick several batch elements from a batched expression. 
+ * \details Pick several batch elements from a batched expression.
  * \param x The input expression
  * \param v A pointer to the indexes
  *
@@ -1741,7 +1856,7 @@ inline Expression concatenate(const T& xs, unsigned d = 0) { return detail::f<Co
 /**
  * \ingroup flowoperations
  * \brief Max out through a dimension
- * \details Select out a element/row/column/sub-tensor from an expression, 
+ * \details Select out a element/row/column/sub-tensor from an expression,
  *          with maximum value along a given dimension.
  *          This will result in the dimension of the tensor being reduced
  *          by 1.
@@ -1756,7 +1871,7 @@ Expression max_dim(const Expression& x, unsigned d = 0);
 /**
  * \ingroup flowoperations
  * \brief Min out through a dimension
- * \details Select out a element/row/column/sub-tensor from an expression, 
+ * \details Select out a element/row/column/sub-tensor from an expression,
  *          with minimum value along a given dimension.
  *          This will result in the dimension of the tensor being reduced
  *          by 1.
@@ -1809,8 +1924,8 @@ Expression dropout(const Expression& x, real p);
 /**
  * \ingroup noiseoperations
  * \brief Dropout along a specific dimension
- * \details Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example 
- * 
+ * \details Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example
+ *
  * For now this only supports tensors of order <= 3 (with or without batch dimension)
  *
  * \param x The input expression
@@ -1825,7 +1940,7 @@ Expression dropout_dim(const Expression& x, unsigned d, real p);
  * \ingroup noiseoperations
  * \brief Dropout entire elements of a minibatch
  * \details Identical to the dropout operation except entire batch elements are dropped
- * 
+ *
  * \param x The input expression
  * \param p The dropout probability
  *
@@ -1915,7 +2030,7 @@ Expression conv2d(const Expression& x, const Expression& f, const std::vector<un
  *
  *   In detail, assume:
  *   - Input feature maps: XH x XW x XC x N
- *   - Filters: FH x FW x XC x FC 
+ *   - Filters: FH x FW x XC x FC
  *   - Strides: strides[0] and strides[1] are row (h) and col (w) stride, respectively.
  *
  *   For the *SAME* convolution: the output height (YH) and width (YW) are computed as:
@@ -1968,10 +2083,10 @@ Expression maxpooling2d(const Expression& x, const std::vector<unsigned>& ksize,
  * \ingroup tensoroperations
  * \brief Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor
  * \details The resulting tensor \f$z\f$ has coordinates \f$z_ij = \sum_k x_{ijk} y_k\f$
- * 
+ *
  * \param x Rank 3 tensor
  * \param y Vector
- * 
+ *
  * \return Matrix
  */
 Expression contract3d_1d(const Expression& x, const Expression& y);
@@ -1980,9 +2095,9 @@ Expression contract3d_1d(const Expression& x, const Expression& y);
  * \ingroup tensoroperations
  * \brief Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor
  * \details This is the equivalent of calling `contract3d_1d` and then performing a matrix vector multiplication.
- * 
+ *
  * The resulting tensor \f$t\f$ has coordinates \f$t_i = \sum_{j,k} x_{ijk} y_k z_j\f$
- * 
+ *
  * \param x Rank 3 tensor
  * \param y Vector
  * \param z Vector
@@ -1993,9 +2108,9 @@ Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expr
  * \ingroup tensoroperations
  * \brief Same as `contract3d_1d_1d` with an additional bias parameter
  * \details This is the equivalent of calling `contract3d_1d` and then performing an affine transform.
- * 
+ *
  * The resulting tensor \f$t\f$ has coordinates \f$t_i = b_i + \sum_{j,k} x_{ijk} y_k z_j\f$
- * 
+ *
  * \param x Rank 3 tensor
  * \param y Vector
  * \param z Vector
@@ -2008,7 +2123,7 @@ Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expr
  * \ingroup tensoroperations
  * \brief Same as `contract3d_1d` with an additional bias parameter
  * \details The resulting tensor \f$z\f$ has coordinates \f$z_{ij} = b_{ij}+\sum_k x_{ijk} y_k\f$
- * 
+ *
  * \param x Rank 3 tensor
  * \param y Vector
  * \param b Bias matrix
@@ -2069,8 +2184,8 @@ Expression trace_of_product(const Expression& x, const Expression& y);
 /**
  * \ingroup normoperations
  * \brief Layer normalization
- * \details Performs layer normalization : 
- * 
+ * \details Performs layer normalization :
+ *
  * \f$
  * \begin{split}
  *    \mu &= \frac 1 n \sum_{i=1}^n x_i\\
@@ -2078,9 +2193,9 @@ Expression trace_of_product(const Expression& x, const Expression& y);
  *    y&=\frac {\boldsymbol{g}} \sigma \circ (\boldsymbol{x}-\mu) + \boldsymbol{b}\\
  * \end{split}
  * \f$
- * 
+ *
  * Reference : [Ba et al., 2016](http://arxiv.org/abs/1607.06450)
- * 
+ *
  * \param x Input expression (possibly batched)
  * \param g Gain (same dimension as x, no batch dimension)
  * \param b Bias (same dimension as x, no batch dimension)
@@ -2091,22 +2206,32 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 /**
  * \ingroup normoperations
  * \brief Weight normalization
- * \details Performs weight normalization : 
- * 
+ * \details Performs weight normalization :
+ *
  * \f$
  * \begin{split}
  *    \hat{w} &= g\frac{w}{\Vert w\Vert}\\
  * \end{split}
  * \f$
- * 
+ *
  * Reference : [Salimans, Kingma 2016](https://arxiv.org/abs/1602.07868)
- * 
+ *
  * \param w Input expression (weight parameter)
  * \param g Gain (scalar expression, usually also a parameter)
  * \return An expression of the same dimension as `w`
  */
 Expression weight_norm(const Expression& w, const Expression& g);
 
+/**
+ * \ingroup change device operation
+ * \brief Copy tensor between devices
+ * \details Copy tensor from x's device to device 
+ *
+ * \param x Input expression
+ * \param device Device to place return tensor
+ * \return An expression of x's tensor in device
+ */
+Expression to_device(const Expression & x, Device *device);
 /**
  * \ingroup lstm
  * \brief Computes LSTM matrix multiplies plus nonlinearities
@@ -2148,7 +2273,7 @@ Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, c
  * \param weightnoise_std: apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
  * \return An expression with dimensions 4H
  */
-Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std=0.f);
+Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std = 0.f);
 
 /**
  * \ingroup lstm

@@ -144,7 +144,11 @@ Input operations
 
 .. autofunction:: dynet.lookup_batch
 
-.. autofunction:: dynet.zeroes
+.. autofunction:: dynet.zeros
+
+.. autofunction:: dynet.ones
+
+.. autofunction:: dynet.constant
 
 .. autofunction:: dynet.random_normal
 

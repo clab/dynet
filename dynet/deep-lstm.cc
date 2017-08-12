@@ -1,11 +1,10 @@
 #include "dynet/deep-lstm.h"
+
 #include "dynet/param-init.h"
 
 #include <string>
 #include <vector>
 #include <iostream>
-
-#include "dynet/nodes.h"
 
 using namespace std;
 

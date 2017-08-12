@@ -192,7 +192,7 @@ struct Tensor {
     } else {
 #if HAVE_CUDA
       if (device->type == DeviceType::GPU) {
-        throw std::runtime_error("is_valid() not implemented on GPU");
+        DYNET_NO_CUDA_IMPL_ERROR("is_valid()");
       }
 #endif
     }
@@ -608,7 +608,7 @@ struct TensorTools {
    * \param left Left bound of the interval
    * \param right Right bound of the interval
    */
-  static void randomize_uniform(Tensor& val, real left = 0.0f, real right = 0.0f);
+  static void randomize_uniform(Tensor& val, real left = 0.0f, real right = 1.0f);
   /**
    * \brief Takes a square matrix tensor and sets it as a random orthonormal matrix
    * \details More specifically this samples a random matrix with RandomizeUniform and then performs SVD and returns the left orthonormal matrix in the decomposition, scaled by `scale`
@@ -670,7 +670,7 @@ struct TensorTools {
    * \param v Target tensor
    * \param v_src Source tensor
    */
-  static void copy_elements(const Tensor& v, const Tensor& v_src);
+  static void copy_elements(Tensor& v, const Tensor& v_src);
 
   /**
    * \brief Accumulate the values of one tensor into another

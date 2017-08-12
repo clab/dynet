@@ -15,6 +15,7 @@ namespace dynet {
       input, scalar_input, lookup, 
       COMPLEX,
       affine, matmul,
+      vanilla_lstm_gates, vanilla_lstm_h, vanilla_lstm_c,
     };
   }
 

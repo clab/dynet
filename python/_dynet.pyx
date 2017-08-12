@@ -573,16 +573,11 @@ cdef class Parameters: # {{{
         """Set value of the parameter
 
         """
-        cdef CTensor t
-        cdef float* vals
-        t = self.thisptr.get_storage().values
         shape = arr.shape
         if self.shape() != shape:
             raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
-        vals = t.v
         arr = arr.flatten(order='F')
-        for i in xrange(arr.size):
-            vals[i] = arr[i]
+        self.thisptr.set_value(arr)
 
     cpdef zero(self):
         """Set the parameter to zero
@@ -2099,28 +2094,65 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
 
 # }}}
 
-cpdef Expression zeroes(dim, int batch_size=1): 
+cpdef Expression zeros(dim, int batch_size=1): 
     """Create an input full of zeros
     
     Create an input full of zeros, sized according to dimensions :code:`dim`
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         batch_size (number): Batch size of the tensor (default: (1))
     
     Returns:
-        dynet.Expression: A "d" dimensioned zero tensor
+        dynet.Expression: A :code:`d` dimensioned zero tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_zeros(_cg.thisptr[0], Dim(dim, batch_size)))
+# Backward compatibility
+cpdef Expression zeroes(dim, int batch_size=1):
+    return zeros(dim, batch_size)
+
+cpdef Expression ones(dim, int batch_size=1): 
+    """Create an input full of ones
+    
+    Create an input full of ones, sized according to dimensions :code:`dim`
+    
+    Args:
+        dim (tuple, int): Dimension of the tensor
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A :code:`d` dimensioned zero tensor
+    """
+    return Expression.from_cexpr(_cg.version(), c_ones(_cg.thisptr[0], Dim(dim, batch_size)))
+
+cpdef Expression constant(dim, float val, int batch_size=1): 
+    """Create an input full of :code:`val`
+    
+    Create an input full of :code:`val`, sized according to dimensions :code:`dim`
+    
+    Args:
+        dim (tuple, int): Dimension of the tensor
+        val (number): Value
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A :code:`d` dimensioned tensor filled with value :code:`val`
+    """
+    return Expression.from_cexpr(_cg.version(), c_constant(_cg.thisptr[0], Dim(dim, batch_size), val))
+
 cpdef Expression random_normal(dim, int batch_size=1): 
     """Create a random normal vector
     
     Create a vector distributed according to normal distribution with mean 0, variance 1.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         batch_size (number): Batch size of the tensor  (default: (1))
@@ -2128,14 +2160,14 @@ cpdef Expression random_normal(dim, int batch_size=1):
     Returns:
         dynet.Expression: A "d" dimensioned normally distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], Dim(dim, batch_size)))
 cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1):
     """Create a random bernoulli tensor
     
     Create a tensor distributed according to bernoulli distribution with parameter :math:`p`.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
         p (number): Parameter of the bernoulli distribution
     
     Keyword Arguments:
@@ -2145,14 +2177,14 @@ cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=
     Returns:
         dynet.Expression: A "d" dimensioned bernoulli distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p, scale))
+    return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], Dim(dim, batch_size), p, scale))
 cpdef Expression random_uniform(dim, float left, float right, int batch_size=1):
     """Create a random uniform tensor
     
     Create a tensor distributed according to uniform distribution with boundaries left and right.
 
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
         left (number): Lower bound of the uniform distribution
         right (number): Upper bound of the uniform distribution
     
@@ -2162,14 +2194,14 @@ cpdef Expression random_uniform(dim, float left, float right, int batch_size=1):
     Returns:
         dynet.Expression: A "d" dimensioned uniform distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
+    return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], Dim(dim, batch_size), left, right))
 cpdef Expression random_gumbel(dim, float mu = 0.0, float beta = 1.0, int batch_size=1):
     """Create a random Gumbel sampled vector
     
     Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         mu (number): The :math:`\mu` parameter (default: (0.0))
@@ -2179,7 +2211,7 @@ cpdef Expression random_gumbel(dim, float mu = 0.0, float beta = 1.0, int batch_
     Returns:
         dynet.Expression:  "d" dimensioned Gumbel distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_gumbel(_cg.thisptr[0], CDim(dim, batch_size), mu, beta))
+    return Expression.from_cexpr(_cg.version(), c_random_gumbel(_cg.thisptr[0], Dim(dim, batch_size), mu, beta))
 
 cpdef Expression nobackprop(Expression x):
     """Prevent backprop
@@ -3167,6 +3199,36 @@ cpdef Expression hinge_batch(Expression x, vector[unsigned] vs, float m=1.0):
         dynet.Expression: The batched hinge loss function
     """
     return Expression.from_cexpr(x.cg_version, c_hinge(x.c(), vs, m))
+cpdef Expression hinge_dim(Expression x, vector[unsigned] v, unsigned d=0, float m=1.0):
+    """Dimensionwise hinge loss
+    
+    This function takes in a matrix of scores  :code:`x`, and calculates a hinge loss such that the elements :code:`v` must be greater than all other elements in dimension :code:`d` by at least :code:`m`, otherwise a loss is incurred.
+
+    Args:
+        x (dynet.Expression): Input scores
+        v (list): True classes (size of the non-:code:`d` dimension)
+        d (int): Dimension over which to perform the hinge loss
+        m (float): The margin
+    
+    Returns:
+        dynet.Expression: Containing a vector of losses the size of the non-:code:`d` dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_hinge_dim(x.c(), v, d, m))
+# cpdef Expression hinge_dim_batch(Expression x, vector[vector[unsigned]] vs, unsigned d=0, float m=1.0):
+#     """Dimensionwise hinge loss on a batch
+#     
+#     The batched version of :code:`hinge_dim`, where we pass in a list of lists of IDs :code:`v`, where each list corresponds to the IDs for one batch.
+#     
+#     Args:
+#         x (dynet.Expression): Input scores
+#         v (list[list]): True classes
+#         d (int): Dimension over which to perform the hinge loss
+#         m (float): The margin
+#     
+#     Returns:
+#         dynet.Expression: The batched hinge_dim loss function
+#     """
+#     return Expression.from_cexpr(x.cg_version, c_hinge_dim(x.c(), vs, d, m))
 
 
 cpdef Expression kmh_ngram(Expression x, unsigned v):
@@ -3809,22 +3871,6 @@ cdef class _RNNBuilder: # {{{
         [description]
         """
         self.thisptr.disable_dropout()
-
-    cpdef set_weight_noise(self, float f):
-        """[summary]
-        
-        [description]
-        
-        Args:
-            float f: [description]
-        """
-        self.thisptr.set_weight_noise(f)
-    cpdef disable_weight_noise(self):
-        """[summary]
-        
-        [description]
-        """
-        self.thisptr.disable_weight_noise()
 
     cdef new_graph(self, update=True):
         self.thisptr.new_graph(_cg.thisptr[0], update)
@@ -4608,14 +4654,6 @@ class BiRNNBuilder(object): # {{{
       for (fb,bb) in self.builder_layers:
         fb.disable_dropout()
         bb.disable_dropout()
-    def set_weight_noise(self, p):
-      for (fb,bb) in self.builder_layers:
-        fb.set_weight_noise(p)
-        bb.set_weight_noise(p)
-    def disable_weight_noise(self):
-      for (fb,bb) in self.builder_layers:
-        fb.disable_weight_noise()
-        bb.disable_weight_noise()
 
     def add_inputs(self, es):
         """
@@ -4916,16 +4954,33 @@ cdef class Trainer:
         cdef vector[unsigned] ulookupvec
         for i in updated_lookups: ulookupvec.push_back(i)
         # self.thisptr.update(uparamvec, ulookupvec)
+
     cpdef update_epoch(self, r):
         """DEPRECATED: do not use.
         """
         self.thisptr.update_epoch(r)
+
+
+    cpdef restart(self, learning_rate=None):
+        """Restarts the optimizer
+        
+        Clears all momentum values and assimilate (if applicable)
+
+        Args:
+            learning_rate (number): (Optional) resets the learning rate
+        """
+        if learning_rate is None:
+            self.thisptr.restart()
+        else:
+            self.thisptr.restart(learning_rate)
+
     cpdef status(self):
         """Outputs information about the trainer in the stderr 
         
         (number of updates since last call, number of clipped gradients, learning rate, etc...)
         """
         self.thisptr.status()
+
     cpdef set_sparse_updates(self,bool su):
         """Sets updates to sparse updates
 

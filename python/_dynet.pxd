@@ -81,6 +81,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         void scale(float s)
         void scale_gradient(float s)
         void clip_inplace(float left, float right)
+        void set_value(const vector[float]& val)
         string get_fullname()
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
@@ -109,13 +110,13 @@ cdef extern from "dynet/model.h" namespace "dynet":
 cdef extern from "dynet/io.h" namespace "dynet":
     cdef cppclass CTextFileSaver "dynet::TextFileSaver":
         CTextFileSaver(string filename, bool append)
-        void save(CModel model, string & key)
-        void save(CParameters param, string & key)
-        void save(CLookupParameters param, string & key)
+        void save(CModel model, string & key) except +
+        void save(CParameters param, string & key) except +
+        void save(CLookupParameters param, string & key) except +
 
     cdef cppclass CTextFileLoader "dynet::TextFileLoader":
         CTextFileLoader(string filename)
-        void populate(CModel & model, string key)
+        void populate(CModel & model, string key) except +
         void populate(CParameters & param, string key) except +
         void populate(CLookupParameters & param, string key) except +
         CParameters load_param(CModel & model, string key) except +
@@ -193,6 +194,8 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool sparse_updates_enabled
         float learning_rate
         void update() except +
+        void restart() except +
+        void restart(float learning_rate) except +
         #void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s) except +
         void update_epoch(float r)
         void status()
@@ -243,7 +246,9 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     #CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
     CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
     CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #
-    CExpression c_zeroes "dynet::zeroes" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_zeros "dynet::zeros" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_ones "dynet::ones" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_constant "dynet::constant" (CComputationGraph& g, CDim& d, float val) except + #
     CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d) except + #
     CExpression c_random_bernoulli "dynet::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale) except +
     CExpression c_random_uniform "dynet::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
@@ -284,6 +289,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_rectify "dynet::rectify" (CExpression& x) except + #        
     CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m) except + #
     CExpression c_hinge "dynet::hinge" (CExpression& x, vector[unsigned] vs, float m) except + #
+    CExpression c_hinge_dim "dynet::hinge_dim" (CExpression& x, vector[unsigned] index, unsigned d, float m) except + #
+    # CExpression c_hinge_dim "dynet::hinge_dim" (CExpression& x, vector[vector[unsigned]] indices, unsigned d, float m) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x, vector[unsigned]& restriction) except + #?
     CExpression c_softmax "dynet::softmax" (CExpression& x) except + #
@@ -401,8 +408,6 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
         CRNNPointer state()
         void set_dropout(float f)
         void disable_dropout()
-        void set_weight_noise(float f)
-        void disable_weight_noise()
         CModel get_parameter_collection()
 
 cdef extern from "dynet/rnn.h" namespace "dynet":

@@ -165,7 +165,9 @@ void ComputationGraph::_revert(CGCheckpoint p) {
   default_device->revert(p.device_mem_checkpoint);
   // clear all nodes at position >= p.node_idx
   if ((int)nodes.size() > p.node_idx) {
-    nodes.resize(p.node_idx); // TODO verify deletion of nodes.
+    for(int i = p.node_idx; i < (int)nodes.size(); i++)
+      delete nodes[i]; // the deletion of nodes.
+    nodes.resize(p.node_idx);
     ee->invalidate(p.node_idx - 1); // clear precomputed forward values
   }
   // clear all parameter nodes at position >= p.par_node_idx
@@ -190,37 +192,43 @@ Dim& ComputationGraph::get_dimension(VariableIndex index) const {
 
 
 
-VariableIndex ComputationGraph::add_input(real s) {
+VariableIndex ComputationGraph::add_input(real s, Device *device) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new ScalarInputNode(s));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_input(const real* ps) {
+VariableIndex ComputationGraph::add_input(const real* ps, Device *device) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new ScalarInputNode(ps));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>& pm) {
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>& pm, Device *device) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new InputNode(d, pm));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm) {
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<float>* pm, Device *device) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new InputNode(d, pm));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
 
-VariableIndex ComputationGraph::add_input(const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata) {
+VariableIndex ComputationGraph::add_input(const Dim& d, const vector<unsigned int>& ids,
+                                          const vector<float>& data, Device *device, float defdata) {
   VariableIndex new_node_index(nodes.size());
   nodes.push_back(new SparseInputNode(d, ids, data, defdata));
+  nodes.back()->device = device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -229,6 +237,7 @@ VariableIndex ComputationGraph::add_parameters(Parameter p) {
   VariableIndex new_node_index(nodes.size());
   ParameterNode* new_node = new ParameterNode(p);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -238,6 +247,7 @@ VariableIndex ComputationGraph::add_parameters(LookupParameter p) {
   VariableIndex new_node_index(nodes.size());
   ParameterNode* new_node = new ParameterNode(p);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -247,6 +257,7 @@ VariableIndex ComputationGraph::add_const_parameters(Parameter p) {
   VariableIndex new_node_index(nodes.size());
   ConstParameterNode* new_node = new ConstParameterNode(p);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -255,6 +266,7 @@ VariableIndex ComputationGraph::add_const_parameters(LookupParameter p) {
   VariableIndex new_node_index(nodes.size());
   ConstParameterNode* new_node = new ConstParameterNode(p);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -263,6 +275,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, const unsigned* pi
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, pindex);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -272,6 +285,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, unsigned index) {
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -281,6 +295,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, const std::vector<
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -290,6 +305,7 @@ VariableIndex ComputationGraph::add_lookup(LookupParameter p, const std::vector<
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   parameter_nodes.push_back(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -302,6 +318,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const unsign
   // get rid of the following in favor of using parameter_nodes to see the needs_derivative
   // expression
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -310,6 +327,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, unsigned ind
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, index);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -318,6 +336,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const std::v
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -326,6 +345,7 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const std::v
   VariableIndex new_node_index(nodes.size());
   LookupNode* new_node = new LookupNode(p, indices);
   nodes.push_back(new_node);
+  nodes.back()->device = p.get_storage().device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
