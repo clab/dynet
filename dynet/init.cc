@@ -21,7 +21,7 @@ namespace dynet {
 DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
   shared_parameters(false)
 #if HAVE_CUDA
-  , ngpus_requested(false), ids_requested(false), requested_gpus(-1), cpu_requested(false)
+  , ngpus_requested(false), ids_requested(false), cpu_requested(false), requested_gpus(-1)
 #endif
 {
 #if HAVE_CUDA
