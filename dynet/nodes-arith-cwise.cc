@@ -327,7 +327,12 @@ void CwiseQuotient::backward_helper(const MyDevice & dev,
       if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
     }
     if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[0]->d.bd;
-    dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs[1]->tb<4>().square().eval().broadcast(bcast) * xs[0]->tb<4>()).sum(red_axis).reshape(morph);
+    AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+    Tensor xs1_squared(xs[1]->d, nullptr, fx.device, fx.mem_pool);
+    xs1_squared.v = static_cast<float*>(scratch_allocator->allocate(xs1_squared.d.size() * sizeof(float)));
+    xs1_squared.tb<4>().device(*dev.edevice) = xs[1]->tb<4>().square();
+    dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs1_squared.tb<4>().broadcast(bcast) * xs[0]->tb<4>()).sum(red_axis).reshape(morph);
+    scratch_allocator->free();
   }
 
 }
