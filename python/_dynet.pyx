@@ -3789,7 +3789,6 @@ cpdef Expression vanilla_lstm_gates(list x_t, Expression h_tm1, Expression Wx, E
         Vector size 4H
         dynet.Expression
     """
-    ensure_freshness(x_t)
     ensure_freshness(h_tm1)
     cdef Expression e
     cdef vector[CExpression] ves
@@ -3825,7 +3824,6 @@ cpdef Expression vanilla_lstm_gates_dropout(list x_t, Expression h_tm1, Expressi
         Vector size 4H
         dynet.Expression
     """
-    ensure_freshness(x_t)
     ensure_freshness(h_tm1)
     cdef Expression e
     cdef vector[CExpression] ves
