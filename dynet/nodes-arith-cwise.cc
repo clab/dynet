@@ -58,7 +58,7 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
     dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
   } else {
     int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
-    for(int i=0;i<xs[0]->d.nd; i++) if(xs[0]->d[i]!=xs[1]->d[i]) n_red++;
+    for(int j=0;j<xs[0]->d.nd; j++) if(xs[0]->d[j]!=xs[1]->d[j]) n_red++;
     DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward (cadd)");
     if(n_red==1)      backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
     else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
