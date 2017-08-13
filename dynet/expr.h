@@ -682,39 +682,9 @@ inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
  */
 Expression sum_elems(const Expression& x);
 
-/**
- * \ingroup arithmeticoperations
- * \brief Compute moment over all elements
- * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ over all the elements in each batch of the expression
- *
- * \param x The input mini-batched expression
- * \param r Order of the moment
- *
- * \return A scalar expression (with a potential batch dimension)
- */
-Expression moment_elems(const Expression& x, unsigned r);
-
-/**
- * \ingroup arithmeticoperations
- * \brief Compute mean over all elements
- * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ over all the elements in each batch of the expression
- *
- * \param x The input mini-batched expression
- *
- * \return A scalar expression (with a potential batch dimension)
- */
-Expression mean_elems(const Expression& x);
-
-/**
- * \ingroup arithmeticoperations
- * \brief Compute Standard deviation over all elements
- * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ over all the elements in each batch of the expression
- *
- * \param x The input mini-batched expression
- *
- * \return A scalar expression (with a potential batch dimension)
- */
-Expression std_elems(const Expression& x);
+Expression moment_elems(const Expression& x, unsigned r); // deprecated
+Expression mean_elems(const Expression& x); // deprecated
+Expression std_elems(const Expression& x); // deprecated
 
 /**
  * \ingroup arithmeticoperations
@@ -1556,40 +1526,9 @@ Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
  */
 Expression sum_batches(const Expression& x);
 
-/**
- * \ingroup flowoperations
- * \brief Compute moment over minibatches
- * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along the batch dimension
- *
- * \param x The input mini-batched expression
- * \param r Order of the moment
- *
- * \return An expression with a single batch
- */
-Expression moment_batches(const Expression& x, unsigned r);
-
-
-/**
- * \ingroup flowoperations
- * \brief Compute mean over minibatches
- * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension
- *
- * \param x The input mini-batched expression
- *
- * \return An expression with a single batch
- */
-Expression mean_batches(const Expression& x);
-
-/**
- * \ingroup flowoperations
- * \brief Compute standard deviation over minibatches
- * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along the batch dimension
- *
- * \param x The input mini-batched expression
- *
- * \return A scalar expression (with a potential batch dimension)
- */
-Expression std_batches(const Expression& x);
+Expression moment_batches(const Expression& x, unsigned r); // deprecated
+Expression mean_batches(const Expression& x); // deprecated
+Expression std_batches(const Expression& x); // deprecated
 
 /**
  * \ingroup flowoperations
