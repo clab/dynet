@@ -34,7 +34,3 @@ print("CPU time:",time.time() - s)
 s = time.time()
 do_gpu()
 print("GPU time:",time.time() - s)
-
-
-
-
