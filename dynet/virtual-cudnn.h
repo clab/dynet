@@ -103,8 +103,10 @@ inline void createPoolingDescriptor(cudnnPoolingDescriptor_t* pool_desc) {
 }
 
 inline void setPooling2dDescriptor(cudnnPoolingDescriptor_t* pool_desc,
-                           cudnnPoolingMode_t mode, int h, int w, int pad_h,
-                           int pad_w, int stride_h, int stride_w) {
+                           cudnnPoolingMode_t mode,
+                           int h, int w,
+                           int pad_h, int pad_w,
+                           int stride_h, int stride_w) {
 #if CUDNN_VERSION_MIN(5, 0, 0)
   CUDNN_CHECK(cudnnSetPooling2dDescriptor(*pool_desc, mode,
         CUDNN_PROPAGATE_NAN, h, w, pad_h, pad_w, stride_h, stride_w));
