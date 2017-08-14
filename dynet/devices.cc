@@ -98,7 +98,9 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 
   // Initialize the Eigen device
-  estream = new Eigen::CudaStreamDevice(device_id);
+  CUDA_CHECK(cudaStreamCreate(stream));
+  estream = new EigenCudaStreamDevice(device_id);
+  estream->set_stream(&stream);
   edevice = new Eigen::GpuDevice(estream);
 
   // this is the big memory allocation.
