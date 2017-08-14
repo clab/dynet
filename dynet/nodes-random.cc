@@ -21,17 +21,19 @@ Dim GaussianNoise::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
-size_t GaussianNoise::aux_storage_size() const {
-  return dim.size() * sizeof(float);
-}
-
 #endif
 
 template<class MyDevice>
 void GaussianNoise::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  TensorTools::randomize_normal(m, 0, stddev);
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec() + m.tvec();
+
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+  Tensor noise(dim, nullptr, fx.device, fx.mem_pool);
+  noise.v = static_cast<float*>(scratch_allocator->allocate(noise.d.size() * sizeof(float)));
+  TensorTools::randomize_normal(noise, 0, stddev);
+
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec() + noise.tvec();
+
+  scratch_allocator->free();
 }
 
 template<class MyDevice>
