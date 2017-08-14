@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <string>
-#include <unsupported/Eigen/CXX11/Tensor>
 
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
@@ -98,7 +97,7 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 
   // Initialize the Eigen device
-  CUDA_CHECK(cudaStreamCreate(stream));
+  CUDA_CHECK(cudaStreamCreate(&stream));
   estream = new EigenCudaStreamDevice(device_id);
   estream->set_stream(&stream);
   edevice = new Eigen::GpuDevice(estream);

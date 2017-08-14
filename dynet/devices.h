@@ -6,6 +6,7 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/cuda.h"
 #include "dynet/globals.h"
+#include <unsupported/Eigen/CXX11/Tensor>
 
 namespace Eigen {
   struct DefaultDevice;
