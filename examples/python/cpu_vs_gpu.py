@@ -1,14 +1,6 @@
-import _gdynet as G
-import _dynet as C
+# Usage: python cpu_vs_gpu.py
 
-G.init()
-C.init()
-
-cm = C.Model()
-gm = G.Model()
-
-cpW = cm.add_parameters((1000,1000))
-gpW = gm.add_parameters((1000,1000))
+import _dynet as C, G
 
 def do_cpu():
 	C.renew_cg()
@@ -26,10 +18,21 @@ def do_gpu():
 	z.value()
 	z.backward()
 
+C.init()
+cm = C.Model()
+cpW = cm.add_parameters((1000,1000))
+
 import time
 s = time.time()
 do_cpu()
 print("CPU time:",time.time() - s)
+
+import sys
+sys.argv.append('--dynet-devices')
+sys.argv.append('GPU:0')
+G.init()
+gm = G.Model()
+gpW = gm.add_parameters((1000,1000))
 
 s = time.time()
 do_gpu()

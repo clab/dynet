@@ -52,11 +52,6 @@ endif()
   # TODO: We should add a dependency, but this isn&t working
   # add_dependencies(copy ${DepFiles})
 
-  add_custom_command(TARGET copy PRE_BUILD
-		  COMMAND ${CMAKE_COMMAND} -E
-		  copy ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx ${CMAKE_CURRENT_BINARY_DIR}/_gdynet.pyx)
-
-
   # Things to perform setup
   set(SETUP_PY "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
   set(SETUP_PY_IN "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in")
@@ -73,9 +68,6 @@ endif()
   add_custom_target(target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/timestamp)
   add_dependencies(target copy)
   add_dependencies(copy dynet)
-  if (WITH_CUDA_BACKEND)
-  add_dependencies(copy gdynet)
-  endif()
 
   install(CODE "execute_process(COMMAND ${PYTHON} ${SETUP_PY})")
 

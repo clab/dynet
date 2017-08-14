@@ -33,11 +33,11 @@ if "CFLAGS" in cfg_vars:
 
 LIBRARIES=['dynet']
 LIBRARY_DIRS=["."]
-GPULIBRARIES=['gdynet']
 GPULIBRARY_DIRS=[]
 
-appendCMakeLibList(GPULIBRARIES, '${CUDA_CUBLAS_FILES}')
-appendCMakeList(GPULIBRARY_DIRS, '${CUDA_CUBLAS_DIRS}')
+if "${WITH_CUDA_BACKEND}"=="1":
+    appendCMakeLibList(LIBRARIES, '${CUDA_CUBLAS_FILES}')
+    appendCMakeList(LIBRARY_DIRS, '${CUDA_CUBLAS_DIRS}')
 
 if "${MSVC}"=="1":
     COMPILER_ARGS=["-DNOMINMAX", "/EHsc"]
@@ -46,10 +46,11 @@ if "${MSVC}"=="1":
     # For MSVC, we compile dynet as a static lib, so we need to also link in the
     # other libraries it depends on:
     appendCMakeLibList(LIBRARIES, '${LIBS}') 
-    appendCMakeLibList(GPULIBRARIES, '${LIBS}') 
     appendCMakeList(LIBRARY_DIRS, '${MKL_LINK_DIRS}')    # Add the MKL dirs, if MKL is being used
-    appendCMakeLibList(GPULIBRARIES, '${CUDA_RT_FILES}')  
-    appendCMakeList(GPULIBRARY_DIRS, '${CUDA_RT_DIRS}')  
+    if "${WITH_CUDA_BACKEND}"=="1":
+        appendCMakeLibList(LIBRARIES, '${LIBS}') 
+        appendCMakeLibList(LIBRARIES, '${CUDA_RT_FILES}')  
+        appendCMakeList(GPULIBRARY_DIRS, '${CUDA_RT_DIRS}')  
 else:
     COMPILER_ARGS=["-std=c++11"]
     DYNET_LIB_DIR="${PROJECT_BINARY_DIR}/dynet/"
@@ -58,7 +59,8 @@ else:
         RUNTIME_LIB_DIRS.append("${CMAKE_INSTALL_PREFIX}/lib/")
 
 LIBRARY_DIRS.append(DYNET_LIB_DIR)
-GPULIBRARY_DIRS = LIBRARY_DIRS + GPULIBRARY_DIRS
+if "${WITH_CUDA_BACKEND}"=="1":
+    LIBRARY_DIRS = LIBRARY_DIRS + GPULIBRARY_DIRS
 EXTRA_LINK_ARGS = []
 
 import platform
@@ -70,40 +72,22 @@ if platform.system() == 'Darwin':
         EXTRA_LINK_ARGS.append("-Wl,-rpath,${CMAKE_INSTALL_PREFIX}/lib/")
 
 
-ext_cpu = Extension(
-        "_dynet",                 # name of extension
-        ["_dynet.pyx"],           # filename of our Pyrex/Cython source
-        language="c++",              # this causes Pyrex/Cython to create C++ source
-        include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
-                      "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
-                      ],
-        libraries=LIBRARIES,             # ditto
-        library_dirs=LIBRARY_DIRS,
-        extra_link_args=EXTRA_LINK_ARGS,
-        #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
-        extra_compile_args=COMPILER_ARGS,
-        runtime_library_dirs=RUNTIME_LIB_DIRS,
-        )
+ext = Extension(
+    "_dynet",                 # name of extension
+    ["_dynet.pyx"],           # filename of our Pyrex/Cython source
+    language="c++",              # this causes Pyrex/Cython to create C++ source
+    include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
+                  "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
+                  ],
+    libraries=LIBRARIES,             # ditto
+    library_dirs=LIBRARY_DIRS,
+    extra_link_args=EXTRA_LINK_ARGS,
+    #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
+    extra_compile_args=COMPILER_ARGS,
+    runtime_library_dirs=RUNTIME_LIB_DIRS,
+    )
 
-ext_gpu = Extension(
-        "_gdynet",                 # name of extension
-        ["_gdynet.pyx"],           # filename of our Pyrex/Cython source
-        language="c++",              # this causes Pyrex/Cython to create C++ source
-        include_dirs=["${PROJECT_SOURCE_DIR}", # this is the location of the main dynet directory.
-                      "${EIGEN3_INCLUDE_DIR}", # this is the directory where eigen is saved.
-                      ],
-        libraries=GPULIBRARIES,             # ditto
-        library_dirs=GPULIBRARY_DIRS,
-        extra_link_args=EXTRA_LINK_ARGS,
-        #extra_link_args=["-L/home/yogo/Vork/Research/dynet/dynet/build/dynet"],       # if needed
-        extra_compile_args=COMPILER_ARGS,
-        runtime_library_dirs=RUNTIME_LIB_DIRS,
-        )
-
-TARGET = [ext_cpu]
-
-if "${WITH_CUDA_BACKEND}"=="1": # if cuda requested
-    TARGET.append(ext_gpu)
+TARGET = [ext]
 
 setup(ext_modules = TARGET,
         cmdclass = {'build_ext': build_ext},
