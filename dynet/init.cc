@@ -114,6 +114,8 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
         remove_args(argc, argv, argi, 2);
       }
     }
+#endif
+
     else if (arg == "--dynet-devices" || arg == "--dynet_devices") {
       if ((argi + 1) >= argc) {
         throw std::invalid_argument("[dynet] --dynet-devices expects an argument (comma separated list of CPU and physical GPU ids to use)");
@@ -132,7 +134,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
             params.cpu_requested = true;
           } else if (startswith(devices_info, "GPU:")) {
             int gpu_id = std::stoi(devices_info.substr(4, devices_info.size() - 4));
-            if (gpu_id >= MAX_GPUS)
+            if (gpu_id >= 256) // MAX_GPUS
               throw std::runtime_error("DyNet hard limit on maximum number of GPUs (MAX_GPUS) exceeded. If you need more, modify the code to raise this hard limit.");
             params.gpu_mask[gpu_id] ++;
             params.requested_gpus++;
@@ -148,7 +150,6 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
         remove_args(argc, argv, argi, 2);
       }
     }
-#endif
 
     // Go to next argument
     else {

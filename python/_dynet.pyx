@@ -60,12 +60,25 @@ cdef class DynetParams: # {{{
         Keyword Args:
             shared_parameters([type]): [description] (default: None)
         """
-        cdef int argc = len(sys.argv)
+        cpu_use = False
+        if '--dynet-gpu' in sys.argv: # the python gpu switch, use GPU:0 by default
+            sys.argv.remove('--dynet-gpu')
+            sys.argv.append('--dynet-devices')
+            sys.argv.append('GPU:0')
+        elif not ('--dynet-gpus' in sys.argv or
+                  '--dynet-devices' in sys.argv or
+                  '--dynet-viz' in sys.argv):
+            cpu_use = True
+
+        cdef int argc = len(sys.argv) + 2 if cpu_use else len(sys.argv)
         cdef char** c_argv
+        c_argv = <char**>malloc(sizeof(char*) * argc) # TODO check failure?
         args = [bytearray(x, encoding="utf-8") for x in sys.argv]
-        c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
         for idx, s in enumerate(args):
             c_argv[idx] = s
+        if cpu_use:
+            c_argv[argc-2] = '--dynet-devices' 
+            c_argv[argc-1] = 'CPU'
 
         if shared_parameters is None:
             self.cparams = dynet.extract_dynet_params(argc,c_argv, 0)
