@@ -11,7 +11,6 @@ namespace dynet {
 struct GaussianNoise : public Node {
   explicit GaussianNoise(const std::initializer_list<VariableIndex>& a, real stddev) : Node(a), stddev(stddev) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
-  size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
   real stddev;
 };
