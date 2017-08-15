@@ -66,7 +66,7 @@ The following is a list of all the commands needed to perform a manual install:
 
     make -j 2 # replace 2 with the number of available cores
     cd python
-    python setup.py install  # or `python setup.py install --user` for a user-local install.
+    python ../../setup.py build --build-dir=.. install  # add `--user` for a user-local install.
     
     # this should suffice, but on some systems you may need to add the following line to your
     # init files in order for the compiled .so files be accessible to Python.
@@ -149,12 +149,12 @@ in the system, run the following:
 .. code:: bash
 
     cd $PATH_TO_DYNET/build/python
-    python setup.py install --user
+    python ../../setup.py build --build-dir=.. install --user
 
 The ``--user`` switch will install the module in your local
 site-packages, and works without root privileges. To install the module
 to the system site-packages (for all users), or to the current `virtualenv`
-(if you are on one), run ``python setup.py install`` without this switch.
+(if you are on one), run ``python ../../setup.py build --build-dir=.. install`` without this switch.
 
 You should now have a working python binding (the ``dynet`` module).
 
@@ -253,7 +253,7 @@ After running ``make -j 2``, you should have the files ``_dynet.so`` and
 ``_gdynet.so`` in the ``build/python`` folder.
 
 As before, ``cd build/python`` followed by
-``python setup.py install --user`` will install the module.
+``python ../../setup.py build --build-dir=.. install --user`` will install the module.
 
 
 
