@@ -34,10 +34,6 @@ matrix:
       compiler: clang
     - os: osx
       compiler: gcc
-    - os: osx
-      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip
-    - os: osx
-      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip
 
 before_install:
   # We do this conditionally because it saves us some downloading if the
@@ -83,12 +79,18 @@ after_failure:
 
 script:
   - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
-      if [[ $TRAVIS_OS_NAME == "linux" ]]; then make -j$(nproc); fi;
-      if [[ $TRAVIS_OS_NAME == "osx" ]]; then make -j$(sysctl -n hw.ncpu); fi;
+      if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+        make -j$(nproc);
+      fi;
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        make -j$(sysctl -n hw.ncpu);
+        export DYLD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/dynet:$DYLD_LIBRARY_PATH;
+      fi;
       make test || travis_terminate 1;
       cd python;
       python ../../setup.py build --build-dir=.. install --user || travis_terminate 1;
+    elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      export DYLD_LIBRARY_PATH=$(dirname $(which python))/../lib:$DYLD_LIBRARY_PATH;
     fi'
   - cd $TRAVIS_BUILD_DIR/tests/python
-  - if [[ $TRAVIS_OS_NAME == "osx" ]]; then export DYLD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/dynet:$DYLD_LIBRARY_PATH; fi;
   - python test.py
