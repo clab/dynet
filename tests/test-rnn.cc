@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_fwd ) {
   Expression x = -dynet::input(cg, Dim({input_dim}, batch_size), {1.f, 1.f, 1.f});
   for (unsigned i = 0; i < 3; i++) {
     const Tensor& builder_h = vanilla_lstm_builder.add_input(x).value();
-    Expression gates_t = dynet::vanilla_lstm_gates({x}, h_tm1, Wx, Wh, b);
+    Expression gates_t = dynet::vanilla_lstm_gates(x, h_tm1, Wx, Wh, b);
     Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
     Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
     for(unsigned i=0; i < hidden_dim; i++){
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_bwd ) {
   Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_5_zeros), Dim({hidden_dim},batch_size));
   Expression x = dynet::reshape(dynet::parameter(cg, param_3), Dim({input_dim},batch_size));
   for (unsigned i = 0; i < 3; i++) {
-    Expression gates_t = dynet::vanilla_lstm_gates({x}, h_tm1, Wx, Wh, b);
+    Expression gates_t = dynet::vanilla_lstm_gates(x, h_tm1, Wx, Wh, b);
     Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
     Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
     c_tm1 = c_t;
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_batched_forward ) {
   Expression x = dynet::input(cg, Dim({input_dim}, batch_size), {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
   for (unsigned i = 0; i < 3; i++) {
     const Tensor& builder_h = vanilla_lstm_builder.add_input(x).value();
-    Expression gates_t = dynet::vanilla_lstm_gates({x}, h_tm1, Wx, Wh, b);
+    Expression gates_t = dynet::vanilla_lstm_gates(x, h_tm1, Wx, Wh, b);
     Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
     Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
     for(unsigned i=0; i < hidden_dim; i++){
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_gates_fwd ) {
   Expression Wx = dynet::input(cg, Dim({hidden_dim*4, input_dim}, 1), {0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f});
   Expression Wh = dynet::input(cg, Dim({hidden_dim*4, hidden_dim}, 1), {0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f});
   Expression b = dynet::input(cg, Dim({hidden_dim*4}, 1), {0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f});
-  Expression gates = vanilla_lstm_gates({x_t}, h_tm1, Wx, Wh, b);
+  Expression gates = vanilla_lstm_gates(x_t, h_tm1, Wx, Wh, b);
   // Wx*x = 0.11 0.33 / 0.33 1.43
   // Wh*h = -0.12 -0.34 / -0.34 -0.56
   // + b  = -0.01 0.09 / -0.01 0.97
@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_gates_bwd ) {
   Expression Wh = dynet::reshape(dynet::parameter(cg, param_36), Dim({hidden_dim*4, hidden_dim},1));
   Expression b = dynet::reshape(dynet::parameter(cg, param_12), Dim({hidden_dim*4},1));
 
-  Expression gates = vanilla_lstm_gates({x_t}, h_tm1, Wx, Wh, b);
+  Expression gates = vanilla_lstm_gates(x_t, h_tm1, Wx, Wh, b);
 
   Expression z = squared_norm(sum_batches(gates));
   BOOST_CHECK(check_grad(mod, z, 0));
@@ -365,7 +365,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_gates_dropout_fwd ) {
   Expression Wx = dynet::input(cg, Dim({hidden_dim*4, input_dim}, 1), {0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f});
   Expression Wh = dynet::input(cg, Dim({hidden_dim*4, hidden_dim}, 1), {0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f});
   Expression b = dynet::input(cg, Dim({hidden_dim*4}, 1), {0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f});
-  Expression gates = vanilla_lstm_gates_dropout({x_t}, h_tm1, Wx, Wh, b, mask_x, mask_h);
+  Expression gates = vanilla_lstm_gates_dropout(x_t, h_tm1, Wx, Wh, b, mask_x, mask_h);
   // Wx*x = 0.11 0.33 / 0.33 1.43
   // Wh*h = -0.12 -0.34 / -0.34 -0.56
   // + b  = -0.01 0.09 / -0.01 0.97
@@ -413,7 +413,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_dropout_bwd ) {
   Expression mask_h = dynet::reshape(dynet::parameter(cg, param_10_mask), Dim({hidden_dim},batch_size))*0.8;
 
   for (unsigned i = 0; i < 3; i++) {
-    Expression gates_t = dynet::vanilla_lstm_gates_dropout({x}, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    Expression gates_t = dynet::vanilla_lstm_gates_dropout(x, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
     Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
     Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
     c_tm1 = c_t;
@@ -442,7 +442,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_multi_input_bwd ) {
   Expression x3 = dynet::reshape(dynet::parameter(cg, param_6), Dim({3},batch_size));
 
   for (unsigned i = 0; i < 3; i++) {
-    Expression gates_t = dynet::vanilla_lstm_gates({x1, x3}, h_tm1, Wx, Wh, b, 0.0f);
+    Expression gates_t = dynet::vanilla_lstm_gates_concat({x1, x3}, h_tm1, Wx, Wh, b, 0.0f);
     Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
     Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
     c_tm1 = c_t;
@@ -473,8 +473,8 @@ BOOST_AUTO_TEST_CASE( lstm_node_multi_input_fwd ) {
   Expression x3 = dynet::pick_range(x, 1, 4);
 
   for (unsigned i = 0; i < 3; i++) {
-    Expression gates_t = dynet::vanilla_lstm_gates({x1, x3}, h_tm1, Wx, Wh, b, 0.0f);
-    Expression gates_t_2 = dynet::vanilla_lstm_gates({x}, h_tm1, Wx, Wh, b, 0.0f);
+    Expression gates_t = dynet::vanilla_lstm_gates_concat({x1, x3}, h_tm1, Wx, Wh, b, 0.0f);
+    Expression gates_t_2 = dynet::vanilla_lstm_gates_concat({x}, h_tm1, Wx, Wh, b, 0.0f);
     for(int b=0; b<batch_size; b++){
       for(int u=0; u<4*hidden_dim; u++){
         BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates_t, (unsigned)b).value())[u],
@@ -511,7 +511,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_dropout_multi_input_bwd ) {
   Expression mask_h = dynet::reshape(dynet::parameter(cg, param_10_mask), Dim({hidden_dim},batch_size))*0.8;
 
   for (unsigned i = 0; i < 3; i++) {
-    Expression gates_t = dynet::vanilla_lstm_gates_dropout({x1, x3}, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    Expression gates_t = dynet::vanilla_lstm_gates_dropout_concat({x1, x3}, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
     Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
     Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
     c_tm1 = c_t;
@@ -545,8 +545,8 @@ BOOST_AUTO_TEST_CASE( lstm_node_dropout_multi_input_fwd ) {
   Expression mask_h = dynet::reshape(dynet::parameter(cg, param_10_mask), Dim({hidden_dim},batch_size))*0.8;
 
   for (unsigned i = 0; i < 3; i++) {
-    Expression gates_t = dynet::vanilla_lstm_gates_dropout({x1, x3}, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
-    Expression gates_t_2 = dynet::vanilla_lstm_gates_dropout({x}, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    Expression gates_t = dynet::vanilla_lstm_gates_dropout_concat({x1, x3}, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    Expression gates_t_2 = dynet::vanilla_lstm_gates_dropout(x, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
     for(int b=0; b<batch_size; b++){
       for(int u=0; u<4*hidden_dim; u++){
         BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates_t, (unsigned)b).value())[u],
@@ -582,8 +582,8 @@ BOOST_AUTO_TEST_CASE( lstm_node_multi_weightnoise_runs ) {
   Expression x3 = dynet::pick_range(x, 1, 4);
 
   for (unsigned i = 0; i < 3; i++) {
-    Expression gates_t = dynet::vanilla_lstm_gates({x1, x3}, h_tm1, Wx, Wh, b, 0.1f);
-    gates_t = dynet::vanilla_lstm_gates({x}, h_tm1, Wx, Wh, b, 0.1f);
+    Expression gates_t = dynet::vanilla_lstm_gates_concat({x1, x3}, h_tm1, Wx, Wh, b, 0.1f);
+    gates_t = dynet::vanilla_lstm_gates(x, h_tm1, Wx, Wh, b, 0.1f);
     Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
     Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
     c_tm1 = c_t;
