@@ -56,26 +56,7 @@ Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg
 Expression operator-(const Expression& x, real y) { return -(y - x); }
 Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
 Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
-Expression cadd(const Expression& x, const Expression& y) {
-    if (x.dim().batch_size() == 1){
-        return Expression(x.pg, x.pg->add_function<ScalarAdd>({y.i, x.i}));
-    } else if (y.dim().batch_size() == 1){
-        return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}));
-    } else {
-        bool flip = false;
-        for(int i=0; i<x.dim().nd; i++){
-            if(y.dim().nd > i && x.dim()[i] > y.dim()[i]){
-        	flip = true;
-        	break;
-            }
-        }
-        if(x.dim().bd > y.dim().bd){
-            flip = true;
-        }
-        if(flip) return Expression(x.pg, x.pg->add_function<CwiseSum>({y.i, x.i}));
-        else     return Expression(x.pg, x.pg->add_function<CwiseSum>({x.i, y.i}));
-    }
-}
+Expression cadd(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<CwiseSum>({x.i, y.i})); }
 Expression cmult(const Expression& x, const Expression& y) { 
     if (x.dim().batch_size() == 1) 
         return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 

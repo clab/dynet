@@ -147,6 +147,16 @@ BOOST_AUTO_TEST_CASE( cadd_gradient ) {
 }
 
 // Expression cadd(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cadd_scalar_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression x2 = parameter(cg, param_scalar2);
+  Expression y = cadd(x1,x2) + cadd(x2,x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cadd(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( cadd_broadcast2_gradient ) {
   Dim dim_permutations[] = {Dim({3,1},2), Dim({3,2},1)};
   dynet::ComputationGraph cg;
@@ -162,7 +172,7 @@ BOOST_AUTO_TEST_CASE( cadd_broadcast2_gradient ) {
 
 // Expression cadd(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( cadd_broadcast3_gradient ) {
-  Dim dim_permutations[] = {Dim({3,3,3},1), Dim({3,3,1},3), Dim({1,3,3},3), Dim({9,3,1},1), Dim({1,3,9},1), Dim({1,3,1},9)};
+  Dim dim_permutations[] = {Dim({3,3,3},1), Dim({3,3,1},3), Dim({1,3,3},3), Dim({9,3,1},1), Dim({1,3,9},1), Dim({1,3,1},9), Dim({3,3},3), Dim({9,3},1), Dim({1,3},9)};
   dynet::ComputationGraph cg;
   for(int i=0; i<6; i++){
     Dim dim = dim_permutations[i];

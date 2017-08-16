@@ -18,12 +18,18 @@ string CwiseSum::as_string(const vector<string>& arg_names) const {
 }
 
 Dim CwiseSum::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseSum")
-  Dim d = xs[1];
-  DYNET_ARG_CHECK(xs[0].nd == xs[1].nd || xs[0].batch_size()==1 || xs[1].batch_size()==1, "CwiseSum: arguments must have equal number of dimensions, or have a scalar as one of its arguments.");
-  for(int i=0; i<xs[0].nd; i++)
-    DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || xs[0].d[i]==1, "CwiseSum: For each dimension, the dim size needs to match or equal 1.");
-  DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || xs[0].bd==1, "CwiseSum: batch size must match or equal 1");
+  DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseSum");
+  std::vector<long> dims({});
+  for(int i=0; i < min(xs[0].nd, xs[1].nd); i++){
+    DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || min(xs[0].d[i], xs[1].d[i])==1, "CwiseSum: For each dimension, the dim size needs to match or equal 1.");
+  }
+  DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || min(xs[0].bd, xs[1].bd)==1, "CwiseSum: batch size must match or equal 1");
+  for(int i=0; i < max(xs[0].nd, xs[1].nd); i++){
+    if(i < min(xs[0].nd, xs[1].nd)) dims.push_back(max(xs[0].d[i], xs[1].d[i]));
+    else if(i < xs[0].nd) dims.push_back(xs[0].d[i]);
+    else dims.push_back(xs[1].d[i]);
+  }
+  Dim d(dims, max(xs[0].bd, xs[1].bd));
   return d;
 }
 
@@ -32,19 +38,16 @@ Dim CwiseSum::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  // convention: 1st argument will be broadcasted (expr.cc code should take care of passing in the right order)
   DYNET_ASSERT(num_args == 2, "Bad number of arguments in CwiseSum::forward");
-  bool all_dims_same = xs[0]->d.size() == xs[1]->d.size();
-  if (all_dims_same){
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec();
-  } else {
-    Eigen::array<int, 5> bcast = {1,1,1,1,1};
-    for(int i=0; i<xs[0]->d.nd; i++){
-      if(xs[0]->d[i]==1) bcast[i] = xs[1]->d[i];
-    }
-    if(xs[0]->d.bd == 1) bcast[4] = xs[1]->d.bd;
-    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast) + xs[1]->tb<4>();
+  Eigen::array<int, 5> bcast_left = {1,1,1,1,1};
+  Eigen::array<int, 5> bcast_right = {1,1,1,1,1};
+  for(int i=0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
+      if(i>=xs[0]->d.nd || xs[0]->d[i]==1) bcast_left[i] = dim[i];
+      if(i>=xs[1]->d.nd || xs[1]->d[i]==1) bcast_right[i] = dim[i];
   }
+  if(xs[0]->d.bd == 1) bcast_left[4] = dim.bd;
+  else if(xs[1]->d.bd == 1) bcast_right[4] = dim.bd;
+  fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) + xs[1]->tb<4>().broadcast(bcast_right);
 }
 
 template<class MyDevice>
@@ -54,17 +57,19 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  if(i==1 || xs[0]->d.size() == xs[1]->d.size()) {
-    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
-  } else {
-    int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
-    for(int j=0;j<xs[0]->d.nd; j++) if(xs[0]->d[j]!=xs[1]->d[j]) n_red++;
-    DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward (cadd)");
-    if(n_red==1)      backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
-    else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
-    else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
-    else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
+  int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
+  for(int j=0; j < fx.d.nd; j++){
+    unsigned dim_j = (j<xs[i]->d.nd ? xs[i]->d[j] : 1);
+    if(dim_j != fx.d[j]){
+      n_red++;
+    }
   }
+  DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward (cadd)");
+  if(n_red==0)      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+  else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
+  else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
+  else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
+  else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseSum)
 

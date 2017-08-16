@@ -628,8 +628,12 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
 
 /**
  * \ingroup arithmeticoperations
- * \brief Expression addition
- * \details Add two expressions, broadcasting dimensions if necessary.
+ * \brief Componentwise addition
+ * \details Add two expressions component-wise, broadcasting dimensions if necessary as follows:
+ *          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+ *          - Now, every dimensions is required to have matching size, or one of the dimensions must equal 1 (in which case it will be broadcasted)
+ *          - In the same way, the batch dimension must match, or equal 1 in which case it will be broadcasted
+ *          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
  *
  * \param x The first input
  * \param y The second input
