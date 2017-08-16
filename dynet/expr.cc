@@ -236,21 +236,52 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 
 Expression weight_norm(const Expression& w, const Expression& g){return Expression(w.pg, w.pg->add_function<WeightNormalization>({w.i,g.i}));}
 
-Expression to_device(const Expression & x, Device *device) {
-  DYNET_ASSERT(x.pg->nodes[x.i]->device != device, "It is unnecessary to peform to_device operation in the same devices");
-  return Expression(x.pg, x.pg->add_function<ToDevice>({x.i}, device));
+Expression vanilla_lstm_gates_concat(const std::vector<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std){
+  std::vector<VariableIndex> xis(x_t.size() + 4);
+  unsigned i=0;
+  std::vector<Expression>::const_iterator it;
+  for ( it=x_t.begin(); it!=x_t.end(); ++it){
+    xis[i] = it->i;
+    i++;
+  }
+  xis[x_t.size()] = h_tm1.i;
+  xis[x_t.size()+1] = Wx.i;
+  xis[x_t.size()+2] = Wh.i;
+  xis[x_t.size()+3] = b.i;
+  return Expression(h_tm1.pg, h_tm1.pg->add_function<VanillaLSTMGates>(xis, false, weightnoise_std));
 }
 Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std){
-  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i}, weightnoise_std));
+  return vanilla_lstm_gates_concat({x_t}, h_tm1, Wx, Wh, b, weightnoise_std);
 }
-Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std){
-  return Expression(x_t.pg, x_t.pg->add_function<VanillaLSTMGates>({x_t.i, h_tm1.i, Wx.i, Wh.i, b.i, dropout_mask_x.i, dropout_mask_h.i}, weightnoise_std));
+Expression vanilla_lstm_gates_dropout_concat(const std::vector<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std){
+  std::vector<VariableIndex> xis(x_t.size() + 6);
+  unsigned i=0;
+  std::vector<Expression>::const_iterator it;
+  for ( it=x_t.begin(); it!=x_t.end(); ++it){
+    xis[i] = it->i;
+    i++;
+  }
+  xis[x_t.size()] = h_tm1.i;
+  xis[x_t.size()+1] = Wx.i;
+  xis[x_t.size()+2] = Wh.i;
+  xis[x_t.size()+3] = b.i;
+  xis[x_t.size()+4] = dropout_mask_x.i;
+  xis[x_t.size()+5] = dropout_mask_h.i;
+  return Expression(h_tm1.pg, h_tm1.pg->add_function<VanillaLSTMGates>(xis, true, weightnoise_std));
+}
+Expression vanilla_lstm_gates_dropout(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_, real weightnoise_std){
+  return vanilla_lstm_gates_dropout_concat({x_t}, h_tm1, Wx, Wh, b, dropout_mask_x, dropout_mask_, weightnoise_std);
 }
 Expression vanilla_lstm_c(const Expression& c_tm1, const Expression& gates_t){
   return Expression(c_tm1.pg, c_tm1.pg->add_function<VanillaLSTMC>({c_tm1.i, gates_t.i}));
 }
 Expression vanilla_lstm_h(const Expression& c_t, const Expression& gates_t){
   return Expression(c_t.pg, c_t.pg->add_function<VanillaLSTMH>({c_t.i, gates_t.i}));
+}
+
+Expression to_device(const Expression & x, Device *device) {
+  DYNET_ASSERT(x.pg->nodes[x.i]->device != device, "It is unnecessary to perform to_device operation in the same devices");
+  return Expression(x.pg, x.pg->add_function<ToDevice>({x.i}, device));
 }
 
 }  // namespace dynet

@@ -44,6 +44,7 @@ struct RNNTest {
     param_36_vals = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, -0.5};
     param_60_vals = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f};
     param_6_mask_vals = {0.f, 1.0f, 1.0f, 1.f, 1.0f, 0.0f};
+    param_8_mask_vals = {0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0};
     param_10_mask_vals = {0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 
     param_1 = mod.add_parameters(Dim({1}));
@@ -74,6 +75,8 @@ struct RNNTest {
     TensorTools::set_elements(param_60.get_storage().values, param_60_vals);
     param_6_mask = mod.add_parameters(Dim({6}));
     TensorTools::set_elements(param_6_mask.get_storage().values, param_6_mask_vals);
+    param_8_mask = mod.add_parameters(Dim({8}));
+    TensorTools::set_elements(param_8_mask.get_storage().values, param_8_mask_vals);
     param_10_mask = mod.add_parameters(Dim({10}));
     TensorTools::set_elements(param_10_mask.get_storage().values, param_10_mask_vals);
 
@@ -92,10 +95,10 @@ struct RNNTest {
     return oss.str();
   }
 
-  std::vector<float> ones_vals, param_vals, param_1_vals, param_2_vals, seq_vals, param_3_vals, param_4_vals, param_5_zeros_vals, param_6_vals, param_8_vals, param_10_vals, param_10_zeros_vals, param_12_vals, param_24_vals, param_36_vals, param_60_vals, param_6_mask_vals, param_10_mask_vals;
+  std::vector<float> ones_vals, param_vals, param_1_vals, param_2_vals, seq_vals, param_3_vals, param_4_vals, param_5_zeros_vals, param_6_vals, param_8_vals, param_10_vals, param_10_zeros_vals, param_12_vals, param_24_vals, param_36_vals, param_60_vals, param_6_mask_vals, param_8_mask_vals, param_10_mask_vals;
   std::vector<char*> av;
   dynet::ParameterCollection mod;
-  dynet::Parameter param_1, param_2, param_3, param_4, param_5_zeros, param_6, param_8, param_10, param_10_zeros, param_12, param_24, param_36, param_60, param_6_mask, param_10_mask;
+  dynet::Parameter param_1, param_2, param_3, param_4, param_5_zeros, param_6, param_8, param_10, param_10_zeros, param_12, param_24, param_36, param_60, param_6_mask, param_8_mask, param_10_mask;
 };
 
 // define the test suite
@@ -362,7 +365,7 @@ BOOST_AUTO_TEST_CASE( lstm_node_gates_dropout_fwd ) {
   Expression Wx = dynet::input(cg, Dim({hidden_dim*4, input_dim}, 1), {0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f});
   Expression Wh = dynet::input(cg, Dim({hidden_dim*4, hidden_dim}, 1), {0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f});
   Expression b = dynet::input(cg, Dim({hidden_dim*4}, 1), {0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f, 0.f, 0.1f});
-  Expression gates = vanilla_lstm_gates(x_t, h_tm1, Wx, Wh, b, mask_x, mask_h);
+  Expression gates = vanilla_lstm_gates_dropout(x_t, h_tm1, Wx, Wh, b, mask_x, mask_h);
   // Wx*x = 0.11 0.33 / 0.33 1.43
   // Wh*h = -0.12 -0.34 / -0.34 -0.56
   // + b  = -0.01 0.09 / -0.01 0.97
@@ -410,15 +413,182 @@ BOOST_AUTO_TEST_CASE( lstm_node_dropout_bwd ) {
   Expression mask_h = dynet::reshape(dynet::parameter(cg, param_10_mask), Dim({hidden_dim},batch_size))*0.8;
 
   for (unsigned i = 0; i < 3; i++) {
-    Expression gates_t = dynet::vanilla_lstm_gates(x, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    Expression gates_t = dynet::vanilla_lstm_gates_dropout(x, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
     Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
     Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
     c_tm1 = c_t;
     h_tm1 = h_t;
   }
   Expression z = squared_norm(sum_batches(h_tm1 + c_tm1));
-  BOOST_CHECK(check_grad(mod, z, 1));
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+BOOST_AUTO_TEST_CASE( lstm_node_multi_input_bwd ) {
+  dynet::ParameterCollection mod;
+  unsigned input_dim = 4;
+  unsigned hidden_dim = 5;
+  unsigned batch_size = 2;
+  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
+  dynet::ComputationGraph cg;
+  vanilla_lstm_builder.new_graph(cg);
+
+  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
+  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
+  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]) + 0.5;
+
+  Expression c_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+  Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+  Expression x1 = dynet::reshape(dynet::parameter(cg, param_2), Dim({1},batch_size));
+  Expression x3 = dynet::reshape(dynet::parameter(cg, param_6), Dim({3},batch_size));
+
+  for (unsigned i = 0; i < 3; i++) {
+    Expression gates_t = dynet::vanilla_lstm_gates_concat({x1, x3}, h_tm1, Wx, Wh, b, 0.0f);
+    Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
+    Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
+    c_tm1 = c_t;
+    h_tm1 = h_t;
+  }
+  Expression z = squared_norm(sum_batches(h_tm1 + c_tm1));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+BOOST_AUTO_TEST_CASE( lstm_node_multi_input_fwd ) {
+  dynet::ParameterCollection mod;
+  unsigned input_dim = 4;
+  unsigned hidden_dim = 5;
+  unsigned batch_size = 2;
+  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
+  dynet::ComputationGraph cg;
+  vanilla_lstm_builder.new_graph(cg);
+
+  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
+  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
+  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]) + 0.5;
+
+  Expression c_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+  Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+
+  Expression x = dynet::reshape(dynet::parameter(cg, param_8), Dim({input_dim},batch_size));
+  Expression x1 = dynet::pick_range(x, 0, 1);
+  Expression x3 = dynet::pick_range(x, 1, 4);
+
+  for (unsigned i = 0; i < 3; i++) {
+    Expression gates_t = dynet::vanilla_lstm_gates_concat({x1, x3}, h_tm1, Wx, Wh, b, 0.0f);
+    Expression gates_t_2 = dynet::vanilla_lstm_gates_concat({x}, h_tm1, Wx, Wh, b, 0.0f);
+    for(int b=0; b<batch_size; b++){
+      for(int u=0; u<4*hidden_dim; u++){
+        BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates_t, (unsigned)b).value())[u],
+        as_vector(pick_batch_elem(gates_t_2, (unsigned)b).value())[u],
+        0.001);
+      }
+    }
+    Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
+    Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
+    c_tm1 = c_t;
+    h_tm1 = h_t;
+  }
+}
+
+BOOST_AUTO_TEST_CASE( lstm_node_dropout_multi_input_bwd ) {
+  dynet::ParameterCollection mod;
+  unsigned input_dim = 4;
+  unsigned hidden_dim = 5;
+  unsigned batch_size = 2;
+  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
+  dynet::ComputationGraph cg;
+  vanilla_lstm_builder.new_graph(cg);
+
+  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
+  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
+  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]) + 0.5;
+
+  Expression c_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+  Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+  Expression x1 = dynet::reshape(dynet::parameter(cg, param_2), Dim({1},batch_size));
+  Expression x3 = dynet::reshape(dynet::parameter(cg, param_6), Dim({3},batch_size));
+
+  Expression mask_x = dynet::reshape(dynet::parameter(cg, param_8_mask), Dim({input_dim},batch_size))*0.9;
+  Expression mask_h = dynet::reshape(dynet::parameter(cg, param_10_mask), Dim({hidden_dim},batch_size))*0.8;
+
+  for (unsigned i = 0; i < 3; i++) {
+    Expression gates_t = dynet::vanilla_lstm_gates_dropout_concat({x1, x3}, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
+    Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
+    c_tm1 = c_t;
+    h_tm1 = h_t;
+  }
+  Expression z = squared_norm(sum_batches(h_tm1 + c_tm1));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+BOOST_AUTO_TEST_CASE( lstm_node_dropout_multi_input_fwd ) {
+  dynet::ParameterCollection mod;
+  unsigned input_dim = 4;
+  unsigned hidden_dim = 5;
+  unsigned batch_size = 2;
+  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
+  dynet::ComputationGraph cg;
+  vanilla_lstm_builder.new_graph(cg);
+
+  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
+  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
+  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]) + 0.5;
+
+  Expression c_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+  Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+
+  Expression x = dynet::reshape(dynet::parameter(cg, param_8), Dim({input_dim},batch_size));
+  Expression x1 = dynet::pick_range(x, 0, 1);
+  Expression x3 = dynet::pick_range(x, 1, 4);
+
+  Expression mask_x = dynet::reshape(dynet::parameter(cg, param_8_mask), Dim({input_dim},batch_size))*0.9;
+  Expression mask_h = dynet::reshape(dynet::parameter(cg, param_10_mask), Dim({hidden_dim},batch_size))*0.8;
+
+  for (unsigned i = 0; i < 3; i++) {
+    Expression gates_t = dynet::vanilla_lstm_gates_dropout_concat({x1, x3}, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    Expression gates_t_2 = dynet::vanilla_lstm_gates_dropout(x, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    for(int b=0; b<batch_size; b++){
+      for(int u=0; u<4*hidden_dim; u++){
+        BOOST_CHECK_CLOSE(as_vector(pick_batch_elem(gates_t, (unsigned)b).value())[u],
+        as_vector(pick_batch_elem(gates_t_2, (unsigned)b).value())[u],
+        0.001);
+      }
+    }
+    Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
+    Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
+    c_tm1 = c_t;
+    h_tm1 = h_t;
+  }
+}
+
+BOOST_AUTO_TEST_CASE( lstm_node_multi_weightnoise_runs ) {
+  dynet::ParameterCollection mod;
+  unsigned input_dim = 4;
+  unsigned hidden_dim = 5;
+  unsigned batch_size = 2;
+  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
+  dynet::ComputationGraph cg;
+  vanilla_lstm_builder.new_graph(cg);
+
+  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
+  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
+  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]) + 0.5;
+
+  Expression c_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+  Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim},batch_size));
+
+  Expression x = dynet::reshape(dynet::parameter(cg, param_8), Dim({input_dim},batch_size));
+  Expression x1 = dynet::pick_range(x, 0, 1);
+  Expression x3 = dynet::pick_range(x, 1, 4);
+
+  for (unsigned i = 0; i < 3; i++) {
+    Expression gates_t = dynet::vanilla_lstm_gates_concat({x1, x3}, h_tm1, Wx, Wh, b, 0.1f);
+    gates_t = dynet::vanilla_lstm_gates(x, h_tm1, Wx, Wh, b, 0.1f);
+    Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
+    Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
+    c_tm1 = c_t;
+    h_tm1 = h_t;
+  }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
