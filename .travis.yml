@@ -60,6 +60,7 @@ install:
       cmake .. || travis_terminate 1;
       sudo make install || travis_terminate 1;
       cd ../..;
+      export EIGEN3_INCLUDE_DIR=/usr/local/include/eigen3;
     fi'
 
 before_script:
@@ -69,7 +70,7 @@ before_script:
   - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
       mkdir build;
       cd build;
-      cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DENABLE_BOOST=ON -DENABLE_CPP_EXAMPLES=ON -DPYTHON=$(which python) || travis_terminate 1;
+      cmake .. -DEIGEN3_INCLUDE_DIR=$EIGEN3_INCLUDE_DIR -DENABLE_BOOST=ON -DENABLE_CPP_EXAMPLES=ON -DPYTHON=$(which python) -DCMAKE_INSTALL_PREFIX=$(dirname $(which python))/.. || travis_terminate 1;
     else
       pip install -v . || travis_terminate 1;
     fi'
@@ -80,15 +81,15 @@ after_failure:
 script:
   - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
       if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-        make -j$(nproc);
+        make -j$(nproc) || travis_terminate 1;
+      elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        make -j$(sysctl -n hw.ncpu) || travis_terminate 1;
+        export DYLD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/dynet;
       fi;
-      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-        make -j$(sysctl -n hw.ncpu);
-        export DYLD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/dynet:$DYLD_LIBRARY_PATH;
-      fi;
+      make install || travis_terminate 1;
       make test || travis_terminate 1;
       cd python;
-      python ../../setup.py build --build-dir=.. install --user || travis_terminate 1;
+      python ../../setup.py build --build-dir=.. --skip-build install --user || travis_terminate 1;
     elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       export DYLD_LIBRARY_PATH=$(dirname $(which python))/../lib:$DYLD_LIBRARY_PATH;
     fi'

@@ -158,10 +158,12 @@ if ENV.get("WITH_CUDA_BACKEND") == "1":  # if cuda requested
 class build(_build):
     user_options = [
         ("build-dir=", None, "New or existing DyNet build directory."),
+        ("skip-build", None, "Assume DyNet C++ library is already built."),
     ]
         
     def __init__(self, *args, **kwargs):
         self.build_dir = None
+        self.skip_build = False
         _build.__init__(self, *args, **kwargs)
 
     def initialize_options(self):
@@ -183,56 +185,56 @@ class build(_build):
         log.info("EIGEN3_INCLUDE_DIR=" + EIGEN3_INCLUDE_DIR)
         log.info("CC_PATH=" + CC_PATH)
         log.info("CXX_PATH=" + CXX_PATH)
-        log.info("SCRIPT_DIR" + SCRIPT_DIR)
-        log.info("BUILD_DIR" + BUILD_DIR)
+        log.info("SCRIPT_DIR=" + SCRIPT_DIR)
+        log.info("BUILD_DIR=" + BUILD_DIR)
         log.info("INSTALL_PREFIX=" + INSTALL_PREFIX)
         log.info("PYTHON=" + PYTHON)
         run_process([CMAKE_PATH, "--version"])
         run_process([CXX_PATH, "--version"])
 
-        # Prepare folders
-        os.chdir(SCRIPT_DIR)
-        if not os.path.exists(BUILD_DIR):
-            log.info("Creating build directory " + BUILD_DIR)
-            os.makedirs(BUILD_DIR)
+        if not self.skip_build:
+            # Prepare folders
+            if not os.path.isdir(BUILD_DIR):
+                log.info("Creating build directory " + BUILD_DIR)
+                os.makedirs(BUILD_DIR)
 
-        os.chdir(BUILD_DIR)
-        if os.path.isdir(EIGEN3_INCLUDE_DIR):
-            log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
-        elif HG_PATH is None:
-            raise DistutilsSetupError("`hg` not found.")
-        else:
-            hg_cmd = [HG_PATH, "clone", "https://bitbucket.org/eigen/eigen"]
-            log.info("Cloning Eigen...")
-            if run_process(hg_cmd) != 0:
-                raise DistutilsSetupError(" ".join(hg_cmd))
+            os.chdir(BUILD_DIR)
+            if os.path.isdir(EIGEN3_INCLUDE_DIR):
+                log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
+            elif HG_PATH is None:
+                raise DistutilsSetupError("`hg` not found.")
+            else:
+                hg_cmd = [HG_PATH, "clone", "https://bitbucket.org/eigen/eigen"]
+                log.info("Cloning Eigen...")
+                if run_process(hg_cmd) != 0:
+                    raise DistutilsSetupError(" ".join(hg_cmd))
 
-        os.environ["CXX"] = CXX_PATH
-        os.environ["CC"] = CC_PATH
+            os.environ["CXX"] = CXX_PATH
+            os.environ["CC"] = CC_PATH
 
-        # Build module
-        cmake_cmd = [
-            CMAKE_PATH,
-            SCRIPT_DIR,
-            "-DCMAKE_INSTALL_PREFIX=" + INSTALL_PREFIX,
-            "-DEIGEN3_INCLUDE_DIR=" + EIGEN3_INCLUDE_DIR,
-            "-DPYTHON=" + PYTHON,
-        ]
-        log.info("Configuring...")
-        if run_process(cmake_cmd) != 0:
-            raise DistutilsSetupError(" ".join(cmake_cmd))
+            # Build module
+            cmake_cmd = [
+                CMAKE_PATH,
+                SCRIPT_DIR,
+                "-DCMAKE_INSTALL_PREFIX=" + INSTALL_PREFIX,
+                "-DEIGEN3_INCLUDE_DIR=" + EIGEN3_INCLUDE_DIR,
+                "-DPYTHON=" + PYTHON,
+            ]
+            log.info("Configuring...")
+            if run_process(cmake_cmd) != 0:
+                raise DistutilsSetupError(" ".join(cmake_cmd))
 
-        make_cmd = [MAKE_PATH] + MAKE_FLAGS
-        log.info("Compiling...")
-        if run_process(make_cmd) != 0:
-            raise DistutilsSetupError(" ".join(make_cmd))
+            make_cmd = [MAKE_PATH] + MAKE_FLAGS
+            log.info("Compiling...")
+            if run_process(make_cmd) != 0:
+                raise DistutilsSetupError(" ".join(make_cmd))
+
+            make_cmd = [MAKE_PATH, "install"]
+            log.info("Installing...")
+            if run_process(make_cmd) != 0:
+                raise DistutilsSetupError(" ".join(make_cmd))
+
         BUILT_EXTENSIONS = True  # because make calls build_ext
-
-        make_cmd = [MAKE_PATH, "install"]
-        log.info("Installing...")
-        if run_process(make_cmd) != 0:
-            raise DistutilsSetupError(" ".join(make_cmd))
-
         _build.run(self)
 
 
