@@ -4,13 +4,15 @@
 #include "dynet/str-util.h"
 
 using namespace std;
-using namespace dynet;
 
 // Precision required not to lose accuracy when serializing float32 to text.
 // We should probably use std::hexfloat, but it's not supported by some
 // older incomplete implementations of C++11.
 static const int FLOAT32_PRECISION = 8;
 static const int FLOAT32_EXPONENT = 2;
+
+namespace dynet {
+namespace {
 
 bool valid_key(const std::string & s) {
   if (s.size() == 0) return true;
@@ -44,12 +46,25 @@ void read_param_header(string line, string &type, string &name, Dim& dim,size_t&
   }
 }
 
+} // anyonymous namespace
+
+Saver::~Saver() {}
+Loader::~Loader() {}
+
 TextFileSaver::TextFileSaver(const string & filename, bool append) :
-        datastream(filename, append ? ofstream::app : ofstream::out) {
+        p_datastream(
+            new std::ofstream(
+                filename, append ? ofstream::app : ofstream::out)),
+        datastream(*p_datastream) {
   if(!datastream)
     DYNET_RUNTIME_ERR("Could not write model to " << filename);
   datastream.precision(FLOAT32_PRECISION);
   datastream << std::scientific << std::showpos;
+}
+
+TextFileSaver::~TextFileSaver() {
+  delete p_datastream;
+  p_datastream = nullptr;
 }
 
 void TextFileSaver::save(const ParameterCollection & model,
@@ -118,6 +133,8 @@ void TextFileSaver::save(const LookupParameterStorage & p,
 
 TextFileLoader::TextFileLoader(const string & filename) :
         dataname(filename) { }
+
+TextFileLoader::~TextFileLoader() {}
 
 void TextFileLoader::populate(ParameterCollection & model, const string & key) {
   ifstream datastream(dataname);
@@ -311,3 +328,5 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
   }
   DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
 }
+
+} // namespace dynet
