@@ -949,8 +949,11 @@ Expression dot_product(const Expression& x, const Expression& y);
 /**
  * \ingroup arithmeticoperations
  * \brief Componentwise multiply
- * \details Do a componentwise multiply where each value is equal to x_i*y_i.
- *          This function used to be called cwise_multiply.
+ * \details Multiply two expressions component-wise, broadcasting dimensions if necessary as follows:
+ *          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+ *          - Now, every dimensions is required to have matching size, or one of the dimensions must equal 1 (in which case it will be broadcasted)
+ *          - In the same way, the batch dimension must match, or equal 1 in which case it will be broadcasted
+ *          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
  *
  * \param x The first input expression
  * \param y The second input expression
@@ -961,8 +964,12 @@ Expression cmult(const Expression& x, const Expression& y);
 
 /**
  * \ingroup arithmeticoperations
- * \brief Componentwise multiply
- * \details Do a componentwise multiply where each value is equal to x_i/y_i
+ * \brief Componentwise division
+ * \details Divide an expressions component-wise by another, broadcasting dimensions (currently only of the second expression!) if necessary as follows:
+ *          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+ *          - Now, every dimensions is required to have matching size, or the dim size of the right expression must equal 1 (in which case it will be broadcasted)
+ *          - In the same way, the batch sizes must match, or the batch size of the right expression must equal 1 in which case it will be broadcasted
+ *          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
  *
  * \param x The first input expression
  * \param y The second input expression

@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE( cdiv_batch_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression x2 = input(cg, Dim({3}, 2), batch_vals);
-  Expression y = cdiv(x1, x2) + cdiv(x2, x1);
+  Expression y = cdiv(x2, x1);
   Expression z = sum_batches(sum_elems(y));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -526,8 +526,8 @@ BOOST_AUTO_TEST_CASE( scalar_cdiv_batch1_gradient ) {
 BOOST_AUTO_TEST_CASE( scalar_cdiv_batch2_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression x2 = input(cg, Dim({1}, 6), batch_vals);
-  Expression y = cdiv(x1, x2);
+  Expression x2 = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = cdiv(x2, x1);
   Expression z = sum_batches(sum_elems(y));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -540,7 +540,7 @@ BOOST_AUTO_TEST_CASE( cdiv_broadcast2_gradient ) {
     Dim dim = dim_permutations[i];
     Expression x1 = reshape(parameter(cg, param1), Dim({3,1},1));
     Expression x2 = reshape(parameter(cg, param4), dim);
-    Expression y = cdiv(x1, x2) + cdiv(x2, x1);
+    Expression y = cdiv(x2, x1);
     Expression z = sum_batches(sum_elems(y));
     BOOST_CHECK(check_grad(mod, z, 0));
   }
@@ -554,7 +554,7 @@ BOOST_AUTO_TEST_CASE( cdiv_broadcast3_gradient ) {
     Dim dim = dim_permutations[i];
     Expression x1 = reshape(parameter(cg, param1), Dim({1,3,1},1));
     Expression x2 = reshape(parameter(cg, param_cube1), dim);
-    Expression y = cdiv(x1, x2) + cdiv(x2, x1);
+    Expression y = cdiv(x2, x1);
     Expression z = sum_batches(sum_elems(y));
     BOOST_CHECK(check_grad(mod, z, 0));
   }
