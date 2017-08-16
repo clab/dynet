@@ -173,6 +173,14 @@ Expression mean_dim(const Expression& x, const vector<unsigned>& dims, bool b) {
 Expression moment_dim(const Expression& x, const vector<unsigned>& dims, unsigned r, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, r, b)); }
 Expression std_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, dims, b)); }
 
+Expression moment_elems(const Expression& x, unsigned r) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use moment_dim instead"); }
+Expression mean_elems(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use mean_dim instead"); }
+Expression std_elems(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use std_dim instead"); }
+Expression moment_batches(const Expression& x, unsigned r) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use moment_dim instead"); }
+Expression mean_batches(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use mean_dim instead"); }
+Expression std_batches(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use std_dim instead"); }
+
+
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 
 Expression max_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MaxDimension>({x.i}, d)); }

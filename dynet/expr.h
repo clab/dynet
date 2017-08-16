@@ -1534,12 +1534,12 @@ Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
  */
 Expression sum_batches(const Expression& x);
 
-Expression moment_elems(const Expression& x, unsigned r) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use moment_dim instead"); };
-Expression mean_elems(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use mean_dim instead"); };
-Expression std_elems(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use std_dim instead"); };
-Expression moment_batches(const Expression& x, unsigned r) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use moment_dim instead"); };
-Expression mean_batches(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use mean_dim instead"); };
-Expression std_batches(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use std_dim instead"); };
+Expression moment_elems(const Expression& x, unsigned r);
+Expression mean_elems(const Expression& x);
+Expression std_elems(const Expression& x);
+Expression moment_batches(const Expression& x, unsigned r);
+Expression mean_batches(const Expression& x);
+Expression std_batches(const Expression& x);
 
 /**
  * \ingroup flowoperations
