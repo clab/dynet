@@ -1759,7 +1759,7 @@ BOOST_AUTO_TEST_CASE( sum_elems_gradient ) {
 BOOST_AUTO_TEST_CASE( mean_elems_gradient ) {
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param4);
-  Expression z = mean_elems(x);
+  Expression z = mean_dim(x, {0});
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -1768,7 +1768,7 @@ BOOST_AUTO_TEST_CASE( moment_elems_gradient ) {
   for (unsigned r = 2; r < 5; r++) {
     dynet::ComputationGraph cg;
     Expression x = parameter(cg, param4);
-    Expression z = moment_elems(x, r);
+    Expression z = moment_dim(x, {0}, r);
     BOOST_CHECK(check_grad(mod, z, 0));
   }
 }
@@ -1777,7 +1777,7 @@ BOOST_AUTO_TEST_CASE( moment_elems_gradient ) {
 BOOST_AUTO_TEST_CASE( std_elems_gradient ) {
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param4);
-  Expression z = std_elems(x);
+  Expression z = std_dim(x, {0});
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -1795,7 +1795,7 @@ BOOST_AUTO_TEST_CASE( mean_batches_gradient ) {
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param4);
   Expression y = reshape(x, Dim({1}, 6));
-  Expression z = mean_batches(y);
+  Expression z = mean_dim(y, {}, true);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -1804,7 +1804,7 @@ BOOST_AUTO_TEST_CASE( mean_batches_gradient_multidim ) {
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param4);
   Expression y = reshape(x, Dim({1, 2}, 3));
-  Expression z = mean_batches(y);
+  Expression z = mean_dim(y, {}, true);
   z = mean_dim(z, {1});
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -1815,7 +1815,7 @@ BOOST_AUTO_TEST_CASE( moment_batches_gradient ) {
     dynet::ComputationGraph cg;
     Expression x = parameter(cg, param4);
     Expression y = reshape(x, Dim({1}, 6));
-    Expression z = moment_batches(y, r);
+    Expression z = moment_dim(y, {}, r, true);
     BOOST_CHECK(check_grad(mod, z, 0));
   }
 }
@@ -1825,7 +1825,7 @@ BOOST_AUTO_TEST_CASE( std_batches_gradient ) {
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param4);
   Expression y = reshape(x, Dim({1}, 6));
-  Expression z = std_batches(y);
+  Expression z = std_dim(y, {}, true);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 

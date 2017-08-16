@@ -686,9 +686,6 @@ inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
  */
 Expression sum_elems(const Expression& x);
 
-Expression moment_elems(const Expression& x, unsigned r); // deprecated
-Expression mean_elems(const Expression& x); // deprecated
-Expression std_elems(const Expression& x); // deprecated
 
 /**
  * \ingroup arithmeticoperations
@@ -1537,9 +1534,12 @@ Expression select_cols(const Expression& x, const std::vector<unsigned>* pcols);
  */
 Expression sum_batches(const Expression& x);
 
-Expression moment_batches(const Expression& x, unsigned r); // deprecated
-Expression mean_batches(const Expression& x); // deprecated
-Expression std_batches(const Expression& x); // deprecated
+Expression moment_elems(const Expression& x, unsigned r) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use moment_dim instead"); };
+Expression mean_elems(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use mean_dim instead"); };
+Expression std_elems(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use std_dim instead"); };
+Expression moment_batches(const Expression& x, unsigned r) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use moment_dim instead"); };
+Expression mean_batches(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use mean_dim instead"); };
+Expression std_batches(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use std_dim instead"); };
 
 /**
  * \ingroup flowoperations
