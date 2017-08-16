@@ -5,7 +5,6 @@
 #include "dynet/param-init.h"
 #include "dynet/io.h"
 
-#include <unordered_set>
 #include <iostream>
 #include <fstream>
 #include <sstream>
