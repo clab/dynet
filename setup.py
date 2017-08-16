@@ -39,6 +39,17 @@ def strip_lib(filename):
     return re.sub(r"^(?:(?:lib)?(.*)\.(?:so|a|dylib)|(.*)\.lib)$", r"\1\2", filename)
 
 
+# In addition to environment variables, read variables passed on the command line as "VARIABLE=VALUE" arguments
+ENV = dict(os.environ)
+for i, arg in enumerate(sys.argv[1:]):
+    try:
+        key, value = arg.split("=", 1)
+    except ValueError:
+        break
+    ENV[key] = value
+
+del sys.argv[1:i+1]
+
 log.basicConfig(stream=sys.stdout, level=log.INFO)
 
 # For build
@@ -50,19 +61,19 @@ ORIG_DIR = os.getcwd()
 SCRIPT_DIR = os.path.dirname(os.path.abspath(this_file))
 BUILD_DIR = "build"
 BUILT_EXTENSIONS = False
-CMAKE_PATH = os.environ.get("CMAKE", find_executable("cmake"))
+CMAKE_PATH = ENV.get("CMAKE", find_executable("cmake"))
 if CMAKE_PATH is None:
     raise DistutilsSetupError("`cmake` not found, and `CMAKE` is not set.")
-MAKE_PATH = os.environ.get("MAKE", find_executable("make"))
+MAKE_PATH = ENV.get("MAKE", find_executable("make"))
 if MAKE_PATH is None:
     raise DistutilsSetupError("`make` not found, and `MAKE` is not set.")
-MAKE_FLAGS = os.environ.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
-EIGEN3_INCLUDE_DIR = os.environ.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
+MAKE_FLAGS = ENV.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
+EIGEN3_INCLUDE_DIR = ENV.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
 HG_PATH = find_executable("hg")
-CC_PATH = os.environ.get("CC", find_executable("gcc"))
+CC_PATH = ENV.get("CC", find_executable("gcc"))
 if CC_PATH is None:
     raise DistutilsSetupError("`gcc` not found, and `CC` is not set.")
-CXX_PATH = os.environ.get("CXX", find_executable("g++"))
+CXX_PATH = ENV.get("CXX", find_executable("g++"))
 if CXX_PATH is None:
     raise DistutilsSetupError("`g++` not found, and `CXX` is not set.")
 INSTALL_PREFIX = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
@@ -85,24 +96,24 @@ RUNTIME_LIB_DIRS = []
 INCLUDE_DIRS = []
 
 # Add all environment variables from CMake for Cython extensions
-append_cmake_lib_list(GPULIBRARIES, os.environ.get("CUDA_CUBLAS_FILES"))
-append_cmake_list(GPULIBRARY_DIRS, os.environ.get("CUDA_CUBLAS_DIRS"))
-CMAKE_INSTALL_PREFIX = os.environ.get("CMAKE_INSTALL_PREFIX", INSTALL_PREFIX)
+append_cmake_lib_list(GPULIBRARIES, ENV.get("CUDA_CUBLAS_FILES"))
+append_cmake_list(GPULIBRARY_DIRS, ENV.get("CUDA_CUBLAS_DIRS"))
+CMAKE_INSTALL_PREFIX = ENV.get("CMAKE_INSTALL_PREFIX", INSTALL_PREFIX)
 LIBS_INSTALL_DIR = CMAKE_INSTALL_PREFIX + "/lib/"
-PROJECT_SOURCE_DIR = os.environ.get("PROJECT_SOURCE_DIR", SCRIPT_DIR)  # location of the main dynet directory
-PROJECT_BINARY_DIR = os.environ.get("PROJECT_BINARY_DIR", BUILD_DIR)  # path where dynet is built
+PROJECT_SOURCE_DIR = ENV.get("PROJECT_SOURCE_DIR", SCRIPT_DIR)  # location of the main dynet directory
+PROJECT_BINARY_DIR = ENV.get("PROJECT_BINARY_DIR", BUILD_DIR)  # path where dynet is built
 DYNET_LIB_DIR = PROJECT_BINARY_DIR + "/dynet/"
 
-if os.environ.get("MSVC") == "1":
+if ENV.get("MSVC") == "1":
     COMPILER_ARGS[:] = ["-DNOMINMAX", "/EHsc"]
     DYNET_LIB_DIR += "/Release/"
     # For MSVC, we compile dynet as a static lib, so we need to also link in the
     # other libraries it depends on:
-    append_cmake_lib_list(LIBRARIES, os.environ.get("LIBS"))
-    append_cmake_lib_list(GPULIBRARIES, os.environ.get("LIBS"))
-    append_cmake_list(LIBRARY_DIRS, os.environ.get("MKL_LINK_DIRS"))  # Add the MKL dirs, if MKL is being used
-    append_cmake_lib_list(GPULIBRARIES, os.environ.get("CUDA_RT_FILES"))
-    append_cmake_list(GPULIBRARY_DIRS, os.environ.get("CUDA_RT_DIRS"))
+    append_cmake_lib_list(LIBRARIES, ENV.get("LIBS"))
+    append_cmake_lib_list(GPULIBRARIES, ENV.get("LIBS"))
+    append_cmake_list(LIBRARY_DIRS, ENV.get("MKL_LINK_DIRS"))  # Add the MKL dirs, if MKL is being used
+    append_cmake_lib_list(GPULIBRARIES, ENV.get("CUDA_RT_FILES"))
+    append_cmake_list(GPULIBRARY_DIRS, ENV.get("CUDA_RT_DIRS"))
 else:
     COMPILER_ARGS[:] = ["-std=c++11"]
     RUNTIME_LIB_DIRS.extend([DYNET_LIB_DIR, LIBS_INSTALL_DIR])
@@ -130,7 +141,7 @@ TARGET = [Extension(
     runtime_library_dirs=RUNTIME_LIB_DIRS,
 )]
 
-if os.environ.get("WITH_CUDA_BACKEND") == "1":  # if cuda requested
+if ENV.get("WITH_CUDA_BACKEND") == "1":  # if cuda requested
     TARGET.append(Extension(
         "_gdynet",  # name of extension
         ["_gdynet.pyx"],  # filename of our Pyrex/Cython source

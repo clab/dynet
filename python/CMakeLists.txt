@@ -65,8 +65,8 @@ if(PYTHON)
 
   add_custom_command(
           OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/timestamp
-          COMMAND ${CMAKE_COMMAND} -E env ${EnvVars} ${PYTHON}
-          ARGS ${CMAKE_SOURCE_DIR}/setup.py build_ext --inplace
+          COMMAND ${PYTHON}
+          ARGS ${CMAKE_SOURCE_DIR}/setup.py ${EnvVars} build_ext --inplace
           COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/timestamp
           DEPENDS ${DepFiles})
 
