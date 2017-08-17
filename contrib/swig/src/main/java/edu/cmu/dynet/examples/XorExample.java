@@ -22,7 +22,7 @@ public class XorExample {
     System.out.println("Running XOR example");
     initialize(new DynetParams());
     System.out.println("Dynet initialized!");
-    Model m = new Model();
+    ParameterCollection m = new ParameterCollection();
     SimpleSGDTrainer sgd = new SimpleSGDTrainer(m);
     ComputationGraph cg = ComputationGraph.getNew();
 
@@ -76,7 +76,7 @@ public class XorExample {
         floatp_assign(y_value, (x1 != x2) ? 1 : -1);
         loss += as_scalar(cg.forward(loss_expr));
         cg.backward(loss_expr);
-        sgd.update(1.0f);
+        sgd.update();
       }
       sgd.update_epoch();
       loss /= 4;

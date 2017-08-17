@@ -19,12 +19,12 @@ Initialization functions
 
 .. autofunction:: dynet.init_from_params
 
-Model and Parameters
---------------------
+ParameterCollection and Parameters
+----------------------------------
 
-Model
-~~~~~
-.. autoclass:: dynet.Model
+ParameterCollection
+~~~~~~~~~~~~~~~~~~~
+.. autoclass:: dynet.ParameterCollection
    :members:
    :show-inheritance:
 
@@ -78,6 +78,13 @@ Parameters initializers
    :members:
    :show-inheritance:
 
+High level saving/loading
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: dynet.save
+
+.. autofunction:: dynet.load
+
 Computation Graph
 -----------------
 
@@ -117,9 +124,11 @@ Operations are used to build expressions
 Input operations
 ^^^^^^^^^^^^^^^^
 
-.. autofunction:: dynet.parameter
-
 .. autofunction:: dynet.inputTensor
+
+.. autofunction:: dynet.sparse_inputTensor
+
+.. autofunction:: dynet.parameter
 
 .. autofunction:: dynet.scalarInput
 
@@ -135,13 +144,19 @@ Input operations
 
 .. autofunction:: dynet.lookup_batch
 
-.. autofunction:: dynet.zeroes
+.. autofunction:: dynet.zeros
+
+.. autofunction:: dynet.ones
+
+.. autofunction:: dynet.constant
 
 .. autofunction:: dynet.random_normal
 
 .. autofunction:: dynet.random_bernoulli
 
 .. autofunction:: dynet.random_uniform
+
+.. autofunction:: dynet.random_gumbel
 
 .. autofunction:: dynet.noise
 
@@ -155,6 +170,8 @@ Arithmetic operations
 .. autofunction:: dynet.colwise_add
 
 .. autofunction:: dynet.squared_norm
+
+.. autofunction:: dynet.l2_norm
 
 .. autofunction:: dynet.tanh
 
@@ -177,6 +194,10 @@ Arithmetic operations
 .. autofunction:: dynet.logistic
 
 .. autofunction:: dynet.rectify
+
+.. autofunction:: dynet.elu
+
+.. autofunction:: dynet.selu
 
 .. autofunction:: dynet.sparsemax
 
@@ -232,6 +253,10 @@ Loss/Probability operations
 .. autofunction:: dynet.pickneglogsoftmax
 
 .. autofunction:: dynet.pickneglogsoftmax_batch
+
+.. autofunction:: dynet.hinge
+
+.. autofunction:: dynet.hinge_batch
 
 .. autofunction:: dynet.kmh_ngram
 
@@ -315,12 +340,16 @@ Convolution/Pooling operations
 
 .. autofunction:: dynet.conv2d_bias
 
+.. autofunction:: dynet.maxpooling2d
+
 .. autofunction:: dynet.filter1d_narrow
 
 .. autofunction:: dynet.kmax_pooling
 
 Tensor operations
 ^^^^^^^^^^^^^^^^^
+
+**Remark**: Compiling the contraction operations takes a lot of time with CUDA. For this reason, only the CPU implementation is compiled by default. If you need those operations, you need to un-comment `this line <https://github.com/clab/dynet/blob/master/dynet/nodes-contract.cc#L11>`_ in the source before compiling. TODO: make this simpler.
 
 .. autofunction:: dynet.contract3d_1d
 
@@ -382,6 +411,26 @@ RNN state
 .. autoclass:: dynet.StackedRNNState
    :members:
    :show-inheritance:
+
+Softmax Builders
+----------------
+
+
+.. autoclass:: dynet.SoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
+.. autoclass:: dynet.StandardSoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
+.. autoclass:: dynet.ClassFactoredSoftmaxBuilder
+   :members:
+   :show-inheritance:
+
+
 
 Optimizers
 ----------

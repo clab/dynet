@@ -3,38 +3,8 @@
 
 #include "dynet/dynet.h"
 #include "dynet/nodes-macros.h"
-#include "dynet/op-helper.h"
-
-#if HAVE_CUDNN
-#include "dynet/cudnn-ops.h"
-#endif
 
 namespace dynet {
-
-// with a single argument x \in R^{n x m}
-// y_i = \sum_j x_i,j / m
-struct AverageColumns : public Node {
-  template <typename T> explicit AverageColumns(const T& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-};
-
-/* Deprecated
-// y = x_1 *conv x_2
-// x_1 \in R^{d x s} (input)
-// x_2 \in R^{d x m} (filter)
-struct Conv1DNarrow : public Node {
-  explicit Conv1DNarrow(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-};
-
-// y = x_1 *conv x_2
-// x_1 \in R^{d x s} (input)
-// x_2 \in R^{d x m} (filter)
-struct Conv1DWide : public Node {
-  explicit Conv1DWide(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-};
-*/
 
 // y = x_1 *filter x_2
 // x_1 \in R^{d x s} (input)
@@ -64,36 +34,23 @@ struct KMaxPooling : public Node {
   unsigned second_dim;
 };
 
-// sum along a single dimension
-struct SumDimension : public Node {
-  template <typename T> explicit SumDimension(const T& a, unsigned d) : Node(a), dimension(d) {}
+// y_i = \sum_{j=1}^n x_1:{i-1+j}
+struct KMHNGram : public Node {
+  explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) : Node(a), n(n) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
-  unsigned dimension;
+  unsigned n;  // width, n=2 for Karl's paper
 };
 
-// conv2d 
-// y = x_1 *conv2d x_2
-// x_1 \in R^{H x W x Ci x N} (input)
-// x_2 \in R^{H x W x Ci x Co} (filter)
-// stride[0] corresponds to H
-// stride[1] corresponds to W
-// is_valid: true for 'VALID' and false for 'SAME'
-struct Conv2D: public Node {
-  explicit Conv2D(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& s,
-    const bool padding_type = true)
-      : Node(a), stride(s), is_valid(padding_type) {}
-  virtual bool supports_multibatch() const override { return true; }
+// hyperparameter: width > 1
+// x_1 is a std::vector in R^n, which we write x
+// y is a std::vector in R^{n / width}
+// y_i = max_{x_{i * width - width + 1}, ..., x_{i * width}}
+struct MaxPooling1D : public Node {
+  MaxPooling1D(const std::initializer_list<VariableIndex>& a, unsigned w) : Node(a), width(w) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
-  size_t aux_storage_size() const override;
-  const std::vector<unsigned> stride;
-  const bool is_valid;
-
- private:
-#if HAVE_CUDNN
-  mutable CudnnConvOp* cudnn_conv_op_ = NULL;
-#endif
+  unsigned width;
+  mutable std::vector<unsigned> ind;
 };
-
 
 } // namespace dynet
 

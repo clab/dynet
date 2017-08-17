@@ -4,8 +4,6 @@
 #include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
 #include "dynet/grad-check.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -18,7 +16,7 @@ int main(int argc, char** argv) {
 
   // parameters
   const unsigned ITERATIONS = 30;
-  Model m;
+  ParameterCollection m;
   SimpleSGDTrainer sgd(m);
   //MomentumSGDTrainer sgd(m);
 
@@ -71,9 +69,8 @@ int main(int argc, char** argv) {
     // Calculate the loss. Batching will automatically be done here.
     float loss = as_scalar(cg.forward(loss_expr)) / 4;
     cg.backward(loss_expr);
-    sgd.update(1.0);
+    sgd.update();
 
-    sgd.update_epoch();
     cerr << "E = " << loss << endl;
   }
 

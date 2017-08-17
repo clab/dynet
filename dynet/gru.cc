@@ -1,11 +1,10 @@
 #include "dynet/gru.h"
 
+#include "dynet/param-init.h"
+
 #include <string>
 #include <vector>
 #include <iostream>
-
-#include "dynet/nodes.h"
-#include "dynet/training.h"
 
 using namespace std;
 
@@ -16,23 +15,24 @@ enum { X2Z, H2Z, BZ, X2R, H2R, BR, X2H, H2H, BH };
 GRUBuilder::GRUBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model) : hidden_dim(hidden_dim), layers(layers) {
+                       ParameterCollection& model) : hidden_dim(hidden_dim), layers(layers) {
   unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("gru-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // z
-    Parameter p_x2z = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2z = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bz = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2z = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2z = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bz = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // r
-    Parameter p_x2r = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2r = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_br = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2r = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2r = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_br = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // h
-    Parameter p_x2h = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2h = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bh = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2h = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bh = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
@@ -153,6 +153,10 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
   for (size_t i = 0; i < params.size(); ++i)
     for (size_t j = 0; j < params[i].size(); ++j)
       params[i][j] = rnn_gru.params[i][j];
+}
+
+ParameterCollection & GRUBuilder::get_parameter_collection() {
+  return local_model;
 }
 
 } // namespace dynet

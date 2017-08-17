@@ -4,16 +4,17 @@
 #include <iostream>
 #include <sstream>
 
+#include "dynet/param-init.h"
+
 using namespace std;
 
 namespace dynet {
 
-using namespace expr;
-
-Cluster::Cluster() : initialized(false) {}
-void Cluster::new_graph(ComputationGraph& cg) {
+Cluster::Cluster() {}
+void Cluster::new_graph(ComputationGraph& cg, bool update) {
+  this->update=update;
   for (Cluster* child : children) {
-    child->new_graph(cg);
+    child->new_graph(cg, update);
   }
   bias.pg = NULL;
   weights.pg = NULL;
@@ -42,12 +43,12 @@ void Cluster::add_word(unsigned word) {
   terminals.push_back(word);
 }
 
-void Cluster::initialize(unsigned rep_dim, Model& model) {
+void Cluster::initialize(unsigned rep_dim, ParameterCollection& model) {
   this->rep_dim = rep_dim;
   initialize(model);
 }
 
-void Cluster::initialize(Model& model) {
+void Cluster::initialize(ParameterCollection& model) {
   output_size = (children.size() > 0) ? children.size() : terminals.size();
 
   if (output_size == 1) {
@@ -62,6 +63,7 @@ void Cluster::initialize(Model& model) {
   }
 
   for (Cluster* child : children) {
+    child->rep_dim = this->rep_dim;
     child->initialize(model);
   }
 }
@@ -81,8 +83,7 @@ unsigned Cluster::get_word(unsigned index) const { return terminals[index]; }
 Expression Cluster::predict(Expression h, ComputationGraph& cg) const {
   if (output_size == 1) {
     return input(cg, 1.0f);
-  }
-  else {
+  } else {
     Expression b = get_bias(cg);
     Expression w = get_weights(cg);
     return affine_transform({b, w, h});
@@ -106,12 +107,12 @@ Expression Cluster::neg_log_softmax(Expression h, unsigned r, ComputationGraph& 
   }
 }
 
-unsigned Cluster::sample(expr::Expression h, ComputationGraph& cg) const {
+unsigned Cluster::sample(Expression h, ComputationGraph& cg) const {
   if (output_size == 1) {
     return 0;
   }
   else if (output_size == 2) {
-    expr::Expression prob0_expr = logistic(predict(h, cg));
+    Expression prob0_expr = logistic(predict(h, cg));
     double prob0 = as_scalar(cg.incremental_forward(prob0_expr));
     double p = rand01();
     if (p < prob0) {
@@ -122,7 +123,7 @@ unsigned Cluster::sample(expr::Expression h, ComputationGraph& cg) const {
     }
   }
   else {
-    expr::Expression dist_expr = softmax(predict(h, cg));
+    Expression dist_expr = softmax(predict(h, cg));
     vector<float> dist = as_vector(cg.incremental_forward(dist_expr));
     unsigned c = 0;
     double p = rand01();
@@ -139,14 +140,14 @@ unsigned Cluster::sample(expr::Expression h, ComputationGraph& cg) const {
 
 Expression Cluster::get_weights(ComputationGraph& cg) const {
   if (weights.pg != &cg) {
-    weights = parameter(cg, p_weights);
+    weights = this->update ? parameter(cg, p_weights) : const_parameter(cg, p_weights);
   }
   return weights;
 }
 
 Expression Cluster::get_bias(ComputationGraph& cg) const {
   if (bias.pg != &cg) {
-    bias = parameter(cg, p_bias);
+    bias = this->update ? parameter(cg, p_bias) : const_parameter(cg, p_bias);
   }
   return bias;
 }
@@ -162,38 +163,29 @@ string Cluster::toString() const {
   return ss.str();
 }
 
-#if BOOST_VERSION >= 105600
-  DYNET_SERIALIZE_COMMIT(Cluster, DYNET_SERIALIZE_DEFINE(rep_dim, children, path, terminals, word2ind))
-#else
-  template<class Archive>
-  void Cluster::serialize(Archive& ar, const unsigned int) {
-    DYNET_RUNTIME_ERR("Serializing clusters is only supported on versions of boost 1.56 or higher");
-  }
-#endif
-DYNET_SERIALIZE_IMPL(Cluster)
-
 HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict& word_dict,
-                             Model& model) {
+                             ParameterCollection& model) {
+  local_model = model.add_subcollection("hsm-builder");
   root = read_cluster_file(cluster_file, word_dict);
-  root->initialize(rep_dim, model);
+  root->initialize(rep_dim, local_model);
 }
 
 HierarchicalSoftmaxBuilder::~HierarchicalSoftmaxBuilder() {
 }
 
-void HierarchicalSoftmaxBuilder::initialize(Model& model) {
+void HierarchicalSoftmaxBuilder::initialize(ParameterCollection& model) {
  root->initialize(model);
 }
 
-void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg) {
+void HierarchicalSoftmaxBuilder::new_graph(ComputationGraph& cg, bool update) {
   pcg = &cg;
-  root->new_graph(cg);
+  root->new_graph(cg, update);
 }
 
 Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
-  if(pcg != NULL)
+  if(pcg == NULL)
     DYNET_INVALID_ARG("In HierarchicalSoftmaxBuilder, you must call new_graph before calling neg_log_softmax!");
   Cluster* path = widx2path[wordidx];
 
@@ -219,8 +211,8 @@ Expression HierarchicalSoftmaxBuilder::neg_log_softmax(const Expression& rep, un
   return sum(log_probs);
 }
 
-unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
-  if(pcg != NULL)
+unsigned HierarchicalSoftmaxBuilder::sample(const Expression& rep) {
+  if(pcg == NULL)
     DYNET_INVALID_ARG("In HierarchicalSoftmaxBuilder, you must call new_graph before calling sample!");
 
   const Cluster* node = root;
@@ -236,8 +228,13 @@ unsigned HierarchicalSoftmaxBuilder::sample(const expr::Expression& rep) {
 }
 
 Expression HierarchicalSoftmaxBuilder::full_log_distribution(const Expression& rep) {
-  DYNET_RUNTIME_ERR("full_distribution not implemented for HierarchicalSoftmaxBuilder");
-  return dynet::expr::Expression();
+  DYNET_RUNTIME_ERR("full_log_distribution not implemented for HierarchicalSoftmaxBuilder");
+  return dynet::Expression();
+}
+
+Expression HierarchicalSoftmaxBuilder::full_logits(const Expression& rep) {
+  DYNET_RUNTIME_ERR("full_logits not implemented for HierarchicalSoftmaxBuilder");
+  return dynet::Expression();
 }
 
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }

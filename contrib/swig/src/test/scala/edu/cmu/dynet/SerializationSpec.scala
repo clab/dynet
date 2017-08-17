@@ -13,7 +13,7 @@ class SerializationSpec extends FlatSpec with Matchers {
     s1.zip(s2).foreach { case (v1, v2) => v1 shouldBe v2 +- eps }
   }
 
-  def assertSameModel(m1: Model, m2: Model): Unit = {
+  def assertSameModel(m1: ParameterCollection, m2: ParameterCollection): Unit = {
     // TODO(joelgrus): add more logic here as we add more methods to the Java API
     m1.parameterCount() shouldBe m2.parameterCount()
 
@@ -42,12 +42,13 @@ class SerializationSpec extends FlatSpec with Matchers {
     }
   }
 
-  def defaultModel(): Model = {
-    val model = new Model()
+  def defaultModel(): ParameterCollection = {
+    val model = new ParameterCollection()
     model.addParameters(Dim(2, 3))
     model.addParameters(Dim(5))
     model
   }
+
 
   "dynet" should "create models with the right number of parameters" in {
     val model = defaultModel()
@@ -57,64 +58,48 @@ class SerializationSpec extends FlatSpec with Matchers {
   "model saver and model loader" should "handle simplernnbuilder correctly" in {
 
     // this is the simple_rnn_io test case from the C++ tests
-    val mod1 = new Model()
+    val mod1 = new ParameterCollection()
     val rnn1 = new SimpleRnnBuilder(1, 10, 10, mod1)
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
+    println(path)
+
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
-    saver.addSRnnBuilder(rnn1)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val mod2 = loader.loadModel()
-    val rnn2 = loader.loadSRnnBuilder()
-    loader.done()
+    val mod2 = new ParameterCollection()
+    val rnn2 = new SimpleRnnBuilder(1, 10, 10, mod2)
 
+    loader.populateModel(mod2)
     assertSameModel(mod1, mod2)
   }
+
 
   "model saver and model loader" should "handle vanillalstmbuilder correctly" in {
 
     // this is the vanilla_lstm_io test case from the C++ tests
-    val mod1 = new Model()
+    val mod1 = new ParameterCollection()
     val rnn1 = new VanillaLstmBuilder(1, 10, 10, mod1)
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
-    saver.addVanillaLstmBuilder(rnn1)
     saver.done()
 
     val loader = new ModelLoader(path)
-    val mod2 = loader.loadModel()
-    val rnn2 = loader.loadVanillaLstmBuilder()
-    loader.done()
+    val mod2 = new ParameterCollection()
+    val rnn2 = new VanillaLstmBuilder(1, 10, 10, mod2)
 
+    loader.populateModel(mod2)
     assertSameModel(mod1, mod2)
   }
 
+  // TODO(joelgrus): implement these
+  /*
 
-  "model saver and model loader" should "handle lstmbuilder correctly" in {
 
-    // this is the lstm_io test case from the C++ tests
-    val mod1 = new Model()
-    val rnn1 = new LstmBuilder(1, 10, 10, mod1)
-
-    val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
-    val saver = new ModelSaver(path)
-    saver.addModel(mod1)
-    saver.addLstmBuilder(rnn1)
-    saver.done()
-
-    val loader = new ModelLoader(path)
-    val mod2 = loader.loadModel()
-    val rnn2 = loader.loadLstmBuilder()
-    loader.done()
-
-    assertSameModel(mod1, mod2)
-  }
-  
   "model saver and model loader" should "handle byte[] correctly" in {
 
     val s = Array[Byte](3, 7, 127, 2, 5, 8, 0, -1, -2, 100, 10, -2, 0)
@@ -173,6 +158,8 @@ class SerializationSpec extends FlatSpec with Matchers {
     loader.loadBoolean() shouldBe false
     loader.done()
   }
+*/
+
 }
 
 case class Foo(a: String, b: Int) extends Serializable

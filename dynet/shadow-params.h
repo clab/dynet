@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "dynet/tensor.h"
-#include "dynet/io-macros.h"
 
 // if your learner needs to keep track of an extra set of values (one per
 // parameter), use the Shadow classes. this can be used to implement, e.g.,
@@ -11,7 +10,7 @@
 
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 struct ParameterStorage;
 struct LookupParameterStorage;
 
@@ -19,8 +18,6 @@ struct ShadowParameters {
   ShadowParameters() {}
   explicit ShadowParameters(const ParameterStorage& p);
   Tensor h;
- private:
-  DYNET_SERIALIZE_DECLARE()
 };
 
 struct ShadowLookupParameters {
@@ -30,13 +27,12 @@ struct ShadowLookupParameters {
   std::vector<Tensor> h;
  private:
   void initialize_lookups();
-  DYNET_SERIALIZE_SPLIT_DECLARE()
 };
 
 // one per element in model.parameters_list
-std::vector<ShadowParameters> allocate_shadow_parameters(const Model& model);
+std::vector<ShadowParameters> allocate_shadow_parameters(const ParameterCollection& model);
 // one per element in model.lookup_parameters_list
-std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const Model& model);
+std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const ParameterCollection& model);
 
 } // namespace dynet
 

@@ -7,7 +7,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
@@ -24,7 +23,7 @@ int main(int argc, char** argv) {
     ys.push_back(y);
   }
 
-  Model model;
+  ParameterCollection model;
   Parameter pW = model.add_parameters({1});
 
   SimpleSGDTrainer trainer(model, 0.1);

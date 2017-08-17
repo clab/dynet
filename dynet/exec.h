@@ -20,14 +20,14 @@ class ExecutionEngine {
   virtual void backward(bool full = false) = 0;
   virtual void backward(VariableIndex i, bool full = false) = 0;
  protected:
-  explicit ExecutionEngine(const ComputationGraph& cg) : cg(cg) {}
+  explicit ExecutionEngine(const ComputationGraph& cg) : cg(cg), backward_computed(0) {}
   const ComputationGraph& cg;
   VariableIndex backward_computed;
 };
 
 class SimpleExecutionEngine : public ExecutionEngine {
  public:
-  explicit SimpleExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) {}
+  explicit SimpleExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg), num_nodes_evaluated(0) {}
   void invalidate() override;
   void invalidate(unsigned i) override;
   const Tensor& forward() override;
@@ -56,7 +56,7 @@ public:
 
 class BatchedExecutionEngine : public ExecutionEngine {
  public:
-  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg) { }
+  explicit BatchedExecutionEngine(const ComputationGraph& cg) : ExecutionEngine(cg), num_nodes_evaluated(0), num_batches_evaluated(0) { }
   ~BatchedExecutionEngine() { garbage_collect(); }
   void invalidate() override;
   void invalidate(unsigned i) override;

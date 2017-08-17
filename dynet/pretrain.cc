@@ -19,7 +19,7 @@ void save_pretrained_embeddings(const std::string& fname,
   ofstream out(fname);
   if(!out)
     DYNET_INVALID_ARG("Could not save embeddings to " << fname);
-  auto& m = *lp.get();
+  auto& m = lp.get_storage();
   for (unsigned i = 0; i < d.size(); ++i) {
     out << d.convert(i) << ' ' << (*m.values[i]).transpose() << endl;
   }

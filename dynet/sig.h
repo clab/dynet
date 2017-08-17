@@ -11,10 +11,11 @@ namespace dynet {
   namespace nt {
     enum NodeType { 
       tanh=1, sqrt, abs, erf, square, cube, exp, loggamma, log, nobackprop, flipgradient, identity, negate, rectify, logistic, softsign,
-      plus_const, concat, cmult, sum, squared_distance, pnls, pickrange,
-      input, scalar_input, lookup,
+      plus_const, concat, cmult, sum, squared_distance, softmax, pnls, pickrange, scalar_mult,
+      input, scalar_input, lookup, 
       COMPLEX,
       affine, matmul,
+      vanilla_lstm_gates, vanilla_lstm_h, vanilla_lstm_c,
     };
   }
 
@@ -83,6 +84,12 @@ struct SigHash {
   inline void add_int(int i) {
     hash = i + (hash << 6) + (hash << 16) - hash;
   }
+  inline void add_float(float i) {
+    assert(sizeof(int) >= sizeof(float));
+    int temp_val = 0;
+    memcpy(&temp_val, &i, sizeof(float));
+    hash = temp_val + (hash << 6) + (hash << 16) - hash;
+  }
   void add_node(unsigned i) { add_int((int)i); }
   void add_dim(const Dim &d) {
     add_int(-(int)d.nd);
@@ -106,7 +113,7 @@ template <class Sig>
 struct SigLinearMap {
   SigLinearMap() { sigs.reserve(50); whiches.reserve(50); Sig s; sigs.push_back(s); whiches.push_back(s.which); }
   int get_idx(Sig &s) {
-    for (int i=0; i<sigs.size(); ++i) {
+    for (unsigned i=0; i<sigs.size(); ++i) {
       if (sigs[i]==s)
           return i;
     }
@@ -132,7 +139,7 @@ struct SigLinearSortedMap {
       }
       // not found, continue to add.
     } else { // linear scan
-      for (int i=0; i<sigs.size(); ++i) {
+      for (unsigned i=0; i<sigs.size(); ++i) {
         if (sigs[i].first==s) {
           const int res=sigs[i].second;
           found++;
@@ -143,9 +150,9 @@ struct SigLinearSortedMap {
     }
     found=0;
     sorted=false;
-    sigs.push_back(std::pair<Sig, int>(s, sigs.size()));
+    sigs.push_back(std::pair<Sig, int>(s, (int)sigs.size()));
     whiches.push_back(s.which);
-    return sigs.size()-1;
+    return (int)sigs.size()-1;
   }
   void clear() {
     sigs.clear(); whiches.clear(); sorted=false;

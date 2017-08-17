@@ -7,10 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "dynet/io-macros.h"
 #include "dynet/except.h"
-
-namespace boost { namespace serialization { class access; } }
 
 namespace dynet {
 
@@ -20,7 +17,7 @@ public:
   Dict() : frozen(false), map_unk(false), unk_id(-1) {
   }
 
-  inline unsigned size() const { return words_.size(); }
+  inline unsigned size() const { return (unsigned)words_.size(); }
 
   inline bool contains(const std::string& words) {
     return !(d_.find(words) == d_.end());
@@ -39,7 +36,7 @@ public:
           DYNET_RUNTIME_ERR("Unknown word encountered in frozen dictionary: " << word);
       }
       words_.push_back(word);
-      return d_[word] = words_.size() - 1;
+      return d_[word] = (int)words_.size() - 1;
     } else {
       return i->second;
     }
@@ -58,7 +55,7 @@ public:
     if (map_unk)
       DYNET_RUNTIME_ERR("Set UNK more than one time");
   
-    // temporarily unfrozen the dictionary to allow the add of the UNK
+    // temporarily unfreeze the dictionary to allow the addition of the UNK
     frozen = false;
     unk_id = convert(word);
     frozen = true;
@@ -71,14 +68,12 @@ public:
   
   void clear() { words_.clear(); d_.clear(); }
 
-private:
+protected:
   bool frozen;
   bool map_unk; // if true, map unknown word to unk_id
   int unk_id; 
   std::vector<std::string> words_;
   Map d_;
-
-  DYNET_SERIALIZE_DECLARE()
 };
 
 std::vector<int> read_sentence(const std::string& line, Dict& sd);

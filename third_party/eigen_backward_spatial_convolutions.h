@@ -166,6 +166,7 @@ SpatialConvolutionBackwardInput(
   eigen_assert(padding_bottom >= 0);
   eigen_assert(padding_right >= 0);
 
+
   // The kernel has dimensions filters X channels X patch_rows X patch_cols
   // We need to reverse the kernel along dimensions corresponding to rows and
   // cols.
@@ -352,7 +353,7 @@ SpatialConvolutionBackwardKernel(
     const Input& input, const OutputBackward& output_backward,
     typename internal::traits<Input>::Index kernelRows,
     typename internal::traits<Input>::Index kernelCols,
-    const DenseIndex row_stride = 1, const DenseIndex col_stride = 1,
+    const DenseIndex row_stride = 1, const DenseIndex col_stride = 1, const bool is_valid = true,
     const DenseIndex row_in_stride = 1, const DenseIndex col_in_stride = 1) {
   typedef typename internal::traits<Input>::Index TensorIndex;
   typedef typename internal::traits<OutputBackward>::Scalar OutScalar;
@@ -409,10 +410,11 @@ SpatialConvolutionBackwardKernel(
       kernelCols + (kernelCols - 1) * (col_in_stride - 1);
 
   // Computing the forward padding
-  const TensorIndex padRows = numext::maxi<Index>(
-      0, (outputRows - 1) * row_stride + kernelRowsEff - inputRows);
-  const TensorIndex padCols = numext::maxi<Index>(
-      0, (outputCols - 1) * col_stride + kernelColsEff - inputCols);
+  const TensorIndex padRows_tmp = (outputRows - 1) * row_stride + kernelRowsEff - inputRows;
+  const TensorIndex padCols_tmp = (outputCols - 1) * col_stride + kernelColsEff - inputCols;
+  const TensorIndex padRows = is_valid ? numext::maxi<Index>(0, padRows_tmp) : padRows_tmp;
+  const TensorIndex padCols = is_valid ? numext::maxi<Index>(0, padCols_tmp) : padCols_tmp;
+
   const TensorIndex padding_top = padRows / 2;
   const TensorIndex padding_bottom = padRows - padding_top;
   const TensorIndex padding_left = padCols / 2;

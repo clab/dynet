@@ -46,7 +46,7 @@ class InternalMemoryPool {
 
 class AlignedMemoryPool {
   public:
-    explicit AlignedMemoryPool(const std::string &name, size_t cap, MemAllocator *a);
+    explicit AlignedMemoryPool(const std::string &name, size_t initial_cap, MemAllocator *a, size_t expanding_unit = 1<<24);
     ~AlignedMemoryPool();
 
     void* allocate(size_t n);
@@ -61,9 +61,10 @@ class AlignedMemoryPool {
   private:
     std::string name;
     std::vector<InternalMemoryPool *> pools;
-    int current;
     size_t cap;
+    int current;
     MemAllocator* a;
+    size_t expanding_unit;
 };
 
 } // namespace dynet

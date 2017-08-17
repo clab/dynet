@@ -1,13 +1,12 @@
 #include "dynet/fast-lstm.h"
 
+#include "dynet/param-init.h"
+
 #include <string>
 #include <vector>
 #include <iostream>
 
-#include "dynet/nodes.h"
-
 using namespace std;
-using namespace dynet::expr;
 
 namespace dynet {
 
@@ -21,25 +20,26 @@ Namely: C2O, C2I.
 FastLSTMBuilder::FastLSTMBuilder(unsigned layers,
                                  unsigned input_dim,
                                  unsigned hidden_dim,
-                                 Model& model) : layers(layers) {
+                                 ParameterCollection& model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("fast-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2i = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2i = model.add_parameters({hidden_dim, 1});
-    Parameter p_bi = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2i = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2i = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2i = local_model.add_parameters({hidden_dim, 1});
+    Parameter p_bi = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // o
-    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2o = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2o = model.add_parameters({hidden_dim, 1});
-    Parameter p_bo = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2o = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2o = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2o = local_model.add_parameters({hidden_dim, 1});
+    Parameter p_bo = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // c
-    Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2c = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bc = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2c = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2c = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bc = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
@@ -212,6 +212,10 @@ void FastLSTMBuilder::copy(const RNNBuilder & rnn) {
   for(size_t i = 0; i < params.size(); ++i)
       for(size_t j = 0; j < params[i].size(); ++j)
         params[i][j] = rnn_lstm.params[i][j];
+}
+
+ParameterCollection & FastLSTMBuilder::get_parameter_collection() {
+  return local_model;
 }
 
 } // namespace dynet

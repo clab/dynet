@@ -32,8 +32,30 @@ ostream& operator<<(ostream& os, const vector<Dim>& ds) {
   return os << ']';
 }
 
-DYNET_SERIALIZE_COMMIT(Dim, DYNET_SERIALIZE_DEFINE(nd, d))
-DYNET_SERIALIZE_IMPL(Dim)
+istream& operator>>(istream& is, Dim& d) {
+  char place_holder;
+  is >> place_holder;
+  d.resize(DYNET_MAX_TENSOR_DIM);
+  bool batch_flag = false;
+  unsigned i = 0;
+  for (; i < DYNET_MAX_TENSOR_DIM + 1; ++i) {
+    if (i) {
+      is >> place_holder;
+      if (place_holder == 'X') {
+        batch_flag = true;
+        break;
+      } else if (place_holder == '}') {
+        break;
+      }
+    }
+    is >> d.d[i];
+  }
+  d.resize(i);
+  if (batch_flag) {
+    is >> d.bd >> place_holder;
+  }
+  return is;
+}
 
 } // namespace dynet
 

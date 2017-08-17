@@ -243,7 +243,7 @@ struct FSoftSignBackward {
 
 struct FLogisticSigmoid {
   DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return 1.f / (1.f + expf(-x));
+    return 0.5 + 0.5 * tanh(x * 0.5);
   }
 };
 
@@ -286,12 +286,12 @@ struct FBinaryLogLoss {
     }
     else if (x_true == 0.f) {
       if (x == 1.f) return -1.f * log(DYNET_DEVICE_MIN);
-      else return (x_true - 1.f) * log1p(-x);
+      else return (x_true - 1.f) * log1pf(-x);
     }
     else {
       if (x == 0.f) return -1.f * log(DYNET_DEVICE_MIN);
       else if (x == 1.f) return -1.f * log(DYNET_DEVICE_MIN);
-      else return -1.f * (x_true * log(x) + (1.f - x_true) * log1p(-x));
+      else return -1.f * (x_true * log(x) + (1.f - x_true) * log1pf(-x));
     }
   }
 };
@@ -311,6 +311,23 @@ struct FBinaryLogLossBackward {
   }
   float d;
 };
+
+struct FELUForward {
+  explicit FELUForward(float alpha, float lambda) : alpha(alpha), lambda(lambda) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x) const {
+    return lambda * ((x > 0.f) ? x : alpha * (expm1f(x)));
+  }
+  float alpha, lambda;
+};
+
+struct FELUBackward {
+  explicit FELUBackward(float alpha, float lambda) : alpha(alpha), lambda(lambda) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x, float d) const {
+    return d * ((x > 0.f) ? lambda : lambda * alpha * expf(x));
+  }
+  float alpha, lambda;
+};
+
 
 } // namespace dynet
 

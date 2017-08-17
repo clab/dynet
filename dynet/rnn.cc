@@ -1,15 +1,14 @@
 #include "dynet/rnn.h"
 
+#include "dynet/expr.h"
+#include "dynet/param-init.h"
+
 #include <string>
 #include <vector>
 #include <fstream>
 #include <iostream>
 
-#include "dynet/nodes.h"
-#include "dynet/expr.h"
-
 using namespace std;
-using namespace dynet::expr;
 using namespace dynet;
 
 namespace dynet {
@@ -18,31 +17,21 @@ enum { X2H=0, H2H, HB, L2H };
 
 RNNBuilder::~RNNBuilder() {}
 
-void RNNBuilder::save_parameters_pretraining(const string& fname) const {
-  throw std::runtime_error("RNNBuilder::save_parameters_pretraining not overridden.");
-}
-
-void RNNBuilder::load_parameters_pretraining(const string& fname) {
-  throw std::runtime_error("RNNBuilder::load_parameters_pretraining not overridden.");
-}
-
-DYNET_SERIALIZE_COMMIT(RNNBuilder, DYNET_SERIALIZE_DEFINE(cur, head, sm))
-DYNET_SERIALIZE_IMPL(RNNBuilder)
-
 SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model,
+                       ParameterCollection& model,
                        bool support_lags) : layers(layers), lagging(support_lags) {
+  local_model = model.add_subcollection("simple-rnn-builder");
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
-    Parameter p_x2h = model.add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2h = model.add_parameters({hidden_dim, hidden_dim});
-    Parameter p_hb = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+    Parameter p_x2h = local_model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2h = local_model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_hb = local_model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     vector<Parameter> ps = {p_x2h, p_h2h, p_hb};
     if (lagging)
-        ps.push_back(model.add_parameters({hidden_dim, hidden_dim}));
+        ps.push_back(local_model.add_parameters({hidden_dim, hidden_dim}));
     params.push_back(ps);
     layer_input_dim = hidden_dim;
   }
@@ -146,48 +135,8 @@ void SimpleRNNBuilder::copy(const RNNBuilder & rnn) {
   }
 }
 
-void SimpleRNNBuilder::save_parameters_pretraining(const string& fname) const {
-  cerr << "Writing parameters to " << fname << endl;
-  ofstream of(fname);
-  if (!of)
-    DYNET_INVALID_ARG("Could not write parameters to " << fname << " in SimpleRNNBuilder");
-  boost::archive::binary_oarchive oa(of);
-  std::string id = "SimpleRNNBuilder:params";
-  oa << id;
-  oa << layers;
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      oa << p.get()->values;
-    }
-  }
+ParameterCollection & SimpleRNNBuilder::get_parameter_collection() {
+  return local_model;
 }
-
-void SimpleRNNBuilder::load_parameters_pretraining(const string& fname) {
-  cerr << "Loading parameters from " << fname << endl;
-  ifstream of(fname);
-  if (!of)
-    DYNET_INVALID_ARG("Could not load parameters from " << fname << " in SimpleRNNBuilder");
-  boost::archive::binary_iarchive ia(of);
-  std::string id;
-  ia >> id;
-  if (id != "SimpleRNNBuilder:params")
-    throw std::invalid_argument("Bad id read in SimpleRNNBuilder::load_parameters_pretraining. Bad model format?");
-  unsigned l = 0;
-  ia >> l;
-  if (l != layers)
-    throw std::invalid_argument("Bad number of layers in SimpleRNNBuilder::load_parameters_pretraining. Bad model format?");
-  // TODO check other dimensions
-  for (unsigned i = 0; i < layers; ++i) {
-    for (auto p : params[i]) {
-      ia >> p.get()->values;
-    }
-  }
-}
-
-DYNET_SERIALIZE_COMMIT(SimpleRNNBuilder, DYNET_SERIALIZE_DERIVED_DEFINE(RNNBuilder, params, layers, lagging))
-DYNET_SERIALIZE_IMPL(SimpleRNNBuilder)
 
 } // namespace dynet
-
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::RNNBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::SimpleRNNBuilder)
