@@ -62,6 +62,9 @@
 #include "gru.h"
 #include "fast-lstm.h"
 #include "io.h"
+#include "mem.h"
+#include "aligned-mem-pool.h"
+#include "devices.h"
 %}
 
 //
@@ -642,15 +645,17 @@ Expression weight_norm(const Expression& w, const Expression& g);
 
 %javamethodmodifiers ComputationGraph::ComputationGraph() "private";
 
+struct Device;
+
 struct ComputationGraph {
   ComputationGraph();
   ~ComputationGraph();
 
-  VariableIndex add_input(real s);
+  VariableIndex add_input(real s, Device* device);
   // VariableIndex add_input(const real* ps);
-  VariableIndex add_input(const Dim& d, const std::vector<float>& data);
+  VariableIndex add_input(const Dim& d, const std::vector<float>& data, Device* device);
   //VariableIndex add_input(const Dim& d, const std::vector<float>* pdata);
-  VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
+  VariableIndex add_input(const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, Device* device, float defdata = 0.f);
 
   VariableIndex add_parameters(Parameter p);
   VariableIndex add_const_parameters(Parameter p);
@@ -684,6 +689,47 @@ struct ComputationGraph {
   std::vector<Node*> nodes;
   std::vector<VariableIndex> parameter_nodes;
 };
+
+///////////////////////////////////////
+// declarations from dynet/devices.h //
+///////////////////////////////////////
+
+enum class DeviceType {CPU, GPU};
+enum class DeviceMempool {FXS = 0, DEDFS = 1, PS = 2, SCS = 3, NONE = 4};
+
+struct DeviceMempoolSizes {
+  size_t used[4];
+  DeviceMempoolSizes() = default;
+  DeviceMempoolSizes(size_t total_s);
+  DeviceMempoolSizes(size_t fxs_s, size_t dEdfs_s, size_t ps_s, size_t sc_s);
+  DeviceMempoolSizes(const std::string & descriptor);
+};
+
+struct MemAllocator;
+struct AlignedMemoryPool;
+struct DeviceMempool;
+
+class Device {
+ protected:
+  Device(int i, DeviceType t, MemAllocator* m) : device_id(i), type(t), mem(m), pools(4, nullptr) {}
+  Device(const Device&) = delete;
+  Device& operator=(const Device&) = delete;
+  virtual ~Device();
+ public:
+  int device_id;
+  DeviceType type;
+  MemAllocator* mem;
+  float* kSCALAR_MINUSONE;
+  float* kSCALAR_ONE;
+  float* kSCALAR_ZERO;
+  std::string name;
+  virtual DeviceMempoolSizes mark(ComputationGraph *cg);
+  virtual void revert(const DeviceMempoolSizes & cp);
+  void allocate_tensor(DeviceMempool mem_pool, Tensor & tensor);
+  std::vector<AlignedMemoryPool*> pools;
+};
+
+extern Device* default_device; // where parameters go by default
 
 ////////////////////////////////////////
 // declarations from dynet/training.h //
