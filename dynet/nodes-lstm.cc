@@ -107,12 +107,12 @@ namespace dynet {
     // gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
 
     unsigned num_inputs = dropout?xs.size()-6:xs.size()-4;
-    const Tensor *h_tm1 = xs[num_inputs];
+    Tensor h_tm1(xs[num_inputs]->d, xs[num_inputs]->v, xs[num_inputs]->device, xs[num_inputs]->mem_pool);
     const Tensor *Wx = xs[num_inputs+1];
     const Tensor *Wh = xs[num_inputs+2];
     const Tensor *b  = xs[num_inputs+3];
 
-    unsigned hidden_dim = h_tm1->d[0];
+    unsigned hidden_dim = h_tm1.d[0];
     unsigned input_dim = Wx->d[1];
     unsigned batch_size = xs[0]->d.bd;
 
@@ -160,8 +160,8 @@ namespace dynet {
       x_t.v = x_t_dropped.v;
       Tensor h_tm1_dropped(Dim({hidden_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
       h_tm1_dropped.v = static_cast<float*>(scratch_allocator->allocate(h_tm1_dropped.d.size() * sizeof(float)));
-      h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1->tvec() * xs[num_inputs+5]->tvec();
-      h_tm1 = &h_tm1_dropped;
+      h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1.tvec() * xs[num_inputs+5]->tvec();
+      h_tm1.v = h_tm1_dropped.v;
     }
     //matrix mult
     if(weightnoise_std > 0.f){
@@ -182,7 +182,7 @@ namespace dynet {
 
     } else {
       MatrixMultiply(dev, *Wx, x_t, fx, kSCALAR_ONE);
-      MatrixMultiply(dev, *Wh, *h_tm1, fx, kSCALAR_ONE);
+      MatrixMultiply(dev, *Wh, h_tm1, fx, kSCALAR_ONE);
     }
 
     // non-linearities
@@ -209,7 +209,7 @@ namespace dynet {
                                unsigned i,
                                Tensor& dEdxi) const {
     unsigned num_inputs = dropout?xs.size()-6:xs.size()-4;
-    const Tensor *h_tm1 = xs[num_inputs];
+    Tensor h_tm1(xs[num_inputs]->d, xs[num_inputs]->v, xs[num_inputs]->device, xs[num_inputs]->mem_pool);
     const Tensor *Wx = xs[num_inputs+1];
     const Tensor *Wh = xs[num_inputs+2];
 //    const Tensor *b  = xs[num_inputs+3];
@@ -424,12 +424,12 @@ namespace dynet {
       if(dropout){
         Tensor h_tm1_dropped(Dim({hidden_dim}, batch_size), nullptr, fx.device, fx.mem_pool);
         h_tm1_dropped.v = static_cast<float*>(scratch_allocator->allocate(h_tm1_dropped.d.size() * sizeof(float)));
-        h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1->tvec() * xs[num_inputs+5]->tvec();
-        h_tm1 = &h_tm1_dropped;
+        h_tm1_dropped.tvec().device(*dev.edevice) = h_tm1.tvec() * xs[num_inputs+5]->tvec();
+        h_tm1.v = h_tm1_dropped.v;
       }
 
       // dWh += (mult_l * mult_r).sum(batches)
-      MatrixMultiplyTranspAcc(dev, mult_l, *h_tm1, dEdxi);
+      MatrixMultiplyTranspAcc(dev, mult_l, h_tm1, dEdxi);
 
     } else if(i==num_inputs+3){
       Eigen::DSizes<ptrdiff_t, 1> sizes_1_nobatch(hidden_dim);
