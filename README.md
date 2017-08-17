@@ -46,10 +46,10 @@ get CMake, and Mercurial with either homebrew or macports:
     brew install cmake hg  # Using homebrew.
     sudo port install cmake mercurial # Using macports.
 
-On **Windows**, see :ref:`windows-cpp-install`.
+On **Windows**, see [documentation](http://dynet.readthedocs.io/en/latest/install.html#windows-support).
 
 To compile DyNet you also need the [development version of the Eigen
-library] (https://bitbucket.org/eigen/eigen). **If you use any of the
+library](https://bitbucket.org/eigen/eigen). **If you use any of the
 released versions, you may get assertion failures or compile errors.**
 If you don't have Eigen already, you can get it easily using the
 following command:
