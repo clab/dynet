@@ -62,7 +62,6 @@ class SerializationSpec extends FlatSpec with Matchers {
     val rnn1 = new SimpleRnnBuilder(1, 10, 10, mod1)
 
     val path = java.io.File.createTempFile("dynet_test", "serialization_spec").getAbsolutePath
-    println(path)
 
     val saver = new ModelSaver(path)
     saver.addModel(mod1)
