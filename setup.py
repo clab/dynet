@@ -69,6 +69,8 @@ if MAKE_PATH is None:
     raise DistutilsSetupError("`make` not found, and `MAKE` is not set.")
 MAKE_FLAGS = ENV.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
 EIGEN3_INCLUDE_DIR = ENV.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
+if EIGEN3_INCLUDE_DIR is not None:
+    EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)
 HG_PATH = find_executable("hg")
 CC_PATH = ENV.get("CC", find_executable("gcc"))
 if CC_PATH is None:
