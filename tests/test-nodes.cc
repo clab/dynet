@@ -1000,6 +1000,14 @@ BOOST_AUTO_TEST_CASE( transpose_higherorder_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression logdet(const Expression& x);
+BOOST_AUTO_TEST_CASE( logdet_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param_square1);
+  Expression y = logdet(-x);
+  BOOST_CHECK(check_grad(mod, y, 0));
+}
+
 // Expression inverse(const Expression& x);
 BOOST_AUTO_TEST_CASE( inverse_gradient ) {
   dynet::ComputationGraph cg;
