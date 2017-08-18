@@ -79,8 +79,11 @@ BOOST_AUTO_TEST_CASE( autobatch_lstm_gradient ) {
 
 BOOST_AUTO_TEST_CASE( autobatch_big_sum ) {
   dynet::ParameterCollection mod;
-  dynet::LookupParameter lp1 = mod.add_lookup_parameters(10, {5}, dynet::ParameterInitUniform(-0.01, 0.01));
-  dynet::LookupParameter lp2 = mod.add_lookup_parameters(10, {3}, dynet::ParameterInitUniform(-0.01, 0.01));
+  vector<float> f1(50), f2(30);
+  for(size_t i = 0; i < 50; ++i) f1[i] = i / 5000.0;
+  for(size_t i = 0; i < 30; ++i) f2[i] = i / 3000.0;
+  dynet::LookupParameter lp1 = mod.add_lookup_parameters(10, {5}, dynet::ParameterInitFromVector(f1));
+  dynet::LookupParameter lp2 = mod.add_lookup_parameters(10, {3}, dynet::ParameterInitFromVector(f2));
   vector<float> results;
   for(size_t i = 0; i < 3; ++i) {
     dynet::autobatch_flag = i;
