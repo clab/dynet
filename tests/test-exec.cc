@@ -7,6 +7,7 @@
 #include <dynet/fast-lstm.h>
 #include <dynet/gru.h>
 #include <dynet/grad-check.h>
+#include <dynet/param-init.h>
 #include <boost/test/unit_test.hpp>
 #include "test.h"
 #include <stdexcept>
@@ -69,6 +70,27 @@ BOOST_AUTO_TEST_CASE( autobatch_lstm_gradient ) {
     }
     losses.push_back(losses[0] + losses[2]);
     Expression z = dynet::sum(losses);
+    results.push_back(as_scalar(z.value()));
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+  for(size_t i = 1; i < results.size(); ++i)
+    BOOST_CHECK_CLOSE(results[0], results[i], 0.0001);
+}
+
+BOOST_AUTO_TEST_CASE( autobatch_big_sum ) {
+  dynet::ParameterCollection mod;
+  dynet::LookupParameter lp1 = mod.add_lookup_parameters(10, {5}, dynet::ParameterInitUniform(-0.01, 0.01));
+  dynet::LookupParameter lp2 = mod.add_lookup_parameters(10, {3}, dynet::ParameterInitUniform(-0.01, 0.01));
+  vector<float> results;
+  for(size_t i = 0; i < 3; ++i) {
+    dynet::autobatch_flag = i;
+    dynet::ComputationGraph cg;
+    vector<Expression> v1, v2;
+    for(size_t j = 0; j < 10000; ++j) {
+      v1.push_back(dynet::lookup(cg, lp1, (j*3 % 10)));
+      v2.push_back(dynet::lookup(cg, lp2, (j*3 % 10)));   
+    }
+    Expression z = dynet::sum_elems(dynet::sum(v1)) + dynet::sum_elems(dynet::sum(v2));
     results.push_back(as_scalar(z.value()));
     BOOST_CHECK(check_grad(mod, z, 0));
   }
