@@ -38,28 +38,48 @@ def append_cmake_lib_list(l, var):
 def strip_lib(filename):
     return re.sub(r"^(?:(?:lib)?(.*)\.(?:so|a|dylib)|(.*)\.lib)$", r"\1\2", filename)
 
+def get_env(build_dir):
 
-# In addition to environment variables, read variables passed on the command line as "VARIABLE=VALUE" arguments
-ENV = dict(os.environ)
-for i, arg in enumerate(sys.argv[1:]):
-    try:
-        key, value = arg.split("=", 1)
-    except ValueError:
-        break
-    ENV[key] = value
+  # Get environmental variables first
+  ENV = dict(os.environ)
 
-del sys.argv[1:i+1]
+  # Get values listed in the CMakeCache.txt file (if existant)
+  try:
+      var_regex = r"^([^:]+):([^=]+)=(.*)$"
+      cache_path = os.path.join(build_dir, "CMakeCache.txt")
+      with open(cache_path, "r") as cache_file:
+          for line in cache_file:
+              line = line.strip()
+              m = re.match(var_regex, line)
+              if m:
+                  ENV[m.group(1)] = m.group(3)
+  except:
+      pass
+
+  # Get values passed on the command line
+  for i, arg in enumerate(sys.argv[1:]):
+      try:
+          key, value = arg.split("=", 1)
+      except ValueError:
+          break
+      ENV[key] = value 
+  del sys.argv[1:i+1]
+
+  return ENV
 
 log.basicConfig(stream=sys.stdout, level=log.INFO)
 
-# For build
+# Find the current directory
 try:
     this_file = __file__
 except NameError:
     this_file = sys.argv[0]
 ORIG_DIR = os.getcwd()
 SCRIPT_DIR = os.path.dirname(os.path.abspath(this_file))
-BUILD_DIR = "build"
+BUILD_DIR = os.path.join(SCRIPT_DIR, "build")
+ENV = get_env(BUILD_DIR)
+
+# Find the paths
 BUILT_EXTENSIONS = False
 CMAKE_PATH = ENV.get("CMAKE", find_executable("cmake"))
 MAKE_PATH = ENV.get("MAKE", find_executable("make"))
@@ -135,7 +155,7 @@ TARGET = [Extension(
     runtime_library_dirs=RUNTIME_LIB_DIRS,
 )]
 
-if ENV.get("WITH_CUDA_BACKEND") == "1":  # if cuda requested
+if ENV.get("BACKEND") == "cuda":  # if cuda requested
     TARGET.append(Extension(
         "_gdynet",  # name of extension
         ["_gdynet.pyx"],  # filename of our Pyrex/Cython source
