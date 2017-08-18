@@ -31,7 +31,16 @@ wheel, things should be running.
 
     pip install git+https://github.com/clab/dynet#egg=dynet
 
-Alternatively, you can add the following to your `requirements.txt`:
+If you have CUDA installed on your system and want to install with GPU support, you
+can instead run the following command.
+
+.. code:: bash
+
+    BACKEND=cuda pip install git+https://github.com/clab/dynet#egg=dynet
+
+Alternatively, you can add the following to your `requirements.txt` (for CUDA support
+you will need to make sure that `BACKEND=cuda` is in your environmental variables when
+DyNet is installed):
 
 .. code:: bash
 
