@@ -80,22 +80,14 @@ ENV = get_env(BUILD_DIR)
 # Find the paths
 BUILT_EXTENSIONS = False
 CMAKE_PATH = ENV.get("CMAKE", find_executable("cmake"))
-if CMAKE_PATH is None:
-    raise DistutilsSetupError("`cmake` not found, and `CMAKE` is not set.")
 MAKE_PATH = ENV.get("MAKE", find_executable("make"))
-if MAKE_PATH is None:
-    raise DistutilsSetupError("`make` not found, and `MAKE` is not set.")
 MAKE_FLAGS = ENV.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
 EIGEN3_INCLUDE_DIR = ENV.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
 if EIGEN3_INCLUDE_DIR is not None:
     EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)
 HG_PATH = find_executable("hg")
 CC_PATH = ENV.get("CC", find_executable("gcc"))
-if CC_PATH is None:
-    raise DistutilsSetupError("`gcc` not found, and `CC` is not set.")
 CXX_PATH = ENV.get("CXX", find_executable("g++"))
-if CXX_PATH is None:
-    raise DistutilsSetupError("`g++` not found, and `CXX` is not set.")
 INSTALL_PREFIX = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
 PYTHON = sys.executable
 
@@ -213,6 +205,15 @@ class build(_build):
         run_process([CXX_PATH, "--version"])
 
         if not self.skip_build:
+            if CMAKE_PATH is None:
+                raise DistutilsSetupError("`cmake` not found, and `CMAKE` is not set.")
+            if MAKE_PATH is None:
+                raise DistutilsSetupError("`make` not found, and `MAKE` is not set.")
+            if CC_PATH is None:
+                raise DistutilsSetupError("`gcc` not found, and `CC` is not set.")
+            if CXX_PATH is None:
+                raise DistutilsSetupError("`g++` not found, and `CXX` is not set.")
+
             # Prepare folders
             if not os.path.isdir(BUILD_DIR):
                 log.info("Creating build directory " + BUILD_DIR)
