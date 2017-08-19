@@ -105,7 +105,8 @@ __global__ void ker_parallel_memcpy(int num_seqs, float **src, float **trg, floa
 void parallel_memcpy(int num_seqs, int max_len, float **src, float **trg, float **len) {
   if(num_seqs > 0) {
     auto tb = SizeToBlockThreadPair(num_seqs*max_len);
-    ker_parallel_memcpy<<<tb.first, tb.second>>>(num_seqs, src, trg, len);
+    for(int pos = 0; pos < num_seqs; pos += tb.second)
+      ker_parallel_memcpy<<<tb.first, tb.second>>>(min(tb.second, num_seqs-pos), src+pos, trg+pos, len+pos);
   }
 }
 
