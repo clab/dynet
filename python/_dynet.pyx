@@ -4155,26 +4155,37 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
     def whoami(self): return "GRUBuilder"
 # GRUBuilder }}}
 
-cdef class LSTMBuilder(_RNNBuilder): # {{{
-    """[summary]
-    
-    [description]
+cdef class CoupledLSTMBuilder(_RNNBuilder): # {{{
+    """CoupledLSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
+
+    More specifically, here are the equations for the dynamics of this cell :
+
+    .. math::
+
+        \\begin{split}
+            i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+W_{ic}c_{t-1}+b_i)\\\\
+            \\tilde{c_t} & = \\tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\\\
+            c_t & = c_{t-1}\circ (1-i_t) + \\tilde{c_t}\circ i_t\\\\
+             & = c_{t-1} + (\\tilde{c_t}-c_{t-1})\circ i_t\\\\
+            o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+W_{oc}c_{t}+b_o)\\\\
+            h_t & = \\tanh(c_t)\circ o_t\\\\
+        \end{split}
     """
-    cdef CLSTMBuilder* thislstmptr
+    cdef CCoupledLSTMBuilder* thislstmptr
     cdef tuple _spec
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
-            self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thislstmptr = self.thisptr = new CCoupledLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
-            self.thislstmptr = self.thisptr = new CLSTMBuilder()
+            self.thislstmptr = self.thisptr = new CCoupledLSTMBuilder()
         self.cg_version = -1
 
     @property
     def spec(self): return self._spec
     @classmethod
     def from_spec(cls, spec, model):
-        return LSTMBuilder(*spec, model)
+        return CoupledLSTMBuilder(*spec, model)
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
@@ -4209,7 +4220,7 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
             ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
         """
         if self.thislstmptr.param_vars.size() == 0 or self.thislstmptr.param_vars[0][0].is_stale():
-            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing LSTMBuilder internal parameters expression")
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing CoupledLSTMBuilder internal parameters expression")
 
         exprs = []
         for l in self.thislstmptr.param_vars:
@@ -4219,8 +4230,8 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
             exprs.append(layer_exprs)
         return exprs
 
-    def whoami(self): return "LSTMBuilder"
-# LSTMBuilder }}}
+    def whoami(self): return "CoupledLSTMBuilder"
+# CoupledLSTMBuilder }}}
 
 cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
     """VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
@@ -4384,6 +4395,9 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
     def whoami(self): return "VanillaLSTMBuilder"
 # VanillaLSTMBuilder }}}
 
+
+# This is an alias for VanillaLSTMBuilder
+LSTMBuilder = VanillaLSTMBuilder
 
 
 cdef class CompactVanillaLSTMBuilder(_RNNBuilder): # {{{

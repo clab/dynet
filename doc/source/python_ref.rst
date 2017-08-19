@@ -385,11 +385,16 @@ RNN Builders
    :members:
    :show-inheritance:
 
-.. autoclass:: dynet.LSTMBuilder
+
+.. autoclass:: dynet.VanillaLSTMBuilder
    :members:
    :show-inheritance:
 
-.. autoclass:: dynet.VanillaLSTMBuilder
+.. autoclass:: dynet.CompactVanillaLSTMBuilder
+   :members:
+   :show-inheritance:
+
+.. autoclass:: dynet.CoupledLSTMBuilder
    :members:
    :show-inheritance:
 
