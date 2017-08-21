@@ -3775,13 +3775,15 @@ cpdef Expression weight_norm(Expression w, Expression g):
     ensure_freshness(g)
     return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
 
-cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, weightnoise_std=0.0):
+# undocumented features, mainly meant to be used by CompactVanillaLSTMBuilder
+
+cpdef Expression vanilla_lstm_gates_dropout_concat(list x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, Expression dropout_mask_x, Expression dropout_mask_h, float weightnoise_std=0.0):
     """Computes LSTM gates (matrix multiply + nonlinearities):
     
-       gates_i = sigmoid (Wx_i * x_t + Wh_i * h_tm1 + b_i)
-       gates_f = sigmoid (Wx_f * x_t + Wh_f * h_tm1 + b_f + 1)
-       gates_o = sigmoid (Wx_o * x_t + Wh_o * h_tm1 + b_o)
-       gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
+       gates_i = sigmoid ((Wx_i * x_t) . dropout_mask_x + (Wh_i * h_tm1) . dropout_mask_h + b_i)
+       gates_f = sigmoid ((Wx_f * x_t) . dropout_mask_x + (Wh_f * h_tm1) . dropout_mask_h + b_f + 1)
+       gates_o = sigmoid ((Wx_o * x_t) . dropout_mask_x + (Wh_o * h_tm1) . dropout_mask_h + b_o)
+       gates_g =   tanh  ((Wx_g * x_t) . dropout_mask_x + (Wh_g * h_tm1) . dropout_mask_h + b_g)
        
        Where optionally gaussian noise with the given standard deviation is applied to Wx, Wh, b parameters. 
        
@@ -3791,7 +3793,7 @@ cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression
                [gates_g]
 
     Args:
-        x_t (dynet.Expression): Input at current timestep (vector size I)
+        x_t (list of dynet.Expression): x_t Inputs at current timestep (if more than 1 input will be concatenated; summed vector size I)
         h_tm1 (dynet.Expression): State previous timestep (vector size H)
         Wx (dynet.Expression): Parameter matrix size 4H x I
         Wh (dynet.Expression): Parameter matrix size 4H x H
@@ -3802,9 +3804,33 @@ cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression
         Vector size 4H
         dynet.Expression
     """
-    ensure_freshness(x_t)
     ensure_freshness(h_tm1)
-    return Expression.from_cexpr(x_t.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+    cdef Expression e
+    cdef vector[CExpression] ves
+    for e in x_t:
+        ensure_freshness(e) 
+        ves.push_back(e.c())
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
+cpdef Expression vanilla_lstm_gates_concat(list x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
+    ensure_freshness(h_tm1)
+    cdef Expression e
+    cdef vector[CExpression] ves
+    for e in x_t:
+        ensure_freshness(e) 
+        ves.push_back(e.c())
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
+cpdef Expression vanilla_lstm_gates_dropout(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, Expression dropout_mask_x, Expression dropout_mask_h, float weightnoise_std=0.0):
+    ensure_freshness(h_tm1)
+    ensure_freshness(x_t)
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
+cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
+    ensure_freshness(h_tm1)
+    ensure_freshness(x_t)
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
 
 cpdef Expression vanilla_lstm_c(Expression c_tm1, Expression gates_t):
     """Computes LSTM cell: c_t = gates_i . gates_g + gates_f . c_tm1
@@ -4142,26 +4168,37 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
     def whoami(self): return "GRUBuilder"
 # GRUBuilder }}}
 
-cdef class LSTMBuilder(_RNNBuilder): # {{{
-    """[summary]
-    
-    [description]
+cdef class CoupledLSTMBuilder(_RNNBuilder): # {{{
+    """CoupledLSTMBuilder creates an LSTM unit with coupled input and forget gate as well as peepholes connections.
+
+    More specifically, here are the equations for the dynamics of this cell :
+
+    .. math::
+
+        \\begin{split}
+            i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+W_{ic}c_{t-1}+b_i)\\\\
+            \\tilde{c_t} & = \\tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\\\
+            c_t & = c_{t-1}\circ (1-i_t) + \\tilde{c_t}\circ i_t\\\\
+             & = c_{t-1} + (\\tilde{c_t}-c_{t-1})\circ i_t\\\\
+            o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+W_{oc}c_{t}+b_o)\\\\
+            h_t & = \\tanh(c_t)\circ o_t\\\\
+        \end{split}
     """
-    cdef CLSTMBuilder* thislstmptr
+    cdef CCoupledLSTMBuilder* thislstmptr
     cdef tuple _spec
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
         self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
-            self.thislstmptr = self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thislstmptr = self.thisptr = new CCoupledLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
-            self.thislstmptr = self.thisptr = new CLSTMBuilder()
+            self.thislstmptr = self.thisptr = new CCoupledLSTMBuilder()
         self.cg_version = -1
 
     @property
     def spec(self): return self._spec
     @classmethod
     def from_spec(cls, spec, model):
-        return LSTMBuilder(*spec, model)
+        return CoupledLSTMBuilder(*spec, model)
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
@@ -4196,7 +4233,7 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
             ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
         """
         if self.thislstmptr.param_vars.size() == 0 or self.thislstmptr.param_vars[0][0].is_stale():
-            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing LSTMBuilder internal parameters expression")
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing CoupledLSTMBuilder internal parameters expression")
 
         exprs = []
         for l in self.thislstmptr.param_vars:
@@ -4206,8 +4243,8 @@ cdef class LSTMBuilder(_RNNBuilder): # {{{
             exprs.append(layer_exprs)
         return exprs
 
-    def whoami(self): return "LSTMBuilder"
-# LSTMBuilder }}}
+    def whoami(self): return "CoupledLSTMBuilder"
+# CoupledLSTMBuilder }}}
 
 cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
     """VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
@@ -4371,6 +4408,9 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
     def whoami(self): return "VanillaLSTMBuilder"
 # VanillaLSTMBuilder }}}
 
+
+# This is an alias for VanillaLSTMBuilder
+LSTMBuilder = VanillaLSTMBuilder
 
 
 cdef class CompactVanillaLSTMBuilder(_RNNBuilder): # {{{

@@ -44,12 +44,6 @@ Dim LogSumExp::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
-// this i need to do something better, but this is a work-around
-// if this is too small, just make it bigger
-size_t LogSumExp::aux_storage_size() const {
-  return (MAX_LOG_SUM_EXP + 1) * sizeof(float);
-}
-
 #endif
 
 template<class MyDevice>
@@ -57,9 +51,10 @@ void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
   if (xs.size() == 1) {
     fx.tvec().device(*dev.edevice) = xs[0]->tvec();
   } else {
-    // TODO: Ideally we wouldn't need to allocate this memory permanently.
-    //       We need a good method for allocating "scratch" memory that is only used temporarily.
-    Tensor ms(fx.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
+    AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+    Tensor ms(fx.d, nullptr, fx.device, fx.mem_pool);
+    ms.v = static_cast<float*>(scratch_allocator->allocate(ms.d.size() * sizeof(float)));
+
     Eigen::array<ptrdiff_t, 2> bcast = {1,fx.d.bd};
     // Calculate the max
     if(ms.d.bd == xs[0]->d.bd)
@@ -85,6 +80,8 @@ void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
     }
     // log and add max
     fx.tvec().device(*dev.edevice) = fx.tvec().log() + ms.tvec();
+
+    scratch_allocator->free();
   }
 }
 

@@ -34,14 +34,14 @@ if(PYTHON)
                      ${CMAKE_CURRENT_SOURCE_DIR}/dynet_viz.py
   )
 
-if (WITH_CUDA_BACKEND)
-  message("--- CUDA: CUBLAS: ${CUDA_CUBLAS_LIBRARIES} RT: ${CUDA_LIBRARIES}")
-  # Collect all of the library filenames and paths for setup.py
-  get_filename_components(CUDA_CUBLAS_DIRS "${CUDA_CUBLAS_LIBRARIES}" PATH)
-  get_filename_components(CUDA_CUBLAS_FILES "${CUDA_CUBLAS_LIBRARIES}" NAME)
-  get_filename_components(CUDA_RT_DIRS "${CUDA_LIBRARIES}" PATH)
-  get_filename_components(CUDA_RT_FILES "${CUDA_LIBRARIES}" NAME)
-endif()
+  if (WITH_CUDA_BACKEND)
+    message("--- CUDA: CUBLAS: ${CUDA_CUBLAS_LIBRARIES} RT: ${CUDA_LIBRARIES}")
+    # Collect all of the library filenames and paths for setup.py
+    get_filename_components(CUDA_CUBLAS_DIRS "${CUDA_CUBLAS_LIBRARIES}" PATH)
+    get_filename_components(CUDA_CUBLAS_FILES "${CUDA_CUBLAS_LIBRARIES}" NAME)
+    get_filename_components(CUDA_RT_DIRS "${CUDA_LIBRARIES}" PATH)
+    get_filename_components(CUDA_RT_FILES "${CUDA_LIBRARIES}" NAME)
+  endif()
 
   add_custom_target(copy)
   foreach(DepFile ${DepFiles})
@@ -49,26 +49,25 @@ endif()
                        COMMAND ${CMAKE_COMMAND} -E
                            copy ${DepFile} ${CMAKE_CURRENT_BINARY_DIR})
   endforeach()
-  # TODO: We should add a dependency, but this isn&t working
+  # TODO: We should add a dependency, but this isn't working
   # add_dependencies(copy ${DepFiles})
 
-  # Things to perform setup
-  set(SETUP_PY "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
-  set(SETUP_PY_IN "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in")
+  # Export environment variables for setup.py
+  foreach(Var CMAKE_INSTALL_PREFIX PROJECT_SOURCE_DIR PROJECT_BINARY_DIR LIBS EIGEN3_INCLUDE_DIR MKL_LINK_DIRS WITH_CUDA_BACKEND CUDA_RT_FILES CUDA_RT_DIRS CUDA_CUBLAS_FILES CUDA_CUBLAS_DIRS)
+    string(REPLACE ";" "\\\\;" Val "${${Var}}")
+    message(${Var}="${Val}")
+    list(APPEND EnvVars ${Var}="${Val}")
+  endforeach()
 
-  configure_file(${SETUP_PY_IN} ${SETUP_PY})
-  
   add_custom_command(
           OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/timestamp
-          COMMAND ${PYTHON} 
-          ARGS setup.py build_ext --inplace
+          COMMAND ${PYTHON}
+          ARGS ${CMAKE_SOURCE_DIR}/setup.py ${EnvVars} build_ext --inplace
           COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/timestamp
           DEPENDS ${DepFiles})
 
   add_custom_target(target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/timestamp)
   add_dependencies(target copy)
   add_dependencies(copy dynet)
-
-  install(CODE "execute_process(COMMAND ${PYTHON} ${SETUP_PY})")
 
 endif()

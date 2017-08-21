@@ -2216,8 +2216,9 @@ Expression weight_norm(const Expression& w, const Expression& g);
  * \return An expression of x's tensor in device
  */
 Expression to_device(const Expression & x, Device *device);
+
+// ----- undocumented features, mainly meant to be used by CompactVanillaLSTMBuilder ---------
 /**
- * \ingroup lstm
  * \brief Computes LSTM matrix multiplies plus nonlinearities
  * \details Computes LSTM gates (matrix multiply + nonlinearities) as follows:
  *
@@ -2234,30 +2235,20 @@ Expression to_device(const Expression & x, Device *device);
  *             [gates_g]
  *
  *
- * \param x_t Input at current timestep (vector size I)
+ * \param x_t Input(s) [expression or list] at current timestep (if more than 1 input will be concatenated; summed vector size I)
  * \param h_tm1 h of previous timestep
  * \param Wx State previous timestep (vector size H)
  * \param Wh Parameter matrix size 4H x I
  * \param b Bias parameter size 4H
- * \param weightnoise_std: apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
+ * \param (optional) dropout_mask_x Input dropout mask, size I
+ * \param (optional) dropout_mask_h Hidden state dropout mask, size H
+ * \param (optional) weightnoise_std: apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
  * \return An expression with dimensions 4H
  */
-Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std = 0.f);
-
-/**
- * \ingroup lstm
- * \brief Computes LSTM matrix multiplies plus nonlinearities, while applying a dropout mask to input and previous state
- * \param x_t Input at current timestep (vector size I)
- * \param h_tm1 h of previous timestep
- * \param Wx State previous timestep (vector size H)
- * \param Wh Parameter matrix size 4H x I
- * \param b Bias parameter size 4H
- * \param dropout_mask_x Input dropout mask, size I
- * \param dropout_mask_h Hidden state dropout mask, size H
- * \param weightnoise_std: apply gaussian noise to weights (Wx, Wh, b); requires only temporary additional memory
- * \return An expression with dimensions 4H
- */
-Expression vanilla_lstm_gates(const Expression& x_t,  const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std = 0.f);
+Expression vanilla_lstm_gates(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std = 0.f);
+Expression vanilla_lstm_gates_concat(const std::vector<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, real weightnoise_std = 0.f);
+Expression vanilla_lstm_gates_dropout(const Expression& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std = 0.f);
+Expression vanilla_lstm_gates_dropout_concat(const std::vector<Expression>& x_t, const Expression& h_tm1, const Expression& Wx, const Expression& Wh, const Expression& b, const Expression& dropout_mask_x, const Expression& dropout_mask_h, real weightnoise_std = 0.f);
 
 /**
  * \ingroup lstm

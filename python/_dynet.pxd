@@ -382,6 +382,9 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_weight_norm "dynet::weight_norm" (CExpression& w, CExpression& g) except + #
 
     CExpression c_vanilla_lstm_gates "dynet::vanilla_lstm_gates" (CExpression& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, float weightnoise_std) except + #
+    CExpression c_vanilla_lstm_gates_concat "dynet::vanilla_lstm_gates_concat" (const vector[CExpression]& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, float weightnoise_std) except + #
+    CExpression c_vanilla_lstm_gates_dropout "dynet::vanilla_lstm_gates_dropout" (CExpression& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, CExpression& dropout_mask_x, CExpression& dropout_mask_h, float weightnoise_std) except + #
+    CExpression c_vanilla_lstm_gates_dropout_concat "dynet::vanilla_lstm_gates_dropout_concat" (const vector[CExpression]& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, CExpression& dropout_mask_x, CExpression& dropout_mask_h, float weightnoise_std) except + #
     CExpression c_vanilla_lstm_c "dynet::vanilla_lstm_c" (CExpression& c_tm1, CExpression& gates_t) except + #
     CExpression c_vanilla_lstm_h "dynet::vanilla_lstm_h" (CExpression& c_t, CExpression& gates_t) except + #
 
@@ -437,6 +440,15 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
         CVanillaLSTMBuilder()
         CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm)
         void set_dropout(float d, float d_r)
+        void set_dropout_masks(unsigned batch_size)
+
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
+
+    cdef cppclass CCoupledLSTMBuilder "dynet::CoupledLSTMBuilder" (CRNNBuilder):
+        CCoupledLSTMBuilder()
+        CCoupledLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+        void set_dropout(float d, float d_r, float d_c)
         void set_dropout_masks(unsigned batch_size)
 
         vector[vector[CParameters]] params

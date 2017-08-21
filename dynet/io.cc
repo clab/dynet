@@ -3,14 +3,20 @@
 #include "dynet/except.h"
 #include "dynet/str-util.h"
 
-using namespace std;
-using namespace dynet;
+// Normally DyNet style permits using namespace std, but to make compatibility
+// possible with some external code, it is simpler if types are fully
+// qualified in dynet/io.cc. Please do not uncomment the following:
+
+// using namespace std;  // DO NOT UNCOMMENT
 
 // Precision required not to lose accuracy when serializing float32 to text.
 // We should probably use std::hexfloat, but it's not supported by some
 // older incomplete implementations of C++11.
 static const int FLOAT32_PRECISION = 8;
 static const int FLOAT32_EXPONENT = 2;
+
+namespace dynet {
+namespace {
 
 bool valid_key(const std::string & s) {
   if (s.size() == 0) return true;
@@ -30,13 +36,13 @@ bool grad_is_zero(const ParameterStorageBase & p){
   return !p.has_grad();
 }
 
-void read_param_header(string line, string &type, string &name, Dim& dim,size_t& byte_count, bool& zero_grad){
+void read_param_header(std::string line, std::string &type, std::string &name, Dim& dim,size_t& byte_count, bool& zero_grad){
   // Read header
-  istringstream iss(line);
+  std::istringstream iss(line);
   iss >> type >> name >> dim >> byte_count;
   // Check whether gradient is 0
   // Check for EOF (for backward compatibility)
-  string grad;
+  std::string grad;
   if (!iss.eof()){
     iss >> grad;
     if (grad == "ZERO_GRAD")
@@ -44,19 +50,32 @@ void read_param_header(string line, string &type, string &name, Dim& dim,size_t&
   }
 }
 
-TextFileSaver::TextFileSaver(const string & filename, bool append) :
-        datastream(filename, append ? ofstream::app : ofstream::out) {
+} // anyonymous namespace
+
+Saver::~Saver() {}
+Loader::~Loader() {}
+
+TextFileSaver::TextFileSaver(const std::string & filename, bool append) :
+        p_datastream(
+            new std::ofstream(
+                filename, append ? std::ios_base::app : std::ios_base::out)),
+        datastream(*p_datastream) {
   if(!datastream)
     DYNET_RUNTIME_ERR("Could not write model to " << filename);
   datastream.precision(FLOAT32_PRECISION);
   datastream << std::scientific << std::showpos;
 }
 
+TextFileSaver::~TextFileSaver() {
+  delete p_datastream;
+  p_datastream = nullptr;
+}
+
 void TextFileSaver::save(const ParameterCollection & model,
-                         const string & key) {
+                         const std::string & key) {
   if (!valid_pc_key(key))
     DYNET_INVALID_ARG("Key should start with '/' and could not include ' ' or '#': " << key);
-  string key_ = key;
+  std::string key_ = key;
   if (key_.back() != '/') key_ += "/";
   const ParameterCollectionStorage & storage = model.get_storage();
   if(key.size() == 0) {
@@ -72,21 +91,21 @@ void TextFileSaver::save(const ParameterCollection & model,
 }
 
 void TextFileSaver::save(const Parameter & param,
-                         const string & key) {
+                         const std::string & key) {
   if (!valid_key(key))
     DYNET_INVALID_ARG("Key could not include ' ' or '#': " << key);
   save(*param.p, key);
 }
 
 void TextFileSaver::save(const LookupParameter & param,
-                         const string & key) {
+                         const std::string & key) {
   if (!valid_key(key))
     DYNET_INVALID_ARG("Key could not include ' ' or '#': " << key);
   save(*param.p, key);
 }
 
 void TextFileSaver::save(const ParameterStorage & p,
-                         const string & key) {
+                         const std::string & key) {
   datastream << "#Parameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.dim << ' ';
   // A single float is "[+-]X.YYYe[+-]ZZZ " where the length of YYY is
   // FLOAT32_PRECISION, and length of ZZZ is FLOAT32_EXPONENT. We additionally
@@ -97,13 +116,13 @@ void TextFileSaver::save(const ParameterStorage & p,
     datastream << strsize << " ZERO_GRAD";
   else
     datastream << strsize*2 << " FULL_GRAD";
-  datastream << endl << dynet::as_vector(p.values) << endl;
+  datastream << std::endl << dynet::as_vector(p.values) << std::endl;
   if(!zero_grad)
-    datastream << dynet::as_vector(p.g) << endl;
+    datastream << dynet::as_vector(p.g) << std::endl;
 }
 
 void TextFileSaver::save(const LookupParameterStorage & p,
-                         const string & key) {
+                         const std::string & key) {
   datastream << "#LookupParameter# " << (key.size() > 0 ? key : p.name) << ' ' << p.all_dim << ' ';
   size_t strsize = p.all_dim.size() * (FLOAT32_PRECISION + 8) + 1;
   bool zero_grad = grad_is_zero(p);
@@ -111,28 +130,30 @@ void TextFileSaver::save(const LookupParameterStorage & p,
     datastream << strsize << " ZERO_GRAD";
   else
     datastream << strsize*2 << " FULL_GRAD";
-  datastream << endl << dynet::as_vector(p.all_values) << endl;
+  datastream << std::endl << dynet::as_vector(p.all_values) << std::endl;
   if(!zero_grad)
-    datastream << dynet::as_vector(p.all_grads) << endl;
+    datastream << dynet::as_vector(p.all_grads) << std::endl;
 }
 
-TextFileLoader::TextFileLoader(const string & filename) :
+TextFileLoader::TextFileLoader(const std::string & filename) :
         dataname(filename) { }
 
-void TextFileLoader::populate(ParameterCollection & model, const string & key) {
-  ifstream datastream(dataname);
+TextFileLoader::~TextFileLoader() {}
+
+void TextFileLoader::populate(ParameterCollection & model, const std::string & key) {
+  std::ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
-  string line, type, name;
+  std::string line, type, name;
   bool zero_grad = false;
   Dim dim;
   size_t byte_count = 0;
-  vector<float> values;
+  std::vector<float> values;
   Tensor *value_t, *grad_t;
   size_t param_id = 0, lookup_id = 0;
   ParameterCollectionStorage & storage = model.get_storage();
-  string key_ = key;
+  std::string key_ = key;
   if (key_.back() != '/') key_ += "/";
-  while(getline(datastream, line)) {
+  while(std::getline(datastream, line)) {
     read_param_header(line, type, name, dim, byte_count, zero_grad);
     // Skip ones that don't match
     if(key.size() != 0 && name.substr(0, key_.size()) != key_) {
@@ -164,10 +185,10 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
     } else {
       DYNET_RUNTIME_ERR("Bad parameter specification in model: " << line);
     }
-    { getline(datastream, line); istringstream iss(line); iss >> values; }
+    { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
     TensorTools::set_elements(*value_t, values);
     if(!zero_grad){
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
+      { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
       TensorTools::set_elements(*grad_t, values);
     } else {
       TensorTools::zero(*grad_t);
@@ -180,25 +201,25 @@ void TextFileLoader::populate(ParameterCollection & model, const string & key) {
 }
 
 void TextFileLoader::populate(Parameter & param,
-                    const string & key) {
+                    const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.populate() requires non-empty key");
-  ifstream datastream(dataname);
+  std::ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
-  string line, type, name;
+  std::string line, type, name;
   bool zero_grad=false;
   Dim dim;
   size_t byte_count = 0;
-  while(getline(datastream, line)) {
+  while(std::getline(datastream, line)) {
     read_param_header(line, type, name, dim, byte_count, zero_grad);
     if(type == "#Parameter#" && name == key) {
       if(param.p->dim != dim)
         DYNET_RUNTIME_ERR("Attempted to populate parameter where arguments don't match (" << param.p->dim << " != " << dim << ")");
-      vector<float> values(dim.size());
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
+      std::vector<float> values(dim.size());
+      { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
       TensorTools::set_elements(param.get_storage().values, values);
       if(!zero_grad){
-        { getline(datastream, line); istringstream iss(line); iss >> values; }
+        { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
         TensorTools::set_elements(param.get_storage().g, values);
       } else {
         TensorTools::zero(param.get_storage().g);
@@ -213,25 +234,25 @@ void TextFileLoader::populate(Parameter & param,
 }
 
 void TextFileLoader::populate(LookupParameter & lookup_param,
-                              const string & key) {
+                              const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.populate() requires non-empty key");
-  ifstream datastream(dataname);
+  std::ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
-  string line, type, name;
+  std::string line, type, name;
   bool zero_grad=false;
   Dim dim;
   size_t byte_count = 0;
-  while(getline(datastream, line)) {
+  while(std::getline(datastream, line)) {
     read_param_header(line, type, name, dim, byte_count, zero_grad);
     if(type == "#LookupParameter#" && name == key) {
       if(lookup_param.p->all_dim != dim)
         DYNET_RUNTIME_ERR("Attempted to populate lookup parameter where arguments don't match (" << lookup_param.p->all_dim << " != " << dim << ")");
-      vector<float> values(dim.size());
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
+      std::vector<float> values(dim.size());
+      { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
       TensorTools::set_elements(lookup_param.get_storage().all_values, values);
       if(!zero_grad){
-        { getline(datastream, line); istringstream iss(line); iss >> values; }
+        { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
         TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
       } else {
         TensorTools::zero(lookup_param.get_storage().all_grads);
@@ -246,25 +267,25 @@ void TextFileLoader::populate(LookupParameter & lookup_param,
 }
 
 Parameter TextFileLoader::load_param(ParameterCollection & model,
-                                     const string & key) {
+                                     const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.load_param() requires non-empty key");
-  ifstream datastream(dataname);
+  std::ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
-  string line, type, name;
+  std::string line, type, name;
   bool zero_grad=false;
   Dim dim;
   size_t byte_count = 0;
-  while(getline(datastream, line)) {
+  while(std::getline(datastream, line)) {
     read_param_header(line, type, name, dim, byte_count, zero_grad);
     if(type == "#Parameter#" && name == key) {
       Parameter param = model.add_parameters(dim);
       param.get_storage().name = name;
-      vector<float> values(dim.size());
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
+      std::vector<float> values(dim.size());
+      { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
       TensorTools::set_elements(param.get_storage().values, values);
       if(!zero_grad){
-        { getline(datastream, line); istringstream iss(line); iss >> values; }
+        { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
         TensorTools::set_elements(param.get_storage().g, values);
       } else {
         TensorTools::zero(param.get_storage().g);
@@ -279,26 +300,26 @@ Parameter TextFileLoader::load_param(ParameterCollection & model,
 }
 
 LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
-                                                  const string & key) {
+                                                  const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.load_lookup_param() requires non-empty key");
-  ifstream datastream(dataname);
+  std::ifstream datastream(dataname);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
-  string line, type, name;
+  std::string line, type, name;
   bool zero_grad=false;
   Dim dim;
   size_t byte_count = 0;
-  while(getline(datastream, line)) {
+  while(std::getline(datastream, line)) {
     read_param_header(line, type, name, dim, byte_count, zero_grad);
     if(type == "#LookupParameter#" && name == key) {
-      vector<float> values(dim.size());
+      std::vector<float> values(dim.size());
       size_t size = dim[dim.nd-1]; dim.nd--;
       LookupParameter lookup_param = model.add_lookup_parameters(size, dim);
       lookup_param.get_storage().name = name;
-      { getline(datastream, line); istringstream iss(line); iss >> values; }
+      { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
       TensorTools::set_elements(lookup_param.get_storage().all_values, values);
       if(!zero_grad){
-        { getline(datastream, line); istringstream iss(line); iss >> values; }
+        { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
         TensorTools::set_elements(lookup_param.get_storage().all_grads, values);
       } else {
         TensorTools::zero(lookup_param.get_storage().all_grads);
@@ -311,3 +332,5 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
   }
   DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
 }
+
+} // namespace dynet
