@@ -64,7 +64,7 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
       n_red++;
     }
   }
-  DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward (cadd)");
+  DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward");
   if(n_red==0)      backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
   else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
   else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
