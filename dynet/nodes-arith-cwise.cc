@@ -193,19 +193,22 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in CwiseMultiply::backward (cmult)");
-    int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
-    for(int j=0; j < fx.d.nd; j++){
-      unsigned dim_j = (j<xs[i]->d.nd ? xs[i]->d[j] : 1);
-      if(dim_j != fx.d[j]){
-        n_red++;
-      }
+  int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
+  for(int j=0; j < fx.d.nd; j++){
+    unsigned dim_j = (j<xs[i]->d.nd ? xs[i]->d[j] : 1);
+    if(dim_j != fx.d[j]){
+      n_red++;
     }
-    DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
-    if(n_red==0)      backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
-    else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
-    else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
-    else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
-    else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
+  }
+  bool same_dims = n_red==0 && xs[0]->d.bd == xs[1]->d.bd && xs[0]->d.nd == xs[1]->d.nd;
+  for(int j=0; j < min(xs[0]->d.nd, xs[1]->d.nd); j++) if(xs[0]->d[j] != xs[1]->d[j]) same_dims = false;
+  DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
+  if(same_dims)     dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() * xs[1-i]->tb<4>();
+  else if(n_red==0) backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
+  else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
+  else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
+  else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
+  else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseMultiply)
 
