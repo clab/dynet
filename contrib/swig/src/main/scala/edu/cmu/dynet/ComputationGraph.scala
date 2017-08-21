@@ -6,6 +6,7 @@ package edu.cmu.dynet
 object ComputationGraph {
   private[dynet] var cg: internal.ComputationGraph = internal.ComputationGraph.getNew
   var version: Long = 0L
+  private var defaultDevice: internal.Device = internal.dynet_swig.getDefault_device()
 
   /** Gets rid of the singleton Computation Graph and replaces it with a fresh one. Increments
     * `version` to make sure we don't use any stale expressions.
@@ -15,11 +16,11 @@ object ComputationGraph {
     version += 1
   }
 
-  def addInput(s: Float): VariableIndex = new VariableIndex(cg.add_input(s))
+  def addInput(s: Float): VariableIndex = new VariableIndex(cg.add_input(s, defaultDevice))
   def addInput(d: Dim, data: FloatVector): VariableIndex =
-    new VariableIndex(cg.add_input(d.dim, data.vector))
+    new VariableIndex(cg.add_input(d.dim, data.vector, defaultDevice))
   def addInput(d: Dim, ids: UnsignedVector, data: FloatVector, defdata: Float = 0.0f) =
-    new VariableIndex(cg.add_input(d.dim, ids.vector, data.vector, defdata))
+    new VariableIndex(cg.add_input(d.dim, ids.vector, data.vector, defaultDevice, defdata))
 
   def addParameters(p: Parameter): VariableIndex = new VariableIndex(cg.add_parameters(p.parameter))
   def addConstParameters(p: Parameter): VariableIndex =

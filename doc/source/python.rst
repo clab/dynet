@@ -31,7 +31,16 @@ wheel, things should be running.
 
     pip install git+https://github.com/clab/dynet#egg=dynet
 
-Alternatively, you can add the following to your `requirements.txt`:
+If you have CUDA installed on your system and want to install with GPU support, you
+can instead run the following command.
+
+.. code:: bash
+
+    BACKEND=cuda pip install git+https://github.com/clab/dynet#egg=dynet
+
+Alternatively, you can add the following to your `requirements.txt` (for CUDA support
+you will need to make sure that `BACKEND=cuda` is in your environmental variables when
+DyNet is installed):
 
 .. code:: bash
 
@@ -66,7 +75,7 @@ The following is a list of all the commands needed to perform a manual install:
 
     make -j 2 # replace 2 with the number of available cores
     cd python
-    python ../../setup.py EIGEN3_INCLUDE_DIR=../../../eigen build --build-dir=.. --skip-build install  # add `--user` for a user-local install.
+    python ../../setup.py build --build-dir=.. --skip-build install  # add `--user` for a user-local install.
     
     # this should suffice, but on some systems you may need to add the following line to your
     # init files in order for the compiled .so files be accessible to Python.
