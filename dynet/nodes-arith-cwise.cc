@@ -159,19 +159,30 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseMultiply::forward (cmult)");
   Eigen::array<int, 5> bcast_left = {1,1,1,1,1};
   Eigen::array<int, 5> bcast_right = {1,1,1,1,1};
+  bool same_dims = true;
   for(int i=0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
-      if(i>=xs[0]->d.nd || xs[0]->d[i]==1) bcast_left[i] = dim[i];
-      if(i>=xs[1]->d.nd || xs[1]->d[i]==1) bcast_right[i] = dim[i];
+    if(i>=xs[0]->d.nd || xs[0]->d[i]==1){
+      bcast_left[i] = dim[i];
+      same_dims = false;
+    }
+    if(i>=xs[1]->d.nd || xs[1]->d[i]==1){
+      bcast_right[i] = dim[i];
+      same_dims = false;
+    }
   }
-  if(xs[0]->d.bd == 1) bcast_left[4] = dim.bd;
-  else if(xs[1]->d.bd == 1) bcast_right[4] = dim.bd;
-
-  Eigen::array<int, 5> bcast = {1,1,1,1,1};
-  for(int di=0; di<xs[0]->d.nd; di++){
-    if(xs[0]->d[di]==1) bcast[di] = xs[1]->d[di];
+  if(xs[0]->d.bd == 1){
+    bcast_left[4] = dim.bd;
+    same_dims = false;
   }
-  if(xs[0]->d.bd == 1) bcast[4] = xs[1]->d.bd;
-  fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) * xs[1]->tb<4>().broadcast(bcast_right);
+  else if(xs[1]->d.bd == 1){
+    bcast_right[4] = dim.bd;
+    same_dims = false;
+  }
+  if(same_dims){
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() * xs[1]->tb<4>();
+  } else {
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) * xs[1]->tb<4>().broadcast(bcast_right);
+  }
 }
 
 template<class MyDevice>
