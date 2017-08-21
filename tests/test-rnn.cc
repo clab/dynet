@@ -129,7 +129,7 @@ DYNET_RNN_GRADIENT_TEST_CASE(lstm_gradient, dynet::LSTMBuilder)
 
 DYNET_RNN_GRADIENT_TEST_CASE(gru_gradient, dynet::GRUBuilder)
 
-//DYNET_RNN_GRADIENT_TEST_CASE(fast_lstm, dynet::FastLSTMBuilder)
+DYNET_RNN_GRADIENT_TEST_CASE(fast_lstm, dynet::FastLSTMBuilder)
 
 BOOST_AUTO_TEST_CASE( vanilla_lstm_ln_gradient ) {
   dynet::ParameterCollection mod;
