@@ -41,13 +41,31 @@ void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*
   DYNET_ASSERT(num_args == 2, "Bad number of arguments in CwiseSum::forward");
   Eigen::array<int, 5> bcast_left = {1,1,1,1,1};
   Eigen::array<int, 5> bcast_right = {1,1,1,1,1};
+  bool same_dims = true;
   for(int i=0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
-      if(i>=xs[0]->d.nd || xs[0]->d[i]==1) bcast_left[i] = dim[i];
-      if(i>=xs[1]->d.nd || xs[1]->d[i]==1) bcast_right[i] = dim[i];
+    if(i>=xs[0]->d.nd || xs[0]->d[i]==1){
+      bcast_left[i] = dim[i];
+      same_dims = false;
+    }
+    if(i>=xs[1]->d.nd || xs[1]->d[i]==1){
+      bcast_right[i] = dim[i];
+      same_dims = false;
+    }
   }
-  if(xs[0]->d.bd == 1) bcast_left[4] = dim.bd;
-  else if(xs[1]->d.bd == 1) bcast_right[4] = dim.bd;
-  fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) + xs[1]->tb<4>().broadcast(bcast_right);
+  if(xs[0]->d.bd == 1){
+    bcast_left[4] = dim.bd;
+    same_dims = false;
+  }
+  else if(xs[1]->d.bd == 1){
+    bcast_right[4] = dim.bd;
+    same_dims = false;
+  }
+  if(same_dims){
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() + xs[1]->tb<4>();
+  } else {
+    // TODO: could handle the case where only the batch dim differs as a special case to avoid slow broadcasting operations there
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) + xs[1]->tb<4>().broadcast(bcast_right);
+  }
 }
 
 template<class MyDevice>
@@ -65,7 +83,7 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
     }
   }
   DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward");
-  if(n_red==0)      backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
+  if(n_red==0)      dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>();
   else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
   else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
   else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
