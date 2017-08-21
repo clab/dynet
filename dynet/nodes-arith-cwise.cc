@@ -275,12 +275,16 @@ Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void CwiseQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseQuotient::forward (cdiv)");
-    Eigen::array<int, 5> bcast = {1,1,1,1,1};
-    for(int di=0; di<xs[0]->d.nd; di++){
-      if(xs[1]->d[di]==1) bcast[di] = xs[0]->d[di];
-    }
-    if(xs[1]->d.bd == 1) bcast[4] = xs[0]->d.bd;
+  if(xs[0]->d.size() == xs[1]->d.size()){
+    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() / xs[1]->tb<4>();
+  } else {
+  Eigen::array<int, 5> bcast = {1,1,1,1,1};
+  for(int di=0; di<xs[0]->d.nd; di++){
+    if(xs[1]->d[di]==1) bcast[di] = xs[0]->d[di];
+  }
+  if(xs[1]->d.bd == 1) bcast[4] = xs[0]->d.bd;
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() / xs[1]->tb<4>().broadcast(bcast);
+  }
 }
 
 template<class MyDevice>
@@ -292,13 +296,20 @@ void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in CwiseQuotient::backward (cdiv)");
   if (i == 0) {
+    if(xs[0]->d.size() == xs[1]->d.size()){
+      dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() / xs[1]->tb<4>();
+    } else {
       Eigen::array<int, 5> bcast = {1,1,1,1,1};
       for(int di=0; di<xs[0]->d.nd; di++){
         if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
       }
       if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[0]->d.bd;
       dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() / xs[1]->tb<4>().broadcast(bcast);
+    }
   } else { // i = 1
+    if(xs[0]->d.size() == xs[1]->d.size()){
+      dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs[1]->tb<4>().square() * xs[0]->tb<4>());
+    } else {
       int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
       for(int di=0;di<xs[0]->d.nd; di++) if(xs[0]->d[di]!=xs[1]->d[di]) n_red++;
       DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseQuotient::backward (cdiv)");
@@ -307,6 +318,7 @@ void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
       else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
       else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
       else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
+    }
   }
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseQuotient)
@@ -332,9 +344,6 @@ void CwiseQuotient::backward_helper(const MyDevice & dev,
     morph[di] = xs[i]->d[di];
   }
   morph[4] = xs[i]->d.bd;
-  if (i == 0) {
-    dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() / xs[1]->tb<4>()).sum(red_axis).reshape(morph);
-  } else {
     Eigen::array<int, 5> bcast = {1,1,1,1,1};
     for(int di=0; di<xs[0]->d.nd; di++){
       if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
@@ -346,8 +355,6 @@ void CwiseQuotient::backward_helper(const MyDevice & dev,
     xs1_squared.tb<4>().device(*dev.edevice) = xs[1]->tb<4>().square();
     dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs1_squared.tb<4>().broadcast(bcast) * xs[0]->tb<4>()).sum(red_axis).reshape(morph);
     scratch_allocator->free();
-  }
-
 }
 
 // ************* Pow *************
