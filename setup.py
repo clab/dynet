@@ -191,6 +191,12 @@ class build(_build):
         BUILD_DIR = os.path.abspath(self.build_dir)
         if EIGEN3_INCLUDE_DIR is None:
             EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
+        # The cmake directory and Python directory are different in manual install, so
+        # try to move to the parent directory
+        if not os.path.isdir(EIGEN3_INCLUDE_DIR) and os.path.isdir(os.path.join(EIGEN3_INCLUDE_DIR, os.pardir)):
+            EIGEN3_INCLUDE_DIR = os.path.join(EIGEN3_INCLUDE_DIR, os.pardir)
+        if not os.path.isdir(EIGEN3_INCLUDE_DIR):
+            raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue at the github site.".format(EIGEN3_INCLUDE_DIR))
         log.info("CMAKE_PATH=" + CMAKE_PATH)
         log.info("MAKE_PATH=" + MAKE_PATH)
         log.info("MAKE_FLAGS=" + " ".join(MAKE_FLAGS))
