@@ -16,7 +16,7 @@ enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 CoupledLSTMBuilder::CoupledLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim) {
+                         ParameterCollection& model) : layers(layers), input_dim(input_dim), hid(hidden_dim), dropout_masks_valid(false) {
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -108,8 +108,8 @@ void CoupledLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit
   } else {
     has_initial_state = false;
   }
-  // Init dropout masks
-  set_dropout_masks();
+
+  dropout_masks_valid = false;
 }
 
 void CoupledLSTMBuilder::set_dropout_masks(unsigned batch_size) {
@@ -179,6 +179,7 @@ Expression CoupledLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   vector<Expression>& ht = h.back();
   vector<Expression>& ct = c.back();
   Expression in = x;
+  if ((dropout_rate > 0.f || dropout_rate_h > 0.f) && !dropout_masks_valid) set_dropout_masks(x.dim().bd);
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
     Expression i_h_tm1, i_c_tm1;
@@ -291,13 +292,13 @@ void CoupledLSTMBuilder::disable_dropout() {
 enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
 enum { LN_GH, LN_BH, LN_GX, LN_BX, LN_GC, LN_BC};
 
-VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false) { }
+VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false), dropout_masks_valid(false) { }
 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned input_dim,
                                        unsigned hidden_dim,
                                        ParameterCollection& model,
-                                       bool ln_lstm) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm) {
+                                       bool ln_lstm) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm), dropout_masks_valid(false) {
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -367,8 +368,7 @@ void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit
     has_initial_state = false;
   }
 
-  // Init droupout masks
-  set_dropout_masks();
+  dropout_masks_valid = false;
 }
 
 void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
@@ -437,6 +437,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   vector<Expression>& ht = h.back();
   vector<Expression>& ct = c.back();
   Expression in = x;
+  if ((dropout_rate > 0.f || dropout_rate_h > 0.f) && !dropout_masks_valid) set_dropout_masks(x.dim().bd);
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
     
@@ -456,7 +457,6 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     // apply dropout according to https://arxiv.org/abs/1512.05287 (tied weights)
     if (dropout_rate > 0.f) {
       in = cmult(in, masks[i][0]);
-
     }
     if (has_prev_state && dropout_rate_h > 0.f)
       i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
@@ -531,13 +531,13 @@ void VanillaLSTMBuilder::disable_dropout() {
 }
 
 
-CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), weightnoise_std(0) { }
+CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), weightnoise_std(0), dropout_masks_valid(false) { }
 
 CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder(unsigned layers,
 						     unsigned input_dim,
 						     unsigned hidden_dim,
 						     ParameterCollection& model)
-	    : layers(layers), input_dim(input_dim), hid(hidden_dim), weightnoise_std(0){
+	    : layers(layers), input_dim(input_dim), hid(hidden_dim), weightnoise_std(0), dropout_masks_valid(false){
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("compact-vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -589,8 +589,7 @@ void CompactVanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>
     has_initial_state = false;
   }
 
-  // Init droupout masks
-  set_dropout_masks();
+  dropout_masks_valid = false;
 }
 
 void CompactVanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
@@ -659,6 +658,7 @@ Expression CompactVanillaLSTMBuilder::add_input_impl(int prev, const Expression&
   vector<Expression>& ht = h.back();
   vector<Expression>& ct = c.back();
   Expression in = x;
+  if ((dropout_rate > 0.f || dropout_rate_h > 0.f) && !dropout_masks_valid) set_dropout_masks(x.dim().bd);
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
     Expression i_h_tm1, i_c_tm1;
