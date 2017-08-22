@@ -21,6 +21,8 @@ get CMake, and Mercurial with either homebrew or macports:
 
 On **Windows**, see :ref:`windows-python-install`.
 
+(Currently, since the pip installation will build from source, you need to install
+ cython ahead: ``pip install cython``.)
 
 Once these packages are installed, the following will download, build and install
 DyNet. Note that compiling DyNet may take a long time, up to 10 minutes or more, but as
