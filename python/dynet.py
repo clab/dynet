@@ -1,4 +1,9 @@
+from __future__ import print_function
 import sys
+import dynet_config
+
+_CONF = dynet_config.get()
+
 if '--dynet-viz' in sys.argv:
     sys.argv.remove('--dynet-viz')
     from dynet_viz import *
@@ -9,4 +14,9 @@ else:
 
 __version__ = 2.0
 
-init()
+if _CONF is None:
+    init()
+else:
+    _params = DynetParams()
+    _params.from_config(_CONF)
+    _params.init()

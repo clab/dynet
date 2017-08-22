@@ -92,5 +92,5 @@ TARGET = [ext]
 setup(ext_modules = TARGET,
         cmdclass = {'build_ext': build_ext},
         name="dyNET",
-        py_modules = ['dynet','dynet_viz'],
+        py_modules = ['dynet','dynet_viz', 'dynet_config'],
 )

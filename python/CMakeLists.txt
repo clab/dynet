@@ -29,6 +29,7 @@ if(PYTHON)
   
   # Things to copy the files
   file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py
+                     ${CMAKE_CURRENT_SOURCE_DIR}/dynet_config.py
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pxd
                      ${CMAKE_CURRENT_SOURCE_DIR}/dynet_viz.py
