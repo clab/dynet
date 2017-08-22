@@ -43,6 +43,8 @@ struct RNNTest {
     param_24_vals = {0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
     param_36_vals = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, -0.5};
     param_60_vals = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.4f, 0.5f, 0.3f, 0.4f, 0.5f};
+    param_3_mask_vals = {0.f, 1.0f, 1.0f};
+    param_5_mask_vals = {0.f, 1.0f, 1.0f, 1.f, 1.0f};
     param_6_mask_vals = {0.f, 1.0f, 1.0f, 1.f, 1.0f, 0.0f};
     param_8_mask_vals = {0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0};
     param_10_mask_vals = {0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0};
@@ -73,6 +75,10 @@ struct RNNTest {
     TensorTools::set_elements(param_36.get_storage().values, param_36_vals);
     param_60 = mod.add_parameters(Dim({60}));
     TensorTools::set_elements(param_60.get_storage().values, param_60_vals);
+    param_3_mask = mod.add_parameters(Dim({3}));
+    TensorTools::set_elements(param_3_mask.get_storage().values, param_3_mask_vals);
+    param_5_mask = mod.add_parameters(Dim({5}));
+    TensorTools::set_elements(param_5_mask.get_storage().values, param_5_mask_vals);
     param_6_mask = mod.add_parameters(Dim({6}));
     TensorTools::set_elements(param_6_mask.get_storage().values, param_6_mask_vals);
     param_8_mask = mod.add_parameters(Dim({8}));
@@ -95,10 +101,10 @@ struct RNNTest {
     return oss.str();
   }
 
-  std::vector<float> ones_vals, param_vals, param_1_vals, param_2_vals, seq_vals, param_3_vals, param_4_vals, param_5_zeros_vals, param_6_vals, param_8_vals, param_10_vals, param_10_zeros_vals, param_12_vals, param_24_vals, param_36_vals, param_60_vals, param_6_mask_vals, param_8_mask_vals, param_10_mask_vals;
+  std::vector<float> ones_vals, param_vals, param_1_vals, param_2_vals, seq_vals, param_3_vals, param_4_vals, param_5_zeros_vals, param_6_vals, param_8_vals, param_10_vals, param_10_zeros_vals, param_12_vals, param_24_vals, param_36_vals, param_60_vals, param_3_mask_vals, param_5_mask_vals, param_6_mask_vals, param_8_mask_vals, param_10_mask_vals;
   std::vector<char*> av;
   dynet::ParameterCollection mod;
-  dynet::Parameter param_1, param_2, param_3, param_4, param_5_zeros, param_6, param_8, param_10, param_10_zeros, param_12, param_24, param_36, param_60, param_6_mask, param_8_mask, param_10_mask;
+  dynet::Parameter param_1, param_2, param_3, param_4, param_5_zeros, param_6, param_8, param_10, param_10_zeros, param_12, param_24, param_36, param_60, param_3_mask, param_5_mask, param_6_mask, param_8_mask, param_10_mask;
 };
 
 // define the test suite
@@ -590,5 +596,37 @@ BOOST_AUTO_TEST_CASE( lstm_node_multi_weightnoise_runs ) {
     h_tm1 = h_t;
   }
 }
+
+BOOST_AUTO_TEST_CASE( lstm_node_dropout_batch_bwd ) {
+  dynet::ParameterCollection mod;
+  unsigned input_dim = 3;
+  unsigned hidden_dim = 5;
+  unsigned batch_size = 2;
+  dynet::VanillaLSTMBuilder vanilla_lstm_builder(1, input_dim, hidden_dim, mod, false);
+  dynet::ComputationGraph cg;
+  vanilla_lstm_builder.new_graph(cg);
+
+  Expression Wx = parameter(cg, vanilla_lstm_builder.params[0][0]);
+  Expression Wh = parameter(cg, vanilla_lstm_builder.params[0][1]);
+  Expression b = parameter(cg, vanilla_lstm_builder.params[0][2]) + 0.5;
+
+  Expression c_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim}, batch_size));
+  Expression h_tm1 = dynet::reshape(dynet::parameter(cg, param_10_zeros), Dim({hidden_dim}, batch_size));
+  Expression x = dynet::reshape(dynet::parameter(cg, param_6), Dim({input_dim}, batch_size));
+
+  Expression mask_x = dynet::reshape(dynet::parameter(cg, param_3_mask), Dim({input_dim}, 1))*0.9;
+  Expression mask_h = dynet::reshape(dynet::parameter(cg, param_5_mask), Dim({hidden_dim}, 1))*0.8;
+
+  for (unsigned i = 0; i < 3; i++) {
+    Expression gates_t = dynet::vanilla_lstm_gates_dropout(x, h_tm1, Wx, Wh, b, mask_x, mask_h, 0.0f);
+    Expression c_t = dynet::vanilla_lstm_c(c_tm1, gates_t);
+    Expression h_t = dynet::vanilla_lstm_h(c_t, gates_t);
+    c_tm1 = c_t;
+    h_tm1 = h_t;
+  }
+  Expression z = squared_norm(sum_batches(h_tm1 + c_tm1));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
