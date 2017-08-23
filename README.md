@@ -29,6 +29,15 @@ Read the [documentation](http://dynet.readthedocs.io/en/latest/) to get started,
 
 You can also read more technical details in our [technical report](https://arxiv.org/abs/1701.03980).
 
+## Getting started
+
+You can find tutorials about using DyNet [here (C++)](http://dynet.readthedocs.io/en/latest/tutorial.html#c-tutorial) and [here (python)](http://dynet.readthedocs.io/en/latest/tutorial.html#python-tutorial), and [here (EMNLP 2016 tutorial)](https://github.com/clab/dynet_tutorial_examples).
+
+One aspect that sets DyNet apart from other tookits is the **auto-batching** feature. See the [documentation](http://dynet.readthedocs.io/en/latest/minibatch.html) about batching.
+
+The `example` folder contains a variety of examples in C++ and python.
+
+
 ## Installation
 
 DyNet relies on a number of external programs/libraries including CMake,
@@ -91,12 +100,6 @@ You can install DyNet for python by using the following command
     pip install git+https://github.com/clab/dynet#egg=dynet
 
 For more details refer to the [documentation](http://dynet.readthedocs.io/en/latest/python.html#installing-dynet-for-python)
-
-## Getting started
-
-You can find tutorials about using DyNet [here (C++)](http://dynet.readthedocs.io/en/latest/tutorial.html#c-tutorial) and [here (python)](http://dynet.readthedocs.io/en/latest/tutorial.html#python-tutorial).
-
-The `example` folder contains a variety of examples in C++ and python.
 
 ## Citing
 
