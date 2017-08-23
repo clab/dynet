@@ -133,6 +133,7 @@ void CoupledLSTMBuilder::set_dropout_masks(unsigned batch_size) {
       masks.push_back(masks_i);
     }
   }
+  dropout_masks_valid = true;
 }
 
 ParameterCollection & CoupledLSTMBuilder::get_parameter_collection() { return local_model; }
@@ -388,6 +389,7 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
       masks.push_back(masks_i);
     }
   }
+  dropout_masks_valid = true;
 }
 
 ParameterCollection & VanillaLSTMBuilder::get_parameter_collection() {
@@ -609,6 +611,7 @@ void CompactVanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
       masks.push_back(masks_i);
     }
   }
+  dropout_masks_valid = true;
 }
 
 ParameterCollection & CompactVanillaLSTMBuilder::get_parameter_collection() {
