@@ -57,6 +57,7 @@ def get_env(build_dir):
       pass
 
   # Get values passed on the command line
+  i = 0
   for i, arg in enumerate(sys.argv[1:]):
       try:
           key, value = arg.split("=", 1)
