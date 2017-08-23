@@ -206,6 +206,7 @@ class build(_build):
         run_process([CMAKE_PATH, "--version"])
         run_process([CXX_PATH, "--version"])
 
+        # This will generally be called by the pip install
         if not self.skip_build:
             if CMAKE_PATH is None:
                 raise DistutilsSetupError("`cmake` not found, and `CMAKE` is not set.")
@@ -257,6 +258,15 @@ class build(_build):
             if run_process(make_cmd) != 0:
                 raise DistutilsSetupError(" ".join(make_cmd))
 
+        # This will generally be called by the manual install
+        else:    
+            # The cmake directory and Python directory are different in manual install, so
+            # try to move to the parent directory
+            if not os.path.isdir(EIGEN3_INCLUDE_DIR) and os.path.isdir(os.path.join(EIGEN3_INCLUDE_DIR, os.pardir)):
+                EIGEN3_INCLUDE_DIR = os.path.join(EIGEN3_INCLUDE_DIR, os.pardir)
+            if not os.path.isdir(EIGEN3_INCLUDE_DIR):
+                raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue at the github site.".format(EIGEN3_INCLUDE_DIR))
+
         BUILT_EXTENSIONS = True  # because make calls build_ext
         _build.run(self)
 
@@ -296,7 +306,7 @@ class build_ext(_build_ext):
 try:
     import pypandoc
     long_description = pypandoc.convert("README.md", "rst")
-except (IOError, ImportError):
+except:
     long_description = ""
 
 setup(
