@@ -160,6 +160,7 @@ public:
   unsigned layers;
   unsigned input_dim = 0;
   unsigned hid = 0;
+  bool dropout_masks_valid;
 
   float dropout_rate_h = 0.f, dropout_rate_c = 0.f;
 
@@ -303,6 +304,7 @@ public:
   unsigned input_dim, hid;
   float dropout_rate_h;
   bool ln_lstm;
+  bool dropout_masks_valid;
 
 private:
   ComputationGraph* _cg; // Pointer to current cg
@@ -442,6 +444,7 @@ public:
   unsigned input_dim, hid;
   float dropout_rate_h;
   float weightnoise_std;
+  bool dropout_masks_valid;
 
 private:
   ComputationGraph* _cg; // Pointer to current cg
