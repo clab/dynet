@@ -36,7 +36,9 @@ def append_cmake_lib_list(l, var):
 
 # Strip library prefixes and suffixes to prevent linker confusion
 def strip_lib(filename):
-    return re.sub(r"^(?:lib)?(.*)\.(?:so|a|dylib|lib)$", r"\1", filename)
+    filename = re.sub(r"^(?:lib)?(.*)\.(?:so|a|dylib)$", r"\1", filename)
+    filename = re.sub(r"^(.*)\.lib$", r"\1", filename)
+    return filename
 
 def get_env(build_dir):
 
