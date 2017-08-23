@@ -102,7 +102,7 @@ if CFLAGS is not None:
 # For Cython extensions
 LIBRARIES = ["dynet"]
 LIBRARY_DIRS = ["."]
-GPULIBRARIES = ["gdynet"]
+GPULIBRARIES = []
 GPULIBRARY_DIRS = []
 COMPILER_ARGS = []
 EXTRA_LINK_ARGS = []
@@ -154,20 +154,6 @@ TARGET = [Extension(
     extra_compile_args=COMPILER_ARGS,
     runtime_library_dirs=RUNTIME_LIB_DIRS,
 )]
-
-if ENV.get("BACKEND") == "cuda":  # if cuda requested
-    TARGET.append(Extension(
-        "_gdynet",  # name of extension
-        ["_gdynet.pyx"],  # filename of our Pyrex/Cython source
-        language="c++",  # this causes Pyrex/Cython to create C++ source
-        include_dirs=INCLUDE_DIRS,
-        libraries=GPULIBRARIES,
-        library_dirs=GPULIBRARY_DIRS,
-        extra_link_args=EXTRA_LINK_ARGS,
-        extra_compile_args=COMPILER_ARGS,
-        runtime_library_dirs=RUNTIME_LIB_DIRS,
-    ))
-
 
 class build(_build):
     user_options = [
@@ -348,5 +334,5 @@ setup(
     license="Apache 2.0",
     cmdclass={"build": build, "build_py": build_py, "build_ext": build_ext},
     ext_modules=TARGET,
-    py_modules=["dynet", "dynet_viz"],
+    py_modules=["dynet", "dynet_viz", "dynet_config"],
 )

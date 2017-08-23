@@ -29,6 +29,7 @@ if(PYTHON)
   
   # Things to copy the files
   file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py
+                     ${CMAKE_CURRENT_SOURCE_DIR}/dynet_config.py
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pxd
                      ${CMAKE_CURRENT_SOURCE_DIR}/dynet_viz.py
@@ -52,10 +53,6 @@ if(PYTHON)
   # TODO: We should add a dependency, but this isn't working
   # add_dependencies(copy ${DepFiles})
 
-  add_custom_command(TARGET copy PRE_BUILD
-		  COMMAND ${CMAKE_COMMAND} -E
-		  copy ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx ${CMAKE_CURRENT_BINARY_DIR}/_gdynet.pyx)
-
   # Export environment variables for setup.py
   foreach(Var CMAKE_INSTALL_PREFIX PROJECT_SOURCE_DIR PROJECT_BINARY_DIR LIBS EIGEN3_INCLUDE_DIR MKL_LINK_DIRS WITH_CUDA_BACKEND CUDA_RT_FILES CUDA_RT_DIRS CUDA_CUBLAS_FILES CUDA_CUBLAS_DIRS)
     string(REPLACE ";" "\\\\;" Val "${${Var}}")
@@ -73,8 +70,5 @@ if(PYTHON)
   add_custom_target(target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/timestamp)
   add_dependencies(target copy)
   add_dependencies(copy dynet)
-  if (WITH_CUDA_BACKEND)
-    add_dependencies(copy gdynet)
-  endif()
 
 endif()
