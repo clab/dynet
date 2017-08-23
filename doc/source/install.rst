@@ -109,8 +109,8 @@ GPU (CUDA) support
 
 DyNet supports running programs on GPUs with CUDA. If you have CUDA
 installed, you can build DyNet with GPU support by adding
-``-DBACKEND=cuda`` to your cmake options. The linking method is exact
-the same with CPU backend case.
+``-DBACKEND=cuda`` to your cmake options. The linking method is exactly
+the same as with the CPU backend case.
 
 ::
 
