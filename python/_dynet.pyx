@@ -17,6 +17,8 @@ from _dynet cimport *
 cimport _dynet as dynet
 
 
+# TODO: make this class hidden from users?
+#       (by prepending with _, and removing from docs)
 cdef class DynetParams: # {{{
     """This object holds the global parameters of Dynet
     
@@ -51,6 +53,22 @@ cdef class DynetParams: # {{{
     def __init__(self):
         pass
 
+    # TODO conf, defined in dynet_config, can be
+    #      made much more "pythonic" and then this
+    #      should be adapted.
+    cpdef from_config(self, conf):
+        """TODO
+        """
+        self.cparams.mem_descriptor = str(conf["mem"]).encode()
+        self.cparams.random_seed=conf["seed"]
+        self.cparams.autobatch = conf["autobatch"]
+        self.cparams.autobatch_debug = conf["autobatch_debug"]
+        self.cparams.weight_decay = conf["weight_decay"]
+        self.cparams.shared_parameters = conf["shared_params"]
+        self.set_requested_gpus(conf["requested_gpus"])
+        self.set_gpu_mask(conf["gpu_mask"])
+
+    # TODO can this be removed?
     cpdef from_args(self, shared_parameters=None):
         """Gets parameters from the command line arguments
         
@@ -60,12 +78,25 @@ cdef class DynetParams: # {{{
         Keyword Args:
             shared_parameters([type]): [description] (default: None)
         """
-        cdef int argc = len(sys.argv)
+        cpu_use = False
+        if '--dynet-gpu' in sys.argv: # the python gpu switch, use GPU:0 by default
+            sys.argv.remove('--dynet-gpu')
+            sys.argv.append('--dynet-devices')
+            sys.argv.append('GPU:0')
+        elif not ('--dynet-gpus' in sys.argv or
+                  '--dynet-devices' in sys.argv or
+                  '--dynet-viz' in sys.argv):
+            cpu_use = True
+
+        cdef int argc = len(sys.argv) + 2 if cpu_use else len(sys.argv)
         cdef char** c_argv
+        c_argv = <char**>malloc(sizeof(char*) * argc) # TODO check failure?
         args = [bytearray(x, encoding="utf-8") for x in sys.argv]
-        c_argv = <char**>malloc(sizeof(char*) * len(args)) # TODO check failure?
         for idx, s in enumerate(args):
             c_argv[idx] = s
+        if cpu_use:
+            c_argv[argc-2] = '--dynet-devices' 
+            c_argv[argc-1] = 'CPU'
 
         if shared_parameters is None:
             self.cparams = dynet.extract_dynet_params(argc,c_argv, 0)

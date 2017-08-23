@@ -191,10 +191,6 @@ endif()
 #     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests.bin/${testName} )
 #endforeach(test_src)
 
-# Build cpu library
-add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
-target_link_libraries(dynet ${LIBS})
-
 if(WITH_CUDA_BACKEND)
   if(${GPU_NUMFILES} EQUAL 0)
     foreach(FILENAME ${dynet_gpu_mergeable_SRCS})
@@ -240,25 +236,28 @@ if(WITH_CUDA_BACKEND)
     list(APPEND CUDA_NVCC_FLAGS_DEBUG "--compiler-options \"/MDd\"")
     list(APPEND CUDA_NVCC_FLAGS_RELEASE "--compiler-options \"/MD\"")
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} ${dynet_gpu_SRCS})
+    cuda_add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS} ${dynet_gpu_SRCS})
   else()
     SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    cuda_add_library(gdynet ${dynet_library_SRCS} ${dynet_library_HDRS} ${dynet_gpu_SRCS} OPTIONS --compiler-options "-fPIC")
+    cuda_add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS} ${dynet_gpu_SRCS} OPTIONS --compiler-options "-fPIC")
   endif()
-  set_target_properties(gdynet PROPERTIES
+  set_target_properties(dynet PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
   if(CUDNN_FOUND)
-    target_compile_definitions(gdynet PRIVATE HAVE_CUDNN)
+    target_compile_definitions(dynet PRIVATE HAVE_CUDNN)
   endif()
-  cuda_add_cublas_to_target(gdynet)
-  target_link_libraries(gdynet ${LIBS})
-
+  cuda_add_cublas_to_target(dynet)
+  target_link_libraries(dynet ${LIBS})
+else()
+  # Build cpu library
+  add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
+  target_link_libraries(dynet ${LIBS})
 endif(WITH_CUDA_BACKEND)
 
 install(FILES ${dynet_library_HDRS} DESTINATION include/dynet)
 install(TARGETS dynet DESTINATION lib)
 if(WITH_CUDA_BACKEND)
-  install(TARGETS gdynet DESTINATION lib)
+  install(TARGETS dynet DESTINATION lib)
 endif(WITH_CUDA_BACKEND)
 
 # target_compile_features(dynet PRIVATE cxx_range_for)

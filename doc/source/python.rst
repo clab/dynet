@@ -21,6 +21,8 @@ get CMake, and Mercurial with either homebrew or macports:
 
 On **Windows**, see :ref:`windows-python-install`.
 
+(Currently, since the pip installation will build from source, you need to install
+ cython ahead: ``pip install cython``.)
 
 Once these packages are installed, the following will download, build and install
 DyNet. Note that compiling DyNet may take a long time, up to 10 minutes or more, but as
@@ -258,8 +260,7 @@ find it, you can specify also
 
 Now, build the Python modules (as above, we assume Cython is installed):
 
-After running ``make -j 2``, you should have the files ``_dynet.so`` and
-``_gdynet.so`` in the ``build/python`` folder.
+After running ``make -j 2``, you should have the file ``_dynet.so`` in the ``build/python`` folder.
 
 As before, ``cd build/python`` followed by
 ``python ../../setup.py EIGEN3_INCLUDE_DIR=$PATH_TO_EIGEN build --build-dir=.. --skip-build install --user`` will install the module.
@@ -283,26 +284,18 @@ same code work with either the GPU or the CPU version depending on how
 it is invoked.
 
 Alternatively, you can also select whether the CPU or GPU should be
-used by using one of the following more specific import statements:
+used by using ``dynet_config`` module:
 
 ::
 
-    import _dynet
-    # or
-    import _gdynet # For GPU
+    import dynet_config
+    dynet_config.set_gpu()
+    import dynet
 
 This may be useful if you want to decide programmatically whether to
-use the CPU or GPU. Importantly, importing ``_dynet`` or ``_gdynet``
-will not initialize the global parameters. If you forget to initialize
-these, dynet may abort with a segmentation fault. Instead, make sure
-to initialize the global parameters, as follows:
-
-::
-
-    # Same as import dynet as dy
-    import _dynet as dy
-    dy.init()
-
+use the CPU or GPU. Importantly, it is not suggested to use ``import _dynet``
+any more.
+    
 
 Running with MKL
 ~~~~~~~~~~~~~~~~
