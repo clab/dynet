@@ -34,7 +34,7 @@ endif(WITH_CUDA_BACKEND)
 # Link with dynet library
 if(WITH_CUDA_BACKEND)
   MESSAGE("-- swig link with GPU library")
-  swig_link_libraries(dynet_swig gdynet)
+  swig_link_libraries(dynet_swig dynet)
 else(WITH_CUDA_BACKEND)
   MESSAGE("-- swig link with CPU library")
   swig_link_libraries(dynet_swig dynet)
