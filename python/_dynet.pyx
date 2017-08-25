@@ -24,13 +24,9 @@ cdef class DynetParams: # {{{
     
     This is useful if you want to specify the global dynet parameters (memory, random seed...) programmatically, for example in a notebook.
     
-    In order to use this object, you will need to import a different package:
-    
     .. code-block:: python
 
         import _dynet
-        # or
-        import _gdynet # For GPU
     
     You can then declare and use a :code:`DynetParams` object
     
@@ -45,6 +41,20 @@ cdef class DynetParams: # {{{
         dyparams.set_random_seed(666)
         # Initialize with the given parameters
         dyparams.init() # or init_from_params(dyparams)
+
+    You can also use :code:`dynet_config` object in your script to specify the
+    device usage and the global dynet parameters (memory, random seed...) before
+    :code:`import dynet`:
+
+    .. code-block:: python
+ 
+        import dynet_config
+        # Declare GPU as the default device type
+        dynet_config.set_gpu()
+        # Set some parameters manualy
+        dynet_config.set(mem=4,random_seed=9)
+        # Initialize dynet import using above configuration in the current scope
+        import dynet
         
     Don't forget to initialize with :code:`dyparams.init()`, otherwise dynet will raise an error.
     """
@@ -57,7 +67,10 @@ cdef class DynetParams: # {{{
     #      made much more "pythonic" and then this
     #      should be adapted.
     cpdef from_config(self, conf):
-        """TODO
+        """Set parameters from config object:
+        
+        Attributes of conf object:
+            mem, seed, autobatch, autobatch_debug, weight_decay, shared_params, requested_gpus, gpu_mask
         """
         self.cparams.mem_descriptor = str(conf["mem"]).encode()
         self.cparams.random_seed=conf["seed"]
@@ -195,13 +208,7 @@ cdef class DynetParams: # {{{
 def init(shared_parameters=None):
     """Initialize dynet
     
-    Initializes dynet from command line arguments. Do not use after 
-        
-        import dynet
-
-    only after 
-
-        import _dynet / import _gdynet
+    Initializes dynet from command line arguments. Do not use after import dynet
     
     Keyword Args:
         shared_parameters(bool): [description] (default: None)
