@@ -59,6 +59,7 @@ def get_env(build_dir):
       pass
 
   # Get values passed on the command line
+  i = 0
   for i, arg in enumerate(sys.argv[1:]):
       try:
           key, value = arg.split("=", 1)
@@ -228,6 +229,10 @@ class build(_build):
                 "-DEIGEN3_INCLUDE_DIR=" + EIGEN3_INCLUDE_DIR,
                 "-DPYTHON=" + PYTHON,
             ]
+            for env_var in ("BACKEND",):
+                value = ENV.get(env_var)
+                if value is not None:
+                    cmake_cmd.append("-D" + env_var + "=" + value)
             log.info("Configuring...")
             if run_process(cmake_cmd) != 0:
                 raise DistutilsSetupError(" ".join(cmake_cmd))
