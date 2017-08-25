@@ -765,7 +765,7 @@ inline VariableIndex ComputationGraph::add_function(
       nodes.back()->device = dynet::default_device;
     }
   }
-  if (!nodes.back()->has_cuda_implemented)
+  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
     DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -787,7 +787,7 @@ inline VariableIndex ComputationGraph::add_function(
       nodes.back()->device = dynet::default_device;
     }
   }
-  if (!nodes.back()->has_cuda_implemented)
+  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
     DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -798,7 +798,7 @@ inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments));
   nodes.back()->device = dynet::default_device;
-  if (!nodes.back()->has_cuda_implemented)
+  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
     DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
   set_dim_for_new_node(new_node_index);
   return new_node_index;
@@ -813,7 +813,7 @@ inline VariableIndex ComputationGraph::add_function(
   nodes.push_back(
       new Function(arguments, std::forward<Args>(side_information)...));
   nodes.back()->device = dynet::default_device;
-  if (!nodes.back()->has_cuda_implemented)
+  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
     DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
   set_dim_for_new_node(new_node_index);
   return new_node_index;
