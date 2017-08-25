@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
       // If the dev loss is lower than the previous ones, save the model
       if (dloss < best) {
         best = dloss;
-        TextFileSaver saver("/tmp/rnnlm-batch.model");
+        TextFileSaver saver("rnnlm-batch.model");
         saver.save(model);
       }
       // Print informations

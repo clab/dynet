@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
     cerr << "E = " << loss << endl;
   }
 
-  string outfile = "/tmp/out.model";
+  string outfile = "read-write.model";
   cerr << "Written model to File: " << outfile << endl;
   WriteToFile(outfile, m);  // Writing objects to file
 
