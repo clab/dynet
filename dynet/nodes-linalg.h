@@ -20,19 +20,25 @@ struct Transpose : public Node {
 // y = inv(x)
 // x = an invertible matrix
 struct MatrixInverse : public Node {
-  explicit MatrixInverse(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  explicit MatrixInverse(const std::initializer_list<VariableIndex>& a) : Node(a) {
+    this->has_cuda_implemented = false;
+  }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = log det(x)
 struct LogDet : public Node {
-  template <typename T> explicit LogDet(const T& a) : Node(a) {}
+  template <typename T> explicit LogDet(const T& a) : Node(a) {
+    this->has_cuda_implemented = false;
+  }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
 // y = Tr(x_1 * x_2^T)
 struct TraceOfProduct : public Node {
-  explicit TraceOfProduct(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  explicit TraceOfProduct(const std::initializer_list<VariableIndex>& a) : Node(a) {
+    this->has_cuda_implemented = false;
+  }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 

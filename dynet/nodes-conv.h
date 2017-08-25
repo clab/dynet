@@ -36,7 +36,8 @@ struct KMaxPooling : public Node {
 
 // y_i = \sum_{j=1}^n x_1:{i-1+j}
 struct KMHNGram : public Node {
-  explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) : Node(a), n(n) {}
+  explicit KMHNGram(const std::initializer_list<VariableIndex>& a, unsigned n) :
+      Node(a), n(n) { this->has_cuda_implemented = false; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   unsigned n;  // width, n=2 for Karl's paper
 };

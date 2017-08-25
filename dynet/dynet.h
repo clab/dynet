@@ -664,6 +664,7 @@ private:
 public:
   // auxiliary memory
   mutable void* aux_mem; /**< this will usually be null. but, if your node needs to store intermediate values between forward and backward, you can use store it here. request the number of bytes you need from aux_storage_size(). Note: this memory will be on the CPU or GPU, depending on your computation backend*/
+  bool has_cuda_implemented = true;
   
 };
 
@@ -678,6 +679,8 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
       nodes.back()->device = dynet::default_device;
     }
   }
+  if (!nodes.back()->has_cuda_implemented)
+    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -695,6 +698,8 @@ inline VariableIndex ComputationGraph::add_function(const std::initializer_list<
       nodes.back()->device = dynet::default_device;
     }
   }
+  if (!nodes.back()->has_cuda_implemented)
+    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -704,6 +709,8 @@ inline VariableIndex ComputationGraph::add_function(const T& arguments) {
   VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments));
   nodes.back()->device = dynet::default_device;
+  if (!nodes.back()->has_cuda_implemented)
+    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
@@ -715,6 +722,8 @@ inline VariableIndex ComputationGraph::add_function(const T& arguments,
   VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(new Function(arguments, std::forward<Args>(side_information)...));
   nodes.back()->device = dynet::default_device;
+  if (!nodes.back()->has_cuda_implemented)
+    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }
