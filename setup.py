@@ -36,7 +36,9 @@ def append_cmake_lib_list(l, var):
 
 # Strip library prefixes and suffixes to prevent linker confusion
 def strip_lib(filename):
-    return re.sub(r"^(?:lib)?(.*)\.(?:so|a|dylib|lib)$", r"\1", filename)
+    filename = re.sub(r"^(?:lib)?(.*)\.(?:so|a|dylib)$", r"\1", filename)
+    filename = re.sub(r"^(.*)\.lib$", r"\1", filename)
+    return filename
 
 def get_env(build_dir):
 
@@ -102,16 +104,14 @@ if CFLAGS is not None:
 # For Cython extensions
 LIBRARIES = ["dynet"]
 LIBRARY_DIRS = ["."]
-GPULIBRARIES = []
-GPULIBRARY_DIRS = []
 COMPILER_ARGS = []
 EXTRA_LINK_ARGS = []
 RUNTIME_LIB_DIRS = []
 INCLUDE_DIRS = []
 
 # Add all environment variables from CMake for Cython extensions
-append_cmake_lib_list(GPULIBRARIES, ENV.get("CUDA_CUBLAS_FILES"))
-append_cmake_list(GPULIBRARY_DIRS, ENV.get("CUDA_CUBLAS_DIRS"))
+append_cmake_lib_list(LIBRARIES, ENV.get("CUDA_CUBLAS_FILES"))
+append_cmake_list(LIBRARY_DIRS, ENV.get("CUDA_CUBLAS_DIRS"))
 CMAKE_INSTALL_PREFIX = ENV.get("CMAKE_INSTALL_PREFIX", INSTALL_PREFIX)
 LIBS_INSTALL_DIR = CMAKE_INSTALL_PREFIX + "/lib/"
 PROJECT_SOURCE_DIR = ENV.get("PROJECT_SOURCE_DIR", SCRIPT_DIR)  # location of the main dynet directory
@@ -124,10 +124,9 @@ if ENV.get("MSVC") == "1":
     # For MSVC, we compile dynet as a static lib, so we need to also link in the
     # other libraries it depends on:
     append_cmake_lib_list(LIBRARIES, ENV.get("LIBS"))
-    append_cmake_lib_list(GPULIBRARIES, ENV.get("LIBS"))
     append_cmake_list(LIBRARY_DIRS, ENV.get("MKL_LINK_DIRS"))  # Add the MKL dirs, if MKL is being used
-    append_cmake_lib_list(GPULIBRARIES, ENV.get("CUDA_RT_FILES"))
-    append_cmake_list(GPULIBRARY_DIRS, ENV.get("CUDA_RT_DIRS"))
+    append_cmake_lib_list(LIBRARIES, ENV.get("CUDA_RT_FILES"))
+    append_cmake_list(LIBRARY_DIRS, ENV.get("CUDA_RT_DIRS"))
 else:
     COMPILER_ARGS[:] = ["-std=c++11"]
     RUNTIME_LIB_DIRS.extend([DYNET_LIB_DIR, LIBS_INSTALL_DIR])
@@ -139,7 +138,6 @@ else:
         EXTRA_LINK_ARGS.append("-Wl,-rpath=" + LIBS_INSTALL_DIR + ",--no-as-needed")
 
 LIBRARY_DIRS.append(DYNET_LIB_DIR)
-GPULIBRARY_DIRS[:0] = LIBRARY_DIRS  # prepend
 
 INCLUDE_DIRS[:] = filter(None, [PROJECT_SOURCE_DIR, EIGEN3_INCLUDE_DIR])
 
@@ -269,13 +267,10 @@ class build_ext(_build_ext):
         if BUILT_EXTENSIONS:
             INCLUDE_DIRS.append(EIGEN3_INCLUDE_DIR)
             LIBRARY_DIRS.append(BUILD_DIR + "/dynet/")
-            GPULIBRARY_DIRS[:0] = LIBRARY_DIRS
         log.info("Building Cython extensions...")
         log.info("INCLUDE_DIRS=" + " ".join(INCLUDE_DIRS))
         log.info("LIBRARIES=" + " ".join(LIBRARIES))
         log.info("LIBRARY_DIRS=" + " ".join(LIBRARY_DIRS))
-        log.info("GPULIBRARIES=" + " ".join(GPULIBRARIES))
-        log.info("GPULIBRARY_DIRS=" + " ".join(GPULIBRARY_DIRS))
         log.info("COMPILER_ARGS=" + " ".join(COMPILER_ARGS))
         log.info("EXTRA_LINK_ARGS=" + " ".join(EXTRA_LINK_ARGS))
         log.info("RUNTIME_LIB_DIRS=" + " ".join(RUNTIME_LIB_DIRS))
