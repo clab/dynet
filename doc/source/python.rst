@@ -222,7 +222,7 @@ After this, you should be able to install using pip or manual installation as no
 Windows Support
 ---------------
 
-You can also use Python on Windows. For simplicity, we recommend 
+You can also use Python on Windows, including GPU and MKL support. For simplicity, we recommend 
 using a Python distribution that already has Cython installed. The following has been tested to work:
 
 1) Install WinPython 2.7.10 (comes with Cython already installed).
