@@ -28,7 +28,7 @@ if(PYTHON)
   check_cython_version(0.23)
   
   # Things to copy the files
-  file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py
+  file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py.in
                      ${CMAKE_CURRENT_SOURCE_DIR}/dynet_config.py
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pxd
@@ -72,3 +72,11 @@ if(PYTHON)
   add_dependencies(copy dynet)
 
 endif()
+
+if (WITH_CUDA_BACKEND)
+  set(HAVE_CUDA True)
+else()
+  set(HAVE_CUDA False)
+endif()
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/dynet.py.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/dynet.py")
