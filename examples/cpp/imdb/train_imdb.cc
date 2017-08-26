@@ -256,7 +256,7 @@ int main(int argc, char** argv) {
   bool first = true;
   int report = 0;
   unsigned lines = 0;
-  TextFileSaver saver("/tmp/imdb.model");
+  TextFileSaver saver("imdb.model");
   while (1) {
     Timer iteration("completed in");
     double loss = 0;

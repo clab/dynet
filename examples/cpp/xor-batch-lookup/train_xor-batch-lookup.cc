@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
   }
   // Output the model and parameter objects
   // to a cout.
-  TextFileSaver saver("/tmp/xor-batch-lookup.model");
+  TextFileSaver saver("xor-batch-lookup.model");
   saver.save(m);
 }
 

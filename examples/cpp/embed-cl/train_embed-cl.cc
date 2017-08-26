@@ -206,7 +206,7 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-	TextFileSaver saver("/tmp/embed-cl.model");
+	TextFileSaver saver("embed-cl.model");
 	saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';

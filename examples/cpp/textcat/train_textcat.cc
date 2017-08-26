@@ -309,7 +309,7 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        TextFileSaver saver("/tmp/textcat.model");
+        TextFileSaver saver("textcat.model");
         saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
