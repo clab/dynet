@@ -218,21 +218,17 @@ First, install Eigen following the above instructions.
 
 To generate the MSVC solution and project files, run
 `cmake <http://www.cmake.org>`__, pointing it to the location you
-installed Eigen and Boost (for example, at c:\\libs\\Eigen and c:\\libs\\boost_1_61_0):
+installed Eigen (for example, at c:\\libs\\Eigen):
 
 ::
 
     mkdir build
     cd build
-    cmake .. -DEIGEN3_INCLUDE_DIR=c:\libs\Eigen -G"Visual Studio 14 2015 Win64"
+    cmake .. -DEIGEN3_INCLUDE_DIR=c:/libs/Eigen -G"Visual Studio 14 2015 Win64"
 
-This will generate `dynet.sln` and a bunch of `*.vcxproj` files (one for
-the DyNet library, and one per example). You should be able to just open
-`dynet.sln` and build all. **Note: multi-process functionality is
+This will generate `dynet.sln`. Simply open this and build all. **Note: multi-process functionality is
 currently not supported in Windows, so the multi-process examples (`*-mp`) will not be included
 in the generated solution**
 
-The Windows build also supports CUDA with the latest version of Eigen (as of Oct 28, 2016), with the following code change: 
-
-- TensorDeviceCuda.h: Change `sleep(1)` to `Sleep(1000)`
+The Windows build also supports MKL and CUDA with the latest version of Eigen. 
 
