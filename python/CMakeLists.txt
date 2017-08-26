@@ -44,14 +44,14 @@ if(PYTHON)
     get_filename_components(CUDA_RT_FILES "${CUDA_LIBRARIES}" NAME)
   endif()
 
-  add_custom_target(copy)
+  add_custom_target(pydynet_precopy)
   foreach(DepFile ${DepFiles})
-    add_custom_command(TARGET copy PRE_BUILD
+    add_custom_command(TARGET pydynet_precopy PRE_BUILD
                        COMMAND ${CMAKE_COMMAND} -E
                            copy ${DepFile} ${CMAKE_CURRENT_BINARY_DIR})
   endforeach()
   # TODO: We should add a dependency, but this isn't working
-  # add_dependencies(copy ${DepFiles})
+  # add_dependencies(pydynet_precopy ${DepFiles})
 
   # Export environment variables for setup.py
   foreach(Var CMAKE_INSTALL_PREFIX PROJECT_SOURCE_DIR PROJECT_BINARY_DIR LIBS EIGEN3_INCLUDE_DIR MKL_LINK_DIRS WITH_CUDA_BACKEND CUDA_RT_FILES CUDA_RT_DIRS CUDA_CUBLAS_FILES CUDA_CUBLAS_DIRS MSVC)
@@ -67,9 +67,9 @@ if(PYTHON)
           COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/timestamp
           DEPENDS ${DepFiles})
 
-  add_custom_target(target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/timestamp)
-  add_dependencies(target copy)
-  add_dependencies(copy dynet)
+  add_custom_target(pydynet ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/timestamp)
+  add_dependencies(pydynet pydynet_precopy)
+  add_dependencies(pydynet_precopy dynet)
 
 endif()
 
