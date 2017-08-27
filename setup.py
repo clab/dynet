@@ -173,23 +173,26 @@ class build(_build):
 
     def run(self):
         global BUILD_DIR, BUILT_EXTENSIONS, EIGEN3_INCLUDE_DIR
+        if self.skip_build:
+            print("Skipping Build.")        
         BUILD_DIR = os.path.abspath(self.build_dir)
         if EIGEN3_INCLUDE_DIR is None:
             EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
-        log.info("CMAKE_PATH=" + CMAKE_PATH)
-        log.info("MAKE_PATH=" + MAKE_PATH)
+        log.info("CMAKE_PATH={}".format(CMAKE_PATH))
+        log.info("MAKE_PATH={}".format(MAKE_PATH))
         log.info("MAKE_FLAGS=" + " ".join(MAKE_FLAGS))
         if HG_PATH is not None:
-            log.info("HG_PATH=" + HG_PATH)
-        log.info("EIGEN3_INCLUDE_DIR=" + EIGEN3_INCLUDE_DIR)
-        log.info("CC_PATH=" + CC_PATH)
-        log.info("CXX_PATH=" + CXX_PATH)
-        log.info("SCRIPT_DIR=" + SCRIPT_DIR)
-        log.info("BUILD_DIR=" + BUILD_DIR)
-        log.info("INSTALL_PREFIX=" + INSTALL_PREFIX)
-        log.info("PYTHON=" + PYTHON)
-        run_process([CMAKE_PATH, "--version"])
-        run_process([CXX_PATH, "--version"])
+            log.info("HG_PATH={}".format(HG_PATH))
+        log.info("EIGEN3_INCLUDE_DIR={}".format(EIGEN3_INCLUDE_DIR))
+        log.info("CC_PATH={}".format(CC_PATH))
+        log.info("CXX_PATH={}".format(CXX_PATH))
+        log.info("SCRIPT_DIR={}".format(SCRIPT_DIR))
+        log.info("BUILD_DIR={}".format(BUILD_DIR))
+        log.info("INSTALL_PREFIX={}".format(INSTALL_PREFIX))
+        log.info("PYTHON={}".format(PYTHON))
+        if not self.skip_build:
+            run_process([CMAKE_PATH, "--version"])
+            run_process([CXX_PATH, "--version"])
 
         # This will generally be called by the pip install
         if not self.skip_build:
@@ -204,12 +207,12 @@ class build(_build):
 
             # Prepare folders
             if not os.path.isdir(BUILD_DIR):
-                log.info("Creating build directory " + BUILD_DIR)
+                log.info("Creating build directory {}".format(BUILD_DIR))
                 os.makedirs(BUILD_DIR)
 
             os.chdir(BUILD_DIR)
             if os.path.isdir(EIGEN3_INCLUDE_DIR):
-                log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
+                log.info("Found eigen in {}".format(EIGEN3_INCLUDE_DIR))
             elif HG_PATH is None:
                 raise DistutilsSetupError("`hg` not found.")
             else:
@@ -246,6 +249,7 @@ class build(_build):
             log.info("Installing...")
             if run_process(make_cmd) != 0:
                 raise DistutilsSetupError(" ".join(make_cmd))
+            BUILT_EXTENSIONS = True  # because make calls build_ext
 
         # This will generally be called by the manual install
         else:    
@@ -255,8 +259,8 @@ class build(_build):
                 EIGEN3_INCLUDE_DIR = os.path.join(EIGEN3_INCLUDE_DIR, os.pardir)
             if not os.path.isdir(EIGEN3_INCLUDE_DIR):
                 raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue at the github site.".format(EIGEN3_INCLUDE_DIR))
+            BUILT_EXTENSIONS = False  # already build repo
 
-        BUILT_EXTENSIONS = True  # because make calls build_ext
         _build.run(self)
 
 
@@ -272,14 +276,14 @@ class build_ext(_build_ext):
         if BUILT_EXTENSIONS:
             INCLUDE_DIRS.append(EIGEN3_INCLUDE_DIR)
             LIBRARY_DIRS.append(BUILD_DIR + "/dynet/")
-        log.info("Building Cython extensions...")
-        log.info("INCLUDE_DIRS=" + " ".join(INCLUDE_DIRS))
-        log.info("LIBRARIES=" + " ".join(LIBRARIES))
-        log.info("LIBRARY_DIRS=" + " ".join(LIBRARY_DIRS))
-        log.info("COMPILER_ARGS=" + " ".join(COMPILER_ARGS))
-        log.info("EXTRA_LINK_ARGS=" + " ".join(EXTRA_LINK_ARGS))
-        log.info("RUNTIME_LIB_DIRS=" + " ".join(RUNTIME_LIB_DIRS))
-        _build_ext.run(self)
+            log.info("Building Cython extensions...")
+            log.info("INCLUDE_DIRS=" + " ".join(INCLUDE_DIRS))
+            log.info("LIBRARIES=" + " ".join(LIBRARIES))
+            log.info("LIBRARY_DIRS=" + " ".join(LIBRARY_DIRS))
+            log.info("COMPILER_ARGS=" + " ".join(COMPILER_ARGS))
+            log.info("EXTRA_LINK_ARGS=" + " ".join(EXTRA_LINK_ARGS))
+            log.info("RUNTIME_LIB_DIRS=" + " ".join(RUNTIME_LIB_DIRS))
+            _build_ext.run(self)
         if os.path.abspath(".") != SCRIPT_DIR:
             log.info("Copying built extensions...")
             for d in os.listdir("build"):
