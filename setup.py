@@ -95,16 +95,15 @@ PYTHON = sys.executable
 
 # Try to find Eigen
 EIGEN3_INCLUDE_DIR = ENV.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
-# Default to under the build directory if specified
-if EIGEN3_INCLUDE_DIR is None:
-    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
 # The cmake directory and Python directory are different in manual install, so
 # will break if relative path is specified. Try moving up if path is specified
 # but not found
-elif not os.path.isdir(EIGEN3_INCLUDE_DIR) and os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)):
+if (EIGEN3_INCLUDE_DIR is not None and
+    not os.path.isdir(EIGEN3_INCLUDE_DIR) and
+    os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
-EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)
-
+EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)    
+    
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
 CFLAGS = cfg_vars.get("CFLAGS")
@@ -183,6 +182,8 @@ class build(_build):
     def run(self):
         global BUILD_DIR, BUILT_EXTENSIONS, EIGEN3_INCLUDE_DIR
         BUILD_DIR = os.path.abspath(self.build_dir)
+        if EIGEN3_INCLUDE_DIR is None:
+            EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
         log.info("CMAKE_PATH=" + CMAKE_PATH)
         log.info("MAKE_PATH=" + MAKE_PATH)
         log.info("MAKE_FLAGS=" + " ".join(MAKE_FLAGS))
