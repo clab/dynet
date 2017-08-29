@@ -78,8 +78,12 @@ cdef class DynetParams: # {{{
         self.cparams.autobatch_debug = conf["autobatch_debug"]
         self.cparams.weight_decay = conf["weight_decay"]
         self.cparams.shared_parameters = conf["shared_params"]
-        self.set_requested_gpus(conf["requested_gpus"])
-        self.set_gpu_mask(conf["gpu_mask"])
+        if conf["requested_gpus"] >= 1:
+            self.set_requested_gpus(conf["requested_gpus"])
+        else:
+          self.set_cpu_mode()
+        if conf["gpu_mask"]:
+            self.set_gpu_mask(conf["gpu_mask"])
 
     # TODO can this be removed?
     cpdef from_args(self, shared_parameters=None):
@@ -184,12 +188,10 @@ cdef class DynetParams: # {{{
     cpdef set_requested_gpus(self, int requested_gpus):
         """Number of requested gpus
         
-        Currently only 1 is supported
-        
         Args:
             requested_gpus(number): number of requested gpus
         """
-        self.cparams.requested_gpus = requested_gpus
+        self.cparams.requested_gpus = requested_gpus - 1
         self.cparams.ngpus_requested = True
         self.cparams.ids_requested = False
     
@@ -202,6 +204,10 @@ cdef class DynetParams: # {{{
         self.cparams.gpu_mask = cgpu_mask
         self.cparams.ngpus_requested = False
         self.cparams.ids_requested = True
+
+    cpdef set_cpu_mode(self):
+        self.cparams.ids_requested = 1
+        self.cparams.cpu_requested = 1
 # DynetParams }}}
 
 # Initialization {{{

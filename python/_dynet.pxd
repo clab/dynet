@@ -14,6 +14,7 @@ cdef extern from "dynet/init.h" namespace "dynet":
         bool shared_parameters
         bool ngpus_requested
         bool ids_requested
+        bool cpu_requested
         int requested_gpus
         vector[int] gpu_mask
     cdef CDynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters)
