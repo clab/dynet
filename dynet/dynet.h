@@ -490,6 +490,7 @@ struct ComputationGraph {
   // immediate_compute is also set to true.
   bool check_validity;
   VariableIndex add_function_node(Node *node);
+  void set_inplace_for_new_node(const VariableIndex& i);
   void set_dim_for_new_node(const VariableIndex& i);
 
   std::vector<CGCheckpoint> checkpoints;
@@ -732,6 +733,17 @@ struct Node {
   // default when there is no input
   Device* device;
 
+  // for inplace operations
+  enum class INPLACE_TYPE {NOPE, READ, WRITE};
+  INPLACE_TYPE inplace_state{INPLACE_TYPE::NOPE}; /**< Type for the inplace operations: NOPE(non-inplace), READ(no changes to the memory), WRITE(unrecoverable changes possibly) */
+  int read_num{0};		/**< How many nodes have use this as inputs (NOPE+READ) */
+  int write_num{0};		/**< How many nodes have take this node's memory (WRITE) */
+
+  /**
+   * \brief Whether this node is inplaced (borrowing other's memory)
+   */
+  inline bool inplaced() const { return inplace_state != INPLACE_TYPE::NOPE; }
+
  protected:
   Node() : args(), device(nullptr) {}
   explicit Node(const std::initializer_list<VariableIndex>& a)
@@ -766,8 +778,9 @@ inline VariableIndex ComputationGraph::add_function_node(Node *node) {
       node->device = dynet::default_device;
     }
   }
-  if (node->device->type == DeviceType::GPU && !node->has_cuda_implemented)
-    DYNET_NO_CUDA_IMPL_ERROR(node->as_dummy_string())
+  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
+    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
+  set_inplace_for_new_node(new_node_index);
   set_dim_for_new_node(new_node_index);
   return new_node_index;
 }

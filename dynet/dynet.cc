@@ -164,8 +164,22 @@ void ComputationGraph::_revert(CGCheckpoint p) {
   default_device->revert(p.device_mem_checkpoint);
   // clear all nodes at position >= p.node_idx
   if ((int)nodes.size() > p.node_idx) {
-    for(int i = p.node_idx; i < (int)nodes.size(); i++)
-      delete nodes[i]; // the deletion of nodes.
+		for(int i = p.node_idx; i < (int)nodes.size(); i++){
+			// revert some info
+			Node* one = nodes[i];
+			for(VariableIndex arg : one->args) {
+				if(one->inplace_state == Node::INPLACE_TYPE::WRITE){
+					if(arg <= p.node_idx){
+						DYNET_RUNTIME_ERR("Invalid revert for the node "<<arg<<" cannot be recovered from certain inplaced operation");
+					}
+					nodes[arg]->write_num -= 1;
+				}
+				else{
+					nodes[arg]->read_num -= 1;
+				}
+			}
+			delete one; // the deletion of nodes.
+		}
     nodes.resize(p.node_idx);
     ee->invalidate(p.node_idx - 1); // clear precomputed forward values
   }
@@ -347,6 +361,40 @@ VariableIndex ComputationGraph::add_const_lookup(LookupParameter p, const std::v
   nodes.back()->device = p.get_storage().device;
   set_dim_for_new_node(new_node_index);
   return new_node_index;
+}
+
+// check for the inplace operations
+void ComputationGraph::set_inplace_for_new_node(const VariableIndex& i) {
+	Node* node = nodes[i];
+	// 1. check current node
+	if(node->inplaced()){
+		// currently, only unary operations support inplacing
+		DYNET_ARG_CHECK(node->args.size() == 1, "Failed input count check for inplaced-operation");
+		Node* x0 = nodes[node->args[0]];
+		// check for validity, currently somewhat strict, only allow multiple READ or one WRITE
+		if(node->inplace_state == Node::INPLACE_TYPE::READ){
+			DYNET_ARG_CHECK(x0->write_num == 0, "Failed input for READ inplaced-operation");
+		}
+		else if(node->inplace_state == Node::INPLACE_TYPE::WRITE){
+			// currently only allow one layer of inplace for WRITE since letting it spreading out might cause certain problems
+			DYNET_ARG_CHECK((x0->write_num + x0->read_num == 0) && (!x0->inplaced()), "Failed input for WRITE inplaced-operation");
+		}
+		else{
+			DYNET_RUNTIME_ERR("Impossible inplace staus");
+		}
+	}
+	// 2. check input arguments (make sure their value is preserved)
+	for(VariableIndex arg : node->args) {
+		Node* x = nodes[arg];
+		DYNET_ARG_CHECK(x->write_num == 0, "Failed input argument (already being inplaced)");
+	}
+	// 3. update info
+	for(VariableIndex arg : node->args) {
+		if(node->inplace_state == Node::INPLACE_TYPE::WRITE)
+			nodes[arg]->write_num += 1;
+		else
+			nodes[arg]->read_num += 1;
+	}
 }
 
 // factory function should call this right after creating a new node object

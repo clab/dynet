@@ -8,7 +8,7 @@ namespace dynet {
 
 // y = reshape(x_1, --> to)
 struct Reshape : public Node {
-  explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& to) : Node(a), to(to) {}
+  explicit Reshape(const std::initializer_list<VariableIndex>& a, const Dim& to, bool inplaced) : Node(a), to(to) { if(inplaced) inplace_state = INPLACE_TYPE::READ; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   Dim to;
@@ -16,9 +16,9 @@ struct Reshape : public Node {
 
 // y = x_1
 struct Identity : public Node {
-  explicit Identity(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  explicit Identity(const std::initializer_list<VariableIndex>& a, bool inplaced) : Node(a) { if(inplaced) inplace_state = INPLACE_TYPE::READ; }
   virtual bool supports_multibatch() const override { return true; }
-  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::identity); return sm.get_idx(s); }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { if(inplaced()) return 0; Sig s(nt::identity); return sm.get_idx(s); }
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }  
   DYNET_NODE_DEFINE_DEV_IMPL()
 };

@@ -78,14 +78,14 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 Expression sqrt(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sqrt>({x.i})); }
 Expression abs(const Expression& x) { return Expression(x.pg, x.pg->add_function<Abs>({x.i})); }
 Expression erf(const Expression& x) { return Expression(x.pg, x.pg->add_function<Erf>({x.i})); }
-Expression tanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tanh>({x.i})); }
+Expression tanh(const Expression& x, bool inplaced) { return Expression(x.pg, x.pg->add_function<Tanh>({x.i}, inplaced)); }
 Expression lgamma(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogGamma>({x.i})); }
 Expression log(const Expression& x) { return Expression(x.pg, x.pg->add_function<Log>({x.i})); }
 Expression exp(const Expression& x) { return Expression(x.pg, x.pg->add_function<Exp>({x.i})); }
 Expression square(const Expression& x) { return Expression(x.pg, x.pg->add_function<Square>({x.i})); }
 Expression cube(const Expression& x) { return Expression(x.pg, x.pg->add_function<Cube>({x.i})); }
-Expression logistic(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogisticSigmoid>({x.i})); }
-Expression rectify(const Expression& x) { return Expression(x.pg, x.pg->add_function<Rectify>({x.i})); }
+Expression logistic(const Expression& x, bool inplaced) { return Expression(x.pg, x.pg->add_function<LogisticSigmoid>({x.i}, inplaced)); }
+Expression rectify(const Expression& x, bool inplaced) { return Expression(x.pg, x.pg->add_function<Rectify>({x.i}, inplaced)); }
 Expression elu(const Expression& x, float alpha) { return Expression(x.pg, x.pg->add_function<ExponentialLinearUnit>({x.i}, 1.0, alpha)); }
 Expression selu(const Expression& x) { return Expression(x.pg, x.pg->add_function<ExponentialLinearUnit>({x.i}, 1.0507009873554804934193349852946, 1.6732632423543772848170429916717)); }
 Expression hinge(const Expression& x, unsigned index, float m) { return Expression(x.pg, x.pg->add_function<Hinge>({x.i}, index, m)); }
@@ -102,17 +102,17 @@ Expression sparsemax(const Expression& x) { return Expression(x.pg, x.pg->add_fu
 Expression sparsemax_loss(const Expression& x, const vector<unsigned>& target_support) { return Expression(x.pg, x.pg->add_function<SparsemaxLoss>({x.i}, target_support)); }
 Expression sparsemax_loss(const Expression& x, const vector<unsigned>* ptarget_support) { return Expression(x.pg, x.pg->add_function<SparsemaxLoss>({x.i}, ptarget_support)); }
 Expression softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<Softmax>({x.i})); }
-Expression softsign(const Expression& x) { return Expression(x.pg, x.pg->add_function<SoftSign>({x.i})); }
+Expression softsign(const Expression& x, bool inplaced) { return Expression(x.pg, x.pg->add_function<SoftSign>({x.i}, inplaced)); }
 Expression pow(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Pow>({x.i, y.i})); }
 Expression min(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Min>({x.i, y.i})); }
 Expression max(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Max>({x.i, y.i})); }
 Expression noise(const Expression& x, real stddev) { return Expression(x.pg, x.pg->add_function<GaussianNoise>({x.i}, stddev)); }
-Expression dropout(const Expression& x, real p) { return Expression(x.pg, x.pg->add_function<Dropout>({x.i}, p)); }
-Expression dropout_batch(const Expression& x, real p) { return Expression(x.pg, x.pg->add_function<DropoutBatch>({x.i}, p)); }
-Expression dropout_dim(const Expression& x, unsigned d, real p) { return Expression(x.pg, x.pg->add_function<DropoutDim>({x.i}, d, p)); }
-Expression block_dropout(const Expression& x, real p) { return Expression(x.pg, x.pg->add_function<BlockDropout>({x.i}, p)); }
+Expression dropout(const Expression& x, real p, bool inplaced) { return Expression(x.pg, x.pg->add_function<Dropout>({x.i}, p, inplaced)); }
+Expression dropout_batch(const Expression& x, real p, bool inplaced) { return Expression(x.pg, x.pg->add_function<DropoutBatch>({x.i}, p, inplaced)); }
+Expression dropout_dim(const Expression& x, unsigned d, real p, bool inplaced) { return Expression(x.pg, x.pg->add_function<DropoutDim>({x.i}, d, p, inplaced)); }
+Expression block_dropout(const Expression& x, real p, bool inplaced) { return Expression(x.pg, x.pg->add_function<BlockDropout>({x.i}, p, inplaced)); }
 
-Expression reshape(const Expression& x, const Dim& d) { return Expression(x.pg, x.pg->add_function<Reshape>({x.i}, d)); }
+Expression reshape(const Expression& x, const Dim& d, bool inplaced) { return Expression(x.pg, x.pg->add_function<Reshape>({x.i}, d, inplaced)); }
 Expression transpose(const Expression& x, const vector<unsigned>& dims) { return Expression(x.pg, x.pg->add_function<Transpose>({x.i}, dims)); }
 Expression select_rows(const Expression& x, const vector<unsigned>& rows) { return Expression(x.pg, x.pg->add_function<SelectRows>({x.i}, rows)); }
 Expression select_rows(const Expression& x, const vector<unsigned>* prows) { return Expression(x.pg, x.pg->add_function<SelectRows>({x.i}, prows)); }
