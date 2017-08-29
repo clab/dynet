@@ -102,7 +102,6 @@ if (EIGEN3_INCLUDE_DIR is not None and
     not os.path.isdir(EIGEN3_INCLUDE_DIR) and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
-EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)    
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
@@ -184,6 +183,7 @@ class build(_build):
         BUILD_DIR = os.path.abspath(self.build_dir)
         if EIGEN3_INCLUDE_DIR is None:
             EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
+        EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)    
         log.info("CMAKE_PATH=" + CMAKE_PATH)
         log.info("MAKE_PATH=" + MAKE_PATH)
         log.info("MAKE_FLAGS=" + " ".join(MAKE_FLAGS))
