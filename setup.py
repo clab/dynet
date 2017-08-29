@@ -172,9 +172,7 @@ class build(_build):
         _build.initialize_options(self)
 
     def run(self):
-        global BUILD_DIR, BUILT_EXTENSIONS, EIGEN3_INCLUDE_DIR
-        if self.skip_build:
-            print("Skipping Build.")        
+        global BUILD_DIR, BUILT_EXTENSIONS, EIGEN3_INCLUDE_DIR      
         BUILD_DIR = os.path.abspath(self.build_dir)
         if EIGEN3_INCLUDE_DIR is None:
             EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
@@ -190,12 +188,11 @@ class build(_build):
         log.info("BUILD_DIR={}".format(BUILD_DIR))
         log.info("INSTALL_PREFIX={}".format(INSTALL_PREFIX))
         log.info("PYTHON={}".format(PYTHON))
-        if not self.skip_build:
-            run_process([CMAKE_PATH, "--version"])
-            run_process([CXX_PATH, "--version"])
 
         # This will generally be called by the pip install
         if not self.skip_build:
+            run_process([CMAKE_PATH, "--version"])
+            run_process([CXX_PATH, "--version"])
             if CMAKE_PATH is None:
                 raise DistutilsSetupError("`cmake` not found, and `CMAKE` is not set.")
             if MAKE_PATH is None:
@@ -252,7 +249,8 @@ class build(_build):
             BUILT_EXTENSIONS = True  # because make calls build_ext
 
         # This will generally be called by the manual install
-        else:    
+        else:
+            print("Skipping Build")
             # The cmake directory and Python directory are different in manual install, so
             # try to move to the parent directory
             if not os.path.isdir(EIGEN3_INCLUDE_DIR) and os.path.isdir(os.path.join(EIGEN3_INCLUDE_DIR, os.pardir)):
