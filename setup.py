@@ -87,15 +87,22 @@ BUILT_EXTENSIONS = False
 CMAKE_PATH = ENV.get("CMAKE", find_executable("cmake"))
 MAKE_PATH = ENV.get("MAKE", find_executable("make"))
 MAKE_FLAGS = ENV.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
-EIGEN3_INCLUDE_DIR = ENV.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
-if EIGEN3_INCLUDE_DIR is not None:
-    EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)
 HG_PATH = find_executable("hg")
 CC_PATH = ENV.get("CC", find_executable("gcc"))
 CXX_PATH = ENV.get("CXX", find_executable("g++"))
 INSTALL_PREFIX = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
 PYTHON = sys.executable
 
+# Try to find Eigen
+EIGEN3_INCLUDE_DIR = ENV.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
+# The cmake directory and Python directory are different in manual install, so
+# will break if relative path is specified. Try moving up if path is specified
+# but not found
+if (EIGEN3_INCLUDE_DIR is not None and
+    not os.path.isdir(EIGEN3_INCLUDE_DIR) and
+    os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
+    EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
+    
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
 CFLAGS = cfg_vars.get("CFLAGS")
@@ -176,6 +183,7 @@ class build(_build):
         BUILD_DIR = os.path.abspath(self.build_dir)
         if EIGEN3_INCLUDE_DIR is None:
             EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
+        EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)    
         log.info("CMAKE_PATH=" + CMAKE_PATH)
         log.info("MAKE_PATH=" + MAKE_PATH)
         log.info("MAKE_FLAGS=" + " ".join(MAKE_FLAGS))
@@ -249,10 +257,6 @@ class build(_build):
 
         # This will generally be called by the manual install
         else:    
-            # The cmake directory and Python directory are different in manual install, so
-            # try to move to the parent directory
-            if not os.path.isdir(EIGEN3_INCLUDE_DIR) and os.path.isdir(os.path.join(EIGEN3_INCLUDE_DIR, os.pardir)):
-                EIGEN3_INCLUDE_DIR = os.path.join(EIGEN3_INCLUDE_DIR, os.pardir)
             if not os.path.isdir(EIGEN3_INCLUDE_DIR):
                 raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue at the github site.".format(EIGEN3_INCLUDE_DIR))
 
