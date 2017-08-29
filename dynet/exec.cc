@@ -52,9 +52,9 @@ const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
   if (i >= num_nodes_evaluated) {
     incremental_forward(i);
   }
-	if(cg.nodes[i]->write_num > 0){
-		DYNET_RUNTIME_ERR("This operation's output has been written by an inplaced operation, thus no valid value");
-	}
+  if(cg.nodes[i]->write_num > 0){
+    DYNET_RUNTIME_ERR("This operation's output has been written by an inplaced operation, thus no valid value");
+  }
   return nfxs[i];
 }
 
@@ -63,9 +63,9 @@ const Tensor& SimpleExecutionEngine::get_gradient(VariableIndex i) {
   if (i >= backward_computed) {
     DYNET_RUNTIME_ERR("Requested gradient for node " << i << ", but backward pass was computed from node " << (backward_computed - 1));
   }
-	if(cg.nodes[i]->inplaced()){
-		DYNET_RUNTIME_ERR("This operation is an inplaced operation, thus no valid gradient");
-	}
+  if(cg.nodes[i]->inplaced()){
+    DYNET_RUNTIME_ERR("This operation is an inplaced operation, thus no valid gradient");
+  }
   return ndEdfs[i];
 }
 
@@ -108,10 +108,10 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       nfxs[num_nodes_evaluated].device = node->device;
       nfxs[num_nodes_evaluated].mem_pool = DeviceMempool::FXS;
       // Get the memory (directly share pointer when inlined)
-			if(node->inplaced())
-				nfxs[num_nodes_evaluated].v = nfxs[node->args[0]].v;
-			else
-				nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(node->dim.size() * sizeof(float)));
+      if(node->inplaced())
+        nfxs[num_nodes_evaluated].v = nfxs[node->args[0]].v;
+      else
+        nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(node->dim.size() * sizeof(float)));
       if (nfxs[num_nodes_evaluated].v == nullptr)
         DYNET_RUNTIME_ERR("Ran out of memory when executing node " << num_nodes_evaluated);
       void* aux_mem = nullptr;
@@ -152,12 +152,12 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     ndEdfs[i].d = dim;
     ndEdfs[i].device = nfxs[i].device;
     ndEdfs[i].mem_pool = DeviceMempool::DEDFS;
-		// share pointers when inplacing
-		const Node* node = cg.nodes[i];
-		if(node->inplaced())
-			ndEdfs[i].v = ndEdfs[node->args[0]].v;
-		else
-			ndEdfs[i].v = static_cast<float*>(ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
+    // share pointers when inplacing
+    const Node* node = cg.nodes[i];
+    if(node->inplaced())
+      ndEdfs[i].v = ndEdfs[node->args[0]].v;
+    else
+      ndEdfs[i].v = static_cast<float*>(ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
     if (!ndEdfs[i].v)
       DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for derivatives of node " << i);
   }
@@ -350,9 +350,9 @@ const Tensor& BatchedExecutionEngine::get_value(VariableIndex i) {
   if (i >= num_nodes_evaluated) {
     incremental_forward(i);
   }
-	if(cg.nodes[i]->write_num > 0){
-		DYNET_RUNTIME_ERR("This operation's output has been written by an inplaced operation, thus no valid value");
-	}
+  if(cg.nodes[i]->write_num > 0){
+    DYNET_RUNTIME_ERR("This operation's output has been written by an inplaced operation, thus no valid value");
+  }
   return get_nfx(i);
 }
 
@@ -361,9 +361,9 @@ const Tensor& BatchedExecutionEngine::get_gradient(VariableIndex i) {
   if (i >= backward_computed) {
     DYNET_RUNTIME_ERR("Requested gradient for node " << i << ", but backward pass was computed from node " << backward_computed);
   }
-	if(cg.nodes[i]->inplaced()){
-		DYNET_RUNTIME_ERR("This operation is an inplaced operation, thus no valid gradient");
-	}
+  if(cg.nodes[i]->inplaced()){
+    DYNET_RUNTIME_ERR("This operation is an inplaced operation, thus no valid gradient");
+  }
   return ndEdfs[i];
 }
 
@@ -642,10 +642,10 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         nfx.device = node->device;
         nfx.mem_pool = DeviceMempool::FXS;
         // Allocate memory (just sharing pointers when inlined)
-				if(node->inplaced())
-					nfx.v = get_nfx(node->args[0]).v;
-				else
-					nfx.v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(node2size[curr_node] * sizeof(float)));
+        if(node->inplaced())
+          nfx.v = get_nfx(node->args[0]).v;
+        else
+          nfx.v = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(node2size[curr_node] * sizeof(float)));
         if (nfx.v == nullptr)
           DYNET_RUNTIME_ERR("Ran out of memory when allocating for node " << curr_node);
         size_t aux_size = node->aux_storage_size();
@@ -812,7 +812,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward(VariableIndex i) {
     incremental_forward_no_update(i, autobatch_flag);
   }
 
-  num_nodes_evaluated = max(i + 1, num_nodes_evaluated);	
+  num_nodes_evaluated = max(i + 1, num_nodes_evaluated);  
   return get_nfx(i);
 }
 
@@ -855,12 +855,12 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
     batched_ndEdfs[i].d = dim;
     batched_ndEdfs[i].device = cg.nodes[my_batch.ids[0]]->device;
     batched_ndEdfs[i].mem_pool = DeviceMempool::DEDFS;
-		// share pointers when inplacing
-		const Node* node = cg.nodes[my_batch.ids[0]];
-		if(node->inplaced())
-			batched_ndEdfs[i].v = ndEdfs[node->args[0]].v;
-		else
-			batched_ndEdfs[i].v = static_cast<float*>(batched_ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
+    // share pointers when inplacing
+    const Node* node = cg.nodes[my_batch.ids[0]];
+    if(node->inplaced())
+      batched_ndEdfs[i].v = ndEdfs[node->args[0]].v;
+    else
+      batched_ndEdfs[i].v = static_cast<float*>(batched_ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
     if (!batched_ndEdfs[i].v)
       DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for derivatives of node " << i);
     // Assign the memory within the batch

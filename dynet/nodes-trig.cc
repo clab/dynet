@@ -36,10 +36,10 @@ void Tanh::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-	if(inplaced())
-		dEdxi.tvec().device(*dev.edevice) = fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
-	else
-		dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
+  if(inplaced())
+    dEdxi.tvec().device(*dev.edevice) = fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
+  else
+    dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Tanh)
 

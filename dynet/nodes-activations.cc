@@ -39,9 +39,9 @@ void Rectify::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   if(inplaced())
-		dEdxi.tvec().device(*dev.edevice) = fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
+    dEdxi.tvec().device(*dev.edevice) = fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
   else
-		dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
+    dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
 }
 DYNET_NODE_INST_DEV_IMPL(Rectify)
 
@@ -76,7 +76,7 @@ void LogisticSigmoid::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   if(inplaced())
-		dEdxi.tvec().device(*dev.edevice) = fx.tvec().binaryExpr(dEdf.tvec(), scalar_logistic_sigmoid_backward_op<float>());
+    dEdxi.tvec().device(*dev.edevice) = fx.tvec().binaryExpr(dEdf.tvec(), scalar_logistic_sigmoid_backward_op<float>());
   else
     dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_logistic_sigmoid_backward_op<float>());
 }
@@ -113,10 +113,10 @@ void SoftSign::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-	if(inplaced())
-		dEdxi.tvec().device(*dev.edevice) = fx.tvec().binaryExpr(dEdf.tvec(), FSoftSignBackward());
-	else
-		dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FSoftSignBackward());
+  if(inplaced())
+    dEdxi.tvec().device(*dev.edevice) = fx.tvec().binaryExpr(dEdf.tvec(), FSoftSignBackward());
+  else
+    dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FSoftSignBackward());
 }
 DYNET_NODE_INST_DEV_IMPL(SoftSign)
 

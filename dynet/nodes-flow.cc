@@ -35,10 +35,10 @@ template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
-	if(inplaced())
-		;		// pass, already sharing pointers
-	else
-		fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  if(inplaced())
+    ;    // pass, already sharing pointers
+  else
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -49,10 +49,10 @@ void Reshape::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device, dEdf.mem_pool);
-	if(inplaced())
-		;		// pass, already accumulated into it
-	else
-		dEdxi.tvec().device(*dev.edevice) += reshaped.tvec();
+  if(inplaced())
+    ;    // pass, already accumulated into it
+  else
+    dEdxi.tvec().device(*dev.edevice) += reshaped.tvec();
 }
 DYNET_NODE_INST_DEV_IMPL(Reshape)
 
@@ -73,10 +73,10 @@ Dim Identity::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Identity::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-	if(inplaced())
-		;		// pass, already sharing pointers
-	else
-		fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  if(inplaced())
+    ;    // pass, already sharing pointers
+  else
+    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
 }
 
 template<class MyDevice>
@@ -86,10 +86,10 @@ void Identity::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-	if(inplaced())
-		;		// pass, already accumulated into it
-	else
-		dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+  if(inplaced())
+    ;    // pass, already accumulated into it
+  else
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
 }
 DYNET_NODE_INST_DEV_IMPL(Identity)
 

@@ -42,10 +42,10 @@ void Dropout::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-	if(inplaced())
-		dEdxi.tvec().device(*dev.edevice) = dEdf.tvec() * m.tvec();
-	else
-		dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * m.tvec();
+  if(inplaced())
+    dEdxi.tvec().device(*dev.edevice) = dEdf.tvec() * m.tvec();
+  else
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * m.tvec();
 }
 DYNET_NODE_INST_DEV_IMPL(Dropout)
 
@@ -93,10 +93,10 @@ void DropoutDim::backward_dev_impl(const MyDevice & dev,
   mask_dim.d[dimension]=1;
   Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Eigen::array<ptrdiff_t, 4> bcast = {1, 1, 1, 1}; bcast[dimension] = dEdf.d[dimension];
-	if(inplaced())
-		dEdxi.tb<3>().device(*dev.edevice) = dEdf.tb<3>() * m.tb<3>().broadcast(bcast);
-	else
-		dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>() * m.tb<3>().broadcast(bcast);
+  if(inplaced())
+    dEdxi.tb<3>().device(*dev.edevice) = dEdf.tb<3>() * m.tb<3>().broadcast(bcast);
+  else
+    dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>() * m.tb<3>().broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(DropoutDim)
 
@@ -140,10 +140,10 @@ void DropoutBatch::backward_dev_impl(const MyDevice & dev,
   Dim mask_dim({1},xs[0]->d.batch_elems());
   Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
-	if(inplaced())
-		dEdxi.tbvec().device(*dev.edevice) = dEdf.tbvec() * m.tbvec().broadcast(bcast);
-	else
-		dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * m.tbvec().broadcast(bcast);
+  if(inplaced())
+    dEdxi.tbvec().device(*dev.edevice) = dEdf.tbvec() * m.tbvec().broadcast(bcast);
+  else
+    dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * m.tbvec().broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(DropoutBatch)
 
@@ -189,10 +189,10 @@ void BlockDropout::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   float block_multiplier = *(static_cast<float*>(aux_mem));
-	if(inplaced())
-		dEdxi.tvec().device(*dev.edevice) = dEdf.tvec() * block_multiplier;
-	else
-		dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * block_multiplier;
+  if(inplaced())
+    dEdxi.tvec().device(*dev.edevice) = dEdf.tvec() * block_multiplier;
+  else
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * block_multiplier;
 }
 DYNET_NODE_INST_DEV_IMPL(BlockDropout)
 
