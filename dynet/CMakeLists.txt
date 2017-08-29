@@ -100,9 +100,39 @@ set(dynet_library_HDRS
     matrix-multiply.h
     mem.h
     model.h
+    nodes-activations.h
+    nodes-affinetransform.h
+    nodes-arith-const.h
+    nodes-arith-cwise.h
+    nodes-arith-scalar.h
+    nodes-arith-sum.h
+    nodes-arith-unary.h
+    nodes-concat.h
+    nodes-const.h
     nodes-contract.h
     nodes-conv.h
+    nodes-conv2d.h
+    nodes-dropout.h
+    nodes-flow.h
+    nodes-hinge.h
+    nodes-linalg.h
+    nodes-logsumexp.h
+    nodes-losses.h
+    nodes-lstm.h
     nodes-macros.h
+    nodes-matrixmultiply.h
+    nodes-maxpooling2d.h
+    nodes-minmax.h
+    nodes-moments.h
+    nodes-normalization.h
+    nodes-norms.h
+    nodes-pickneglogsoftmax.h
+    nodes-random.h
+    nodes-select.h
+    nodes-similarities.h
+    nodes-softmaxes.h
+    nodes-to-device.h
+    nodes-trig.h
     nodes.h
     param-init.h
     param-nodes.h

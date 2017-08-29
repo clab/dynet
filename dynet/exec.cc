@@ -254,6 +254,7 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
     } else { throw std::runtime_error("Bad device type"); }
     dest += sz; // pointer arith
   }
+  if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
   size_t req_sz = batch_ids.size()*3*sizeof(float*);
   float** srcs = static_cast<float**>(mempool->allocate(req_sz));
@@ -262,6 +263,8 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
   CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
   gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
+  } else if (tout.device->type == DeviceType::CPU) {}
+  else { throw std::runtime_error("Bad device type"); }
 }
 
 void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<VariableIndex> batch_ids, int ai) {
