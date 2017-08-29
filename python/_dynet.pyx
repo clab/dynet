@@ -3841,7 +3841,7 @@ cpdef Expression vanilla_lstm_gates_dropout_concat(list x_t, Expression h_tm1, E
     for e in x_t:
         ensure_freshness(e) 
         ves.push_back(e.c())
-    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_dropout_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), dropout_mask_x.c(), dropout_mask_h.c(), weightnoise_std))
 
 cpdef Expression vanilla_lstm_gates_concat(list x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
@@ -3855,7 +3855,7 @@ cpdef Expression vanilla_lstm_gates_concat(list x_t, Expression h_tm1, Expressio
 cpdef Expression vanilla_lstm_gates_dropout(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, Expression dropout_mask_x, Expression dropout_mask_h, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
     ensure_freshness(x_t)
-    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_dropout(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), dropout_mask_x.c(), dropout_mask_h.c(), weightnoise_std))
 
 cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
