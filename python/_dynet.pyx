@@ -191,7 +191,7 @@ cdef class DynetParams: # {{{
         Args:
             requested_gpus(number): number of requested gpus
         """
-        self.cparams.requested_gpus = requested_gpus - 1
+        self.cparams.requested_gpus = requested_gpus
         self.cparams.ngpus_requested = True
         self.cparams.ids_requested = False
     
@@ -206,8 +206,8 @@ cdef class DynetParams: # {{{
         self.cparams.ids_requested = True
 
     cpdef set_cpu_mode(self):
-        self.cparams.ids_requested = 1
-        self.cparams.cpu_requested = 1
+        self.cparams.ids_requested = True
+        self.cparams.cpu_requested = True
 # DynetParams }}}
 
 # Initialization {{{
