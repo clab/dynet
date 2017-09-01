@@ -662,8 +662,10 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         // Get the concatenation and pseudo-node info
         my_batch.concat = node->autobatch_concat(cg);
         my_batch.pseudo_node = node->autobatch_pseudo_node(cg, batch_ids);
-        if(my_batch.pseudo_node != nullptr)
+		if (my_batch.pseudo_node != nullptr) {
           my_batch.pseudo_node->aux_mem = head_aux;
+          my_batch.pseudo_node->device = node->device;
+        }
         else
           cg.nodes[batch_ids[0]]->aux_mem = head_aux;
 
