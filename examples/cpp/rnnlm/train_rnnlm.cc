@@ -265,7 +265,7 @@ int main(int argc, char** argv) {
       for (unsigned i = 0; i < report_every_i; ++i) {
         if (si == training.size()) {
           si = 0;
-          if (first) { first = false; } else { sgd->update_epoch(); }
+          if (first) { first = false; }
           cerr << "**SHUFFLE\n";
           completed_epoch++;
           if (eta_decay_onset_epoch && completed_epoch >= (int)eta_decay_onset_epoch)

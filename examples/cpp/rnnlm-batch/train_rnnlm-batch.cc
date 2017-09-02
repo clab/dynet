@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
   // Run for the given number of epochs (or indefinitely if params.NUM_EPOCHS is negative)
   while (epoch < params.NUM_EPOCHS || params.NUM_EPOCHS < 0) {
     // Update the optimizer
-    if (first) { first = false; } else { adam->update_epoch(); }
+    if (first) { first = false; }
     // Reshuffle the dataset
     cerr << "**SHUFFLE\n";
     random_shuffle(order.begin(), order.end());

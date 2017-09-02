@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i, ++si) {
       if (si == order.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
+        if (first) { first = false; }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
