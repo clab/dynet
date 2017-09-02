@@ -4141,7 +4141,7 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
     cdef CGRUBuilder* thisgruptr
     cdef tuple _spec
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
-        _spec = (layers, input_dim, hidden_dim)
+        self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:
