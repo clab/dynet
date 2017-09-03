@@ -5,6 +5,7 @@ cd "$TRAVIS_BUILD_DIR"
 source activate "$PYVER"
 
 if [[ "$PYTHON_INSTALL" == manual ]]; then
+  cd build
   if [[ "$TRAVIS_OS_NAME" == linux ]]; then
     make -j$(nproc)
   elif [[ "$TRAVIS_OS_NAME" == osx ]]; then
