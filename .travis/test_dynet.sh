@@ -6,15 +6,15 @@ source activate "$PYVER"
 
 if [[ "$PYTHON_INSTALL" == manual ]]; then
   if [[ "$TRAVIS_OS_NAME" == linux ]]; then
-    make -j$(nproc) || travis_terminate 1
+    make -j$(nproc)
   elif [[ "$TRAVIS_OS_NAME" == osx ]]; then
-    make -j$(sysctl -n hw.ncpu) || travis_terminate 1
+    make -j$(sysctl -n hw.ncpu)
     export DYLD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/dynet
   fi
-  make install || travis_terminate 1
-  make test || travis_terminate 1
+  make install
+  make test
   cd python
-  python ../../setup.py build --build-dir=.. --skip-build install --user || travis_terminate 1
+  python ../../setup.py build --build-dir=.. --skip-build install --user
 else
   pip install dynet --no-index -f dist
   if [[ "$TRAVIS_OS_NAME" == osx ]]; then
