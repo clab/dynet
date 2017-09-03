@@ -238,8 +238,7 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  Trainer* sgd = nullptr;
-  sgd = new AdamTrainer(model);
+  std::unique_ptr<Trainer> sgd(new AdamTrainer(model));
 
   DocumentModel engine(model);
 
@@ -309,5 +308,4 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }
   }
-  delete sgd;
 }

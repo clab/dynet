@@ -186,11 +186,11 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   bool use_momentum = true;
-  Trainer* sgd = nullptr;
+  std::unique_ptr<Trainer> sgd;
   if (use_momentum)
-    sgd = new MomentumSGDTrainer(model);
+    sgd.reset(new MomentumSGDTrainer(model));
   else
-    sgd = new SimpleSGDTrainer(model);
+    sgd.reset(new SimpleSGDTrainer(model));
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
@@ -258,5 +258,4 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / dtags) << ' ';
     }
   }
-  delete sgd;
 }

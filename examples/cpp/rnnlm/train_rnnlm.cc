@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  Trainer* sgd = new SimpleSGDTrainer(model);
+  std::unique_ptr<Trainer> sgd(new SimpleSGDTrainer(model));
   sgd->learning_rate = params.eta0;
   RNNLanguageModel<LSTMBuilder> lm(model);
 
@@ -369,6 +369,4 @@ int main(int argc, char** argv) {
       cout << endl;
     }
   }
-
-  delete sgd;
 }

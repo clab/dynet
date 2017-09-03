@@ -176,12 +176,12 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  Trainer* sgd = nullptr;
+  std::unique_ptr<Trainer> sgd;
   // bool use_momentum = false;
   // if (use_momentum)
   //   sgd = new MomentumSGDTrainer(model);
   // else
-  sgd = new SimpleSGDTrainer(model);
+  sgd.reset(new SimpleSGDTrainer(model));
 
   RNNLanguageModel<GRUBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
@@ -245,6 +245,4 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
   }
-  delete sgd;
 }
-
