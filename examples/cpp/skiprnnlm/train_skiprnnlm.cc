@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
         for (unsigned i = 0; i < report_every_i; ++i) {
             if (si == training.size()) {
                 si = 0;
-                if (first) { first = false; } else { sgd->update_epoch(); }
+                if (first) { first = false; }
                 LOG(INFO) << "**SHUFFLE\n";
                 shuffle(order.begin(), order.end(), *rndeng);
             }
