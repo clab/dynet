@@ -139,7 +139,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
 
   const unsigned num_nodes = from_where+1;
   ndEdfs.resize(num_nodes);
-  vector<Device*> &devices = device_manager->get_devices();
+  const vector<Device*> &devices = device_manager->get_devices();
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->free();
   for (unsigned i = 0; i < num_nodes; ++i) {

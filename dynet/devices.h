@@ -89,7 +89,7 @@ class DeviceManager final {
 
   size_t num_devices() const { return devices.size(); }
 
-  std::vector<Device*>& get_devices() { return devices; }
+  const std::vector<Device*>& get_devices() const { return devices; }
 
   Device* get_global_device(const std::string & name);
 
