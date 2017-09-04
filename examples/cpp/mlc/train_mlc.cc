@@ -134,7 +134,6 @@ int main(int argc, char** argv) {
 
   unsigned report_every_i = 50;
   unsigned si = train.size();
-  bool first = true;
   vector<unsigned> order(train.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
   double ti = 0;
@@ -145,7 +144,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == train.size()) {
         si = 0;
-        if (first) { first = false; }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }

@@ -80,15 +80,12 @@ int main(int argc, char** argv) {
   vector<unsigned> order(num_batches);
   for (unsigned i = 0; i < num_batches; ++i) order[i] = i;
 
-  bool first = true;
   unsigned epoch = 0;
   vector<Expression> cur_batch;
   vector<unsigned> cur_labels;
 
   // Run for the given number of epochs (or indefinitely if params.NUM_EPOCHS is negative)
   while (epoch < params.NUM_EPOCHS || params.NUM_EPOCHS < 0) {
-    // Update the optimizer
-    if (first) { first = false; }
     // Reshuffle the dataset
     cerr << "**SHUFFLE\n";
     random_shuffle(order.begin(), order.end());

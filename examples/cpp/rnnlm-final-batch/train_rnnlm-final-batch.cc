@@ -209,7 +209,6 @@ int main(int argc, char** argv) {
   vector<unsigned> order((training.size() + BATCH_SIZE - 1) / BATCH_SIZE);
   unsigned si = order.size();
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i * BATCH_SIZE;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   while (1) {
@@ -219,7 +218,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i, ++si) {
       if (si == order.size()) {
         si = 0;
-        if (first) { first = false; }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
