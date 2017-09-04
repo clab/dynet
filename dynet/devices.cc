@@ -134,12 +134,35 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
 
 Device_CPU::~Device_CPU() {}
 
-Device* get_global_device(const std::string & name) {
-  auto it = dynet::devices_map.find(name);
-  if (it == dynet::devices_map.end()) {
+
+DeviceManager::DeviceManager() {}
+
+DeviceManager::~DeviceManager() {
+  // TODO: Devices cannot be deleted at the moment because the destructor
+  // is protected
+  // for(Device* device : devices) delete device;
+  devices.clear();
+}
+
+void DeviceManager::add(Device* d) {
+    devices.push_back(d);
+    devices_map[d->name] = d;
+}
+
+Device* DeviceManager::get_global_device(const std::string & name) {
+  auto it = devices_map.find(name);
+  if (it == devices_map.end()) {
     throw std::runtime_error("Invalid device name: " + name);
   }
   return it->second;
+}
+
+DeviceManager* get_device_manager() {
+  // In C++11, initialization of function local static objects is
+  // thread safe.
+  // See https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
+  static auto device_manager = new DeviceManager;
+  return device_manager;
 }
 
 } // namespace dynet

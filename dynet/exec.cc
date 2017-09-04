@@ -15,6 +15,9 @@ using namespace std;
 
 namespace dynet {
 
+ExecutionEngine::ExecutionEngine(const ComputationGraph& cg)
+    : device_manager(get_device_manager()), cg(cg), backward_computed(0) {}
+
 ExecutionEngine::~ExecutionEngine() {}
 
 vector<const Tensor*> ExecutionEngine::forward(std::vector<VariableIndex> is) {
@@ -73,7 +76,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 
   // free any old memory if this is a new CG
   if (num_nodes_evaluated == 0)
-    for(Device* dev : dynet::devices)
+    for(Device* dev : device_manager->get_devices())
       dev->pools[(int)DeviceMempool::FXS]->free();
 
   if (i >= num_nodes_evaluated) {
@@ -136,6 +139,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
 
   const unsigned num_nodes = from_where+1;
   ndEdfs.resize(num_nodes);
+  vector<Device*> &devices = device_manager->get_devices();
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->free();
   for (unsigned i = 0; i < num_nodes; ++i) {
@@ -365,7 +369,7 @@ void BatchedExecutionEngine::garbage_collect() {
       }
     }
   }
-  for(Device* dev : dynet::devices)
+  for(Device* dev : device_manager->get_devices())
     dev->pools[(int)DeviceMempool::FXS]->free();
   batches.clear();
 }
@@ -823,7 +827,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
   // Allocate the memory
   vector<Tensor> batched_ndEdfs(num_batches);
   ndEdfs.resize(node2batch.size());
-  for(Device* device : devices)
+  for(Device* device : device_manager->get_devices())
     device->pools[(int)DeviceMempool::DEDFS]->free();
   for (unsigned i = 0; i < num_batches; ++i) {
     const auto & my_batch = batches[i];
@@ -842,7 +846,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
       ndEdfs[id].v = batched_ndEdfs[i].v + node2offset[id];
     }
   }
-  for(Device* device : devices)
+  for(Device* device : device_manager->get_devices())
     device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
 
   // initialize dE/dE = 1
