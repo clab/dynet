@@ -253,7 +253,6 @@ int main(int argc, char** argv) {
     if (report_every_i > si) report_every_i = si;
     vector<unsigned> order(training.size());
     for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-    bool first = true;
     int report = 0;
     double lines = 0;
     int completed_epoch = -1;
@@ -265,7 +264,6 @@ int main(int argc, char** argv) {
       for (unsigned i = 0; i < report_every_i; ++i) {
         if (si == training.size()) {
           si = 0;
-          if (first) { first = false; } else { sgd->update_epoch(); }
           cerr << "**SHUFFLE\n";
           completed_epoch++;
           if (eta_decay_onset_epoch && completed_epoch >= (int)eta_decay_onset_epoch)
