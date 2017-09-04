@@ -83,6 +83,8 @@ class DeviceManager final {
   DeviceManager();
   ~DeviceManager();
 
+  void clear();
+
   void add(Device* d);
 
   Device* get(size_t i) { return devices[i]; }

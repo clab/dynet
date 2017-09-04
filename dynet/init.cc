@@ -235,6 +235,7 @@ void initialize(int& argc, char**& argv, bool shared_parameters) {
 
 void cleanup() {
   delete rndeng;
+  get_device_manager()->clear();
   default_device = nullptr;
 }
 

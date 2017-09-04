@@ -138,6 +138,10 @@ Device_CPU::~Device_CPU() {}
 DeviceManager::DeviceManager() {}
 
 DeviceManager::~DeviceManager() {
+  clear();
+}
+
+void DeviceManager::clear() {
   // TODO: Devices cannot be deleted at the moment because the destructor
   // is protected
   // for(Device* device : devices) delete device;
