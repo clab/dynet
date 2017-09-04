@@ -210,14 +210,9 @@ void initialize(DynetParams& params) {
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
   int default_index = 0;
-  if (gpudevices.size() > 0) {
-    Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
-    device_manager->add(d);
-  } else {
-    Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor,
-                               params.shared_parameters);
-    device_manager->add(d);
-  }
+
+  Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+  device_manager->add(d);
   default_device = device_manager->get(default_index);
 
   // TODO these should be accessed through the relevant device and removed here
