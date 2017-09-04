@@ -196,7 +196,6 @@ int main(int argc, char** argv) {
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   while(1) {
@@ -206,7 +205,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }

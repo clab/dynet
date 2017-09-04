@@ -60,7 +60,6 @@ int main(int argc, char** argv) {
       cg.backward(loss_expr);
       sgd.update();
     }
-    sgd.update_epoch();
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
