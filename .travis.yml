@@ -25,7 +25,8 @@ addons:
       - libboost-regex1.55-dev
 env:
   global:
-    - PYTHON=python CONDA_PACKAGES="numpy cython"
+    - PYTHON=python CONDA_PACKAGES="numpy cython" TWINE_USERNAME=danielh
+    - secure: "j8Ro21/7h5FKuJHPJRHYfOiZHMoAfD/dfpqXZreGrl79jVSEdPZmmOdvFH++CqrRdttpxOf2Lg5qOfpXfziC5ecJx1USslBSo2qwAG9JwPkwjCK7MhouM64yhVedj9Es/H635aufbyRsDIhKr5poPrrH+UebEq/63QpEdDWIWq8="
   matrix:
     - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
     - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
