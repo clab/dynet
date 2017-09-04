@@ -56,12 +56,12 @@ matrix:
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
 
 before_install:
-  - .travis/install_conda.sh
+  - travis_retry .travis/install_conda.sh
   - export PATH="$PWD/miniconda/bin:$PATH"
   - source activate "$PYVER"
 
 install:
-  - .travis/install_eigen.sh
+  - travis_retry .travis/install_eigen.sh
   - export EIGEN3_INCLUDE_DIR=/usr/local/include/eigen3
 
 before_script:
