@@ -2,8 +2,9 @@
 set -xe
 
 if [[ "$BUILD_ARCH" == i686 && `arch` == x86_64 ]]; then
-  echo Using Docker to test $BUILD_ARCH build on `arch`
-  docker run -e PYVER -e TRAVIS_OS_NAME -e CONDA_PACKAGES -e TRAVIS_BUILD_DIR=/build -e DYNET_TEST=1 -v "$TRAVIS_BUILD_DIR":/build --rm "dynet-manylinux1-${BUILD_ARCH}-builder" /root/.travis/build_manylinux_wheel.sh
+  echo Skipping Python test on $BUILD_ARCH
+  #echo Using Docker to test $BUILD_ARCH build on `arch`
+  #docker run -e PYVER -e TRAVIS_OS_NAME -e CONDA_PACKAGES -e TRAVIS_BUILD_DIR=/build -e DYNET_TEST=1 -v "$TRAVIS_BUILD_DIR":/build --rm "dynet-manylinux1-${BUILD_ARCH}-builder" /root/.travis/build_manylinux_wheel.sh
 else
   cd "$TRAVIS_BUILD_DIR"
   source activate "$PYVER"
