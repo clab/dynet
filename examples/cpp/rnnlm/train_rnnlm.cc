@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
   SAMPLE = params.sample;
   if (params.dropout_rate)
     DROPOUT = params.dropout_rate;
-  Model model;
+  ParameterCollection model;
   if (params.clusters_file != "")
     cfsm = new ClassFactoredSoftmaxBuilder(HIDDEN_DIM, params.clusters_file, d, model);
   else if (params.paths_file != "")
