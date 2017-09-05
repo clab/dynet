@@ -23,6 +23,7 @@ addons:
       - libboost-serialization1.55-dev
       - libboost-test1.55-dev
       - libboost-regex1.55-dev
+      - pandoc
 env:
   global:
     - PYTHON=python CONDA_PACKAGES="numpy cython" TWINE_USERNAME=danielh
