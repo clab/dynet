@@ -48,7 +48,7 @@ void* SharedAllocator::malloc(size_t n) {
   throw dynet::out_of_memory("Shared memory allocation failed");
 #else
   void* ptr = mmap(NULL, n, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
-  if (!ptr) {
+  if (ptr == MAP_FAILED) {
     cerr << "Shared memory allocation failed n=" << n << endl;
     throw dynet::out_of_memory("Shared memory allocation failed");
   }
