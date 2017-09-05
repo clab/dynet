@@ -234,7 +234,7 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   //sgd = new MomentumSGDTrainer(model);
-  std::unique_ptr<Trainer> sgd(new AdagradTrainer(model));
+  std::unique_ptr<Trainer> adagrad(new AdagradTrainer(model));
   //sgd = new SimpleSGDTrainer(model);
 
   //NeuralBagOfWords nbow(model);
@@ -276,11 +276,11 @@ int main(int argc, char** argv) {
       Expression loss_expr = HingeLoss(y_pred, y);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update(2.0);
+      adagrad->update(2.0);
       ++lines;
       ++ttags;
     }
-    sgd->status();
+    adagrad->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / (double)ttags) << ") ";
     model.project_weights();
 
