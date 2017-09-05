@@ -76,7 +76,9 @@ script:
 deploy:
   provider: script
   skip_cleanup: true
-  script: .travis/deploy.sh
+  script:
+    - .travis/build_sdist.sh
+    - .travis/deploy.sh
   on:
     repo: clab/dynet
     tags: true
