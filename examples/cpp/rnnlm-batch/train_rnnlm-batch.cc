@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
   // Initialize model and trainer ------------------------------------------------------------------
   ParameterCollection model;
   // Use Adam optimizer
-  Trainer* adam = new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8);
+  std::unique_ptr<Trainer> adam(new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8));
   adam->clip_threshold *= params.BATCH_SIZE;
 
   // Create model
@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
     double loss = 0;
     unsigned tokens = 0;
     // Start timer
-    Timer* iteration = new Timer("completed in");
+    std::unique_ptr<Timer> iteration(new Timer("completed in"));
 
     for (si = 0; si < num_batches; ++si) {
       // build graph for this instance
@@ -187,8 +187,7 @@ int main(int argc, char** argv) {
         adam->status();
         cerr << " E = " << (loss / tokens) << " ppl=" << exp(loss / tokens) << ' ';
         // Reinitialize timer
-        delete iteration;
-        iteration = new Timer("completed in");
+        iteration.reset(new Timer("completed in"));
         // Reinitialize loss
         loss = 0;
         tokens = 0;
@@ -222,8 +221,7 @@ int main(int argc, char** argv) {
            << "] E = " << (dloss / dtokens)
            << " ppl=" << exp(dloss / dtokens) << ' ';
       // Reinitialize timer
-      delete iteration;
-      iteration = new Timer("completed in");
+      iteration.reset(new Timer("completed in"));
     }
 
     // Sample some examples because it's cool (also helps debugging)
@@ -234,5 +232,4 @@ int main(int argc, char** argv) {
     // Increment epoch
     ++epoch;
   }
-  delete adam;
 }

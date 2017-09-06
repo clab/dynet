@@ -126,16 +126,16 @@ int main(int argc, char** argv) {
 
     ParameterCollection model;
     bool use_momentum = false;
-    Trainer* sgd = nullptr;
+    std::unique_ptr<Trainer> sgd;
     if (use_momentum)
-        sgd = new MomentumSGDTrainer(model);
+        sgd.reset(new MomentumSGDTrainer(model));
     else
-        sgd = new SimpleSGDTrainer(model);
+        sgd.reset(new SimpleSGDTrainer(model));
 
     RNNSkipLM lm(model);
     if (argc == 4) {
         TextfileLoader loader(argv[3]);
-        loader.populate(model);'
+        loader.populate(model);
     }
 
     unsigned report_every_i = 50;
@@ -195,7 +195,6 @@ int main(int argc, char** argv) {
             LOG(INFO) << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
         }
     }
-    delete sgd;
 }
 
 void read_documents(const std::string &filename, Corpus &corpus) {

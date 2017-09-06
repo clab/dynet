@@ -135,11 +135,11 @@ int main(int argc, char** argv) {
   }
 
   bool use_momentum = false;
-  Trainer* sgd = nullptr;
+  std::unique_ptr<Trainer> sgd;
   if (use_momentum)
-    sgd = new MomentumSGDTrainer(model);
+    sgd.reset(new MomentumSGDTrainer(model));
   else
-    sgd = new SimpleSGDTrainer(model);
+    sgd.reset(new SimpleSGDTrainer(model));
 
   unsigned report_every_i = 100;
   unsigned si = training.size();
@@ -211,6 +211,4 @@ int main(int argc, char** argv) {
     }
 #endif
   }
-  delete sgd;
 }
-

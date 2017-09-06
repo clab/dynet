@@ -223,8 +223,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   ParameterCollection model;
-  Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(model);
+  std::unique_ptr<Trainer> sgd(new SimpleSGDTrainer(model));
   vector<pair<string,vector<unsigned>>> training;
   kSOW = d.convert("<w>");
   kEOW = d.convert("</w>");
@@ -292,6 +291,4 @@ int main(int argc, char** argv) {
     sgd->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
   }
-  delete sgd;
 }
-

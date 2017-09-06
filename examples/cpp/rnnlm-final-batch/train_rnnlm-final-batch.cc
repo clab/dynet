@@ -194,8 +194,7 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(model);
+  std::unique_ptr<Trainer> sgd(new SimpleSGDTrainer(model));
   sgd->clip_threshold *= BATCH_SIZE;
 
   RNNLanguageModel<LSTMBuilder> lm(model);
@@ -252,5 +251,4 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
   }
-  delete sgd;
 }
