@@ -83,4 +83,4 @@ deploy:
   on:
     repo: clab/dynet
     tags: true
-    condition: "$PYTHON_INSTALL == pip"
+    condition: "$PYTHON_INSTALL = pip && $TRAVIS_OS_NAME = linux"
