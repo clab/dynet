@@ -139,12 +139,12 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Trainer* sgd = nullptr;
+  std::unique_ptr<Trainer> sgd;
   // bool use_momentum = false;
   // if (use_momentum)
   //   sgd = new MomentumSGDTrainer(model);
   // else
-  sgd = new SimpleSGDTrainer(model);
+  sgd.reset(new SimpleSGDTrainer(model));
 
   RNNLanguageModel<LSTMBuilder> lm(model, cfsm);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model, cfsm);
@@ -209,6 +209,4 @@ int main(int argc, char** argv) {
     }
 #endif
   }
-  delete sgd;
 }
-

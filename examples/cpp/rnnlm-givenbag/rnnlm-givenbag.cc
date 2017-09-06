@@ -161,11 +161,11 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   bool use_momentum = false;
-  Trainer* sgd = nullptr;
+  std::unique_ptr<Trainer> sgd;
   //if (use_momentum)
   //else
   //sgd = new SimpleSGDTrainer(model);
-  sgd = new MomentumSGDTrainer(model);
+  sgd.reset(new MomentumSGDTrainer(model));
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
@@ -242,6 +242,4 @@ int main(int argc, char** argv) {
     }
 #endif
   }
-  delete sgd;
 }
-

@@ -1074,7 +1074,7 @@ int main(int argc, char** argv) {
 
     ParameterCollection model;
     // auto sgd = new SimpleSGDTrainer(model);
-    auto sgd = new AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8);
+    std::unique_ptr<Trainer> sgd(new AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8));
     int max_seg_len = DATA_MAX_SEG_LEN + 1;
     if(vm.count("train_max_seg_len")){
       max_seg_len = vm["train_max_seg_len"].as<int>();
@@ -1154,7 +1154,6 @@ int main(int argc, char** argv) {
         }
       }
     }
-    delete sgd;
   }else if(vm["test"].as<bool>()){
     use_pretrained_embeding = false;
     use_dropout = false;

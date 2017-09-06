@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
     double num_samples = 0;
 
     // Start timer
-    Timer* iteration = new Timer("completed in");
+    std::unique_ptr<Timer> iteration(new Timer("completed in"));
 
     // Activate dropout
     nn.enable_dropout();
@@ -130,8 +130,7 @@ int main(int argc, char** argv) {
         adam.status();
         cerr << " E = " << (loss / num_samples) << ' ';
         // Reinitialize timer
-        delete iteration;
-        iteration = new Timer("completed in");
+        iteration.reset(new Timer("completed in"));
         // Reinitialize loss
         loss = 0;
         num_samples = 0;
@@ -165,8 +164,7 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (epoch)
            << "] E = " << (dpos / (double) mnist_dev.size()) << ' ';
       // Reinitialize timer
-      delete iteration;
-      iteration = new Timer("completed in");
+      iteration.reset(new Timer("completed in"));
     }
 
     // Increment epoch

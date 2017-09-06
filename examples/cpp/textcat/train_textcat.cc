@@ -233,9 +233,8 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  Trainer* sgd = nullptr;
   //sgd = new MomentumSGDTrainer(model);
-  sgd = new AdagradTrainer(model);
+  std::unique_ptr<Trainer> sgd(new AdagradTrainer(model));
   //sgd = new SimpleSGDTrainer(model);
 
   //NeuralBagOfWords nbow(model);
@@ -313,6 +312,4 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }
   }
-  delete sgd;
 }
-

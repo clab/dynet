@@ -66,10 +66,7 @@ TextFileSaver::TextFileSaver(const std::string & filename, bool append) :
   datastream << std::scientific << std::showpos;
 }
 
-TextFileSaver::~TextFileSaver() {
-  delete p_datastream;
-  p_datastream = nullptr;
-}
+TextFileSaver::~TextFileSaver() {}
 
 void TextFileSaver::save(const ParameterCollection & model,
                          const std::string & key) {
