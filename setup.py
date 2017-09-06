@@ -143,7 +143,7 @@ else:
         COMPILER_ARGS.extend(["-stdlib=libc++", "-mmacosx-version-min=10.7"])
         EXTRA_LINK_ARGS.append("-Wl,-rpath," + LIBS_INSTALL_DIR)
     else:
-        EXTRA_LINK_ARGS.append("-Wl,-rpath=" + LIBS_INSTALL_DIR + ",--no-as-needed")
+        EXTRA_LINK_ARGS.append("-Wl,-rpath=%r" % LIBS_INSTALL_DIR + ",--no-as-needed")
 
 LIBRARY_DIRS.append(DYNET_LIB_DIR)
 
@@ -184,20 +184,21 @@ class build(_build):
         if EIGEN3_INCLUDE_DIR is None:
             EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
         EIGEN3_INCLUDE_DIR = os.path.abspath(EIGEN3_INCLUDE_DIR)    
-        log.info("CMAKE_PATH=" + CMAKE_PATH)
-        log.info("MAKE_PATH=" + MAKE_PATH)
-        log.info("MAKE_FLAGS=" + " ".join(MAKE_FLAGS))
-        if HG_PATH is not None:
-            log.info("HG_PATH=" + HG_PATH)
-        log.info("EIGEN3_INCLUDE_DIR=" + EIGEN3_INCLUDE_DIR)
-        log.info("CC_PATH=" + CC_PATH)
-        log.info("CXX_PATH=" + CXX_PATH)
-        log.info("SCRIPT_DIR=" + SCRIPT_DIR)
-        log.info("BUILD_DIR=" + BUILD_DIR)
-        log.info("INSTALL_PREFIX=" + INSTALL_PREFIX)
-        log.info("PYTHON=" + PYTHON)
-        run_process([CMAKE_PATH, "--version"])
-        run_process([CXX_PATH, "--version"])
+        log.info("CMAKE_PATH=%r" % CMAKE_PATH)
+        log.info("MAKE_PATH=%r" % MAKE_PATH)
+        log.info("MAKE_FLAGS=%r" % " ".join(MAKE_FLAGS))
+        log.info("HG_PATH=%r" % HG_PATH)
+        log.info("EIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR)
+        log.info("CC_PATH=%r" % CC_PATH)
+        log.info("CXX_PATH=%r" % CXX_PATH)
+        log.info("SCRIPT_DIR=%r" % SCRIPT_DIR)
+        log.info("BUILD_DIR=%r" % BUILD_DIR)
+        log.info("INSTALL_PREFIX=%r" % INSTALL_PREFIX)
+        log.info("PYTHON=%r" % PYTHON)
+        if CMAKE_PATH != None:
+            run_process([CMAKE_PATH, "--version"])
+        if CXX_PATH != None:
+            run_process([CXX_PATH, "--version"])
 
         # This will generally be called by the pip install
         if not self.skip_build:
@@ -233,14 +234,14 @@ class build(_build):
             cmake_cmd = [
                 CMAKE_PATH,
                 SCRIPT_DIR,
-                "-DCMAKE_INSTALL_PREFIX=" + INSTALL_PREFIX,
-                "-DEIGEN3_INCLUDE_DIR=" + EIGEN3_INCLUDE_DIR,
-                "-DPYTHON=" + PYTHON,
+                "-DCMAKE_INSTALL_PREFIX=%r" % INSTALL_PREFIX,
+                "-DEIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR,
+                "-DPYTHON=%r" % PYTHON,
             ]
             for env_var in ("BACKEND",):
                 value = ENV.get(env_var)
                 if value is not None:
-                    cmake_cmd.append("-D" + env_var + "=" + value)
+                    cmake_cmd.append("-D" + env_var + "=%r" % value)
             log.info("Configuring...")
             if run_process(cmake_cmd) != 0:
                 raise DistutilsSetupError(" ".join(cmake_cmd))
@@ -277,12 +278,12 @@ class build_ext(_build_ext):
             INCLUDE_DIRS.append(EIGEN3_INCLUDE_DIR)
             LIBRARY_DIRS.append(BUILD_DIR + "/dynet/")
         log.info("Building Cython extensions...")
-        log.info("INCLUDE_DIRS=" + " ".join(INCLUDE_DIRS))
-        log.info("LIBRARIES=" + " ".join(LIBRARIES))
-        log.info("LIBRARY_DIRS=" + " ".join(LIBRARY_DIRS))
-        log.info("COMPILER_ARGS=" + " ".join(COMPILER_ARGS))
-        log.info("EXTRA_LINK_ARGS=" + " ".join(EXTRA_LINK_ARGS))
-        log.info("RUNTIME_LIB_DIRS=" + " ".join(RUNTIME_LIB_DIRS))
+        log.info("INCLUDE_DIRS=%r" % " ".join(INCLUDE_DIRS))
+        log.info("LIBRARIES=%r" % " ".join(LIBRARIES))
+        log.info("LIBRARY_DIRS=%r" % " ".join(LIBRARY_DIRS))
+        log.info("COMPILER_ARGS=%r" % " ".join(COMPILER_ARGS))
+        log.info("EXTRA_LINK_ARGS=%r" % " ".join(EXTRA_LINK_ARGS))
+        log.info("RUNTIME_LIB_DIRS=%r" % " ".join(RUNTIME_LIB_DIRS))
         _build_ext.run(self)
         if os.path.abspath(".") != SCRIPT_DIR:
             log.info("Copying built extensions...")
