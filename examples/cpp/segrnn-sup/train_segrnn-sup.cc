@@ -1073,8 +1073,8 @@ int main(int argc, char** argv) {
     }
 
     ParameterCollection model;
-    // auto sgd = new SimpleSGDTrainer(model);
-    std::unique_ptr<Trainer> adam(new AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8));
+    // auto trainer = new SimpleSGDTrainer(model);
+    std::unique_ptr<Trainer> trainer(new AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8));
     int max_seg_len = DATA_MAX_SEG_LEN + 1;
     if(vm.count("train_max_seg_len")){
       max_seg_len = vm["train_max_seg_len"].as<int>();
@@ -1136,11 +1136,11 @@ int main(int argc, char** argv) {
           ttags += sent.second.size();
           loss += as_scalar(cg.forward(loss_expr));
           cg.backward(loss_expr);
-          adam->update(1.0);
+          trainer->update(1.0);
         }
         ++lines;
       }
-      adam->status();
+      trainer->status();
       cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
       report++;
       if (report % dev_every_i_reports == 0) {

@@ -8,7 +8,7 @@ HIDDEN_SIZE = 8
 ITERATIONS = 2000
 
 m = dy.Model()
-sgd = dy.SimpleSGDTrainer(m)
+trainer = dy.SimpleSGDTrainer(m)
 
 pW = m.add_parameters((HIDDEN_SIZE, 2))
 pb = m.add_parameters(HIDDEN_SIZE)
@@ -47,7 +47,7 @@ for iter in range(ITERATIONS):
         y.set(T if x1 != x2 else F)
         mloss += loss.scalar_value()
         loss.backward()
-        sgd.update()
+        trainer.update()
     mloss /= 4.
     print("loss: %0.9f" % mloss)
 

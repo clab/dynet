@@ -201,8 +201,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  std::unique_ptr<Trainer> sgd(new SimpleSGDTrainer(model));
-  sgd->learning_rate = params.eta0;
+  std::unique_ptr<Trainer> trainer(new SimpleSGDTrainer(model));
+  trainer->learning_rate = params.eta0;
   RNNLanguageModel<LSTMBuilder> lm(model);
 
   bool has_model_to_load = params.model_file != "";
@@ -267,7 +267,7 @@ int main(int argc, char** argv) {
           cerr << "**SHUFFLE\n";
           completed_epoch++;
           if (eta_decay_onset_epoch && completed_epoch >= (int)eta_decay_onset_epoch)
-            sgd->learning_rate *= eta_decay_rate;
+            trainer->learning_rate *= eta_decay_rate;
           shuffle(order.begin(), order.end(), *rndeng);
         }
 
@@ -279,11 +279,11 @@ int main(int argc, char** argv) {
         Expression loss_expr = lm.BuildLMGraph(sent, cg, DROPOUT > 0.f);
         loss += as_scalar(cg.forward(loss_expr));
         cg.backward(loss_expr);
-        sgd->update();
+        trainer->update();
         ++lines;
       }
       report++;
-      cerr << '#' << report << " [epoch=" << (lines / training.size()) << " lr=" << sgd->learning_rate << "] E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
+      cerr << '#' << report << " [epoch=" << (lines / training.size()) << " lr=" << trainer->learning_rate << "] E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 
       // show score on dev data?
       if (report % dev_every_i_reports == 0) {

@@ -135,11 +135,11 @@ int main(int argc, char** argv) {
   }
 
   bool use_momentum = false;
-  std::unique_ptr<Trainer> sgd;
+  std::unique_ptr<Trainer> trainer;
   if (use_momentum)
-    sgd.reset(new MomentumSGDTrainer(model));
+    trainer.reset(new MomentumSGDTrainer(model));
   else
-    sgd.reset(new SimpleSGDTrainer(model));
+    trainer.reset(new SimpleSGDTrainer(model));
 
   unsigned report_every_i = 100;
   unsigned si = training.size();
@@ -180,11 +180,11 @@ int main(int argc, char** argv) {
       if (iloss > 0) {
         loss += iloss;
         cg.backward(l);
-        sgd->update();
+        trainer->update();
       }
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss) << " ppl=" << exp(loss / chars) << ' ';
 
 #if 0

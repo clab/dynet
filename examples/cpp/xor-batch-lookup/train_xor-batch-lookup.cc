@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
   const unsigned HIDDEN_SIZE = 8;
   const unsigned ITERATIONS = 200;
   ParameterCollection m;
-  SimpleSGDTrainer sgd(m);
+  SimpleSGDTrainer trainer(m);
 
   ComputationGraph cg;
   Parameter p_W, p_b, p_V, p_a;
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
     vector<float> losses = as_vector(cg.forward(sum_loss));
     cg.backward(sum_loss);
-    sgd.update();
+    trainer.update();
     float loss = 0;
     for(auto l : losses)
       loss += l;
