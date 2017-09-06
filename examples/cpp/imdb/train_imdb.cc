@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  std::unique_ptr<Trainer> sgd(new AdamTrainer(model));
+  std::unique_ptr<Trainer> adam(new AdamTrainer(model));
 
   DocumentModel engine(model);
 
@@ -279,11 +279,11 @@ int main(int argc, char** argv) {
       Expression loss_expr = engine.objective(cg, inst, logits);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      adam->update();
       ++lines;
       ++ttags;
     }
-    sgd->status();
+    adam->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / (double)ttags) << ") ";
     model.project_weights();
 
