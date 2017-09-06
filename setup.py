@@ -195,8 +195,10 @@ class build(_build):
         log.info("BUILD_DIR=%r" % BUILD_DIR)
         log.info("INSTALL_PREFIX=%r" % INSTALL_PREFIX)
         log.info("PYTHON=%r" % PYTHON)
-        run_process([CMAKE_PATH, "--version"])
-        run_process([CXX_PATH, "--version"])
+        if CMAKE_PATH != None:
+            run_process([CMAKE_PATH, "--version"])
+        if CXX_PATH != None:
+            run_process([CXX_PATH, "--version"])
 
         # This will generally be called by the pip install
         if not self.skip_build:
