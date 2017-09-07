@@ -105,7 +105,7 @@ if __name__ == '__main__':
             errs = lm.BuildLMGraph(isent)
             loss += errs.scalar_value()
             errs.backward()
-            trainer.update(1.0)
+            trainer.update()
             #print "TM:",(time.time() - _start)/len(sent)
         print("ITER",ITER,loss)
         trainer.status()

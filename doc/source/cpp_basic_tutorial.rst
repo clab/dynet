@@ -75,7 +75,7 @@ Now, we perform a parameter update for a single example. Set the input/output to
 
 .. code:: cpp
 
-    trainer.update(1.0);
+    trainer.update();
 
 Note that this very simple example that doesn't cover things like memory
 initialization, reading/writing parameter collections, recurrent/LSTM networks, or
