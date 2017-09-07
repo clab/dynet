@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   // Use Adam optimizer
-  AdamTrainer adam(model);
-  adam.clip_threshold *= params.BATCH_SIZE;
+  AdamTrainer trainer(model);
+  trainer.clip_threshold *= params.BATCH_SIZE;
 
   // Create model
   MLP nn(model, vector<Layer>({
@@ -123,11 +123,11 @@ int main(int argc, char** argv) {
       // Compute gradient with backward pass
       cg.backward(loss_expr);
       // Update parameters
-      adam.update();
+      trainer.update();
       // Print progress every tenth of the dataset
       if ((si + 1) % (num_batches / 10) == 0 || si == num_batches - 1) {
         // Print informations
-        adam.status();
+        trainer.status();
         cerr << " E = " << (loss / num_samples) << ' ';
         // Reinitialize timer
         iteration.reset(new Timer("completed in"));

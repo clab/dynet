@@ -176,12 +176,12 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  std::unique_ptr<Trainer> sgd;
+  std::unique_ptr<Trainer> trainer;
   // bool use_momentum = false;
   // if (use_momentum)
-  //   sgd = new MomentumSGDTrainer(model);
+  //   trainer = new MomentumSGDTrainer(model);
   // else
-  sgd.reset(new SimpleSGDTrainer(model));
+  trainer.reset(new SimpleSGDTrainer(model));
 
   RNNLanguageModel<GRUBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
@@ -217,10 +217,10 @@ int main(int argc, char** argv) {
       Expression loss_expr = lm.BuildLMGraph(sent, cg);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 
     // show score on dev data?

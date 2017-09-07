@@ -45,7 +45,7 @@ public:
     a = parameter(cg, pa);
   }
 
-  float Train(const vector<dynet::real>& input, dynet::real gold_output, SimpleSGDTrainer& sgd) {
+  float Train(const vector<dynet::real>& input, dynet::real gold_output, SimpleSGDTrainer& trainer) {
     ComputationGraph cg;
     NewGraph(cg);
 
@@ -58,7 +58,7 @@ public:
 
     float return_loss = as_scalar(cg.forward(loss));
     cg.backward(loss);
-    sgd.update();
+    trainer.update();
     return return_loss;
   }
 
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
   const unsigned HIDDEN = 8;
   const unsigned ITERATIONS = 20;
   ParameterCollection m;
-  SimpleSGDTrainer sgd(m);
+  SimpleSGDTrainer trainer(m);
   XORModel model(HIDDEN, m);
 
   vector<dynet::real> x_values(2);  // set x_values to change the inputs
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
       x_values[0] = x1 ? 1 : -1;
       x_values[1] = x2 ? 1 : -1;
       y_value = (x1 != x2) ? 1 : -1;
-      loss += model.Train(x_values, y_value, sgd);
+      loss += model.Train(x_values, y_value, trainer);
     }
     loss /= 4;
     cerr << "E = " << loss << endl;

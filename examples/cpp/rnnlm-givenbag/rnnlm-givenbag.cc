@@ -161,11 +161,11 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   bool use_momentum = false;
-  std::unique_ptr<Trainer> sgd;
+  std::unique_ptr<Trainer> trainer;
   //if (use_momentum)
   //else
-  //sgd = new SimpleSGDTrainer(model);
-  sgd.reset(new MomentumSGDTrainer(model));
+  //trainer = new SimpleSGDTrainer(model);
+  trainer.reset(new MomentumSGDTrainer(model));
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
@@ -213,11 +213,11 @@ int main(int argc, char** argv) {
       Expression loss_expr = lm.BuildLMGraph(rmsent, cg, &rows);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       for (auto w : sent) { w2sl[w] = 0; }
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 #if 0
     lm.RandomSample();

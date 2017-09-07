@@ -74,12 +74,12 @@ int main(int argc, char** argv) {
   dynet::initialize(argc, argv, true);
 
   ParameterCollection model;
-  SimpleSGDTrainer sgd(model, 0.2);
-  //AdagradTrainer sgd(model, 0.0);
-  //AdamTrainer sgd(model, 0.0);
+  SimpleSGDTrainer trainer(model, 0.2);
+  //AdagradTrainer trainer(model, 0.0);
+  //AdamTrainer trainer(model, 0.0);
 
   RNNLanguageModel<LSTMBuilder> rnnlm(model);
 
   Learner<LSTMBuilder, Datum> learner(rnnlm, data.size());
-  run_multi_process<Datum>(num_children, &learner, &sgd, data, dev_data, num_iterations, dev_frequency, report_frequency);
+  run_multi_process<Datum>(num_children, &learner, &trainer, data, dev_data, num_iterations, dev_frequency, report_frequency);
 }

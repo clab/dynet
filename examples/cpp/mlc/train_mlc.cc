@@ -128,9 +128,9 @@ int main(int argc, char** argv) {
   ParameterCollection m;
   MLCBuilder mlc(m, max_xi, max_yi);
 
-  //AdadeltaTrainer sgd(m);
-  SimpleSGDTrainer sgd(m);
-  sgd.learning_rate = 0.001;
+  //AdadeltaTrainer trainer(m);
+  SimpleSGDTrainer trainer(m);
+  trainer.learning_rate = 0.001;
 
   unsigned report_every_i = 50;
   unsigned si = train.size();
@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
       Expression loss_expr = sparsemax_loss(u, &xy.labels);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update();
+      trainer.update();
     }
     cerr << "[epoch=" << (ti / train.size()) << "] E=" << (loss / instances) << ' ';
   }

@@ -186,11 +186,11 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   bool use_momentum = true;
-  std::unique_ptr<Trainer> sgd;
+  std::unique_ptr<Trainer> trainer;
   if (use_momentum)
-    sgd.reset(new MomentumSGDTrainer(model));
+    trainer.reset(new MomentumSGDTrainer(model));
   else
-    sgd.reset(new SimpleSGDTrainer(model));
+    trainer.reset(new SimpleSGDTrainer(model));
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
@@ -227,10 +227,10 @@ int main(int argc, char** argv) {
       // Run forward pass, backpropagate, and do an update
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
 
     // show score on dev data?

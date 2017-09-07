@@ -126,11 +126,11 @@ int main(int argc, char** argv) {
 
     ParameterCollection model;
     bool use_momentum = false;
-    std::unique_ptr<Trainer> sgd;
+    std::unique_ptr<Trainer> trainer;
     if (use_momentum)
-        sgd.reset(new MomentumSGDTrainer(model));
+        trainer.reset(new MomentumSGDTrainer(model));
     else
-        sgd.reset(new SimpleSGDTrainer(model));
+        trainer.reset(new SimpleSGDTrainer(model));
 
     RNNSkipLM lm(model);
     if (argc == 4) {
@@ -166,10 +166,10 @@ int main(int argc, char** argv) {
             Expression loss_expr = lm.BuildLMGraph(doc, cg);
             loss += as_scalar(cg.forward(loss_expr));
             cg.backward(loss_expr);
-            sgd->update();
+            trainer->update();
             ++lines;
         }
-        sgd->status();
+        trainer->status();
         // FIXME: is chars incorrect?
         LOG(INFO) << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
         //lm.RandomSample(); // why???
