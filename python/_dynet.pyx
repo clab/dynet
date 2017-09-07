@@ -191,7 +191,7 @@ cdef class DynetParams: # {{{
         Args:
             requested_gpus(number): number of requested gpus
         """
-        self.cparams.requested_gpus = requested_gpus - 1
+        self.cparams.requested_gpus = requested_gpus
         self.cparams.ngpus_requested = True
         self.cparams.ids_requested = False
     
@@ -206,8 +206,8 @@ cdef class DynetParams: # {{{
         self.cparams.ids_requested = True
 
     cpdef set_cpu_mode(self):
-        self.cparams.ids_requested = 1
-        self.cparams.cpu_requested = 1
+        self.cparams.ids_requested = True
+        self.cparams.cpu_requested = True
 # DynetParams }}}
 
 # Initialization {{{
@@ -3841,7 +3841,7 @@ cpdef Expression vanilla_lstm_gates_dropout_concat(list x_t, Expression h_tm1, E
     for e in x_t:
         ensure_freshness(e) 
         ves.push_back(e.c())
-    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_dropout_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), dropout_mask_x.c(), dropout_mask_h.c(), weightnoise_std))
 
 cpdef Expression vanilla_lstm_gates_concat(list x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
@@ -3855,7 +3855,7 @@ cpdef Expression vanilla_lstm_gates_concat(list x_t, Expression h_tm1, Expressio
 cpdef Expression vanilla_lstm_gates_dropout(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, Expression dropout_mask_x, Expression dropout_mask_h, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
     ensure_freshness(x_t)
-    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_dropout(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), dropout_mask_x.c(), dropout_mask_h.c(), weightnoise_std))
 
 cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
@@ -4141,7 +4141,7 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
     cdef CGRUBuilder* thisgruptr
     cdef tuple _spec
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
-        _spec = (layers, input_dim, hidden_dim)
+        self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:

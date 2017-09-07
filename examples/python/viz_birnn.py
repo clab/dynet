@@ -9,7 +9,7 @@ num_words = len(w2i)
 num_tags = len(t2i)
 
 model = Model()
-sgd = SimpleSGDTrainer(model)
+trainer = SimpleSGDTrainer(model)
 
 WEMB_DIM = 128
 RNN_HIDDEN_DIM = 64

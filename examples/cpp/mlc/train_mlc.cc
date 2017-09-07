@@ -128,13 +128,12 @@ int main(int argc, char** argv) {
   ParameterCollection m;
   MLCBuilder mlc(m, max_xi, max_yi);
 
-  //AdadeltaTrainer sgd(m);
-  SimpleSGDTrainer sgd(m);
-  sgd.learning_rate = 0.001;
+  //AdadeltaTrainer trainer(m);
+  SimpleSGDTrainer trainer(m);
+  trainer.learning_rate = 0.001;
 
   unsigned report_every_i = 50;
   unsigned si = train.size();
-  bool first = true;
   vector<unsigned> order(train.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
   double ti = 0;
@@ -145,7 +144,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == train.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd.update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -170,7 +168,7 @@ int main(int argc, char** argv) {
       Expression loss_expr = sparsemax_loss(u, &xy.labels);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update();
+      trainer.update();
     }
     cerr << "[epoch=" << (ti / train.size()) << "] E=" << (loss / instances) << ' ';
   }

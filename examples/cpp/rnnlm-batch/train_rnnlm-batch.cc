@@ -122,8 +122,8 @@ int main(int argc, char** argv) {
   // Initialize model and trainer ------------------------------------------------------------------
   ParameterCollection model;
   // Use Adam optimizer
-  Trainer* adam = new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8);
-  adam->clip_threshold *= params.BATCH_SIZE;
+  std::unique_ptr<Trainer> trainer(new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8));
+  trainer->clip_threshold *= params.BATCH_SIZE;
 
   // Create model
   RNNBatchLanguageModel<LSTMBuilder> lm(model,
@@ -155,12 +155,9 @@ int main(int argc, char** argv) {
   vector<unsigned> order(num_batches);
   for (unsigned i = 0; i < num_batches; ++i) order[i] = i;
 
-  bool first = true;
   unsigned epoch = 0;
   // Run for the given number of epochs (or indefinitely if params.NUM_EPOCHS is negative)
   while (epoch < params.NUM_EPOCHS || params.NUM_EPOCHS < 0) {
-    // Update the optimizer
-    if (first) { first = false; } else { adam->update_epoch(); }
     // Reshuffle the dataset
     cerr << "**SHUFFLE\n";
     random_shuffle(order.begin(), order.end());
@@ -168,7 +165,7 @@ int main(int argc, char** argv) {
     double loss = 0;
     unsigned tokens = 0;
     // Start timer
-    Timer* iteration = new Timer("completed in");
+    std::unique_ptr<Timer> iteration(new Timer("completed in"));
 
     for (si = 0; si < num_batches; ++si) {
       // build graph for this instance
@@ -183,15 +180,14 @@ int main(int argc, char** argv) {
       // Compute gradient with backward pass
       cg.backward(loss_expr);
       // Update parameters
-      adam->update();
+      trainer->update();
       // Print progress every tenth of the dataset
       if ((si + 1) % (num_batches / 10) == 0 || si == num_batches - 1) {
         // Print informations
-        adam->status();
+        trainer->status();
         cerr << " E = " << (loss / tokens) << " ppl=" << exp(loss / tokens) << ' ';
         // Reinitialize timer
-        delete iteration;
-        iteration = new Timer("completed in");
+        iteration.reset(new Timer("completed in"));
         // Reinitialize loss
         loss = 0;
         tokens = 0;
@@ -225,8 +221,7 @@ int main(int argc, char** argv) {
            << "] E = " << (dloss / dtokens)
            << " ppl=" << exp(dloss / dtokens) << ' ';
       // Reinitialize timer
-      delete iteration;
-      iteration = new Timer("completed in");
+      iteration.reset(new Timer("completed in"));
     }
 
     // Sample some examples because it's cool (also helps debugging)
@@ -237,5 +232,4 @@ int main(int argc, char** argv) {
     // Increment epoch
     ++epoch;
   }
-  delete adam;
 }

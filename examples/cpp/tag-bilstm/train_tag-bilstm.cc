@@ -186,11 +186,11 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   bool use_momentum = true;
-  Trainer* sgd = nullptr;
+  std::unique_ptr<Trainer> trainer;
   if (use_momentum)
-    sgd = new MomentumSGDTrainer(model);
+    trainer.reset(new MomentumSGDTrainer(model));
   else
-    sgd = new SimpleSGDTrainer(model);
+    trainer.reset(new SimpleSGDTrainer(model));
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
@@ -204,7 +204,6 @@ int main(int argc, char** argv) {
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   while(1) {
@@ -215,7 +214,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -229,10 +227,10 @@ int main(int argc, char** argv) {
       // Run forward pass, backpropagate, and do an update
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
 
     // show score on dev data?
@@ -258,5 +256,4 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / dtags) << ' ';
     }
   }
-  delete sgd;
 }

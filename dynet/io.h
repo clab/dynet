@@ -1,6 +1,7 @@
 #ifndef DYNET_IO_H_
 #define DYNET_IO_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 #include <sstream>
@@ -152,7 +153,7 @@ protected:
   void save(const ParameterStorage & param, const std::string & key = "");
   void save(const LookupParameterStorage & param, const std::string & key = "");
 
-  std::ostream* p_datastream;
+  std::unique_ptr<std::ostream> p_datastream;
   std::ostream& datastream;
 
 }; // class TextFileSaver

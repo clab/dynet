@@ -17,8 +17,8 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned ITERATIONS = 30;
   ParameterCollection m;
-  SimpleSGDTrainer sgd(m);
-  //MomentumSGDTrainer sgd(m);
+  SimpleSGDTrainer trainer(m);
+  //MomentumSGDTrainer trainer(m);
 
   Parameter p_W, p_b, p_V, p_a;
   const unsigned HIDDEN_SIZE = 3;
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     // Calculate the loss. Batching will automatically be done here.
     float loss = as_scalar(cg.forward(loss_expr)) / 4;
     cg.backward(loss_expr);
-    sgd.update();
+    trainer.update();
 
     cerr << "E = " << loss << endl;
   }

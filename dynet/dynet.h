@@ -8,6 +8,7 @@
 
 #include <initializer_list>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -478,7 +479,7 @@ struct ComputationGraph {
                                                // that can be updated (subset of
                                                // nodes)
 
-  ExecutionEngine* ee;  // handles the execution
+  std::unique_ptr<ExecutionEngine> ee;  // handles the execution
 
  private:
   unsigned graph_id;
@@ -488,6 +489,7 @@ struct ComputationGraph {
   // flag of checking Inf/NaN of each layer. Only performing checking when
   // immediate_compute is also set to true.
   bool check_validity;
+  VariableIndex add_function_node(Node *node);
   void set_dim_for_new_node(const VariableIndex& i);
 
   std::vector<CGCheckpoint> checkpoints;
@@ -753,22 +755,27 @@ struct Node {
   bool has_cuda_implemented = true;
 };
 
+
+inline VariableIndex ComputationGraph::add_function_node(Node *node) {
+  VariableIndex new_node_index((VariableIndex)nodes.size());
+  nodes.push_back(node);
+  if (node->device == nullptr) {
+    if (node->arity() > 0) {
+      node->device = nodes[node->args[0]]->device;
+    } else {
+      node->device = dynet::default_device;
+    }
+  }
+  if (node->device->type == DeviceType::GPU && !node->has_cuda_implemented)
+    DYNET_NO_CUDA_IMPL_ERROR(node->as_dummy_string())
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
+}
+
 template <class Function>
 inline VariableIndex ComputationGraph::add_function(
     const std::initializer_list<VariableIndex>& arguments) {
-  VariableIndex new_node_index(nodes.size());
-  nodes.push_back(new Function(arguments));
-  if (nodes.back()->device == nullptr) {
-    if (arguments.size()) {
-      nodes.back()->device = nodes[*arguments.begin()]->device;
-    } else {
-      nodes.back()->device = dynet::default_device;
-    }
-  }
-  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
-    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
-  set_dim_for_new_node(new_node_index);
-  return new_node_index;
+  return add_function_node(new Function(arguments));
 }
 
 // pass side information to the function. these are likely to be
@@ -777,31 +784,13 @@ template <class Function, typename... Args>
 inline VariableIndex ComputationGraph::add_function(
     const std::initializer_list<VariableIndex>& arguments,
     Args&&... side_information) {
-  VariableIndex new_node_index(nodes.size());
-  nodes.push_back(
+  return add_function_node(
       new Function(arguments, std::forward<Args>(side_information)...));
-  if (nodes.back()->device == nullptr) {
-    if (arguments.size()) {
-      nodes.back()->device = nodes[*arguments.begin()]->device;
-    } else {
-      nodes.back()->device = dynet::default_device;
-    }
-  }
-  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
-    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
-  set_dim_for_new_node(new_node_index);
-  return new_node_index;
 }
 
 template <class Function, typename T>
 inline VariableIndex ComputationGraph::add_function(const T& arguments) {
-  VariableIndex new_node_index((VariableIndex)nodes.size());
-  nodes.push_back(new Function(arguments));
-  nodes.back()->device = dynet::default_device;
-  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
-    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
-  set_dim_for_new_node(new_node_index);
-  return new_node_index;
+  return add_function_node(new Function(arguments));
 }
 
 // pass side information to the function. these are likely to be
@@ -809,14 +798,8 @@ inline VariableIndex ComputationGraph::add_function(const T& arguments) {
 template <class Function, typename T, typename... Args>
 inline VariableIndex ComputationGraph::add_function(
     const T& arguments, Args&&... side_information) {
-  VariableIndex new_node_index((VariableIndex)nodes.size());
-  nodes.push_back(
+  return add_function_node(
       new Function(arguments, std::forward<Args>(side_information)...));
-  nodes.back()->device = dynet::default_device;
-  if (nodes.back()->device->type == DeviceType::GPU && !nodes.back()->has_cuda_implemented)
-    DYNET_NO_CUDA_IMPL_ERROR(nodes.back()->as_dummy_string())
-  set_dim_for_new_node(new_node_index);
-  return new_node_index;
 }
 
 }  // namespace dynet

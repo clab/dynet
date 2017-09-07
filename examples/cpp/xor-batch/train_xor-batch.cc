@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
   const unsigned HIDDEN_SIZE = 8;
   const unsigned ITERATIONS = 200;
   ParameterCollection m;
-  SimpleSGDTrainer sgd(m);
+  SimpleSGDTrainer trainer(m);
 
   ComputationGraph cg;
   Parameter p_W, p_b, p_V, p_a;
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
   for (unsigned iter = 0; iter < ITERATIONS; ++iter) {
     float my_loss = as_scalar(cg.forward(sum_loss)) / 4;
     cg.backward(sum_loss);
-    sgd.update();
+    trainer.update();
     cerr << "E = " << my_loss << endl;
   }
 

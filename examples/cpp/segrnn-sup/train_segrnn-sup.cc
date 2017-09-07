@@ -1073,8 +1073,8 @@ int main(int argc, char** argv) {
     }
 
     ParameterCollection model;
-    // auto sgd = new SimpleSGDTrainer(model);
-    auto sgd = new AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8);
+    // auto trainer = new SimpleSGDTrainer(model);
+    std::unique_ptr<Trainer> trainer(new AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8));
     int max_seg_len = DATA_MAX_SEG_LEN + 1;
     if(vm.count("train_max_seg_len")){
       max_seg_len = vm["train_max_seg_len"].as<int>();
@@ -1094,7 +1094,6 @@ int main(int argc, char** argv) {
     unsigned si = training.size();
     vector<unsigned> order(training.size());
     for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-    bool first = true;
     int report = 0;
     unsigned lines = 0;
     while(1) {
@@ -1105,7 +1104,6 @@ int main(int argc, char** argv) {
       for (unsigned i = 0; i < report_every_i; ++i) {
         if (si == training.size()) {
           si = 0;
-          if (first) { first = false; } else { sgd->update_epoch(); }
           cerr << "**SHUFFLE\n";
           shuffle(order.begin(), order.end(), *rndeng);
         }
@@ -1138,11 +1136,11 @@ int main(int argc, char** argv) {
           ttags += sent.second.size();
           loss += as_scalar(cg.forward(loss_expr));
           cg.backward(loss_expr);
-          sgd->update(1.0);
+          trainer->update(1.0);
         }
         ++lines;
       }
-      sgd->status();
+      trainer->status();
       cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
       report++;
       if (report % dev_every_i_reports == 0) {
@@ -1156,7 +1154,6 @@ int main(int argc, char** argv) {
         }
       }
     }
-    delete sgd;
   }else if(vm["test"].as<bool>()){
     use_pretrained_embeding = false;
     use_dropout = false;

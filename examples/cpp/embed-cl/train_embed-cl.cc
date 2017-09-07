@@ -135,17 +135,16 @@ int main(int argc, char** argv) {
   }
 
   bool use_momentum = false;
-  Trainer* sgd = nullptr;
+  std::unique_ptr<Trainer> trainer;
   if (use_momentum)
-    sgd = new MomentumSGDTrainer(model);
+    trainer.reset(new MomentumSGDTrainer(model));
   else
-    sgd = new SimpleSGDTrainer(model);
+    trainer.reset(new SimpleSGDTrainer(model));
 
   unsigned report_every_i = 100;
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   // int report = 0;
   // unsigned dev_every_i_reports = 10;
   unsigned lines = 0;
@@ -156,7 +155,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         random_shuffle(order.begin(), order.end());
       }
@@ -182,11 +180,11 @@ int main(int argc, char** argv) {
       if (iloss > 0) {
         loss += iloss;
         cg.backward(l);
-        sgd->update();
+        trainer->update();
       }
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss) << " ppl=" << exp(loss / chars) << ' ';
 
 #if 0
@@ -213,6 +211,4 @@ int main(int argc, char** argv) {
     }
 #endif
   }
-  delete sgd;
 }
-

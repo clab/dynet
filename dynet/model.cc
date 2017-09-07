@@ -4,6 +4,7 @@
 #include "dynet/dynet.h"
 #include "dynet/param-init.h"
 #include "dynet/io.h"
+#include "dynet/except.h"
 
 #include <iostream>
 #include <fstream>
@@ -787,12 +788,16 @@ float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
   size_t k1 = 0, k2 = 0;
   for (pi = 0; pi < all_params.size(); ++pi) {
     Device *dev_k;
-    if (all_params[pi] == params[k1]) {
+    DYNET_ASSERT(all_params.size() == (params.size() + lookup_params.size()),
+                 "Unmatched parameter size");
+    if (params.size() && all_params[pi] == params[k1]) {
       dev_k = params[k1]->device;
       ++k1;
-    } else {
+    } else if (lookup_params.size() && all_params[pi] == lookup_params[k2]) {
       dev_k = lookup_params[k2]->device; 
       ++k2;
+    } else {
+      DYNET_RUNTIME_ERR("Incorrect device type");
     }
     float *v = (float *)dev_k->mem->malloc(sizeof(float));
     all_params[pi]->g_squared_l2norm(v);

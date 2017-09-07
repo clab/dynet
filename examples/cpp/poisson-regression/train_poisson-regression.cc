@@ -135,8 +135,7 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(model);
+  std::unique_ptr<Trainer> trainer(new SimpleSGDTrainer(model));
 
   RNNLengthPredictor<LSTMBuilder> lm(model);
   if (argc == 4) {
@@ -149,7 +148,6 @@ int main(int argc, char** argv) {
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   while(1) {
@@ -159,7 +157,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -171,11 +168,11 @@ int main(int argc, char** argv) {
       Expression loss_expr = lm.BuildLMGraph(sent.first, sent.second, cg);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       ++lines;
       ++chars;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 
     // show score on dev data?
@@ -197,6 +194,4 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
   }
-  delete sgd;
 }
-

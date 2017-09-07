@@ -11,7 +11,7 @@ Create a parameter collection, and an SGD trainer to update its parameters.
 .. code:: cpp
 
     ParameterCollection pc;
-    SimpleSGDTrainer sgd(pc);
+    SimpleSGDTrainer trainer(pc);
 
 Create a "computation graph," which will define the flow of information.
 
@@ -71,11 +71,11 @@ Now, we perform a parameter update for a single example. Set the input/output to
 
     cg.backward(l);
 
-``sgd.update`` updates parameters of the parameter collection that was passed to its constructor. Here 1.0 is the scaling factor that allows us to control the size of the update.
+``trainer.update`` updates parameters of the parameter collection that was passed to its constructor. Here 1.0 is the scaling factor that allows us to control the size of the update.
 
 .. code:: cpp
 
-    sgd.update(1.0);
+    trainer.update(1.0);
 
 Note that this very simple example that doesn't cover things like memory
 initialization, reading/writing parameter collections, recurrent/LSTM networks, or

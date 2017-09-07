@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
 
   // parameters
   ParameterCollection model;
-  SimpleSGDTrainer sgd(model);
+  SimpleSGDTrainer trainer(model);
   LookupParameter p_c = model.add_lookup_parameters(VOCAB_SIZE, {DIM});
 
   ComputationGraph cg;
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
       loss += as_scalar(cg.forward(nerr));
       cg.backward(nerr);
       ++n;
-      sgd.update();
+      trainer.update();
       if (n == 2500) break;
     }
     loss /= n;
