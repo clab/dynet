@@ -116,7 +116,7 @@ if __name__ == '__main__':
     VOCAB_SIZE = vocab.size()
 
     model = dy.ParameterCollection()
-    sgd = SimpleSGDTrainer(model)
+    trainer = SimpleSGDTrainer(model)
 
     #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
     lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=LSTMBuilder)
@@ -135,7 +135,7 @@ if __name__ == '__main__':
         for sid in train_order: 
             i += 1
             #if i % int(50) == 0:
-            sgd.status()
+            trainer.status()
             if chars > 0: print(loss / chars,)
             for _ in range(1):
                 samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["\n"])
@@ -150,15 +150,15 @@ if __name__ == '__main__':
             myexp.add_scalar_value("lossevolution", loss)
             chars += mb_chars
             errs.backward()
-            sgd.update()
+            trainer.update()
                 
 
             #print "TM:",(time.time() - _start)/chars
         print("ITER",ITER,loss)
         #print(loss / chars,)
         #print "TM:",(time.time() - _start)/len(train)
-        sgd.status()
-        sgd.update_epoch(1.0)
+        trainer.status()
+        trainer.update_epoch(1.0)
 
     # To save the experiment
     filename = myexp.to_zip()

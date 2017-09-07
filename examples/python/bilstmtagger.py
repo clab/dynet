@@ -48,7 +48,7 @@ nwords = vw.size()
 ntags  = vt.size()
 
 model = Model()
-sgd = SimpleSGDTrainer(model)
+trainer = SimpleSGDTrainer(model)
 
 E = model.add_lookup_parameters((nwords, 128))
 p_t1  = model.add_lookup_parameters((ntags, 30))
@@ -119,7 +119,7 @@ for ITER in range(50):
     random.shuffle(train)
     for i,s in enumerate(train,1):
         if i % 5000 == 0:
-            sgd.status()
+            trainer.status()
             print(loss / tagged)
             loss = 0
             tagged = 0
@@ -139,6 +139,6 @@ for ITER in range(50):
         loss += sum_errs.scalar_value()
         tagged += len(ps)
         sum_errs.backward()
-        sgd.update()
+        trainer.update()
 
 

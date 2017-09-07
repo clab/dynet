@@ -194,8 +194,8 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  std::unique_ptr<Trainer> sgd(new SimpleSGDTrainer(model));
-  sgd->clip_threshold *= BATCH_SIZE;
+  std::unique_ptr<Trainer> trainer(new SimpleSGDTrainer(model));
+  trainer->clip_threshold *= BATCH_SIZE;
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   if (argc == 4) {
@@ -226,10 +226,10 @@ int main(int argc, char** argv) {
       Expression loss_expr = lm.BuildLMGraphs(training, order[si], bsize, chars, cg);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       lines += bsize;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
     lm.RandomSample();
 

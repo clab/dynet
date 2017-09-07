@@ -79,7 +79,7 @@ if __name__ == '__main__':
     VOCAB_SIZE = vocab.size()
 
     model = Model()
-    sgd = SimpleSGDTrainer(model)
+    trainer = SimpleSGDTrainer(model)
 
     #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
     lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=LSTMBuilder)
@@ -92,7 +92,7 @@ if __name__ == '__main__':
         for i,sent in enumerate(train):
             _start = time.time()
             if i % 50 == 0:
-                sgd.status()
+                trainer.status()
                 if chars > 0: print(loss / chars,)
                 for _ in range(1):
                     samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["\n"])
@@ -105,8 +105,8 @@ if __name__ == '__main__':
             errs = lm.BuildLMGraph(isent)
             loss += errs.scalar_value()
             errs.backward()
-            sgd.update(1.0)
+            trainer.update(1.0)
             #print "TM:",(time.time() - _start)/len(sent)
         print("ITER",ITER,loss)
-        sgd.status()
-        sgd.update_epoch(1.0)
+        trainer.status()
+        trainer.update_epoch(1.0)

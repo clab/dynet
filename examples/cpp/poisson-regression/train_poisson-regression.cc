@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  std::unique_ptr<Trainer> sgd(new SimpleSGDTrainer(model));
+  std::unique_ptr<Trainer> trainer(new SimpleSGDTrainer(model));
 
   RNNLengthPredictor<LSTMBuilder> lm(model);
   if (argc == 4) {
@@ -168,11 +168,11 @@ int main(int argc, char** argv) {
       Expression loss_expr = lm.BuildLMGraph(sent.first, sent.second, cg);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       ++lines;
       ++chars;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 
     // show score on dev data?

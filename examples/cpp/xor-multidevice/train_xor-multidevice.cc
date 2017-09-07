@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
 
   // ParameterCollection (all the model parameters).
   ParameterCollection m;
-  SimpleSGDTrainer sgd(m);
+  SimpleSGDTrainer trainer(m);
 
   // Get two devices, the CPU device and GPU device
   Device* cpu_device = get_global_device("CPU");
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update();
+      trainer.update();
 
     }
     loss /= 4;

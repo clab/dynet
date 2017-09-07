@@ -122,8 +122,8 @@ int main(int argc, char** argv) {
   // Initialize model and trainer ------------------------------------------------------------------
   ParameterCollection model;
   // Use Adam optimizer
-  std::unique_ptr<Trainer> adam(new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8));
-  adam->clip_threshold *= params.BATCH_SIZE;
+  std::unique_ptr<Trainer> trainer(new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8));
+  trainer->clip_threshold *= params.BATCH_SIZE;
 
   // Create model
   RNNBatchLanguageModel<LSTMBuilder> lm(model,
@@ -180,11 +180,11 @@ int main(int argc, char** argv) {
       // Compute gradient with backward pass
       cg.backward(loss_expr);
       // Update parameters
-      adam->update();
+      trainer->update();
       // Print progress every tenth of the dataset
       if ((si + 1) % (num_batches / 10) == 0 || si == num_batches - 1) {
         // Print informations
-        adam->status();
+        trainer->status();
         cerr << " E = " << (loss / tokens) << " ppl=" << exp(loss / tokens) << ' ';
         // Reinitialize timer
         iteration.reset(new Timer("completed in"));
