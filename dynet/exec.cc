@@ -161,7 +161,8 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   vector<bool> needs_derivative(num_nodes, full);
   if (!full) {
     for (auto i : cg.parameter_nodes)
-      needs_derivative[i] = true;
+      if (i <= from_where)
+	needs_derivative[i] = true;
 
     for (unsigned ni = 0; ni < num_nodes; ++ni) {
       bool nd = needs_derivative[ni];
