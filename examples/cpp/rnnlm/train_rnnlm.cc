@@ -131,6 +131,25 @@ void inline read_fields(string line, vector<string>& fields, string delimiter = 
   }
 }
 
+// Read the dataset, returns the number of tokens
+unsigned read_data(const string& filename,
+                   vector<vector<int>>& data) {
+  unsigned num_tokens = 0;
+  ifstream in(filename);
+  assert(in);
+  size_t lc = 0;
+  string line;
+  while (getline(in, line)) {
+    ++lc;
+    data.push_back(read_sentence(line, d));
+    num_tokens += data.back().size();
+    if (data.back().front() == kSOS || data.back().back() == kEOS) {
+      cerr << "sentence in " << filename << ":" << lc << " started with <s> or ended with </s>\n";
+      abort();
+    }
+  }
+  return num_tokens;
+}
 
 int main(int argc, char** argv) {
   cerr << "COMMAND LINE:";
@@ -168,17 +187,8 @@ int main(int argc, char** argv) {
   {
     string trainf = params.train_file;
     cerr << "Reading training data from " << trainf << " ...\n";
-    ifstream in(trainf);
-    assert(in);
-    while (getline(in, line)) {
-      ++tlc;
-      training.push_back(read_sentence(line, d));
-      ttoks += training.back().size();
-      if (training.back().front() == kSOS || training.back().back() == kEOS) {
-        cerr << "Training sentence in " << argv[1] << ":" << tlc << " started with <s> or ended with </s>\n";
-        abort();
-      }
-    }
+    ttoks = read_data(trainf, training);
+    tlc = training.size();
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
   d.freeze(); // no new word types allowed
@@ -190,15 +200,7 @@ int main(int argc, char** argv) {
   if (params.test_file != "") {
     string testf = params.test_file;
     cerr << "Reading test data from " << testf << " ...\n";
-    ifstream in(testf);
-    assert(in);
-    while (getline(in, line)) {
-      test.push_back(read_sentence(line, d));
-      if (test.back().front() == kSOS || test.back().back() == kEOS) {
-        cerr << "Test sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
-        abort();
-      }
-    }
+    read_data(testf, test);
   }
 
   std::unique_ptr<Trainer> trainer(new SimpleSGDTrainer(model));
@@ -224,17 +226,7 @@ int main(int argc, char** argv) {
     } else {
       string devf = params.dev_file;
       cerr << "Reading dev data from " << devf << " ...\n";
-      ifstream in(devf);
-      assert(in);
-      while (getline(in, line)) {
-        ++dlc;
-        dev.push_back(read_sentence(line, d));
-        dtoks += dev.back().size();
-        if (dev.back().front() == kSOS || dev.back().back() == kEOS) {
-          cerr << "Dev sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
-          abort();
-        }
-      }
+      dtoks = read_data(devf, dev);
       cerr << dlc << " lines, " << dtoks << " tokens\n";
     }
     ostringstream os;
