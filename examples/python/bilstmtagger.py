@@ -1,4 +1,4 @@
-from dynet import *
+import dynet as dy
 from collections import Counter
 import random
 
@@ -47,8 +47,8 @@ UNK = vw.w2i["_UNK_"]
 nwords = vw.size()
 ntags  = vt.size()
 
-model = Model()
-trainer = SimpleSGDTrainer(model)
+model = dy.Model()
+trainer = dy.SimpleSGDTrainer(model)
 
 E = model.add_lookup_parameters((nwords, 128))
 p_t1  = model.add_lookup_parameters((ntags, 30))
@@ -59,38 +59,38 @@ else:
     pO = model.add_parameters((ntags, 50*2))
 
 builders=[
-        LSTMBuilder(1, 128, 50, model),
-        LSTMBuilder(1, 128, 50, model),
+        dy.LSTMBuilder(1, 128, 50, model),
+        dy.LSTMBuilder(1, 128, 50, model),
         ]
 
 def build_tagging_graph(words, tags, builders):
-    renew_cg()
+    dy.renew_cg()
     f_init, b_init = [b.initial_state() for b in builders]
 
     wembs = [E[w] for w in words]
-    wembs = [noise(we,0.1) for we in wembs]
+    wembs = [dy.noise(we,0.1) for we in wembs]
 
     fw = [x.output() for x in f_init.add_inputs(wembs)]
     bw = [x.output() for x in b_init.add_inputs(reversed(wembs))]
 
     if MLP:
-        H = parameter(pH)
-        O = parameter(pO)
+        H = dy.parameter(pH)
+        O = dy.parameter(pO)
     else:
-        O = parameter(pO)
+        O = dy.parameter(pO)
     errs = []
     for f,b,t in zip(fw, reversed(bw), tags):
-        f_b = concatenate([f,b])
+        f_b = dy.concatenate([f,b])
         if MLP:
-            r_t = O*(tanh(H * f_b))
+            r_t = O*(dy.tanh(H * f_b))
         else:
             r_t = O * f_b
-        err = pickneglogsoftmax(r_t, t)
+        err = dy.pickneglogsoftmax(r_t, t)
         errs.append(err)
-    return esum(errs)
+    return dy.esum(errs)
 
 def tag_sent(sent, builders):
-    renew_cg()
+    dy.renew_cg()
     f_init, b_init = [b.initial_state() for b in builders]
     wembs = [E[vw.w2i.get(w, UNK)] for w,t in sent]
 
@@ -98,17 +98,17 @@ def tag_sent(sent, builders):
     bw = [x.output() for x in b_init.add_inputs(reversed(wembs))]
 
     if MLP:
-        H = parameter(pH)
-        O = parameter(pO)
+        H = dy.parameter(pH)
+        O = dy.parameter(pO)
     else:
-        O = parameter(pO)
+        O = dy.parameter(pO)
     tags=[]
     for f,b,(w,t) in zip(fw,reversed(bw),sent):
         if MLP:
-            r_t = O*(tanh(H * concatenate([f,b])))
+            r_t = O*(dy.tanh(H * dy.concatenate([f,b])))
         else:
-            r_t = O*concatenate([f,b])
-        out = softmax(r_t)
+            r_t = O*dy.concatenate([f,b])
+        out = dy.softmax(r_t)
         chosen = np.argmax(out.npvalue())
         tags.append(vt.i2w[chosen])
     return tags
