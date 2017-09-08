@@ -1,4 +1,4 @@
-from dynet import *
+import dynet as dy
 import time
 import random
 
@@ -15,7 +15,7 @@ import sys
 import util
 
 class RNNLanguageModel:
-    def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder):
+    def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.SimpleRNNBuilder):
         # Char-level LSTM (layers=2, input=256, hidden=128, model)
         self.builder = builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
         # Lookup parameters for word embeddings
@@ -26,12 +26,12 @@ class RNNLanguageModel:
 
     # Build the language model graph
     def BuildLMGraph(self, sents):
-        renew_cg()
+        dy.renew_cg()
         # initialize the RNN
         init_state = self.builder.initial_state()
         # parameters -> expressions
-        R = parameter(self.R)
-        bias = parameter(self.bias)
+        R = dy.parameter(self.R)
+        bias = dy.parameter(self.bias)
 
         S = vocab.w2i["<s>"]
         # get the cids and masks for each step
@@ -47,42 +47,42 @@ class RNNLanguageModel:
 
         # start the rnn with "<s>"
         init_ids = cids[0]
-        s = init_state.add_input(lookup_batch(self.lookup, init_ids))
+        s = init_state.add_input(dy.lookup_batch(self.lookup, init_ids))
 
         losses = []
 
         # feed char vectors into the RNN and predict the next char
         for cid, mask in zip(cids[1:], masks[1:]):
-            score = affine_transform([bias, R, s.output()])
-            loss = pickneglogsoftmax_batch(score, cid)
+            score = dy.affine_transform([bias, R, s.output()])
+            loss = dy.pickneglogsoftmax_batch(score, cid)
             # mask the loss if at least one sentence is shorter
             if mask[-1] != 1:
-                mask_expr = inputVector(mask)
-                mask_expr = reshape(mask_expr, (1,), len(sents))
+                mask_expr = dy.inputVector(mask)
+                mask_expr = dy.reshape(mask_expr, (1,), len(sents))
                 loss = loss * mask_expr
 
             losses.append(loss)
             # update the state of the RNN
-            cemb = lookup_batch(self.lookup, cid)
+            cemb = dy.lookup_batch(self.lookup, cid)
             s = s.add_input(cemb)
 
-        return sum_batches(esum(losses)), tot_chars
+        return dy.sum_batches(dy.esum(losses)), tot_chars
 
 
     def sample(self, first=1, nchars=0, stop=-1):
         res = [first]
-        renew_cg()
+        dy.renew_cg()
         state = self.builder.initial_state()
 
-        R = parameter(self.R)
-        bias = parameter(self.bias)
+        R = dy.parameter(self.R)
+        bias = dy.parameter(self.bias)
         cw = first
         while True:
-            x_t = lookup(self.lookup, cw)
+            x_t = dy.lookup(self.lookup, cw)
             state = state.add_input(x_t)
             y_t = state.output()
             r_t = bias + (R * y_t)
-            ydist = softmax(r_t)
+            ydist = dy.softmax(r_t)
             dist = ydist.vec_value()
             rnd = random.random()
             for i,p in enumerate(dist):
@@ -104,11 +104,11 @@ if __name__ == '__main__':
     
     VOCAB_SIZE = vocab.size()
 
-    model = Model()
-    trainer = SimpleSGDTrainer(model)
+    model = dy.Model()
+    trainer = dy.SimpleSGDTrainer(model)
 
     #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
-    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=LSTMBuilder)
+    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.LSTMBuilder)
 
     train = list(train)
     # Sort training sentences in descending order and count minibatches

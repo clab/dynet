@@ -1,4 +1,4 @@
-from dynet import *
+import dynet as dy
 
 train_sentence = [('the','D'), ('dog','N'), ('walks','V')]
 
@@ -8,8 +8,8 @@ t2i = dict((t,i) for i,t in enumerate(set(t for w,t in train_sentence)))
 num_words = len(w2i)
 num_tags = len(t2i)
 
-model = Model()
-trainer = SimpleSGDTrainer(model)
+model = dy.Model()
+trainer = dy.SimpleSGDTrainer(model)
 
 WEMB_DIM = 128
 RNN_HIDDEN_DIM = 64
@@ -21,32 +21,32 @@ pHb = model.add_parameters(HIDDEN_DIM)
 pO = model.add_parameters((num_tags, HIDDEN_DIM))
 pOb = model.add_parameters(num_tags)
 
-rnn_builder = BiRNNBuilder(1, WEMB_DIM, RNN_HIDDEN_DIM, model, LSTMBuilder)
+rnn_builder = dy.BiRNNBuilder(1, WEMB_DIM, RNN_HIDDEN_DIM, model, dy.LSTMBuilder)
 
 
-renew_cg()
+dy.renew_cg()
 
-H = parameter(pH)
-Hb = parameter(pHb)
-O = parameter(pO)
-Ob = parameter(pOb)
+H = dy.parameter(pH)
+Hb = dy.parameter(pHb)
+O = dy.parameter(pO)
+Ob = dy.parameter(pOb)
 
 indexed_words, indexed_gold_tags = zip(*[(w2i[w], t2i[t]) for w,t in train_sentence]) 
 
 wembs = [pWembs[wi] for wi in indexed_words]
-noised_wembs = [noise(we, 0.1) for we in wembs]
+noised_wembs = [dy.noise(we, 0.1) for we in wembs]
 
 rnn_outputs = rnn_builder.transduce(noised_wembs)
 
 errs = []
 for rnn_output, gold_tag in zip(rnn_outputs, indexed_gold_tags):
-    hidden = tanh(affine_transform([Hb, H, rnn_output]))
-    model_tag = affine_transform([Ob, O, hidden])
-    err = pickneglogsoftmax(model_tag, gold_tag)
+    hidden = dy.tanh(dy.affine_transform([Hb, H, rnn_output]))
+    model_tag = dy.affine_transform([Ob, O, hidden])
+    err = dy.pickneglogsoftmax(model_tag, gold_tag)
     errs.append(err)
-sum_errs = esum(errs)
+sum_errs = dy.esum(errs)
 
-print_graphviz(compact=False,
+dy.print_graphviz(compact=False,
                show_dims=True,
                 expression_names={ pWembs: "word_emb", 
                                    H: "H", Hb: "Hb",

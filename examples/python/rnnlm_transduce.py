@@ -1,5 +1,5 @@
 # a version rnnlm.py using the transduce() interface.
-from dynet import *
+import dynet as dy
 import time
 import random
 
@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 class RNNLanguageModel:
-    def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder):
+    def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.SimpleRNNBuilder):
         self.builder = builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
 
         self.lookup = model.add_lookup_parameters((VOCAB_SIZE, INPUT_DIM))
@@ -25,11 +25,11 @@ class RNNLanguageModel:
         self.bias = model.add_parameters((VOCAB_SIZE))
 
     def BuildLMGraph(self, sent):
-        renew_cg()
+        dy.renew_cg()
         init_state = self.builder.initial_state()
 
-        R = parameter(self.R)
-        bias = parameter(self.bias)
+        R = dy.parameter(self.R)
+        bias = dy.parameter(self.bias)
         errs = [] # will hold expressions
         es=[]
         state = init_state
@@ -38,25 +38,25 @@ class RNNLanguageModel:
         expected_outputs = [int(nw) for nw in sent[1:]]
         outputs = state.transduce(inputs)
         r_ts = ((bias + (R * y_t)) for y_t in outputs)
-        errs = [pickneglogsoftmax(r_t, eo) for r_t, eo in zip(r_ts, expected_outputs)]
-        nerr = esum(errs)
+        errs = [dy.pickneglogsoftmax(r_t, eo) for r_t, eo in zip(r_ts, expected_outputs)]
+        nerr = dy.esum(errs)
         return nerr
 
     def sample(self, first=1, nchars=0, stop=-1):
         # sampling must use the regular incremental interface.
         res = [first]
-        renew_cg()
+        dy.renew_cg()
         state = self.builder.initial_state()
 
-        R = parameter(self.R)
-        bias = parameter(self.bias)
+        R = dy.parameter(self.R)
+        bias = dy.parameter(self.bias)
         cw = first
         while True:
-            x_t = lookup(self.lookup, cw)
+            x_t = dy.lookup(self.lookup, cw)
             state = state.add_input(x_t)
             y_t = state.output()
             r_t = bias + (R * y_t)
-            ydist = softmax(r_t)
+            ydist = dy.softmax(r_t)
             dist = ydist.vec_value()
             rnd = random.random()
             for i,p in enumerate(dist):
@@ -78,11 +78,11 @@ if __name__ == '__main__':
     
     VOCAB_SIZE = vocab.size()
 
-    model = Model()
-    trainer = SimpleSGDTrainer(model)
+    model = dy.Model()
+    trainer = dy.SimpleSGDTrainer(model)
 
-    #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
-    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=LSTMBuilder)
+    #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.SimpleRNNBuilder)
+    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.LSTMBuilder)
 
     train = list(train)
 

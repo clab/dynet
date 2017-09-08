@@ -186,8 +186,8 @@ installation is likely to be working:
 
 ::
 
-    from dynet import *
-    pc = ParameterCollection()
+    import dynet as dy
+    pc = dy.ParameterCollection()
 
 If it doesn't work and you get an error similar to the following:
 ::
