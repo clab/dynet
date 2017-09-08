@@ -109,4 +109,3 @@ if __name__ == '__main__':
             #print "TM:",(time.time() - _start)/len(sent)
         print("ITER",ITER,loss)
         trainer.status()
-        trainer.update_epoch(1.0)
