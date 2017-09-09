@@ -272,9 +272,6 @@ namespace dynet {
             batch_counter = 0;
           }
         }
-        if (header.end_of_epoch && trainer != nullptr) {
-          trainer->update_epoch();
-        }
 
         // Let the parent know that we're done and return the loss value
         write_data(workloads[cid].c2p[1], total_loss);
@@ -370,7 +367,6 @@ namespace dynet {
           if (stop_requested) {
             break;
           }
-          trainer->update_epoch();
           if (new_best) {
             learner->SaveModel();
             best_dev_loss = dev_loss;
