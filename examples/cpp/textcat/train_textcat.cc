@@ -233,10 +233,9 @@ int main(int argc, char** argv) {
   double best = 9e+99;
 
   ParameterCollection model;
-  Trainer* sgd = nullptr;
-  //sgd = new MomentumSGDTrainer(model);
-  sgd = new AdagradTrainer(model);
-  //sgd = new SimpleSGDTrainer(model);
+  //trainer = new MomentumSGDTrainer(model);
+  std::unique_ptr<Trainer> trainer(new AdagradTrainer(model));
+  //trainer = new SimpleSGDTrainer(model);
 
   //NeuralBagOfWords nbow(model);
   ConvNet nbow(model);
@@ -251,7 +250,6 @@ int main(int argc, char** argv) {
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   while(1) {
@@ -262,7 +260,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -279,11 +276,11 @@ int main(int argc, char** argv) {
       Expression loss_expr = HingeLoss(y_pred, y);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update(2.0);
+      trainer->update(2.0);
       ++lines;
       ++ttags;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / (double)ttags) << ") ";
     model.project_weights();
 
@@ -309,12 +306,10 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        TextFileSaver saver("/tmp/textcat.model");
+        TextFileSaver saver("textcat.model");
         saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }
   }
-  delete sgd;
 }
-

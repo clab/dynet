@@ -161,7 +161,8 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   vector<bool> needs_derivative(num_nodes, full);
   if (!full) {
     for (auto i : cg.parameter_nodes)
-      needs_derivative[i] = true;
+      if (i <= from_where)
+	needs_derivative[i] = true;
 
     for (unsigned ni = 0; ni < num_nodes; ++ni) {
       bool nd = needs_derivative[ni];
@@ -254,6 +255,7 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
     } else { throw std::runtime_error("Bad device type"); }
     dest += sz; // pointer arith
   }
+  if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
   size_t req_sz = batch_ids.size()*3*sizeof(float*);
   float** srcs = static_cast<float**>(mempool->allocate(req_sz));
@@ -262,6 +264,8 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
   CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
   gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
+  } else if (tout.device->type == DeviceType::CPU) {}
+  else { throw std::runtime_error("Bad device type"); }
 }
 
 void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<VariableIndex> batch_ids, int ai) {
@@ -659,8 +663,10 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         // Get the concatenation and pseudo-node info
         my_batch.concat = node->autobatch_concat(cg);
         my_batch.pseudo_node = node->autobatch_pseudo_node(cg, batch_ids);
-        if(my_batch.pseudo_node != nullptr)
+		if (my_batch.pseudo_node != nullptr) {
           my_batch.pseudo_node->aux_mem = head_aux;
+          my_batch.pseudo_node->device = node->device;
+        }
         else
           cg.nodes[batch_ids[0]]->aux_mem = head_aux;
 

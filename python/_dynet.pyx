@@ -24,13 +24,9 @@ cdef class DynetParams: # {{{
     
     This is useful if you want to specify the global dynet parameters (memory, random seed...) programmatically, for example in a notebook.
     
-    In order to use this object, you will need to import a different package:
-    
     .. code-block:: python
 
         import _dynet
-        # or
-        import _gdynet # For GPU
     
     You can then declare and use a :code:`DynetParams` object
     
@@ -45,6 +41,20 @@ cdef class DynetParams: # {{{
         dyparams.set_random_seed(666)
         # Initialize with the given parameters
         dyparams.init() # or init_from_params(dyparams)
+
+    You can also use :code:`dynet_config` object in your script to specify the
+    device usage and the global dynet parameters (memory, random seed...) before
+    :code:`import dynet`:
+
+    .. code-block:: python
+ 
+        import dynet_config
+        # Declare GPU as the default device type
+        dynet_config.set_gpu()
+        # Set some parameters manualy
+        dynet_config.set(mem=4,random_seed=9)
+        # Initialize dynet import using above configuration in the current scope
+        import dynet
         
     Don't forget to initialize with :code:`dyparams.init()`, otherwise dynet will raise an error.
     """
@@ -57,7 +67,10 @@ cdef class DynetParams: # {{{
     #      made much more "pythonic" and then this
     #      should be adapted.
     cpdef from_config(self, conf):
-        """TODO
+        """Set parameters from config object:
+        
+        Attributes of conf object:
+            mem, seed, autobatch, autobatch_debug, weight_decay, shared_params, requested_gpus, gpu_mask
         """
         self.cparams.mem_descriptor = str(conf["mem"]).encode()
         self.cparams.random_seed=conf["seed"]
@@ -65,8 +78,12 @@ cdef class DynetParams: # {{{
         self.cparams.autobatch_debug = conf["autobatch_debug"]
         self.cparams.weight_decay = conf["weight_decay"]
         self.cparams.shared_parameters = conf["shared_params"]
-        self.set_requested_gpus(conf["requested_gpus"])
-        self.set_gpu_mask(conf["gpu_mask"])
+        if conf["requested_gpus"] >= 1:
+            self.set_requested_gpus(conf["requested_gpus"])
+        else:
+          self.set_cpu_mode()
+        if conf["gpu_mask"]:
+            self.set_gpu_mask(conf["gpu_mask"])
 
     # TODO can this be removed?
     cpdef from_args(self, shared_parameters=None):
@@ -171,8 +188,6 @@ cdef class DynetParams: # {{{
     cpdef set_requested_gpus(self, int requested_gpus):
         """Number of requested gpus
         
-        Currently only 1 is supported
-        
         Args:
             requested_gpus(number): number of requested gpus
         """
@@ -189,19 +204,17 @@ cdef class DynetParams: # {{{
         self.cparams.gpu_mask = cgpu_mask
         self.cparams.ngpus_requested = False
         self.cparams.ids_requested = True
+
+    cpdef set_cpu_mode(self):
+        self.cparams.ids_requested = True
+        self.cparams.cpu_requested = True
 # DynetParams }}}
 
 # Initialization {{{
 def init(shared_parameters=None):
     """Initialize dynet
     
-    Initializes dynet from command line arguments. Do not use after 
-        
-        import dynet
-
-    only after 
-
-        import _dynet / import _gdynet
+    Initializes dynet from command line arguments. Do not use after import dynet
     
     Keyword Args:
         shared_parameters(bool): [description] (default: None)
@@ -3780,7 +3793,7 @@ cpdef Expression vanilla_lstm_gates_dropout_concat(list x_t, Expression h_tm1, E
     for e in x_t:
         ensure_freshness(e) 
         ves.push_back(e.c())
-    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_dropout_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), dropout_mask_x.c(), dropout_mask_h.c(), weightnoise_std))
 
 cpdef Expression vanilla_lstm_gates_concat(list x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
@@ -3794,7 +3807,7 @@ cpdef Expression vanilla_lstm_gates_concat(list x_t, Expression h_tm1, Expressio
 cpdef Expression vanilla_lstm_gates_dropout(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, Expression dropout_mask_x, Expression dropout_mask_h, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
     ensure_freshness(x_t)
-    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_dropout(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), dropout_mask_x.c(), dropout_mask_h.c(), weightnoise_std))
 
 cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
     ensure_freshness(h_tm1)
@@ -4080,7 +4093,7 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
     cdef CGRUBuilder* thisgruptr
     cdef tuple _spec
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model):
-        _spec = (layers, input_dim, hidden_dim)
+        self._spec = (layers, input_dim, hidden_dim)
         if layers > 0:
             self.thisgruptr = self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
         else:

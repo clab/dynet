@@ -28,7 +28,7 @@ if(PYTHON)
   check_cython_version(0.23)
   
   # Things to copy the files
-  file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py
+  file(GLOB DepFiles ${CMAKE_CURRENT_SOURCE_DIR}/dynet.py.in
                      ${CMAKE_CURRENT_SOURCE_DIR}/dynet_config.py
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pyx
                      ${CMAKE_CURRENT_SOURCE_DIR}/_dynet.pxd
@@ -44,17 +44,17 @@ if(PYTHON)
     get_filename_components(CUDA_RT_FILES "${CUDA_LIBRARIES}" NAME)
   endif()
 
-  add_custom_target(copy)
+  add_custom_target(pydynet_precopy)
   foreach(DepFile ${DepFiles})
-    add_custom_command(TARGET copy PRE_BUILD
+    add_custom_command(TARGET pydynet_precopy PRE_BUILD
                        COMMAND ${CMAKE_COMMAND} -E
                            copy ${DepFile} ${CMAKE_CURRENT_BINARY_DIR})
   endforeach()
   # TODO: We should add a dependency, but this isn't working
-  # add_dependencies(copy ${DepFiles})
+  # add_dependencies(pydynet_precopy ${DepFiles})
 
   # Export environment variables for setup.py
-  foreach(Var CMAKE_INSTALL_PREFIX PROJECT_SOURCE_DIR PROJECT_BINARY_DIR LIBS EIGEN3_INCLUDE_DIR MKL_LINK_DIRS WITH_CUDA_BACKEND CUDA_RT_FILES CUDA_RT_DIRS CUDA_CUBLAS_FILES CUDA_CUBLAS_DIRS)
+  foreach(Var CMAKE_INSTALL_PREFIX PROJECT_SOURCE_DIR PROJECT_BINARY_DIR LIBS EIGEN3_INCLUDE_DIR MKL_LINK_DIRS WITH_CUDA_BACKEND CUDA_RT_FILES CUDA_RT_DIRS CUDA_CUBLAS_FILES CUDA_CUBLAS_DIRS MSVC)
     string(REPLACE ";" "\\\\;" Val "${${Var}}")
     message(${Var}="${Val}")
     list(APPEND EnvVars ${Var}="${Val}")
@@ -67,8 +67,16 @@ if(PYTHON)
           COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/timestamp
           DEPENDS ${DepFiles})
 
-  add_custom_target(target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/timestamp)
-  add_dependencies(target copy)
-  add_dependencies(copy dynet)
+  add_custom_target(pydynet ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/timestamp)
+  add_dependencies(pydynet pydynet_precopy)
+  add_dependencies(pydynet_precopy dynet)
 
 endif()
+
+if (WITH_CUDA_BACKEND)
+  set(HAVE_CUDA True)
+else()
+  set(HAVE_CUDA False)
+endif()
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/dynet.py.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/dynet.py")

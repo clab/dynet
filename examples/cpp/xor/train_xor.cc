@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 
   // ParameterCollection (all the model parameters).
   ParameterCollection m;
-  SimpleSGDTrainer sgd(m);
+  SimpleSGDTrainer trainer(m);
 
   const unsigned HIDDEN_SIZE = 8;
   Parameter p_W = m.add_parameters({HIDDEN_SIZE, 2});
@@ -60,13 +60,13 @@ int main(int argc, char** argv) {
       y_value = (x1 != x2) ? 1 : -1;
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update();
+      trainer.update();
     }
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
 
   // Output the model and parameter objects to a file.
-  TextFileSaver saver("/tmp/xor.model");
+  TextFileSaver saver("xor.model");
   saver.save(m);
 }

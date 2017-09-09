@@ -223,8 +223,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   ParameterCollection model;
-  Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(model);
+  std::unique_ptr<Trainer> trainer(new SimpleSGDTrainer(model));
   vector<pair<string,vector<unsigned>>> training;
   kSOW = d.convert("<w>");
   kEOW = d.convert("</w>");
@@ -261,7 +260,6 @@ int main(int argc, char** argv) {
   cerr << "Parameters allocated.\n";
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   // int report = 0;
   unsigned lines = 0;
   unsigned report_every_i = 50;
@@ -274,7 +272,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -288,12 +285,10 @@ int main(int argc, char** argv) {
       ttags += 1;
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / ttags) << ") ";
   }
-  delete sgd;
 }
-

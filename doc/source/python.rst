@@ -76,8 +76,7 @@ The following is a list of all the commands needed to perform a manual install:
     cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DPYTHON=`which python` -DBACKEND=cuda
 
     make -j 2 # replace 2 with the number of available cores
-    cd python
-    python ../../setup.py build --build-dir=.. --skip-build install  # add `--user` for a user-local install.
+    python ../setup.py build --build-dir=.. --skip-build install  # add `--user` for a user-local install.
     
     # this should suffice, but on some systems you may need to add the following line to your
     # init files in order for the compiled .so files be accessible to Python.
@@ -187,8 +186,8 @@ installation is likely to be working:
 
 ::
 
-    from dynet import *
-    pc = ParameterCollection()
+    import dynet as dy
+    pc = dy.ParameterCollection()
 
 If it doesn't work and you get an error similar to the following:
 ::
@@ -222,7 +221,7 @@ After this, you should be able to install using pip or manual installation as no
 Windows Support
 ---------------
 
-You can also use Python on Windows. For simplicity, we recommend 
+You can also use Python on Windows, including GPU and MKL support. For simplicity, we recommend 
 using a Python distribution that already has Cython installed. The following has been tested to work:
 
 1) Install WinPython 2.7.10 (comes with Cython already installed).

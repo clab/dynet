@@ -126,16 +126,16 @@ int main(int argc, char** argv) {
 
     ParameterCollection model;
     bool use_momentum = false;
-    Trainer* sgd = nullptr;
+    std::unique_ptr<Trainer> trainer;
     if (use_momentum)
-        sgd = new MomentumSGDTrainer(model);
+        trainer.reset(new MomentumSGDTrainer(model));
     else
-        sgd = new SimpleSGDTrainer(model);
+        trainer.reset(new SimpleSGDTrainer(model));
 
     RNNSkipLM lm(model);
     if (argc == 4) {
         TextfileLoader loader(argv[3]);
-        loader.populate(model);'
+        loader.populate(model);
     }
 
     unsigned report_every_i = 50;
@@ -143,7 +143,6 @@ int main(int argc, char** argv) {
     unsigned si = training.size();
     vector<unsigned> order(training.size());
     for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-    bool first = true;
     int report = 0;
     unsigned lines = 0;
     while(1) {
@@ -153,7 +152,6 @@ int main(int argc, char** argv) {
         for (unsigned i = 0; i < report_every_i; ++i) {
             if (si == training.size()) {
                 si = 0;
-                if (first) { first = false; } else { sgd->update_epoch(); }
                 LOG(INFO) << "**SHUFFLE\n";
                 shuffle(order.begin(), order.end(), *rndeng);
             }
@@ -168,10 +166,10 @@ int main(int argc, char** argv) {
             Expression loss_expr = lm.BuildLMGraph(doc, cg);
             loss += as_scalar(cg.forward(loss_expr));
             cg.backward(loss_expr);
-            sgd->update();
+            trainer->update();
             ++lines;
         }
-        sgd->status();
+        trainer->status();
         // FIXME: is chars incorrect?
         LOG(INFO) << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
         //lm.RandomSample(); // why???
@@ -197,7 +195,6 @@ int main(int argc, char** argv) {
             LOG(INFO) << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
         }
     }
-    delete sgd;
 }
 
 void read_documents(const std::string &filename, Corpus &corpus) {

@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   // Use Adam optimizer
-  AdamTrainer adam(model);
-  adam.clip_threshold *= params.BATCH_SIZE;
+  AdamTrainer trainer(model);
+  trainer.clip_threshold *= params.BATCH_SIZE;
 
   // Create model
   MLP nn(model, vector<Layer>({
@@ -80,15 +80,12 @@ int main(int argc, char** argv) {
   vector<unsigned> order(num_batches);
   for (unsigned i = 0; i < num_batches; ++i) order[i] = i;
 
-  bool first = true;
   unsigned epoch = 0;
   vector<Expression> cur_batch;
   vector<unsigned> cur_labels;
 
   // Run for the given number of epochs (or indefinitely if params.NUM_EPOCHS is negative)
   while (epoch < params.NUM_EPOCHS || params.NUM_EPOCHS < 0) {
-    // Update the optimizer
-    if (first) { first = false; } else { adam.update_epoch(); }
     // Reshuffle the dataset
     cerr << "**SHUFFLE\n";
     random_shuffle(order.begin(), order.end());
@@ -97,7 +94,7 @@ int main(int argc, char** argv) {
     double num_samples = 0;
 
     // Start timer
-    Timer* iteration = new Timer("completed in");
+    std::unique_ptr<Timer> iteration(new Timer("completed in"));
 
     // Activate dropout
     nn.enable_dropout();
@@ -126,15 +123,14 @@ int main(int argc, char** argv) {
       // Compute gradient with backward pass
       cg.backward(loss_expr);
       // Update parameters
-      adam.update();
+      trainer.update();
       // Print progress every tenth of the dataset
       if ((si + 1) % (num_batches / 10) == 0 || si == num_batches - 1) {
         // Print informations
-        adam.status();
+        trainer.status();
         cerr << " E = " << (loss / num_samples) << ' ';
         // Reinitialize timer
-        delete iteration;
-        iteration = new Timer("completed in");
+        iteration.reset(new Timer("completed in"));
         // Reinitialize loss
         loss = 0;
         num_samples = 0;
@@ -168,8 +164,7 @@ int main(int argc, char** argv) {
       cerr << "\n***DEV [epoch=" << (epoch)
            << "] E = " << (dpos / (double) mnist_dev.size()) << ' ';
       // Reinitialize timer
-      delete iteration;
-      iteration = new Timer("completed in");
+      iteration.reset(new Timer("completed in"));
     }
 
     // Increment epoch

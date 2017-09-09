@@ -1,6 +1,7 @@
 import dynet as dy
 import time
 import random
+from pycrayon import CrayonClient
 
 LAYERS = 2
 INPUT_DIM = 256 #50  #256
@@ -13,6 +14,7 @@ from collections import defaultdict
 from itertools import count
 import sys
 import util
+
 
 class RNNLanguageModel:
     def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.SimpleRNNBuilder):
@@ -47,7 +49,7 @@ class RNNLanguageModel:
 
         # start the rnn with "<s>"
         init_ids = cids[0]
-        s = init_state.add_input(dy.lookup_batch(self.lookup, init_ids))
+        s = init_state.add_input(lookup_batch(self.lookup, init_ids))
 
         losses = []
 
@@ -97,17 +99,25 @@ class RNNLanguageModel:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('corpus', help='Path to the corpus file.')
+    parser.add_argument('crayserver', help='Server location for crayon.')
+    parser.add_argument('expname', help='Experiment name')
     args = parser.parse_args()
+
+    # Connect to the server
+    cc = CrayonClient(hostname=args.crayserver)
+
+    #Create a new experiment
+    myexp = cc.create_experiment(args.expname)
 
     train = util.CharsCorpusReader(args.corpus, begin="<s>")
     vocab = util.Vocab.from_corpus(train)
     
     VOCAB_SIZE = vocab.size()
 
-    model = dy.Model()
+    model = dy.ParameterCollection()
     trainer = dy.SimpleSGDTrainer(model)
 
-    #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
+    #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.SimpleRNNBuilder)
     lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.LSTMBuilder)
 
     train = list(train)
@@ -135,6 +145,8 @@ if __name__ == '__main__':
             # train on the minibatch
             errs, mb_chars = lm.BuildLMGraph(train[sid: sid + MB_SIZE])
             loss += errs.scalar_value()
+            # Add a scalar value to the experiment for the set of data points named loss evolution
+            myexp.add_scalar_value("lossevolution", loss)
             chars += mb_chars
             errs.backward()
             trainer.update()
@@ -146,3 +158,7 @@ if __name__ == '__main__':
         #print "TM:",(time.time() - _start)/len(train)
         trainer.status()
         trainer.update_epoch(1.0)
+
+    # To save the experiment
+    filename = myexp.to_zip()
+    print("Save tensorboard experiment at {}".format(filename))

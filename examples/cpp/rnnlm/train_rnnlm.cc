@@ -131,6 +131,25 @@ void inline read_fields(string line, vector<string>& fields, string delimiter = 
   }
 }
 
+// Read the dataset, returns the number of tokens
+unsigned read_data(const string& filename,
+                   vector<vector<int>>& data) {
+  unsigned num_tokens = 0;
+  ifstream in(filename);
+  assert(in);
+  size_t lc = 0;
+  string line;
+  while (getline(in, line)) {
+    ++lc;
+    data.push_back(read_sentence(line, d));
+    num_tokens += data.back().size();
+    if (data.back().front() == kSOS || data.back().back() == kEOS) {
+      cerr << "sentence in " << filename << ":" << lc << " started with <s> or ended with </s>\n";
+      abort();
+    }
+  }
+  return num_tokens;
+}
 
 int main(int argc, char** argv) {
   cerr << "COMMAND LINE:";
@@ -154,7 +173,7 @@ int main(int argc, char** argv) {
   SAMPLE = params.sample;
   if (params.dropout_rate)
     DROPOUT = params.dropout_rate;
-  Model model;
+  ParameterCollection model;
   if (params.clusters_file != "")
     cfsm = new ClassFactoredSoftmaxBuilder(HIDDEN_DIM, params.clusters_file, d, model);
   else if (params.paths_file != "")
@@ -168,17 +187,8 @@ int main(int argc, char** argv) {
   {
     string trainf = params.train_file;
     cerr << "Reading training data from " << trainf << " ...\n";
-    ifstream in(trainf);
-    assert(in);
-    while (getline(in, line)) {
-      ++tlc;
-      training.push_back(read_sentence(line, d));
-      ttoks += training.back().size();
-      if (training.back().front() == kSOS || training.back().back() == kEOS) {
-        cerr << "Training sentence in " << argv[1] << ":" << tlc << " started with <s> or ended with </s>\n";
-        abort();
-      }
-    }
+    ttoks = read_data(trainf, training);
+    tlc = training.size();
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
   d.freeze(); // no new word types allowed
@@ -190,19 +200,11 @@ int main(int argc, char** argv) {
   if (params.test_file != "") {
     string testf = params.test_file;
     cerr << "Reading test data from " << testf << " ...\n";
-    ifstream in(testf);
-    assert(in);
-    while (getline(in, line)) {
-      test.push_back(read_sentence(line, d));
-      if (test.back().front() == kSOS || test.back().back() == kEOS) {
-        cerr << "Test sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
-        abort();
-      }
-    }
+    read_data(testf, test);
   }
 
-  Trainer* sgd = new SimpleSGDTrainer(model);
-  sgd->learning_rate = params.eta0;
+  std::unique_ptr<Trainer> trainer(new SimpleSGDTrainer(model));
+  trainer->learning_rate = params.eta0;
   RNNLanguageModel<LSTMBuilder> lm(model);
 
   bool has_model_to_load = params.model_file != "";
@@ -224,17 +226,7 @@ int main(int argc, char** argv) {
     } else {
       string devf = params.dev_file;
       cerr << "Reading dev data from " << devf << " ...\n";
-      ifstream in(devf);
-      assert(in);
-      while (getline(in, line)) {
-        ++dlc;
-        dev.push_back(read_sentence(line, d));
-        dtoks += dev.back().size();
-        if (dev.back().front() == kSOS || dev.back().back() == kEOS) {
-          cerr << "Dev sentence in " << argv[2] << ":" << tlc << " started with <s> or ended with </s>\n";
-          abort();
-        }
-      }
+      dtoks = read_data(devf, dev);
       cerr << dlc << " lines, " << dtoks << " tokens\n";
     }
     ostringstream os;
@@ -253,7 +245,6 @@ int main(int argc, char** argv) {
     if (report_every_i > si) report_every_i = si;
     vector<unsigned> order(training.size());
     for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-    bool first = true;
     int report = 0;
     double lines = 0;
     int completed_epoch = -1;
@@ -265,11 +256,10 @@ int main(int argc, char** argv) {
       for (unsigned i = 0; i < report_every_i; ++i) {
         if (si == training.size()) {
           si = 0;
-          if (first) { first = false; } else { sgd->update_epoch(); }
           cerr << "**SHUFFLE\n";
           completed_epoch++;
           if (eta_decay_onset_epoch && completed_epoch >= (int)eta_decay_onset_epoch)
-            sgd->learning_rate *= eta_decay_rate;
+            trainer->learning_rate *= eta_decay_rate;
           shuffle(order.begin(), order.end(), *rndeng);
         }
 
@@ -281,11 +271,11 @@ int main(int argc, char** argv) {
         Expression loss_expr = lm.BuildLMGraph(sent, cg, DROPOUT > 0.f);
         loss += as_scalar(cg.forward(loss_expr));
         cg.backward(loss_expr);
-        sgd->update();
+        trainer->update();
         ++lines;
       }
       report++;
-      cerr << '#' << report << " [epoch=" << (lines / training.size()) << " lr=" << sgd->learning_rate << "] E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
+      cerr << '#' << report << " [epoch=" << (lines / training.size()) << " lr=" << trainer->learning_rate << "] E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 
       // show score on dev data?
       if (report % dev_every_i_reports == 0) {
@@ -369,6 +359,4 @@ int main(int argc, char** argv) {
       cout << endl;
     }
   }
-
-  delete sgd;
 }

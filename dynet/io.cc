@@ -66,17 +66,14 @@ TextFileSaver::TextFileSaver(const std::string & filename, bool append) :
   datastream << std::scientific << std::showpos;
 }
 
-TextFileSaver::~TextFileSaver() {
-  delete p_datastream;
-  p_datastream = nullptr;
-}
+TextFileSaver::~TextFileSaver() {}
 
 void TextFileSaver::save(const ParameterCollection & model,
                          const std::string & key) {
   if (!valid_pc_key(key))
     DYNET_INVALID_ARG("Key should start with '/' and could not include ' ' or '#': " << key);
   std::string key_ = key;
-  if (key_.back() != '/') key_ += "/";
+  if (key_.size() != 0 && key_.back() != '/') key_ += "/";
   const ParameterCollectionStorage & storage = model.get_storage();
   if(key.size() == 0) {
     for (auto & p : storage.params) save(*p, key);
@@ -152,7 +149,7 @@ void TextFileLoader::populate(ParameterCollection & model, const std::string & k
   size_t param_id = 0, lookup_id = 0;
   ParameterCollectionStorage & storage = model.get_storage();
   std::string key_ = key;
-  if (key_.back() != '/') key_ += "/";
+  if (key_.size() != 0 && key_.back() != '/') key_ += "/";
   while(std::getline(datastream, line)) {
     read_param_header(line, type, name, dim, byte_count, zero_grad);
     // Skip ones that don't match

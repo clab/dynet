@@ -16,8 +16,8 @@ int main(int argc, char** argv) {
   // parameters
   const unsigned HIDDEN_SIZE = 8;
   ParameterCollection m;
-  SimpleSGDTrainer sgd(m);
-  //MomentumSGDTrainer sgd(m);
+  SimpleSGDTrainer trainer(m);
+  //MomentumSGDTrainer trainer(m);
 
   ComputationGraph cg;
 
@@ -58,15 +58,14 @@ int main(int argc, char** argv) {
       y_value = (x1 != x2) ? 1 : 0;
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update();
+      trainer.update();
     }
-    sgd.update_epoch();
     loss /= 4;
     cerr << "E = " << loss << endl;
   }
 
   // Output the model and parameter objects
   // to a file.
-  TextFileSaver saver("/tmp/xor-xent.model");
+  TextFileSaver saver("xor-xent.model");
   saver.save(m);
 }
