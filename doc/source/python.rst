@@ -77,12 +77,6 @@ The following is a list of all the commands needed to perform a manual install:
 
     make -j 2 # replace 2 with the number of available cores
     python ../setup.py build --build-dir=.. --skip-build install  # add `--user` for a user-local install.
-    
-    # this should suffice, but on some systems you may need to add the following line to your
-    # init files in order for the compiled .so files be accessible to Python.
-    # /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
-    export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
-
 
 To explain these one-by-one, first we get DyNet:
 
@@ -188,19 +182,6 @@ installation is likely to be working:
 
     import dynet as dy
     pc = dy.ParameterCollection()
-
-If it doesn't work and you get an error similar to the following:
-::
-
-    ImportError: dlopen(/Users/sneharajana/.python-eggs/dyNET-0.0.0-py2.7-macosx-10.11-intel.egg-tmp/_dynet.so, 2): Library not loaded: @rpath/libdynet.dylib
-    Referenced from: /Users/sneharajana/.python-eggs/dyNET-0.0.0-py2.7-macosx-10.11-intel.egg-tmp/_dynet.so
-    Reason: image not found``
-
-then you may need to run the following (and add it to your shell init files):
-
-    export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
-
-# /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
 
 Anaconda Support
 ----------------
