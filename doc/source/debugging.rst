@@ -96,7 +96,7 @@ Build with TSan
 
 Linux/macOS only.
 
-If you're on macOS or Linux, we can build DyNet with
+If you're on Linux or macOS, you can build DyNet with
 `ThreadSanitizer <https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual>`__
 (aka TSan). TSan is a data race error detector for C/C++. It finds data races at runtime
 just like ASan. Please see the `official wiki <https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual>`__
