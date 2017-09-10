@@ -1,5 +1,8 @@
 language: cpp
 
+sudo: required
+services:
+  - docker
 os:
   - linux
   - osx
@@ -20,78 +23,64 @@ addons:
       - libboost-serialization1.55-dev
       - libboost-test1.55-dev
       - libboost-regex1.55-dev
+      - pandoc
 env:
   global:
-    - PYTHON=python CONDA_PACKAGES="numpy cython"
+    - PYTHON=python CONDA_PACKAGES="numpy cython" TWINE_USERNAME=danielh
+    - secure: "j8Ro21/7h5FKuJHPJRHYfOiZHMoAfD/dfpqXZreGrl79jVSEdPZmmOdvFH++CqrRdttpxOf2Lg5qOfpXfziC5ecJx1USslBSo2qwAG9JwPkwjCK7MhouM64yhVedj9Es/H635aufbyRsDIhKr5poPrrH+UebEq/63QpEdDWIWq8="
   matrix:
-    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
-    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip
     - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
-    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip
+    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
+    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
+    - PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+    - PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
+    - PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+    - PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
 matrix:
   exclude:
     - os: linux
       compiler: clang
     - os: osx
       compiler: gcc
+    - os: osx
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
+    - os: osx
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+    - os: osx
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+    - os: osx
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
 
 before_install:
-  # We do this conditionally because it saves us some downloading if the
-  # version is the same.
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      export MINICONDA_OS_NAME=Linux CXX=g++-4.8 CC=gcc-4.8;
-    elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      export MINICONDA_OS_NAME=MacOSX;
-    fi
-  - wget https://repo.continuum.io/miniconda/Miniconda$PYNUM-latest-$MINICONDA_OS_NAME-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  # Useful for debugging any issues with conda
-  - conda info -a
+  - travis_retry .travis/install_conda.sh
+  - export PATH="$PWD/miniconda/bin:$PATH"
+  - source activate "$PYVER"
 
 install:
-  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
-      hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb || travis_terminate 1;
-      cd eigen;
-      mkdir build && cd build;
-      cmake .. || travis_terminate 1;
-      sudo make install || travis_terminate 1;
-      cd ../..;
-      export EIGEN3_INCLUDE_DIR=/usr/local/include/eigen3;
-    fi'
+  - travis_retry .travis/install_eigen.sh
+  - export EIGEN3_INCLUDE_DIR=/usr/local/include/eigen3
 
 before_script:
-  - cd $TRAVIS_BUILD_DIR
-  - conda create -q -n dynet-environment python=$PYVER $CONDA_PACKAGES
-  - source activate dynet-environment
-  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
-      mkdir build;
-      cd build;
-      cmake .. -DEIGEN3_INCLUDE_DIR=$EIGEN3_INCLUDE_DIR -DENABLE_BOOST=ON -DENABLE_CPP_EXAMPLES=ON -DPYTHON=$(which python) -DCMAKE_INSTALL_PREFIX=$(dirname $(which python))/.. || travis_terminate 1;
-    else
-      pip install -v . || travis_terminate 1;
-    fi'
+  - .travis/build_dynet.sh
 
 after_failure:
   - cat $TRAVIS_BUILD_DIR/build/CMakeFiles/CMakeError.log
 
 script:
-  - 'if [[ "$PYTHON_INSTALL" == "manual" ]]; then
-      if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-        make -j$(nproc) || travis_terminate 1;
-      elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-        make -j$(sysctl -n hw.ncpu) || travis_terminate 1;
-        export DYLD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/dynet;
-      fi;
-      make install || travis_terminate 1;
-      make test || travis_terminate 1;
-      cd python;
-      python ../../setup.py build --build-dir=.. --skip-build install --user || travis_terminate 1;
-    elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      export DYLD_LIBRARY_PATH=$(dirname $(which python))/../lib:$DYLD_LIBRARY_PATH;
-    fi'
-  - cd $TRAVIS_BUILD_DIR/tests/python
-  - python test.py
+  - .travis/test_dynet.sh
+
+deploy:
+  provider: script
+  skip_cleanup: true
+  script:
+    - .travis/build_sdist.sh
+    - .travis/deploy.sh
+  on:
+    repo: clab/dynet
+    tags: true
+    condition: "$PYTHON_INSTALL = pip && $TRAVIS_OS_NAME = linux"
