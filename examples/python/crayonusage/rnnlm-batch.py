@@ -157,7 +157,6 @@ if __name__ == '__main__':
         #print(loss / chars,)
         #print "TM:",(time.time() - _start)/len(train)
         trainer.status()
-        trainer.update_epoch(1.0)
 
     # To save the experiment
     filename = myexp.to_zip()
