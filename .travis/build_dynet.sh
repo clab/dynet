@@ -2,15 +2,19 @@
 set -xe
 
 cd "$TRAVIS_BUILD_DIR"
-sed -i.bak "s/ -march=native//;s/-Wall/-w/" CMakeLists.txt
-sed -i.bak "s/\(APPEND CUDA_NVCC_FLAGS.*;\)/\1-w;/" dynet/CMakeLists.txt
+if [[ "$BACKEND" == cuda ]]; then
+  sed -i.bak "s/\(APPEND CUDA_NVCC_FLAGS.*;\)/\1-w;/" dynet/CMakeLists.txt
+  export DYNET_TEST_DEVICES=CPU
+  BACKEND_OPTION="-DBACKEND=cuda"
+fi
 if [[ "$PYTHON_INSTALL" == manual ]]; then
   mkdir build
   cd build
-  cmake .. -DEIGEN3_INCLUDE_DIR="$EIGEN3_INCLUDE_DIR" -DENABLE_BOOST=ON -DENABLE_CPP_EXAMPLES=ON -DPYTHON=$(which python) -DCMAKE_INSTALL_PREFIX=$(dirname $(which python))/..
+  cmake .. $BACKEND_OPTION -DEIGEN3_INCLUDE_DIR="$EIGEN3_INCLUDE_DIR" -DENABLE_BOOST=ON -DENABLE_CPP_EXAMPLES=ON -DPYTHON=$(which python) -DCMAKE_INSTALL_PREFIX=$(dirname $(which python))/..
 else  # pip
   if [[ -n "$TRAVIS_TAG" ]]; then
     sed -i.bak "s/# version=.*/version=\"$TRAVIS_TAG\",/" setup.py
+    sed -i.bak "s/ -march=native//" CMakeLists.txt
   fi
   if [[ "$TRAVIS_OS_NAME" == linux ]]; then
     docker build --rm -t "dynet-manylinux1-${BUILD_ARCH}-builder" -f "docker/Dockerfile-$BUILD_ARCH" .

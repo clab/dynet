@@ -18,6 +18,7 @@ else
       export DYLD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/dynet
     fi
     make install
+    export CTEST_OUTPUT_ON_FAILURE=1
     make test
     cd python
     python ../../setup.py build --build-dir=.. --skip-build install --user
