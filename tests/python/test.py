@@ -96,6 +96,18 @@ class TestParameters(unittest.TestCase):
         self.trainer = dy.SimpleSGDTrainer(self.m, learning_rate=0.1)
         self.trainer.set_clip_threshold(-1)
 
+    def test_as_array(self):
+        # Values
+        self.p1.as_array()
+        self.lp1.as_array()
+        self.lp1.row_as_array(0)
+        self.lp1.rows_as_array([5, 6, 9])
+        # Gradients
+        self.p1.grad_as_array()
+        self.lp1.as_array()
+        self.lp1.row_grad_as_array(0)
+        self.lp1.rows_grad_as_array([5, 6, 9])
+
     def test_grad(self):
         # add parameter
         p = self.m.parameters_from_numpy(np.arange(5))
