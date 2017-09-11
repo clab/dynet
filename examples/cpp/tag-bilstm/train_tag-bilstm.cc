@@ -101,7 +101,7 @@ struct RNNLanguageModel {
           // Find best tag according to the distribution
           double best = -9e99;
           int besti = -1;
-          for (int i = 0; i < dist.size(); ++i) {
+          for (int i = 0; i < static_cast<int>(dist.size()); ++i) {
             if (dist[i] > best) { best = dist[i]; besti = i; }
           }
           if (tags[t] == besti) (*cor)++;

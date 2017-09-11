@@ -103,11 +103,11 @@ struct RNNLanguageModel {
         auto dist = as_vector(cg.incremental_forward(dist_expr));
         double p = rand01();
         cur = 0;
-        for (; cur < dist.size(); ++cur) {
+        for (; static_cast<unsigned>(cur) < dist.size(); ++cur) {
           p -= dist[cur];
           if (p < 0.0) { break; }
         }
-        if (cur == dist.size()) cur = kEOS;
+        if (static_cast<unsigned>(cur) == dist.size()) cur = kEOS;
       }
       if (cur == kEOS) break;
       ++len;
