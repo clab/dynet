@@ -39,6 +39,84 @@ In Python, these values can be set by using optional arguments to the ``renew_cg
     dy.renew_cg(immediate_compute = True, check_validity = True)
 
 
+Debug Builds
+------------
+
+By default, DyNet is built with all optimization enabled.
+You can build DyNet without optimizations by adding
+``-DCMAKE_BUILD_TYPE=Debug`` to the cmake command
+
+::
+
+    cd dynet
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_BUILD_TYPE=Debug
+    make -j8 # replace 8 properly
+
+
+Note: pass other cmake options based on your environment.
+
+
+Debugging Crashes
+-----------------
+
+Build with ASan
+~~~~~~~~~~~~~~~
+
+If you're on Linux or macOS, you can build DyNet with
+`AddressSanitizer <https://github.com/google/sanitizers/wiki/AddressSanitizer>`__
+(aka ASan). ASan is a memory error detector for C/C++. It's useful for debugging
+bugs or crashes caused by memory errors such as use-after-free, heap buffer overflow,
+stack buffer overflow. By running ASan-enabled tests or programs, ASan finds memory
+errors at runtime. To enable ASan, add ``-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address"``
+to the cmake command:
+
+
+::
+
+    cd dynet
+    mkdir build-asan
+    cd build-asan
+    cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address"
+    make -j8
+
+
+Please see the `official wiki <https://github.com/google/sanitizers/wiki/AddressSanitizer>`__
+for the details.
+
+CAUTION: Please do not install ASan enabled libraries or programs
+under root partition. You might have a bad time.
+
+Debugging Threading Issues
+--------------------------
+
+Build with TSan
+~~~~~~~~~~~~~~~
+
+Linux/macOS only.
+
+If you're on Linux or macOS, you can build DyNet with
+`ThreadSanitizer <https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual>`__
+(aka TSan). TSan is a data race error detector for C/C++. It finds data races at runtime
+just like ASan. Please see the `official wiki <https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual>`__
+for more details.
+
+By running TSan-enabled tests or programs, TSan finds data races at runtime.
+To enable TSan, add ``-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address"``
+to the cmake command:
+
+::
+
+    cd dynet
+    mkdir build-tsan
+    cd build-tsan
+    cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address"
+
+
+CAUTION: Please do not install TSan enabled libraries or programs
+under root partition. You might have a bad time.
+
 .. _debugging-asking:
 
 Asking Questions/Reporting Bugs
