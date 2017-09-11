@@ -830,7 +830,7 @@ cdef class LookupParameters: # {{{
         """
         cdef vector[CTensor] vals
         vals = self.thisptr.get_storage().values
-        return np.vstack([c_tensor_as_np(vals[row]).reshape(1,-1,order='F') for row in rows])
+        return np.stack([c_tensor_as_np(vals[row]) for row in rows])
 
     cpdef as_array(self):
         """Return as a numpy array.
@@ -842,7 +842,7 @@ cdef class LookupParameters: # {{{
         """
         cdef vector[CTensor] vals
         vals = self.thisptr.get_storage().values
-        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
+        return np.stack([c_tensor_as_np(t) for t in vals])
 
     cpdef grad_as_array(self):
         """Return gradients as a numpy array.
@@ -854,7 +854,7 @@ cdef class LookupParameters: # {{{
         """
         cdef vector[CTensor] grads
         grads = self.thisptr.get_storage().grads
-        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
+        return np.stack([c_tensor_as_np(t) for t in grads])
 
     cpdef row_grad_as_array(self, row):
         """Return row gradient as a numpy array.
@@ -882,7 +882,7 @@ cdef class LookupParameters: # {{{
         """
         cdef vector[CTensor] vals
         vals = self.thisptr.get_storage().grads
-        return np.vstack([c_tensor_as_np(vals[row]).reshape(1,-1,order='F') for row in rows])
+        return np.stack([c_tensor_as_np(vals[row]) for row in rows])
 
     
     cpdef scale(self,float s):
