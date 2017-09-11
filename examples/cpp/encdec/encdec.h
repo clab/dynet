@@ -145,7 +145,7 @@ public:
             // Fill x_t with the characters at step t in the batch
             for (unsigned i = 0; i < bsize; ++i) {
                 x_t[i] = isents[id + i][t];
-                if (x_t[i] != *isents[id].rbegin()) chars++; // if x_t is non-EOS, count a char
+                if (x_t[i] != static_cast<unsigned>(*isents[id].rbegin())) chars++; // if x_t is non-EOS, count a char
             }
             // Get embedding
             Expression i_x_t = lookup(cg, p_ec, x_t);
@@ -161,7 +161,7 @@ public:
             rev_enc_builder.start_new_sequence();
             // Fill x_t with the characters at step t in the batch (in reverse order)
             for (int t = islen - 1; t >= 0; --t) {
-                for (int i = 0; i < bsize; ++i) {
+                for (unsigned i = 0; i < bsize; ++i) {
                     x_t[i] = isents[id + i][t];
                 }
                 // Get embedding (could be mutualized with fwd_enc_builder)
@@ -362,7 +362,7 @@ private:
         float p = (float)rand() / (float) RAND_MAX;
         float cumul = 0.f;
         int idx = 0;
-        while (idx < v.size() && p > cumul) {
+        while (idx < static_cast<int>(v.size()) && p > cumul) {
             cumul += v[idx];
             idx += 1;
         }

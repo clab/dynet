@@ -275,7 +275,7 @@ int main(int argc, char** argv) {
       Expression logits = engine.classify(cg, inst);
       std::vector<float> pred = dynet::as_vector(cg.get_value(logits));
       unsigned y_pred = std::max_element(pred.begin(), pred.end()) - pred.begin();
-      if (y_pred == inst.second) { correct ++; }
+      if (y_pred == static_cast<unsigned>(inst.second)) { correct ++; }
       Expression loss_expr = engine.objective(cg, inst, logits);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
@@ -296,7 +296,7 @@ int main(int argc, char** argv) {
       for (auto& inst : dev) {
         ComputationGraph cg;
         unsigned y_pred = engine.predict(cg, inst);
-        if (y_pred == inst.second) dcorr++;
+        if (y_pred == static_cast<unsigned>(inst.second)) dcorr++;
         dtags++;
       }
       if (dloss < best) {
