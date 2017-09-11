@@ -182,13 +182,13 @@ BOOST_AUTO_TEST_CASE( simple_sgd_update_subset ) {
 BOOST_AUTO_TEST_CASE( simple_edge_case_test_dynet_867 ) {
   ParameterCollection model;
   LookupParameter emb_weight = model.add_lookup_parameters(1, {1});
-  Parameter foo = model.add_parameters({1, 1});
+  model.add_parameters({1, 1});
   SimpleSGDTrainer trainer(model);
   ComputationGraph cg;
-  dynet::real zero;
+  dynet::real zero = 0.0;
   Expression loss2 = input(cg, zero);
   for (int i = 0; i < 1000; ++i)
-    auto emb_read = dynet::lookup(cg, emb_weight, 0u);
+    dynet::lookup(cg, emb_weight, 0u);
   cg.backward(loss2);
   trainer.update();
 }
