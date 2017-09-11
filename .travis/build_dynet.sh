@@ -2,6 +2,8 @@
 set -xe
 
 cd "$TRAVIS_BUILD_DIR"
+sed -i.bak "s/ -march=native//;s/-Wall/-w/" CMakeLists.txt
+sed -i.bak "s/\(APPEND CUDA_NVCC_FLAGS.*;\)/\1-w;/" dynet/CMakeLists.txt
 if [[ "$PYTHON_INSTALL" == manual ]]; then
   mkdir build
   cd build
@@ -9,7 +11,6 @@ if [[ "$PYTHON_INSTALL" == manual ]]; then
 else  # pip
   if [[ -n "$TRAVIS_TAG" ]]; then
     sed -i.bak "s/# version=.*/version=\"$TRAVIS_TAG\",/" setup.py
-    sed -i.bak "s/ -march=native//" CMakeLists.txt
   fi
   if [[ "$TRAVIS_OS_NAME" == linux ]]; then
     docker build --rm -t "dynet-manylinux1-${BUILD_ARCH}-builder" -f "docker/Dockerfile-$BUILD_ARCH" .
