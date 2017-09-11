@@ -131,7 +131,7 @@ public:
       for (unsigned i = 0; i < bsize; ++i) {
         next_arr[i] = sents[id + i][t];
         // count non-EOS tokens
-        if (next_arr[i] != *sents[id].rbegin()) tokens++;
+        if (next_arr[i] != static_cast<unsigned>(*sents[id].rbegin())) tokens++;
       }
       // Embed the current tokens
       Expression i_x_t = lookup(cg, p_c, last_arr);
@@ -202,7 +202,7 @@ public:
         if (w == dist.size()) w = kEOS;
       }
 
-      if (w == kEOS) {
+      if (static_cast<int>(w) == kEOS) {
         // If the sampled token is an EOS, reinitialize network and start generating a new sample
         rnn.start_new_sequence();
         cerr << endl;
