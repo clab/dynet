@@ -136,7 +136,7 @@ if ENV.get("MSVC") == "1":
     append_cmake_lib_list(LIBRARIES, ENV.get("CUDA_RT_FILES"))
     append_cmake_list(LIBRARY_DIRS, ENV.get("CUDA_RT_DIRS"))
 else:
-    COMPILER_ARGS[:] = ["-std=c++11"]
+    COMPILER_ARGS[:] = ["-std=c++11", "-Wno-shorten-64-to-32", "-Wno-unused-function"]
     RUNTIME_LIB_DIRS.extend([DYNET_LIB_DIR, LIBS_INSTALL_DIR])
     # in some OSX systems, the following extra flags are needed:
     if platform.system() == "Darwin":
