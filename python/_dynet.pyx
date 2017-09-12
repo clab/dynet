@@ -1727,25 +1727,59 @@ cpdef values(list exps, recalculate=False):
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
-def parameter(p, update=True):
-    """Load a parameter in the computation graph
-    
-    Get the expression corresponding to a parameter
-    
+def parameter(*args):
+    """Add parameters to the computation graph.
+
+    Get the expression objects corresponding to parameters. Gradients for
+    parameters will be computed and used by Optimizers to update.
+
     Args:
-        p(Parameter,LookupParameter): Parameter to load (can be a lookup parameter as well)
-        update(bool): If this is set to False, the parameter won't be updated during the backward pass
-    
+        args: Parameter and LookupParameter objects to add to the computation
+        graph.
+
     Returns:
-        Expression: Parameter expression
-    
+        Expression: one expression for each input parameter.
+
     Raises:
-        NotImplementedError: Only works with parameters and lookup parameters
+        NotImplementedError: Only works with Parameters and LookupParameters.
     """
-    if isinstance(p,Parameters) or isinstance(p,LookupParameters):
-        return p.expr(update)
+    for p in args:
+      if not (isinstance(p, Parameters) or isinstance(p, LookupParameters)):
+        raise NotImplementedError(
+            "Cannot call parameter() on anything other than Parameters or LookupParameters")
+    if len(args) == 1:
+      return args[0].expr(True)  # True=update parameter
     else:
-        raise NotImplementedError("Cannot call parameter() on anything other than Parameters or LookupParameters")
+      return tuple(p.expr(True) for p in args)
+
+
+def const_parameter(*args):
+    """Add constant parameters to the computation graph.
+
+    Get the expression objects corresponding to parameters. Gradients for
+    parameters will be NOT computed or used by Optimizers to update. To access
+    parameters that should be updated (which is usually what you want), use
+    parameter() instead.
+
+    Args:
+        args: Parameter and LookupParameter objects to add to the computation
+        graph.
+
+    Returns:
+        Expression: one expression for each input parameter.
+
+    Raises:
+        NotImplementedError: Only works with Parameters and LookupParameters.
+    """
+    for p in args:
+      if not (isinstance(p, Parameters) or isinstance(p, LookupParameters)):
+        raise NotImplementedError(
+            "Cannot call const_parameter() on anything other than Parameters or LookupParameters")
+    if len(args) == 1:
+      return args[0].expr(False)  # False=update parameter
+    else:
+      return tuple(p.expr(False) for p in args)
+
 
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller
