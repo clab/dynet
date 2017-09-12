@@ -202,8 +202,8 @@ class TestParameters(unittest.TestCase):
                         0] * 0.9), msg=np.array_str(self.lp1.as_array()[1]))
         self.assertTrue(np.allclose(self.lp2.as_array()[1], ones[
                         0] * 0.9), msg=np.array_str(self.lp2.as_array()))
-     
-     def test_param_change_after_update(self):
+
+    def test_param_change_after_update(self):
         trainer = dy.AdamTrainer(self.m)
         trainer.update()
         p = self.m.add_parameters((1,))

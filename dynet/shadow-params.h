@@ -30,9 +30,9 @@ struct ShadowLookupParameters {
 };
 
 // one per element in model.parameters_list
-std::vector<ShadowParameters> allocate_shadow_parameters(const ParameterCollection& model);
+std::vector<ShadowParameters> allocate_shadow_parameters(const ParameterCollection& model, unsigned allocated);
 // one per element in model.lookup_parameters_list
-std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const ParameterCollection& model);
+std::vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const ParameterCollection& model, unsigned allocated);
 
 } // namespace dynet
 
