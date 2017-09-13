@@ -77,7 +77,7 @@ struct Dim {
         x.size() <= DYNET_MAX_TENSOR_DIM,
         "Out of bounds exception in Dim::Dim() with vector of size "
         << x.size());
-    for (auto v : x) d[nd++] = v;
+    for (auto v : x) d[nd++] = static_cast<unsigned int>(v);
   }
   /**
      * \brief Initialize from a vector of dimensions and a batch size
@@ -90,7 +90,7 @@ struct Dim {
         x.size() <= DYNET_MAX_TENSOR_DIM,
         "Out of bounds exception in Dim::Dim() with vector of size "
         << x.size());
-    for (auto v : x) d[nd++] = v;
+    for (auto v : x) d[nd++] = static_cast<unsigned int>(v);
   }
   /**
    * \brief Total size of a batch
