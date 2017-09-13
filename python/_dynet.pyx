@@ -804,6 +804,34 @@ cdef class LookupParameters: # {{{
         """
         self.thisptr.initialize(i, row)
 
+    cpdef row_as_array(self, row):
+        """Return row as a numpy array.
+        
+        Args:
+            row (int): row to return
+
+        Returns:
+            np.array: Values
+        """
+        cdef CTensor val
+        val = self.thisptr.get_storage().values[row]
+        return c_tensor_as_np(val)
+
+    cpdef rows_as_array(self, rows):
+        """Return rows as a numpy array.
+
+        The first dimension is the lookup dimension
+        
+        Args:
+            rows (list): rows to return
+
+        Returns:
+            np.array: Values
+        """
+        cdef vector[CTensor] vals
+        vals = self.thisptr.get_storage().values
+        return np.stack([c_tensor_as_np(vals[row]) for row in rows])
+
     cpdef as_array(self):
         """Return as a numpy array.
 
@@ -814,7 +842,7 @@ cdef class LookupParameters: # {{{
         """
         cdef vector[CTensor] vals
         vals = self.thisptr.get_storage().values
-        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in vals])
+        return np.stack([c_tensor_as_np(t) for t in vals])
 
     cpdef grad_as_array(self):
         """Return gradients as a numpy array.
@@ -826,7 +854,36 @@ cdef class LookupParameters: # {{{
         """
         cdef vector[CTensor] grads
         grads = self.thisptr.get_storage().grads
-        return np.vstack([c_tensor_as_np(t).reshape(1,-1,order='F') for t in grads])
+        return np.stack([c_tensor_as_np(t) for t in grads])
+
+    cpdef row_grad_as_array(self, row):
+        """Return row gradient as a numpy array.
+        
+        Args:
+            row (int): row to return
+
+        Returns:
+            np.array: Values
+        """
+        cdef CTensor val
+        val = self.thisptr.get_storage().grads[row]
+        return c_tensor_as_np(val)
+
+    cpdef rows_grad_as_array(self, rows):
+        """Return rows gradients as a numpy array.
+
+        The first dimension is the lookup dimension
+        
+        Args:
+            rows (list): rows to return
+
+        Returns:
+            np.array: Values
+        """
+        cdef vector[CTensor] vals
+        vals = self.thisptr.get_storage().grads
+        return np.stack([c_tensor_as_np(vals[row]) for row in rows])
+
     
     cpdef scale(self,float s):
         """Scales the parameter
