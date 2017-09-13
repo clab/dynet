@@ -1098,28 +1098,71 @@ cdef class ParameterCollection: # {{{
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None, string name=""):
-        """Add a parameter to the ParameterCollection
+    cpdef add_parameters(self, dim, init=None, string name="", scale=1.0, mean=0.0, std=1.0):
+        """Add a parameter to the ParameterCollection with a given initializer. There are different ways of specifying an initializer:
+
+        .. code-block:: python
+            
+            p = m.add_parameters((3,5), init=0)                         # Creates 3x5 matrix filled with 0 (or any other float)
+            p = m.add_parameters((3,5), init='uniform', scale=a)        # Creates 3x5 matrix initialized with U([-a,a])
+            p = m.add_parameters((3,5), init='normal', mean=a, std=b)   # Creates 3x5 matrix initialized with N(a, b)
+            p = m.add_parameters((5,5), init='identity')                # Creates 5x5 identity matrix
+            p = m.add_parameters((5,5), init='saxe')                    # Creates 5x5 orthogonal matrix (NOT SUPPORTED YET)
+            p = m.add_parameters((3,5), init='glorot')                  # Creates 3x5 matrix with glorot init
+            p = m.add_parameters((3,5), init='he')                      # Creates 3x5 matrix with glorot init
+            p = m.add_parameters(np.zeros((3,5)))                       # Creates 3x5 matrix from a numpy array (size is inferred)
+            p = m.add_parameters((3,5), init=dy.PyInitializer())        # Any parameter initializer
         
         Args:
-            dim (tuple): Shape of the parameter
+            dim (tuple, np.ndarray): Shape of the parameter. If only a numpy array is passed the dimension is inferred
         
         Keyword Arguments:
-            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            init (number, string, dynet.PyInitializer): Initializer, see description for details (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
+            scale (number): Scale for uniform initialization
+            mean (number): Mean for normal initialization
+            std (number): Standard deviation for normal initialization
         
         Returns:
             (dynet.Parameters): Created Parameter
         """
-        assert(isinstance(dim,(tuple,int)))
+        assert(isinstance(dim,(tuple, int, np.ndarray)))
+        if isinstance(dim, np.ndarray):
+            return self.parameters_from_numpy(dim, name=name)
+        elif isinstance(dim, int):
+            dim = (dim,)
         cdef CParameters p
         cdef CParameterInit *initializer
+        cdef PyInitializer pyinit
         if init is None:
-            init = GlorotInitializer()
-        initializer = init.initializer
+            pyinit = GlorotInitializer()
+        else:
+            if isinstance(init, (int, float)):
+                val = init
+                pyinit = ConstInitializer(val)
+            elif isinstance(init, str):
+                if init == 'identity':
+                    pyinit = IdentityInitializer()
+                elif init == 'glorot':
+                    pyinit = GlorotInitializer()
+                elif init == 'he':
+                    pyinit = NormalInitializer(0, 1 / (2 * dim[-1]))
+                elif init == 'uniform':
+                    pyinit = UniformInitializer(scale)
+                elif init == 'normal':
+                    pyinit = NormalInitializer(mean, std*std)
+                else:
+                    raise ValueError('Didn\'t recognize initializer')
+            elif isinstance(init, PyInitializer):
+                pyinit = init
+            else:
+                raise ValueError('Didn\'t recognize initializer')
+        initializer = pyinit.initializer
         p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
+
+    cpdef add_parameters_int
 
     cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name=""):
         """Add a lookup parameter to the ParameterCollection

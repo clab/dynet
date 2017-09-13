@@ -203,6 +203,18 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(np.allclose(self.lp2.as_array()[1], ones[
                         0] * 0.9), msg=np.array_str(self.lp2.as_array()))
 
+    def test_initializers(self):
+
+        p = self.m.add_parameters((3,5), init=0)
+        p = self.m.add_parameters((3,5), init='uniform', scale=2.0)
+        p = self.m.add_parameters((3,5), init='normal', mean=-1.0, std=2.5)
+        p = self.m.add_parameters((5,5), init='identity')
+        #p = self.m.add_parameters((5,5), init='saxe')
+        p = self.m.add_parameters((3,5), init='glorot')
+        p = self.m.add_parameters((3,5), init='he')
+        p = self.m.add_parameters(np.zeros((3,5)))
+        p = self.m.add_parameters((3,5), init=dy.ConstInitializer(2.0))
+
 
 class TestBatchManipulation(unittest.TestCase):
 
