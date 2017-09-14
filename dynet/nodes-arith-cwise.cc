@@ -41,29 +41,39 @@ void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*
   DYNET_ASSERT(num_args == 2, "Bad number of arguments in CwiseSum::forward");
   Eigen::array<int, 5> bcast_left = {1,1,1,1,1};
   Eigen::array<int, 5> bcast_right = {1,1,1,1,1};
-  bool same_dims = true;
+  bool same_nonbatch_dims = true;
   for(int i=0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
-    if(i>=xs[0]->d.nd || xs[0]->d[i]==1){
+    if(i >= xs[0]->d.nd || (xs[0]->d[i] == 1 && xs[0]->d[i] != dim[i])){
       bcast_left[i] = dim[i];
-      same_dims = false;
+      same_nonbatch_dims = false;
     }
-    if(i>=xs[1]->d.nd || xs[1]->d[i]==1){
+    if(i >= xs[1]->d.nd || (xs[1]->d[i] == 1 && xs[1]->d[i] != dim[i])){
       bcast_right[i] = dim[i];
-      same_dims = false;
+      same_nonbatch_dims = false;
     }
   }
-  if(xs[0]->d.bd == 1){
+  if(xs[0]->d.bd == 1 && xs[1]->d.bd != 1){
     bcast_left[4] = dim.bd;
-    same_dims = false;
   }
-  else if(xs[1]->d.bd == 1){
+  else if(xs[1]->d.bd == 1 && xs[0]->d.bd != 1){
     bcast_right[4] = dim.bd;
-    same_dims = false;
   }
-  if(same_dims){
+  bool same_batch_dims = xs[0]->d.bd==xs[1]->d.bd;
+  if(same_nonbatch_dims && same_batch_dims){
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() + xs[1]->tb<4>();
+#ifndef __CUDACC__
+  } else if(same_nonbatch_dims){
+    TensorTools::zero(fx);
+    for (unsigned i = 0; i < xs.size(); ++i) {
+      if (xs[i]->d.bd == fx.d.bd) {
+        fx.tvec().device(*dev.edevice) += xs[i]->tvec();
+      } else {
+        for (unsigned b = 0; b < fx.d.bd; ++b)
+          fx.tbvec().chip<1>(b).device(*dev.edevice) += xs[i]->tvec();
+      }
+    }
+#endif
   } else {
-    // TODO: could handle the case where only the batch dim differs as a special case to avoid slow broadcasting operations there
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) + xs[1]->tb<4>().broadcast(bcast_right);
   }
 }

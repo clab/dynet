@@ -103,7 +103,6 @@ set(dynet_library_HDRS
     nodes-affinetransform.h
     nodes-arith-const.h
     nodes-arith-cwise.h
-    nodes-arith-scalar.h
     nodes-arith-sum.h
     nodes-arith-unary.h
     nodes-concat.h
