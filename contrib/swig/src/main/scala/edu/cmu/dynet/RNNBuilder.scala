@@ -5,9 +5,9 @@ abstract class RnnBuilder(private[dynet] val _builder: internal.RNNBuilder) {
   var version: Long = ComputationGraph.version
 
   def state(): Int = _builder.state
-  def newGraph(): Unit = {
+  def newGraph(update:Boolean = true): Unit = {
     version = ComputationGraph.version
-    _builder.new_graph(ComputationGraph.cg)
+    _builder.new_graph(ComputationGraph.cg, update)
   }
 
   def startNewSequence(ev: ExpressionVector): Unit = _builder.start_new_sequence(ev.vector)
