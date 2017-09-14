@@ -103,7 +103,7 @@ just like ASan. Please see the `official wiki <https://github.com/google/sanitiz
 for more details.
 
 By running TSan-enabled tests or programs, TSan finds data races at runtime.
-To enable TSan, add ``-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address"``
+To enable TSan, add ``-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=thread"``
 to the cmake command:
 
 ::
@@ -111,7 +111,7 @@ to the cmake command:
     cd dynet
     mkdir build-tsan
     cd build-tsan
-    cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address"
+    cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=thread"
 
 
 CAUTION: Please do not install TSan enabled libraries or programs
