@@ -85,19 +85,28 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
-  for(int j=0; j < fx.d.nd; j++){
-    unsigned dim_j = (j<xs[i]->d.nd ? xs[i]->d[j] : 1);
-    if(dim_j != fx.d[j]){
-      n_red++;
+  if(fx.d == dEdxi.d) {
+    dEdxi.tvec().device(*dev.edevice) += fx.tvec();
+#ifndef __CUDACC__
+  } else if (fx.d.single_batch() == dEdxi.d.single_batch()) {
+    for(size_t i = 0; i < dEdxi.d.bd; ++i)
+      dEdxi.tvec().device(*dev.edevice) += fx.tbvec().chip<1>(i);
+#endif
+  } else {
+    int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
+    for(int j=0; j < fx.d.nd; j++){
+      unsigned dim_j = (j<xs[i]->d.nd ? xs[i]->d[j] : 1);
+      if(dim_j != fx.d[j]){
+        n_red++;
+      }
     }
+    DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward");
+    if(n_red==0)      dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>();
+    else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
   }
-  DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseSum::backward");
-  if(n_red==0)      dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>();
-  else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
-  else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
-  else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
-  else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseSum)
 
