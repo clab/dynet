@@ -172,12 +172,16 @@ void initialize(DynetParams& params) {
     return;
   }
 
+  DeviceManager* device_manager = get_device_manager();
+
   // initialize CUDA
   vector<Device*> gpudevices;
 #if HAVE_CUDA
   if (!(params.cpu_requested && (params.requested_gpus == -1))) {
     cerr << "[dynet] initializing CUDA\n";
     gpudevices = initialize_gpu(params);
+    for (auto gpu : gpudevices)
+      device_manager->add(gpu);
   }
 #endif
 
@@ -206,19 +210,10 @@ void initialize(DynetParams& params) {
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
   int default_index = 0;
-  if (gpudevices.size() > 0) {
-    for (auto gpu : gpudevices)
-      devices.push_back(gpu);
-    Device *d = new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters);
-    devices.push_back(d);
-    dynet::devices_map[d->name] = d;
-  } else {
-    Device *d = new Device_CPU(devices.size(), params.mem_descriptor,
-                               params.shared_parameters);
-    devices.push_back(d);
-    dynet::devices_map[d->name] = d;
-  }
-  default_device = devices[default_index];
+
+  Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+  device_manager->add(d);
+  default_device = device_manager->get(default_index);
 
   // TODO these should be accessed through the relevant device and removed here
   kSCALAR_MINUSONE = default_device->kSCALAR_MINUSONE;
@@ -235,11 +230,8 @@ void initialize(int& argc, char**& argv, bool shared_parameters) {
 
 void cleanup() {
   delete rndeng;
-  // TODO: Devices cannot be deleted at the moment
-  // for(Device* device : devices) delete device;
-  devices.clear();
+  get_device_manager()->clear();
   default_device = nullptr;
 }
 
 } // namespace dynet
-

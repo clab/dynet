@@ -5,6 +5,8 @@
 
 namespace dynet {
 
+class DeviceManager;
+
 class ExecutionEngine {
  public:
   virtual ~ExecutionEngine();
@@ -20,7 +22,8 @@ class ExecutionEngine {
   virtual void backward(bool full = false) = 0;
   virtual void backward(VariableIndex i, bool full = false) = 0;
  protected:
-  explicit ExecutionEngine(const ComputationGraph& cg) : cg(cg), backward_computed(0) {}
+  explicit ExecutionEngine(const ComputationGraph& cg);
+  DeviceManager* const device_manager;
   const ComputationGraph& cg;
   VariableIndex backward_computed;
 };
