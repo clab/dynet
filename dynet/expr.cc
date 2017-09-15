@@ -40,14 +40,8 @@ Expression nobackprop(const Expression& x) { return Expression(x.pg, x.pg->add_f
 Expression flip_gradient(const Expression& x) { return Expression(x.pg, x.pg->add_function<FlipGradient>({x.i})); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
-Expression operator+(const Expression& x, const Expression& y) {
-    if (x.dim().batch_size() == 1)
-        return Expression(x.pg, x.pg->add_function<ScalarAdd>({y.i, x.i}));
-    else if (y.dim().batch_size() == 1)
-        return Expression(x.pg, x.pg->add_function<ScalarAdd>({x.i, y.i}));
-    else
-        return Expression(x.pg, x.pg->add_function<Sum>({x.i, y.i}));
-}
+Expression operator+(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<CwiseSum>({x.i, y.i}));}
+
 Expression operator+(real x, const Expression& y) { return Expression(y.pg, y.pg->add_function<ConstantPlusX>({y.i}, x)); }
 Expression operator+(const Expression& x, real y) { return y + x; }
 Expression operator-(const Expression& x, const Expression& y) { return x + (-y); }
@@ -55,20 +49,8 @@ Expression operator-(real x, const Expression& y) { return Expression(y.pg, y.pg
 Expression operator-(const Expression& x, real y) { return -(y - x); }
 Expression operator*(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<MatrixMultiply>({x.i, y.i})); }
 Expression operator*(const Expression& x, float y) { return Expression(x.pg, x.pg->add_function<ConstScalarMultiply>({x.i}, y)); }
-Expression cmult(const Expression& x, const Expression& y) { 
-    if (x.dim().batch_size() == 1) 
-        return Expression(x.pg, x.pg->add_function<ScalarMultiply>({x.i, y.i})); 
-    else if(y.dim().batch_size() == 1)
-        return Expression(x.pg, x.pg->add_function<ScalarMultiply>({y.i, x.i})); 
-    else 
-        return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i}));
-}
-Expression cdiv(const Expression& x, const Expression& y) { 
-    if(y.dim().batch_size()==1)
-        return Expression(x.pg, x.pg->add_function<ScalarQuotient>({x.i, y.i}));
-    else
-        return Expression(x.pg, x.pg->add_function<CwiseQuotient>({x.i, y.i}));
-}
+Expression cmult(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<CwiseMultiply>({x.i, y.i})); }
+Expression cdiv(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<CwiseQuotient>({x.i, y.i})); }
 Expression colwise_add(const Expression& x, const Expression& bias) { return Expression(x.pg, x.pg->add_function<AddVectorToAllColumns>({x.i, bias.i})); }
 Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z) { return Expression(x.pg, x.pg->add_function<InnerProduct3D_1D_1D>({x.i, y.i, z.i})); }
 Expression contract3d_1d_1d(const Expression& x, const Expression& y, const Expression& z, const Expression& b) { return Expression(x.pg, x.pg->add_function<InnerProduct3D_1D_1D>({x.i, y.i, z.i, b.i})); }
@@ -176,18 +158,20 @@ Expression sum_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.
 Expression sum_rows(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 0)); }
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, 1)); }
 Expression sum_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumElements>({x.i})); }
-Expression mean_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<MomentElements>({x.i}, 1)); }
-Expression moment_elems(const Expression& x, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentElements>({x.i}, r)); }
-Expression std_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdElements>({x.i})); }
 
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
-Expression moment_batches(const Expression& x, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentBatches>({x.i}, r)); }
-Expression mean_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<MomentBatches>({x.i}, 1)); }
-Expression std_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<StdBatches>({x.i})); }
 
-Expression mean_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, d, 1)); }
-Expression moment_dim(const Expression& x, unsigned d, unsigned r) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, d, r)); }
-Expression std_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, d)); }
+Expression mean_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, 1, b)); }
+Expression moment_dim(const Expression& x, const vector<unsigned>& dims, unsigned r, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, r, b)); }
+Expression std_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, dims, b)); }
+
+Expression moment_elems(const Expression& x, unsigned r) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use moment_dim instead"); }
+Expression mean_elems(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use mean_dim instead"); }
+Expression std_elems(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use std_dim instead"); }
+Expression moment_batches(const Expression& x, unsigned r) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use moment_dim instead"); }
+Expression mean_batches(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use mean_dim instead"); }
+Expression std_batches(const Expression& x) { DYNET_RUNTIME_ERR("moment_elems has been deprecated, use std_dim instead"); }
+
 
 Expression kmh_ngram(const Expression& x, unsigned n) { return Expression(x.pg, x.pg->add_function<KMHNGram>({x.i}, n)); }
 
@@ -195,9 +179,9 @@ Expression max_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.
 Expression min_dim(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<MinDimension>({x.i}, d)); }
 
 Expression layer_norm(const Expression& x, const Expression& g, const Expression& b){
-    Expression mu = mean_elems(x);
+    Expression mu = mean_dim(x, {0});
     Expression x_centered= x - mu;
-    Expression sigma = std_elems(x);
+    Expression sigma = std_dim(x, {0});
     return cmult(g, cdiv(x_centered,sigma + 1e-8)) + b;
 }
 
