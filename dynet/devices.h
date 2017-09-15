@@ -1,6 +1,7 @@
 #ifndef DYNET_DEVICES_H
 #define DYNET_DEVICES_H
 
+#include <unordered_map>
 #include <string>
 #include <exception>
 #include "dynet/aligned-mem-pool.h"
@@ -77,7 +78,33 @@ class Device_CPU : public Device {
   MemAllocator* shmem;
 };
 
-Device* get_global_device(const std::string & name);
+class DeviceManager final {
+ public:
+  DeviceManager();
+  ~DeviceManager();
+
+  void clear();
+
+  void add(Device* d);
+
+  Device* get(size_t i) { return devices[i]; }
+
+  size_t num_devices() const { return devices.size(); }
+
+  const std::vector<Device*>& get_devices() const { return devices; }
+
+  Device* get_global_device(const std::string & name);
+
+  // no copying allowed
+  DeviceManager(const DeviceManager &) = delete;
+  void operator=(const DeviceManager &) = delete;
+
+ private:
+  std::vector<Device*> devices;
+  std::unordered_map<std::string, Device*> devices_map;
+};
+
+DeviceManager* get_device_manager();
 
 } // namespace dynet
 
