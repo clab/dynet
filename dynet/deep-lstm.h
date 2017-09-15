@@ -5,18 +5,16 @@
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
 
-using namespace dynet::expr;
-
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 
 struct DeepLSTMBuilder : public RNNBuilder {
   DeepLSTMBuilder() = default;
   explicit DeepLSTMBuilder(unsigned layers,
                            unsigned input_dim,
                            unsigned hidden_dim,
-                           Model& model);
+                           ParameterCollection& model);
 
   Expression back() const override { return h.back().back(); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
@@ -25,12 +23,18 @@ struct DeepLSTMBuilder : public RNNBuilder {
     for(auto my_h : final_h()) ret.push_back(my_h);
     return ret;
   }
+  /**
+   * \brief Get parameters in DeepLSTMBuilder
+   * \return list of points to ParameterStorage object
+   */
+  ParameterCollection & get_parameter_collection() override;
  protected:
-  void new_graph_impl(ComputationGraph& cg) override;
+  void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
 
  public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 

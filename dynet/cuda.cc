@@ -4,24 +4,25 @@
 
 #include "dynet/dynet.h"
 #include "dynet/cuda.h"
+#include "dynet/init.h"
+#include "dynet/globals.h"
+
 using namespace std;
 
 namespace dynet {
 
-vector<Device*> initialize_gpu(DynetParams params) {
+vector<Device*> initialize_gpu(DynetParams& params) {
   // Get GPU devices count
   int nDevices;
   CUDA_CHECK(cudaGetDeviceCount(&nDevices));
-  if (nDevices < 1) {
-    cerr << "[dynet] No GPUs found, recompile without DENABLE_CUDA=1\n";
-    throw std::runtime_error("No GPUs found but DYNET compiled with CUDA support.");
-  }
+  if (nDevices < 1)
+    throw std::runtime_error("No GPUs found but DyNet compiled with CUDA support. Recompile without -DBACKEND=cuda");
 
   // Check gpu_mask
   for (unsigned gpu_id = nDevices; gpu_id < MAX_GPUS; ++gpu_id) {
     if (params.gpu_mask[gpu_id] != 0) {
-      cerr << "You requested GPU id " << gpu_id << " but system only reports up to " << nDevices << endl;
-      abort();
+      ostringstream oss; oss << "You requested GPU id " << gpu_id << " but system only reports up to " << nDevices;
+      throw std::invalid_argument(oss.str());
     }
   }
 
@@ -30,15 +31,15 @@ vector<Device*> initialize_gpu(DynetParams params) {
     cerr << "Request for " << params.requested_gpus << " GPU" << (params.requested_gpus == 1 ? "" : "s") << " ...\n";
     for (int i = 0; i < MAX_GPUS; ++i) params.gpu_mask[i] = 1;
   } else if (params.ids_requested) {
-    params.requested_gpus++;
+    params.requested_gpus++; // since start from -1
     cerr << "[dynet] Request for " << params.requested_gpus << " specific GPU" << (params.requested_gpus == 1 ? "" : "s") << " ...\n";
   }
 
   vector<Device*> gpudevices;
   if (params.requested_gpus == 0) return gpudevices;
   if (params.requested_gpus > nDevices) {
-    cerr << "You requested " << params.requested_gpus << " GPUs but system only reports " << nDevices << endl;
-    abort();
+    ostringstream oss; oss << "You requested " << params.requested_gpus << " GPUs but system only reports " << nDevices;
+    throw std::invalid_argument(oss.str());
   }
 
   // after all that, params.requested_gpus is the number of GPUs to reserve
@@ -58,10 +59,8 @@ vector<Device*> initialize_gpu(DynetParams params) {
     cerr << "[dynet]   Memory Clock Rate (KHz): " << prop.memoryClockRate << endl;
     cerr << "[dynet]   Memory Bus Width (bits): " << prop.memoryBusWidth << endl;
     cerr << "[dynet]   Peak Memory Bandwidth (GB/s): " << (2.0 * prop.memoryClockRate * (prop.memoryBusWidth / 8) / 1.0e6) << endl;
-    if (!prop.unifiedAddressing) {
-      cerr << "[dynet] GPU does not support unified addressing.\n";
-      abort();
-    }
+    if (!prop.unifiedAddressing)
+      throw std::invalid_argument("[dynet] GPU does not support unified addressing.");
     CUDA_CHECK(cudaSetDevice(i));
     try {
       CUDA_CHECK(cudaMemGetInfo( &free_bytes, &total_bytes ));
@@ -81,6 +80,7 @@ vector<Device*> initialize_gpu(DynetParams params) {
   for (int i = 0; i < params.requested_gpus; ++i) {
     cerr << ' ' << gpus[i];
     Device* d = new Device_GPU(gpudevices.size(), params.mem_descriptor, gpus[i]);
+    dynet::devices_map[d->name] = d;
     gpudevices.push_back(d);
   }
   cerr << endl;

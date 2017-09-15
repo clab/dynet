@@ -4,6 +4,7 @@
 #include "dynet/training.h"
 #include "dynet/expr.h"
 #include "dynet/grad-check.h"
+#include "dynet/globals.h"
 
 #include <sstream>
 #include <string>
@@ -13,7 +14,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 struct TrainingInstance {
   TrainingInstance() {}
@@ -78,7 +78,7 @@ vector<TrainingInstance> ReadFiles(const char* xfname, const char* yfname, unsig
 }
 
 struct MLCBuilder {
-  explicit MLCBuilder(Model& m, unsigned nfeats, unsigned labels) {
+  explicit MLCBuilder(ParameterCollection& m, unsigned nfeats, unsigned labels) {
     unsigned HIDDEN_SIZE = 200;
     p_xe = m.add_lookup_parameters(nfeats, {HIDDEN_SIZE});
     p_bh = m.add_parameters({HIDDEN_SIZE});
@@ -125,17 +125,15 @@ int main(int argc, char** argv) {
   max_yi++;
 
   // parameters
-  Model m;
+  ParameterCollection m;
   MLCBuilder mlc(m, max_xi, max_yi);
 
-  //AdadeltaTrainer sgd(m);
-  SimpleSGDTrainer sgd(m);
-  sgd.eta0 = 0.001;
-  sgd.eta = 0.001;
+  //AdadeltaTrainer trainer(m);
+  SimpleSGDTrainer trainer(m);
+  trainer.learning_rate = 0.001;
 
   unsigned report_every_i = 50;
   unsigned si = train.size();
-  bool first = true;
   vector<unsigned> order(train.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
   double ti = 0;
@@ -146,7 +144,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == train.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd.update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -171,7 +168,7 @@ int main(int argc, char** argv) {
       Expression loss_expr = sparsemax_loss(u, &xy.labels);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd.update(1.0);
+      trainer.update();
     }
     cerr << "[epoch=" << (ti / train.size()) << "] E=" << (loss / instances) << ' ';
   }

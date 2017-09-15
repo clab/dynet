@@ -11,7 +11,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
@@ -21,8 +20,8 @@ int main(int argc, char** argv) {
   unsigned VOCAB_SIZE = 29;
 
   // parameters
-  Model model;
-  SimpleSGDTrainer sgd(model);
+  ParameterCollection model;
+  SimpleSGDTrainer trainer(model);
   LookupParameter p_c = model.add_lookup_parameters(VOCAB_SIZE, {DIM});
 
   ComputationGraph cg;
@@ -76,7 +75,7 @@ int main(int argc, char** argv) {
       loss += as_scalar(cg.forward(nerr));
       cg.backward(nerr);
       ++n;
-      sgd.update(1.0);
+      trainer.update();
       if (n == 2500) break;
     }
     loss /= n;

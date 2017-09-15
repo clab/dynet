@@ -7,13 +7,12 @@
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/globals.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -36,7 +35,7 @@ struct NeuralBagOfWords {
   Parameter p_h2o;
   Parameter p_obias;
 
-  explicit NeuralBagOfWords(Model& m) :
+  explicit NeuralBagOfWords(ParameterCollection& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
       p_c2h(m.add_parameters({OUTPUT_DIM, INPUT_DIM})),
       p_hbias(m.add_parameters({OUTPUT_DIM})),
@@ -65,7 +64,7 @@ struct ConvLayer {
   // filter_width = length of filter (columns)
   // in_nfmaps = number of feature maps in input
   // out_nfmaps = number of feature maps in output
-  ConvLayer(Model& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
+  ConvLayer(ParameterCollection& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
       p_filts(in_nfmaps),
       p_fbias(in_nfmaps),
       k_fold_rows(k_fold_rows) {
@@ -121,9 +120,9 @@ struct ConvNet {
   Parameter p_t2o;
   Parameter p_obias;
 
-  explicit ConvNet(Model& m) :
+  explicit ConvNet(ParameterCollection& m) :
       p_w(m.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
-  //ConvLayer(Model& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
+  //ConvLayer(ParameterCollection& m, int in_rows, int k_fold_rows, int filter_width, int in_nfmaps, int out_nfmaps) :
       cl1(m, INPUT_DIM, 2,  10, 1, 6),
       cl2(m, INPUT_DIM/2, 2, 6, 6, 14),
       p_t2o(m.add_parameters({LABEL_SIZE, 14 * (INPUT_DIM / 4) * 5})),
@@ -179,7 +178,7 @@ Expression HingeLoss(const Expression& y_pred, int y_true) {
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
     return 1;
   }
   kSOS = d.convert("<s>");
@@ -233,21 +232,24 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
-  Trainer* sgd = nullptr;
-  //sgd = new MomentumSGDTrainer(model);
-  sgd = new AdagradTrainer(model);
-  //sgd = new SimpleSGDTrainer(model);
+  ParameterCollection model;
+  //trainer = new MomentumSGDTrainer(model);
+  std::unique_ptr<Trainer> trainer(new AdagradTrainer(model));
+  //trainer = new SimpleSGDTrainer(model);
 
   //NeuralBagOfWords nbow(model);
   ConvNet nbow(model);
+
+  if (argc == 4) {
+    TextFileLoader loader(argv[3]);
+    loader.populate(model);
+  }
 
   unsigned report_every_i = min(100, int(training.size()));
   unsigned dev_every_i_reports = 25;
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   while(1) {
@@ -258,7 +260,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -275,11 +276,11 @@ int main(int argc, char** argv) {
       Expression loss_expr = HingeLoss(y_pred, y);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update(2.0);
+      trainer->update(2.0);
       ++lines;
       ++ttags;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / ttags) << " ppl=" << exp(loss / ttags) << " (acc=" << (correct / (double)ttags) << ") ";
     model.project_weights();
 
@@ -292,7 +293,7 @@ int main(int argc, char** argv) {
       for (auto& sent : dev) {
         const auto& x = sent.first;
         const int y = sent.second;
-        nbow.p_t2o.get()->scale_parameters(pdropout);
+        nbow.p_t2o.get_storage().scale_parameters(pdropout);
         ComputationGraph cg;
         Expression y_pred = nbow.BuildClassifier(x, cg, false);
         if (IsCurrentPredictionCorrection(y_pred, y)) dcorr++;
@@ -300,18 +301,15 @@ int main(int argc, char** argv) {
         Expression loss_expr = HingeLoss(y_pred, y);
         //cerr << "DEVLINE: " << dtags << endl;
         dloss += as_scalar(cg.incremental_forward(loss_expr));
-        nbow.p_t2o.get()->scale_parameters(1.f/pdropout);
+        nbow.p_t2o.get_storage().scale_parameters(1.f/pdropout);
         dtags++;
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        TextFileSaver saver("textcat.model");
+        saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / (double)dtags) << ' ';
     }
   }
-  delete sgd;
 }
-

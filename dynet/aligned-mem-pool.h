@@ -3,26 +3,24 @@
 
 #include <iostream>
 #include "dynet/mem.h"
+#include "dynet/globals.h"
+#include "dynet/except.h"
 
 namespace dynet {
 
-class AlignedMemoryPool {
+class InternalMemoryPool {
  public:
-  explicit AlignedMemoryPool(size_t cap, MemAllocator* a) : a(a) {
+  explicit InternalMemoryPool(const std::string & name, size_t cap, MemAllocator* a) : name(name), a(a) {
     sys_alloc(cap);
     zero_all();
   }
 
-  void* allocate(size_t n) {
-    auto rounded_n = a->round_up_align(n);
-    if (rounded_n + used > capacity) {
-      std::cerr << "dynet is out of memory, try increasing with --dynet-mem (current capacity: " << capacity << ")\n";
-      abort();
-    }
-    void* res = static_cast<char*>(mem) + used;
-    used += rounded_n;
-    return res;
+  ~InternalMemoryPool() {
+      a->free(mem);
   }
+
+  void* allocate(size_t n); 
+
   void free() {
     //std::cerr << "freeing " << used << " bytes\n";
     used = 0;
@@ -35,19 +33,38 @@ class AlignedMemoryPool {
 
   size_t used;
  private:
-  void sys_alloc(size_t cap) {
-    capacity = a->round_up_align(cap);
-    //std::cerr << "Allocating " << capacity << " ...\n";
-    mem = a->malloc(capacity);
-    if (!mem) { std::cerr << "Failed to allocate " << capacity << std::endl; abort(); }
-    used = 0;
-  }
+  void sys_alloc(size_t cap);
+
   void zero_all() {
     a->zero(mem, capacity);
   }
+  std::string name;
   size_t capacity;
   MemAllocator* a;
   void* mem;
+};
+
+class AlignedMemoryPool {
+  public:
+    explicit AlignedMemoryPool(const std::string &name, size_t initial_cap, MemAllocator *a, size_t expanding_unit = 1<<24);
+    ~AlignedMemoryPool();
+
+    void* allocate(size_t n);
+
+    void free();
+
+    void zero_allocated_memory();
+
+    size_t used();
+    void set_used(size_t s);
+
+  private:
+    std::string name;
+    std::vector<InternalMemoryPool *> pools;
+    size_t cap;
+    int current;
+    MemAllocator* a;
+    size_t expanding_unit;
 };
 
 } // namespace dynet

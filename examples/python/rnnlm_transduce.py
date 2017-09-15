@@ -1,5 +1,5 @@
 # a version rnnlm.py using the transduce() interface.
-from dynet import *
+import dynet as dy
 import time
 import random
 
@@ -8,13 +8,16 @@ INPUT_DIM = 50  #256
 HIDDEN_DIM = 50  #1024
 VOCAB_SIZE = 0
 
-from collections import defaultdict
-from itertools import count, izip
+import argparse
 import sys
 import util
+try:
+    from itertools import izip as zip
+except ImportError:
+    pass
 
 class RNNLanguageModel:
-    def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder):
+    def __init__(self, model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.SimpleRNNBuilder):
         self.builder = builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
 
         self.lookup = model.add_lookup_parameters((VOCAB_SIZE, INPUT_DIM))
@@ -22,11 +25,11 @@ class RNNLanguageModel:
         self.bias = model.add_parameters((VOCAB_SIZE))
 
     def BuildLMGraph(self, sent):
-        renew_cg()
+        dy.renew_cg()
         init_state = self.builder.initial_state()
 
-        R = parameter(self.R)
-        bias = parameter(self.bias)
+        R = dy.parameter(self.R)
+        bias = dy.parameter(self.bias)
         errs = [] # will hold expressions
         es=[]
         state = init_state
@@ -35,25 +38,25 @@ class RNNLanguageModel:
         expected_outputs = [int(nw) for nw in sent[1:]]
         outputs = state.transduce(inputs)
         r_ts = ((bias + (R * y_t)) for y_t in outputs)
-        errs = [pickneglogsoftmax(r_t, eo) for r_t, eo in izip(r_ts, expected_outputs)]
-        nerr = esum(errs)
+        errs = [dy.pickneglogsoftmax(r_t, eo) for r_t, eo in zip(r_ts, expected_outputs)]
+        nerr = dy.esum(errs)
         return nerr
 
     def sample(self, first=1, nchars=0, stop=-1):
         # sampling must use the regular incremental interface.
         res = [first]
-        renew_cg()
+        dy.renew_cg()
         state = self.builder.initial_state()
 
-        R = parameter(self.R)
-        bias = parameter(self.bias)
+        R = dy.parameter(self.R)
+        bias = dy.parameter(self.bias)
         cw = first
         while True:
-            x_t = lookup(self.lookup, cw)
+            x_t = dy.lookup(self.lookup, cw)
             state = state.add_input(x_t)
             y_t = state.output()
             r_t = bias + (R * y_t)
-            ydist = softmax(r_t)
+            ydist = dy.softmax(r_t)
             dist = ydist.vec_value()
             rnd = random.random()
             for i,p in enumerate(dist):
@@ -66,16 +69,20 @@ class RNNLanguageModel:
         return res
 
 if __name__ == '__main__':
-    train = util.CharsCorpusReader(sys.argv[1],begin="<s>")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('corpus', help='Path to the corpus file.')
+    args = parser.parse_args()
+
+    train = util.CharsCorpusReader(args.corpus, begin="<s>")
     vocab = util.Vocab.from_corpus(train)
     
     VOCAB_SIZE = vocab.size()
 
-    model = Model()
-    sgd = SimpleSGDTrainer(model)
+    model = dy.Model()
+    trainer = dy.SimpleSGDTrainer(model)
 
-    #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=SimpleRNNBuilder)
-    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=LSTMBuilder)
+    #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.SimpleRNNBuilder)
+    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.LSTMBuilder)
 
     train = list(train)
 
@@ -85,7 +92,7 @@ if __name__ == '__main__':
         for i,sent in enumerate(train):
             _start = time.time()
             if i % 50 == 0:
-                sgd.status()
+                trainer.status()
                 if chars > 0: print(loss / chars,)
                 for _ in range(1):
                     samp = lm.sample(first=vocab.w2i["<s>"],stop=vocab.w2i["\n"])
@@ -98,8 +105,7 @@ if __name__ == '__main__':
             errs = lm.BuildLMGraph(isent)
             loss += errs.scalar_value()
             errs.backward()
-            sgd.update(1.0)
+            trainer.update()
             #print "TM:",(time.time() - _start)/len(sent)
         print("ITER",ITER,loss)
-        sgd.status()
-        sgd.update_epoch(1.0)
+        trainer.status()

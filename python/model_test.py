@@ -1,7 +1,8 @@
 """
 Tests for model saving and loading, including for user-defined models.
 """
-from pydynet import *
+from __future__ import print_function
+import dynet as dy
 import numpy
 import os
 
@@ -16,7 +17,7 @@ class Transfer(Saveable):
         self.nout = nout
 
     def __call__(self, x):
-        W,b=map(parameter, [self.W, self.b])
+        W,b=map(dy.parameter, [self.W, self.b])
         return self.act(W*x+b)
 
     def get_components(self):
@@ -46,34 +47,34 @@ class NoParameters(Saveable):
     def __init__(self, act):
         self.act = act
     def __call__(self, in_expr):
-        return self.act(cwise_multiply(in_expr))
+        return self.act(dy.cmult(in_expr))
     def get_components(self): return []
     def restore_components(self,components):pass
 
 def old_style_save_and_load():
     # create a model and add parameters.
-    m = Model()
+    m = dy.Model()
     a = m.add_parameters((100,100))
     b = m.add_lookup_parameters((20,2))
-    t1 = Transfer(5,6,softmax, m)
-    t2 = Transfer(7,8,softmax, m)
-    tt = MultiTransfer([10,10,10,10],tanh, m)
+    t1 = Transfer(5,6,dy.softmax, m)
+    t2 = Transfer(7,8,dy.softmax, m)
+    tt = MultiTransfer([10,10,10,10],dy.tanh, m)
     c = m.add_parameters((100))
-    lb = LSTMBuilder(1,2,3,m)
-    lb2 = LSTMBuilder(2,4,4,m)
+    lb = dy.LSTMBuilder(1,2,3,m)
+    lb2 = dy.LSTMBuilder(2,4,4,m)
     # save
     m.save("test1")
 
     # create new model (same parameters):
-    m2 = Model()
+    m2 = dy.Model()
     a2 = m2.add_parameters((100,100))
     b2 = m2.add_lookup_parameters((20,2))
-    t12 = Transfer(5,6,softmax, m2)
-    t22 = Transfer(7,8,softmax, m2)
-    tt2 = MultiTransfer([10,10,10,10],tanh, m2)
+    t12 = Transfer(5,6,dy.softmax, m2)
+    t22 = Transfer(7,8,dy.softmax, m2)
+    tt2 = MultiTransfer([10,10,10,10],dy.tanh, m2)
     c2 = m2.add_parameters((100))
-    lb2 = LSTMBuilder(1,2,3,m2)
-    lb22 = LSTMBuilder(2,4,4,m2)
+    lb2 = dy.LSTMBuilder(1,2,3,m2)
+    lb22 = dy.LSTMBuilder(2,4,4,m2)
 
     # parameters should be different
     for p1,p2 in [(a,a2),(b,b2),(c,c2),(t1.W,t12.W),(tt.transfers[0].W,tt2.transfers[0].W)]:
@@ -92,40 +93,40 @@ old_style_save_and_load()
 
 def new_style_save_and_load():
     # create a model and add parameters.
-    m = Model()
+    m = dy.Model()
     a = m.add_parameters((100,100))
     b = m.add_lookup_parameters((20,2))
-    t1 = Transfer(5,6,softmax, m)
-    t2 = Transfer(7,8,softmax, m)
-    tt = MultiTransfer([10,10,10,10],tanh, m)
+    t1 = Transfer(5,6,dy.softmax, m)
+    t2 = Transfer(7,8,dy.softmax, m)
+    tt = MultiTransfer([10,10,10,10],dy.tanh, m)
     c = m.add_parameters((100))
-    lb = LSTMBuilder(1,2,3,m)
-    lb2 = LSTMBuilder(2,4,4,m)
-    np = NoParameters(tanh)
+    lb = dy.LSTMBuilder(1,2,3,m)
+    lb2 = dy.LSTMBuilder(2,4,4,m)
+    np = NoParameters(dy.tanh)
     # save
     m.save("test_new",[a,b,t1,t2,tt,c,lb,lb2,np])
     m.save("test_new_r",[np,lb2,lb,c,tt,t2,t1,b,a]) 
 
     # create new model and load:
-    m2 = Model()
+    m2 = dy.Model()
     [xa,xb,xt1,xt2,xtt,xc,xlb,xlb2,xnp] = m2.load("test_new")
-    #m3 = Model()
+    #m3 = dy.Model()
     #[rnp,rlb2,rlb,rc,rtt,rt2,rt1,rb,ra] = m3.load("test_new_r")
-    m3,[rnp,rlb2,rlb,rc,rtt,rt2,rt1,rb,ra] = Model.from_file("test_new_r")
+    m3,[rnp,rlb2,rlb,rc,rtt,rt2,rt1,rb,ra] = dy.Model.from_file("test_new_r")
 
     # partial save and load:
     m.save("test_new_partial", [a,tt,lb2])
-    m4 = Model()
+    m4 = dy.Model()
     [pa,ptt,plb2] = m4.load("test_new_partial")
 
     # types
     params = [a,xa,ra,pa,c,xc,rc]
     for p1 in params:
-        assert(isinstance(p1,Parameters))
+        assert(isinstance(p1,dy.Parameters))
     for p1 in [b,xb,rb]:
-        assert(isinstance(p1,LookupParameters))
+        assert(isinstance(p1,dy.LookupParameters))
     for p1 in [lb,lb2,xlb,xlb2,rlb,rlb2,plb2]:
-        assert(isinstance(p1,LSTMBuilder))
+        assert(isinstance(p1,dy.LSTMBuilder))
     for p1 in [t1,t2,xt1,xt2,rt1,rt2]:
         assert(isinstance(p1,Transfer))
     for p1 in [tt,xtt,rtt,ptt]:
@@ -177,7 +178,7 @@ def new_style_save_and_load():
 
     # NoParameter equalities
     for p1 in [np,xnp,rnp]:
-        assert(p1.act == tanh)
+        assert(p1.act == dy.tanh)
 
     for suf in ['','.pyk','.pym']:
         os.remove("test_new"+suf)
@@ -186,7 +187,7 @@ def new_style_save_and_load():
 
 new_style_save_and_load()
 
-print "Model saving tests passed."
+print("Model saving tests passed.")
 
 
 

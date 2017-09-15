@@ -7,14 +7,13 @@
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/globals.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -50,7 +49,7 @@ struct RNNLanguageModel {
   Parameter p_z2h0;
   Parameter p_h0b;
 
-  explicit RNNLanguageModel(Model& model) :
+  explicit RNNLanguageModel(ParameterCollection& model) :
       ebuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model),
       dbuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_H = model.add_parameters({HIDDEN_DIM2, HIDDEN_DIM});
@@ -122,7 +121,7 @@ struct RNNLanguageModel {
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
     return 1;
   }
   kSOS = d.convert("<s>");
@@ -160,7 +159,7 @@ int main(int argc, char** argv) {
       dev.push_back(read_sentence(line, d));
       dtoks += dev.back().size();
       if (dev.back().front() != kSOS && dev.back().back() != kEOS) {
-        cerr << "Dev sentence in " << argv[2] << ":" << tlc << " didn't start or end with <s>, </s>\n";
+        cerr << "Dev sentence in " << argv[2] << ":" << dlc << " didn't start or end with <s>, </s>\n";
         abort();
       }
     }
@@ -176,21 +175,20 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
-  Trainer* sgd = nullptr;
+  ParameterCollection model;
+  std::unique_ptr<Trainer> trainer;
   // bool use_momentum = false;
   // if (use_momentum)
-  //   sgd = new MomentumSGDTrainer(model);
+  //   trainer = new MomentumSGDTrainer(model);
   // else
-  sgd = new SimpleSGDTrainer(model);
+  trainer.reset(new SimpleSGDTrainer(model));
 
   RNNLanguageModel<GRUBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
     string fname = argv[3];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    TextFileLoader loader(fname);
+    loader.populate(model);
   }
 
   unsigned report_every_i = 50;
@@ -198,7 +196,6 @@ int main(int argc, char** argv) {
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   while(1) {
@@ -208,7 +205,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -221,10 +217,10 @@ int main(int argc, char** argv) {
       Expression loss_expr = lm.BuildLMGraph(sent, cg);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 
     // show score on dev data?
@@ -241,13 +237,10 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        TextFileSaver saver(fname);
+        saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
   }
-  delete sgd;
 }
-

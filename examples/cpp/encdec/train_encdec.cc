@@ -5,14 +5,12 @@
  * This provide an example of usage of the encdec.h model
  */
 #include "encdec.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 #include "../utils/cl-args.h"
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
-
-
 
 // Sort sentences in descending order of length
 struct CompareLen {
@@ -114,7 +112,7 @@ int main(int argc, char** argv) {
       while (dev[i + j].size() < dev[i].size())
         dev[i + j].push_back(kEOS);
 
-  // Model name (for saving) -----------------------------------------------------------------------
+  // ParameterCollection name (for saving) -----------------------------------------------------------------------
   ostringstream os;
   // Store a bunch of information in the model name
   os << params.exp_name
@@ -127,11 +125,10 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
 
   // Initialize model and trainer ------------------------------------------------------------------
-  Model model;
+  ParameterCollection model;
   // Use Adam optimizer
-  Trainer* adam = nullptr;
-  adam = new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8);
-  adam->clip_threshold *= params.BATCH_SIZE;
+  std::unique_ptr<Trainer> trainer(new AdamTrainer(model, 0.001, 0.9, 0.999, 1e-8));
+  trainer->clip_threshold *= params.BATCH_SIZE;
 
   // Create model
   EncoderDecoder<LSTMBuilder> lm(model,
@@ -142,9 +139,8 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    ifstream in(params.model_file);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> lm;
+    TextFileLoader loader(params.model_file);
+    loader.populate(model);
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -162,12 +158,9 @@ int main(int argc, char** argv) {
   vector<unsigned> order(num_batches);
   for (unsigned i = 0; i < num_batches; ++i) order[i] = i;
 
-  bool first = true;
   int epoch = 0;
   // Run for the given number of epochs (or indefinitely if params.NUM_EPOCHS is negative)
   while (epoch < params.NUM_EPOCHS || params.NUM_EPOCHS < 0) {
-    // Update the optimizer
-    if (first) { first = false; } else { adam->update_epoch(); }
     // Reshuffle the dataset
     cerr << "**SHUFFLE\n";
     random_shuffle(order.begin(), order.end());
@@ -175,7 +168,7 @@ int main(int argc, char** argv) {
     double loss = 0;
     unsigned chars = 0;
     // Start timer
-    Timer* iteration = new Timer("completed in");
+    std::unique_ptr<Timer> iteration(new Timer("completed in"));
 
     for (si = 0; si < num_batches; ++si) {
       // build graph for this instance
@@ -192,15 +185,14 @@ int main(int argc, char** argv) {
       // Compute gradient with backward pass
       cg.backward(loss_expr);
       // Update parameters
-      adam->update();
+      trainer->update();
       // Print progress every tenth of the dataset
       if ((si + 1) % (num_batches / 10) == 0 || si == num_batches - 1) {
         // Print informations
-        adam->status();
+        trainer->status();
         cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
         // Reinitialize timer
-        delete iteration;
-        iteration = new Timer("completed in");
+        iteration.reset(new Timer("completed in"));
         // Reinitialize loss
         loss = 0;
         chars = 0;
@@ -228,17 +220,15 @@ int main(int argc, char** argv) {
       // If the validation loss is the lowest, save the parameters
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << lm;
+        TextFileSaver saver(fname);
+        saver.save(model);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)
            << "] E = " << (dloss / dchars)
            << " ppl=" << exp(dloss / dchars) << ' ';
       // Reinitialize timer
-      delete iteration;
-      iteration = new Timer("completed in");
+      iteration.reset(new Timer("completed in"));
     }
 
 
@@ -272,8 +262,4 @@ int main(int argc, char** argv) {
     // Increment epoch
     ++epoch;
   }
-  // Free memory
-  delete adam;
-
 }
-

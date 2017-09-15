@@ -22,12 +22,8 @@
 #include <fstream>
 #include <sstream>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 int kSOS;
 int kEOS;
@@ -83,7 +79,7 @@ public:
     /**
      * \brief Creates an EncoderDecoder
      *
-     * \param model Model holding the parameters
+     * \param model ParameterCollection holding the parameters
      * \param num_layers Number of layers (same in the ecoder and decoder)
      * \param input_dim Dimension of the word/char embeddings
      * \param hidden_dim Dimension of the hidden states
@@ -93,7 +89,7 @@ public:
      * of size num_layers * hidden_dim compatible with the decoder
      *
      */
-    explicit EncoderDecoder(Model& model,
+    explicit EncoderDecoder(ParameterCollection& model,
                             unsigned num_layers,
                             unsigned input_dim,
                             unsigned hidden_dim,
@@ -149,7 +145,7 @@ public:
             // Fill x_t with the characters at step t in the batch
             for (unsigned i = 0; i < bsize; ++i) {
                 x_t[i] = isents[id + i][t];
-                if (x_t[i] != *isents[id].rbegin()) chars++; // if x_t is non-EOS, count a char
+                if (x_t[i] != static_cast<unsigned>(*isents[id].rbegin())) chars++; // if x_t is non-EOS, count a char
             }
             // Get embedding
             Expression i_x_t = lookup(cg, p_ec, x_t);
@@ -165,7 +161,7 @@ public:
             rev_enc_builder.start_new_sequence();
             // Fill x_t with the characters at step t in the batch (in reverse order)
             for (int t = islen - 1; t >= 0; --t) {
-                for (int i = 0; i < bsize; ++i) {
+                for (unsigned i = 0; i < bsize; ++i) {
                     x_t[i] = isents[id + i][t];
                 }
                 // Get embedding (could be mutualized with fwd_enc_builder)
@@ -362,24 +358,11 @@ public:
     }
 
 private:
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int) {
-        ar & bidirectional;
-        ar & LAYERS & INPUT_DIM & HIDDEN_DIM;
-        ar & p_c & p_ec & p_R & p_bias;
-        if (bidirectional)
-            ar & p_ie2oe & p_boe;
-        if (bidirectional)
-            ar & dec_builder & rev_enc_builder & fwd_enc_builder;
-        else
-            ar & dec_builder & fwd_enc_builder;
-    }
     inline int sample(const vector<float>& v) {
         float p = (float)rand() / (float) RAND_MAX;
         float cumul = 0.f;
         int idx = 0;
-        while (idx < v.size() && p > cumul) {
+        while (idx < static_cast<int>(v.size()) && p > cumul) {
             cumul += v[idx];
             idx += 1;
         }

@@ -4,6 +4,7 @@
  * This provide an example of usage of the mlp.h model
  */
 #include "mlp.h"
+#include "dynet/io.h"
 #include "../utils/getpid.h"
 #include "../utils/cl-args.h"
 #include "../utils/data-io.h"
@@ -11,7 +12,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 int main(int argc, char** argv) {
   // Fetch dynet params ----------------------------------------------------------------------------
@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   read_mnist_labels(params.train_labels_file, mnist_train_labels);
   read_mnist_labels(params.dev_labels_file, mnist_dev_labels);
 
-  // Model name (for saving) -----------------------------------------------------------------------
+  // ParameterCollection name (for saving) -----------------------------------------------------------------------
   ostringstream os;
   // Store a bunch of information in the model name
   os << params.exp_name
@@ -49,10 +49,10 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   // Build model -----------------------------------------------------------------------------------
 
-  Model model;
+  ParameterCollection model;
   // Use Adam optimizer
-  AdamTrainer adam(model);
-  adam.clip_threshold *= params.BATCH_SIZE;
+  AdamTrainer trainer(model);
+  trainer.clip_threshold *= params.BATCH_SIZE;
 
   // Create model
   MLP nn(model, vector<Layer>({
@@ -64,9 +64,8 @@ int main(int argc, char** argv) {
 
   // Load preexisting weights (if provided)
   if (params.model_file != "") {
-    ifstream in(params.model_file);
-    boost::archive::text_iarchive ia(in);
-    ia >> model >> nn;
+    TextFileLoader loader(params.model_file);
+    loader.populate(model);
   }
 
   // Initialize variables for training -------------------------------------------------------------
@@ -81,15 +80,12 @@ int main(int argc, char** argv) {
   vector<unsigned> order(num_batches);
   for (unsigned i = 0; i < num_batches; ++i) order[i] = i;
 
-  bool first = true;
   unsigned epoch = 0;
   vector<Expression> cur_batch;
   vector<unsigned> cur_labels;
 
   // Run for the given number of epochs (or indefinitely if params.NUM_EPOCHS is negative)
-  while (epoch < params.NUM_EPOCHS || params.NUM_EPOCHS < 0) {
-    // Update the optimizer
-    if (first) { first = false; } else { adam.update_epoch(); }
+  while (static_cast<int>(epoch) < params.NUM_EPOCHS || params.NUM_EPOCHS < 0) {
     // Reshuffle the dataset
     cerr << "**SHUFFLE\n";
     random_shuffle(order.begin(), order.end());
@@ -98,7 +94,7 @@ int main(int argc, char** argv) {
     double num_samples = 0;
 
     // Start timer
-    Timer* iteration = new Timer("completed in");
+    std::unique_ptr<Timer> iteration(new Timer("completed in"));
 
     // Activate dropout
     nn.enable_dropout();
@@ -127,15 +123,14 @@ int main(int argc, char** argv) {
       // Compute gradient with backward pass
       cg.backward(loss_expr);
       // Update parameters
-      adam.update();
+      trainer.update();
       // Print progress every tenth of the dataset
       if ((si + 1) % (num_batches / 10) == 0 || si == num_batches - 1) {
         // Print informations
-        adam.status();
+        trainer.status();
         cerr << " E = " << (loss / num_samples) << ' ';
         // Reinitialize timer
-        delete iteration;
-        iteration = new Timer("completed in");
+        iteration.reset(new Timer("completed in"));
         // Reinitialize loss
         loss = 0;
         num_samples = 0;
@@ -159,26 +154,21 @@ int main(int argc, char** argv) {
         if (predicted_idx == mnist_dev_labels[i])
           dpos++;
       }
-      // If the dev loss is lower than the previous ones, save the ,odel
+      // If the dev loss is lower than the previous ones, save the model
       if (dpos > worst) {
         worst = dpos;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model << nn;
+        TextFileSaver saver(fname);
+        saver.save(model);
       }
       // Print informations
       cerr << "\n***DEV [epoch=" << (epoch)
            << "] E = " << (dpos / (double) mnist_dev.size()) << ' ';
       // Reinitialize timer
-      delete iteration;
-      iteration = new Timer("completed in");
+      iteration.reset(new Timer("completed in"));
     }
 
     // Increment epoch
     ++epoch;
 
   }
-
-
 }
-

@@ -8,14 +8,12 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/grad-check.h"
+#include "dynet/globals.h"
 #include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -35,7 +33,7 @@ struct RNNLanguageModel {
   Parameter p_R;
   Parameter p_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
+  explicit RNNLanguageModel(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
@@ -161,20 +159,18 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
+  ParameterCollection model;
   bool use_momentum = false;
-  Trainer* sgd = nullptr;
+  std::unique_ptr<Trainer> trainer;
   //if (use_momentum)
   //else
-  //sgd = new SimpleSGDTrainer(model);
-  sgd = new MomentumSGDTrainer(model);
+  //trainer = new SimpleSGDTrainer(model);
+  trainer.reset(new MomentumSGDTrainer(model));
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
   if (argc == 4) {
-    string fname = argv[3];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    TextFileLoader loader(argv[3]);
+    loader.populate(model, "model");
   }
 
   unsigned report_every_i = 50;
@@ -182,7 +178,6 @@ int main(int argc, char** argv) {
   unsigned si = training.size();
   vector<unsigned> order(training.size());
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   vector<unsigned> rows;
@@ -195,7 +190,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i) {
       if (si == training.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -219,11 +213,11 @@ int main(int argc, char** argv) {
       Expression loss_expr = lm.BuildLMGraph(rmsent, cg, &rows);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       for (auto w : sent) { w2sl[w] = 0; }
       ++lines;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
 #if 0
     lm.RandomSample();
@@ -241,14 +235,11 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+	TextFileSaver saver("rnnlm-givenbag.model");
+	saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
 #endif
   }
-  delete sgd;
 }
-

@@ -7,6 +7,7 @@
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/globals.h"
 
 #include "easylogging++.h"
 
@@ -14,9 +15,6 @@
 #include <fstream>
 #include <sstream>
 #include <tuple>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -45,7 +43,7 @@ struct RNNSkipLM {
     Parameter p_R;
     Parameter p_bias;
     SimpleRNNBuilder builder;
-    explicit RNNSkipLM(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model, true) {
+    explicit RNNSkipLM(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model, true) {
         p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
         p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
         p_bias = model.add_parameters({VOCAB_SIZE});
@@ -101,7 +99,7 @@ int main(int argc, char** argv) {
 
     dynet::initialize(argc, argv);
     if (argc != 3 && argc != 4) {
-        LOG(INFO) << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+        LOG(INFO) << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
         return 1;
     }
     kSOS = d.convert("<s>");
@@ -126,20 +124,18 @@ int main(int argc, char** argv) {
     LOG(INFO) << "Parameters will be written to: " << fname << endl;
     double best = 9e+99;
 
-    Model model;
+    ParameterCollection model;
     bool use_momentum = false;
-    Trainer* sgd = nullptr;
+    std::unique_ptr<Trainer> trainer;
     if (use_momentum)
-        sgd = new MomentumSGDTrainer(model);
+        trainer.reset(new MomentumSGDTrainer(model));
     else
-        sgd = new SimpleSGDTrainer(model);
+        trainer.reset(new SimpleSGDTrainer(model));
 
     RNNSkipLM lm(model);
     if (argc == 4) {
-        string fname = argv[3];
-        ifstream in(fname);
-        boost::archive::text_iarchive ia(in);
-        ia >> model;
+        TextfileLoader loader(argv[3]);
+        loader.populate(model);
     }
 
     unsigned report_every_i = 50;
@@ -147,7 +143,6 @@ int main(int argc, char** argv) {
     unsigned si = training.size();
     vector<unsigned> order(training.size());
     for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
-    bool first = true;
     int report = 0;
     unsigned lines = 0;
     while(1) {
@@ -157,7 +152,6 @@ int main(int argc, char** argv) {
         for (unsigned i = 0; i < report_every_i; ++i) {
             if (si == training.size()) {
                 si = 0;
-                if (first) { first = false; } else { sgd->update_epoch(); }
                 LOG(INFO) << "**SHUFFLE\n";
                 shuffle(order.begin(), order.end(), *rndeng);
             }
@@ -172,10 +166,10 @@ int main(int argc, char** argv) {
             Expression loss_expr = lm.BuildLMGraph(doc, cg);
             loss += as_scalar(cg.forward(loss_expr));
             cg.backward(loss_expr);
-            sgd->update();
+            trainer->update();
             ++lines;
         }
-        sgd->status();
+        trainer->status();
         // FIXME: is chars incorrect?
         LOG(INFO) << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
         //lm.RandomSample(); // why???
@@ -195,14 +189,12 @@ int main(int argc, char** argv) {
             }
             if (dloss < best) {
                 best = dloss;
-                ofstream out(fname);
-                boost::archive::text_oarchive oa(out);
-                oa << model;
+                TextFileSaver saver(fname);
+                saver.save(model);
             }
             LOG(INFO) << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
         }
     }
-    delete sgd;
 }
 
 void read_documents(const std::string &filename, Corpus &corpus) {

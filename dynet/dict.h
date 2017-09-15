@@ -1,14 +1,13 @@
 #ifndef DYNET_DICT_H_
 #define DYNET_DICT_H_
 
-#include <cassert>
 #include <unordered_map>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <stdexcept>
 
-namespace boost { namespace serialization { class access; } }
+#include "dynet/except.h"
 
 namespace dynet {
 
@@ -18,7 +17,7 @@ public:
   Dict() : frozen(false), map_unk(false), unk_id(-1) {
   }
 
-  inline unsigned size() const { return words_.size(); }
+  inline unsigned size() const { return (unsigned)words_.size(); }
 
   inline bool contains(const std::string& words) {
     return !(d_.find(words) == d_.end());
@@ -31,34 +30,32 @@ public:
     auto i = d_.find(word);
     if (i == d_.end()) {
       if (frozen) {
-        if (map_unk) {
+        if (map_unk)
           return unk_id;
-        }
-        else {
-         std::cerr << map_unk << std::endl;
-          std::cerr << "Unknown word encountered: " << word << std::endl;
-          throw std::runtime_error("Unknown word encountered in frozen dictionary: " + word);
-        }
+        else
+          DYNET_RUNTIME_ERR("Unknown word encountered in frozen dictionary: " << word);
       }
       words_.push_back(word);
-      return d_[word] = words_.size() - 1;
+      return d_[word] = (int)words_.size() - 1;
     } else {
       return i->second;
     }
   }
   
   inline const std::string& convert(const int& id) const {
-    assert(id < (int)words_.size());
+    DYNET_ARG_CHECK(id < (int)words_.size(), 
+                            "Out-of-bounds error in Dict::convert for word ID " << id <<
+                            " (dict size: " << words_.size() << ")");
     return words_[id];
   }
   
   void set_unk(const std::string& word) {
     if (!frozen)
-      throw std::runtime_error("Please call set_unk() only after dictionary is frozen");
+      DYNET_RUNTIME_ERR("Please call set_unk() only after dictionary is frozen");
     if (map_unk)
-      throw std::runtime_error("Set UNK more than one time");
+      DYNET_RUNTIME_ERR("Set UNK more than one time");
   
-    // temporarily unfrozen the dictionary to allow the add of the UNK
+    // temporarily unfreeze the dictionary to allow the addition of the UNK
     frozen = false;
     unk_id = convert(word);
     frozen = true;
@@ -71,17 +68,12 @@ public:
   
   void clear() { words_.clear(); d_.clear(); }
 
-private:
+protected:
   bool frozen;
   bool map_unk; // if true, map unknown word to unk_id
   int unk_id; 
   std::vector<std::string> words_;
   Map d_;
-
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive& ar, const unsigned int);
-
 };
 
 std::vector<int> read_sentence(const std::string& line, Dict& sd);

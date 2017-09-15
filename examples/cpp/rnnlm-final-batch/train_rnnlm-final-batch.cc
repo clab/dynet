@@ -7,15 +7,13 @@
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/globals.h"
 #include "../utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 using namespace std;
 using namespace dynet;
@@ -38,7 +36,7 @@ struct RNNLanguageModel {
   Parameter p_last;
   Parameter p_last_bias;
   Builder builder;
-  explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
+  explicit RNNLanguageModel(ParameterCollection& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model) {
     p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
@@ -129,7 +127,7 @@ struct CompareLen {
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
   if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.file]\n";
     return 1;
   }
   kSOS = d.convert("<s>");
@@ -195,17 +193,14 @@ int main(int argc, char** argv) {
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
-  Model model;
-  Trainer* sgd = nullptr;
-  sgd = new SimpleSGDTrainer(model);
-  sgd->clip_threshold *= BATCH_SIZE;
+  ParameterCollection model;
+  std::unique_ptr<Trainer> trainer(new SimpleSGDTrainer(model));
+  trainer->clip_threshold *= BATCH_SIZE;
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   if (argc == 4) {
-    string fname = argv[3];
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    TextFileLoader loader(argv[3]);
+    loader.populate(model);
   }
 
   unsigned report_every_i = 50;
@@ -213,7 +208,6 @@ int main(int argc, char** argv) {
   vector<unsigned> order((training.size() + BATCH_SIZE - 1) / BATCH_SIZE);
   unsigned si = order.size();
   for (unsigned i = 0; i < order.size(); ++i) order[i] = i * BATCH_SIZE;
-  bool first = true;
   int report = 0;
   unsigned lines = 0;
   while (1) {
@@ -223,7 +217,6 @@ int main(int argc, char** argv) {
     for (unsigned i = 0; i < report_every_i; ++i, ++si) {
       if (si == order.size()) {
         si = 0;
-        if (first) { first = false; } else { sgd->update_epoch(); }
         cerr << "**SHUFFLE\n";
         shuffle(order.begin(), order.end(), *rndeng);
       }
@@ -233,10 +226,10 @@ int main(int argc, char** argv) {
       Expression loss_expr = lm.BuildLMGraphs(training, order[si], bsize, chars, cg);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      sgd->update();
+      trainer->update();
       lines += bsize;
     }
-    sgd->status();
+    trainer->status();
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
     lm.RandomSample();
 
@@ -252,13 +245,10 @@ int main(int argc, char** argv) {
       }
       if (dloss < best) {
         best = dloss;
-        ofstream out(fname);
-        boost::archive::text_oarchive oa(out);
-        oa << model;
+        TextFileSaver saver(fname);
+        saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dchars) << " ppl=" << exp(dloss / dchars) << ' ';
     }
   }
-  delete sgd;
 }
-

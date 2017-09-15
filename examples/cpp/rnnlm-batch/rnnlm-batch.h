@@ -20,10 +20,6 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -31,7 +27,6 @@
 
 using namespace std;
 using namespace dynet;
-using namespace dynet::expr;
 
 int kSOS;
 int kEOS;
@@ -82,13 +77,13 @@ public:
   /**
    * \brief Constructor for the batched RNN language model
    *
-   * \param model Model to hold all parameters for training
+   * \param model ParameterCollection to hold all parameters for training
    * \param LAYERS Number of layers of the RNN
    * \param INPUT_DIM Embedding dimension for the words
    * \param HIDDEN_DIM Dimension of the hidden states
    * \param VOCAB_SIZE Size of the input vocabulary
    */
-  explicit RNNBatchLanguageModel(Model& model,
+  explicit RNNBatchLanguageModel(ParameterCollection& model,
                                  unsigned LAYERS,
                                  unsigned INPUT_DIM,
                                  unsigned HIDDEN_DIM,
@@ -136,7 +131,7 @@ public:
       for (unsigned i = 0; i < bsize; ++i) {
         next_arr[i] = sents[id + i][t];
         // count non-EOS tokens
-        if (next_arr[i] != *sents[id].rbegin()) tokens++;
+        if (next_arr[i] != static_cast<unsigned>(*sents[id].rbegin())) tokens++;
       }
       // Embed the current tokens
       Expression i_x_t = lookup(cg, p_c, last_arr);
@@ -207,7 +202,7 @@ public:
         if (w == dist.size()) w = kEOS;
       }
 
-      if (w == kEOS) {
+      if (static_cast<int>(w) == kEOS) {
         // If the sampled token is an EOS, reinitialize network and start generating a new sample
         rnn.start_new_sequence();
         cerr << endl;
@@ -220,15 +215,6 @@ public:
 
     }
     cerr << endl;
-  }
-
-private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int) {
-    ar & LAYERS & INPUT_DIM & HIDDEN_DIM;
-    ar & p_c & p_R & p_bias;
-    ar & rnn;
   }
 };
 
