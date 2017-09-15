@@ -76,7 +76,8 @@ The following is a list of all the commands needed to perform a manual install:
     cmake .. -DEIGEN3_INCLUDE_DIR=../../eigen -DPYTHON=`which python` -DBACKEND=cuda
 
     make -j 2 # replace 2 with the number of available cores
-    python ../setup.py build --build-dir=.. --skip-build install  # add `--user` for a user-local install.
+    cd python
+    python ../../setup.py build --build-dir=.. --skip-build install # add `--user` for a user-local install.
     
     # this should suffice, but on some systems you may need to add the following line to your
     # init files in order for the compiled .so files be accessible to Python.
