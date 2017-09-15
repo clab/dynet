@@ -27,6 +27,7 @@ namespace dynet {
 // * LookupParameters represents a table of vectors that are used to embed a
 //   set of discrete objects. These are sparsely updated.
 
+class DeviceManager;
 class ParameterCollection;
 struct ParameterInit;
 
@@ -454,6 +455,9 @@ struct ParameterCollectionStorage {
 
   mutable float* gradient_norm_scratch;
   L2WeightDecay weight_decay;
+
+ private:
+  DeviceManager* const device_manager;
 };
 
 // this is a collection of parameters
