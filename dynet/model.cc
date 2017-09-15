@@ -243,14 +243,15 @@ float LookupParameter::current_weight_decay() const {
   return get_storage().owner->get_weight_decay().current_weight_decay();
 }
 
-ParameterCollectionStorage::ParameterCollectionStorage() : gradient_norm_scratch(nullptr) {
+ParameterCollectionStorage::ParameterCollectionStorage()
+    : gradient_norm_scratch(nullptr), device_manager(get_device_manager()) {
   weight_decay.set_lambda(weight_decay_lambda);
 }
 
 ParameterCollectionStorage::~ParameterCollectionStorage() {
   for (auto p : all_params) delete p;
   if (gradient_norm_scratch)
-    dynet::get_global_device("CPU")->mem->free(gradient_norm_scratch);
+    device_manager->get_global_device("CPU")->mem->free(gradient_norm_scratch);
 }
 
 void ParameterCollectionStorage::project_weights(float radius) {
@@ -822,7 +823,7 @@ template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_GPU>(Devi
 extern template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_GPU>(Device_GPU & dev) const;
 template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float ParameterCollectionStorage::gradient_l2_norm() const {
-  if (default_device->type == DeviceType::CPU || default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_CPU*)dynet::get_global_device("CPU")); }
+  if (default_device->type == DeviceType::CPU || default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_CPU*)device_manager->get_global_device("CPU")); }
   else { throw std::runtime_error("Bad device type"); }
 }
 float ParameterCollection::gradient_l2_norm() const {
@@ -831,7 +832,7 @@ float ParameterCollection::gradient_l2_norm() const {
 #else
 template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float ParameterCollectionStorage::gradient_l2_norm() const {
-  if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)dynet::get_global_device("CPU")); }
+  if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)device_manager->get_global_device("CPU")); }
   else { throw std::runtime_error("Bad device type"); }
 }
 float ParameterCollection::gradient_l2_norm() const {

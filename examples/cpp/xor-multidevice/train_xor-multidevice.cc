@@ -18,8 +18,8 @@ int main(int argc, char** argv) {
   SimpleSGDTrainer trainer(m);
 
   // Get two devices, the CPU device and GPU device
-  Device* cpu_device = get_global_device("CPU");
-  Device* gpu_device = get_global_device("GPU:0");
+  Device* cpu_device = get_device_manager()->get_global_device("CPU");
+  Device* gpu_device = get_device_manager()->get_global_device("GPU:0");
 
   const unsigned HIDDEN_SIZE = 8;
   Parameter p_W = m.add_parameters({HIDDEN_SIZE, 2}, gpu_device);
