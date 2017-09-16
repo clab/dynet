@@ -1672,6 +1672,17 @@ cdef class Expression: #{{{
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         self.cgp().backward(self.vindex, full)
 
+    cpdef set_rewritable(self, bool value):
+        """Setting whether this expression(Node)'s memory could be rewritten by others (for inplaced operations)
+        
+        This action could be dangerous for nodes which need its original value when calculating gradients !!
+        
+        Args:
+            value (bool): Whether this could be rewritable.
+        
+        """
+        self.c().set_rewritable(value)
+
     def __add__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
             return _add(self,other)

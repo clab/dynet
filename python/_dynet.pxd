@@ -233,6 +233,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
         CDim dim() except +
         bool is_stale()
         const CTensor& gradient() except +
+        void set_rewritable(bool v) except +
     #CExpression c_input "dynet::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::input" (CComputationGraph& g, float *ps) except + #
     CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +

@@ -169,7 +169,7 @@ void ComputationGraph::_revert(CGCheckpoint p) {
       Node* one = nodes[i];
       for(VariableIndex arg : one->args) {
         if(one->inplace_state == Node::INPLACE_TYPE::WRITE){
-          if(arg <= p.node_idx){
+          if(arg <= (unsigned)p.node_idx){
             DYNET_RUNTIME_ERR("Invalid revert for the node "<<arg<<" cannot be recovered from certain inplaced operation");
           }
           nodes[arg]->write_num -= 1;
@@ -377,7 +377,9 @@ void ComputationGraph::set_inplace_for_new_node(const VariableIndex& i) {
     }
     else if(node->inplace_state == Node::INPLACE_TYPE::WRITE){
       // currently only allow one layer of inplace for WRITE since letting it spreading out might cause certain problems
-      DYNET_ARG_CHECK((x0->write_num + x0->read_num == 0) && (!x0->inplaced()), "Failed input for WRITE inplaced-operation");
+      DYNET_ARG_CHECK((x0->write_num + x0->read_num == 0), "Failed input (used by others) for WRITE inplaced-operation");
+      DYNET_ARG_CHECK((!x0->inplaced()), "Failed input (already inplaced) for WRITE inplaced-operation");
+      DYNET_ARG_CHECK((x0->rewritable), "Failed input (not rewritable) for WRITE inplaced-operation");
     }
     else{
       DYNET_RUNTIME_ERR("Impossible inplace staus");

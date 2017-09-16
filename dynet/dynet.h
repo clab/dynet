@@ -736,13 +736,19 @@ struct Node {
   // for inplace operations
   enum class INPLACE_TYPE {NOPE, READ, WRITE};
   INPLACE_TYPE inplace_state{INPLACE_TYPE::NOPE}; /**< Type for the inplace operations: NOPE(non-inplace), READ(no changes to the memory), WRITE(unrecoverable changes possibly) */
-  int read_num{0};		/**< How many nodes have use this as inputs (NOPE+READ) */
-  int write_num{0};		/**< How many nodes have take this node's memory (WRITE) */
+  int read_num{0}; /**< How many nodes have use this as inputs (NOPE+READ) */
+  int write_num{0}; /**< How many nodes have take this node's memory (WRITE) */
+  bool rewritable{false}; /**< Whether this node can be rewritten by anothor inplaced Node (does not need its output when calculating gradients) */
 
   /**
    * \brief Whether this node is inplaced (borrowing other's memory)
    */
   inline bool inplaced() const { return inplace_state != INPLACE_TYPE::NOPE; }
+
+  /**
+  * \brief Force setting whether this Node can be rewrite (might be dangerous for some nodes which need its own values when calculating gradients)
+  */
+  inline void set_rewritable(bool v) { rewritable = v; }
 
  protected:
   Node() : args(), device(nullptr) {}

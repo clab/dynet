@@ -68,6 +68,8 @@ struct Expression {
     return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());
   }
 
+  inline void set_rewritable(bool v) { pg->nodes[i]->set_rewritable(v); }
+
   /**
    * \brief Get value of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
