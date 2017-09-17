@@ -8,12 +8,12 @@ This downloads the data used in this tutorial.
 
 Train an LSTM LM using a class-factor softmax:
 
-    ./train_rnnlm -x -s -t ../rnnlm/ptb-mikolov/train.txt -d ../rnnlm/ptb-mikolov/valid.txt \
+    ./train_rnnlm -s -t ../rnnlm/ptb-mikolov/train.txt -d ../rnnlm/ptb-mikolov/valid.txt \
          -c ../rnnlm/ptb-mikolov/clusters-mkcls.txt -D 0.3 --hidden_size 256 --eta_decay_onset_epoch 10 --eta_decay_rate 0.5
 
 Train an LSTM LM with a standard softmax:
 
-    ./train_rnnlm -x -s -t ../rnnlm/ptb-mikolov/train.txt -d ../rnnlm/ptb-mikolov/valid.txt \
+    ./train_rnnlm -s -t ../rnnlm/ptb-mikolov/train.txt -d ../rnnlm/ptb-mikolov/valid.txt \
          -D 0.3 --hidden_size 256 --eta_decay_onset_epoch 10 --eta_decay_rate 0.5
 
 ### Evaluation example
