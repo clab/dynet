@@ -782,8 +782,12 @@ void LookupParameterStorage::scale_gradient(float a) {
 
 template <class MyDevice>
 float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
-  if (gradient_norm_scratch == nullptr) {
-    gradient_norm_scratch = (float*)dev.mem->malloc((all_params.size() + 1) * sizeof(float));
+  auto scratch_size = (all_params.size() + 1) * sizeof(float);
+  if (gradient_norm_scratch == nullptr || sizeof(gradient_norm_scratch) < scratch_size) {
+    if (gradient_norm_scratch != nullptr) {
+      dev.mem->free(gradient_norm_scratch);
+    }
+    gradient_norm_scratch = (float*)dev.mem->malloc(scratch_size);
   }
   size_t pi;
   size_t k1 = 0, k2 = 0;
