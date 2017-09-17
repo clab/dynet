@@ -204,13 +204,15 @@ class TestParameters(unittest.TestCase):
                         0] * 0.9), msg=np.array_str(self.lp2.as_array()))
 
     def test_param_change_after_update(self):
-        trainer = dy.AdamTrainer(self.m)
-        trainer.update()
-        p = self.m.add_parameters((1,))
-        x = dy.parameter(p)
-        x.forward()
-        x.backward()
-        trainer.update()
+        for trainer_type in dy.SimpleSGDTrainer, dy.AdamTrainer:
+            trainer = trainer_type(self.m)
+            for _ in range(100):
+                p = self.m.add_parameters((1,))
+                dy.renew_cg()
+                x = dy.parameter(p)
+                x.forward()
+                x.backward()
+                trainer.update()
 
 
 class TestBatchManipulation(unittest.TestCase):
