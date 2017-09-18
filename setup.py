@@ -156,7 +156,7 @@ INCLUDE_DIRS[:] = filter(None, [PROJECT_SOURCE_DIR, EIGEN3_INCLUDE_DIR])
 
 TARGET = [Extension(
     "_dynet",  # name of extension
-    [BUILD_DIR + "/python/_dynet.pyx"],  # filename of our Pyrex/Cython source
+    [PYTHON_DIR + "/_dynet.pyx"],  # filename of our Pyrex/Cython source
     language="c++",  # this causes Pyrex/Cython to create C++ source
     include_dirs=INCLUDE_DIRS,
     libraries=LIBRARIES,
