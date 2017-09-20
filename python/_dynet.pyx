@@ -1432,6 +1432,19 @@ cpdef available_devices():
     dm = c_get_device_manager()
     return [dm.get(i).name for i in xrange(dm.num_devices())]
 
+class DeviceInfo(object):
+    def __init__(self, name, id, dtype):
+        self.name = name
+        self.type = dtype
+        self.id = id
+
+cpdef get_device_info(string name):
+    cdef CDevice *d = c_str2dev(name)
+    # TODO represent type (enum in cython)
+    # TODO enable query of memory size?
+    return DeviceInfo(d.name, d.device_id, -1)
+
+
 cdef CDevice* c_str2dev(string name):
     cdef CDevice* dev
     dev = c_get_device_manager().get_global_device(name)

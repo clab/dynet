@@ -228,6 +228,8 @@ cdef extern from "dynet/training.h" namespace "dynet":
 cdef extern from "dynet/devices.h" namespace "dynet":
     cdef cppclass CDevice "dynet::Device":
         string name
+        int type # TODO how do we do enums in cython?
+        int device_id
 
     cdef cppclass CDeviceManager "dynet::DeviceManager":
         CDevice* get_global_device(string name) except +
