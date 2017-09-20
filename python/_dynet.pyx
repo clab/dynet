@@ -1065,28 +1065,36 @@ cdef class ParameterCollection: # {{{
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
-    cpdef parameters_from_numpy(self, array,string name=""):
+    cpdef parameters_from_numpy(self, array,string name="", string device=""):
         """Create parameter from numpy array
         
         Args:
             array (np.ndarray): Numpy array
             name  (string): optional name for this parameter.
+            device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
             (dynet.Parameters): Parameter
         """
         dim = array.shape
-        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name)
+        cdef CDevice* dev
+        cdef CParameters p
+        if str(device) != "":
+            dev = c_str2dev(device)
+            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name, dev)
+        else:
+            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
     # TODO this may fail with >2 dim arrays.
-    cpdef lookup_parameters_from_numpy(self, array, string name=""):
+    cpdef lookup_parameters_from_numpy(self, array, string name="", string device=""):
         """Create LookupParameters from numpy array
         
         Args:
             array (np.ndarray): Numpy array. rows: vocab_size, cols: dims.
             name  (string): optional name for this parameter.
+            device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
             (dynet.LookupParameters): LookupParameter
@@ -1094,11 +1102,17 @@ cdef class ParameterCollection: # {{{
         vocab_size = array.shape[0]
         emb_dim = array.shape[1:]
         init = NumpyInitializer(array.T)
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name)
+        cdef CDevice* dev
+        cdef CLookupParameters p
+        if str(device) != "":
+            dev = c_str2dev(device)
+            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name, dev)
+        else:
+            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None, string name=""):
+    cpdef add_parameters(self, dim, PyInitializer init=None, string name="", string device=""):
         """Add a parameter to the ParameterCollection
         
         Args:
@@ -1107,6 +1121,7 @@ cdef class ParameterCollection: # {{{
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
+            device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
             (dynet.Parameters): Created Parameter
@@ -1114,14 +1129,19 @@ cdef class ParameterCollection: # {{{
         assert(isinstance(dim,(tuple,int)))
         cdef CParameters p
         cdef CParameterInit *initializer
+        cdef CDevice *dev
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
-        p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
+        if str(device) != "":
+            dev = c_str2dev(device)
+            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name, dev)
+        else:
+            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name=""):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name="", string device=""):
         """Add a lookup parameter to the ParameterCollection
         
         Args:
@@ -1130,17 +1150,24 @@ cdef class ParameterCollection: # {{{
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
+            device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
             (dynet.LookupParameters): Created LookupParameter
         """
         assert(isinstance(dim, tuple))
+        cdef CDevice *dev
+        cdef CLookupParameters p
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
         if init is None:
             init = GlorotInitializer(True)
         initializer = init.initializer
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name)
+        if str(device) != "":
+            dev = c_str2dev(device)
+            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name, dev)
+        else:
+            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
@@ -1380,6 +1407,35 @@ cdef class ComputationGraph:
     cdef outputBatchPicker(self, Expression e, vector[unsigned] vs, unsigned dim=0):
         r = _pickerBatchExpression(self, e, vs, dim)
         return r
+# }}}
+
+# {{{ Devices
+    
+cpdef available_devices():
+    """We use the term Device to refer to a Computation Device.
+    A computation device is a piece of hardware performing computation (e.g., CPU, GPU).
+    Computation devices are identified by string names (e.g., 'CPU', 'GPU:0').
+    This returns the list of available devices.
+    
+    Devices have both a processor and an associated memory.
+    Hence, each Parameters, LookupParameters and Expression are tied to devices.
+    - Parameter and LookupParameters are associated with a device at creation time.
+      If no device is given at creation time, the default device is assumed.
+    - Parameter Expressions reside on the same device as their Parameters.
+    - Other Expressions reside on the same device as the expressions that comprise them.
+    - An Expression e can be copied across devices using dy.to_device(e, name).
+
+    Returns:
+        list : list of available device names (as strings)
+    """
+    cdef CDeviceManager* dm
+    dm = c_get_device_manager()
+    return [dm.get(i).name for i in xrange(dm.num_devices())]
+
+cdef CDevice* c_str2dev(string name):
+    cdef CDevice* dev
+    dev = c_get_device_manager().get_global_device(name)
+    return dev
 # }}}
 
 cdef class Tensor: #{{{
