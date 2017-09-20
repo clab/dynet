@@ -223,6 +223,13 @@ cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
 
+cdef extern from "dynet/devices.h" namespace "dynet":
+    cdef cppclass CDevice "dynet::Device":
+        pass
+    cdef cppclass CDeviceManager "dynet::DeviceManager":
+        CDevice* get_global_device(string name)
+
+    CDeviceManager* c_get_device_manager "dynet::get_device_manager" () 
 
 cdef extern from "dynet/expr.h" namespace "dynet":
     cdef cppclass CExpression "dynet::Expression":
@@ -388,6 +395,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_vanilla_lstm_gates_dropout_concat "dynet::vanilla_lstm_gates_dropout_concat" (const vector[CExpression]& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, CExpression& dropout_mask_x, CExpression& dropout_mask_h, float weightnoise_std) except + #
     CExpression c_vanilla_lstm_c "dynet::vanilla_lstm_c" (CExpression& c_tm1, CExpression& gates_t) except + #
     CExpression c_vanilla_lstm_h "dynet::vanilla_lstm_h" (CExpression& c_t, CExpression& gates_t) except + #
+    CExpression c_to_device "dynet::to_device" (CExpression& e, CDevice* d) except + #
 
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNPointer "dynet::RNNPointer":

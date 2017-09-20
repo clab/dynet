@@ -3984,6 +3984,14 @@ cpdef Expression vanilla_lstm_h(Expression c_t, Expression gates_t):
     ensure_freshness(gates_t)
     return Expression.from_cexpr(c_t.cg_version, c_vanilla_lstm_h(c_t.c(),gates_t.c()))
 
+cpdef Expression to_device(Expression e, string device_str):
+    """TODO
+    """
+    ensure_freshness(e)
+    cdef CDevice* dev
+    dev = c_get_device_manager().get_global_device(device_str)
+    return Expression.from_cexpr(e.cg_version, c_to_device(e.c(), dev))
+
 # }}}
     
 # {{{ RNNS / Builders
