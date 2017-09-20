@@ -4054,7 +4054,15 @@ cpdef Expression vanilla_lstm_h(Expression c_t, Expression gates_t):
     return Expression.from_cexpr(c_t.cg_version, c_vanilla_lstm_h(c_t.c(),gates_t.c()))
 
 cpdef Expression to_device(Expression e, string device_str):
-    """TODO
+    """Copy Expression's values between devices.
+    Creates a new expression with e's values on device device_str.
+
+    Args:
+        e (dynet.Expression): Expression
+        device_str (string): a device name
+    
+    Returns:
+        dynet.Expression
     """
     ensure_freshness(e)
     cdef CDevice* dev
