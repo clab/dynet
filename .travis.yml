@@ -10,20 +10,6 @@ compiler:
   - gcc
   - clang
 dist: trusty
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-      - boost-latest
-    packages:
-      - gcc-4.8
-      - g++-4.8
-      - libboost-filesystem1.55-dev
-      - libboost-program-options1.55-dev
-      - libboost-serialization1.55-dev
-      - libboost-test1.55-dev
-      - libboost-regex1.55-dev
-      - pandoc
 env:
   global:
     - PYTHON=python CONDA_PACKAGES="numpy cython" TWINE_USERNAME=danielh
@@ -57,6 +43,7 @@ matrix:
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
 
 before_install:
+  - travis_retry .travis/install_packages.sh
   - travis_retry .travis/install_conda.sh
   - export PATH="$PWD/miniconda/bin:$PATH"
   - source activate "$PYVER"
