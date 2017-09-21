@@ -1388,15 +1388,15 @@ cdef class ComputationGraph:
     cdef inputValue(self, float v = 0.0, device=""):
         return _inputExpression(self, v, device)
     cdef inputVector(self, int dim, device=""):
-        return _vecInputExpression(self, vector[float](dim), device)
+        return _vecInputExpression(self, vector[float](dim), device=device)
     cdef inputVectorLiteral(self, vector[float] v, device=""):
-        return _vecInputExpression(self, v, device)
+        return _vecInputExpression(self, v, device=device)
     cdef inputMatrix(self, int d1, int d2, device=""):
-        return _vecInputExpression(self, vector[float](d1*d2), (d1,d2), device)
+        return _vecInputExpression(self, vector[float](d1*d2), (d1,d2), device=device)
     def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1,device=""):
-        return _vecInputExpression(self, v, d,batch_size,device)
+        return _vecInputExpression(self, v, d,batch_size,device=device)
     def inputSparseTensor(self, vector[unsigned] idxs, vector[float] v, tuple dim, int batch_size=1, float defval=0, device=""):
-        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval, device)
+        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval, device=device)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
