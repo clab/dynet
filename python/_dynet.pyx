@@ -1180,6 +1180,9 @@ cdef class ParameterCollection: # {{{
         """
         return self.thisptr.get_fullname().decode("utf8")
 
+    cpdef parameter_count(self):
+      return self.thisptr.parameter_count()
+
 # Alias Model and ParameterCollection
 Model=ParameterCollection
 
