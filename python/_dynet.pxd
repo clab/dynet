@@ -107,6 +107,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         vector[CParameterStorage] parameters_list()
         CModel add_subcollection(string name)
         string get_fullname()
+        int parameter_count()
 
 cdef extern from "dynet/io.h" namespace "dynet":
     cdef cppclass CTextFileSaver "dynet::TextFileSaver":
