@@ -1385,18 +1385,18 @@ cdef class ComputationGraph:
     # 
     # We have the classes UnsignedValue, FloatValue and FloatVectorValue for
     # this purpose.
-    cdef inputValue(self, float v = 0.0):
-        return _inputExpression(self, v)
-    cdef inputVector(self, int dim):
-        return _vecInputExpression(self, vector[float](dim))
-    cdef inputVectorLiteral(self, vector[float] v):
-        return _vecInputExpression(self, v)
-    cdef inputMatrix(self, int d1, int d2):
-        return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
-    def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1):
-        return _vecInputExpression(self, v, d,batch_size)
-    def inputSparseTensor(self, vector[unsigned] idxs, vector[float] v, tuple dim, int batch_size=1, float defval=0):
-        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval)
+    cdef inputValue(self, float v = 0.0, device=""):
+        return _inputExpression(self, v, device)
+    cdef inputVector(self, int dim, device=""):
+        return _vecInputExpression(self, vector[float](dim), device)
+    cdef inputVectorLiteral(self, vector[float] v, device=""):
+        return _vecInputExpression(self, v, device)
+    cdef inputMatrix(self, int d1, int d2, device=""):
+        return _vecInputExpression(self, vector[float](d1*d2), (d1,d2), device)
+    def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1,device=""):
+        return _vecInputExpression(self, v, d,batch_size,device)
+    def inputSparseTensor(self, vector[unsigned] idxs, vector[float] v, tuple dim, int batch_size=1, float defval=0, device=""):
+        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval, device)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -1445,7 +1445,7 @@ cpdef get_device_info(string name):
     return DeviceInfo(d.name, d.device_id, -1)
 
 
-cdef CDevice* c_str2dev(string name):
+cdef CDevice* c_str2dev(string name) except NULL:
     cdef CDevice* dev
     dev = c_get_device_manager().get_global_device(name)
     return dev
@@ -1915,12 +1915,17 @@ cdef class _inputExpression(Expression):
     
     """
     cdef FloatValue val
-    def __cinit__(self, ComputationGraph g, float s):
+    def __cinit__(self, ComputationGraph g, float s, string device=""):
         self.val = FloatValue(s)
         #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cgp()[0], self.val.addr())
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], self.val.addr(),dev)
+        else:
+            e = c_input(self.cgp()[0], self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, float s):
@@ -1935,8 +1940,8 @@ cdef class _inputExpression(Expression):
         self.cgp().invalidate()
         self.val.set(s)
 
-def scalarInput(float s):
-    return _cg.inputValue(s)
+def scalarInput(float s, device=""):
+    return _cg.inputValue(s, device)
 
 cdef class _vecInputExpression(Expression):
     """Subclass of Expression corresponding to any non-scalar input expressions
@@ -1945,13 +1950,18 @@ cdef class _vecInputExpression(Expression):
     TODO : change this
     """
     cdef FloatVectorValue val
-    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None,batch_size=1):
+    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None,batch_size=1,device=""):
         self.val = FloatVectorValue(val)
         if dim is None: dim = self.val.size()
         #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.val.addr())
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.val.addr(), dev)
+        else:
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, vector[float] data):
@@ -1973,11 +1983,16 @@ cdef class _sparseInputExpression(Expression):
     Despite the name, this also represents tensors (in column major format).
     TODO : change this
     """
-    def __cinit__(self, ComputationGraph g, vector[unsigned] idxs, vector[float] val, dim ,batch_size=1, defval=0):
+    def __cinit__(self, ComputationGraph g, vector[unsigned] idxs, vector[float] val, dim ,batch_size=1, defval=0, device=""):
         #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval)
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval, dev)
+        else:
+            e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval)
         self.vindex = e.i
         g._inputs.append(self)
 
@@ -1993,27 +2008,29 @@ cdef class _sparseInputExpression(Expression):
         """
         raise ValueError('Can\'t set value of sparse input vector for now')
 
-def vecInput(int dim):
+def vecInput(int dim, string device=""):
     """Input an empty vector
     
     Args:
         dim(number): Size
+        device(string): Optional, device on which to create the expression.
     
     Returns:
         _vecInputExpression: Corresponding expression
     """
-    return _cg.inputVector(dim)
+    return _cg.inputVector(dim, device)
 
-def inputVector(vector[float] v):
+def inputVector(vector[float] v, string device=""):
     """Input a vector by values
     
     Args:
         v(vector[float]): Values
+        device(string): Optional, device on which to create the expression.
     
     Returns:
         _vecInputExpression: Corresponding expression
     """
-    return _cg.inputVectorLiteral(v)
+    return _cg.inputVectorLiteral(v, device)
 
 def matInput(int d1, int d2):
     """DEPRECATED : use inputTensor
@@ -2050,7 +2067,7 @@ def inputMatrix(vector[float] v, tuple d):
     """
     raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
-def inputTensor(arr,batched=False):
+def inputTensor(arr,batched=False,device=""):
     """Creates a tensor expression based on a numpy array or a list.
     
     The dimension is inferred from the shape of the input.
@@ -2062,6 +2079,7 @@ def inputTensor(arr,batched=False):
     
     Keyword Args:
         batched(bool): Whether to use the last dimension as a batch dimension (default: False)
+        device(string): Optional, device on which to create the expression.
     
     Returns:
         _vecInputExpression: Input expression
@@ -2084,10 +2102,10 @@ def inputTensor(arr,batched=False):
         dim = arr.shape
         batch_size= 1
     arr = arr.flatten(order='F')
-    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
+    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size,device=device)
 
 
-def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
+def sparse_inputTensor(idxs, values, shape, batched=False, defval=0,device=""):
     """Creates a tensor expression based on indices and values
     
     The dimension is inferred from the shape of the input.
@@ -2101,6 +2119,7 @@ def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
     Keyword Args:
         batched(bool): Whether to use the last dimension as a batch dimension (default: False). For example if :code:`shape=(3, 3, 3)` and :code:`batched=True` the resulting expression will be a batch of 3 3x3 matrices
         defval(number): The default value for all non specified coordinates (default: 0)
+        device(string): Optional, device on which to create the expression.
     
     Returns:
         _vecInputExpression: Input expression
@@ -2122,7 +2141,7 @@ def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
         dim = shape
         batch_size = 1
     idxs = np.ravel_multi_index(idxs, shape, order='F')
-    return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval)
+    return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval, device=device)
 
 cdef class _lookupExpression(Expression):
     """Expression corresponding to a lookup from lookup parameter
@@ -4066,7 +4085,7 @@ cpdef Expression to_device(Expression e, string device_str):
     """
     ensure_freshness(e)
     cdef CDevice* dev
-    dev = c_get_device_manager().get_global_device(device_str)
+    dev = c_str2dev(device_str)
     return Expression.from_cexpr(e.cg_version, c_to_device(e.c(), dev))
 
 # }}}
