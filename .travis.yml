@@ -3,44 +3,87 @@ language: cpp
 sudo: required
 services:
   - docker
-os:
-  - linux
-  - osx
-compiler:
-  - gcc
-  - clang
 dist: trusty
 env:
   global:
     - PYTHON=python CONDA_PACKAGES="numpy cython" TWINE_USERNAME=danielh
     - secure: "j8Ro21/7h5FKuJHPJRHYfOiZHMoAfD/dfpqXZreGrl79jVSEdPZmmOdvFH++CqrRdttpxOf2Lg5qOfpXfziC5ecJx1USslBSo2qwAG9JwPkwjCK7MhouM64yhVedj9Es/H635aufbyRsDIhKr5poPrrH+UebEq/63QpEdDWIWq8="
-  matrix:
-    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
-    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
-    - PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
-    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
-    - PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-    - PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
-    - PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
-    - PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-    - PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
-    - PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
-    - PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-matrix:
-  exclude:
+jobs:
+  include:
+    - os: linux
+      compiler: gcc
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
+    - os: linux
+      compiler: gcc
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: NOT type = pull_request
+    - os: linux
+      compiler: gcc
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: linux
+      compiler: gcc
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+      if: NOT type = pull_request
+    - os: linux
+      compiler: gcc
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: NOT type = pull_request
+    - os: linux
+      compiler: gcc
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: NOT type = pull_request
+    - os: linux
+      compiler: gcc
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
+      if: NOT type = pull_request
+    - os: linux
+      compiler: gcc
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: NOT type = pull_request
     - os: linux
       compiler: clang
-    - os: osx
-      compiler: gcc
-    - os: osx
-      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
-    - os: osx
-      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
-    - os: osx
-      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
-    - os: osx
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: NOT type = pull_request
+    - os: linux
+      compiler: clang
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
+    - os: linux
+      compiler: clang
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: NOT type = pull_request
+    - os: linux
+      compiler: clang
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: osx
+      compiler: clang
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
+    - os: osx
+      compiler: clang
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
 
 before_install:
   - travis_retry .travis/install_packages.sh
