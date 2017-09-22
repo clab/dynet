@@ -83,6 +83,8 @@ The following is a list of all the commands needed to perform a manual install:
     # init files in order for the compiled .so files be accessible to Python.
     # /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
+    # if the environment is Linux, use LD_LIBRARY_PATH instead.
+    export LD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$LD_LIBRARY_PATH
 
 
 To explain these one-by-one, first we get DyNet:
@@ -199,9 +201,12 @@ If it doesn't work and you get an error similar to the following:
 
 then you may need to run the following (and add it to your shell init files):
 
+    # OSX 
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
+    # Linux
+    export LD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$LD_LIBRARY_PATH
 
-# /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
+# /path/to/dynet/build/dynet is the location in which libdynet.so(libdynet.dylib under osx) resides.
 
 Anaconda Support
 ----------------
