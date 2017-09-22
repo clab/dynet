@@ -155,6 +155,8 @@ void DeviceManager::add(Device* d) {
 }
 
 Device* DeviceManager::get_global_device(const std::string & name) {
+  if (name == "")
+    return dynet::default_device;
   auto it = devices_map.find(name);
   if (it == devices_map.end()) {
     throw std::runtime_error("Invalid device name: " + name);
