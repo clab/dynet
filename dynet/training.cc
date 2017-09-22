@@ -82,10 +82,10 @@ void Trainer::update() {
   
   // Allocate if necessary
   if(aux_allocated < params.size()) {
-    aux_allocated += alloc_impl();
+    aux_allocated = alloc_impl();
   }
   if(aux_allocated_lookup < lparams.size()) {
-    aux_allocated_lookup += alloc_lookup_impl();
+    aux_allocated_lookup = alloc_lookup_impl();
   }
 
   // Perform gradient clipping and cycle through parameters
@@ -195,14 +195,12 @@ void MomentumSGDTrainer::update_lookup_params(real gscale, size_t idx) {
   update_rule(gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h});
 }
 unsigned MomentumSGDTrainer::alloc_impl() {
-  auto v = allocate_shadow_parameters(*model, aux_allocated);
-  vp.insert(vp.end(), v.begin(), v.end());
-  return v.size();
+  allocate_shadow_parameters(*model, aux_allocated, vp);
+  return vp.size();
 }
 unsigned MomentumSGDTrainer::alloc_lookup_impl() {
-  auto vl = allocate_shadow_lookup_parameters(*model, aux_allocated_lookup);
-  vlp.insert(vlp.end(), vl.begin(), vl.end());
-  return vl.size();
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, vlp);
+  return vlp.size();
 }
 
 void MomentumSGDTrainer::restart() {
@@ -239,14 +237,12 @@ void AdagradTrainer::update_lookup_params(real gscale, size_t idx) {
   update_rule(gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h});
 }
 unsigned AdagradTrainer::alloc_impl() {
-  auto v = allocate_shadow_parameters(*model, aux_allocated);
-  vp.insert(vp.end(), v.begin(), v.end());
-  return v.size();
+  allocate_shadow_parameters(*model, aux_allocated, vp);
+  return vp.size();
 }
 unsigned AdagradTrainer::alloc_lookup_impl() {
-  auto vl = allocate_shadow_lookup_parameters(*model, aux_allocated_lookup);
-  vlp.insert(vlp.end(), vl.begin(), vl.end());
-  return vl.size();
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, vlp);
+  return vlp.size();
 }
 
 void AdagradTrainer::restart() {
@@ -285,18 +281,14 @@ void AdadeltaTrainer::update_lookup_params(real gscale, size_t idx) {
   update_rule(gscale, {&p->all_values, &p->all_grads, &hlg[idx].all_h, &hld[idx].all_h});
 }
 unsigned AdadeltaTrainer::alloc_impl() {
-  auto v = allocate_shadow_parameters(*model, aux_allocated);
-  hg.insert(hg.end(), v.begin(), v.end());
-  v = allocate_shadow_parameters(*model, aux_allocated);
-  hd.insert(hd.end(), v.begin(), v.end());
-  return v.size();
+  allocate_shadow_parameters(*model, aux_allocated, hg);
+  allocate_shadow_parameters(*model, aux_allocated, hd);
+  return hd.size();
 }
 unsigned AdadeltaTrainer::alloc_lookup_impl() {
-  auto vl = allocate_shadow_lookup_parameters(*model, aux_allocated_lookup);
-  hlg.insert(hlg.end(), vl.begin(), vl.end());
-  vl = allocate_shadow_lookup_parameters(*model, aux_allocated_lookup);
-  hld.insert(hld.end(), vl.begin(), vl.end());
-  return vl.size();
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, hlg);
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, hld);
+  return hld.size();
 }
 
 void AdadeltaTrainer::restart() {
@@ -344,14 +336,12 @@ void RMSPropTrainer::update_lookup_params(real gscale, size_t idx) {
   update_rule(gscale, {&p->all_values, &p->all_grads, &hlmsg[idx].all_h});
 }
 unsigned RMSPropTrainer::alloc_impl() {
-  auto v = allocate_shadow_parameters(*model, aux_allocated);
-  hmsg.insert(hmsg.end(), v.begin(), v.end());
-  return v.size();
+  allocate_shadow_parameters(*model, aux_allocated, hmsg);
+  return hmsg.size();
 }
 unsigned RMSPropTrainer::alloc_lookup_impl() {
-  auto vl = allocate_shadow_lookup_parameters(*model, aux_allocated_lookup);
-  hlmsg.insert(hlmsg.end(), vl.begin(), vl.end());
-  return vl.size();
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, hlmsg);
+  return hlmsg.size();
 }
 
 void RMSPropTrainer::restart() {
@@ -379,39 +369,35 @@ DYNET_TRAINER_INST_DEV_IMPL(AdamTrainer)
 #ifndef __CUDACC__
 void AdamTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g, &m[idx].h, &d[idx].h});
+  update_rule(gscale, {&p->values, &p->g, &m[idx].h, &v[idx].h});
 }
 void AdamTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &ld[idx].h[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx]});
 }
 void AdamTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &ld[idx].all_h});
+  update_rule(gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &lv[idx].all_h});
 }
 unsigned AdamTrainer::alloc_impl() {
-  auto v = allocate_shadow_parameters(*model, aux_allocated);
-  m.insert(m.end(), v.begin(), v.end());
-  v = allocate_shadow_parameters(*model, aux_allocated);
-  d.insert(d.end(), v.begin(), v.end());
+  allocate_shadow_parameters(*model, aux_allocated, m);
+  allocate_shadow_parameters(*model, aux_allocated, v);
   return v.size();
 }
 unsigned AdamTrainer::alloc_lookup_impl() {
-  auto vl = allocate_shadow_lookup_parameters(*model, aux_allocated_lookup);
-  lm.insert(lm.end(), vl.begin(), vl.end());
-  vl = allocate_shadow_lookup_parameters(*model, aux_allocated_lookup);
-  ld.insert(ld.end(), vl.begin(), vl.end());
-  return vl.size();
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, lm);
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, lv);
+  return lv.size();
 }
 
 void AdamTrainer::restart() {
   for (auto sp : m)
     TensorTools::zero(sp.h);
-  for (auto sp : d)
+  for (auto sp : v)
     TensorTools::zero(sp.h);
   for (auto slp : lm)
     TensorTools::zero(slp.all_h);
-  for (auto slp : ld)
+  for (auto slp : lv)
     TensorTools::zero(slp.all_h);
 }
 
@@ -442,14 +428,12 @@ void EGTrainer::update_lookup_params(real gscale, size_t idx) {
   update_rule(gscale, {&p->all_grads, &p->all_grads, &hlp[idx].all_h, &meg, &zeg});
 }
 unsigned EGTrainer::alloc_impl() {
-  auto v = allocate_shadow_parameters(*model, aux_allocated);
-  hp.insert(hp.end(), v.begin(), v.end());
-  return v.size();
+  allocate_shadow_parameters(*model, aux_allocated, hp);
+  return hp.size();
 }
 unsigned EGTrainer::alloc_lookup_impl() {
-  auto vl = allocate_shadow_lookup_parameters(*model, aux_allocated_lookup);
-  hlp.insert(hlp.end(), vl.begin(), vl.end());
-  return vl.size();
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, hlp);
+  return hlp.size();
 }
 
 void EGTrainer::restart() {

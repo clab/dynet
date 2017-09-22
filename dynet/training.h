@@ -445,8 +445,8 @@ protected:
   float epsilon;
   std::vector<ShadowParameters> m; // History of gradients
   std::vector<ShadowLookupParameters> lm;
-  std::vector<ShadowParameters> d; // History of deltas
-  std::vector<ShadowLookupParameters> ld;
+  std::vector<ShadowParameters> v; // History of deltas
+  std::vector<ShadowLookupParameters> lv;
 private:
   AdamTrainer() {}
 };
