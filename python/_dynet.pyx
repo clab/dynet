@@ -1803,6 +1803,17 @@ cdef class Expression: #{{{
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
         self.cgp().backward(self.vindex, full)
 
+    cpdef set_rewritable(self, bool value):
+        """Setting whether this expression(Node)'s memory could be rewritten by others (for inplaced operations)
+        
+        This action could be dangerous for nodes which need its original value when calculating gradients !!
+        
+        Args:
+            value (bool): Whether this could be rewritable.
+        
+        """
+        self.c().set_rewritable(value)
+
     def __add__(self, other):
         if isinstance(self, Expression) and isinstance(other, Expression):
             return _add(self,other)
@@ -2770,18 +2781,19 @@ cpdef Expression maxpooling2d(Expression x, vector[unsigned] ksize, vector[unsig
     return Expression.from_cexpr(x.cg_version, c_maxpooling2d(x.c(), ksize, stride, is_valid))
 
 # unary-exp
-cpdef Expression tanh(Expression x): 
+cpdef Expression tanh(Expression x, bool inplaced=False): 
     """Hyperbolic tangent
     
     Elementwise calculation of the hyperbolic tangent
     
     Args:
         x (dynet.Expression): Input expression
+		inplaced (bool): whether this is an inplaced operation
     
     Returns:
         dynet.Expression: :math:`\\tanh(x)`
     """
-    return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
+    return Expression.from_cexpr(x.cg_version, c_tanh(x.c(), inplaced))
 cpdef Expression exp(Expression x): 
     """Natural exponent
     
@@ -2880,31 +2892,33 @@ cpdef Expression lgamma(Expression x):
         dynet.Expression: :math:`y_i = \ln(\Gamma(x_i))`
     """
     return Expression.from_cexpr(x.cg_version, c_lgamma(x.c()))
-cpdef Expression logistic(Expression x): 
+cpdef Expression logistic(Expression x, bool inplaced=False): 
     """Logistic sigmoid function
     
     Calculate elementwise :math:`y_i = \\frac{1}{1+e^{-x_i}}`
     
     Args:
         x (dynet.Expression): Input expression
+		inplaced (bool): whether this is an inplaced operation
     
     Returns:
         dynet.Expression: :math:`y_i = \\frac{1}{1+e^{-x_i}}`
     """
-    return Expression.from_cexpr(x.cg_version, c_logistic(x.c()))
+    return Expression.from_cexpr(x.cg_version, c_logistic(x.c(), inplaced))
 
-cpdef Expression rectify(Expression x): 
+cpdef Expression rectify(Expression x, bool inplaced=False): 
     """Rectifier (or ReLU, Rectified Linear Unit)
     
     Calculate elementwise recitifer (ReLU) function :math:`y_i = \max(x_i,0)`
 
     Args:
         x (dynet.Expression): Input expression
+		inplaced (bool): whether this is an inplaced operation
     
     Returns:
         dynet.Expression: :math:`y_i = \max(x_i,0)`
     """
-    return Expression.from_cexpr(x.cg_version, c_rectify(x.c()))
+    return Expression.from_cexpr(x.cg_version, c_rectify(x.c(), inplaced))
 
 cpdef Expression elu(Expression x, float alpha=1.0): 
     """Exponential Linear Unit (ELU)
@@ -3000,18 +3014,19 @@ cpdef Expression sparsemax(Expression x):
         dynet.Expression: The sparsemax of the scores
     """
     return Expression.from_cexpr(x.cg_version, c_sparsemax(x.c()))
-cpdef Expression softsign(Expression x):
+cpdef Expression softsign(Expression x, inplaced=False):
     """Softsign function
 
     Calculate elementwise the softsign function :math:`y_i = \\frac{x_i}{1+\\vert x_i\\vert}`
 
     Args:
         x (dynet.Expression): Input expression
+		inplaced (bool): whether this is an inplaced operation
     
     Returns:
         dynet.Expression: :math:`y_i = \\frac{x_i}{1+\\vert x_i\\vert}`
     """
-    return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
+    return Expression.from_cexpr(x.cg_version, c_softsign(x.c(), inplaced))
 cpdef Expression pow(Expression x, Expression y):
     """Power function
     
@@ -3566,7 +3581,7 @@ cpdef Expression noise(Expression x, float stddev):
     """
     return Expression.from_cexpr(x.cg_version, c_noise(x.c(), stddev))
 
-cpdef Expression dropout(Expression x, float p):
+cpdef Expression dropout(Expression x, float p, bool inplaced=False):
     """Dropout
     
     With a fixed probability, drop out (set to zero) nodes in the input expression, and **scale** the remaining nodes by 1/p. Note that there are `two kinds of dropout <http://cs231n.github.io/neural-networks-2/#reg>`_: 
@@ -3579,14 +3594,15 @@ cpdef Expression dropout(Expression x, float p):
     Args:
         x (dynet.Expression): Input expression
         p (number): The dropout probability
+		inplaced (bool): whether this is an inplaced operation
     
     Returns:
         dynet.Expression: The dropped out expression :math:`y=\\frac{1}{1-\\texttt{p}}x\circ z, z\sim\\text{Bernoulli}(1-\\texttt{p})`
     """
-    return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p))
+    return Expression.from_cexpr(x.cg_version, c_dropout(x.c(), p, inplaced))
 
     
-cpdef Expression dropout_batch(Expression x, float p):
+cpdef Expression dropout_batch(Expression x, float p, bool inplaced=False):
     """Dropout entire elements of a minibatch
     
     Identical to the dropout operation except entire batch elements are dropped
@@ -3594,13 +3610,14 @@ cpdef Expression dropout_batch(Expression x, float p):
     Args:
         x (dynet.Expression): Input expression
         p (number): The dropout probability
+		inplaced (bool): whether this is an inplaced operation
     
     Returns:
         dynet.Expression: The dropped expression
     """
-    return Expression.from_cexpr(x.cg_version, c_dropout_batch(x.c(), p))
+    return Expression.from_cexpr(x.cg_version, c_dropout_batch(x.c(), p, inplaced))
 
-cpdef Expression dropout_dim(Expression x, unsigned d, float p):
+cpdef Expression dropout_dim(Expression x, unsigned d, float p, bool inplaced=False):
     """Dropout along one dimension
     
     Identical to the dropout operation except the dropout mask is the same across one dimension. Use this if you want to drop columns or lines in a matrix for example 
@@ -3611,13 +3628,14 @@ cpdef Expression dropout_dim(Expression x, unsigned d, float p):
         x (dynet.Expression): Input expression
         d (int): Dimension along which to drop
         p (number): The dropout probability
+		inplaced (bool): whether this is an inplaced operation
     
     Returns:
         dynet.Expression: The dropped expression
     """
-    return Expression.from_cexpr(x.cg_version, c_dropout_dim(x.c(), d, p))
+    return Expression.from_cexpr(x.cg_version, c_dropout_dim(x.c(), d, p, inplaced))
 
-cpdef Expression block_dropout(Expression x, float p):
+cpdef Expression block_dropout(Expression x, float p, bool inplaced=False):
     """Block dropout
     
     Identical to the dropout operation, but either drops out *all* or *no* values in the expression, as opposed to making a decision about each value individually.
@@ -3625,13 +3643,14 @@ cpdef Expression block_dropout(Expression x, float p):
     Args:
         x (dynet.Expression): Input expression
         p (number): The dropout probability
+		inplaced (bool): whether this is an inplaced operation
     
     Returns:
         dynet.Expression: The block dropout expression
     """
-    return Expression.from_cexpr(x.cg_version, c_block_dropout(x.c(), p))
+    return Expression.from_cexpr(x.cg_version, c_block_dropout(x.c(), p, inplaced))
 #expr-dim
-cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1):
+cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1, bool inplaced=False):
     """Reshape to another size
     
     This node reshapes a tensor to another size, without changing the underlying layout of the data. The layout of the data in DyNet is column-major, so if we have a 3x4 matrix :
@@ -3658,6 +3677,7 @@ cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1):
     Args:
         x (dynet.Expression): Input expression
         d (tuple): New dimension
+		inplaced (bool): whether this is an inplaced operation
     
     Keyword Arguments:
         batch_size (int): New batch size (default: (1))
@@ -3665,7 +3685,7 @@ cpdef Expression reshape(Expression x, tuple d, unsigned int batch_size=1):
     Returns:
         dynet.Expression: The reshaped expression
     """
-    return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d, batch_size)))
+    return Expression.from_cexpr(x.cg_version, c_reshape(x.c(),Dim(d, batch_size),inplaced))
 
 cpdef Expression max_dim(Expression x, unsigned d=0):
     """Max out through a dimension

@@ -248,6 +248,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
         CDim dim() except +
         bool is_stale()
         const CTensor& gradient() except +
+        void set_rewritable(bool v) except +
     #CExpression c_input "dynet::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::input" (CComputationGraph& g, float *ps) except + #
     CExpression c_input "dynet::input" (CComputationGraph& g, float *ps, CDevice* device) except + #
@@ -293,7 +294,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_cmult "dynet::cmult" (CExpression& x, CExpression& y) except + #
     CExpression c_colwise_add "dynet::colwise_add" (CExpression& x, CExpression& bias) except + #
 
-    CExpression c_tanh "dynet::tanh" (CExpression& x) except + #
+    CExpression c_tanh "dynet::tanh" (CExpression& x, bool inplaced) except + #
     CExpression c_exp "dynet::exp" (CExpression& x) except + #
     CExpression c_square "dynet::square" (CExpression& x) except + #
     CExpression c_sqrt "dynet::sqrt" (CExpression& x) except + #
@@ -302,8 +303,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_cube "dynet::cube" (CExpression& x) except + #
     CExpression c_log "dynet::log" (CExpression& x) except + #
     CExpression c_lgamma "dynet::lgamma" (CExpression& x) except + #
-    CExpression c_logistic "dynet::logistic" (CExpression& x) except + #
-    CExpression c_rectify "dynet::rectify" (CExpression& x) except + #
+    CExpression c_logistic "dynet::logistic" (CExpression& x, bool inplaced) except + #
+    CExpression c_rectify "dynet::rectify" (CExpression& x, bool inplaced) except + #
     CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m) except + #
     CExpression c_hinge "dynet::hinge" (CExpression& x, vector[unsigned] vs, float m) except + #
     CExpression c_hinge_dim "dynet::hinge_dim" (CExpression& x, vector[unsigned] index, unsigned d, float m) except + #
@@ -312,17 +313,17 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x, vector[unsigned]& restriction) except + #?
     CExpression c_softmax "dynet::softmax" (CExpression& x) except + #
     CExpression c_sparsemax "dynet::sparsemax" (CExpression& x) except + #
-    CExpression c_softsign "dynet::softsign" (CExpression& x) except + #
+    CExpression c_softsign "dynet::softsign" (CExpression& x, bool inplaced) except + #
     CExpression c_pow "dynet::pow" (CExpression& x, CExpression& y) except + #
     CExpression c_bmin "dynet::min" (CExpression& x, CExpression& y) except + #
     CExpression c_bmax "dynet::max" (CExpression& x, CExpression& y) except + #
     CExpression c_noise "dynet::noise" (CExpression& x, float stddev) except + #
-    CExpression c_dropout "dynet::dropout" (CExpression& x, float p) except + #
-    CExpression c_dropout_batch "dynet::dropout_batch" (CExpression& x, float p) except + #
-    CExpression c_dropout_dim "dynet::dropout_dim" (CExpression& x, unsigned d, float p) except + #
-    CExpression c_block_dropout "dynet::block_dropout" (CExpression& x, float p) except + #
+    CExpression c_dropout "dynet::dropout" (CExpression& x, float p, bool inplaced) except + #
+    CExpression c_dropout_batch "dynet::dropout_batch" (CExpression& x, float p, bool inplaced) except + #
+    CExpression c_dropout_dim "dynet::dropout_dim" (CExpression& x, unsigned d, float p, bool inplaced) except + #
+    CExpression c_block_dropout "dynet::block_dropout" (CExpression& x, float p, bool inplaced) except + #
 
-    CExpression c_reshape "dynet::reshape" (CExpression& x, CDim& d) except + #?
+    CExpression c_reshape "dynet::reshape" (CExpression& x, CDim& d, bool inplaced) except + #?
     CExpression c_transpose "dynet::transpose" (CExpression& x, vector[unsigned]& dims) except + #
 
     CExpression c_affine_transform "dynet::affine_transform" (const vector[CExpression]& xs) except +

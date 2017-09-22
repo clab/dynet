@@ -69,6 +69,8 @@ struct Expression {
     return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());
   }
 
+  inline void set_rewritable(bool v) { pg->nodes[i]->set_rewritable(v); }
+
   /**
    * \brief Get value of the expression
    * \details Throws a tuntime_error exception if no computation graph is available
@@ -757,10 +759,11 @@ Expression erf(const Expression& x);
  * \details Elementwise calculation of the hyperbolic tangent
  *
  * \param x The input expression
+ * \param inplaced Whether doing inplace operation
  *
  * \return An expression where the ith element is equal to tanh(x_i)
  */
-Expression tanh(const Expression& x);
+Expression tanh(const Expression& x, bool inplaced=false);
 
 /**
  * \ingroup arithmeticoperations
@@ -823,10 +826,11 @@ Expression log(const Expression& x);
  * \details Calculate elementwise y_i = 1/(1+e^{-x_i})
  *
  * \param x The input expression
+ * \param inplaced Whether doing inplace operation
  *
  * \return An expression where the ith element is equal to y_i = 1/(1+e^{-x_i})
  */
-Expression logistic(const Expression& x);
+Expression logistic(const Expression& x, bool inplaced=false);
 
 /**
  * \ingroup arithmeticoperations
@@ -834,10 +838,11 @@ Expression logistic(const Expression& x);
  * \details Calculate elementwise the recitifer (ReLU) function y_i = max(x_i,0)
  *
  * \param x The input expression
+ * \param inplaced Whether doing inplace operation
  *
  * \return An expression where the ith element is equal to max(x_i,0)
  */
-Expression rectify(const Expression& x);
+Expression rectify(const Expression& x, bool inplaced = false);
 
 
 /**
@@ -894,10 +899,11 @@ Expression selu(const Expression& x);
  * \details Calculate elementwise the softsign function y_i = x_i/(1+|x_i|)
  *
  * \param x The input expression
+ * \param inplaced Whether doing inplace operation
  *
  * \return An expression where the ith element is equal to x_i/(1+|x_i|)
  */
-Expression softsign(const Expression& x);
+Expression softsign(const Expression& x, bool inplaced = false);
 
 /**
  * \ingroup arithmeticoperations
@@ -1458,10 +1464,11 @@ Expression flip_gradient(const Expression& x);
  *
  * \param x The input expression
  * \param d The new dimensions
+ * \param inplaced Whether doing inplace operation
  *
  * \return The reshaped expression
  */
-Expression reshape(const Expression& x, const Dim& d);
+Expression reshape(const Expression& x, const Dim& d, bool inplaced=false);
 
 /**
  * \ingroup flowoperations
@@ -1901,10 +1908,11 @@ Expression noise(const Expression& x, real stddev);
  *
  * \param x The input expression
  * \param p The dropout probability
+ * \param inplaced Whether doing inplace operation
  *
  * \return The dropped out expression
  */
-Expression dropout(const Expression& x, real p);
+Expression dropout(const Expression& x, real p, bool inplaced=false);
 
 /**
  * \ingroup noiseoperations
@@ -1916,10 +1924,11 @@ Expression dropout(const Expression& x, real p);
  * \param x The input expression
  * \param d The dimension along which to drop
  * \param p The dropout probability
+ * \param inplaced Whether doing inplace operation
  *
  * \return The dropped out expression
  */
-Expression dropout_dim(const Expression& x, unsigned d, real p);
+Expression dropout_dim(const Expression& x, unsigned d, real p, bool inplaced = false);
 
 /**
  * \ingroup noiseoperations
@@ -1928,10 +1937,11 @@ Expression dropout_dim(const Expression& x, unsigned d, real p);
  *
  * \param x The input expression
  * \param p The dropout probability
+ * \param inplaced Whether doing inplace operation
  *
  * \return The dropped out expression
  */
-Expression dropout_batch(const Expression& x, real p);
+Expression dropout_batch(const Expression& x, real p, bool inplaced = false);
 
 /**
  * \ingroup noiseoperations
@@ -1942,10 +1952,11 @@ Expression dropout_batch(const Expression& x, real p);
  *
  * \param x The input expression
  * \param p The block dropout probability
+ * \param inplaced Whether doing inplace operation
  *
  * \return The block dropout expression
  */
-Expression block_dropout(const Expression& x, real p);
+Expression block_dropout(const Expression& x, real p, bool inplaced = false);
 
 ////////////////////////////////////////////////
 // Convolution operations                     //

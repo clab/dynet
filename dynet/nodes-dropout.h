@@ -8,7 +8,7 @@ namespace dynet {
 
 // y = dropout(x,p) where p specifies the dropout probability
 struct Dropout : public Node {
-  explicit Dropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
+  explicit Dropout(const std::initializer_list<VariableIndex>& a, real p, bool inplaced) : Node(a), p(p) { if(inplaced) inplace_state = INPLACE_TYPE::WRITE; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
@@ -17,7 +17,7 @@ struct Dropout : public Node {
 
 // y = dropout(x,p) where p specifies the dropout probability
 struct DropoutDim : public Node {
-  explicit DropoutDim(const std::initializer_list<VariableIndex>& a, unsigned d,real p) : Node(a), dimension(d), p(p) {}
+  explicit DropoutDim(const std::initializer_list<VariableIndex>& a, unsigned d, real p, bool inplaced) : Node(a), dimension(d), p(p) { if(inplaced) inplace_state = INPLACE_TYPE::WRITE; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
@@ -27,7 +27,7 @@ struct DropoutDim : public Node {
 
 // y = dropout(x,p) where p specifies the dropout probability
 struct DropoutBatch : public Node {
-  explicit DropoutBatch(const std::initializer_list<VariableIndex>& a, real p) : Node(a), p(p) {}
+  explicit DropoutBatch(const std::initializer_list<VariableIndex>& a, real p, bool inplaced) : Node(a), p(p) { if(inplaced) inplace_state = INPLACE_TYPE::WRITE; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
@@ -36,7 +36,7 @@ struct DropoutBatch : public Node {
 
 // y = block_dropout(x,p) where p specifies the probability for dropping-out the entire block
 struct BlockDropout : public Node {
-  explicit BlockDropout(const std::initializer_list<VariableIndex>& a, real p) : Node(a), dropout_probability(p) {}
+  explicit BlockDropout(const std::initializer_list<VariableIndex>& a, real p, bool inplaced) : Node(a), dropout_probability(p) { if(inplaced) inplace_state = INPLACE_TYPE::WRITE; }
   DYNET_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
   real dropout_probability;
