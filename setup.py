@@ -1,6 +1,7 @@
 import distutils.sysconfig
 import logging as log
 import platform
+import tarfile
 import sys
 from distutils.command.build import build as _build
 from distutils.command.build_py import build_py as _build_py
@@ -16,6 +17,14 @@ from Cython.Distutils import build_ext as _build_ext
 from setuptools import setup
 from setuptools.extension import Extension
 from shutil import rmtree, copytree
+
+# urlretrieve has a different location in Python 2 and Python 3
+import urllib
+if hasattr(urllib, "urlretrieve"):
+    urlretrieve = urllib.urlretrieve
+else:
+    import urllib.request
+    urlretrieve = urllib.request.urlretrieve
 
 
 def run_process(cmds):
@@ -87,7 +96,7 @@ BUILT_EXTENSIONS = False
 CMAKE_PATH = ENV.get("CMAKE", find_executable("cmake"))
 MAKE_PATH = ENV.get("MAKE", find_executable("make"))
 MAKE_FLAGS = ENV.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
-HG_PATH = find_executable("hg")
+# HG_PATH = find_executable("hg")
 CC_PATH = ENV.get("CC", find_executable("gcc"))
 CXX_PATH = ENV.get("CXX", find_executable("g++"))
 INSTALL_PREFIX = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
@@ -102,6 +111,8 @@ if (EIGEN3_INCLUDE_DIR is not None and
     not os.path.isdir(EIGEN3_INCLUDE_DIR) and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
+
+EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2")
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
@@ -187,7 +198,7 @@ class build(_build):
         log.info("CMAKE_PATH=%r" % CMAKE_PATH)
         log.info("MAKE_PATH=%r" % MAKE_PATH)
         log.info("MAKE_FLAGS=%r" % " ".join(MAKE_FLAGS))
-        log.info("HG_PATH=%r" % HG_PATH)
+        # log.info("HG_PATH=%r" % HG_PATH)
         log.info("EIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR)
         log.info("CC_PATH=%r" % CC_PATH)
         log.info("CXX_PATH=%r" % CXX_PATH)
@@ -219,13 +230,28 @@ class build(_build):
             os.chdir(BUILD_DIR)
             if os.path.isdir(EIGEN3_INCLUDE_DIR):
                 log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
-            elif HG_PATH is None:
-                raise DistutilsSetupError("`hg` not found.")
             else:
-                hg_cmd = [HG_PATH, "clone", "https://bitbucket.org/eigen/eigen"]
-                log.info("Cloning Eigen...")
-                if run_process(hg_cmd) != 0:
-                    raise DistutilsSetupError(" ".join(hg_cmd))
+                try:
+                    log.info("Fetching Eigen...")
+                    urlretrieve(EIGEN3_DOWNLOAD_DIR, "eigen.tar.bz2")
+                    log.info("Unpacking Eigen...")
+                    tfile = tarfile.open("eigen.tar.bz2", 'r')
+                    tfile.extractall('eigen')
+                    #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
+                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
+                except:
+                    raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_DIR)
+
+            # Previously, we used mercurial to download the latest version as follows.
+            # This is saved here in case we need to revert to this behavior to get
+            # the most recent branch of Eigen.
+            # elif HG_PATH is None:
+            #     raise DistutilsSetupError("`hg` not found.")
+            # else:
+            #     hg_cmd = [HG_PATH, "clone", "https://bitbucket.org/eigen/eigen"]
+            #     log.info("Cloning Eigen...")
+            #     if run_process(hg_cmd) != 0:
+            #         raise DistutilsSetupError(" ".join(hg_cmd))
 
             os.environ["CXX"] = CXX_PATH
             os.environ["CC"] = CC_PATH
