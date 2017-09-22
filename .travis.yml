@@ -41,18 +41,18 @@ jobs:
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
       if: NOT type = pull_request
     - os: linux
-      compiler: clang
+      compiler: gcc
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
       if: NOT type = pull_request
     - os: linux
-      compiler: clang
+      compiler: gcc
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
     - os: linux
-      compiler: clang
+      compiler: gcc
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
       if: NOT type = pull_request
     - os: linux
-      compiler: clang
+      compiler: gcc
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
     - os: osx
       compiler: clang
