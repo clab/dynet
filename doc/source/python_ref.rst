@@ -473,6 +473,5 @@ Optimizers
 MultiDevice
 -----------
 
-.. autoclass:: dynet.to_device
-   :members:
-   :show-inheritance:
+.. autofunction:: dynet.to_device
+
