@@ -194,8 +194,6 @@ int main(int argc, char** argv) {
   d.freeze(); // no new word types allowed
   d.set_unk("<unk>");
   VOCAB_SIZE = d.size();
-  if (!cfsm)
-    cfsm = new StandardSoftmaxBuilder(HIDDEN_DIM, VOCAB_SIZE, model);
 
   if (params.test_file != "") {
     string testf = params.test_file;

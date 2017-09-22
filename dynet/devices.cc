@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <string>
-#include <unsupported/Eigen/CXX11/Tensor>
 
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
@@ -98,7 +97,9 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 
   // Initialize the Eigen device
-  estream = new Eigen::CudaStreamDevice(device_id);
+  CUDA_CHECK(cudaStreamCreate(&stream));
+  estream = new EigenCudaStreamDevice(device_id);
+  estream->set_stream(&stream);
   edevice = new Eigen::GpuDevice(estream);
 
   // this is the big memory allocation.
@@ -154,6 +155,8 @@ void DeviceManager::add(Device* d) {
 }
 
 Device* DeviceManager::get_global_device(const std::string & name) {
+  if (name == "")
+    return dynet::default_device;
   auto it = devices_map.find(name);
   if (it == devices_map.end()) {
     throw std::runtime_error("Invalid device name: " + name);

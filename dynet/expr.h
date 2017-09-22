@@ -10,6 +10,7 @@
  * \defgroup tensoroperations tensoroperations
  * \defgroup linalgoperations linalgoperations
  * \defgroup normoperations normoperations
+ * \defgroup deviceoperations deviceoperations
  * \brief The various operations that you can use in building a DyNet graph
  *
  * \details TODO: **This documentation is incomplete. See expr.h for a full list of expressions.**
@@ -2207,7 +2208,7 @@ Expression layer_norm(const Expression& x, const Expression& g, const Expression
 Expression weight_norm(const Expression& w, const Expression& g);
 
 /**
- * \ingroup change device operation
+ * \ingroup deviceoperations
  * \brief Copy tensor between devices
  * \details Copy tensor from x's device to device 
  *

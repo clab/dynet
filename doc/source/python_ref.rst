@@ -435,8 +435,6 @@ Softmax Builders
    :members:
    :show-inheritance:
 
-
-
 Optimizers
 ----------
 
@@ -471,3 +469,9 @@ Optimizers
 .. autoclass:: dynet.AdamTrainer
    :members:
    :show-inheritance:
+
+MultiDevice
+-----------
+
+.. autofunction:: dynet.to_device
+
