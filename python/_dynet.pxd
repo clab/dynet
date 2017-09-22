@@ -102,8 +102,10 @@ cdef extern from "dynet/model.h" namespace "dynet":
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d)
         CParameters add_parameters(CDim& d, CParameterInit initializer, string name)
+        CParameters add_parameters(CDim& d, CParameterInit initializer, string name, CDevice *device)
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name)
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, CDevice *device)
         vector[CParameterStorage] parameters_list()
         CModel add_subcollection(string name)
         string get_fullname()
@@ -224,6 +226,18 @@ cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
 
+cdef extern from "dynet/devices.h" namespace "dynet":
+    cdef cppclass CDevice "dynet::Device":
+        string name
+        int type # TODO how do we do enums in cython?
+        int device_id
+
+    cdef cppclass CDeviceManager "dynet::DeviceManager":
+        CDevice* get_global_device(string name) except +
+        CDevice* get(unsigned i)
+        unsigned num_devices()
+
+    CDeviceManager* c_get_device_manager "dynet::get_device_manager" () 
 
 cdef extern from "dynet/expr.h" namespace "dynet":
     cdef cppclass CExpression "dynet::Expression":
@@ -236,8 +250,11 @@ cdef extern from "dynet/expr.h" namespace "dynet":
         const CTensor& gradient() except +
     #CExpression c_input "dynet::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::input" (CComputationGraph& g, float *ps) except + #
+    CExpression c_input "dynet::input" (CComputationGraph& g, float *ps, CDevice* device) except + #
     CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[float]* pdata) except +
+    CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[float]* pdata, CDevice* device) except +
     CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[unsigned]& ids, vector[float]& data, float defdata) except +
+    CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[unsigned]& ids, vector[float]& data, float defdata, CDevice* device) except +
     CExpression c_parameter "dynet::parameter" (CComputationGraph& g, CParameters p) except + #
     CExpression c_parameter "dynet::parameter" (CComputationGraph& g, CLookupParameters p) except + #
     CExpression c_const_parameter "dynet::const_parameter" (CComputationGraph& g, CParameters p) except + #
@@ -389,6 +406,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_vanilla_lstm_gates_dropout_concat "dynet::vanilla_lstm_gates_dropout_concat" (const vector[CExpression]& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, CExpression& dropout_mask_x, CExpression& dropout_mask_h, float weightnoise_std) except + #
     CExpression c_vanilla_lstm_c "dynet::vanilla_lstm_c" (CExpression& c_tm1, CExpression& gates_t) except + #
     CExpression c_vanilla_lstm_h "dynet::vanilla_lstm_h" (CExpression& c_t, CExpression& gates_t) except + #
+    CExpression c_to_device "dynet::to_device" (CExpression& e, CDevice* d) except + #
 
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CRNNPointer "dynet::RNNPointer":
