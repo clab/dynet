@@ -200,6 +200,7 @@ class build(_build):
         log.info("MAKE_FLAGS=%r" % " ".join(MAKE_FLAGS))
         # log.info("HG_PATH=%r" % HG_PATH)
         log.info("EIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR)
+        log.info("EIGEN3_DOWNLOAD_URL=%r" % EIGEN3_DOWNLOAD_URL)
         log.info("CC_PATH=%r" % CC_PATH)
         log.info("CXX_PATH=%r" % CXX_PATH)
         log.info("SCRIPT_DIR=%r" % SCRIPT_DIR)
@@ -233,14 +234,14 @@ class build(_build):
             else:
                 try:
                     log.info("Fetching Eigen...")
-                    urlretrieve(EIGEN3_DOWNLOAD_DIR, "eigen.tar.bz2")
+                    urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
                     log.info("Unpacking Eigen...")
                     tfile = tarfile.open("eigen.tar.bz2", 'r')
                     tfile.extractall('eigen')
                     #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
                     EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
                 except:
-                    raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_DIR)
+                    raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
 
             # Previously, we used mercurial to download the latest version as follows.
             # This is saved here in case we need to revert to this behavior to get
