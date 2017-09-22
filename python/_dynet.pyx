@@ -1065,7 +1065,7 @@ cdef class ParameterCollection: # {{{
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
-    cpdef parameters_from_numpy(self, array,string name="", string device=""):
+    cpdef parameters_from_numpy(self, array,string name="", device=""):
         """Create parameter from numpy array
         
         Args:
@@ -1088,7 +1088,7 @@ cdef class ParameterCollection: # {{{
         return pp
 
     # TODO this may fail with >2 dim arrays.
-    cpdef lookup_parameters_from_numpy(self, array, string name="", string device=""):
+    cpdef lookup_parameters_from_numpy(self, array, string name="", device=""):
         """Create LookupParameters from numpy array
         
         Args:
@@ -1112,7 +1112,7 @@ cdef class ParameterCollection: # {{{
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None, string name="", string device=""):
+    cpdef add_parameters(self, dim, PyInitializer init=None, string name="", device=""):
         """Add a parameter to the ParameterCollection
         
         Args:
@@ -1141,7 +1141,7 @@ cdef class ParameterCollection: # {{{
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name="", string device=""):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name="", device=""):
         """Add a lookup parameter to the ParameterCollection
         
         Args:
@@ -1918,7 +1918,7 @@ cdef class _inputExpression(Expression):
     
     """
     cdef FloatValue val
-    def __cinit__(self, ComputationGraph g, float s, string device=""):
+    def __cinit__(self, ComputationGraph g, float s, device=""):
         self.val = FloatValue(s)
         #self.cg = g.thisptr
         self.cg_version = g.version()
@@ -2011,7 +2011,7 @@ cdef class _sparseInputExpression(Expression):
         """
         raise ValueError('Can\'t set value of sparse input vector for now')
 
-def vecInput(int dim, string device=""):
+def vecInput(int dim, device=""):
     """Input an empty vector
     
     Args:
@@ -2023,7 +2023,7 @@ def vecInput(int dim, string device=""):
     """
     return _cg.inputVector(dim, device)
 
-def inputVector(vector[float] v, string device=""):
+def inputVector(vector[float] v, device=""):
     """Input a vector by values
     
     Args:
@@ -4075,7 +4075,7 @@ cpdef Expression vanilla_lstm_h(Expression c_t, Expression gates_t):
     ensure_freshness(gates_t)
     return Expression.from_cexpr(c_t.cg_version, c_vanilla_lstm_h(c_t.c(),gates_t.c()))
 
-cpdef Expression to_device(Expression e, string device_str):
+cpdef Expression to_device(Expression e, device_str):
     """Copy Expression's values between devices.
     Creates a new expression with e's values on device device_str.
 
