@@ -102,3 +102,12 @@ This includes batch normalization and the likes.
 .. doxygengroup:: normoperations
 	:members:
 	:content-only:
+
+Device operations
+~~~~~~~~~~~~~~~~
+
+These operations are device-related.
+
+.. doxygengroup:: deviceoperations
+  :members:
+  :content-only:
