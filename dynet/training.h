@@ -43,7 +43,7 @@ struct Trainer {
    */
   explicit Trainer(ParameterCollection& m, real learning_rate) :
     learning_rate(learning_rate), clipping_enabled(true), clip_threshold(5),
-    clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(false), model(&m) {}
+    clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(0), aux_allocated_lookup(0), model(&m) {}
   virtual ~Trainer();
 
   /**
@@ -121,7 +121,8 @@ struct Trainer {
    */
   bool sparse_updates_enabled;
 
-  bool aux_allocated;
+  unsigned aux_allocated;
+  unsigned aux_allocated_lookup;
 
   void status() {
     std::cerr << "[lr=" << learning_rate << " clips=" << clips_since_status << " updates=" << updates_since_status << "] ";
@@ -132,7 +133,12 @@ struct Trainer {
 
 protected:
   Trainer() {}
-  virtual void alloc_impl() { }
+  virtual unsigned alloc_impl() {
+      return model->parameters_list().size() - aux_allocated;
+  }
+  virtual unsigned alloc_lookup_impl() {
+      return model->lookup_parameters_list().size() - aux_allocated_lookup;
+  }
   /**
    * \brief The actual rule to update the parameters
    *
@@ -283,7 +289,8 @@ struct MomentumSGDTrainer : public Trainer {
   std::vector<ShadowLookupParameters> vlp;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
-  virtual void alloc_impl() override;
+  virtual unsigned alloc_impl() override;
+  virtual unsigned alloc_lookup_impl() override;
 
   real momentum;
 
@@ -316,7 +323,8 @@ struct AdagradTrainer : public Trainer {
   using Trainer::restart;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
-  virtual void alloc_impl() override;
+  virtual unsigned alloc_impl() override;
+  virtual unsigned alloc_lookup_impl() override;
 
   real epsilon;
   std::vector<ShadowParameters> vp;
@@ -352,7 +360,8 @@ struct AdadeltaTrainer : public Trainer {
   using Trainer::restart;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
-  virtual void alloc_impl() override;
+  virtual unsigned alloc_impl() override;
+  virtual unsigned alloc_lookup_impl() override;
 
   real epsilon;
   real rho;
@@ -389,7 +398,8 @@ struct RMSPropTrainer : public Trainer {
   using Trainer::restart;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
-  virtual void alloc_impl() override;
+  virtual unsigned alloc_impl() override;
+  virtual unsigned alloc_lookup_impl() override;
 
   real epsilon;
   real rho;
@@ -427,7 +437,8 @@ struct AdamTrainer : public Trainer {
 
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
-  virtual void alloc_impl() override;
+  virtual unsigned alloc_impl() override;
+  virtual unsigned alloc_lookup_impl() override;
 
   float beta_1;
   float beta_2;
@@ -478,7 +489,8 @@ struct EGTrainer : public Trainer {
   using Trainer::restart;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
-  virtual void alloc_impl() override;
+  virtual unsigned alloc_impl() override;
+  virtual unsigned alloc_lookup_impl() override;
 
 //-----------------------------------------------------------------------------------------
   real momentum;// with momentum
