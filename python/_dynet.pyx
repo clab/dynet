@@ -479,6 +479,8 @@ cdef class GlorotInitializer(PyInitializer):
     * :math:`\\text{sigmoid}` : 4.0
     * Any smooth function :math:`f` : :math:`\\frac{1}{f'(0)}`
     
+    *Note:* This is also known as **Xavier initialization**
+
     Keyword Arguments:
         is_lookup (bool): Whether the parameter is alookup parameter (default: False)
         gain (number): Gain (Depends on the activation function) (default: 1.0)
