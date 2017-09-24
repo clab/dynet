@@ -296,7 +296,6 @@ class build_ext(_build_ext):
                 target_dir = os.path.join(SCRIPT_DIR, "build", d)
                 rmtree(target_dir, ignore_errors=True)
                 copytree(os.path.join("build", d), target_dir)
-        os.chdir(PYTHON_DIR)
 
 
 try:
