@@ -5,6 +5,7 @@
 #include <dynet/training.h>
 #include <dynet/grad-check.h>
 #include <boost/test/unit_test.hpp>
+#include "test.h"
 #include <stdexcept>
 
 using namespace dynet;
@@ -18,6 +19,7 @@ struct TrainerTest {
       for (auto x : {"TrainerTest", "--dynet-mem", "10"}) {
         av.push_back(strdup(x));
       }
+      ADD_EXTRA_ARGUMENTS(av)
       char **argv = &av[0];
       int argc = av.size();
       dynet::initialize(argc, argv);
