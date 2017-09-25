@@ -14,7 +14,7 @@ else  # build
   python setup.py bdist_wheel
   source deactivate  # auditwheel installed in system but not in conda env
   export LD_LIBRARY_PATH="$TRAVIS_BUILD_DIR/miniconda/envs/$PYVER/lib" 
-  cd ./build/py*/python
+  cd build/py*/python
   auditwheel repair dist/*.whl
   rm -f dist/*.whl
   mv -f wheelhouse/*.whl dist/
