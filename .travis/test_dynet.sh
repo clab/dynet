@@ -22,6 +22,7 @@ else
     cd python
     python ../../setup.py build --build-dir=.. --skip-build install --user
   else
+    cd ./build/py*/python
     pip install dynet --no-index -f dist
     if [[ "$TRAVIS_OS_NAME" == osx ]]; then
       export DYLD_LIBRARY_PATH=$(dirname $(which python))/../lib:$DYLD_LIBRARY_PATH
