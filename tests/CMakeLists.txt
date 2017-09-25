@@ -5,6 +5,10 @@ find_package(Boost COMPONENTS system filesystem unit_test_framework REQUIRED)
 include_directories(${TEST_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS})
 add_definitions(-DBOOST_TEST_DYN_LINK)
 
+if (DEFINED ENV{DYNET_TEST_DEVICES})  # use env variable as preprocessor macro
+  add_definitions(-DDYNET_TEST_DEVICES=$ENV{DYNET_TEST_DEVICES})
+endif()
+
 foreach(TESTNAME dynet exec io mem nodes params tensor trainers rnn softmax)
   add_executable(test-${TESTNAME} test-${TESTNAME}.cc)
   if (NOT MSVC)
