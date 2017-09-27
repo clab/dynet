@@ -18,6 +18,14 @@ namespace Eigen {
 namespace dynet {
 
 enum class DeviceType {CPU, GPU};
+
+/*
+ * FXS   -> forward pass memory
+ * DEDFS -> backward pass memory
+ * PS    -> parameter memory
+ * SCS   -> scratch memory (for use in temporary calculations)
+ * NONE  -> when a memory pool has not been assigned yet
+ */
 enum class DeviceMempool {FXS = 0, DEDFS = 1, PS = 2, SCS = 3, NONE = 4};
 
 struct ComputationGraph; // TODO is there a nicer way to resolve this cyclic dependency?
