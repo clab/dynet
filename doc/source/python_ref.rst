@@ -130,6 +130,8 @@ Input operations
 
 .. autofunction:: dynet.parameter
 
+.. autofunction:: dynet.const_parameter
+
 .. autofunction:: dynet.scalarInput
 
 .. autofunction:: dynet.vecInput
