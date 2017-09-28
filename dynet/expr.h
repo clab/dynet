@@ -1748,7 +1748,7 @@ Expression pick_batch_elem(const Expression& x, unsigned v);
  *      \end{pmatrix}
  *    \f$
  *
- * pick_batch_elems(t, {2, 3}) will return a Tensor of with 2 batch elements:
+ * pick_batch_elems(t, {1, 2}) will return a Tensor of with 2 batch elements:
  *
  *    \f$
  *      \begin{pmatrix}
