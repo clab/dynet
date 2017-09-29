@@ -21,6 +21,8 @@ Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   Dim d = xs[0].truncate();
   DYNET_ARG_CHECK(d.single_batch() == xs[1].truncate().single_batch(),
                           "Mismatched input dimensions in CwiseMultiply: " << xs);
+  DYNET_ARG_CHECK(xs[0].bd == 1 || xs[1].bd == 1 || xs[0].bd == xs[1].bd,
+                  "Batch dimensions must match, or one must be 1, but got " << xs);
   d.bd = max(xs[1].bd, d.bd);
   return d;
 }
