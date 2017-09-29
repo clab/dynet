@@ -130,6 +130,8 @@ Input operations
 
 .. autofunction:: dynet.parameter
 
+.. autofunction:: dynet.const_parameter
+
 .. autofunction:: dynet.scalarInput
 
 .. autofunction:: dynet.vecInput
@@ -423,8 +425,6 @@ Softmax Builders
    :members:
    :show-inheritance:
 
-
-
 Optimizers
 ----------
 
@@ -459,3 +459,9 @@ Optimizers
 .. autoclass:: dynet.AdamTrainer
    :members:
    :show-inheritance:
+
+MultiDevice
+-----------
+
+.. autofunction:: dynet.to_device
+

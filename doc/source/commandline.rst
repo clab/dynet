@@ -28,6 +28,7 @@ options.
    `here <http://dynet.readthedocs.io/en/latest/minibatch.html>`_.
 -  ``--dynet-gpus NUMBER``: Specify how many GPUs you want to use, if
    DyNet is compiled with CUDA. Currently, only one GPU is supported.
+-  ``--dynet-gpu``: Specify whether to use GPU or not. Note that it is an option for Python programs.
 -  ``--dynet-devices CPU,GPU:1,GPU:3,GPU:0``: Specify the CPU/GPU devices that you
    want to use. You can the physical ID for GPU and can not specify the ID for CPU.
    This is an useful option working together with your multi-device code.

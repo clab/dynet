@@ -79,7 +79,12 @@ except NameError:
     this_file = sys.argv[0]
 ORIG_DIR = os.getcwd()
 SCRIPT_DIR = os.path.dirname(os.path.abspath(this_file))
-BUILD_DIR = os.path.join(SCRIPT_DIR, "build")
+if ORIG_DIR.rstrip('/').endswith('python'):
+    BUILD_DIR = ORIG_DIR.rstrip('/').rstrip('python')
+    PYTHON_DIR = ORIG_DIR
+else:
+    BUILD_DIR = ORIG_DIR
+    PYTHON_DIR = ORIG_DIR + '/python'
 ENV = get_env(BUILD_DIR)
 
 # Find the paths
@@ -136,7 +141,7 @@ if ENV.get("MSVC") == "1":
     append_cmake_lib_list(LIBRARIES, ENV.get("CUDA_RT_FILES"))
     append_cmake_list(LIBRARY_DIRS, ENV.get("CUDA_RT_DIRS"))
 else:
-    COMPILER_ARGS[:] = ["-std=c++11", "-Wno-shorten-64-to-32", "-Wno-unused-function"]
+    COMPILER_ARGS[:] = ["-std=c++11", "-Wno-unused-function"]
     RUNTIME_LIB_DIRS.extend([DYNET_LIB_DIR, LIBS_INSTALL_DIR])
     # in some OSX systems, the following extra flags are needed:
     if platform.system() == "Darwin":
@@ -151,7 +156,7 @@ INCLUDE_DIRS[:] = filter(None, [PROJECT_SOURCE_DIR, EIGEN3_INCLUDE_DIR])
 
 TARGET = [Extension(
     "_dynet",  # name of extension
-    ["_dynet.pyx"],  # filename of our Pyrex/Cython source
+    [PYTHON_DIR + "/_dynet.pyx"],  # filename of our Pyrex/Cython source
     language="c++",  # this causes Pyrex/Cython to create C++ source
     include_dirs=INCLUDE_DIRS,
     libraries=LIBRARIES,
@@ -291,7 +296,6 @@ class build_ext(_build_ext):
                 target_dir = os.path.join(SCRIPT_DIR, "build", d)
                 rmtree(target_dir, ignore_errors=True)
                 copytree(os.path.join("build", d), target_dir)
-        os.chdir(ORIG_DIR)
 
 
 try:

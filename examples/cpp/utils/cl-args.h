@@ -49,10 +49,44 @@ struct Params {
   bool sample = false;
 };
 
+static void usage(std::ostream& os, const char* program, Task task) {
+  if (task == TRAIN)
+    os << "usage: " << program << " -t train_file -d dev_file [options]" << std::endl;
+  else if (task == TRAIN_SUP)
+    os << "usage: " << program << " -t train_file -d dev_file -tl train_labels_file -dl dev-labels_file [options]" << std::endl;
+  else if (task == TEST)
+    os << "usage: " << program << " -ts test_file [options]" << std::endl;
+  else
+    os << "usage: " << program << " [options]" << std::endl;
+
+  os << std::endl
+     << "options:" << std::endl
+     << "  -b int, --batch_size int" << std::endl
+     << "  -bid, --bidirectional" << std::endl
+     << "  -c filename, --clusters filename" << std::endl
+     << "  -d filename, --dev filename" << std::endl
+     << "  -dic filename, --dict filename" << std::endl
+     << "  -D float, --dropout_rate float" << std::endl
+     << "  -e0 float, --eta0 float" << std::endl
+     << "  -edr float, --eta_decay_rate float" << std::endl
+     << "  -edoe float, --eta_decay_onset_epoch float" << std::endl
+     << "  -i int, --input_size int" << std::endl
+     << "  -l int, --num_layers int" << std::endl
+     << "  -m filename, --model filename" << std::endl
+     << "  -n string, --name string" << std::endl
+     << "  -N int, --num_epochs int" << std::endl
+     << "  -nb filename, --nbest filename" << std::endl
+     << "  -p filename, --paths filename" << std::endl
+     << "  -s, --sample" << std::endl
+     << "  -t filename, --train filename" << std::endl
+     << "  -ts filename, --test filename" << std::endl
+     << "  --help" << std::endl;
+}
+
 /**
  * \brief Get parameters from command line arguments
  * \details Parses parameters from `argv` and check for required fields depending on the task
- * 
+ *
  * \param argc Number of arguments
  * \param argv Arguments strings
  * \param params Params structure
@@ -62,7 +96,7 @@ void get_args(int argc,
               char** argv,
               Params& params,
               Task task) {
-  int i = 0;
+  int i = 1;
   while (i < argc) {
     string arg = argv[i];
     if (arg == "--name" || arg == "-n") {
@@ -225,23 +259,30 @@ void get_args(int argc,
       istringstream d(argv[i + 1]);
       d >> params.dropout_rate;
       i++;
-    } else  if (arg == "--bidirectionnal" || arg == "-bid") {
+    } else  if (arg == "--bidirectional" || arg == "-bid") {
       params.bidirectionnal = true;
     } else  if (arg == "--sample" || arg == "-s") {
       params.sample = true;
+    } else if (arg == "--help") {
+      usage(std::cerr, argv[0], task);
+      exit(1);
+    } else {
+      std::cerr << "FATAL: illegal option: " << arg << std::endl;
+      usage(std::cerr, argv[0], task);
+      abort();
     }
     i++;
   }
   if (task == TRAIN) {
     if (params.train_file == "" || params.dev_file == "") {
       stringstream ss;
-      ss << "Usage: " << argv[0] << " -t [train_file] -d [dev_file]";
+      usage(ss, argv[0], task);
       throw invalid_argument(ss.str());
     }
   } else if (task == TRAIN_SUP) {
     if (params.train_file == "" || params.dev_file == "" || params.train_labels_file == "" || params.dev_labels_file == "") {
       stringstream ss;
-      ss << "Usage: " << argv[0] << " -t [train_file] -d [dev_file] -tl [train_labels_file] -d [dev_labels_file]";
+      usage(ss, argv[0], task);
       throw invalid_argument(ss.str());
     }
   }

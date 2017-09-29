@@ -255,9 +255,14 @@ ParameterCollectionStorage::~ParameterCollectionStorage() {
 }
 
 void ParameterCollectionStorage::project_weights(float radius) {
-  static float* project_scratch = 0;
-  if (!project_scratch)
-    project_scratch = (float*)default_device->mem->malloc(all_params.size() * sizeof(float));
+  static float* project_scratch = nullptr;
+  auto scratch_size = all_params.size() * sizeof(float);
+  if (project_scratch == nullptr || sizeof(project_scratch) < scratch_size) {
+    if (project_scratch != nullptr) {
+      default_device->mem->free(gradient_norm_scratch);
+    }
+    project_scratch = (float *) default_device->mem->malloc(scratch_size);
+  }
   int pi = 0;
   for (auto p : all_params) {
     p->squared_l2norm(&project_scratch[pi]);
@@ -782,8 +787,12 @@ void LookupParameterStorage::scale_gradient(float a) {
 
 template <class MyDevice>
 float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
-  if (gradient_norm_scratch == nullptr) {
-    gradient_norm_scratch = (float*)dev.mem->malloc((all_params.size() + 1) * sizeof(float));
+  auto scratch_size = (all_params.size() + 1) * sizeof(float);
+  if (gradient_norm_scratch == nullptr || sizeof(gradient_norm_scratch) < scratch_size) {
+    if (gradient_norm_scratch != nullptr) {
+      dev.mem->free(gradient_norm_scratch);
+    }
+    gradient_norm_scratch = (float*)dev.mem->malloc(scratch_size);
   }
   size_t pi;
   size_t k1 = 0, k2 = 0;

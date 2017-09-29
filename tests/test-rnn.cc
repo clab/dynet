@@ -23,6 +23,7 @@ struct RNNTest {
       for (auto x : {"RNNTest", "--dynet-seed", "10", "--dynet-mem", "10"}) {
         av.push_back(strdup(x));
       }
+      ADD_EXTRA_ARGUMENTS(av)
       char **argv = &av[0];
       int argc = av.size();
       dynet::initialize(argc, argv);
@@ -361,12 +362,12 @@ BOOST_AUTO_TEST_CASE( lstm_node_gates_dropout_fwd ) {
   unsigned batch_size = 2;
   dynet::ComputationGraph cg;
 
-  Expression x_t = dynet::input(cg, Dim({input_dim}, batch_size), {0.0, 0.1, 0.2, 0.3});
+  Expression x_t = dynet::input(cg, Dim({input_dim}, batch_size), {0.0, 0.1f, 0.2f, 0.3f});
   Expression mask_x = dynet::input(cg, Dim({input_dim}, batch_size), {0.0, 1, 1, 1});
 //    cout << "x_t: " << print_vec(as_vector(x_t.value())) << "\n";
 //    cout << "x_t b0: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)0).value())) << "\n";
 //    cout << "x_t b1: " << print_vec(as_vector(pick_batch_elem(x_t, (unsigned)1).value())) << "\n";
-  Expression h_tm1 = dynet::input(cg, Dim({input_dim}, batch_size), {0.f, -0.1, 0.2, -0.3});
+  Expression h_tm1 = dynet::input(cg, Dim({input_dim}, batch_size), {0.f, -0.1f, 0.2f, -0.3f});
   Expression mask_h = dynet::input(cg, Dim({input_dim}, batch_size), {0.0, 0.0, 1.0, 1.0});
   Expression Wx = dynet::input(cg, Dim({hidden_dim*4, input_dim}, 1), {0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f, 0.f, 1.1f, 2.2f, 3.3f});
   Expression Wh = dynet::input(cg, Dim({hidden_dim*4, hidden_dim}, 1), {0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f, 0.1f, 1.2f, 2.3f, 3.4f});

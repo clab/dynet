@@ -200,7 +200,7 @@ options:
     -DBOOST_ROOT:PATHNAME=$HOME/boost -DBoost_LIBRARY_DIRS:FILEPATH=$HOME/boost/lib
     -DBoost_NO_BOOST_CMAKE=TRUE -DBoost_NO_SYSTEM_PATHS=TRUE
 
-Note that you will also have to set your ``LD_LIBRARY_PATH`` to point to
+Note that you will also have to set your ``LD_LIBRARY_PATH``(``DYLD_LIBRARY_PATH`` instead for osx) to point to
 the ``boost/lib`` directory.
 Note also that Boost must be compiled with the same compiler version as
 you are using to compile DyNet.
