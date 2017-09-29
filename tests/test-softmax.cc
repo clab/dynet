@@ -24,6 +24,7 @@ struct SoftmaxTest {
       for (auto x : {"SoftmaxTest", "--dynet-seed", "10", "--dynet-mem", "10"}) {
         av.push_back(strdup(x));
       }
+      ADD_EXTRA_ARGUMENTS(av)
       char **argv = &av[0];
       int argc = av.size();
       dynet::initialize(argc, argv);

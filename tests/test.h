@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <cstdlib>
 #include <boost/test/unit_test.hpp>
 #include <dynet/model.h>
 
@@ -111,5 +112,13 @@ void equal_check(std::unordered_map<K, V> a,
     BOOST_CHECK_EQUAL(kv.second, b[kv.first]);
   }
 }
+
+#ifdef DYNET_TEST_DEVICES
+  #define STR(x) #x
+  #define ADD_DEVICES_ARGUMENTS(av, devices) {for (auto x : {"--dynet-devices", STR(devices)}) av.push_back(strdup(x));}
+  #define ADD_EXTRA_ARGUMENTS(av) ADD_DEVICES_ARGUMENTS(av, DYNET_TEST_DEVICES)
+#else
+  #define ADD_EXTRA_ARGUMENTS(av) {}
+#endif
 
 #endif

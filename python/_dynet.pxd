@@ -415,21 +415,21 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
 
     cdef cppclass CRNNBuilder "dynet::RNNBuilder":
         void new_graph(CComputationGraph &cg, bool update)
-        void start_new_sequence(vector[CExpression] ces)
+        void start_new_sequence(vector[CExpression] ces) except +
         CExpression add_input(CExpression &x) except +
         CExpression add_input(CRNNPointer prev, CExpression &x) except +
-        CExpression set_h(CRNNPointer prev, vector[CExpression] ces)
-        CExpression set_s(CRNNPointer prev, vector[CExpression] ces)
+        CExpression set_h(CRNNPointer prev, vector[CExpression] ces) except +
+        CExpression set_s(CRNNPointer prev, vector[CExpression] ces) except +
         void rewind_one_step()
         CExpression back()
-        vector[CExpression] final_h()
-        vector[CExpression] final_s()
-        vector[CExpression] get_h(CRNNPointer i)
-        vector[CExpression] get_s(CRNNPointer i)
+        vector[CExpression] final_h() except +
+        vector[CExpression] final_s() except +
+        vector[CExpression] get_h(CRNNPointer i) except +
+        vector[CExpression] get_s(CRNNPointer i) except +
         CRNNPointer state()
-        void set_dropout(float f)
-        void disable_dropout()
-        CModel get_parameter_collection()
+        void set_dropout(float f) except +
+        void disable_dropout() except +
+        CModel get_parameter_collection() except +
 
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):

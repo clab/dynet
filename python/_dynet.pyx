@@ -96,10 +96,10 @@ cdef class DynetParams: # {{{
             shared_parameters([type]): [description] (default: None)
         """
         cpu_use = False
-        if '--dynet-gpu' in sys.argv: # the python gpu switch, use GPU:0 by default
+        if '--dynet-gpu' in sys.argv:
             sys.argv.remove('--dynet-gpu')
-            sys.argv.append('--dynet-devices')
-            sys.argv.append('GPU:0')
+            sys.argv.append('--dynet-gpus')
+            sys.argv.append('1')
         elif not ('--dynet-gpus' in sys.argv or
                   '--dynet-devices' in sys.argv or
                   '--dynet-viz' in sys.argv):
