@@ -9,7 +9,7 @@
 #include "dynet/expr.h"
 #include "dynet/globals.h"
 #include "dynet/io.h"
-#include "../utils/getpid.h"
+// #include "../cpp-utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
       Expression loss_expr = HingeLoss(y_pred, y);
       loss += as_scalar(cg.forward(loss_expr));
       cg.backward(loss_expr);
-      trainer->update(2.0);
+      trainer->update();
       ++lines;
       ++ttags;
     }

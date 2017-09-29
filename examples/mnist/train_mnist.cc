@@ -5,9 +5,9 @@
  */
 #include "mlp.h"
 #include "dynet/io.h"
-#include "../utils/getpid.h"
-#include "../utils/cl-args.h"
-#include "../utils/data-io.h"
+// #include "../cpp-utils/getpid.h"
+#include "../cpp-utils/cl-args.h"
+#include "../cpp-utils/data-io.h"
 
 
 using namespace std;

@@ -5,8 +5,8 @@
  */
 #include "rnnlm-batch.h"
 #include "dynet/io.h"
-#include "../utils/getpid.h"
-#include "../utils/cl-args.h"
+// #include "../cpp-utils/getpid.h"
+#include "../cpp-utils/cl-args.h"
 
 using namespace std;
 using namespace dynet;

@@ -26,7 +26,7 @@
 #include "dynet/globals.h"
 #include "dynet/io.h"
 
-#include "../utils/getpid.h"
+// #include "../cpp-utils/getpid.h"
 
 #include <iostream>
 #include <fstream>
