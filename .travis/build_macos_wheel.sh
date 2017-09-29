@@ -6,6 +6,7 @@ source activate "$PYVER"
 pip install pypandoc delocate
 python setup.py bdist_wheel
 DYLIB="$TRAVIS_BUILD_DIR"/miniconda/envs/"$PYVER"/lib/libdynet.dylib
+cd build/py*/python
 WHEEL=dist/*.whl
 echo Trying to relink $DYLIB into $WHEEL...
 DEPS_BEFORE="$(delocate-listdeps $WHEEL)"
