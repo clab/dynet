@@ -85,12 +85,12 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  if(fx.d == dEdxi.d) {
-    dEdxi.tvec().device(*dev.edevice) += fx.tvec();
+  if(dEdf.d == dEdxi.d) {
+    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
 #ifndef __CUDACC__
-  } else if (fx.d.single_batch() == dEdxi.d.single_batch()) {
-    for(size_t i = 0; i < dEdxi.d.bd; ++i)
-      dEdxi.tvec().device(*dev.edevice) += fx.tbvec().chip<1>(i);
+  } else if (dEdf.d.single_batch() == dEdxi.d.single_batch()) {
+    for(size_t i = 0; i < dEdf.d.bd; ++i)
+      dEdxi.tvec().device(*dev.edevice) += dEdf.tbvec().chip<1>(i);
 #endif
   } else {
     int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
