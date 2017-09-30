@@ -214,6 +214,12 @@ void initialize(DynetParams& params) {
   Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
   device_manager->add(d);
   default_device = device_manager->get(default_index);
+#if HAVE_CUDA
+  if (default_device->type == DeviceType::GPU) {
+    auto default_gpu_device = static_cast<Device_GPU *>(default_device);
+    CUDA_CHECK(cudaSetDevice(default_gpu_device->cuda_device_id));
+  }
+#endif
 
   // TODO these should be accessed through the relevant device and removed here
   kSCALAR_MINUSONE = default_device->kSCALAR_MINUSONE;
