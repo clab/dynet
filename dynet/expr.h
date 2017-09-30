@@ -963,8 +963,11 @@ Expression dot_product(const Expression& x, const Expression& y);
 /**
  * \ingroup arithmeticoperations
  * \brief Componentwise multiply
- * \details Do a componentwise multiply where each value is equal to x_i*y_i.
- *          This function used to be called cwise_multiply.
+ * \details Multiply two expressions component-wise, broadcasting dimensions if necessary as follows:
+ *          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+ *          - Now, every dimensions is required to have matching size, or one of the dimensions must equal 1 (in which case it will be broadcasted)
+ *          - In the same way, the batch dimension must match, or equal 1 in which case it will be broadcasted
+ *          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
  *
  * \param x The first input expression
  * \param y The second input expression
@@ -975,8 +978,12 @@ Expression cmult(const Expression& x, const Expression& y);
 
 /**
  * \ingroup arithmeticoperations
- * \brief Componentwise multiply
- * \details Do a componentwise multiply where each value is equal to x_i/y_i
+ * \brief Componentwise division
+ * \details Divide an expressions component-wise by another, broadcasting dimensions (currently only of the second expression!) if necessary as follows:
+ *          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+ *          - Now, every dimensions is required to have matching size, or the dim size of the right expression must equal 1 (in which case it will be broadcasted)
+ *          - In the same way, the batch sizes must match, or the batch size of the right expression must equal 1 in which case it will be broadcasted
+ *          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
  *
  * \param x The first input expression
  * \param y The second input expression
@@ -1556,7 +1563,6 @@ Expression sum_batches(const Expression& x);
  */
 Expression moment_batches(const Expression& x, unsigned r);
 
-
 /**
  * \ingroup flowoperations
  * \brief Compute mean over minibatches
@@ -1585,11 +1591,12 @@ Expression std_batches(const Expression& x);
  * \details Computes \f$\frac 1 n\sum_{i=1}^n(x_i -\mu)^2\f$ where \f$\mu=\frac 1 n\sum_{i=1}^nx_i\f$ along an arbitrary dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return A scalar expression (with a potential batch dimension)
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression std_dim(const Expression& x, unsigned d);
+Expression std_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
 
 /**
  * \ingroup flowoperations
@@ -1597,23 +1604,25 @@ Expression std_dim(const Expression& x, unsigned d);
  * \details Compute the moment of order \f$r\f$, \f$\frac 1 n\sum_{i=1}^nx_i^r\f$ along a specific dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
  * \param r Order of the moment
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return An expression with one less dimension
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression moment_dim(const Expression& x, unsigned d, unsigned r);
+Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, unsigned r, bool b=false);
 /**
  * \ingroup flowoperations
  * \brief Compute mean along  a specific dimension
  * \details Computes \f$\frac 1 n\sum_{i=1}^nx_i\f$ along a specific dimension
  *
  * \param x The input mini-batched expression
- * \param d Dimension along which to reduce
+ * \param d Dimensions along which to reduce
+ * \param b Whether to include batch dimension (default: false)
  *
- * \return An expression with one less dimension
+ * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression mean_dim(const Expression& x, unsigned d);
+Expression mean_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
 
 
 /**

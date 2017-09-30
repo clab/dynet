@@ -2,7 +2,6 @@
 #include "dynet/nodes-affinetransform.h"
 #include "dynet/nodes-arith-const.h"
 #include "dynet/nodes-arith-cwise.h"
-#include "dynet/nodes-arith-scalar.h"
 #include "dynet/nodes-arith-sum.h"
 #include "dynet/nodes-arith-unary.h"
 #include "dynet/nodes-concat.h"

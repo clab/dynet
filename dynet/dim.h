@@ -304,7 +304,7 @@ struct Dim {
  */
 inline bool operator==(const Dim& a, const Dim& b) {
   if (a.nd != b.nd || a.bd != b.bd) return false;
-  return std::memcmp(a.d, b.d, a.nd) == 0;
+  return std::memcmp(a.d, b.d, a.nd * sizeof(unsigned int)) == 0;
 }
 
 /**
