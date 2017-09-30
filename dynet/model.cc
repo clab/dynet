@@ -54,6 +54,12 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string 
     : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
+#if HAVE_CUDA
+  if (dev->type == DeviceType::GPU) {
+    auto gpu_dev = static_cast<Device_GPU *>(dev);
+    CUDA_CHECK(cudaSetDevice(gpu_dev->cuda_device_id));
+  }
+#endif
   values.d = g.d = d;
   values.device = g.device = device;
   device->allocate_tensor(DeviceMempool::PS, values);
@@ -73,6 +79,12 @@ ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init,
     : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
+#if HAVE_CUDA
+  if (dev->type == DeviceType::GPU) {
+    auto gpu_dev = static_cast<Device_GPU *>(dev);
+    CUDA_CHECK(cudaSetDevice(gpu_dev->cuda_device_id));
+  }
+#endif
   values.d = g.d = d;
   values.device = g.device = device;
   device->allocate_tensor(DeviceMempool::PS, values);
