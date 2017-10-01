@@ -13,7 +13,7 @@
 #include "dynet/expr.h"
 #include "dynet/globals.h"
 #include "dynet/io.h"
-// #include "../cpp-utils/getpid.h"
+#include "getpid.h"
 
 using namespace std;
 using namespace dynet;

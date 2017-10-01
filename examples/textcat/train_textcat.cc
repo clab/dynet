@@ -9,7 +9,6 @@
 #include "dynet/expr.h"
 #include "dynet/globals.h"
 #include "dynet/io.h"
-// #include "../cpp-utils/getpid.h"
 
 #include <iostream>
 #include <fstream>

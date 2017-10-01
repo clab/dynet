@@ -11,8 +11,8 @@
 #include "dynet/hsm-builder.h"
 #include "dynet/globals.h"
 #include "dynet/io.h"
-// #include "../cpp-utils/getpid.h"
-#include "../cpp-utils/cl-args.h"
+#include "getpid.h"
+#include "cl-args.h"
 
 #include <iostream>
 #include <fstream>
