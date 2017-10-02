@@ -190,7 +190,8 @@ class build(_build):
 
     def initialize_options(self):
         py_version = "%s.%s" % (sys.version_info[0], sys.version_info[1])
-        build_name = "py%s-%s" % (py_version, platform.architecture()[0])
+        unicode_suffix = "u" if sys.version_info[0] == 2 and sys.maxunicode > 65536 else ""
+        build_name = "py%s%s-%s" % (py_version, unicode_suffix, platform.architecture()[0])
         self.build_dir = os.path.join(SCRIPT_DIR, "build", build_name)
         _build.initialize_options(self)
 
