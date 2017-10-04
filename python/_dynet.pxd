@@ -101,15 +101,15 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CModel()
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d)
-        CParameters add_parameters(CDim& d, CParameterInit initializer, string name)
-        CParameters add_parameters(CDim& d, CParameterInit initializer, string name, CDevice *device)
+        CParameters add_parameters(CDim& d, CParameterInit initializer, string name) except +
+        CParameters add_parameters(CDim& d, CParameterInit initializer, string name, CDevice *device) except +
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
-        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name)
-        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, CDevice *device)
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name) except +
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, CDevice *device) except +
         vector[CParameterStorage] parameters_list()
-        CModel add_subcollection(string name)
+        CModel add_subcollection(string name) except +
         string get_fullname()
-        int parameter_count()
+        int parameter_count() except +
 
 cdef extern from "dynet/io.h" namespace "dynet":
     cdef cppclass CTextFileSaver "dynet::TextFileSaver":
