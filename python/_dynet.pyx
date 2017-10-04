@@ -1064,8 +1064,29 @@ cdef class ParameterCollection: # {{{
         loader.populate(self.thisptr, _key)
         del loader
 
-    # TODO: for debug, remove
-    cpdef pl(self): return self.thisptr.parameters_list().size()
+    cpdef parameters_list(self):
+        """Returns list of all parameters in the collection
+        
+        Returns:
+            (list): All dy.Parameters in the collection
+        """
+        cdef vector[CParameterStorage*] pl = self.thisptr.parameters_list()
+        parameters_list = []
+        for p in pl:
+            parameters_list.append(Parameters.wrap_ptr(CParameters(p)))
+        return parameters_list
+
+    cpdef lookup_parameters_list(self):
+        """Returns list of all looku parameters in the collection
+        
+        Returns:
+            (list): All dy.LookupParameters in the collection
+        """
+        cdef vector[CLookupParameterStorage*] pl = self.thisptr.lookup_parameters_list()
+        lookup_parameters_list = []
+        for p in pl:
+            lookup_parameters_list.append(LookupParameters.wrap_ptr(CLookupParameters(p)))
+        return lookup_parameters_list
 
     cpdef parameters_from_numpy(self, array,string name="", device=""):
         """Create parameter from numpy array

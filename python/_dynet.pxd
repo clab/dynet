@@ -75,6 +75,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CParameters "dynet::Parameter":
         CParameters()
+        CParameters(CParameterStorage* p)
         CParameterStorage& get_storage()
         void zero()
         void set_updated(bool b)
@@ -87,6 +88,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
+        CLookupParameters(CLookupParameterStorage* p)
         CLookupParameterStorage& get_storage()
         CDim dim
         void initialize(unsigned index, const vector[float]& val)
@@ -106,7 +108,8 @@ cdef extern from "dynet/model.h" namespace "dynet":
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name) except +
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, CDevice *device) except +
-        vector[CParameterStorage] parameters_list()
+        vector[CParameterStorage*] parameters_list()
+        vector[CLookupParameterStorage*] lookup_parameters_list()
         CModel add_subcollection(string name) except +
         string get_fullname()
         int parameter_count() except +
