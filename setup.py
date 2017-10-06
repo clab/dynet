@@ -240,22 +240,22 @@ class build(_build):
             if os.path.isdir(EIGEN3_INCLUDE_DIR):
                 log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
             else:
-                try:
-                    # Can use BZ2 or zip, right now using zip
-                    # log.info("Fetching Eigen...")
-                    # urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
-                    # log.info("Unpacking Eigen...")
-                    # tfile = tarfile.open("eigen.tar.bz2", 'r')
-                    # tfile.extractall('eigen')
-                    log.info("Fetching Eigen...")
-                    urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
-                    log.info("Unpacking Eigen...")
-                    zfile = zipfile.open("eigen.zip", 'r')
-                    zfile.extractall('eigen')
-                    #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
-                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
-                except:
-                    raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
+                # try:
+                # Can use BZ2 or zip, right now using zip
+                # log.info("Fetching Eigen...")
+                # urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
+                # log.info("Unpacking Eigen...")
+                # tfile = tarfile.open("eigen.tar.bz2", 'r')
+                # tfile.extractall('eigen')
+                log.info("Fetching Eigen...")
+                urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
+                log.info("Unpacking Eigen...")
+                zfile = zipfile.open("eigen.zip", 'r')
+                zfile.extractall('eigen')
+                #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
+                EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
+                # except:
+                #     raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
 
             # Previously, we used mercurial to download the latest version as follows.
             # This is saved here in case we need to revert to this behavior to get
