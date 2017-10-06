@@ -1088,7 +1088,7 @@ cdef class ParameterCollection: # {{{
             lookup_parameters_list.append(LookupParameters.wrap_ptr(CLookupParameters(p)))
         return lookup_parameters_list
 
-    cpdef parameters_from_numpy(self, array,string name="", device=""):
+    cpdef parameters_from_numpy(self, array, name="", device=""):
         """Create parameter from numpy array
         
         Args:
@@ -1111,7 +1111,7 @@ cdef class ParameterCollection: # {{{
         return pp
 
     # TODO this may fail with >2 dim arrays.
-    cpdef lookup_parameters_from_numpy(self, array, string name="", device=""):
+    cpdef lookup_parameters_from_numpy(self, array, name="", device=""):
         """Create LookupParameters from numpy array
         
         Args:
@@ -1135,7 +1135,7 @@ cdef class ParameterCollection: # {{{
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None, string name="", device=""):
+    cpdef add_parameters(self, dim, PyInitializer init=None, name="", device=""):
         """Add a parameter to the ParameterCollection
         
         Args:
@@ -1153,18 +1153,19 @@ cdef class ParameterCollection: # {{{
         cdef CParameters p
         cdef CParameterInit *initializer
         cdef CDevice *dev
+        cdef string _name = <string> name.encode("utf8")
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
         if str(device) != "":
             dev = c_str2dev(device)
-            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name, dev)
+            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name, dev)
         else:
-            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
+            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name="", device=""):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, name="", device=""):
         """Add a lookup parameter to the ParameterCollection
         
         Args:
@@ -1182,15 +1183,16 @@ cdef class ParameterCollection: # {{{
         cdef CDevice *dev
         cdef CLookupParameters p
         cdef int nids = dim[0]
+        cdef string _name = <string> name.encode("utf8")
         rest = tuple(dim[1:])
         if init is None:
             init = GlorotInitializer(True)
         initializer = init.initializer
         if str(device) != "":
             dev = c_str2dev(device)
-            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name, dev)
+            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), _name, dev)
         else:
-            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name)
+            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), _name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
@@ -1464,16 +1466,17 @@ class DeviceInfo(object):
         self.type = dtype
         self.id = id
 
-cpdef get_device_info(string name):
+cpdef get_device_info(name):
     cdef CDevice *d = c_str2dev(name)
     # TODO represent type (enum in cython)
     # TODO enable query of memory size?
     return DeviceInfo(d.name, d.device_id, -1)
 
 
-cdef CDevice* c_str2dev(string name) except NULL:
+cdef CDevice* c_str2dev(name) except NULL:
     cdef CDevice* dev
-    dev = c_get_device_manager().get_global_device(name)
+    cdef string _name = <string> name.encode("utf8")
+    dev = c_get_device_manager().get_global_device(_name)
     return dev
 # }}}
 
