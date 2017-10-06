@@ -40,6 +40,7 @@ real as_scalar(const Tensor& t) {
     return t.v[0];
 #if HAVE_CUDA
   } else if (t.device->type == DeviceType::GPU) {
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)t.device)->cuda_device_id));
     CUDA_CHECK(cudaMemcpy(&res, t.v, sizeof(float), cudaMemcpyDeviceToHost));
     return res;
 #endif
@@ -53,6 +54,7 @@ vector<real> as_vector(const Tensor& v) {
     memcpy(&res[0], v.v, sizeof(real) * res.size());
   } else if (v.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)v.device)->cuda_device_id));
     CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(real) * res.size(), cudaMemcpyDeviceToHost));
 #endif
   } else { throw std::runtime_error("Bad device type"); }
@@ -65,6 +67,7 @@ vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
     memcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size());
 #if HAVE_CUDA
   } else if (v.device->type == DeviceType::GPU) {
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)v.device)->cuda_device_id));
     CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size(), cudaMemcpyDeviceToHost));
 #endif
   } else { throw std::runtime_error("Bad device type"); }
@@ -167,6 +170,7 @@ void TensorTools::identity(Tensor& val) {
     for (size_t i = 0; i < val.d[0]; ++i)
       for (size_t j = 0; j < val.d[1]; ++j)
         t[pos++] = (i == j ? 1 : 0);
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
     CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
     delete[] t;
 #endif
@@ -182,6 +186,7 @@ void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
   } else if (val.device->type == DeviceType::GPU) {
     float* t = new float[val.d.size()];
     generate(t, t + val.d.size(), b);
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
     CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
     delete[] t;
 #endif
@@ -197,6 +202,7 @@ void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
   } else if (val.device->type == DeviceType::GPU) {
     float* t = new float[val.d.size()];
     generate(t, t + val.d.size(), b);
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
     CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
     delete[] t;
 #endif
@@ -212,6 +218,7 @@ void TensorTools::randomize_uniform(Tensor& val, real left, real right) {
   } else if (val.device->type == DeviceType::GPU) {
     float* t = new float[val.d.size()];
     generate(t, t + val.d.size(), b);
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
     CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
     delete[] t;
 #endif
@@ -235,6 +242,7 @@ void TensorTools::randomize_orthonormal(Tensor& val, real scale) {
     // randomize_uniform(tt, -1.0, 1.0);
     // Eigen::JacobiSVD<Eigen::MatrixXf> svd(*tt, Eigen::ComputeFullU | Eigen::ComputeThinV);
     // *tt = scale * svd.matrixU();
+    // CUDA_CHECK(cudaSetDevice(v.device->cuda_device_id));
     // CUDA_CHECK(cudaMemcpy(val.v, tt.v, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
     // delete[] t;
 #endif
