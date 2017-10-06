@@ -1102,11 +1102,12 @@ cdef class ParameterCollection: # {{{
         dim = array.shape
         cdef CDevice* dev
         cdef CParameters p
+        cdef string _name = <string> name.encode("utf8")
         if str(device) != "":
             dev = c_str2dev(device)
-            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name, dev)
+            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name, dev)
         else:
-            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name)
+            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
@@ -1127,11 +1128,12 @@ cdef class ParameterCollection: # {{{
         init = NumpyInitializer(array.T)
         cdef CDevice* dev
         cdef CLookupParameters p
+        cdef string _name = <string> name.encode("utf8")
         if str(device) != "":
             dev = c_str2dev(device)
-            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name, dev)
+            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), _name, dev)
         else:
-            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name)
+            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), _name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
