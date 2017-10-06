@@ -8,6 +8,44 @@ env:
     - secure: "j8Ro21/7h5FKuJHPJRHYfOiZHMoAfD/dfpqXZreGrl79jVSEdPZmmOdvFH++CqrRdttpxOf2Lg5qOfpXfziC5ecJx1USslBSo2qwAG9JwPkwjCK7MhouM64yhVedj9Es/H635aufbyRsDIhKr5poPrrH+UebEq/63QpEdDWIWq8="
 jobs:
   include:
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: NOT type = pull_request
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
     - os: linux
       compiler: gcc
       language: cpp
@@ -76,44 +114,6 @@ jobs:
       compiler: gcc
       language: cpp
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual BACKEND=cuda
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
-      if: NOT type = pull_request
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: NOT type = pull_request
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
-      if: NOT type = pull_request
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: NOT type = pull_request
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
-      if: NOT type = pull_request
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: NOT type = pull_request
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
 
 install:
   - travis_retry .travis/install_dependencies.sh
