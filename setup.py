@@ -250,7 +250,7 @@ class build(_build):
                 log.info("Fetching Eigen...")
                 urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
                 log.info("Unpacking Eigen...")
-                zfile = zipfile.open("eigen.zip", 'r')
+                zfile = zipfile.ZipFile("eigen.zip", 'r')
                 zfile.extractall('eigen')
                 #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
                 EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
