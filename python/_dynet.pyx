@@ -3310,7 +3310,7 @@ cpdef Expression fold_rows(Expression x, unsigned nrows=2):
 cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0):
     """Pairwise rank loss
     
-    A margin-based loss, where every margin violation for each pair of values is penalized: :math:`\sum_i \max(x_i-y_i+m, 0)`
+    A margin-based loss, where every margin violation for each pair of values is penalized: :math:`\sum_i \max(m - x_i + y_i, 0)`
     
     Args:
         x (dynet.Expression): The first input expression

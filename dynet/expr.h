@@ -1370,7 +1370,7 @@ Expression binary_log_loss(const Expression& x, const Expression& y);
  * \ingroup lossoperations
  * \brief Pairwise rank loss
  * \details A margin-based loss, where every margin violation for each pair of
- *          values is penalized: \f$\sum_i max(x_i-y_i+m, 0)\f$
+ *          values is penalized: \f$\sum_i max(m - x_i + y_i, 0)\f$
  *
  * \param x A vector of values
  * \param y A vector of true answers
