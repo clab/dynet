@@ -2,6 +2,7 @@ import distutils.sysconfig
 import logging as log
 import platform
 import tarfile
+import zipfile
 import sys
 from distutils.command.build import build as _build
 from distutils.command.build_py import build_py as _build_py
@@ -117,7 +118,8 @@ if (EIGEN3_INCLUDE_DIR is not None and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
 
-EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2")
+EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/699b6595fc47.zip") 
+# EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2")
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
@@ -239,26 +241,21 @@ class build(_build):
                 log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
             else:
                 try:
+                    # Can use BZ2 or zip, right now using zip
+                    # log.info("Fetching Eigen...")
+                    # urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
+                    # log.info("Unpacking Eigen...")
+                    # tfile = tarfile.open("eigen.tar.bz2", 'r')
+                    # tfile.extractall('eigen')
                     log.info("Fetching Eigen...")
-                    urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
+                    urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
                     log.info("Unpacking Eigen...")
-                    tfile = tarfile.open("eigen.tar.bz2", 'r')
-                    tfile.extractall('eigen')
+                    zfile = zipfile.ZipFile("eigen.zip", 'r')
+                    zfile.extractall('eigen')
                     #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
                     EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
                 except:
                     raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
-
-            # Previously, we used mercurial to download the latest version as follows.
-            # This is saved here in case we need to revert to this behavior to get
-            # the most recent branch of Eigen.
-            # elif HG_PATH is None:
-            #     raise DistutilsSetupError("`hg` not found.")
-            # else:
-            #     hg_cmd = [HG_PATH, "clone", "https://bitbucket.org/eigen/eigen"]
-            #     log.info("Cloning Eigen...")
-            #     if run_process(hg_cmd) != 0:
-            #         raise DistutilsSetupError(" ".join(hg_cmd))
 
             os.environ["CXX"] = CXX_PATH
             os.environ["CC"] = CC_PATH
