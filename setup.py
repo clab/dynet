@@ -240,33 +240,22 @@ class build(_build):
             if os.path.isdir(EIGEN3_INCLUDE_DIR):
                 log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
             else:
-                # try:
-                # Can use BZ2 or zip, right now using zip
-                # log.info("Fetching Eigen...")
-                # urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
-                # log.info("Unpacking Eigen...")
-                # tfile = tarfile.open("eigen.tar.bz2", 'r')
-                # tfile.extractall('eigen')
-                log.info("Fetching Eigen...")
-                urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
-                log.info("Unpacking Eigen...")
-                zfile = zipfile.ZipFile("eigen.zip", 'r')
-                zfile.extractall('eigen')
-                #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
-                EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
-                # except:
-                #     raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
-
-            # Previously, we used mercurial to download the latest version as follows.
-            # This is saved here in case we need to revert to this behavior to get
-            # the most recent branch of Eigen.
-            # elif HG_PATH is None:
-            #     raise DistutilsSetupError("`hg` not found.")
-            # else:
-            #     hg_cmd = [HG_PATH, "clone", "https://bitbucket.org/eigen/eigen"]
-            #     log.info("Cloning Eigen...")
-            #     if run_process(hg_cmd) != 0:
-            #         raise DistutilsSetupError(" ".join(hg_cmd))
+                try:
+                    # Can use BZ2 or zip, right now using zip
+                    # log.info("Fetching Eigen...")
+                    # urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
+                    # log.info("Unpacking Eigen...")
+                    # tfile = tarfile.open("eigen.tar.bz2", 'r')
+                    # tfile.extractall('eigen')
+                    log.info("Fetching Eigen...")
+                    urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
+                    log.info("Unpacking Eigen...")
+                    zfile = zipfile.ZipFile("eigen.zip", 'r')
+                    zfile.extractall('eigen')
+                    #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
+                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
+                except:
+                    raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
 
             os.environ["CXX"] = CXX_PATH
             os.environ["CC"] = CC_PATH

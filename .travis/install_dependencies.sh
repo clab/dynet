@@ -46,7 +46,7 @@ if [[ "$BACKEND" == cuda ]]; then
 fi
 
 # Eigen
-hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
+hg clone https://bitbucket.org/eigen/eigen/ -r 699b659
 cd eigen
 mkdir build && cd build
 cmake ..
