@@ -2,6 +2,7 @@ import distutils.sysconfig
 import logging as log
 import platform
 import tarfile
+import zipfile
 import sys
 from distutils.command.build import build as _build
 from distutils.command.build_py import build_py as _build_py
@@ -117,7 +118,8 @@ if (EIGEN3_INCLUDE_DIR is not None and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
 
-EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2")
+EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/699b6595fc47.zip") 
+# EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2")
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
@@ -239,11 +241,17 @@ class build(_build):
                 log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
             else:
                 try:
+                    # Can use BZ2 or zip, right now using zip
+                    # log.info("Fetching Eigen...")
+                    # urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
+                    # log.info("Unpacking Eigen...")
+                    # tfile = tarfile.open("eigen.tar.bz2", 'r')
+                    # tfile.extractall('eigen')
                     log.info("Fetching Eigen...")
-                    urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
+                    urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
                     log.info("Unpacking Eigen...")
-                    tfile = tarfile.open("eigen.tar.bz2", 'r')
-                    tfile.extractall('eigen')
+                    zfile = zipfile.open("eigen.zip", 'r')
+                    zfile.extractall('eigen')
                     #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
                     EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
                 except:
