@@ -35,10 +35,7 @@ template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
-  if(forward_inplaced())
-    ; // pass, already sharing pointers
-  else
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  // (read-only inplaced opearation) pass, already sharing pointers
 }
 
 template<class MyDevice>
@@ -49,10 +46,7 @@ void Reshape::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device, dEdf.mem_pool);
-  if(backward_inplaced())
-    ; // pass, already accumulated into it
-  else
-    dEdxi.tvec().device(*dev.edevice) += reshaped.tvec();
+  // (read-only inplaced opearation) pass, already accumulated into it
 }
 DYNET_NODE_INST_DEV_IMPL(Reshape)
 
@@ -73,10 +67,7 @@ Dim Identity::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Identity::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  if(forward_inplaced())
-    ; // pass, already accumulated into it
-  else
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  // (read-only inplaced opearation) pass, already sharing pointers
 }
 
 template<class MyDevice>
@@ -86,10 +77,7 @@ void Identity::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  if(backward_inplaced())
-    ; // pass, already accumulated into it
-  else
-    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+  // (read-only inplaced opearation) pass, already accumulated into it
 }
 DYNET_NODE_INST_DEV_IMPL(Identity)
 
@@ -112,10 +100,7 @@ Dim NoBackprop::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void NoBackprop::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  if(forward_inplaced())
-    ; // pass, already accumulated into it
-  else
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  // (read-only inplaced opearation) pass, already sharing pointers
 }
 
 template<class MyDevice>
@@ -148,10 +133,7 @@ Dim FlipGradient::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void FlipGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  if(forward_inplaced())
-    ; // pass, already accumulated into it
-  else
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  // (read-only inplaced opearation) pass, already sharing pointers
 }
 
 template<class MyDevice>
