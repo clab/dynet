@@ -258,7 +258,7 @@ void BatchedExecutionEngine::combine_tensors(
 #if HAVE_CUDA
       locs[i] = my_src; // src
       locs[i + TRG] = dest;
-      locs[i + LEN] = static_cast<float*>(sz);
+      locs[i + LEN] = reinterpret_cast<float*>(sz);
       if (max_length < sz) max_length = sz;
       i++;
 #endif
