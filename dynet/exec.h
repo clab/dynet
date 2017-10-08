@@ -75,7 +75,8 @@ class BatchedExecutionEngine : public ExecutionEngine {
   void garbage_collect();
  private:
   const Tensor& incremental_forward_no_update(VariableIndex i, int autobatch_strategy);
-  void combine_tensors(std::vector<VariableIndex> batch_ids, int aid, Tensor &tout);
+  void combine_tensors(const std::vector<VariableIndex>& batch_ids,
+                       int aid, Tensor &tout);
   void accumulate_tensors(const Tensor& my_ndEdf,
                           const std::vector<VariableIndex>& batch_ids,
                           int aid);
