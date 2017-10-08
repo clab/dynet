@@ -1064,10 +1064,31 @@ cdef class ParameterCollection: # {{{
         loader.populate(self.thisptr, _key)
         del loader
 
-    # TODO: for debug, remove
-    cpdef pl(self): return self.thisptr.parameters_list().size()
+    cpdef parameters_list(self):
+        """Returns list of all parameters in the collection
+        
+        Returns:
+            (list): All dy.Parameters in the collection
+        """
+        cdef vector[CParameterStorage*] pl = self.thisptr.parameters_list()
+        parameters_list = []
+        for p in pl:
+            parameters_list.append(Parameters.wrap_ptr(CParameters(p)))
+        return parameters_list
 
-    cpdef parameters_from_numpy(self, array,string name="", device=""):
+    cpdef lookup_parameters_list(self):
+        """Returns list of all looku parameters in the collection
+        
+        Returns:
+            (list): All dy.LookupParameters in the collection
+        """
+        cdef vector[CLookupParameterStorage*] pl = self.thisptr.lookup_parameters_list()
+        lookup_parameters_list = []
+        for p in pl:
+            lookup_parameters_list.append(LookupParameters.wrap_ptr(CLookupParameters(p)))
+        return lookup_parameters_list
+
+    cpdef parameters_from_numpy(self, array, name="", device=""):
         """Create parameter from numpy array
         
         Args:
@@ -1081,16 +1102,17 @@ cdef class ParameterCollection: # {{{
         dim = array.shape
         cdef CDevice* dev
         cdef CParameters p
+        cdef string _name = <string> name.encode("utf8")
         if str(device) != "":
             dev = c_str2dev(device)
-            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name, dev)
+            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name, dev)
         else:
-            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name)
+            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
     # TODO this may fail with >2 dim arrays.
-    cpdef lookup_parameters_from_numpy(self, array, string name="", device=""):
+    cpdef lookup_parameters_from_numpy(self, array, name="", device=""):
         """Create LookupParameters from numpy array
         
         Args:
@@ -1106,15 +1128,16 @@ cdef class ParameterCollection: # {{{
         init = NumpyInitializer(array.T)
         cdef CDevice* dev
         cdef CLookupParameters p
+        cdef string _name = <string> name.encode("utf8")
         if str(device) != "":
             dev = c_str2dev(device)
-            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name, dev)
+            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), _name, dev)
         else:
-            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name)
+            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), _name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None, string name="", device=""):
+    cpdef add_parameters(self, dim, PyInitializer init=None, name="", device=""):
         """Add a parameter to the ParameterCollection
         
         Args:
@@ -1132,18 +1155,19 @@ cdef class ParameterCollection: # {{{
         cdef CParameters p
         cdef CParameterInit *initializer
         cdef CDevice *dev
+        cdef string _name = <string> name.encode("utf8")
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
         if str(device) != "":
             dev = c_str2dev(device)
-            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name, dev)
+            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name, dev)
         else:
-            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
+            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name="", device=""):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, name="", device=""):
         """Add a lookup parameter to the ParameterCollection
         
         Args:
@@ -1161,15 +1185,16 @@ cdef class ParameterCollection: # {{{
         cdef CDevice *dev
         cdef CLookupParameters p
         cdef int nids = dim[0]
+        cdef string _name = <string> name.encode("utf8")
         rest = tuple(dim[1:])
         if init is None:
             init = GlorotInitializer(True)
         initializer = init.initializer
         if str(device) != "":
             dev = c_str2dev(device)
-            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name, dev)
+            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), _name, dev)
         else:
-            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name)
+            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), _name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
@@ -1443,16 +1468,17 @@ class DeviceInfo(object):
         self.type = dtype
         self.id = id
 
-cpdef get_device_info(string name):
+cpdef get_device_info(name):
     cdef CDevice *d = c_str2dev(name)
     # TODO represent type (enum in cython)
     # TODO enable query of memory size?
     return DeviceInfo(d.name, d.device_id, -1)
 
 
-cdef CDevice* c_str2dev(string name) except NULL:
+cdef CDevice* c_str2dev(name) except NULL:
     cdef CDevice* dev
-    dev = c_get_device_manager().get_global_device(name)
+    cdef string _name = <string> name.encode("utf8")
+    dev = c_get_device_manager().get_global_device(_name)
     return dev
 # }}}
 
@@ -2470,7 +2496,11 @@ cpdef Expression flip_gradient(Expression x):
 cpdef Expression cdiv(Expression x, Expression y):
     """Componentwise division
     
-    Do a componentwise division where each value is equal to :math:`\\frac{x_i}{y_i}`
+    Divide an expressions component-wise by another, broadcasting dimensions (currently only of the second expression!) if necessary as follows:
+          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+          - Now, every dimensions is required to have matching size, or the dim size of the right expression must equal 1 (in which case it will be broadcasted)
+          - In the same way, the batch sizes must match, or the batch size of the right expression must equal 1 in which case it will be broadcasted
+          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
     
     Args:
         x (dynet.Expression): The first input expression
@@ -2484,7 +2514,11 @@ cpdef Expression cdiv(Expression x, Expression y):
 cpdef Expression cmult(Expression x, Expression y):
     """Componentwise multiplication
     
-    Do a componentwise multiplication where each value is equal to :math:`x_i\\times y_i`
+    Multiply two expressions component-wise, broadcasting dimensions if necessary as follows:
+          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+          - Now, every dimensions is required to have matching size, or one of the dimensions must equal 1 (in which case it will be broadcasted)
+          - In the same way, the batch dimension must match, or equal 1 in which case it will be broadcasted
+          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
     
     Args:
         x (dynet.Expression): The first input expression
@@ -3138,7 +3172,6 @@ cpdef Expression mean_elems(Expression x):
     """Mean of elements of the tensor
     
     Computes the mean :math:`\\frac 1 n \sum_ix_i` of all the elements of each minibatch.
-
     Args:
         x (dynet.Expression): Input expression
     
@@ -3151,8 +3184,6 @@ cpdef Expression mean_batches(Expression x):
     """Mean along the batch dimension
     
     Computes the mean :math:`\\frac 1 n \sum_ix_i`  along the batch dimension.
-
-
     Args:
         x (dynet.Expression): Input expression
     
@@ -3165,7 +3196,6 @@ cpdef Expression std_elems(Expression x):
     """Standard deviation of elements of the tensor
     
     Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` of all the elements of each minibatch.
-
     Args:
         x (dynet.Expression): Input expression
     
@@ -3178,8 +3208,6 @@ cpdef Expression std_batches(Expression x):
     """Standard deviation along the batch dimension
     
     Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}`  along the batch dimension.
-
-
     Args:
         x (dynet.Expression): Input expression
     
@@ -3188,23 +3216,24 @@ cpdef Expression std_batches(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_std_batches(x.c()))
 
-cpdef Expression std_dim(Expression x, unsigned d):
+cpdef Expression std_dim(Expression x, list d, bool b):
     """Standard deviation along an arbitrary dimension
     
-    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` along an arbitrary dimension.
+    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` along arbitrary dimensions.
 
 
     Args:
         x (dynet.Expression): Input expression
-        d (int): Dimension along which to reduce
+        d (int): Dimensions along which to reduce
+        b (bool): Whether to include batch dimension
     
     Returns:
-        dynet.Expression: An expression with one less dimension
+        dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_std_dim(x.c(), d))
+    return Expression.from_cexpr(x.cg_version, c_std_dim(x.c(), d, b))
 
 
-cpdef Expression mean_dim(Expression x, unsigned d):
+cpdef Expression mean_dim(Expression x, list d, bool b):
     """Mean along an arbitrary dimension
     
     Computes the mean :math:`\\frac 1 n \sum_ix_i`  along an arbitrary dimension.
@@ -3212,18 +3241,18 @@ cpdef Expression mean_dim(Expression x, unsigned d):
 
     Args:
         x (dynet.Expression): Input expression
-        d (int): Dimension along which to reduce
+        d (int): Dimensions along which to reduce
+        b (bool): Whether to include batch dimension
     
     Returns:
-        dynet.Expression: An expression with one less dimension
+        dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_mean_dim(x.c(), d))
+    return Expression.from_cexpr(x.cg_version, c_mean_dim(x.c(), d, b))
 
 cpdef Expression moment_elems(Expression x, unsigned r):
     """Statistical moment of elements of the tensor
     
     Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r` of all the elements of each minibatch.
-
     Args:
         x (dynet.Expression): Input expression
         r (int): Moment order
@@ -3237,8 +3266,6 @@ cpdef Expression moment_batches(Expression x, unsigned r):
     """Statistical moment along the batch dimension
     
     Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along the batch dimension.
-
-
     Args:
         x (dynet.Expression): Input expression
         r (int): Moment order
@@ -3248,7 +3275,7 @@ cpdef Expression moment_batches(Expression x, unsigned r):
     """
     return Expression.from_cexpr(x.cg_version, c_moment_batches(x.c(), r))
 
-cpdef Expression moment_dim(Expression x, unsigned d, unsigned r):
+cpdef Expression moment_dim(Expression x, list d, unsigned r, bool b):
     """Statistical moment along an arbitrary dimension
     
     Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along an arbitrary dimension.
@@ -3256,13 +3283,14 @@ cpdef Expression moment_dim(Expression x, unsigned d, unsigned r):
 
     Args:
         x (dynet.Expression): Input expression
-        d (int): Dimension along which to reduce
+        d (list): Dimension along which to reduce
         r (int): Moment order
+        b (bool): Whether to include batch dimension
     
     Returns:
-        dynet.Expression: An expression with one less dimension
+        dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_moment_dim(x.c(), d, r))
+    return Expression.from_cexpr(x.cg_version, c_moment_dim(x.c(), d, r, b))
 
 #expr-opt
 cpdef Expression fold_rows(Expression x, unsigned nrows=2):
@@ -3287,7 +3315,7 @@ cpdef Expression fold_rows(Expression x, unsigned nrows=2):
 cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0):
     """Pairwise rank loss
     
-    A margin-based loss, where every margin violation for each pair of values is penalized: :math:`\sum_i \max(x_i-y_i+m, 0)`
+    A margin-based loss, where every margin violation for each pair of values is penalized: :math:`\sum_i \max(m - x_i + y_i, 0)`
     
     Args:
         x (dynet.Expression): The first input expression

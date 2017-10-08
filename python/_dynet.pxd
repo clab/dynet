@@ -75,6 +75,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CParameters "dynet::Parameter":
         CParameters()
+        CParameters(CParameterStorage* p)
         CParameterStorage& get_storage()
         void zero()
         void set_updated(bool b)
@@ -87,6 +88,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
+        CLookupParameters(CLookupParameterStorage* p)
         CLookupParameterStorage& get_storage()
         CDim dim
         void initialize(unsigned index, const vector[float]& val)
@@ -101,15 +103,16 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CModel()
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d)
-        CParameters add_parameters(CDim& d, CParameterInit initializer, string name)
-        CParameters add_parameters(CDim& d, CParameterInit initializer, string name, CDevice *device)
+        CParameters add_parameters(CDim& d, CParameterInit initializer, string name) except +
+        CParameters add_parameters(CDim& d, CParameterInit initializer, string name, CDevice *device) except +
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
-        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name)
-        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, CDevice *device)
-        vector[CParameterStorage] parameters_list()
-        CModel add_subcollection(string name)
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name) except +
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, CDevice *device) except +
+        vector[CParameterStorage*] parameters_list()
+        vector[CLookupParameterStorage*] lookup_parameters_list()
+        CModel add_subcollection(string name) except +
         string get_fullname()
-        int parameter_count()
+        int parameter_count() except +
 
 cdef extern from "dynet/io.h" namespace "dynet":
     cdef cppclass CTextFileSaver "dynet::TextFileSaver":
@@ -285,12 +288,13 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_op_scalar_mul "dynet::operator*" (CExpression& x, float y) except + #
     CExpression c_op_scalar_div "dynet::operator/" (CExpression& x, float y) except + #
     CExpression c_op_scalar_sub "dynet::operator-" (float y, CExpression& x) except + #
-
+    
     CExpression c_bmax "dynet::max" (CExpression& x, CExpression& y) except + #
     CExpression c_bmin "dynet::min" (CExpression& x, CExpression& y) except + #
 
     CExpression c_cdiv "dynet::cdiv" (CExpression& x, CExpression& y) except + #
     CExpression c_cmult "dynet::cmult" (CExpression& x, CExpression& y) except + #
+
     CExpression c_colwise_add "dynet::colwise_add" (CExpression& x, CExpression& bias) except + #
 
     CExpression c_tanh "dynet::tanh" (CExpression& x) except + #
@@ -303,7 +307,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_log "dynet::log" (CExpression& x) except + #
     CExpression c_lgamma "dynet::lgamma" (CExpression& x) except + #
     CExpression c_logistic "dynet::logistic" (CExpression& x) except + #
-    CExpression c_rectify "dynet::rectify" (CExpression& x) except + #
+    CExpression c_rectify "dynet::rectify" (CExpression& x) except + #        
     CExpression c_hinge "dynet::hinge" (CExpression& x, unsigned index, float m) except + #
     CExpression c_hinge "dynet::hinge" (CExpression& x, vector[unsigned] vs, float m) except + #
     CExpression c_hinge_dim "dynet::hinge_dim" (CExpression& x, vector[unsigned] index, unsigned d, float m) except + #
@@ -356,11 +360,11 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_sum_elems "dynet::sum_elems" (CExpression& x) except +
     CExpression c_moment_batches "dynet::moment_batches" (CExpression& x, unsigned r) except +
     CExpression c_moment_elems "dynet::moment_elems" (CExpression& x, unsigned r) except +
-    CExpression c_moment_dim "dynet::moment_dim" (CExpression& x, unsigned d, unsigned r) except +
+    CExpression c_moment_dim "dynet::moment_dim" (CExpression& x, vector[unsigned] dims, unsigned r, bool b) except +
     CExpression c_mean_elems "dynet::mean_elems" (CExpression& x) except +
     CExpression c_mean_batches "dynet::mean_batches" (CExpression& x) except +
-    CExpression c_mean_dim "dynet::mean_dim" (CExpression& x, unsigned d) except +
-    CExpression c_std_dim "dynet::std_dim" (CExpression& x, unsigned d) except +
+    CExpression c_mean_dim "dynet::mean_dim" (CExpression& x, vector[unsigned] dims, bool b) except +
+    CExpression c_std_dim "dynet::std_dim" (CExpression& x, vector[unsigned] dims, bool b) except +
     CExpression c_std_elems "dynet::std_elems" (CExpression& x) except +
     CExpression c_std_batches "dynet::std_batches" (CExpression& x) except +
 
@@ -415,21 +419,21 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
 
     cdef cppclass CRNNBuilder "dynet::RNNBuilder":
         void new_graph(CComputationGraph &cg, bool update)
-        void start_new_sequence(vector[CExpression] ces)
+        void start_new_sequence(vector[CExpression] ces) except +
         CExpression add_input(CExpression &x) except +
         CExpression add_input(CRNNPointer prev, CExpression &x) except +
-        CExpression set_h(CRNNPointer prev, vector[CExpression] ces)
-        CExpression set_s(CRNNPointer prev, vector[CExpression] ces)
+        CExpression set_h(CRNNPointer prev, vector[CExpression] ces) except +
+        CExpression set_s(CRNNPointer prev, vector[CExpression] ces) except +
         void rewind_one_step()
         CExpression back()
-        vector[CExpression] final_h()
-        vector[CExpression] final_s()
-        vector[CExpression] get_h(CRNNPointer i)
-        vector[CExpression] get_s(CRNNPointer i)
+        vector[CExpression] final_h() except +
+        vector[CExpression] final_s() except +
+        vector[CExpression] get_h(CRNNPointer i) except +
+        vector[CExpression] get_s(CRNNPointer i) except +
         CRNNPointer state()
-        void set_dropout(float f)
-        void disable_dropout()
-        CModel get_parameter_collection()
+        void set_dropout(float f) except +
+        void disable_dropout() except +
+        CModel get_parameter_collection() except +
 
 cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):

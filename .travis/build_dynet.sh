@@ -18,7 +18,7 @@ else  # pip
   fi
   if [[ "$TRAVIS_OS_NAME" == linux ]]; then
     docker build --rm -t "dynet-manylinux1-${BUILD_ARCH}-builder" -f "docker/Dockerfile-$BUILD_ARCH" .
-    docker run -e PYVER -e TRAVIS_OS_NAME -e CONDA_PACKAGES -e TRAVIS_BUILD_DIR=/build -v "$TRAVIS_BUILD_DIR":/build --rm "dynet-manylinux1-${BUILD_ARCH}-builder" /root/.travis/build_manylinux_wheel.sh
+    docker run -e PYVER -e BUILD_ARCH -e TRAVIS_BUILD_DIR=/build -v "$TRAVIS_BUILD_DIR":/build --rm "dynet-manylinux1-${BUILD_ARCH}-builder" /root/.travis/build_linux_wheel.sh
   elif [[ "$TRAVIS_OS_NAME" == osx ]]; then
     .travis/build_macos_wheel.sh
   fi

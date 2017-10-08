@@ -536,10 +536,10 @@ void VanillaLSTMBuilder::disable_dropout() {
 CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), weightnoise_std(0), dropout_masks_valid(false) { }
 
 CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder(unsigned layers,
-						     unsigned input_dim,
-						     unsigned hidden_dim,
-						     ParameterCollection& model)
-	    : layers(layers), input_dim(input_dim), hid(hidden_dim), weightnoise_std(0), dropout_masks_valid(false){
+                 unsigned input_dim,
+                 unsigned hidden_dim,
+                 ParameterCollection& model)
+      : layers(layers), input_dim(input_dim), hid(hidden_dim), weightnoise_std(0), dropout_masks_valid(false){
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("compact-vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -672,8 +672,8 @@ Expression CompactVanillaLSTMBuilder::add_input_impl(int prev, const Expression&
         i_h_tm1 = h0[i];
         i_c_tm1 = c0[i];
       } else {
-	i_h_tm1 = zeros(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
-	i_c_tm1 = i_h_tm1;
+  i_h_tm1 = zeros(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
+  i_c_tm1 = i_h_tm1;
       }
     } else {  // t > 0
       i_h_tm1 = h[prev][i];

@@ -96,6 +96,10 @@ class TestParameters(unittest.TestCase):
         self.trainer = dy.SimpleSGDTrainer(self.m, learning_rate=0.1)
         self.trainer.set_clip_threshold(-1)
 
+    def test_list(self):
+        [p1, p2] = self.m.parameters_list()
+        [lp1, lp2] = self.m.lookup_parameters_list()
+
     def test_as_array(self):
         # Values
         self.p1.as_array()
