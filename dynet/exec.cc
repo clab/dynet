@@ -273,11 +273,14 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
   else { throw std::runtime_error("Bad device type"); }
 }
 
-void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<VariableIndex> batch_ids, int ai) {
+void BatchedExecutionEngine::accumulate_tensors(
+    const Tensor& tin,
+    const std::vector<VariableIndex>& batch_ids,
+    int ai) {
   if (tin.device->type == DeviceType::CPU) {
     size_t tot_arg = 0;
     Tensor temp_ndEdf;
-    for(auto curr_node : batch_ids) {
+    for(const auto curr_node : batch_ids) {
       VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
       temp_ndEdf = ndEdfs[my_aid];
       temp_ndEdf.v = tin.v + tot_arg;
@@ -293,7 +296,7 @@ void BatchedExecutionEngine::accumulate_tensors(const Tensor& tin, std::vector<V
     const int LEN = batch_ids.size()*2;
     float* src = tin.v;
     // copy
-    for (auto id : batch_ids) {
+    for (const auto id : batch_ids) {
       const size_t sz = node2size[cg.nodes[id]->args[ai]];
 
       locs[i] = src; // src
