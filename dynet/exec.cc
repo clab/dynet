@@ -20,13 +20,14 @@ ExecutionEngine::ExecutionEngine(const ComputationGraph& cg)
 
 ExecutionEngine::~ExecutionEngine() {}
 
-vector<const Tensor*> ExecutionEngine::forward(std::vector<VariableIndex> is) {
+vector<const Tensor*> ExecutionEngine::forward(
+    const std::vector<VariableIndex>& node_list) {
   invalidate();
-  VariableIndex i=*(std::max_element(is.begin(),is.end()));
-  incremental_forward(i);
-  vector<const Tensor*> ret;
-  for (auto i : is) {
-      ret.push_back(&(get_value(i)));
+  VariableIndex max_node=*std::max_element(node_list.begin(),node_list.end());
+  incremental_forward(max_node);
+  vector<const Tensor*> ret(node_list.size());
+  for (unsigned i = 0; i < ret.size(); ++i) {
+    ret[i] = &(get_value(node_list[i]));
   }
   return ret;
 }
