@@ -110,7 +110,7 @@ if CFLAGS is not None:
     cfg_vars["CFLAGS"] = CFLAGS.replace("-Wstrict-prototypes", "")
 
 # For Cython extensions
-LIBRARIES = ["dynet_static"]
+LIBRARIES = ["dynet"]
 LIBRARY_DIRS = ["."]
 COMPILER_ARGS = []
 EXTRA_LINK_ARGS = []
