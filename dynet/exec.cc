@@ -220,30 +220,35 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
 
 // copies the list of tensors into a single contig tensor (tout).
 // allocates the memory for tout.
-void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_ids, int aid, Tensor &tout) {
-
+void BatchedExecutionEngine::combine_tensors(
+    const std::vector<VariableIndex>& batch_ids,
+    int aid,
+    Tensor &tout) {
   AlignedMemoryPool *mempool = tout.device->pools[(int)DeviceMempool::FXS];
-  // determine needed memory
+  // Determine needed memory for tout and get list of nodes corresponding to
+  // specified argument.
   unsigned total_dsize = 0;
-  for(auto & id : batch_ids) {
-    id = cg.nodes[id]->args[aid];
-    total_dsize += node2size[id];
+  vector<VariableIndex> arg_nodes(batch_ids.size());
+  for (unsigned i = 0; i < batch_ids.size(); ++i) {
+    const auto nid = cg.nodes[batch_ids[i]]->args[aid];
+    total_dsize += node2size[nid];
+    arg_nodes[i] = nid;
   }
   tout.d = Dim({total_dsize});
 
-  // allocate
+  // allocate memory for tout
   float* dest = static_cast<float*>(mempool->allocate(total_dsize * sizeof(float)));
 
 #if HAVE_CUDA
-  vector<float*> locs(batch_ids.size()*3);
+  vector<float*> locs(batch_ids.size() * 3);
   unsigned i = 0;
   unsigned max_length = 0;
   const int TRG = batch_ids.size();
-  const int LEN = batch_ids.size()*2;
+  const int LEN = batch_ids.size() * 2;
 #endif
   tout.v = dest;
   // copy
-  for (auto id : batch_ids) {
+  for (const auto id : arg_nodes) {
     const size_t sz = node2size[id];
 
     float* my_src = batches[node2batch[id]].nfx.v + node2offset[id];
@@ -251,26 +256,30 @@ void BatchedExecutionEngine::combine_tensors(std::vector<VariableIndex> batch_id
       memcpy(dest, my_src, sz * sizeof(float));
     } else if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
-        locs[i] = my_src; // src
-        locs[i+TRG] = dest;
-        locs[i+LEN] = (float*)sz;
-        if (max_length < sz) max_length=sz;
-        i++;
+      locs[i] = my_src; // src
+      locs[i + TRG] = dest;
+      locs[i + LEN] = static_cast<float*>(sz);
+      if (max_length < sz) max_length = sz;
+      i++;
 #endif
     } else { throw std::runtime_error("Bad device type"); }
     dest += sz; // pointer arith
   }
   if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
-  size_t req_sz = batch_ids.size()*3*sizeof(float*);
-  float** srcs = static_cast<float**>(mempool->allocate(req_sz));
-  float** trgs = srcs + TRG;
-  float** lens = srcs + LEN;
-  CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
-  gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
+    size_t req_sz = batch_ids.size() * 3 * sizeof(float*);
+    float** srcs = static_cast<float**>(mempool->allocate(req_sz));
+    float** trgs = srcs + TRG;
+    float** lens = srcs + LEN;
+    CUDA_CHECK(cudaMemcpyAsync(srcs,
+                               &(locs)[0],
+                               locs.size() * sizeof(float**),
+                               cudaMemcpyHostToDevice));
+    gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
-  } else if (tout.device->type == DeviceType::CPU) {}
-  else { throw std::runtime_error("Bad device type"); }
+  } else if (tout.device->type == DeviceType::CPU) {
+    ; // Nothing more to do, memory was already copied.
+  } else { throw std::runtime_error("Bad device type"); }
 }
 
 void BatchedExecutionEngine::accumulate_tensors(
