@@ -251,6 +251,16 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   // for(VariableIndex vi = (VariableIndex)0; vi <= backward_computed; ++vi) cerr << "ndEdfs[" << vi << "] == " << print_vec(as_vector(ndEdfs[vi])) << endl;
 }
 
+// To minimize the number of host-to-device memory copies, we put a bunch of
+// data in contiguous memory. Since we need to pass both pointers and sizes,
+// we use this union.
+union CopyArgs {
+  float* ptr;
+  std::size_t n;
+};
+static_assert(sizeof(float*) == sizeof(std::size_t),
+              "Pointer size must be the same size as size_t");
+
 // copies the list of tensors into a single contig tensor (tout).
 // allocates the memory for tout.
 void BatchedExecutionEngine::combine_tensors(
@@ -270,14 +280,15 @@ void BatchedExecutionEngine::combine_tensors(
   tout.d = Dim({total_dsize});
 
   // allocate memory for tout
-  float* dest = static_cast<float*>(mempool->allocate(total_dsize * sizeof(float)));
+  float* dest =
+      static_cast<float*>(mempool->allocate(total_dsize * sizeof(float)));
 
 #if HAVE_CUDA
-  vector<float*> locs(batch_ids.size() * 3);
-  unsigned i = 0;
-  unsigned max_length = 0;
-  const int TRG = batch_ids.size();
-  const int LEN = batch_ids.size() * 2;
+  vector<CopyArgs> locs(batch_ids.size() * 3);
+  size_t i = 0;
+  size_t max_length = 0;
+  const size_t TRG = batch_ids.size();
+  const size_t LEN = batch_ids.size() * 2;
 #endif
   tout.v = dest;
   // copy
@@ -289,9 +300,9 @@ void BatchedExecutionEngine::combine_tensors(
       memcpy(dest, my_src, sz * sizeof(float));
     } else if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
-      locs[i] = my_src; // src
-      locs[i + TRG] = dest;
-      locs[i + LEN] = (float*)sz;
+      locs[i].ptr = my_src;
+      locs[i + TRG].ptr = dest;
+      locs[i + LEN].n = sz;
       if (max_length < sz) max_length = sz;
       i++;
 #endif
@@ -300,13 +311,14 @@ void BatchedExecutionEngine::combine_tensors(
   }
   if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
-    size_t req_sz = batch_ids.size() * 3 * sizeof(float*);
-    float** srcs = static_cast<float**>(mempool->allocate(req_sz));
-    float** trgs = srcs + TRG;
-    float** lens = srcs + LEN;
-    CUDA_CHECK(cudaMemcpyAsync(srcs,
+    size_t req_sz = batch_ids.size() * 3 * sizeof(CopyArgs);
+    void* basemem = mempool->allocate(req_sz);
+    float** srcs = static_cast<float**>(basemem);
+    float** trgs = static_cast<float**>(basemem) + TRG;
+    std::size_t* lens = static_cast<std::size_t*>(basemem) + LEN;
+    CUDA_CHECK(cudaMemcpyAsync(basemem,
                                &(locs)[0],
-                               locs.size() * sizeof(float**),
+                               locs.size() * sizeof(CopyArgs),
                                cudaMemcpyHostToDevice));
     gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
@@ -326,34 +338,39 @@ void BatchedExecutionEngine::accumulate_tensors(
       VariableIndex my_aid = cg.nodes[curr_node]->args[ai];
       temp_ndEdf = ndEdfs[my_aid];
       temp_ndEdf.v = tin.v + tot_arg;
-      TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]], temp_ndEdf);
+      TensorTools::accumulate(ndEdfs[cg.nodes[curr_node]->args[ai]],
+                              temp_ndEdf);
       tot_arg += node2size[my_aid];
     }
   } else {
 #if HAVE_CUDA
-    vector<float*> locs(batch_ids.size()*3);
-    unsigned i = 0;
-    unsigned max_length = 0;
-    const int TRG = batch_ids.size();
-    const int LEN = batch_ids.size()*2;
+    vector<CopyArgs> locs(batch_ids.size() * 3);
+    size_t i = 0;
+    size_t max_length = 0;
+    const size_t TRG = batch_ids.size();
+    const size_t LEN = batch_ids.size() * 2;
     float* src = tin.v;
     // copy
     for (const auto id : batch_ids) {
       const size_t sz = node2size[cg.nodes[id]->args[ai]];
 
-      locs[i] = src; // src
-      locs[i+TRG] = ndEdfs[cg.nodes[id]->args[ai]].v;
-      locs[i+LEN] = (float*)sz;
+      locs[i].ptr = src; // src
+      locs[i + TRG].ptr = ndEdfs[cg.nodes[id]->args[ai]].v;
+      locs[i + LEN].n = sz;
       if (max_length < sz) max_length = sz;
       i++;
       src += sz; // pointer arith
     }
-    size_t req_sz = batch_ids.size()*3*sizeof(float*);
+    size_t req_sz = batch_ids.size() * 3 * sizeof(CopyArgs);
     AlignedMemoryPool *mempool = tin.device->pools[(int)DeviceMempool::DEDFS];
-    float** srcs = static_cast<float**>(mempool->allocate(req_sz));
-    float** trgs = srcs + TRG;
-    float** lens = srcs + LEN;
-    CUDA_CHECK(cudaMemcpyAsync(srcs, &(locs)[0], locs.size()*sizeof(float**), cudaMemcpyHostToDevice));
+    void* basemem = mempool->allocate(req_sz);
+    float** srcs = static_cast<float**>(basemem);
+    float** trgs = static_cast<float**>(basemem) + TRG;
+    std::size_t* lens = static_cast<std::size_t*>(basemem) + LEN;
+    CUDA_CHECK(cudaMemcpyAsync(basemem,
+                               &(locs)[0],
+                               locs.size() * sizeof(CopyArgs),
+                               cudaMemcpyHostToDevice));
     gpu::parallel_accumulate(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
   }
@@ -364,7 +381,11 @@ void BatchedExecutionEngine::invalidate() {
   num_batches_evaluated = 0;
   backward_computed = 0;
   garbage_collect();
-  node2offset.clear(); node2size.clear(); node2batch.clear(); ndEdfs.clear(); nfx_cache.clear();
+  node2offset.clear();
+  node2size.clear();
+  node2batch.clear();
+  ndEdfs.clear();
+  nfx_cache.clear();
 }
 
 void BatchedExecutionEngine::invalidate(unsigned i) {
@@ -382,7 +403,8 @@ const Tensor& BatchedExecutionEngine::forward(VariableIndex i) {
 }
 
 const Tensor& BatchedExecutionEngine::get_value(VariableIndex i) {
-  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::get_value()");
+  DYNET_ASSERT(i < cg.nodes.size(),
+      "Out-of-bounds variable access in BatchedExecutionEngine::get_value()");
   if (i >= num_nodes_evaluated) {
     incremental_forward(i);
   }
@@ -390,9 +412,12 @@ const Tensor& BatchedExecutionEngine::get_value(VariableIndex i) {
 }
 
 const Tensor& BatchedExecutionEngine::get_gradient(VariableIndex i) {
-  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in BatchedExecutionEngine::get_value()");
+  DYNET_ASSERT(i < cg.nodes.size(),
+      "Out-of-bounds variable access in BatchedExecutionEngine::get_value()");
   if (i >= backward_computed) {
-    DYNET_RUNTIME_ERR("Requested gradient for node " << i << ", but backward pass was computed from node " << backward_computed);
+    DYNET_RUNTIME_ERR("Requested gradient for node "
+                      << i << ", but backward pass was computed from node "
+                      << backward_computed);
   }
   return ndEdfs[i];
 }
@@ -404,19 +429,17 @@ const Tensor& BatchedExecutionEngine::incremental_forward() {
 
 void BatchedExecutionEngine::garbage_collect() {
   // free any old memory if this is a new CG
-  for(auto & batch : batches) {
-    if(batch.pseudo_node != nullptr) {
-      delete batch.pseudo_node;
-      batch.pseudo_node = nullptr;
-    }
-    for(size_t i = 0; i < batch.arg_nfxs.size(); ++i) {
-      if(batch.concat[i] != 0) {
+  for (auto & batch : batches) {
+    delete batch.pseudo_node;  // may be nullptr, but that's allowed
+    batch.pseudo_node = nullptr;
+    for (size_t i = 0; i < batch.arg_nfxs.size(); ++i) {
+      if (batch.concat[i] != 0) {
         delete batch.arg_nfxs[i];
         batch.arg_nfxs[i] = nullptr;
       }
     }
   }
-  for(Device* dev : device_manager->get_devices())
+  for (Device* dev : device_manager->get_devices())
     dev->pools[(int)DeviceMempool::FXS]->free();
   batches.clear();
 }
@@ -443,7 +466,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
     // Allocate temporary memory for bookkeeping
     size_t temp_data_size = (uptop1)*4*sizeof(int) + (uptop1psig)*2*sizeof(float);
-    int* node2profid = (int*)malloc(temp_data_size);
+    int* node2profid = (int*)malloc(temp_data_size); // mixed types, so no new[]
     memset(node2profid, 0, temp_data_size);
     int* node2left = node2profid + uptop1;
     int* node2depth = node2left + uptop1;
@@ -628,17 +651,16 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         sig = node->autobatch_sig(cg, sigmap);
         depth_profile_batches[make_pair(depth, sig)].push_back(j); 
       }
-      for(auto & batch_info : depth_profile_batches) {
-        // unbatchable
-        if(batch_info.first.second == 0) {
-          for(auto curr_node : batch_info.second) {
+      for (auto & batch_info : depth_profile_batches) {
+        if (batch_info.first.second == 0) {  // unbatchable
+          for (auto curr_node : batch_info.second) {
             node2batch[curr_node] = batch_id;
             batches[batch_id++].ids.resize(1, curr_node);
           }
-        // batchable
-        } else {
-          for(auto curr_node : batch_info.second)
+        } else {  // batchable
+          for (auto curr_node : batch_info.second) {
             node2batch[curr_node] = batch_id;
+          }
           batches[batch_id++].ids = batch_info.second;
         }
       }
@@ -657,16 +679,15 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
 
     // 3. Based on the batches, allocate the memory, etc
     for(VariableIndex bid = num_batches_evaluated; bid < batch_id; ++bid) {
-
       auto & my_batch = batches[bid];
       auto & nfx = my_batch.nfx;
       auto & batch_ids = my_batch.ids;
 
-      if(batch_ids.size() == 1) {
-
+      if (batch_ids.size() == 1) {
         VariableIndex curr_node = batch_ids[0];
         const Node* node = cg.nodes[curr_node];
-        DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in BatchedExecutionEngine::incremental_forward");
+        DYNET_ASSERT(node->device != nullptr,
+            "Attempt to access null device in BatchedExecutionEngine::incremental_forward");
         // Save the node profile
         nfx.d = node->dim;
         nfx.device = node->device;
@@ -681,13 +702,12 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           if (!node->aux_mem)
             DYNET_RUNTIME_ERR("Ran out of auxiliary memory when allocating for node " << curr_node);
         }
-
-      } else {
-
-        // Set up the configuration of each component node, including pointer differential from the start of the batch
+      } else { // here: batch_ids.size() > 1
+        // Set up the configuration of each component node, including pointer
+        // differential from the start of the batch.
         const Node* node = nullptr;
         size_t tot_main = 0, tot_aux = 0, my_main, my_aux;
-        for(auto curr_node : batch_ids) {
+        for (auto curr_node : batch_ids) {
           node = cg.nodes[curr_node];
           my_main = node2size[curr_node];
           my_aux = node->aux_storage_size();
@@ -696,7 +716,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
           node->aux_mem = (void*)tot_aux;
           tot_aux += my_aux;
         }
-
 
         // Allocate main/auxiliary memory for the batch
         float *head_main = static_cast<float*>(node->device->pools[(int)DeviceMempool::FXS]->allocate(tot_main * sizeof(float)));
@@ -713,30 +732,27 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         // Get the concatenation and pseudo-node info
         my_batch.concat = node->autobatch_concat(cg);
         my_batch.pseudo_node = node->autobatch_pseudo_node(cg, batch_ids);
-		if (my_batch.pseudo_node != nullptr) {
+        if (my_batch.pseudo_node != nullptr) {
           my_batch.pseudo_node->aux_mem = head_aux;
           my_batch.pseudo_node->device = node->device;
-        }
-        else
+        } else {
           cg.nodes[batch_ids[0]]->aux_mem = head_aux;
-
+        }
         // Set the size for the final output
         nfx.device = node->device;
         nfx.mem_pool = DeviceMempool::FXS;
         nfx.d = Dim({(unsigned int)tot_main});
         nfx.v = head_main;
+      }  // batch_ids.size() > 1 condition
+    }  // loop over all batches
 
-      }
-
-    }
-
-    // 4: do the actual execution 
+    // 4: do the actual execution
     Tensor temp_nfx;
     vector<const Tensor*> xs(16), ts(16);
     while(num_batches_evaluated < batch_id) {
       // Read in the stuff for this batch
       auto & my_batch = batches[num_batches_evaluated];
-      if (autobatch_debug_flag) { 
+      if (autobatch_debug_flag) {
         VariableIndex nid = my_batch.ids[0];
         Node* node = cg.nodes[nid];
         current_batch_name = node->as_dummy_string();
@@ -758,7 +774,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         size_t arity = my_batch.concat.size();
         Node* node = my_batch.pseudo_node;
         if(node == nullptr) node = cg.nodes[my_batch.ids[0]];
-        xs.resize(arity); 
+        xs.resize(arity);
         // Figure out whether we need to create the inputs
         my_batch.arg_nfxs.resize(arity);
         for(size_t i = 0; i < arity; ++i) {
@@ -774,12 +790,13 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
             my_xsi->mem_pool = DeviceMempool::FXS;
 
             // check contig memory
-            auto it = my_batch.ids.begin(), itend = my_batch.ids.end();
+            auto it = my_batch.ids.begin();
+            auto itend = my_batch.ids.end();
             VariableIndex aid = cg.nodes[*(it++)]->args[i];
             float *min_node = batches[node2batch[aid]].nfx.v + node2offset[aid];
             unsigned int tot_arg = node2size[aid];
             bool contig = true;
-            while(it != itend && contig) {
+            while (it != itend && contig) {
               aid = cg.nodes[*(it++)]->args[i];
               float* v = batches[node2batch[aid]].nfx.v + node2offset[aid];
               contig = contig && v == min_node + tot_arg;
@@ -803,8 +820,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(VariableInde
         node->forward(my_batch.arg_nfxs, my_batch.nfx);
         // cerr << "batched forward[" << num_batches_evaluated << "] (nodes:"; for(auto id : my_batch.ids) cerr << ' ' << id; cerr << ") == " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
-
-      }
+      } // execute a batch node (not a single instance node)
       if (autobatch_debug_flag) { timer.stop(current_batch_name); }
     }
 
