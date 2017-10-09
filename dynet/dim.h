@@ -118,16 +118,14 @@ struct Dim {
     return p;
   }
   /**
-   * \brief [TODO]
-   * \details [long description]
-   * \return [description]
+   * \brief remove trailing dimensions of 1
+   * \details iterate all the dimensions of Dim, stop at last dimension of 1
+   * \return truncated dimension
    */
   inline Dim truncate() const {
     Dim r = *this;
-    unsigned int m = 1;
-    unsigned int s = size();
-    for (unsigned int i = 1; i < s; ++i)
-      if (size(i) > 1) m = i + 1;
+    unsigned int m = nd;
+    while (m > 1 && size(m-1) == 1) --m;
     r.resize(m);
     return r;
   }
