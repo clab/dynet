@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 foreach(TARGET 0_multiply 1_linear_regression)
-  ADD_EXECUTABLE(${TARGET} ${TARGET}.cc)
+  add_executable(${TARGET} ${TARGET}.cc)
   target_link_libraries(${TARGET} dynet ${LIBS})
   if(UNIX AND NOT APPLE)
     target_link_libraries(${TARGET} rt)

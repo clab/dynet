@@ -58,7 +58,8 @@ Loader::~Loader() {}
 TextFileSaver::TextFileSaver(const std::string & filename, bool append) :
         p_datastream(
             new std::ofstream(
-                filename, append ? std::ios_base::app : std::ios_base::out)),
+                filename.c_str(),
+                append ? std::ios_base::app : std::ios_base::out)),
         datastream(*p_datastream) {
   if(!datastream)
     DYNET_RUNTIME_ERR("Could not write model to " << filename);

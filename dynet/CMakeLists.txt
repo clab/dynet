@@ -25,7 +25,6 @@ set(dynet_library_SRCS
     nodes-affinetransform.cc
     nodes-arith-const.cc
     nodes-arith-cwise.cc
-    nodes-arith-scalar.cc
     nodes-arith-sum.cc
     nodes-arith-unary.cc
     nodes-concat.cc
@@ -104,7 +103,6 @@ set(dynet_library_HDRS
     nodes-affinetransform.h
     nodes-arith-const.h
     nodes-arith-cwise.h
-    nodes-arith-scalar.h
     nodes-arith-sum.h
     nodes-arith-unary.h
     nodes-concat.h
@@ -160,7 +158,6 @@ set(dynet_gpu_mergeable_SRCS
     nodes-affinetransform
     nodes-arith-const
     nodes-arith-cwise
-    nodes-arith-scalar
     nodes-arith-sum
     nodes-arith-unary
     nodes-concat

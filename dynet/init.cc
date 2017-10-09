@@ -19,10 +19,7 @@ using namespace std;
 namespace dynet {
 
 DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
-  shared_parameters(false)
-#if HAVE_CUDA
-  , ngpus_requested(false), ids_requested(false), cpu_requested(false), requested_gpus(-1)
-#endif
+  shared_parameters(false), ngpus_requested(false), ids_requested(false), cpu_requested(false), requested_gpus(-1)
 {
 #if HAVE_CUDA
   gpu_mask = std::vector<int>(MAX_GPUS, 0);
@@ -214,6 +211,12 @@ void initialize(DynetParams& params) {
   Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
   device_manager->add(d);
   default_device = device_manager->get(default_index);
+#if HAVE_CUDA
+  if (default_device->type == DeviceType::GPU) {
+    auto default_gpu_device = static_cast<Device_GPU *>(default_device);
+    CUDA_CHECK(cudaSetDevice(default_gpu_device->cuda_device_id));
+  }
+#endif
 
   // TODO these should be accessed through the relevant device and removed here
   kSCALAR_MINUSONE = default_device->kSCALAR_MINUSONE;
