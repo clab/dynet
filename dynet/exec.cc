@@ -52,7 +52,8 @@ const Tensor& SimpleExecutionEngine::forward(VariableIndex i) {
 }
 
 const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
-  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in SimpleExecutionEngine::get_value()");
+  DYNET_ASSERT(i < cg.nodes.size(),
+               "Out-of-bounds variable access in SimpleExecutionEngine::get_value()");
   if (i >= num_nodes_evaluated) {
     incremental_forward(i);
   }
@@ -60,9 +61,12 @@ const Tensor& SimpleExecutionEngine::get_value(VariableIndex i) {
 }
 
 const Tensor& SimpleExecutionEngine::get_gradient(VariableIndex i) {
-  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in SimpleExecutionEngine::get_value()");
+  DYNET_ASSERT(i < cg.nodes.size(),
+               "Out-of-bounds variable access in SimpleExecutionEngine::get_value()");
   if (i >= backward_computed) {
-    DYNET_RUNTIME_ERR("Requested gradient for node " << i << ", but backward pass was computed from node " << (backward_computed - 1));
+    DYNET_RUNTIME_ERR("Requested gradient for node " << i
+                      << ", but backward pass was computed from node "
+                      << (backward_computed - 1));
   }
   return ndEdfs[i];
 }
@@ -73,19 +77,20 @@ const Tensor& SimpleExecutionEngine::incremental_forward() {
 }
 
 const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
-  DYNET_ASSERT(i < cg.nodes.size(), "Out-of-bounds variable access in SimpleExecutionEngine::incremental_forward()");
+  DYNET_ASSERT(i < cg.nodes.size(),
+    "Out-of-bounds variable access in SimpleExecutionEngine::incremental_forward()");
 
   // free any old memory if this is a new CG
   if (num_nodes_evaluated == 0)
-    for(Device* dev : device_manager->get_devices())
+    for (Device* dev : device_manager->get_devices())
       dev->pools[(int)DeviceMempool::FXS]->free();
 
   if (i >= num_nodes_evaluated) {
-    string current_node_name;
     nfxs.resize(i + 1);
+    string current_node_name;  // Optionally used for debugging.
+    vector<const Tensor*> xs(16);  // Container for arguments to nodes (reused).
 
     //vector<string> dummy(5, "x");
-    vector<const Tensor*> xs(16);
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
       if (autobatch_debug_flag) {
@@ -97,27 +102,34 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       for (VariableIndex arg : node->args) {
         xs[ai] = &nfxs[arg];
         DYNET_ARG_CHECK(xs[ai]->device == node->device || node->supports_multidevice(),
-                        "Attempt to do tensor forward in different devices (nodes " << arg << " and " << num_nodes_evaluated << ")");
+                        "Attempt to do tensor forward in different devices (nodes "
+                        << arg << " and " << num_nodes_evaluated << ")");
         ++ai;
       }
-      nfxs[num_nodes_evaluated].d = node->dim;
+      auto& node_fx = nfxs[num_nodes_evaluated];
+      node_fx.d = node->dim;
       // Get the device
-      DYNET_ASSERT(node->device != nullptr, "Attempt to access null device in SimpleExecutionEngine::incremental_forward");
-      nfxs[num_nodes_evaluated].device = node->device;
-      nfxs[num_nodes_evaluated].mem_pool = DeviceMempool::FXS;
+      DYNET_ASSERT(node->device != nullptr,
+        "Attempt to access null device in SimpleExecutionEngine::incremental_forward");
+      node_fx.device = node->device;
+      node_fx.mem_pool = DeviceMempool::FXS;
       // Get the memory
-      nfxs[num_nodes_evaluated].v = static_cast<float*>(nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(node->dim.size() * sizeof(float)));
-      if (nfxs[num_nodes_evaluated].v == nullptr)
+      auto& node_fx_pools = node_fx.device->pools;
+      node_fx.v = static_cast<float*>(
+          node_fx_pools[(int)DeviceMempool::FXS]->allocate(
+              node->dim.size() * sizeof(float)));
+      if (node_fx.v == nullptr)
         DYNET_RUNTIME_ERR("Ran out of memory when executing node " << num_nodes_evaluated);
       void* aux_mem = nullptr;
-      size_t aux_size = node->aux_storage_size();
+      size_t aux_size = node->aux_storage_size(); // Is the node requesting extra memory?
       if (aux_size) {
-        aux_mem = nfxs[num_nodes_evaluated].device->pools[(int)DeviceMempool::FXS]->allocate(aux_size);
-        if (!aux_mem)
-          DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node " << num_nodes_evaluated);
+        aux_mem = node_fx_pools[(int)DeviceMempool::FXS]->allocate(aux_size);
+        if (aux_mem == nullptr)
+          DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node "
+                            << num_nodes_evaluated);
       }
       node->aux_mem = aux_mem;
-      node->forward(xs, nfxs[num_nodes_evaluated]);
+      node->forward(xs, node_fx);
 
       if (autobatch_debug_flag) { timer.stop(current_node_name); }
     }
