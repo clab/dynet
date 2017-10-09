@@ -23,7 +23,8 @@ ExecutionEngine::~ExecutionEngine() {}
 vector<const Tensor*> ExecutionEngine::forward(
     const std::vector<VariableIndex>& node_list) {
   invalidate();
-  VariableIndex max_node=*std::max_element(node_list.begin(),node_list.end());
+  VariableIndex max_node =
+      *std::max_element(node_list.begin(), node_list.end());
   incremental_forward(max_node);
   vector<const Tensor*> ret(node_list.size());
   for (unsigned i = 0; i < ret.size(); ++i) {
@@ -140,32 +141,46 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 }
 
 void SimpleExecutionEngine::backward(bool full) {
-  DYNET_ASSERT(nfxs.size() >= cg.nodes.size(), "Mismatched array sizes in SimpleExecutionEngine::backward");
-  backward((VariableIndex)(cg.nodes.size()-1),full);
+  DYNET_ASSERT(nfxs.size() >= cg.nodes.size(),
+               "Mismatched array sizes in SimpleExecutionEngine::backward");
+  backward((VariableIndex)(cg.nodes.size() - 1), full);
 }
 
 void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
-  if(!(from_where < nfxs.size()))
-    incremental_forward(from_where);
-  if (nfxs[from_where].d.size() != 1)
-    DYNET_INVALID_ARG("backward() can only be called on scalar nodes, but node " << from_where << " has dimension: " << nfxs[from_where].d);
+  if (from_where >= nfxs.size()) { incremental_forward(from_where); }
+  if (nfxs[from_where].d.size() != 1) {
+    DYNET_INVALID_ARG(
+        "backward() can only be called on scalar nodes, but node "
+        << from_where << " has dimension: " << nfxs[from_where].d);
+  }
 
-  const unsigned num_nodes = from_where+1;
+  const unsigned num_nodes = from_where + 1;
   ndEdfs.resize(num_nodes);
   const vector<Device*> &devices = device_manager->get_devices();
   for(Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->free();
+
+  // This loop allocates memory on the appropriate devices for the nodes whose
+  // derivatives will be computed.
   for (unsigned i = 0; i < num_nodes; ++i) {
     const auto dim = nfxs[i].d;
-    ndEdfs[i].d = dim;
-    ndEdfs[i].device = nfxs[i].device;
-    ndEdfs[i].mem_pool = DeviceMempool::DEDFS;
-    ndEdfs[i].v = static_cast<float*>(ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
-    if (!ndEdfs[i].v)
-      DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for derivatives of node " << i);
+    auto& node_dEdfx = ndEdfs[i];
+    node_dEdfx.d = dim;
+    node_dEdfx.device = nfxs[i].device;
+    node_dEdfx.mem_pool = DeviceMempool::DEDFS;
+    node_dEdfx.v = static_cast<float*>(
+        node_dEdfx.device->pools[(int)DeviceMempool::DEDFS]->allocate(
+            dim.size() * sizeof(float)));
+    if (node_dEdfx.v == nullptr) {
+      DYNET_RUNTIME_ERR(
+          "out of memory while attempting to allocate space for derivatives of node "
+          << i);
+    }
   }
-  for(Device* device : devices)
+  // Zero all derivative memory (which is contiguous on each device)
+  for (Device* device : devices)
     device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
+
   // initialize dE/dE = 1
   ndEdfs.back().v = cg.nodes.back()->device->kSCALAR_ONE;
 
@@ -179,7 +194,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   if (!full) {
     for (auto i : cg.parameter_nodes)
       if (i <= from_where)
-	needs_derivative[i] = true;
+        needs_derivative[i] = true;
 
     for (unsigned ni = 0; ni < num_nodes; ++ni) {
       bool nd = needs_derivative[ni];
@@ -189,14 +204,17 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     }
   }
 
-  // loop in reverse topological order
-  // consider only nodes that participate in the computation.
+  // Loop in reverse topological order (nodes stored in topological order),
+  // considering only nodes that participate in the computation.
   vector<bool> in_computation(num_nodes, false);
   in_computation[num_nodes - 1] = true;
-  vector<const Tensor*> xs;
+  vector<const Tensor*> xs(16);
   for (int i = num_nodes - 1; i >= 0; --i) {
     if (!in_computation[i]) continue;
     const Node* node = cg.nodes[i];
+    const auto& node_fx = nfxs[i];  // f(x_1, x_2, ..., x_arity), which
+                                    // was previously computed by forward.
+    const auto& node_dEdfx = ndEdfs[i];  // dE/df(x_1, x_2, ..., x_arity)
     xs.resize(node->arity());
     unsigned ai = 0;
     for (VariableIndex arg : node->args) {
@@ -207,24 +225,27 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     ai = 0;
     for (VariableIndex arg : node->args) {
       if (needs_derivative[arg]) {
-        DYNET_ASSERT(nfxs[i].device == ndEdfs[i].device, "Attempt to do tensor backward in different devices");
-        DYNET_ASSERT(nfxs[i].device == ndEdfs[arg].device, "Attempt to do tensor backward in different devices");
+        auto& node_dEdxai = ndEdfs[arg];  // where to store dE/dx_{ai}.
+        DYNET_ASSERT(node_fx.device == node_dEdfx.device,
+                     "Attempt to do tensor backward in different devices");
+        DYNET_ASSERT(node_fx.device == node_dEdxai.device,
+                     "Attempt to do tensor backward in different devices");
         // for (auto & xs_v : xs) {
         //   DYNET_ASSERT(xs_v->device == nfxs[i].device.device,
         //                "Attempt to do tensor backward in different devices");
         // }
-        node->backward(xs, nfxs[i], ndEdfs[i], ai, ndEdfs[arg]);
+        node->backward(xs, node_fx, node_dEdfx, ai, node_dEdxai);
       }
       ++ai;
     }
   }
 
-  // accumulate gradients into parameters
+  // Accumulate gradients into parameters
   // this is simpler than you might find in some other frameworks
   // since we assume parameters come into the graph as a "function"
   // that returns the current value of the parameters
   for (VariableIndex i : cg.parameter_nodes)
-    if(i <= from_where)
+    if (i <= from_where)
       static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
   backward_computed = from_where;
   // for(VariableIndex vi = (VariableIndex)0; vi <= backward_computed; ++vi) cerr << "ndEdfs[" << vi << "] == " << print_vec(as_vector(ndEdfs[vi])) << endl;
