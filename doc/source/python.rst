@@ -66,7 +66,7 @@ The following is a list of all the commands needed to perform a manual install:
     cd dynet-base
     # getting dynet and eigen
     git clone https://github.com/clab/dynet.git
-    hg clone https://bitbucket.org/eigen/eigen -r 346ecdb  # -r NUM specified a known working revision
+    hg clone https://bitbucket.org/eigen/eigen -r 699b659  # -r NUM specified a known working revision
     cd dynet
     mkdir build
     cd build

@@ -209,7 +209,7 @@ string MomentDimension::as_string(const vector<string>& arg_names) const {
 Dim MomentDimension::dim_forward(const vector<Dim>& xs) const {
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in MomentDimension");
   DYNET_ARG_CHECK(xs[0].nd <= 3, "MomentDimension implemented up to tensors of order 3 (with minibatch) for now")
-  for(int i=0; i<dims.size(); i++)
+  for (unsigned i = 0; i < dims.size(); ++i)
     DYNET_ARG_CHECK(dims[i] <= xs[0].nd, "dimension " << dims[i]<< " is out of bounds of tensor of order " << xs[0].nd << " in MomentDimension" )
   DYNET_ARG_CHECK(order>= 1, "Order of moment should be >=1 in MomentDimension (received "<<order<<")")
   DYNET_ARG_CHECK(dims.size()<=2, "Number of dimensions to reduce (excluding batch dimension) implemented up to 2 in MomentDimension (received "<< dims.size() <<")")
@@ -455,7 +455,7 @@ string StdDimension::as_string(const vector<string>& arg_names) const {
 Dim StdDimension::dim_forward(const vector<Dim>& xs) const {
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in StdDimension");
   DYNET_ARG_CHECK(xs[0].nd <= 3, "StdDimension implemented up to tensors of order 3 (with minibatch) for now")
-  for(int i=0; i<dims.size(); i++)
+  for (unsigned i = 0; i < dims.size(); ++i)
     DYNET_ARG_CHECK(dims[i] <= xs[0].nd, "dimension " << dims[i]<< " is out of bounds of tensor of order " << xs[0].nd << " in StdDimension" )
   DYNET_ARG_CHECK(dims.size()<=2, "Number of dimensions to reduce (excluding batch dimension) implemented up to 2 in StdDimension (received "<< dims.size() <<")")
   if(dims.size()==0)

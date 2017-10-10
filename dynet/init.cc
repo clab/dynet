@@ -19,10 +19,7 @@ using namespace std;
 namespace dynet {
 
 DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
-  shared_parameters(false)
-#if HAVE_CUDA
-  , ngpus_requested(false), ids_requested(false), cpu_requested(false), requested_gpus(-1)
-#endif
+  shared_parameters(false), ngpus_requested(false), ids_requested(false), cpu_requested(false), requested_gpus(-1)
 {
 #if HAVE_CUDA
   gpu_mask = std::vector<int>(MAX_GPUS, 0);
