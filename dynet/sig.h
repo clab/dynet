@@ -3,16 +3,18 @@
 
 #define DYNET_MAX_SIG 100
 
+#include <vector>
+#include <algorithm>
 #include <unordered_map>
 #include <map>
 
 namespace dynet {
 
   namespace nt {
-    enum NodeType { 
+    enum NodeType {
       tanh=1, sqrt, abs, erf, square, cube, exp, loggamma, log, nobackprop, flipgradient, identity, negate, rectify, logistic, softsign,
       plus_const, concat, cmult, sum, squared_distance, softmax, pnls, pickrange, scalar_mult,
-      input, scalar_input, lookup, 
+      input, scalar_input, lookup,
       COMPLEX,
       affine, matmul,
       vanilla_lstm_gates, vanilla_lstm_h, vanilla_lstm_c,
@@ -23,7 +25,7 @@ struct SigYoav {
   SigYoav(short which) : which(which), nn(0), nd(0) { }
   SigYoav() : which(0), nn(0), nd(0) { }
   const unsigned short which;
-  unsigned short nn; 
+  unsigned short nn;
   unsigned short nd;
   Dim dims[10];
   unsigned node_ids[10];
@@ -74,6 +76,18 @@ inline bool operator==(const SigString& a, const SigString& b) {
 
 inline bool operator!=(const SigString& a, const SigString& b) { return !(a == b); }
 
+// returns the binary representation (in an int) of a float
+static inline int float_contents_as_int(float x) {
+  union {
+    int bin;
+    float f;
+  };
+  f = x;
+  return bin;
+}
+static_assert(sizeof(int) >= sizeof(float),
+    "float_contents_as_int needs float to be the same size or smaller than int");
+
 struct SigHash {
   SigHash(int which) : hash((int)0xcc9e2d51 ^ which), which(which) { }
   SigHash() : hash((int)0xcc9e2d51a), which(0) { }
@@ -84,11 +98,8 @@ struct SigHash {
   inline void add_int(int i) {
     hash = i + (hash << 6) + (hash << 16) - hash;
   }
-  inline void add_float(float i) {
-    assert(sizeof(int) >= sizeof(float));
-    int temp_val = 0;
-    memcpy(&temp_val, &i, sizeof(float));
-    hash = temp_val + (hash << 6) + (hash << 16) - hash;
+  inline void add_float(float f) {
+    add_int(float_contents_as_int(f));
   }
   void add_node(unsigned i) { add_int((int)i); }
   void add_dim(const Dim &d) {
@@ -96,7 +107,6 @@ struct SigHash {
     for(size_t i = 0; i < d.nd; ++i)
       add_int((int)d.d[i]);
   }
-
 };
 
 inline bool operator<(const SigHash& a, const SigHash& b) {

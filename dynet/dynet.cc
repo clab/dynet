@@ -180,7 +180,7 @@ void ComputationGraph::checkpoint() {
 }
 
 void ComputationGraph::revert() {
-  if (checkpoints.size() == 0) return;
+  if (checkpoints.empty()) return;
   _revert(checkpoints.back());
   checkpoints.pop_back();
 }
