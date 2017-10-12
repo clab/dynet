@@ -44,11 +44,13 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in Softmax::forward");
   Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
-  TensorTools::logsumexp_dev(dev, *xs[0], m, z);
-  // TODO? Is this broadcast efficient on CPU?
+  Eigen::array<int, 1> red_dim = {0};
+  m.tb<1>().device(*dev.edevice) = xs[0]->tb<2>().maximum(red_dim);
   Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
   Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
-  fx.tb<2>().device(*dev.edevice) = (xs[0]->tb<2>() - z.tvec().reshape(morph).broadcast(bcasts)).exp();
+  fx.tb<2>().device(*dev.edevice) = (xs[0]->tb<2>() - m.tvec().reshape(morph).broadcast(bcasts)).exp();
+  z.tb<1>().device(*dev.edevice) = fx.tb<2>().sum(red_dim);
+  fx.tb<2>().device(*dev.edevice) = fx.tb<2>() / z.tvec().reshape(morph).broadcast(bcasts);
 }
 
 template<class MyDevice>
