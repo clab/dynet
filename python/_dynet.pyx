@@ -776,7 +776,11 @@ cdef class LookupParameters: # {{{
         Returns:
             tuple: Shape of the parameter
         """
-        return c_dim_as_shape(self.thisptr.get_storage().all_dim)
+        shape = c_dim_as_shape(self.thisptr.get_storage().all_dim)
+        # In C++, the lookup dimension is stored in the last dimension (go figure)
+        # So we need to rotate the shape left to right
+        rotated_shape = tuple([shape[-1]] + list(shape[:-1]))
+        return rotated_shape
 
     def __getitem__(self, int i):
         """
