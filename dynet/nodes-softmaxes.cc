@@ -89,7 +89,7 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
   Tensor col_dEdf(Dim({xs[0]->d[0]}), (float*)dEdf.v, fx.device, DeviceMempool::FXS);
   Tensor col_dEdxi(Dim({xs[0]->d[0]}), (float*)dEdxi.v, fx.device, DeviceMempool::FXS);
   for(size_t col = 0; col < num_cols; ++col) {
-    col_dEdxi.tvec() = (col_dEdf.tvec() - z.v[col]) * col_fx.tvec();
+    col_dEdxi.tvec() += (col_dEdf.tvec() - z.v[col]) * col_fx.tvec();
     col_fx.v += size;
     col_dEdf.v += size;
     col_dEdxi.v += size;
@@ -172,7 +172,7 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
   Tensor col_dEdf(Dim({xs[0]->d[0]}), (float*)dEdf.v, fx.device, DeviceMempool::FXS);
   Tensor col_dEdxi(Dim({xs[0]->d[0]}), (float*)dEdxi.v, fx.device, DeviceMempool::FXS);
   for(size_t col = 0; col < num_cols; ++col) {
-    col_dEdxi.tvec() = (col_fx.tvec() * -z.v[col]) * col_dEdf.tvec();
+    col_dEdxi.tvec() += (col_fx.tvec().exp() * -z.v[col]) + col_dEdf.tvec();
     col_fx.v += size;
     col_dEdf.v += size;
     col_dEdxi.v += size;
