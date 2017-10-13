@@ -24,9 +24,9 @@ import doc_util
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 # sys.path.insert(0, os.path.abspath('../../examples/tutorials'))
 tutorials_folder = 'tutorials_notebooks'
-if os.path.islink():
+if os.path.islink(tutorials_folder):
     os.remove(tutorials_folder)
-    os.symlink('../../examples/jupyter-tutorials', tutorials_folder)
+os.symlink('../../examples/jupyter-tutorials', tutorials_folder)
 
 # Create copy of _dynet.pyx for documentation purposes
 doc_util.create_doc_copy(in_file = '../../python/_dynet.pyx',out_file = 'dynet.py')
