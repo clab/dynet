@@ -1593,10 +1593,11 @@ Expression std_batches(const Expression& x);
  * \param x The input mini-batched expression
  * \param d Dimensions along which to reduce
  * \param b Whether to include batch dimension (default: false)
+ * \param n If > 0, overwrite the n in the equation by this value, useful for masking (default: 0)
  *
  * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression std_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
+Expression std_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false, unsigned n=0);
 
 /**
  * \ingroup flowoperations
@@ -1607,10 +1608,11 @@ Expression std_dim(const Expression& x, const std::vector<unsigned>& dims, bool 
  * \param d Dimensions along which to reduce
  * \param r Order of the moment
  * \param b Whether to include batch dimension (default: false)
+ * \param n If > 0, overwrite the n in the equation by this value, useful for masking (default: 0)
  *
  * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, unsigned r, bool b=false);
+Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, unsigned r, bool b=false, unsigned n=0);
 /**
  * \ingroup flowoperations
  * \brief Compute mean along  a specific dimension
@@ -1619,10 +1621,11 @@ Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, un
  * \param x The input mini-batched expression
  * \param d Dimensions along which to reduce
  * \param b Whether to include batch dimension (default: false)
+ * \param n If > 0, overwrite the n in the equation by this value, useful for masking (default: 0)
  *
  * \return An expression with |d| less dimensions and possibly dropped batch dimension
  */
-Expression mean_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
+Expression mean_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false, unsigned n=0);
 
 
 /**

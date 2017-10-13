@@ -1122,6 +1122,25 @@ BOOST_AUTO_TEST_CASE( trace_of_product_gradient ) {
 }
 
 // Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cadd_broadcast_gradient_scalar ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = reshape(parameter(cg, param_scalar1), Dim({1},1));
+  Expression x2 = reshape(parameter(cg, param4), Dim({3,1,1},2));
+  Expression y = (x1 + x2) + (x2 + x1) + (x1 - x2) + (x2 - x1);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cdiv_broadcast_gradient_scalar ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = reshape(parameter(cg, param_scalar1), Dim({1},1));
+  Expression x2 = reshape(parameter(cg, param4), Dim({3,1,1},2));
+  Expression y = cdiv(x2, x1);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cmult(const Expression& x, const Expression& y);
 BOOST_AUTO_TEST_CASE( cmult_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
@@ -1156,6 +1175,16 @@ BOOST_AUTO_TEST_CASE( scalar_cmult_batch_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param_scalar1);
   Expression x2 = reshape(parameter(cg, param_square1), Dim({1, 3}, 3));
+  Expression y = cmult(x1, x2) + cmult(x2, x1);
+  Expression z = sum_batches(sum_elems(y));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cmult(const Expression& x, const Expression& y);
+BOOST_AUTO_TEST_CASE( cmult_broadcast_gradient_scalar ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = reshape(parameter(cg, param_scalar1), Dim({1},1));
+  Expression x2 = reshape(parameter(cg, param4), Dim({3,1,1},2));
   Expression y = cmult(x1, x2) + cmult(x2, x1);
   Expression z = sum_batches(sum_elems(y));
   BOOST_CHECK(check_grad(mod, z, 0));

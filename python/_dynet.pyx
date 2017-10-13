@@ -3220,7 +3220,7 @@ cpdef Expression std_batches(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_std_batches(x.c()))
 
-cpdef Expression std_dim(Expression x, list d, bool b):
+cpdef Expression std_dim(Expression x, list d, bool b, unsigned n=0):
     """Standard deviation along an arbitrary dimension
     
     Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` along arbitrary dimensions.
@@ -3230,14 +3230,15 @@ cpdef Expression std_dim(Expression x, list d, bool b):
         x (dynet.Expression): Input expression
         d (int): Dimensions along which to reduce
         b (bool): Whether to include batch dimension
+        n (int): If > 0, overwrite the n in the equation by this value, useful for masking
     
     Returns:
         dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_std_dim(x.c(), d, b))
+    return Expression.from_cexpr(x.cg_version, c_std_dim(x.c(), d, b, n=0))
 
 
-cpdef Expression mean_dim(Expression x, list d, bool b):
+cpdef Expression mean_dim(Expression x, list d, bool b, unsigned n=0):
     """Mean along an arbitrary dimension
     
     Computes the mean :math:`\\frac 1 n \sum_ix_i`  along an arbitrary dimension.
@@ -3245,13 +3246,14 @@ cpdef Expression mean_dim(Expression x, list d, bool b):
 
     Args:
         x (dynet.Expression): Input expression
-        d (int): Dimensions along which to reduce
+        d (list): Dimensions along which to reduce
         b (bool): Whether to include batch dimension
+        n (int): If > 0, overwrite the n in the equation by this value, useful for masking
     
     Returns:
         dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_mean_dim(x.c(), d, b))
+    return Expression.from_cexpr(x.cg_version, c_mean_dim(x.c(), d, b, n))
 
 cpdef Expression moment_elems(Expression x, unsigned r):
     """Statistical moment of elements of the tensor
@@ -3279,7 +3281,7 @@ cpdef Expression moment_batches(Expression x, unsigned r):
     """
     return Expression.from_cexpr(x.cg_version, c_moment_batches(x.c(), r))
 
-cpdef Expression moment_dim(Expression x, list d, unsigned r, bool b):
+cpdef Expression moment_dim(Expression x, list d, unsigned r, bool b, unsigned n=0):
     """Statistical moment along an arbitrary dimension
     
     Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along an arbitrary dimension.
@@ -3287,14 +3289,15 @@ cpdef Expression moment_dim(Expression x, list d, unsigned r, bool b):
 
     Args:
         x (dynet.Expression): Input expression
-        d (list): Dimension along which to reduce
+        d (list): Dimensions along which to reduce
         r (int): Moment order
         b (bool): Whether to include batch dimension
+        n (int): If > 0, overwrite the n in the equation by this value, useful for masking
     
     Returns:
         dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
     """
-    return Expression.from_cexpr(x.cg_version, c_moment_dim(x.c(), d, r, b))
+    return Expression.from_cexpr(x.cg_version, c_moment_dim(x.c(), d, r, b, n))
 
 #expr-opt
 cpdef Expression fold_rows(Expression x, unsigned nrows=2):
