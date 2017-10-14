@@ -161,9 +161,9 @@ Expression sum_elems(const Expression& x) { return Expression(x.pg, x.pg->add_fu
 
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumBatches>({x.i})); }
 
-Expression mean_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, 1, b)); }
-Expression moment_dim(const Expression& x, const vector<unsigned>& dims, unsigned r, bool b) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, r, b)); }
-Expression std_dim(const Expression& x, const vector<unsigned>& dims, bool b) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, dims, b)); }
+Expression mean_dim(const Expression& x, const vector<unsigned>& dims, bool b, unsigned n) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, 1, b, n)); }
+Expression moment_dim(const Expression& x, const vector<unsigned>& dims, unsigned r, bool b, unsigned n) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, r, b, n)); }
+Expression std_dim(const Expression& x, const vector<unsigned>& dims, bool b, unsigned n) { return Expression(x.pg, x.pg->add_function<StdDimension>({x.i}, dims, b, n)); }
 
 Expression moment_elems(const Expression& x, unsigned r) { 
   vector<unsigned> dims(x.dim().nd);

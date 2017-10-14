@@ -86,6 +86,8 @@ You can install dynet for C++ with the following commands
     mkdir build
     cd build
     # Run CMake
+    # -DENABLE_BOOST=ON in combination with -DENABLE_CPP_EXAMPLES=ON also
+    # compiles the multiprocessing c++ examples
     cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DENABLE_CPP_EXAMPLES=ON
     # Compile using 2 processes
     make -j 2

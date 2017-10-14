@@ -226,9 +226,13 @@ template<class MyDevice>
 void MomentDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumDimension");
 
-  float n = 1;
-  for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
-  if(include_batch_dim) n *= xs[0]->d.bd;
+  float n = 1.0;
+  if(overwrite_n==0){
+    for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
+    if(include_batch_dim) n *= xs[0]->d.bd;
+  } else {
+    n = overwrite_n;
+  }
 
   if(dims.size()==0 && include_batch_dim){
     Eigen::array<int, 1> reduction_axis = {1};
@@ -283,9 +287,13 @@ void MomentDimension::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in MomentDimension::backward");
 
-  float n = 1;
-  for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
-  if(include_batch_dim) n *= xs[0]->d.bd;
+  float n = 1.0;
+  if(overwrite_n==0){
+    for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
+    if(include_batch_dim) n *= xs[0]->d.bd;
+  } else {
+    n = overwrite_n;
+  }
 
   if(dims.size()==0 && include_batch_dim){
     Eigen::array<int, 2> bcast = {1, (int)xs[0]->d.bd};
@@ -471,9 +479,13 @@ template<class MyDevice>
 void StdDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumDimension");
 
-  float n = 1;
-  for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
-  if(include_batch_dim) n *= xs[0]->d.bd;
+  float n = 1.0;
+  if(overwrite_n==0){
+    for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
+    if(include_batch_dim) n *= xs[0]->d.bd;
+  } else {
+    n = overwrite_n;
+  }
 
   AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
 
@@ -531,9 +543,13 @@ void StdDimension::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in StdDimension::backward");
 
-  float n = 1;
-  for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
-  if(include_batch_dim) n *= xs[0]->d.bd;
+  float n = 1.0;
+  if(overwrite_n==0){
+    for(unsigned i=0; i<dims.size(); i++) n *= (float) xs[0]->d[dims[i]];
+    if(include_batch_dim) n *= xs[0]->d.bd;
+  } else {
+    n = overwrite_n;
+  }
 
   AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
 

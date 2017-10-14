@@ -100,6 +100,14 @@ class TestParameters(unittest.TestCase):
         [p1, p2] = self.m.parameters_list()
         [lp1, lp2] = self.m.lookup_parameters_list()
 
+    def test_shape(self):
+        shape = (10, 5, 2)
+        lp = self.m.add_lookup_parameters(shape)
+        lp_shape = lp.shape()
+        self.assertEqual(shape[0], lp_shape[0])
+        self.assertEqual(shape[1], lp_shape[1])
+        self.assertEqual(shape[2], lp_shape[2])
+
     def test_as_array(self):
         # Values
         self.p1.as_array()
