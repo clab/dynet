@@ -121,7 +121,7 @@ void CwiseSum::backward_helper(const MyDevice & dev,
   if(ReductionOrder>0) red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
   for(int di=0; di < fx.d.nd; di++){
-    if(di >= xs[i]->d.nd || xs[i]->d[di] != fx.d[di]){
+    if((di >= xs[i]->d.nd && fx.d[di]>1) || xs[i]->d[di] != fx.d[di]){
       red_axis[curr_red_axis] = di;
       curr_red_axis++;
     }
@@ -242,7 +242,7 @@ void CwiseMultiply::backward_helper(const MyDevice & dev,
   if(ReductionOrder>0) red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
   for(int di=0; di < fx.d.nd; di++){
-    if(di >= xs[i]->d.nd || xs[i]->d[di] != fx.d[di]){
+    if((di >= xs[i]->d.nd && fx.d[di]>1) || xs[i]->d[di] != fx.d[di]){
       red_axis[curr_red_axis] = di;
       curr_red_axis++;
     }
