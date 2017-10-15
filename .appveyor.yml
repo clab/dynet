@@ -9,6 +9,9 @@ environment:
     BOOST_LIBRARYDIR: C:\Libraries\boost_1_59_0\lib64-msvc-14.0
     MSVC: 1
     MINICONDA: "C:\\Miniconda3-x64"
+    TWINE_USERNAME: danielh
+    TWINE_PASSWORD:
+      secure: cpMn69tLzuhwO7EPhhiVwA==
   matrix:
 #    - PYTHON_VERSION: 3.5
 #      PYTHON_INSTALL: manual
@@ -62,14 +65,16 @@ test_script:
 # Gives mysterious "Command exited with code -1073740791":
   - python -m unittest discover C:\projects\dynet\tests\python -v
 
-#deploy:
-#  - provider: Script
-#    on:
-#      appveyor_repo_tag: true
-
-#deploy_script:
-#  - cmd: cd C:\projects\dynet
-#  - ps: cat setup.py | % { $_ -replace "0.0.0", %APPVEYOR_REPO_TAG_NAME% } > setup.py
-#  - python setup.py sdist bdist_wheel
-#  - python -m pip install -U twine
-#  - python -m twine upload --skip-existing dist/*
+deploy_script:
+  - cmd: cd C:\projects\dynet
+  - ps: "(gc setup.py) -replace '0.0.0', '%APPVEYOR_REPO_TAG_NAME%' | Out-File -encoding 'UTF8' setup.py"
+  - python setup.py sdist #bdist_wheel
+  - echo [distutils]                                  > %USERPROFILE%\\.pypirc
+  - echo index-servers =                             >> %USERPROFILE%\\.pypirc
+  - echo     pypi                                    >> %USERPROFILE%\\.pypirc
+  - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
+  - echo repository=https://pypi.python.org/pypi     >> %USERPROFILE%\\.pypirc
+  - echo username=%PYPI_USERNAME%                    >> %USERPROFILE%\\.pypirc
+  - echo password=%PYPI_PASSWORD%                    >> %USERPROFILE%\\.pypirc
+  - python -m pip install twine
+  - if "%APPVEYOR_REPO_TAG%"=="true" ( python -m twine upload --skip-existing dist/* )
