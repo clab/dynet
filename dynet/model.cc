@@ -91,8 +91,6 @@ ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init,
   device->allocate_tensor(DeviceMempool::PS, g);
   TensorTools::zero(g);
   init.initialize_params(values);
-  std::cout << g.tvec() << std::endl;
-  std::cout << values.tvec() << std::endl;
 }
 
 size_t ParameterStorage::size() const { return dim.size(); }
