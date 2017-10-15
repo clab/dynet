@@ -6,6 +6,9 @@ env:
   global:
     - PYTHON=python TWINE_USERNAME=danielh
     - secure: "j8Ro21/7h5FKuJHPJRHYfOiZHMoAfD/dfpqXZreGrl79jVSEdPZmmOdvFH++CqrRdttpxOf2Lg5qOfpXfziC5ecJx1USslBSo2qwAG9JwPkwjCK7MhouM64yhVedj9Es/H635aufbyRsDIhKr5poPrrH+UebEq/63QpEdDWIWq8="
+branches:
+  only:
+    - master
 jobs:
   include:
     - os: osx
