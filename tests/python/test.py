@@ -1,6 +1,7 @@
 import dynet as dy
 import numpy as np
 import unittest
+import gc
 
 
 def npvalue_callable(x):
@@ -227,8 +228,15 @@ class TestParameters(unittest.TestCase):
                 trainer.update()
 
     def test_delete_model(self):
-        import gc
         p = dy.parameter(dy.ParameterCollection().add_parameters((1,), init=dy.ConstInitializer(1)))
+        self.assertEqual(p.value(), 1)
+        gc.collect()
+        self.assertEqual(p.value(), 1)
+
+
+    def test_delete_parent_model(self):
+        model = dy.ParameterCollection().add_subcollection()
+        p = dy.parameter(model.add_parameters((1,), init=dy.ConstInitializer(1)))
         self.assertEqual(p.value(), 1)
         gc.collect()
         self.assertEqual(p.value(), 1)
