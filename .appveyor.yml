@@ -8,14 +8,15 @@ environment:
     BOOST_ROOT: C:\Libraries\boost_1_59_0
     BOOST_LIBRARYDIR: C:\Libraries\boost_1_59_0\lib64-msvc-14.0
     MSVC: 1
+    MINICONDA: "C:\\Miniconda3-x64"
   matrix:
-#    - MINICONDA: "C:\\Miniconda35-x64"  # 3.5
+#    - PYTHON_VERSION: 3.5
 #      PYTHON_INSTALL: manual
-    - MINICONDA: "C:\\Miniconda36-x64"  # 3.6
+    - PYTHON_VERSION: 3.6
 #      PYTHON_INSTALL: manual
-#    - MINICONDA: "C:\\Miniconda35-x64"  # 3.5
+#    - PYTHON_VERSION: 3.5
 #      PYTHON_INSTALL: pip
-#    - MINICONDA: "C:\\Miniconda36-x64"  # 3.6
+#    - PYTHON_VERSION: 3.6
 #      PYTHON_INSTALL: pip
 
 configuration: Release
@@ -23,6 +24,7 @@ configuration: Release
 init:
   - cmd: cmake --version
   - cmd: msbuild /version
+  - "ECHO %PYTHON_VERSION% %MINICONDA%"
 
 install:
   - cmd: git submodule update --init --recursive
@@ -31,13 +33,16 @@ install:
   - cmd: rename C:\projects\eigen-eigen-1f0f8337c029 eigen
   - set PATH=%MINICONDA%;%MINICONDA%\Scripts;C:\Program Files (x86)\Pandoc;%PATH%
   - conda config --set always_yes yes --set changeps1 no
-  - conda install -q conda setuptools pip wheel cython numpy pypandoc
+  - conda update -q conda
+  - conda info -a
+  - conda create -q -n test-env python=%PYTHON_VERSION% cython numpy pypandoc
+  - activate test-env
   - cinst pandoc
 
 before_build:
   - cmd: md build
   - cmd: cd build
-  - cmd: cmake -DEIGEN3_INCLUDE_DIR=C:/projects/eigen -G "Visual Studio 14 2015 Win64" -DCMAKE_BUILD_TYPE=%configuration% -DENABLE_BOOST=ON -DBOOST_ROOT:PATHNAME="%BOOST_ROOT%" -DBoost_LIBRARY_DIRS:FILEPATH="%BOOST_LIBRARYDIR%" -DBoost_NO_BOOST_CMAKE=TRUE -DBoost_NO_SYSTEM_PATHS=TRUE -DPYTHON=%MINICONDA%/python.exe .. 
+  - cmd: cmake -DEIGEN3_INCLUDE_DIR=C:/projects/eigen -G "Visual Studio 14 2015 Win64" -DCMAKE_BUILD_TYPE=%configuration% -DENABLE_BOOST=ON -DBOOST_ROOT:PATHNAME="%BOOST_ROOT%" -DBoost_LIBRARY_DIRS:FILEPATH="%BOOST_LIBRARYDIR%" -DBoost_NO_BOOST_CMAKE=TRUE -DBoost_NO_SYSTEM_PATHS=TRUE -DPYTHON=python.exe .. 
   - cmd: set VS90COMNTOOLS=%VS140COMNTOOLS%
 
 build:
