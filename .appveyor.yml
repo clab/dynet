@@ -47,26 +47,27 @@ before_build:
   - cmd: cd build
   - cmd: cmake -DEIGEN3_INCLUDE_DIR=C:/projects/eigen -G "Visual Studio 14 2015 Win64" -DCMAKE_BUILD_TYPE=%configuration% -DENABLE_BOOST=ON -DBOOST_ROOT:PATHNAME="%BOOST_ROOT%" -DBoost_LIBRARY_DIRS:FILEPATH="%BOOST_LIBRARYDIR%" -DBoost_NO_BOOST_CMAKE=TRUE -DBoost_NO_SYSTEM_PATHS=TRUE -DPYTHON=python.exe .. 
   - cmd: set VS90COMNTOOLS=%VS140COMNTOOLS%
+  - cmd: cd ..
 
 build:
-  project: C:\projects\dynet\build\dynet.sln
+  project: build\dynet.sln
   verbosity: normal
 
 after_build:
-#  - if [%PYTHON_INSTALL%]==[manual] (cd C:\projects\dynet\build\python &&
+#  - if [%PYTHON_INSTALL%]==[manual] (cd %APPVEYOR_BUILD_FOLDER%\build\python &&
 #      python ../../setup.py EIGEN3_INCLUDE_DIR=C:/projects/eigen build --build-dir=.. --skip-build install)
-  - cmd: cd C:\projects\dynet\build\python
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\python
   - python ../../setup.py EIGEN3_INCLUDE_DIR=C:/projects/eigen build --build-dir=.. --skip-build install
-#  - if [%PYTHON_INSTALL%]==[pip] (cd C:\projects\dynet && python setup.py sdist bdist_wheel)
+#  - if [%PYTHON_INSTALL%]==[pip] (cd %APPVEYOR_BUILD_FOLDER% && python setup.py sdist bdist_wheel)
 
 test_script:
 #  - cmd: ctest -VV --build-config %configuration% --output-on-failure
 #  - if [%PYTHON_INSTALL%]==[pip] (pip install dynet --no-index -f dist)
 # Gives mysterious "Command exited with code -1073740791":
-  - python -m unittest discover C:\projects\dynet\tests\python -v
+  - python -m unittest discover %APPVEYOR_BUILD_FOLDER%\tests\python -v
 
 deploy_script:
-  - cmd: cd C:\projects\dynet
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%
   - ps: "(gc setup.py) -replace '0.0.0', '%APPVEYOR_REPO_TAG_NAME%' | Out-File -encoding 'UTF8' setup.py"
   - python setup.py sdist #bdist_wheel
   - echo [distutils]                                  > %USERPROFILE%\\.pypirc
