@@ -166,7 +166,7 @@ void TensorTools::copy_elements(Tensor& v, const Tensor& v_src) {
 
 void TensorTools::zero(Tensor& d) {
 #if HAVE_CUDA
-  if (d.device.type == DeviceType::GPU) {
+  if (d.device->type == DeviceType::GPU) {
     CUDA_CHECK(cudaSetDevice(((Device_GPU*)d.device)->cuda_device_id));
   }
 #endif
