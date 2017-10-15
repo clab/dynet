@@ -87,18 +87,18 @@ void MatrixMultiply::backward_dev_impl(const MyDevice & dev,
     if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[1]->d.bd)) {
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
             dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols() * dEdf.d.batch_elems(),
-            kSCALAR_ONE,
+            dev.kSCALAR_ONE,
             dEdf.v, dEdf.d.rows(),
             xs[1]->v, xs[1]->d.rows(),
-            kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+            dev.kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
     } else {
       for(int b = 0; b < max_b; ++b)
         CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
               dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
-              kSCALAR_ONE,
+              dev.kSCALAR_ONE,
               dEdf.batch_ptr(b), dEdf.d.rows(),
               xs[1]->batch_ptr(b), xs[1]->d.rows(),
-              kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+              dev.kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
     }
   } else {
     // Do a single multiply if xs[0] has one batch
@@ -106,18 +106,18 @@ void MatrixMultiply::backward_dev_impl(const MyDevice & dev,
       // dEdxi.colbatch_matrix().noalias() += (**xs[0]).transpose() * dEdf.colbatch_matrix();
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
             dEdxi.d.rows(), dEdxi.d.cols()*dEdxi.d.batch_elems(), xs[0]->d.rows(),
-            kSCALAR_ONE,
+            dev.kSCALAR_ONE,
             xs[0]->v, xs[0]->d.rows(),
             dEdf.v, dEdf.d.rows(),
-            kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+            dev.kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
     } else {
       for(int b = 0; b < max_b; ++b)
         CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
               dEdxi.d.rows(), dEdxi.d.cols(), xs[0]->d.rows(),
-              kSCALAR_ONE,
+              dev.kSCALAR_ONE,
               xs[0]->batch_ptr(b), xs[0]->d.rows(),
               dEdf.batch_ptr(b), dEdf.d.rows(),
-              kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
+              dev.kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
     }
   }
 #else
