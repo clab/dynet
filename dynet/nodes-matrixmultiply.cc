@@ -51,7 +51,7 @@ void MatrixMultiply::forward_dev_impl(const MyDevice & dev, const vector<const T
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in MatrixMultiply::forward");
 #ifdef __CUDACC__
   // fx = 0*fx + xs[0] * xs[1]
-  dynet::MatrixMultiply(dev, *xs[0], *xs[1], fx, kSCALAR_ZERO);
+  dynet::MatrixMultiply(dev, *xs[0], *xs[1], fx, dev.kSCALAR_ZERO);
 #else
   DYNET_ASSERT(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd), "Failed dimension check in MatrixMultiply::forward");
   if(xs[0]->d.bd == 1) {
@@ -77,6 +77,11 @@ void MatrixMultiply::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in MatrixMultiply::backward");
   int max_b = max(xs[0]->d.bd, xs[1]->d.bd);
+#if HAVE_CUDA
+  if (dev.type == DeviceType::GPU) {
+    cudaSetDevice(((Device_GPU*)&dev)->cuda_device_id);
+  }
+#endif
 #ifdef __CUDACC__
   if (i == 0) {
     if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[1]->d.bd)) {

@@ -13,6 +13,7 @@
 namespace dynet {
 
 inline void MatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor& r, Tensor& y, const float* acc_scalar) {
+  CUDA_CHECK(cudaSetDevice(dev.cuda_device_id));
   if(l.d.bd == 1 && r.d.bd == y.d.bd) {
     // If the left side has one batch, multiply by columns
     // [x, z, b] = [x, y] * [y, z, b]
