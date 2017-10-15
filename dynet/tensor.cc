@@ -165,6 +165,11 @@ void TensorTools::copy_elements(Tensor& v, const Tensor& v_src) {
 }
 
 void TensorTools::zero(Tensor& d) {
+#if HAVE_CUDA
+  if (d.device.type == DeviceType::GPU) {
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)d.device)->cuda_device_id));
+  }
+#endif
   constant(d, 0);
 }
 
@@ -295,7 +300,7 @@ template void TensorTools::accumulate_dev<Device_CPU>(const Device_CPU & dev, Te
 extern template void TensorTools::accumulate_dev<Device_GPU>(const Device_GPU & dev, Tensor& v, const Tensor& v_src);
 void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) { return accumulate_dev(*(const Device_CPU*)v.device, v, v_src); }
-  else if (v.device->type == DeviceType::GPU) { return accumulate_dev(*(const Device_GPU*)v.device, v, v_src); }
+  else if (v.device->type == DeviceType::GPU) { cudaSetDevice(((Device_GPU*)v.device)->cuda_device_id); return accumulate_dev(*(const Device_GPU*)v.device, v, v_src); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #else

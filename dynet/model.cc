@@ -91,6 +91,8 @@ ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init,
   device->allocate_tensor(DeviceMempool::PS, g);
   TensorTools::zero(g);
   init.initialize_params(values);
+  std::cout << g.tvec() << std::endl;
+  std::cout << values.tvec() << std::endl;
 }
 
 size_t ParameterStorage::size() const { return dim.size(); }
@@ -562,7 +564,7 @@ template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev
 void ParameterStorage::accumulate_grad(const Tensor& d) {
   nonzero_grad = true;
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
-  else if (values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values.device, d); }
+  else if (values.device->type == DeviceType::GPU) { cudaSetDevice(((Device_GPU*)values.device)->cuda_device_id); accumulate_grad_dev(*(Device_GPU*)values.device, d); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #else
