@@ -60,7 +60,7 @@ test_script:
 #  - cmd: ctest -VV --build-config %configuration% --output-on-failure
 #  - if [%PYTHON_INSTALL%]==[pip] (pip install dynet --no-index -f dist)
 # Gives mysterious "Command exited with code -1073740791":
-#  - python -m unittest discover C:\projects\dynet\tests\python -v
+  - python -m unittest discover C:\projects\dynet\tests\python -v
 
 #deploy:
 #  - provider: Script
