@@ -226,6 +226,13 @@ class TestParameters(unittest.TestCase):
                 x.backward()
                 trainer.update()
 
+    def test_delete_model(self):
+        import gc
+        p = dy.parameter(dy.ParameterCollection().add_parameters((1,), init=dy.ConstInitializer(1)))
+        self.assertEqual(p.value(), 1)
+        gc.collect()
+        self.assertEqual(p.value(), 1)
+
 
 class TestBatchManipulation(unittest.TestCase):
 
