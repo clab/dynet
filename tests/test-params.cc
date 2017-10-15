@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
     return p.get_storage().name;
   };
   auto save_parameters_lambda3 = [] (const std::string & fname,
-                                     dynet::ParameterStorage *p) ->std::string {
+                                     std::shared_ptr<dynet::ParameterStorage>p) ->std::string {
     std::cout << p->name << " saved in file " << fname << std::endl;
     return p->name;
   };
