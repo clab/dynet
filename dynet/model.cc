@@ -562,8 +562,10 @@ template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev
 void ParameterStorage::accumulate_grad(const Tensor& d) {
   nonzero_grad = true;
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
-  else if (values.device->type == DeviceType::GPU) { cudaSetDevice(((Device_GPU*)values.device)->cuda_device_id); accumulate_grad_dev(*(Device_GPU*)values.device, d); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (values.device->type == DeviceType::GPU) {
+    cudaSetDevice(((Device_GPU*)values.device)->cuda_device_id);
+    accumulate_grad_dev(*(Device_GPU*)values.device, d);
+  } else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
