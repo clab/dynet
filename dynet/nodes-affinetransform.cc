@@ -75,11 +75,6 @@ std::vector<int> AffineTransform::autobatch_concat(const ComputationGraph & cg) 
 // much faster than using Eigen's tensor contractions (as of the writing)
 template<class MyDevice>
 void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-#if HAVE_CUDA
-  if (dev.type == DeviceType::GPU) {
-    cudaSetDevice(((Device_GPU*)&dev)->cuda_device_id);
-  }
-#endif
   DYNET_ASSERT(xs.size() % 2 == 1, "Failed dimension check in AffineTransform::forward");
   if (xs.size() == 1) {
     fx.tvec().device(*dev.edevice) = xs[0]->tvec();
