@@ -980,15 +980,16 @@ cdef class ParameterCollection: # {{{
         separator) or :code:`_` (which is used as an index separator).
     """
     cdef CModel thisptr  # Not a pointer...
+    cdef ParameterCollection parent
     def __cinit__(self, ):
         pass
 
-    def __init__(self):
-        pass
+    def __init__(self, parent=None):
+        self.parent = parent
 
     @staticmethod
-    cdef wrap(CModel m):
-        self = ParameterCollection()
+    cdef wrap(CModel m, ParameterCollection parent=None):
+        self = ParameterCollection(parent)
         self.thisptr = m
         return self
 
@@ -1230,8 +1231,7 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.ParameterCollection) a parameter collection.
         """
-        if name is None: return ParameterCollection.wrap(self.thisptr.add_subcollection("".encode()))
-        else: return ParameterCollection.wrap(self.thisptr.add_subcollection(name.encode()))
+        return ParameterCollection.wrap(self.thisptr.add_subcollection((name or "").encode()), self)
 
     cpdef name(self):
         """
