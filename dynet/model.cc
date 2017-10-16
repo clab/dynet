@@ -30,14 +30,14 @@
   void MyParam::regular_func(float *sqnorm) const { \
     if(device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)device,sqnorm); } \
     else if(device->type == DeviceType::GPU) { dev_func(*(Device_GPU*)device,sqnorm); } \
-    else { throw runtime_error("Invalid device type in MyParam::dev_func"); } \
+    else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
 #else
 #define DYNET_PARAMNORM_INST_DEV_IMPL(MyParam, regular_func, dev_func) \
   template void MyParam::dev_func<Device_CPU>(Device_CPU & dev, float *sqnorm) const; \
   void MyParam::regular_func(float *sqnorm) const { \
     if(device->type == DeviceType::CPU) { dev_func(*(Device_CPU*)device,sqnorm); } \
-    else { throw runtime_error("Invalid device type in MyParam::dev_func"); } \
+    else { throw std::runtime_error("Invalid device type in MyParam::dev_func"); } \
   }
 #endif
 
@@ -50,7 +50,7 @@ namespace dynet {
 
 ParameterStorageBase::~ParameterStorageBase() {}
 
-ParameterStorage::ParameterStorage(const Dim& d, float scale, const string & name, Device *dev)
+ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name, Device *dev)
     : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
@@ -75,7 +75,7 @@ ParameterStorage::ParameterStorage(const Dim& d, float scale, const string & nam
 }
 
 ParameterStorage::ParameterStorage(const Dim& d, const ParameterInit & init,
-                                   const string & name, Device *dev)
+                                   const std::string & name, Device *dev)
     : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
@@ -116,17 +116,17 @@ void ParameterStorage::clip(float left, float right) {
   TensorTools::clip(values, left, right);
 }
 
-void ParameterStorage::set_value(const vector<float>& val) {
+void ParameterStorage::set_value(const std::vector<float>& val) {
   TensorTools::set_elements(values, val);
 }
 
-bool valid_parameter(const string & s) {
-  auto it = find_if(s.begin(), s.end(), [] (char ch) { return ch == '/' || ch == '_'; });
+bool valid_parameter(const std::string & s) {
+  auto it = std::find_if(s.begin(), s.end(), [] (char ch) { return ch == '/' || ch == '_'; });
   return it == s.end();
 }
 
 LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
-                                               const string & name, Device *dev)
+                                               const std::string & name, Device *dev)
     : name(name), dim(d), updated(true), all_updated(false),
     nonzero_grad(false), owner(nullptr), device(dev) {
   DYNET_ARG_CHECK(default_device != nullptr,
@@ -185,7 +185,7 @@ void LookupParameterStorage::clear() {
 
 Parameter::Parameter() : p(nullptr) {}
 
-Parameter::Parameter(shared_ptr<ParameterStorage> p) : p(p) {}
+Parameter::Parameter(std::shared_ptr<ParameterStorage> p) : p(p) {}
 
 ParameterStorage& Parameter::get_storage() const {
   DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null parameter");
@@ -206,7 +206,7 @@ void Parameter::clip_inplace(float left, float right){
   get_storage().clip(left * my_scale, right * my_scale);
 }
 
-void Parameter::set_value(const vector<float>& val){
+void Parameter::set_value(const std::vector<float>& val){
   get_storage().set_value(val);
 }
 
@@ -224,7 +224,7 @@ float Parameter::current_weight_decay() const {
 
 LookupParameter::LookupParameter() : p(nullptr) { }
 
-LookupParameter::LookupParameter(shared_ptr<LookupParameterStorage> p) : p(p) {}
+LookupParameter::LookupParameter(std::shared_ptr<LookupParameterStorage> p) : p(p) {}
 
 LookupParameterStorage& LookupParameter::get_storage() const {
   DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null LookupParameter");
@@ -235,7 +235,7 @@ void LookupParameter::zero() {
   get_storage().zero();
 }
 
-void LookupParameter::initialize(unsigned index, const vector<float>& val) const {
+void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
   get_storage().initialize(index, val);
 }
 
@@ -298,7 +298,7 @@ ParameterCollection ParameterCollection::add_subcollection(const string & sub_na
     oss << "/";
     return ParameterCollection(oss.str(), this);
   } else {
-    throw runtime_error("Submodel name could not include '/' and '_'");
+    throw std::runtime_error("Submodel name could not include '/' and '_'");
   }
 }
 
@@ -318,12 +318,12 @@ void ParameterCollection::project_weights(float radius) {
 Parameter ParameterCollection::add_parameters(const Dim & d, Device *device) {
   return add_parameters(d, ParameterInitGlorot(), "", device);
 }
-Parameter ParameterCollection::add_parameters(const Dim & d, const string & p_name, Device *device) {
+Parameter ParameterCollection::add_parameters(const Dim & d, const std::string & p_name, Device *device) {
   return add_parameters(d, ParameterInitGlorot(), p_name, device);
 }
 
 Parameter ParameterCollection::add_parameters(const Dim& d, float scale,
-                                              const string & p_name, Device *device) {
+                                              const std::string & p_name, Device *device) {
   if(scale == 0.0f)
     return add_parameters(d, ParameterInitGlorot(), p_name, device);
   else
@@ -331,21 +331,21 @@ Parameter ParameterCollection::add_parameters(const Dim& d, float scale,
 }
 
 Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit & init,
-                                              const string & p_name, Device *device) {
+                                              const std::string & p_name, Device *device) {
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
     if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
 
-    shared_ptr<ParameterStorage> p = ParameterStorageCreator::create(d, init, oss.str(), device);
+    std::shared_ptr<ParameterStorage> p = ParameterStorageCreator::create(d, init, oss.str(), device);
     add_parameters_to_storage(p);
     return Parameter(p);
   } else {
-    throw runtime_error("Parameter name could not include '/' and '_'");
+    throw std::runtime_error("Parameter name could not include '/' and '_'");
   }
 }
 
-void ParameterCollection::add_parameters_to_storage(shared_ptr<ParameterStorage>p) {
+void ParameterCollection::add_parameters_to_storage(std::shared_ptr<ParameterStorage>p) {
   if(parent != nullptr)
     parent->add_parameters_to_storage(p);
   else
@@ -356,8 +356,8 @@ void ParameterCollection::add_parameters_to_storage(shared_ptr<ParameterStorage>
   }
 }
 
-vector<shared_ptr<ParameterStorageBase>> ParameterCollection::get_parameter_storages_base() const {
-  vector<shared_ptr<ParameterStorageBase>> all_params;
+std::vector<std::shared_ptr<ParameterStorageBase>> ParameterCollection::get_parameter_storages_base() const {
+  std::vector<std::shared_ptr<ParameterStorageBase>> all_params;
   ParameterCollection *t = const_cast<ParameterCollection*>(this);
   while (t->parent != nullptr) { t = t->parent; }
   auto all_ps = t->get_storage().all_params;
@@ -380,7 +380,7 @@ vector<shared_ptr<ParameterStorageBase>> ParameterCollection::get_parameter_stor
   return all_params;
 }
 
-shared_ptr<ParameterStorage> ParameterCollection::get_parameter_storage(const string & pname) {
+std::shared_ptr<ParameterStorage> ParameterCollection::get_parameter_storage(const std::string & pname) {
   if (pname.find(name) == 0) {
     ParameterCollection *t = this;
     while (t->parent != nullptr) { t = t->parent; }
@@ -390,12 +390,12 @@ shared_ptr<ParameterStorage> ParameterCollection::get_parameter_storage(const st
       }
     }
   }
-  string errMsg = "No existing parameter " + pname + " found in " + name;
-  throw runtime_error(errMsg);
+  std::string errMsg = "No existing parameter " + pname + " found in " + name;
+  throw std::runtime_error(errMsg);
 }
 
-vector<shared_ptr<ParameterStorage>> ParameterCollection::get_parameter_storages() const {
-  vector<shared_ptr<ParameterStorage>> params;
+std::vector<std::shared_ptr<ParameterStorage>> ParameterCollection::get_parameter_storages() const {
+  std::vector<std::shared_ptr<ParameterStorage>> params;
   ParameterCollection *t = const_cast<ParameterCollection*>(this);
   while (t->parent != nullptr) { t = t->parent; }
   for (auto & param : t->get_storage().params) {
@@ -407,28 +407,28 @@ vector<shared_ptr<ParameterStorage>> ParameterCollection::get_parameter_storages
 }
 
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d,
-                                                           const string & p_name,
+                                                           const std::string & p_name,
                                                            Device *device) {
   return add_lookup_parameters(n, d, ParameterInitGlorot(true), p_name, device);
 }
 
 LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init,
-                                                           const string & p_name,
+                                                           const std::string & p_name,
                                                            Device *device) {
   if (valid_parameter(p_name)) {
     ostringstream oss; oss << name << p_name;
     int idx = name_cntr[p_name]++;
     if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
 
-    shared_ptr<LookupParameterStorage> p = LookupParameterStorageCreator::create(n, d, init, oss.str(), device);
+    std::shared_ptr<LookupParameterStorage> p = LookupParameterStorageCreator::create(n, d, init, oss.str(), device);
     add_lookup_parameters_to_storage(p);
     return LookupParameter(p);
   } else {
-    throw runtime_error("LookupParameter name could not include '/' and '_'");
+    throw std::runtime_error("LookupParameter name could not include '/' and '_'");
   }
 }
 
-void ParameterCollection::add_lookup_parameters_to_storage(shared_ptr<LookupParameterStorage>p) {
+void ParameterCollection::add_lookup_parameters_to_storage(std::shared_ptr<LookupParameterStorage>p) {
   if(parent != nullptr)
     parent->add_lookup_parameters_to_storage(p);
   else
@@ -439,7 +439,7 @@ void ParameterCollection::add_lookup_parameters_to_storage(shared_ptr<LookupPara
   }
 }
 
-shared_ptr<LookupParameterStorage> ParameterCollection::get_lookup_parameter_storage(const string & lookup_pname)
+std::shared_ptr<LookupParameterStorage> ParameterCollection::get_lookup_parameter_storage(const std::string & lookup_pname)
 {
   if (lookup_pname.find(name) == 0) {
     ParameterCollection *t = this;
@@ -450,13 +450,13 @@ shared_ptr<LookupParameterStorage> ParameterCollection::get_lookup_parameter_sto
       }
     }
   }
-  string errMsg = "No existing parameter " + lookup_pname + " found in " + name;
-  throw runtime_error(errMsg);
+  std::string errMsg = "No existing parameter " + lookup_pname + " found in " + name;
+  throw std::runtime_error(errMsg);
 }
 
-vector<shared_ptr<LookupParameterStorage>>
+std::vector<std::shared_ptr<LookupParameterStorage>>
 ParameterCollection::get_lookup_parameter_storages() const {
-  vector<shared_ptr<LookupParameterStorage>> lookup_params;
+  std::vector<std::shared_ptr<LookupParameterStorage>> lookup_params;
   ParameterCollection *t = const_cast<ParameterCollection*>(this);
   while (t->parent != nullptr) { t = t->parent; }
   for (auto & lookup_param: t->get_storage().lookup_params) {
@@ -474,14 +474,14 @@ void ParameterCollection::reset_gradient() {
 
 size_t ParameterCollection::parameter_count() const {
   size_t r = 0;
-  for (const shared_ptr<ParameterStorageBase> param : get_storage().all_params)
+  for (const std::shared_ptr<ParameterStorageBase> param : get_storage().all_params)
     r += param->size();
   return r;
 }
 
 size_t ParameterCollection::updated_parameter_count() const {
   size_t r = 0;
-  for (const shared_ptr<ParameterStorageBase> param : get_storage().all_params)
+  for (const std::shared_ptr<ParameterStorageBase> param : get_storage().all_params)
     if(param->is_updated())
       r += param->size();
   return r;
@@ -507,12 +507,12 @@ const ParameterCollectionStorage& ParameterCollection::get_storage() const {
   return *storage;
 }
 
-void save_dynet_model(string filename, ParameterCollection* model) {
+void save_dynet_model(std::string filename, ParameterCollection* model) {
   TextFileSaver saver(filename);
   saver.save(*model, "/model");
 };
 
-void load_dynet_model(string filename, ParameterCollection* model) {
+void load_dynet_model(std::string filename, ParameterCollection* model) {
   TextFileLoader loader(filename);
   loader.populate(*model, "/model");
 };
@@ -562,14 +562,14 @@ void ParameterStorage::accumulate_grad(const Tensor& d) {
   nonzero_grad = true;
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
   else if (values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values.device, d); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void ParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
 void ParameterStorage::accumulate_grad(const Tensor& d) {
   nonzero_grad = true;
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -585,13 +585,13 @@ template void ParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & de
 void ParameterStorage::scale_parameters(float a) {
   if (values.device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values.device, a); }
   else if (values.device->type == DeviceType::GPU) { scale_parameters_dev(*(Device_GPU*)values.device, a); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void ParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
 void ParameterStorage::scale_parameters(float a) {
   if (values.device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values.device, a); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -607,13 +607,13 @@ template void ParameterStorage::scale_gradient_dev<Device_CPU>(Device_CPU & dev,
 void ParameterStorage::scale_gradient(float a) {
   if (g.device->type == DeviceType::CPU) { scale_gradient_dev(*(Device_CPU*)g.device, a); }
   else if (g.device->type == DeviceType::GPU) { scale_gradient_dev(*(Device_GPU*)g.device, a); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void ParameterStorage::scale_gradient_dev<Device_CPU>(Device_CPU & dev, float a);
 void ParameterStorage::scale_gradient(float a) {
   if (g.device->type == DeviceType::CPU) { scale_gradient_dev(*(Device_CPU*)g.device, a); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -636,13 +636,13 @@ template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & de
 void LookupParameterStorage::initialize(unsigned index, const vector<float>& val) {
   if (values[index].device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values[index].device, index, val); }
   else if (values[index].device->type == DeviceType::GPU) { initialize_dev(*(Device_GPU*)values[index].device, index, val); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val);
 void LookupParameterStorage::initialize(unsigned index, const vector<float>& val) {
   if (values[index].device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values[index].device, index, val); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -682,14 +682,14 @@ void LookupParameterStorage::accumulate_grad(const Tensor& d) {
   nonzero_grad = true;
   if (all_values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)all_values.device, d); }
   else if (all_values.device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)all_values.device, d); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, const Tensor& d);
 void LookupParameterStorage::accumulate_grad(const Tensor& d) {
   nonzero_grad = true;
   if (all_values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)all_values.device, d); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -707,14 +707,14 @@ void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
   nonzero_grad = true;
   if (values[index].device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values[index].device, index, d); }
   else if (values[index].device->type == DeviceType::GPU) { accumulate_grad_dev(*(Device_GPU*)values[index].device, index, d); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::accumulate_grad_dev<Device_CPU>(Device_CPU & dev, unsigned index, const Tensor& d);
 void LookupParameterStorage::accumulate_grad(unsigned index, const Tensor& d) {
   nonzero_grad = true;
   if (values[index].device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values[index].device, index, d); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -742,13 +742,13 @@ template void LookupParameterStorage::accumulate_grads_dev<Device_CPU>(Device_CP
 void LookupParameterStorage::accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g) {
   if (all_values.device->type == DeviceType::CPU) { accumulate_grads_dev(*(Device_CPU*)all_values.device, n, ids_host, ids_dev, g); }
   else if (all_values.device->type == DeviceType::GPU) { accumulate_grads_dev(*(Device_GPU*)all_values.device, n, ids_host, ids_dev, g); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::accumulate_grads_dev<Device_CPU>(Device_CPU & dev, unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
 void LookupParameterStorage::accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g) {
   if (all_values.device->type == DeviceType::CPU) { accumulate_grads_dev(*(Device_CPU*)all_values.device, n, ids_host, ids_dev, g); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -764,13 +764,13 @@ template void LookupParameterStorage::scale_parameters_dev<Device_CPU>(Device_CP
 void LookupParameterStorage::scale_parameters(float a) {
   if (values[0].device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values[0].device, a); }
   else if (values[0].device->type == DeviceType::GPU) { scale_parameters_dev(*(Device_GPU*)values[0].device, a); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::scale_parameters_dev<Device_CPU>(Device_CPU & dev, float a);
 void LookupParameterStorage::scale_parameters(float a) {
   if (values[0].device->type == DeviceType::CPU) { scale_parameters_dev(*(Device_CPU*)values[0].device, a); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -786,13 +786,13 @@ template void LookupParameterStorage::scale_gradient_dev<Device_CPU>(Device_CPU 
 void LookupParameterStorage::scale_gradient(float a) {
   if (grads[0].device->type == DeviceType::CPU) { scale_gradient_dev(*(Device_CPU*)grads[0].device, a); }
   else if (grads[0].device->type == DeviceType::GPU) { scale_gradient_dev(*(Device_GPU*)grads[0].device, a); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::scale_gradient_dev<Device_CPU>(Device_CPU & dev, float a);
 void LookupParameterStorage::scale_gradient(float a) {
   if (grads[0].device->type == DeviceType::CPU) { scale_gradient_dev(*(Device_CPU*)grads[0].device, a); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 #endif
 
@@ -828,7 +828,7 @@ float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
     else if (dev_k->type == DeviceType::GPU)
       cudaMemcpy(gradient_norm_scratch + pi, v, sizeof(float), cudaMemcpyDeviceToHost);
 #endif
-    else { throw runtime_error("Bad device type"); }
+    else { throw std::runtime_error("Bad device type"); }
     dev_k->mem->free(v);
   }
   Tensor scratch_t({(unsigned int)all_params.size()}, gradient_norm_scratch, &dev, DeviceMempool::NONE);
@@ -844,7 +844,7 @@ extern template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_GP
 template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float ParameterCollectionStorage::gradient_l2_norm() const {
   if (default_device->type == DeviceType::CPU || default_device->type == DeviceType::GPU) { return gradient_l2_norm_dev(*(Device_CPU*)device_manager->get_global_device("CPU")); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 float ParameterCollection::gradient_l2_norm() const {
   return get_storage().gradient_l2_norm();
@@ -853,7 +853,7 @@ float ParameterCollection::gradient_l2_norm() const {
 template float ParameterCollectionStorage::gradient_l2_norm_dev<Device_CPU>(Device_CPU & dev) const;
 float ParameterCollectionStorage::gradient_l2_norm() const {
   if (default_device->type == DeviceType::CPU) { return gradient_l2_norm_dev(*(Device_CPU*)device_manager->get_global_device("CPU")); }
-  else { throw runtime_error("Bad device type"); }
+  else { throw std::runtime_error("Bad device type"); }
 }
 float ParameterCollection::gradient_l2_norm() const {
   return get_storage().gradient_l2_norm();
